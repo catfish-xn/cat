@@ -126,10 +126,11 @@ export class BoardScene extends Phaser.Scene {
         const point = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
         // Resolve current geometry, not a cached hover ID that could outlive a sale.
         // Include enemies so hovering one never falls back to an unrelated selection.
-        // Later-created tokens draw on top; match Phaser's click hit order where
-        // neighboring rectangular hit areas overlap. A dragged token is on top.
-        const hovered = this.input.manager.isOver ? [...this.tokens].reverse().find(([, token]) =>
-          token.visible && Math.abs(point.x - token.x) <= 29 * token.scaleX && Math.abs(point.y - token.y) <= 29 * token.scaleY)?.[0] : undefined;
+        // Use the same render ordering as clicks: dragging can reorder even an
+        // older token. Creation/Map order is not the scene's current draw order.
+        const candidates = this.input.manager.isOver ? [...this.tokens.values()].filter(token =>
+          token.visible && Math.abs(point.x - token.x) <= 29 * token.scaleX && Math.abs(point.y - token.y) <= 29 * token.scaleY) : [];
+        const hovered: string | undefined = this.input.sortGameObjects(candidates, pointer)[0]?.getData('unitId');
         const id = this.draggingId ?? hovered ?? this.selectedId;
         if (id) this.sell(id);
         else this.status.setText(this.session.phase === 'preparation' ? '请悬停或选择一个我方单位，再按 E' : this.failureMessage('wrong-phase'));

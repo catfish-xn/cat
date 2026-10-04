@@ -57,11 +57,11 @@ module.exports = async function verifyDesktop({ page, read, assertHud, report, c
     assert(token, `Missing hover target ${id}`);
     await page.mouse.move(token.screenX, token.screenY);
   }
-  async function dragTo(id, cell, release = true) {
+  async function dragTo(id, cell, release = true, steps = 2) {
     await hover(id);
     await page.mouse.down();
     const point = (await read()).layout.hexes[`${cell.col},${cell.row}`];
-    await page.mouse.move(point.x, point.y, { steps: 2 });
+    await page.mouse.move(point.x, point.y, { steps });
     if (release) await page.mouse.up();
   }
   async function step(name, command, input) {
@@ -134,7 +134,15 @@ module.exports = async function verifyDesktop({ page, read, assertHud, report, c
   assert.equal((await read()).selectedId, overlapping, 'Phaser click chooses later drawn token');
   await step('E-agrees-with-click-in-overlapping-hitboxes', { type: 'sell', id: overlapping }, () => page.keyboard.press('e'));
 
-  const interrupted = (await read()).state.preparation.units.find(unit => unit.team === 'player' && unit.location.kind === 'bench').id;
+  const behindOldToken = (await read()).state.preparation.units.find(unit => unit.team === 'player' && unit.location.kind === 'bench').id;
+  await step('deploy-new-neighbor-before-old-token-drag', { type: 'deploy', id: behindOldToken, cell: { col: 5, row: 5 } }, () => dragTo(behindOldToken, { col: 5, row: 5 }));
+  await step('lift-old-token-forward', { type: 'deploy', id: 'unit-3', cell: { col: 4, row: 4 } }, () => dragTo('unit-3', { col: 4, row: 4 }, true, 12));
+  await step('return-old-token-beside-new-neighbor', { type: 'deploy', id: 'unit-3', cell: { col: 5, row: 4 } }, () => dragTo('unit-3', { col: 5, row: 4 }, true, 12));
+  await page.mouse.click((oldToken.screenX + newToken.screenX) / 2, (oldToken.screenY + newToken.screenY) / 2);
+  assert.equal((await read()).selectedId, 'unit-3', 'dragged old token now draws above newer neighbor');
+  await step('E-agrees-with-click-after-drag-reorders-display', { type: 'sell', id: 'unit-3' }, () => page.keyboard.press('e'));
+
+  const interrupted = 'unit-4';
   await step('D-during-drag', { type: 'reroll' }, async () => {
     await dragTo(interrupted, { col: 6, row: 6 }, false);
     await page.keyboard.press('d');
@@ -142,7 +150,7 @@ module.exports = async function verifyDesktop({ page, read, assertHud, report, c
   assert.equal((await read()).draggingId, null);
   await step('late-release-after-reroll', { type: 'reject' }, () => page.mouse.up());
 
-  await hover('unit-3');
+  await hover(behindOldToken);
   for (const chord of ['Control+d', 'Meta+d', 'Alt+d', 'Control+e', 'Meta+e', 'Alt+e', 'f']) {
     await step(`ignore-${chord}`, { type: 'reject' }, () => page.keyboard.press(chord));
   }
