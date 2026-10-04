@@ -20,7 +20,7 @@ export function deployed(): MatchState {
 export function finish(input: MatchState): MatchState {
   let state = input;
   for (let i = 0; i < 1201 && state.phase === 'combat'; i++) state = stepMatch(state).state;
-  expect(state.phase).toBe('settlement');
+  expect(['settlement', 'gameOver']).toContain(state.phase);
   return state;
 }
 export function battle(): MatchState { return accepted(startMatchCombat(deployed())); }

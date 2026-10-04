@@ -1,5 +1,6 @@
 import type { GameState } from './game';
-import { UNIT_DEFINITIONS } from './units';
+import { getUnitStats } from './unit-stats';
+import { resolveAbility } from './combat-abilities';
 import { compareIds, eliminationResult, MAX_COMBAT_TICKS, type CombatState, type CombatStep, type CombatUnit } from './combat-types';
 import { advanceCombatTick } from './combat-tick';
 export * from './combat-types';
@@ -20,11 +21,13 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 export function createCombat(preparationState: GameState): CombatState {
   const units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
-    const stats = UNIT_DEFINITIONS[unit.definitionId].baseStats;
-    return [{ id: unit.id, definitionId: unit.definitionId, team: unit.team,
+    const stats = getUnitStats(unit.definitionId, unit.starLevel);
+    return [{ id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
       cell: { ...unit.location.cell }, hp: stats.health, maxHp: stats.health,
-      attackDamage: stats.attack, attackRange: unit.definitionId === 'ranger' ? 3 : 1,
-      attackIntervalTicks: 20, cooldownTicks: 0, moveCooldownTicks: 0,
+      attackDamage: stats.attack, attackRange: stats.attackRange,
+      attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
+      armor: stats.armor, magicResist: stats.magicResist, mana: stats.initialMana, maxMana: stats.maxMana,
+      shield: 0, shieldExpiresAtTick: null, ability: resolveAbility(stats.abilityId, unit.starLevel),
       alive: true, targetId: null }];
   }).sort(compareIds);
   const result = eliminationResult(units);

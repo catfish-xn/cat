@@ -1,6 +1,6 @@
 import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import {
-  buyUnit, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
+  buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
 } from '../simulation/match';
 import type { UnitLocation } from '../simulation/units';
@@ -26,6 +26,7 @@ export class MatchSession {
   buy(slot: number, generation: number) { return this.commit(buyUnit(this.matchState, slot, generation)); }
   sell(id: string) { return this.commit(sellUnit(this.matchState, id)); }
   reroll() { return this.commit(rerollShop(this.matchState)); }
+  buyXp() { return this.commit(buyXp(this.matchState)); }
   start() { return this.commit(startMatchCombat(this.matchState)); }
   continue(round: number) { return this.commit(nextRound(this.matchState, round)); }
 

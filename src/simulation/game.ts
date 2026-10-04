@@ -5,11 +5,11 @@ export type DeploymentFailure = 'unknown-unit' | 'enemy-unit' | 'invalid-locatio
 export type DeploymentResult = { readonly ok: true; readonly state: GameState } | { readonly ok: false; readonly reason: DeploymentFailure; readonly state: GameState };
 export function createGame(): GameState {
   const playerUnits: Unit[] = ['sentinel', 'ranger', 'mystic', 'sentinel', 'ranger'].map((definitionId, slot) => ({
-    id: `unit-${slot + 1}`, definitionId, team: 'player', location: { kind: 'bench', slot },
+    id: `unit-${slot + 1}`, definitionId, team: 'player', starLevel: 1, location: { kind: 'bench', slot },
   }));
   const enemyUnits: Unit[] = [
-    { id: 'enemy-1', definitionId: 'sentinel', team: 'enemy', location: { kind: 'board', cell: { col: 2, row: 1 } } },
-    { id: 'enemy-2', definitionId: 'ranger', team: 'enemy', location: { kind: 'board', cell: { col: 4, row: 2 } } },
+    { id: 'enemy-1', definitionId: 'sentinel', team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col: 2, row: 1 } } },
+    { id: 'enemy-2', definitionId: 'ranger', team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col: 4, row: 2 } } },
   ];
   return { board: DEFAULT_BOARD, benchSize: 7, units: [...playerUnits, ...enemyUnits] };
 }
