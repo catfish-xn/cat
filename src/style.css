@@ -1,0 +1,5 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; background: #0a1018; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+#app { width: 100vw; height: 100dvh; overflow: hidden; }
+canvas { display: block; touch-action: none; }
