@@ -12,7 +12,7 @@ Initial gold10; buy3; sell2; reroll2; income5 for every outcome. Fixed three-def
 
 Main coordinator froze the public Match API/types/rules and contract in `0dde6ea`, implemented Match/economy/lifecycle, integrated the actual diffs serially, and owns browser/CI/final acceptance. A worked only on RNG/shop tests in `/workspace/cat-m2-shop`; B worked on Phaser/session and corresponding tests in `/workspace/cat-m2-ui`. C remained an independent read-only reviewer. Maximum concurrency was four including the coordinator. No core file had two simultaneous owners.
 
-The reviewer checked the frozen API, failure atomicity, settlement, replay tests, integrated UI/token cleanup and the migration of M1 tests. Browser assertions were strengthened to check visible HUD/shop labels and reject a repeated Start after tick40. Final evidence and CI must be checked at the final implementation SHA, as recorded in the PR; an earlier commit's green checks do not constitute final acceptance.
+The reviewer checked the frozen API, failure atomicity, settlement, replay tests, integrated UI/token cleanup and the migration of M1 tests. Browser assertions were strengthened to check visible HUD/shop labels and reject a repeated Start after tick40. Final evidence and CI must be checked at the final implementation SHA, as recorded in the final acceptance report; an earlier commit's green checks do not constitute final acceptance.
 
 ## Automated tests
 
@@ -75,7 +75,7 @@ For a system Chromium, set `CHROMIUM_PATH=/usr/bin/chromium`. Evidence defaults 
 
 The existing test-and-build job remains. The new chromium-match job installs locked Playwright1.63.0 and its matching Chromium, builds, runs the five-round real browser suite and production preview, and uploads the complete artifacts even on failure. It has a 15-minute timeout; individual battles allow75 seconds for the existing60 logical-second maximum. No clock acceleration is used.
 
-The PR description and final acceptance report must link the successful workflow run for the exact final PR head and record local browser SHA/clean-tree evidence. Completion requires both jobs passing and final independent review, not only this document or an intermediate run. No automatic merge is performed.
+The final acceptance report must link the successful workflow run for the exact final implementation commit and record local browser SHA/clean-tree evidence. Completion requires both jobs passing and final independent review, not only this document or an intermediate run. The implementation is delivered on `feat/m2-match-loop`; no PR or merge is required for the branch's push-triggered CI.
 
 ## Limits
 
