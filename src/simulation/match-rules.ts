@@ -9,7 +9,7 @@ export const SHOP_ODDS: Readonly<Record<number, readonly [number, number, number
 });
 for (const row of Object.values(SHOP_ODDS)) Object.freeze(row);
 export const SHOP_CATALOG_BY_COST: Readonly<Record<CostTier, readonly string[]>> = Object.freeze({
-  1: Object.freeze(['sentinel','ranger','mystic']), 2: Object.freeze(['bulwark','archer']),
-  3: Object.freeze(['arcanist','duelist']), 4: Object.freeze(['warden','tempest']), 5: Object.freeze(['colossus','oracle']),
+  1: Object.freeze(['mystic','ranger','sentinel','spark','squire']), 2: Object.freeze(['archer','binder','bulwark','scout']),
+  3: Object.freeze(['arcanist','beacon','duelist','striker']), 4: Object.freeze(['prism','tempest','warden']), 5: Object.freeze(['colossus','oracle']),
 });
 export const SHOP_CATALOG: readonly string[] = Object.freeze(Object.values(SHOP_CATALOG_BY_COST).flat());

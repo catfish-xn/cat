@@ -1,10 +1,12 @@
 import { compareIds, type CombatUnit } from './combat-types';
+import { sourceRank } from './effects';
 import type { DamagePacket } from './ability-types';
 
 export interface DamageTotals {
   readonly physicalAmount: number;
   readonly magicAmount: number;
   readonly amount: number;
+  readonly packets?: readonly (DamagePacket & { readonly mitigated: number })[];
 }
 
 /** Round each individual hit before aggregation; even very high resistance permits one damage. */
@@ -16,12 +18,14 @@ export function mitigateDamage(rawAmount: number, resistance: number): number {
 }
 
 /** The returned Map is tick-local; committed combat state contains only JSON data. */
-export function aggregateDamagePackets(packets: readonly DamagePacket[], units: readonly CombatUnit[]): ReadonlyMap<string, DamageTotals> {
+export function aggregateDamagePackets(packets: readonly DamagePacket[], units: readonly CombatUnit[], includePackets = false): ReadonlyMap<string, DamageTotals> {
   const targets = new Map(units.map(unit => [unit.id, unit]));
   const totals = new Map<string, DamageTotals>();
   const sorted = [...packets].sort((a, b) =>
     compareIds({ id: a.targetId }, { id: b.targetId }) ||
-    compareIds({ id: a.sourceId }, { id: b.sourceId }) || a.effectIndex - b.effectIndex);
+    compareIds({ id: a.sourceId }, { id: b.sourceId }) || packetRank(a) - packetRank(b)
+    || compareIds({ id: a.sourceInstanceId ?? '' }, { id: b.sourceInstanceId ?? '' })
+    || a.effectIndex - b.effectIndex || (a.packetOrdinal ?? 0) - (b.packetOrdinal ?? 0));
   for (const packet of sorted) {
     const target = targets.get(packet.targetId);
     if (!target || !target.alive) throw new Error(`Invalid damage target: ${packet.targetId}`);
@@ -31,7 +35,10 @@ export function aggregateDamagePackets(packets: readonly DamagePacket[], units: 
       physicalAmount: previous.physicalAmount + (packet.damageType === 'physical' ? amount : 0),
       magicAmount: previous.magicAmount + (packet.damageType === 'magic' ? amount : 0),
       amount: previous.amount + amount,
+      ...(includePackets ? { packets: [...(previous.packets ?? []), { ...structuredClone(packet), mitigated: amount }] } : {}),
     });
   }
   return totals;
 }
+
+function packetRank(packet: DamagePacket): number { return packet.sourceKind === 'attack' ? 0 : packet.sourceKind === 'ability' ? 1 : 2 + sourceRank(packet.sourceKind); }

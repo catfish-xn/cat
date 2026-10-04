@@ -16,7 +16,7 @@ jobs:
       - run: npm run build
   chromium-match:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -34,5 +34,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: m3-chromium-${{ matrix.mode }}-${{ github.sha }}
+          name: m4-chromium-${{ matrix.mode }}-${{ github.sha }}
           path: artifacts/

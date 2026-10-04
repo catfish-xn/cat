@@ -3,13 +3,13 @@ import { buyUnit, buyXp, createMatch, deployMatchUnit, getDeploymentCap, matchSt
 import { accepted, freeze } from './match-helpers';
 import type { UnitLocation } from '../src/simulation/units';
 
-describe('M3 public contract', () => {
+describe('M4 public contract', () => {
   it('starts with a reproducible versioned shop, growth and separate preparation', () => {
     const first = createMatch();
     let rng = 42n;
     for (let i = 0; i < 10; i++) rng = (rng * 1664525n + 1013904223n) % 4294967296n;
     expect(first).toEqual(createMatch(42));
-    expect(first).toMatchObject({ schemaVersion: 3, rulesVersion: 'm3-v1', contentVersion: 'm3-content-v1',
+    expect(first).toMatchObject({ schemaVersion: 4, rulesVersion: 'm4-v1', contentVersion: 'm4-slice-v1',
       phase: 'preparation', round: 1, gold: 10, level: 3, xp: 0, playerHp: 100, rngState: Number(rng), nextUnitSerial: 6, combat: null, roundResults: [] });
     expect(first.shop.slots).toHaveLength(5);
     expect(first.preparation).not.toBe(createMatch().preparation);
@@ -20,7 +20,7 @@ describe('M3 public contract', () => {
     const result = startMatchCombat(state);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.events).toEqual([]);
+    expect(result.events.map(event => event.type)).toEqual(['combatFinished', 'roundSettled']);
     expect(result.state).toMatchObject({ phase: 'settlement', playerHp: 94, gold: 15, xp: 2 });
     expect(result.state.roundResults).toHaveLength(1);
     expect(result.state.roundResults[0]).toMatchObject({ result: 'enemyWin', combatTicks: 0, playerDamage: 6 });

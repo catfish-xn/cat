@@ -10,13 +10,17 @@ const CONTENT = [
   ['duelist', 3, 1100, 100, 35, 30, 1, 60, 'duelist-strike'], ['warden', 4, 1500, 90, 55, 50, 1, 80, 'warden-guard'],
   ['tempest', 4, 950, 110, 30, 35, 3, 80, 'tempest-burst'], ['colossus', 5, 1800, 125, 65, 60, 1, 90, 'colossus-guard'],
   ['oracle', 5, 1150, 125, 35, 45, 3, 80, 'oracle-burst'],
+  ['squire', 1, 800, 45, 40, 30, 1, 80, 'sentinel-guard'], ['spark', 1, 450, 80, 10, 20, 1, 60, 'mystic-bolt'],
+  ['scout', 2, 650, 85, 20, 20, 3, 60, 'archer-shot'], ['binder', 2, 1000, 55, 45, 35, 1, 80, 'bulwark-guard'],
+  ['striker', 3, 1100, 100, 35, 30, 1, 60, 'duelist-strike'], ['beacon', 3, 750, 85, 25, 30, 3, 80, 'arcanist-burst'],
+  ['prism', 4, 950, 110, 30, 35, 3, 80, 'tempest-burst'],
 ] as const;
 
 describe('authored unit catalog and star stat resolution', () => {
-  it('provides all eleven complete definitions and the fixed nonempty tier catalogs', () => {
+  it('provides all eighteen complete definitions and the fixed nonempty tier catalogs', () => {
     expect(Object.keys(UNIT_DEFINITIONS)).toEqual(CONTENT.map(row => row[0]));
-    expect(SHOP_CATALOG_BY_COST).toEqual({ 1: ['sentinel', 'ranger', 'mystic'], 2: ['bulwark', 'archer'],
-      3: ['arcanist', 'duelist'], 4: ['warden', 'tempest'], 5: ['colossus', 'oracle'] });
+    expect(SHOP_CATALOG_BY_COST).toEqual({ 1: ['mystic', 'ranger', 'sentinel', 'spark', 'squire'], 2: ['archer', 'binder', 'bulwark', 'scout'],
+      3: ['arcanist', 'beacon', 'duelist', 'striker'], 4: ['prism', 'tempest', 'warden'], 5: ['colossus', 'oracle'] });
     expect(() => validateUnitDefinitions()).not.toThrow();
     for (const [id, cost, health, attack, armor, magicResist, attackRange, maxMana, abilityId] of CONTENT) {
       expect(UNIT_DEFINITIONS[id]).toMatchObject({ id, cost, baseStats: { health, attack, armor, magicResist },
@@ -43,6 +47,7 @@ describe('authored unit catalog and star stat resolution', () => {
     for (const definition of Object.values(UNIT_DEFINITIONS)) {
       expect(Object.isFrozen(definition)).toBe(true);
       expect(Object.isFrozen(definition.baseStats)).toBe(true);
+      expect(Object.isFrozen(definition.traits)).toBe(true);
     }
     expect(JSON.stringify(UNIT_DEFINITIONS)).toBe(before);
   });

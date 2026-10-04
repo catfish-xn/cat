@@ -3,7 +3,7 @@ import { buyUnit, buyXp, createMatch, deployMatchUnit, nextRound, rerollShop, se
   type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import type { Unit, UnitLocation } from '../src/simulation/units';
 import { accepted, battle, finish, freeze } from './match-helpers';
-import { cardValue, COST, expectedCommand, expectedShop, type LedgerCommand } from './fixtures/m3/oracle.cjs';
+import { cardValue, COST, expectedCommand, expectedShop, type LedgerCommand } from './fixtures/m4/oracle.cjs';
 
 function rejects(state: MatchState, action: (state: MatchState) => MatchCommandResult, reason: string) {
   const before = structuredClone(state), result = action(freeze(state));
@@ -38,13 +38,13 @@ function fullBench(): MatchState {
     fixtureUnit('fixture-bulwark', 'bulwark', { kind: 'bench', slot: 6 })] } };
 }
 
-describe('M3 atomic economy and independent ledger', () => {
+describe('M4 atomic economy and independent ledger', () => {
   it('uses the frozen two-word level shop and buys a non-merge card into the first free bench slot', () => {
     const state = createMatch();
     expect({ shop: state.shop, rngState: state.rngState }).toEqual(expectedShop(42, 1, 3));
     const next = ledger(state, { type: 'buy', slot: 4, generation: 1 });
     expect(next.gold).toBe(8); expect(next.nextUnitSerial).toBe(7);
-    expect(next.preparation.units.find(u => u.id === 'unit-6')).toEqual(fixtureUnit('unit-6', 'archer', { kind: 'bench', slot: 5 }));
+    expect(next.preparation.units.find(u => u.id === 'unit-6')).toEqual(fixtureUnit('unit-6', 'scout', { kind: 'bench', slot: 5 }));
     expect(next.rngState).toBe(state.rngState);
   });
   it('fills holes by slot number independently of array order and never reuses a sold ID', () => {
@@ -99,7 +99,7 @@ describe('M3 atomic economy and independent ledger', () => {
       fixtureUnit('unit-4', 'sentinel', { kind: 'bench', slot: 2 }, 2)] } };
     const result = buyUnit(freeze(state), 0, 1), next = accepted(result);
     expect(result).toEqual(expectedCommand(state, { type: 'buy', slot: 0, generation: 1 }));
-    expect(result.ok && result.events.map(e => [e.fromStar, e.toStar])).toEqual([[1, 2], [2, 3]]);
+    expect(result.ok && result.events.filter(e => e.type === 'unitUpgraded').map(e => [e.fromStar, e.toStar])).toEqual([[1, 2], [2, 3]]);
     expect(next.preparation.units.filter(u => u.team === 'player')).toEqual([fixtureUnit('unit-1', 'sentinel', { kind: 'board', cell: { col: 2, row: 4 } }, 3)]);
     expect(cardValue(next.preparation.units)).toBe(9);
     expect(ledger(next, { type: 'sell', id: 'unit-1' }).gold).toBe(state.gold - 1 + 9);
@@ -129,7 +129,7 @@ describe('M3 atomic economy and independent ledger', () => {
     expect([state.level, state.xp, state.gold]).toEqual([4, 2, 2]);
     expect(state.shop).toBe(before.shop); expect(state.rngState).toBe(before.rngState);
     state = ledger(state, { type: 'reroll' });
-    expect(state.shop.slots).toEqual(['arcanist', 'archer', 'bulwark', 'mystic', 'duelist'].map(definitionId => ({ status: 'available', definitionId })));
+    expect(state.shop.slots).toEqual(['beacon', 'scout', 'archer', 'squire', 'striker'].map(definitionId => ({ status: 'available', definitionId })));
     rejects(state, buyXp, 'insufficient-gold');
   });
   it('F preserves a valid old-generation offer and checks max-level before money', () => {
