@@ -9,6 +9,19 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
  * ScaleManager's next step updates the canvas and its input coordinate scale. */
 async function resizeViewport(page, viewport) {
   await page.setViewportSize(viewport);
+  const inspect = () => page.evaluate(() => {
+    const parent = document.getElementById('board-root'), canvas = parent?.querySelector('canvas');
+    const rectangle = node => {
+      if (!node) return null;
+      const box = node.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width, height: box.height };
+    };
+    return { viewport: { width: window.innerWidth, height: window.innerHeight },
+      visualViewport: window.visualViewport && { width: visualViewport.width, height: visualViewport.height,
+        scale: visualViewport.scale, offsetLeft: visualViewport.offsetLeft, offsetTop: visualViewport.offsetTop },
+      orientation: { type: screen.orientation?.type, angle: screen.orientation?.angle },
+      parent: rectangle(parent), canvas: rectangle(canvas), canvasStyle: canvas?.getAttribute('style') ?? null };
+  });
   const matchesFit = ({ width, height }) => {
     const parent = document.getElementById('board-root'), canvas = parent?.querySelector('canvas');
     if (!parent || !canvas || window.innerWidth !== width || window.innerHeight !== height) return false;
@@ -21,16 +34,14 @@ async function resizeViewport(page, viewport) {
       && close(rect.x, box.x + (box.width - expectedWidth) / 2)
       && close(rect.y, box.y + (box.height - expectedHeight) / 2);
   };
-  await page.waitForFunction(matchesFit, viewport, { polling: 'raf', timeout: 10000 });
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  await page.waitForFunction(matchesFit, viewport, { polling: 'raf', timeout: 10000 });
-  return page.evaluate(() => {
-    const parent = document.getElementById('board-root').getBoundingClientRect();
-    const canvas = document.querySelector('#board-root canvas').getBoundingClientRect();
-    return { viewport: { width: window.innerWidth, height: window.innerHeight },
-      parent: { x: parent.x, y: parent.y, width: parent.width, height: parent.height },
-      canvas: { x: canvas.x, y: canvas.y, width: canvas.width, height: canvas.height } };
-  });
+  try {
+    await page.waitForFunction(matchesFit, viewport, { polling: 'raf', timeout: 10000 });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.waitForFunction(matchesFit, viewport, { polling: 'raf', timeout: 10000 });
+  } catch (error) {
+    throw new Error(`Viewport FIT did not settle for ${JSON.stringify(viewport)}: ${JSON.stringify(await inspect())}`, { cause: error });
+  }
+  return inspect();
 }
 
 module.exports = async function verifyInteractions({ page, context, read, click, report, touch = false }) {
