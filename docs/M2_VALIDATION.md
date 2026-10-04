@@ -46,7 +46,7 @@ Local Chromium `151.0.7922.173`, seed42, 960×800:
 
 | Completed round | Result | Final tick | Gold before / after | Next shop generation |
 | --- | --- | ---: | --- | ---: |
-| 1 | playerWin | 131 | 6 / 11 | 3 |
+| 1 | playerWin | 126 | 6 / 11 | 3 |
 | 2 | playerWin | 141 | 11 / 16 | 4 |
 | 3 | playerWin | 141 | 16 / 21 | 5 |
 | 4 | playerWin | 141 | 21 / 26 | 6 |
@@ -56,7 +56,7 @@ The main path ends at **round6 preparation, gold31, five unique result records, 
 
 Production preview separately verifies actual built-bundle startup, HUD, five slots and purchase rendering. Both pageerror and console.error must be empty. Traces, screenshots and JSON including source SHA, dirty flag, operations, per-round ledger and failure evidence are saved even on failure.
 
-Initial verification uncovered a missing favicon request in preview and a test context that had not enabled touch capability. Added a local empty data favicon to remove the404; enabled `hasTouch` before creating the browser context. The complete script then passed, including real touch input. No console error is filtered out. These failures were fixed and rerun, not counted as passes.
+Initial verification uncovered a missing favicon request in preview and a test context that had not enabled touch capability. Added a local empty data favicon to remove the404; enabled `hasTouch` before creating the browser context. Final independent evidence review also caught a purchased unit landing in row5 when dragged to row4: Phaser's threshold-delayed drag offset included the initial pointer movement, and release used the token's previous position. Preview and release now both use the actual camera-transformed pointer position; every successful browser deployment asserts the exact requested hex. The corrected first battle ends at tick126 (the earlier incorrect-position run ended at131). No console error is filtered out. Earlier partial passes are superseded by the final exact-placement run.
 
 Reproduce with:
 
@@ -69,7 +69,7 @@ npm run test:browser
 npm run test:preview
 ```
 
-For a system Chromium, set `CHROMIUM_PATH=/usr/bin/chromium`. Evidence defaults to `artifacts/m2-browser` and `artifacts/m2-preview` (gitignored); `M2_EVIDENCE_DIR` overrides it. The legacy `verify-m1-browser.cjs` entrypoint forwards to this expanded regression suite. Initial successful local evidence is at `/tmp/cat-m2-browser-fixed` and `/tmp/cat-m2-preview-fixed`; the final clean-commit rerun is recorded separately at `/tmp/cat-m2-browser-final` and `/tmp/cat-m2-preview-final`.
+For a system Chromium, set `CHROMIUM_PATH=/usr/bin/chromium`. Evidence defaults to `artifacts/m2-browser` and `artifacts/m2-preview` (gitignored); `M2_EVIDENCE_DIR` overrides it. The legacy `verify-m1-browser.cjs` entrypoint forwards to this expanded regression suite. Final clean-commit evidence is at `/tmp/cat-m2-browser-final` and `/tmp/cat-m2-preview-final`; those JSON records identify the exact tested SHA. Earlier intermediate evidence is superseded.
 
 ## GitHub CI and release gate
 

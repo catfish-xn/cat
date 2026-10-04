@@ -61,7 +61,11 @@ async function drag(id, destination) {
   await page.mouse.up();
   await delay(120);
 }
-async function deploy(id, col, row) { await drag(id, (await read()).layout.hexes[`${col},${row}`]); }
+async function deploy(id, col, row, accepted = true) {
+  await drag(id, (await read()).layout.hexes[`${col},${row}`]);
+  if (accepted) assert.deepEqual((await read()).state.preparation.units.find(unit => unit.id === id).location,
+    { kind: 'board', cell: { col, row } }, `${id} must land on the exact requested hex`);
+}
 function expectedShop(rngState) {
   const slots = [];
   for (let i = 0; i < 5; i++) {
@@ -112,13 +116,13 @@ function assertControlsFit(snapshot) {
     }
 
     await click('start-combat'); assert.deepEqual((await read()).state, initial.state);
-    await deploy('unit-1', 0, 0); assert.deepEqual((await read()).state, initial.state);
+    await deploy('unit-1', 0, 0, false); assert.deepEqual((await read()).state, initial.state);
     await deploy('unit-1', 1, 4);
-    await deploy('unit-2', 1, 4); // occupied rejects, no swap
+    await deploy('unit-2', 1, 4, false); // occupied rejects, no swap
     assert.equal((await read()).state.preparation.units.find(unit => unit.id === 'unit-2').location.kind, 'bench');
     await drag('unit-1', (await read()).layout.bench[0]);
     await click('start-combat'); assert.deepEqual((await read()).state, initial.state);
-    await deploy('enemy-1', 0, 4); assert.deepEqual((await read()).state, initial.state);
+    await deploy('enemy-1', 0, 4, false); assert.deepEqual((await read()).state, initial.state);
     report.m1Deployment = true;
 
     await click('buy-0');
@@ -158,7 +162,7 @@ function assertControlsFit(snapshot) {
       assert.deepEqual(started.state.combat, expected, `round ${round}: fresh HP/death/cooldown/target at observed tick`);
       assert.equal(started.state.combat.units.length, before.state.preparation.units.filter(unit => unit.location.kind === 'board').length);
       await click('start-combat'); await click('buy-0'); await click('reroll'); await click('sell');
-      await deploy('unit-4', 6, 7);
+      await deploy('unit-4', 6, 7, false);
       const locked = await read();
       assert.equal(locked.state.phase, 'combat');
       assert.equal(locked.state.gold, before.state.gold); assert.equal(locked.state.rngState, before.state.rngState);

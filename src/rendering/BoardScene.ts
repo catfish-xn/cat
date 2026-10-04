@@ -123,8 +123,11 @@ export class BoardScene extends Phaser.Scene {
       this.draggingId = token.getData('unitId'); this.selectedId = this.draggingId;
       token.setDepth(10).setScale(1.08); this.syncSelection();
     });
-    this.input.on('drag', (_pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container, x: number, y: number) => {
+    this.input.on('drag', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
+      // Center the token on the pointer: Phaser's threshold-delayed drag offset
+      // otherwise incorporates the first mouse move and can shift a whole hex.
+      const { x, y } = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
       token.setPosition(x, y); this.overlay.clear();
       const target = this.target({ x, y });
       if (target) {
@@ -135,9 +138,10 @@ export class BoardScene extends Phaser.Scene {
         else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 37, p.y - 38, 74, 76, 10); }
       } else this.status.setText(this.failureMessage('invalid-location'));
     });
-    this.input.on('dragend', (_pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
+    this.input.on('dragend', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
-      const target = this.target(token);
+      // Read release coordinates directly, even if no final drag frame rendered.
+      const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
       if (target) this.command(this.session.deploy(token.getData('unitId'), target), '放置成功 · 可点击选中单位出售');
       else this.status.setText(this.failureMessage('invalid-location'));
       this.clearDrag(); this.sync();
