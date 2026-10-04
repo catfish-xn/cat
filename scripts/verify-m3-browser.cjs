@@ -90,9 +90,11 @@ async function input(command) {
   else if (command.type === 'sell') { const token = (await read()).tokens.find(t => t.id === command.id); assert(token); await page.mouse.move(token.screenX, token.screenY); await page.keyboard.press('e'); }
   else if (command.type === 'deploy') { const snap = await read(), p = command.target.kind === 'board' ? snap.layout.hexes[`${command.target.cell.col},${command.target.cell.row}`] : snap.layout.bench[command.target.slot]; await drag(command.id, p); }
 }
+function observePageErrors(target) {
+  target.on('pageerror', e => errors.push(`pageerror: ${e.message}`));
+  target.on('console', e => { if (e.type() === 'error') errors.push(`console.error: ${e.text()} (${e.location().url})`); });
+}
 async function attachObservers() {
-  page.on('pageerror', e => errors.push(`pageerror: ${e.message}`));
-  page.on('console', e => { if (e.type() === 'error') errors.push(`console.error: ${e.text()} (${e.location().url})`); });
   await page.evaluate(() => {
     window.__m3Keys = [];
     window.addEventListener('keydown', event => {
@@ -172,7 +174,7 @@ async function play(run) {
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox','--enable-unsafe-swiftshader'] });
     report.browser = await browser.version();
     context = await browser.newContext({ viewport: { width: 960, height: 800 }, hasTouch: true });
-    await context.tracing.start({ screenshots: true, snapshots: true }); page = await context.newPage();
+    await context.tracing.start({ screenshots: true, snapshots: true }); page = await context.newPage(); observePageErrors(page);
     await page.goto(url); await until(s => s.state.phase === 'preparation'); await attachObservers();
     for (const name of ['buy-0','buy-1','buy-2','buy-3','buy-4','reroll','buy-xp','sell','start-combat','continue']) {
       const b = (await read()).bounds[name]; assert(b && b.x >= 0 && b.y >= 0 && b.x + b.width <= 960.5 && b.y + b.height <= 800.5, `${name} fits viewport`);
@@ -181,7 +183,7 @@ async function play(run) {
     await require('./verify-m3-desktop.cjs')({ page, read, click, drag, assertHud, capture, report, ledgerStep, context, preview, initial: fixtures.growth.initial });
     await context.tracing.stop({ path: path.join(output, 'growth-desktop-trace.zip') });
     await page.close();
-    await context.tracing.start({ screenshots: true, snapshots: true }); page = await context.newPage();
+    await context.tracing.start({ screenshots: true, snapshots: true }); page = await context.newPage(); observePageErrors(page);
     await page.goto(url); await until(s => s.state.phase === 'preparation'); await attachObservers();
     await play(fixtures.terminal);
     const terminal = (await read()).state;
