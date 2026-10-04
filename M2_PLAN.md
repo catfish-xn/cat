@@ -339,3 +339,24 @@ M1 的缺敌方 browser fixture 可以保留为单独负向测试；不能在上
 已在上述 main SHA 实际重跑原有 `scripts/verify-m1-browser.cjs`，Chromium `151.0.7922.173`。两场真实鼠标部署/Start/结果/Reset 流程通过，结果分别为 playerWin、tick121 和 tick141；移动、攻击、HP下降、死亡、准备状态恢复与再次开战检查通过，`errors=[]`。缺player、最后一名player回bench，以及独立启动fixture中的缺enemy/缺双方检查均通过。
 
 本轮证据位于 `/tmp/cat-m2-baseline-browser/results.json` 及同目录截图。它确认 M1 当前可运行，不代表 M2 五回合已验证；结果文件中的两条 round 是脚本对两场 Reset 战斗的编号，产品当前还没有 Match round。M1 脚本只捕获 pageerror，M2 会另加意外 console.error 采集。
+
+## 13. 桌面端高频操作手感：正式验收补充
+
+本节属于既有 shop / economy / interaction 的质量门槛，追加到当前 M2 Goal。沿用现有架构、功能范围、五回合循环与分工，不重新规划里程碑。实现、独立 reviewer 和最终 Chromium 验收均必须覆盖以下条件。
+
+- `D` 是 reroll 快捷键。每个合法 keydown（包括操作系统自动重复）按事件顺序提交一次 simulation command，立即扣费并刷新五槽商店。不得遗漏合法事件、重复扣费或重复推进 RNG；不对合法输入人为 debounce。
+- `E` 出售当前悬停单位；无悬停单位时使用明确选中的我方单位。悬停 enemy 时拒绝，不能退回出售此前选中的 player。board / bench 均支持；成功后立即删除实例、增加金币并清除失效选择/拖拽。继续按 E 不得再次出售同一实例。
+- D/E 不处理 Ctrl/Meta/Alt 组合、输入法组合输入或文本编辑控件内输入；场景退出时释放监听，避免重复绑定。`F` 无功能，不引入 XP。
+- 购买成功立即进入第一个合法空备战格。拖拽释放、购买、出售和 reroll 同步提交 simulation 状态，HUD/shop/token 随即与该状态一致；不得等待动画结束，rendering 动画不得锁住下一次合法输入。
+- 高频 D 与点击/拖拽/E 混合输入共用当前 MatchSession 和纯命令校验。不得在 UI 修改 gold、shop、RNG、阵容，不保留跨事件的过期 MatchState。
+- 金币不足、bench 满、已购买槽位、无出售目标等失败无部分提交：不扣金币、不推进 RNG、不分配实例 ID，不改变阵容。combat / settlement 禁止 buy、sell、reroll、deployment；战斗时钟可以正常推进，但经济与准备状态保持锁定。
+
+### 必须保留的验证证据
+
+1. 自动测试无动画/时钟推进的连续命令、完整状态重放、成功计价与 RNG 次数、失败原子性、重复出售及 combat 锁定；原 M1/M2 测试、build、CI 全部通过。
+2. 真实 Chromium 使用真实键盘、鼠标点击和拖拽，至少连续三次执行 `D → buy → deploy → E sell → D → buy`，不在操作间添加人为动画等待。每一步对账完整 MatchState，单独检查 gold、五槽 shop、bench、board、实例序号与 RNG，并核对可见 HUD 和单位位置。
+3. 另测快速连续 D、按住 D 的 keydown repeat（合法事件每次恰好一次；余额不足后全部拒绝且状态/RNG 不变）、E 悬停/选中优先级、enemy 拒绝、board/bench 出售、重复 E、拖拽中出售后迟到的 release，以及 combat 中 D/E 与其他操作锁定。
+4. bench 满且金币足够、金币不足等失败须有真实输入证据。console.error / pageerror 均为空，保存输入序列、每步状态、截图/trace 和所测 SHA。
+5. 新增高频证据不能替代原先连续五回合、每轮唯一结算、下一轮阵容恢复与 HP/death/cooldown 隔离的验收。独立 reviewer 检查输入顺序、自动重复、目标选择、监听清理、失败原子性和浏览器证据后，方可完成 Goal。
+
+本节不新增技能、等级、升星、装备、羁绊、XP 或任何原 M2 排除系统。

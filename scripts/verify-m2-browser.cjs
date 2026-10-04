@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn, execFileSync } = require('node:child_process');
 const { chromium } = require('playwright');
+const verifyDesktop = require('./verify-m2-desktop.cjs');
 const preview = process.argv.includes('--preview');
 const output = process.env.M2_EVIDENCE_DIR || path.join('artifacts', preview ? 'm2-preview' : 'm2-browser');
 fs.mkdirSync(output, { recursive: true });
@@ -109,6 +110,14 @@ function assertControlsFit(snapshot) {
       assert.equal((await read()).state.gold, 7);
       assert((await read()).tokens.some(token => token.id === 'unit-6'));
       await capture('preview-purchase');
+      await page.keyboard.press('d');
+      assert.equal((await read()).state.gold, 5);
+      const bought = (await read()).tokens.find(token => token.id === 'unit-6');
+      await page.mouse.move(bought.screenX, bought.screenY);
+      await page.keyboard.press('e');
+      assert.equal((await read()).state.gold, 7);
+      assert(!(await read()).tokens.some(token => token.id === 'unit-6'));
+      await capture('preview-keyboard');
       assert.deepEqual(errors, []);
       await context.tracing.stop({ path: path.join(output, 'trace.zip') });
       report.passed = true;
@@ -163,6 +172,7 @@ function assertControlsFit(snapshot) {
       assert.equal(started.state.combat.units.length, before.state.preparation.units.filter(unit => unit.location.kind === 'board').length);
       await click('start-combat'); await click('buy-0'); await click('reroll'); await click('sell');
       await deploy('unit-4', 6, 7, false);
+      await page.keyboard.press('d'); await page.keyboard.press('e');
       const locked = await read();
       assert.equal(locked.state.phase, 'combat');
       assert.equal(locked.state.gold, before.state.gold); assert.equal(locked.state.rngState, before.state.rngState);
@@ -198,6 +208,7 @@ function assertControlsFit(snapshot) {
       assert(snapshot.texts.some(text => text.includes({ playerWin: 'Victory', enemyWin: 'Defeat', draw: 'Draw' }[settled.combat.result])));
       await capture(`round-${round}-result`);
       await delay(300); await click('buy-0'); await click('reroll'); await click('sell');
+      await page.keyboard.press('d'); await page.keyboard.press('e');
       assert.deepEqual((await read()).state, settled, 'result frames and rejected input cannot settle twice');
       const continueBounds = (await read()).bounds.continue;
       await page.mouse.click(continueBounds.centerX, continueBounds.centerY, { clickCount: 2, delay: 25 });
@@ -247,6 +258,7 @@ function assertControlsFit(snapshot) {
 
     // Separate debug/reset and invalid-income checks after the uninterrupted five-round path.
     await page.setViewportSize({ width: 960, height: 800 }); await delay(250);
+    await verifyDesktop({ page, read, assertHud, report, capture });
     await click('debug-new-match');
     assert.deepEqual((await read()).state, initial.state);
     for (let i = 0; i < 5; i++) await click('reroll');

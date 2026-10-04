@@ -56,14 +56,14 @@ export class BoardScene extends Phaser.Scene {
     this.timer = this.add.text(756, 366, '', { fontSize: '14px', color: '#9aaeb9' });
     this.startHint = this.add.text(756, 400, '', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 165 }, lineSpacing: 5 });
     this.selectionLabel = this.add.text(756, 494, '', { fontSize: '14px', color: '#edf4f3', wordWrap: { width: 165 } });
-    this.sellButton = this.button('sell', 756, 526, 164, 40, `Sell · +${MATCH_RULES.sellPrice} G`, () => {
+    this.sellButton = this.button('sell', 756, 526, 164, 40, `E · Sell · +${MATCH_RULES.sellPrice} G`, () => {
       if (this.selectedId === null) {
         this.status.setText(this.session.phase === 'preparation' ? '请先点击一个我方单位，再点击 Sell' : this.failureMessage('wrong-phase'));
         return;
       }
-      this.command(this.session.sell(this.selectedId), '出售成功 · 金币已到账');
+      this.sell(this.selectedId);
     });
-    this.rerollButton = this.button('reroll', 756, 577, 164, 40, `Reroll · ${MATCH_RULES.rerollCost} G`, () => this.command(this.session.reroll(), '商店已刷新'));
+    this.rerollButton = this.button('reroll', 756, 577, 164, 40, `D · Reroll · ${MATCH_RULES.rerollCost} G`, () => this.command(this.session.reroll(), '商店已刷新'));
     this.button('debug-new-match', 756, 710, 164, 30, 'Debug New Match', () => {
       this.session.newMatch();
       this.clearCombatEffects();
@@ -101,12 +101,50 @@ export class BoardScene extends Phaser.Scene {
     this.status = this.add.text(48, 754, '准备就绪 · 购买或部署棋子，再点击 Start Combat', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
+    this.installKeyboardHandlers();
     this.sync();
     const debug = Object.freeze({ read: () => this.debugSnapshot() });
     window.__CAT_DEBUG__ = debug;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (window.__CAT_DEBUG__ === debug) delete window.__CAT_DEBUG__;
     });
+  }
+
+  private installKeyboardHandlers() {
+    // Native keydown preserves each OS repeat and commits in DOM event order,
+    // alongside pointer input, without Phaser's per-frame keyboard queue.
+    const keydown = (event: KeyboardEvent) => {
+      if (!this.scene.isActive() || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select'))) return;
+      if (event.code === 'KeyD') {
+        event.preventDefault();
+        this.command(this.session.reroll(), '商店已刷新');
+      } else if (event.code === 'KeyE') {
+        event.preventDefault();
+        const pointer = this.input.activePointer;
+        const point = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
+        // Resolve current geometry, not a cached hover ID that could outlive a sale.
+        // Include enemies so hovering one never falls back to an unrelated selection.
+        // Later-created tokens draw on top; match Phaser's click hit order where
+        // neighboring rectangular hit areas overlap. A dragged token is on top.
+        const hovered = this.input.manager.isOver ? [...this.tokens].reverse().find(([, token]) =>
+          token.visible && Math.abs(point.x - token.x) <= 29 * token.scaleX && Math.abs(point.y - token.y) <= 29 * token.scaleY)?.[0] : undefined;
+        const id = this.draggingId ?? hovered ?? this.selectedId;
+        if (id) this.sell(id);
+        else this.status.setText(this.session.phase === 'preparation' ? '请悬停或选择一个我方单位，再按 E' : this.failureMessage('wrong-phase'));
+      }
+    };
+    window.addEventListener('keydown', keydown);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.removeEventListener('keydown', keydown));
+  }
+
+  private sell(id: string) {
+    const result = this.session.sell(id);
+    // A hover sale must also clear a different old selection: holding E must
+    // never unexpectedly sell that unit once the hovered token disappears.
+    if (result.ok) this.selectedId = null;
+    this.command(result, '出售成功 · 金币已到账');
   }
 
   private button(name: string, x: number, y: number, width: number, height: number, text: string, onClick: () => void, size = 17) {
@@ -253,7 +291,7 @@ export class BoardScene extends Phaser.Scene {
   private syncSelection() {
     const selected = this.state.units.find(unit => unit.id === this.selectedId && unit.team === 'player');
     if (!selected || this.session.phase !== 'preparation') this.selectedId = null;
-    this.selectionLabel.setText(this.selectedId && selected ? `已选择：${getDefinition(selected).name}` : '点击我方单位以出售');
+    this.selectionLabel.setText(this.selectedId && selected ? `已选择：${getDefinition(selected).name}` : '悬停按 E / 点击选择');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
     for (const unit of this.state.units) this.discs.get(unit.id)?.setStrokeStyle(3,
       unit.id === this.selectedId ? 0xffffff : unit.team === 'enemy' ? 0xf08080 : 0x0b151f);

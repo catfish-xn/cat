@@ -1,6 +1,6 @@
 # M2 validation record
 
-Validated on 2026-10-04 (Asia/Taipei). Baseline: latest fetched main `abd9245c01a8bbdd5b26724e6ab156fd2a89dfe3`, including merged PR #1 and PR #2. Baseline 59 tests/build and the original two-battle Chromium script passed before implementation. `M1_PLAN.md`, `M2_PLAN.md`, and `M2_GOAL.txt` retain their planning-stage contents; the subsequent full-M2 Goal authorized implementation.
+Validated on 2026-10-04 (Asia/Taipei). Baseline: latest fetched main `abd9245c01a8bbdd5b26724e6ab156fd2a89dfe3`, including merged PR #1 and PR #2. Baseline 59 tests/build and the original two-battle Chromium script passed before implementation. The original planning text remains; the subsequent full-M2 Goal authorized implementation, and M2_PLAN section13 adds the requested desktop interaction acceptance without changing scope.
 
 ## Implemented behavior
 
@@ -21,13 +21,13 @@ The reviewer checked the frozen API, failure atomicity, settlement, replay tests
 | Tests | Count | Evidence |
 | --- | ---: | --- |
 | Original M1 board/deployment/layout/combat/start files | 51 | All six files unchanged; geometry, permissions, targeting/BFS, simultaneous damage/death, timeout, snapshot isolation, replay and terminal behavior |
-| MatchSession, replacing old 8-test CombatSession suite | 10 | Original guards/clock/isolation/restart guarantees migrated to Continue, plus economy, five rounds and whole-match debug reset |
+| MatchSession, replacing old 8-test CombatSession suite | 13 | Original guards/clock/isolation/restart guarantees migrated to Continue, plus economy, five rounds, whole-match debug reset and three rapid-command accounting/replay tests |
 | RNG and shop | 33 | Independent uint32 vectors and threshold seeds, fixed catalog, five draws, four-generation sequence, duplicate definitions and identical consecutive shops |
 | Match public contract | 9 | Initialization, reproducibility, invalid seeds and atomic rejection |
 | Match economy | 15 | Buy/sell/reroll boundaries, sufficient-money full bench rejection, first free slot/ID non-reuse, stale shop and combat/settlement guards |
 | Match lifecycle/isolation | 7 | Real win/loss/draw settlement, repeat/stale Continue, all historical frozen snapshots, five rounds and fresh combat |
 | Match integration replay | 3 | Full five-round state/event trace equality, rejected-command insertion invariance, JSON restore at every preparation/combat/settlement step |
-| Total | **128** | **13 suites** |
+| Total | **131** | **13 suites** |
 
 Test code uses complete state identity/deep equality and frozen input, not merely gold comparisons. An independent operation ledger checks every successful transition. The draw fixture shortens maxTicks while still using real stepCombat; browser playthroughs do not inject results or change tick duration.
 
@@ -54,7 +54,7 @@ Local Chromium `151.0.7922.173`, seed42, 960×800:
 
 The main path ends at **round6 preparation, gold31, five unique result records, generation7**. Independent BigInt arithmetic checks each shop and RNG advancement. Further checks after this uninterrupted path cover 390×844 viewport/touch deployment and reroll (gold31→29), Debug New Match, exact insufficient-money rejection, and isolated startup fixtures for missing-enemy/missing-both UI messages. Fixtures reload only after the five-round path is complete and are not used to satisfy its success conditions.
 
-Production preview separately verifies actual built-bundle startup, HUD, five slots and purchase rendering. Both pageerror and console.error must be empty. Traces, screenshots and JSON including source SHA, dirty flag, operations, per-round ledger and failure evidence are saved even on failure.
+Production preview separately verifies actual built-bundle startup, HUD, five slots, purchase rendering and D/E shortcuts. Both pageerror and console.error must be empty. Traces, screenshots and JSON including source SHA, dirty flag, operations, per-round ledger and failure evidence are saved even on failure.
 
 Initial verification uncovered a missing favicon request in preview and a test context that had not enabled touch capability. Added a local empty data favicon to remove the404; enabled `hasTouch` before creating the browser context. Final independent evidence review also caught a purchased unit landing in row5 when dragged to row4: Phaser's threshold-delayed drag offset included the initial pointer movement, and release used the token's previous position. Preview and release now both use the actual camera-transformed pointer position; every successful browser deployment asserts the exact requested hex. The corrected first battle ends at tick126 (the earlier incorrect-position run ended at131). No console error is filtered out. Earlier partial passes are superseded by the final exact-placement run.
 
@@ -69,7 +69,19 @@ npm run test:browser
 npm run test:preview
 ```
 
-For a system Chromium, set `CHROMIUM_PATH=/usr/bin/chromium`. Evidence defaults to `artifacts/m2-browser` and `artifacts/m2-preview` (gitignored); `M2_EVIDENCE_DIR` overrides it. The legacy `verify-m1-browser.cjs` entrypoint forwards to this expanded regression suite. Final clean-commit evidence is at `/tmp/cat-m2-browser-final` and `/tmp/cat-m2-preview-final`; those JSON records identify the exact tested SHA. Earlier intermediate evidence is superseded.
+For a system Chromium, set `CHROMIUM_PATH=/usr/bin/chromium`. Evidence defaults to `artifacts/m2-browser` and `artifacts/m2-preview` (gitignored); `M2_EVIDENCE_DIR` overrides it. The legacy `verify-m1-browser.cjs` entrypoint forwards to this expanded regression suite. Desktop-extension clean-commit evidence is at `/tmp/cat-m2-desktop-final` and `/tmp/cat-m2-desktop-preview-final`; those JSON records identify the exact tested SHA and supersede the earlier M2-only and dirty intermediate runs.
+
+## Desktop high-frequency acceptance (M2_PLAN section13)
+
+The coordinator appended the acceptance section and owns BoardScene/browser integration. Agent A added only three MatchSession tests; the independent reviewer remained read-only. No simulation API, prices, RNG algorithm or excluded feature changed.
+
+D/E use native keydown so each OS repeat is processed in DOM event order alongside pointer input, without Phaser's frame-queued keyboard repeat filtering. Existing synchronous MatchSession commands own all changes. There is no timer, debounce or animation completion gate. Modifier/composition/editable input is ignored; shutdown removes the listener. E checks current token geometry, honors a dragged token and the display order of overlapping hit areas, rejects enemy hover, then uses an explicit selection only on empty space. Successful sales clear any previous selection and drag so repeated E or a late mouse release cannot sell/deploy the deleted instance or an unrelated old selection.
+
+`scripts/verify-m2-desktop.cjs` runs inside the main Chromium suite after five rounds and touch checks, using the same naturally earned gold29. Three uninterrupted chains `D → buy → deploy → E → D → buy` cost8 each: **29 → 21 → 13 → 5**. There is no reset, injected gold, synthetic DOM input or artificial delay between operations in those chains. Every step compares the full state against a separate ledger with BigInt RNG, checks first-free bench placement/ID allocation, exact board positions, token count/visibility, and visible gold/shop. A keyboard observer records trusted events and repeat flags, checking that successful D/E already committed gold/RNG/shop during that same event dispatch.
+
+Additional real-input checks cover hover over another selected unit, enemy hover with an old selection, empty-space selection fallback, repeated E, overlapping neighbor hit areas, E and D during a drag followed by release, Ctrl/Meta/Alt shortcuts, ignored F, editable input, full bench with enough gold, purchased slots and insufficient funds. Separate post-match reset fixtures send eight keydowns without keyup and eight rapid independent D presses: in each sequence the first five refresh exactly once, and the last three preserve the entire state. The main five-battle path also rejects D/E in combat and settlement. The JSON `desktop` section preserves every checked state and real keyboard event; screenshot/trace evidence accompanies it.
+
+Review caught a hover-order mismatch at overlapping rectangular token hit areas: clicking selected the last-drawn token while E searched older instances first. The handler now searches reverse display order, and a real overlapping-area click followed by E asserts that the same new instance is sold. The final exact-SHA browser evidence and CI must include this regression; a pass from before that correction is insufficient.
 
 ## GitHub CI and release gate
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';
 import { type CombatEvent } from '../src/simulation/combat';
-import { createMatch, deployMatchUnit, type MatchState } from '../src/simulation/match';
+import { createMatch, deployMatchUnit, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 
 function preparation(): MatchState {
   return deployMatchUnit(createMatch(), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
@@ -167,5 +167,129 @@ describe('match session commands and fixed clock (migrated M1 lifecycle guarante
     session.start();
     expect(session.advance(1)).toEqual([]);
     expect(session.combat?.tick).toBe(0);
+  });
+});
+
+describe('rapid preparation commands without frame or animation waits', () => {
+  // Independent exact-integer oracle: no calls into production RNG/shop helpers,
+  // no floating-point mapping, and no prices read back from simulation rules.
+  function referenceShop(initialState: number) {
+    let state = BigInt(initialState);
+    const catalog = ['sentinel', 'ranger', 'mystic'];
+    const slots = Array.from({ length: 5 }, () => {
+      state = (state * 1664525n + 1013904223n) % 4294967296n;
+      return { status: 'available', definitionId: catalog[Number(state * 3n / 4294967296n)] };
+    });
+    return { rngState: Number(state), slots };
+  }
+
+  function runBurst(seed: number) {
+    // Enough gold for six cycles; deploy the five starting units to leave the
+    // bench available for the six retained purchases. This is a test fixture.
+    let initial: MatchState = { ...createMatch(seed), gold: 200 };
+    for (let col = 0; col < 5; col++) {
+      initial = deployMatchUnit(initial, `unit-${col + 1}`, { kind: 'board', cell: { col, row: 7 } }).state;
+    }
+    const original = structuredClone(initial);
+    const session = new MatchSession(initial);
+    const trace: MatchCommandResult[] = [];
+    let gold = 200;
+    let reference = referenceShop(seed);
+    let generation = 1;
+    expect(session.state.rngState).toBe(reference.rngState);
+    expect(session.state.shop).toEqual({ generation, slots: reference.slots });
+
+    function accept(command: () => MatchCommandResult, goldChange: number, refresh = false) {
+      const result = command();
+      expect(result.ok).toBe(true);
+      expect(result.state).toBe(session.state);
+      gold += goldChange;
+      if (refresh) {
+        reference = referenceShop(reference.rngState);
+        generation++;
+        expect(session.state.shop).toEqual({ generation, slots: reference.slots });
+      }
+      expect(session.state.gold).toBe(gold);
+      expect(session.state.rngState).toBe(reference.rngState);
+      expect(session.state.shop.generation).toBe(generation);
+      expect(session.phase).toBe('preparation');
+      expect(session.combat).toBeNull();
+      expect(session.state.round).toBe(1);
+      expect(session.state.roundResults).toEqual([]);
+      trace.push(structuredClone(result));
+    }
+
+    for (let cycle = 0; cycle < 6; cycle++) {
+      const soldId = `unit-${6 + cycle * 2}`;
+      const keptId = `unit-${7 + cycle * 2}`;
+      accept(() => session.reroll(), -2, true); // D
+      accept(() => session.buy(0, generation), -3);
+      expect(session.preparation.units.find(unit => unit.id === soldId)?.location).toEqual({ kind: 'bench', slot: cycle });
+      expect(session.state.shop.slots[0]).toEqual({ status: 'purchased' });
+      accept(() => session.deploy(soldId, { kind: 'board', cell: { col: cycle, row: 4 } }), 0);
+      accept(() => session.sell(soldId), 2);
+      expect(session.preparation.units.some(unit => unit.id === soldId)).toBe(false);
+
+      const afterSale = session.state;
+      const saleSnapshot = structuredClone(afterSale);
+      for (let duplicate = 0; duplicate < 3; duplicate++) {
+        const result = session.sell(soldId);
+        expect(result).toEqual({ ok: false, reason: 'unknown-unit', state: saleSnapshot });
+        expect(result.state).toBe(afterSale);
+        expect(session.state).toBe(afterSale);
+        trace.push(structuredClone(result));
+      }
+
+      accept(() => session.reroll(), -2, true); // D again, immediately after sell
+      accept(() => session.buy(4, generation), -3);
+      expect(session.preparation.units.find(unit => unit.id === keptId)?.location).toEqual({ kind: 'bench', slot: cycle });
+      expect(session.state.shop.slots[4]).toEqual({ status: 'purchased' });
+      expect(session.state.nextUnitSerial).toBe(8 + cycle * 2);
+    }
+
+    expect(initial).toEqual(original);
+    return { state: session.state, trace };
+  }
+
+  it('commits six immediate reroll/buy/deploy/sell/reroll/buy cycles with exact accounting', () => {
+    const { state } = runBurst(42);
+    expect(state.gold).toBe(152); // 200 - 6 * (2 + 3 - 2 + 2 + 3)
+    expect(state.shop.generation).toBe(13);
+    expect(state.nextUnitSerial).toBe(18);
+    expect(state.preparation.units.filter(unit => unit.team === 'player')).toHaveLength(11);
+    expect(state.preparation.units.filter(unit => unit.location.kind === 'bench').map(unit => unit.id))
+      .toEqual(['unit-7', 'unit-9', 'unit-11', 'unit-13', 'unit-15', 'unit-17']);
+  });
+
+  it('rejects repeated immediate rerolls after funds run out without advancing RNG or any state', () => {
+    const initial: MatchState = { ...createMatch(0), gold: 11 };
+    const original = structuredClone(initial);
+    const session = new MatchSession(initial);
+    let reference = referenceShop(0);
+    for (let rerolls = 1; rerolls <= 5; rerolls++) {
+      expect(session.reroll().ok).toBe(true);
+      reference = referenceShop(reference.rngState);
+      expect(session.state.gold).toBe(11 - rerolls * 2);
+      expect(session.state.rngState).toBe(reference.rngState);
+      expect(session.state.shop).toEqual({ generation: rerolls + 1, slots: reference.slots });
+    }
+    const exhausted = session.state;
+    const snapshot = structuredClone(exhausted);
+    for (let repeat = 0; repeat < 30; repeat++) {
+      const result = session.reroll();
+      expect(result).toEqual({ ok: false, reason: 'insufficient-gold', state: snapshot });
+      expect(result.state).toBe(exhausted);
+      expect(session.state).toBe(exhausted);
+    }
+    expect(session.state.gold).toBe(1);
+    expect(initial).toEqual(original);
+  });
+
+  it('replays every accepted and rejected rapid command to the same complete state', () => {
+    const first = runBurst(42);
+    runBurst(0); // An unrelated session must not advance another match's RNG.
+    const replay = runBurst(42);
+    expect(replay.trace).toEqual(first.trace);
+    expect(replay.state).toEqual(first.state);
   });
 });
