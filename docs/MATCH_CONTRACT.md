@@ -1,0 +1,15 @@
+# M2 Match contract v1
+
+Public entrypoint: `src/simulation/match.ts`; shared readonly discriminated types: `match-types.ts`; prices/catalog: `match-rules.ts`. Main coordinator owns these files. Shop/RNG and rendering agents must use these signatures.
+
+- `createMatch(seed = 42): MatchState`; invalid uint32 seed throws RangeError, zero is valid. Separate initial GameState copy. Round1, gold10, serial6, generation1.
+- Commands `deployMatchUnit(state,id,target)`, `buyUnit(state,slot,expectedGeneration)`, `sellUnit(state,id)`, `rerollShop(state)`, `startMatchCombat(state)`, `nextRound(state,expectedRound)` return MatchCommandResult. Every rejection returns the identical input state, no partial writes/RNG/ID advancement. `matchStartFailure(state)` is read-only. UI cannot supply prices/results/rewards.
+- `stepMatch(state): MatchStep` advances one existing 50ms combat tick. Outside combat it returns identical state and no events. The terminal transition atomically appends one RoundResult, grants5 and enters settlement. No claim or settle UI command. Continue grants0, increments round, discards combat, generates five slots, preserves preparation.
+- Combat and settlement reject preparation commands. Continue rejects stale round and repeat calls. Buy rejects stale generation, invalid/purchased slot, insufficient gold, full bench. Buy3, sell2, reroll2, base income5 for every result. Successful buy uses first free bench slot and monotonically assigns unit-N. No ID reuse after sell.
+- RNG `nextRandom(state): {word,state}` is lcg32-v1, `(Math.imul(state,1664525)+1013904223)>>>0`; `validateSeed(seed): void`. `generateShop(rngState,generation): {shop,rngState}` generates 5 slots using fixed sentinel/ranger/mystic catalog and `floor(word/2**32*3)`. Exactly five words per generation. Only initial shop, successful reroll and Continue advance RNG.
+- Shop slots are `{status:'available',definitionId}` or `{status:'purchased'}`. Purchased slots stay in place, not replenished. Generation increments on refresh only. Duplicate definitions/identical consecutive shops are valid.
+- Preparation has no combat fields. Combat remains the existing isolated snapshot API. No back-copy of moved/dead combat units. Next Start rebuilds full HP/alive/zero cooldown/target=null/tick0; bench excluded. Fixed enemies remain in unmodified preparation every round.
+- Rendering session holds current MatchState and delta accumulator only, delegates all rules. Repeated render/events cannot settle. Finish/Continue/debug reset clear accumulator. Normal flow is Continue; optional debug New Match discards the entire match through createMatch(same seed).
+- Match fields are JSON serializable; no RNG, IDs or settlement flags outside MatchState. Replay tests compare all intermediate states and combat events. M1 combat rules remain unchanged.
+
+M2_PLAN.md contains the acceptance matrix, test ledger and ownership plan. This contract supersedes only the M1 rendering-owned lifecycle paragraph; combat mechanics remain governed by COMBAT_CONTRACT.md.

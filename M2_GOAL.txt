@@ -1,0 +1,4 @@
+完成 catfish-xn/cat 的完整 M2：玩家在同一局中通过准备、五槽商店、购买/出售/刷新、布阵、战斗、一次性金币结算和 Continue，连续完成至少5回合并进入第6回合准备阶段，无需刷新网页或手动Reset。
+金币、回合、商店和阵容由纯simulation管理；相同seed、初态及操作得到相同结果；失败操作完全不改状态/RNG，战斗中禁止经济操作，结算不重复，阵容跨轮保留且战斗状态不泄漏。
+Phaser界面清晰可用；unit、integration、deterministic replay、state isolation及M1回归测试、真实Chromium五回合验证、npm build和最终提交的GitHub CI全部通过，并有可复核证据。
+遵守M2_PLAN.md的范围，不加入排除系统；独立review无未解决阻塞后才算完成。
