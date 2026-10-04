@@ -4,7 +4,7 @@ import { isDeploymentCell } from '../simulation/board';
 import type { UnitLocation } from '../simulation/units';
 import { HexLayout, type Point } from './hex-layout';
 import { CombatSession } from './combat-session';
-import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
+import { COMBAT_TICK_MS, type CombatEvent, type CombatStartFailure } from '../simulation/combat';
 
 export class BoardScene extends Phaser.Scene {
   private session = new CombatSession();
@@ -18,6 +18,7 @@ export class BoardScene extends Phaser.Scene {
   private resetButton!: Phaser.GameObjects.Text;
   private phaseLabel!: Phaser.GameObjects.Text;
   private resultLabel!: Phaser.GameObjects.Text;
+  private startHint!: Phaser.GameObjects.Text;
   private timer!: Phaser.GameObjects.Text;
   private layout = new HexLayout(this.state.board);
   private tokens = new Map<string, Phaser.GameObjects.Container>();
@@ -32,6 +33,7 @@ export class BoardScene extends Phaser.Scene {
     this.startButton = this.add.text(728, 210, 'Start Combat', { fontSize: '19px', color: '#10212c', backgroundColor: '#68ddd0', padding: { x: 15, y: 14 } }).setInteractive({ useHandCursor: true });
     this.resetButton = this.add.text(728, 280, 'Reset to\nPreparation', { fontSize: '17px', color: '#edf4f3', backgroundColor: '#304653', padding: { x: 15, y: 12 }, align: 'center' }).setInteractive({ useHandCursor: true });
     this.resultLabel = this.add.text(728, 380, '', { fontSize: '25px', color: '#edf4f3', fontStyle: 'bold' });
+    this.startHint = this.add.text(728, 475, '', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 185 }, lineSpacing: 6 });
     this.timer = this.add.text(728, 430, '', { fontSize: '14px', color: '#9aaeb9' });
     this.startButton.on('pointerdown', () => this.startCombat());
     this.resetButton.on('pointerdown', () => this.resetCombat());
@@ -128,7 +130,9 @@ export class BoardScene extends Phaser.Scene {
       this.discs.get(unit.id)?.setAlpha(1);
       if (token.input) { token.input.enabled = true; this.input.setDraggable(token, true); }
     }
-    this.startButton.setAlpha(1);
+    const failure = this.session.startFailure;
+    this.startButton.setAlpha(failure ? 0.4 : 1);
+    this.startHint.setText(failure && failure !== 'combat-active' ? this.startFailureMessage(failure) : '双方已部署，可以开始');
     this.resetButton.setAlpha(0.4);
     this.phaseLabel.setText('准备阶段 · 拖拽我方单位到下半场空格或备战席。');
     this.resultLabel.setText('');
@@ -150,8 +154,20 @@ export class BoardScene extends Phaser.Scene {
     for (const pointer of this.input.manager.pointers) this.input.setDragState(pointer, 0);
     this.overlay.clear();
   }
+  private startFailureMessage(reason: CombatStartFailure): string {
+    const messages: Record<CombatStartFailure, string> = {
+      'missing-player': '无法开始：请先将至少 1 个我方单位部署到棋盘',
+      'missing-enemy': '无法开始：棋盘上至少需要 1 个敌方单位',
+      'missing-both': '无法开始：棋盘上双方都至少需要 1 个单位',
+    };
+    return messages[reason];
+  }
   private startCombat() {
-    if (!this.session.start()) return;
+    if (!this.session.start()) {
+      const reason = this.session.startFailure;
+      if (reason && reason !== 'combat-active') this.status.setText(this.startFailureMessage(reason));
+      return;
+    }
     this.clearCombatEffects();
     this.sync();
     for (const token of this.tokens.values()) {
@@ -170,6 +186,7 @@ export class BoardScene extends Phaser.Scene {
   private syncCombat() {
     const combat = this.session.combat;
     if (!combat) return;
+    this.startHint.setText('');
     for (const unit of this.state.units) {
       if (unit.location.kind === 'bench') this.tokens.get(unit.id)?.setAlpha(0.35);
     }

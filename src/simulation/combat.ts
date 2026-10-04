@@ -4,6 +4,18 @@ import { compareIds, eliminationResult, MAX_COMBAT_TICKS, type CombatState, type
 import { advanceCombatTick } from './combat-tick';
 export * from './combat-types';
 
+export type CombatStartFailure = 'missing-player' | 'missing-enemy' | 'missing-both';
+/** Preparation gate only; terminal-state semantics of createCombat stay unchanged. */
+export function validateCombatStart(preparation: GameState): CombatStartFailure | undefined {
+  const deployed = preparation.units.filter(unit => unit.location.kind === 'board');
+  const player = deployed.some(unit => unit.team === 'player');
+  const enemy = deployed.some(unit => unit.team === 'enemy');
+  if (!player && !enemy) return 'missing-both';
+  if (!player) return 'missing-player';
+  if (!enemy) return 'missing-enemy';
+  return undefined;
+}
+
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
 export function createCombat(preparationState: GameState): CombatState {
   const units: CombatUnit[] = preparationState.units.flatMap(unit => {

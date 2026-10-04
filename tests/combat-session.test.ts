@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CombatSession } from '../src/rendering/combat-session';
 import { createCombat, stepCombat, type CombatEvent, type CombatState, type CombatStep } from '../src/simulation/combat';
 import { createGame, deployUnit } from '../src/simulation/game';
@@ -89,13 +89,35 @@ describe('combat session lifecycle and fixed clock', () => {
     expect(run([60_000]).state?.status).toBe('finished');
   });
 
-  it('reads a tick-zero result from createCombat and can reset immediately', () => {
-    const session = new CombatSession(createGame());
-    session.start();
-    expect(session.phase).toBe('result');
-    expect(session.combat?.result).toBe('enemyWin');
+  it.each(['missing-player', 'missing-enemy', 'missing-both'] as const)('rejects %s without creating combat or a reset snapshot', reason => {
+    const prep = preparation();
+    const units = reason === 'missing-player' ? createGame().units
+      : reason === 'missing-enemy' ? prep.units.filter(unit => unit.team === 'player') : [];
+    const create = vi.fn(createCombat);
+    const session = new CombatSession({ ...prep, units }, { createCombat: create, stepCombat });
+    const before = structuredClone(session.preparation);
+    expect(session.startFailure).toBe(reason);
+    expect(session.start()).toBe(false);
+    expect(session.start()).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+    expect(session.phase).toBe('preparation');
+    expect(session.combat).toBeNull();
     expect(session.advance(1000)).toEqual([]);
+    expect(session.reset()).toBe(false);
+    expect(session.preparation).toEqual(before);
+  });
+
+  it('rechecks eligibility after deployment and after returning the last player to bench', () => {
+    const session = new CombatSession(createGame());
+    expect(session.start()).toBe(false);
+    session.deploy('unit-1', { kind: 'board', cell: { col: 2, row: 7 } });
+    expect(session.startFailure).toBeUndefined();
+    expect(session.start()).toBe(true);
+    expect(session.phase).toBe('combat');
     session.reset();
+    session.deploy('unit-1', { kind: 'bench', slot: 0 });
+    expect(session.startFailure).toBe('missing-player');
+    expect(session.start()).toBe(false);
     expect(session.phase).toBe('preparation');
   });
 });

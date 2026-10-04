@@ -62,3 +62,11 @@ The existing Vite chunk-size warning remains; no unrelated bundling or dependenc
 ## Release evidence
 
 GitHub CI must pass on the final PR HEAD before the coordinator reports M1 complete. The PR and final response carry the exact final commit and CI run link; no old baseline/branch check is used as final CI proof. No automatic merge is authorized.
+
+## PR #2 pre-merge Start eligibility correction
+
+The preparation Start command now calls pure simulation `validateCombatStart`: at least one board player and one board enemy are required. Bench units do not count. Rejected commands leave preparation, combat, reset snapshot and clock unchanged; the UI displays a persistent reason and repeats it on a rejected click. Direct `createCombat` empty/single-sided terminal semantics and all other M1 rules are unchanged.
+
+The complete updated suite has **59 passing tests** (seven test files), and build passes. Seven validator cases cover empty board, both on bench, each missing side, bench-only presence and a valid 1v1 board. Session tests cover rejection without calling createCombat, deployment enabling Start and returning the last player to bench disabling it again. Independent review also ran all 59 tests and build with no blocker.
+
+The browser script now additionally checks initial missing-player rejection, repeated invalid Start, and the last player returning to bench using real clicks/drags. The existing two-match flow remains. Missing-both/missing-enemy UI reasons are tested in a separate startup fixture that omits enemies from the initial data (the normal UI cannot remove enemies); live game state is not edited. This fixture is isolated from the normal two-round verification. Final browser evidence and CI are linked in the updated PR.

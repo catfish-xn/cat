@@ -13,7 +13,7 @@ fs.mkdirSync(output, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 960, height: 800 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  const report = { sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), browser: await browser.version(), rounds: [] };
+  const report = { sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), browser: await browser.version(), startValidation: [], rounds: [] };
   async function read() {
     return page.evaluate(async () => {
       const url = performance.getEntriesByType('resource').map(entry => entry.name).find(name => name.includes('/phaser.js?'));
@@ -51,6 +51,21 @@ fs.mkdirSync(output, { recursive: true });
   try {
     await page.goto(process.env.M1_URL || 'http://127.0.0.1:5173');
     await until(state => state.phase === 'preparation');
+    const emptyPreparation = (await read()).preparation;
+    for (let attempt = 0; attempt < 2; attempt++) await clickText('Start Combat');
+    const rejected = await read();
+    assert.equal(rejected.phase, 'preparation'); assert.equal(rejected.combat, null);
+    assert.deepEqual(rejected.preparation, emptyPreparation);
+    assert(rejected.texts.some(text => text.includes('无法开始：请先将至少 1 个我方单位部署到棋盘')));
+    await page.screenshot({ path: path.join(output, 'missing-player.png') });
+    // Eligibility must also update after returning the last deployed player to bench.
+    await drag({ x: 242, y: 660 }, hex(1, 4));
+    assert((await read()).texts.some(text => text === '双方已部署，可以开始'));
+    await drag(hex(1, 4), { x: 242, y: 660 });
+    await clickText('Start Combat');
+    assert.equal((await read()).phase, 'preparation');
+    assert.equal((await read()).combat, null);
+    report.startValidation.push('missing player rejects repeated Start', 'last player returned to bench rejects Start');
     // Existing restrictions: enemy area and occupied cells reject a real drag.
     await drag({ x: 242, y: 660 }, hex(0, 0));
     assert.equal((await read()).preparation.units.find(unit => unit.id === 'unit-1').location.kind, 'bench');
@@ -122,6 +137,29 @@ fs.mkdirSync(output, { recursive: true });
       }
       console.log(JSON.stringify(report.rounds.at(-1)));
     }
+    // Separate startup fixture for absent-enemy UI: normal UI never removes enemies.
+    // Transform only initial preparation data at module load; no live game-state writes.
+    await page.route('**/src/simulation/game.ts', async route => {
+      const response = await route.fetch();
+      const source = await response.text();
+      const modified = source.replace(/units: \[\.\.\.playerUnits, \.\.\.enemyUnits\]/, 'units: [...playerUnits]');
+      assert.notEqual(modified, source, 'Missing-enemy fixture must replace initial unit list');
+      await route.fulfill({ response, body: modified });
+    });
+    await page.reload();
+    await until(state => state.phase === 'preparation');
+    await clickText('Start Combat');
+    const missingBoth = await read();
+    assert.equal(missingBoth.phase, 'preparation'); assert.equal(missingBoth.combat, null);
+    assert(missingBoth.texts.some(text => text.includes('无法开始：棋盘上双方都至少需要 1 个单位')));
+    await page.screenshot({ path: path.join(output, 'missing-both-fixture.png') });
+    await drag({ x: 242, y: 660 }, hex(1, 4));
+    await clickText('Start Combat');
+    const missingEnemy = await read();
+    assert.equal(missingEnemy.phase, 'preparation'); assert.equal(missingEnemy.combat, null);
+    assert(missingEnemy.texts.some(text => text.includes('无法开始：棋盘上至少需要 1 个敌方单位')));
+    await page.screenshot({ path: path.join(output, 'missing-enemy-fixture.png') });
+    report.startValidation.push('both sides absent rejects Start (startup fixture)', 'enemy absent rejects Start (startup fixture)');
     assert.deepEqual(errors, []);
     report.errors = errors; report.passed = true;
     fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2));

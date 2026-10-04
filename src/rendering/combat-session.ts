@@ -1,4 +1,4 @@
-import { COMBAT_TICK_MS, createCombat, stepCombat, type CombatEvent, type CombatState } from '../simulation/combat';
+import { COMBAT_TICK_MS, createCombat, stepCombat, validateCombatStart, type CombatStartFailure, type CombatEvent, type CombatState } from '../simulation/combat';
 import { createGame, deployUnit, type DeploymentFailure, type GameState } from '../simulation/game';
 import type { UnitLocation } from '../simulation/units';
 
@@ -26,8 +26,11 @@ export class CombatSession {
     this.preparationState = result.state;
     return undefined;
   }
+  get startFailure(): CombatStartFailure | 'combat-active' | undefined {
+    return this.phase !== 'preparation' ? 'combat-active' : validateCombatStart(this.preparationState);
+  }
   start(): boolean {
-    if (this.phase !== 'preparation') return false;
+    if (this.startFailure) return false;
     this.snapshot = structuredClone(this.preparationState);
     this.combatState = this.api.createCombat(this.snapshot);
     this.accumulator = 0;
