@@ -90,11 +90,11 @@ function assertControlsFit(snapshot) {
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true,
       args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
     report.browser = await browser.version();
-    const context = await browser.newContext({ viewport: { width: 960, height: 800 } });
+    const context = await browser.newContext({ viewport: { width: 960, height: 800 }, hasTouch: true });
     await context.tracing.start({ screenshots: true, snapshots: true });
     page = await context.newPage();
     page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
-    page.on('console', message => { if (message.type() === 'error') errors.push(`console.error: ${message.text()}`); });
+    page.on('console', message => { if (message.type() === 'error') errors.push(`console.error: ${message.text()} (${message.location().url})`); });
     await page.goto(url);
     const initial = await until(snapshot => snapshot.state.phase === 'preparation');
     assert.equal(initial.state.round, 1); assert.equal(initial.state.gold, 10);
@@ -240,6 +240,38 @@ function assertControlsFit(snapshot) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await delay(150);
     assert.equal((await read()).state.gold, 29);
     report.touchSimulation = true; await capture('mobile-touch-deployed');
+
+    // Separate debug/reset and invalid-income checks after the uninterrupted five-round path.
+    await page.setViewportSize({ width: 960, height: 800 }); await delay(250);
+    await click('debug-new-match');
+    assert.deepEqual((await read()).state, initial.state);
+    for (let i = 0; i < 5; i++) await click('reroll');
+    const poor = (await read()).state;
+    assert.equal(poor.gold, 0);
+    await click('reroll'); assert.deepEqual((await read()).state, poor);
+    assert((await read()).texts.includes('金币不足'));
+    await click('buy-0'); assert.deepEqual((await read()).state, poor);
+    await capture('insufficient-gold');
+    await click('debug-new-match'); assert.deepEqual((await read()).state, initial.state);
+    report.debugNewMatch = true;
+
+    // M1 missing-enemy UI regression: isolated startup fixture, never edits the five-round match.
+    await page.route('**/src/simulation/game.ts', async route => {
+      const response = await route.fetch(), source = await response.text();
+      const body = source.replace(/units: \[\.\.\.playerUnits, \.\.\.enemyUnits\]/, 'units: [...playerUnits]');
+      assert.notEqual(body, source, 'startup fixture must omit enemies');
+      await route.fulfill({ response, body });
+    });
+    await page.reload(); await until(snapshot => snapshot.state.phase === 'preparation');
+    await click('start-combat');
+    assert.equal((await read()).state.combat, null);
+    assert((await read()).texts.some(text => text.includes('无法开始：棋盘上双方都至少需要 1 个单位')));
+    await capture('missing-both-fixture');
+    await deploy('unit-1', 1, 4); await click('start-combat');
+    assert.equal((await read()).state.combat, null);
+    assert((await read()).texts.some(text => text.includes('无法开始：棋盘上至少需要 1 个敌方单位')));
+    await capture('missing-enemy-fixture');
+    report.missingEnemyFixture = true;
     assert.deepEqual(errors, []);
     await context.tracing.stop({ path: path.join(output, 'trace.zip') });
     report.passed = true;
