@@ -1,91 +1,141 @@
 import { describe, expect, it } from 'vitest';
 import { createCombat, type CombatResult } from '../src/simulation/combat';
-import { buyUnit, createMatch, deployMatchUnit, nextRound, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { buyUnit, buyXp, createMatch, deployMatchUnit, nextRound, rerollShop, sellUnit, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { accepted, battle, deployed, finish, freeze } from './match-helpers';
+import { expectedRound, expectedShop, progression } from './fixtures/m3/oracle.cjs';
 
-describe('round lifecycle and settlement', () => {
-  it.each(['playerWin', 'enemyWin', 'draw'] as const)('settles real combat %s exactly once and permits Continue', result => {
-    let state: MatchState;
-    if (result === 'playerWin') state = battle();
-    else state = accepted(startMatchCombat(accepted(deployMatchUnit(createMatch(), 'unit-1', { kind: 'board', cell: { col: 3, row: 7 } }))));
+const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
+function weak(): MatchState { return accepted(deployMatchUnit(createMatch(), 'unit-2', { kind: 'board', cell: { col: 3, row: 7 } })); }
+
+describe('M3 round lifecycle, XP, HP and unique settlement', () => {
+  it.each(['playerWin', 'enemyWin', 'draw'] as const)('settles real %s exactly once and Continue refreshes enemies/shop only', result => {
+    let state = result === 'playerWin' ? battle() : accepted(startMatchCombat(weak()));
     if (result === 'draw' && state.phase === 'combat') state = { ...state, combat: { ...state.combat, maxTicks: 1 } };
-    const gold = state.gold, rng = state.rngState;
-    const settled = finish(freeze(state));
+    const before = structuredClone(state), settled = finish(freeze(state));
     expect(settled.combat?.result).toBe(result);
-    expect(settled.gold).toBe(gold + 5);
-    expect(settled.rngState).toBe(rng);
-    expect(settled.roundResults).toEqual([{ round: 1, result, combatTicks: settled.combat!.tick, income: 5, goldBefore: gold, goldAfter: gold + 5 }]);
-    for (let i = 0; i < 20; i++) expect(stepMatch(settled)).toEqual({ state: settled, events: [] });
-    expect(stepMatch(settled).state).toBe(settled);
+    const record = expectedRound(before, settled.combat!);
+    expect(settled.roundResults).toEqual([record]);
+    expect(settled).toMatchObject({ gold: record.goldAfter, level: record.levelAfter, xp: record.xpAfter, playerHp: record.hpAfter });
+    expect(settled.rngState).toBe(before.rngState);
+    for (let i = 0; i < 20; i++) {
+      expect(stepMatch(settled)).toEqual({ state: settled, events: [] });
+      expect(stepMatch(settled).state).toBe(settled);
+      expect(startMatchCombat(settled)).toEqual({ ok: false, state: settled, reason: 'wrong-phase' });
+    }
     const next = accepted(nextRound(freeze(settled), 1));
-    expect(next).toMatchObject({ phase: 'preparation', round: 2, combat: null, gold: gold + 5 });
-    expect(next.roundResults).toBe(settled.roundResults);
-    expect(next.shop.generation).toBe(2);
-    expect(next.shop.slots.every(slot => slot.status === 'available')).toBe(true);
+    expect(next).toMatchObject({ phase: 'preparation', round: 2, combat: null, gold: settled.gold, level: settled.level, xp: settled.xp, playerHp: settled.playerHp });
+    expect(next.roundResults).toBe(settled.roundResults); expect(players(next)).toEqual(players(before));
+    expect(next.preparation.units.filter(u => u.team === 'enemy').map(u => u.id)).toEqual(['enemy-r2-1', 'enemy-r2-2']);
+    expect({ shop: next.shop, rngState: next.rngState }).toEqual(expectedShop(settled.rngState, 2, settled.level));
     expect(nextRound(next, 1)).toEqual({ ok: false, state: next, reason: 'wrong-phase' });
   });
-
-  it('rejects stale Continue in later settlement and never double-refreshes', () => {
-    const first = finish(battle());
-    const secondPrep = accepted(nextRound(first, 1));
-    const second = finish(accepted(startMatchCombat(secondPrep)));
+  it('natural XP crosses a level exactly once, and Continue uses the new level odds', () => {
+    const prep = accepted(buyXp(createMatch()));
+    const settled = accepted(startMatchCombat(prep)); // Empty board is a real tick-zero defeat.
+    expect(settled).toMatchObject({ phase: 'settlement', level: 4, xp: 0, gold: 11, playerHp: 94 });
+    expect(settled.roundResults[0]).toMatchObject({ xpAwarded: 2, levelBefore: 3, levelAfter: 4, xpBefore: 4, xpAfter: 0 });
+    const next = accepted(nextRound(settled, 1));
+    expect(next.level).toBe(4); expect(next.xp).toBe(0);
+    expect({ shop: next.shop, rngState: next.rngState }).toEqual(expectedShop(settled.rngState, 2, 4));
+  });
+  it('caps natural XP at max level, recording actual applied experience', () => {
+    for (const [level, xp, applied] of [[8, 79, 1], [9, 0, 0]]) {
+      const settled = accepted(startMatchCombat({ ...createMatch(), level, xp }));
+      expect(settled).toMatchObject({ level: 9, xp: 0 });
+      expect(settled.roundResults[0].xpAwarded).toBe(applied);
+    }
+  });
+  it('rejects stale or unsettled Continue without refreshing RNG', () => {
+    const first = finish(battle()), second = finish(accepted(startMatchCombat(accepted(nextRound(first, 1)))));
     const before = structuredClone(second);
     expect(nextRound(freeze(second), 1)).toEqual({ ok: false, state: second, reason: 'stale-round' });
     expect(second).toEqual(before);
+    const malformed = { ...second, roundResults: [] };
+    expect(nextRound(malformed, 2)).toEqual({ ok: false, state: malformed, reason: 'unsettled-round' });
     expect(accepted(nextRound(second, 2)).round).toBe(3);
   });
-
-  it('does not settle or consume randomness from preparation ticks or rejected starts', () => {
-    const state = freeze(createMatch());
-    expect(stepMatch(state)).toEqual({ state, events: [] });
-    expect(stepMatch(state).state).toBe(state);
-    expect(startMatchCombat(state).state).toBe(state);
+  it('keeps preparation ticks inert and rejects missing enemies/both while empty player board settles once', () => {
+    const empty = freeze(createMatch());
+    expect(stepMatch(empty)).toEqual({ state: empty, events: [] }); expect(stepMatch(empty).state).toBe(empty);
+    const abandoned = accepted(startMatchCombat(empty));
+    expect(abandoned).toMatchObject({ phase: 'settlement', playerHp: 94, gold: 15 });
+    expect(abandoned.combat).toMatchObject({ tick: 0, result: 'enemyWin' });
     for (const [teams, reason] of [[['player'], 'missing-enemy'], [[], 'missing-both']] as const) {
-      const input = deployed();
-      const fixture = { ...input, preparation: { ...input.preparation, units: input.preparation.units.filter(unit => (teams as readonly string[]).includes(unit.team)) } };
+      const input = deployed(), fixture = { ...input, preparation: { ...input.preparation, units: input.preparation.units.filter(unit => (teams as readonly string[]).includes(unit.team)) } };
       expect(startMatchCombat(fixture)).toEqual({ ok: false, state: fixture, reason });
     }
   });
+  it('enters Game Over directly on lethal loss, grants final income/XP once and clamps actual HP loss', () => {
+    const before = { ...createMatch(), playerHp: 1, xp: 5 }, terminal = accepted(startMatchCombat(freeze(before)));
+    expect(terminal.phase).toBe('gameOver');
+    expect(terminal).toMatchObject({ playerHp: 0, gold: 15, level: 4, xp: 1 });
+    expect(terminal.roundResults).toEqual([expectedRound(before, terminal.combat!)]);
+    expect(terminal.roundResults[0]).toMatchObject({ playerDamage: 6, hpLost: 1, hpAfter: 0 });
+    const commands = [buyXp, rerollShop, startMatchCombat, (s: MatchState) => buyUnit(s, 0, s.shop.generation),
+      (s: MatchState) => sellUnit(s, 'unit-1'), (s: MatchState) => nextRound(s, s.round),
+      (s: MatchState) => deployMatchUnit(s, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } })];
+    for (let i = 0; i < 30; i++) {
+      expect(stepMatch(terminal)).toEqual({ state: terminal, events: [] });
+      for (const command of commands) { expect(command(terminal)).toEqual({ ok: false, state: terminal, reason: 'wrong-phase' }); expect(command(terminal).state).toBe(terminal); }
+    }
+  });
+  it('plays a real nonempty weak roster to Game Over within twenty rounds without injecting HP or results', () => {
+    let state = weak(), nonemptyDefeats = 0;
+    while (state.phase !== 'gameOver' && state.round <= 20) {
+      const before = state, settled = finish(accepted(startMatchCombat(state)));
+      expect(settled.roundResults.at(-1)).toEqual(expectedRound(before, settled.combat!));
+      expect(settled.roundResults).toHaveLength(before.round);
+      if (settled.combat?.result === 'enemyWin') nonemptyDefeats++;
+      state = settled.phase === 'gameOver' ? settled : accepted(nextRound(settled, settled.round));
+    }
+    expect(state.phase).toBe('gameOver'); expect(state.playerHp).toBe(0); expect(state.round).toBeLessThanOrEqual(20);
+    expect(nonemptyDefeats).toBeGreaterThan(0);
+  });
+  it('selling everything and spending every gold still allows bounded defeat/recovery instead of softlock', () => {
+    let state = createMatch();
+    for (const unit of players(state)) state = accepted(sellUnit(state, unit.id));
+    while (state.gold >= 4) state = accepted(buyXp(state));
+    while (state.gold >= 2) state = accepted(rerollShop(state));
+    expect(state.gold).toBeLessThan(2); expect(players(state)).toHaveLength(0);
+    const settled = accepted(startMatchCombat(state));
+    expect(settled.playerHp).toBeLessThan(state.playerHp); expect(settled.gold).toBe(state.gold + 5);
+    const next = accepted(nextRound(settled, settled.round));
+    expect(buyUnit(next, 0, next.shop.generation).ok).toBe(true);
+  });
 });
 
-describe('match/preparation/combat isolation across rounds', () => {
-  it('keeps every frozen historical snapshot and economic field stable before the atomic finish', () => {
+describe('M3 preparation/Combat isolation and changing opponents', () => {
+  it('preserves frozen history and all economic fields until the one terminal transition', () => {
     const prep = freeze(deployed()), original = structuredClone(prep);
     let state = accepted(startMatchCombat(prep));
     const snapshots: { actual: MatchState; copy: MatchState }[] = [];
     while (state.phase === 'combat') {
-      snapshots.push({ actual: freeze(state), copy: structuredClone(state) });
-      state = stepMatch(state).state;
-      expect(state.preparation).toEqual(prep.preparation);
-      expect(state.shop).toBe(prep.shop);
-      expect(state.rngState).toBe(prep.rngState);
-      expect(state.nextUnitSerial).toBe(prep.nextUnitSerial);
-      expect(state.gold).toBe(prep.gold + (state.phase === 'settlement' ? 5 : 0));
+      snapshots.push({ actual: freeze(state), copy: structuredClone(state) }); state = stepMatch(state).state;
+      expect(state.preparation).toEqual(prep.preparation); expect(state.shop).toBe(prep.shop);
+      expect(state.rngState).toBe(prep.rngState); expect(state.nextUnitSerial).toBe(prep.nextUnitSerial);
+      if (state.phase === 'combat') expect([state.gold, state.level, state.xp, state.playerHp]).toEqual([prep.gold, prep.level, prep.xp, prep.playerHp]);
     }
     expect(prep).toEqual(original);
     for (const snapshot of snapshots) expect(snapshot.actual).toEqual(snapshot.copy);
   });
-
-  it('retains purchases and positions, never resurrects sales, and rebuilds fresh combat for five rounds', () => {
-    let state = accepted(buyUnit(deployed(), 0, 1));
-    state = accepted(deployMatchUnit(state, 'unit-6', { kind: 'board', cell: { col: 3, row: 6 } }));
-    state = accepted(sellUnit(state, 'unit-4'));
-    const owned = structuredClone(state.preparation);
-    const results: CombatResult[] = [];
+  it('retains upgraded purchases/positions, never resurrects consumed/sold IDs, and creates fresh combat each round', () => {
+    let state = accepted(buyUnit(createMatch(), 0, 1)); // Real default shop makes sentinel two-star.
+    for (const [id, col] of [['unit-1', 1], ['unit-2', 3], ['unit-3', 5]] as const) state = accepted(deployMatchUnit(state, id, { kind: 'board', cell: { col, row: 4 } }));
+    state = accepted(sellUnit(state, 'unit-5'));
+    const owned = structuredClone(players(state)), results: CombatResult[] = [];
     for (let round = 1; round <= 5; round++) {
-      const started = accepted(startMatchCombat(freeze(state)));
-      expect(started.combat).toEqual(createCombat(owned));
-      expect(started.combat!.units.every(unit => unit.alive && unit.hp === unit.maxHp && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0 && unit.targetId === null)).toBe(true);
-      const settled = finish(started);
-      results.push(settled.combat!.result!);
+      const before = state, started = accepted(startMatchCombat(freeze(state)));
+      expect(started.combat).toEqual(createCombat(before.preparation));
+      expect(started.combat!.units.every(u => u.alive && u.hp === u.maxHp && u.mana === 0 && u.shield === 0 && u.shieldExpiresAtTick === null && u.cooldownTicks === 0 && u.moveCooldownTicks === 0 && u.targetId === null)).toBe(true);
+      const settled = finish(started); results.push(settled.combat!.result!);
+      expect(settled.roundResults.at(-1)).toEqual(expectedRound(before, settled.combat!));
       state = accepted(nextRound(freeze(settled), round));
-      expect(state.preparation).toEqual(owned);
-      expect(state.combat).toBeNull();
-      expect(state.preparation.units.some(unit => unit.id === 'unit-4')).toBe(false);
+      expect(players(state)).toEqual(owned); expect(state.combat).toBeNull();
+      expect(state.preparation.units.some(u => ['unit-4', 'unit-5', 'unit-6'].includes(u.id))).toBe(false);
+      expect(state.preparation.units.filter(u => u.team === 'enemy').every(u => u.id.startsWith(`enemy-r${round + 1}-`))).toBe(true);
     }
-    expect(state.round).toBe(6);
-    expect(state.gold).toBe(10 - 3 + 2 + 5 * 5);
+    expect(state.round).toBe(6); expect(state.gold).toBe(10 - 1 + 1 + 5 * 5);
+    expect([state.level, state.xp]).toEqual([progression(3, 0, 10).level, progression(3, 0, 10).xp]);
     expect(state.roundResults.map(record => record.result)).toEqual(results);
-    expect(state.roundResults.map(record => record.round)).toEqual([1, 2, 3, 4, 5]);
   });
 });

@@ -1,16 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BOARD, getNeighbors, hexDistance } from '../src/simulation/board';
-import { createCombat, stepCombat, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
+import { createCombat, stepCombat, type CombatEvent, type CombatState } from '../src/simulation/combat';
 import { createGame, deployUnit } from '../src/simulation/game';
+import { battle, freeze, unit } from './combat-helpers';
 
-function unit(id: string, team: CombatUnit['team'], col: number, row: number, overrides: Partial<CombatUnit> = {}): CombatUnit {
-  return { id, team, definitionId: 'sentinel', cell: { col, row }, hp: 100, maxHp: 100,
-    attackDamage: 40, attackRange: 1, attackIntervalTicks: 20, cooldownTicks: 0,
-    moveCooldownTicks: 0, alive: true, targetId: null, ...overrides };
-}
-function battle(units: CombatUnit[], overrides: Partial<CombatState> = {}): CombatState {
-  return { board: DEFAULT_BOARD, units, tick: 0, maxTicks: 1200, status: 'running', result: null, ...overrides };
-}
 function run(initial: CombatState) {
   let state = initial;
   const events: CombatEvent[] = [];
@@ -23,10 +16,6 @@ function run(initial: CombatState) {
   }
   expect(state.status).toBe('finished');
   return { state, events };
-}
-function freeze<T>(value: T): T {
-  if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
-  return value;
 }
 
 describe('deterministic combat simulation', () => {
@@ -113,7 +102,7 @@ describe('deterministic combat simulation', () => {
     const outside = battle([shooter, unit('e', 'enemy', 4, 0, { moveCooldownTicks: 100, cooldownTicks: 100 })]);
     expect(stepCombat(outside).events.filter(event => event.type === 'attack')).toEqual([]);
     const moving = stepCombat({ ...outside, units: [{ ...shooter, moveCooldownTicks: 0 }, outside.units[1]] });
-    expect(moving.events.map(event => event.type)).toEqual(['movement', 'attack', 'damage']);
+    expect(moving.events.map(event => event.type)).toEqual(['movement', 'attack', 'damage', 'manaChanged', 'manaChanged']);
   });
 
   it('uses logical attack and movement intervals, with first actions ready immediately', () => {
@@ -134,8 +123,8 @@ describe('deterministic combat simulation', () => {
     expect(result.events).toEqual([
       { type: 'attack', tick: 1, attackerId: 'e', targetId: 'p' },
       { type: 'attack', tick: 1, attackerId: 'p', targetId: 'e' },
-      { type: 'damage', tick: 1, unitId: 'e', amount: 40, hp: 0 },
-      { type: 'damage', tick: 1, unitId: 'p', amount: 40, hp: 0 },
+      { type: 'damage', tick: 1, unitId: 'e', amount: 40, hp: 0, physicalAmount: 40, magicAmount: 0, absorbed: 0, hpDamage: 40, shield: 0 },
+      { type: 'damage', tick: 1, unitId: 'p', amount: 40, hp: 0, physicalAmount: 40, magicAmount: 0, absorbed: 0, hpDamage: 40, shield: 0 },
       { type: 'death', tick: 1, unitId: 'e' },
       { type: 'death', tick: 1, unitId: 'p' },
       { type: 'combatFinished', tick: 1, result: 'draw', reason: 'elimination' },
@@ -148,7 +137,7 @@ describe('deterministic combat simulation', () => {
     const initial = battle([unit('p1', 'player', 0, 0, { attackDamage: 80 }), unit('p2', 'player', 1, 1, { attackDamage: 80 }),
       unit('e', 'enemy', 1, 0, { cooldownTicks: 100 })]);
     expect(stepCombat(initial).events.filter(event => event.type === 'damage')).toEqual([
-      { type: 'damage', tick: 1, unitId: 'e', amount: 160, hp: 0 },
+      { type: 'damage', tick: 1, unitId: 'e', amount: 160, hp: 0, physicalAmount: 160, magicAmount: 0, absorbed: 0, hpDamage: 100, shield: 0 },
     ]);
   });
 
