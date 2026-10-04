@@ -1,7 +1,7 @@
 import type { Board, HexCell } from '../simulation/board';
 export interface Point { x: number; y: number }
 export class HexLayout {
-  constructor(readonly board: Board, readonly radius = 40, readonly origin: Point = { x: 242, y: 156 }) {}
+  constructor(readonly board: Board, readonly radius = 36, readonly origin: Point = { x: 242, y: 146 }) {}
   center(cell: HexCell): Point { return { x: this.origin.x + Math.sqrt(3) * this.radius * (cell.col + (cell.row % 2) / 2), y: this.origin.y + this.radius * 1.5 * cell.row }; }
   corners(cell: HexCell): Point[] {
     const center = this.center(cell);
