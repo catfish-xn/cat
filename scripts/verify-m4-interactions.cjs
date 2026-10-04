@@ -1,9 +1,37 @@
 /* Supplemental interaction regression after full-match. Only trusted native input;
  * observer/DOM reads never invoke simulation commands or replace Match state. */
 const assert = require('node:assert/strict');
-const crypto = require('node:crypto');
-const hash = value => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const { hash } = require('./m4-evidence.cjs');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+/** Wait for Phaser's automatic FIT refresh, without reaching into Phaser or
+ * changing a game clock. A viewport resize updates the parent CSS before the
+ * ScaleManager's next step updates the canvas and its input coordinate scale. */
+async function resizeViewport(page, viewport) {
+  await page.setViewportSize(viewport);
+  const matchesFit = ({ width, height }) => {
+    const parent = document.getElementById('board-root'), canvas = parent?.querySelector('canvas');
+    if (!parent || !canvas || window.innerWidth !== width || window.innerHeight !== height) return false;
+    const box = parent.getBoundingClientRect(), rect = canvas.getBoundingClientRect();
+    if (!box.width || !box.height || !canvas.width || !canvas.height) return false;
+    const scale = Math.min(box.width / canvas.width, box.height / canvas.height);
+    const expectedWidth = canvas.width * scale, expectedHeight = canvas.height * scale;
+    const close = (a, b) => Math.abs(a - b) < 1;
+    return close(rect.width, expectedWidth) && close(rect.height, expectedHeight)
+      && close(rect.x, box.x + (box.width - expectedWidth) / 2)
+      && close(rect.y, box.y + (box.height - expectedHeight) / 2);
+  };
+  await page.waitForFunction(matchesFit, viewport, { polling: 'raf', timeout: 10000 });
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  await page.waitForFunction(matchesFit, viewport, { polling: 'raf', timeout: 10000 });
+  return page.evaluate(() => {
+    const parent = document.getElementById('board-root').getBoundingClientRect();
+    const canvas = document.querySelector('#board-root canvas').getBoundingClientRect();
+    return { viewport: { width: window.innerWidth, height: window.innerHeight },
+      parent: { x: parent.x, y: parent.y, width: parent.width, height: parent.height },
+      canvas: { x: canvas.x, y: canvas.y, width: canvas.width, height: canvas.height } };
+  });
+}
 
 module.exports = async function verifyInteractions({ page, context, read, click, report, touch = false }) {
   report.interactions ??= [];
@@ -77,6 +105,19 @@ module.exports = async function verifyInteractions({ page, context, read, click,
   try {
     if (!touch) {
       await reset();
+      // Each resize must settle before reading the one and only New Match
+      // click coordinate. Perturb gold first so a missed click cannot pass.
+      const originalViewport = page.viewportSize();
+      const resizeCases = [{ width: 1440, height: 600 }, originalViewport,
+        { width: 390, height: 844 }, originalViewport, { width: 844, height: 390 }, originalViewport];
+      for (let pass = 0; pass < 2; pass++) for (const viewport of resizeCases) {
+        const beforeResize = await state();
+        await page.keyboard.press('d'); assert.equal((await state()).gold, beforeResize.gold - 2);
+        const geometry = await resizeViewport(page, viewport);
+        const clickBounds = (await read()).bounds['debug-new-match'];
+        await reset();
+        await record('viewport-fit-New-Match-one-click', beforeResize, { pass, geometry, clickBounds, clicks: 1 });
+      }
       // Successful D and F synchronously cancel a unit drag; its release is stale.
       for (const [key, cost] of [['d', 2], ['f', 4]]) {
         const before = await state(); await startUnitDrag('unit-1');
@@ -156,7 +197,7 @@ module.exports = async function verifyInteractions({ page, context, read, click,
 
       // A real wheel scroll of the inventory cancels its active drag. Scrolling
       // cannot turn the later release into an equipment transaction.
-      const viewport = page.viewportSize(); await page.setViewportSize({ width: 1440, height: 600 });
+      const viewport = page.viewportSize(); await resizeViewport(page, { width: 1440, height: 600 });
       const scrollingItem = await itemPoint('item-2');
       await page.mouse.move(scrollingItem.centerX, scrollingItem.centerY); await page.mouse.down();
       await page.mouse.move(scrollingItem.centerX + 8, scrollingItem.centerY, { steps: 3 });
@@ -170,7 +211,7 @@ module.exports = async function verifyInteractions({ page, context, read, click,
       await record('item-panel-wheel-scroll-cancels-drag-without-equip', beforeScroll, {
         scrollBefore: scrollTop, scrollAfter: await page.locator('#strategy-root').evaluate(node => node.scrollTop), input: 'trusted mouse wheel',
       });
-      await page.setViewportSize(viewport);
+      await resizeViewport(page, viewport);
 
       // Enter is a real activation while the pointer still owns the old choice
       // card. Releasing that now-detached card must not activate anything below.
@@ -198,7 +239,7 @@ module.exports = async function verifyInteractions({ page, context, read, click,
       await record('held-D-across-choice-only-new-native-repeat-commits', chosen, { rejectedChoiceHash: hash(beforeChoice), repeat: nativeRepeat });
       await record('multiple-New-Match-native-listener-commits-once', chosen, { resetCount, successfulKeydowns: 1, chargedGold: chosen.gold - repeated.gold });
     } else {
-      await page.setViewportSize({ width: 390, height: 844 }); await reset();
+      await resizeViewport(page, { width: 390, height: 844 }); await reset();
       const cdp = await context.newCDPSession(page);
       await itemPoint(); let snapshot = await read();
       const firstBounds = snapshot.bounds['item:item-1'], secondBounds = snapshot.bounds['item:item-2'];
@@ -217,7 +258,7 @@ module.exports = async function verifyInteractions({ page, context, read, click,
 
       // A touchscreen laptop can produce touch and mouse concurrently. The
       // second input must not equip/combine a selection owned by the first.
-      await page.setViewportSize({ width: 1440, height: 1000 });
+      await resizeViewport(page, { width: 1440, height: 1000 });
       await click('panel:items'); await click('item:item-1'); await click('item:item-2');
       snapshot = await read();
       const mixedBounds = snapshot.bounds['item:item-1'];
@@ -237,18 +278,18 @@ module.exports = async function verifyInteractions({ page, context, read, click,
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
       await record('touch-mouse-keyboard-cannot-steal-item-for-equip-or-combine', before, { owner: mixedOwner });
 
-      await page.setViewportSize({ width: 390, height: 844 });
+      await resizeViewport(page, { width: 390, height: 844 });
       const resizeBounds = await itemPoint();
       const resizeTouch = { id: 6, x: resizeBounds.centerX, y: resizeBounds.centerY };
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [resizeTouch] });
       assert.equal((await read()).gesture?.kind, 'item');
-      await page.setViewportSize({ width: 844, height: 390 });
+      await resizeViewport(page, { width: 844, height: 390 });
       await until(current => current.gesture === null, 10000);
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       await sameState(before, 'viewport change cancels item gesture without consuming it');
       await record('touch-viewport-cancel-late-release', before, { viewport: { width: 844, height: 390 } });
 
-      await page.setViewportSize({ width: 390, height: 844 });
+      await resizeViewport(page, { width: 390, height: 844 });
       await click('panel:items');
       const heading = page.locator('.item-panel > h3').first(); await heading.scrollIntoViewIfNeeded();
       const headingBounds = await heading.boundingBox();
@@ -302,3 +343,4 @@ module.exports = async function verifyInteractions({ page, context, read, click,
     assert(inputs.length > 0); assert(inputs.every(input => input.trusted), 'all interaction input must be trusted');
   }
 };
+module.exports.resizeViewport = resizeViewport;
