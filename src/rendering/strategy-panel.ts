@@ -108,7 +108,11 @@ export class StrategyPanel {
       event.stopPropagation();
       if (this.dismissalTimer !== null) this.shieldChoiceDismissal();
     });
-    this.modal.addEventListener('click', event => event.stopPropagation());
+    // Phaser also consumes native mouse/touch events bubbling to window.
+    // Isolate both the dialog and its dismissal shield at those entry points,
+    // while leaving DOM click activation and keyboard commands intact.
+    for (const type of ['click', 'mousedown', 'mouseup', 'mousemove', 'touchstart', 'touchmove', 'touchend', 'touchcancel'])
+      this.modal.addEventListener(type, event => event.stopPropagation());
   }
 
   get blocksSell(): boolean {

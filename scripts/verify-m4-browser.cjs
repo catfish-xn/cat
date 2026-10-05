@@ -4,6 +4,7 @@ const fs = require('node:fs');const path=require('node:path');
 const {spawn,execFileSync}=require('node:child_process');const {chromium}=require('playwright');
 const generateRoute=require('./generate-m4-route.cjs');
 const verifyInteractions=require('./verify-m4-interactions.cjs');
+const verifyInputBoundaries=require('./verify-m4-input-boundaries.cjs');
 const preview=process.argv.includes('--preview');const mode=preview?'preview':'dev';
 const output=process.env.M4_EVIDENCE_DIR||path.join('artifacts',`m4-${mode}`);fs.mkdirSync(output,{recursive:true});
 const report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),status:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),node:process.version,mode,seed:42,checkpoints:[],rounds:[],screenshots:[],errors:[],console:[],passed:false};
@@ -123,6 +124,7 @@ async function desktopEdges(){
  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});report.chromium=browser.version();
  await newContext();await play();await desktopEdges();await verifyInteractions({page,context,read,click,report,touch});await context.tracing.stop({path:path.join(output,'desktop-trace.zip')});await context.close();
  await newContext(true);await play(8);await checkpoint('touch-two-anomaly-battles');await page.setViewportSize({width:844,height:390});await checkpoint('touch-landscape');await verifyInteractions({page,context,read,click,report,touch});await context.tracing.stop({path:path.join(output,'touch-trace.zip')});await context.close();context=null;
+ await verifyInputBoundaries({browser,url,report,output});
  assert.deepEqual(report.errors,[]);report.passed=true;
 }catch(error){report.failure=error.stack;console.error(error);process.exitCode=1;try{if(page&&!page.isClosed())await page.screenshot({path:path.join(output,'failure.png')});if(context)await context.tracing.stop({path:path.join(output,'failure-trace.zip')});}catch{}
 }finally{report.durationSeconds=(Date.now()-startedAt)/1000;fs.writeFileSync(path.join(output,'page-console.json'),JSON.stringify({console:report.console,errors:report.errors},null,2));fs.writeFileSync(path.join(output,'report.json'),JSON.stringify(report,null,2));fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify({sha:report.sha,status:report.status,diffHash:report.diffHash,ciUrl:report.ciUrl,versions:report.versions,mode,seed:42,node:report.node,chromium:report.chromium,platform:report.platform,startedAt:report.startedAt,durationSeconds:report.durationSeconds,passed:report.passed},null,2));await browser?.close();server?.kill();if(report.passed){console.log(JSON.stringify({mode,checkpointHash:hash(report.checkpoints.filter(p=>!p.volatile)),roundLedgerHash:hash(report.rounds),versions:report.versions,durationSeconds:report.durationSeconds}));console.log(`PASS M4 ${mode}: full Match + touch + native input`);}}})();
