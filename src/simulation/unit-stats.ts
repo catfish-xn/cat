@@ -11,6 +11,7 @@ export function getUnitStats(definitionId: string, starLevel: StarLevel): Resolv
     attack: Math.floor(definition.baseStats.attack * STAR_PERCENT[starLevel] / 100),
     armor: definition.baseStats.armor, magicResist: definition.baseStats.magicResist,
     attackRange: definition.attackRange, attackIntervalTicks: definition.attackIntervalTicks,
+    ...(definition.baseAttackSpeedBps === undefined ? {} : { baseAttackSpeedBps: definition.baseAttackSpeedBps }),
     initialMana: definition.initialMana, maxMana: definition.maxMana, abilityId: definition.abilityId,
   };
 }
@@ -18,5 +19,6 @@ export function getUnitStats(definitionId: string, starLevel: StarLevel): Resolv
 export function getUnitSellPrice(unit: Unit): number {
   if (!Object.hasOwn(UNIT_DEFINITIONS, unit.definitionId)) throw new RangeError(`Unknown unit definition: ${unit.definitionId}`);
   if (!Object.hasOwn(STAR_PERCENT, unit.starLevel)) throw new RangeError(`Invalid star level: ${unit.starLevel}`);
-  return UNIT_DEFINITIONS[unit.definitionId].cost * 3 ** (unit.starLevel - 1);
+  const cost = UNIT_DEFINITIONS[unit.definitionId].cost;
+  return unit.starLevel === 1 ? cost : cost * 3 ** (unit.starLevel - 1) - (cost > 1 ? 1 : 0);
 }

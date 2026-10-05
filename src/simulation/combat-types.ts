@@ -7,7 +7,16 @@ export const COMBAT_TICK_MS = 50;
 export const MAX_COMBAT_TICKS = 1200;
 export const MOVE_INTERVAL_TICKS = 5;
 export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
+export interface CombatOrigin { readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
+export interface ShieldLayer { readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
+export interface CombatStatus { readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
+export interface CombatTask { readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number }
+export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
+export type CombatMechanics = readonly CombatMechanic[];
+export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 export interface CombatUnit {
+  readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number;
+  readonly abilityPower?: number; readonly baseAttackSpeedBps?: number; readonly attackSpeedBonusBps?: number; readonly shieldLayers?: readonly ShieldLayer[]; readonly statuses?: readonly CombatStatus[]; readonly tasks?: readonly CombatTask[]; readonly mechanics?: CombatMechanics; readonly runtime?: CombatRuntime;
   readonly sources?: readonly SourcedEffect[]; readonly triggers?: readonly ResolvedTrigger[]; readonly effectRuntime?: readonly EffectRuntime[];
   readonly id: string; readonly definitionId: string; readonly team: Team; readonly starLevel: StarLevel;
   readonly cell: HexCell; readonly hp: number; readonly maxHp: number;
@@ -17,12 +26,21 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly rngState?: number; readonly rngDraws?: number; readonly nextActionSeq?: number;
   readonly strategy?: StrategySnapshot; readonly combatId?: string; readonly nextEventSeq?: number; readonly startEffectsApplied?: boolean;
   readonly board: Board; readonly units: readonly CombatUnit[]; readonly tick: number; readonly maxTicks: number;
   readonly status: 'running' | 'finished'; readonly result: CombatResult | null;
 }
 export type CombatEvent = CombatEventData & { readonly domain?: 'combat'; readonly combatId?: string; readonly eventSeq?: number };
 export type CombatEventData =
+  | { readonly type: 'statChanged'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly stat: 'attackSpeedBps' | 'abilityPower' | 'range'; readonly before: number; readonly after: number }
+  | { readonly type: 'targetChanged'; readonly tick: number; readonly unitId: string; readonly before: string | null; readonly after: string | null }
+  | { readonly type: 'heal'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly requested: number; readonly actual: number; readonly overheal: number; readonly hp: number }
+  | { readonly type: 'statusChanged'; readonly tick: number; readonly unitId: string; readonly status: CombatStatus; readonly reason: 'applied' | 'expired' }
+  | { readonly type: 'shieldLayerChanged'; readonly tick: number; readonly unitId: string; readonly layer: ShieldLayer; readonly reason: 'granted' | 'absorbed' | 'expired' | 'decayed' }
+  | { readonly type: 'packetDamage'; readonly tick: number; readonly source: CombatOrigin; readonly unitId: string; readonly damageType: 'physical' | 'magic'; readonly raw: number; readonly mitigated: number; readonly absorbed: number; readonly hpDamage: number; readonly actionSeq: number; readonly packetOrdinal: number; readonly critical: boolean; readonly redirected: boolean }
+  | { readonly type: 'kill'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin }
+  | { readonly type: 'growth'; readonly tick: number; readonly unitId: string; readonly amountBps: number; readonly totalBps: number }
   | { readonly type: 'effectTriggered'; readonly tick: number; readonly source: EffectSource; readonly effectKey: string; readonly action: EffectAction; readonly targetId: string }
   | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell }
   | { readonly type: 'attack'; readonly tick: number; readonly attackerId: string; readonly targetId: string }

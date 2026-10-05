@@ -3,14 +3,14 @@ import { DEFAULT_BOARD } from '../src/simulation/board';
 import type { GameState } from '../src/simulation/game';
 import { createMatch } from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match-types';
-import { deriveTraits } from '../src/simulation/trait-snapshot';
-import { buildStrategySnapshot, type StrategyCatalog } from '../src/simulation/strategy-snapshot';
+import { deriveTraits as derive } from '../src/simulation/trait-snapshot';
+import { buildStrategySnapshot as build, type StrategyCatalog } from '../src/simulation/strategy-snapshot';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import type { Unit } from '../src/simulation/unit-types';
-import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
-import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
-import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
-import { ANOMALY_DEFINITIONS } from '../src/simulation/content/anomalies';
+import { TRAIT_DEFINITIONS } from '../src/simulation/content/legacy-traits';
+import { ITEM_DEFINITIONS } from '../src/simulation/content/legacy-items';
+import { AUGMENT_DEFINITIONS } from '../src/simulation/content/legacy-augments';
+import { ANOMALY_DEFINITIONS } from '../src/simulation/content/legacy-anomalies';
 
 function frozen<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(frozen); Object.freeze(value); }
@@ -26,6 +26,8 @@ function snapshotState(units: readonly Unit[], patch: Partial<MatchState> = {}):
 const equipped = (id: string, definitionId: string, unitId: string, slot: number): ItemInstance =>
   ({ id, definitionId, location: { kind: 'unit', unitId, slot } });
 const catalog: StrategyCatalog = { traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS, augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS };
+const buildStrategySnapshot = (state: MatchState, value: StrategyCatalog = catalog) => build(state, value);
+const deriveTraits: typeof derive = (state, team, value = TRAIT_DEFINITIONS) => derive(state, team, value);
 const reverse = <T>(value: Readonly<Record<string, T>>): Record<string, T> => Object.fromEntries(Object.entries(value).reverse());
 
 describe('trait activation boundary', () => {
@@ -125,8 +127,8 @@ describe('complete strategy snapshot', () => {
     expect(buildStrategySnapshot(state)).toEqual(permuted);
   });
 
-  it.each([[9, 800, 45], [10, 880, 49], [29, 2400, 135], [100, 2400, 135]])(
-    'gives only enemies the documented round %i growth and caps it', (round, health, attack) => {
+  it.each([[9, 800, 45], [10, 800, 45], [29, 800, 45], [35, 800, 45]])(
+    'M5 round %i adds no hidden growth to either team (R7)', (round, health, attack) => {
       const state = snapshotState([boardUnit('p', 'sentinel'), boardUnit('e', 'sentinel', 'enemy')], { round });
       const snapshot = buildStrategySnapshot(state);
       const enemy = snapshot.units.find(unit => unit.unitId === 'e')!;

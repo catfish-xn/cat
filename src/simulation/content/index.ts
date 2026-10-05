@@ -1,8 +1,11 @@
+import { S13_COMBAT_RULES } from '../s13-rules';
 import { ABILITY_DEFINITIONS } from '../combat-abilities';
-import { UNIT_DEFINITIONS } from '../units';
-import { SHOP_CATALOG_BY_COST, SHOP_ODDS } from '../match-rules';
+import { M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS } from '../units';
+import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL, MATCH_RULES, STAGE_PLAYER_DAMAGE, ECONOMY_RULES } from '../match-rules';
 import { ROUND_SCHEDULE } from '../round-schedule';
-import { ENEMY_TEMPLATES, ENEMY_POSITIONS, ENEMY_GROWTH } from '../round-enemies';
+import { ENEMY_TEMPLATES, ENEMY_POSITIONS, ENEMY_GROWTH, createRoundEnemies, getRoundEnemyItems } from '../round-enemies';
+import { S13_ABILITY_DATA } from './abilities';
+import { SOURCE_MANIFEST } from './source-manifest';
 import { TRAIT_DEFINITIONS } from './traits';
 import { ITEM_DEFINITIONS } from './items';
 import { AUGMENT_DEFINITIONS } from './augments';
@@ -30,8 +33,11 @@ export function digestContent(value: unknown): string {
   return `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
 }
 export const CONTENT_DIGEST = digestContent({
-  units: UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
+  units: M5_UNIT_DEFINITIONS, neutralUnits: NEUTRAL_UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, s13Abilities: S13_ABILITY_DATA, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
   augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
   shopCatalog: SHOP_CATALOG_BY_COST, shopOdds: SHOP_ODDS,
   enemyTemplates: ENEMY_TEMPLATES, enemyPositions: ENEMY_POSITIONS, enemyGrowth: ENEMY_GROWTH,
+  opponents: Array.from({length:35},(_,index)=>({round:index+1,units:createRoundEnemies(index+1),items:getRoundEnemyItems(index+1)})),
+  economy: { rules: MATCH_RULES, stages: STAGE_PLAYER_DAMAGE, income: ECONOMY_RULES, experience: XP_TO_NEXT_LEVEL },
+  reference: SOURCE_MANIFEST, combatRules: S13_COMBAT_RULES,
 });

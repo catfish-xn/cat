@@ -2,7 +2,7 @@ import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import {
   buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
-  combineItems, equipItem, selectChoice, selectAnomalyTarget, rerollAnomaly,
+  combineItems, equipItem, selectChoice, selectAnomalyTarget, rerollAnomaly, setShopLock,
 } from '../simulation/match';
 import type { MatchEvent } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
@@ -39,6 +39,7 @@ export class MatchSession {
   deploy(id: string, target: UnitLocation) { return this.commit(deployMatchUnit(this.matchState, id, target)); }
   buy(slot: number, generation: number) { return this.commit(buyUnit(this.matchState, slot, generation)); }
   sell(id: string) { return this.commit(sellUnit(this.matchState, id)); }
+  shopLock(locked: boolean, generation: number) { return this.commit(setShopLock(this.matchState, locked, generation)); }
   reroll() { return this.commit(rerollShop(this.matchState)); }
   buyXp() { return this.commit(buyXp(this.matchState)); }
   start() { return this.commit(startMatchCombat(this.matchState)); }

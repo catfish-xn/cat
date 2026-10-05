@@ -10,7 +10,7 @@ import type { SourcedEffect, StrategySnapshot } from '../src/simulation/strategy
 import { createMatch } from '../src/simulation/match';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { validateContent } from '../src/simulation/validate-content';
-import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
+import { TRAIT_DEFINITIONS } from '../src/simulation/content/legacy-traits';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../src/simulation/content/anomalies';

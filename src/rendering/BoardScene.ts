@@ -7,6 +7,8 @@ import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import { HexLayout, type Point } from './hex-layout';
 import { MatchSession } from './match-session';
 import { InputRouter } from './input-router';
+import { combatEventText } from './combat-feedback';
+import { getStageRound, getRoundKind } from '../simulation/round-schedule';
 import { StrategyPanel } from './strategy-panel';
 
 declare global {
@@ -120,13 +122,13 @@ export class BoardScene extends Phaser.Scene {
     this.overlay = this.add.graphics().setDepth(5);
     this.status = this.add.text(48, 754, '准备就绪 · 购买或部署棋子，再点击 Start Combat', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
     this.strategyPanel = new StrategyPanel({
-      state: () => this.session.state, selectedUnit: () => this.selectedId,
+      state: () => this.session.state, shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
       equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效'),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), 'Anomaly 目标已锁定'),
-      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), 'Anomaly 选项已刷新 · 扣除 2 G'),
+      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), 'Anomaly 选项已刷新 · 扣除 1 G'),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
       control: name => this.panelControl(name),
@@ -321,7 +323,7 @@ export class BoardScene extends Phaser.Scene {
       this.fadeEffect(label, 1000); this.renderedUpgradeCount++;
     }
     this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
-    if (this.session.phase === 'gameOver') this.setStatus('Game Over · HP 已归零，点击 New Match 重开');
+    if (this.session.phase === 'gameOver') this.setStatus(`${this.session.state.outcome === 'victory' ? 'Victory · 最终挑战完成' : 'Defeat · 对局结束'}，点击 New Match 重开`);
     else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
     else if (this.session.phase === 'settlement') this.setStatus('本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
   }
@@ -365,7 +367,7 @@ export class BoardScene extends Phaser.Scene {
     if (unit.team === 'player') {
       token.setInteractive({ useHandCursor: true }); this.input.setDraggable(token);
       token.on('pointerdown', () => {
-        if (this.session.phase !== 'preparation' || !this.tokens.has(unit.id)) return;
+        if (!this.tokens.has(unit.id)) return;
         if (this.inputRouter.current) return;
         this.selectedId = unit.id; this.syncSelection(); this.strategyPanel?.render();
       });
@@ -394,13 +396,14 @@ export class BoardScene extends Phaser.Scene {
   }
   private syncHud() {
     const match = this.session.state, ready = match.phase === 'preparation';
-    this.roundLabel.setText(`Round ${match.round}`); this.goldLabel.setText(`Gold ${match.gold}`);
+    this.roundLabel.setText(`${getStageRound(match.round).stage}-${getStageRound(match.round).round}`); this.goldLabel.setText(`Gold ${match.gold}`);
     this.hpLabel.setText(`HP ${match.playerHp}`);
     this.levelLabel.setText(`Level ${match.level}`);
     const threshold = getXpToNextLevel(match.level);
     this.xpLabel.setText(threshold === null ? 'XP MAX' : `XP ${match.xp} / ${threshold}`);
     this.oddsLabel.setText(`Lv.${match.level} 搜牌概率 · ${getShopOdds(match.level).map((chance, index) => `${index + 1}费 ${chance}%`).join(' / ')}`);
     this.count.setText(`我方人口 ${getPlayerDeploymentCount(this.state)} / ${getDeploymentCap(match)}`);
+    this.startButton.setText(getRoundKind(match.round) === 'supply' ? '领取补给' : 'Start Combat');
     this.startButton.setAlpha(this.session.startFailure ? 0.4 : 1).setBackgroundColor('#38695f');
     this.continueButton.setData('round', match.round).setAlpha(match.phase === 'settlement' ? 1 : 0.4);
     this.rerollButton.setAlpha(ready ? 1 : 0.4);
@@ -421,13 +424,13 @@ export class BoardScene extends Phaser.Scene {
     const failure = this.session.startFailure;
     this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与 XP，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
     this.phaseLabel.setText(ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
-      : match.phase === 'choice' ? '构筑选择 · 完成当前 Augment / Anomaly 后继续'
+      : match.phase === 'choice' ? '构筑选择 · 完成组件 / Augment / Anomaly 后继续'
       : match.phase === 'combat' ? '自动战斗 · 积累 Mana 并施法，商店与部署已锁定'
-      : match.phase === 'gameOver' ? 'Game Over · HP 已归零，点击 New Match 重开' : '回合结算 · 收入与 XP 已到账，Continue 进入下一回合');
+      : match.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? 'Victory · 最终挑战完成' : 'Defeat · 对局结束'}，点击 New Match 重开` : '回合结算 · 收入与 XP 已到账，Continue 进入下一回合');
     if (match.phase === 'settlement' || match.phase === 'gameOver') {
-      const labels = { playerWin: 'Victory', enemyWin: 'Defeat', draw: 'Draw' }, result = match.roundResults.at(-1)!;
-      this.resultLabel.setText(match.phase === 'gameOver' ? 'Game Over' : labels[result.result]);
-      const reason = result.result === 'playerWin' ? '胜利 · 不扣 HP' : result.result === 'draw' ? `平局 · 基础伤害 ${result.baseDamage}` : `败局 · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}×2`;
+      const labels = { playerWin: 'Victory', enemyWin: 'Defeat', draw: 'Draw', supply: 'Supply' }, result = match.roundResults.at(-1)!;
+      this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? 'Victory' : 'Defeat') : labels[result.result]);
+      const reason = result.result === 'supply' ? '补给 · 无战斗' : result.result === 'playerWin' ? '胜利 · 不扣 HP' : result.result === 'draw' ? `平局 · 基础伤害 ${result.baseDamage}` : `败局 · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}`;
       this.incomeLabel.setText(`第 ${result.round} 回合 · ${labels[result.result]}\n收入 +${result.income} G / XP +${result.xpAwarded}\nLv.${result.levelBefore} → ${result.levelAfter}\nHP ${result.hpBefore} → ${result.hpAfter} (-${result.hpLost})\n${reason}`);
     } else { this.resultLabel.setText(''); this.incomeLabel.setText(''); }
     if (!match.combat) this.timer.setText('');
@@ -435,7 +438,7 @@ export class BoardScene extends Phaser.Scene {
   }
   private syncSelection() {
     const selected = this.state.units.find(unit => unit.id === this.selectedId && unit.team === 'player');
-    if (!selected || this.session.phase !== 'preparation') this.selectedId = null;
+    if (!selected) this.selectedId = null;
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
     const displayed = this.session.phase === 'preparation' ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
@@ -451,8 +454,10 @@ export class BoardScene extends Phaser.Scene {
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
     const events = this.session.advance(delta);
     this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
-    if (this.session.state.phase === 'settlement' || this.session.state.phase === 'gameOver') {
-      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'gameOver' ? 'Game Over · HP 已归零，点击 New Match 重开' : '本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
+    // Rewards may leave combat directly for a component choice (for example 2-7).
+    // Render every phase exit, including choices, before waiting for more input.
+    if (this.session.state.phase !== 'combat') {
+      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? 'Victory · 最终挑战完成' : 'Defeat · 对局结束'}，点击 New Match 重开` : '本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
     }
   }
   private clearDrag() {
@@ -477,10 +482,12 @@ export class BoardScene extends Phaser.Scene {
     if (!combat) return;
     for (const unit of this.state.units) {
       const token = this.tokens.get(unit.id)!;
-      if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
+      if (token.input) { this.input.setDraggable(token, false); token.input.enabled = true; }
       if (unit.location.kind === 'bench') token.setAlpha(0.35);
     }
+    const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
+      this.discs.get(unit.id)?.setStrokeStyle(3, unit.id === selectedTarget ? 0xffd782 : unit.id === this.selectedId ? 0xffffff : unit.team === 'enemy' ? 0xf08080 : 0x0b151f);
       const token = this.tokens.get(unit.id)!;
       token.setVisible(unit.alive);
       const key = `${unit.cell.col},${unit.cell.row}`;
@@ -513,6 +520,7 @@ export class BoardScene extends Phaser.Scene {
   private showEvents(events: readonly CombatEvent[]) {
     const combat = this.session.combat;
     if (!combat) return;
+    this.strategyPanel?.observeEvents(events);
     this.recentCombatEvents.push(...structuredClone(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
     for (const event of events) {
@@ -526,7 +534,7 @@ export class BoardScene extends Phaser.Scene {
         const source = combat.units.find(unit => unit.id === event.sourceId);
         if (!source) continue;
         const from = this.layout.center(source.cell), ability = source.ability;
-        const color = ability.kind === 'selfShield' ? 0xbcefff : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e;
+        const color = ability.kind === 's13' ? 0xc5a0ff : ability.kind === 'selfShield' ? 0xbcefff : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e;
         const effect = this.add.graphics().setDepth(20).lineStyle(4, color, 0.9).strokeCircle(from.x, from.y, 34);
         for (const id of event.targetIds) {
           const target = combat.units.find(unit => unit.id === id);
@@ -535,10 +543,23 @@ export class BoardScene extends Phaser.Scene {
           effect.lineBetween(from.x, from.y, to.x, to.y).strokeCircle(to.x, to.y, 31);
         }
         this.fadeEffect(effect, 500);
-        const label = this.add.text(from.x, from.y - 56, ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理', {
+        const label = this.add.text(from.x, from.y - 56, ability.kind === 's13' ? `施法 · ${ability.championId}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理', {
           fontSize: '12px', color: Phaser.Display.Color.IntegerToColor(color).rgba, backgroundColor: '#16232d',
         }).setOrigin(0.5).setDepth(20);
         this.fadeEffect(label, 700); this.renderedCastCount++;
+      } else if (event.type === 'packetDamage' || event.type === 'heal' || event.type === 'growth' || event.type === 'statusChanged' || event.type === 'shieldLayerChanged') {
+        const target = combat.units.find(unit => unit.id === event.unitId);
+        if (!target) continue;
+        const p = this.layout.center(target.cell);
+        const text = event.type === 'packetDamage' ? `−${event.hpDamage}${event.absorbed ? ` / 盾 ${event.absorbed}` : ''}${event.critical ? ' !' : ''}`
+          : event.type === 'heal' ? `+${event.actual}${event.overheal ? ` (溢出 ${event.overheal})` : ''}`
+          : event.type === 'growth' ? `成长 +${event.amountBps / 100}%`
+          : event.type === 'statusChanged' ? `${event.status.kind} ${event.reason}` : `盾 ${event.layer.remaining}`;
+        const label = this.add.text(p.x, p.y - 32, text, { fontSize: '12px', color: event.type === 'heal' ? '#6ee7a4' : event.type === 'packetDamage' ? (event.damageType === 'physical' ? '#ffd0b5' : '#d5b1ff') : '#bcefff', backgroundColor: '#14212c' }).setOrigin(0.5).setDepth(21);
+        label.setData('eventText', combatEventText(event)); this.fadeEffect(label, 600);
+      } else if (event.type === 'targetChanged') {
+        const target = event.after ? this.discs.get(event.after) : null;
+        target?.setStrokeStyle(4, 0xffd782);
       } else if (event.type === 'damage') {
         const disc = this.discs.get(event.unitId);
         if (disc) { this.tweens.killTweensOf(disc); disc.setAlpha(1); this.tweens.add({ targets: disc, alpha: 0.25, duration: 80, yoyo: true }); }

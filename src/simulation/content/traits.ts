@@ -1,14 +1,205 @@
-import type { Effect, TraitDefinition } from '../strategy-types';
+import type { TraitDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
-const tiers = (amounts: readonly number[], effects: (amount: number) => readonly Effect[]) =>
-  amounts.map((amount, i) => ({ threshold: (i + 1) * 2, effects: effects(amount) }));
-export const TRAIT_DEFINITIONS: Readonly<Record<string, TraitDefinition>> = freezeContent({
-  bulwark: { id: 'bulwark', name: '壁阵', target: 'members', tiers: tiers([15, 30, 50], amount => [
-    { kind: 'statFlat', stat: 'armor', amount }, { kind: 'statFlat', stat: 'magicResist', amount }]) },
-  marksman: { id: 'marksman', name: '远射', target: 'members', tiers: tiers([1500, 3000, 5000], bps => [{ kind: 'attackSpeedBps', bps }]) },
-  scholar: { id: 'scholar', name: '研习', target: 'members', tiers: tiers([1500, 3000, 5000], bps => [{ kind: 'statPercentBps', stat: 'abilityAmount', bps }]) },
-  forge: { id: 'forge', name: '锻盟', target: 'team', tiers: tiers([8, 16, 28], amount => [{ kind: 'statFlat', stat: 'attackDamage', amount }]) },
-  conduit: { id: 'conduit', name: '导流', target: 'members', tiers: tiers([10, 20, 30], amount => [{ kind: 'statFlat', stat: 'initialMana', amount }]) },
-  duelist: { id: 'duelist', name: '锋舞', target: 'members', tiers: tiers([25, 55], amount => [
-    { kind: 'trigger', hook: 'onAttack', everyN: 3, action: { kind: 'dealDamage', damageType: 'physical', amount } }]) },
+export const TRAIT_DEFINITIONS: Readonly<Record<string,TraitDefinition>> = freezeContent({
+  "sentinel": {
+    "id": "sentinel",
+    "name": "哨兵",
+    "target": "team",
+    "tiers": [
+      {
+        "threshold": 2,
+        "effects": [
+          {
+            "kind": "statFlat",
+            "stat": "armor",
+            "amount": 12
+          },
+          {
+            "kind": "statFlat",
+            "stat": "magicResist",
+            "amount": 12
+          }
+        ],
+        "memberEffects": [
+          {
+            "kind": "statFlat",
+            "stat": "armor",
+            "amount": 24
+          },
+          {
+            "kind": "statFlat",
+            "stat": "magicResist",
+            "amount": 24
+          }
+        ]
+      },
+      {
+        "threshold": 4,
+        "effects": [
+          {
+            "kind": "statFlat",
+            "stat": "armor",
+            "amount": 25
+          },
+          {
+            "kind": "statFlat",
+            "stat": "magicResist",
+            "amount": 25
+          }
+        ],
+        "memberEffects": [
+          {
+            "kind": "statFlat",
+            "stat": "armor",
+            "amount": 50
+          },
+          {
+            "kind": "statFlat",
+            "stat": "magicResist",
+            "amount": 50
+          }
+        ]
+      }
+    ]
+  },
+  "artillerist": {
+    "id": "artillerist",
+    "name": "炮手",
+    "target": "members",
+    "tiers": [
+      {
+        "threshold": 2,
+        "effects": [
+          {
+            "kind": "statPercentBps",
+            "stat": "attackDamage",
+            "bps": 1000
+          },
+          {
+            "kind": "mechanic",
+            "mechanic": "artillery",
+            "values": {
+              "everyN": 5,
+              "adBps": 12500,
+              "radius": 1
+            }
+          }
+        ]
+      },
+      {
+        "threshold": 4,
+        "effects": [
+          {
+            "kind": "statPercentBps",
+            "stat": "attackDamage",
+            "bps": 4500
+          },
+          {
+            "kind": "mechanic",
+            "mechanic": "artillery",
+            "values": {
+              "everyN": 5,
+              "adBps": 12500,
+              "radius": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sniper": {
+    "id": "sniper",
+    "name": "狙神",
+    "target": "members",
+    "tiers": [
+      {
+        "threshold": 2,
+        "effects": [
+          {
+            "kind": "mechanic",
+            "mechanic": "sniper",
+            "values": {
+              "damageBpsPerHex": 700
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "watcher": {
+    "id": "watcher",
+    "name": "监察",
+    "target": "members",
+    "tiers": [
+      {
+        "threshold": 2,
+        "effects": [
+          {
+            "kind": "mechanic",
+            "mechanic": "watcher",
+            "values": {
+              "reductionBps": 1500,
+              "healthyReductionBps": 3000,
+              "thresholdBps": 5000
+            }
+          }
+        ]
+      },
+      {
+        "threshold": 4,
+        "effects": [
+          {
+            "kind": "mechanic",
+            "mechanic": "watcher",
+            "values": {
+              "reductionBps": 2500,
+              "healthyReductionBps": 4500,
+              "thresholdBps": 5000
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sorcerer": {
+    "id": "sorcerer",
+    "name": "法师",
+    "target": "team",
+    "tiers": [
+      {
+        "threshold": 2,
+        "effects": [
+          {
+            "kind": "statFlat",
+            "stat": "abilityPower",
+            "amount": 10
+          }
+        ],
+        "memberEffects": [
+          {
+            "kind": "statFlat",
+            "stat": "abilityPower",
+            "amount": 10
+          }
+        ]
+      },
+      {
+        "threshold": 4,
+        "effects": [
+          {
+            "kind": "statFlat",
+            "stat": "abilityPower",
+            "amount": 10
+          }
+        ],
+        "memberEffects": [
+          {
+            "kind": "statFlat",
+            "stat": "abilityPower",
+            "amount": 40
+          }
+        ]
+      }
+    ]
+  }
 });

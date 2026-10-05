@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { getUnitSellPrice, getUnitStats } from '../src/simulation/unit-stats';
-import { UNIT_DEFINITIONS, validateUnitDefinitions, type StarLevel, type Unit, type UnitDefinition } from '../src/simulation/units';
+import { LEGACY_UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, UNIT_DEFINITIONS, validateUnitDefinitions, type StarLevel, type Unit, type UnitDefinition } from '../src/simulation/units';
 
 const CONTENT = [
   ['sentinel', 1, 800, 45, 40, 30, 1, 80, 'sentinel-guard'], ['ranger', 1, 500, 70, 15, 15, 3, 60, 'ranger-shot'],
@@ -17,10 +17,12 @@ const CONTENT = [
 ] as const;
 
 describe('authored unit catalog and star stat resolution', () => {
-  it('provides all eighteen complete definitions and the fixed nonempty tier catalogs', () => {
-    expect(Object.keys(UNIT_DEFINITIONS)).toEqual(CONTENT.map(row => row[0]));
-    expect(SHOP_CATALOG_BY_COST).toEqual({ 1: ['mystic', 'ranger', 'sentinel', 'spark', 'squire'], 2: ['archer', 'binder', 'bulwark', 'scout'],
-      3: ['arcanist', 'beacon', 'duelist', 'striker'], 4: ['prism', 'tempest', 'warden'], 5: ['colossus', 'oracle'] });
+  it('retains low-level legacy definitions but offers only the nineteen M5 heroes', () => {
+    expect(Object.keys(LEGACY_UNIT_DEFINITIONS)).toEqual(CONTENT.map(row => row[0]));
+    const catalog = { 1: ['darius', 'irelia', 'lux', 'maddie', 'zyra'], 2: ['leona', 'rell', 'tristana', 'urgot', 'vander'],
+      3: ['ezreal', 'kogmaw', 'loris', 'nami', 'scar'], 4: ['corki', 'garen', 'zoe'], 5: ['caitlyn'] };
+    expect(SHOP_CATALOG_BY_COST).toEqual(catalog);
+    expect(Object.keys(M5_UNIT_DEFINITIONS).sort()).toEqual(Object.values(catalog).flat().sort());
     expect(() => validateUnitDefinitions()).not.toThrow();
     for (const [id, cost, health, attack, armor, magicResist, attackRange, maxMana, abilityId] of CONTENT) {
       expect(UNIT_DEFINITIONS[id]).toMatchObject({ id, cost, baseStats: { health, attack, armor, magicResist },
@@ -52,11 +54,25 @@ describe('authored unit catalog and star stat resolution', () => {
     expect(JSON.stringify(UNIT_DEFINITIONS)).toBe(before);
   });
 
-  it('values every star at its represented card cost with no merge arbitrage', () => {
+  it('uses the R3 sale loss table at every cost and star', () => {
+    // Independently transcribed R3 values: upgraded non-1-costs lose one gold on sale.
+    const saleTable = [[1, 3, 9], [2, 5, 17], [3, 8, 26], [4, 11, 35], [5, 14, 44]];
     for (const [definitionId, cost] of CONTENT) for (const starLevel of [1, 2, 3] as const) {
       const unit: Unit = { id: 'value', definitionId, starLevel, team: 'player', location: { kind: 'bench', slot: 0 } };
-      expect(getUnitSellPrice(unit)).toBe(cost * [1, 3, 9][starLevel - 1]);
+      expect(getUnitSellPrice(unit)).toBe(saleTable[cost - 1][starLevel - 1]);
     }
+    for (const [definitionId, cost] of [['irelia', 1], ['rell', 2], ['loris', 3], ['corki', 4], ['caitlyn', 5]] as const) {
+      for (const starLevel of [1, 2, 3] as const) expect(getUnitSellPrice({ id: 'm5-value', definitionId, starLevel,
+        team: 'player', location: { kind: 'bench', slot: 0 } })).toBe(saleTable[cost - 1][starLevel - 1]);
+    }
+  });
+
+  it('keeps Loris 14.24b mana override and exact integer star scaling', () => {
+    const stars = [[850, 50], [1530, 90], [2754, 162]];
+    for (const star of [1, 2, 3] as const) expect(getUnitStats('loris', star)).toEqual({
+      health: stars[star - 1][0], attack: stars[star - 1][1], armor: 50, magicResist: 50,
+      attackRange: 1, attackIntervalTicks: 31, baseAttackSpeedBps: 6500, initialMana: 40, maxMana: 80, abilityId: 'loris-ability',
+    });
   });
 
   it.each(['absent', '__proto__', 'constructor'])('rejects unknown definition %s', id => {
@@ -77,10 +93,16 @@ describe('authored unit catalog and star stat resolution', () => {
     expect(() => validateUnitDefinitions({ ...UNIT_DEFINITIONS, sentinel: invalid })).toThrow(RangeError);
   });
 
-  it('rejects missing or uncatalogued definitions', () => {
+  it('rejects missing active shop definitions and invalid active catalog entries', () => {
     const missing = { ...UNIT_DEFINITIONS };
-    delete missing.oracle;
+    delete missing.caitlyn;
     expect(() => validateUnitDefinitions(missing)).toThrow(RangeError);
-    expect(() => validateUnitDefinitions({ ...UNIT_DEFINITIONS, extra: { ...UNIT_DEFINITIONS.sentinel, id: 'extra' } })).toThrow(RangeError);
+    expect(() => validateUnitDefinitions(UNIT_DEFINITIONS, { ...SHOP_CATALOG_BY_COST, 5: ['absent'] })).toThrow('Invalid shop definition');
+    expect(() => validateUnitDefinitions(UNIT_DEFINITIONS, { ...SHOP_CATALOG_BY_COST, 5: ['irelia'] })).toThrow('Invalid shop definition');
+    expect(() => validateUnitDefinitions(UNIT_DEFINITIONS, { ...SHOP_CATALOG_BY_COST, 1: ['irelia', 'irelia'] })).toThrow('Invalid shop definition');
+    expect(() => validateUnitDefinitions(UNIT_DEFINITIONS, { ...SHOP_CATALOG_BY_COST, 1: ['sentinel'] })).toThrow('Legacy or neutral unit');
+    expect(() => validateUnitDefinitions(UNIT_DEFINITIONS, { ...SHOP_CATALOG_BY_COST, 1: ['neutral-stage-2'] })).toThrow('Legacy or neutral unit');
+    expect(() => validateUnitDefinitions(UNIT_DEFINITIONS, { ...SHOP_CATALOG_BY_COST, 5: [] })).toThrow('Empty shop tier');
+    expect(() => validateUnitDefinitions({ ...UNIT_DEFINITIONS, extra: { ...UNIT_DEFINITIONS.sentinel, id: 'extra' } })).not.toThrow();
   });
 });

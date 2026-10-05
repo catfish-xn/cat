@@ -21,19 +21,26 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 }
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
-function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone'): CombatState {
+function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatState {
   const units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
     if (strategy && !resolved) throw new Error(`Missing strategy unit: ${unit.id}`);
     const stats = resolved?.stats ?? getUnitStats(unit.definitionId, unit.starLevel);
+    const ability = resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel);
     return [{ id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
-      cell: { ...unit.location.cell }, hp: stats.health, maxHp: stats.health,
+      cell: { ...unit.location.cell }, hp: Math.floor(stats.health * (resolved?.mechanics?.find(m => m.mechanic === 'glassCannon')?.values.startingHealthBps ?? 10000) / 10000), maxHp: stats.health,
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
       armor: stats.armor, magicResist: stats.magicResist, mana: stats.initialMana, maxMana: stats.maxMana,
-      shield: 0, shieldExpiresAtTick: null, ability: resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel),
+      shield: 0, shieldExpiresAtTick: null, ability,
       ...(resolved ? { sources: structuredClone(resolved.sources), triggers: structuredClone(resolved.triggers), effectRuntime: initializeEffectRuntime(resolved.triggers) } : {}),
+      ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0, abilityPower: resolved?.abilityPower ?? 100,
+        baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
+        attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
+        mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
+        runtime: { attackCount: 0, castCount: 0, attackSpeedBps: 0, abilityPowerFlat: 0, rangeBonus: 0,
+          nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
   const result = eliminationResult(units);
@@ -43,13 +50,13 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       enemy: { ...preparationState.board.deploymentZones.enemy },
     } },
     ...(strategy ? { strategy: structuredClone(strategy), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
-    units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
+    rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };
 }
 export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState); }
-export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string): CombatStep {
-  return applyCombatStart(snapshotCombat(preparation, strategy, combatId));
+export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42): CombatStep {
+  return applyCombatStart(snapshotCombat(preparation, strategy, combatId, rngState));
 }
 export function stepCombat(state: CombatState): CombatStep {
   if (state.status === 'finished') return { state, events: [] };
