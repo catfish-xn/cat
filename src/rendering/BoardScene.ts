@@ -6,6 +6,8 @@ import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToN
 import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import { HexLayout, type Point } from './hex-layout';
 import { MatchSession } from './match-session';
+import { InputRouter } from './input-router';
+import { StrategyPanel } from './strategy-panel';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -13,6 +15,8 @@ declare global {
 
 export class BoardScene extends Phaser.Scene {
   private session = new MatchSession();
+  private inputRouter = new InputRouter();
+  private strategyPanel: StrategyPanel | null = null;
   private get state() { return this.session.preparation; }
   private layout = new HexLayout(this.state.board);
   private health = new Map<string, Phaser.GameObjects.Graphics>();
@@ -78,21 +82,14 @@ export class BoardScene extends Phaser.Scene {
     this.selectionLabel = this.add.text(756, 462, '', { fontSize: '13px', color: '#edf4f3', wordWrap: { width: 164 }, lineSpacing: 3 });
     this.sellButton = this.button('sell', 756, 526, 164, 40, 'E · Sell', () => {
       if (this.selectedId === null) {
-        this.status.setText(this.session.phase === 'preparation' ? '请先点击一个我方单位，再点击 Sell' : this.failureMessage('wrong-phase'));
+        this.setStatus(this.session.phase === 'preparation' ? '请先点击一个我方单位，再点击 Sell' : this.failureMessage('wrong-phase'));
         return;
       }
       this.sell(this.selectedId);
     });
     this.rerollButton = this.button('reroll', 756, 577, 164, 40, `D · Reroll · ${MATCH_RULES.rerollCost} G`, () => this.command(this.session.reroll(), '商店已刷新'));
     this.xpButton = this.button('buy-xp', 756, 629, 164, 44, `F · ${MATCH_RULES.xpPurchaseCost} G → ${MATCH_RULES.xpPurchaseAmount} XP`, () => this.command(this.session.buyXp(), '经验已购买 · 升级增加人口，下一次刷新使用新概率'), 15);
-    this.button('debug-new-match', 756, 710, 164, 30, 'New Match', () => {
-      this.session.newMatch();
-      this.clearCombatEffects();
-      this.selectedId = null;
-      this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
-      this.sync();
-      this.status.setText('已重开整局 · Round 1 / Level 3 / HP 100，成长、金币与阵容已重置');
-    }, 12);
+    this.button('debug-new-match', 756, 710, 164, 30, 'New Match', () => this.newMatch(), 12);
     const graphics = this.add.graphics();
     for (let row = 0; row < this.state.board.rows; row++) for (let col = 0; col < this.state.board.columns; col++) {
       graphics.fillStyle(isDeploymentCell(this.state.board, 'player', { col, row }) ? 0x1b3039 : 0x30232e).lineStyle(1, 0x36505d);
@@ -122,6 +119,20 @@ export class BoardScene extends Phaser.Scene {
     }
     this.overlay = this.add.graphics().setDepth(5);
     this.status = this.add.text(48, 754, '准备就绪 · 购买或部署棋子，再点击 Start Combat', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
+    this.strategyPanel = new StrategyPanel({
+      state: () => this.session.state, selectedUnit: () => this.selectedId,
+      selectUnit: id => { this.selectedId = id; this.syncSelection(); },
+      combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
+      equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效'),
+      choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
+      target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), 'Anomaly 目标已锁定'),
+      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), 'Anomaly 选项已刷新 · 扣除 2 G'),
+      buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
+      deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
+      control: name => this.panelControl(name),
+      unitAt: (x, y) => this.playerUnitAt(x, y), cancelGesture: () => this.clearDrag(),
+      status: message => this.setStatus(message),
+    }, this.inputRouter);
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
@@ -130,6 +141,7 @@ export class BoardScene extends Phaser.Scene {
     window.__CAT_DEBUG__ = debug;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (window.__CAT_DEBUG__ === debug) delete window.__CAT_DEBUG__;
+      this.strategyPanel?.destroy(); this.strategyPanel = null;
       this.resetViewReferences();
     });
   }
@@ -139,6 +151,7 @@ export class BoardScene extends Phaser.Scene {
     this.discs.clear(); this.tokens.clear(); this.renderedCells.clear(); this.effects.clear(); this.namedObjects.clear();
     this.shopButtons.length = 0; this.shopFrames.length = 0;
     this.draggingId = null; this.selectedId = null; this.recentCombatEvents = [];
+    this.inputRouter.cancel();
   }
 
   private installKeyboardHandlers() {
@@ -156,9 +169,10 @@ export class BoardScene extends Phaser.Scene {
         this.command(this.session.buyXp(), '经验已购买 · 升级增加人口，下一次刷新使用新概率');
       } else if (event.code === 'KeyE') {
         event.preventDefault();
+        if (this.strategyPanel?.blocksSell) { this.setStatus('无出售单位目标 · 物品操作不会出售背景单位'); return; }
         const id = this.draggingId ?? this.hoveredId() ?? this.selectedId;
         if (id) this.sell(id);
-        else this.status.setText(this.session.phase === 'preparation' ? '请悬停或选择一个我方单位，再按 E' : this.failureMessage('wrong-phase'));
+        else this.setStatus(this.session.phase === 'preparation' ? '请悬停或选择一个我方单位，再按 E' : this.failureMessage('wrong-phase'));
       }
     };
     window.addEventListener('keydown', keydown);
@@ -182,6 +196,34 @@ export class BoardScene extends Phaser.Scene {
     this.command(result, '出售成功 · 金币已到账');
   }
 
+  private setStatus(message: string) { this.status.setText(message); this.strategyPanel?.status(message); }
+  private newMatch() {
+    this.clearCombatEffects(); this.session.newMatch(); this.selectedId = null;
+    this.strategyPanel?.reset();
+    this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
+    this.sync(); this.setStatus('已重开整局 · Round 1 / Level 3 / HP 100，成长、金币与阵容已重置');
+  }
+  private panelControl(name: 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match') {
+    if (name === 'new-match') { this.newMatch(); return; }
+    if (name === 'reroll') this.command(this.session.reroll(), '商店已刷新');
+    if (name === 'buy-xp') this.command(this.session.buyXp(), '经验已购买');
+    if (name === 'start-combat') this.command(this.session.start(), '战斗开始');
+    if (name === 'continue') this.command(this.session.continue(this.session.state.round), '进入下一回合');
+    if (name === 'sell') {
+      if (this.selectedId) this.sell(this.selectedId);
+      else this.setStatus('请先在单位面板选择一个我方单位');
+    }
+  }
+  private playerUnitAt(x: number, y: number): string | undefined {
+    const rect = this.game.canvas.getBoundingClientRect();
+    const px = (x - rect.left) * this.scale.gameSize.width / rect.width;
+    const py = (y - rect.top) * this.scale.gameSize.height / rect.height;
+    return this.state.units.find(unit => unit.team === 'player' && (() => {
+      const token = this.tokens.get(unit.id);
+      return token?.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29;
+    })())?.id;
+  }
+
   private button(name: string, x: number, y: number, width: number, height: number, text: string, onClick: () => void, size = 17) {
     const button = this.add.text(x, y, text, { fontSize: `${size}px`, color: '#edf4f3', backgroundColor: '#304653',
       fixedWidth: width, fixedHeight: height, align: 'center', padding: { top: 8 }, lineSpacing: 2 })
@@ -191,13 +233,17 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private installDragHandlers() {
-    this.input.on('dragstart', (_pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
+    this.input.on('dragstart', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (this.session.phase !== 'preparation' || !this.tokens.has(token.getData('unitId'))) return;
+      const gesture = this.inputRouter.begin('unit', token.getData('unitId'), pointer.id);
+      if (!gesture) return;
+      token.setData('gesture', gesture);
       this.draggingId = token.getData('unitId'); this.selectedId = this.draggingId;
       token.setDepth(10).setScale(1.08); this.syncSelection();
     });
     this.input.on('drag', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
+      if (!token.getData('gesture') || !this.inputRouter.owns(token.getData('gesture')) || pointer.id !== token.getData('gesture').pointerId) return;
       // Center the token on the pointer: Phaser's threshold-delayed drag offset
       // otherwise incorporates the first mouse move and can shift a whole hex.
       const { x, y } = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
@@ -205,18 +251,22 @@ export class BoardScene extends Phaser.Scene {
       const target = this.target({ x, y });
       if (target) {
         const reason = validateMatchDeployment(this.session.state, token.getData('unitId'), target);
-        this.status.setText(reason ? this.failureMessage(reason) : '可放置 · 释放以确认部署');
+        this.setStatus(reason ? this.failureMessage(reason) : '可放置 · 释放以确认部署');
         this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
         if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
         else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 37, p.y - 38, 74, 76, 10); }
-      } else this.status.setText(this.failureMessage('invalid-location'));
+      } else this.setStatus(this.failureMessage('invalid-location'));
     });
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
+      const gesture = token.getData('gesture');
+      if (!gesture || pointer.id !== gesture.pointerId) return;
+      if (pointer.wasCanceled) { this.clearDrag(); return; }
+      if (!this.inputRouter.release(gesture)) return;
       // Read release coordinates directly, even if no final drag frame rendered.
       const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
       if (target) this.command(this.session.deploy(token.getData('unitId'), target), '放置成功 · 可点击选中单位出售');
-      else this.status.setText(this.failureMessage('invalid-location'));
+      else this.setStatus(this.failureMessage('invalid-location'));
       this.clearDrag(); this.sync();
     });
   }
@@ -232,6 +282,7 @@ export class BoardScene extends Phaser.Scene {
   private failureMessage(reason: MatchFailure): string {
     const messages: Record<MatchFailure, string> = {
       'wrong-phase': this.session.phase === 'preparation' ? '当前为准备阶段 · 请布阵或开始战斗'
+        : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
         : this.session.phase === 'settlement' ? '本轮已结算 · 点击 Continue 进入下一回合'
         : 'Game Over · 点击 New Match 开始新的一局',
@@ -245,15 +296,19 @@ export class BoardScene extends Phaser.Scene {
       'insufficient-gold': '金币不足', 'bench-full': '备战席已满 · 请先部署或出售单位',
       'stale-round': '此回合已结束，请使用当前 Continue', 'unsettled-round': '当前回合尚未结算',
       'max-level': '已达最高等级 · 无需继续购买经验', 'population-cap': '人口已满 · 按 F 升级或先移回一个单位',
+      'unknown-item': '物品已不存在', 'item-not-inventory': '只能操作物品备战席中的装备',
+      'invalid-recipe': '请选择两件不同的组件实例合成', 'item-slot-occupied': '该装备槽已有物品',
+      'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
     return messages[reason];
   }
   private command(result: MatchCommandResult, success: string) {
-    if (!result.ok) { this.status.setText(this.failureMessage(result.reason)); return; }
+    if (!result.ok) { this.setStatus(this.failureMessage(result.reason)); return; }
     this.clearCombatEffects();
     if (this.session.phase !== 'preparation') this.selectedId = null;
     if (!this.session.combat) this.recentCombatEvents = [];
     this.sync();
+    this.showEvents(result.events.filter((event): event is CombatEvent => 'tick' in event));
     const upgrades = result.events.filter(event => event.type === 'unitUpgraded');
     for (const event of upgrades) {
       const token = this.tokens.get(event.survivorId);
@@ -265,9 +320,10 @@ export class BoardScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(20);
       this.fadeEffect(label, 1000); this.renderedUpgradeCount++;
     }
-    this.status.setText(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
-    if (this.session.phase === 'gameOver') this.status.setText('Game Over · HP 已归零，点击 New Match 重开');
-    else if (this.session.phase === 'settlement') this.status.setText('本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
+    this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
+    if (this.session.phase === 'gameOver') this.setStatus('Game Over · HP 已归零，点击 New Match 重开');
+    else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
+    else if (this.session.phase === 'settlement') this.setStatus('本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
   }
 
   private reconcileTokens() {
@@ -310,7 +366,8 @@ export class BoardScene extends Phaser.Scene {
       token.setInteractive({ useHandCursor: true }); this.input.setDraggable(token);
       token.on('pointerdown', () => {
         if (this.session.phase !== 'preparation' || !this.tokens.has(unit.id)) return;
-        this.selectedId = unit.id; this.syncSelection();
+        if (this.inputRouter.current) return;
+        this.selectedId = unit.id; this.syncSelection(); this.strategyPanel?.render();
       });
     } else {
       token.add(this.add.circle(21, -21, 10, 0xc35364));
@@ -320,7 +377,11 @@ export class BoardScene extends Phaser.Scene {
 
   private sync() {
     this.reconcileTokens(); this.syncHud();
-    if (this.session.phase !== 'preparation') { this.syncCombat(); return; }
+    this.strategyPanel?.render();
+    if (this.session.phase !== 'preparation') {
+      for (const token of this.tokens.values()) if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
+      this.syncCombat(); return;
+    }
     for (const unit of this.state.units) {
       const p = this.position(unit.location), token = this.tokens.get(unit.id)!;
       token.setPosition(p.x, p.y).setVisible(true).setAlpha(1).setScale(1).setDepth(0);
@@ -360,6 +421,7 @@ export class BoardScene extends Phaser.Scene {
     const failure = this.session.startFailure;
     this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与 XP，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
     this.phaseLabel.setText(ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
+      : match.phase === 'choice' ? '构筑选择 · 完成当前 Augment / Anomaly 后继续'
       : match.phase === 'combat' ? '自动战斗 · 积累 Mana 并施法，商店与部署已锁定'
       : match.phase === 'gameOver' ? 'Game Over · HP 已归零，点击 New Match 重开' : '回合结算 · 收入与 XP 已到账，Continue 进入下一回合');
     if (match.phase === 'settlement' || match.phase === 'gameOver') {
@@ -388,12 +450,13 @@ export class BoardScene extends Phaser.Scene {
   update(_time: number, delta: number) {
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
     const events = this.session.advance(delta);
-    this.syncCombat(); this.showEvents(events);
+    this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
     if (this.session.state.phase === 'settlement' || this.session.state.phase === 'gameOver') {
-      this.syncHud(); this.status.setText(this.session.state.phase === 'gameOver' ? 'Game Over · HP 已归零，点击 New Match 重开' : '本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
+      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'gameOver' ? 'Game Over · HP 已归零，点击 New Match 重开' : '本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
     }
   }
   private clearDrag() {
+    this.inputRouter.cancel(); this.strategyPanel?.cancel();
     const dragged = this.state.units.find(unit => unit.id === this.draggingId);
     if (dragged) {
       const point = this.position(dragged.location);
@@ -484,6 +547,14 @@ export class BoardScene extends Phaser.Scene {
         if (!unit) continue;
         const p = this.layout.center(unit.cell), cross = this.add.text(p.x, p.y, '×', { fontSize: '42px', color: '#f08080' }).setOrigin(0.5).setDepth(20);
         this.fadeEffect(cross, 500);
+      } else if (event.type === 'effectTriggered') {
+        const unit = combat.units.find(unit => unit.id === event.source.ownerId);
+        if (!unit) continue;
+        const p = this.layout.center(unit.cell);
+        const label = this.add.text(p.x, p.y + 44, `${event.source.sourceKind} · ${event.source.sourceDefinitionId}`, {
+          fontSize: '10px', color: '#ffe39b', backgroundColor: '#1b2634',
+        }).setOrigin(0.5).setDepth(20);
+        this.fadeEffect(label, 700);
       }
     }
   }
@@ -506,7 +577,9 @@ export class BoardScene extends Phaser.Scene {
     const meters = (map: Map<string, Phaser.GameObjects.Graphics>) => [...map].map(([id, meter]) => ({ id, visible: meter.visible,
       value: meter.getData('value') ?? 0, maxValue: meter.getData('maxValue') ?? 0,
       ratio: meter.getData('ratio') ?? 0, width: meter.getData('width') ?? 0 }));
-    return structuredClone({ state: this.session.state,
+    const strategy = this.strategyPanel?.snapshot();
+    Object.assign(bounds, strategy?.bounds ?? {});
+    return structuredClone({ state: this.session.state, strategy,
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
@@ -517,7 +590,9 @@ export class BoardScene extends Phaser.Scene {
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,
         xp: this.xpLabel.text, population: this.count.text, odds: this.oddsLabel.text, result: this.resultLabel.text,
         settlement: this.incomeLabel.text, selection: this.selectionLabel.text, startHint: this.startHint.text },
-      recentCombatEvents: this.recentCombatEvents, renderedCastCount: this.renderedCastCount, renderedUpgradeCount: this.renderedUpgradeCount,
+      recentCombatEvents: this.recentCombatEvents, combatEvents: this.session.combatEvents,
+      gesture: this.inputRouter.current, gestureEpoch: this.inputRouter.gestureEpoch,
+      renderedCastCount: this.renderedCastCount, renderedUpgradeCount: this.renderedUpgradeCount,
       effects: this.effects.size, tweens: this.tweens.getTweens().length, selectedId: this.selectedId, draggingId: this.draggingId,
       texts: this.children.list.filter((child): child is Phaser.GameObjects.Text => child instanceof Phaser.GameObjects.Text).map(child => child.text),
       bounds, layout: { hexes, bench: Array.from({ length: this.state.benchSize }, (_, slot) => client(this.benchCenter(slot))) },

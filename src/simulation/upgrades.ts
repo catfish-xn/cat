@@ -1,6 +1,7 @@
 import { contains, isDeploymentCell } from './board';
 import type { GameState } from './game';
 import type { PurchasePlanResult } from './match-types';
+import type { AnomalyBinding, ItemInstance, StrategyEvent } from './strategy-types';
 import { UNIT_DEFINITIONS, type StarLevel, type Unit, type UnitLocation, type UnitUpgradedEvent } from './units';
 
 type Candidate = Omit<Unit, 'location'> & { readonly location: UnitLocation | null };
@@ -68,4 +69,41 @@ export function planPurchase(preparation: GameState, definitionId: string, candi
   }).sort(compareIds) };
   validateRoster(next);
   return { ok: true, preparation: next, events };
+}
+
+/** Apply every upgrade to a temporary resource ledger before Match commits the purchase. */
+export function transferUpgradeResources(
+  items: readonly ItemInstance[], binding: AnomalyBinding | null, upgradeEvents: readonly UnitUpgradedEvent[],
+): { readonly items: readonly ItemInstance[]; readonly anomalyBinding: AnomalyBinding | null; readonly events: readonly StrategyEvent[] } {
+  let nextItems = [...items], anomalyBinding = binding;
+  const events: StrategyEvent[] = [];
+  for (const upgrade of upgradeEvents) {
+    const occupiedSlots = new Set(nextItems.flatMap(item => item.location.kind === 'unit' && item.location.unitId === upgrade.survivorId
+      ? [item.location.slot] : []));
+    for (const consumedId of [...upgrade.consumedIds].sort()) {
+      const consumedItems = nextItems.filter(item => item.location.kind === 'unit' && item.location.unitId === consumedId)
+        .sort((a, b) => {
+          if (a.location.kind !== 'unit' || b.location.kind !== 'unit') throw new Error('Expected equipped item');
+          return a.location.slot - b.location.slot || compareIds(a, b);
+        });
+      const returnedIds: string[] = [];
+      for (const item of consumedItems) {
+        let slot = 0;
+        while (occupiedSlots.has(slot) && slot < 3) slot++;
+        const location: ItemInstance['location'] = slot < 3
+          ? { kind: 'unit', unitId: upgrade.survivorId, slot } : { kind: 'inventory' };
+        nextItems = nextItems.map(candidate => candidate.id === item.id ? { ...candidate, location } : candidate);
+        if (slot < 3) {
+          occupiedSlots.add(slot);
+          events.push({ type: 'itemEquipped', itemId: item.id, unitId: upgrade.survivorId, slot });
+        } else returnedIds.push(item.id);
+      }
+      if (returnedIds.length) events.push({ type: 'itemsReturned', itemIds: returnedIds.sort(), unitId: consumedId });
+    }
+    if (anomalyBinding && upgrade.consumedIds.includes(anomalyBinding.unitId)) {
+      events.push({ type: 'anomalyTransferred', fromId: anomalyBinding.unitId, toId: upgrade.survivorId });
+      anomalyBinding = { ...anomalyBinding, unitId: upgrade.survivorId };
+    }
+  }
+  return { items: nextItems.sort(compareIds), anomalyBinding, events };
 }

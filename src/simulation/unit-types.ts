@@ -7,6 +7,7 @@ export interface UnitDefinition {
   readonly baseStats: { readonly health: number; readonly attack: number; readonly armor: number; readonly magicResist: number };
   readonly attackRange: number; readonly attackIntervalTicks: number;
   readonly initialMana: number; readonly maxMana: number; readonly abilityId: string;
+  readonly traits: readonly string[];
 }
 export type UnitLocation = { readonly kind: 'bench'; readonly slot: number } | { readonly kind: 'board'; readonly cell: HexCell };
 export interface Unit { readonly id: string; readonly definitionId: string; readonly team: Team; readonly location: UnitLocation; readonly starLevel: StarLevel }

@@ -1,3 +1,6 @@
+import { collectTriggers } from './effects';
+import { invocationEvent, stampCombatStep } from './combat-effects';
+import type { EffectInvocation } from './strategy-types';
 import { getNeighbors, hexDistance, type Board, type HexCell } from './board';
 import { compareIds, eliminationResult, MOVE_INTERVAL_TICKS, type CombatEvent, type CombatState, type CombatStep, type CombatUnit } from './combat-types';
 import { planAbility, type AbilityIntent } from './combat-abilities';
@@ -33,7 +36,7 @@ function nextStep(board: Board, unit: CombatUnit, target: CombatUnit, occupied: 
 export function advanceCombatTick(state: CombatState): CombatStep {
   const tick = state.tick + 1;
   const events: CombatEvent[] = [];
-  const units: WorkingUnit[] = state.units.map(unit => ({ ...unit, cell: { ...unit.cell }, ability: { ...unit.ability },
+  const units: WorkingUnit[] = state.units.map(unit => ({ ...structuredClone(unit), cell: { ...unit.cell }, ability: { ...unit.ability },
     cooldownTicks: unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0,
     moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0,
   })).sort(compareIds);
@@ -79,6 +82,8 @@ export function advanceCombatTick(state: CombatState): CombatStep {
   const attacks = new Set<string>();
   const spentMana = new Map<string, number>();
   const shields: NonNullable<AbilityIntent['shield']>[] = [];
+  const hookMana = new Map<string, number>();
+  const invocations: EffectInvocation[] = [];
   for (const action of actions) {
     const unit = action.unit;
     if (action.kind === 'cast') {
@@ -95,21 +100,35 @@ export function advanceCombatTick(state: CombatState): CombatStep {
         rawAmount: unit.attackDamage, sourceKind: 'attack', effectIndex: 0 });
     }
     unit.cooldownTicks = unit.attackIntervalTicks;
-  }
-
-  // Every cast and attack is committed before any HP/life changes. Same-tick shields protect both teams.
-  for (const grant of shields) {
-    const unit = units.find(other => other.id === grant.unitId)!;
-    const before = unit.shield;
-    const previousExpiry = unit.shieldExpiresAtTick;
-    unit.shield = Math.max(unit.shield, grant.amount);
-    unit.shieldExpiresAtTick = unit.shield > 0 ? tick + grant.durationTicks : null;
-    if (before !== unit.shield || previousExpiry !== unit.shieldExpiresAtTick) {
-      events.push({ type: 'shieldChanged', tick, unitId: unit.id, reason: 'granted', before,
-        after: unit.shield, expiresAtTick: unit.shieldExpiresAtTick });
+    if (state.strategy) {
+      const batch = collectTriggers(unit.triggers ?? [], unit.effectRuntime ?? [], action.kind === 'cast' ? 'onCast' : 'onAttack', unit.id, unit.targetId);
+      unit.effectRuntime = batch.runtime;
+      invocations.push(...batch.invocations);
     }
   }
-  const incoming = aggregateDamagePackets(packets, units);
+
+  for (const invocation of invocations) {
+    events.push(invocationEvent(invocation, tick));
+    const { action, trigger, targetId } = invocation;
+    if (action.kind === 'gainMana') hookMana.set(targetId, (hookMana.get(targetId) ?? 0) + action.amount);
+    else if (action.kind === 'grantShield') shields.push({ unitId: targetId, amount: action.amount, durationTicks: action.durationTicks });
+    else packets.push({ sourceId: trigger.source.ownerId, targetId, rawAmount: action.amount, damageType: action.damageType,
+      sourceKind: trigger.source.sourceKind, source: { ...trigger.source }, sourceInstanceId: trigger.source.sourceInstanceId,
+      effectIndex: trigger.source.effectIndex, packetOrdinal: packets.length, triggerEligible: false });
+  }
+  // Every cast and attack is committed before any HP/life changes. Same-tick shields protect both teams.
+  for (const unit of units) {
+    const grants = shields.filter(grant => grant.unitId === unit.id);
+    if (grants.length === 0) continue;
+    const before = unit.shield, previousExpiry = unit.shieldExpiresAtTick;
+    unit.shield = Math.max(unit.shield, ...grants.map(grant => grant.amount));
+    unit.shieldExpiresAtTick = unit.shield > 0
+      ? (state.strategy ? Math.max(previousExpiry ?? 0, ...grants.map(grant => tick + grant.durationTicks))
+        : tick + grants.at(-1)!.durationTicks) : null;
+    if (before !== unit.shield || previousExpiry !== unit.shieldExpiresAtTick) events.push({ type: 'shieldChanged', tick,
+      unitId: unit.id, reason: 'granted', before, after: unit.shield, expiresAtTick: unit.shieldExpiresAtTick });
+  }
+  const incoming = aggregateDamagePackets(packets, units, Boolean(state.strategy));
   const hpLost = new Map<string, number>();
   for (const unit of units) {
     const damage = incoming.get(unit.id);
@@ -122,16 +141,27 @@ export function advanceCombatTick(state: CombatState): CombatStep {
     hpLost.set(unit.id, hpDamage);
     events.push({ type: 'damage', tick, unitId: unit.id, ...damage, absorbed, hpDamage, hp: unit.hp, shield: unit.shield });
   }
+  // HP-loss hooks have only Mana actions; they cannot recurse into damage or alter settled HP.
+  if (state.strategy) for (const unit of units) {
+    if (!unit.alive || unit.hp === 0 || (hpLost.get(unit.id) ?? 0) === 0) continue;
+    const batch = collectTriggers(unit.triggers ?? [], unit.effectRuntime ?? [], 'onHpLoss', unit.id, unit.targetId);
+    unit.effectRuntime = batch.runtime;
+    for (const invocation of batch.invocations) {
+      events.push(invocationEvent(invocation, tick));
+      hookMana.set(unit.id, (hookMana.get(unit.id) ?? 0) + invocation.action.amount);
+    }
+  }
   for (const unit of units) {
     if (!unit.alive || unit.hp === 0) continue;
     const spent = spentMana.get(unit.id) ?? 0;
     const attackGain = attacks.has(unit.id) ? 10 : 0;
     const damageGain = Math.min(20, Math.floor((hpLost.get(unit.id) ?? 0) / 10));
-    if (spent === 0 && attackGain === 0 && damageGain === 0) continue;
+    const hookGain = hookMana.get(unit.id) ?? 0;
+    if (spent === 0 && attackGain === 0 && damageGain === 0 && hookGain === 0) continue;
     const before = unit.mana + spent;
-    const overflow = Math.max(0, unit.mana + attackGain + damageGain - unit.maxMana);
-    unit.mana = Math.min(unit.maxMana, unit.mana + attackGain + damageGain);
-    events.push({ type: 'manaChanged', tick, unitId: unit.id, before, spent, attackGain, damageGain, overflow, after: unit.mana });
+    const overflow = Math.max(0, unit.mana + attackGain + damageGain + hookGain - unit.maxMana);
+    unit.mana = Math.min(unit.maxMana, unit.mana + attackGain + damageGain + hookGain);
+    events.push({ type: 'manaChanged', tick, unitId: unit.id, before, spent, attackGain, damageGain, ...(state.strategy ? { hookGain } : {}), overflow, after: unit.mana });
   }
   for (const unit of units) {
     if (!unit.alive || unit.hp > 0) continue;
@@ -147,5 +177,5 @@ export function advanceCombatTick(state: CombatState): CombatStep {
   const eliminated = eliminationResult(units);
   const result = eliminated ?? (tick >= state.maxTicks ? 'draw' : null);
   if (result !== null) events.push({ type: 'combatFinished', tick, result, reason: eliminated === null ? 'timeout' : 'elimination' });
-  return { state: { ...state, units, tick, status: result === null ? 'running' : 'finished', result }, events };
+  return stampCombatStep({ ...state, units, tick, status: result === null ? 'running' : 'finished', result }, events);
 }

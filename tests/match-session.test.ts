@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';
-import { type CombatEvent } from '../src/simulation/combat';
+import { createCombatWithEvents, type CombatEvent } from '../src/simulation/combat';
 import { createMatch, deployMatchUnit, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 
 function preparation(): MatchState {
   return deployMatchUnit(createMatch(), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
@@ -10,6 +11,15 @@ const players = (state: MatchState) => state.preparation.units.filter(unit => un
 function rejected(session: MatchSession, result: MatchCommandResult, reason: string, before: MatchState) {
   expect(result).toEqual({ ok: false, state: before, reason });
   expect(result.state).toBe(before); expect(session.state).toBe(before);
+}
+function resolveSessionChoices(session: MatchSession): void {
+  while (session.phase === 'choice') {
+    const choice = session.state.pendingChoice!;
+    const result = choice.step === 'target'
+      ? session.anomalyTarget(choice.choiceId, choice.generation, players(session.state)[0].id)
+      : session.choose(choice.choiceId, choice.generation, choice.offers[0]);
+    expect(result.ok).toBe(true);
+  }
 }
 
 describe('match session commands and fixed clock', () => {
@@ -39,14 +49,19 @@ describe('match session commands and fixed clock', () => {
     expect(session.combat?.units.some(unit => unit.hp < unit.maxHp)).toBe(true);
     expect(players(session.state)).toEqual(before);
     expect(session.continue(1).ok).toBe(true);
+    expect(session.phase).toBe('choice');
+    expect(session.advance(1000)).toEqual([]);
+    resolveSessionChoices(session);
     expect(session.phase).toBe('preparation'); expect(session.combat).toBeNull();
     expect(players(session.state)).toEqual(before);
     expect(session.advance(1000)).toEqual([]);
     expect(session.deploy('unit-1', { kind: 'board', cell: { col: 4, row: 6 } }).ok).toBe(true);
     const secondRoster = structuredClone(players(session.state));
+    const secondInitial = createCombatWithEvents(session.state.preparation, buildStrategySnapshot(session.state), 'round-2').state;
     session.start();
+    expect(session.combat).toEqual(secondInitial);
     expect(session.combat?.units.every(unit => unit.hp === unit.maxHp && unit.alive && unit.targetId === null
-      && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0 && unit.mana === 0 && unit.shield === 0 && unit.shieldExpiresAtTick === null)).toBe(true);
+      && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0)).toBe(true);
     expect(session.combat?.units.find(unit => unit.id === 'unit-1')?.cell).toEqual({ col: 4, row: 6 });
     expect(session.advance(25)).toEqual([]); expect(session.combat?.tick).toBe(0);
     session.advance(25); expect(session.combat?.tick).toBe(1);
@@ -97,6 +112,7 @@ describe('match session commands and fixed clock', () => {
     rejected(session, session.start(), 'wrong-phase', settled);
     expect(session.advance(60_000)).toEqual([]); expect(session.state).toBe(settled);
     expect(session.continue(1).ok).toBe(true);
+    resolveSessionChoices(session);
     session.deploy('unit-1', { kind: 'board', cell: { col: 2, row: 7 } });
     session.deploy('unit-1', { kind: 'bench', slot: 0 }); session.sell('unit-1');
     expect(session.startFailure).toBeUndefined(); expect(session.start().ok).toBe(true);
@@ -115,6 +131,7 @@ describe('match session commands and fixed clock', () => {
       expect(session.state.gold).toBe(gold + 5 * round);
       expect(session.state.roundResults).toHaveLength(round);
       expect(session.continue(round).ok).toBe(true);
+      resolveSessionChoices(session);
       const next = session.state; rejected(session, session.continue(round), 'wrong-phase', next);
       expect(players(session.state)).toEqual(roster); expect(session.combat).toBeNull();
     }
@@ -136,7 +153,7 @@ describe('match session commands and fixed clock', () => {
     const session = new MatchSession({ ...initial, shop: { ...initial.shop, slots: [{ status: 'available', definitionId: 'sentinel' }, ...initial.shop.slots.slice(1)] } });
     const result = session.buy(0, 1);
     expect(result.ok).toBe(true); if (!result.ok) throw new Error(result.reason);
-    expect(result.events).toEqual([{ type: 'unitUpgraded', survivorId: 'unit-1', consumedIds: ['unit-4', 'unit-6'], definitionId: 'sentinel', fromStar: 1, toStar: 2, location: { kind: 'bench', slot: 0 } }]);
+    expect(result.events).toEqual([{ type: 'unitUpgraded', survivorId: 'unit-1', consumedIds: ['unit-4', 'unit-6'], definitionId: 'sentinel', fromStar: 1, toStar: 2, location: { kind: 'bench', slot: 0 }, domain: 'match', eventSeq: initial.nextMatchEventSeq }]);
     expect(session.state.nextUnitSerial).toBe(7); expect(players(session.state).find(unit => unit.id === 'unit-1')?.starLevel).toBe(2);
     expect(session.sell('unit-1').ok).toBe(true); expect(session.state.gold).toBe(12);
     const sold = session.state; rejected(session, session.sell('unit-1'), 'unknown-unit', sold);
@@ -159,7 +176,8 @@ describe('match session commands and fixed clock', () => {
 
 describe('rapid D/F/E commands without frame or animation waits', () => {
   const odds: Record<number, number[]> = { 3: [75,25,0,0,0], 4: [55,30,15,0,0], 5: [45,33,20,2,0] };
-  const catalogs = [['sentinel','ranger','mystic'], ['bulwark','archer'], ['arcanist','duelist'], ['warden','tempest'], ['colossus','oracle']];
+  const catalogs = [['mystic','ranger','sentinel','spark','squire'], ['archer','binder','bulwark','scout'],
+    ['arcanist','beacon','duelist','striker'], ['prism','tempest','warden'], ['colossus','oracle']];
   function referenceShop(initialState: number, level: number) {
     let state = BigInt(initialState);
     const draw = () => (state = (state * 1664525n + 1013904223n) % 4294967296n);

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BOARD } from '../src/simulation/board';
 import type { GameState } from '../src/simulation/game';
-import { planPurchase } from '../src/simulation/upgrades';
+import { planPurchase, transferUpgradeResources } from '../src/simulation/upgrades';
+import type { AnomalyBinding, ItemInstance } from '../src/simulation/strategy-types';
 import { getUnitSellPrice } from '../src/simulation/unit-stats';
 import type { StarLevel, Unit, UnitLocation } from '../src/simulation/units';
 
@@ -142,5 +143,133 @@ describe('atomic purchase and automatic upgrades', () => {
     expect(() => planPurchase(state, 'unknown', 'new')).toThrow(RangeError);
     expect(() => planPurchase(state, 'sentinel', 'a')).toThrow('Duplicate unit ID');
     expect(() => planPurchase(game([unit('a', bench(0)), unit('b', bench(0))]), 'sentinel', 'new')).toThrow('Invalid preparation roster');
+  });
+});
+
+const item = (id: string, unitId?: string, slot = 0, definitionId = 'blade'): ItemInstance => ({
+  id, definitionId, location: unitId === undefined ? { kind: 'inventory' } : { kind: 'unit', unitId, slot },
+});
+const anomaly = (unitId: string): AnomalyBinding => ({
+  definitionId: 'colossus', unitId, choiceId: 'anomaly-r7', boundRound: 7,
+});
+
+describe('upgrade item and anomaly resource plans', () => {
+  it('preserves survivor slots and fills gaps by consumed unit ID then original slot, returning overflow', () => {
+    const roster = freeze(game([unit('survivor', board(2)), unit('unit-9', bench(0)), unit('unit-10', bench(1))]));
+    // A legal planner input with an existing triple makes the nonmerging incoming card remain on the bench.
+    const upgraded = purchase(roster);
+    expect(upgraded.events[0].consumedIds).toEqual(['unit-10', 'unit-9']);
+    const items = freeze([
+      item('item-1', 'survivor', 1), item('item-2', 'unit-9', 0), item('item-3', 'unit-10', 2),
+      item('item-4', 'unit-10', 0), item('item-5', 'unit-10', 1), item('item-6'),
+    ]);
+    const binding = freeze(anomaly('unit-10')), before = JSON.stringify({ items, binding });
+    const transferred = transferUpgradeResources(items, binding, freeze(upgraded.events));
+    expect(transferred.items).toEqual([
+      item('item-1', 'survivor', 1), item('item-2'), item('item-3'),
+      item('item-4', 'survivor', 0), item('item-5', 'survivor', 2), item('item-6'),
+    ]);
+    expect(transferred.events).toEqual([
+      { type: 'itemEquipped', itemId: 'item-4', unitId: 'survivor', slot: 0 },
+      { type: 'itemEquipped', itemId: 'item-5', unitId: 'survivor', slot: 2 },
+      { type: 'itemsReturned', itemIds: ['item-3'], unitId: 'unit-10' },
+      { type: 'itemsReturned', itemIds: ['item-2'], unitId: 'unit-9' },
+      { type: 'anomalyTransferred', fromId: 'unit-10', toId: 'survivor' },
+    ]);
+    expect(transferred.anomalyBinding).toEqual(anomaly('survivor'));
+    expect(JSON.stringify({ items, binding })).toBe(before);
+    expect(transferUpgradeResources([...items].reverse(), binding, upgraded.events)).toEqual(transferred);
+    expect(transferUpgradeResources(items, binding, upgraded.events.map(event => ({ ...event, consumedIds: [...event.consumedIds].reverse() }))))
+      .toEqual(transferred);
+  });
+
+  it('moves resources at each stage of a one-to-two-to-three-star chain without changing survivor selection', () => {
+    const roster = freeze(game([unit('unit-20', board(2), 2), unit('unit-10', bench(0), 2),
+      unit('unit-4', bench(2)), unit('unit-3', bench(1))]));
+    const upgraded = purchase(roster);
+    const items = freeze([
+      item('item-1', 'unit-20', 2), item('item-2', 'unit-10', 1), item('item-3', 'unit-3', 2),
+      item('item-4', 'unit-4', 0), item('item-5', 'unit-4', 1), item('item-6', undefined, 0, 'rod'),
+    ]);
+    const transferred = transferUpgradeResources(items, freeze(anomaly('unit-4')), upgraded.events);
+    expect(upgraded.preparation.units).toEqual([unit('unit-20', board(2), 3)]);
+    expect(transferred.items).toEqual([
+      item('item-1', 'unit-20', 2), item('item-2', 'unit-20', 0), item('item-3'),
+      item('item-4', 'unit-20', 1), item('item-5'), item('item-6', undefined, 0, 'rod'),
+    ]);
+    expect(transferred.events.filter(event => event.type === 'anomalyTransferred')).toEqual([
+      { type: 'anomalyTransferred', fromId: 'unit-4', toId: 'unit-3' },
+      { type: 'anomalyTransferred', fromId: 'unit-3', toId: 'unit-20' },
+    ]);
+    expect(transferred.anomalyBinding).toEqual(anomaly('unit-20'));
+    expect(transferred.items.map(value => [value.id, value.definitionId])).toEqual(items.map(value => [value.id, value.definitionId]));
+    const owned = new Set(upgraded.preparation.units.map(value => value.id));
+    expect(transferred.items.every(value => value.location.kind === 'inventory' || owned.has(value.location.unitId))).toBe(true);
+    const restored = JSON.parse(JSON.stringify({ items, binding: anomaly('unit-4'), events: upgraded.events }));
+    expect(transferUpgradeResources(restored.items, restored.binding, restored.events)).toEqual(transferred);
+  });
+
+  it('retains an existing survivor or unrelated binding and does not turn identical components into a completed item', () => {
+    const upgraded = purchase(freeze(game([unit('survivor', board(1)), unit('consumed', bench(0))])));
+    const items = freeze([item('item-1', 'survivor', 2), item('item-2', 'consumed', 1)]);
+    for (const binding of [anomaly('survivor'), anomaly('unrelated'), null]) {
+      const transferred = transferUpgradeResources(items, freeze(binding), upgraded.events);
+      expect(transferred.items).toEqual([item('item-1', 'survivor', 2), item('item-2', 'survivor', 0)]);
+      expect(transferred.anomalyBinding).toEqual(binding);
+      expect(transferred.events).toEqual([{ type: 'itemEquipped', itemId: 'item-2', unitId: 'survivor', slot: 0 }]);
+    }
+  });
+
+  it('transfers a full-bench successful purchase and returns no partial plan for a final bench failure', () => {
+    const roster = freeze(game([unit('a', bench(0)), unit('b', bench(1))], 2));
+    const items = freeze([item('item-1', 'a', 0), item('item-2', 'b', 2)]), binding = freeze(anomaly('b'));
+    const success = purchase(roster);
+    expect(transferUpgradeResources(items, binding, success.events)).toEqual({
+      items: [item('item-1', 'a', 0), item('item-2', 'a', 1)], anomalyBinding: anomaly('a'),
+      events: [{ type: 'itemEquipped', itemId: 'item-2', unitId: 'a', slot: 1 },
+        { type: 'anomalyTransferred', fromId: 'b', toId: 'a' }],
+    });
+    const unmergeable = freeze(game([unit('a', board(1)), unit('b', board(2)), unit('c', board(3)),
+      unit('other', bench(0), 1, 'ranger')], 1));
+    const before = JSON.stringify({ unmergeable, items, binding });
+    // The three board copies can merge in the temporary plan, but the incoming fourth card cannot fit.
+    expect(planPurchase(unmergeable, 'sentinel', 'unit-99')).toEqual({ ok: false, reason: 'bench-full' });
+    expect(JSON.stringify({ unmergeable, items, binding })).toBe(before);
+  });
+
+  it('conserves every item through successive purchases and returns all overflow to inventory', () => {
+    let roster = game([]), items: readonly ItemInstance[] = [], binding: AnomalyBinding | null = null;
+    const created = new Map<string, string>();
+    for (let serial = 1; serial <= 27; serial++) {
+      const upgraded = purchase(freeze(roster), 'sentinel', `unit-${serial}`);
+      const transferred = transferUpgradeResources(freeze(items), freeze(binding), upgraded.events);
+      roster = upgraded.preparation;
+      items = transferred.items;
+      binding = transferred.anomalyBinding;
+      const target = roster.units.find(value => value.id === `unit-${serial}`);
+      if (target) {
+        const itemId = `item-${serial}`;
+        items = [...items, item(itemId, target.id, 0, 'rod')];
+        created.set(itemId, 'rod');
+        if (serial === 2) binding = anomaly(target.id);
+      }
+      expect(items).toHaveLength(created.size);
+      expect(new Set(items.map(value => value.id)).size).toBe(created.size);
+      for (const value of items) {
+        expect(value.definitionId).toBe(created.get(value.id));
+        if (value.location.kind === 'unit') {
+          expect(roster.units.some(unit => value.location.kind === 'unit' && unit.id === value.location.unitId)).toBe(true);
+        }
+      }
+      for (const value of roster.units) {
+        const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === value.id);
+        expect(equipped.length).toBeLessThanOrEqual(3);
+        expect(new Set(equipped.map(item => item.location.kind === 'unit' ? item.location.slot : -1)).size).toBe(equipped.length);
+      }
+      if (binding) expect(roster.units.some(unit => unit.id === binding?.unitId)).toBe(true);
+    }
+    expect(roster.units.map(value => value.starLevel)).toEqual([3, 3, 3]);
+    expect(items.some(value => value.location.kind === 'inventory')).toBe(true);
+    expect(binding?.choiceId).toBe('anomaly-r7');
   });
 });

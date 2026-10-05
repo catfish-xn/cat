@@ -16,6 +16,8 @@ export function createGame(): GameState {
 
 /** Player preparation placement only. Future combat movement must use separate commands. */
 export function validateDeployment(state: GameState, unitId: string, target: UnitLocation): DeploymentFailure | undefined {
+  if (!target || typeof target !== 'object' || (target.kind !== 'board' && target.kind !== 'bench')
+    || (target.kind === 'board' && (!target.cell || typeof target.cell !== 'object'))) return 'invalid-location';
   const unit = state.units.find(unit => unit.id === unitId);
   if (!unit) return 'unknown-unit';
   if (unit.team !== 'player') return 'enemy-unit';

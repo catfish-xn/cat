@@ -5,7 +5,7 @@ import { UNIT_DEFINITIONS } from '../src/simulation/units';
 
 const MODULUS = 4294967296n;
 // Deliberately independent copies: this oracle never calls production RNG/odds/catalog helpers.
-const CATALOG = [['sentinel', 'ranger', 'mystic'], ['bulwark', 'archer'], ['arcanist', 'duelist'], ['warden', 'tempest'], ['colossus', 'oracle']];
+const CATALOG = [['mystic', 'ranger', 'sentinel', 'spark', 'squire'], ['archer', 'binder', 'bulwark', 'scout'], ['arcanist', 'beacon', 'duelist', 'striker'], ['prism', 'tempest', 'warden'], ['colossus', 'oracle']];
 const ODDS = [[100, 0, 0, 0, 0], [100, 0, 0, 0, 0], [75, 25, 0, 0, 0], [55, 30, 15, 0, 0],
   [45, 33, 20, 2, 0], [30, 40, 25, 5, 0], [19, 30, 40, 10, 1], [18, 25, 32, 22, 3], [10, 20, 25, 35, 10]];
 const word = (seed: bigint) => (seed * 1664525n + 1013904223n) % MODULUS;
@@ -26,7 +26,7 @@ function oracle(seed: number, generation: number, level: number) {
 }
 
 describe('versioned level-dependent deterministic shop', () => {
-  it('fixes five slots and the ordered eleven-definition catalog', () => {
+  it('fixes five slots and the ordered eighteen-definition catalog', () => {
     expect(MATCH_RULES.shopSize).toBe(5);
     expect(SHOP_CATALOG).toEqual(CATALOG.flat());
     expect(Object.values(SHOP_CATALOG_BY_COST)).toEqual(CATALOG);
@@ -38,9 +38,9 @@ describe('versioned level-dependent deterministic shop', () => {
 
   it('locks the seed42 level3 golden sequence and consumes exactly ten words per generation', () => {
     const expected = [
-      { names: ['sentinel', 'sentinel', 'sentinel', 'sentinel', 'archer'], rngState: 4271921684 },
-      { names: ['bulwark', 'mystic', 'sentinel', 'mystic', 'archer'], rngState: 3820240078 },
-      { names: ['sentinel', 'sentinel', 'archer', 'mystic', 'sentinel'], rngState: 260725464 },
+      { names: ['mystic', 'ranger', 'mystic', 'mystic', 'scout'], rngState: 4271921684 },
+      { names: ['binder', 'squire', 'mystic', 'squire', 'scout'], rngState: 3820240078 },
+      { names: ['mystic', 'ranger', 'scout', 'squire', 'mystic'], rngState: 260725464 },
     ];
     let seed = 42;
     for (const [index, fixture] of expected.entries()) {
@@ -83,8 +83,8 @@ describe('versioned level-dependent deterministic shop', () => {
   });
 
   it('maps exact second-draw catalog thresholds independently from the first cost draw', () => {
-    const boundaries = [0n, 1431655765n, 1431655766n, 2863311530n, 2863311531n, MODULUS - 1n];
-    const expected = ['sentinel', 'sentinel', 'ranger', 'ranger', 'mystic', 'mystic'];
+    const boundaries = [0n, 858993459n, 858993460n, 1717986918n, 1717986919n, 2576980377n, 2576980378n, 3435973836n, 3435973837n, MODULUS - 1n];
+    const expected = ['mystic', 'mystic', 'ranger', 'ranger', 'sentinel', 'sentinel', 'spark', 'spark', 'squire', 'squire'];
     for (const [index, chosenWord] of boundaries.entries()) {
       const seed = Number(predecessor(predecessor(chosenWord)));
       expect(generateShop(seed, 1, 1).shop.slots[0]).toEqual({ status: 'available', definitionId: expected[index] });
@@ -92,18 +92,18 @@ describe('versioned level-dependent deterministic shop', () => {
   });
 
   it('allows duplicate cards and identical consecutive shops without extra sampling', () => {
-    expect(generateShop(48, 1, 1)).toEqual({ shop: { generation: 1, slots: available(['ranger', 'ranger', 'ranger', 'ranger', 'ranger']) }, rngState: 1457390794 });
-    const first = generateShop(13, 1, 1), second = generateShop(first.rngState, 2, 1);
-    expect(first.shop.slots).toEqual(available(['ranger', 'sentinel', 'ranger', 'ranger', 'sentinel']));
+    expect(generateShop(100, 1, 1)).toEqual({ shop: { generation: 1, slots: available(['ranger', 'ranger', 'ranger', 'ranger', 'ranger']) }, rngState: 1402937758 });
+    const first = generateShop(8959, 1, 1), second = generateShop(first.rngState, 2, 1);
+    expect(first.shop.slots).toEqual(available(['squire', 'ranger', 'ranger', 'sentinel', 'ranger']));
     expect(second.shop.slots).toEqual(first.shop.slots);
-    expect(first.rngState).toBe(1411446351);
-    expect(second.rngState).toBe(742289953);
+    expect(first.rngState).toBe(1128937553);
+    expect(second.rngState).toBe(1345267635);
     expect(second.shop.generation).toBe(2);
   });
 
   it('changes offers by level while keeping identical RNG consumption and generation metadata independent', () => {
     const low = generateShop(42, 1, 3), high = generateShop(42, 1, 9);
-    expect(high.shop.slots).toEqual(available(['bulwark', 'warden', 'arcanist', 'arcanist', 'tempest']));
+    expect(high.shop.slots).toEqual(available(['archer', 'prism', 'arcanist', 'arcanist', 'warden']));
     expect(high.shop.slots).not.toEqual(low.shop.slots);
     expect(high.rngState).toBe(low.rngState);
     expect(generateShop(42, 500, 3)).toEqual({ ...low, shop: { ...low.shop, generation: 500 } });

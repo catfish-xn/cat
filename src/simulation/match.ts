@@ -1,4 +1,4 @@
-import { createCombat, stepCombat, validateCombatStart, type CombatState } from './combat';
+import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { createGame, deployUnit, getPlayerDeploymentCount, validateDeployment } from './game';
 import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
@@ -6,24 +6,65 @@ import { validateSeed } from './rng';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
 import { getUnitSellPrice } from './unit-stats';
-import { planPurchase } from './upgrades';
+import { planPurchase, transferUpgradeResources } from './upgrades';
 import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
+import { planCombine, planEquip, returnUnitItems } from './inventory';
+import { buildStrategySnapshot } from './strategy-snapshot';
+import { getRoundSchedule } from './round-schedule';
+import { planReward } from './rewards';
+import { CONTENT_DIGEST } from './content';
+import { AUGMENT_DEFINITIONS } from './content/augments';
+import { ANOMALY_DEFINITIONS } from './content/anomalies';
+import { generateChoices } from './choices';
+import type { ScheduleReceipt } from './strategy-types';
 import type { FinishedCombat, MatchCommandResult, MatchEvent, MatchFailure, MatchState, MatchStep, RunningCombat } from './match-types';
 export * from './match-types';
 export { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 export { getXpToNextLevel, getShopOdds } from './progression';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
-const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => ({ ok: true, state, events });
+const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
+  let seq = state.nextMatchEventSeq;
+  const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
+  return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
+};
+function enterScheduledEvents(initial: MatchState): { state: MatchState; events: MatchEvent[] } {
+  let state = initial; const events: MatchEvent[] = [];
+  for (const event of getRoundSchedule(state.round)) {
+    if (state.scheduleReceipts.some(receipt => receipt.eventId === event.id)) continue;
+    if (event.kind === 'reward') {
+      const { receipt, ...plan } = planReward(state, event);
+      state = { ...state, ...plan, scheduleReceipts: [...state.scheduleReceipts, receipt] };
+      events.push({ type: 'rewardGranted', receipt });
+      continue;
+    }
+    let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
+    if (event.kind === 'augment') {
+      const drawn = generateChoices(Object.keys(AUGMENT_DEFINITIONS).filter(id => !state.augments.some(a => a.definitionId === id)), choiceRngState);
+      offers = drawn.offers; choiceRngState = drawn.choiceRngState;
+    }
+    const pendingChoice = { kind: event.kind, step: event.kind === 'augment' ? 'offer' as const : 'target' as const,
+      choiceId: event.id, eventId: event.id, generation: 0, offers, targetId: null, rerollCount: 0 };
+    state = { ...state, choiceRngState, phase: 'choice', combat: null, pendingChoice };
+    events.push({ type: 'choiceOpened', choice: pendingChoice });
+    return { state, events };
+  }
+  return { state: { ...state, phase: 'preparation', combat: null, pendingChoice: null }, events };
+}
 
 export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
   validateSeed(seed);
   validateContent();
-  return { schemaVersion: 3, rulesVersion: 'm3-v1', contentVersion: 'm3-content-v1', seed,
+  const initial: MatchState = { schemaVersion: 4, rulesVersion: 'm4-v1', contentVersion: 'm4-slice-v1', contentDigest: CONTENT_DIGEST, seed,
+    items: [], nextItemSerial: 1, augments: [], anomalyBinding: null, pendingChoice: null, scheduleReceipts: [],
+    choiceRngState: (seed ^ 0x9e3779b9) >>> 0, rewardRngState: (seed ^ 0x85ebca6b) >>> 0, nextMatchEventSeq: 0,
     ...generateShop(seed, 1, MATCH_RULES.initialLevel), round: 1, gold: MATCH_RULES.initialGold,
     level: MATCH_RULES.initialLevel, xp: 0, playerHp: MATCH_RULES.initialHp, nextUnitSerial: 6,
     preparation: structuredClone(createGame()), roundResults: [], phase: 'preparation', combat: null };
+  const entered = enterScheduledEvents(initial);
+  const result = accept(entered.state, entered.events);
+  return result.state;
 }
 export function getDeploymentCap(state: MatchState): number { return state.level; }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
@@ -50,18 +91,21 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   const plan = planPurchase(state.preparation, offer.definitionId, `unit-${state.nextUnitSerial}`);
   if (!plan.ok) return fail(state, plan.reason);
-  return accept({ ...state, gold: state.gold - cost, nextUnitSerial: state.nextUnitSerial + 1,
+  const resources = transferUpgradeResources(state.items, state.anomalyBinding, plan.events);
+  return accept({ ...state, items: resources.items, anomalyBinding: resources.anomalyBinding, gold: state.gold - cost, nextUnitSerial: state.nextUnitSerial + 1,
     preparation: plan.preparation,
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
-  }, plan.events);
+  }, [...plan.events, ...resources.events]);
 }
 export function sellUnit(state: MatchState, unitId: string): MatchCommandResult {
   if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
   if (!unit) return fail(state, 'unknown-unit');
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
-  return accept({ ...state, gold: state.gold + getUnitSellPrice(unit),
-    preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.id !== unitId) } });
+  const returned = returnUnitItems(state.items, unitId);
+  const removesBinding = state.anomalyBinding?.unitId === unitId;
+  return accept({ ...state, items: returned.items, anomalyBinding: removesBinding ? null : state.anomalyBinding, gold: state.gold + getUnitSellPrice(unit),
+    preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.id !== unitId) } }, [...returned.events, ...(removesBinding ? [{ type: 'anomalyRemoved' as const, unitId }] : [])]);
 }
 export function rerollShop(state: MatchState): MatchCommandResult {
   if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
@@ -102,19 +146,74 @@ function withCombat(state: MatchState, combat: CombatState): MatchState {
 }
 export function startMatchCombat(state: MatchState): MatchCommandResult {
   const reason = matchStartFailure(state);
-  return reason ? fail(state, reason) : accept(withCombat(state, createCombat(state.preparation)));
+  if (reason) return fail(state, reason);
+  const started = createCombatWithEvents(state.preparation, buildStrategySnapshot(state), `round-${state.round}`);
+  const next = withCombat(state, started.state);
+  return accept(next, [...started.events, ...(next.phase !== 'combat' ? [{ type: 'roundSettled' as const, round: state.round }] : [])]);
 }
 export function stepMatch(state: MatchState): MatchStep {
   if (state.phase !== 'combat') return { state, events: [] };
   const next = stepCombat(state.combat);
-  return { state: withCombat(state, next.state), events: next.events };
+  const settled = withCombat(state, next.state);
+  const result = accept(settled, [...next.events, ...(settled.phase !== 'combat' ? [{ type: 'roundSettled' as const, round: state.round }] : [])]);
+  return { state: result.state, events: result.ok ? result.events : [] };
 }
 export function nextRound(state: MatchState, expectedRound: number): MatchCommandResult {
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
   if (expectedRound !== state.round) return fail(state, 'stale-round');
   if (state.roundResults.length !== state.round || state.roundResults.at(-1)?.round !== state.round) return fail(state, 'unsettled-round');
   const round = state.round + 1;
-  return accept({ ...state, round, phase: 'preparation', combat: null,
+  const entered = enterScheduledEvents({ ...state, round, phase: 'preparation', combat: null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...createRoundEnemies(round)] },
     ...generateShop(state.rngState, state.shop.generation + 1, state.level) });
+  return accept(entered.state, entered.events);
+}
+
+export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
+  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  const plan = planCombine(state.items, state.nextItemSerial, aId, bId);
+  return plan.ok ? accept({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial }, plan.events) : fail(state, plan.reason);
+}
+export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
+  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  const plan = planEquip(state.items, state.preparation, itemId, unitId, slot);
+  return plan.ok ? accept({ ...state, items: plan.items }, plan.events) : fail(state, plan.reason);
+}
+function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {
+  if (state.phase !== 'choice') return 'wrong-phase';
+  if (!state.pendingChoice || state.pendingChoice.choiceId !== choiceId || state.pendingChoice.generation !== generation) return 'stale-choice';
+  return undefined;
+}
+export function selectAnomalyTarget(state: MatchState, choiceId: string, generation: number, unitId: string): MatchCommandResult {
+  const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
+  const choice = state.pendingChoice!;
+  if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
+  const target = state.preparation.units.find(unit => unit.id === unitId);
+  if (!target || target.team !== 'player' || state.anomalyBinding !== null) return fail(state, 'invalid-target');
+  const draw = generateChoices(Object.keys(ANOMALY_DEFINITIONS), state.choiceRngState);
+  return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
+    [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
+}
+export function rerollAnomaly(state: MatchState, choiceId: string, generation: number): MatchCommandResult {
+  const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
+  const choice = state.pendingChoice!;
+  if (choice.kind !== 'anomaly' || choice.step !== 'offer') return fail(state, 'invalid-choice');
+  if (!state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
+  if (state.gold < 2) return fail(state, 'insufficient-gold');
+  const draw = generateChoices(Object.keys(ANOMALY_DEFINITIONS).filter(id => !choice.offers.includes(id)), state.choiceRngState);
+  return accept({ ...state, gold: state.gold - 2, choiceRngState: draw.choiceRngState,
+    pendingChoice: { ...choice, offers: draw.offers, generation: generation + 1, rerollCount: choice.rerollCount + 1 } },
+    [{ type: 'anomalyRerolled', choiceId, generation: generation + 1, cost: 2 }]);
+}
+export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string): MatchCommandResult {
+  const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
+  const choice = state.pendingChoice!;
+  if (choice.step !== 'offer' || !choice.offers.includes(definitionId)) return fail(state, 'invalid-choice');
+  if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
+  const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind, itemIds: [], gold: 0, unitId: choice.targetId, definitionId };
+  const selected: MatchState = { ...state, pendingChoice: null, scheduleReceipts: [...state.scheduleReceipts, receipt],
+    augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
+    anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
+  const entered = enterScheduledEvents(selected);
+  return accept(entered.state, [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }, ...entered.events]);
 }

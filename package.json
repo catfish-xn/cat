@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:browser": "node scripts/verify-m3-browser.cjs",
-    "test:preview": "node scripts/verify-m3-browser.cjs --preview"
+    "test:browser": "node scripts/verify-m4-browser.cjs",
+    "test:preview": "node scripts/verify-m4-browser.cjs --preview"
   },
   "dependencies": {
     "phaser": "^3.90.0"

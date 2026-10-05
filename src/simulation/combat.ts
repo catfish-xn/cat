@@ -1,3 +1,6 @@
+import type { StrategySnapshot } from './strategy-types';
+import { initializeEffectRuntime } from './effects';
+import { applyCombatStart } from './combat-effects';
 import type { GameState } from './game';
 import { getUnitStats } from './unit-stats';
 import { resolveAbility } from './combat-abilities';
@@ -18,16 +21,19 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 }
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
-export function createCombat(preparationState: GameState): CombatState {
+function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone'): CombatState {
   const units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
-    const stats = getUnitStats(unit.definitionId, unit.starLevel);
+    const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
+    if (strategy && !resolved) throw new Error(`Missing strategy unit: ${unit.id}`);
+    const stats = resolved?.stats ?? getUnitStats(unit.definitionId, unit.starLevel);
     return [{ id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
       cell: { ...unit.location.cell }, hp: stats.health, maxHp: stats.health,
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
       armor: stats.armor, magicResist: stats.magicResist, mana: stats.initialMana, maxMana: stats.maxMana,
-      shield: 0, shieldExpiresAtTick: null, ability: resolveAbility(stats.abilityId, unit.starLevel),
+      shield: 0, shieldExpiresAtTick: null, ability: resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel),
+      ...(resolved ? { sources: structuredClone(resolved.sources), triggers: structuredClone(resolved.triggers), effectRuntime: initializeEffectRuntime(resolved.triggers) } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
   const result = eliminationResult(units);
@@ -36,9 +42,14 @@ export function createCombat(preparationState: GameState): CombatState {
       player: { ...preparationState.board.deploymentZones.player },
       enemy: { ...preparationState.board.deploymentZones.enemy },
     } },
+    ...(strategy ? { strategy: structuredClone(strategy), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
     units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };
+}
+export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState); }
+export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string): CombatStep {
+  return applyCombatStart(snapshotCombat(preparation, strategy, combatId));
 }
 export function stepCombat(state: CombatState): CombatStep {
   if (state.status === 'finished') return { state, events: [] };
