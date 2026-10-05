@@ -8,6 +8,9 @@ app.append(board, strategy);
 new Phaser.Game({
   type: Phaser.AUTO, parent: 'board-root', width: 960, height: 800, backgroundColor: '#101923',
   scene: [BoardScene], scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  // CSS touch-action:none controls canvas gestures. Phaser must still track
+  // cancellation without preventDefault on a noncancelable touchcancel event.
+  input: { touch: { capture: false } },
   render: { antialias: true },
   callbacks: {
     postBoot(game) {
