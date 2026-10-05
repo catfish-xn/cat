@@ -51,6 +51,7 @@ module.exports = async function verifyInteractions({ page, context, read, click,
     window.__M4_INTERACTION_INPUTS__ = [];
     window.__M4_RECORD_INTERACTION__ = event => {
       window.__M4_INTERACTION_INPUTS__.push({ type: event.type, trusted: event.isTrusted,
+        target: event.target?.closest?.('[data-debug]')?.dataset.debug ?? null,
         code: event.code, repeat: event.repeat, pointerId: event.pointerId, pointerType: event.pointerType, detail: event.detail, deltaY: event.deltaY });
     };
     for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'keydown', 'click', 'wheel'])
@@ -252,6 +253,33 @@ module.exports = async function verifyInteractions({ page, context, read, click,
     } else {
       await resizeViewport(page, { width: 390, height: 844 }); await reset();
       const cdp = await context.newCDPSession(page);
+      // Real canvas touch drag: cancellation keeps Match and the displayed
+      // token at the original bench position; the same path with touchEnd works.
+      await resizeViewport(page, { width: 1440, height: 1000 });
+      await resizeViewport(page, { width: 390, height: 844 });
+      const beforeUnitDrag = await read(), originalToken = beforeUnitDrag.tokens.find(unit => unit.id === 'unit-1');
+      const unitTarget = beforeUnitDrag.layout.hexes['2,5'];
+      async function nativeUnitDrag() {
+        const current = (await read()).tokens.find(unit => unit.id === 'unit-1');
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 11, x: current.screenX, y: current.screenY }] });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 11, x: current.screenX + 18, y: current.screenY - 18 }] });
+        await until(snapshot => snapshot.draggingId === 'unit-1' && snapshot.gesture?.kind === 'unit', 10000);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 11, x: unitTarget.x, y: unitTarget.y }] });
+      }
+      await nativeUnitDrag();
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+      await sameState(beforeUnitDrag.state, 'native touchCancel cannot submit unit deployment');
+      let canceledUnit = await read();
+      assert.equal(canceledUnit.draggingId, null); assert.equal(canceledUnit.gesture, null);
+      let token = canceledUnit.tokens.find(unit => unit.id === 'unit-1');
+      assert.equal(token.x, originalToken.x); assert.equal(token.y, originalToken.y);
+      await record('touch-unit-cancel-restores-bench-and-view', beforeUnitDrag.state, { target: { col: 2, row: 5 } });
+      await nativeUnitDrag();
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      assert.deepEqual((await state()).preparation.units.find(unit => unit.id === 'unit-1').location,
+        { kind: 'board', cell: { col: 2, row: 5 } });
+      await record('touch-unit-same-path-normal-end-deploys', beforeUnitDrag.state);
+      await reset();
       await itemPoint(); let snapshot = await read();
       const firstBounds = snapshot.bounds['item:item-1'], secondBounds = snapshot.bounds['item:item-2'];
       const first = { id: 1, x: firstBounds.centerX, y: firstBounds.centerY };
@@ -342,6 +370,53 @@ module.exports = async function verifyInteractions({ page, context, read, click,
       assert.deepEqual(chosen.preparation, beforeChoice.preparation); assert.deepEqual(chosen.items, beforeChoice.items);
       assert.equal(chosen.gold, beforeChoice.gold);
       await record('touch-natural-R2-choice-two-fingers-at-most-one', beforeChoice, { simultaneousConfirmations, definitionId: chosen.augments[0].definitionId, method: 'CDP Input.dispatchTouchEvent' });
+      // Reproduce the overlap in the review: the left side of the second
+      // Augment card lies over Start Combat once the dialog is dismissed.
+      await page.waitForFunction(() => !document.querySelector('.choice-overlay.dismissal-shield'));
+      for (const tapCount of [2, 3]) {
+        await reset();
+        // Previous keyboard selection can scroll the unit roster into view.
+        // Restore the ordinary top-of-page geometry for this overlap scenario.
+        await page.keyboard.press('Control+Home');
+        await page.waitForFunction(() => window.scrollY === 0);
+        await click('mobile:start-combat');
+        await until(snapshot => snapshot.state.phase === 'settlement');
+        await click('mobile:continue');
+        const beforeBurst = await read(); assert.equal(beforeBurst.state.playerHp, 94);
+        const second = beforeBurst.bounds[`choice:${beforeBurst.state.pendingChoice.offers[1]}`];
+        const start = beforeBurst.bounds['mobile:start-combat'];
+        const point = { x: Math.max(second.x, start.x) + 8, y: Math.max(second.y, start.y) + 8 };
+        assert(point.x < Math.min(second.x + second.width, start.x + start.width)
+          && point.y < Math.min(second.y + second.height, start.y + start.height), 'test tap overlaps the underlying Start');
+        const inputOffset = await page.evaluate(() => window.__M4_INTERACTION_INPUTS__.length);
+        for (let tap = 0; tap < tapCount; tap++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 12, ...point }] });
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        }
+        const afterBurst = await state();
+        assert.equal(afterBurst.phase, 'preparation'); assert.equal(afterBurst.playerHp, 94);
+        assert.equal(afterBurst.combat, null); assert.equal(afterBurst.pendingChoice, null);
+        assert.equal(afterBurst.augments.length, 1);
+        assert.equal(afterBurst.augments[0].definitionId, beforeBurst.state.pendingChoice.offers[1]);
+        assert.deepEqual(afterBurst.preparation, beforeBurst.state.preparation);
+        assert(await page.locator('.choice-overlay.dismissal-shield').count(), 'D/F/E are tested during pointer protection');
+        await page.keyboard.press('d'); assert.equal((await state()).gold, afterBurst.gold - 2);
+        await page.keyboard.press('f'); assert.equal((await state()).gold, afterBurst.gold - 6);
+        await page.locator('[data-debug="panel:units"]').focus(); await page.keyboard.press('Enter');
+        await page.locator('[data-debug="mobile:unit:unit-1"]').focus(); await page.keyboard.press('Enter');
+        await page.keyboard.press('e');
+        const operated = await state(); assert.equal(operated.gold, afterBurst.gold - 5);
+        assert(!operated.preparation.units.some(unit => unit.id === 'unit-1'));
+        const nativeTaps = await page.evaluate(offset => window.__M4_INTERACTION_INPUTS__.slice(offset)
+          .filter(input => input.type === 'pointerdown'), inputOffset);
+        assert.equal(nativeTaps.length, tapCount); assert(nativeTaps.every(input => input.trusted));
+        assert(nativeTaps.slice(1).every(input => input.target === 'choice-dismissal-shield'), 'repeat taps hit the dismissal shield');
+        await record('touch-Augment-repeat-taps-cannot-start-combat', beforeBurst.state, { tapCount, nativeTaps, confirmationHash: hash(afterBurst) });
+        await record('touch-choice-confirmation-keeps-native-DFE-immediate', afterBurst, { tapCount });
+        await page.waitForFunction(() => !document.querySelector('.choice-overlay.dismissal-shield'));
+        await click('mobile:start-combat'); await until(snapshot => snapshot.state.phase === 'settlement');
+        assert.equal((await state()).playerHp, 88, 'a fresh deliberate Start still works after the pointer burst');
+      }
       await cdp.detach();
     }
   } finally {

@@ -259,7 +259,10 @@ export class BoardScene extends Phaser.Scene {
     });
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
       if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
-      if (!token.getData('gesture') || pointer.id !== token.getData('gesture').pointerId || !this.inputRouter.release(token.getData('gesture'))) return;
+      const gesture = token.getData('gesture');
+      if (!gesture || pointer.id !== gesture.pointerId) return;
+      if (pointer.wasCanceled) { this.clearDrag(); return; }
+      if (!this.inputRouter.release(gesture)) return;
       // Read release coordinates directly, even if no final drag frame rendered.
       const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
       if (target) this.command(this.session.deploy(token.getData('unitId'), target), '放置成功 · 可点击选中单位出售');

@@ -194,6 +194,72 @@ const invalidPatches: readonly [string, string, readonly (string | number)[], un
   ['nonterminal Game Over', 'gameOver', ['combat', 'status'], 'running'],
 ];
 
+describe('M4 definition references must be strings before catalog lookup', () => {
+  const cases: readonly [string, string, readonly (string | number)[]][] = [
+    ['player unit', 'initial', ['preparation', 'units', 0, 'definitionId']],
+    ['enemy unit', 'initial', ['preparation', 'units', 5, 'definitionId']],
+    ['available shop offer', 'initial', ['shop', 'slots', 0, 'definitionId']],
+    ['component', 'initial', ['items', 0, 'definitionId']],
+    ['equipped item', 'start1', ['items', 0, 'definitionId']],
+    ['owned augment', 'anomalyBound', ['augments', 0, 'definitionId']],
+    ['bound anomaly', 'anomalyBound', ['anomalyBinding', 'definitionId']],
+    ['augment offer', 'augment2', ['pendingChoice', 'offers', 0]],
+    ['anomaly offer', 'anomalyOffer', ['pendingChoice', 'offers', 0]],
+    ['combat unit', 'start1', ['combat', 'units', 0, 'definitionId']],
+    ['combat ability', 'start1', ['combat', 'units', 0, 'ability', 'id']],
+  ];
+  it.each(cases)('rejects an array wrapping a valid %s ID, as object and JSON', (_label, fixture, path) => {
+    const original = fixtures[fixture];
+    let value: unknown = original;
+    for (const part of path) value = (value as Record<string, unknown>)[part];
+    expect(typeof value).toBe('string');
+    const invalid = patch(original, path, [value]);
+    const before = canonicalContent(invalid);
+    expect(() => restoreMatch(invalid)).toThrow();
+    expect(() => restoreMatch(JSON.stringify(invalid))).toThrow();
+    expect(canonicalContent(invalid)).toBe(before);
+    expect(restoreMatch(serializeMatch(original))).toEqual(original);
+  });
+  it.each(['augment', 'anomaly'] as const)('rejects an array wrapping the valid %s receipt definition', kind => {
+    const original = fixtures.anomalyBound;
+    const index = original.scheduleReceipts.findIndex(receipt => receipt.kind === kind);
+    const invalid = patch(original, ['scheduleReceipts', index, 'definitionId'], [original.scheduleReceipts[index].definitionId]);
+    expect(() => restoreMatch(invalid)).toThrow();
+    expect(() => restoreMatch(JSON.stringify(invalid))).toThrow();
+  });
+  it('rejects a wrapped reward item instance ID before serial parsing', () => {
+    const invalid = patch(fixtures.initial, ['scheduleReceipts', 0, 'itemIds', 0], ['item-1']);
+    expect(() => restoreMatch(invalid)).toThrow();
+    expect(() => restoreMatch(JSON.stringify(invalid))).toThrow();
+  });
+  it('rejects wrapped trait/member/source definitions in resolved Combat snapshots', () => {
+    const original = fixtures.triggerCombat;
+    const traitIndex = original.combat!.strategy!.traits.findIndex(trait => trait.memberDefinitionIds.length > 0);
+    const unitIndex = original.combat!.units.findIndex(unit => unit.sources!.length > 0);
+    const paths = [
+      ['combat', 'strategy', 'traits', traitIndex, 'traitId'],
+      ['combat', 'strategy', 'traits', traitIndex, 'memberDefinitionIds', 0],
+      ['combat', 'units', unitIndex, 'sources', 0, 'source', 'sourceDefinitionId'],
+    ];
+    for (const path of paths) {
+      let value: unknown = original;
+      for (const part of path) value = (value as Record<string, unknown>)[part];
+      expect(typeof value).toBe('string');
+      const invalid = patch(original, path, [value]);
+      expect(() => restoreMatch(invalid)).toThrow();
+      expect(() => restoreMatch(JSON.stringify(invalid))).toThrow();
+    }
+  });
+  it('rejects two separately wrapped copies of the same unit definition before trait counting', () => {
+    const invalid = structuredClone(fixtures.initial) as unknown as { preparation: { units: Record<string, unknown>[] } };
+    const first = invalid.preparation.units[0];
+    const same = invalid.preparation.units.find((unit, index) => index > 0 && unit.definitionId === first.definitionId)!;
+    expect(same).toBeDefined();
+    first.definitionId = [first.definitionId]; same.definitionId = [...first.definitionId as string[]];
+    expect(() => restoreMatch(invalid)).toThrow();
+  });
+});
+
 describe('M4 rejects corrupt saves atomically', () => {
   it.each(invalidPatches)('rejects %s', (_label, fixture, path, value) => {
     const original = fixtures[fixture];

@@ -41,6 +41,8 @@ export function describeEffect(effect: Effect): string {
   return `${effect.hook}${effect.everyN > 1 ? ` 每${effect.everyN}次` : ''} → ${result}`;
 }
 
+const CHOICE_POINTER_QUIET_MS = 400;
+
 /** Accessible DOM view over the same Match commands; it owns no game state. */
 export class StrategyPanel {
   private readonly root: HTMLElement;
@@ -51,6 +53,7 @@ export class StrategyPanel {
   private pointerPosition: { x: number; y: number } | null = null;
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement } | null = null;
   private choiceToken = '';
+  private dismissalTimer: number | null = null;
   private combatText: HTMLElement | null = null;
   private statusText: HTMLElement | null = null;
 
@@ -86,20 +89,25 @@ export class StrategyPanel {
       this.actions.equip(drag.gesture.id, unitId, slot);
     };
     const cancel = () => this.actions.cancelGesture();
-    const cancelPointer = (event: PointerEvent) => { if (this.itemDrag?.gesture.pointerId === event.pointerId) cancel(); };
+    const cancelPointer = (event: PointerEvent) => {
+      if (this.router.current?.kind === 'unit' || this.itemDrag?.gesture.pointerId === event.pointerId) cancel();
+    };
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', release);
     window.addEventListener('pointerdown', trackPointer, true);
-    window.addEventListener('pointercancel', cancelPointer); window.addEventListener('resize', cancel);
-    window.addEventListener('touchcancel', cancel);
+    window.addEventListener('pointercancel', cancelPointer, true); window.addEventListener('resize', cancel);
+    window.addEventListener('touchcancel', cancel, true);
     window.addEventListener('blur', cancel); window.addEventListener('scroll', cancel, true);
     this.disposers.push(() => {
       window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', release);
       window.removeEventListener('pointerdown', trackPointer, true);
-      window.removeEventListener('pointercancel', cancelPointer); window.removeEventListener('resize', cancel);
-      window.removeEventListener('touchcancel', cancel);
+      window.removeEventListener('pointercancel', cancelPointer, true); window.removeEventListener('resize', cancel);
+      window.removeEventListener('touchcancel', cancel, true);
       window.removeEventListener('blur', cancel); window.removeEventListener('scroll', cancel, true);
     });
-    this.modal.addEventListener('pointerdown', event => event.stopPropagation());
+    this.modal.addEventListener('pointerdown', event => {
+      event.stopPropagation();
+      if (this.dismissalTimer !== null) this.shieldChoiceDismissal();
+    });
     this.modal.addEventListener('click', event => event.stopPropagation());
   }
 
@@ -118,8 +126,8 @@ export class StrategyPanel {
       this.itemDrag = null;
     }
   }
-  reset(): void { this.cancel(); this.selectedItems = []; this.choiceToken = ''; }
-  destroy(): void { this.cancel(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.modal.remove(); }
+  reset(): void { this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.choiceToken = ''; }
+  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
     const button = element('button', label); button.type = 'button'; button.dataset.debug = name; button.disabled = disabled;
@@ -248,9 +256,31 @@ export class StrategyPanel {
     }, !ready));
     section.append(bench); this.root.append(section);
   }
+  private clearChoiceDismissal(): void {
+    if (this.dismissalTimer !== null) window.clearTimeout(this.dismissalTimer);
+    this.dismissalTimer = null;
+    this.modal.classList.remove('dismissal-shield');
+    this.modal.removeAttribute('aria-hidden'); delete this.modal.dataset.debug;
+  }
+  private shieldChoiceDismissal(): void {
+    this.clearChoiceDismissal();
+    // Consume the rest of the confirming pointer burst before exposing the
+    // board below. Keyboard D/F/E still commit synchronously in preparation.
+    this.modal.hidden = false; this.modal.replaceChildren();
+    this.modal.classList.add('dismissal-shield'); this.modal.setAttribute('aria-hidden', 'true');
+    this.modal.dataset.debug = 'choice-dismissal-shield';
+    this.dismissalTimer = window.setTimeout(() => {
+      this.clearChoiceDismissal(); this.renderChoice(this.actions.state());
+    }, CHOICE_POINTER_QUIET_MS);
+  }
   private renderChoice(state: MatchState): void {
     const choice = state.pendingChoice;
-    if (!choice) { this.choiceToken = ''; this.modal.hidden = true; this.modal.replaceChildren(); return; }
+    if (!choice) {
+      this.choiceToken = '';
+      if (this.dismissalTimer === null) { this.modal.hidden = true; this.modal.replaceChildren(); }
+      return;
+    }
+    this.clearChoiceDismissal();
     const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
     if (token === this.choiceToken) return;
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
@@ -270,7 +300,10 @@ export class StrategyPanel {
       const offers = element('div', '', 'choice-cards');
       for (const id of choice.offers) {
         const definition = (choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
-        const button = this.button(`choice:${id}`, `${definition.name}\n${definition.description}\n${definition.effects.map(describeEffect).join('；')}`, () => this.actions.choose(choice.choiceId, choice.generation, id));
+        const button = this.button(`choice:${id}`, `${definition.name}\n${definition.description}\n${definition.effects.map(describeEffect).join('；')}`, () => {
+          this.actions.choose(choice.choiceId, choice.generation, id);
+          if (!this.actions.state().pendingChoice) this.shieldChoiceDismissal();
+        });
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
@@ -301,7 +334,7 @@ export class StrategyPanel {
       const rect = node.getBoundingClientRect(); if (!rect.width || !rect.height || node.closest('[hidden]')) continue;
       bounds[node.dataset.debug!] = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, centerX: rect.x + rect.width / 2, centerY: rect.y + rect.height / 2 };
     }
-    return { bounds, selectedItemIds: [...this.selectedItems], tab: this.tab, choiceVisible: !this.modal.hidden,
+    return { bounds, selectedItemIds: [...this.selectedItems], tab: this.tab, choiceVisible: !this.modal.hidden && this.dismissalTimer === null,
       choiceText: this.modal.textContent, text: this.root.textContent, combatSourceText: this.combatText?.textContent ?? '', itemPointer: this.blocksSell };
   }
 }

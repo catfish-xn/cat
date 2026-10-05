@@ -34,6 +34,7 @@ button:focus-visible, summary:focus-visible { outline: 3px solid #ffd782; outlin
 details { margin: 10px 0; }
 summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .choice-overlay { position: fixed; inset: 0; z-index: 100; background: #06111de8; display: grid; place-items: center; padding: 18px; overflow-y: auto; overscroll-behavior: contain; }
+.choice-overlay.dismissal-shield { background: transparent; }
 .choice-overlay[hidden] { display: none; }
 .choice-dialog { width: min(880px, 100%); padding: 24px; border: 1px solid #78a8b9; border-radius: 14px; background: #182a37; box-shadow: 0 16px 80px #0009; }
 .choice-dialog p { color: #c2d7de; line-height: 1.5; }

@@ -17,10 +17,14 @@ import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
 function integer(value: unknown, min = 0): asserts value is number { requireValue(Number.isSafeInteger(value) && (value as number) >= min, 'integer'); }
 function id(value: unknown): asserts value is string { requireValue(typeof value === 'string' && value.length > 0, 'ID'); }
+function definitionId(value: unknown, catalog: object, label: string): asserts value is string {
+  id(value); requireValue(Object.hasOwn(catalog, value), label);
+}
 function list(value: unknown): asserts value is unknown[] { requireValue(Array.isArray(value), 'array'); }
 function record(value: unknown): asserts value is Record<string, unknown> { requireValue(value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype, 'object'); }
 function nullableString(value: unknown): void { if (value !== null) id(value); }
 function checkSerial(instanceId: string, prefix: string, next: number): void {
+  id(instanceId);
   requireValue(new RegExp(`^${prefix}-[1-9][0-9]*$`).test(instanceId), `${prefix} ID`);
   requireValue(Number(instanceId.slice(prefix.length + 1)) < next, `${prefix} serial`);
 }
@@ -49,7 +53,7 @@ export function restoreMatch(input: unknown): MatchState {
   const units = new Map<string, MatchState['preparation']['units'][number]>(); const locations = new Set<string>();
   for (const unit of state.preparation.units) {
     record(unit); id(unit.id); requireValue(!units.has(unit.id), 'duplicate unit'); units.set(unit.id, unit);
-    requireValue(Object.hasOwn(UNIT_DEFINITIONS, unit.definitionId), 'unit definition');
+    definitionId(unit.definitionId, UNIT_DEFINITIONS, 'unit definition');
     requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
     requireValue([1,2,3].includes(unit.starLevel), 'star'); record(unit.location);
     if (unit.team === 'player') checkSerial(unit.id, 'unit', state.nextUnitSerial);
@@ -63,12 +67,15 @@ export function restoreMatch(input: unknown): MatchState {
     === canonicalContent([...createRoundEnemies(state.round)].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)), 'enemy roster identity');
   requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board').length <= state.level, 'population cap');
   record(raw.shop); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
-  for (const slot of state.shop.slots) { record(slot); requireValue(slot.status === 'purchased' || (slot.status === 'available' && Object.hasOwn(UNIT_DEFINITIONS, slot.definitionId)), 'shop slot'); }
+  for (const slot of state.shop.slots) {
+    record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
+    if (slot.status === 'available') definitionId(slot.definitionId, UNIT_DEFINITIONS, 'shop definition');
+  }
   list(raw.items); const itemIds = new Set<string>(), equipment = new Set<string>();
   for (const item of state.items) {
     record(item); id(item.id); checkSerial(item.id, 'item', state.nextItemSerial);
     requireValue(!itemIds.has(item.id), 'duplicate item'); itemIds.add(item.id);
-    requireValue(Object.hasOwn(ITEM_DEFINITIONS, item.definitionId), 'item definition'); record(item.location);
+    definitionId(item.definitionId, ITEM_DEFINITIONS, 'item definition'); record(item.location);
     if (item.location.kind === 'unit') {
       requireValue(units.get(item.location.unitId)?.team === 'player', 'item owner'); integer(item.location.slot);
       requireValue(item.location.slot <= 2, 'equipment slot'); const key = `${item.location.unitId}:${item.location.slot}`;
@@ -77,12 +84,14 @@ export function restoreMatch(input: unknown): MatchState {
   }
   list(raw.augments); requireValue(state.augments.length <= 2, 'augment count'); const augmentIds = new Set<string>();
   for (const augment of state.augments) {
-    record(augment); requireValue(Object.hasOwn(AUGMENT_DEFINITIONS, augment.definitionId) && !augmentIds.has(augment.definitionId), 'augment definition/duplicate');
+    record(augment); definitionId(augment.definitionId, AUGMENT_DEFINITIONS, 'augment definition');
+    requireValue(!augmentIds.has(augment.definitionId), 'duplicate augment');
     augmentIds.add(augment.definitionId); id(augment.choiceId); integer(augment.acquiredRound, 1); requireValue(augment.acquiredRound <= state.round, 'augment round');
   }
   if (state.anomalyBinding !== null) {
     record(state.anomalyBinding); const binding = state.anomalyBinding;
-    requireValue(Object.hasOwn(ANOMALY_DEFINITIONS, binding.definitionId) && units.get(binding.unitId)?.team === 'player', 'anomaly binding');
+    definitionId(binding.definitionId, ANOMALY_DEFINITIONS, 'anomaly definition'); id(binding.unitId);
+    requireValue(units.get(binding.unitId)?.team === 'player', 'anomaly binding');
     id(binding.choiceId); integer(binding.boundRound, 1); requireValue(binding.boundRound <= state.round, 'binding round');
   }
   list(raw.roundResults); requireValue(state.roundResults.length === state.round - (state.phase === 'settlement' || state.phase === 'gameOver' ? 0 : 1), 'history length');
@@ -101,13 +110,13 @@ export function restoreMatch(input: unknown): MatchState {
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');
-    if (receipt.kind === 'anomaly') requireValue(Object.hasOwn(ANOMALY_DEFINITIONS, receipt.definitionId!), 'anomaly receipt');
+    if (receipt.kind === 'anomaly') definitionId(receipt.definitionId, ANOMALY_DEFINITIONS, 'anomaly receipt');
   }
   for (const augment of state.augments) requireValue(receipts.get(augment.choiceId)?.definitionId === augment.definitionId && receipts.get(augment.choiceId)?.round === augment.acquiredRound, 'augment missing receipt');
   if (state.anomalyBinding) requireValue(receipts.get(state.anomalyBinding.choiceId)?.definitionId === state.anomalyBinding.definitionId && receipts.get(state.anomalyBinding.choiceId)?.round === state.anomalyBinding.boundRound, 'binding missing receipt');
   if (state.phase === 'choice') {
     record(state.pendingChoice); const choice = state.pendingChoice;
-    id(choice.choiceId); requireValue(choice.choiceId === choice.eventId, 'choice event ID');
+    id(choice.choiceId); id(choice.eventId); nullableString(choice.targetId); requireValue(choice.choiceId === choice.eventId, 'choice event ID');
     integer(choice.generation); integer(choice.rerollCount); list(choice.offers);
     requireValue(!receipts.has(choice.eventId), 'choice already completed');
     const event = getRoundSchedule(state.round).find(event => event.id === choice.eventId);
@@ -116,7 +125,7 @@ export function restoreMatch(input: unknown): MatchState {
     else {
       requireValue(choice.step === 'offer' && choice.offers.length === 3 && new Set(choice.offers).size === 3, 'offer substate');
       const catalog = choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS;
-      requireValue(choice.offers.every(def => Object.hasOwn(catalog, def)), 'offer definition');
+      for (const offer of choice.offers) definitionId(offer, catalog, 'offer definition');
       if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
       else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation === choice.rerollCount + 1, 'locked target');
     }

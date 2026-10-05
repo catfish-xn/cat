@@ -19,6 +19,9 @@ async function read(){return page.evaluate(()=>window.__CAT_DEBUG__?.read()??nul
 async function until(check,timeout=10000){const end=Date.now()+timeout;while(Date.now()<end){const value=await read();if(value&&check(value))return value;await delay(60);}throw Error(`Timeout ${check}`);}
 async function checkpoint(name){const snap=await read();const file=`${touch?'touch-':''}${name}.png`;await page.screenshot({path:path.join(output,file),fullPage:false});fs.writeFileSync(path.join(output,file.replace('.png','.json')),JSON.stringify(snap));report.screenshots.push(file);report.checkpoints.push({name,touch,stateHash:hash(snap.state),eventHash:hash(snap.combatEvents),round:snap.state.round,tick:snap.state.combat?.tick??0});return snap;}
 async function click(name){
+ // A fresh intended pointer action waits for the previous choice burst to end.
+ // Dedicated repeated-tap regressions use native CDP gestures without this wait.
+ await page.waitForFunction(()=>!document.querySelector('.choice-overlay.dismissal-shield'));
  const element=page.locator(`[data-debug="${name}"]`);
  if(await element.count())await element.scrollIntoViewIfNeeded();
  const snap=await read(),b=snap.bounds[name];assert(b,`Missing UI ${name}`);
