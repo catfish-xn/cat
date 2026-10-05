@@ -387,6 +387,19 @@ describe('M5 independent finite combat rules', () => {
     expect(owner.runtime!.permanentAdBps).toBe(0);
     expect(owner.tasks).toEqual([]);
   });
+  it.each([0, 100])('475 Tristana ricochet shares238/237 once with secondary armor %i, without reapplying armor or recursively sharing', armor => {
+    const protector = hero('loris', 'ep', { mana: 0, cooldownTicks: 1000, cell: { col: 4, row: 3 } });
+    const src = origin(protector);
+    const first = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), dummy('eb', 3, 3, { armor }), {
+      ...protector, statuses: [{ key: `${sourceKey(src)}:redirect:ep:`, source: src, kind: 'redirect', amount: 5000, startsAtTick: 0, expiresAtTick: 80 }],
+    }]));
+    expect(first.state.units.find(u => u.id === 'p')!.tasks![0].amount).toBe(475);
+    const second = stepCombat(first.state);
+    expect(packets(second.events).filter(p => p.source.ownerId === 'p').map(p => [p.unitId, p.raw, p.mitigated, p.hpDamage, p.redirected]))
+      .toEqual([['eb', 475, 238, 238, false], ['ep', 475, 237, 237, true]]);
+    expect(second.state.units.find(u => u.id === 'p')!.runtime!.permanentAdBps).toBe(125);
+    expect(second.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
+  });
   it('the scheduled Archangel boundary precedes action planning: tick99 Lux shields160, tick100 shields208', () => {
     const owner = hero('lux', 'p', { mechanics: [mechanic('p', 'archangel', { periodTicks: 100, abilityPower: 30 })] });
     const before = stepCombat(battle([owner, dummy()], { tick: 98 }));

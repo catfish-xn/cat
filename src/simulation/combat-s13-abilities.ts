@@ -4,7 +4,7 @@ import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, grantShield, lowestAlly, mechanic, neighborsOf,
   origin, path, sourceKey, variable, type S13Unit } from './combat-s13-state';
 export interface S13Packet { source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic'; actionSeq: number;
-  ordinal: number; critical?: boolean; bounce?: boolean; direct?: boolean }
+  ordinal: number; critical?: boolean; bounce?: boolean; alreadyMitigated?: boolean }
 export interface S13Heal { source: CombatOrigin; targetId: string; amount: number }
 export interface AbilityContext {
   tick: number; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
@@ -160,7 +160,7 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
   const opponents = enemies(unit, ctx.units), target = opponents.find(u => u.id === task.targetId);
   const emit = (u: S13Unit, value: number, type: 'physical' | 'magic' = 'physical', ordinal = task.ordinal) => {
     ctx.packets.push({ source: task.source, targetId: u.id, raw: value, damageType: type, actionSeq: task.actionSeq, ordinal,
-      ...(task.kind === 'tristanaBounce' ? { direct: true } : {}) });
+      ...(task.kind === 'tristanaBounce' ? { alreadyMitigated: true } : {}) });
   };
   switch (task.kind) {
     case 'bleed': if (target) emit(target, task.amount); break;

@@ -17,3 +17,6 @@ Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`,
 - `targetChanged`, `packetDamage`, `heal`, `shieldLayerChanged`, `statusChanged`, `statChanged`, `kill` and `growth` supplement attack/cast/movement/death/finish events. Events retain actor, target, source, action/packet identity and numerical outcomes; actualHP, absorption, requested/actual healing and status changes remain distinguishable. UI can aggregate visual text but cannot truncate the authoritative ledger.
 - Dead units remain in state withHP0/alive=false and no active target/action resources. Finished steps are idempotent. Empty/single-sided low-level combats end at tick0; Match owns the permitted empty-player concession and all economic effects.
 - Restoration validates frozen and runtime state, including sources, layer aggregates, statuses, task timing, counters and sequences; it does not rerun combatStart. Tests distinguish independent numerical answers from replay/browser consistency using production calculations.
+
+
+M5审计修订：alreadyMitigated伤害仍允许一次洛里斯分担；redirected实际分担直接在吸收阶段结算，不进入递归或弹射触发。恢复校验按来源/tick/计数验证动态字段和运算上界，schema5死亡单位周期AP只接受有限可达累计值，不声称重建未存储的死亡时刻。

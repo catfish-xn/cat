@@ -38,7 +38,7 @@ export function readCombatStats(unit: CombatState['units'][number], state: Comba
 }
 function mitigated(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[]): number {
   if (packet.raw === 0) return 0;
-  if (packet.direct) return packet.raw;
+  if (packet.alreadyMitigated) return packet.raw;
   const resistance = defenses(target, packet.damageType === 'physical', tick, units);
   const first = Math.floor(packet.raw * 100 / (100 + resistance));
   let amp = owner ? mechanic(owner, 'damageAmp', 'bps') : 0;
@@ -205,7 +205,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const owner = units.find(u => u.id === packet.source.ownerId), value = mitigated(packet, target, owner, tick, units);
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
       && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];
-    const transfer = protector && !packet.direct ? Math.floor(value * Math.max(...active(protector, tick, 'redirect').map(s => s.amount)) / 10000) : 0;
+    const transfer = protector ? Math.floor(value * Math.max(...active(protector, tick, 'redirect').map(s => s.amount)) / 10000) : 0;
     absorb(target, value - transfer, packet, false); if (protector && transfer > 0) absorb(protector, transfer, packet, true);
   }
   for (const unit of units) {

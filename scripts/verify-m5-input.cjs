@@ -238,6 +238,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // Use native actionability, never blindly tap its covered center coordinate.
     await resizeViewport(page, { width: 390, height: 844 });
     {
+      const traitBefore = await reset(), traitStart = await offset();
+      await click('panel:traits', true);
+      for (const [id, totals] of [['sorcerer', [20, 50]], ['sentinel', [36, 75]]]) {
+        const text = await page.locator(`[data-debug="trait:${id}"]`).innerText();
+        assert(text.includes('全队收益') && text.includes('职业成员额外收益'));
+        for (const total of totals) assert(text.includes(`+${total}`), `visible ${id} member total ${total}`);
+      }
+      await record('trait-team-member-and-combined-benefits-visible', traitBefore, traitBefore, traitStart);
+      await page.screenshot({ path: path.join(output, 'trait-audit-benefits.png') });
       const before = await reset(); await click('panel:builds', true);
       const tab = page.locator('[data-debug="panel:units"]');
       await tab.evaluate(node => node.scrollIntoView({ block: 'start' }));

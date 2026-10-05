@@ -5,7 +5,7 @@ import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { deriveTraits } from '../simulation/trait-snapshot';
-import { getUnitStats, getXpToNextLevel, getShopOdds } from '../simulation/match';
+import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment } from '../simulation/match';
 import type { MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 import type { Effect } from '../simulation/strategy-types';
@@ -41,12 +41,12 @@ export function describeEffect(effect: Effect): string {
     const v = effect.values, pct = (key: string) => `${v[key] / 100}%`;
     const descriptions: Record<string, string> = {
       rageblade: `每次普攻叠加 ${pct('attackSpeedBps')} 攻速`, damageAmp: `伤害增幅 ${pct('bps')}`,
-      extraAttackMana: `每次普攻额外 ${v.amount} 法力${v.backRowOnly ? '（后两排）' : ''}`,
+      extraAttackMana: `每次普攻额外 ${v.amount} 法力${v.backRowOnly ? '（最后一排）' : ''}`,
       archangel: `每 ${v.periodTicks * .05} 秒增加 ${v.abilityPower} 法强`, dragonClaw: `每 ${v.periodTicks * .05} 秒治疗 ${pct('healMaxHpBps')} 最大生命`,
       gargoyle: `每个以持有者为目标的敌人增加 ${v.resistPerEnemy} 双抗`, gunblade: `实际伤害的 ${pct('selfHealBps')} 自疗、${pct('allyHealBps')} 治疗最低生命比例友军`,
       artillery: `每 ${v.everyN} 次普攻造成 ${pct('adBps')} AD 范围物理伤害`, sniper: `每格距离增加 ${pct('damageBpsPerHex')} 伤害`,
       watcher: `减伤 ${pct('reductionBps')}；生命超过 ${pct('thresholdBps')} 时为 ${pct('healthyReductionBps')}`,
-      acquisitionGold: `立即获得 ${v.amount} 金币`, glassCannon: `后两排初始生命 ${pct('startingHealthBps')}、伤害增加 ${pct('damageAmpBps')}`,
+      acquisitionGold: `立即获得 ${v.amount} 金币`, glassCannon: `最后一排初始生命 ${pct('startingHealthBps')}、伤害增加 ${pct('damageAmpBps')}`,
       pumpingUp: `每轮增加 ${pct('attackSpeedBpsPerRound')} 攻速`, investment: `每点利息永久增加 ${v.healthPerInterest} 生命`,
       bulkyBuddies: `相邻双人组获得 ${v.health} 生命，触发 ${pct('shieldMaxHpBps')} 最大生命护盾，持续 ${v.durationTicks * .05} 秒`,
       titanic: `普攻附加 ${pct('adBps')} AD 物理伤害，命中目标及相邻格`, mageArmor: `获得最终法强 ${pct('apBps')} 的双抗`, killStreak: `击杀后存活获得 ${v.mana} 法力`,
@@ -60,6 +60,21 @@ export function describeEffect(effect: Effect): string {
   const result = action.kind === 'grantShield' ? `护盾 ${action.amount} / ${action.durationTicks * 50 / 1000}s`
     : action.kind === 'gainMana' ? `Mana +${action.amount}` : `${action.damageType} 伤害 ${action.amount}`;
   return `${effect.hook}${effect.everyN > 1 ? ` 每${effect.everyN}次` : ''} → ${result}`;
+}
+
+/** Describe authored benefits by audience; merge additive flat stats for the member total. */
+export function describeTraitTier(definition: import('../simulation/strategy-types').TraitDefinition,
+  tier: import('../simulation/strategy-types').TraitTier): string {
+  const text = (effects: readonly Effect[]) => effects.map(describeEffect).join('；') || '无';
+  const combined: Effect[] = [];
+  for (const effect of [...tier.effects, ...(tier.memberEffects ?? [])]) {
+    const index = effect.kind === 'statFlat' ? combined.findIndex(value => value.kind === 'statFlat' && value.stat === effect.stat) : -1;
+    const prior = combined[index];
+    if (index >= 0 && prior.kind === 'statFlat' && effect.kind === 'statFlat') combined[index] = { ...prior, amount: prior.amount + effect.amount };
+    else combined.push(effect);
+  }
+  return `${tier.threshold}：${definition.target === 'team' ? '全队收益' : '职业成员收益'}：${text(tier.effects)}`
+    + (tier.memberEffects?.length ? `；职业成员额外收益：${text(tier.memberEffects)}；职业成员最终合计：${text(combined)}` : '');
 }
 
 const CHOICE_POINTER_QUIET_MS = 400;
@@ -214,6 +229,7 @@ export class StrategyPanel {
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
     const owned = element('section', '', 'owned-modifiers'); owned.append(element('h3', '永久构筑'));
     owned.append(element('p', `Augment: ${state.augments.map(augment => AUGMENT_DEFINITIONS[augment.definitionId].name).join(' / ') || '尚未选择'}`));
+    if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
     owned.append(element('p', binding ? `Anomaly: ${ANOMALY_DEFINITIONS[binding.definitionId].name} → ${UNIT_DEFINITIONS[state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId].name} (${binding.unitId})` : 'Anomaly: 4-6 选择单位'));
     this.root.append(owned);
@@ -226,7 +242,7 @@ export class StrategyPanel {
       const row = element('article', '', snapshot.tier > 0 ? 'trait active' : 'trait'); row.dataset.debug = `trait:${snapshot.traitId}`;
       row.append(element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? 'MAX'} · tier ${snapshot.tier}`));
       row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => UNIT_DEFINITIONS[id].name).join('、') || '无'}`));
-      row.append(element('p', definition.tiers.map(tier => `${tier.threshold}：${tier.effects.map(describeEffect).join('；')}`).join(' / ')));
+      row.append(element('p', definition.tiers.map(tier => describeTraitTier(definition, tier)).join(' / ')));
       list.append(row);
     }
     this.root.append(list);

@@ -12,7 +12,7 @@ import { eliminationResult } from './combat-types';
 import { createRoundEnemies } from './round-enemies';
 import { XP_TO_NEXT_LEVEL } from './match-rules';
 import { planRoundEconomy } from './economy';
-import { sourceKey } from './combat-s13-state';
+import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
 
@@ -126,7 +126,7 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(!receipts.has(choice.eventId), 'choice already completed');
     const event = getRoundSchedule(state.round).find(event => event.id === choice.eventId);
     requireValue(event?.kind === choice.kind && choice.kind !== undefined, 'choice scheduled');
-    if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && choice.offers.length === 0 && choice.generation === 0 && choice.rerollCount === 0, 'target substate');
+    if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && choice.offers.length === 0 && choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player'), 'target substate');
     else {
       requireValue(choice.step === 'offer' && choice.offers.length === (choice.kind === 'component' ? 7 : choice.kind === 'anomaly' ? 1 : 3) && new Set(choice.offers).size === choice.offers.length, 'offer substate');
       const catalog = choice.kind === 'augment' ? AUGMENT_DEFINITIONS : choice.kind === 'component' ? ITEM_DEFINITIONS : ANOMALY_DEFINITIONS;
@@ -143,6 +143,10 @@ export function restoreMatch(input: unknown): MatchState {
   let stopped = false;
   for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
     if (state.pendingChoice?.eventId === event.id) stopped = true;
+    if (round === state.round && event.kind === 'anomaly' && !receipts.has(event.id) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')) {
+      requireValue(state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= state.gold), 'anomaly recruitment affordability');
+      stopped = true;
+    }
     if ((event.timing ?? 'before') === 'after' && state.roundResults.length < round || state.outcome !== null && round === state.round && event.timing === 'after') continue;
     if (!stopped) requireValue(receipts.has(event.id), 'missing schedule receipt');
     else requireValue(!receipts.has(event.id), 'receipt beyond pending choice');
@@ -244,6 +248,37 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   for (const field of ['attackCount','castCount','attackSpeedBps','abilityPowerFlat','rangeBonus','nextAttackMagic','nextAttackPhysical','permanentAdBps']) integer(unit.runtime[field as keyof typeof unit.runtime]);
   requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick && unit.runtime.permanentAdBps % 125 === 0, 'combat runtime');
   if (unit.definitionId !== 'tristana') requireValue(unit.runtime.permanentAdBps === 0, 'growth owner');
+  const runtime = unit.runtime, isKog = champion(unit) === 'kogmaw';
+  requireValue(runtime.attackCount + runtime.castCount <= tick, 'action count bound');
+  const expectedSpeed = runtime.attackCount * mechanic(unit, 'rageblade', 'attackSpeedBps')
+    + (isKog ? runtime.castCount * Math.round(variable(unit, 'AttackSpeed', .25) * 10000) : 0);
+  requireValue(runtime.attackSpeedBps === expectedSpeed, 'derived attack speed');
+  requireValue(runtime.rangeBonus === (isKog ? Math.floor(runtime.castCount / variable(unit, 'RangeIncreaseNumAttacks', 3)) : 0), 'derived range');
+  const archangels = (unit.mechanics ?? []).filter(m => m.mechanic === 'archangel');
+  const maximumAp = archangels.reduce((sum, m) => sum + Math.floor(tick / m.values.periodTicks) * m.values.abilityPower, 0);
+  // A dead unit stops periodic grants at its death tick. Death time is not retained
+  // in this schema, so check the finite set of possible grants rather than invent it.
+  const possibleAp = new Set([0]);
+  for (const source of archangels) for (let at = source.values.periodTicks; at <= tick; at += source.values.periodTicks)
+    possibleAp.add(archangels.reduce((sum, m) => sum + Math.floor(at / m.values.periodTicks) * m.values.abilityPower, 0));
+  requireValue(unit.alive ? runtime.abilityPowerFlat === maximumAp : possibleAp.has(runtime.abilityPowerFlat), 'derived ability power');
+  requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
+  if (runtime.nextAttackMagic > 0) {
+    requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...possibleAp].some(value =>
+      Math.floor(((unit.abilityPower ?? 100) + value) * variable(unit, 'Damage') / 100) === runtime.nextAttackMagic), 'derived empowered magic');
+  }
+  if (runtime.nextAttackPhysical > 0) {
+    const attack = Math.floor(unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps!) / 10000);
+    const coefficient = variable(unit, 'PercentAttackDamage') + variable(unit, 'BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count');
+    requireValue(champion(unit) === 'vander' && runtime.castCount > 0 && runtime.nextAttackPhysical === Math.floor(attack * Math.round(coefficient * 10000) / 10000), 'derived empowered physical');
+  }
+  requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies' && combatUnits.some(other => other.id === m.targetId && !other.alive)), 'derived buddy trigger');
+  const numerator = unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps! + runtime.permanentAdBps);
+  requireValue(Number.isSafeInteger(numerator) && Number.isSafeInteger(unit.baseAttackSpeedBps! * (10000 + unit.attackSpeedBonusBps! + expectedSpeed)), 'dynamic arithmetic bound');
+  if (unit.ability.kind === 's13') {
+    const largestCoefficient = Math.max(10000, ...Object.values(unit.ability.variables));
+    requireValue(Number.isSafeInteger(largestCoefficient * (1 + Math.floor(numerator / 10000) + unit.maxHp + unit.abilityPower! + maximumAp)), 'ability arithmetic bound');
+  }
   const origin = (source: import('./combat-types').CombatOrigin) => {
     record(source); id(source.ownerId); id(source.definitionId); id(source.instanceId); integer(source.effectIndex);
     requireValue(combatIds.has(source.ownerId) && ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(source.sourceKind), 'runtime source');
@@ -270,12 +305,19 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     record(status); origin(status.source); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
     requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
     requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
+    requireValue(status.kind !== 'abilityPower' && status.kind !== 'attackSpeed', 'unsupported dynamic status source');
+    requireValue(Math.abs(status.amount) <= 1000000, 'status arithmetic bound');
     if (['damageReduction','armorReduction','redirect'].includes(status.kind)) requireValue(status.amount <= 10000, 'status bps');
     requireValue(status.key.startsWith(sourceKey(status.source)), 'status key/source'); statusKeys.add(status.key);
   }
   list(unit.tasks); const taskKeys = new Set<string>();
   for (const task of unit.tasks) {
     record(task); origin(task.source); id(task.key); integer(task.executeAtTick); integer(task.amount); integer(task.ordinal); integer(task.total,1); integer(task.actionSeq);
+    const owner = combatUnits.find(value => value.id === task.source.ownerId)!;
+    const maximumAmp = mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
+      + mechanic(owner, 'sniper', 'damageBpsPerHex') * (DEFAULT_BOARD.columns + DEFAULT_BOARD.rows);
+    requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
+      && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
     requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce'].includes(task.kind), 'task kind');
     requireValue(task.targetId === null || combatIds.has(task.targetId), 'task target'); taskKeys.add(task.key);

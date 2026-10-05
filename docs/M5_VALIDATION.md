@@ -1,3 +1,5 @@
+> 用户审计已否决ba5c057的M5验收结论。以下CI通过记录仍是有效历史证据；本轮六项修复与新提交的门禁见 [M5_FIX_REVIEW](M5_FIX_REVIEW.md)。不合并main、不启动M6。
+
 # M5 implementation evidence
 
 Status: **F1–F3 complete; final-budget commit acceptance pending**. The three-sample remote profiling run passed all30 jobs; F4 requires the subsequent final-budget commit to pass all gates. The final PR check run, linked from PR#6, is the authoritative post-commit result. Browser jobs and later checks are not counted as passed until their complete manifests succeed. Local dirty-worktree evidence does not certify a final clean commit.

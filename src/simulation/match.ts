@@ -32,6 +32,14 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
   return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
 };
+/** Only the uncompleted anomaly node may defer choice while its roster is empty. */
+export function needsAnomalyRecruitment(state: MatchState): boolean {
+  return state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')
+    && getRoundSchedule(state.round).some(event => event.kind === 'anomaly' && !state.scheduleReceipts.some(receipt => receipt.eventId === event.id));
+}
+function affordableOffer(state: MatchState, gold = state.gold): boolean {
+  return state.shop.slots.some(slot => slot.status === 'available' && UNIT_DEFINITIONS[slot.definitionId].cost <= gold);
+}
 function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 'before'): { state: MatchState; events: MatchEvent[] } {
   let state = initial; const events: MatchEvent[] = [];
   for (const event of getRoundSchedule(state.round).filter(event => (event.timing ?? 'before') === timing)) {
@@ -42,6 +50,7 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
       events.push({ type: 'rewardGranted', receipt });
       continue;
     }
+    if (event.kind === 'anomaly' && !state.preparation.units.some(unit => unit.team === 'player')) continue;
     let choiceRngState = state.choiceRngState; let offers: readonly string[] = [];
     if (event.kind === 'augment') {
       const drawn = generateChoices(Object.keys(AUGMENT_DEFINITIONS).filter(id => !state.augments.some(a => a.definitionId === id)), choiceRngState);
@@ -101,10 +110,12 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   const plan = planPurchase(state.preparation, offer.definitionId, `unit-${state.nextUnitSerial}`);
   if (!plan.ok) return fail(state, plan.reason);
   const resources = transferUpgradeResources(state.items, state.anomalyBinding, plan.events);
-  return accept({ ...state, items: resources.items, anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowth(state, plan.events), gold: state.gold - cost, nextUnitSerial: state.nextUnitSerial + 1,
+  const purchased: MatchState = { ...state, items: resources.items, anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowth(state, plan.events), gold: state.gold - cost, nextUnitSerial: state.nextUnitSerial + 1,
     preparation: plan.preparation,
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
-  }, [...plan.events, ...resources.events]);
+  };
+  const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
+  return accept(entered.state, [...plan.events, ...resources.events, ...entered.events]);
 }
 export function sellUnit(state: MatchState, unitId: string): MatchCommandResult {
   if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
@@ -127,6 +138,7 @@ export function rerollShop(state: MatchState): MatchCommandResult {
   if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
   if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
   const generated = generateShop(state.rngState, state.shop.generation + 1, state.level);
+  if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - MATCH_RULES.rerollCost)) return fail(state, 'insufficient-gold');
   return accept({ ...state, gold: state.gold - MATCH_RULES.rerollCost, ...generated,
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
@@ -134,11 +146,13 @@ export function buyXp(state: MatchState): MatchCommandResult {
   if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
   if (state.gold < MATCH_RULES.xpPurchaseCost) return fail(state, 'insufficient-gold');
+  if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - MATCH_RULES.xpPurchaseCost)) return fail(state, 'insufficient-gold');
   const progression = grantXp(state.level, state.xp, MATCH_RULES.xpPurchaseAmount);
   return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
   if (state.phase !== 'preparation') return 'wrong-phase';
+  if (needsAnomalyRecruitment(state)) return 'missing-player';
   if (getPlayerDeploymentCount(state.preparation) > getDeploymentCap(state)) return 'population-cap';
   const reason = validateCombatStart(state.preparation);
   // An empty deployment may concede the round, preventing a zero-gold/empty-roster soft lock.
@@ -211,7 +225,9 @@ export function nextRound(state: MatchState, expectedRound: number): MatchComman
   if (state.roundResults.length !== state.round || state.roundResults.at(-1)?.round !== state.round) return fail(state, 'unsettled-round');
   if (state.round >= 35) return fail(state, 'wrong-phase');
   const round = state.round + 1, stageRound = getStageRound(round);
-  const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
+  const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
+  // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
+  const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
   const entered = enterScheduledEvents({ ...state, round, roundDefinitionId: `${stageRound.stage}-${stageRound.round}`, phase: 'preparation', combat: null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...createRoundEnemies(round)] }, ...refresh });
   return accept(entered.state, entered.events);
@@ -255,7 +271,7 @@ export function rerollAnomaly(state: MatchState, choiceId: string, generation: n
 }
 function generateAnomalyOffer(ids: readonly string[], rngState: number): { offers: string[]; choiceRngState: number } {
   const pool = [...ids].sort(), draw = nextRandom(rngState);
-  return { offers: [pool[draw.word % pool.length]], choiceRngState: draw.state };
+  return { offers: [pool[Math.floor(draw.word * pool.length / 0x100000000)]], choiceRngState: draw.state };
 }
 export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
