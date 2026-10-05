@@ -49,13 +49,30 @@ module.exports = async function verifyInteractions({ page, context, read, click,
   let resetCount = 0;
   await page.evaluate(() => {
     window.__M4_INTERACTION_INPUTS__ = [];
+    window.__M4_CHOICE_KEYS__ = [];
+    window.__M4_CHOICE_KEY_BEFORE__ = new WeakMap();
+    window.__M4_CAPTURE_CHOICE_KEYS__ = false;
     window.__M4_RECORD_INTERACTION__ = event => {
+      if (window.__M4_CAPTURE_CHOICE_KEYS__ && event.type === 'keydown' && ['KeyD', 'KeyF', 'KeyE'].includes(event.code)) {
+        window.__M4_CHOICE_KEY_BEFORE__.set(event, {
+          shieldActive: Boolean(document.querySelector('.choice-overlay.dismissal-shield')),
+          state: window.__CAT_DEBUG__.read().state,
+        });
+      }
       window.__M4_INTERACTION_INPUTS__.push({ type: event.type, trusted: event.isTrusted,
         target: event.target?.closest?.('[data-debug]')?.dataset.debug ?? null,
         code: event.code, repeat: event.repeat, pointerId: event.pointerId, pointerType: event.pointerType, detail: event.detail, deltaY: event.deltaY });
     };
     for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'keydown', 'click', 'wheel'])
       window.addEventListener(type, window.__M4_RECORD_INTERACTION__, true);
+    // Registered after the product's native handler: this same dispatch must
+    // already contain the committed state, even while the pointer shield exists.
+    window.__M4_OBSERVE_CHOICE_KEY__ = event => {
+      const before = window.__M4_CHOICE_KEY_BEFORE__.get(event);
+      if (before) window.__M4_CHOICE_KEYS__.push({ code: event.code, trusted: event.isTrusted,
+        shieldActive: before.shieldActive, before: before.state, after: window.__CAT_DEBUG__.read().state });
+    };
+    window.addEventListener('keydown', window.__M4_OBSERVE_CHOICE_KEY__);
   });
   const state = async () => (await read()).state;
   const sameState = async (before, message) => assert.deepEqual(await state(), before, message);
@@ -388,31 +405,52 @@ module.exports = async function verifyInteractions({ page, context, read, click,
         const point = { x: Math.max(second.x, start.x) + 8, y: Math.max(second.y, start.y) + 8 };
         assert(point.x < Math.min(second.x + second.width, start.x + start.width)
           && point.y < Math.min(second.y + second.height, start.y + start.height), 'test tap overlaps the underlying Start');
-        const inputOffset = await page.evaluate(() => window.__M4_INTERACTION_INPUTS__.length);
+        const inputOffset = await page.evaluate(() => {
+          window.__M4_CHOICE_KEYS__ = []; window.__M4_CAPTURE_CHOICE_KEYS__ = true;
+          return window.__M4_INTERACTION_INPUTS__.length;
+        });
         for (let tap = 0; tap < tapCount; tap++) {
           await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 12, ...point }] });
           await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
         }
-        const afterBurst = await state();
+        // Send native keys before any expensive external snapshot/DOM reads.
+        // Capture/bubble observers record the state within each real dispatch.
+        for (const [key, code, keyCode] of [['d', 'KeyD', 68], ['f', 'KeyF', 70]]) {
+          for (const type of ['keyDown', 'keyUp'])
+            await cdp.send('Input.dispatchKeyEvent', { type, key, code, windowsVirtualKeyCode: keyCode });
+        }
+        await page.locator('[data-debug="panel:units"]').focus(); await page.keyboard.press('Enter');
+        await page.locator('[data-debug="mobile:unit:unit-1"]').focus(); await page.keyboard.press('Enter');
+        await page.keyboard.press('e');
+        const keys = await page.evaluate(() => {
+          window.__M4_CAPTURE_CHOICE_KEYS__ = false; return window.__M4_CHOICE_KEYS__;
+        });
+        assert.deepEqual(keys.map(key => key.code), ['KeyD', 'KeyF', 'KeyE']);
+        assert(keys.every(key => key.trusted));
+        assert(keys[0].shieldActive, 'native D dispatch occurs during pointer protection');
+        const afterBurst = keys[0].before;
         assert.equal(afterBurst.phase, 'preparation'); assert.equal(afterBurst.playerHp, 94);
         assert.equal(afterBurst.combat, null); assert.equal(afterBurst.pendingChoice, null);
         assert.equal(afterBurst.augments.length, 1);
         assert.equal(afterBurst.augments[0].definitionId, beforeBurst.state.pendingChoice.offers[1]);
         assert.deepEqual(afterBurst.preparation, beforeBurst.state.preparation);
-        assert(await page.locator('.choice-overlay.dismissal-shield').count(), 'D/F/E are tested during pointer protection');
-        await page.keyboard.press('d'); assert.equal((await state()).gold, afterBurst.gold - 2);
-        await page.keyboard.press('f'); assert.equal((await state()).gold, afterBurst.gold - 6);
-        await page.locator('[data-debug="panel:units"]').focus(); await page.keyboard.press('Enter');
-        await page.locator('[data-debug="mobile:unit:unit-1"]').focus(); await page.keyboard.press('Enter');
-        await page.keyboard.press('e');
+        assert.equal(keys[0].after.gold, afterBurst.gold - 2);
+        assert.deepEqual(keys[1].before, keys[0].after);
+        assert.equal(keys[1].after.gold, afterBurst.gold - 6);
+        assert.deepEqual(keys[2].before, keys[1].after);
+        assert.equal(keys[2].after.gold, afterBurst.gold - 5);
         const operated = await state(); assert.equal(operated.gold, afterBurst.gold - 5);
+        assert.deepEqual(operated, keys[2].after, 'commands commit within their native dispatch');
         assert(!operated.preparation.units.some(unit => unit.id === 'unit-1'));
         const nativeTaps = await page.evaluate(offset => window.__M4_INTERACTION_INPUTS__.slice(offset)
           .filter(input => input.type === 'pointerdown'), inputOffset);
         assert.equal(nativeTaps.length, tapCount); assert(nativeTaps.every(input => input.trusted));
         assert(nativeTaps.slice(1).every(input => input.target === 'choice-dismissal-shield'), 'repeat taps hit the dismissal shield');
         await record('touch-Augment-repeat-taps-cannot-start-combat', beforeBurst.state, { tapCount, nativeTaps, confirmationHash: hash(afterBurst) });
-        await record('touch-choice-confirmation-keeps-native-DFE-immediate', afterBurst, { tapCount });
+        await record('touch-choice-confirmation-keeps-native-DFE-immediate', afterBurst, {
+          tapCount, keys: keys.map(key => ({ code: key.code, trusted: key.trusted, shieldActive: key.shieldActive,
+            beforeHash: hash(key.before), afterHash: hash(key.after), goldBefore: key.before.gold, goldAfter: key.after.gold })),
+        });
         await page.waitForFunction(() => !document.querySelector('.choice-overlay.dismissal-shield'));
         await click('mobile:start-combat'); await until(snapshot => snapshot.state.phase === 'settlement');
         assert.equal((await state()).playerHp, 88, 'a fresh deliberate Start still works after the pointer burst');
@@ -423,6 +461,8 @@ module.exports = async function verifyInteractions({ page, context, read, click,
     const inputs = await page.evaluate(() => {
       for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'keydown', 'click', 'wheel'])
         window.removeEventListener(type, window.__M4_RECORD_INTERACTION__, true);
+      window.removeEventListener('keydown', window.__M4_OBSERVE_CHOICE_KEY__);
+      window.__M4_CAPTURE_CHOICE_KEYS__ = false;
       return window.__M4_INTERACTION_INPUTS__;
     });
     report.interactions.push({ name: 'native-interaction-inputs', touch, inputs });
