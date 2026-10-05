@@ -1,6 +1,6 @@
 # M5 implementation evidence
 
-Status: **implementation and acceptance in progress; F4 has not passed**. Browser jobs and later checks are not counted as passed until their complete manifests succeed. Local dirty-worktree evidence does not certify a final clean commit.
+Status: **F1–F3 complete; final-budget commit acceptance pending**. The three-sample remote profiling run passed all30 jobs; F4 requires the subsequent final-budget commit to pass all gates. The final PR check run, linked from PR#6, is the authoritative post-commit result. Browser jobs and later checks are not counted as passed until their complete manifests succeed. Local dirty-worktree evidence does not certify a final clean commit.
 
 ## Observed baseline — 2026-10-05
 
@@ -138,3 +138,49 @@ Both normal-time touch routes on `19a486e` stopped at command 87 (round 12 deplo
 The driver used `scrollIntoViewIfNeeded` followed by an unconditional viewport-coordinate touch. The deployment tab was geometrically visible but covered by the sticky shop; its center hit `mobile:buy-2`. A short normal-new-game probe reproduced the accidental purchase. On the same scenario, Playwright's native locator `tap()` scrolled/hit-tested the DOM target and preserved the complete state. Probe evidence: `artifacts/m5-occlusion-probe/{unsafe,safe}.json` and screenshots. The probe does not count as a complete route.
 
 Both browser drivers now use native locator tap/click for DOM controls, retaining native coordinate input for Canvas. The input gate includes a permanently occluded-tab case: first prove the center is covered by the shop, then require a single native pointerdown on `panel:units` and complete-state noninterference. The full-route driver also saves native input logs on failure. No production source, rule/content digest, dependency, simulation function or golden expectation changed. Script syntax checks and the focused native probe passed; full updated-driver acceptance is pending.
+
+## Corrected-driver local acceptance and authorized publication
+
+The subsequent clean local commit `967a5b1ca890008f16c69d27a3b91ddc358ad6bd` passed both 73-case native-input gates (dev 384.599s / preview 386.136s), both normal-time touch routes (1145.302s / 1139.746s), and all six desktop routes: cannon 846.418s / 846.084s, sniper 1018.907s / 1014.012s, mage 1037.172s / 1036.627s. Each touch route completed 182 commands, 30 battles, all 35 rounds and New Match; round 15/22 orientation changes preserved complete state. The formerly failing command 87 completed with gold 30 and next unit serial 25. Native inputs were trusted browser events.
+
+The final local comparison on that commit passed all ten required clean-commit manifests, 532 desktop checkpoints and 90 complete combat state/event pairs, plus 30 touch combat pairs. The independent rules, 621-test suite, 24-seed and performance evidence above retain their actual `19a486e` attribution: production sources and golden expectations did not change in the driver correction. They are not mislabeled as executions on `967a5b1`.
+
+On 2026-10-06 (Asia/Shanghai), the user explicitly authorized branch publication and a draft PR, without merging main. Direct Git push failed because this environment has no HTTPS Git credentials (`fatal: could not read Username for 'https://github.com': No such device or address`); this was not a new approval rejection. The authorized GitHub connector published the exact reviewed tree `e6278cdfd32ce7b057318d4824e6f061d6ef377c` as remote commit `446b49315d6e4a7b89e36e6668f5a7437352aa94`, parent `5a4ce80394bde766e79d57a31d8625e5a0b381c3`. Its commit metadata differs from the local commit; the complete tree is identical. Original local history remains at `archive/m5-local-reviewed-967a5b1`; the working branch tracks the published branch.
+
+Draft PR: https://github.com/catfish-xn/cat/pull/6. Initial three-sample profiling run: https://github.com/catfish-xn/cat/actions/runs/37378727483. Earlier paragraphs recording missing authorization/upload are historical observations superseded by this publication. Main was not merged or changed. Profiling and final-budget acceptance are separate: the latter must execute on the final clean PR commit.
+
+## Remote profiling evidence on 446b493
+
+The three test/build/headless/performance jobs passed on GitHub Actions. Sample 2's log records 621/621 tests in 40 files (405.77s), including all four per-command/per-tick replay routes. Each sample ran the 24-seed ordinary acquisition suite and twelve performance routes. The 36 performance-route final hashes agree across samples for all four builds. Checked-in extracted metrics: [M5_CI_PROFILE_PERFORMANCE.json](evidence/M5_CI_PROFILE_PERFORMANCE.json); original artifacts and logs remain attached to run 37378727483.
+
+Runner class: Ubuntu 24.04, Linux x64, four vCPUs, approximately 16 GiB RAM, Node v22.23.3; image ubuntu-24.04/20260927.320.1. Physical CPUs varied (AMD EPYC 7763 and Intel Xeon Platinum 8370C in the headless samples; browser samples also observed EPYC 9V45/9V74). These are same hosted-runner resource classes, not an assertion of identical physical processors. Freeze the OS label to ubuntu-24.04 and use the slowest full-job sample plus the planned margin.
+
+Across 36 performance routes, maximum route p95/p99 tick times were 1.016409/1.463439ms; largest individual tick 11.961043ms; peak process RSS 289,861,632 bytes; largest combat ledger 868,878 bytes. Full events are preserved. These timings do not imply browser frame-rate guarantees.
+
+Preview native-input sample 2 passed all 73 cases in143.942s; its touch route passed182 checkpoints and all35 rounds in669.975s. Chromium153.0.8010.12. The observed normal-combat frame p50/p95/p99 was33.3/66.7/83.3ms with tracing and read-only observation; this does not establish60fps. Observer p95 was0.5ms before combat,4.2ms after combat,0.8ms after New Match. New Match cleared all801 prior combat events, effect objects and tweens. Heap observations were not forced-GC evidence. Other browser samples and the aggregate comparison require their own successful jobs; these observations alone do not certify F4.
+
+
+## F3 budget freeze and final-commit gate
+
+Profiling run37378727483 completed successfully: all30 jobs passed, including three independent artifact comparisons. Each comparison required ten clean browser manifests on SHA446b493, all six desktop routes, both73-case native-input gates, both normal-time touch routes, matching versions/digest, every desktop checkpoint and complete dev/preview combat state/event pairs. No fixture/resource injection or simulation acceleration was introduced.
+
+Full job durations (seconds, samples1/2/3; setup, installation, build, execution and upload included):
+
+| Workload | Sample1 | Sample2 | Sample3 | Budget minutes |
+|---|---:|---:|---:|---:|
+| test-and-build | 680 | 660 | 668 | 22 |
+| compare-evidence | 12 | 12 | 13 | 6 |
+| browser-dev-cannon | 632 | 693 | 581 | 23 |
+| browser-dev-sniper | 834 | 798 | 885 | 28 |
+| browser-dev-mage | 828 | 889 | 839 | 28 |
+| input-dev | 1045 | 1040 | 1051 | 32 |
+| browser-preview-cannon | 710 | 708 | 690 | 23 |
+| browser-preview-sniper | 838 | 862 | 845 | 27 |
+| browser-preview-mage | 891 | 893 | 827 | 28 |
+| input-preview | 962 | 878 | 1036 | 31 |
+
+Formula: `ceil(maxSeconds / 60 * 1.5 + 5)`. Workflow class budgets are22/28/32/6 minutes for test/browser/input/comparison. [M5_CI_BUDGET.json](evidence/M5_CI_BUDGET.json) preserves source run/SHA, jobIDs and per-step durations; its input was the unmodified GitHub jobs API response saved locally as `artifacts/m5-ci-profile-jobs-final.json`. Queue waiting is excluded from per-job execution time.
+
+Follow-up changes only freeze CI OS/budgets/sample policy and document evidence; production sources, content digest, rule answers and golden expectations are unchanged. Ordinary CI has ten jobs (one test, six desktop, two input/touch, one comparison); manual profiling retains three samples. Final F4 is not inferred from profiling: the subsequent clean committed tree must pass these ten jobs and publish its own exact-SHA manifests. Record the final result in the draft PR without making another source commit solely to reference its own hash. The PR remains draft and main remains unmerged.
+
+The user subsequently confirmed GitHub connectivity. Retrying native `git push -u origin feat/m5-s13-single-player` succeeded (`Everything up-to-date`); follow-up publication can now use ordinary Git push. There was no new automatic approval rejection.

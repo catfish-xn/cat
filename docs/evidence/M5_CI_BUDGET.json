@@ -1,0 +1,1933 @@
+{
+  "evidence": "GitHub job timestamps, including all steps",
+  "runIds": [
+    37378727483
+  ],
+  "headShas": [
+    "446b49315d6e4a7b89e36e6668f5a7437352aa94"
+  ],
+  "formula": "ceil(max of three measured minutes * 1.5 + 5)",
+  "budgets": [
+    {
+      "name": "test-and-build",
+      "samples": [
+        {
+          "sample": 2,
+          "jobId": 111994750704,
+          "seconds": 660,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs tests npm test",
+              "conclusion": "success",
+              "seconds": 406
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs headless npm run test:headless",
+              "conclusion": "success",
+              "seconds": 148
+            },
+            {
+              "name": "Run M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance",
+              "conclusion": "success",
+              "seconds": 80
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 1,
+          "jobId": 111994750966,
+          "seconds": 680,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs tests npm test",
+              "conclusion": "success",
+              "seconds": 419
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 9
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs headless npm run test:headless",
+              "conclusion": "success",
+              "seconds": 150
+            },
+            {
+              "name": "Run M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance",
+              "conclusion": "success",
+              "seconds": 80
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 6
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751072,
+          "seconds": 668,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs tests npm test",
+              "conclusion": "success",
+              "seconds": 414
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 9
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs headless npm run test:headless",
+              "conclusion": "success",
+              "seconds": 147
+            },
+            {
+              "name": "Run M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance",
+              "conclusion": "success",
+              "seconds": 79
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 680,
+      "timeoutMinutes": 22
+    },
+    {
+      "name": "compare-evidence",
+      "samples": [
+        {
+          "sample": 2,
+          "jobId": 112005495087,
+          "seconds": 12,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/download-artifact@v4",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/compare-m5-evidence.cjs --final",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 1,
+          "jobId": 112005495092,
+          "seconds": 12,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/download-artifact@v4",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/compare-m5-evidence.cjs --final",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 112005495308,
+          "seconds": 13,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/download-artifact@v4",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/compare-m5-evidence.cjs --final",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 13,
+      "timeoutMinutes": 6
+    },
+    {
+      "name": "browser-dev-cannon",
+      "samples": [
+        {
+          "sample": 1,
+          "jobId": 111994750934,
+          "seconds": 632,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 34
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 8
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 577
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751045,
+          "seconds": 581,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 21
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 6
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 544
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 2,
+          "jobId": 111994751060,
+          "seconds": 693,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 28
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 642
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 693,
+      "timeoutMinutes": 23
+    },
+    {
+      "name": "browser-dev-sniper",
+      "samples": [
+        {
+          "sample": 1,
+          "jobId": 111994750980,
+          "seconds": 834,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 39
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 8
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 772
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751061,
+          "seconds": 885,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 23
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 835
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 2,
+          "jobId": 111994751098,
+          "seconds": 798,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 26
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 6
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 754
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 885,
+      "timeoutMinutes": 28
+    },
+    {
+      "name": "browser-dev-mage",
+      "samples": [
+        {
+          "sample": 2,
+          "jobId": 111994750949,
+          "seconds": 889,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 23
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 9
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 842
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751158,
+          "seconds": 839,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 25
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 8
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 793
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 1,
+          "jobId": 111994751218,
+          "seconds": 828,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 26
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 7
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 783
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 889,
+      "timeoutMinutes": 28
+    },
+    {
+      "name": "input-dev",
+      "samples": [
+        {
+          "sample": 2,
+          "jobId": 111994751085,
+          "seconds": 1040,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 22
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Native input and normal-time touch route",
+              "conclusion": "success",
+              "seconds": 997
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 1,
+          "jobId": 111994751301,
+          "seconds": 1045,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 23
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Native input and normal-time touch route",
+              "conclusion": "success",
+              "seconds": 997
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751334,
+          "seconds": 1051,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 31
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Native input and normal-time touch route",
+              "conclusion": "success",
+              "seconds": 995
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 1051,
+      "timeoutMinutes": 32
+    },
+    {
+      "name": "browser-preview-cannon",
+      "samples": [
+        {
+          "sample": 1,
+          "jobId": 111994751175,
+          "seconds": 710,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 37
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 11
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 643
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751213,
+          "seconds": 690,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 25
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 9
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 642
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 2,
+          "jobId": 111994751398,
+          "seconds": 708,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 7
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 33
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 644
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 710,
+      "timeoutMinutes": 23
+    },
+    {
+      "name": "browser-preview-sniper",
+      "samples": [
+        {
+          "sample": 1,
+          "jobId": 111994751101,
+          "seconds": 838,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 29
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 8
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 789
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 2,
+          "jobId": 111994751237,
+          "seconds": 862,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 26
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 812
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751332,
+          "seconds": 845,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 21
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 9
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 802
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 862,
+      "timeoutMinutes": 27
+    },
+    {
+      "name": "browser-preview-mage",
+      "samples": [
+        {
+          "sample": 1,
+          "jobId": 111994751268,
+          "seconds": 891,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 23
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 847
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 2,
+          "jobId": 111994751320,
+          "seconds": 893,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 23
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 849
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751458,
+          "seconds": 827,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 26
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 8
+            },
+            {
+              "name": "Normal-time complete route",
+              "conclusion": "success",
+              "seconds": 779
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 893,
+      "timeoutMinutes": 28
+    },
+    {
+      "name": "input-preview",
+      "samples": [
+        {
+          "sample": 2,
+          "jobId": 111994750995,
+          "seconds": 878,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 33
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 8
+            },
+            {
+              "name": "Native input and normal-time touch route",
+              "conclusion": "success",
+              "seconds": 818
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 1,
+          "jobId": 111994751091,
+          "seconds": 962,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 5
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 4
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 29
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 10
+            },
+            {
+              "name": "Native input and normal-time touch route",
+              "conclusion": "success",
+              "seconds": 906
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        },
+        {
+          "sample": 3,
+          "jobId": 111994751239,
+          "seconds": 1036,
+          "steps": [
+            {
+              "name": "Set up job",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "conclusion": "success",
+              "seconds": 3
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "conclusion": "success",
+              "seconds": 24
+            },
+            {
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "conclusion": "success",
+              "seconds": 9
+            },
+            {
+              "name": "Native input and normal-time touch route",
+              "conclusion": "success",
+              "seconds": 992
+            },
+            {
+              "name": "Run actions/upload-artifact@v4",
+              "conclusion": "success",
+              "seconds": 2
+            },
+            {
+              "name": "Post Run actions/setup-node@v4",
+              "conclusion": "success",
+              "seconds": 0
+            },
+            {
+              "name": "Post Run actions/checkout@v4",
+              "conclusion": "success",
+              "seconds": 1
+            },
+            {
+              "name": "Complete job",
+              "conclusion": "success",
+              "seconds": 0
+            }
+          ]
+        }
+      ],
+      "maxSeconds": 1036,
+      "timeoutMinutes": 31
+    }
+  ],
+  "workflowTimeoutMinutes": {
+    "test": 22,
+    "browser": 28,
+    "input": 32,
+    "comparison": 6
+  }
+}
