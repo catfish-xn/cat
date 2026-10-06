@@ -13,7 +13,7 @@ const arg = (name, fallback) => (process.argv.find(value => value.startsWith(`--
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = await context.newPage();
     const started = Date.now();
-    await page.goto(url);
+    await page.goto(url, { waitUntil: 'commit' });
     await page.waitForFunction(() => { const button = document.querySelector('[data-debug="m6-fixed-start"]'); return button && !button.disabled; });
     times.push(Date.now() - started);
     await context.close();

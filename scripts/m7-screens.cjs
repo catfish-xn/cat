@@ -111,5 +111,19 @@ async function run(browser, viewport) {
   fs.mkdirSync(out, { recursive: true });
   fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify(reports.map(report => ({ viewport: report.viewport.name, failed: report.failed, interactiveMs: report.interactiveMs, errors: report.errors,
     steps: Object.fromEntries(Object.entries(report.steps ?? {}).map(([name, step]) => [name, { overflow: step.horizontalOverflow, piece: step.pieceDiameterCSS, minFont: step.minPanelFontPx, small: step.smallTargets.length, phase: step.phase }])) })), null, 2));
-  if (reports.some(report => report.failed)) process.exitCode = 1;
+  // Gate: any overflow, sub-44px target, piece under 32 CSS px, page/console error or failed step fails the run.
+  const problems = [];
+  for (const report of reports) {
+    if (report.failed) problems.push(`${report.viewport.name}: ${report.failed}`);
+    for (const error of report.errors ?? []) problems.push(`${report.viewport.name}: page/console error ${error}`);
+    for (const [step, data] of Object.entries(report.steps ?? {})) {
+      if (data.horizontalOverflow > 0) problems.push(`${report.viewport.name}/${step}: horizontal overflow ${data.horizontalOverflow}px`);
+      if (data.smallTargets.length) problems.push(`${report.viewport.name}/${step}: targets under 44px ${JSON.stringify(data.smallTargets)}`);
+      if (data.pieceDiameterCSS !== null && data.pieceDiameterCSS < 32) problems.push(`${report.viewport.name}/${step}: piece ${data.pieceDiameterCSS}px < 32`);
+    }
+    for (const step of ['preparation', 'combat', 'settlement', 'replay']) if (!report.failed && !report.steps?.[step]) problems.push(`${report.viewport.name}: missing step ${step}`);
+  }
+  fs.writeFileSync(path.join(out, 'problems.json'), JSON.stringify(problems, null, 2));
+  for (const problem of problems) console.log(`FAIL ${problem}`);
+  if (problems.length) process.exitCode = 1;
 })();

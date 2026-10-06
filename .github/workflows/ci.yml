@@ -122,6 +122,47 @@ jobs:
         with:
           name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
+  m7-presentation:
+    name: m7-presentation-sample${{ matrix.sample }}
+    env:
+      M5_JOB_KEY: m7-presentation-sample${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - run: node scripts/ci-m5-step.cjs build npm run build
+      - name: Signed-off M6 build for paired budgets
+        run: |
+          git worktree add ../m6-base 631c131f1f2fd387c873f0fd8b5a238bca79dbe0
+          ln -s "$PWD/node_modules" ../m6-base/node_modules
+          (cd ../m6-base && npx vite build)
+      - name: M7 presentation, five viewports, sub-path deploy and budgets
+        run: |
+          mkdir -p artifacts
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort > artifacts/m7-preview.log 2>&1 &
+          until curl -s http://127.0.0.1:4173 > /dev/null; do sleep 1; done
+          node scripts/ci-m5-step.cjs m7-presentation node scripts/verify-m7-presentation.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-presentation
+          node scripts/ci-m5-step.cjs m7-screens node scripts/m7-screens.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-screens
+          node scripts/ci-m5-step.cjs m7-subpath node scripts/verify-m7-subpath.cjs
+          node scripts/ci-m5-step.cjs m7-budget node scripts/m7-budget.cjs --base=../m6-base/dist --current=dist --out=artifacts/m7-budget
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m7-presentation-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/
   compare-evidence:
     name: compare-evidence-sample${{ matrix.sample }}
     needs: [test-and-build, chromium-match, chromium-input]

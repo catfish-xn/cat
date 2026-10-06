@@ -5,6 +5,7 @@ import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/un
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import { HexLayout, type Point } from './hex-layout';
+import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
 import { InputRouter } from './input-router';
 import { getStageRound, getRoundKind } from '../simulation/round-schedule';
@@ -17,7 +18,7 @@ import type { SessionChange } from '../m6/contracts';
 import { UnitView, type RingState } from '../presentation/unit-view';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
-import { buildPortraitTextures, preloadS13Assets } from '../presentation/s13-assets';
+import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 
@@ -33,12 +34,14 @@ export class BoardScene extends Phaser.Scene {
   private activeStats: BattleStats | null = null;
   private lastStatsRender = -1;
   private lastReplaySeq = -1;
+  private replayBattle = '';
+  private replayCombat: import('../simulation/combat-types').CombatState | null = null;
   private replayRenderKey = '';
   private inputRouter = new InputRouter();
   private strategyPanel: StrategyPanel | null = null;
   private help: HelpPanel | null = null;
   private get state() { return this.session.preparation; }
-  private layout = new HexLayout(this.state.board, 34, { x: 35, y: 40 });
+  private layout = new HexLayout(this.state.board, BOARD_LAYOUT.hexRadius, BOARD_LAYOUT.origin);
   private views = new Map<string, UnitView>();
   private tokens = new Map<string, Phaser.GameObjects.Container>();
   private renderedCells = new Map<string, string>();
@@ -75,7 +78,6 @@ export class BoardScene extends Phaser.Scene {
   private renderedUpgradeCount = 0;
 
   constructor() { super('Board'); }
-  preload() { preloadS13Assets(this); }
   create() {
     buildPortraitTextures(this);
     // Phaser reuses the Scene instance on restart but destroys its display list.
@@ -174,16 +176,25 @@ export class BoardScene extends Phaser.Scene {
         this.feedback?.reset(); this.sync(); this.renderActiveStats();
       }, changed: change => this.observeStats(change),
       playback: (snapshot, record) => {
-        if (!snapshot || !record) { this.lastReplaySeq = -1; this.replayRenderKey = ''; this.renderActiveStats(); return; }
+        if (!snapshot || !record) { this.lastReplaySeq = -1; this.replayRenderKey = ''; this.replayCombat = null; this.feedback?.reset(); this.renderActiveStats(); return; }
         const key = `${record.runId}/${record.combatId}/${snapshot.tick}/${this.application?.replaySelectedUnit}`;
         if (key === this.replayRenderKey) return; this.replayRenderKey = key;
         document.getElementById('stats-root')!.hidden = false;
-        if (this.lastReplaySeq !== snapshot.nextEventSeq) this.feedback?.reset();
+        // Same numeric floats as live combat: feed only newly played events; seek/switch resets.
+        const battle = `${record.runId}/${record.combatId}`, forward = battle === this.replayBattle && this.lastReplaySeq >= 0
+          && snapshot.nextEventSeq >= this.lastReplaySeq && snapshot.nextEventSeq - this.lastReplaySeq <= 400;
+        if (forward) { if (snapshot.nextEventSeq > this.lastReplaySeq) this.feedback?.push(snapshot.events.slice(this.lastReplaySeq), performance.now()); }
+        else this.feedback?.reset();
+        this.replayBattle = battle; this.replayCombat = snapshot.combat;
         this.lastReplaySeq = snapshot.nextEventSeq;
         this.statsPanel?.render({ stats: aggregateStats(record.runId, record.combatId, snapshot.events), combat: snapshot.combat,
           events: snapshot.events, selectedUnitId: this.application?.replaySelectedUnit ?? null });
       }, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message),
     });
+    // Portraits load once the page is idle so they never delay the first usable controls.
+    const loadPortraits = () => { if (this.sys.isActive()) loadS13Portraits(this, () => { buildPortraitTextures(this); for (const view of this.views.values()) view.invalidate(); this.reconcileTokens(); }); };
+    const idle = (window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number }).requestIdleCallback;
+    if (idle) idle(loadPortraits, { timeout: 1500 }); else window.setTimeout(loadPortraits, 300);
     const debug = Object.freeze({ read: () => this.debugSnapshot() });
     window.__CAT_DEBUG__ = debug;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -507,6 +518,17 @@ export class BoardScene extends Phaser.Scene {
     this.statsPanel?.render({ stats: this.activeStats, combat: this.session.combat, events: this.session.combatEvents, selectedUnitId: this.selectedId });
     this.lastStatsRender = performance.now();
   }
+  /** Replay floats anchor to the replay canvas, which shares the board's 480×520 geometry. */
+  private renderReplayFeedback() {
+    const combat = this.replayCombat, overlay = document.querySelector<HTMLCanvasElement>('#board-root .replay-canvas');
+    if (!combat || !overlay) return;
+    const canvas = overlay.getBoundingClientRect(), host = document.getElementById('feedback-root')!.getBoundingClientRect();
+    const scale = canvas.width / BOARD_LAYOUT.width;
+    this.feedback?.render(performance.now(), new Map(combat.units.filter(unit => unit.alive).map(unit => {
+      const p = this.layout.center(unit.cell);
+      return [unit.id, { x: canvas.left - host.left + p.x * scale, y: canvas.top - host.top + p.y * scale, radius: BOARD_LAYOUT.tokenRadius * scale }];
+    })));
+  }
   private renderFeedback() {
     const canvas = this.game.canvas.getBoundingClientRect(), host = document.getElementById('feedback-root')!.getBoundingClientRect();
     const scale = canvas.width / this.scale.gameSize.width;
@@ -514,7 +536,7 @@ export class BoardScene extends Phaser.Scene {
       { x: canvas.left - host.left + token.x * scale, y: canvas.top - host.top + token.y * scale, radius: 27 * scale }])));
   }
   update(_time: number, delta: number) {
-    if (this.application && !this.application.frame(delta)) return;
+    if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
     this.renderFeedback();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }

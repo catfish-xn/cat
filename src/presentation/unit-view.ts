@@ -41,19 +41,19 @@ export class UnitView {
     const add = scene.add;
     this.disc = add.circle(0, 0, PIECE_RADIUS, this.identity.colorNumber);
     this.emblem = add.graphics();
-    this.label = add.text(0, 1, '', { fontSize: '15px', fontStyle: 'bold', color: this.identity.ink, resolution: 3 }).setOrigin(0.5).setName('symbol');
-    this.star = add.text(0, -PIECE_RADIUS + 1, '', { fontSize: '12px', color: STAR_COLORS[0], backgroundColor: '#0b151fd9', padding: { x: 3, y: 0 }, resolution: 3 }).setOrigin(0.5);
+    this.label = add.text(0, 1, '', { fontSize: '15px', fontStyle: 'bold', color: this.identity.ink, resolution: 2 }).setOrigin(0.5).setName('symbol');
+    this.star = add.text(0, -PIECE_RADIUS + 1, '', { fontSize: '12px', color: STAR_COLORS[0], backgroundColor: '#0b151fd9', padding: { x: 3, y: 0 }, resolution: 2 }).setOrigin(0.5);
     this.costBadge = add.circle(-20, 18, 8, toNumber(costColor(1))).setStrokeStyle(2, 0x0b151f);
-    this.costText = add.text(-20, 18, '', { fontSize: '11px', fontStyle: 'bold', color: '#0b151f', resolution: 3 }).setOrigin(0.5);
+    this.costText = add.text(-20, 18, '', { fontSize: '11px', fontStyle: 'bold', color: '#0b151f', resolution: 2 }).setOrigin(0.5);
     this.items = add.graphics();
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
-    this.shieldLabel = add.text(0, 40, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 3 }).setOrigin(0.5).setVisible(false);
+    this.shieldLabel = add.text(0, 40, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
     const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
-      children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 3 }).setOrigin(0.5));
+      children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
     }
     this.token = add.container(x, y, children).setSize(58, 58).setName(`unit:${unit.id}`);
     this.token.setData('unitId', unit.id);
@@ -61,6 +61,8 @@ export class UnitView {
     this.update(unit, []);
   }
 
+  /** Forces the next update() to redraw identity (e.g. portraits finished loading). */
+  invalidate(): void { this.renderKey = ''; }
   get name(): string { return this.identity.name; }
   get symbol(): string { return this.label.text; }
 

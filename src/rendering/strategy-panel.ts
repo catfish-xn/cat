@@ -105,6 +105,8 @@ export function describeTraitTier(definition: import('../simulation/strategy-typ
 }
 
 const CHOICE_POINTER_QUIET_MS = 400;
+const LIFECYCLE_QUIET_MS = 400;
+const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
 
 /** Accessible DOM view over the same Match commands; it owns no game state. */
 export class StrategyPanel {
@@ -121,6 +123,7 @@ export class StrategyPanel {
   private pointerPosition: { x: number; y: number } | null = null;
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement } | null = null;
   private choiceToken = '';
+  private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
   private focusFrame: number | null = null;
   private combatText: HTMLElement | null = null;
@@ -133,8 +136,10 @@ export class StrategyPanel {
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
+    // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
+    const helpOpen = () => document.body.dataset.helpOpen === 'true';
     const tabWithinChoice = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab' || !choiceVisible()) return;
+      if (event.key !== 'Tab' || !choiceVisible() || helpOpen()) return;
       // Only Tab belongs to the focus boundary. D/F/E and repeat still reach the
       // existing domain command handlers without a timer or key suppression.
       const targets = Array.from(this.modal.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
@@ -144,7 +149,7 @@ export class StrategyPanel {
       else targets[index < 0 ? (event.shiftKey ? targets.length - 1 : 0) : (index + (event.shiftKey ? -1 : 1) + targets.length) % targets.length].focus({ preventScroll: true });
     };
     const retainChoiceFocus = (event: FocusEvent) => {
-      if (choiceVisible() && !this.modal.contains(event.target as Node)) this.focusChoice();
+      if (choiceVisible() && !helpOpen() && !this.modal.contains(event.target as Node)) this.focusChoice();
     };
     document.addEventListener('keydown', tabWithinChoice, true);
     document.addEventListener('focusin', retainChoiceFocus, true);
@@ -152,9 +157,10 @@ export class StrategyPanel {
     // React to the mode commit instead of assuming a single animation frame is
     // late enough to move focus into an import-hidden dialog.
     const modeObserver = new MutationObserver(() => {
+      this.modal.inert = helpOpen();
       if (!this.modal.contains(document.activeElement)) this.focusChoice();
     });
-    modeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-m6-mode'] });
+    modeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-m6-mode', 'data-help-open'] });
     this.disposers.push(() => {
       document.removeEventListener('keydown', tabWithinChoice, true);
       document.removeEventListener('focusin', retainChoiceFocus, true);
@@ -267,6 +273,17 @@ export class StrategyPanel {
     const controlButton = (name: ControlName, className: string) => {
       const button = this.button(`mobile:${name}`, labels[name], () => {
         if (name === 'sell' && this.router.current?.kind === 'item') { this.actions.status('无出售单位目标 · 请先结束物品拖拽'); return; }
+        if (LIFECYCLE.has(name)) {
+          // The primary button changes meaning when the phase changes (继续 → 开始战斗). A second
+          // click of the same burst must not land on the new action; deliberate clicks after the
+          // quiet window, and every D/F/E or shop input, are unaffected.
+          const now = performance.now(), guard = this.lifecycleGuard;
+          if (guard && guard.name !== name && now - guard.at < LIFECYCLE_QUIET_MS) { this.actions.status('阶段刚刚切换 · 请确认后再点击'); return; }
+          const before = this.actions.state().phase;
+          this.actions.control(name);
+          if (this.actions.state().phase !== before) this.lifecycleGuard = { at: now, name };
+          return;
+        }
         this.actions.control(name);
       });
       button.classList.add(className);
@@ -436,6 +453,7 @@ export class StrategyPanel {
     const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
     if (token === this.choiceToken) return;
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
+    this.modal.inert = document.body.dataset.helpOpen === 'true';
     const card = element('div', '', 'choice-dialog');
     card.append(element('h2', choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
     card.append(element('p', '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
@@ -469,7 +487,8 @@ export class StrategyPanel {
     this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
   }
   private focusChoice(): void {
-    if (this.modal.hidden || getComputedStyle(this.modal).display === 'none') return;
+    if (this.modal.hidden || getComputedStyle(this.modal).display === 'none' || document.body.dataset.helpOpen === 'true') return;
+    this.modal.inert = false;
     (this.modal.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? this.modal).focus({ preventScroll: true });
   }
   updateCombat(): void {

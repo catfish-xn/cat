@@ -4,7 +4,9 @@ import './style.css';
 import { createAppShell } from './rendering/app-shell';
 import { BOARD_LAYOUT } from './rendering/layout-config';
 import { applyThemeVariables } from './presentation/theme';
+import { installImageFallback } from './presentation/s13-assets';
 applyThemeVariables();
+const removeImageFallback = installImageFallback();
 const app = document.getElementById('app')!;
 const shell = createAppShell(app);
 const board = shell.board;
@@ -46,7 +48,7 @@ new Phaser.Game({
         for (const type of mouseEvents) game.canvas.removeEventListener(type, ignoreTouchMouse, true);
         for (const type of geometryEvents) game.canvas.removeEventListener(type, updateInputBounds, true);
         window.removeEventListener('scroll', updateInputBounds, true);
-        observer.disconnect(); shell.dispose();
+        observer.disconnect(); shell.dispose(); removeImageFallback();
         if (frame !== null) cancelAnimationFrame(frame);
       });
     },
