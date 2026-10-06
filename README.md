@@ -22,6 +22,8 @@ npm run preview
 - 新局先选两件组件，再选2-1强化。强化还有3-2、4-2两次；4-6选择异常目标并查看单项报价，1G刷新，确认免费。选择期间普通运营暂停。
 - 每阶段.4为组件补给，无战斗；.7为PvE，前四次存活后有随机组件和组件选择。完成奖励选择后才能点击“继续”。
 - **开始战斗**开始50ms固定tick的自动战斗，期间经济和部署锁定。界面显示目标、实际伤害、盾吸收、治疗、状态及来源；战损不带入下一场。
+- 右上角 **？帮助** 打开操作说明（Esc 或“关闭”退出，打开期间 D/F/E 不生效）；其中“减少动效”只影响画面，不改变战斗结果，偏好保存在本机浏览器。
+- 棋子与商店使用 S13 官方头像；商店卡片列出种族与职业，本版本可用的 5 个职业高亮。星级为铜/银/金，左下角数字为费用。
 - **继续**进入下一轮，保留玩家资源和站位。HP归零失败；6-7战胜最终PvE成功，失败或平局为失败。**新局**转到“对局与存档”，选择随机或固定种子开始。
 
 “固定种子”初始显示 42。新局初始100HP、10G、等级3、艾瑞莉娅／麦迪／拉克丝各一星。收入分为基础5G、对战胜利1G、最多5G利息和最多3G连胜败金；PvE/补给不增长或支付连胜败金。每完成一轮2XP，最高九级。经济结算、历史数据出处及明确简化详见 [M5规则](M5_RULES.md)。
@@ -48,6 +50,9 @@ npm run preview
 M6 文件使用 `hex-autobattler-save` 包装，saveFormatVersion/replayFormatVersion 均为 1；内层对局继续使用schema5、`m5-14.24b-v1`、`s13-14.24b-slice-v1`、命令协议2和内容digest。裸 M5 文件、旧schema4及未知版本明确拒绝，不猜测迁移。恢复不重发奖励、不重抽随机数、不重新开战。完整契约见 [保存](docs/SAVE_CONTRACT.md)、[回放](docs/REPLAY_CONTRACT.md)、[Match](docs/MATCH_CONTRACT.md) 和 [Combat](docs/COMBAT_CONTRACT.md)。
 
 ## 验收
+
+M7 表现层门禁：`node scripts/verify-m7-presentation.cjs --url=<preview 地址>`；五视口走查：`node scripts/m7-screens.cjs --url=<地址>`。
+
 
 ```sh
 npx playwright install --with-deps chromium
