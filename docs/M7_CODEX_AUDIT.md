@@ -3,7 +3,28 @@
 审计日期：2026-10-07（北京时间）。分支 `claude/friendly-darwin-pak00a`，交接提交 `111e9f8305ab4a7da8e67bd7f96a2318cabe5df0`。
 先阅读了 [M7_HANDOFF](M7_HANDOFF.md) 和 [M7_PLAN](../M7_PLAN.md)。本次只修改测试驱动、诊断 workflow 和文档；没有修改游戏实现、视觉、交互或冻结预算，没有合并分支。
 
+> 最新跟进（2026-10-07）：已在包含 Claude `b252c34` 的 `77600c82bb709837ca1142abc16238765074f116` 上重新完成一次完整 CI，11 个验收作业全部通过，见下节。第三轮预热失败属于 M6 main，现按用户决定独立登记为 [M6-MEM-01](M6_LIFECYCLE_KNOWN_ISSUE.md)，不以该已知问题阻塞 M7 合并。
+
 ## 1. 完整 CI
+
+### 最新 Claude UI 提交后的完整复核
+
+[完整运行 37540777240](https://github.com/catfish-xn/cat/actions/runs/37540777240)：`workflow_dispatch`，2026-10-07 北京时间 06:28 启动，约 06:48 结束；**success**。开跑前拉取最新分支，HEAD 为 `77600c8`，已确认包含 `b252c34`。未开启 profile、heap_diagnostics 或 warmup_experiment。
+
+| 作业（均为 sample1） | 结果 |
+| --- | --- |
+| test-and-build：50 文件 / 722 单元测试、build、headless、performance | 通过 |
+| m7-presentation | 通过 |
+| browser-dev-cannon / mage / sniper | 三项均通过 |
+| browser-preview-cannon / mage / sniper | 三项均通过 |
+| input-dev / input-preview | 两项均通过 |
+| compare-evidence | 正常执行并通过；M5 三条路线、M6 九份 manifest 比较均通过 |
+
+共 **11 个验收作业通过**。两个诊断入口 `heap-diagnostics` / `warmup-experiment` 因未启用而按预期跳过，不是验收缺失。所有作业状态、SHA、正式生命周期样本见 [M7_LATEST_FULL_CI.json](evidence/M7_LATEST_FULL_CI.json)。本次没有修改 workflow 的依赖或跳过策略。
+
+正式生命周期仍为 **2 次预热 / 30 次测量 / 1MiB**：dev +56,668B，preview +1,032,868B；分别保持 listeners=83 / 82、RAF=1。preview 仅剩 15,708B 余量，单次全绿不能证明门禁稳定，风险与后续调查见 [M6-MEM-01](M6_LIFECYCLE_KNOWN_ISSUE.md)。
+
+独立调查分支 `codex/m6-lifecycle-retention` 已推送提交 `a35b027`，新增输入、原生控件与 matchMedia 诊断及证据，未修改应用。M7 本轮随后仅追加文档/证据；上述 CI 的确切受测 SHA 是 `77600c8`，不把之后的报告提交称为另一次完整验收。没有合并分支。
 
 ### 原始交接提交
 
