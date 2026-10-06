@@ -93,6 +93,44 @@ const {sourceFingerprint}=require('../scripts/m5-evidence.cjs');
     report.results[`P2_stale_archive_${delayedOutcome}_after_${delayedOutcome==='success'?'new_run':'same_run_new_epoch'}`]={passed:true,fullStateLedgerStatusRevisionEqual:true,optionsUnchanged:true,sameRunNewEpoch:delayedOutcome==='reject'};
    }finally{await page.evaluate(()=>{window.__M6_FAILURE_CASE.restoreArchiveRead?.();window.__M6_FAILURE_CASE.restoreArchiveObserver?.();window.__M6_FAILURE_CASE.app.dispose();});await context.close();}
   }
+  // R4: the tick-80 native transaction remains in-flight while the real final tick is queued.
+  {
+   const {context,page}=await openPage();try{
+    await boot(page);for(const name of ['B','C','D'])await importEnvelope(page,{...finished,runId:ids[name],battles:records.map(record=>({...record,runId:ids[name]}))});
+    let tick79=api.startMatchCombat(finalRecord.context).state;while(tick79.combat.tick<79)tick79=api.stepMatch(tick79).state;
+    assert.equal(tick79.phase,'combat');assert(finalRecord.endTick>80&&finalRecord.endTick<120,'fixture has one periodic save at80 before real terminal tick');
+    const prefix79Events=finalRecord.events.filter(event=>event.tick<=79),at79={...finished,match:tick79,battles:records.slice(0,-1),currentBattle:{...finalRecord,events:prefix79Events,endTick:79,nextEventSeq:tick79.combat.nextEventSeq,result:null,stateHash:digestContent(tick79.combat),eventHash:digestContent(prefix79Events)}};
+    await importEnvelope(page,at79);const initialR4Token=(await readApplication(page)).debug.token;
+    await page.evaluate(async()=>{const c=window.__M6_FAILURE_CASE,{SaveRepository}=await import('/src/persistence/repository.ts');
+      const nativeTx=IDBDatabase.prototype.transaction,nativeCommit=SaveRepository.prototype.commit,originalRefresh=c.app.loadArchives,originalFailed=c.app.failed;
+      const probe=c.r4={held:[],released:[],completed:[],writes:[],refreshes:[],refreshPending:0,failures:[]};
+      c.app.failed=function(error){probe.failures.push({message:error.message,reason:error.reason??null});return originalFailed.call(this,error);};
+      c.restoreR4=()=>{IDBDatabase.prototype.transaction=nativeTx;SaveRepository.prototype.commit=nativeCommit;c.app.loadArchives=originalRefresh;c.app.failed=originalFailed;};
+      SaveRepository.prototype.commit=function(token,capture){const row={tick:capture.match.combat?.tick,phase:capture.match.phase,completed:false};probe.writes.push(row);return nativeCommit.call(this,token,capture).then(next=>{row.completed=true;row.token=next;return next;});};
+      c.app.loadArchives=function(...args){const row={afterCommittedTicks:probe.writes.filter(write=>write.completed).map(write=>write.tick),settled:false};probe.refreshes.push(row);probe.refreshPending++;return originalRefresh.apply(this,args).finally(()=>{row.settled=true;probe.refreshPending--;});};
+      IDBDatabase.prototype.transaction=function(...args){const tx=nativeTx.apply(this,args);if(args[1]==='readwrite'){const ordinal=probe.held.length;probe.held.push(true);tx.addEventListener('complete',()=>{probe.completed[ordinal]=true;});const pump=()=>{const request=tx.objectStore('metadata').get('current');request.onsuccess=()=>{if(!probe.released[ordinal])pump();};};pump();}return tx;};
+      c.app.activeSession.advance(50);
+    });
+    await page.waitForFunction(()=>window.__M6_FAILURE_CASE.r4.held[0]);
+    await page.evaluate(()=>{const c=window.__M6_FAILURE_CASE;while(c.app.activeSession.phase==='combat')c.app.activeSession.advance(50);});
+    const queued=await page.evaluate(()=>{const c=window.__M6_FAILURE_CASE;return{tick:c.app.activeSession.state.combat.tick,phase:c.app.activeSession.phase,pending:c.app.coordinator.pendingCount,oldWrite:c.r4.writes[0],oldCompleted:Boolean(c.r4.completed[0])};});
+    assert.equal(queued.phase,'gameOver');assert.equal(queued.tick,finalRecord.endTick);assert.equal(queued.pending,1);assert.equal(queued.oldWrite.tick,80);assert.equal(queued.oldWrite.phase,'combat');assert.equal(queued.oldCompleted,false);
+    await page.evaluate(()=>window.__M6_FAILURE_CASE.r4.released[0]=true);
+    await page.waitForFunction(()=>window.__M6_FAILURE_CASE.r4.held[1]);
+    const beforeFinalCommit=await page.evaluate(()=>{const c=window.__M6_FAILURE_CASE;return{refreshes:c.r4.refreshes,writes:c.r4.writes,savedArchiveRun:c.app.savedArchiveRun};});
+    await page.evaluate(()=>window.__M6_FAILURE_CASE.r4.released[1]=true);
+    await page.waitForFunction(()=>{const c=window.__M6_FAILURE_CASE;return c.r4.completed[1]&&c.app.coordinator.running===null&&c.r4.refreshPending===0;});
+    const result=await page.evaluate(async()=>{const c=window.__M6_FAILURE_CASE,{SaveRepository}=await import('/src/persistence/repository.ts'),repo=new SaveRepository();try{return{probe:c.r4,status:c.app.debug().status,saveLabel:document.querySelector('[data-debug=m6-save-status]').textContent,state:c.app.activeSession.state,events:c.app.activeSession.combatEvents,current:await repo.readCurrent(),completed:await repo.listCompleted(),options:[...document.querySelectorAll('#replay-root select option')].filter(option=>option.value!=='').map(option=>option.textContent)};}finally{repo.close();}});
+    fs.writeFileSync(path.join(output,'r4-native-transaction-order.json'),JSON.stringify({initialR4Token,queued,beforeFinalCommit,result},null,2));
+    assert.equal(beforeFinalCommit.refreshes.length,0,'old combat write success must not start terminal archive refresh');assert.equal(beforeFinalCommit.savedArchiveRun,null,'old combat commit must not claim terminal archive identity');
+    assert.deepEqual(result.probe.writes.map(write=>[write.tick,write.phase,write.completed]),[[80,'combat',true],[finalRecord.endTick,'gameOver',true]]);
+    assert.deepEqual(result.probe.writes.map(write=>write.token.revision),[initialR4Token.revision+1,initialR4Token.revision+2]);for(const write of result.probe.writes){assert.equal(write.token.runId,initialR4Token.runId);assert.equal(write.token.activationEpoch,initialR4Token.activationEpoch);}assert.equal(result.current.token.revision,initialR4Token.revision+2);assert(result.saveLabel.startsWith('最近保存成功：'));assert(!result.saveLabel.includes('保存失败'));
+    assert.equal(result.probe.refreshes.length,1,'only the final committed snapshot triggers archive refresh');assert.deepEqual(result.probe.refreshes[0].afterCommittedTicks,[80,finalRecord.endTick]);assert.equal(result.probe.refreshPending,0);
+    assert.deepEqual(result.completed.map(row=>row.runId),[ids.C,ids.D,ids.A]);assert.equal(result.options.length,90);assert(!result.options.some(text=>text.includes(ids.B.slice(-8))));for(const id of [ids.C,ids.D,ids.A])assert.equal(result.options.filter(text=>text.includes(id.slice(-8))).length,30);
+    assert.deepEqual(result.state,route.final);assert.deepEqual(result.current.envelope,finished);assert.deepEqual(result.events,finalRecord.events);assert.equal(result.status.kind,'saved');assert.deepEqual(result.probe.failures,[],'neither genuine successful commit causes a false failure notification');assert.deepEqual(result.status.token,result.current.token);
+    report.results.R4_inflight_combat_then_pending_terminal_commit={passed:true,inflightTick:80,terminalTick:finalRecord.endTick,pendingTerminalCount:queued.pending,actualNativeTransactions:result.probe.completed.length,oldCommitRefreshCount:beforeFinalCommit.refreshes.length,finalCommitRefreshCount:result.probe.refreshes.length,durableRunIds:result.completed.map(row=>row.runId),displayedBattles:result.options.length,completeTerminalSnapshotEqual:true,savedWithoutFalseFailure:true,revisionAdvancedExactlyTwice:true,saveControlsSuccess:true,allRefreshesSettled:result.probe.refreshPending===0};
+   }finally{await page.evaluate(()=>{const c=window.__M6_FAILURE_CASE;c.restoreR4?.();c.app.dispose();});await context.close();}
+  }
   // ROOT-04a: initialization read remains a real live IDB transaction when disposal occurs.
   {
    const {context,page}=await openPage();try{await boot(page,true);await page.waitForFunction(()=>window.__M6_FAILURE_CASE.held);await page.evaluate(()=>{const c=window.__M6_FAILURE_CASE;c.app.dispose();c.disposed=true;c.released=true;IDBDatabase.prototype.transaction=c.nativeTransaction;});await page.waitForFunction(()=>window.__M6_FAILURE_CASE.aborted);await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,0)));

@@ -125,10 +125,10 @@ export class MatchApplication {
   private attachCoordinator(token: SlotToken) {
     this.coordinator?.dispose();
     const run = this.runId;
-    this.coordinator = new SaveCoordinator(this.repository, token, status => {
+    this.coordinator = new SaveCoordinator(this.repository, token, (status, committed) => {
       if (this.disposed || this.runId !== run) return;
       this.status = status; this.syncControls();
-      if (status.kind === 'saved' && this.session.phase === 'gameOver' && this.savedArchiveRun !== run) {
+      if (status.kind === 'saved' && committed?.phase === 'gameOver' && this.savedArchiveRun !== run) {
         this.savedArchiveRun = run; void this.loadArchives();
       }
     });

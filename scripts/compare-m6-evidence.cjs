@@ -110,6 +110,12 @@ for (const key of ['ROOT_04_initialize_dispose_then_idb_abort', 'ROOT_04_import_
 for(const [key,sameRun] of [['P2_stale_archive_success_after_new_run',false],['P2_stale_archive_reject_after_same_run_new_epoch',true]]){
  const result=failures.results[key];assert.equal(result?.passed,true,key);assert.equal(result.fullStateLedgerStatusRevisionEqual,true);assert.equal(result.optionsUnchanged,true);assert.equal(result.sameRunNewEpoch,sameRun);
 }
+const r4=failures.results.R4_inflight_combat_then_pending_terminal_commit;
+assert.equal(r4?.passed,true,'in-flight combat write followed by pending terminal commit');
+assert.equal(r4.inflightTick,80);assert.equal(r4.terminalTick,117);assert.equal(r4.pendingTerminalCount,1);assert.equal(r4.actualNativeTransactions,2);
+assert.equal(r4.oldCommitRefreshCount,0);assert.equal(r4.finalCommitRefreshCount,1);assert.equal(r4.displayedBattles,90);
+assert.deepEqual(r4.durableRunIds,[failures.fixture.ids.C,failures.fixture.ids.D,failures.fixture.ids.A]);
+for(const key of ['completeTerminalSnapshotEqual','savedWithoutFalseFailure','revisionAdvancedExactlyTwice','saveControlsSuccess','allRefreshesSettled'])assert.equal(r4[key],true,`R4 ${key}`);
 const performance = read('m6-performance');
 const expectedGates = {
   capture: ['p95', 'incrementalCaptureP95'], write: ['p95', 'incrementalWriteP95'],
@@ -186,7 +192,7 @@ const audit = { sha, dirty: '', sourceFingerprint: fingerprint, generatedAt: new
 fs.writeFileSync('artifacts/m6-validation.json', JSON.stringify(audit, null, 2));
 const commandRows = commands.map(step => `| ${step.job} | \`${[step.command, ...step.args].join(' ')}\` | ${step.durationSeconds} | 0 |`).join('\n');
 const budgetRows = performance.measurements.gates.map(gate => `| ${gate.name} | ${gate.metric} | ${gate.actual} | ${gate.ceiling} | 通过 |`).join('\n');
-const header = `# M6 最终同提交验收\n\n状态：全部必需机器门禁通过；等待用户最终 Review/合并决策，不自动合并或进入 M7。\n\nSHA：\`${sha}\`；dirty：空；sourceFingerprint：\`${fingerprint}\`；seed：42。完整版本/digest、Node/Chromium/硬件、实际命令与耗时、证据 hash 均见同包 \`m6-validation.json\`。本报告在全部正常路线与 M6 证据比较成功后生成，不把历史局部结果提升为最终结果。\n`;
+const header = `# M6 同提交机器验证\n\n状态：本提交全部必需机器门禁通过；这不代表用户最终验收。等待用户 Review/合并决策，不自动合并或进入 M7。\n\nSHA：\`${sha}\`；dirty：空；sourceFingerprint：\`${fingerprint}\`；seed：42。完整版本/digest、Node/Chromium/硬件、实际命令与耗时、证据 hash 均见同包 \`m6-validation.json\`。本报告在全部正常路线与 M6 证据比较成功后生成，不把历史局部结果提升为最终结果。\n`;
 fs.writeFileSync('artifacts/M6_VALIDATION.md', `${header}\n## 实际命令\n\n| CI job | 命令 | 耗时秒 | 退出码 |\n|---|---|---:|---:|\n${commandRows}\n\n## 冻结性能预算\n\n| 项目 | 统计 | 实测ms | 冻结ms | 结果 |\n|---|---|---:|---:|---|\n${budgetRows}\n\n## 历史记录与限制\n\n以下为本提交文档中的历史记录；旧 SHA/dirty 结果保持历史身份。真实后台切换没有被合成 visibility 事件冒充；heap snapshot 诊断没有被最终门禁采用。\n\n${fs.readFileSync('docs/M6_VALIDATION.md', 'utf8')}`);
 fs.writeFileSync('artifacts/M6_REVIEW.md', `${header}\n原领域规则与 golden 不变；原有语义测试、四路线逐命令/逐tick恢复、全部正常桌面/触摸路线、原生输入、存储失败/竞争、统计手写oracle、五视口和两类30次生命周期均由本次 CI 的对应命令及证据验证。下面保留独立审查与修复的历史过程；最终结果由同 SHA 的 \`m6-validation.json\` 和两项 comparison 决定。\n\n${fs.readFileSync('docs/M6_REVIEW.md', 'utf8')}`);
 fs.writeFileSync('artifacts/m6-final-comparison.json', JSON.stringify({ sha, sourceFingerprint: fingerprint, records, passed: true }, null, 2));

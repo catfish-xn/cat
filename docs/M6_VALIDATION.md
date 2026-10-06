@@ -69,3 +69,11 @@ The clean final-candidate run at 06b4e59, with source fingerprint 5ee323030b52dc
 原438f35b的全部通过只证明原有覆盖；隔离旧源复现暴露了离窗悬停、同场重入及迟到档案读取的缺口。新增回归已纳入同提交最终CI和comparison，保留原全部断言、预算、正常时间路线及历史失败；不得以旧438f35b结果代替本次修复提交。具体缺陷/owner/独立检查见M6_REVIEW末节。
 
 CI47（clean 6c1522f）新增同场重入回归首次失败，dev/preview均记录revision36→37；真实失败ZIP及digest保留于仓库外work/m6-ci47-failed-preview.zip。查明新用例错误沿用早先quota故障区间基线：第一次从active进入回放按既有设计flush积压保存，因此合法前置写入已完成。原quota区间的完整state/ledger/token与原生IDB等式恢复在该区间结束处，未放宽或删除；新增用例在首次open完成后独立采集基线，再执行返回→同场原生popup重选，严格比较完整state/ledger/token及再次读取的真实IDB版本。生产代码未变；A只读复核确认两段隔离语义分别保留。该测试修订仍待最终同SHA门禁。
+
+### R2 Review：R4终局归档触发顺序
+
+用户确认R1–R3复验通过并关闭；CI48全绿未覆盖本轮R4，不等于最终用户验收通过。隔离aa606645的真实IDB事务回归在45.522s复现：A导入tick79后revision4，tick80战中写入被保持在途，正常推进至tick117终局且pending1；旧写入成功revision5即提前刷新/占savedArchiveRun，终局写入revision6成功后无第二刷新。两笔与所有刷新settle后数据库C,D,A与终局存档正确，但UI120战和validation错误“找不到已完成对局”。原始失败及完整事务顺序证据保留于仓库外work/m6-r4-baseline-evidence，不宣称自然发生频率或丢档。
+
+A/C最小修复给SaveCoordinator成功状态回调提供本次in-flight固定快照的只读阶段元信息，await commit前冻结；保存失败或未完成不提供成功元信息。application只以committed.phase===gameOver触发归档并设置已刷新标记，不再用live session.phase。保存格式/SaveStatus/SlotToken契约和所有R3请求、Session、runId、epoch栅栏保持原样。B/D只读复核无阻断。38项协调器单测及TypeScript/构建通过；新增真实事务门禁仍待当前干净提交与完整CI。
+
+E新增R4必需回归：严格revision4→5→6、旧战中commit刷新0/标记未占、终局commit唯一刷新1；两native事务与全部异步刷新实际结束后完整终局Match/账本/存档相同、DB与UI仅C,D,A90战、B消失，实际保存控件成功且无failed回调。原8组及R1–R3门禁不删不放宽，比较器强制新字段。P3施法英雄中文及README文档仍待该P2定向回归通过后收尾，均在冻结Goal现有范围。暂不进入M7。

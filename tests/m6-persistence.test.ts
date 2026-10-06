@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { parseSeed, createSeed, createRunId } from '../src/persistence/seed';
 import { validateEnvelope, validateFile, exportFile } from '../src/persistence/format';
-import { SaveCoordinator } from '../src/persistence/coordinator';
+import { SaveCoordinator, type CommittedSnapshotInfo } from '../src/persistence/coordinator';
 import { BattleHistory } from '../src/replay/history';
 import { fixedCapture, mergeCaptures } from '../src/persistence/capture-ownership';
 import { SaveError } from '../src/persistence/repository';
@@ -53,6 +53,47 @@ describe('M6 serial snapshot coordinator', () => {
     const first = captured(); c.enqueue(first); c.enqueue(captured()); (first.match as { gold: number }).gold = 999;
     expect(writer.commit).toHaveBeenCalledTimes(1); expect(statuses.some(s => s.kind === 'saved')).toBe(false);
     release(); await c.flush(); expect(seen[0].snapshot.match.gold).not.toBe(999); expect(seen.map(s => s.expected.revision)).toEqual([1, 2]); expect(c.token.revision).toBe(3);
+  });
+  it('reports the actual successful in-flight phase before a later queued terminal snapshot', async () => {
+    const pending: Array<{ resolve: (token: SlotToken) => void; expected: SlotToken }> = [];
+    const notices: Array<{ status: SaveStatus; committed?: CommittedSnapshotInfo }> = [];
+    const writer = { commit: (expected: SlotToken) => new Promise<SlotToken>(resolve => pending.push({ resolve, expected })) };
+    const coordinator = new SaveCoordinator(writer, token, (status, committed) => notices.push({ status, committed }));
+    // Stub-writer unit fixtures exercise metadata ownership, not domain validation.
+    const combat = captured(), terminal = captured();
+    (combat.match as { phase: string }).phase = 'combat';
+    (terminal.match as { phase: string }).phase = 'gameOver';
+    coordinator.enqueue(combat);
+    coordinator.enqueue(terminal);
+    // Neither a newer pending snapshot nor caller mutation can reclassify the old transaction.
+    (terminal.match as { phase: string }).phase = 'preparation';
+    expect(notices.filter(n => n.status.kind === 'saved')).toEqual([]);
+    pending[0].resolve({ ...token, revision: 2 });
+    await Promise.resolve();
+    expect(notices.filter(n => n.status.kind === 'saved').map(n => n.committed?.phase)).toEqual(['combat']);
+    expect(pending).toHaveLength(2);
+    expect(notices.every(n => n.status.kind === 'saved' || n.committed === undefined)).toBe(true);
+    pending[1].resolve({ ...token, revision: 3 });
+    await coordinator.flush();
+    const saved = notices.filter(n => n.status.kind === 'saved');
+    expect(saved.map(n => n.committed?.phase)).toEqual(['combat', 'gameOver']);
+    expect(saved.every(n => Object.isFrozen(n.committed))).toBe(true);
+    expect(saved.map(n => n.status.kind === 'saved' ? n.status.token.revision : null)).toEqual([2, 3]);
+    coordinator.dispose();
+  });
+  it('does not report a terminal commit until its failed transaction is successfully retried', async () => {
+    const notices: Array<{ status: SaveStatus; committed?: CommittedSnapshotInfo }> = [];
+    const writer = { commit: vi.fn().mockRejectedValueOnce(new SaveError('abort', 'abort'))
+      .mockImplementation(async (expected: SlotToken) => ({ ...expected, revision: expected.revision + 1 })) };
+    const coordinator = new SaveCoordinator(writer, token, (status, committed) => notices.push({ status, committed }));
+    const terminal = captured();
+    (terminal.match as { phase: string }).phase = 'gameOver';
+    coordinator.enqueue(terminal);
+    await expect(coordinator.flush()).rejects.toThrow('abort');
+    expect(notices.every(n => n.committed === undefined)).toBe(true);
+    await coordinator.flush();
+    expect(notices.filter(n => n.status.kind === 'saved').map(n => n.committed)).toEqual([{ phase: 'gameOver' }]);
+    coordinator.dispose();
   });
   it('stops forever on conflict and preserves token/local capture', async () => {
     const writer = { commit: vi.fn(async () => { throw new SaveError('conflict', 'conflict'); }) }; const c = new SaveCoordinator(writer, token, () => {});

@@ -1,6 +1,8 @@
 import type { CapturedSave, SaveStatus, SlotToken } from '../m6/contracts';
 import { SaveError, saveError } from './repository';
 
+/** Describes the fixed snapshot whose transaction actually completed, not live/pending state. */
+export interface CommittedSnapshotInfo { readonly phase: CapturedSave['match']['phase'] }
 export interface SaveWriter { commit(expected: SlotToken, snapshot: CapturedSave): Promise<SlotToken> }
 import { fixedCapture, mergeCaptures } from './capture-ownership';
 
@@ -11,7 +13,7 @@ export class SaveCoordinator {
   private running: Promise<void> | null = null;
   private failure: SaveError | null = null;
   private disposed = false;
-  constructor(private readonly repository: SaveWriter, token: SlotToken, private readonly onStatus: (status: SaveStatus) => void) { this.current = { ...token }; }
+  constructor(private readonly repository: SaveWriter, token: SlotToken, private readonly onStatus: (status: SaveStatus, committed?: CommittedSnapshotInfo) => void) { this.current = { ...token }; }
   get token(): SlotToken { return { ...this.current }; }
   /** Read-only evidence/diagnostic count; excludes the sole in-flight transaction. */
   get pendingCount(): number { return this.pending ? 1 : 0; }
@@ -21,7 +23,7 @@ export class SaveCoordinator {
     this.failure = null;
     this.start();
   }
-  private notify(status: SaveStatus): void { if (!this.disposed) this.onStatus(status); }
+  private notify(status: SaveStatus, committed?: CommittedSnapshotInfo): void { if (!this.disposed) this.onStatus(status, committed); }
   private start(): void {
     if (this.running || this.disposed || this.failure || !this.pending) return;
     this.running = this.drain().finally(() => { this.running = null; if (!this.failure && !this.disposed && this.pending) this.start(); });
@@ -29,11 +31,12 @@ export class SaveCoordinator {
   private async drain(): Promise<void> {
     while (!this.disposed && this.pending) {
       const snapshot = this.pending;
+      const committed = Object.freeze({ phase: snapshot.match.phase });
       this.pending = null;
       this.notify({ kind: 'saving' });
       try {
         this.current = await this.repository.commit(this.current, snapshot);
-        this.notify({ kind: 'saved', at: new Date().toISOString(), token: this.token });
+        this.notify({ kind: 'saved', at: new Date().toISOString(), token: this.token }, committed);
       } catch (error) {
         if (this.disposed) return;
         this.failure = saveError(error);
