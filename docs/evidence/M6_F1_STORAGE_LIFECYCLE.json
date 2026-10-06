@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-10-06T00:50:32.776Z",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "browser": "153.0.8010.12",
+  "before": {
+    "usedSize": 528076,
+    "totalSize": 1048576,
+    "embedderHeapUsedSize": 422024,
+    "backingStorageSize": 0
+  },
+  "after": {
+    "usedSize": 582076,
+    "totalSize": 1048576,
+    "embedderHeapUsedSize": 306616,
+    "backingStorageSize": 9
+  },
+  "heapDeltaBytes": 54000,
+  "cycles": 30,
+  "activeConnections": 0,
+  "callbackCount": 30,
+  "disposedCallbackCount": 0,
+  "limitations": [
+    "prototype listeners and IDB connection ownership only",
+    "does not exercise production Phaser tweens/timers or MatchSession lifecycle",
+    "GC heap delta is one 30-cycle sample, not a leak proof"
+  ]
+}

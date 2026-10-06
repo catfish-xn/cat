@@ -1,0 +1,127 @@
+{
+  "sha": "d8a54bba0da2c398a2944634ef38fa781f26894b",
+  "dirty": "?? M6_GOAL.md\n?? M6_PLAN.md\n?? docs/REPLAY_CONTRACT.md\n?? docs/SAVE_CONTRACT.md\n?? docs/evidence/M6_F1_LAYOUT.json\n?? docs/evidence/M6_F1_LAYOUT.md\n?? docs/evidence/M6_F1_LOAD.json\n?? docs/evidence/M6_F1_LOAD_FULL.json\n?? docs/evidence/M6_F1_LOAD_SUPPLEMENT.json\n?? docs/evidence/M6_F1_STORAGE.json\n?? docs/evidence/M6_F1_STORAGE.md\n?? docs/evidence/M6_F1_STORAGE_COMPLETE.json\n?? docs/evidence/M6_F1_STORAGE_CURRENT.json\n?? docs/evidence/M6_F1_STORAGE_LIFECYCLE.json\n?? docs/evidence/M6_F1_STORAGE_MAX_COMPLETE.json\n?? scripts/m6-f1-full-load.cjs\n?? scripts/m6-f1-load.cjs\n?? scripts/m6-f1-supplement.cjs\n?? scripts/m6-layout-measure.cjs\n?? scripts/m6-layout-prototype.html\n?? scripts/m6-storage-lifecycle.cjs\n?? scripts/m6-storage-prototype.cjs\n?? src/m6/\n?? work/",
+  "node": "v24.21.0",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "method": "F1 prototype. Real sniper seed42 30 battles, maximum event battle; warm source Vite SSR, three repeats, no render trace. Checkpoints are ephemeral Match snapshots solely for prototype; production may cache Combat only.",
+  "currentPrefix": {
+    "bytes": 13969713,
+    "battleCount": 29,
+    "tick": 257,
+    "events": 656
+  },
+  "maxIncrementalPrefix": {
+    "envelopeBytes": 13754070,
+    "incrementalBytes": 1164068,
+    "combatId": "round-34",
+    "events": 3254
+  },
+  "largest": {
+    "combatId": "round-34",
+    "events": 3266,
+    "ticks": 576
+  },
+  "checkpointRows": [
+    {
+      "spacing": 20,
+      "repeat": 0,
+      "firstSeekMs": 573.3138749999998,
+      "checkpointCount": 29,
+      "checkpointBytes": 4011355,
+      "cachedSeekMaxMs": 47.092618000000584,
+      "cachedSeekP95Ms": 44.76752900000065
+    },
+    {
+      "spacing": 20,
+      "repeat": 1,
+      "firstSeekMs": 551.9922690000003,
+      "checkpointCount": 29,
+      "checkpointBytes": 4011355,
+      "cachedSeekMaxMs": 31.398897999999463,
+      "cachedSeekP95Ms": 27.46135900000081
+    },
+    {
+      "spacing": 20,
+      "repeat": 2,
+      "firstSeekMs": 654.7051919999994,
+      "checkpointCount": 29,
+      "checkpointBytes": 4011355,
+      "cachedSeekMaxMs": 36.39995100000124,
+      "cachedSeekP95Ms": 28.374021999999968
+    },
+    {
+      "spacing": 40,
+      "repeat": 0,
+      "firstSeekMs": 573.4824260000005,
+      "checkpointCount": 15,
+      "checkpointBytes": 2075469,
+      "cachedSeekMaxMs": 47.77174299999933,
+      "cachedSeekP95Ms": 45.63214700000026
+    },
+    {
+      "spacing": 40,
+      "repeat": 1,
+      "firstSeekMs": 589.0750689999986,
+      "checkpointCount": 15,
+      "checkpointBytes": 2075469,
+      "cachedSeekMaxMs": 53.44940199999837,
+      "cachedSeekP95Ms": 51.89729299999817
+    },
+    {
+      "spacing": 40,
+      "repeat": 2,
+      "firstSeekMs": 595.4581369999978,
+      "checkpointCount": 15,
+      "checkpointBytes": 2075469,
+      "cachedSeekMaxMs": 53.93241299999863,
+      "cachedSeekP95Ms": 47.15045900000041
+    },
+    {
+      "spacing": 80,
+      "repeat": 0,
+      "firstSeekMs": 555.7280019999998,
+      "checkpointCount": 8,
+      "checkpointBytes": 1106116,
+      "cachedSeekMaxMs": 97.29842899999858,
+      "cachedSeekP95Ms": 88.5268959999994
+    },
+    {
+      "spacing": 80,
+      "repeat": 1,
+      "firstSeekMs": 538.9241570000013,
+      "checkpointCount": 8,
+      "checkpointBytes": 1106116,
+      "cachedSeekMaxMs": 94.73505600000135,
+      "cachedSeekP95Ms": 89.85385099999985
+    },
+    {
+      "spacing": 80,
+      "repeat": 2,
+      "firstSeekMs": 541.6644269999997,
+      "checkpointCount": 8,
+      "checkpointBytes": 1106116,
+      "cachedSeekMaxMs": 89.66752400000041,
+      "cachedSeekP95Ms": 86.75550699999803
+    }
+  ],
+  "incrementalStats": [
+    {
+      "repeat": 0,
+      "fullMs": 4.7135939999971015,
+      "max40TickBatchMs": 0.1645409999982803,
+      "units": 16
+    },
+    {
+      "repeat": 1,
+      "fullMs": 2.097972999999911,
+      "max40TickBatchMs": 0.06648700000005192,
+      "units": 16
+    },
+    {
+      "repeat": 2,
+      "fullMs": 1.4557300000014948,
+      "max40TickBatchMs": 0.06369400000039604,
+      "units": 16
+    }
+  ]
+}

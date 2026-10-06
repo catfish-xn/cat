@@ -1,12 +1,13 @@
 import Phaser from 'phaser';
 import { BoardScene } from './rendering/BoardScene';
 import './style.css';
+import { createAppShell } from './rendering/app-shell';
+import { BOARD_LAYOUT } from './rendering/layout-config';
 const app = document.getElementById('app')!;
-const board = document.createElement('main'); board.id = 'board-root'; board.setAttribute('aria-label', '自动战棋棋盘');
-const strategy = document.createElement('aside'); strategy.id = 'strategy-root'; strategy.setAttribute('aria-label', '策略构筑');
-app.append(board, strategy);
+const shell = createAppShell(app);
+const board = shell.board;
 new Phaser.Game({
-  type: Phaser.AUTO, parent: 'board-root', width: 960, height: 800, backgroundColor: '#101923',
+  type: Phaser.AUTO, parent: 'board-root', width: BOARD_LAYOUT.width, height: BOARD_LAYOUT.height, backgroundColor: '#101923',
   scene: [BoardScene], scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   // CSS touch-action:none controls canvas gestures. Phaser must still track
   // cancellation without preventDefault on a noncancelable touchcancel event.
@@ -22,6 +23,10 @@ new Phaser.Game({
         if (capabilities?.firesTouchEvents) event.stopImmediatePropagation();
       };
       const mouseEvents = ['mousedown', 'mousemove', 'mouseup'] as const;
+      const updateInputBounds = () => game.scale.updateBounds();
+      const geometryEvents = ['mousedown', 'mousemove', 'touchstart', 'touchmove'] as const;
+      for (const type of geometryEvents) game.canvas.addEventListener(type, updateInputBounds, { capture: true, passive: true });
+      window.addEventListener('scroll', updateInputBounds, true);
       for (const type of mouseEvents) game.canvas.addEventListener(type, ignoreTouchMouse, true);
       // Phaser's orientation handler can refresh with the previous parent size.
       // Observe the settled host layout, then refresh both FIT and input bounds.
@@ -37,7 +42,9 @@ new Phaser.Game({
       observer.observe(board);
       game.events.once(Phaser.Core.Events.DESTROY, () => {
         for (const type of mouseEvents) game.canvas.removeEventListener(type, ignoreTouchMouse, true);
-        observer.disconnect();
+        for (const type of geometryEvents) game.canvas.removeEventListener(type, updateInputBounds, true);
+        window.removeEventListener('scroll', updateInputBounds, true);
+        observer.disconnect(); shell.dispose();
         if (frame !== null) cancelAnimationFrame(frame);
       });
     },

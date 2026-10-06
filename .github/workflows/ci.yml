@@ -72,6 +72,7 @@ jobs:
         run: |
           args=()
           if [ "$MODE" = preview ]; then args+=(--preview); fi
+          if [ "$BUILD" = cannon ]; then args+=(--m6-journey); fi
           node scripts/ci-m5-step.cjs route node scripts/verify-m5-browser.cjs "${args[@]}" --build="$BUILD"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -108,6 +109,14 @@ jobs:
           if [ "$MODE" = preview ]; then args+=(--preview); fi
           node scripts/ci-m5-step.cjs input node scripts/verify-m5-input.cjs "${args[@]}"
           node scripts/ci-m5-step.cjs touch-route node scripts/verify-m5-browser.cjs "${args[@]}" --build=cannon --touch
+          node scripts/ci-m5-step.cjs m6-layout node scripts/m6-layout-product-smoke.cjs "${args[@]}"
+          if [ "$MODE" = dev ]; then
+            node scripts/ci-m5-step.cjs m6-storage node scripts/verify-m6-storage.cjs
+            node scripts/ci-m5-step.cjs m6-components node tests/m6-stats-browser.cjs
+            node scripts/ci-m5-step.cjs m6-performance node scripts/verify-m6-performance.cjs
+            node scripts/ci-m5-step.cjs m6-retry node tests/m6-persistence-retry.cjs
+            node scripts/ci-m5-step.cjs m6-application-failures node tests/m6-application-failures.cjs
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -134,8 +143,14 @@ jobs:
           merge-multiple: true
           path: artifacts/
       - run: node scripts/compare-m5-evidence.cjs --final
+      - run: node scripts/compare-m6-evidence.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: m5-comparison-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
-          path: artifacts/m5-cross-mode-comparison.json
+          path: |
+            artifacts/m5-cross-mode-comparison.json
+            artifacts/m6-final-comparison.json
+            artifacts/m6-validation.json
+            artifacts/M6_VALIDATION.md
+            artifacts/M6_REVIEW.md

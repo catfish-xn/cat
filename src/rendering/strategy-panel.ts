@@ -1,3 +1,5 @@
+import { displayUnitName } from './display-names';
+export { displayUnitName } from './display-names';
 import { getRoundKind, getStageRound } from '../simulation/round-schedule';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
@@ -36,6 +38,14 @@ interface PanelActions {
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
+const TERM: Readonly<Record<string,string>> = {
+  health:'生命', maxHp:'最大生命', attack:'攻击力', attackDamage:'攻击力', armor:'护甲', magicResist:'魔抗', abilityPower:'法强', initialMana:'初始法力', maxMana:'最大法力', attackRange:'射程',
+  attackSpeed:'攻速', attackSpeedBps:'攻速', range:'射程', stun:'眩晕', damageReduction:'减伤', armorReduction:'护甲削减', resistanceFlat:'双抗', channel:'引导', redirect:'伤害分担',
+  combatStart:'开战时', onAttack:'普攻时', onCast:'施法时', onHpLoss:'损失生命时', physical:'物理', magic:'魔法',
+  ability:'技能', trait:'羁绊', item:'装备', augment:'强化', anomaly:'异常', enemyGrowth:'敌方成长',
+};
+const term = (value: string) => TERM[value] ?? value;
+const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? TRAIT_DEFINITIONS[id]?.name ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
 export function describeEffect(effect: Effect): string {
   if (effect.kind === 'mechanic') {
     const v = effect.values, pct = (key: string) => `${v[key] / 100}%`;
@@ -44,22 +54,22 @@ export function describeEffect(effect: Effect): string {
       extraAttackMana: `每次普攻额外 ${v.amount} 法力${v.backRowOnly ? '（最后一排）' : ''}`,
       archangel: `每 ${v.periodTicks * .05} 秒增加 ${v.abilityPower} 法强`, dragonClaw: `每 ${v.periodTicks * .05} 秒治疗 ${pct('healMaxHpBps')} 最大生命`,
       gargoyle: `每个以持有者为目标的敌人增加 ${v.resistPerEnemy} 双抗`, gunblade: `实际伤害的 ${pct('selfHealBps')} 自疗、${pct('allyHealBps')} 治疗最低生命比例友军`,
-      artillery: `每 ${v.everyN} 次普攻造成 ${pct('adBps')} AD 范围物理伤害`, sniper: `每格距离增加 ${pct('damageBpsPerHex')} 伤害`,
+      artillery: `每 ${v.everyN} 次普攻造成 ${pct('adBps')} 攻击力 范围物理伤害`, sniper: `每格距离增加 ${pct('damageBpsPerHex')} 伤害`,
       watcher: `减伤 ${pct('reductionBps')}；生命超过 ${pct('thresholdBps')} 时为 ${pct('healthyReductionBps')}`,
       acquisitionGold: `立即获得 ${v.amount} 金币`, glassCannon: `最后一排初始生命 ${pct('startingHealthBps')}、伤害增加 ${pct('damageAmpBps')}`,
       pumpingUp: `每轮增加 ${pct('attackSpeedBpsPerRound')} 攻速`, investment: `每点利息永久增加 ${v.healthPerInterest} 生命`,
       bulkyBuddies: `相邻双人组获得 ${v.health} 生命，触发 ${pct('shieldMaxHpBps')} 最大生命护盾，持续 ${v.durationTicks * .05} 秒`,
-      titanic: `普攻附加 ${pct('adBps')} AD 物理伤害，命中目标及相邻格`, mageArmor: `获得最终法强 ${pct('apBps')} 的双抗`, killStreak: `击杀后存活获得 ${v.mana} 法力`,
+      titanic: `普攻附加 ${pct('adBps')} 攻击力 物理伤害，命中目标及相邻格`, mageArmor: `获得最终法强 ${pct('apBps')} 的双抗`, killStreak: `击杀后存活获得 ${v.mana} 法力`,
     };
     return descriptions[effect.mechanic] ?? effect.mechanic;
   }
-  if (effect.kind === 'statFlat') return `${effect.stat} +${effect.amount}`;
-  if (effect.kind === 'statPercentBps') return `${effect.stat} +${effect.bps / 100}%`;
+  if (effect.kind === 'statFlat') return `${term(effect.stat)} +${effect.amount}`;
+  if (effect.kind === 'statPercentBps') return `${term(effect.stat)} +${effect.bps / 100}%`;
   if (effect.kind === 'attackSpeedBps') return `攻速 +${effect.bps / 100}%`;
   const action = effect.action;
   const result = action.kind === 'grantShield' ? `护盾 ${action.amount} / ${action.durationTicks * 50 / 1000}s`
-    : action.kind === 'gainMana' ? `Mana +${action.amount}` : `${action.damageType} 伤害 ${action.amount}`;
-  return `${effect.hook}${effect.everyN > 1 ? ` 每${effect.everyN}次` : ''} → ${result}`;
+    : action.kind === 'gainMana' ? `法力 +${action.amount}` : `${term(action.damageType)}伤害 ${action.amount}`;
+  return `${term(effect.hook)}${effect.everyN > 1 ? ` 每${effect.everyN}次` : ''} → ${result}`;
 }
 
 /** Describe authored benefits by audience; merge additive flat stats for the member total. */
@@ -95,15 +105,46 @@ export class StrategyPanel {
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement } | null = null;
   private choiceToken = '';
   private dismissalTimer: number | null = null;
+  private focusFrame: number | null = null;
   private combatText: HTMLElement | null = null;
   private statusText: HTMLElement | null = null;
 
   constructor(private readonly actions: PanelActions, private readonly router: InputRouter) {
-    this.root = document.getElementById('strategy-root')!;
+    this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
     this.modal = element('section', '', 'choice-overlay');
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
-    this.modal.setAttribute('aria-label', '构筑选择'); this.modal.hidden = true;
+    this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
+    const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
+    const tabWithinChoice = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !choiceVisible()) return;
+      // Only Tab belongs to the focus boundary. D/F/E and repeat still reach the
+      // existing domain command handlers without a timer or key suppression.
+      const targets = Array.from(this.modal.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+      const index = targets.indexOf(document.activeElement as HTMLButtonElement);
+      event.preventDefault();
+      if (!targets.length) this.modal.focus({ preventScroll: true });
+      else targets[index < 0 ? (event.shiftKey ? targets.length - 1 : 0) : (index + (event.shiftKey ? -1 : 1) + targets.length) % targets.length].focus({ preventScroll: true });
+    };
+    const retainChoiceFocus = (event: FocusEvent) => {
+      if (choiceVisible() && !this.modal.contains(event.target as Node)) this.focusChoice();
+    };
+    document.addEventListener('keydown', tabWithinChoice, true);
+    document.addEventListener('focusin', retainChoiceFocus, true);
+    // Candidate activation may await archive reads after the choice DOM exists.
+    // React to the mode commit instead of assuming a single animation frame is
+    // late enough to move focus into an import-hidden dialog.
+    const modeObserver = new MutationObserver(() => {
+      if (!this.modal.contains(document.activeElement)) this.focusChoice();
+    });
+    modeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-m6-mode'] });
+    this.disposers.push(() => {
+      document.removeEventListener('keydown', tabWithinChoice, true);
+      document.removeEventListener('focusin', retainChoiceFocus, true);
+      modeObserver.disconnect();
+      if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
+      this.focusFrame = null;
+    });
     const trackPointer = (event: PointerEvent) => {
       this.pointerPosition = event.pointerType === 'touch' ? null : { x: event.clientX, y: event.clientY };
     };
@@ -191,12 +232,12 @@ export class StrategyPanel {
     const head = element('header'), stage = getStageRound(state.round);
     const xp = getXpToNextLevel(state.level);
     const interest = getInterestGold(state.gold);
-    head.append(element('h2', `${stage.stage}-${stage.round} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[getRoundKind(state.round)]}`), element('p', `HP ${state.playerHp} · ${state.gold} G · 利息档 ${interest} G · Lv.${state.level} / ${state.xp}${xp === null ? ' MAX' : ` / ${xp}`} XP`, 'panel-hud'));
+    head.append(element('h2', `${stage.stage}-${stage.round} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[getRoundKind(state.round)]}`), element('p', `生命 ${state.playerHp} · ${state.gold} 金币 · 利息档 ${interest} 金币 · 等级 ${state.level} / ${state.xp}${xp === null ? ' 满级' : ` / ${xp}`} 经验`, 'panel-hud'));
     head.append(element('p', `${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · 强化 2-1 / 3-2 / 4-2 · 异常 4-6 · 终局 6-7`));
     head.append(element('p', 'S13 14.24b 精选单人模式 · 无限单位池 · 补给代替选秀', 'mode-note'));
     this.root.append(head);
     const controls = element('div', '', 'mobile-controls');
-    const controlsList = [['reroll', 'D · 搜牌 2 G'], ['buy-xp', 'F · 经验 4 G'], ['sell', 'E · 出售选中'], ['start-combat', 'Start Combat'], ['continue', 'Continue'], ['new-match', 'New Match']] as const;
+    const controlsList = [['reroll', 'D · 搜牌 2 金币'], ['buy-xp', 'F · 经验 4 金币'], ['sell', 'E · 出售选中'], ['start-combat', '开始战斗'], ['continue', '继续'], ['new-match', '新局']] as const;
     for (const [name, label] of controlsList) controls.append(this.button(`mobile:${name}`, label, () => {
       if (name === 'sell' && this.router.current?.kind === 'item') { this.actions.status('无出售单位目标 · 请先结束物品拖拽'); return; }
       this.actions.control(name);
@@ -208,12 +249,12 @@ export class StrategyPanel {
     const result = state.roundResults.at(-1);
     if (result) {
       const receipt = element('details', '', 'income-receipt'); receipt.dataset.debug = 'income-receipt';
-      receipt.append(element('summary', `上轮收入 +${result.income} G · HP ${result.hpBefore} → ${result.hpAfter}`));
+      receipt.append(element('summary', `上轮收入 +${result.income} 金币 · 生命 ${result.hpBefore} → ${result.hpAfter}`));
       const income = result.incomeBreakdown;
-      receipt.append(element('p', `基础 ${income.base} + 胜利 ${income.win} + 利息 ${income.interest}（基数 ${result.interestBasis}）+ 连胜败 ${income.streak} = ${result.income} G；余额 ${result.goldBefore} → ${result.goldAfter}；XP +${result.xpAwarded}/${result.xpRequested}；收据 ${result.settlementId}`));
+      receipt.append(element('p', `基础 ${income.base} + 胜利 ${income.win} + 利息 ${income.interest}（基数 ${result.interestBasis}）+ 连胜败 ${income.streak} = ${result.income} 金币；余额 ${result.goldBefore} → ${result.goldAfter}；经验 +${result.xpAwarded}/${result.xpRequested}`));
       this.root.append(receipt);
     }
-    this.statusText = element('p', ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? `${state.outcome === 'victory' ? 'Victory · 完成最终挑战' : 'Defeat · 对局结束'} · 点击 New Match` : '战斗与回合结算期间构筑已锁定', 'panel-status');
+    this.statusText = element('p', ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局` : '战斗与回合结算期间构筑已锁定', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     for (const [tab, label] of [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const) {
@@ -221,17 +262,17 @@ export class StrategyPanel {
       button.setAttribute('aria-pressed', String(this.tab === tab)); tabs.append(button);
     }
     this.root.append(tabs);
-    this.combatText = element('section', '', 'combat-sources'); this.root.append(this.combatText); this.updateCombat();
+    this.combatText = element('section', '', 'combat-sources'); this.root.append(this.combatText); this.lastCombatTick = -1; this.lastCombatId = undefined; this.updateCombat();
     if (this.tab === 'traits') this.renderTraits(state);
     if (this.tab === 'items') this.renderItems(state, ready);
     if (this.tab === 'units') this.renderUnits(state, ready);
     if (this.tab === 'builds') this.renderBuilds();
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
     const owned = element('section', '', 'owned-modifiers'); owned.append(element('h3', '永久构筑'));
-    owned.append(element('p', `Augment: ${state.augments.map(augment => AUGMENT_DEFINITIONS[augment.definitionId].name).join(' / ') || '尚未选择'}`));
+    owned.append(element('p', `强化： ${state.augments.map(augment => AUGMENT_DEFINITIONS[augment.definitionId].name).join(' / ') || '尚未选择'}`));
     if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
-    owned.append(element('p', binding ? `Anomaly: ${ANOMALY_DEFINITIONS[binding.definitionId].name} → ${UNIT_DEFINITIONS[state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId].name} (${binding.unitId})` : 'Anomaly: 4-6 选择单位'));
+    owned.append(element('p', binding ? `异常： ${ANOMALY_DEFINITIONS[binding.definitionId].name} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
     this.root.append(owned);
     this.renderChoice(state); this.lastCombatTick = -1; this.updateCombat();
   }
@@ -240,8 +281,8 @@ export class StrategyPanel {
     for (const snapshot of deriveTraits(state.preparation, 'player')) {
       const definition = TRAIT_DEFINITIONS[snapshot.traitId], next = definition.tiers.find(tier => tier.threshold > snapshot.count);
       const row = element('article', '', snapshot.tier > 0 ? 'trait active' : 'trait'); row.dataset.debug = `trait:${snapshot.traitId}`;
-      row.append(element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? 'MAX'} · tier ${snapshot.tier}`));
-      row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => UNIT_DEFINITIONS[id].name).join('、') || '无'}`));
+      row.append(element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`));
+      row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => displayUnitName(id)).join('、') || '无'}`));
       row.append(element('p', definition.tiers.map(tier => describeTraitTier(definition, tier)).join(' / ')));
       list.append(row);
     }
@@ -279,7 +320,7 @@ export class StrategyPanel {
     section.append(recipes, element('h3', '单位装备 · 每单位 3 槽'));
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const row = element('article', '', 'equipment-row');
-      row.append(element('strong', `${UNIT_DEFINITIONS[unit.definitionId].name} ${'★'.repeat(unit.starLevel)} · ${unit.id}${state.anomalyBinding?.unitId === unit.id ? ' ◈ Anomaly' : ''}`));
+      row.append(element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`));
       const slots = element('div', '', 'equipment-slots');
       for (let slot = 0; slot < 3; slot++) {
         const item = state.items.find(item => item.location.kind === 'unit' && item.location.unitId === unit.id && item.location.slot === slot);
@@ -298,7 +339,7 @@ export class StrategyPanel {
     const section = element('section'); section.append(element('h3', '先选单位，再点部署位置'));
     const roster = element('div', '', 'unit-roster');
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
-      const button = this.button(`mobile:unit:${unit.id}`, `${UNIT_DEFINITIONS[unit.definitionId].name} ${'★'.repeat(unit.starLevel)} · ${unit.location.kind === 'bench' ? '备战席' : `(${unit.location.cell.col},${unit.location.cell.row})`}${state.anomalyBinding?.unitId === unit.id ? ' ◈' : ''}`, () => { this.actions.selectUnit(unit.id); this.render(); });
+      const button = this.button(`mobile:unit:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)} · ${unit.location.kind === 'bench' ? '备战席' : `(${unit.location.cell.col},${unit.location.cell.row})`}${state.anomalyBinding?.unitId === unit.id ? ' ◈' : ''}`, () => { this.actions.selectUnit(unit.id); this.render(); });
       button.setAttribute('aria-pressed', String(this.actions.selectedUnit() === unit.id)); roster.append(button);
     }
     section.append(roster);
@@ -327,7 +368,8 @@ export class StrategyPanel {
     // Consume the rest of the confirming pointer burst before exposing the
     // board below. Keyboard D/F/E still commit synchronously in preparation.
     this.modal.hidden = false; this.modal.replaceChildren();
-    this.modal.classList.add('dismissal-shield'); this.modal.setAttribute('aria-hidden', 'true');
+    this.modal.classList.add('dismissal-shield'); this.modal.removeAttribute('aria-hidden');
+    this.modal.focus({ preventScroll: true });
     this.modal.dataset.debug = 'choice-dismissal-shield';
     this.dismissalTimer = window.setTimeout(() => {
       this.clearChoiceDismissal(); this.renderChoice(this.actions.state());
@@ -337,7 +379,13 @@ export class StrategyPanel {
     const choice = state.pendingChoice;
     if (!choice) {
       this.choiceToken = '';
-      if (this.dismissalTimer === null) { this.modal.hidden = true; this.modal.replaceChildren(); }
+      if (this.dismissalTimer === null) {
+        const restoreFocus = this.modal.contains(document.activeElement);
+        this.modal.hidden = true; this.modal.replaceChildren();
+        // Return to a neutral panel only after the pointer shield is gone.
+        // Never focus the seed field or activate a gameplay control on close.
+        if (restoreFocus) this.root.focus({ preventScroll: true });
+      }
       return;
     }
     this.clearChoiceDismissal();
@@ -345,17 +393,17 @@ export class StrategyPanel {
     if (token === this.choiceToken) return;
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
     const card = element('div', '', 'choice-dialog');
-    card.append(element('h2', choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择 Augment · 本局永久生效' : 'Anomaly · 单位永久进化'));
+    card.append(element('h2', choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
     card.append(element('p', '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
-      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${UNIT_DEFINITIONS[unit.definitionId].name} ${'★'.repeat(unit.starLevel)} · ${unit.id}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
+      for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) targets.append(this.button(`anomaly-target:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`, () => this.actions.target(choice.choiceId, choice.generation, unit.id)));
       card.append(targets);
     } else {
       if (choice.kind === 'anomaly') {
         const target = state.preparation.units.find(unit => unit.id === choice.targetId);
-        card.append(element('p', `已锁定 ${target ? UNIT_DEFINITIONS[target.definitionId].name : ''} (${choice.targetId}) · 余额 ${state.gold} G · 已刷新 ${choice.rerollCount} 次`, 'anomaly-target-lock'));
+        card.append(element('p', `已锁定 ${target ? displayUnitName(target.definitionId) : ''} · 余额 ${state.gold} 金币 · 已刷新 ${choice.rerollCount} 次`, 'anomaly-target-lock'));
       }
       const offers = element('div', '', 'choice-cards');
       for (const id of choice.offers) {
@@ -368,9 +416,17 @@ export class StrategyPanel {
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
-      if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 G（余额 ${state.gold} G）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
+      if (choice.kind === 'anomaly') card.append(this.button('anomaly-reroll', `刷新异常 · 1 金币（余额 ${state.gold} 金币）`, () => this.actions.rerollAnomaly(choice.choiceId, choice.generation), state.gold < 1));
     }
     this.modal.append(card);
+    // Session replacement changes the mode at the end of this same task.
+    // Focus after that commit so startup/import-hidden choices cannot steal it.
+    if (this.focusFrame !== null) cancelAnimationFrame(this.focusFrame);
+    this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
+  }
+  private focusChoice(): void {
+    if (this.modal.hidden || getComputedStyle(this.modal).display === 'none') return;
+    (this.modal.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? this.modal).focus({ preventScroll: true });
   }
   updateCombat(): void {
     const state = this.actions.state(), combat = state.combat, node = this.combatText;
@@ -383,7 +439,7 @@ export class StrategyPanel {
       const selected = state.preparation.units.find(unit => unit.id === this.actions.selectedUnit());
       if (selected) {
         const definition = UNIT_DEFINITIONS[selected.definitionId], stats = getUnitStats(selected.definitionId, selected.starLevel);
-        node.append(element('h3', `${definition.name} ${'★'.repeat(selected.starLevel)}`), element('p', `基础 HP ${stats.health} · AD ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
+        node.append(element('h3', `${displayUnitName(selected.definitionId)} ${'★'.repeat(selected.starLevel)}`), element('p', `基础 生命 ${stats.health} · 攻击力 ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
         node.append(element('p', `职业：${definition.traits.map(id => TRAIT_DEFINITIONS[id]?.name ?? `${id}（本版本未开放）`).join(' / ')}`));
       }
       return;
@@ -394,13 +450,13 @@ export class StrategyPanel {
     if (!unit) return;
     const base = getUnitStats(unit.definitionId, unit.starLevel);
     const current = readCombatStats(unit, combat);
-    node.append(element('h3', `Combat · ${UNIT_DEFINITIONS[unit.definitionId].name}`));
-    node.append(element('p', `HP ${unit.hp}/${unit.maxHp} · Mana ${unit.mana}/${unit.maxMana} · 盾 ${unit.shield}`));
+    node.append(element('h3', `战斗 · ${displayUnitName(unit.definitionId)}`));
+    node.append(element('p', `生命 ${unit.hp}/${unit.maxHp} · 法力 ${unit.mana}/${unit.maxMana} · 盾 ${unit.shield}`));
     node.append(element('p', `基础最大生命 ${base.health} → 本场最大生命 ${unit.maxHp}`));
     node.append(element('p', '基础 → 开战冻结 → 当前（含技能与状态）', 'stat-columns'));
     const statRows: readonly [string, string, number | string, number | string, number][] = [
-      ['ad', 'AD', base.attack, unit.attackDamage, current.attackDamage],
-      ['ap', 'AP', '—', unit.abilityPower ?? '—', current.abilityPower],
+      ['ad', '攻击力', base.attack, unit.attackDamage, current.attackDamage],
+      ['ap', '法强', '—', unit.abilityPower ?? '—', current.abilityPower],
       ['attack-interval', '攻速 / 普攻间隔(ms)', base.attackIntervalTicks * 50, unit.attackIntervalTicks * 50, current.attackIntervalTicks * 50],
       ['armor', '护甲', base.armor, unit.armor, current.armor],
       ['magic-resist', '魔抗', base.magicResist, unit.magicResist, current.magicResist],
@@ -411,16 +467,22 @@ export class StrategyPanel {
       row.dataset.debug = `combat-stat:${id}`; row.dataset.current = String(value); node.append(row);
     }
     const ability = unit.ability;
-    node.append(element('p', `Ability · ${ability.kind === 's13' ? `${UNIT_DEFINITIONS[ability.championId].name} 技能` : `${ability.kind === 'selfShield' ? '护盾' : ability.damageType === 'magic' ? '魔法伤害' : '物理伤害'} ${ability.amount}`} · 普攻间隔 ${current.attackIntervalTicks * 50}ms`));
-    node.append(element('p', `当前目标 ${unit.targetId ?? '无'}`));
-    for (const layer of unit.shieldLayers ?? []) node.append(element('p', `盾 ${layer.remaining} / ${layer.granted} · 到期 t${layer.expiresAtTick} · ${originLabel(layer.source)}`));
-    for (const status of unit.statuses ?? []) node.append(element('p', `${status.kind} ${status.amount} · 层数 ${(unit.statuses ?? []).filter(entry => entry.kind === status.kind).length} · 到期 t${status.expiresAtTick} · ${originLabel(status.source)}`));
-    for (const source of unit.sources ?? []) node.append(element('p', `${source.source.sourceKind} · ${source.source.sourceDefinitionId}：${describeEffect(source.effect)}`));
+    node.append(element('p', `技能 · ${ability.kind === 's13' ? `${displayUnitName(ability.championId)} 技能` : `${ability.kind === 'selfShield' ? '护盾' : ability.damageType === 'magic' ? '魔法伤害' : '物理伤害'} ${ability.amount}`} · 普攻间隔 ${current.attackIntervalTicks * 50}ms`));
+    node.append(element('p', `当前目标 ${combat.units.find(target => target.id === unit.targetId) ? definitionName(combat.units.find(target => target.id === unit.targetId)!.definitionId) : '无'}`));
+    for (const layer of unit.shieldLayers ?? []) node.append(element('p', `盾 ${layer.remaining} / ${layer.granted} · 到期 t${layer.expiresAtTick} · ${originLabel(layer.source, id => this.combatUnitName(id))}`));
+    for (const status of unit.statuses ?? []) node.append(element('p', `${term(status.kind)} ${status.amount} · 层数 ${(unit.statuses ?? []).filter(entry => entry.kind === status.kind).length} · 到期 t${status.expiresAtTick} · ${originLabel(status.source, id => this.combatUnitName(id))}`));
+    for (const source of unit.sources ?? []) node.append(element('p', `${term(source.source.sourceKind)} · ${definitionName(source.source.sourceDefinitionId)}：${describeEffect(source.effect)}`));
+  }
+  private combatUnitName(id: string | null): string {
+    if (!id) return '无';
+    const state = this.actions.state();
+    const unit = state.combat?.units.find(value => value.id === id) ?? state.preparation.units.find(value => value.id === id);
+    return unit ? `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}` : '历史单位';
   }
   observeEvents(events: readonly CombatEvent[]): void {
     if (!events.length) return;
     if (events.length && events[0].combatId !== this.eventCombatId) { this.eventTexts = []; this.eventCombatId = events[0].combatId; }
-    for (const event of events) { const text = combatEventText(event); if (text) this.eventTexts.push(text); }
+    for (const event of events) { const text = combatEventText(event, id => this.combatUnitName(id)); if (text) this.eventTexts.push(text); }
     if (this.eventTexts.length > 200) this.eventTexts.splice(0, this.eventTexts.length - 200);
     this.renderEventList();
   }
@@ -434,20 +496,20 @@ export class StrategyPanel {
     const shop = element('div', '', 'touch-shop');
     state.shop.slots.forEach((offer, slot) => {
       const definition = offer.status === 'available' ? UNIT_DEFINITIONS[offer.definitionId] : null;
-      shop.append(this.button(`mobile:buy-${slot}`, definition ? `${definition.name}\n${definition.cost} G` : '已购买', () => this.actions.buy(slot, state.shop.generation), !ready || !definition));
+      shop.append(this.button(`mobile:buy-${slot}`, definition ? `${displayUnitName(definition.id)}\n${definition.cost} 金币` : '已购买', () => this.actions.buy(slot, state.shop.generation), !ready || !definition));
     });
     section.append(shop, element('p', `商店概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' / ')}`)); this.root.append(section);
   }
   private renderBuilds(): void {
     const section = element('section', '', 'build-guide'); section.dataset.debug = 'build-guide';
     const builds = [
-      ['四炮四哨', 'Tristana / Urgot / Ezreal / Corki · Irelia / Rell / Leona / Loris', 'Maddie 暂持物理装 → 中期两炮 → 升8找二星 Corki；出售持装者归还装备。', 'Corki：Deathblade / Shojin / Gunblade；Loris：Warmog / Dragon’s Claw / Gargoyle'],
-      ['两狙四监察两哨', 'Maddie / Kog’Maw · Darius / Vander / Scar / Garen · Irelia / Loris', '6/7级寻找二星 Kog’Maw、Scar，保利息搜牌；8级补 Garen。Caitlyn 可替 Maddie。', 'Kog’Maw：Rageblade / Archangel / Gunblade；Garen：Warmog / Dragon’s Claw / Gargoyle'],
-      ['四法四哨', 'Lux / Zyra / Nami / Zoe · Irelia / Rell / Leona / Loris', 'Lux/Zyra 过渡 → Nami 中期 → 8级二星 Zoe；出售过渡持装者后重购羁绊挂件。', 'Zoe：Shojin / Deathcap / Gunblade；Loris：Warmog / Dragon’s Claw / Gargoyle'],
+      ['四炮四哨', '崔丝塔娜 / 厄加特 / 伊泽瑞尔 / 库奇 · 艾瑞莉娅 / 芮尔 / 蕾欧娜 / 洛里斯', '麦迪 暂持物理装 → 中期两炮 → 升8找二星 库奇；出售持装者归还装备。', '库奇：死亡之刃 / 朔极之矛 / 海克斯科技枪刃；洛里斯：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
+      ['两狙四监察两哨', '麦迪 / 克格莫 · 德莱厄斯 / 范德尔 / 斯卡 / 盖伦 · 艾瑞莉娅 / 洛里斯', '6/7级寻找二星 克格莫、斯卡，保利息搜牌；8级补 盖伦。凯特琳 可替 麦迪。', '克格莫：鬼索的狂暴之刃 / 大天使之杖 / 海克斯科技枪刃；盖伦：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
+      ['四法四哨', '拉克丝 / 婕拉 / 娜美 / 佐伊 · 艾瑞莉娅 / 芮尔 / 蕾欧娜 / 洛里斯', '拉克丝/婕拉 过渡 → 娜美 中期 → 8级二星 佐伊；出售过渡持装者后重购羁绊挂件。', '佐伊：朔极之矛 / 灭世者的死亡之帽 / 海克斯科技枪刃；洛里斯：狂徒铠甲 / 巨龙之爪 / 石像鬼石板甲'],
     ];
     for (const [title, units, route, items] of builds) { const card = element('article', '', 'trait'); card.append(element('h3', title), element('p', units), element('p', route), element('p', items)); section.append(card); }
     for (const definition of Object.values(ANOMALY_DEFINITIONS)) section.append(element('p', `${definition.name}：${definition.description}`));
-    section.append(element('p', '异常适配：Corki/Tristana 可选泰坦打击；Kog’Maw/Zoe 可选法师护甲；Corki/Zoe 可选连杀。无需特定异常才能继续。'));
+    section.append(element('p', '异常适配：库奇/崔丝塔娜 可选泰坦打击；克格莫/佐伊 可选法师护甲；库奇/佐伊 可选连杀。无需特定异常才能继续。'));
     section.append(element('p', '目标：八人口、核心二星、输出至少两件成装、前排一件成装。4-6 绑定核心异常；组件来自开局、每阶段 .4 补给及 .7 野怪。副羁绊只保留原生身份，本版本未开放。'));
     this.root.append(section);
   }
