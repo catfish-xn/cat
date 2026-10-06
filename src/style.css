@@ -145,7 +145,8 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .primary-action { width: 100%; min-height: 52px; font-size: 17px !important; font-weight: 700; background: var(--c-accent-strong); border-color: var(--c-accent); }
 .primary-action:hover { background: #36a497; }
 .mobile-controls { grid-template-columns: repeat(4, minmax(44px, 1fr)) !important; }
-.mobile-controls .secondary-action { grid-column: span 2; background: var(--c-surface-alt); color: var(--c-text-muted); }
+.secondary-controls { display: grid; grid-template-columns: repeat(2, minmax(44px, 1fr)); gap: var(--space-sm); margin: var(--space-sm) 0; }
+.secondary-action { background: var(--c-surface-alt); color: var(--c-text-muted); }
 .mobile-controls button { font-size: var(--font-small); }
 .touch-shop { grid-template-columns: repeat(5, minmax(44px, 1fr)); gap: var(--space-xs); }
 .shop-card { position: relative; display: grid; justify-items: center; align-content: start; gap: 2px; padding: 6px 2px 4px !important; min-height: 92px;

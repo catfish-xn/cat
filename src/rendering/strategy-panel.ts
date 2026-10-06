@@ -278,10 +278,14 @@ export class StrategyPanel {
     for (const name of ['reroll', 'buy-xp', 'sell'] as const) controls.append(controlButton(name, 'economy-action'));
     const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !ready);
     lock.setAttribute('aria-pressed', String(Boolean(state.shop.locked))); lock.classList.add('economy-action'); controls.append(lock);
-    for (const name of (['start-combat', 'continue', 'new-match'] as const).filter(name => name !== primary)) controls.append(controlButton(name, 'secondary-action'));
     actions.append(controls);
     this.root.append(actions);
+    // Lifecycle buttons that are not the current primary action sit below the shop,
+    // keeping the shop within the first screen on small phones.
+    const secondary = element('div', '', 'secondary-controls');
+    for (const name of (['start-combat', 'continue', 'new-match'] as const).filter(name => name !== primary)) secondary.append(controlButton(name, 'secondary-action'));
     this.renderShop(state, ready);
+    this.root.append(secondary);
     const result = state.roundResults.at(-1);
     if (result) {
       const receipt = element('details', '', 'income-receipt'); receipt.dataset.debug = 'income-receipt';
