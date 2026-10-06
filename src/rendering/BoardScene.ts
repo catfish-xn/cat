@@ -18,6 +18,8 @@ import { UnitView, type RingState } from '../presentation/unit-view';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { buildPortraitTextures, preloadS13Assets } from '../presentation/s13-assets';
+import { HelpPanel } from '../presentation/help-panel';
+import { reducedMotion } from '../presentation/preferences';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -34,6 +36,7 @@ export class BoardScene extends Phaser.Scene {
   private replayRenderKey = '';
   private inputRouter = new InputRouter();
   private strategyPanel: StrategyPanel | null = null;
+  private help: HelpPanel | null = null;
   private get state() { return this.session.preparation; }
   private layout = new HexLayout(this.state.board, 34, { x: 35, y: 40 });
   private views = new Map<string, UnitView>();
@@ -104,8 +107,8 @@ export class BoardScene extends Phaser.Scene {
       }
       this.sell(this.selectedId);
     });
-    this.rerollButton = this.button('reroll', 756, 577, 164, 40, `D · Reroll · ${MATCH_RULES.rerollCost} G`, () => this.command(this.session.reroll(), '商店已刷新'));
-    this.xpButton = this.button('buy-xp', 756, 629, 164, 44, `F · ${MATCH_RULES.xpPurchaseCost} G → ${MATCH_RULES.xpPurchaseAmount} XP`, () => this.command(this.session.buyXp(), '经验已购买 · 升级增加人口，下一次刷新使用新概率'), 15);
+    this.rerollButton = this.button('reroll', 756, 577, 164, 40, `D · 刷新 · ${MATCH_RULES.rerollCost} 金币`, () => this.command(this.session.reroll(), '商店已刷新'));
+    this.xpButton = this.button('buy-xp', 756, 629, 164, 44, `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`, () => this.command(this.session.buyXp(), '经验已购买 · 升级增加人口，下一次刷新使用新概率'), 15);
     this.button('debug-new-match', 756, 710, 164, 30, '新局', () => this.newMatch(), 12);
     for (const child of this.children.list.slice(oldHudStart)) (child as unknown as Phaser.GameObjects.Components.Visible).setVisible(false);
     const graphics = this.add.graphics();
@@ -138,14 +141,16 @@ export class BoardScene extends Phaser.Scene {
     }
     this.overlay = this.add.graphics().setDepth(5);
     this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
+    this.help = new HelpPanel();
     this.strategyPanel = new StrategyPanel({
+      help: () => this.help?.show(),
       state: () => this.session.state, shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
       equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效'),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
-      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 G'),
+      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
       control: name => this.panelControl(name),
@@ -185,7 +190,7 @@ export class BoardScene extends Phaser.Scene {
       if (window.__CAT_DEBUG__ === debug) delete window.__CAT_DEBUG__;
       this.statsPanel?.dispose(); this.statsPanel = null; this.feedback?.dispose(); this.feedback = null;
       this.application?.dispose(); this.application = null;
-      this.strategyPanel?.destroy(); this.strategyPanel = null;
+      this.strategyPanel?.destroy(); this.strategyPanel = null; this.help?.destroy(); this.help = null;
       this.resetViewReferences();
     });
   }
@@ -218,6 +223,8 @@ export class BoardScene extends Phaser.Scene {
     // alongside pointer input, without Phaser's per-frame keyboard queue.
     const keydown = (event: KeyboardEvent) => {
       if (!this.scene.isActive() || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+      // Reading help never issues a game command.
+      if (this.help?.open) return;
       const target = event.target;
       if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select'))) return;
       if (event.code === 'KeyD') {
@@ -435,24 +442,24 @@ export class BoardScene extends Phaser.Scene {
     this.hpLabel.setText(`生命 ${match.playerHp}`);
     this.levelLabel.setText(`等级 ${match.level}`);
     const threshold = getXpToNextLevel(match.level);
-    this.xpLabel.setText(threshold === null ? 'XP MAX' : `XP ${match.xp} / ${threshold}`);
-    this.oddsLabel.setText(`Lv.${match.level} 搜牌概率 · ${getShopOdds(match.level).map((chance, index) => `${index + 1}费 ${chance}%`).join(' / ')}`);
+    this.xpLabel.setText(threshold === null ? '经验 已满' : `经验 ${match.xp} / ${threshold}`);
+    this.oddsLabel.setText(`${match.level} 级搜牌概率 · ${getShopOdds(match.level).map((chance, index) => `${index + 1}费 ${chance}%`).join(' / ')}`);
     this.count.setText(`我方人口 ${getPlayerDeploymentCount(this.state)} / ${getDeploymentCap(match)}`);
     this.startButton.setText(getRoundKind(match.round) === 'supply' ? '领取补给' : '开始战斗');
     this.startButton.setAlpha(this.session.startFailure ? 0.4 : 1).setBackgroundColor('#38695f');
     this.continueButton.setData('round', match.round).setAlpha(match.phase === 'settlement' ? 1 : 0.4);
     this.rerollButton.setAlpha(ready ? 1 : 0.4);
-    this.xpButton.setText(threshold === null ? 'F · MAX LEVEL' : `F · ${MATCH_RULES.xpPurchaseCost} G → ${MATCH_RULES.xpPurchaseAmount} XP`).setAlpha(ready && threshold !== null ? 1 : 0.4);
+    this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(ready && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];
       const frame = this.shopFrames[slot].clear().setVisible(false);
       button.setData('generation', match.shop.generation);
-      if (offer.status === 'purchased') button.setText('已购买\nPurchased').setBackgroundColor('#1c2934').setAlpha(0.45);
+      if (offer.status === 'purchased') button.setText('已购买').setBackgroundColor('#1c2934').setAlpha(0.45);
       else {
         const definition = UNIT_DEFINITIONS[offer.definitionId];
         const colors = ['#304653', '#245841', '#28517d', '#634786', '#846230'];
         const borders = [0x7b94a3, 0x68c087, 0x72b6ff, 0xba8bff, 0xffd675];
-        button.setText(`${definition.symbol} ${definition.name}\nBuy · ${definition.cost} G`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(ready ? 1 : 0.4);
+        button.setText(`${definition.symbol} ${definition.name}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(ready ? 1 : 0.4);
         frame.lineStyle(2, borders[definition.cost - 1], ready ? 1 : 0.4).strokeRect(204 + slot * 106, 567, 104, 54);
       }
     }
@@ -463,10 +470,10 @@ export class BoardScene extends Phaser.Scene {
       : match.phase === 'combat' ? '自动战斗 · 积累法力 并施法，商店与部署已锁定'
       : match.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开` : '回合结算 · 收入与经验 已到账，继续进入下一回合');
     if (match.phase === 'settlement' || match.phase === 'gameOver') {
-      const labels = { playerWin: 'Victory', enemyWin: 'Defeat', draw: 'Draw', supply: 'Supply' }, result = match.roundResults.at(-1)!;
-      this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? 'Victory' : 'Defeat') : labels[result.result]);
+      const labels = { playerWin: '胜利', enemyWin: '失败', draw: '平局', supply: '补给' }, result = match.roundResults.at(-1)!;
+      this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? '胜利' : '失败') : labels[result.result]);
       const reason = result.result === 'supply' ? '补给 · 无战斗' : result.result === 'playerWin' ? '胜利 · 不扣 HP' : result.result === 'draw' ? `平局 · 基础伤害 ${result.baseDamage}` : `败局 · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}`;
-      this.incomeLabel.setText(`第 ${result.round} 回合 · ${labels[result.result]}\n收入 +${result.income} G / XP +${result.xpAwarded}\nLv.${result.levelBefore} → ${result.levelAfter}\nHP ${result.hpBefore} → ${result.hpAfter} (-${result.hpLost})\n${reason}`);
+      this.incomeLabel.setText(`第 ${result.round} 回合 · ${labels[result.result]}\n收入 +${result.income} 金币 / 经验 +${result.xpAwarded}\n等级 ${result.levelBefore} → ${result.levelAfter}\n生命 ${result.hpBefore} → ${result.hpAfter} (-${result.hpLost})\n${reason}`);
     } else { this.resultLabel.setText(''); this.incomeLabel.setText(''); }
     if (!match.combat) this.timer.setText('');
     this.syncSelection();
@@ -478,9 +485,9 @@ export class BoardScene extends Phaser.Scene {
     const displayed = this.session.phase === 'preparation' ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
       const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
-      this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${definition.cost}费\nHP ${stats.health} / AD ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} G`}`);
+      this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${definition.cost}费\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
-    this.sellButton.setText(this.selectedId && selected ? `E · Sell · +${getUnitSellPrice(selected)} G` : 'E · 出售');
+    this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
     for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : 'normal', unit.team);
   }
@@ -554,7 +561,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.renderedCells.get(unit.id) !== key) {
         this.tweens.killTweensOf(token);
         const p = this.layout.center(unit.cell);
-        if (this.renderedCells.has(unit.id) && unit.alive) this.tweens.add({ targets: token, x: p.x, y: p.y, duration: 100 });
+        if (this.renderedCells.has(unit.id) && unit.alive && !reducedMotion()) this.tweens.add({ targets: token, x: p.x, y: p.y, duration: 100 });
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }

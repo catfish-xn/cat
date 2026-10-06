@@ -16,6 +16,7 @@ import { combatEventText } from '../rendering/combat-feedback';
 import { getHeroIdentity } from './hero-identity';
 import { THEME, toNumber } from './theme';
 import type { UnitView } from './unit-view';
+import { reducedMotion } from './preferences';
 
 type Point = { x: number; y: number };
 type Fadeable = Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc;
@@ -35,7 +36,7 @@ const sourceName = (kind: string, id: string) => {
 
 export class CombatFx {
   /** Reduced motion: no travelling projectiles or pulses, only short static markers. */
-  reduced = false;
+  get reduced(): boolean { return reducedMotion(); }
   casts = 0;
   constructor(private readonly host: CombatFxHost) {}
 

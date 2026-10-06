@@ -44,6 +44,7 @@ interface PanelActions {
   readonly unitAt: (x: number, y: number) => string | undefined;
   readonly cancelGesture: () => void;
   readonly status: (message: string) => void;
+  readonly help: () => void;
 }
 
 function traitLine(definitionId: string): HTMLElement {
@@ -249,6 +250,7 @@ export class StrategyPanel {
     const head = element('header', '', 'hud-bar'); head.dataset.phase = state.phase;
     const title = element('div', '', 'hud-title');
     title.append(element('span', PHASE_LABEL[state.phase], `phase-badge phase-${state.phase}`), element('h2', `${stage.stage}-${stage.round} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[getRoundKind(state.round)]}`));
+    const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
     const chip = (label: string, value: string, kind: string) => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); stats.append(node); };
