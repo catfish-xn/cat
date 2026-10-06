@@ -4,6 +4,8 @@
 - 交接前最后的代码提交：69e1387（本交接只追加文档）
 - 相关文档：[M7_PLAN](../M7_PLAN.md)、[M7_BASELINE](M7_BASELINE.md)、[M7_VALIDATION](M7_VALIDATION.md)、[M6_FINAL_REVIEW](M6_FINAL_REVIEW.md)
 
+> 后续跟进（2026-10-07）：以下保留交接时的历史状态。Codex 的完整 CI、内存快照与负对照结果见 [M7_CODEX_AUDIT](M7_CODEX_AUDIT.md)；原始 `111e9f8` 本次内存检查已通过，另发现并修复了完整路线测试与 400ms 防连击保护的时序冲突。冻结内存预算及正式测量方法未调整。
+
 ## 1. M7 已完成的功能
 
 - 主题令牌 `src/presentation/theme.ts`，CSS 变量统一注入（`applyThemeVariables`）。
