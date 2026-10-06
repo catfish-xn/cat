@@ -57,12 +57,21 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
           target: event.target?.closest?.('[data-debug]')?.dataset.debug ?? event.target?.tagName ?? null }), true);
     });
     page = await context.newPage();
+    page.on('dialog', async dialog => { assert.equal(dialog.type(), 'confirm'); await dialog.accept(); });
     page.on('pageerror', error => report.errors.push(error.message));
     page.on('console', event => { if (event.type() === 'error') report.errors.push(event.text()); });
     await page.goto(url); await page.waitForFunction(() => window.__CAT_DEBUG__);
     const cdp = await context.newCDPSession(page);
     const read = () => page.evaluate(() => window.__CAT_DEBUG__.read());
     const state = async () => (await read()).state;
+    async function startFixed42() {
+      const oldRun = (await read()).m6?.runId ?? null;
+      await page.locator('[data-debug="m6-seed-input"]').fill('42');
+      await page.locator('[data-debug="m6-fixed-start"]').click();
+      await page.waitForFunction(previous => { const snapshot = window.__CAT_DEBUG__.read();
+        return snapshot.state.seed === 42 && snapshot.m6?.mode === 'active' && snapshot.m6.runId !== previous; }, oldRun);
+    }
+    await startFixed42();
     const initial = await state(); assert.deepEqual(initial, structuredClone(api.createMatch(42)));
     report.versions = Object.fromEntries(['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion', 'rngAlgorithm', 'tickMs'].map(key => [key, initial[key]]));
     async function sampleObserver(label) {
@@ -81,7 +90,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const offset = () => page.evaluate(() => window.__M5_INPUTS__.length);
     const quiet = () => page.waitForFunction(() => !document.querySelector('.choice-overlay.dismissal-shield'));
     async function click(name, touch = false) {
-      await quiet(); const node = page.locator(`[data-debug="${name}"]`);
+      await quiet(); const publicName = /^(buy-[0-4]|reroll|buy-xp|start-combat|continue|debug-new-match)$/.test(name) ? `mobile:${name === 'debug-new-match' ? 'new-match' : name}` : name;
+      let node = page.locator(`[data-debug="${publicName}"]`);
+      await node.waitFor({ state: 'visible', timeout: 10000 });
       // Native locator actions scroll and hit-test the actual DOM target. A
       // raw bounding-box tap can hit the sticky shop covering a panel tab.
       if (await node.count()) { if (touch) await node.tap(); else await node.click(); return; }
@@ -113,7 +124,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await quiet();
     }
     async function reset() {
-      await chooseAll(); await click('mobile:new-match');
+      await chooseAll(); await click('mobile:new-match'); await startFixed42();
       assert.deepEqual(await state(), structuredClone(api.createMatch(42))); await chooseAll();
       return state();
     }
@@ -121,7 +132,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // Every modal transition, including back-to-back component choices, protects
     // the remaining confirming pointer burst. It does not suppress keyboard D/F.
     for (const method of ['mouse', 'touch']) {
-      if (method === 'touch') { await chooseAll(); await click('mobile:new-match'); }
+      if (method === 'touch') { await chooseAll(); await click('mobile:new-match'); await startFixed42(); }
       while ((await state()).phase === 'choice') {
         await quiet(); const before = await state(), choice = before.pendingChoice;
         const node = page.locator(`[data-debug="choice:${choice.offers[0]}"]`); await node.scrollIntoViewIfNeeded();
@@ -234,8 +245,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await resizeViewport(page, { width: 844, height: 390 }); await touch('touchEnd');
       const result = await record('orientation-cancels-item-late-release', before, before, start); assert.equal(result.snap.gesture, null);
     }
-    // A tab geometrically in the viewport can be covered by the sticky shop.
-    // Use native actionability, never blindly tap its covered center coordinate.
+    // M6 removes sticky shop/tabs, eliminating the old physical occlusion trigger.
+    // Prove that geometry, then retain trusted native target-routing and no-background-command checks.
     await resizeViewport(page, { width: 390, height: 844 });
     {
       const traitBefore = await reset(), traitStart = await offset();
@@ -247,25 +258,29 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       }
       await record('trait-team-member-and-combined-benefits-visible', traitBefore, traitBefore, traitStart);
       await page.screenshot({ path: path.join(output, 'trait-audit-benefits.png') });
-      const before = await reset(); await click('panel:builds', true);
-      const tab = page.locator('[data-debug="panel:units"]');
-      await tab.evaluate(node => node.scrollIntoView({ block: 'start' }));
-      await tab.scrollIntoViewIfNeeded();
-      const coveredBy = await tab.evaluate(node => {
+      const before = await reset(); await click('panel:items', true);
+      const target = page.locator('[data-debug="item:item-1"]');
+      await target.evaluate(node => node.scrollIntoView({ block: 'start' }));
+      const coveredBy = await target.evaluate(node => {
         const box = node.getBoundingClientRect();
         return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest('[data-debug]')?.getAttribute('data-debug');
       });
-      assert.equal(coveredBy, 'mobile:buy-2', 'regression starts with a genuinely occluded tab');
-      const start = await offset(); await click('panel:units', true);
-      const result = await record('sticky-shop-occluded-tab-native-tap-does-not-buy', before, before, start, { coveredBy });
-      assert.deepEqual(result.inputs.filter(input => input.type === 'pointerdown').map(input => input.target), ['panel:units']);
+      const positions = await page.evaluate(() => ({shop:getComputedStyle(document.querySelector('.shop-panel')).position,tabs:getComputedStyle(document.querySelector('.panel-tabs')).position}));
+      assert.notEqual(positions.shop, 'sticky'); assert.notEqual(positions.tabs, 'sticky');
+      assert.equal(coveredBy, 'item:item-1', 'M6 layout removes the old shop/tab overlap at the actual target');
+      await page.locator('canvas').scrollIntoViewIfNeeded();
+      const start = await offset(); await click('item:item-1', true);
+      const result = await record('nonoverlapping-layout-native-item-tap-does-not-buy-or-deploy', before, before, start, { coveredBy, positions, adaptation: 'M6 shop and tabs are relative: original sticky overlap trigger is eliminated; native scroll/hit-test and complete-state/no-background-command assertions retained, with actual choice/dismissal overlays still covered by their unchanged native cases' });
+      assert.deepEqual(result.inputs.filter(input => input.type === 'pointerdown').map(input => input.target), ['item:item-1']);
+      assert(result.snap.strategy.selectedItemIds.includes('item-1'));
+
     }
     // New Match resets listeners as well as domain state. Two resets then one D
     // must still produce exactly one accepted command.
     await resizeViewport(page, { width: 1440, height: 1000 }); await reset();
     const before = await reset(), start = await offset(); await page.keyboard.press('d');
     await record('repeated-new-match-does-not-duplicate-listeners', before, accepted(api.rerollShop(before)), start);
-    await click('mobile:new-match'); await chooseAll(['bow', 'rod']);
+    await click('mobile:new-match'); await startFixed42(); await chooseAll(['bow', 'rod']);
     } else { await chooseAll(['bow', 'rod']); }
     // One ordinary first-round combat supplies a labeled wall-time sample and
     // proves that New Match releases a nonempty combat ledger and visual work.
@@ -308,7 +323,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     fs.writeFileSync(path.join(output, 'dynamic-stats.json'), JSON.stringify({ unit: lux, expectedProjection: stats, currentDisplayed, evidenceKind: 'production selector to UI consistency' }));
     await page.screenshot({ path: path.join(output, 'dynamic-stats.png') });
     const afterCombatMetrics = await sampleObserver('after-normal-combat');
-    const resetStart = await offset(); await click('mobile:new-match');
+    const resetStart = await offset(); await click('mobile:new-match'); await startFixed42();
     const resetRecord = await record('new-match-clears-ledger-effects-and-tweens', expectedCombat, initial, resetStart);
     assert.equal(resetRecord.snap.combatEvents.length, 0); assert.equal(resetRecord.snap.effects, 0); assert.equal(resetRecord.snap.tweens, 0);
     const afterResetMetrics = await sampleObserver('after-new-match');
@@ -325,7 +340,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     report.passed = true; await cdp.detach();
   } catch (error) {
     report.failure = error.stack; process.exitCode = 1; console.error(error);
-    if (page) { try { fs.writeFileSync(path.join(output, 'failure-state.json'), JSON.stringify(await page.evaluate(() => window.__CAT_DEBUG__?.read()))); await page.screenshot({ path: path.join(output, 'failure.png') }); } catch {} }
+    if (page) { try { fs.writeFileSync(path.join(output, 'native-inputs.json'), JSON.stringify(await page.evaluate(() => window.__M5_INPUTS__)));
+        fs.writeFileSync(path.join(output, 'failure-state.json'), JSON.stringify(await page.evaluate(() => window.__CAT_DEBUG__?.read()))); await page.screenshot({ path: path.join(output, 'failure.png') }); } catch {} }
   } finally {
     report.durationSeconds = (Date.now() - started) / 1000; report.finalSourceFingerprint = sourceFingerprint();
     if (context) await context.tracing.stop({ path: path.join(output, 'trace.zip') }).catch(() => {});

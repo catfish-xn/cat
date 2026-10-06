@@ -9,7 +9,12 @@ import { MatchSession } from './match-session';
 import { InputRouter } from './input-router';
 import { combatEventText } from './combat-feedback';
 import { getStageRound, getRoundKind } from '../simulation/round-schedule';
-import { StrategyPanel } from './strategy-panel';
+import { StrategyPanel, displayUnitName } from './strategy-panel';
+import { MatchApplication } from '../m6/application';
+import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
+import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
+import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../stats/combat-feedback-renderer';
+import type { SessionChange } from '../m6/contracts';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -17,10 +22,17 @@ declare global {
 
 export class BoardScene extends Phaser.Scene {
   private session = new MatchSession();
+  private application: MatchApplication | null = null;
+  private statsPanel: StatsPanel | null = null;
+  private feedback: CombatFeedbackRenderer | null = null;
+  private activeStats: BattleStats | null = null;
+  private lastStatsRender = -1;
+  private lastReplaySeq = -1;
+  private replayRenderKey = '';
   private inputRouter = new InputRouter();
   private strategyPanel: StrategyPanel | null = null;
   private get state() { return this.session.preparation; }
-  private layout = new HexLayout(this.state.board);
+  private layout = new HexLayout(this.state.board, 34, { x: 35, y: 40 });
   private health = new Map<string, Phaser.GameObjects.Graphics>();
   private mana = new Map<string, Phaser.GameObjects.Graphics>();
   private shields = new Map<string, Phaser.GameObjects.Graphics>();
@@ -33,6 +45,7 @@ export class BoardScene extends Phaser.Scene {
   private namedObjects = new Map<string, Phaser.GameObjects.Text | Phaser.GameObjects.Container>();
   private draggingId: string | null = null;
   private selectedId: string | null = null;
+  private mouseClient: Point | null = null;
   private shopButtons: Phaser.GameObjects.Text[] = [];
   private shopFrames: Phaser.GameObjects.Graphics[] = [];
   private startButton!: Phaser.GameObjects.Text;
@@ -64,6 +77,7 @@ export class BoardScene extends Phaser.Scene {
     // Phaser reuses the Scene instance on restart but destroys its display list.
     // Keep the authoritative MatchSession; all cached display references must be new.
     this.resetViewReferences();
+    const oldHudStart = this.children.length;
     this.add.text(48, 28, 'HEX / 自动战棋', { fontSize: '25px', color: '#edf4f3', fontStyle: 'bold' });
     this.phaseLabel = this.add.text(48, 67, '', { fontSize: '14px', color: '#9aaeb9' });
     this.roundLabel = this.add.text(455, 32, '', { fontSize: '21px', color: '#edf4f3' }).setName('round');
@@ -73,8 +87,8 @@ export class BoardScene extends Phaser.Scene {
     this.xpLabel = this.add.text(756, 95, '', { fontSize: '14px', color: '#b4a1f5' }).setName('xp');
     this.oddsLabel = this.add.text(48, 89, '', { fontSize: '12px', color: '#9aaeb9' }).setName('shop-odds');
     this.count = this.add.text(756, 119, '', { fontSize: '14px', color: '#68ddd0' }).setName('population');
-    this.startButton = this.button('start-combat', 756, 148, 164, 48, 'Start Combat', () => this.command(this.session.start(), '战斗开始 · 阵容已锁定'));
-    this.continueButton = this.button('continue', 756, 207, 164, 48, 'Continue', () => {
+    this.startButton = this.button('start-combat', 756, 148, 164, 48, '开始战斗', () => this.command(this.session.start(), '战斗开始 · 阵容已锁定'));
+    this.continueButton = this.button('continue', 756, 207, 164, 48, '继续', () => {
       this.command(this.session.continue(this.continueButton.getData('round')), '进入下一回合 · 商店已更新，可继续调整阵容');
     });
     this.resultLabel = this.add.text(756, 269, '', { fontSize: '25px', color: '#edf4f3', fontStyle: 'bold' }).setName('result');
@@ -82,53 +96,55 @@ export class BoardScene extends Phaser.Scene {
     this.timer = this.add.text(756, 426, '', { fontSize: '13px', color: '#9aaeb9' });
     this.startHint = this.add.text(756, 308, '', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 164 }, lineSpacing: 5 });
     this.selectionLabel = this.add.text(756, 462, '', { fontSize: '13px', color: '#edf4f3', wordWrap: { width: 164 }, lineSpacing: 3 });
-    this.sellButton = this.button('sell', 756, 526, 164, 40, 'E · Sell', () => {
+    this.sellButton = this.button('sell', 756, 526, 164, 40, 'E · 出售', () => {
       if (this.selectedId === null) {
-        this.setStatus(this.session.phase === 'preparation' ? '请先点击一个我方单位，再点击 Sell' : this.failureMessage('wrong-phase'));
+        this.setStatus(this.session.phase === 'preparation' ? '请先点击一个我方单位，再点击出售' : this.failureMessage('wrong-phase'));
         return;
       }
       this.sell(this.selectedId);
     });
     this.rerollButton = this.button('reroll', 756, 577, 164, 40, `D · Reroll · ${MATCH_RULES.rerollCost} G`, () => this.command(this.session.reroll(), '商店已刷新'));
     this.xpButton = this.button('buy-xp', 756, 629, 164, 44, `F · ${MATCH_RULES.xpPurchaseCost} G → ${MATCH_RULES.xpPurchaseAmount} XP`, () => this.command(this.session.buyXp(), '经验已购买 · 升级增加人口，下一次刷新使用新概率'), 15);
-    this.button('debug-new-match', 756, 710, 164, 30, 'New Match', () => this.newMatch(), 12);
+    this.button('debug-new-match', 756, 710, 164, 30, '新局', () => this.newMatch(), 12);
+    for (const child of this.children.list.slice(oldHudStart)) (child as unknown as Phaser.GameObjects.Components.Visible).setVisible(false);
     const graphics = this.add.graphics();
     for (let row = 0; row < this.state.board.rows; row++) for (let col = 0; col < this.state.board.columns; col++) {
       graphics.fillStyle(isDeploymentCell(this.state.board, 'player', { col, row }) ? 0x1b3039 : 0x30232e).lineStyle(1, 0x36505d);
       graphics.fillPoints(this.layout.corners({ col, row }), true).strokePoints(this.layout.corners({ col, row }), true);
     }
-    this.add.text(48, 140, `${this.state.board.columns} 列 × ${this.state.board.rows} 行`, { fontSize: '14px', color: '#7e95a4' });
+    this.add.text(-2000, 140, `${this.state.board.columns} 列 × ${this.state.board.rows} 行`, { fontSize: '14px', color: '#7e95a4' });
     for (const team of ['enemy', 'player'] as const) {
       const zone = this.state.board.deploymentZones[team];
       const y = (this.layout.center({ col: 0, row: zone.firstRow }).y + this.layout.center({ col: 0, row: zone.lastRow }).y) / 2;
-      this.add.text(48, y, `${team === 'player' ? '我方部署区' : '敌方部署区'}\nrow ${zone.firstRow}–${zone.lastRow}`, { fontSize: '14px', color: team === 'player' ? '#68ddd0' : '#f08080', lineSpacing: 10 });
+      this.add.text(-2000, y, `${team === 'player' ? '我方部署区' : '敌方部署区'}\nrow ${zone.firstRow}–${zone.lastRow}`, { fontSize: '14px', color: team === 'player' ? '#68ddd0' : '#f08080', lineSpacing: 10 });
     }
-    this.add.text(48, 575, '商店', { fontSize: '19px', color: '#edf4f3' });
-    this.add.text(48, 600, '买入备战席', { fontSize: '12px', color: '#7e95a4' });
+    this.add.text(-2000, 575, '商店', { fontSize: '19px', color: '#edf4f3' });
+    this.add.text(-2000, 600, '买入备战席', { fontSize: '12px', color: '#7e95a4' });
     for (let slot = 0; slot < MATCH_RULES.shopSize; slot++) {
       this.shopFrames.push(this.add.graphics());
       const button = this.button(`buy-${slot}`, 205 + slot * 106, 568, 102, 52, '', () => {
         this.command(this.session.buy(slot, button.getData('generation')), '购买成功 · 集齐三张同星同名单位自动升星');
       }, 14);
       button.setData('slot', slot);
+      button.setVisible(false);
       this.shopButtons.push(button);
     }
-    this.add.text(48, 641, '备战席', { fontSize: '19px', color: '#edf4f3' });
-    this.add.text(48, 672, '拖拽部署 · 点击选择', { fontSize: '12px', color: '#7e95a4' });
+    this.add.text(-2000, 641, '备战席', { fontSize: '19px', color: '#edf4f3' });
+    this.add.text(-2000, 672, '拖拽部署 · 点击选择', { fontSize: '12px', color: '#7e95a4' });
     for (let slot = 0; slot < this.state.benchSize; slot++) {
       const p = this.benchCenter(slot);
-      graphics.fillStyle(0x182531).lineStyle(1, 0x36505d).fillRoundedRect(p.x - 37, p.y - 38, 74, 76, 10).strokeRoundedRect(p.x - 37, p.y - 38, 74, 76, 10);
+      graphics.fillStyle(0x182531).lineStyle(1, 0x36505d).fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10).strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10);
     }
     this.overlay = this.add.graphics().setDepth(5);
-    this.status = this.add.text(48, 754, '准备就绪 · 购买或部署棋子，再点击 Start Combat', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
+    this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
     this.strategyPanel = new StrategyPanel({
       state: () => this.session.state, shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
       equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效'),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
-      target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), 'Anomaly 目标已锁定'),
-      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), 'Anomaly 选项已刷新 · 扣除 1 G'),
+      target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
+      rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 G'),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
       control: name => this.panelControl(name),
@@ -139,10 +155,35 @@ export class BoardScene extends Phaser.Scene {
     this.installDragHandlers();
     this.installKeyboardHandlers();
     this.sync();
+    this.statsPanel = createStatsPanel(document.getElementById('stats-root')!, id => {
+      if (this.application?.debug().mode === 'replay') { this.application.selectReplayUnit(id); return; }
+      this.selectedId = id; this.syncSelection(); this.renderActiveStats();
+    });
+    this.feedback = createCombatFeedbackRenderer(document.getElementById('feedback-root')!);
+    this.application = new MatchApplication(this.session, {
+      replace: session => {
+        this.clearCombatEffects(); this.session = session; this.selectedId = null;
+        this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
+        this.activeStats = session.combat ? aggregateStats(this.application?.debug().runId ?? '', session.combat.combatId!, session.combatEvents) : null;
+        this.feedback?.reset(); this.sync(); this.renderActiveStats();
+      }, changed: change => this.observeStats(change),
+      playback: (snapshot, record) => {
+        if (!snapshot || !record) { this.lastReplaySeq = -1; this.replayRenderKey = ''; this.renderActiveStats(); return; }
+        const key = `${record.runId}/${record.combatId}/${snapshot.tick}/${this.application?.replaySelectedUnit}`;
+        if (key === this.replayRenderKey) return; this.replayRenderKey = key;
+        document.getElementById('stats-root')!.hidden = false;
+        if (this.lastReplaySeq !== snapshot.nextEventSeq) this.feedback?.reset();
+        this.lastReplaySeq = snapshot.nextEventSeq;
+        this.statsPanel?.render({ stats: aggregateStats(record.runId, record.combatId, snapshot.events), combat: snapshot.combat,
+          events: snapshot.events, selectedUnitId: this.application?.replaySelectedUnit ?? null });
+      }, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message),
+    });
     const debug = Object.freeze({ read: () => this.debugSnapshot() });
     window.__CAT_DEBUG__ = debug;
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (window.__CAT_DEBUG__ === debug) delete window.__CAT_DEBUG__;
+      this.statsPanel?.dispose(); this.statsPanel = null; this.feedback?.dispose(); this.feedback = null;
+      this.application?.dispose(); this.application = null;
       this.strategyPanel?.destroy(); this.strategyPanel = null;
       this.resetViewReferences();
     });
@@ -157,6 +198,17 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private installKeyboardHandlers() {
+    const mousemove = (event: MouseEvent) => {
+      const capabilities = (event as MouseEvent & { sourceCapabilities?: { firesTouchEvents?: boolean } }).sourceCapabilities;
+      if (!capabilities?.firesTouchEvents) this.mouseClient = { x: event.clientX, y: event.clientY };
+    };
+    const touch = (event: PointerEvent) => { if (event.pointerType === 'touch') this.mouseClient = null; };
+    window.addEventListener('mousemove', mousemove, true);
+    window.addEventListener('pointerdown', touch, true);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('mousemove', mousemove, true); window.removeEventListener('pointerdown', touch, true);
+      this.mouseClient = null;
+    });
     // Native keydown preserves each OS repeat and commits in DOM event order,
     // alongside pointer input, without Phaser's per-frame keyboard queue.
     const keydown = (event: KeyboardEvent) => {
@@ -182,12 +234,16 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private hoveredId(): string | undefined {
-    const pointer = this.input.activePointer;
-    const point = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
-    // Resolve current geometry in Phaser's click order, including enemy tokens.
-    const candidates = this.input.manager.isOver ? [...this.tokens.values()].filter(token =>
-      token.visible && Math.abs(point.x - token.x) <= 29 * token.scaleX && Math.abs(point.y - token.y) <= 29 * token.scaleY) : [];
-    return this.input.sortGameObjects(candidates, pointer)[0]?.getData('unitId');
+    // D/F can change page layout without another mousemove. Resolve native client
+    // coordinates against the current canvas bounds instead of a cached pointer transform.
+    const client = this.mouseClient;
+    if (!client || document.elementFromPoint(client.x, client.y) !== this.game.canvas) return;
+    const rect = this.game.canvas.getBoundingClientRect();
+    const point = { x: (client.x - rect.left) * this.scale.gameSize.width / rect.width,
+      y: (client.y - rect.top) * this.scale.gameSize.height / rect.height };
+    const candidates = [...this.tokens.values()].filter(token => token.visible
+      && Math.abs(point.x - token.x) <= 29 * token.scaleX && Math.abs(point.y - token.y) <= 29 * token.scaleY);
+    return this.input.sortGameObjects(candidates, this.input.activePointer)[0]?.getData('unitId');
   }
 
   private sell(id: string) {
@@ -199,12 +255,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private setStatus(message: string) { this.status.setText(message); this.strategyPanel?.status(message); }
-  private newMatch() {
-    this.clearCombatEffects(); this.session.newMatch(); this.selectedId = null;
-    this.strategyPanel?.reset();
-    this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
-    this.sync(); this.setStatus('已重开整局 · Round 1 / Level 3 / HP 100，成长、金币与阵容已重置');
-  }
+  private newMatch() { this.application?.requestNew(); }
   private panelControl(name: 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match') {
     if (name === 'new-match') { this.newMatch(); return; }
     if (name === 'reroll') this.command(this.session.reroll(), '商店已刷新');
@@ -256,7 +307,7 @@ export class BoardScene extends Phaser.Scene {
         this.setStatus(reason ? this.failureMessage(reason) : '可放置 · 释放以确认部署');
         this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
         if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
-        else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 37, p.y - 38, 74, 76, 10); }
+        else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
       } else this.setStatus(this.failureMessage('invalid-location'));
     });
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
@@ -272,12 +323,12 @@ export class BoardScene extends Phaser.Scene {
       this.clearDrag(); this.sync();
     });
   }
-  private benchCenter(slot: number): Point { return { x: 242 + slot * 80, y: 660 }; }
+  private benchCenter(slot: number): Point { return { x: 27 + slot * 53.25, y: 480 }; }
   private position(location: UnitLocation): Point { return location.kind === 'board' ? this.layout.center(location.cell) : this.benchCenter(location.slot); }
   private target(point: Point): UnitLocation | undefined {
     const cell = this.layout.hitTest(point);
     if (cell) return { kind: 'board', cell };
-    for (let slot = 0; slot < this.state.benchSize; slot++) { const p = this.benchCenter(slot); if (Math.abs(point.x - p.x) <= 37 && Math.abs(point.y - p.y) <= 38) return { kind: 'bench', slot }; }
+    for (let slot = 0; slot < this.state.benchSize; slot++) { const p = this.benchCenter(slot); if (Math.abs(point.x - p.x) <= 26 && Math.abs(point.y - p.y) <= 30) return { kind: 'bench', slot }; }
     return undefined;
   }
 
@@ -286,8 +337,8 @@ export class BoardScene extends Phaser.Scene {
       'wrong-phase': this.session.phase === 'preparation' ? '当前为准备阶段 · 请布阵或开始战斗'
         : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
-        : this.session.phase === 'settlement' ? '本轮已结算 · 点击 Continue 进入下一回合'
-        : 'Game Over · 点击 New Match 开始新的一局',
+        : this.session.phase === 'settlement' ? '本轮已结算 · 点击 继续进入下一回合'
+        : 'Game Over · 点击 新局 开始新的一局',
       'unknown-unit': '未找到该单位', 'enemy-unit': '敌方单位不可操作或出售',
       'invalid-location': '请放置到棋盘或备战席内', 'outside-deployment-zone': '只能部署在我方区域，不能放入敌方区域',
       'occupied': '该位置已有单位，请选择空位',
@@ -323,9 +374,9 @@ export class BoardScene extends Phaser.Scene {
       this.fadeEffect(label, 1000); this.renderedUpgradeCount++;
     }
     this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
-    if (this.session.phase === 'gameOver') this.setStatus(`${this.session.state.outcome === 'victory' ? 'Victory · 最终挑战完成' : 'Defeat · 对局结束'}，点击 New Match 重开`);
+    if (this.session.phase === 'gameOver') this.setStatus(`${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`);
     else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
-    else if (this.session.phase === 'settlement') this.setStatus('本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
+    else if (this.session.phase === 'settlement') this.setStatus('本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
   }
 
   private reconcileTokens() {
@@ -346,7 +397,7 @@ export class BoardScene extends Phaser.Scene {
       const token = this.tokens.get(unit.id)!, definition = getDefinition(unit);
       this.stars.get(unit.id)!.setText('★'.repeat(unit.starLevel));
       (token.getByName('symbol') as Phaser.GameObjects.Text).setText(definition.symbol);
-      (token.getByName('unit-name') as Phaser.GameObjects.Text).setText(definition.name);
+      (token.getByName('unit-name') as Phaser.GameObjects.Text).setText(displayUnitName(unit.definitionId));
       this.discs.get(unit.id)!.setFillStyle(definition.color);
       token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: definition.cost });
     }
@@ -355,7 +406,7 @@ export class BoardScene extends Phaser.Scene {
     const definition = getDefinition(unit), p = this.position(unit.location);
     const disc = this.add.circle(0, 0, 27, definition.color).setStrokeStyle(3, unit.team === 'enemy' ? 0xf08080 : 0x0b151f);
     const label = this.add.text(0, -4, definition.symbol, { fontSize: '23px', color: '#10212c', fontStyle: 'bold' }).setOrigin(0.5).setName('symbol');
-    const name = this.add.text(0, 16, definition.name, { fontSize: '10px', color: '#10212c' }).setOrigin(0.5).setName('unit-name');
+    const name = this.add.text(0, 16, displayUnitName(unit.definitionId), { fontSize: '10px', color: '#10212c' }).setOrigin(0.5).setName('unit-name');
     const star = this.add.text(0, -24, '★'.repeat(unit.starLevel), { fontSize: '11px', color: '#fff1ae', backgroundColor: '#243341' }).setOrigin(0.5);
     const hp = this.add.graphics().setVisible(false);
     const mana = this.add.graphics().setVisible(false), shield = this.add.graphics().setVisible(false);
@@ -396,21 +447,21 @@ export class BoardScene extends Phaser.Scene {
   }
   private syncHud() {
     const match = this.session.state, ready = match.phase === 'preparation';
-    this.roundLabel.setText(`${getStageRound(match.round).stage}-${getStageRound(match.round).round}`); this.goldLabel.setText(`Gold ${match.gold}`);
-    this.hpLabel.setText(`HP ${match.playerHp}`);
-    this.levelLabel.setText(`Level ${match.level}`);
+    this.roundLabel.setText(`${getStageRound(match.round).stage}-${getStageRound(match.round).round}`); this.goldLabel.setText(`金币 ${match.gold}`);
+    this.hpLabel.setText(`生命 ${match.playerHp}`);
+    this.levelLabel.setText(`等级 ${match.level}`);
     const threshold = getXpToNextLevel(match.level);
     this.xpLabel.setText(threshold === null ? 'XP MAX' : `XP ${match.xp} / ${threshold}`);
     this.oddsLabel.setText(`Lv.${match.level} 搜牌概率 · ${getShopOdds(match.level).map((chance, index) => `${index + 1}费 ${chance}%`).join(' / ')}`);
     this.count.setText(`我方人口 ${getPlayerDeploymentCount(this.state)} / ${getDeploymentCap(match)}`);
-    this.startButton.setText(getRoundKind(match.round) === 'supply' ? '领取补给' : 'Start Combat');
+    this.startButton.setText(getRoundKind(match.round) === 'supply' ? '领取补给' : '开始战斗');
     this.startButton.setAlpha(this.session.startFailure ? 0.4 : 1).setBackgroundColor('#38695f');
     this.continueButton.setData('round', match.round).setAlpha(match.phase === 'settlement' ? 1 : 0.4);
     this.rerollButton.setAlpha(ready ? 1 : 0.4);
     this.xpButton.setText(threshold === null ? 'F · MAX LEVEL' : `F · ${MATCH_RULES.xpPurchaseCost} G → ${MATCH_RULES.xpPurchaseAmount} XP`).setAlpha(ready && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];
-      const frame = this.shopFrames[slot].clear();
+      const frame = this.shopFrames[slot].clear().setVisible(false);
       button.setData('generation', match.shop.generation);
       if (offer.status === 'purchased') button.setText('已购买\nPurchased').setBackgroundColor('#1c2934').setAlpha(0.45);
       else {
@@ -422,11 +473,11 @@ export class BoardScene extends Phaser.Scene {
       }
     }
     const failure = this.session.startFailure;
-    this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与 XP，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
+    this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与经验，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
     this.phaseLabel.setText(ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
-      : match.phase === 'choice' ? '构筑选择 · 完成组件 / Augment / Anomaly 后继续'
-      : match.phase === 'combat' ? '自动战斗 · 积累 Mana 并施法，商店与部署已锁定'
-      : match.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? 'Victory · 最终挑战完成' : 'Defeat · 对局结束'}，点击 New Match 重开` : '回合结算 · 收入与 XP 已到账，Continue 进入下一回合');
+      : match.phase === 'choice' ? '构筑选择 · 完成组件 / 强化 / 异常 后继续'
+      : match.phase === 'combat' ? '自动战斗 · 积累法力 并施法，商店与部署已锁定'
+      : match.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开` : '回合结算 · 收入与经验 已到账，继续进入下一回合');
     if (match.phase === 'settlement' || match.phase === 'gameOver') {
       const labels = { playerWin: 'Victory', enemyWin: 'Defeat', draw: 'Draw', supply: 'Supply' }, result = match.roundResults.at(-1)!;
       this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? 'Victory' : 'Defeat') : labels[result.result]);
@@ -437,7 +488,7 @@ export class BoardScene extends Phaser.Scene {
     this.syncSelection();
   }
   private syncSelection() {
-    const selected = this.state.units.find(unit => unit.id === this.selectedId && unit.team === 'player');
+    const selected = this.state.units.find(unit => unit.id === this.selectedId);
     if (!selected) this.selectedId = null;
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
     const displayed = this.session.phase === 'preparation' ? this.state.units.find(unit => unit.id === displayId) : undefined;
@@ -445,19 +496,44 @@ export class BoardScene extends Phaser.Scene {
       const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
       this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${definition.cost}费\nHP ${stats.health} / AD ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} G`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
-    this.sellButton.setText(this.selectedId && selected ? `E · Sell · +${getUnitSellPrice(selected)} G` : 'E · Sell');
+    this.sellButton.setText(this.selectedId && selected ? `E · Sell · +${getUnitSellPrice(selected)} G` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
     for (const unit of this.state.units) this.discs.get(unit.id)?.setStrokeStyle(3,
       unit.id === this.selectedId ? 0xffffff : unit.team === 'enemy' ? 0xf08080 : 0x0b151f);
   }
+  private observeStats(change: SessionChange) {
+    const combat = change.after.combat;
+    if (!combat) { this.activeStats = null; this.feedback?.reset(); return; }
+    if (!this.activeStats || this.activeStats.combatId !== combat.combatId) {
+      this.activeStats = emptyStats(this.application?.debug().runId ?? '', combat.combatId!); this.feedback?.reset();
+    }
+    this.activeStats = appendStats(this.activeStats, change.events);
+    this.feedback?.push(change.events, performance.now());
+    if (combat.status === 'finished') this.renderActiveStats();
+  }
+  private renderActiveStats() {
+    document.getElementById('stats-root')!.hidden = !this.activeStats || !this.session.combat;
+    if (!this.activeStats || !this.session.combat) return;
+    this.statsPanel?.render({ stats: this.activeStats, combat: this.session.combat, events: this.session.combatEvents, selectedUnitId: this.selectedId });
+    this.lastStatsRender = performance.now();
+  }
+  private renderFeedback() {
+    const canvas = this.game.canvas.getBoundingClientRect(), host = document.getElementById('feedback-root')!.getBoundingClientRect();
+    const scale = canvas.width / this.scale.gameSize.width;
+    this.feedback?.render(performance.now(), new Map([...this.tokens].filter(([, token]) => token.visible).map(([id,token]) => [id,
+      { x: canvas.left - host.left + token.x * scale, y: canvas.top - host.top + token.y * scale, radius: 27 * scale }])));
+  }
   update(_time: number, delta: number) {
+    if (this.application && !this.application.frame(delta)) return;
+    this.renderFeedback();
+    if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
     const events = this.session.advance(delta);
     this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
     // Rewards may leave combat directly for a component choice (for example 2-7).
     // Render every phase exit, including choices, before waiting for more input.
     if (this.session.state.phase !== 'combat') {
-      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? 'Victory · 最终挑战完成' : 'Defeat · 对局结束'}，点击 New Match 重开` : '本轮结果已结算 · 点击 Continue 保留阵容并进入下一回合');
+      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开` : '本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
     }
   }
   private clearDrag() {
@@ -543,19 +619,16 @@ export class BoardScene extends Phaser.Scene {
           effect.lineBetween(from.x, from.y, to.x, to.y).strokeCircle(to.x, to.y, 31);
         }
         this.fadeEffect(effect, 500);
-        const label = this.add.text(from.x, from.y - 56, ability.kind === 's13' ? `施法 · ${ability.championId}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理', {
+        const label = this.add.text(from.x, from.y - 56, ability.kind === 's13' ? `施法 · ${UNIT_DEFINITIONS[ability.championId]?.name ?? ability.championId}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理', {
           fontSize: '12px', color: Phaser.Display.Color.IntegerToColor(color).rgba, backgroundColor: '#16232d',
         }).setOrigin(0.5).setDepth(20);
         this.fadeEffect(label, 700); this.renderedCastCount++;
-      } else if (event.type === 'packetDamage' || event.type === 'heal' || event.type === 'growth' || event.type === 'statusChanged' || event.type === 'shieldLayerChanged') {
+      } else if (event.type === 'growth' || event.type === 'statusChanged') {
         const target = combat.units.find(unit => unit.id === event.unitId);
         if (!target) continue;
         const p = this.layout.center(target.cell);
-        const text = event.type === 'packetDamage' ? `−${event.hpDamage}${event.absorbed ? ` / 盾 ${event.absorbed}` : ''}${event.critical ? ' !' : ''}`
-          : event.type === 'heal' ? `+${event.actual}${event.overheal ? ` (溢出 ${event.overheal})` : ''}`
-          : event.type === 'growth' ? `成长 +${event.amountBps / 100}%`
-          : event.type === 'statusChanged' ? `${event.status.kind} ${event.reason}` : `盾 ${event.layer.remaining}`;
-        const label = this.add.text(p.x, p.y - 32, text, { fontSize: '12px', color: event.type === 'heal' ? '#6ee7a4' : event.type === 'packetDamage' ? (event.damageType === 'physical' ? '#ffd0b5' : '#d5b1ff') : '#bcefff', backgroundColor: '#14212c' }).setOrigin(0.5).setDepth(21);
+        const text = event.type === 'growth' ? `成长 +${event.amountBps / 100}%` : `效果${event.reason === 'applied' ? '生效' : '结束'}`;
+        const label = this.add.text(p.x, p.y - 32, text, { fontSize: '12px', color: '#bcefff', backgroundColor: '#14212c' }).setOrigin(0.5).setDepth(21);
         label.setData('eventText', combatEventText(event)); this.fadeEffect(label, 600);
       } else if (event.type === 'targetChanged') {
         const target = event.after ? this.discs.get(event.after) : null;
@@ -600,7 +673,7 @@ export class BoardScene extends Phaser.Scene {
       ratio: meter.getData('ratio') ?? 0, width: meter.getData('width') ?? 0 }));
     const strategy = this.strategyPanel?.snapshot();
     Object.assign(bounds, strategy?.bounds ?? {});
-    return structuredClone({ state: this.session.state, strategy,
+    return structuredClone({ state: this.session.state, strategy, m6: this.application?.debug(), stats: this.activeStats,
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
