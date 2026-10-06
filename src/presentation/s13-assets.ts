@@ -32,9 +32,9 @@ export function buildPortraitTextures(scene: Phaser.Scene, size = 108): void {
     if (!texture) continue;
     const context = texture.getContext(), image = scene.textures.get(source).getSourceImage() as CanvasImageSource & { width: number; height: number };
     context.save(); context.beginPath(); context.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2); context.clip();
-    // TFT square icons frame the face in the upper-middle: crop slightly toward it.
-    const crop = Math.min(image.width, image.height) * 0.86;
-    context.drawImage(image, (image.width - crop) / 2, (image.height - crop) * 0.35, crop, crop, 0, 0, size, size);
+    // HUD square icons are already face-centred; draw them whole inside the circle.
+    const side = Math.min(image.width, image.height);
+    context.drawImage(image, (image.width - side) / 2, (image.height - side) / 2, side, side, 0, 0, size, size);
     context.restore(); texture.refresh();
   }
 }
@@ -43,4 +43,14 @@ export function buildPortraitTextures(scene: Phaser.Scene, size = 108): void {
 export function heroPortraitHtml(definitionId: string, size: number, fallback: string): string {
   const url = s13AssetUrl('champion', definitionId);
   return url ? `<img class="hero-portrait" src="${url}" width="${size}" height="${size}" alt="" draggable="false">` : fallback;
+}
+
+/** Repo trait ids → S13 client apiNames (the client keeps internal names for some classes). */
+export const TRAIT_API_NAMES: Readonly<Record<string, string>> = Object.freeze({
+  sentinel: 'TFT13_Titan', artillerist: 'TFT13_Martialist', sniper: 'TFT13_Sniper', watcher: 'TFT13_Watcher', sorcerer: 'TFT13_Sorcerer',
+});
+/** Small inline icon markup for DOM labels; empty string when the asset is not bundled. */
+export function s13IconHtml(kind: 'trait' | 'item', id: string, size: number, className: string): string {
+  const url = s13AssetUrl(kind, kind === 'trait' ? TRAIT_API_NAMES[id] ?? id : id);
+  return url ? `<img class="${className}" src="${url}" width="${size}" height="${size}" alt="" draggable="false">` : '';
 }

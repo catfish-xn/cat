@@ -1,7 +1,7 @@
 [
   {
     "viewport": "desktop-1440x1000",
-    "interactiveMs": 938,
+    "interactiveMs": 1817,
     "errors": [],
     "steps": {
       "startup": {
@@ -50,7 +50,7 @@
   },
   {
     "viewport": "desktop-1440x600",
-    "interactiveMs": 2899,
+    "interactiveMs": 2925,
     "errors": [],
     "steps": {
       "startup": {
@@ -99,7 +99,7 @@
   },
   {
     "viewport": "phone-390x844",
-    "interactiveMs": 2787,
+    "interactiveMs": 2898,
     "errors": [],
     "steps": {
       "startup": {
@@ -148,7 +148,7 @@
   },
   {
     "viewport": "phone-844x390",
-    "interactiveMs": 2873,
+    "interactiveMs": 2940,
     "errors": [],
     "steps": {
       "startup": {
@@ -197,7 +197,7 @@
   },
   {
     "viewport": "phone-360x640",
-    "interactiveMs": 2650,
+    "interactiveMs": 2745,
     "errors": [],
     "steps": {
       "startup": {

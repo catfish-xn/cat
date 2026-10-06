@@ -19,7 +19,7 @@ import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
-import { heroPortraitHtml } from '../presentation/s13-assets';
+import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -315,7 +315,9 @@ export class StrategyPanel {
     for (const snapshot of deriveTraits(state.preparation, 'player')) {
       const definition = TRAIT_DEFINITIONS[snapshot.traitId], next = definition.tiers.find(tier => tier.threshold > snapshot.count);
       const row = element('article', '', snapshot.tier > 0 ? 'trait active' : 'trait'); row.dataset.debug = `trait:${snapshot.traitId}`;
-      row.append(element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`));
+      const title = element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`);
+      title.insertAdjacentHTML('afterbegin', s13IconHtml('trait', snapshot.traitId, 20, 'trait-icon'));
+      row.append(title);
       row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => displayUnitName(id)).join('、') || '无'}`));
       row.append(element('p', definition.tiers.map(tier => describeTraitTier(definition, tier)).join(' / ')));
       list.append(row);
@@ -329,6 +331,7 @@ export class StrategyPanel {
       const definition = ITEM_DEFINITIONS[item.definitionId];
       const button = this.button(`item:${item.id}`, `${definition.name}\n${definition.effects.map(describeEffect).join('；')}`, () => {}, !ready);
       button.setAttribute('aria-pressed', String(this.selectedItems.includes(item.id))); button.classList.add('item-card');
+      button.insertAdjacentHTML('afterbegin', s13IconHtml('item', item.definitionId, 28, 'item-icon'));
       button.dataset.itemId = item.id; button.title = `${item.id} · ${definition.id}`;
       button.addEventListener('pointerdown', event => {
         if (!ready || event.button !== 0) return;
@@ -363,6 +366,7 @@ export class StrategyPanel {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
           if (chosen) this.actions.equip(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
         }, !ready);
+        if (item) button.insertAdjacentHTML('afterbegin', s13IconHtml('item', item.definitionId, 22, 'item-icon'));
         button.dataset.equipUnit = unit.id; button.dataset.equipSlot = String(slot); slots.append(button);
       }
       row.append(slots); section.append(row);
