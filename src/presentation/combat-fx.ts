@@ -12,6 +12,7 @@ import { THEME, toNumber } from './theme';
 import type { UnitView } from './unit-view';
 import { reducedMotion } from './preferences';
 import { planFx } from './fx-plan';
+import { placeLabel, type LabelRect } from './label-layout';
 export { planFx, type FxSpec } from './fx-plan';
 
 type Point = { x: number; y: number };
@@ -29,7 +30,22 @@ export interface CombatFxHost {
 /** Phaser backend for the live board. */
 export class CombatFx {
   casts = 0;
+  private labels: { rect: LabelRect; text: Phaser.GameObjects.Text }[] = [];
   constructor(private readonly host: CombatFxHost) {}
+
+  /** Live label rects (board logical coordinates) for the numeric floats to avoid. */
+  labelRects(): LabelRect[] {
+    this.labels = this.labels.filter(label => label.text.active);
+    return this.labels.map(label => label.rect);
+  }
+
+  /** Places a created label in a free slot near `anchor`, or destroys it when the area is full. */
+  private place(text: Phaser.GameObjects.Text, anchor: Point, dy: number, duration: number): void {
+    const { width, height } = this.host.scene.scale;
+    const rect = placeLabel(anchor, text.width, text.height, dy, this.labelRects(), { width, height });
+    if (!rect) { text.destroy(); return; }
+    text.setPosition(rect.x, rect.y); this.labels.push({ rect, text }); this.host.fade(text, duration);
+  }
 
   show(events: readonly CombatEvent[], combat: CombatState): void {
     const { scene } = this.host, add = scene.add, at = (cell: HexCell) => this.host.center(cell);
@@ -52,9 +68,9 @@ export class CombatFx {
         const effect = add.graphics().setDepth(20).lineStyle(5, spec.color, 0.95).strokeCircle(from.x, from.y, 34).lineStyle(2, 0xffffff, 0.8).strokeCircle(from.x, from.y, 38);
         for (const cell of spec.targets) { const to = at(cell); effect.lineStyle(3, spec.color, 0.85).lineBetween(from.x, from.y, to.x, to.y).strokeCircle(to.x, to.y, 30); }
         this.host.fade(effect, spec.duration - 100);
-        const label = add.text(from.x, from.y - 58, spec.label, { fontSize: '13px', fontStyle: 'bold', color: '#ffffff',
+        const label = add.text(from.x, from.y, spec.label, { fontSize: '13px', fontStyle: 'bold', color: '#ffffff',
           backgroundColor: Phaser.Display.Color.IntegerToColor(spec.color).rgba, padding: { x: 4, y: 1 }, resolution: 2 }).setOrigin(0.5).setDepth(22);
-        this.host.fade(label, spec.duration + 100); this.casts++;
+        this.place(label, from, -58, spec.duration + 100); this.casts++;
       } else if (spec.kind === 'ring') {
         const p = at(spec.at);
         this.host.fade(add.graphics().setDepth(20).lineStyle(4, spec.color, 0.95).strokeCircle(p.x, p.y, spec.radius), spec.duration);
@@ -64,7 +80,7 @@ export class CombatFx {
         this.host.fade(add.text(p.x, p.y, '×', { fontSize: '40px', color: C.danger, fontStyle: 'bold', resolution: 2 }).setOrigin(0.5).setDepth(21), spec.duration);
       } else if (spec.kind === 'label') {
         const p = at(spec.at);
-        this.host.fade(add.text(p.x, p.y + spec.dy, spec.text, { fontSize: '12px', color: spec.color, backgroundColor: spec.background, resolution: 2 }).setOrigin(0.5).setDepth(21), spec.duration);
+        this.place(add.text(p.x, p.y, spec.text, { fontSize: '12px', color: spec.color, backgroundColor: spec.background, resolution: 2 }).setOrigin(0.5).setDepth(21), p, spec.dy, spec.duration);
       } else if (spec.kind === 'target') {
         this.host.view(spec.unitId)?.setRing('target', spec.team);
       } else if (spec.kind === 'flash') {

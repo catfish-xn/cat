@@ -6,6 +6,7 @@ import { BOARD_LAYOUT } from './layout-config';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { s13AssetUrl } from '../presentation/s13-assets';
 import { THEME, costColor } from '../presentation/theme';
+import { canvasLabelRects as labelRects, placeLabel, type LabelRect } from '../presentation/label-layout';
 
 const C = THEME.color;
 const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d'];
@@ -21,7 +22,7 @@ const portraits = new Map<string, HTMLImageElement>();
 export class ReplayView {
   readonly canvas = document.createElement('canvas');
   private last: { state: CombatState; selected: string | null } | null = null;
-  private effects: { spec: FxSpec; start: number }[] = [];
+  private effects: { spec: FxSpec; start: number; rect?: LabelRect | null }[] = [];
   private consumed = 0;
   private combatId: string | undefined;
   /** Read-only counters for acceptance checks. */
@@ -117,7 +118,21 @@ export class ReplayView {
   private drawEffects(ctx: CanvasRenderingContext2D, layout: HexLayout, state: CombatState, now: number) {
     const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
     this.effects = this.effects.filter(({ spec, start }) => now - start < ('duration' in spec ? spec.duration : 160));
-    for (const { spec, start } of this.effects) {
+    // Each label takes a free slot on its first frame and keeps it until it fades (same rule as the live board).
+    const taken: LabelRect[] = [];
+    for (const effect of this.effects) {
+      const { spec } = effect;
+      if (spec.kind !== 'cast' && spec.kind !== 'label') continue;
+      if (effect.rect === undefined) {
+        const text = spec.kind === 'cast' ? spec.label : spec.text;
+        ctx.font = spec.kind === 'cast' ? 'bold 13px system-ui, sans-serif' : '12px system-ui, sans-serif';
+        const w = ctx.measureText(text).width + (spec.kind === 'cast' ? 8 : 6), h = spec.kind === 'cast' ? 17 : 16;
+        effect.rect = placeLabel(layout.center(spec.at), w, h, spec.kind === 'cast' ? -58 : spec.dy, taken, { width: 480, height: 520 });
+      }
+      if (effect.rect) taken.push(effect.rect);
+    }
+    labelRects.set(this.canvas, taken);
+    for (const { spec, start, rect } of this.effects) {
       const age = now - start, life = 'duration' in spec ? spec.duration : 160, alpha = Math.max(0, 1 - age / life);
       ctx.save(); ctx.globalAlpha = alpha; ctx.lineCap = 'round';
       if (spec.kind === 'slash') {
@@ -134,19 +149,20 @@ export class ReplayView {
         const from = layout.center(spec.at);
         ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(from.x, from.y, 34, 0, Math.PI * 2); ctx.stroke();
         for (const cell of spec.targets) { const to = layout.center(cell); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y); ctx.stroke(); ctx.beginPath(); ctx.arc(to.x, to.y, 30, 0, Math.PI * 2); ctx.stroke(); }
-        ctx.font = 'bold 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        const width = ctx.measureText(spec.label).width + 8;
-        ctx.fillStyle = hex(spec.color); ctx.fillRect(from.x - width / 2, from.y - 66, width, 17); ctx.fillStyle = '#ffffff'; ctx.fillText(spec.label, from.x, from.y - 57);
+        if (rect) {
+          ctx.font = 'bold 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = hex(spec.color); ctx.fillRect(rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h); ctx.fillStyle = '#ffffff'; ctx.fillText(spec.label, rect.x, rect.y + 1);
+        }
       } else if (spec.kind === 'ring') {
         const p = layout.center(spec.at); ctx.strokeStyle = hex(spec.color); ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(p.x, p.y, spec.radius, 0, Math.PI * 2); ctx.stroke();
       } else if (spec.kind === 'death') {
         const p = layout.center(spec.at); ctx.strokeStyle = C.danger; ctx.fillStyle = C.danger; ctx.lineWidth = 3;
         ctx.beginPath(); ctx.arc(p.x, p.y, 26, 0, Math.PI * 2); ctx.stroke();
         ctx.font = 'bold 40px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('×', p.x, p.y);
-      } else if (spec.kind === 'label') {
-        const p = layout.center(spec.at); ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        const width = ctx.measureText(spec.text).width + 6; ctx.fillStyle = spec.background; ctx.fillRect(p.x - width / 2, p.y + spec.dy - 8, width, 16);
-        ctx.fillStyle = spec.color; ctx.fillText(spec.text, p.x, p.y + spec.dy);
+      } else if (spec.kind === 'label' && rect) {
+        ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = spec.background; ctx.fillRect(rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h);
+        ctx.fillStyle = spec.color; ctx.fillText(spec.text, rect.x, rect.y);
       } else if (spec.kind === 'flash' || spec.kind === 'target') {
         const unit = state.units.find(value => value.id === spec.unitId);
         if (unit?.alive) {
@@ -157,5 +173,5 @@ export class ReplayView {
       ctx.restore();
     }
   }
-  dispose() { this.disposed = true; this.last = null; this.effects = []; this.canvas.remove(); }
+  dispose() { this.disposed = true; this.last = null; this.effects = []; labelRects.delete(this.canvas); this.canvas.remove(); }
 }

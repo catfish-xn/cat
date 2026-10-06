@@ -183,3 +183,22 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .help-dialog ul { margin: 0; padding-left: 20px; font-size: var(--font-body); line-height: 1.6; }
 .help-dialog > button[data-debug="help-reduced-motion"] { margin-top: 10px; }
 .hero-fallback { display: block; line-height: 0; }
+/* M7: short portrait phones (e.g. 360×640) — board, HUD, actions and the shop share the first screen.
+   The board shrinks to the space left over (never below 288px wide, i.e. pieces ≥32 CSS px). */
+@media (max-width: 700px) and (max-height: 700px) and (orientation: portrait) {
+  #app { padding: 6px 10px; gap: 6px; }
+  #board-root { width: clamp(288px, calc((100dvh - 318px) * 480 / 520), 100%); margin: 0 auto; }
+  #strategy-root { padding: 8px; }
+  .hud-bar { gap: 4px; margin-bottom: 6px; }
+  .hud-title h2 { font-size: 18px !important; }
+  .hud-hint { display: none; }
+  .hud-chip { padding: 2px 5px; }
+  .hud-chip strong { font-size: 14px; }
+  .action-bar { gap: 6px; margin-bottom: 6px; }
+  .primary-action { min-height: 44px; font-size: 16px !important; }
+  .shop-panel { padding-top: 0; }
+  .shop-card { min-height: 66px; padding-top: 4px !important; }
+  .shop-card .shop-trait { display: none; }
+  .shop-emblem img, .shop-emblem svg { width: 30px; height: 30px; }
+  .shop-odds { margin: 3px 0 !important; }
+}

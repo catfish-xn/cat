@@ -67,10 +67,14 @@ export const HERO_S13_TRAITS: Readonly<Record<string, readonly string[]>> = Obje
   scar: ['Firelight', 'Watcher'], ezreal: ['Academy', 'Rebel', 'Artillerist'], loris: ['Enforcer', 'Sentinel'], nami: ['Emissary', 'Sorcerer'],
   corki: ['Scrap', 'Artillerist'], garen: ['Emissary', 'Watcher'], zoe: ['Rebel', 'Sorcerer'], caitlyn: ['Enforcer', 'Sniper'],
 });
-/** Chinese client names (CN media coverage of S13 双城之战2). */
+/**
+ * Chinese client names for S13 双城之战2. Checked 2026-10-06 against the official 国服 14.23/14.24
+ * TFT patch notes on lol.qq.com (e.g. 【铁血征服者】) and CN coverage of in-client trait text.
+ * The client string table (CommunityDragon zh_cn.json) was unreachable at the time; recheck when it is.
+ */
 export const S13_TRAIT_ZH: Readonly<Record<string, string>> = Object.freeze({
   Sentinel: '哨兵', Artillerist: '炮手', Sniper: '狙神', Watcher: '监察', Sorcerer: '法师',
-  Academy: '皮城学院', Automata: '海克斯机械', Conqueror: '征服者', Emissary: '外交官', Enforcer: '执法官', Experiment: '试验品',
+  Academy: '皮城学院', Automata: '海克斯机械', Conqueror: '铁血征服者', Emissary: '外交官', Enforcer: '执法官', Experiment: '试验品',
   Family: '家人', Firelight: '野火帮', Rebel: '蓝发小队', Scrap: '极客', 'Pit Fighter': '搏击手', Visionary: '先知',
 });
 const OPEN_TRAITS = new Set(['Sentinel', 'Artillerist', 'Sniper', 'Watcher', 'Sorcerer']);

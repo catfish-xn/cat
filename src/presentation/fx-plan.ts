@@ -60,7 +60,7 @@ export function planFx(events: readonly CombatEvent[], combat: CombatState, redu
       const target = unit(event.unitId);
       if (!target) continue;
       const text = event.type === 'growth' ? `成长 +${event.amountBps / 100}%` : `效果${event.reason === 'applied' ? '生效' : '结束'}`;
-      specs.push({ kind: 'label', at: target.cell, text, dy: -32, color: C.shield, background: '#14212c', duration: 600 });
+      specs.push({ kind: 'label', at: target.cell, text, dy: 46, color: C.shield, background: '#14212c', duration: 600 });
     } else if (event.type === 'targetChanged') {
       const target = unit(event.after);
       if (target) specs.push({ kind: 'target', unitId: target.id, team: target.team });
