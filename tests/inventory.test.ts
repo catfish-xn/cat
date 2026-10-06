@@ -14,20 +14,19 @@ const item = (id: string, definitionId: string, unitId?: string, slot = 0): Item
   id, definitionId, location: unitId === undefined ? { kind: 'inventory' } : { kind: 'unit', unitId, slot },
 });
 const unit = (id: string, team: Unit['team'], onBoard: boolean): Unit => ({
-  id, team, definitionId: 'sentinel', starLevel: 1,
+  id, team, definitionId: 'irelia', starLevel: 1,
   location: onBoard ? { kind: 'board', cell: { row: team === 'player' ? 4 : 1, col: 2 } } : { kind: 'bench', slot: 0 },
 });
 const preparation: GameState = freeze({
-  board: DEFAULT_BOARD, benchSize: 7,
+  board: DEFAULT_BOARD, benchSize: 9,
   units: [unit('board-unit', 'player', true), unit('bench-unit', 'player', false), unit('enemy-unit', 'enemy', true)],
 });
 
+// Independent transcription of M5_RULES R5; production recipes are only the actual under test.
 const recipes = [
-  ['blade', 'blade', 'twin-edge'], ['blade', 'rod', 'spell-edge'], ['blade', 'vest', 'guard-edge'],
-  ['blade', 'tear', 'pulse-edge'], ['blade', 'belt', 'heavy-edge'], ['rod', 'rod', 'focus-rod'],
-  ['rod', 'vest', 'ward-rod'], ['rod', 'tear', 'echo-rod'], ['rod', 'belt', 'vital-rod'],
-  ['vest', 'vest', 'fortress'], ['vest', 'tear', 'dawn-ward'], ['vest', 'belt', 'heavy-plate'],
-  ['tear', 'tear', 'flowing-tear'], ['tear', 'belt', 'reservoir'], ['belt', 'belt', 'giant-belt'],
+  ['bow', 'rod', 'rageblade'], ['sword', 'sword', 'deathblade'], ['sword', 'tear', 'shojin'],
+  ['rod', 'tear', 'archangel'], ['rod', 'rod', 'deathcap'], ['belt', 'belt', 'warmog'],
+  ['cloak', 'cloak', 'dragons-claw'], ['vest', 'cloak', 'gargoyle'], ['sword', 'rod', 'gunblade'],
 ] as const;
 
 describe('atomic inventory composition', () => {
@@ -49,11 +48,29 @@ describe('atomic inventory composition', () => {
   it('accounts for every authored unordered recipe exactly once', () => {
     const authored = Object.values(ITEM_DEFINITIONS).filter(definition => definition.kind === 'completed');
     expect(authored.map(definition => definition.id).sort()).toEqual(recipes.map(([, , id]) => id).sort());
-    expect(new Set(recipes.map(([a, b]) => [a, b].sort().join('+'))).size).toBe(15);
+    expect(new Set(recipes.map(([a, b]) => [a, b].sort().join('+'))).size).toBe(9);
+    expect(Object.values(ITEM_DEFINITIONS).filter(definition => definition.kind === 'component').map(value => value.id).sort())
+      .toEqual(['belt', 'bow', 'cloak', 'rod', 'sword', 'tear', 'vest']);
+  });
+
+  it('rejects all nineteen unopened component pairs in both orders without changing resources', () => {
+    const components = ['sword', 'bow', 'rod', 'tear', 'vest', 'cloak', 'belt'];
+    const openPairs = new Set(recipes.map(([a, b]) => [a, b].sort().join('+')));
+    let unopened = 0;
+    for (let i = 0; i < components.length; i++) for (let j = i; j < components.length; j++) {
+      const a = components[i], b = components[j];
+      if (openPairs.has([a, b].sort().join('+'))) continue;
+      unopened++;
+      const items = freeze([item('item-1', a), item('item-2', b)]), before = JSON.stringify(items);
+      expect(planCombine(items, 3, 'item-1', 'item-2')).toEqual({ ok: false, reason: 'invalid-recipe' });
+      expect(planCombine(items, 3, 'item-2', 'item-1')).toEqual({ ok: false, reason: 'invalid-recipe' });
+      expect(JSON.stringify(items)).toBe(before);
+    }
+    expect(unopened).toBe(19);
   });
 
   it('rejects same instance, unknown/stale instances, equipped components and completed materials atomically', () => {
-    const items = freeze([item('item-1', 'blade'), item('item-2', 'rod'), item('item-3', 'vest', 'board-unit'), item('item-4', 'spell-edge')]);
+    const items = freeze([item('item-1', 'sword'), item('item-2', 'rod'), item('item-3', 'vest', 'board-unit'), item('item-4', 'gunblade')]);
     const before = JSON.stringify(items);
     for (const [a, b, reason] of [
       ['item-1', 'item-1', 'invalid-recipe'], ['missing', 'item-2', 'unknown-item'],
@@ -71,7 +88,7 @@ describe('atomic inventory composition', () => {
   });
 
   it('rejects corrupt content references and serials instead of manufacturing duplicate identities', () => {
-    const items = freeze([item('item-1', 'blade'), item('item-2', 'rod')]);
+    const items = freeze([item('item-1', 'sword'), item('item-2', 'rod')]);
     for (const serial of [0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER]) {
       expect(() => planCombine(items, serial, 'item-1', 'item-2')).toThrow('Invalid next item serial');
     }
@@ -82,7 +99,7 @@ describe('atomic inventory composition', () => {
 
 describe('equipment and sale return plans', () => {
   it.each(['board-unit', 'bench-unit'])('equips components and repeated completed items into all three slots on %s', unitId => {
-    let items: readonly ItemInstance[] = freeze([item('item-1', 'blade'), item('item-2', 'twin-edge'), item('item-3', 'twin-edge'), item('item-4', 'vest')]);
+    let items: readonly ItemInstance[] = freeze([item('item-1', 'sword'), item('item-2', 'deathblade'), item('item-3', 'deathblade'), item('item-4', 'vest')]);
     for (let slot = 0; slot < 3; slot++) {
       const source = items, before = JSON.stringify(source), itemId = `item-${slot + 1}`;
       const result = planEquip(freeze(source), preparation, itemId, unitId, slot);
@@ -100,7 +117,7 @@ describe('equipment and sale return plans', () => {
   });
 
   it('rejects invalid targets, slots and duplicate pointer releases without moving an item', () => {
-    const items = freeze([item('item-1', 'blade'), item('item-2', 'rod', 'board-unit', 1)]);
+    const items = freeze([item('item-1', 'sword'), item('item-2', 'rod', 'board-unit', 1)]);
     const before = JSON.stringify(items);
     for (const slot of [-1, 3, 0.5, Number.NaN, Infinity, '0' as unknown as number]) {
       expect(planEquip(items, preparation, 'item-1', 'board-unit', slot)).toEqual({ ok: false, reason: 'invalid-slot' });
@@ -118,8 +135,8 @@ describe('equipment and sale return plans', () => {
 
   it('returns all sold-unit equipment with stable IDs into an arbitrarily large inventory', () => {
     const existing = Array.from({ length: 100 }, (_, i) => item(`item-${i + 10}`, 'belt'));
-    const items = freeze([...existing, item('item-3', 'spell-edge', 'board-unit', 2), item('item-1', 'blade', 'board-unit', 0),
-      item('item-2', 'blade', 'board-unit', 1), item('item-4', 'vest', 'bench-unit', 2)]);
+    const items = freeze([...existing, item('item-3', 'gunblade', 'board-unit', 2), item('item-1', 'sword', 'board-unit', 0),
+      item('item-2', 'sword', 'board-unit', 1), item('item-4', 'vest', 'bench-unit', 2)]);
     const before = JSON.stringify(items), returned = returnUnitItems(items, 'board-unit');
     expect(returned.items).toHaveLength(items.length);
     expect(returned.items.filter(value => value.location.kind === 'inventory')).toHaveLength(103);
@@ -132,7 +149,7 @@ describe('equipment and sale return plans', () => {
   });
 
   it('preserves behavior after JSON restoration', () => {
-    const items = [item('item-1', 'blade'), item('item-2', 'rod')];
+    const items = [item('item-1', 'sword'), item('item-2', 'rod')];
     const original = planCombine(items, 3, 'item-1', 'item-2');
     expect(planCombine(JSON.parse(JSON.stringify(items)), 3, 'item-1', 'item-2')).toEqual(original);
     if (!original.ok) throw new Error(original.reason);

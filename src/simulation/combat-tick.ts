@@ -6,6 +6,7 @@ import { compareIds, eliminationResult, MOVE_INTERVAL_TICKS, type CombatEvent, t
 import { planAbility, type AbilityIntent } from './combat-abilities';
 import { aggregateDamagePackets } from './combat-damage';
 import type { DamagePacket } from './ability-types';
+import { advanceS13Tick } from './combat-s13';
 
 type WorkingUnit = { -readonly [Key in keyof CombatUnit]: CombatUnit[Key] };
 const cellKey = (cell: HexCell): string => `${cell.col},${cell.row}`;
@@ -34,6 +35,7 @@ function nextStep(board: Board, unit: CombatUnit, target: CombatUnit, occupied: 
 }
 
 export function advanceCombatTick(state: CombatState): CombatStep {
+  if (state.units.some(unit => unit.ability.kind === 's13')) return advanceS13Tick(state);
   const tick = state.tick + 1;
   const events: CombatEvent[] = [];
   const units: WorkingUnit[] = state.units.map(unit => ({ ...structuredClone(unit), cell: { ...unit.cell }, ability: { ...unit.ability },

@@ -1,0 +1,3 @@
+const assert=require('node:assert/strict');
+const golden=require('./full-match-golden.json');
+module.exports=function assertGolden(route){const expected=golden.routes[route.summary.build];assert(expected,route.summary.build);for(const [key,value]of Object.entries(expected.versions))assert.deepEqual(route.initial[key],value,`golden ${key}: review explicit rule/version change`);assert.equal(route.initial.seed,expected.seed);assert.deepEqual(route.actions.map(a=>a.command),expected.commands,'frozen normal-input command transcript');assert.deepEqual(route.rounds.map(r=>({round:r.round,stateHash:r.stateHash,eventsHash:r.eventsHash})),expected.rounds,'frozen complete per-round state/event hashes');};

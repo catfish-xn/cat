@@ -6,6 +6,7 @@ export interface UnitDefinition {
   readonly cost: CostTier;
   readonly baseStats: { readonly health: number; readonly attack: number; readonly armor: number; readonly magicResist: number };
   readonly attackRange: number; readonly attackIntervalTicks: number;
+  readonly baseAttackSpeedBps?: number;
   readonly initialMana: number; readonly maxMana: number; readonly abilityId: string;
   readonly traits: readonly string[];
 }
@@ -14,6 +15,9 @@ export interface Unit { readonly id: string; readonly definitionId: string; read
 export interface ResolvedUnitStats {
   readonly health: number; readonly attack: number; readonly armor: number; readonly magicResist: number;
   readonly attackRange: number; readonly attackIntervalTicks: number;
+  /** Original attacks/second ×10000; static modifiers stay additive. */
+  readonly baseAttackSpeedBps?: number;
+  readonly attackSpeedBonusBps?: number;
   readonly initialMana: number; readonly maxMana: number; readonly abilityId: string;
 }
 export interface UnitUpgradedEvent {

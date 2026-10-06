@@ -1,37 +1,335 @@
 import type { ItemDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
-export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = freezeContent({
-  blade: { id: 'blade', name: '刃片', kind: 'component', effects: [{ kind: 'statFlat', stat: 'attackDamage', amount: 10 }] },
-  rod: { id: 'rod', name: '晶杆', kind: 'component', effects: [{ kind: 'statFlat', stat: 'abilityAmount', amount: 20 }] },
-  vest: { id: 'vest', name: '甲片', kind: 'component', effects: [{ kind: 'statFlat', stat: 'armor', amount: 15 }] },
-  tear: { id: 'tear', name: '流滴', kind: 'component', effects: [{ kind: 'statFlat', stat: 'initialMana', amount: 15 }] },
-  belt: { id: 'belt', name: '织带', kind: 'component', effects: [{ kind: 'statFlat', stat: 'maxHp', amount: 100 }] },
-  'twin-edge': { id: 'twin-edge', name: '双刃', kind: 'completed', recipe: ['blade', 'blade'], effects: [{ kind: 'statFlat', stat: 'attackDamage', amount: 30 }] },
-  'spell-edge': { id: 'spell-edge', name: '法刃', kind: 'completed', recipe: ['blade', 'rod'], effects: [
-    { kind: 'statFlat', stat: 'attackDamage', amount: 15 }, { kind: 'statFlat', stat: 'abilityAmount', amount: 30 }] },
-  'guard-edge': { id: 'guard-edge', name: '护刃', kind: 'completed', recipe: ['blade', 'vest'], effects: [
-    { kind: 'statFlat', stat: 'attackDamage', amount: 15 }, { kind: 'statFlat', stat: 'armor', amount: 20 }] },
-  'pulse-edge': { id: 'pulse-edge', name: '脉刃', kind: 'completed', recipe: ['blade', 'tear'], effects: [
-    { kind: 'statFlat', stat: 'attackDamage', amount: 10 }, { kind: 'trigger', hook: 'onAttack', everyN: 3, action: { kind: 'gainMana', amount: 15 } }] },
-  'heavy-edge': { id: 'heavy-edge', name: '重刃', kind: 'completed', recipe: ['blade', 'belt'], effects: [
-    { kind: 'statFlat', stat: 'attackDamage', amount: 15 }, { kind: 'statFlat', stat: 'maxHp', amount: 180 }] },
-  'focus-rod': { id: 'focus-rod', name: '聚焦杖', kind: 'completed', recipe: ['rod', 'rod'], effects: [{ kind: 'statPercentBps', stat: 'abilityAmount', bps: 6000 }] },
-  'ward-rod': { id: 'ward-rod', name: '庇护杖', kind: 'completed', recipe: ['rod', 'vest'], effects: [
-    { kind: 'statFlat', stat: 'armor', amount: 20 }, { kind: 'trigger', hook: 'onCast', everyN: 1, action: { kind: 'grantShield', amount: 120, durationTicks: 60 } }] },
-  'echo-rod': { id: 'echo-rod', name: '回声杖', kind: 'completed', recipe: ['rod', 'tear'], effects: [
-    { kind: 'trigger', hook: 'onCast', everyN: 1, action: { kind: 'dealDamage', amount: 70, damageType: 'magic' } }] },
-  'vital-rod': { id: 'vital-rod', name: '生机杖', kind: 'completed', recipe: ['rod', 'belt'], effects: [
-    { kind: 'statFlat', stat: 'maxHp', amount: 180 }, { kind: 'statFlat', stat: 'abilityAmount', amount: 30 }] },
-  fortress: { id: 'fortress', name: '堡垒', kind: 'completed', recipe: ['vest', 'vest'], effects: [
-    { kind: 'statFlat', stat: 'armor', amount: 45 }, { kind: 'statFlat', stat: 'magicResist', amount: 20 }] },
-  'dawn-ward': { id: 'dawn-ward', name: '晨曦屏障', kind: 'completed', recipe: ['vest', 'tear'], effects: [
-    { kind: 'trigger', hook: 'combatStart', everyN: 1, action: { kind: 'grantShield', amount: 200, durationTicks: 80 } }] },
-  'heavy-plate': { id: 'heavy-plate', name: '重甲', kind: 'completed', recipe: ['vest', 'belt'], effects: [
-    { kind: 'statFlat', stat: 'maxHp', amount: 240 }, { kind: 'statFlat', stat: 'armor', amount: 25 }] },
-  'flowing-tear': { id: 'flowing-tear', name: '流泉', kind: 'completed', recipe: ['tear', 'tear'], effects: [
-    { kind: 'statFlat', stat: 'initialMana', amount: 30 }, { kind: 'trigger', hook: 'onHpLoss', everyN: 1, action: { kind: 'gainMana', amount: 3 } }] },
-  reservoir: { id: 'reservoir', name: '蓄流池', kind: 'completed', recipe: ['tear', 'belt'], effects: [
-    { kind: 'statFlat', stat: 'maxHp', amount: 180 }, { kind: 'trigger', hook: 'onCast', everyN: 1, action: { kind: 'gainMana', amount: 10 } }] },
-  'giant-belt': { id: 'giant-belt', name: '巨人腰带', kind: 'completed', recipe: ['belt', 'belt'], effects: [{ kind: 'statFlat', stat: 'maxHp', amount: 500 }] },
+export const ITEM_DEFINITIONS: Readonly<Record<string,ItemDefinition>> = freezeContent({
+  "sword": {
+    "id": "sword",
+    "name": "暴风大剑",
+    "kind": "component",
+    "effects": [
+      {
+        "kind": "statPercentBps",
+        "stat": "attackDamage",
+        "bps": 1000
+      }
+    ]
+  },
+  "bow": {
+    "id": "bow",
+    "name": "反曲之弓",
+    "kind": "component",
+    "effects": [
+      {
+        "kind": "attackSpeedBps",
+        "bps": 1000
+      }
+    ]
+  },
+  "rod": {
+    "id": "rod",
+    "name": "无用大棒",
+    "kind": "component",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "abilityPower",
+        "amount": 10
+      }
+    ]
+  },
+  "tear": {
+    "id": "tear",
+    "name": "女神之泪",
+    "kind": "component",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "initialMana",
+        "amount": 15
+      }
+    ]
+  },
+  "vest": {
+    "id": "vest",
+    "name": "锁子甲",
+    "kind": "component",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "armor",
+        "amount": 20
+      }
+    ]
+  },
+  "cloak": {
+    "id": "cloak",
+    "name": "负极斗篷",
+    "kind": "component",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "magicResist",
+        "amount": 20
+      }
+    ]
+  },
+  "belt": {
+    "id": "belt",
+    "name": "巨人腰带",
+    "kind": "component",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "maxHp",
+        "amount": 150
+      }
+    ]
+  },
+  "rageblade": {
+    "id": "rageblade",
+    "name": "鬼索的狂暴之刃",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "abilityPower",
+        "amount": 10
+      },
+      {
+        "kind": "attackSpeedBps",
+        "bps": 1000
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "rageblade",
+        "values": {
+          "attackSpeedBps": 500
+        }
+      }
+    ],
+    "recipe": [
+      "bow",
+      "rod"
+    ]
+  },
+  "deathblade": {
+    "id": "deathblade",
+    "name": "死亡之刃",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statPercentBps",
+        "stat": "attackDamage",
+        "bps": 5500
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "damageAmp",
+        "values": {
+          "bps": 800
+        }
+      }
+    ],
+    "recipe": [
+      "sword",
+      "sword"
+    ]
+  },
+  "shojin": {
+    "id": "shojin",
+    "name": "朔极之矛",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statPercentBps",
+        "stat": "attackDamage",
+        "bps": 1500
+      },
+      {
+        "kind": "statFlat",
+        "stat": "abilityPower",
+        "amount": 15
+      },
+      {
+        "kind": "statFlat",
+        "stat": "initialMana",
+        "amount": 15
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "extraAttackMana",
+        "values": {
+          "amount": 5
+        }
+      }
+    ],
+    "recipe": [
+      "sword",
+      "tear"
+    ]
+  },
+  "archangel": {
+    "id": "archangel",
+    "name": "大天使之杖",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "abilityPower",
+        "amount": 20
+      },
+      {
+        "kind": "statFlat",
+        "stat": "initialMana",
+        "amount": 15
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "archangel",
+        "values": {
+          "periodTicks": 100,
+          "abilityPower": 30
+        }
+      }
+    ],
+    "recipe": [
+      "rod",
+      "tear"
+    ]
+  },
+  "deathcap": {
+    "id": "deathcap",
+    "name": "灭世者的死亡之帽",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "abilityPower",
+        "amount": 50
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "damageAmp",
+        "values": {
+          "bps": 1500
+        }
+      }
+    ],
+    "recipe": [
+      "rod",
+      "rod"
+    ]
+  },
+  "warmog": {
+    "id": "warmog",
+    "name": "狂徒铠甲",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "maxHp",
+        "amount": 600
+      },
+      {
+        "kind": "statPercentBps",
+        "stat": "maxHp",
+        "bps": 1200
+      }
+    ],
+    "recipe": [
+      "belt",
+      "belt"
+    ]
+  },
+  "dragons-claw": {
+    "id": "dragons-claw",
+    "name": "巨龙之爪",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "magicResist",
+        "amount": 75
+      },
+      {
+        "kind": "statPercentBps",
+        "stat": "maxHp",
+        "bps": 900
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "dragonClaw",
+        "values": {
+          "periodTicks": 40,
+          "healMaxHpBps": 250
+        }
+      }
+    ],
+    "recipe": [
+      "cloak",
+      "cloak"
+    ]
+  },
+  "gargoyle": {
+    "id": "gargoyle",
+    "name": "石像鬼石板甲",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statFlat",
+        "stat": "maxHp",
+        "amount": 100
+      },
+      {
+        "kind": "statFlat",
+        "stat": "armor",
+        "amount": 25
+      },
+      {
+        "kind": "statFlat",
+        "stat": "magicResist",
+        "amount": 25
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "gargoyle",
+        "values": {
+          "resistPerEnemy": 10
+        }
+      }
+    ],
+    "recipe": [
+      "vest",
+      "cloak"
+    ]
+  },
+  "gunblade": {
+    "id": "gunblade",
+    "name": "海克斯科技枪刃",
+    "kind": "completed",
+    "effects": [
+      {
+        "kind": "statPercentBps",
+        "stat": "attackDamage",
+        "bps": 2000
+      },
+      {
+        "kind": "statFlat",
+        "stat": "abilityPower",
+        "amount": 20
+      },
+      {
+        "kind": "mechanic",
+        "mechanic": "gunblade",
+        "values": {
+          "selfHealBps": 1500,
+          "allyHealBps": 2500
+        }
+      }
+    ],
+    "recipe": [
+      "sword",
+      "rod"
+    ]
+  }
 });
-export const COMPONENT_IDS: readonly string[] = Object.freeze(Object.keys(ITEM_DEFINITIONS).filter(id => ITEM_DEFINITIONS[id].kind === 'component').sort());
+export const COMPONENT_IDS: readonly string[] = Object.freeze(Object.keys(ITEM_DEFINITIONS).filter(id=>ITEM_DEFINITIONS[id].kind==='component').sort());

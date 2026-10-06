@@ -5,16 +5,26 @@ import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
 export type MatchEvent = CombatEvent | ((UnitUpgradedEvent | StrategyEvent | { readonly type: 'roundSettled'; readonly round: number }) & { readonly domain?: 'match'; readonly eventSeq?: number });
 export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased' };
-export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[] }
+export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[]; readonly locked?: boolean }
+export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: number }
+export type RoundKind = 'pvp' | 'pve' | 'supply';
+export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
-  readonly round: number; readonly result: CombatResult; readonly combatTicks: number;
+  readonly round: number; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
+  readonly settlementId: string; readonly roundKind: RoundKind;
+  readonly incomeBreakdown: { readonly base: number; readonly win: number; readonly interest: number; readonly streak: number };
+  readonly interestBasis: number; readonly streakBefore: Streak; readonly streakAfter: Streak; readonly xpRequested: number;
   readonly income: number; readonly goldBefore: number; readonly goldAfter: number;
   readonly xpAwarded: number; readonly levelBefore: number; readonly levelAfter: number;
   readonly xpBefore: number; readonly xpAfter: number; readonly hpBefore: number; readonly hpAfter: number;
   readonly baseDamage: number; readonly survivingEnemyCount: number; readonly playerDamage: number; readonly hpLost: number;
 }
 export interface MatchBase {
-  readonly schemaVersion: 4; readonly rulesVersion: 'm4-v1'; readonly contentVersion: 'm4-slice-v1'; readonly contentDigest: string;
+  readonly schemaVersion: 5; readonly rulesVersion: 'm5-14.24b-v1'; readonly contentVersion: 's13-14.24b-slice-v1'; readonly contentDigest: string;
+  readonly commandProtocolVersion: 2; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
+  readonly roundDefinitionId: string; readonly streak: Streak; readonly outcome: 'victory' | 'defeat' | null;
+  readonly battleSeedRngState: number; readonly persistentGrowth: readonly PersistentGrowth[];
+  readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number };
   readonly items: readonly ItemInstance[]; readonly nextItemSerial: number; readonly augments: readonly OwnedAugment[];
   readonly anomalyBinding: AnomalyBinding | null; readonly pendingChoice: PendingChoice | null;
   readonly scheduleReceipts: readonly ScheduleReceipt[]; readonly choiceRngState: number; readonly rewardRngState: number; readonly nextMatchEventSeq: number;
@@ -25,9 +35,10 @@ export interface MatchBase {
 export type RunningCombat = CombatState & { readonly status: 'running'; readonly result: null };
 export type FinishedCombat = CombatState & { readonly status: 'finished'; readonly result: CombatResult };
 export type MatchState = MatchBase & (
-  | { readonly phase: 'preparation' | 'choice'; readonly combat: null }
+  | { readonly phase: 'preparation'; readonly combat: null }
+  | { readonly phase: 'choice'; readonly combat: FinishedCombat | null }
   | { readonly phase: 'combat'; readonly combat: RunningCombat }
-  | { readonly phase: 'settlement' | 'gameOver'; readonly combat: FinishedCombat }
+  | { readonly phase: 'settlement' | 'gameOver'; readonly combat: FinishedCombat | null }
 );
 export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'

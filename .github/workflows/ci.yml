@@ -1,38 +1,141 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Run every workload three times to remeasure the F3 budget
+        type: boolean
+        default: false
+env:
+  M5_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 permissions:
   contents: read
 jobs:
   test-and-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
-  chromium-match:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    name: test-and-build-sample${{ matrix.sample }}
     strategy:
       fail-fast: false
       matrix:
-        mode: [browser, preview]
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    env:
+      M5_JOB_KEY: test-and-build-sample${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22 # Three-sample measured budget; docs/evidence/M5_CI_BUDGET.json.
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run build
-      - run: npm run test:${{ matrix.mode }}
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs tests npm test
+      - run: node scripts/ci-m5-step.cjs build npm run build
+      - run: node scripts/ci-m5-step.cjs headless npm run test:headless
+      - run: M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: m4-chromium-${{ matrix.mode }}-${{ github.sha }}
+          name: m5-headless-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
+  chromium-match:
+    name: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
+    env:
+      M5_JOB_KEY: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28 # Maximum measured budget across six browser workloads.
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [dev, preview]
+        build: [cannon, sniper, mage]
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - run: node scripts/ci-m5-step.cjs build npm run build
+      - name: Normal-time complete route
+        env:
+          MODE: ${{ matrix.mode }}
+          BUILD: ${{ matrix.build }}
+        run: |
+          args=()
+          if [ "$MODE" = preview ]; then args+=(--preview); fi
+          node scripts/ci-m5-step.cjs route node scripts/verify-m5-browser.cjs "${args[@]}" --build="$BUILD"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/
+  chromium-input:
+    name: input-${{ matrix.mode }}-sample${{ matrix.sample }}
+    env:
+      M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32 # Includes native input and a normal-time touch route.
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [dev, preview]
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - run: node scripts/ci-m5-step.cjs build npm run build
+      - name: Native input and normal-time touch route
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          args=()
+          if [ "$MODE" = preview ]; then args+=(--preview); fi
+          node scripts/ci-m5-step.cjs input node scripts/verify-m5-input.cjs "${args[@]}"
+          node scripts/ci-m5-step.cjs touch-route node scripts/verify-m5-browser.cjs "${args[@]}" --build=cannon --touch
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/
+  compare-evidence:
+    name: compare-evidence-sample${{ matrix.sample }}
+    needs: [test-and-build, chromium-match, chromium-input]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6 # Three measured comparison jobs, including artifact transfer.
+    strategy:
+      matrix:
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: m5-*-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          merge-multiple: true
+          path: artifacts/
+      - run: node scripts/compare-m5-evidence.cjs --final
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-comparison-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/m5-cross-mode-comparison.json

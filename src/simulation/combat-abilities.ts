@@ -2,6 +2,7 @@ import { hexDistance } from './board';
 import { compareIds, type CombatUnit } from './combat-types';
 import type { AbilityDefinition, DamagePacket, ResolvedAbility } from './ability-types';
 import type { StarLevel } from './unit-types';
+import { S13_ABILITY_DATA } from './content/abilities';
 
 const definitions: Record<string, AbilityDefinition> = {
   'sentinel-guard': { id: 'sentinel-guard', kind: 'selfShield', amountByStar: [220, 400, 720], durationTicks: 60 },
@@ -41,6 +42,13 @@ validateAbilityDefinitions();
 
 /** Copy only resolved numbers into battle state, never content-table objects or callbacks. */
 export function resolveAbility(abilityId: string, starLevel: StarLevel): ResolvedAbility {
+  if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid star level');
+  if (abilityId === 'neutral-attack') return { id: abilityId, amount: 0, kind: 's13', championId: 'neutral', variables: {} };
+  if (Object.hasOwn(S13_ABILITY_DATA, abilityId)) {
+    const definition = S13_ABILITY_DATA[abilityId];
+    return { id: abilityId, amount: 0, kind: 's13', championId: definition.championId,
+      variables: Object.fromEntries(Object.entries(definition.variables).map(([key, values]) => [key, Math.round(values[starLevel - 1] * 10000)])) };
+  }
   const definition = ABILITY_DEFINITIONS[abilityId];
   if (!definition) throw new Error(`Unknown ability: ${abilityId}`);
   if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid star level');
@@ -60,6 +68,7 @@ export interface AbilityIntent {
 export function planAbility(unit: CombatUnit, target: CombatUnit | undefined, units: readonly CombatUnit[]): AbilityIntent | undefined {
   if (!unit.alive || !target || unit.mana < unit.maxMana) return undefined;
   const ability = unit.ability;
+  if (ability.kind === 's13') return undefined;
   if (ability.kind === 'selfShield') {
     return { targetIds: [unit.id], packets: [], shield: { unitId: unit.id, amount: ability.amount, durationTicks: ability.durationTicks } };
   }

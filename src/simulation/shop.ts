@@ -18,5 +18,5 @@ export function generateShop(rngState: number, generation: number, level: number
     const catalog = SHOP_CATALOG_BY_COST[(tier + 1) as CostTier];
     slots.push({ status: 'available', definitionId: catalog[Math.floor(unitDraw.word * catalog.length / 4294967296)] });
   }
-  return { shop: { generation, slots }, rngState };
+  return { shop: { generation, slots, locked: false }, rngState };
 }
