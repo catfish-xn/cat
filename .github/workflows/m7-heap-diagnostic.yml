@@ -1,0 +1,50 @@
+name: M7 heap diagnosis (not acceptance)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: heap-${{ matrix.revision }}-${{ matrix.mode }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        revision: [m6, m7]
+        mode: [dev, preview]
+        include:
+          - revision: m6
+            ref: 631c131f1f2fd387c873f0fd8b5a238bca79dbe0
+          - revision: m7
+            ref: 111e9f8305ab4a7da8e67bd7f96a2318cabe5df0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Original two-warmup, thirty-cycle probe with snapshots
+        env:
+          MODE: ${{ matrix.mode }}
+          M6_HEAP_DIAGNOSTICS: '1'
+          M5_EVIDENCE_DIR: artifacts/heap
+        run: |
+          args=()
+          if [ "$MODE" = preview ]; then args+=(--preview); fi
+          node scripts/verify-m5-browser.cjs "${args[@]}" --build=cannon --m6-f2
+      # Snapshot collection perturbs the heap. These artifacts diagnose failures;
+      # the original 1 MiB assertion remains and this run cannot certify acceptance.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heap-${{ matrix.revision }}-${{ matrix.mode }}
+          path: artifacts/

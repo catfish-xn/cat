@@ -175,14 +175,18 @@ async function firstBattle(browser, reduced) {
     for (let i = 0; i < 600; i++) {
       const sample = await replayPage.evaluate(() => ({ replay: window.__CAT_DEBUG__.read().m6.replay, floats: document.querySelectorAll('.m6-combat-feedback span:not([hidden])').length }));
       floats = Math.max(floats, sample.floats);
-      if (!shot && sample.replay.fx.casts > 0) { await replayPage.screenshot({ path: path.join(out, 'replay-cast.png') }); shot = true; }
+      if (!shot && (sample.replay.fx?.casts ?? 0) > 0) { await replayPage.screenshot({ path: path.join(out, 'replay-cast.png') }); shot = true; }
       if (sample.replay.tick >= sample.replay.endTick) break;
       await replayPage.waitForTimeout(50);
     }
-    const fx = (await read(replayPage)).m6.replay.fx;
+    const replayEnd = (await read(replayPage)).m6.replay;
+    assert.equal(replayEnd.tick, replayEnd.endTick, 'replay reached its recorded end');
+    // Old builds have no fx diagnostics: fail on missing visible feedback,
+    // rather than a TypeError that masks whether this regression was exercised.
+    assert(floats > 0, 'replay shows numeric damage floats');
+    const fx = replayEnd.fx ?? { attacks: 0, casts: 0, specs: 0 };
     assert.equal(fx.attacks, expected.attacks, 'every replayed attack produced feedback once');
     assert.equal(fx.casts, expected.casts, 'every replayed cast produced feedback once');
-    assert(floats > 0, 'replay shows numeric damage floats');
     check('replay-feedback', { ...fx, expected, maxFloats: floats });
     await replayPage.screenshot({ path: path.join(out, 'replay.png') });
     await replayPage.locator('#replay-root').getByRole('button', { name: '返回当前局', exact: true }).click();
@@ -243,6 +247,7 @@ async function firstBattle(browser, reduced) {
         fallbacks: document.querySelectorAll('.shop-card .hero-fallback svg').length,
         darius: [...document.querySelectorAll('.shop-card')].filter(card => card.textContent.includes('德莱厄斯')).length,
       }));
+      assert(shop.darius > 0, 'the seeded shop actually exercises the missing Darius portrait');
       assert.equal(shop.broken, 0, 'no broken portrait images remain');
       assert.equal(shop.fallbacks, shop.darius, 'every 德莱厄斯 card shows the emblem fallback');
       await context.close();
