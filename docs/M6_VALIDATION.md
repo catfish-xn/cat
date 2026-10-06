@@ -37,3 +37,9 @@ A 改为模块私有WeakSet仅识别已独立拷贝且递归冻结的捕获，�
 随后同样本、同预算、无并行本地测试的生产复测全部通过，实际164.569s：capture p95 37.80/50ms，write p95 63.70/250ms，fullCapture p95 148/500ms，activation max 285.70/1000ms，完整import max8494.10/30000ms，首次seek max1360.60/2000ms，缓存seek max32.30/100ms，40tick统计批次max0.30/5ms。真实模块30次回收后GC堆增长137,820 bytes，新增监听器0、遗留组件DOM0。合法满载样本9玩家/8敌/15装备、30战完整验证及IDB往返也通过。证据 `artifacts/m6-performance/manifest.json`。
 
 该复测启动于优化尚未提交的591525c脏树，sourceFingerprint首尾一致；它是定位修复的局部历史证据，不能冒称新提交最终门禁。增强F2（精确恢复、quota回放隔离、公开seed相同命令与完整应用30cycle）及最终新SHA CI仍待执行。
+
+### 591525c CI runner failures and corrections
+
+The old clean CI run 37401141157 did not pass all gates. Its storage module gate completed 33 checks, then correctly failed the zero-browser-error assertion: navigating the application root unintentionally booted Phaser while this isolated harness had dependency discovery disabled, causing its CommonJS default-export error. The runner now serves an empty dedicated same-origin harness page and imports only the production modules under test; browser-error checks remain mandatory.
+
+Both cannon modes reached seed validation after completing the save/replay/lifecycle checks, then timed out waiting for an invalid-seed alert. The captured trusted input stream proves the empty-input Delete targeted the real choice dismissal shield, leaving the old value 42 intact; the following public button therefore legitimately started another seed-42 run. The runner now waits for that shield to disappear after choosing offers, before filling seed inputs. Invalid-input state/identity preservation assertions remain unchanged. These are runner corrections, with no production source or budget changes; new clean-SHA execution remains required.

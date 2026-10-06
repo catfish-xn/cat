@@ -20,3 +20,9 @@ E 的统计预期为独立手写数字。四条已有路线每场原始 Match/�
 F1 的 SHA/dirty/环境/容量/预算原始证据仍保持历史身份，不能当作生产 F4 性能结果。生产 performance gate 将复测四路线与同 F1 的9玩家/8敌人/15装备完整合法30战样本，真实capture/hash/clone/IDB/完整导入/seek/统计与模块回收。完整应用30次公开新局/导入/回放循环另由F2验证。全部最终门禁必须在一个干净提交完成；当前没有未知缺陷不存在的保证，未自动合并或进入M7。
 
 追加独立性能发现与关闭：生产真实capturePrefix→Coordinator→Repository路径首次p95=74.10ms，违反冻结50ms。A消除已独立深冻结捕获的重复克隆，B复用进入历史时已独立冻结的context/initial/event子图，每次仍算全量摘要；不使用同tick缓存。原失败manifest保留。原样本原阈值复测164.569s，8项全部通过，capture p95降至37.80ms；模块30次GC堆增长137,820 bytes且监听器/组件DOM归零。实际样本/数值与历史身份见M6_VALIDATION；此为未提交优化树的局部证据，仍须新干净SHA全套最终复验。
+
+### 591525c CI runner failures and corrections
+
+The old clean CI run 37401141157 did not pass all gates. Its storage module gate completed 33 checks, then correctly failed the zero-browser-error assertion: navigating the application root unintentionally booted Phaser while this isolated harness had dependency discovery disabled, causing its CommonJS default-export error. The runner now serves an empty dedicated same-origin harness page and imports only the production modules under test; browser-error checks remain mandatory.
+
+Both cannon modes reached seed validation after completing the save/replay/lifecycle checks, then timed out waiting for an invalid-seed alert. The captured trusted input stream proves the empty-input Delete targeted the real choice dismissal shield, leaving the old value 42 intact; the following public button therefore legitimately started another seed-42 run. The runner now waits for that shield to disappear after choosing offers, before filling seed inputs. Invalid-input state/identity preservation assertions remain unchanged. These are runner corrections, with no production source or budget changes; new clean-SHA execution remains required.
