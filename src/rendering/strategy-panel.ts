@@ -19,6 +19,7 @@ import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
+import { heroPortraitHtml } from '../presentation/s13-assets';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -535,7 +536,7 @@ export class StrategyPanel {
       if (definition) {
         const identity = getHeroIdentity(definition.id);
         button.dataset.cost = String(definition.cost); button.classList.toggle('unaffordable', !affordable);
-        const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroEmblemSvg(definition.id, 34);
+        const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroPortraitHtml(definition.id, 34, heroEmblemSvg(definition.id, 34));
         button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
         button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}`);
       } else button.append(element('span', '已购买', 'shop-name'));

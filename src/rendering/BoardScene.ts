@@ -17,6 +17,7 @@ import type { SessionChange } from '../m6/contracts';
 import { UnitView, type RingState } from '../presentation/unit-view';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
+import { buildPortraitTextures, preloadS13Assets } from '../presentation/s13-assets';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -71,7 +72,9 @@ export class BoardScene extends Phaser.Scene {
   private renderedUpgradeCount = 0;
 
   constructor() { super('Board'); }
+  preload() { preloadS13Assets(this); }
   create() {
+    buildPortraitTextures(this);
     // Phaser reuses the Scene instance on restart but destroys its display list.
     // Keep the authoritative MatchSession; all cached display references must be new.
     this.resetViewReferences();

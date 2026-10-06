@@ -167,3 +167,5 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .shop-trait { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
 .shop-trait .trait-open { color: var(--c-text); }
 .shop-trait .trait-closed { color: var(--c-text-faint); }
+.hero-portrait { display: block; border-radius: 50%; border: 2px solid #0b151f; object-fit: cover; }
+#legal-notice { margin-top: 12px; padding: 0 4px; font-size: var(--font-small); line-height: 1.5; color: var(--c-text-faint); }

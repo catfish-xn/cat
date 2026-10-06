@@ -82,3 +82,9 @@ node scripts/verify-m6-performance.cjs
 正式目标为Chromium桌面、触屏电脑及手机竖横屏；Chromium手机模拟不代表Safari支持。WebKit为候选，iPhone/iPad Safari尚未承诺正式支持。
 
 M6 范围与验收依据为已冻结的 [M6 Goal](M6_GOAL.md)。领域规则和历史基线保留 [M5计划](M5_PLAN.md)、[M5验收](M5_ACCEPTANCE.md) 及 [M5验证记录](docs/M5_VALIDATION.md)。M1–M4文件保留历史证据；[测试迁移说明](docs/M5_HISTORICAL_TESTS.md)区分旧内容golden与继续执行的底层/缺陷回归。本阶段暂缓全量S13、八人联网、完整对手经济AI、有限共享池、选秀、超出当前槽／三个完成局的复杂存档管理、3D和Riot美术资产。
+
+## Riot 素材与免责声明
+
+本项目是免费、非商业的 S13（双城之战 II，14.24b）粉丝复刻，按 Riot Games 面向同人项目的素材政策使用官方英雄头像与图标。素材由 `node scripts/fetch-s13-assets.cjs` 从 14.24 游戏文件镜像下载到 `public/assets/s13/`，并生成带 sha256 的清单；运行时只读本地文件，缺失的素材自动回退为代码绘制的英雄徽记。
+
+HEX is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.

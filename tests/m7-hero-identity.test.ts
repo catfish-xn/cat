@@ -3,6 +3,8 @@ import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 import { HERO_STYLE, TRAIT_SHAPES, getHeroIdentity, heroEmblemSvg, EMBLEM_POINTS, HERO_S13_TRAITS, S13_TRAIT_ZH, heroTraitLabels } from '../src/presentation/hero-identity';
 import { champions } from './fixtures/s13-source.cjs';
 import { THEME, costColor } from '../src/presentation/theme';
+import { heroPortraitHtml, s13AssetUrl } from '../src/presentation/s13-assets';
+import { S13_ASSETS } from '../src/presentation/s13-asset-manifest';
 
 const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => !definition.id.startsWith('neutral'));
 const rgb = (hex: string) => [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16));
@@ -50,5 +52,14 @@ describe('M7 hero identity (G01)', () => {
       const open = heroTraitLabels(hero.id).filter(label => label.open).map(label => label.name);
       expect(open).toEqual([getHeroIdentity(hero.id).traitName]);
     }
+  });
+  it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
+    for (const hero of heroes) {
+      const bundled = S13_ASSETS.some(asset => asset.kind === 'champion' && asset.id === hero.id);
+      expect(s13AssetUrl('champion', hero.id) !== null).toBe(bundled);
+      const html = heroPortraitHtml(hero.id, 34, heroEmblemSvg(hero.id, 34));
+      expect(html.startsWith(bundled ? '<img' : '<svg')).toBe(true);
+    }
+    for (const asset of S13_ASSETS) expect(asset.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 });

@@ -14,6 +14,9 @@ export function createAppShell(app: HTMLElement): AppShell {
   const save=node('section','save-root','对局与存档');
   const replay=node('section','replay-root','战斗回放');
   const stats=node('section','stats-root','战斗统计');
-  boardFrame.append(board,feedback);panels.append(strategy,save,replay,stats);app.replaceChildren(boardFrame,panels);
+  const legal=node('footer','legal-notice','声明');
+  legal.textContent='HEX / 自动战棋是免费、非商业的粉丝复刻项目，并非 Riot Games 认可的作品，也不代表 Riot Games 或任何参与制作、管理 Riot Games 产品人员的观点或意见。Riot Games 及所有相关财产均为 Riot Games, Inc. 的商标或注册商标。'
+    +' HEX is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.';
+  boardFrame.append(board,feedback);panels.append(strategy,save,replay,stats,legal);app.replaceChildren(boardFrame,panels);
   return {board,strategy,save,replay,stats,feedback,dispose(){boardFrame.remove();panels.remove();}};
 }

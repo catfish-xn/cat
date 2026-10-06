@@ -9,6 +9,7 @@ import type { CombatUnit } from '../simulation/combat-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
+import { championPortraitKey } from './s13-assets';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
@@ -30,6 +31,7 @@ export class UnitView {
   private readonly costBadge: Phaser.GameObjects.Arc;
   private readonly costText: Phaser.GameObjects.Text;
   private readonly items: Phaser.GameObjects.Graphics;
+  private portrait: Phaser.GameObjects.Image | null = null;
   private identity: HeroIdentity;
   private renderKey = '';
   ring: RingState = 'normal';
@@ -70,8 +72,16 @@ export class UnitView {
     this.identity = getHeroIdentity(unit.definitionId);
     this.disc.setFillStyle(this.identity.colorNumber);
     this.label.setText(this.identity.short).setColor(this.identity.ink);
+    // Official S13 portrait when bundled; otherwise the code-drawn emblem and short name.
+    const portraitKey = championPortraitKey(unit.definitionId), hasPortrait = this.scene.textures.exists(portraitKey);
+    if (hasPortrait) {
+      if (!this.portrait) { this.portrait = this.scene.add.image(0, 0, portraitKey); this.token.addAt(this.portrait, 1); }
+      this.portrait.setTexture(portraitKey).setDisplaySize(PIECE_RADIUS * 2 - 2, PIECE_RADIUS * 2 - 2).setVisible(true);
+    } else this.portrait?.setVisible(false);
+    this.label.setVisible(!hasPortrait);
     const points = EMBLEM_POINTS[this.identity.shape].map(([px, py]) => new Phaser.Math.Vector2(px * PIECE_RADIUS * 0.82, py * PIECE_RADIUS * 0.82));
     this.emblem.clear().lineStyle(3, this.identity.inkNumber, 0.28).strokePoints(points, true, true);
+    this.emblem.setVisible(!hasPortrait);
     this.star.setText('★'.repeat(unit.starLevel)).setColor(STAR_COLORS[unit.starLevel - 1]);
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost)));
     this.costText.setText(String(this.identity.cost));
