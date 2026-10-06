@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 
-// Relative asset URLs: the same build works at a domain root and under a project
-// sub-path such as GitHub Pages' /cat/. Runtime S13 icons resolve via import.meta.env.BASE_URL.
-export default defineConfig({ base: './' });
+export default defineConfig(({ mode }) => ({
+  // Pages has a fixed repository path; other builds remain portable to subpaths.
+  // Runtime S13 icons use import.meta.env.BASE_URL in both modes.
+  base: mode === 'pages' ? '/cat/' : './',
+}));
