@@ -26,3 +26,18 @@ F1 的 SHA/dirty/环境/容量/预算原始证据仍保持历史身份，不能�
 The old clean CI run 37401141157 did not pass all gates. Its storage module gate completed 33 checks, then correctly failed the zero-browser-error assertion: navigating the application root unintentionally booted Phaser while this isolated harness had dependency discovery disabled, causing its CommonJS default-export error. The runner now serves an empty dedicated same-origin harness page and imports only the production modules under test; browser-error checks remain mandatory.
 
 Both cannon modes reached seed validation after completing the save/replay/lifecycle checks, then timed out waiting for an invalid-seed alert. The captured trusted input stream proves the empty-input Delete targeted the real choice dismissal shield, leaving the old value 42 intact; the following public button therefore legitimately started another seed-42 run. The runner now waits for that shield to disappear after choosing offers, before filling seed inputs. Invalid-input state/identity preservation assertions remain unchanged. These are runner corrections, with no production source or budget changes; new clean-SHA execution remains required.
+
+### Later local verification and retained limitations
+
+Enhanced public-input F2 dev passed in 332.397s, starting clean 2dc5c44, with stable source fingerprint while later test-only commits occurred: saved-file/refresh exact continuation, quota/replay revision isolation, 30 real application cycles (+272868B after GC, stable listeners/RAF and one application/session/observer), and public seed command determinism passed. The independent extended application gate passed six cases in 91.747s: thirteen legal full-envelope phase samples with native-IDB Continue and exact next transition, unavailable-IDB same-tick export, and the four earlier lifecycle/archive failure cases. These remain historical local evidence, not a replacement for final same-SHA CI.
+
+Same-hardware production performance started clean 3f9fa8c and passed all eight unchanged budgets in 166.247s (source stable through test-only commits): capture40.4, write69.5, fullCapture224.1, activation312.5, completeImport8500.2, firstSeek1158, cachedSeek23.2, statsBatch0.2ms; module lifecycle heap +137524B. The earlier 74.10ms capture failure remains preserved.
+
+Old CI preview exceeded the 1MiB application heap budget and is not declared resolved by a later pass. A separate preview heap-snapshot diagnostic did not reproduce that excess (+175844B; listeners78→78, RAF1→1), but failed its final random-seed display check. Static review confirmed active session installation precedes asynchronous archive refresh and final control rendering; the runner now waits for public seed buttons to become enabled before asserting the displayed seed. This diagnostic run is explicitly excluded from final evidence. NaN is also exercised as the sixth public invalid-seed input, retaining state and identity assertions.
+
+The final authoritative machine appendix is generated only after same-SHA normal-route and M6 comparisons, required execution-job timings, frozen budgets and clean identities all pass. Committed prose records history; it does not predict a future final SHA or supersede a failed machine gate.
+
+
+### 本地 heap 独立复核（非最终通过）
+
+[B/D 独立 heap 诊断](M6_HEAP_DIAGNOSTIC.md)记录了两个 snapshot 的 SHA256、属性识别数量和强引用路径。本地样本中旧 Session／History／Coordinator 已释放，Playback 为零，Phaser 对象数量稳定；这不证明 CI41 preview 的 1 MiB 超标已修复。保留旧失败，最终仍以同一干净 SHA、正常 runner 和默认冻结预算的正式门禁为准。

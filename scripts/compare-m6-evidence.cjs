@@ -32,6 +32,7 @@ for (const mode of ['dev', 'preview']) {
   assert.equal(route.m6RejectedImport?.atomic, true, 'invalid history preserves active and durable state');
   assert.equal(route.m6Seeds?.newIdentity, true, 'public seed controls');
   assert.deepEqual(route.m6Seeds.boundaries, [0, 42, 4294967295]);
+  assert.equal(route.m6Seeds.invalidPreserved, 6, 'public invalid seeds include NaN');
   for (const key of ['accepted', 'rngChanged', 'completeStateAndLedgerEqual'])
     assert.equal(route.m6Seeds.publicCommandSequence?.[key], true, `random/fixed same-command reproduction: ${key}`);
   assert.equal(route.m6Lifecycle?.cycles, limits.LIFECYCLE_CYCLES, 'full application lifecycle cycles');
@@ -133,5 +134,53 @@ assert.equal(performance.lifecycle.cycles, limits.LIFECYCLE_CYCLES);
 assert.equal(performance.lifecycle.extraListeners, 0);
 assert.equal(performance.lifecycle.remainingComponentRoots, 0);
 assert(performance.lifecycle.heapDeltaBytes <= limits.MAX_POST_GC_HEAP_GROWTH_BYTES);
+// The final SHA cannot be embedded in its own committed documentation. Produce
+// an actual same-SHA report only after both complete evidence comparisons pass.
+const original = JSON.parse(fs.readFileSync('artifacts/m5-cross-mode-comparison.json', 'utf8'));
+assert.equal(original.length, 3);
+assert(original.every(row => row.passed && row.sha === sha && row.evidenceClass === 'final-clean-commit'));
+const commands = [];
+for (const folder of fs.readdirSync('artifacts').filter(name => name.startsWith('m5-ci-timing-')).sort()) {
+  for (const name of fs.readdirSync(`artifacts/${folder}`).filter(name => name.endsWith('.json')).sort()) {
+    const step = JSON.parse(fs.readFileSync(`artifacts/${folder}/${name}`, 'utf8'));
+    assert.equal(step.sha, sha, `${folder}/${name} timing commit`);
+    assert.equal(step.exitCode, 0, `${folder}/${name} command failed`);
+    assert.equal(step.signal, null, `${folder}/${name} interrupted command`);
+    commands.push(step);
+  }
+}
+assert.equal(new Set(commands.map(step => step.job)).size, 9, 'all nine execution jobs recorded');
+const sample = commands[0].job.match(/sample\d+$/)?.[0];
+assert(sample && commands.every(step => step.job.endsWith(sample)), 'one consistent CI sample');
+const requireSteps = (job, steps) => {
+  for (const name of steps) assert(commands.some(step => step.job === job && step.step === name), `${job} missing ${name} timing`);
+};
+requireSteps(`test-and-build-${sample}`, ['install', 'tests', 'build', 'headless', 'performance']);
+for (const mode of ['dev', 'preview']) {
+  for (const build of ['cannon', 'sniper', 'mage']) requireSteps(`browser-${mode}-${build}-${sample}`, ['install', 'browser-install', 'build', 'route']);
+  requireSteps(`input-${mode}-${sample}`, ['install', 'browser-install', 'build', 'input', 'touch-route', 'm6-layout',
+    ...(mode === 'dev' ? ['m6-storage', 'm6-components', 'm6-performance', 'm6-retry', 'm6-application-failures'] : [])]);
+}
+const normalRoutes = ['dev', 'preview'].flatMap(mode => ['cannon', 'sniper', 'mage', 'cannon-touch'].map(build => {
+  const report = JSON.parse(fs.readFileSync(`artifacts/m5-${mode}-${build}/manifest.json`, 'utf8'));
+  return { mode, build, durationSeconds: report.durationSeconds, browser: report.browser,
+    manifestHash: hash(fs.readFileSync(`artifacts/m5-${mode}-${build}/manifest.json`, 'utf8')),
+    cpu: report.cpu, cpuCount: report.cpuCount, node: report.node, memoryBytes: report.memoryBytes,
+    versions: report.versions, seed: 42 };
+}));
+const audit = { sha, dirty: '', sourceFingerprint: fingerprint, generatedAt: new Date().toISOString(),
+  goalHash: require('node:crypto').createHash('sha256').update(fs.readFileSync('M6_GOAL.md')).digest('hex'),
+  m5ComparisonHash: hash(fs.readFileSync('artifacts/m5-cross-mode-comparison.json', 'utf8')),
+  runId: process.env.GITHUB_RUN_ID ?? null, commands, normalRoutes, records,
+  performance: performance.measurements, moduleLifecycle: performance.lifecycle,
+  applicationLifecycle: Object.fromEntries(['dev', 'preview'].map(mode => [mode,
+    JSON.parse(fs.readFileSync(`artifacts/m5-${mode}-cannon/manifest.json`, 'utf8')).m6Lifecycle])),
+  passed: true };
+fs.writeFileSync('artifacts/m6-validation.json', JSON.stringify(audit, null, 2));
+const commandRows = commands.map(step => `| ${step.job} | \`${[step.command, ...step.args].join(' ')}\` | ${step.durationSeconds} | 0 |`).join('\n');
+const budgetRows = performance.measurements.gates.map(gate => `| ${gate.name} | ${gate.metric} | ${gate.actual} | ${gate.ceiling} | 通过 |`).join('\n');
+const header = `# M6 最终同提交验收\n\n状态：全部必需机器门禁通过；等待用户最终 Review/合并决策，不自动合并或进入 M7。\n\nSHA：\`${sha}\`；dirty：空；sourceFingerprint：\`${fingerprint}\`；seed：42。完整版本/digest、Node/Chromium/硬件、实际命令与耗时、证据 hash 均见同包 \`m6-validation.json\`。本报告在全部正常路线与 M6 证据比较成功后生成，不把历史局部结果提升为最终结果。\n`;
+fs.writeFileSync('artifacts/M6_VALIDATION.md', `${header}\n## 实际命令\n\n| CI job | 命令 | 耗时秒 | 退出码 |\n|---|---|---:|---:|\n${commandRows}\n\n## 冻结性能预算\n\n| 项目 | 统计 | 实测ms | 冻结ms | 结果 |\n|---|---|---:|---:|---|\n${budgetRows}\n\n## 历史记录与限制\n\n以下为本提交文档中的历史记录；旧 SHA/dirty 结果保持历史身份。真实后台切换没有被合成 visibility 事件冒充；heap snapshot 诊断没有被最终门禁采用。\n\n${fs.readFileSync('docs/M6_VALIDATION.md', 'utf8')}`);
+fs.writeFileSync('artifacts/M6_REVIEW.md', `${header}\n原领域规则与 golden 不变；原有语义测试、四路线逐命令/逐tick恢复、全部正常桌面/触摸路线、原生输入、存储失败/竞争、统计手写oracle、五视口和两类30次生命周期均由本次 CI 的对应命令及证据验证。下面保留独立审查与修复的历史过程；最终结果由同 SHA 的 \`m6-validation.json\` 和两项 comparison 决定。\n\n${fs.readFileSync('docs/M6_REVIEW.md', 'utf8')}`);
 fs.writeFileSync('artifacts/m6-final-comparison.json', JSON.stringify({ sha, sourceFingerprint: fingerprint, records, passed: true }, null, 2));
 console.log(JSON.stringify({ sha, manifests: records.length, passed: true }));

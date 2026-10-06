@@ -151,3 +151,6 @@ jobs:
           path: |
             artifacts/m5-cross-mode-comparison.json
             artifacts/m6-final-comparison.json
+            artifacts/m6-validation.json
+            artifacts/M6_VALIDATION.md
+            artifacts/M6_REVIEW.md
