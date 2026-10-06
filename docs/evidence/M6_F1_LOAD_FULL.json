@@ -1,0 +1,82 @@
+{
+  "node": "v24.21.0",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "sourceFingerprint": "6630dfc14e896da0809d25998845c357afdf74042a13344427f60e6480de31ed",
+  "payloadBytes": 11172389,
+  "fullLoadBattles": [
+    {
+      "round": 28,
+      "players": 9,
+      "enemies": 1,
+      "equipped": 12
+    },
+    {
+      "round": 29,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 14
+    },
+    {
+      "round": 30,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 14
+    },
+    {
+      "round": 31,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 14
+    },
+    {
+      "round": 33,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 15
+    },
+    {
+      "round": 34,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 15
+    },
+    {
+      "round": 35,
+      "players": 9,
+      "enemies": 1,
+      "equipped": 15
+    }
+  ],
+  "sha": "d8a54bba0da2c398a2944634ef38fa781f26894b",
+  "dirty": "?? M6_GOAL.md\n?? M6_PLAN.md\n?? docs/REPLAY_CONTRACT.md\n?? docs/SAVE_CONTRACT.md\n?? docs/evidence/M6_F1_LAYOUT.json\n?? docs/evidence/M6_F1_LAYOUT.md\n?? docs/evidence/M6_F1_LOAD.json\n?? docs/evidence/M6_F1_LOAD_FULL.json\n?? docs/evidence/M6_F1_LOAD_SUPPLEMENT.json\n?? docs/evidence/M6_F1_STORAGE.json\n?? docs/evidence/M6_F1_STORAGE.md\n?? docs/evidence/M6_F1_STORAGE_COMPLETE.json\n?? docs/evidence/M6_F1_STORAGE_CURRENT.json\n?? docs/evidence/M6_F1_STORAGE_LIFECYCLE.json\n?? docs/evidence/M6_F1_STORAGE_MAX_COMPLETE.json\n?? scripts/m6-f1-full-load.cjs\n?? scripts/m6-f1-load.cjs\n?? scripts/m6-f1-supplement.cjs\n?? scripts/m6-layout-measure.cjs\n?? scripts/m6-layout-prototype.html\n?? scripts/m6-storage-lifecycle.cjs\n?? scripts/m6-storage-prototype.cjs\n?? src/m6/\n?? work/",
+  "method": "Policy fork: buy ninth Garen, level9 from round28, never combine components, equip all received components; only official accepted commands; restore validates each pre/post battle; no state injection.",
+  "summary": {
+    "caitlynBattles": 0,
+    "caitlynCasts": 0,
+    "tickTimingMs": {
+      "p50": 0.613749000000098,
+      "p95": 1.4406479999997828,
+      "p99": 2.2759269999987737,
+      "max": 8.591088000000127
+    },
+    "build": "cannon",
+    "seed": 42,
+    "outcome": "victory",
+    "round": 35,
+    "hp": 85,
+    "gold": 131,
+    "formedAt": null,
+    "formedBattles": 0,
+    "boundBattles": 14,
+    "transitioned": true,
+    "ticks": 10161,
+    "commands": 206,
+    "durationSeconds": 7.825
+  },
+  "combatCount": 30,
+  "maxBoard": 9,
+  "maxItems": 15,
+  "maxEquipped": 15,
+  "maxEvents": 2096,
+  "maxTicks": 621
+}

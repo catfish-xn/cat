@@ -1,0 +1,152 @@
+{
+  "timestamp": "2026-10-06T00:47:59.881Z",
+  "sha": "d8a54bba0da2c398a2944634ef38fa781f26894b",
+  "dirty": "?? M6_GOAL.md\n?? M6_PLAN.md\n?? docs/evidence/M6_F1_LAYOUT.json\n?? scripts/m6-f1-load.cjs\n?? scripts/m6-layout-measure.cjs\n?? scripts/m6-layout-prototype.html\n?? scripts/m6-storage-prototype.cjs\n?? work/",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "node": "v24.21.0",
+  "browser": "153.0.8010.12",
+  "input": "work/m6-f1-payload.json",
+  "bytes": 9882682,
+  "incrementalBytes": 94282,
+  "completedRecordCount": 30,
+  "summary": {
+    "capture": {
+      "samples": [
+        145.30000001192093,
+        130.39999997615814,
+        123.19999998807907,
+        98.30000001192093,
+        153.5,
+        135.80000001192093,
+        123.09999996423721,
+        224.29999995231628,
+        94.30000001192093,
+        115,
+        116.30000001192093,
+        162.5999999642372
+      ],
+      "p50": 130.39999997615814,
+      "p95": 224.29999995231628,
+      "max": 224.29999995231628
+    },
+    "parse": {
+      "samples": [
+        34.09999996423721,
+        58.60000002384186,
+        28,
+        29.19999998807907,
+        28.69999998807907,
+        26.80000001192093,
+        61.80000001192093,
+        57.19999998807907,
+        28.80000001192093,
+        28.599999964237213,
+        27.399999976158142,
+        50.80000001192093
+      ],
+      "p50": 29.19999998807907,
+      "p95": 61.80000001192093,
+      "max": 61.80000001192093
+    },
+    "write": {
+      "samples": [
+        192.9000000357628,
+        180.19999998807907,
+        235.30000001192093,
+        194.5,
+        263.80000001192093,
+        206.30000001192093,
+        178.9000000357628,
+        345,
+        213.80000001192093,
+        182.69999998807907,
+        238.39999997615814,
+        177.39999997615814
+      ],
+      "p50": 206.30000001192093,
+      "p95": 345,
+      "max": 345
+    },
+    "read": {
+      "samples": [
+        108.89999997615814,
+        93.30000001192093,
+        76.60000002384186,
+        126.90000003576279,
+        89.19999998807907,
+        66.60000002384186,
+        118.5,
+        81.30000001192093,
+        105.90000003576279,
+        71.70000004768372,
+        113.90000003576279,
+        92.30000001192093
+      ],
+      "p50": 93.30000001192093,
+      "p95": 126.90000003576279,
+      "max": 126.90000003576279
+    },
+    "archiveThree": {
+      "samples": [
+        113.30000001192093,
+        109.59999996423721,
+        106.5
+      ],
+      "p50": 109.59999996423721,
+      "p95": 113.30000001192093,
+      "max": 113.30000001192093
+    },
+    "incrementalCapture": {
+      "samples": [
+        1,
+        0.8999999761581421,
+        1.300000011920929,
+        1.9000000357627869,
+        1.300000011920929,
+        1,
+        2.100000023841858,
+        1.199999988079071,
+        1.100000023841858,
+        2.699999988079071,
+        1.699999988079071,
+        2.100000023841858
+      ],
+      "p50": 1.300000011920929,
+      "p95": 2.699999988079071,
+      "max": 2.699999988079071
+    },
+    "incrementalWrite": {
+      "samples": [
+        4.399999976158142,
+        4.300000011920929,
+        5.299999952316284,
+        6,
+        5.399999976158142,
+        6.599999964237213,
+        8.300000011920929,
+        5.699999988079071,
+        5.899999976158142,
+        6.900000035762787,
+        7.100000023841858,
+        6.199999988079071
+      ],
+      "p50": 6,
+      "p95": 8.300000011920929,
+      "max": 8.300000011920929
+    }
+  },
+  "checks": [
+    "same-run reactivation rejects old queued write",
+    "separate IDB connection revision conflict",
+    "transaction abort preserves current",
+    "snapshot remains fixed",
+    "failed fourth archive retains first three",
+    "successful fourth atomically removes oldest"
+  ],
+  "limitations": [
+    "parse timing excludes restoreMatch and historical replay verification",
+    "synthetic CAS adapter only; production implementation still needs independent tests",
+    "capture/write use full payload baseline; incrementalCapture/incrementalWrite use immutable history references",
+    "separate connections are same origin/page, not full two-tab UI test"
+  ]
+}

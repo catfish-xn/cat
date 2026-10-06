@@ -1,0 +1,624 @@
+{
+  "stage": "F1 prototype, not production validation",
+  "sha": "d8a54bba0da2c398a2944634ef38fa781f26894b",
+  "dirty": "?? M6_PLAN.md\n?? scripts/m6-f1-load.cjs\n?? scripts/m6-layout-measure.cjs\n?? scripts/m6-layout-prototype.html\n?? scripts/m6-storage-prototype.cjs\n?? work/",
+  "sourceFingerprint": "11c0083320ada57d2cb19175576f0b4e1c57bdc92ed3b4f0501cf4bf3263b69b",
+  "node": "v24.21.0",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "cpuCount": 4,
+  "memoryBytes": 8322404352,
+  "startedAt": "2026-10-06T00:46:58.933Z",
+  "routes": [
+    {
+      "build": "cannon",
+      "seed": 42,
+      "combatCount": 30,
+      "round": 35,
+      "payloadBytes": 9882682,
+      "events": 27051,
+      "maxBattleEvents": 1505,
+      "maxBattleBytes": 535436,
+      "maxBattleTicks": 626,
+      "maxBoard": 8,
+      "maxItems": 9,
+      "maxEquippedItems": 6,
+      "captureMs": {
+        "count": 30,
+        "p50": 3.6061699999991106,
+        "p95": 6.885498999999982,
+        "max": 10.250589000001128
+      },
+      "restoreMs": {
+        "count": 30,
+        "p50": 7.505384000000049,
+        "p95": 14.775832000001174,
+        "max": 16.45474600000125
+      },
+      "fullBattleReplayMs": {
+        "count": 30,
+        "p50": 172.4201430000012,
+        "p95": 280.41926500000045,
+        "max": 392.7510629999997
+      },
+      "cached40TickSeekMs": {
+        "count": 120,
+        "p50": 12.620059999999285,
+        "p95": 33.01787599999989,
+        "max": 64.55854100000033
+      },
+      "fullHistoryReplayMs": 4844.373418000002,
+      "contextValidateMs": 30.729977000000872,
+      "jsonStringifyMs": 71.76445899999999,
+      "jsonParseMs": 49.33350799999971,
+      "elapsedMs": 13459.968368
+    },
+    {
+      "build": "sniper",
+      "seed": 42,
+      "combatCount": 30,
+      "round": 35,
+      "payloadBytes": 13973361,
+      "events": 42174,
+      "maxBattleEvents": 3266,
+      "maxBattleBytes": 1024265,
+      "maxBattleTicks": 582,
+      "maxBoard": 8,
+      "maxItems": 9,
+      "maxEquippedItems": 6,
+      "captureMs": {
+        "count": 30,
+        "p50": 4.639223999998649,
+        "p95": 12.55303499999718,
+        "max": 13.224597000000358
+      },
+      "restoreMs": {
+        "count": 30,
+        "p50": 6.582685999997921,
+        "p95": 12.673714000000473,
+        "max": 15.442949000000226
+      },
+      "fullBattleReplayMs": {
+        "count": 30,
+        "p50": 224.88322000000335,
+        "p95": 498.22293400000126,
+        "max": 554.5281109999996
+      },
+      "cached40TickSeekMs": {
+        "count": 120,
+        "p50": 11.63284200000271,
+        "p95": 30.860184000001027,
+        "max": 39.18938799999887
+      },
+      "fullHistoryReplayMs": 6891.8307559999885,
+      "contextValidateMs": 35.906160999998974,
+      "jsonStringifyMs": 72.79313299999922,
+      "jsonParseMs": 66.96805099999983,
+      "elapsedMs": 18336.877903
+    },
+    {
+      "build": "mage",
+      "seed": 42,
+      "combatCount": 30,
+      "round": 35,
+      "payloadBytes": 11919636,
+      "events": 34618,
+      "maxBattleEvents": 2497,
+      "maxBattleBytes": 818372,
+      "maxBattleTicks": 642,
+      "maxBoard": 8,
+      "maxItems": 9,
+      "maxEquippedItems": 6,
+      "captureMs": {
+        "count": 30,
+        "p50": 4.080521999996563,
+        "p95": 7.4604260000051,
+        "max": 9.115317999996478
+      },
+      "restoreMs": {
+        "count": 30,
+        "p50": 6.727958000003127,
+        "p95": 10.512368000003335,
+        "max": 15.335689999999886
+      },
+      "fullBattleReplayMs": {
+        "count": 30,
+        "p50": 201.89489100000355,
+        "p95": 506.22366299999703,
+        "max": 525.628214999997
+      },
+      "cached40TickSeekMs": {
+        "count": 120,
+        "p50": 12.336545999998634,
+        "p95": 36.938962000000174,
+        "max": 45.914057000001776
+      },
+      "fullHistoryReplayMs": 6799.6259560000035,
+      "contextValidateMs": 36.920538999998826,
+      "jsonStringifyMs": 86.02621800000634,
+      "jsonParseMs": 60.387110999996366,
+      "elapsedMs": 17781.670471999998
+    },
+    {
+      "build": "sniper-caitlyn",
+      "seed": 42,
+      "combatCount": 30,
+      "round": 35,
+      "payloadBytes": 13646586,
+      "events": 40713,
+      "maxBattleEvents": 3211,
+      "maxBattleBytes": 1027159,
+      "maxBattleTicks": 582,
+      "maxBoard": 8,
+      "maxItems": 9,
+      "maxEquippedItems": 6,
+      "captureMs": {
+        "count": 30,
+        "p50": 4.804054000000178,
+        "p95": 10.152851999999257,
+        "max": 11.440394000004744
+      },
+      "restoreMs": {
+        "count": 30,
+        "p50": 7.12101700000494,
+        "p95": 12.568148999998812,
+        "max": 20.341740999996546
+      },
+      "fullBattleReplayMs": {
+        "count": 30,
+        "p50": 212.86620499999844,
+        "p95": 488.93228799999633,
+        "max": 497.8268780000071
+      },
+      "cached40TickSeekMs": {
+        "count": 120,
+        "p50": 10.356778999994276,
+        "p95": 35.56906300000264,
+        "max": 46.04513100000622
+      },
+      "fullHistoryReplayMs": 6400.112902000015,
+      "contextValidateMs": 40.853051999991294,
+      "jsonStringifyMs": 53.513388999999734,
+      "jsonParseMs": 68.5582940000022,
+      "elapsedMs": 18222.174006
+    }
+  ],
+  "passed": true,
+  "populationStress": {
+    "source": "cannon seed42 round35 pre-battle; only accepted commands",
+    "commands": [
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyXp",
+        "args": []
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          0,
+          53
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          1,
+          53
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          2,
+          53
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          3,
+          53
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          4,
+          53
+        ]
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          0,
+          54
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          1,
+          54
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          2,
+          54
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          3,
+          54
+        ]
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          0,
+          55
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          1,
+          55
+        ]
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          4,
+          55
+        ]
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "buyUnit",
+        "args": [
+          0,
+          56
+        ]
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "rerollShop",
+        "args": []
+      },
+      {
+        "name": "deployMatchUnit",
+        "args": [
+          "unit-27",
+          {
+            "kind": "board",
+            "cell": {
+              "col": 2,
+              "row": 4
+            }
+          }
+        ]
+      },
+      {
+        "name": "equipItem",
+        "args": [
+          "item-14",
+          "unit-1",
+          0
+        ]
+      },
+      {
+        "name": "equipItem",
+        "args": [
+          "item-18",
+          "unit-1",
+          1
+        ]
+      },
+      {
+        "name": "equipItem",
+        "args": [
+          "item-21",
+          "unit-1",
+          2
+        ]
+      }
+    ],
+    "level": 9,
+    "board": 9,
+    "bench": 8,
+    "items": 9,
+    "equipped": 9,
+    "events": 385,
+    "ticks": 107,
+    "bytes": 285398,
+    "replayMs": 72.1343280000001
+  },
+  "threeCompletedArchiveBytes": 35775679,
+  "peakProcessRssBytes": 674922496,
+  "endedAt": "2026-10-06T00:48:07.590Z",
+  "finalSourceFingerprint": "11c0083320ada57d2cb19175576f0b4e1c57bdc92ed3b4f0501cf4bf3263b69b"
+}

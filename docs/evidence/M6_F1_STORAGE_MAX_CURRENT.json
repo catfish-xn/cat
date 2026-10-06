@@ -1,0 +1,152 @@
+{
+  "timestamp": "2026-10-06T00:53:28.391Z",
+  "sha": "d8a54bba0da2c398a2944634ef38fa781f26894b",
+  "dirty": "?? M6_GOAL.md\n?? M6_PLAN.md\n?? docs/REPLAY_CONTRACT.md\n?? docs/SAVE_CONTRACT.md\n?? docs/evidence/M6_F1_LAYOUT.json\n?? docs/evidence/M6_F1_LAYOUT.md\n?? docs/evidence/M6_F1_LOAD.json\n?? docs/evidence/M6_F1_LOAD_FULL.json\n?? docs/evidence/M6_F1_LOAD_SUPPLEMENT.json\n?? docs/evidence/M6_F1_STORAGE.json\n?? docs/evidence/M6_F1_STORAGE.md\n?? docs/evidence/M6_F1_STORAGE_COMPLETE.json\n?? docs/evidence/M6_F1_STORAGE_CURRENT.json\n?? docs/evidence/M6_F1_STORAGE_LIFECYCLE.json\n?? docs/evidence/M6_F1_STORAGE_MAX_COMPLETE.json\n?? docs/evidence/M6_F1_STORAGE_MAX_CURRENT.json\n?? docs/evidence/M6_F1_STORAGE_MAX_CURRENT_SHARED_CPU.json\n?? scripts/m6-f1-full-load.cjs\n?? scripts/m6-f1-load.cjs\n?? scripts/m6-f1-supplement.cjs\n?? scripts/m6-layout-measure.cjs\n?? scripts/m6-layout-prototype.html\n?? scripts/m6-storage-lifecycle.cjs\n?? scripts/m6-storage-prototype.cjs\n?? src/m6/\n?? work/",
+  "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+  "node": "v24.21.0",
+  "browser": "153.0.8010.12",
+  "input": "work/m6-f1-incremental-prefix.json",
+  "bytes": 13754070,
+  "incrementalBytes": 1164071,
+  "completedRecordCount": 28,
+  "summary": {
+    "capture": {
+      "samples": [
+        144.19999998807907,
+        144.5999999642372,
+        142.80000001192093,
+        146.80000001192093,
+        135.69999998807907,
+        215.60000002384186,
+        139.4000000357628,
+        136.89999997615814,
+        144.5,
+        138.89999997615814,
+        138.79999995231628,
+        136.5
+      ],
+      "p50": 142.80000001192093,
+      "p95": 215.60000002384186,
+      "max": 215.60000002384186
+    },
+    "parse": {
+      "samples": [
+        59.30000001192093,
+        56.5,
+        64.30000001192093,
+        52.5,
+        55.09999996423721,
+        63.80000001192093,
+        62.60000002384186,
+        54,
+        50.80000001192093,
+        50,
+        56.80000001192093,
+        99.20000004768372
+      ],
+      "p50": 56.80000001192093,
+      "p95": 99.20000004768372,
+      "max": 99.20000004768372
+    },
+    "write": {
+      "samples": [
+        236.69999998807907,
+        239,
+        283,
+        217.89999997615814,
+        237.20000004768372,
+        234.29999995231628,
+        253.10000002384186,
+        242.69999998807907,
+        220.9000000357628,
+        214,
+        223.0999999642372,
+        249.69999998807907
+      ],
+      "p50": 237.20000004768372,
+      "p95": 283,
+      "max": 283
+    },
+    "read": {
+      "samples": [
+        104.5,
+        167.69999998807907,
+        96.40000003576279,
+        97.10000002384186,
+        168.29999995231628,
+        117.30000001192093,
+        140.39999997615814,
+        113.20000004768372,
+        93.39999997615814,
+        107.10000002384186,
+        105.80000001192093,
+        120.70000004768372
+      ],
+      "p50": 113.20000004768372,
+      "p95": 168.29999995231628,
+      "max": 168.29999995231628
+    },
+    "archiveThree": {
+      "samples": [
+        107.60000002384186,
+        107.5,
+        118.80000001192093
+      ],
+      "p50": 107.60000002384186,
+      "p95": 118.80000001192093,
+      "max": 118.80000001192093
+    },
+    "incrementalCapture": {
+      "samples": [
+        10.399999976158142,
+        12,
+        9.300000011920929,
+        9.5,
+        12.800000011920929,
+        11.699999988079071,
+        12.699999988079071,
+        13.599999964237213,
+        12.899999976158142,
+        15.300000011920929,
+        12.300000011920929,
+        16.80000001192093
+      ],
+      "p50": 12.699999988079071,
+      "p95": 16.80000001192093,
+      "max": 16.80000001192093
+    },
+    "incrementalWrite": {
+      "samples": [
+        26.30000001192093,
+        28.099999964237213,
+        19.599999964237213,
+        31.900000035762787,
+        28.899999976158142,
+        31,
+        31.900000035762787,
+        30.100000023841858,
+        25.400000035762787,
+        26.399999976158142,
+        30.399999976158142,
+        29.100000023841858
+      ],
+      "p50": 29.100000023841858,
+      "p95": 31.900000035762787,
+      "max": 31.900000035762787
+    }
+  },
+  "checks": [
+    "same-run reactivation rejects old queued write",
+    "separate IDB connection revision conflict",
+    "transaction abort preserves current",
+    "snapshot remains fixed",
+    "failed fourth archive retains first three",
+    "successful fourth atomically removes oldest"
+  ],
+  "limitations": [
+    "parse timing excludes restoreMatch and historical replay verification",
+    "synthetic CAS adapter only; production implementation still needs independent tests",
+    "capture/write use full payload baseline; incrementalCapture/incrementalWrite use immutable history references",
+    "separate connections are same origin/page, not full two-tab UI test"
+  ]
+}
