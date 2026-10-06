@@ -1,0 +1,109 @@
+M6 第三轮复验 / 最终技术验收
+项目：catfish-xn/cat / HEX 自动战棋
+日期：2026-10-06
+结论：本轮通过 M6 已冻结范围的技术与功能验收。R1—R4 及已报告的两个 P3 均关闭；本轮未发现新的、有证据支持的阻塞项。
+
+一、精确对象与授权边界
+
+PR #7，分支 feat/m6-product-replay。
+验收 HEAD：631c131f1f2fd387c873f0fd8b5a238bca79dbe0。
+上轮对象：aa606645937f9af1c5392d69e6e639bcf8ceaec2。
+本轮新增两个提交：9848c909（R4 修复与回归）、631c131（施法标签和文档）。
+base main：d8a54bba0da2c398a2944634ef38fa781f26894b。
+查询时 PR 为 open、draft、未合并。此报告没有执行代码修改、推送、评论、审批或合并。
+可以由用户决定合并 M6，并继续 M7 Plan。M7 实施应从已纳入本次验收内容的 main 开始，不得退回丢失 M6 的旧基线。
+本验收不保证不存在未知缺陷，也不等同于公网发布安全认证、Safari/实体设备认证或全量 S13 完成。
+
+二、R4 根因与修复复核
+
+旧行为：一个 tick80 战中快照的异步事务成功时，活动对局已经到 tick117/gameOver。application 依据实时 phase 判断终局，提前刷新归档并占用 savedArchiveRun；真正终局快照提交后不再刷新。
+
+新实现：SaveCoordinator 从本次固定的 in-flight snapshot 读取 phase，并在 await commit 前冻结元信息。只有 repository.commit 成功才向 saved 回调提供该元信息。application 仅在 committed.phase 为 gameOver 时发起终局归档刷新，不再使用实时 session.phase。
+
+R3 的请求代号、session、runId、activationEpoch 和 dispose 检查保留。公共文件包装、领域规则、存档格式与阈值未修改。协调器仍保持一个正在写入、最多一个待写快照；失败保留可重试快照，冲突停止写入，销毁阻断迟到通知。
+
+三、原始事务证据的独立对账
+
+下载 CI49 原始 ZIP，而非仅阅读 PR 声明或 passed 标记：
+1. comparison artifact 11392366007。
+2. input-dev artifact 11391453906，含真实 IndexedDB 事务探针及完整 Match/事件。
+
+对 r4-native-transaction-order.json 重新比较得到：
+- 初始 revision=4。
+- 活动对局 tick117/gameOver 时，tick80/combat 的第一次事务仍未完成，终局快照排队，pending=1。
+- tick80 写入完成到 revision=5 后，refreshes=[]、savedArchiveRun=null。
+- tick117/gameOver 写入完成到 revision=6 后，仅发生一次刷新，且发生在已提交 ticks [80,117] 之后。
+- 两个原生事务均完成，refreshPending=0；等待全部相关异步刷新结束再检查。
+- 数据库完成局顺序为 C、D、A，UI 共90场，三个保留局各30场，没有被淘汰的B。
+- 活动终局 Match 与实际存档 Match 整体相等。
+- 最后一战完整361条事件与持久化 BattleRecord 整体相等；当前局保留30份完整战斗记录。
+- 保存控件显示“最近保存成功”，状态 token 等于数据库 token。
+- 无失败回调，无该应用测试的页面错误。
+
+这些结果关闭 R4。本轮重新对账了 CI 产生的真实事务记录；没有把这次 JSON 对账称作本地重新运行真实 IndexedDB 场景。
+
+四、已签收项目与回归
+
+R1：鼠标离窗的悬停失效保护保留，当前 dev 原生输入记录共100项，含向左/右/上离窗不误售、重入后恢复，以及显式选中/拖拽出售不受影响。
+R2：同场回放退出后可重新进入的修复保留；本轮没有改动其入口逻辑。当前同提交正式比较仍强制验证原生重入、完整状态/账本/版本不变。
+R3：异步归档旧成功和旧失败结果的激活身份隔离保留；当前应用回归九组中包含两项迟到结果测试，且原有断言未删减。
+R4：见第二、三节，关闭。
+P3-施法中文：BoardScene 的施法英雄标签改为既有 displayUnitName 映射，不修改领域事件和伤害公式。
+P3-README：已同步 M6 新局/续玩、保存成功语义、三个归档、导入导出、回放统计与实际验证入口，保留浏览器限制和简化说明。
+
+五、CI 与本轮执行边界
+
+正式 CI49：37417578752，HEAD 为上述631c131；10个作业成功。
+已读取测试/构建作业和最终比较作业的执行日志，并核对其精确 checkout。
+测试：45文件、699项通过，436.07秒。类型检查、生产构建、四条命令/tick恢复路线、24个正常多种子路线和12个领域性能样本通过。
+同提交机器报告记录46条成功命令、9个执行作业、8条正常桌面/触摸路线、9份M6记录；最终比较通过。
+当前正式门禁还包括 dev/preview 原生输入、五视口、13种恢复阶段、九组应用场景和每模式30次完整应用生命周期。
+
+八个冻结性能门禁（毫秒，以下为CI数据而非本轮本地测量）：
+捕获 p95：17.5 <=50。
+增量写入 p95：12.6 <=250。
+完整捕获 p95：56.7 <=500。
+激活写入 max：181.8 <=1000。
+完整导入 max：5739.1 <=30000。
+首次 seek max：696.3 <=2000。
+缓存 seek max：15.6 <=100。
+统计批次 max：0.1 <=5。
+完整应用30次循环后，GC堆增量 dev=993756B，preview=55904B，均在冻结1MiB以内；监听器数量与待执行RAF前后相同。dev余量较小，后续加动效须继续测量，不推导为“无内存风险”或“稳定60FPS”。
+
+本轮实际追加：
+A. Python 对下载ZIP摘要、五份可用manifest、原始R4完整对象及机器报告作25项一致性检查，全部通过。
+B. 对读取到的当前 SaveCoordinator 源码作6项隔离探针：顺序、失败重试、dispose、conflict、待写合并及旧/新判断条件的负对照，全部通过。写入器与capture依赖为测试替身，不是完整应用执行。
+C. 源码改动及新增回归断言审查；浏览器证据截图抽查。
+
+没有在本轮本地重跑699项测试、生产构建或完整浏览器矩阵。后者结论来自精确提交的已完成CI及下载产物，不是把施工代理自述当作本轮执行。
+没有重新下载其余八个CI ZIP，也未重新验证每一张截图。成功门禁与局部独立验证共同支持本次范围内的验收。
+
+六、非阻塞记录与发布前注意
+
+构建保留大chunk警告。安装日志另显示3个依赖漏洞提示（1 moderate、2 critical）；本轮未取得完整 advisory 链、具体受影响包与可达性结论，不能据此断定生产游戏可被利用，也不能宣称依赖已安全。
+将依赖安全分诊列为M7启动检查及对外发布前置项：分别核查开发/生产依赖、直接/传递依赖、受影响入口、可兼容修复方案。不得直接 npm audit fix --force、暴露开发服务或为追求零警告盲目升级。
+此项不冒充R4修复引入的新P2；M6功能验收通过不自动授权公网部署。
+
+七、证据标识与复查说明
+
+Goal SHA256：ddf9b1bff4f11d45c2c3d464d15064118d8565eded422310fc43105b0e99c90e。
+源码 fingerprint：2ce668c600b06607cdd858af2ab9b5cbc7ef7a165be94e66054287240f471b72。
+comparison ZIP SHA256：86d4c017067b5646a85c9a695a1192a4dc41e2336fe0678fd44ec743492b1ab7。
+input-dev ZIP SHA256：303d7c309c35ad40e22affe03468614c2244fe4c3d80cf1638e70e0a1fa8afdb。
+注意仓库manifestHash使用 hash(文件UTF8字符串)，即规范JSON字符串的SHA256，不是文件原始字节SHA256；独立脚本首次以原始字节比较不匹配，按实际合同修正后五份全部严格相等。ZIP校验仍使用原始字节。
+
+八、事实来源
+
+PR状态：https://github.com/catfish-xn/cat/pull/7
+本轮diff：https://github.com/catfish-xn/cat/compare/aa606645937f9af1c5392d69e6e639bcf8ceaec2...631c131f1f2fd387c873f0fd8b5a238bca79dbe0
+协调器：https://github.com/catfish-xn/cat/blob/631c131f1f2fd387c873f0fd8b5a238bca79dbe0/src/persistence/coordinator.ts
+应用接线：https://github.com/catfish-xn/cat/blob/631c131f1f2fd387c873f0fd8b5a238bca79dbe0/src/m6/application.ts
+单元回归：https://github.com/catfish-xn/cat/blob/631c131f1f2fd387c873f0fd8b5a238bca79dbe0/tests/m6-persistence.test.ts
+真实事务回归：https://github.com/catfish-xn/cat/blob/631c131f1f2fd387c873f0fd8b5a238bca79dbe0/tests/m6-application-failures.cjs
+CI49：https://github.com/catfish-xn/cat/actions/runs/37417578752
+测试构建日志：https://github.com/catfish-xn/cat/actions/runs/37417578752/job/112119511122
+最终比较日志：https://github.com/catfish-xn/cat/actions/runs/37417578752/job/112124341556
+比较产物：https://github.com/catfish-xn/cat/actions/runs/37417578752/artifacts/11392366007
+原生输入与应用失败产物：https://github.com/catfish-xn/cat/actions/runs/37417578752/artifacts/11391453906
+
+上述结论仅签收631c131及其等价已验收代码；后续改动仍需按影响范围复验。
