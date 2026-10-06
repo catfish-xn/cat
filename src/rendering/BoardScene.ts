@@ -7,14 +7,16 @@ import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import { HexLayout, type Point } from './hex-layout';
 import { MatchSession } from './match-session';
 import { InputRouter } from './input-router';
-import { combatEventText } from './combat-feedback';
 import { getStageRound, getRoundKind } from '../simulation/round-schedule';
-import { StrategyPanel, displayUnitName } from './strategy-panel';
+import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
 import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
 import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
 import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../stats/combat-feedback-renderer';
 import type { SessionChange } from '../m6/contracts';
+import { UnitView, type RingState } from '../presentation/unit-view';
+import { THEME, toNumber } from '../presentation/theme';
+import { CombatFx } from '../presentation/combat-fx';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -33,12 +35,7 @@ export class BoardScene extends Phaser.Scene {
   private strategyPanel: StrategyPanel | null = null;
   private get state() { return this.session.preparation; }
   private layout = new HexLayout(this.state.board, 34, { x: 35, y: 40 });
-  private health = new Map<string, Phaser.GameObjects.Graphics>();
-  private mana = new Map<string, Phaser.GameObjects.Graphics>();
-  private shields = new Map<string, Phaser.GameObjects.Graphics>();
-  private stars = new Map<string, Phaser.GameObjects.Text>();
-  private shieldLabels = new Map<string, Phaser.GameObjects.Text>();
-  private discs = new Map<string, Phaser.GameObjects.Arc>();
+  private views = new Map<string, UnitView>();
   private tokens = new Map<string, Phaser.GameObjects.Container>();
   private renderedCells = new Map<string, string>();
   private effects = new Set<Phaser.GameObjects.GameObject>();
@@ -69,6 +66,7 @@ export class BoardScene extends Phaser.Scene {
   private status!: Phaser.GameObjects.Text;
   private count!: Phaser.GameObjects.Text;
   private recentCombatEvents: CombatEvent[] = [];
+  private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
   private renderedCastCount = 0;
   private renderedUpgradeCount = 0;
 
@@ -109,7 +107,7 @@ export class BoardScene extends Phaser.Scene {
     for (const child of this.children.list.slice(oldHudStart)) (child as unknown as Phaser.GameObjects.Components.Visible).setVisible(false);
     const graphics = this.add.graphics();
     for (let row = 0; row < this.state.board.rows; row++) for (let col = 0; col < this.state.board.columns; col++) {
-      graphics.fillStyle(isDeploymentCell(this.state.board, 'player', { col, row }) ? 0x1b3039 : 0x30232e).lineStyle(1, 0x36505d);
+      graphics.fillStyle(toNumber(isDeploymentCell(this.state.board, 'player', { col, row }) ? THEME.color.boardAlly : THEME.color.boardEnemy)).lineStyle(1, toNumber(THEME.color.boardLine));
       graphics.fillPoints(this.layout.corners({ col, row }), true).strokePoints(this.layout.corners({ col, row }), true);
     }
     this.add.text(-2000, 140, `${this.state.board.columns} 列 × ${this.state.board.rows} 行`, { fontSize: '14px', color: '#7e95a4' });
@@ -133,7 +131,7 @@ export class BoardScene extends Phaser.Scene {
     this.add.text(-2000, 672, '拖拽部署 · 点击选择', { fontSize: '12px', color: '#7e95a4' });
     for (let slot = 0; slot < this.state.benchSize; slot++) {
       const p = this.benchCenter(slot);
-      graphics.fillStyle(0x182531).lineStyle(1, 0x36505d).fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10).strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10);
+      graphics.fillStyle(toNumber(THEME.color.bench)).lineStyle(1, toNumber(THEME.color.boardLine)).fillRoundedRect(p.x - 26, p.y - 30, 52, 60, 10).strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10);
     }
     this.overlay = this.add.graphics().setDepth(5);
     this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
@@ -190,8 +188,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private resetViewReferences() {
-    this.health.clear(); this.mana.clear(); this.shields.clear(); this.stars.clear(); this.shieldLabels.clear();
-    this.discs.clear(); this.tokens.clear(); this.renderedCells.clear(); this.effects.clear(); this.namedObjects.clear();
+    this.views.clear(); this.tokens.clear(); this.renderedCells.clear(); this.effects.clear(); this.namedObjects.clear();
     this.shopButtons.length = 0; this.shopFrames.length = 0;
     this.draggingId = null; this.selectedId = null; this.recentCombatEvents = [];
     this.inputRouter.cancel();
@@ -388,38 +385,23 @@ export class BoardScene extends Phaser.Scene {
     const ids = new Set(this.state.units.map(unit => unit.id));
     for (const [id, token] of this.tokens) {
       if (ids.has(id)) continue;
-      this.tweens.killTweensOf(token);
-      const disc = this.discs.get(id);
-      if (disc) this.tweens.killTweensOf(disc);
-      token.destroy();
-      this.tokens.delete(id); this.health.delete(id); this.discs.delete(id); this.renderedCells.delete(id);
-      this.mana.delete(id); this.shields.delete(id); this.stars.delete(id); this.shieldLabels.delete(id);
+      this.views.get(id)?.destroy(); if (token.active) token.destroy();
+      this.tokens.delete(id); this.views.delete(id); this.renderedCells.delete(id);
       this.namedObjects.delete(`unit:${id}`);
       if (this.selectedId === id) this.selectedId = null;
     }
+    const items = this.session.state.items;
     for (const unit of this.state.units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
-      const token = this.tokens.get(unit.id)!, definition = getDefinition(unit);
-      this.stars.get(unit.id)!.setText('★'.repeat(unit.starLevel));
-      (token.getByName('symbol') as Phaser.GameObjects.Text).setText(definition.symbol);
-      (token.getByName('unit-name') as Phaser.GameObjects.Text).setText(displayUnitName(unit.definitionId));
-      this.discs.get(unit.id)!.setFillStyle(definition.color);
-      token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: definition.cost });
+      const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
+        .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
+      this.views.get(unit.id)!.update(unit, equipped);
     }
   }
   private createToken(unit: Unit) {
-    const definition = getDefinition(unit), p = this.position(unit.location);
-    const disc = this.add.circle(0, 0, 27, definition.color).setStrokeStyle(3, unit.team === 'enemy' ? 0xf08080 : 0x0b151f);
-    const label = this.add.text(0, -4, definition.symbol, { fontSize: '23px', color: '#10212c', fontStyle: 'bold' }).setOrigin(0.5).setName('symbol');
-    const name = this.add.text(0, 16, displayUnitName(unit.definitionId), { fontSize: '10px', color: '#10212c' }).setOrigin(0.5).setName('unit-name');
-    const star = this.add.text(0, -24, '★'.repeat(unit.starLevel), { fontSize: '11px', color: '#fff1ae', backgroundColor: '#243341' }).setOrigin(0.5);
-    const hp = this.add.graphics().setVisible(false);
-    const mana = this.add.graphics().setVisible(false), shield = this.add.graphics().setVisible(false);
-    const shieldLabel = this.add.text(0, 34, '', { fontSize: '10px', color: '#bcefff', backgroundColor: '#182b38' }).setOrigin(0.5).setVisible(false);
-    const token = this.add.container(p.x, p.y, [disc, label, name, star, hp, mana, shield, shieldLabel]).setSize(58, 58).setName(`unit:${unit.id}`);
-    this.health.set(unit.id, hp); this.discs.set(unit.id, disc); this.tokens.set(unit.id, token); this.namedObjects.set(token.name, token);
-    this.mana.set(unit.id, mana); this.shields.set(unit.id, shield); this.stars.set(unit.id, star); this.shieldLabels.set(unit.id, shieldLabel);
-    token.setData('unitId', unit.id);
+    const p = this.position(unit.location);
+    const view = new UnitView(this, unit, p.x, p.y), token = view.token;
+    this.views.set(unit.id, view); this.tokens.set(unit.id, token); this.namedObjects.set(token.name, token);
     if (unit.team === 'player') {
       token.setInteractive({ useHandCursor: true }); this.input.setDraggable(token);
       token.on('pointerdown', () => {
@@ -427,9 +409,6 @@ export class BoardScene extends Phaser.Scene {
         if (this.inputRouter.current) return;
         this.selectedId = unit.id; this.syncSelection(); this.strategyPanel?.render();
       });
-    } else {
-      token.add(this.add.circle(21, -21, 10, 0xc35364));
-      token.add(this.add.text(21, -21, '敌', { fontSize: '11px', color: '#ffffff' }).setOrigin(0.5));
     }
   }
 
@@ -443,10 +422,7 @@ export class BoardScene extends Phaser.Scene {
     for (const unit of this.state.units) {
       const p = this.position(unit.location), token = this.tokens.get(unit.id)!;
       token.setPosition(p.x, p.y).setVisible(true).setAlpha(1).setScale(1).setDepth(0);
-      this.health.get(unit.id)!.clear().setVisible(false); this.discs.get(unit.id)!.setAlpha(1);
-      this.mana.get(unit.id)!.clear().setVisible(false);
-      this.shields.get(unit.id)!.clear().setVisible(false); this.shieldLabels.get(unit.id)!.setVisible(false).setText('');
-      for (const meter of [this.health.get(unit.id)!, this.mana.get(unit.id)!, this.shields.get(unit.id)!]) meter.setData({ value: 0, maxValue: 0, ratio: 0, width: 0 });
+      this.views.get(unit.id)!.resetMeters();
       if (token.input) { token.input.enabled = true; this.input.setDraggable(token, true); }
     }
   }
@@ -503,8 +479,7 @@ export class BoardScene extends Phaser.Scene {
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
     this.sellButton.setText(this.selectedId && selected ? `E · Sell · +${getUnitSellPrice(selected)} G` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
-    for (const unit of this.state.units) this.discs.get(unit.id)?.setStrokeStyle(3,
-      unit.id === this.selectedId ? 0xffffff : unit.team === 'enemy' ? 0xf08080 : 0x0b151f);
+    for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : 'normal', unit.team);
   }
   private observeStats(change: SessionChange) {
     const combat = change.after.combat;
@@ -568,7 +543,8 @@ export class BoardScene extends Phaser.Scene {
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
-      this.discs.get(unit.id)?.setStrokeStyle(3, unit.id === selectedTarget ? 0xffd782 : unit.id === this.selectedId ? 0xffffff : unit.team === 'enemy' ? 0xf08080 : 0x0b151f);
+      const ring: RingState = unit.id === selectedTarget ? 'target' : unit.id === this.selectedId ? 'selected' : 'normal';
+      this.views.get(unit.id)?.setRing(ring, unit.team);
       const token = this.tokens.get(unit.id)!;
       token.setVisible(unit.alive);
       const key = `${unit.cell.col},${unit.cell.row}`;
@@ -579,22 +555,7 @@ export class BoardScene extends Phaser.Scene {
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }
-      const hp = this.health.get(unit.id)!;
-      hp.clear().setVisible(unit.alive);
-      const hpRatio = unit.hp / unit.maxHp;
-      hp.fillStyle(0x091219).fillRect(-27, -43, 54, 7);
-      hp.fillStyle(unit.team === 'player' ? 0x68ddd0 : 0xf08080).fillRect(-26, -42, 52 * hpRatio, 5);
-      hp.setData({ value: unit.hp, maxValue: unit.maxHp, ratio: hpRatio, width: 52 * hpRatio });
-      const mana = this.mana.get(unit.id)!, manaRatio = unit.mana / unit.maxMana;
-      mana.clear().setVisible(unit.alive).fillStyle(0x091219).fillRect(-27, -35, 54, 5);
-      mana.fillStyle(unit.mana === unit.maxMana ? 0xbde5ff : 0x449cfa).fillRect(-26, -34, 52 * manaRatio, 3);
-      mana.setData({ value: unit.mana, maxValue: unit.maxMana, ratio: manaRatio, width: 52 * manaRatio });
-      const shield = this.shields.get(unit.id)!, shieldRatio = Math.min(1, unit.shield / unit.maxHp);
-      shield.clear().setVisible(unit.alive && unit.shield > 0);
-      shield.lineStyle(3, 0xbcefff).strokeCircle(0, 0, 30);
-      shield.fillStyle(0xbcefff).fillRect(-26, -42, 52 * shieldRatio, 2);
-      shield.setData({ value: unit.shield, maxValue: unit.maxHp, ratio: shieldRatio, width: 52 * shieldRatio });
-      this.shieldLabels.get(unit.id)!.setText(`盾 ${unit.shield}`).setVisible(unit.alive && unit.shield > 0);
+      this.views.get(unit.id)?.drawCombat(unit);
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }
@@ -604,60 +565,11 @@ export class BoardScene extends Phaser.Scene {
     this.strategyPanel?.observeEvents(events);
     this.recentCombatEvents.push(...structuredClone(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
-    for (const event of events) {
-      if (event.type === 'attack') {
-        const source = combat.units.find(unit => unit.id === event.attackerId), target = combat.units.find(unit => unit.id === event.targetId);
-        if (!source || !target) continue;
-        const from = this.layout.center(source.cell), to = this.layout.center(target.cell), line = this.add.graphics().setDepth(20);
-        line.lineStyle(3, source.team === 'player' ? 0x68ddd0 : 0xf08080, 0.85).lineBetween(from.x, from.y, to.x, to.y);
-        this.fadeEffect(line, 180);
-      } else if (event.type === 'cast') {
-        const source = combat.units.find(unit => unit.id === event.sourceId);
-        if (!source) continue;
-        const from = this.layout.center(source.cell), ability = source.ability;
-        const color = ability.kind === 's13' ? 0xc5a0ff : ability.kind === 'selfShield' ? 0xbcefff : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e;
-        const effect = this.add.graphics().setDepth(20).lineStyle(4, color, 0.9).strokeCircle(from.x, from.y, 34);
-        for (const id of event.targetIds) {
-          const target = combat.units.find(unit => unit.id === id);
-          if (!target || target.id === source.id) continue;
-          const to = this.layout.center(target.cell);
-          effect.lineBetween(from.x, from.y, to.x, to.y).strokeCircle(to.x, to.y, 31);
-        }
-        this.fadeEffect(effect, 500);
-        const label = this.add.text(from.x, from.y - 56, ability.kind === 's13' ? `施法 · ${displayUnitName(ability.championId)}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理', {
-          fontSize: '12px', color: Phaser.Display.Color.IntegerToColor(color).rgba, backgroundColor: '#16232d',
-        }).setOrigin(0.5).setDepth(20);
-        this.fadeEffect(label, 700); this.renderedCastCount++;
-      } else if (event.type === 'growth' || event.type === 'statusChanged') {
-        const target = combat.units.find(unit => unit.id === event.unitId);
-        if (!target) continue;
-        const p = this.layout.center(target.cell);
-        const text = event.type === 'growth' ? `成长 +${event.amountBps / 100}%` : `效果${event.reason === 'applied' ? '生效' : '结束'}`;
-        const label = this.add.text(p.x, p.y - 32, text, { fontSize: '12px', color: '#bcefff', backgroundColor: '#14212c' }).setOrigin(0.5).setDepth(21);
-        label.setData('eventText', combatEventText(event)); this.fadeEffect(label, 600);
-      } else if (event.type === 'targetChanged') {
-        const target = event.after ? this.discs.get(event.after) : null;
-        target?.setStrokeStyle(4, 0xffd782);
-      } else if (event.type === 'damage') {
-        const disc = this.discs.get(event.unitId);
-        if (disc) { this.tweens.killTweensOf(disc); disc.setAlpha(1); this.tweens.add({ targets: disc, alpha: 0.25, duration: 80, yoyo: true }); }
-      } else if (event.type === 'death') {
-        const unit = combat.units.find(unit => unit.id === event.unitId);
-        if (!unit) continue;
-        const p = this.layout.center(unit.cell), cross = this.add.text(p.x, p.y, '×', { fontSize: '42px', color: '#f08080' }).setOrigin(0.5).setDepth(20);
-        this.fadeEffect(cross, 500);
-      } else if (event.type === 'effectTriggered') {
-        const unit = combat.units.find(unit => unit.id === event.source.ownerId);
-        if (!unit) continue;
-        const p = this.layout.center(unit.cell);
-        const label = this.add.text(p.x, p.y + 44, `${event.source.sourceKind} · ${event.source.sourceDefinitionId}`, {
-          fontSize: '10px', color: '#ffe39b', backgroundColor: '#1b2634',
-        }).setOrigin(0.5).setDepth(20);
-        this.fadeEffect(label, 700);
-      }
-    }
+    const casts = this.fx.casts;
+    this.fx.show(events, combat);
+    this.renderedCastCount += this.fx.casts - casts;
   }
-  private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text, duration: number) {
+  private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc, duration: number) {
     this.effects.add(effect);
     this.tweens.add({ targets: effect, alpha: 0, duration, onComplete: () => { this.effects.delete(effect); effect.destroy(); } });
   }
@@ -673,19 +585,17 @@ export class BoardScene extends Phaser.Scene {
     }));
     const hexes: Record<string, Point> = {};
     for (let row = 0; row < this.state.board.rows; row++) for (let col = 0; col < this.state.board.columns; col++) hexes[`${col},${row}`] = client(this.layout.center({ col, row }));
-    const meters = (map: Map<string, Phaser.GameObjects.Graphics>) => [...map].map(([id, meter]) => ({ id, visible: meter.visible,
-      value: meter.getData('value') ?? 0, maxValue: meter.getData('maxValue') ?? 0,
-      ratio: meter.getData('ratio') ?? 0, width: meter.getData('width') ?? 0 }));
+    const meters = (kind: 'hp' | 'mana' | 'shield') => [...this.views].map(([id, view]) => ({ id,
+      visible: (kind === 'hp' ? view.hp : kind === 'mana' ? view.mana : view.shield).visible, ...view.meter(kind) }));
     const strategy = this.strategyPanel?.snapshot();
     Object.assign(bounds, strategy?.bounds ?? {});
     return structuredClone({ state: this.session.state, strategy, m6: this.application?.debug(), stats: this.activeStats,
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
-        starLabel: this.stars.get(id)!.text, name: (token.getByName('unit-name') as Phaser.GameObjects.Text).text,
-        symbol: (token.getByName('symbol') as Phaser.GameObjects.Text).text })),
-      health: meters(this.health), mana: meters(this.mana),
-      shields: meters(this.shields).map(meter => ({ ...meter, text: this.shieldLabels.get(meter.id)!.text, labelVisible: this.shieldLabels.get(meter.id)!.visible })),
+        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol })),
+      health: meters('hp'), mana: meters('mana'),
+      shields: meters('shield').map(meter => ({ ...meter, text: this.views.get(meter.id)!.shieldLabel.text, labelVisible: this.views.get(meter.id)!.shieldLabel.visible })),
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,
         xp: this.xpLabel.text, population: this.count.text, odds: this.oddsLabel.text, result: this.resultLabel.text,
         settlement: this.incomeLabel.text, selection: this.selectionLabel.text, startHint: this.startHint.text },

@@ -3,17 +3,13 @@
  * from the 631c131 tree) must still import, continue one legal step and replay.
  */
 import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
-import zlib from 'node:zlib';
+import { load, manifest as readManifest } from './fixtures/m6-saves/load.cjs';
 import { validateEnvelope } from '../src/persistence/format';
 import { BattleHistory, PlaybackSession, validateBattleCollection } from '../src/replay';
 import { MatchSession } from '../src/rendering/match-session';
 import type { SaveEnvelope } from '../src/m6/contracts';
 
-const DIR = path.resolve(__dirname, 'fixtures/m6-saves');
-const manifest = JSON.parse(fs.readFileSync(path.join(DIR, 'manifest.json'), 'utf8')) as { saves: { file: string; phase: string; round: number; battles: number }[] };
-const load = (file: string): unknown => JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(DIR, file))).toString('utf8'));
+const manifest = readManifest();
 
 describe('M6 save files remain compatible', () => {
   it('covers every required phase', () => {

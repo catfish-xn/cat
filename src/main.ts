@@ -3,6 +3,8 @@ import { BoardScene } from './rendering/BoardScene';
 import './style.css';
 import { createAppShell } from './rendering/app-shell';
 import { BOARD_LAYOUT } from './rendering/layout-config';
+import { applyThemeVariables } from './presentation/theme';
+applyThemeVariables();
 const app = document.getElementById('app')!;
 const shell = createAppShell(app);
 const board = shell.board;
