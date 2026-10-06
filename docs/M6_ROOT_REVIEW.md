@@ -61,3 +61,12 @@ All four ROOT findings have source fixes on the post-fix fingerprint above; none
 - **ROOT_04_candidate_dispose_then_activation_abort:** A validated same-run import constructs an isolated candidate (two live sessions before disposal); its native readwrite activation transaction is held pending, then really aborted after dispose. Both sessions and observer/application resources are released, no stale UI callback fires, and the last durable Match is unchanged.
 
 The gate uses real MatchApplication, SaveControls, ReplayPanel and native IndexedDB, with legal domain events and no simulation-resource injection. It does not instantiate Phaser, exercise native board dragging, or prove 30-cycle heap stability. ROOT-01/02 real replay-switch failure paths remain assigned to E; these four results do not close those findings. Final acceptance must rerun this gate together with the other evidence on the same clean implementation SHA.
+
+## 最终覆盖复核补充：G02 / G04（新增门禁，待执行）
+
+在冻结 Goal 不变的前提下，最终只读复核发现两项真实模块证据缺口：既有逐命令/逐 tick 恢复主要证明领域序列化，不能直接替代 M6 文件包装、原生 IDB 和 Continue 接线；已有 quota/abort 也不能替代初次打开存储就不可用的分支。现于原 `tests/m6-application-failures.cjs` 增加以下两个命名门禁，未改生产代码或扩大功能范围：
+
+- `G04_unavailable_open_public_play_and_same_tick_export`：仅在原生 `IDBFactory.open` 边界注入 `SecurityError`；通过真实 SaveControls 固定 seed42 新局，按正常路线的公开 MatchSession 命令完成初始选择、运营、开战，推进至 tick40。完整 Match 和事件前缀与正式路线比较，再用公开导出按钮下载文件，比较同 tick 完整 Match、事件和 nextEventSeq。明确不是棋盘原生操作或 Phaser 测试。
+- `G02_all_phase_native_roundtrip_and_exact_next_transition`：从已有合法炮手路线采集两个初始组件选择、强化、异常目标、异常 offer、准备、战斗39/40/41、战后结算、补给结算、奖励选择、终局；逐个以公开文件输入导入，比较实际活动完整 Match、事件和原生 IDB 完整包装。销毁并重新构造真实 MatchApplication，再点击公开 Continue；复核完整状态后执行该样本真实下一条命令/一步，比较正式路线的完整后继 Match 与账本，因此 RNG、收入、奖励、收据、成长和 tick0 重复都会导致失败。终局下一步应保持不变。
+
+编写期间 E 正执行 F2，因此只做脚本语法检查，没有运行浏览器或领域路线。上述新增用例当前为**已实现、待同提交实际执行**，不得引用旧四用例 manifest 声称新覆盖已通过。它们补模块和存储接线覆盖，仍不替代 Phaser 完整路线、真实输入、真实后台切换或最终生命周期门禁。

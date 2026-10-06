@@ -74,6 +74,19 @@ for (const name of [
 ]) assert(storage.results.includes(name), `missing native IndexedDB case: ${name}`);
 assert.equal(storage.results.filter(name => name === 'format/schema/digest/runtime rejected').length, 5);
 const failures = read('m6-application-failures');
+const unavailable = failures.results.G04_unavailable_open_public_play_and_same_tick_export;
+assert.equal(unavailable?.passed, true, 'initial storage unavailability');
+assert.equal(unavailable.tick, 40);
+assert.equal(unavailable.wholeMatchAndLedgerEqual, true);
+assert(Number.isSafeInteger(unavailable.nextEventSeq) && unavailable.nextEventSeq > 0);
+const phases = failures.results.G02_all_phase_native_roundtrip_and_exact_next_transition;
+assert.equal(phases?.passed, true, 'all-phase application save/continue matrix');
+assert.deepEqual(phases.samples.map(row => row.phase).sort(), [
+  'initial_component_0', 'initial_component_1', 'augment', 'anomaly_target', 'anomaly_offer',
+  'preparation', 'combat_39', 'combat_40', 'combat_41', 'settlement',
+  'supply_settlement', 'reward_choice', 'game_over',
+].sort());
+assert(phases.samples.every(row => row.passed));
 const archive = failures.results.ROOT_03_same_run_completion_archive_refresh;
 assert.equal(archive?.passed, true);
 assert.equal(archive.displayedBattles, 90);
