@@ -1,6 +1,7 @@
 name: M7 heap diagnosis (not acceptance)
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 permissions:

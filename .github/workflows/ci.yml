@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      heap_diagnostics:
+        description: Run only the isolated M6/M7 heap snapshot diagnosis (not acceptance)
+        type: boolean
+        default: false
       profile:
         description: Run every workload three times to remeasure the F3 budget
         type: boolean
@@ -14,7 +18,11 @@ env:
 permissions:
   contents: read
 jobs:
+  heap-diagnostics:
+    if: ${{ inputs.heap_diagnostics }}
+    uses: ./.github/workflows/m7-heap-diagnostic.yml
   test-and-build:
+    if: ${{ !inputs.heap_diagnostics }}
     name: test-and-build-sample${{ matrix.sample }}
     strategy:
       fail-fast: false
@@ -43,6 +51,7 @@ jobs:
           name: m5-headless-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   chromium-match:
+    if: ${{ !inputs.heap_diagnostics }}
     name: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
@@ -80,6 +89,7 @@ jobs:
           name: m5-browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   chromium-input:
+    if: ${{ !inputs.heap_diagnostics }}
     name: input-${{ matrix.mode }}-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
@@ -123,6 +133,7 @@ jobs:
           name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   m7-presentation:
+    if: ${{ !inputs.heap_diagnostics }}
     name: m7-presentation-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: m7-presentation-sample${{ matrix.sample }}
@@ -164,6 +175,7 @@ jobs:
           name: m7-presentation-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   compare-evidence:
+    if: ${{ !inputs.heap_diagnostics }}
     name: compare-evidence-sample${{ matrix.sample }}
     needs: [test-and-build, chromium-match, chromium-input]
     runs-on: ubuntu-24.04
