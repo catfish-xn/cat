@@ -1,0 +1,1459 @@
+{
+  "issue": "M6-MEM-01",
+  "diagnosticOnly": true,
+  "applicationBaseline": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+  "summaryHashes": {
+    "input": "4f6bcfd4a4b6853b6bb44e4919a88e0f68e24d139ca77e9b1f2b9d89ae5d048e",
+    "actions": "16569609f198e431540b321aa09023f8b455fdacea9126a1db319a2beb051fe5",
+    "nativeControls": "020dd5d57fcd2b12bd488d1c82f67a9ac89f6ceb915320cc8781444282dbd182",
+    "mediaTrace": "6b3b779a49538fc123e5bdf44da1a3647ec830023cd782b84559e9cbb3909111"
+  },
+  "reports": {
+    "input": {
+      "diagnosticOnly": true,
+      "createdAt": "2026-10-06T22:34:50.130Z",
+      "applicationSourceSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "workingTree": "?? dist\n?? node_modules\n?? scripts/diagnose-m6-input-retention.cjs",
+      "driverSha256": "1315b24a52087b16a63bb1d9e0c24547f14bcb4461245ebfd4680f5d0cff5e9e",
+      "node": "v24.21.0",
+      "url": "http://127.0.0.1:4193",
+      "warmup": 12,
+      "windows": 3,
+      "iterationsPerWindow": 30,
+      "buildHashes": {
+        "dist/index.html": "f79ae24e2bd8446d61b248c5744c8dd2f97b367b5d2bed36fa28377e35eb597a",
+        "dist/assets/index-Bagg6XUP.js": "c67c09409776eb47ad117f772f63648b057ed6388a3a399874fcf1ede447eaa9"
+      },
+      "caveat": "Fresh context per arm; heap snapshots perturb GC. No new/import/replay lifecycle. Not acceptance or a frame-rate benchmark.",
+      "arms": [
+        {
+          "name": "seed-fill-repeat",
+          "errors": [],
+          "snapshots": [
+            {
+              "file": "seed-fill-repeat-0.heapsnapshot",
+              "sha256": "094a4273bd220a66eb52f8ececc019c74df64f5eb8af2dde863431a587b99139",
+              "heap": {
+                "usedSize": 7935944,
+                "totalSize": 11395072,
+                "embedderHeapUsedSize": 4762112,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 13,
+                  "selfSize": 2496
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "seed-fill-repeat-30.heapsnapshot",
+              "sha256": "94acf6ca9914b2674f0023464e4cdcfaabd1b8c2cd2408e464b8fbfeceb91200",
+              "heap": {
+                "usedSize": 7657196,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4581216,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 43,
+                  "selfSize": 8256
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "seed-fill-repeat-60.heapsnapshot",
+              "sha256": "5f833f456cc51ec008d8295c47b85f89593b16312e26a2c3cca0ffaa50665dd5",
+              "heap": {
+                "usedSize": 7633012,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4591032,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 73,
+                  "selfSize": 14016
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "seed-fill-repeat-90.heapsnapshot",
+              "sha256": "06845c87f8e643aba86059892ea3f526b3d884291917e761cf462aacc408d68b",
+              "heap": {
+                "usedSize": 8126700,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4598848,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 103,
+                  "selfSize": 19776
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        },
+        {
+          "name": "seed-fill-once",
+          "errors": [],
+          "snapshots": [
+            {
+              "file": "seed-fill-once-0.heapsnapshot",
+              "sha256": "28eab7685d3c72c2d9dd2a93de2fab075711c5d12a0fdb17b81643a9b20bf269",
+              "heap": {
+                "usedSize": 7647552,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4516744,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "seed-fill-once-30.heapsnapshot",
+              "sha256": "765de289d2af29f7a0b571a1c8d4ced2bbe387ae96628a54e11976fae9146bbc",
+              "heap": {
+                "usedSize": 7748036,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4499600,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "seed-fill-once-60.heapsnapshot",
+              "sha256": "d035b13f21b1e9c2dadec04aa7f5965143769aa030b9c37b0d0ac47307688609",
+              "heap": {
+                "usedSize": 8103572,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4490368,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "seed-fill-once-90.heapsnapshot",
+              "sha256": "b560bf2adc412aae4b7e4d747a2fc2dd868add93c91524fce2cfe0445b440334",
+              "heap": {
+                "usedSize": 7714788,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4522552,
+                "backingStorageSize": 5251401
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        },
+        {
+          "name": "replay-role-query",
+          "errors": [],
+          "snapshots": [
+            {
+              "file": "replay-role-query-0.heapsnapshot",
+              "sha256": "bae357804649b8e2c660b643402b0136cce7277847cfeaa6f8c61d390260feb7",
+              "heap": {
+                "usedSize": 8046860,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4531152,
+                "backingStorageSize": 5252681
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "replay-role-query-30.heapsnapshot",
+              "sha256": "abcc760d63b3f0ae12fcb0ed8103ace947b876a7171dac3adc6b3b0f11690536",
+              "heap": {
+                "usedSize": 8022724,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4513384,
+                "backingStorageSize": 5252681
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "replay-role-query-60.heapsnapshot",
+              "sha256": "41a9e35e9aa7a9c268675fa3d961771d9f271d12bdb5495cc55a9ec6e2784860",
+              "heap": {
+                "usedSize": 7823300,
+                "totalSize": 11132928,
+                "embedderHeapUsedSize": 4510840,
+                "backingStorageSize": 5252681
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "replay-role-query-90.heapsnapshot",
+              "sha256": "ca5b1cd2b4ebdd566840566e18c68e89c8bf8512c3dc078d8eefd24bf2677722",
+              "heap": {
+                "usedSize": 7685640,
+                "totalSize": 11395072,
+                "embedderHeapUsedSize": 4473240,
+                "backingStorageSize": 5252681
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 4,
+                  "selfSize": 320
+                },
+                "MediaQuerySet": {
+                  "count": 4,
+                  "selfSize": 96
+                },
+                "MediaQuery": {
+                  "count": 3,
+                  "selfSize": 96
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        }
+      ],
+      "browser": "153.0.8010.12",
+      "completed": true
+    },
+    "actions": {
+      "diagnosticOnly": true,
+      "createdAt": "2026-10-06T22:36:09.345Z",
+      "applicationSourceSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "workingTree": "?? dist\n?? node_modules\n?? scripts/diagnose-m6-input-retention.cjs",
+      "driverSha256": "18be78453178819b77a89f87365a7fc0d8018a75b6bd168e1a772c1683bb039c",
+      "node": "v24.21.0",
+      "url": "http://127.0.0.1:4193",
+      "warmup": 12,
+      "windows": 3,
+      "iterationsPerWindow": 30,
+      "buildHashes": {
+        "dist/index.html": "f79ae24e2bd8446d61b248c5744c8dd2f97b367b5d2bed36fa28377e35eb597a",
+        "dist/assets/index-Bagg6XUP.js": "c67c09409776eb47ad117f772f63648b057ed6388a3a399874fcf1ede447eaa9"
+      },
+      "fixtureSha256": "5e00bb09a595d27c8815d2878224e85593bc04915d665790d80295d3b6699860",
+      "caveat": "Fresh context per arm; heap snapshots perturb GC. Isolated actions, not the combined lifecycle acceptance or a frame-rate benchmark.",
+      "arms": [
+        {
+          "name": "import-only",
+          "errors": [],
+          "snapshots": [
+            {
+              "file": "import-only-0.heapsnapshot",
+              "sha256": "91f47c69a61e366ae4d69533682ce1e3d903dc079fc37c73742517e58027fe0f",
+              "heap": {
+                "usedSize": 10546748,
+                "totalSize": 13754368,
+                "embedderHeapUsedSize": 6158336,
+                "backingStorageSize": 5253268
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 30,
+                  "selfSize": 2400
+                },
+                "MediaQuerySet": {
+                  "count": 30,
+                  "selfSize": 720
+                },
+                "MediaQuery": {
+                  "count": 29,
+                  "selfSize": 928
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "import-only-30.heapsnapshot",
+              "sha256": "a5b7fb920944ad571e0d1666690202a068ea0fcf89296b4244cc64ee57bee982",
+              "heap": {
+                "usedSize": 11006472,
+                "totalSize": 14540800,
+                "embedderHeapUsedSize": 6215472,
+                "backingStorageSize": 5253301
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 90,
+                  "selfSize": 7200
+                },
+                "MediaQuerySet": {
+                  "count": 90,
+                  "selfSize": 2160
+                },
+                "MediaQuery": {
+                  "count": 89,
+                  "selfSize": 2848
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "import-only-60.heapsnapshot",
+              "sha256": "285d9885b369e8c81270d9b637020b225c419341b0e8b1ae9cb1033c7ed550f4",
+              "heap": {
+                "usedSize": 11955524,
+                "totalSize": 15065088,
+                "embedderHeapUsedSize": 6245376,
+                "backingStorageSize": 5253301
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 150,
+                  "selfSize": 12000
+                },
+                "MediaQuerySet": {
+                  "count": 150,
+                  "selfSize": 3600
+                },
+                "MediaQuery": {
+                  "count": 149,
+                  "selfSize": 4768
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "import-only-90.heapsnapshot",
+              "sha256": "501c531b8fc725de9f0f1c6ae7b6eb622b216e1b0d76cc1dc6b48baeecd4bac7",
+              "heap": {
+                "usedSize": 11505584,
+                "totalSize": 14540800,
+                "embedderHeapUsedSize": 6201096,
+                "backingStorageSize": 5253301
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 210,
+                  "selfSize": 16800
+                },
+                "MediaQuerySet": {
+                  "count": 210,
+                  "selfSize": 5040
+                },
+                "MediaQuery": {
+                  "count": 209,
+                  "selfSize": 6688
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        },
+        {
+          "name": "replay-only",
+          "errors": [],
+          "snapshots": [
+            {
+              "file": "replay-only-0.heapsnapshot",
+              "sha256": "65b06e7a4ea77ce88fdff796f0b8978a828b41b643e854ee7ddcdd8e9bcf7b47",
+              "heap": {
+                "usedSize": 10436508,
+                "totalSize": 13492224,
+                "embedderHeapUsedSize": 5861360,
+                "backingStorageSize": 5253656
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 30,
+                  "selfSize": 2400
+                },
+                "MediaQuerySet": {
+                  "count": 30,
+                  "selfSize": 720
+                },
+                "MediaQuery": {
+                  "count": 29,
+                  "selfSize": 928
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "replay-only-30.heapsnapshot",
+              "sha256": "ff93375978cf1ce1fb71bf1c2ac9bf409634e158b456f12ca1df07bb49e4746c",
+              "heap": {
+                "usedSize": 10564924,
+                "totalSize": 13754368,
+                "embedderHeapUsedSize": 5894216,
+                "backingStorageSize": 5253656
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 90,
+                  "selfSize": 7200
+                },
+                "MediaQuerySet": {
+                  "count": 90,
+                  "selfSize": 2160
+                },
+                "MediaQuery": {
+                  "count": 89,
+                  "selfSize": 2848
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "replay-only-60.heapsnapshot",
+              "sha256": "2b77862ff7c5fe7b8e1f264317c2d493167907e3104ef75e9b8e27d7bd66cfbd",
+              "heap": {
+                "usedSize": 10979972,
+                "totalSize": 14016512,
+                "embedderHeapUsedSize": 5967944,
+                "backingStorageSize": 5253656
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 150,
+                  "selfSize": 12000
+                },
+                "MediaQuerySet": {
+                  "count": 150,
+                  "selfSize": 3600
+                },
+                "MediaQuery": {
+                  "count": 149,
+                  "selfSize": 4768
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "replay-only-90.heapsnapshot",
+              "sha256": "44757686f08f6f757bf7d0ada11ee835975079c022ef9555a70bfd15c0726555",
+              "heap": {
+                "usedSize": 10990720,
+                "totalSize": 14278656,
+                "embedderHeapUsedSize": 5944880,
+                "backingStorageSize": 5253656
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 210,
+                  "selfSize": 16800
+                },
+                "MediaQuerySet": {
+                  "count": 210,
+                  "selfSize": 5040
+                },
+                "MediaQuery": {
+                  "count": 209,
+                  "selfSize": 6688
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        },
+        {
+          "name": "new-match-only",
+          "errors": [],
+          "snapshots": [
+            {
+              "file": "new-match-only-0.heapsnapshot",
+              "sha256": "fc92680f718cf96d7c74a0125611e8a97aa17f3ef149aba71ee675bdb6634d1f",
+              "heap": {
+                "usedSize": 10374556,
+                "totalSize": 13754368,
+                "embedderHeapUsedSize": 5687856,
+                "backingStorageSize": 5256050
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 7,
+                  "selfSize": 560
+                },
+                "MediaQuerySet": {
+                  "count": 7,
+                  "selfSize": 168
+                },
+                "MediaQuery": {
+                  "count": 6,
+                  "selfSize": 192
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "new-match-only-30.heapsnapshot",
+              "sha256": "e38d47490bfd00cd1c7ef0a8cdd8984bb9cc535402aab6364c3f8757eceaa93a",
+              "heap": {
+                "usedSize": 10393880,
+                "totalSize": 13754368,
+                "embedderHeapUsedSize": 5703248,
+                "backingStorageSize": 5256050
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 7,
+                  "selfSize": 560
+                },
+                "MediaQuerySet": {
+                  "count": 7,
+                  "selfSize": 168
+                },
+                "MediaQuery": {
+                  "count": 6,
+                  "selfSize": 192
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "new-match-only-60.heapsnapshot",
+              "sha256": "d3f010ac140bc9b0ed6c2880420f92f0988c35e378b55846e4d425c5cf277039",
+              "heap": {
+                "usedSize": 10526556,
+                "totalSize": 13754368,
+                "embedderHeapUsedSize": 5849568,
+                "backingStorageSize": 5256050
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 7,
+                  "selfSize": 560
+                },
+                "MediaQuerySet": {
+                  "count": 7,
+                  "selfSize": 168
+                },
+                "MediaQuery": {
+                  "count": 6,
+                  "selfSize": 192
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "new-match-only-90.heapsnapshot",
+              "sha256": "82e8cc869cc3429b6f463f0554a9d4ba478f1123f5ce76aa88c6d59f44c8afdc",
+              "heap": {
+                "usedSize": 9660520,
+                "totalSize": 13754368,
+                "embedderHeapUsedSize": 5900072,
+                "backingStorageSize": 5254737
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 1,
+                  "selfSize": 192
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 7,
+                  "selfSize": 560
+                },
+                "MediaQuerySet": {
+                  "count": 7,
+                  "selfSize": 168
+                },
+                "MediaQuery": {
+                  "count": 6,
+                  "selfSize": 192
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        }
+      ],
+      "browser": "153.0.8010.12",
+      "completed": true
+    },
+    "nativeControls": {
+      "diagnosticOnly": true,
+      "browser": "153.0.8010.12",
+      "node": "v24.21.0",
+      "arms": [
+        {
+          "name": "select-disabled",
+          "snapshots": [
+            {
+              "file": "select-disabled-0.heapsnapshot",
+              "sha256": "f0bffd8b4960bcb7838a6b693f39746335e24ded11b671a9103f424d985c0421",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 332768,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "select-disabled-30.heapsnapshot",
+              "sha256": "aaf1562f5269f2c0e0b9749a6bb285486dd5d77369e8c47d75c5d17b0f3b1152",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 503360,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "select-disabled-60.heapsnapshot",
+              "sha256": "f82dadbaf97a8701dc202f4aa1cfc7c16b63d2983e96005e28d7b859552e263f",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 440496,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "select-disabled-90.heapsnapshot",
+              "sha256": "c8ab491a05a66376b695b8edb6c7014e7564a7aa6cf63e57d0d29f77a9fe83db",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 332768,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        },
+        {
+          "name": "file-disabled",
+          "snapshots": [
+            {
+              "file": "file-disabled-0.heapsnapshot",
+              "sha256": "813e824aaa13fd44071e4b9a32890609e0651839d9262be5cd70c1528a05564a",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 317808,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "file-disabled-30.heapsnapshot",
+              "sha256": "69ea43a3e0fed4a3cfb9dfff59f53b27c943cccdbb5bc9e3e7d05248db7e2a4f",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 317960,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "file-disabled-60.heapsnapshot",
+              "sha256": "700c0855e146c3d33a447e56e421a385df88b484a33b78e1bc380ca20ed08c10",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 317960,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "file-disabled-90.heapsnapshot",
+              "sha256": "682f7ce91df5c25b0510d3294d2c4693c71aa20848a26b7ad1bb656342f38a5a",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 449200,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        },
+        {
+          "name": "range-hidden",
+          "snapshots": [
+            {
+              "file": "range-hidden-0.heapsnapshot",
+              "sha256": "0993c2d0194a7f392d72b99a98ff569166d792b6eaca93f481d70ff6ff745fc6",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 311752,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "range-hidden-30.heapsnapshot",
+              "sha256": "1b84fc423e0705aa09f28248d176adba6c354ff506f4951afb63f7cfee37d779",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 485792,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "range-hidden-60.heapsnapshot",
+              "sha256": "f10c5a712a0250537b29cd27c220230b12de5f279a0ce43d138e49325ec59439",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 494088,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "range-hidden-90.heapsnapshot",
+              "sha256": "a87b54028d21c0fe30f5498d65c5a735dbae2ea9283bffa6afe8c24b121d59e8",
+              "heap": {
+                "usedSize": 629256,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 311904,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        },
+        {
+          "name": "select-control",
+          "snapshots": [
+            {
+              "file": "select-control-0.heapsnapshot",
+              "sha256": "022b10460b5735ff7fb4977aeddc7d391daa59572e57e8eb7366fb29b5febd5a",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 324800,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 0
+            },
+            {
+              "file": "select-control-30.heapsnapshot",
+              "sha256": "12b69cdb748e3137a44254181f2c3c04fb311e16f1c44017b55227e5e221f97f",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 324800,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 30
+            },
+            {
+              "file": "select-control-60.heapsnapshot",
+              "sha256": "582b939a9e3a101a9d4eb64eed9a08d263f177c8122aac87f3d65f71666d9078",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 324800,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 60
+            },
+            {
+              "file": "select-control-90.heapsnapshot",
+              "sha256": "3ff08e1f186619b28a259bceb3a82dddb1ed819d4fa1c310e44a16fd7df07b31",
+              "heap": {
+                "usedSize": 620560,
+                "totalSize": 1572864,
+                "embedderHeapUsedSize": 324824,
+                "backingStorageSize": 9
+              },
+              "native": {
+                "UndoStep": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQueryFeatureExpNode": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuerySet": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "MediaQuery": {
+                  "count": 0,
+                  "selfSize": 0
+                },
+                "HTMLDocument": {
+                  "count": 1,
+                  "selfSize": 3368
+                }
+              },
+              "iterations": 90
+            }
+          ]
+        }
+      ],
+      "completed": true
+    },
+    "mediaTrace": {
+      "diagnosticOnly": true,
+      "browser": "153.0.8010.12",
+      "stages": [
+        {
+          "label": "startup",
+          "calls": {}
+        },
+        {
+          "label": "five-imports",
+          "calls": {}
+        },
+        {
+          "label": "five-replays",
+          "calls": {}
+        }
+      ],
+      "completed": true
+    }
+  }
+}
