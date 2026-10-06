@@ -164,3 +164,6 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 @media (max-width: 420px) { .shop-trait { display: none; } .shop-card { min-height: 78px; } .hud-chip { padding: 4px 5px; } }
 .primary-action.waiting { background: var(--c-surface-raised); border-color: var(--c-border-strong); color: var(--c-text-muted); }
 .mobile-controls.locked .economy-action { opacity: .5; }
+.shop-trait { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
+.shop-trait .trait-open { color: var(--c-text); }
+.shop-trait .trait-closed { color: var(--c-text-faint); }

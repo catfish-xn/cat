@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
-import { HERO_STYLE, TRAIT_SHAPES, getHeroIdentity, heroEmblemSvg, EMBLEM_POINTS } from '../src/presentation/hero-identity';
+import { HERO_STYLE, TRAIT_SHAPES, getHeroIdentity, heroEmblemSvg, EMBLEM_POINTS, HERO_S13_TRAITS, S13_TRAIT_ZH, heroTraitLabels } from '../src/presentation/hero-identity';
+import { champions } from './fixtures/s13-source.cjs';
 import { THEME, costColor } from '../src/presentation/theme';
 
 const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => !definition.id.startsWith('neutral'));
@@ -39,5 +40,15 @@ describe('M7 hero identity (G01)', () => {
     expect(getHeroIdentity('neutral-stage-2').shape).toBe('hexagon');
     expect(getHeroIdentity('sentinel').short.length).toBeGreaterThan(0);
     expect(costColor(1)).toBe(THEME.cost[0]); expect(costColor(5)).toBe(THEME.cost[4]);
+  });
+  it('shows the real S13 origin and class traits from the archived 14.24 client data', () => {
+    const archive = champions();
+    for (const hero of heroes) {
+      expect(HERO_S13_TRAITS[hero.id], hero.id).toEqual(archive[hero.id].traits);
+      expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
+      for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
+      const open = heroTraitLabels(hero.id).filter(label => label.open).map(label => label.name);
+      expect(open).toEqual([getHeroIdentity(hero.id).traitName]);
+    }
   });
 });

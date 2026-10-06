@@ -12,7 +12,8 @@ import { THEME, costColor, toNumber } from './theme';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
-const STAR_COLORS = ['#d8dee3', '#ffd34d', '#7ff3ff'] as const;
+/** TFT client convention: 1★ bronze, 2★ silver, 3★ gold. */
+const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d'] as const;
 export type RingState = 'normal' | 'selected' | 'target';
 export interface MeterData { value: number; maxValue: number; ratio: number; width: number }
 

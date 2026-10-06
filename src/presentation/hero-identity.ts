@@ -55,7 +55,31 @@ export function getHeroIdentity(definitionId: string): HeroIdentity {
   return identity;
 }
 
-/** Profession names for display (opened professions first, unopened labelled). */
+/**
+ * Full S13 trait list per hero from the archived 14.24 client data
+ * (src/simulation/content/source/s13-14.24.json). Only the five classes are playable in
+ * this slice; origins and other classes are shown for identity and marked unopened.
+ */
+export const HERO_S13_TRAITS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  irelia: ['Rebel', 'Sentinel'], maddie: ['Enforcer', 'Sniper'], darius: ['Conqueror', 'Watcher'], lux: ['Academy', 'Sorcerer'],
+  zyra: ['Experiment', 'Sorcerer'], tristana: ['Emissary', 'Artillerist'], urgot: ['Experiment', 'Pit Fighter', 'Artillerist'],
+  rell: ['Conqueror', 'Sentinel', 'Visionary'], leona: ['Academy', 'Sentinel'], vander: ['Family', 'Watcher'], kogmaw: ['Automata', 'Sniper'],
+  scar: ['Firelight', 'Watcher'], ezreal: ['Academy', 'Rebel', 'Artillerist'], loris: ['Enforcer', 'Sentinel'], nami: ['Emissary', 'Sorcerer'],
+  corki: ['Scrap', 'Artillerist'], garen: ['Emissary', 'Watcher'], zoe: ['Rebel', 'Sorcerer'], caitlyn: ['Enforcer', 'Sniper'],
+});
+/** Chinese client names (CN media coverage of S13 双城之战2). */
+export const S13_TRAIT_ZH: Readonly<Record<string, string>> = Object.freeze({
+  Sentinel: '哨兵', Artillerist: '炮手', Sniper: '狙神', Watcher: '监察', Sorcerer: '法师',
+  Academy: '皮城学院', Automata: '海克斯机械', Conqueror: '征服者', Emissary: '外交官', Enforcer: '执法官', Experiment: '试验品',
+  Family: '家人', Firelight: '野火帮', Rebel: '蓝发小队', Scrap: '极客', 'Pit Fighter': '搏击手', Visionary: '先知',
+});
+const OPEN_TRAITS = new Set(['Sentinel', 'Artillerist', 'Sniper', 'Watcher', 'Sorcerer']);
+export interface HeroTraitLabel { readonly name: string; readonly open: boolean }
+/** Origin first, then classes, as in the TFT shop; unopened traits flagged. */
+export function heroTraitLabels(definitionId: string): HeroTraitLabel[] {
+  return (HERO_S13_TRAITS[definitionId] ?? []).map(id => ({ name: S13_TRAIT_ZH[id] ?? id, open: OPEN_TRAITS.has(id) }));
+}
+/** Opened profession names only (compact displays). */
 export function heroTraitNames(definitionId: string): string[] {
   return (UNIT_DEFINITIONS[definitionId]?.traits ?? []).map(id => TRAIT_DEFINITIONS[id]?.name ?? '').filter(Boolean);
 }

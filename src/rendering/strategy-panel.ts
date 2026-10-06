@@ -18,7 +18,7 @@ import { combatEventText, originLabel } from './combat-feedback';
 import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
-import { getHeroIdentity, heroEmblemSvg, heroTraitNames } from '../presentation/hero-identity';
+import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -45,6 +45,11 @@ interface PanelActions {
   readonly status: (message: string) => void;
 }
 
+function traitLine(definitionId: string): HTMLElement {
+  const line = element('span', '', 'shop-trait');
+  for (const label of heroTraitLabels(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
+  return line;
+}
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
@@ -531,7 +536,7 @@ export class StrategyPanel {
         const identity = getHeroIdentity(definition.id);
         button.dataset.cost = String(definition.cost); button.classList.toggle('unaffordable', !affordable);
         const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroEmblemSvg(definition.id, 34);
-        button.append(emblem, element('span', identity.name, 'shop-name'), element('span', heroTraitNames(definition.id).join('·') || identity.traitName, 'shop-trait'), element('span', `${definition.cost}`, 'shop-cost'));
+        button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
         button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}`);
       } else button.append(element('span', '已购买', 'shop-name'));
       shop.append(button);
