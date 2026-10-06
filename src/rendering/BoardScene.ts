@@ -624,7 +624,7 @@ export class BoardScene extends Phaser.Scene {
           effect.lineBetween(from.x, from.y, to.x, to.y).strokeCircle(to.x, to.y, 31);
         }
         this.fadeEffect(effect, 500);
-        const label = this.add.text(from.x, from.y - 56, ability.kind === 's13' ? `施法 · ${UNIT_DEFINITIONS[ability.championId]?.name ?? ability.championId}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理', {
+        const label = this.add.text(from.x, from.y - 56, ability.kind === 's13' ? `施法 · ${displayUnitName(ability.championId)}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理', {
           fontSize: '12px', color: Phaser.Display.Color.IntegerToColor(color).rgba, backgroundColor: '#16232d',
         }).setOrigin(0.5).setDepth(20);
         this.fadeEffect(label, 700); this.renderedCastCount++;

@@ -77,3 +77,7 @@ CI47（clean 6c1522f）新增同场重入回归首次失败，dev/preview均记�
 A/C最小修复给SaveCoordinator成功状态回调提供本次in-flight固定快照的只读阶段元信息，await commit前冻结；保存失败或未完成不提供成功元信息。application只以committed.phase===gameOver触发归档并设置已刷新标记，不再用live session.phase。保存格式/SaveStatus/SlotToken契约和所有R3请求、Session、runId、epoch栅栏保持原样。B/D只读复核无阻断。38项协调器单测及TypeScript/构建通过；新增真实事务门禁仍待当前干净提交与完整CI。
 
 E新增R4必需回归：严格revision4→5→6、旧战中commit刷新0/标记未占、终局commit唯一刷新1；两native事务与全部异步刷新实际结束后完整终局Match/账本/存档相同、DB与UI仅C,D,A90战、B消失，实际保存控件成功且无failed回调。原8组及R1–R3门禁不删不放宽，比较器强制新字段。P3施法英雄中文及README文档仍待该P2定向回归通过后收尾，均在冻结Goal现有范围。暂不进入M7。
+
+R4本地正式应用九组在clean9848c909d2faf316bb10818322f56034c8365575通过（192.013s，errors=[]），精确tick80→117、revision4→5→6，旧commit刷新0且标记未占，终局commit唯一刷新1；全部事务/异步完成后DB/UI仅C,D,A90，完整终局快照与账本相等、failed回调为空、真实控件最近保存成功。该中间提交证据不替代最终SHA全套门禁。
+
+在P2定向回归通过后收尾用户指出两项P3：BoardScene施法飘字仅改为已有displayUnitName中文英雄映射，未改领域事件或其他反馈；README同步真实M6控件、保存成功语义、三档案、回放/统计、冻结Goal及合同与专项验证入口，保留M5规则/历史和非目标，不增加玩法或声称已最终用户验收。所有相对文档/脚本链接已核验存在。最终同提交CI及同F1性能重测仍须完成。
