@@ -12,6 +12,7 @@ export class ReplayPanel {
   private controls = document.createElement('div');
   private records: readonly BattleRecord[] = [];
   private callbacks: ReplayCallbacks | null;
+  private showingReplay = false;
   constructor(host: HTMLElement, callbacks: ReplayCallbacks) {
     this.callbacks = callbacks; this.root.className = 'replay-panel'; this.root.setAttribute('aria-label','战斗回放');
     const title = document.createElement('h3'); title.textContent = '已完成战斗回放';
@@ -35,6 +36,10 @@ export class ReplayPanel {
   }
   setEnabled(enabled: boolean): void { this.choices.disabled = !enabled; }
   render(snapshot: ReplaySnapshot | null): void {
+    // Reset only on exit: an idle render must not erase a selection while its
+    // asynchronous open is waiting for the active save queue to finish.
+    if (this.showingReplay && snapshot === null) this.choices.value = '';
+    this.showingReplay = snapshot !== null;
     this.slider.disabled = !snapshot; this.slider.hidden = !snapshot; this.controls.hidden = !snapshot;
     this.status.textContent = snapshot ? `${snapshot.playing ? '播放中' : '已暂停'} · ${snapshot.speed}× · tick ${snapshot.tick} / ${snapshot.endTick}` : '在准备、结算或终局查看已完成战斗';
     if(snapshot) { this.slider.max=String(snapshot.endTick);this.slider.value=String(snapshot.tick); }

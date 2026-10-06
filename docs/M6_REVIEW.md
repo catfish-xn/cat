@@ -41,3 +41,12 @@ The final authoritative machine appendix is generated only after same-SHA normal
 ### 本地 heap 独立复核（非最终通过）
 
 [B/D 独立 heap 诊断](M6_HEAP_DIAGNOSTIC.md)记录了两个 snapshot 的 SHA256、属性识别数量和强引用路径。本地样本中旧 Session／History／Coordinator 已释放，Playback 为零，Phaser 对象数量稳定；这不证明 CI41 preview 的 1 MiB 超标已修复。保留旧失败，最终仍以同一干净 SHA、正常 runner 和默认冻结预算的正式门禁为准。
+
+
+### 用户 Review 的三项 P2 修复
+
+旧生产提交438f35b在隔离git archive中独立复现：真实鼠标从左/右/上离开viewport后E仍误售；打开回放→返回→原生popup同项重选未进入；完成局的真实IDB档案读取延迟后，新局导入已经完成并淘汰旧档，但旧结果会恢复已淘汰列表。证据保留在仓库外work/m6-p2-baseline-evidence；复现不受主工作树HMR影响。合法并发调度已证实，未声称自然使用频率。
+
+主控的鼠标修复只在relatedTarget=null的mouseout及blur清悬停坐标，保留dragging/selected优先级和D/F后按当前canvas bounds计算；所有新增监听器配套SHUTDOWN移除。B在ReplayPanel非null→null退出边界重置选择，避免每帧清除异步打开中的选项。主控给档案刷新加请求代号、runId/activationEpoch/Session身份检查，每个await及内部catch均受约束；install先失效旧读取并清档案引用，dispose失效。正常保存revision或只读回放operation变化不废弃当前请求，真正当前读取失败仍报告。A只读交叉审查无阻断。
+
+E回归覆盖三方向离窗全Match/账本/token不变、重入可出售、显式选中与拖拽离窗仍可出售；同场原生popup重入保持全Match/账本/revision；跨run迟到成功与同run新epoch迟到失败均保持新列表/status/Match/账本/token。延迟仅控制真实IDB结果Promise，等待自动refresh真实settle后才断言，不以固定等待抢在旧请求完成前判通过。最终比较器强制两模式新input/reopen证据及两类迟到结果；Goal、合同、阈值和领域/golden均未改。此段为修复记录，最终同SHA运行结论由新CI生成的机器附录决定。

@@ -203,10 +203,15 @@ export class BoardScene extends Phaser.Scene {
       if (!capabilities?.firesTouchEvents) this.mouseClient = { x: event.clientX, y: event.clientY };
     };
     const touch = (event: PointerEvent) => { if (event.pointerType === 'touch') this.mouseClient = null; };
+    const clearHover = () => { this.mouseClient = null; };
+    const mouseout = (event: MouseEvent) => { if (event.relatedTarget === null) clearHover(); };
     window.addEventListener('mousemove', mousemove, true);
     window.addEventListener('pointerdown', touch, true);
+    window.addEventListener('mouseout', mouseout, true);
+    window.addEventListener('blur', clearHover);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       window.removeEventListener('mousemove', mousemove, true); window.removeEventListener('pointerdown', touch, true);
+      window.removeEventListener('mouseout', mouseout, true); window.removeEventListener('blur', clearHover);
       this.mouseClient = null;
     });
     // Native keydown preserves each OS repeat and commits in DOM event order,

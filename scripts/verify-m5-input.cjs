@@ -50,7 +50,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         previous = now; requestAnimationFrame(sample);
       }
       requestAnimationFrame(sample);
-      for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'touchstart', 'touchend', 'touchcancel', 'mousedown', 'mouseup', 'click', 'keydown'])
+      for (const type of ['pointerdown', 'pointerup', 'pointercancel', 'touchstart', 'touchend', 'touchcancel', 'mousedown', 'mouseup', 'click', 'keydown', 'mouseout', 'pointerout', 'mouseleave'])
         window.addEventListener(type, event => window.__M5_INPUTS__.push({ type, time: performance.now(), trusted: event.isTrusted, code: event.code ?? null,
           repeat: event.repeat ?? false, shieldActive: Boolean(document.querySelector('.choice-overlay.dismissal-shield')), pointerType: event.pointerType ?? null, pointerId: event.pointerId ?? null,
           firesTouchEvents: event.sourceCapabilities?.firesTouchEvents ?? null,
@@ -188,6 +188,31 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert.deepEqual(inputs.filter(input => input.type === 'keydown').map(input => input.code), ['KeyD', 'KeyD', 'KeyF', 'KeyE']);
       assert(inputs.some(input => input.type === 'keydown' && input.repeat));
       const rejectStart = await offset(); await page.keyboard.press('f'); await record('failed-F-preserves-complete-state', expected, expected, rejectStart);
+    }
+    for (const [edge, exitX, exitY] of [['left', -10, 200], ['right', 1450, 200], ['top', 200, -10]]) {
+      await resizeViewport(page, { width: 1440, height: 1000 }); const before = await reset();
+      await page.locator('canvas').scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => window.__CAT_DEBUG__.read().m6.status.kind === 'saved');
+      const unit = (await read()).tokens.find(token => token.id === 'unit-1');
+      await page.mouse.move(unit.screenX, unit.screenY); const hovered = await read();
+      const start = await offset(); await page.mouse.move(exitX, exitY); await page.keyboard.press('e');
+      const { snap, inputs } = await record(`native-viewport-${edge}-exit-clears-hover`, before, before, start);
+      assert.deepEqual(snap.combatEvents, hovered.combatEvents, 'viewport exit E preserves full event ledger');
+      assert.deepEqual(snap.m6.token, hovered.m6.token, 'viewport exit E preserves durable revision');
+      assert(inputs.some(input => ['mouseout', 'pointerout', 'mouseleave'].includes(input.type)), 'real native viewport exit event');
+      const reenterStart = await offset(); await page.mouse.move(unit.screenX, unit.screenY); await page.keyboard.press('e');
+      await record(`native-viewport-${edge}-reentry-restores-hover-sale`, before, accepted(api.sellUnit(before, 'unit-1')), reenterStart);
+    }
+    for (const selection of ['explicit-selected', 'dragging']) {
+      await resizeViewport(page, { width: 1440, height: 1000 }); const before = await reset();
+      await page.locator('canvas').scrollIntoViewIfNeeded();const unit=(await read()).tokens.find(token=>token.id==='unit-1');
+      await page.mouse.move(unit.screenX,unit.screenY);
+      if(selection==='explicit-selected')await page.mouse.click(unit.screenX,unit.screenY);
+      else {await page.mouse.down();await page.mouse.move(unit.screenX+18,unit.screenY-18);await page.waitForFunction(()=>window.__CAT_DEBUG__.read().draggingId==='unit-1');}
+      const start=await offset();await page.mouse.move(-10,200);
+      if(selection==='dragging')assert.equal((await read()).draggingId,'unit-1','leaving viewport does not cancel active drag');
+      await page.keyboard.press('e');if(selection==='dragging')await page.mouse.up();
+      await record(`native-viewport-exit-preserves-${selection}-sale`,before,accepted(api.sellUnit(before,'unit-1')),start);
     }
     async function touch(type, points = []) { await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points }); }
     // Cancellation and normal release use precisely the same native drag path.

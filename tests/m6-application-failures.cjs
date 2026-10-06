@@ -78,6 +78,21 @@ const {sourceFingerprint}=require('../scripts/m5-evidence.cjs');
     assert.equal(checked.activationEpoch,priorEpoch);assert.equal(checked.live.applications,1);assert.equal(checked.live.sessions,1);assert.equal(checked.live.observers,1);report.results.ROOT_03_same_run_completion_archive_refresh={passed:true,...checked};
    }finally{await page.evaluate(()=>window.__M6_FAILURE_CASE.app.dispose());await context.close();}
   }
+  // A completed-run refresh holds real old IDB data while a newer activation finishes.
+  for (const delayedOutcome of ['success', 'reject']) {
+   const {context,page}=await openPage();try{
+    await boot(page);for(const name of ['B','C'])await importEnvelope(page,{...finished,runId:ids[name],battles:records.map(record=>({...record,runId:ids[name]}))});await importEnvelope(page,unfinished);
+    await page.evaluate(async({heldRun,outcome})=>{const {SaveRepository}=await import('/src/persistence/repository.ts');const c=window.__M6_FAILURE_CASE,original=SaveRepository.prototype.readCompleted,originalRefresh=c.app.loadArchives;let first=true,firstRefresh=true;c.app.loadArchives=function(...args){const observed=firstRefresh;firstRefresh=false;return originalRefresh.apply(this,args).finally(()=>{if(observed)c.oldRefreshFinished=true;});};c.restoreArchiveRead=()=>{SaveRepository.prototype.readCompleted=original;};c.restoreArchiveObserver=()=>{c.app.loadArchives=originalRefresh;};SaveRepository.prototype.readCompleted=async function(runId){const actual=await original.call(this,runId);if(first&&runId===heldRun){first=false;c.archiveHeld=true;await new Promise((resolve,reject)=>{c.releaseArchive=()=>{c.archiveReleased=true;if(outcome==='reject')reject(new DOMException('controlled stale archive read failure','AbortError'));else resolve();};});}return actual;};c.app.activeSession.advance(50);},{heldRun:ids.B,outcome:delayedOutcome});
+    await page.waitForFunction(()=>window.__M6_FAILURE_CASE.archiveHeld);const oldToken=(await readApplication(page)).debug.token;
+    const replacement=delayedOutcome==='success'?{...finished,runId:ids.D,battles:records.map(record=>({...record,runId:ids.D}))}:finished;
+    await importEnvelope(page,replacement);
+    const snapshot=()=>page.evaluate(()=>{const app=window.__M6_FAILURE_CASE.app;return{state:app.activeSession.state,events:app.activeSession.combatEvents,token:app.debug().token,status:app.debug().status,options:[...document.querySelectorAll('#replay-root select option')].map(option=>({value:option.value,text:option.textContent}))};});
+    const before=await snapshot();assert.notEqual(before.token.activationEpoch,oldToken.activationEpoch,'new activation invalidates prior read identity');if(delayedOutcome==='reject')assert.equal(before.token.runId,oldToken.runId,'same-run epoch case');await page.evaluate(()=>{const c=window.__M6_FAILURE_CASE;c.restoreArchiveRead();c.releaseArchive();});await page.waitForFunction(()=>window.__M6_FAILURE_CASE.oldRefreshFinished);const after=await snapshot();
+    assert.deepEqual(after,before,'stale archive read cannot overwrite new activation list/status/state/ledger/revision');
+    if(delayedOutcome==='success')assert(!after.options.some(option=>option.text.includes(ids.B.slice(-8))),'evicted old archive never resurrects');
+    report.results[`P2_stale_archive_${delayedOutcome}_after_${delayedOutcome==='success'?'new_run':'same_run_new_epoch'}`]={passed:true,fullStateLedgerStatusRevisionEqual:true,optionsUnchanged:true,sameRunNewEpoch:delayedOutcome==='reject'};
+   }finally{await page.evaluate(()=>{window.__M6_FAILURE_CASE.restoreArchiveRead?.();window.__M6_FAILURE_CASE.restoreArchiveObserver?.();window.__M6_FAILURE_CASE.app.dispose();});await context.close();}
+  }
   // ROOT-04a: initialization read remains a real live IDB transaction when disposal occurs.
   {
    const {context,page}=await openPage();try{await boot(page,true);await page.waitForFunction(()=>window.__M6_FAILURE_CASE.held);await page.evaluate(()=>{const c=window.__M6_FAILURE_CASE;c.app.dispose();c.disposed=true;c.released=true;IDBDatabase.prototype.transaction=c.nativeTransaction;});await page.waitForFunction(()=>window.__M6_FAILURE_CASE.aborted);await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,0)));

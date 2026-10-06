@@ -62,3 +62,8 @@ The final authoritative machine appendix is generated only after same-SHA normal
 ## Final-candidate 06b4e59 local performance failure (preserved)
 
 The clean final-candidate run at 06b4e59, with source fingerprint 5ee323030b52dcdc717782dc9e271325e8a6b5436dee64a2edbbe7ea0c31a7d7, failed the original 12-sample budgets: capture p95 57.8/50ms; write p95 440.3/250ms (the first write was 440.3ms). The other six gates and the legal full-load roundtrip passed. No sample was removed and the first write remains included. Raw evidence is retained at artifacts/m6-final-local-performance/manifest.json. A subsequent source change must receive complete clean-SHA verification; an earlier green run does not qualify this candidate.
+
+
+## 用户 P2 Review 回归门禁
+
+原438f35b的全部通过只证明原有覆盖；隔离旧源复现暴露了离窗悬停、同场重入及迟到档案读取的缺口。新增回归已纳入同提交最终CI和comparison，保留原全部断言、预算、正常时间路线及历史失败；不得以旧438f35b结果代替本次修复提交。具体缺陷/owner/独立检查见M6_REVIEW末节。

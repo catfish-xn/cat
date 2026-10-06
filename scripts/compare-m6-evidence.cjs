@@ -41,6 +41,10 @@ for (const mode of ['dev', 'preview']) {
   assert(route.m6Lifecycle.heapDelta <= limits.MAX_POST_GC_HEAP_GROWTH_BYTES, 'full application post-GC heap');
   assert.equal(route.m6Lifecycle.afterResources.listeners, route.m6Lifecycle.beforeResources.listeners, 'full application listener cleanup');
   assert(route.m6Lifecycle.afterResources.pendingRaf <= route.m6Lifecycle.beforeResources.pendingRaf + 1, 'full application frame scheduler cleanup');
+  for(const key of ['sameBattle','fullStateLedgerRevisionPreserved','nativeKeyboard'])assert.equal(route.m6ReplayReopen?.[key],true,`same-battle native reopen: ${key}`);
+  const nativeInput=read(`m5-input-${mode}`);
+  for(const edge of ['left','right','top'])for(const suffix of ['exit-clears-hover','reentry-restores-hover-sale'])assert(nativeInput.interactions.some(row=>row.name===`native-viewport-${edge}-${suffix}`),`missing native viewport ${edge} ${suffix}`);
+  for(const selection of ['explicit-selected','dragging'])assert(nativeInput.interactions.some(row=>row.name===`native-viewport-exit-preserves-${selection}-sale`),`missing viewport ${selection} preservation`);
   const layout = read(`m6-layout-${mode}`);
   assert.deepEqual(layout.rows.map(r => [r.width, r.height]), [[1440, 1000], [1440, 600], [390, 844], [844, 390], [360, 640]]);
   for (const row of layout.rows) {
@@ -102,6 +106,9 @@ for (const key of ['ROOT_04_initialize_dispose_then_idb_abort', 'ROOT_04_import_
   assert.deepEqual(result.unhandled, []);
   assert.deepEqual(result.live, { applications: 0, sessions: 0, observers: 0 });
   assert.equal(result.saveChildren, 0);
+}
+for(const [key,sameRun] of [['P2_stale_archive_success_after_new_run',false],['P2_stale_archive_reject_after_same_run_new_epoch',true]]){
+ const result=failures.results[key];assert.equal(result?.passed,true,key);assert.equal(result.fullStateLedgerStatusRevisionEqual,true);assert.equal(result.optionsUnchanged,true);assert.equal(result.sameRunNewEpoch,sameRun);
 }
 const performance = read('m6-performance');
 const expectedGates = {

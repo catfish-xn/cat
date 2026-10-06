@@ -42,6 +42,7 @@ export class MatchApplication {
   private busy = true;
   private ignoreNextDelta = true;
   private operation = 0;
+  private archiveRequest = 0;
   private savedArchiveRun: string | null = null;
   constructor(private session: MatchSession, private hooks: ApplicationHooks) {
     MatchApplication.instances++;
@@ -69,13 +70,26 @@ export class MatchApplication {
     finally { if (!this.disposed) { this.busy = false; this.syncMode(); } }
   }
   private async loadArchives() {
-    const records: BattleRecord[] = [];
-    for (const info of await this.repository.listCompleted()) {
-      if (info.runId === this.runId) continue;
-      const envelope = await this.repository.readCompleted(info.runId);
-      if (envelope) records.push(...envelope.battles);
+    const request = ++this.archiveRequest, session = this.session, run = this.runId;
+    const epoch = this.coordinator?.token.activationEpoch ?? this.existing?.token.activationEpoch ?? null;
+    const current = () => !this.disposed && request === this.archiveRequest && session === this.session
+      && run === this.runId && epoch === (this.coordinator?.token.activationEpoch ?? this.existing?.token.activationEpoch ?? null);
+    try {
+      const records: BattleRecord[] = [];
+      const completed = await this.repository.listCompleted();
+      if (!current()) return;
+      for (const info of completed) {
+        if (info.runId === run) continue;
+        const envelope = await this.repository.readCompleted(info.runId);
+        if (!current()) return;
+        if (envelope) records.push(...envelope.battles);
+      }
+      if (current()) { this.archives = records; this.refreshRecords(); }
+    } catch (error) {
+      // Handle failures in the same continuation as the identity check: a late
+      // rejection must not report failure against a newly activated session.
+      if (current()) this.failed(error);
     }
-    if (!this.disposed) { this.archives = records; this.refreshRecords(); }
   }
   private refreshRecords() { this.replayPanel.setRecords([...this.history.completedRecords, ...this.archives.filter(record => record.runId !== this.runId)]); }
   private observe(change: SessionChange) {
@@ -115,12 +129,13 @@ export class MatchApplication {
       if (this.disposed || this.runId !== run) return;
       this.status = status; this.syncControls();
       if (status.kind === 'saved' && this.session.phase === 'gameOver' && this.savedArchiveRun !== run) {
-        this.savedArchiveRun = run; void this.loadArchives().catch(error => this.failed(error));
+        this.savedArchiveRun = run; void this.loadArchives();
       }
     });
   }
   private install(envelope: SaveEnvelope, token: SlotToken | null, prepared: MatchSession, preparedHistory: BattleHistory) {
     const old = this.session;
+    this.archiveRequest++; this.archives = [];
     this.unsubscribe();
     this.session = prepared;
     if (document.hidden) this.session.pause('hidden');
@@ -159,7 +174,7 @@ export class MatchApplication {
       if (token) {
         this.status = { kind: 'saved', at: new Date().toISOString(), token };
         // Activation may import a fourth finished run and evict the oldest archive.
-        await this.loadArchives().catch(error => this.failed(error));
+        await this.loadArchives();
       }
     } catch (error) {
       if (this.disposed || id !== this.operation) return;
@@ -272,7 +287,7 @@ export class MatchApplication {
     replay: this.playbackSession ? { tick: this.playbackSession.read().tick, endTick: this.playbackSession.read().endTick } : null }; }
   dispose() {
     if (this.disposed) return;
-    this.disposed = true; MatchApplication.instances--; this.operation++; this.unsubscribe(); this.coordinator?.dispose(); this.repository.close();
+    this.disposed = true; MatchApplication.instances--; this.operation++; this.archiveRequest++; this.unsubscribe(); this.coordinator?.dispose(); this.repository.close();
     document.removeEventListener('visibilitychange', this.visibility); this.controls.dispose(); this.replayPanel.dispose();
     this.playbackSession?.dispose(); this.replayView?.dispose(); this.session.dispose();
   }
