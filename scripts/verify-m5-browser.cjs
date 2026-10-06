@@ -23,9 +23,33 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const cdp=await context.newCDPSession(page);await cdp.send('HeapProfiler.enable');const heapDiagnostics=process.env.M6_HEAP_DIAGNOSTICS==='1';async function heapSnapshot(label){if(!heapDiagnostics)return;const descriptor=fs.openSync(path.join(output,`${label}.heapsnapshot`),'w');const chunk=({chunk})=>fs.writeSync(descriptor,chunk);cdp.on('HeapProfiler.addHeapSnapshotChunk',chunk);try{await cdp.send('HeapProfiler.takeHeapSnapshot',{reportProgress:false});}finally{cdp.off('HeapProfiler.addHeapSnapshotChunk',chunk);fs.closeSync(descriptor);}}
   async function cycle(){await click('mobile:new-match');await startFixed42();while((await read()).state.phase==='choice'){const pending=(await read()).state.pendingChoice;await click(`choice:${pending.offers[0]}`);}const epoch=(await read()).m6.token.activationEpoch;await page.locator('[data-debug="m6-import"]').setInputFiles(file);await page.waitForFunction(epoch=>{const s=window.__CAT_DEBUG__.read();return s.m6.mode==='active'&&s.m6.token.activationEpoch!==epoch;},epoch);await page.getByLabel('选择已完成战斗').selectOption('0');await page.waitForFunction(()=>window.__CAT_DEBUG__.read().m6.mode==='replay');await page.locator('#replay-root').getByRole('button',{name:'返回当前局',exact:true}).click();const state=await read();assert.deepEqual(state.state,original);assert.equal(state.effects,0);assert.equal(state.tweens,0);assert.equal(state.m6.paused,false);assert.equal(state.m6.status.kind,'saved','active replacement successfully saves after quota recovery');assert.deepEqual(state.m6.lifecycle,{applications:1,sessions:1,observers:1},'one active application/session/observer after replacement');}
   async function drainInputs(){const segment=await page.evaluate(()=>{const events=window.__M5_NATIVE_INPUTS__;window.__M5_NATIVE_INPUTS__=[];return events;});report.nativeBeforeReload=[...(report.nativeBeforeReload??[]),...segment];}
-  await cycle();await cycle();report.m6ReplayFailureIsolation.activeSavingRecovered=true;await drainInputs();await cdp.send('HeapProfiler.collectGarbage');const beforeHeap=await cdp.send('Runtime.getHeapUsage'),beforeResources=await page.evaluate(()=>window.__M6_RESOURCES__.read());await heapSnapshot('before');const rows=[];
+  // The approved experiment changes only prewarming; the production method stays at two cycles until adoption.
+  const warmupExperiment=process.env.M6_WARMUP_EXPERIMENT==='1',warmupCycles=warmupExperiment?12:2;
+  assert(!warmupExperiment||!heapDiagnostics,'warmup experiment must not collect perturbing heap snapshots');
+  for(let i=0;i<warmupCycles;i++)await cycle();report.m6ReplayFailureIsolation.activeSavingRecovered=true;await drainInputs();await cdp.send('HeapProfiler.collectGarbage');const beforeHeap=await cdp.send('Runtime.getHeapUsage'),beforeResources=await page.evaluate(()=>window.__M6_RESOURCES__.read());await heapSnapshot('before');const rows=[];
   for(let i=0;i<30;i++){await cycle();rows.push({cycle:i+1,m6:(await read()).m6,resources:await page.evaluate(()=>window.__M6_RESOURCES__.read())});fs.writeFileSync(path.join(output,'m6-lifecycle-progress.json'),JSON.stringify({cycle:i+1}));}
-  await drainInputs();await cdp.send('HeapProfiler.collectGarbage');const afterHeap=await cdp.send('Runtime.getHeapUsage'),afterResources=await page.evaluate(()=>window.__M6_RESOURCES__.read());await heapSnapshot('after');report.m6Lifecycle={heapDiagnostics,cycles:30,beforeHeap,afterHeap,heapDelta:afterHeap.usedSize-beforeHeap.usedSize,beforeResources,afterResources,rows};fs.writeFileSync(path.join(output,'m6-lifecycle.json'),JSON.stringify(report.m6Lifecycle));assert.equal(afterResources.listeners,beforeResources.listeners,'full application window/document/canvas listeners do not accumulate');assert(afterResources.pendingRaf<=beforeResources.pendingRaf+1,'full application RAF schedulers do not accumulate');assert(afterHeap.usedSize-beforeHeap.usedSize<=1024*1024,'full application post-GC heap growth <=1MiB');
+  await drainInputs();await cdp.send('HeapProfiler.collectGarbage');const afterHeap=await cdp.send('Runtime.getHeapUsage'),afterResources=await page.evaluate(()=>window.__M6_RESOURCES__.read());await heapSnapshot('after');report.m6Lifecycle={heapDiagnostics,warmupExperiment,warmupCycles,cycles:30,beforeHeap,afterHeap,heapDelta:afterHeap.usedSize-beforeHeap.usedSize,beforeResources,afterResources,rows};fs.writeFileSync(path.join(output,'m6-lifecycle.json'),JSON.stringify(report.m6Lifecycle));// Additional windows are diagnostic follow-up, after the unchanged first 30-cycle measurement has been saved.
+  if(warmupExperiment){
+   const windows=[{window:1,cycles:30,beforeHeap,afterHeap,heapDelta:afterHeap.usedSize-beforeHeap.usedSize,beforeResources,afterResources}];
+   const trend={warmupCycles,cyclesPerWindow:30,heapDiagnostics:false,windows};
+   for(let window=2;window<=3;window++){
+    const previous=windows.at(-1);
+    for(let i=0;i<30;i++){await cycle();fs.writeFileSync(path.join(output,'m6-trend-progress.json'),JSON.stringify({window,cycle:i+1}));}
+    await drainInputs();await cdp.send('HeapProfiler.collectGarbage');
+    const heap=await cdp.send('Runtime.getHeapUsage'),resources=await page.evaluate(()=>window.__M6_RESOURCES__.read());
+    windows.push({window,cycles:30,beforeHeap:previous.afterHeap,afterHeap:heap,heapDelta:heap.usedSize-previous.afterHeap.usedSize,beforeResources:previous.afterResources,afterResources:resources});
+    fs.writeFileSync(path.join(output,'m6-heap-trend.json'),JSON.stringify(trend,null,2));
+   }
+   trend.persistentGrowth=windows.every(sample=>sample.heapDelta>0);
+   fs.writeFileSync(path.join(output,'m6-heap-trend.json'),JSON.stringify(trend,null,2));
+   for(const sample of windows){
+    assert.equal(sample.afterResources.listeners,beforeResources.listeners,'follow-up listeners do not accumulate');
+    assert(sample.afterResources.pendingRaf<=beforeResources.pendingRaf+1,'follow-up RAF schedulers do not accumulate');
+    assert(sample.heapDelta<=1024*1024,'each follow-up 30-cycle window retains the 1MiB ceiling');
+   }
+   assert(!trend.persistentGrowth,'persistent post-warmup growth: investigate as a potential real leak, do not accept the method');
+  }
+  assert.equal(afterResources.listeners,beforeResources.listeners,'full application window/document/canvas listeners do not accumulate');assert(afterResources.pendingRaf<=beforeResources.pendingRaf+1,'full application RAF schedulers do not accumulate');assert(afterHeap.usedSize-beforeHeap.usedSize<=1024*1024,'full application post-GC heap growth <=1MiB');
  }
  async function verifySeedControls(){
   async function choices(){while((await read()).state.phase==='choice'){const pending=(await read()).state.pendingChoice;await click(`choice:${pending.offers[0]}`);}await page.waitForFunction(()=>!document.querySelector('.choice-overlay.dismissal-shield'));}

@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      warmup_experiment:
+        description: Run the approved main/M7 12-warmup comparison (not full acceptance)
+        type: boolean
+        default: false
       heap_diagnostics:
         description: Run only the isolated M6/M7 heap snapshot diagnosis (not acceptance)
         type: boolean
@@ -18,11 +22,14 @@ env:
 permissions:
   contents: read
 jobs:
+  warmup-experiment:
+    if: ${{ inputs.warmup_experiment }}
+    uses: ./.github/workflows/m7-warmup-experiment.yml
   heap-diagnostics:
-    if: ${{ inputs.heap_diagnostics }}
+    if: ${{ inputs.heap_diagnostics && !inputs.warmup_experiment }}
     uses: ./.github/workflows/m7-heap-diagnostic.yml
   test-and-build:
-    if: ${{ !inputs.heap_diagnostics }}
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: test-and-build-sample${{ matrix.sample }}
     strategy:
       fail-fast: false
@@ -51,7 +58,7 @@ jobs:
           name: m5-headless-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   chromium-match:
-    if: ${{ !inputs.heap_diagnostics }}
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}
@@ -89,7 +96,7 @@ jobs:
           name: m5-browser-${{ matrix.mode }}-${{ matrix.build }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   chromium-input:
-    if: ${{ !inputs.heap_diagnostics }}
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: input-${{ matrix.mode }}-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
@@ -133,7 +140,7 @@ jobs:
           name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   m7-presentation:
-    if: ${{ !inputs.heap_diagnostics }}
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: m7-presentation-sample${{ matrix.sample }}
     env:
       M5_JOB_KEY: m7-presentation-sample${{ matrix.sample }}
@@ -175,7 +182,7 @@ jobs:
           name: m7-presentation-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
   compare-evidence:
-    if: ${{ !inputs.heap_diagnostics }}
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: compare-evidence-sample${{ matrix.sample }}
     needs: [test-and-build, chromium-match, chromium-input]
     runs-on: ubuntu-24.04
