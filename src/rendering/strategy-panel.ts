@@ -266,7 +266,7 @@ export class StrategyPanel {
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));
-    const controls = element('div', '', 'mobile-controls');
+    const controls = element('div', '', 'mobile-controls'); controls.classList.toggle('locked', !ready);
     for (const name of ['reroll', 'buy-xp', 'sell'] as const) controls.append(controlButton(name, 'economy-action'));
     const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !ready);
     lock.setAttribute('aria-pressed', String(Boolean(state.shop.locked))); lock.classList.add('economy-action'); controls.append(lock);
