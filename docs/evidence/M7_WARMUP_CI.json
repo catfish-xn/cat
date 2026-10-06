@@ -1,0 +1,619 @@
+{
+  "experimentOnly": true,
+  "harnessSha": "4e687db1df765aaaaae504586884d84aa6ecaed2",
+  "ceilingBytes": 1048576,
+  "runs": [
+    {
+      "round": 1,
+      "runId": 37495606837,
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37495606837",
+      "conclusion": "success",
+      "createdAt": "2026-10-06T16:25:38Z",
+      "completedAt": "2026-10-06T16:38:26Z",
+      "comparisonSha256": "dc2258b68f46566f0f9db4da5afa833f92267b133fe5b77dcb57bc8805a0bfda",
+      "passed": true
+    },
+    {
+      "round": 2,
+      "runId": 37497322321,
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37497322321",
+      "conclusion": "success",
+      "createdAt": "2026-10-06T16:38:42Z",
+      "completedAt": "2026-10-06T16:51:41Z",
+      "comparisonSha256": "0f824eaab0a3b718bfa53247296c734baf50e59f2ab9e8d18f33f24b36b7deed",
+      "passed": true
+    },
+    {
+      "round": 3,
+      "runId": 37499113340,
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37499113340",
+      "conclusion": "failure",
+      "createdAt": "2026-10-06T16:52:25Z",
+      "completedAt": "2026-10-06T17:05:17Z",
+      "comparisonSha256": "69781d7e76e0d48dfdb0b0715e92977990bd307800adaa0bb708a76099099c83",
+      "passed": false
+    }
+  ],
+  "samples": [
+    {
+      "round": 1,
+      "runId": 37495606837,
+      "revision": "m6-main",
+      "mode": "dev",
+      "targetSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "sourceFingerprint": "d358245c9afa0355492a7da1b24115bd9bf44c94f6616855192fe3f3c3d19f48",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        13402072,
+        13187720,
+        13975092,
+        14030212
+      ],
+      "windowDeltasBytes": [
+        -214352,
+        787372,
+        55120
+      ],
+      "net90CyclesBytes": 628140,
+      "observedSpanBytes": 842492,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 81,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 1,
+      "runId": 37495606837,
+      "revision": "m6-main",
+      "mode": "preview",
+      "targetSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "sourceFingerprint": "d358245c9afa0355492a7da1b24115bd9bf44c94f6616855192fe3f3c3d19f48",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        11746080,
+        11001944,
+        11249624,
+        11976712
+      ],
+      "windowDeltasBytes": [
+        -744136,
+        247680,
+        727088
+      ],
+      "net90CyclesBytes": 230632,
+      "observedSpanBytes": 974768,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 80,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 1,
+      "runId": 37495606837,
+      "revision": "m7",
+      "mode": "dev",
+      "targetSha": "67527610063802d995c4f95044d82c7ad4afe9dc",
+      "sourceFingerprint": "7f155dfc2aa174608e25f87f29ff7c738680956b5fa22d3e971393ced9608be9",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        15146296,
+        14742196,
+        15031412,
+        15162908
+      ],
+      "windowDeltasBytes": [
+        -404100,
+        289216,
+        131496
+      ],
+      "net90CyclesBytes": 16612,
+      "observedSpanBytes": 420712,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 1,
+      "runId": 37495606837,
+      "revision": "m7",
+      "mode": "preview",
+      "targetSha": "67527610063802d995c4f95044d82c7ad4afe9dc",
+      "sourceFingerprint": "7f155dfc2aa174608e25f87f29ff7c738680956b5fa22d3e971393ced9608be9",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        12660196,
+        12500144,
+        12991064,
+        12800892
+      ],
+      "windowDeltasBytes": [
+        -160052,
+        490920,
+        -190172
+      ],
+      "net90CyclesBytes": 140696,
+      "observedSpanBytes": 490920,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 2,
+      "runId": 37497322321,
+      "revision": "m6-main",
+      "mode": "dev",
+      "targetSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "sourceFingerprint": "d358245c9afa0355492a7da1b24115bd9bf44c94f6616855192fe3f3c3d19f48",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        13732160,
+        13210368,
+        13930720,
+        13474044
+      ],
+      "windowDeltasBytes": [
+        -521792,
+        720352,
+        -456676
+      ],
+      "net90CyclesBytes": -258116,
+      "observedSpanBytes": 720352,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 81,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 2,
+      "runId": 37497322321,
+      "revision": "m6-main",
+      "mode": "preview",
+      "targetSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "sourceFingerprint": "d358245c9afa0355492a7da1b24115bd9bf44c94f6616855192fe3f3c3d19f48",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        11250780,
+        11320152,
+        11595280,
+        11489940
+      ],
+      "windowDeltasBytes": [
+        69372,
+        275128,
+        -105340
+      ],
+      "net90CyclesBytes": 239160,
+      "observedSpanBytes": 344500,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 80,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 2,
+      "runId": 37497322321,
+      "revision": "m7",
+      "mode": "dev",
+      "targetSha": "67527610063802d995c4f95044d82c7ad4afe9dc",
+      "sourceFingerprint": "7f155dfc2aa174608e25f87f29ff7c738680956b5fa22d3e971393ced9608be9",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        15030132,
+        15049928,
+        14898152,
+        15493812
+      ],
+      "windowDeltasBytes": [
+        19796,
+        -151776,
+        595660
+      ],
+      "net90CyclesBytes": 463680,
+      "observedSpanBytes": 595660,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 2,
+      "runId": 37497322321,
+      "revision": "m7",
+      "mode": "preview",
+      "targetSha": "67527610063802d995c4f95044d82c7ad4afe9dc",
+      "sourceFingerprint": "7f155dfc2aa174608e25f87f29ff7c738680956b5fa22d3e971393ced9608be9",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        12891616,
+        12050536,
+        12378036,
+        12989504
+      ],
+      "windowDeltasBytes": [
+        -841080,
+        327500,
+        611468
+      ],
+      "net90CyclesBytes": 97888,
+      "observedSpanBytes": 938968,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 3,
+      "runId": 37499113340,
+      "revision": "m6-main",
+      "mode": "dev",
+      "targetSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "sourceFingerprint": "d358245c9afa0355492a7da1b24115bd9bf44c94f6616855192fe3f3c3d19f48",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        13948436,
+        12982480,
+        13426992,
+        13606720
+      ],
+      "windowDeltasBytes": [
+        -965956,
+        444512,
+        179728
+      ],
+      "net90CyclesBytes": -341716,
+      "observedSpanBytes": 965956,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 81,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 81,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 3,
+      "runId": 37499113340,
+      "revision": "m6-main",
+      "mode": "preview",
+      "targetSha": "a8be9fc151b9ebb895eb4097828bb74c590e2559",
+      "sourceFingerprint": "d358245c9afa0355492a7da1b24115bd9bf44c94f6616855192fe3f3c3d19f48",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        11574956,
+        11696936,
+        11729016,
+        11895608
+      ],
+      "windowDeltasBytes": [
+        121980,
+        32080,
+        166592
+      ],
+      "net90CyclesBytes": 320652,
+      "observedSpanBytes": 320652,
+      "persistentGrowth": true,
+      "beforeResources": {
+        "listeners": 80,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 80,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: three growing windows: investigate as a potential real leak\n    at Object.<anonymous> (/home/runner/work/cat/cat/scripts/compare-m7-warmup.cjs:55:5)\n    at Module._compile (node:internal/modules/cjs/loader:1781:14)\n    at Object..js (node:internal/modules/cjs/loader:1913:10)\n    at Module.load (node:internal/modules/cjs/loader:1505:32)\n    at Function._load (node:internal/modules/cjs/loader:1309:12)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)\n    at node:internal/main/run_main_module:36:49"
+    },
+    {
+      "round": 3,
+      "runId": 37499113340,
+      "revision": "m7",
+      "mode": "dev",
+      "targetSha": "67527610063802d995c4f95044d82c7ad4afe9dc",
+      "sourceFingerprint": "7f155dfc2aa174608e25f87f29ff7c738680956b5fa22d3e971393ced9608be9",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        15840464,
+        15374624,
+        15743612,
+        15565484
+      ],
+      "windowDeltasBytes": [
+        -465840,
+        368988,
+        -178128
+      ],
+      "net90CyclesBytes": -274980,
+      "observedSpanBytes": 465840,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 83,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "passed": true,
+      "error": null
+    },
+    {
+      "round": 3,
+      "runId": 37499113340,
+      "revision": "m7",
+      "mode": "preview",
+      "targetSha": "67527610063802d995c4f95044d82c7ad4afe9dc",
+      "sourceFingerprint": "7f155dfc2aa174608e25f87f29ff7c738680956b5fa22d3e971393ced9608be9",
+      "driverSha256": "b5b95eb2cc80fc9936588879ab77601600619033d4996f18df782996da6f9a8b",
+      "warmups": 12,
+      "cyclesPerWindow": 30,
+      "heapBytesAfterCycles0_30_60_90": [
+        13242080,
+        12749228,
+        12668336,
+        12823072
+      ],
+      "windowDeltasBytes": [
+        -492852,
+        -80892,
+        154736
+      ],
+      "net90CyclesBytes": -419008,
+      "observedSpanBytes": 573744,
+      "persistentGrowth": false,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "windowResources": [
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      ],
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "passed": true,
+      "error": null
+    }
+  ],
+  "allPassed": false,
+  "maximumPrimaryDeltaBytes": 121980,
+  "maximumFollowupDeltaBytes": 787372,
+  "minimumWindowDeltaBytes": -965956
+}

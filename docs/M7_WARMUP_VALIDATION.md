@@ -6,6 +6,7 @@
 
 - M6：main 在开工时的 HEAD `a8be9fc151b9ebb895eb4097828bb74c590e2559`。此提交已合并 M6；对照签收 `631c131`，`src/`、package/lock 和原测量脚本无差异，不能继续把 main 描述成 M5。
 - M7：本次实验前的分支 HEAD `67527610063802d995c4f95044d82c7ad4afe9dc`。
+- 实验结束、推送记录时，远端另有 Claude 的 UI 提交 `b252c34`。已保留该并行提交并仅重放本报告；它不在本次固定 M7 样本中，不能把以下结果当成新 UI 提交的内存验收。
 - 每轮矩阵：M6/M7 × dev/preview，四个独立 Ubuntu 24.04 / Node 22 runner，分别按各自 lockfile 安装并构建。
 - 三轮使用相同实验提交与固定目标 SHA；上一轮结束后才派发下一轮。不从失败中挑一次成功，不重跑覆盖结果。
 - 不修改 main、不合并分支、不修改 UI/规则/存档、预算常量或普通完整 CI 的正式测量方法。
@@ -38,8 +39,62 @@
 
 ## 三轮结果
 
-待实际运行后逐项记录。无论成功或失败，均保留 run ID、目标、模式、三个窗口的原始前后值、增量和作业状态，不只记录“绿”。
+实验提交：`4e687db1df765aaaaae504586884d84aa6ecaed2`。三轮按顺序运行，使用同一源码/驱动；没有重跑覆盖失败。前两轮 success，第三轮 failure。**未达到三轮全部稳定通过的目标。**
+
+下表增量单位均为 B。窗口 1 是规定的 30 次主测量，窗口 2/3 是同进程后续观察。
+
+| 轮次 / CI | 目标 | 模式 | 窗口 1 | 窗口 2 | 窗口 3 | 结果 |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| [1 / 37495606837](https://github.com/catfish-xn/cat/actions/runs/37495606837) | m6-main | dev | -214,352 | 787,372 | 55,120 | 通过 |
+| [1 / 37495606837](https://github.com/catfish-xn/cat/actions/runs/37495606837) | m6-main | preview | -744,136 | 247,680 | 727,088 | 通过 |
+| [1 / 37495606837](https://github.com/catfish-xn/cat/actions/runs/37495606837) | m7 | dev | -404,100 | 289,216 | 131,496 | 通过 |
+| [1 / 37495606837](https://github.com/catfish-xn/cat/actions/runs/37495606837) | m7 | preview | -160,052 | 490,920 | -190,172 | 通过 |
+| [2 / 37497322321](https://github.com/catfish-xn/cat/actions/runs/37497322321) | m6-main | dev | -521,792 | 720,352 | -456,676 | 通过 |
+| [2 / 37497322321](https://github.com/catfish-xn/cat/actions/runs/37497322321) | m6-main | preview | 69,372 | 275,128 | -105,340 | 通过 |
+| [2 / 37497322321](https://github.com/catfish-xn/cat/actions/runs/37497322321) | m7 | dev | 19,796 | -151,776 | 595,660 | 通过 |
+| [2 / 37497322321](https://github.com/catfish-xn/cat/actions/runs/37497322321) | m7 | preview | -841,080 | 327,500 | 611,468 | 通过 |
+| [3 / 37499113340](https://github.com/catfish-xn/cat/actions/runs/37499113340) | m6-main | dev | -965,956 | 444,512 | 179,728 | 通过 |
+| [3 / 37499113340](https://github.com/catfish-xn/cat/actions/runs/37499113340) | m6-main | preview | 121,980 | 32,080 | 166,592 | **持续增长，失败** |
+| [3 / 37499113340](https://github.com/catfish-xn/cat/actions/runs/37499113340) | m7 | dev | -465,840 | 368,988 | -178,128 | 通过 |
+| [3 / 37499113340](https://github.com/catfish-xn/cat/actions/runs/37499113340) | m7 | preview | -492,852 | -80,892 | 154,736 | 通过 |
+
+### 结论与失败处置
+
+- 12 组主测量全部低于原 1MiB，上限未改；最大主窗口增量 **121,980B**。全部 36 个窗口也都未超 1MiB，最大单窗口增量 **787,372B**。这些数字不能掩盖持续增长检查失败。
+- M7 的 dev/preview 共 6 组全部通过，未出现三个窗口连续增长。
+- **M6/main preview 第 3 轮失败**：预热后 usedSize 从 11,574,956 → 11,696,936 → 11,729,016 → 11,895,608 B，连续三段正增长，90 次合计 **320,652B**。采样没有堆快照，故不能归咎于本次快照扰动。
+- 按用户要求，将该样本按潜在真实泄漏处理，保留阻断，不以“仍小于 1MiB”“基线也会这样”或其他轮次通过为由放行。增长趋势已观察到，具体保留链尚待定位；不能把趋势直接写成某个应用对象泄漏已证实。
+- 失败样本监听器始终 80、RAF 始终 1，主窗口各循环 application/session/observer 均为 1。所有 12 组已有资源计数都稳定，因此常见实例/监听器累积未被这些探针发现，但这不足以排除其他对象保留。
+- 三轮环境均为 Node 22.23.3、Chromium 153.0.8010.12；目标应用 fingerprint 与共享驱动哈希跨轮一致。每轮有 4 个测量作业和 1 个 compare；第 3 轮 compare 也按预期失败，原始失败保持可见。
+- 机器摘要见 [M7_WARMUP_CI.json](evidence/M7_WARMUP_CI.json)，包含全部前后值、增量、资源计数、环境、SHA 和原始比较报告哈希。完整证据见三个 run 的 `warmup-*` / `warmup-comparison` artifacts；失败原始包为 artifact `11428324817`。
+
+### 独立泄漏调查
+
+已在独立的 main 固定提交工作树中完成相同公开路线、12 次预热和 90 次观察，采集 baseline、30、60、90 次后的堆快照。该单独诊断明确启用 `heapDiagnostics=true`，不进入正式/实验比较器；没有把它作为第 4 次候选验收，或用它覆盖第 3 轮失败。
+
+诊断环境是本地 Node **24.21.0** / Intel Xeon，CI 是 Node **22.23.3** / AMD EPYC；Chromium 均为 153.0.8010.12。加上快照对 GC/优化的扰动，这不是原失败 runner 的直接重现。三段增量为 **−844,396 / +297,112 / +585,904 B**，90 次净增 **38,620B**。
+
+快照分析（生产构建类名通过实际构造调用及 debug lifecycle 字段映射，不按缩写猜测）：
+
+| 对象 | baseline / 30 / 60 / 90 次 |
+| --- | --- |
+| MatchApplication、MatchSession、BattleHistory、SaveCoordinator、SaveRepository | 均为 1 / 1 / 1 / 1 |
+| PlaybackSession、ReplayView | 均为 0 / 0 / 0 / 0 |
+| HTMLCanvasElement | 3 / 3 / 3 / 3 |
+
+基线的旧 MatchSession / BattleHistory / SaveCoordinator 对象 ID 在后续三张快照中均不存在，证明这些旧实例确实释放。普通 JS object 的总 self-size 到 90 次仅增加 244B，closure 总 self-size 不变；但不能由此推断所有对象都没有问题。
+
+定位到的其他增长和保留链：
+
+- V8 code 类型总 self-size 较基线 +145,644B；其中 InstructionStream 的正向变化 +490,944B，同时有其他代码类型回收。不能只加正项，也不能直接拿 snapshot self-size 去减 Runtime.usedSize。
+- native 类型总 self-size +278,061B。`MediaQueryFeatureExpNode` 较基线在 30/60/90 次分别增加 **150/300/450** 个；新对象强引用路径为 `HTMLDocument → StyleEngine → media-query cache → MediaQuerySet → MediaQuery → MediaQueryFeatureExpNode`。
+- `UndoStep` 较基线在 30/60/90 次分别增加 **30/60/90** 个；强引用路径为 `LocalFrame → Editor → UndoStack → UndoStep`。测试每次通过公开 seed input 执行 `fill('42')`，这是值得进一步做消融验证的输入历史来源，尚未用消融实验证明因果。
+- 以上表明诊断中确有浏览器原生缓存/编辑历史持续保留，也有运行时代码变化；**尚不能证明它们解释了失败 CI 的全部 JS usedSize 增长，不能据此把阻断改判成纯噪声。** 未贸然修改界面、浏览器输入方式或再次调整预热次数。
+
+节点摘要、类名映射、原始快照哈希和非 weak 保留路径见 [M7_WARMUP_HEAP_DIAGNOSTIC.json](evidence/M7_WARMUP_HEAP_DIAGNOSTIC.json)。原始快照和独立驱动保存在本次交付目录 `outputs/m7-warmup/`。
+
+静态复核：`MatchApplication.install()` 解除旧订阅、dispose 旧 session/coordinator 并替换 history；退出回放清空 playback session/view；`SaveCoordinator` 只持有一个在途写和一个 pending capture，dispose 清空 pending；repository 的 committedHeader 只保存头部而不保留完整战斗，激活时清理不再保留的存档。暂未由这些代码定位到确定的无界保留链，继续按未定位泄漏风险处理。
 
 ## 采用状态
 
-本提交只实现获批对照实验。正式方法是否改为 12 次预热，应基于三轮全部证据作出结论；不能在实验尚未证明稳定时宣称问题已解决。
+**不推广 12 次预热为正式门禁；不提高 1MiB，不继续增加预热次数来追求全绿。** 三轮实验已完成，但 M6 的持续增长阻断尚未解除。正式 CI 仍保持原方法。后续应定位并处理被保留对象，或用充分证据定位测量器本身的问题，再完整重复验证；不能把这三轮表述成全部通过。
