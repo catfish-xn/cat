@@ -25,6 +25,22 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -- --mode pages
+      # Keep the temporary M7 snapshot separate from the main site. Pages
+      # replaces the entire site on deployment, so include both in every artifact.
+      - name: Check out temporary M7 preview
+        uses: actions/checkout@v4
+        with:
+          # claude/friendly-darwin-pak00a at the time the preview was requested.
+          ref: d46ed54269548840ccc4644e1d67cad96199afac
+          path: .pages-m7
+          persist-credentials: false
+      - name: Build M7 for its own subpath
+        working-directory: .pages-m7
+        run: |
+          npm ci
+          npm run build -- --base /cat/m7/
+      - name: Include M7 without replacing main
+        run: mv .pages-m7/dist dist/m7
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
