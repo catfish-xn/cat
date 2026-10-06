@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { deepFreeze, isOwnedBattleRecord } from '../src/replay/history';
 import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattleRecord } from '../src/replay';
 import { startMatchCombat, stepMatch, nextRound, sellUnit } from '../src/simulation/match';
 import type { CombatEvent } from '../src/simulation/combat';
@@ -85,6 +86,25 @@ describe('M6 isolated battle records and replay',()=>{
     const beforeMutation=restored.capturePrefix(); Object.assign(imported.context,{seed:99});
     Object.assign(imported.events[0],{tick:999});
     expect(restored.capturePrefix()).toEqual(beforeMutation);
+  });
+  it('brands only detached recorder-owned immutable records, not external frozen lookalikes',()=>{
+    const {history,envelope}=battle(undefined,40), prefix=history.capturePrefix()!;
+    expect(isOwnedBattleRecord(prefix)).toBe(true);
+    for(const value of [null,undefined,1,'record',{},Object.freeze({...prefix}),deepFreeze(structuredClone(prefix))])
+      expect(isOwnedBattleRecord(value)).toBe(false);
+    const external=structuredClone(prefix), imported=new BattleHistory(envelope.runId,[],external);
+    const captured=imported.capturePrefix()!;
+    expect(isOwnedBattleRecord(external)).toBe(false);expect(isOwnedBattleRecord(captured)).toBe(true);
+    expect(captured.context).not.toBe(external.context);expect(captured.events[0]).not.toBe(external.events[0]);
+    Object.assign(external.context,{seed:99});Object.assign(external.events[0],{tick:999});
+    expect(captured).toEqual(prefix);
+    const completed=battle().history.completedRecords[0], copy=structuredClone(completed);
+    const restored=new BattleHistory('test-run',[copy]).completedRecords[0];
+    expect(isOwnedBattleRecord(completed)).toBe(true);expect(isOwnedBattleRecord(copy)).toBe(false);
+    expect(isOwnedBattleRecord(restored)).toBe(true);expect(restored).not.toBe(copy);
+    const assertFrozen=(value:unknown):void=>{if(value&&typeof value==='object'){expect(Object.isFrozen(value)).toBe(true);Object.values(value).forEach(assertFrozen);}};
+    assertFrozen(captured);assertFrozen(restored);
+    expect(validateBattleRecord(captured).terminal.tick).toBe(40);
   });
   it('rejects missing/reordered events, forged checkpoint, wrong result, future identity, and topology',async()=>{
     const {envelope}=battle(),record=envelope.battles[0];

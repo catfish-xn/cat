@@ -58,3 +58,7 @@ The final authoritative machine appendix is generated only after same-SHA normal
 ### 本地 heap 独立复核（非最终通过）
 
 [B/D 独立 heap 诊断](M6_HEAP_DIAGNOSTIC.md)记录了两个 snapshot 的 SHA256、属性识别数量和强引用路径。本地样本中旧 Session／History／Coordinator 已释放，Playback 为零，Phaser 对象数量稳定；这不证明 CI41 preview 的 1 MiB 超标已修复。保留旧失败，最终仍以同一干净 SHA、正常 runner 和默认冻结预算的正式门禁为准。
+
+## Final-candidate 06b4e59 local performance failure (preserved)
+
+The clean final-candidate run at 06b4e59, with source fingerprint 5ee323030b52dcdc717782dc9e271325e8a6b5436dee64a2edbbe7ea0c31a7d7, failed the original 12-sample budgets: capture p95 57.8/50ms; write p95 440.3/250ms (the first write was 440.3ms). The other six gates and the legal full-load roundtrip passed. No sample was removed and the first write remains included. Raw evidence is retained at artifacts/m6-final-local-performance/manifest.json. A subsequent source change must receive complete clean-SHA verification; an earlier green run does not qualify this candidate.

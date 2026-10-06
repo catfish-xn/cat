@@ -16,6 +16,7 @@ export interface CompletedRun { readonly runId: string; readonly completedAt: st
 interface StoredRun {
   runId: string; createdAt: string; match: SaveEnvelope['match']; currentBattle: BattleRecord | null; battleKeys: readonly string[];
 }
+interface CommittedHeader { token: SlotToken; createdAt: string; battleKeys: readonly string[] }
 const STORES = ['metadata', 'runs', 'battles'];
 const equal = (a: SlotToken | undefined, b: SlotToken | null) => b === null ? a === undefined : a !== undefined && a.runId === b.runId && a.activationEpoch === b.activationEpoch && a.revision === b.revision;
 function request<T>(r: IDBRequest<T>): Promise<T> { return new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(saveError(r.error)); }); }
@@ -25,6 +26,7 @@ function completion(tx: IDBTransaction): Promise<void> { return new Promise((res
 export class SaveRepository {
   private dbPromise: Promise<IDBDatabase> | null = null;
   private closed = false;
+  private committedHeader: CommittedHeader | null = null;
   constructor(private readonly name = 'hex-autobattler-m6') {}
   private db(): Promise<IDBDatabase> {
     if (this.closed) return Promise.reject(new SaveError('unavailable', '存储已关闭'));
@@ -37,7 +39,7 @@ export class SaveRepository {
         open.onsuccess = () => {
           const db = open.result;
           if (this.closed) { db.close(); reject(new SaveError('unavailable', '存储已关闭')); return; }
-          db.onversionchange = () => { this.closed = true; db.close(); };
+          db.onversionchange = () => { this.closed = true; this.committedHeader = null; db.close(); };
           resolve(db);
         };
       } catch (error) { reject(saveError(error)); }
@@ -100,16 +102,19 @@ export class SaveRepository {
       let failure: SaveError | null = null;
       const abort = (reason: SaveFailureReason, message: string) => { failure = new SaveError(reason, message); tx.abort(); };
       const guarded = (callback: () => void) => () => { try { callback(); } catch (error) { failure = saveError(error); try { tx.abort(); } catch { /* Already aborted. */ } } };
-      tx.oncomplete = () => resolve(token);
+      tx.oncomplete = () => {
+        // Never retain large state/records, nor let caller mutation change this evidence.
+        this.committedHeader = this.closed ? null : { token: { ...token }, createdAt: run.createdAt, battleKeys: [...run.battleKeys] };
+        resolve(token);
+      };
       tx.onabort = () => reject(failure ?? saveError(tx.error ?? new DOMException('保存事务已取消', 'AbortError')));
       const meta = tx.objectStore('metadata'), runs = tx.objectStore('runs'), battles = tx.objectStore('battles');
       const current = meta.get('current');
       current.onsuccess = guarded(() => {
         if (!equal(current.result, expected)) { abort('conflict', '另一页面已修改存档，自动保存已停止；仍可导出当前局'); return; }
-        const allRuns = runs.getAll();
-        allRuns.onsuccess = guarded(() => {
-          const stored = allRuns.result as StoredRun[];
-          const prior = stored.find(value => value.runId === run.runId);
+        const cached = this.committedHeader;
+        const fast = !activation && run.match.phase !== 'gameOver' && cached !== null && equal(cached.token, expected);
+        const persist = (stored: StoredRun[], prior: Pick<StoredRun, 'createdAt' | 'battleKeys'> | undefined) => {
           if (!activation && !prior) { abort('validation', '当前对局存储已丢失'); return; }
           if (!activation) run.createdAt = prior!.createdAt;
           const known = new Set(activation ? [] : prior!.battleKeys);
@@ -140,9 +145,20 @@ export class SaveRepository {
             }
             runs.put(run, run.runId); meta.put(token, 'current'); meta.put(rows, 'completed');
           });
-        });
+        };
+        if (fast) {
+          // CAS above certifies this connection's successful header still describes the slot.
+          // Normal saves cannot add/evict archives, so no historical run payload is needed.
+          persist([], cached);
+        } else {
+          const allRuns = runs.getAll();
+          allRuns.onsuccess = guarded(() => {
+            const stored = allRuns.result as StoredRun[];
+            persist(stored, stored.find(value => value.runId === run.runId));
+          });
+        }
       });
     });
   }
-  close(): void { this.closed = true; void this.dbPromise?.then(db => db.close(), () => undefined); }
+  close(): void { this.closed = true; this.committedHeader = null; void this.dbPromise?.then(db => db.close(), () => undefined); }
 }

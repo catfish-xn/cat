@@ -13,10 +13,32 @@ const {chromium}=require('playwright'),path=require('node:path'),assert=require(
     const source={match:structuredClone(original.match),currentBattle:null,battleKeys:[],addedBattles:[]};
     const expected=JSON.stringify(source.match);Object.freeze(source);
     const committing=repo.commit(token,source);source.match.gold=999999;source.battleKeys.push('forged-after-call');
-    await committing;const stored=await repo.readCurrent();
+    let latestToken=await committing;const stored=await repo.readCurrent();
     check(JSON.stringify(stored.envelope.match)===expected,'direct commit trusted shallow frozen mutable children');
     check(stored.envelope.battles.length===0,'direct commit retained caller-owned key mutation');
     results.push({boundary:'direct_commit_shallow_frozen_source_mutation',passed:true});
+    const nativeGetAll=IDBObjectStore.prototype.getAll;let largeReads=0;
+    IDBObjectStore.prototype.getAll=function(...args){if(this.name==='runs')largeReads++;return nativeGetAll.apply(this,args);};
+    const other=new SaveRepository(name);
+    try {
+     latestToken=await repo.commit(latestToken,{match:original.match,currentBattle:null,battleKeys:[],addedBattles:[]});
+     check(largeReads===0,'successful local header should avoid reading large run payloads');
+     const staleToken={...latestToken};
+     latestToken=await other.commit(latestToken,{match:states[0],currentBattle:null,battleKeys:[records[0].combatId],addedBattles:[records[0]]});
+     check(largeReads===1,'unknown connection header requires durable fallback read');
+     let conflict=false;try{await repo.commit(staleToken,{match:original.match,currentBattle:null,battleKeys:[],addedBattles:[]});}catch(error){conflict=error.reason==='conflict';}
+     check(conflict,'cached header bypassed cross-connection CAS');
+     latestToken=await repo.commit(latestToken,{match:states[0],currentBattle:null,battleKeys:[records[0].combatId],addedBattles:[]});
+     check(largeReads===2,'new external revision must invalidate cached header');
+     const fresh=await repo.readCurrent();check(fresh.envelope.battles.length===1,'fallback lost externally committed history');
+     const beforeActivation={...latestToken};
+     const sameRun={...original,match:states[0],battles:[records[0]]};
+     latestToken=await other.activate(latestToken,sameRun);
+     let oldEpochRejected=false;try{await repo.commit(beforeActivation,{match:states[0],currentBattle:null,battleKeys:[records[0].combatId],addedBattles:[]});}catch(error){oldEpochRejected=error.reason==='conflict';}
+     check(oldEpochRejected&&latestToken.activationEpoch!==beforeActivation.activationEpoch,'warm cache accepted stale same-run activation epoch');
+     results.push({boundary:'local_header_fast_path_and_external_revision_fallback',largeReads,oldEpochRejected,passed:true});
+    } finally {IDBObjectStore.prototype.getAll=nativeGetAll;other.close();}
+
    } finally {repo.close();}
   }
   for(const failure of ['quota','abort']){

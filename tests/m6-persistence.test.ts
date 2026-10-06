@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { parseSeed, createSeed, createRunId } from '../src/persistence/seed';
 import { validateEnvelope, validateFile, exportFile } from '../src/persistence/format';
 import { SaveCoordinator } from '../src/persistence/coordinator';
+import { BattleHistory } from '../src/replay/history';
 import { fixedCapture, mergeCaptures } from '../src/persistence/capture-ownership';
 import { SaveError } from '../src/persistence/repository';
 import { createMatch } from '../src/simulation/match';
@@ -87,6 +88,22 @@ describe('M6 owned capture boundaries', () => {
     expect(() => { (fixed.match as { gold: number }).gold = 789; }).toThrow();
     expect(() => { (fixed.battleKeys as string[]).push('forged'); }).toThrow();
     expect(fixedCapture(fixed)).toBe(fixed);
+  });
+  it('shares only History-owned deeply frozen records, never caller-frozen imitations', () => {
+    const raw = { combatId: 'battle-one', events: [{ seq: 1 }] };
+    const history = new BattleHistory('test-run', [raw] as unknown as import('../src/m6/contracts').BattleRecord[]);
+    const trusted = history.completedRecords[0];
+    const spoof = Object.freeze({ ...trusted, events: [{ seq: 2 }] });
+    const snapshot = { ...captured(), currentBattle: trusted, addedBattles: [trusted, spoof] } as unknown as CapturedSave;
+    const fixed = fixedCapture(snapshot);
+    expect(fixed.currentBattle).toBe(trusted);
+    expect(fixed.addedBattles[0]).toBe(trusted);
+    expect(fixed.addedBattles[1]).not.toBe(spoof);
+    spoof.events[0].seq = 999; raw.events[0].seq = 888;
+    expect((fixed.addedBattles[1].events[0] as unknown as { seq: number }).seq).toBe(2);
+    expect((fixed.addedBattles[0].events[0] as unknown as { seq: number }).seq).toBe(1);
+    expect(fixed.match).not.toBe(snapshot.match);
+    expect(fixed.battleKeys).not.toBe(snapshot.battleKeys);
   });
   it('reuses only branded captures after merge, preserving first immutable history', () => {
     const record = { combatId: 'battle-one', events: [{ seq: 1 }] };

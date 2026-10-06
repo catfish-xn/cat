@@ -7,6 +7,16 @@ import { MAX_COMBAT_TICKS } from '../simulation/combat-types';
 import { restoreMatch } from '../simulation/serialization';
 import { canonicalContent, digestContent } from '../simulation/content';
 
+// Only this recorder can establish detached, deeply immutable record ownership.
+// Weak branding never keeps an old battle alive and cannot be forged by freezing input.
+const ownedBattleRecords = new WeakSet<object>();
+export function isOwnedBattleRecord(value: unknown): value is BattleRecord {
+  return value !== null && typeof value === 'object' && ownedBattleRecords.has(value);
+}
+function markOwned(record: BattleRecord): BattleRecord {
+  ownedBattleRecords.add(record); return record;
+}
+
 export function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) { Object.values(value).forEach(deepFreeze); Object.freeze(value); }
   return value;
@@ -92,17 +102,17 @@ function capture(runId: string, working: WorkingRecord): BattleRecord {
   const { context, initial, terminal, events } = working;
   // Context, initial state and individual events are already owned and deeply frozen.
   // Only the growing array needs a new snapshot; hashes still cover the complete payload.
-  return Object.freeze({ runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
+  return markOwned(Object.freeze({ runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
     endTick: terminal.tick, nextEventSeq: terminal.nextEventSeq!, result: terminal.result,
-    stateHash: digestContent(terminal), eventHash: digestContent(events) });
+    stateHash: digestContent(terminal), eventHash: digestContent(events) }));
 }
 /** Observes already committed steps; never advances or settles the active match. */
 export class BattleHistory {
   private completed: BattleRecord[];
   private current: WorkingRecord | null;
   constructor(readonly runId: string, battles: readonly BattleRecord[] = [], currentBattle: BattleRecord | null = null) {
-    this.completed = battles.map(record => deepFreeze(structuredClone(record)));
-    const owned = currentBattle ? deepFreeze(structuredClone(currentBattle)) : null;
+    this.completed = battles.map(record => markOwned(deepFreeze(structuredClone(record))));
+    const owned = currentBattle ? markOwned(deepFreeze(structuredClone(currentBattle))) : null;
     this.current = owned ? { context: owned.context, initial: owned.initial,
       terminal: validateBattleRecord(owned).terminal, events: [...owned.events] } : null;
   }
