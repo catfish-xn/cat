@@ -3,7 +3,7 @@
  * projects. Only files listed in the generated manifest are referenced; everything has a
  * code-drawn fallback (hero emblem / text), so missing assets never block play.
  */
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { S13_ASSETS, type S13Asset } from './s13-asset-manifest';
 import { heroEmblemSvg } from './hero-identity';
 
@@ -27,7 +27,7 @@ export function loadS13Portraits(scene: Phaser.Scene, ready: () => void): void {
     scene.load.image(championTextureKey(asset.id), `${BASE}${asset.path}`); queued++;
   }
   if (!queued) { ready(); return; }
-  scene.load.once(Phaser.Loader.Events.COMPLETE, () => { if (scene.sys.isActive()) ready(); });
+  scene.load.once('complete', () => { if (scene.sys.isActive()) ready(); });
   scene.load.start();
 }
 
