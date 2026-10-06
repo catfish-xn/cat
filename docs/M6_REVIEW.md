@@ -50,3 +50,5 @@ The final authoritative machine appendix is generated only after same-SHA normal
 主控的鼠标修复只在relatedTarget=null的mouseout及blur清悬停坐标，保留dragging/selected优先级和D/F后按当前canvas bounds计算；所有新增监听器配套SHUTDOWN移除。B在ReplayPanel非null→null退出边界重置选择，避免每帧清除异步打开中的选项。主控给档案刷新加请求代号、runId/activationEpoch/Session身份检查，每个await及内部catch均受约束；install先失效旧读取并清档案引用，dispose失效。正常保存revision或只读回放operation变化不废弃当前请求，真正当前读取失败仍报告。A只读交叉审查无阻断。
 
 E回归覆盖三方向离窗全Match/账本/token不变、重入可出售、显式选中与拖拽离窗仍可出售；同场原生popup重入保持全Match/账本/revision；跨run迟到成功与同run新epoch迟到失败均保持新列表/status/Match/账本/token。延迟仅控制真实IDB结果Promise，等待自动refresh真实settle后才断言，不以固定等待抢在旧请求完成前判通过。最终比较器强制两模式新input/reopen证据及两类迟到结果；Goal、合同、阈值和领域/golden均未改。此段为修复记录，最终同SHA运行结论由新CI生成的机器附录决定。
+
+CI47（clean 6c1522f）新增同场重入回归首次失败，dev/preview均记录revision36→37；真实失败ZIP及digest保留于仓库外work/m6-ci47-failed-preview.zip。查明新用例错误沿用早先quota故障区间基线：第一次从active进入回放按既有设计flush积压保存，因此合法前置写入已完成。原quota区间的完整state/ledger/token与原生IDB等式恢复在该区间结束处，未放宽或删除；新增用例在首次open完成后独立采集基线，再执行返回→同场原生popup重选，严格比较完整state/ledger/token及再次读取的真实IDB版本。生产代码未变；A只读复核确认两段隔离语义分别保留。该测试修订仍待最终同SHA门禁。

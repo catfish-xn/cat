@@ -41,7 +41,7 @@ for (const mode of ['dev', 'preview']) {
   assert(route.m6Lifecycle.heapDelta <= limits.MAX_POST_GC_HEAP_GROWTH_BYTES, 'full application post-GC heap');
   assert.equal(route.m6Lifecycle.afterResources.listeners, route.m6Lifecycle.beforeResources.listeners, 'full application listener cleanup');
   assert(route.m6Lifecycle.afterResources.pendingRaf <= route.m6Lifecycle.beforeResources.pendingRaf + 1, 'full application frame scheduler cleanup');
-  for(const key of ['sameBattle','fullStateLedgerRevisionPreserved','nativeKeyboard'])assert.equal(route.m6ReplayReopen?.[key],true,`same-battle native reopen: ${key}`);
+  for(const key of ['sameBattle','fullStateLedgerRevisionPreserved','nativeKeyboard','durableRevisionUnchanged'])assert.equal(route.m6ReplayReopen?.[key],true,`same-battle native reopen: ${key}`);
   const nativeInput=read(`m5-input-${mode}`);
   for(const edge of ['left','right','top'])for(const suffix of ['exit-clears-hover','reentry-restores-hover-sale'])assert(nativeInput.interactions.some(row=>row.name===`native-viewport-${edge}-${suffix}`),`missing native viewport ${edge} ${suffix}`);
   for(const selection of ['explicit-selected','dragging'])assert(nativeInput.interactions.some(row=>row.name===`native-viewport-exit-preserves-${selection}-sale`),`missing viewport ${selection} preservation`);

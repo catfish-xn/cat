@@ -67,3 +67,5 @@ The clean final-candidate run at 06b4e59, with source fingerprint 5ee323030b52dc
 ## 用户 P2 Review 回归门禁
 
 原438f35b的全部通过只证明原有覆盖；隔离旧源复现暴露了离窗悬停、同场重入及迟到档案读取的缺口。新增回归已纳入同提交最终CI和comparison，保留原全部断言、预算、正常时间路线及历史失败；不得以旧438f35b结果代替本次修复提交。具体缺陷/owner/独立检查见M6_REVIEW末节。
+
+CI47（clean 6c1522f）新增同场重入回归首次失败，dev/preview均记录revision36→37；真实失败ZIP及digest保留于仓库外work/m6-ci47-failed-preview.zip。查明新用例错误沿用早先quota故障区间基线：第一次从active进入回放按既有设计flush积压保存，因此合法前置写入已完成。原quota区间的完整state/ledger/token与原生IDB等式恢复在该区间结束处，未放宽或删除；新增用例在首次open完成后独立采集基线，再执行返回→同场原生popup重选，严格比较完整state/ledger/token及再次读取的真实IDB版本。生产代码未变；A只读复核确认两段隔离语义分别保留。该测试修订仍待最终同SHA门禁。
