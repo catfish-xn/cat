@@ -32,6 +32,8 @@ for (const mode of ['dev', 'preview']) {
   assert.equal(route.m6RejectedImport?.atomic, true, 'invalid history preserves active and durable state');
   assert.equal(route.m6Seeds?.newIdentity, true, 'public seed controls');
   assert.deepEqual(route.m6Seeds.boundaries, [0, 42, 4294967295]);
+  for (const key of ['accepted', 'rngChanged', 'completeStateAndLedgerEqual'])
+    assert.equal(route.m6Seeds.publicCommandSequence?.[key], true, `random/fixed same-command reproduction: ${key}`);
   assert.equal(route.m6Lifecycle?.cycles, limits.LIFECYCLE_CYCLES, 'full application lifecycle cycles');
   assert.equal(route.m6Lifecycle.rows.length, limits.LIFECYCLE_CYCLES);
   assert(route.m6Lifecycle.heapDelta <= limits.MAX_POST_GC_HEAP_GROWTH_BYTES, 'full application post-GC heap');

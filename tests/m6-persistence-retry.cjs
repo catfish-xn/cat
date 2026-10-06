@@ -5,6 +5,20 @@ const {chromium}=require('playwright'),path=require('node:path'),assert=require(
  browser=await chromium.launch({args:['--no-sandbox']});const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(`${server.resolvedUrls.local[0]}__retry`);
  const result=await page.evaluate(async({records,states})=>{
   const {SaveRepository}=await import('/src/persistence/repository.ts'),{SaveCoordinator}=await import('/src/persistence/coordinator.ts'),{validateEnvelope}=await import('/src/persistence/format.ts'),{validateBattleCollection}=await import('/src/replay/index.ts');const check=(v,message)=>{if(!v)throw Error(message);};const results=[];
+  {
+   const name=`direct-fixed-${crypto.randomUUID()}`,repo=new SaveRepository(name);
+   const original={kind:'hex-autobattler-save',saveFormatVersion:1,replayFormatVersion:1,runId:'retry-run',createdAt:'2026-10-06T00:00:00.000Z',match:records[0].context,battles:[],currentBattle:null};
+   try {
+    const token=await repo.activate(null,original);
+    const source={match:structuredClone(original.match),currentBattle:null,battleKeys:[],addedBattles:[]};
+    const expected=JSON.stringify(source.match);Object.freeze(source);
+    const committing=repo.commit(token,source);source.match.gold=999999;source.battleKeys.push('forged-after-call');
+    await committing;const stored=await repo.readCurrent();
+    check(JSON.stringify(stored.envelope.match)===expected,'direct commit trusted shallow frozen mutable children');
+    check(stored.envelope.battles.length===0,'direct commit retained caller-owned key mutation');
+    results.push({boundary:'direct_commit_shallow_frozen_source_mutation',passed:true});
+   } finally {repo.close();}
+  }
   for(const failure of ['quota','abort']){
    const name=`retry-${failure}-${crypto.randomUUID()}`,repo=new SaveRepository(name);const original={kind:'hex-autobattler-save',saveFormatVersion:1,replayFormatVersion:1,runId:'retry-run',createdAt:'2026-10-06T00:00:00.000Z',match:records[0].context,battles:[],currentBattle:null};const token=await repo.activate(null,original);const before=JSON.stringify(await repo.readCurrent());let lastStatus=null;const c=new SaveCoordinator(repo,token,s=>{lastStatus=s;});
    const nativePut=IDBObjectStore.prototype.put,nativeTx=IDBDatabase.prototype.transaction;let failures=0;

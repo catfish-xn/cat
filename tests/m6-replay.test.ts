@@ -47,6 +47,45 @@ describe('M6 isolated battle records and replay',()=>{
       await expect(validateBattleCollection({...envelope,match:next.state,currentBattle:history.capturePrefix(),battles:history.completedRecords})).resolves.toBeUndefined();
     }
   });
+  it('owns observed inputs and keeps earlier frozen prefixes unchanged across later ticks and completion',()=>{
+    const initial=readyMatch(42), start=startMatchCombat(initial); if(!start.ok)throw Error(start.reason);
+    const history=new BattleHistory('owned-run');
+    let match=structuredClone(start.state);
+    const events=start.events.filter((event):event is CombatEvent=>event.domain==='combat');
+    history.observe({before:initial,after:start.state,events,reason:'command'});
+    const zero=history.capturePrefix()!, zeroSnapshot=structuredClone(zero);
+    Object.assign(initial,{seed:99}); Object.assign(start.state.combat!,{tick:999});
+    if(events[0]) Object.assign(events[0],{tick:999});
+    expect(history.capturePrefix()).toEqual(zeroSnapshot);
+    const prefixes=[zero];
+    while(match.phase==='combat') {
+      const before=match, next=stepMatch(match); match=structuredClone(next.state);
+      const events=next.events.filter((event):event is CombatEvent=>event.domain==='combat');
+      history.observe({before,after:next.state,events,reason:'tick'});
+      if(match.combat!.tick===40||match.combat!.tick===80) prefixes.push(history.capturePrefix()!);
+      Object.assign(next.state.combat!,{tick:999});
+      if(events[0]) Object.assign(events[0],{tick:999});
+    }
+    expect(prefixes.length).toBe(3);
+    const completed=history.completedRecords[0];
+    expect(zero).toEqual(zeroSnapshot);
+    for(const prefix of prefixes) {
+      expect(prefix.context).toBe(completed.context);
+      expect(prefix.initial).toBe(completed.initial);
+      expect(prefix.events).not.toBe(completed.events);
+      expect(Object.isFrozen(prefix.events)).toBe(true);
+      expect(Object.isFrozen(prefix.context.preparation.units)).toBe(true);
+      for(const [index,event] of prefix.events.entries()) {
+        expect(event).toBe(completed.events[index]); expect(Object.isFrozen(event)).toBe(true);
+      }
+      expect(validateBattleRecord(prefix).terminal.tick).toBe(prefix.endTick);
+    }
+    expect(validateBattleRecord(completed).terminal.tick).toBe(match.combat!.tick);
+    const imported=structuredClone(prefixes[1]), restored=new BattleHistory('owned-run',[],imported);
+    const beforeMutation=restored.capturePrefix(); Object.assign(imported.context,{seed:99});
+    Object.assign(imported.events[0],{tick:999});
+    expect(restored.capturePrefix()).toEqual(beforeMutation);
+  });
   it('rejects missing/reordered events, forged checkpoint, wrong result, future identity, and topology',async()=>{
     const {envelope}=battle(),record=envelope.battles[0];
     expect(()=>validateBattleRecord({...record,events:record.events.slice(1)})).toThrow();

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { parseSeed, createSeed, createRunId } from '../src/persistence/seed';
 import { validateEnvelope, validateFile, exportFile } from '../src/persistence/format';
 import { SaveCoordinator } from '../src/persistence/coordinator';
+import { fixedCapture, mergeCaptures } from '../src/persistence/capture-ownership';
 import { SaveError } from '../src/persistence/repository';
 import { createMatch } from '../src/simulation/match';
 import { MAX_SAVE_BYTES } from '../src/m6/limits';
@@ -74,5 +75,30 @@ describe('M6 serial snapshot coordinator', () => {
     let release!: (value: SlotToken) => void; const writer = { commit: vi.fn(() => new Promise<SlotToken>(resolve => { release = resolve; })) }; const notify = vi.fn();
     const c = new SaveCoordinator(writer, token, notify); c.enqueue(captured()); c.enqueue(captured()); c.dispose(); release({ ...token, revision: 2 }); await Promise.resolve(); await Promise.resolve();
     expect(writer.commit).toHaveBeenCalledTimes(1); expect(notify).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('M6 owned capture boundaries', () => {
+  it('does not trust shallow frozen inputs and makes every retained child immutable', () => {
+    const original = captured(); Object.freeze(original);
+    const fixed = fixedCapture(original);
+    (original.match as { gold: number }).gold = 123456;
+    expect(fixed.match.gold).not.toBe(123456);
+    expect(() => { (fixed.match as { gold: number }).gold = 789; }).toThrow();
+    expect(() => { (fixed.battleKeys as string[]).push('forged'); }).toThrow();
+    expect(fixedCapture(fixed)).toBe(fixed);
+  });
+  it('reuses only branded captures after merge, preserving first immutable history', () => {
+    const record = { combatId: 'battle-one', events: [{ seq: 1 }] };
+    const first = { ...captured(), addedBattles: [record] } as unknown as CapturedSave;
+    const fixed = fixedCapture(first);
+    record.events[0].seq = 999;
+    const second = { ...captured(), addedBattles: [{ combatId: 'battle-one', events: [] }, { combatId: 'battle-two', events: [] }] } as unknown as CapturedSave;
+    const merged = mergeCaptures(fixed, second);
+    expect(merged.addedBattles.map(r => r.combatId)).toEqual(['battle-one', 'battle-two']);
+    expect(merged.addedBattles[0]).toBe(fixed.addedBattles[0]);
+    expect((merged.addedBattles[0].events[0] as unknown as { seq: number }).seq).toBe(1);
+    expect(() => { (merged.addedBattles as unknown[]).pop(); }).toThrow();
+    expect(fixedCapture(merged)).toBe(merged);
   });
 });

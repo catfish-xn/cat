@@ -90,9 +90,11 @@ export async function validateBattleCollection(envelope: SaveEnvelope): Promise<
 interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: CombatEvent[] }
 function capture(runId: string, working: WorkingRecord): BattleRecord {
   const { context, initial, terminal, events } = working;
-  return deepFreeze(structuredClone({ runId, combatId: terminal.combatId!, context, initial, events,
+  // Context, initial state and individual events are already owned and deeply frozen.
+  // Only the growing array needs a new snapshot; hashes still cover the complete payload.
+  return Object.freeze({ runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
     endTick: terminal.tick, nextEventSeq: terminal.nextEventSeq!, result: terminal.result,
-    stateHash: digestContent(terminal), eventHash: digestContent(events) }));
+    stateHash: digestContent(terminal), eventHash: digestContent(events) });
 }
 /** Observes already committed steps; never advances or settles the active match. */
 export class BattleHistory {
@@ -100,8 +102,9 @@ export class BattleHistory {
   private current: WorkingRecord | null;
   constructor(readonly runId: string, battles: readonly BattleRecord[] = [], currentBattle: BattleRecord | null = null) {
     this.completed = battles.map(record => deepFreeze(structuredClone(record)));
-    this.current = currentBattle ? { context: structuredClone(currentBattle.context), initial: structuredClone(currentBattle.initial),
-      terminal: validateBattleRecord(currentBattle).terminal, events: structuredClone([...currentBattle.events]) } : null;
+    const owned = currentBattle ? deepFreeze(structuredClone(currentBattle)) : null;
+    this.current = owned ? { context: owned.context, initial: owned.initial,
+      terminal: validateBattleRecord(owned).terminal, events: [...owned.events] } : null;
   }
   get completedRecords(): readonly BattleRecord[] { return Object.freeze([...this.completed]); }
   capturePrefix(): BattleRecord | null { return this.current ? capture(this.runId, this.current) : null; }
@@ -109,10 +112,12 @@ export class BattleHistory {
     const combat = change.after.combat;
     if (!combat) return;
     if (!change.before.combat && combat) {
-      this.current = { context: structuredClone(change.before), initial: structuredClone(combat), terminal: structuredClone(combat), events: structuredClone([...change.events]) };
+      const initial = deepFreeze(structuredClone(combat));
+      this.current = { context: deepFreeze(structuredClone(change.before)), initial, terminal: initial,
+        events: change.events.map(event => deepFreeze(structuredClone(event))) };
     } else if (this.current && combat.combatId === this.current.terminal.combatId) {
       this.current.terminal = structuredClone(combat);
-      this.current.events.push(...structuredClone(change.events));
+      this.current.events.push(...change.events.map(event => deepFreeze(structuredClone(event))));
     }
     if (combat.status === 'finished' && this.current) {
       if (!this.completed.some(record => record.combatId === combat.combatId)) this.completed.push(capture(this.runId, this.current));

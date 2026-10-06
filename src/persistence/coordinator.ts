@@ -2,14 +2,8 @@ import type { CapturedSave, SaveStatus, SlotToken } from '../m6/contracts';
 import { SaveError, saveError } from './repository';
 
 export interface SaveWriter { commit(expected: SlotToken, snapshot: CapturedSave): Promise<SlotToken> }
-/** Latest fixed state plus all immutable additions from superseded pending captures. */
-function merge(older: CapturedSave | null, newer: CapturedSave): CapturedSave {
-  if (!older) return newer;
-  const additions = new Map(older.addedBattles.map(record => [record.combatId, record]));
-  // A completed record is immutable. Keep the first captured copy for a repeated key.
-  for (const record of newer.addedBattles) if (!additions.has(record.combatId)) additions.set(record.combatId, record);
-  return { ...newer, addedBattles: [...additions.values()] };
-}
+import { fixedCapture, mergeCaptures } from './capture-ownership';
+
 /** One in-flight transaction and at most one latest pending capture, even during quota failure. */
 export class SaveCoordinator {
   private current: SlotToken;
@@ -23,7 +17,7 @@ export class SaveCoordinator {
   get pendingCount(): number { return this.pending ? 1 : 0; }
   enqueue(snapshot: CapturedSave): void {
     if (this.disposed || this.failure?.reason === 'conflict') return;
-    this.pending = merge(this.pending, structuredClone(snapshot));
+    this.pending = mergeCaptures(this.pending, fixedCapture(snapshot));
     this.failure = null;
     this.start();
   }
@@ -45,7 +39,7 @@ export class SaveCoordinator {
         this.failure = saveError(error);
         // Preserve newly completed records from the failed transaction, but keep the
         // latest queued legal tick. A prolonged failure must not retain every tick.
-        this.pending = this.pending ? merge(snapshot, this.pending) : snapshot;
+        this.pending = this.pending ? mergeCaptures(snapshot, this.pending) : snapshot;
         this.notify({ kind: 'failed', reason: this.failure.reason, message: this.failure.message });
         return;
       }

@@ -1,5 +1,6 @@
 import type { BattleRecord, CapturedSave, SaveEnvelope, SlotToken } from '../m6/contracts';
 import { MAX_COMPLETED_RUNS } from '../m6/limits';
+import { fixedCapture } from './capture-ownership';
 import { canonicalContent } from '../simulation/content';
 
 export type SaveFailureReason = 'quota' | 'abort' | 'conflict' | 'unavailable' | 'validation';
@@ -86,7 +87,7 @@ export class SaveRepository {
   }
   async commit(expected: SlotToken, snapshot: CapturedSave): Promise<SlotToken> {
     // Coordinator already owns a fixed snapshot; direct callers get the same protection.
-    const fixed = structuredClone(snapshot);
+    const fixed = fixedCapture(snapshot);
     const run: StoredRun = { runId: expected.runId, createdAt: '', match: fixed.match, currentBattle: fixed.currentBattle, battleKeys: fixed.battleKeys };
     return this.write(expected, { ...expected, revision: expected.revision + 1 }, run, fixed.addedBattles, false);
   }

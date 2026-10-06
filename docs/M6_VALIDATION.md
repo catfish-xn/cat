@@ -27,3 +27,13 @@
 F2追加门禁包括独立原路线精确恢复点续算、坏历史UI导入原子性、公开seed边界/随机seed复现、quota失败后回放不重试写、原生输入跨refresh完整累积，以及2次预热后30次公开新局→正常选择→导入真实导出文件→回放/返回循环。GC前将观测器自己的native事件日志转存Node，避免把测量器保留日志当成产品内存增长；仍保存完整可信输入证据。visibility事件的临时hidden getter/合成事件是独立环境故障注入，不混入trusted输入证据，也不宣称真实隐藏标签页验收。以上增强门禁待运行。
 
 A执行并确认真实MatchApplication故障gate退出0：ROOT03同runId旧末战前缀重新完成与归档/ReplayPanel淘汰一致；ROOT04 dispose后IDB/File.text异步失败无旧UI回调及候选泄漏，共4cases、48.956s、pageerror0。此为当前脏树局部结果，最终CI同SHA尚未执行。
+
+## 生产性能专项局部结果（所有权优化后）
+
+首次生产路径实测 capture p95 为74.10ms，超过已冻结50ms；其余7项预算通过。失败原始manifest保留于 `artifacts/m6-performance-pre-optimization/manifest.json`。没有删除样本、放宽阈值或引入同tick缓存。
+
+A 改为模块私有WeakSet仅识别已独立拷贝且递归冻结的捕获，省去Coordinator→Repository重复克隆；外部浅冻结输入仍独立复制。B在接收context/initial/event时独立clone+deepFreeze，捕获仅复制事件数组并复用已冻结子图；每次仍计算完整权威摘要，不缓存同tick结果。不同合法0/40/80tick到结束的所有权/不可变测试以及真实IDB浅冻结输入隔离/反复quota重试通过。
+
+随后同样本、同预算、无并行本地测试的生产复测全部通过，实际164.569s：capture p95 37.80/50ms，write p95 63.70/250ms，fullCapture p95 148/500ms，activation max 285.70/1000ms，完整import max8494.10/30000ms，首次seek max1360.60/2000ms，缓存seek max32.30/100ms，40tick统计批次max0.30/5ms。真实模块30次回收后GC堆增长137,820 bytes，新增监听器0、遗留组件DOM0。合法满载样本9玩家/8敌/15装备、30战完整验证及IDB往返也通过。证据 `artifacts/m6-performance/manifest.json`。
+
+该复测启动于优化尚未提交的591525c脏树，sourceFingerprint首尾一致；它是定位修复的局部历史证据，不能冒称新提交最终门禁。增强F2（精确恢复、quota回放隔离、公开seed相同命令与完整应用30cycle）及最终新SHA CI仍待执行。
