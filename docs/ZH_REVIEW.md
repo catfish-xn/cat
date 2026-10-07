@@ -12,8 +12,9 @@
 
 来源锁定：
 
-- 腾讯国服：`15.6-2025.S13`，四份文件由用户本地下载提供，下载时间为 2026-10-07 17:03:47（UTC+08:00）。逐文件精确下载时间、字节数及 SHA-256 见 [归档 manifest](evidence/zh-review/tencent-15.6-2025.S13/manifest.txt)，用户原 manifest 另存为 [manifest.user.txt](evidence/zh-review/tencent-15.6-2025.S13/manifest.user.txt)。已重新计算四份文件的字节数及 SHA-256，全部一致；原始字节未改写。文件内 `time` 是官网数据生成时间，不是下载时间。
-- 英文 `apiName` 对应字段：`chess.js` 的 `hero_EN_name` → `displayName` / `skillName`；`equip.js` 的 `englishName` → `name`；`race.js` 的 `characterid` → `name`；`hex.js` 的 `augments` → `name`。精确匹配，不按中文名、图片、数字 ID 或英雄职业关系推测身份。用词依据来自这些记录的技能/装备/羁绊/强化描述；术语表逐行记录字段和证据。
+- 腾讯国服：`15.6-2025.S13`，五份文件由用户本地下载提供；原四份下载时间为 2026-10-07 17:03:47（UTC+08:00），job.js 为用户报告的约 17:12。逐文件下载时间（job.js 为约略时间）、字节数及 SHA-256 见 [归档 manifest](evidence/zh-review/tencent-15.6-2025.S13/manifest.txt)，原四份用户 manifest 另存为 [manifest.user.txt](evidence/zh-review/tencent-15.6-2025.S13/manifest.user.txt)。已重新计算原四份文件的字节数及 SHA-256，与用户 manifest 全部一致。job.js 未附本地校验值，按用户补充指示直接计算字节数及 SHA-256 并记录，不能宣称与用户本地值一致；五份原始文件字节均未改写。文件内 `time` 是官网数据生成时间，不是下载时间。
+- 英文 `apiName` 对应字段：`chess.js` 的 `hero_EN_name` → `displayName` / `skillName`；`equip.js` 的 `englishName` → `name`；`race.js` / `job.js` 的 `characterid` → `name`；`hex.js` 的 `augments` → `name`。精确匹配，不按中文名、图片、数字 ID 或英雄职业关系推测身份。用词依据来自这些记录的技能/装备/羁绊/强化描述；术语表逐行记录字段和证据。
+- 名称补充来源：[国服 14.24 公告](https://lol.qq.com/gicp/news/662/37055498.html)“异常突变”章节确认“泰坦打击”“法师护甲”“连杀”；该公告不提供客户端 apiName，名称状态与身份字段缺口分开记录。[LOL 国服艾瑞莉娅官方数据](https://game.gtimg.cn/images/lol/act/img/js/hero/39.js)（2026-10-07 查阅，数据 version 为 `16.19`）中 `hero.alias=Irelia`、`spells[spellKey=w].name=距破之舞`，与 S13 chess.js 的技能名一致；仅核实名称，不引入 LOL 技能数值或机制。
 - 原英文/规则基线 `main`：`5aff440c702e7c8c665f05f0b419a9edbf9ea00f`。19 英雄的英文名称、技能名、技能原文，以及 5 羁绊和 6 强化原文，取自 `src/simulation/content/source/s13-14.24.json`；3 异常的当前效果取自 `src/simulation/content/anomalies.ts`。
 - M8 B1：`feat/m8-b0-baseline` @ `877c59b2babc4c6abfccc62452075f3b0cbbd688`。44 项装备身份取自 `docs/M8_ITEM_NAMES_REVIEW.md` / `normalized/items.json`；效果描述取自 `raw/selected-items.json`，基础属性另列 B1 可读摘要。中文名现按腾讯归档核对。
 - M9：`data/m9-champions` @ `74616d26780add9b52b321cd2844ba8b56e3e6ee` 的 `docs/M9_DATA_LEDGER.md` §6、§7：63 英雄、37 羁绊（29 常规/专属 + 8 强化解锁关系）。仅核对名称；§8 的 Rammus 排除项和召唤物不计入。
@@ -104,7 +105,7 @@
 | --- | --- | --- |
 | `TFT13_Zyra`<br>英雄：Zyra<br>技能：Grasping Roots<br>描述：Send vines towards the current target, Stunning them for @StunDuration@ second and dealing @ModifiedTargetDamage@ (%i:scaleAP%) magic damage. Then smaller vines seek out the @NumSmallerVines@ nearest enemies and deal @ModifiedAOEDamage@ (%i:scaleAP%) magic damage to them.<br><br>Experiment Bonus: Ability damage bleeds enemies for @TFTUnitProperty.:TFT13_ZyraCurrentExperimentBonus@% bonus true damage over @ExperimentDuration@ seconds. | 英雄：婕拉 · 已核对（国服 S13 数据）<br>技能：**缠绕之根** · 已核对（国服 S13 数据）<br>描述：向当前目标发射藤蔓，使其晕眩 @StunDuration@ 秒，并造成 @ModifiedTargetDamage@（%i:scaleAP%）魔法伤害。随后，较小的藤蔓追踪最近的 @NumSmallerVines@ 个敌人，各造成 @ModifiedAOEDamage@（%i:scaleAP%）魔法伤害。<br><br>【条件段：TFT13_ExperimentActive；试验品加成】技能伤害使敌人流血，在 @ExperimentDuration@ 秒内额外造成 @TFTUnitProperty.:TFT13_ZyraCurrentExperimentBonus@% 的真实伤害。 | 存疑：原文保留试验品条件段，main 未启用此加成 |
 | `TFT13_Urgot`<br>英雄：Urgot<br>技能：Corrosive Charge<br>描述：Fire an explosive charge, dealing @ModifiedPrimaryDamage@ (%i:scaleAD%) physical damage to target and @ModifiedSecondaryDamage@ (%i:scaleAD%) physical damage to adjacent enemies. 20% Sunder all enemies hit for @Duration@ seconds.<br><br>Sunder: Reduce Armor<br><br>Experiment Bonus: Dash to targets. On cast, gain @TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusShield@% max Health Shield and @TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusAS@% Attack Speed for @ExperimentDuration@ seconds. | 英雄：厄加特 · 已核对（国服 S13 数据）<br>技能：**腐蚀电荷** · 已核对（国服 S13 数据）<br>描述：发射爆炸弹，对目标造成 @ModifiedPrimaryDamage@（%i:scaleAD%）物理伤害，对相邻敌人造成 @ModifiedSecondaryDamage@（%i:scaleAD%）物理伤害。对所有命中的敌人施加 20% 护甲击碎，持续 @Duration@ 秒。<br><br>护甲击碎：降低护甲。<br><br>【条件段：TFT13_ExperimentActive；试验品加成】冲向目标。施放技能时，获得相当于最大生命值 @TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusShield@% 的护盾，以及 @TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusAS@% 攻击速度，持续 @ExperimentDuration@ 秒。 | 存疑：原文保留试验品条件段，main 未启用此加成 |
-| `TFT13_Irelia`<br>英雄：Irelia<br>技能：Defiant Dance<br>描述：Enter a defensive stance and gain @ModifiedShield@ (%i:scaleAP%) Shield that rapidly decays over @ShieldDuration@ seconds. When it expires, deal @ModifiedBaseStrikeDamage@ (%i:scaleAP%) magic damage + @PercentShieldDamage*100@% of the damage absorbed to enemies around and in front of Irelia. | 英雄：艾瑞莉娅 · 已核对（国服 S13 数据）<br>技能：**距破之舞** · 已核对（国服 S13 数据）<br>描述：进入防御姿态，获得 @ModifiedShield@（%i:scaleAP%）护盾；护盾在 @ShieldDuration@ 秒内快速衰减。护盾结束时，对艾瑞莉娅周围及前方的敌人造成 @ModifiedBaseStrikeDamage@（%i:scaleAP%）魔法伤害，另加已吸收伤害的 @PercentShieldDamage*100@%。 | 存疑：国服 skillName 原文为“距破之舞”，用字疑似异常；照录，不自行纠正 |
+| `TFT13_Irelia`<br>英雄：Irelia<br>技能：Defiant Dance<br>描述：Enter a defensive stance and gain @ModifiedShield@ (%i:scaleAP%) Shield that rapidly decays over @ShieldDuration@ seconds. When it expires, deal @ModifiedBaseStrikeDamage@ (%i:scaleAP%) magic damage + @PercentShieldDamage*100@% of the damage absorbed to enemies around and in front of Irelia. | 英雄：艾瑞莉娅 · 已核对（国服 S13 数据）<br>技能：**距破之舞** · 已核对（国服 S13 数据）<br>描述：进入防御姿态，获得 @ModifiedShield@（%i:scaleAP%）护盾；护盾在 @ShieldDuration@ 秒内快速衰减。护盾结束时，对艾瑞莉娅周围及前方的敌人造成 @ModifiedBaseStrikeDamage@（%i:scaleAP%）魔法伤害，另加已吸收伤害的 @PercentShieldDamage*100@%。 | 否；[LOL 国服艾瑞莉娅官方数据](https://game.gtimg.cn/images/lol/act/img/js/hero/39.js)中 `spells[spellKey=w].name` 同为“距破之舞”，已解除用字疑点 |
 | `TFT13_Shooter`<br>英雄：Maddie<br>技能：Fan the Hammer<br>描述：Fire @NumOfShots@ shots towards the farthest enemy that deal @TotalDamage@ (%i:scaleAD%) physical damage to the first enemy they hit. | 英雄：麦迪 · 已核对（国服 S13 数据）<br>技能：**连拨击锤** · 已核对（国服 S13 数据）<br>描述：朝最远的敌人射击 @NumOfShots@ 次，每发对子弹命中的首个敌人造成 @TotalDamage@（%i:scaleAD%）物理伤害。 | 否 |
 | `TFT13_Tristana`<br>英雄：Tristana<br>技能：Draw a Bead<br>描述：Fire a cannonball at target, dealing @TotalDamage@ (%i:scaleAD%) physical damage. If they die, the cannonball ricochets to the nearest enemy, dealing the overkill damage. When it does, permanently gain @TFTUnitProperty.:TFT13_TristanaASPerStack@% Attack Damage.<br><br>(Current Bonus: @TFTUnitProperty.:TFT13_TristanaASGain@% %i:scaleAD%) | 英雄：崔丝塔娜 · 已核对（国服 S13 数据）<br>技能：**瞄准** · 已核对（国服 S13 数据）<br>描述：向目标发射炮弹，造成 @TotalDamage@（%i:scaleAD%）物理伤害。如果目标死亡，炮弹会弹射至最近的敌人，造成溢出伤害。发生弹射时，永久获得 @TFTUnitProperty.:TFT13_TristanaASPerStack@% 攻击力。<br><br>（当前加成：@TFTUnitProperty.:TFT13_TristanaASGain@% %i:scaleAD%） | 否 |
 | `TFT13_Rell`<br>英雄：Rell<br>技能：Shattering Strike<br>描述：Gain @ModifiedShield@ (%i:scaleAP%) Shield for @ShieldDuration@ seconds. Lance enemies in a line for @ModifiedDamage@ (%i:scaleAP%) magic damage and steal @DefensesSteal@ Armor and Magic Resist from enemies hit. | 英雄：芮尔 · 已核对（国服 S13 数据）<br>技能：**裂阵** · 已核对（国服 S13 数据）<br>描述：获得 @ModifiedShield@（%i:scaleAP%）护盾，持续 @ShieldDuration@ 秒。刺击直线上的敌人，造成 @ModifiedDamage@（%i:scaleAP%）魔法伤害，并从命中的敌人处偷取 @DefensesSteal@ 护甲和魔抗。 | 否 |
@@ -128,11 +129,11 @@
 
 | 英文原文 | 中文译文 | 是否存疑 |
 | --- | --- | --- |
-| `TFT13_Sorcerer`<br>名称：Sorcerer<br>描述：Your team gains @TeamAP@ Ability Power. Sorcerers gain more.<br><br>(@MinUnits@) @BaseAP@ %i:scaleAP%<br>(@MinUnits@) @BaseAP@ %i:scaleAP%<br>(@MinUnits@) @BaseAP@ %i:scaleAP%<br>(@MinUnits@) @BaseAP@ %i:scaleAP%, Abilities reduce their target's damage by @DamageDecrease*100@% for @DamageDecreaseDuration@ seconds | **法师**（待核）<br>描述：己方队伍获得 @TeamAP@ 法术强度。法师获得更多。<br><br>（@MinUnits@）@BaseAP@ %i:scaleAP%<br>（@MinUnits@）@BaseAP@ %i:scaleAP%<br>（@MinUnits@）@BaseAP@ %i:scaleAP%<br>（@MinUnits@）@BaseAP@ %i:scaleAP%；技能使目标造成的伤害降低 @DamageDecrease*100@%，持续 @DamageDecreaseDuration@ 秒。 | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Martialist`<br>名称：Artillerist<br>描述：Every @NumOfAttacks@ attacks, Artillerists launch a rocket that deals @PercentDamage*100@% Attack Damage around the target. They also gain Attack Damage.<br><br>(@MinUnits@) @AD*100@% %i:scaleAD%<br>(@MinUnits@) @AD*100@% %i:scaleAD%<br>(@MinUnits@) @AD*100@% %i:scaleAD%, Launch a rocket every @NumOfAttacks@ attacks that deals double damage. | **炮手**（待核）<br>描述：炮手每进行 @NumOfAttacks@ 次普攻，发射一枚火箭，对目标周围造成相当于 @PercentDamage*100@% 攻击力的伤害。他们还会获得攻击力。<br><br>（@MinUnits@）@AD*100@% %i:scaleAD%<br>（@MinUnits@）@AD*100@% %i:scaleAD%<br>（@MinUnits@）@AD*100@% %i:scaleAD%；每进行 @NumOfAttacks@ 次普攻发射一枚火箭，火箭造成双倍伤害。 | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Titan`<br>名称：Sentinel<br>描述：Your team gains Armor and Magic Resist. Sentinels gain triple.<br><br>(@MinUnits@) @BonusArmor@ %i:scaleArmor%%i:scaleMR% | **哨兵**（待核）<br>描述：己方队伍获得护甲和魔抗。哨兵获得三倍加成。<br><br>（@MinUnits@）@BonusArmor@ %i:scaleArmor%%i:scaleMR% | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Sniper`<br>名称：Sniper<br>描述：Snipers deal more damage to targets farther away.<br><br>(@MinUnits@) @PercentDamageIncrease@% damage per hex<br>(@MinUnits@) @PercentDamageIncrease@% damage per hex<br>(@MinUnits@) @PercentDamageIncrease@% damage per hex and +@BonusHexRangeIncrease@ Attack Range | **狙神**（待核）<br>描述：狙神对距离更远的目标造成更多伤害。<br><br>（@MinUnits@）每相距 1 格，伤害提高 @PercentDamageIncrease@%<br>（@MinUnits@）每相距 1 格，伤害提高 @PercentDamageIncrease@%<br>（@MinUnits@）每相距 1 格，伤害提高 @PercentDamageIncrease@%，攻击距离增加 @BonusHexRangeIncrease@ 格。 | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Watcher`<br>名称：Watcher<br>描述：Watchers gain Durability, increased while above @HealthBreakpoint*100@% Health.<br><br>(@MinUnits@) @BaseDR*100@% or @IncreasedDR*100@% %i:scaleDR%<br> | **监察**（待核）<br>描述：监察获得伤害减免；生命值高于 @HealthBreakpoint*100@% 时，加成提高。<br><br>（@MinUnits@）@BaseDR*100@% 或 @IncreasedDR*100@% %i:scaleDR% | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
+| `TFT13_Sorcerer`<br>名称：Sorcerer<br>描述：Your team gains @TeamAP@ Ability Power. Sorcerers gain more.<br><br>(@MinUnits@) @BaseAP@ %i:scaleAP%<br>(@MinUnits@) @BaseAP@ %i:scaleAP%<br>(@MinUnits@) @BaseAP@ %i:scaleAP%<br>(@MinUnits@) @BaseAP@ %i:scaleAP%, Abilities reduce their target's damage by @DamageDecrease*100@% for @DamageDecreaseDuration@ seconds | **法师** · 已核对（国服 S13 数据）<br>描述：己方队伍获得 @TeamAP@ 法术强度。法师获得更多。<br><br>（@MinUnits@）@BaseAP@ %i:scaleAP%<br>（@MinUnits@）@BaseAP@ %i:scaleAP%<br>（@MinUnits@）@BaseAP@ %i:scaleAP%<br>（@MinUnits@）@BaseAP@ %i:scaleAP%；技能使目标造成的伤害降低 @DamageDecrease*100@%，持续 @DamageDecreaseDuration@ 秒。 | 否；依据：`job.js` → `characterid=TFT13_Sorcerer` → `name` |
+| `TFT13_Martialist`<br>名称：Artillerist<br>描述：Every @NumOfAttacks@ attacks, Artillerists launch a rocket that deals @PercentDamage*100@% Attack Damage around the target. They also gain Attack Damage.<br><br>(@MinUnits@) @AD*100@% %i:scaleAD%<br>(@MinUnits@) @AD*100@% %i:scaleAD%<br>(@MinUnits@) @AD*100@% %i:scaleAD%, Launch a rocket every @NumOfAttacks@ attacks that deals double damage. | **炮手** · 已核对（国服 S13 数据）<br>描述：炮手每进行 @NumOfAttacks@ 次普攻，发射一枚火箭，对目标周围造成相当于 @PercentDamage*100@% 攻击力的伤害。他们还会获得攻击力。<br><br>（@MinUnits@）@AD*100@% %i:scaleAD%<br>（@MinUnits@）@AD*100@% %i:scaleAD%<br>（@MinUnits@）@AD*100@% %i:scaleAD%；每进行 @NumOfAttacks@ 次普攻发射一枚火箭，火箭造成双倍伤害。 | 否；依据：`job.js` → `characterid=TFT13_Martialist` → `name` |
+| `TFT13_Titan`<br>名称：Sentinel<br>描述：Your team gains Armor and Magic Resist. Sentinels gain triple.<br><br>(@MinUnits@) @BonusArmor@ %i:scaleArmor%%i:scaleMR% | **哨兵** · 已核对（国服 S13 数据）<br>描述：己方队伍获得护甲和魔抗。哨兵获得三倍加成。<br><br>（@MinUnits@）@BonusArmor@ %i:scaleArmor%%i:scaleMR% | 否；依据：`job.js` → `characterid=TFT13_Titan` → `name` |
+| `TFT13_Sniper`<br>名称：Sniper<br>描述：Snipers deal more damage to targets farther away.<br><br>(@MinUnits@) @PercentDamageIncrease@% damage per hex<br>(@MinUnits@) @PercentDamageIncrease@% damage per hex<br>(@MinUnits@) @PercentDamageIncrease@% damage per hex and +@BonusHexRangeIncrease@ Attack Range | **狙神** · 已核对（国服 S13 数据）<br>描述：狙神对距离更远的目标造成更多伤害。<br><br>（@MinUnits@）每相距 1 格，伤害提高 @PercentDamageIncrease@%<br>（@MinUnits@）每相距 1 格，伤害提高 @PercentDamageIncrease@%<br>（@MinUnits@）每相距 1 格，伤害提高 @PercentDamageIncrease@%，攻击距离增加 @BonusHexRangeIncrease@ 格。 | 否；依据：`job.js` → `characterid=TFT13_Sniper` → `name` |
+| `TFT13_Watcher`<br>名称：Watcher<br>描述：Watchers gain Durability, increased while above @HealthBreakpoint*100@% Health.<br><br>(@MinUnits@) @BaseDR*100@% or @IncreasedDR*100@% %i:scaleDR%<br> | **监察** · 已核对（国服 S13 数据）<br>描述：监察获得伤害减免；生命值高于 @HealthBreakpoint*100@% 时，加成提高。<br><br>（@MinUnits@）@BaseDR*100@% 或 @IncreasedDR*100@% %i:scaleDR% | 否；依据：`job.js` → `characterid=TFT13_Watcher` → `name` |
 
 ## 5. 现有强化名及描述（6）
 
@@ -147,13 +148,13 @@
 
 ## 6. 现有异常名及描述（3）
 
-异常英文效果由 2026-10-07 查阅网页补齐，与 main 当前效果数值一致；来源见各行。Wiki 页标识版本 oldid=3848901（源模块引用版本），但它是社区资料而非客户端原件；MOBAFire 是 14.24 补丁解读。译文与项目额外执行条件分开列出，后者取自 `anomalies.ts`，本文不改变规则。Wiki 小段文字的中译由本清单提供，原作者见其页面历史，按该页 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) 标示来源。
+异常中文名称已由 [国服 14.24 公告](https://lol.qq.com/gicp/news/662/37055498.html)“异常突变”章节确认，逐项标为“已核对（国服 14.24 公告）”；仅核对名称，客户端 apiName 仍缺。英文效果由 2026-10-07 查阅网页补齐，与 main 当前效果数值一致；来源见各行。Wiki 页标识版本 oldid=3848901（源模块引用版本），但它是社区资料而非客户端原件；MOBAFire 是 14.24 补丁解读。译文与项目额外执行条件分开列出，后者取自 `anomalies.ts`，本文不改变规则。Wiki 小段文字的中译由本清单提供，原作者见其页面历史，按该页 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) 标示来源。
 
 | 英文原文 | 中文译文 | 是否存疑 |
 | --- | --- | --- |
-| `titanic-strikes`（项目 ID）<br>名称：Titanic Strikes<br>描述：Attacks deal an additional 40% Attack Damage to the target and adjacent enemies.<br>来源：[Wiki 异常表](https://wiki.leagueoflegends.com/en-us/TFT:Anomaly) | **泰坦打击**（待核）<br>普攻对目标及相邻敌人额外造成相当于 40% 攻击力的伤害。<br>项目显示补充：伤害类型为物理伤害，范围按现有 1 格邻域规则。 | 待核：四份文件无对应异常记录；缺客户端 apiName |
-| `mage-armor`（项目 ID）<br>名称：Mage Armor<br>描述：Gain Armor and Magic Resist equal to 50% of Ability Power.<br>来源：[MOBAFire 14.24 摘录](https://www.mobafire.com/league-of-legends/news/tft-14-24) | **法师护甲**（待核）<br>获得护甲和魔抗，数值分别相当于法术强度的 50%。<br>项目显示补充：以转换前最终法术强度计算。 | 待核：四份文件无对应异常记录；缺客户端 apiName；英文效果来自补丁解读网页，非客户端归档 |
-| `kill-streak`（项目 ID）<br>名称：Kill Streak<br>描述：Gain 20 Mana each kill.<br>来源：[Wiki 异常表](https://wiki.leagueoflegends.com/en-us/TFT:Anomaly) | **连杀**（待核）<br>每次击杀获得 20 法力值。<br>项目显示补充：仅在当前模拟步仍存活时获得。 | 待核：四份文件无对应异常记录；缺客户端 apiName；同模拟步存活判断为现有项目补充 |
+| `titanic-strikes`（项目 ID）<br>名称：Titanic Strikes<br>描述：Attacks deal an additional 40% Attack Damage to the target and adjacent enemies.<br>来源：[Wiki 异常表](https://wiki.leagueoflegends.com/en-us/TFT:Anomaly) | **泰坦打击** · 已核对（国服 14.24 公告）<br>普攻对目标及相邻敌人额外造成相当于 40% 攻击力的伤害。<br>项目显示补充：伤害类型为物理伤害，范围按现有 1 格邻域规则。 | 备注：名称依据 [国服 14.24 公告](https://lol.qq.com/gicp/news/662/37055498.html)“异常突变”章节；客户端 apiName 仍缺；项目显示补充不是公告原文 |
+| `mage-armor`（项目 ID）<br>名称：Mage Armor<br>描述：Gain Armor and Magic Resist equal to 50% of Ability Power.<br>来源：[MOBAFire 14.24 摘录](https://www.mobafire.com/league-of-legends/news/tft-14-24) | **法师护甲** · 已核对（国服 14.24 公告）<br>获得护甲和魔抗，数值分别相当于法术强度的 50%。<br>项目显示补充：以转换前最终法术强度计算。 | 备注：名称依据 [国服 14.24 公告](https://lol.qq.com/gicp/news/662/37055498.html)“异常突变”章节；客户端 apiName 仍缺；英文描述来自原补丁解读网页，非客户端归档 |
+| `kill-streak`（项目 ID）<br>名称：Kill Streak<br>描述：Gain 20 Mana each kill.<br>来源：[Wiki 异常表](https://wiki.leagueoflegends.com/en-us/TFT:Anomaly) | **连杀** · 已核对（国服 14.24 公告）<br>每次击杀获得 20 法力值。<br>项目显示补充：仅在当前模拟步仍存活时获得。 | 备注：名称依据 [国服 14.24 公告](https://lol.qq.com/gicp/news/662/37055498.html)“异常突变”章节；客户端 apiName 仍缺；同模拟步存活判断为现有项目补充 |
 
 ## 7. M8 装备名及效果描述（44：8 组件 + 36 成装）
 
@@ -282,18 +283,18 @@
 
 | 英文原文 | 中文译文 | 是否存疑 |
 | --- | --- | --- |
-| `TFT13_Ambusher`<br>名称：Ambusher | **伏击专家**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Bruiser`<br>名称：Bruiser | **格斗家**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Challenger`<br>名称：Quickstriker | **迅击战士**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_FormSwapper`<br>名称：Form Swapper | **双形战士**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Infused`<br>名称：Dominator | **统领**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Invoker`<br>名称：Visionary | **先知**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Martialist`<br>名称：Artillerist | **炮手**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Pugilist`<br>名称：Pit Fighter | **搏击手**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Sniper`<br>名称：Sniper | **狙神**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Sorcerer`<br>名称：Sorcerer | **法师**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Titan`<br>名称：Sentinel | **哨兵**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
-| `TFT13_Watcher`<br>名称：Watcher | **监察**（待核） | 待核：race.js 无对应 characterid；其他三份文件也无该英文 apiName 的羁绊记录；保留原译名 |
+| `TFT13_Ambusher`<br>名称：Ambusher | **伏击专家** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Ambusher` → `name` |
+| `TFT13_Bruiser`<br>名称：Bruiser | **格斗家** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Bruiser` → `name` |
+| `TFT13_Challenger`<br>名称：Quickstriker | **迅击战士** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Challenger` → `name` |
+| `TFT13_FormSwapper`<br>名称：Form Swapper | **双形战士** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_FormSwapper` → `name` |
+| `TFT13_Infused`<br>名称：Dominator | **统领** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Infused` → `name` |
+| `TFT13_Invoker`<br>名称：Visionary | **先知** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Invoker` → `name` |
+| `TFT13_Martialist`<br>名称：Artillerist | **炮手** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Martialist` → `name` |
+| `TFT13_Pugilist`<br>名称：Pit Fighter | **搏击手** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Pugilist` → `name` |
+| `TFT13_Sniper`<br>名称：Sniper | **狙神** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Sniper` → `name` |
+| `TFT13_Sorcerer`<br>名称：Sorcerer | **法师** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Sorcerer` → `name` |
+| `TFT13_Titan`<br>名称：Sentinel | **哨兵** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Titan` → `name` |
+| `TFT13_Watcher`<br>名称：Watcher | **监察** · 已核对（国服 S13 数据） | 否；依据：`job.js` → `characterid=TFT13_Watcher` → `name` |
 | `TFT13_BloodHunter`<br>名称：Blood Hunter | **祖安怒兽** · 已核对（国服 S13 数据） | 否 |
 | `TFT13_MachineHerald`<br>名称：Machine Herald | **机械先驱** · 已核对（国服 S13 数据） | 否 |
 | `TFT13_MissMageTrait`<br>名称：Banished Mage | **放逐法师** · 已核对（国服 S13 数据） | 否 |
@@ -323,40 +324,29 @@
 ## 10. 校对结果与交付边界
 
 - 名称覆盖：19 现有英雄、19 技能、5 羁绊、6 强化、3 异常、44 装备、63 M9 英雄、37 M9 羁绊；不扩展 M9 技能或羁绊效果。
-- 精确匹配：63 个不同英雄 apiName（第 2、8 表共 82 行）、19 个技能、44 件装备、6 个强化均已核对；37 个 M9 羁绊中 25 个在 race.js 找到。第 4 表的 5 个已有羁绊属于缺失的 12 个职业羁绊，保留原译名并标“待核”。47 条术语逐条附描述字段证据；复合术语另记其他记录依据和版本疑点。
-- 第 6 表的 3 个异常没有客户端 apiName，四份文件没有对应异常记录；保留原译名并标“待核”，不以英文名称或猜测 ID 冒充精确匹配。
+- 精确匹配：63 个不同英雄 apiName（第 2、8 表共 82 行）、19 个技能、44 件装备、6 个强化均已核对；37 个 M9 羁绊已全部核对：25 个在 race.js、12 个在 job.js 精确匹配；第 4 表的 5 个已有羁绊也已按 job.js 核对。47 条术语逐条附描述字段证据；复合术语另记其他记录依据和版本疑点。
+- 第 6 表的 3 个异常名已由国服 14.24 公告核对；客户端 apiName 仍缺，保留项目 ID，不以名称核对状态冒充精确身份匹配。全部 196 行名称均已核对（193 行国服 S13 数据、3 行国服 14.24 公告），仍存疑的是部分描述/身份字段，不是这些中文名称。
 - 名称已核对与描述存疑可同时存在。英文描述、占位符、动态图标、百分比及 B1 摘要仍取原版本；15.6 描述只作名称/用词证据，不改现有规则、版本或 digest。
 - 已检查文档覆盖、精确身份匹配、名称状态、术语证据、原文/占位符/数值保留，以及归档字节数和 SHA-256；依据 AGENTS.md，纯文档任务不运行完整游戏验收。
 
 ## 11. 官方文件缺失项与疑点
 
-### 11.1 未找到：12 个职业羁绊、3 个异常
+### 11.1 补充来源与异常身份字段边界
 
-以下职业羁绊均不在 race.js 的 characterid 中；chess.js 的 jobs 和 hex.js 的描述可能提及部分中文名称，但没有这些羁绊的英文 apiName 记录，不据此反推映射。缺失只是本次四份文件的范围缺口，不表示国服没有该羁绊；保留原译名。
+12 个职业羁绊均已在 job.js 的 characterid 精确找到，名称与原译名一致；第 4、9 表的待核名称已全部解除。race.js 的 25 个种族/专属/关系羁绊与 job.js 的 12 个职业羁绊合计覆盖 37 个 M9 羁绊。job.js 的额外“召唤物”记录 characterid 为空，不扩入清单。
 
-| 英文 apiName / 项目 ID | 保留译名 | 状态 / 原因 |
+以下三个异常的中文名称已由 [国服 14.24 公告](https://lol.qq.com/gicp/news/662/37055498.html)“异常突变”章节确认；公告未给客户端 apiName，仍用项目 ID，不将名称已核对误作身份字段已补齐。
+
+| 项目 ID | 中文名称 / 状态 | 仍缺少的证据 |
 | --- | --- | --- |
-| `TFT13_Sorcerer` | 法师 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Martialist` | 炮手 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Titan` | 哨兵 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Sniper` | 狙神 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Watcher` | 监察 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Ambusher` | 伏击专家 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Bruiser` | 格斗家 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Challenger` | 迅击战士 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_FormSwapper` | 双形战士 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Infused` | 统领 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Invoker` | 先知 | 待核：无对应羁绊 apiName 记录 |
-| `TFT13_Pugilist` | 搏击手 | 待核：无对应羁绊 apiName 记录 |
-| `titanic-strikes`（项目 ID） | 泰坦打击 | 待核：缺客户端 apiName；四份文件无对应异常记录 |
-| `mage-armor`（项目 ID） | 法师护甲 | 待核：缺客户端 apiName；四份文件无对应异常记录 |
-| `kill-streak`（项目 ID） | 连杀 | 待核：缺客户端 apiName；四份文件无对应异常记录 |
+| `titanic-strikes` | 泰坦打击 · 已核对（国服 14.24 公告） | 客户端 apiName；项目附加执行条件并非公告原文 |
+| `mage-armor` | 法师护甲 · 已核对（国服 14.24 公告） | 客户端 apiName；原英文效果仍取已标来源 |
+| `kill-streak` | 连杀 · 已核对（国服 14.24 公告） | 客户端 apiName；项目附加执行条件并非公告原文 |
 
 ### 11.2 名称已核对，描述或用法仍需留意
 
 | 条目 | 官方证据 / 疑点 | 本文处理 |
 | --- | --- | --- |
-| `TFT13_Irelia` 技能 | chess.js 的 skillName 为“距破之舞”，用字疑似异常 | 名称照录并保留存疑备注，不自行修字 |
 | `TFT13_Leona` 技能 | skillName 为“魔法坦克”，不同于英文 Eclipse 的字面 | 按国服名称；14.24b 描述保持原效果 |
 | `TFT_Augment_Manaflow1` | hex.js description 写“后2排”，14.24 英文写 back row | 名称“法力流 I”已核对；站位范围仍待同版本原件核对，不扩为后两排 |
 | `TFT_Augment_GlassCannonI` / back row | 国服写“后排”，本次描述原译为“最后一排” | 术语表采用“后排”；具体 14.24b 范围解释保持原文档，不扩大 |
