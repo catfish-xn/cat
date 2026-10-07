@@ -1,6 +1,8 @@
 # HEX 自动战棋
 
-TypeScript + Vite + Phaser 3 的网页单人自动战棋。以 M5 已冻结的 S13 原赛季 **14.24b** 为固定参考，提供 19 个英雄、5 个职业羁绊、7 个组件与9件成装、6 个强化和3个异常，从2-1运营到6-7。单人简化包括固定对手、无限商店池、补给代替选秀及手动准备期；不是全量 TFT。M6 在既有规则上增加公开种子、保存与恢复、战斗回放、统计及响应式中文界面。最终验收以同一干净提交的完整机器报告及用户 Review 为依据；实际结果见 [M6 验证记录](docs/M6_VALIDATION.md) 和 [M6 Review](docs/M6_REVIEW.md)，不以历史 CI 通过替代当前验收。
+TypeScript + Vite + Phaser 3 的网页单人自动战棋。以 S13 原赛季 **14.24b** 为固定参考，当前领域内容为 19 个英雄、5 个职业羁绊、7 个组件与 9 件成装、6 个强化和 3 个异常，从 2-1 运营到 6-7。单人简化包括固定对手、无限商店池、补给代替选秀及手动准备期；不是全量 TFT。M6 已加入公开种子、保存与恢复、战斗回放、统计和中文操作界面。
+
+**分支状态（2026-10-07）**：M7 已由 [PR #8](https://github.com/catfish-xn/cat/pull/8) 合入 main（`15313a7`）；本次文档同步基线为随后更新桌面平台要求的 `44541f0`。main 已有官方 S13 身份与图标、实战/回放反馈、帮助、减少动效及审计修复；[正式试玩](https://catfish-xn.github.io/cat/) 已成功部署该基线。M8 计划的 D1–D6 已全部确认 A，当前任务仅合并规划文档，交给后续实施者后停止，不开始功能实现。合并、部署及各精确 SHA 的 CI 证据分别见 [M7 状态核对](docs/M7_STATUS.md)；下一轮开工前重新 fetch。
 
 ## 运行与操作
 
@@ -15,8 +17,8 @@ npm run preview
 ```
 
 - **D**：2G刷新五格商店；**F**：4G购买4XP。快速输入和按住重复即时提交。锁店保留自然换轮的商品，主动D仍刷新并保持锁定。
-- **E**：卖出鼠标悬停的我方棋子，拖拽期间卖拖拽对象，空白处回落到显式选中对象。触屏提供购买、出售、部署等按钮。
-- 拖拽部署到我方row4–7或空备战格；手机可点选单位和目标格。人口上限等于等级，备战席九格。取消拖拽不提交，正常松手提交。
+- **E**：卖出鼠标悬停的我方棋子，拖拽期间卖拖拽对象，空白处回落到显式选中对象。
+- 拖拽或点选部署到我方 row4–7 或空备战格。人口上限等于等级，备战席九格。取消拖拽不提交，正常松手提交。
 - 三张同名同星自动升星，最多三星。满备战席可购买能立即合成的第三张。升星优先保留棋盘单位；纯备战席合成不会自动部署。
 - 装备面板选择两件库存组件合成，再装备到单位空槽。每单位三槽；出售返还装备，升星转移装备并返还溢出。未开放配方明确拒绝。
 - 新局先选两件组件，再选2-1强化。强化还有3-2、4-2两次；4-6选择异常目标并查看单项报价，1G刷新，确认免费。选择期间普通运营暂停。
@@ -46,13 +48,13 @@ npm run preview
 - 商店、选择、奖励、战斗种子使用显式独立RNG；每场Combat持有自己的RNG。拒绝命令不消耗随机数或序号。
 - `combat-s13*.ts`处理有限技能、来源独立盾层、状态、持续动作、治疗和伤害分担。旧底层测试仍覆盖未改变的移动、寻路与原子规则。
 - `rendering/match-session.ts`只提交命令并累计时间；界面读取领域状态与事件，不另算规则。
+- `presentation/`提供 S13 身份、素材、帮助与偏好及实战/回放共用表现映射；`public/assets/s13/`保存 40 张本地固定版本图标。
 
-M6 文件使用 `hex-autobattler-save` 包装，saveFormatVersion/replayFormatVersion 均为 1；内层对局继续使用schema5、`m5-14.24b-v1`、`s13-14.24b-slice-v1`、命令协议2和内容digest。裸 M5 文件、旧schema4及未知版本明确拒绝，不猜测迁移。恢复不重发奖励、不重抽随机数、不重新开战。完整契约见 [保存](docs/SAVE_CONTRACT.md)、[回放](docs/REPLAY_CONTRACT.md)、[Match](docs/MATCH_CONTRACT.md) 和 [Combat](docs/COMBAT_CONTRACT.md)。
+当前 M7 沿用 M6 的 `hex-autobattler-save` 包装，saveFormatVersion/replayFormatVersion 均为 1；内层对局继续使用schema5、`m5-14.24b-v1`、`s13-14.24b-slice-v1`、命令协议2和内容digest。裸 M5 文件、旧schema4及未知版本明确拒绝，不猜测迁移。恢复不重发奖励、不重抽随机数、不重新开战。M8 的新版本与旧档保全方案尚未实施。完整契约见 [保存](docs/SAVE_CONTRACT.md)、[回放](docs/REPLAY_CONTRACT.md)、[Match](docs/MATCH_CONTRACT.md) 和 [Combat](docs/COMBAT_CONTRACT.md)。
 
 ## 验收
 
-M7 表现层门禁：`node scripts/verify-m7-presentation.cjs --url=<preview 地址>`；五视口走查：`node scripts/m7-screens.cjs --url=<地址>`。
-
+M7 表现层门禁：`node scripts/verify-m7-presentation.cjs --url=<preview 地址>`；原有五视口走查：`node scripts/m7-screens.cjs --url=<地址>`。两者已在 main，历史手机覆盖继续保留；新增 M8 验收仅面向桌面 Chromium。
 
 ```sh
 npx playwright install --with-deps chromium
@@ -66,7 +68,7 @@ npm run test:performance
 
 `--build=sniper`和`--build=mage`运行另外两条路线；`--touch`用正常触摸操作运行完整路线。三个桌面路线及触摸路线分别在dev/preview执行后，`npm run test:compare`比较完整状态/事件；最终证据使用`npm run test:compare -- --final`，要求同一干净提交。产物保存在gitignored `artifacts/`。可用`CHROMIUM_PATH`指定浏览器路径。
 
-浏览器脚本只读观察状态，用原生输入和正常逻辑时间游玩；headless轨迹证明浏览器一致性，独立手算账本和数值用例才验证规则答案。CI分别执行单测/构建、三路线×两模式、两模式输入与触摸路线，再比较证据。M6 的数值预算已经冻结，当前修复仍须按原预算完成最终回归，不能以调试运行或旧 SHA 结果代替。
+浏览器脚本只读观察状态，用原生输入和正常逻辑时间游玩；headless轨迹证明浏览器一致性，独立手算账本和数值用例才验证规则答案。当前 CI 常规包含 11 个验收作业：单测/构建、三路线×两模式、两模式输入与原有触摸路线、M7 表现/资源/预算，以及 M5/M6 证据比较。M6 数值预算和 M7 相对 M6 的表现层预算均已有门禁；不能以调试运行、Pages 部署成功或旧 SHA 结果代替当前提交的完整验收。
 
 M6 专项入口如下；应先安装依赖及 Chromium，preview 前先构建。`--m6-journey` 在炮手完整正常路线中追加保存／恢复／回放与应用生命周期检查：
 
@@ -84,9 +86,16 @@ node scripts/verify-m6-performance.cjs
 
 存储／组件脚本不代替真实产品浏览器路线，模块生命周期不代替完整 Phaser 生命周期。`npm run test:performance` 保留既有领域性能测试；M6 浏览器性能使用上列 `verify-m6-performance.cjs`。完整 CI 汇集同一干净 SHA 的全部必需产物后，依次运行 `npm run test:compare -- --final` 与 `node scripts/compare-m6-evidence.cjs`；比较脚本不能仅凭上述单条路线的部分产物通过。具体编排见 [CI 工作流](.github/workflows/ci.yml)。
 
-正式目标为Chromium桌面、触屏电脑及手机竖横屏；Chromium手机模拟不代表Safari支持。WebKit为候选，iPhone/iPad Safari尚未承诺正式支持。
+当前及 M8 的目标平台为 **桌面 Chromium**。上文触摸脚本是已有回归入口；M8 不新增手机适配、手机路线或手机相关测试。浏览器支持不延伸为 Safari/WebKit 认证。
 
-M6 范围与验收依据为已冻结的 [M6 Goal](M6_GOAL.md)。领域规则和历史基线保留 [M5计划](M5_PLAN.md)、[M5验收](M5_ACCEPTANCE.md) 及 [M5验证记录](docs/M5_VALIDATION.md)。M1–M4文件保留历史证据；[测试迁移说明](docs/M5_HISTORICAL_TESTS.md)区分旧内容golden与继续执行的底层/缺陷回归。本阶段暂缓全量S13、八人联网、完整对手经济AI、有限共享池、选秀、超出当前槽／三个完成局的复杂存档管理、3D和Riot美术资产。
+M6 范围与验收依据为已冻结的 [M6 Goal](M6_GOAL.md)；最终技术复验记录在 [M6 最终复验](docs/M6_FINAL_REVIEW.md)。领域规则和历史基线保留 [M5计划](M5_PLAN.md)、[M5验收](M5_ACCEPTANCE.md) 及 [M5验证记录](docs/M5_VALIDATION.md)。M1–M7 文件中的阶段性失败和“尚未合并”按原日期阅读；[测试迁移说明](docs/M5_HISTORICAL_TESTS.md)区分旧内容 golden 与继续执行的底层/缺陷回归。main 已包含 M7 的 40 张 S13 图标和来源/hash 清单；修复、回退与精确提交证据见 [M7 验证](docs/M7_VALIDATION.md)、[M7 审计](docs/M7_CODEX_AUDIT.md) 和 [M7 状态核对](docs/M7_STATUS.md)。
+
+## 后续路线
+
+- M8：[M8_PLAN.md](M8_PLAN.md) 的 D1–D6 已全部确认 A：8 个常规组件与 36 件成装、第一阶段野怪、各阶段 `.7` 野怪和掉落，按 M8A 装备/通用机制、M8B 野怪/掉落推进；[Claude 界面任务](docs/M8_CLAUDE_TASKS.md) 列出功能与后端数据依赖。当前只合并已确认的规划文档并停止，后续实施者接手时再按任务依赖执行；任务标签不表示本轮启动实施。
+- M9 起：按费用分批补齐英雄与羁绊；全英雄完成后再做纹章等特殊装备，最后扩充海克斯强化。现有 6 个强化和 3 个异常保留，不把“最后做海克斯”理解为本轮删除旧功能。
+- 通用战斗机制须服务装备及后续技能/强化；M6 撤销记录累积问题在 `codex/m6-lifecycle-retention` 独立处理，不纳入 M8。
+- 八人联网、完整对手经济 AI、有限共享池、选秀、复杂存档管理、3D 均不在 M8 范围；旧 M7 计划中的后续方向由本轮用户路线取代。
 
 ## Riot 素材与免责声明
 

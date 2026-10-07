@@ -1,5 +1,7 @@
 # M7 PLAN：可玩 Alpha 的视觉、信息层级与操作体验
 
+> 2026-10-07 历史范围说明：M7 已由 PR #8（`15313a7`）合入 main，当前证据见 [M7 状态核对](docs/M7_STATUS.md)。本文保留当时的计划、手机范围及后续方向，不作为新阶段授权。当前平台以 `AGENTS.md` 的桌面 Chromium 要求为准；后续路线以 D1–D6 已全部确认 A 的 [M8_PLAN.md](M8_PLAN.md) 为准：M8 装备/PvE，M9 起按费用补英雄/羁绊，全英雄后做特殊装备，最后扩充海克斯。本轮仅合并规划文档后停止，不开始功能实施。
+
 - 规划日期：2026-10-06
 - 基线：M6 签收提交 `631c131`（PR #7），签收记录见 [docs/M6_FINAL_REVIEW.md](docs/M6_FINAL_REVIEW.md)。M7 分支从 PR #7 分支开出；PR #7 合并到 main 后，M7 分支 rebase 到 main（增量只有 M6 文档时直接快进）。
 - 状态与证据：本文是计划；实际执行结果记录在 `docs/M7_BASELINE.md` 与 `docs/M7_VALIDATION.md`。

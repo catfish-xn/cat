@@ -3,11 +3,11 @@
 ## 1. 本说明的范围与阅读顺序
 
 - 仓库：`catfish-xn/cat`；项目名：HEX 自动战棋；npm 包名：`hex-autobattler`（`private: true`）。
-- 本次扫描日期：2026-10-06。main 扫描基线为 `d0f9ecd`；此前游戏功能合并提交为 `d8a54bb`（M5，PR #6）。本说明是该快照的导航，不是永久不变的进度声明。
-- 扫描覆盖 main 的全部 197 个受版本控制文件及主要开发分支的文件树、配置和里程碑记录；main 有 54 个 TypeScript 源文件、41 个顶层活动测试文件、21 份历史测试文本。后续以实际文件树为准，不把这些数量当验收门槛。
+- 本次状态同步日期：2026-10-07（北京时间）。M7 已由 PR #8（`15313a7`）合入 main；文档同步基线为随后更新桌面平台要求的 `44541f0`。合并、精确 SHA 的 CI 与 Pages 部署分别见 [M7_STATUS.md](M7_STATUS.md)。
+- 导航已同步 main 中的 M6 应用、存档、回放、统计，以及 M7 表现层、素材和专项门禁；文件数量不作为验收门槛。
 - 先读根目录 `AGENTS.md` 的分工规则，再读 `README.md`、`docs/MATCH_CONTRACT.md`、`docs/COMBAT_CONTRACT.md`、`M5_RULES.md`，最后读当前任务涉及的计划、验收记录和代码。
 - 实际功能与分支归属以当前源码、Git 合并历史为准；规则意图以当前版本契约为准；“已通过”必须有对应提交的真实验证证据。三者冲突时记录差异，不自行修改规则来迎合旧文档。
-- M1—M5 计划中包含历史基线、当时的阻塞、旧协作安排和旧视觉要求。这些不是当前任务的新授权；当前用户要求及根目录 `AGENTS.md` 的分工规则不因历史计划而改变。
+- M1—M7 计划中包含历史基线、当时的阻塞、旧协作安排和旧视觉要求。这些不是当前任务的新授权；当前用户要求及根目录 `AGENTS.md` 的分工规则不因历史计划而改变。M8 的 D1–D6 已全部确认 A，本轮只合并文档并交接后停止，尚不开始实施。
 - 下文列出的界面文件仅用于理解数据流和定位问题，不构成修改界面或制定视觉方案的授权。
 
 ## 2. 项目简介与产品范围
@@ -23,7 +23,8 @@ main 当前包含：
 - 五槽无限单位池商店、锁店、买卖、三合一升星（最高三星）、经验和等级（最高九级）、利息与连胜败收入、装备合成/装备/返还、持久成长和终局。
 - D 刷新商店（2 G）、F 购买经验（4 G / 4 XP）、E 出售目标；Start Combat、Continue、New Match 由领域阶段控制。
 - 三条主要构筑验收路线：`cannon`（四炮四哨）、`sniper`（两狙四监察两哨）、`mage`（四法四哨）；`sniper-caitlyn` 是额外的自然获取五费英雄路线。
-- schema5 JSON 序列化、恢复校验和确定性重放测试。main 尚无 M6 的完整公开存档/续玩/回放产品界面。
+- schema5 JSON 校验与确定性重放；M6 公开种子、当前局自动保存、导入/导出/续玩、最近三个完成局、已完成战斗回放/seek 和统计已在 main。
+- M7 的 19 英雄身份与种族/职业信息、40 张本地图标、实战/回放共用反馈、帮助与焦点保护、减少动效偏好及审计修复已在 main；领域内容数量、轮次和存档协议保持上述 M6 基线。
 
 这不是全量 TFT，也不是 Riot 内部规则的逐项复刻。单人简化包括无限商店池、手动准备期、补给替代选秀、固定对手和明确的有限战斗机制。没有独立后端服务、数据库服务器、账号系统或联网对战；这里的“后端”职责主要对应纯 TypeScript 领域规则与本地数据处理。当前未引入 React、Vue、服务端渲染或 URL 路由框架。
 
@@ -34,7 +35,7 @@ main 当前包含：
 | TypeScript | `^5.9.3`，锁定 5.9.3；业务代码和测试的类型检查 |
 | Vite | `^7.1.0`，锁定 7.3.6；开发服务器、生产打包和预览 |
 | Phaser | `^3.90.0`，锁定 3.90.0；棋盘与战斗显示、输入接入 |
-| Vitest | `^3.2.4`，锁定 3.2.7；单元、契约、集成、重放回归 |
+| Vitest | `^5.0.3`，锁定 5.0.3；单元、契约、集成、重放回归 |
 | Playwright | 精确 1.63.0；Chromium 原生鼠标/键盘/触摸及生产预览验证 |
 | npm | 通过 `package-lock.json` 锁定依赖；使用 `npm ci` 重现安装 |
 | 模块 | `package.json` 为 `type: module`；源码 ESM，Node 工具多为 `.cjs`，数据导入器为 `.mjs` |
@@ -43,7 +44,7 @@ main 当前包含：
 - Node 要求以锁定工具的 engines 为准：Vite 7.3.6 要求 `^20.19.0 || >=22.12.0`，Playwright 要求 Node >=20。优先使用 Node 22.12+ 的 22 系列，与 CI 主版本保持一致。
 - `tsconfig.json`：ES2022、DOM lib、ESNext 模块、Bundler 解析；启用 `strict`、`noEmit`、`noUnusedLocals`、`noUnusedParameters`、`skipLibCheck`；检查范围为 `src` 和 `tests`。
 - 仓库没有独立 ESLint、Prettier、Docker 或后端启动配置，也没有 `lint`、`start`、`test:coverage` npm script；不要在说明或自动化中假设这些命令存在。
-- 上述锁定版本是 main 快照。M7 分支已经将 Vitest 升为 `^5.0.3`，并将 dev/preview 默认监听改为本机，不能把不同分支的配置混写。
+- 上述锁定版本是 `44541f0` 的 main 快照；M7 已将 Vitest 升为 `^5.0.3`，dev/preview 使用 Vite 默认的本机监听。切换历史提交时重新核对配置，不把旧 M6 环境混写为当前环境。
 
 ## 4. main 目录与文件职责
 
@@ -62,21 +63,24 @@ main 当前包含：
 ├── M5_PLAN.md                 M5 范围、依赖与冻结点
 ├── M5_RULES.md                当前 S13 切片详细规则与审计修订
 ├── M5_ACCEPTANCE.md           M5 验收矩阵和证据门禁
+├── M6_PLAN.md / M6_GOAL.md     M6 历史计划与已冻结产品契约
+├── M7_PLAN.md                 已合并 M7 的历史计划
+├── M8_PLAN.md                 已确认的装备/PvE 规划，尚未实施
 ├── package.json               npm scripts、依赖声明
 ├── package-lock.json          可重现依赖版本
 ├── tsconfig.json              TypeScript 检查配置
-├── vite.config.ts             普通构建 / 与 Pages 构建 /cat/ 的 base
+├── vite.config.ts             普通构建 ./ 与 Pages 构建 /cat/ 的 base
 ├── index.html                 HTML 入口，加载 src/main.ts（界面边界）
 ├── src/                       产品代码
 ├── tests/                     活动回归、独立 oracle 和历史 fixtures
 ├── scripts/                   路线生成、浏览器/性能验收和离线工具
 ├── docs/                      契约、规则补充、审查与验证记录
-├── .github/workflows/ci.yml    原有完整测试矩阵
-├── .github/workflows/pages.yml 正式站点与固定 M7 预览部署
+├── .github/workflows/ci.yml    M5/M6/M7 验收矩阵与条件诊断
+├── .github/workflows/pages.yml main 正式站点与 M7 旧快照部署
 └── .gitignore                 排除依赖、构建、coverage、日志、artifacts
 ```
 
-`node_modules/`、`dist/`、`coverage/`、`artifacts/` 和 `*.log` 是忽略的安装/生成产物，不应当作源文件提交。main 没有 `public/`、`src/presentation/`、`src/persistence/` 等 M6/M7 专属目录；也没有顶层 `content/`、`economy/` 或 `combat/` 目录，分工规则中的这些逻辑模块实际主要位于 `src/simulation/`。
+main 已有 M6 的 `src/m6/`、`src/persistence/`、`src/replay/`、`src/stats/`，以及 M7 的 `src/presentation/`、`public/assets/s13/` 和相关脚本、fixtures。切换历史提交时以实际文件树为准。
 
 ### 4.2 纯领域层：`src/simulation/`
 
@@ -133,6 +137,7 @@ main 当前包含：
 - `src/rendering/match-session.ts`：薄会话适配器，同步提交 Match 命令、累计帧时间、维护当前战斗完整事件账本；不应成为第二套规则引擎。
 - `src/rendering/hex-layout.ts`：格子与显示坐标转换；`input-router.ts`：手势 owner/epoch 和取消语义。
 - `src/rendering/strategy-panel.ts`：读取状态并调用命令的 DOM 操作/信息面板；`combat-feedback.ts`：领域事件与来源的文字说明。
+- `src/presentation/`：英雄与装备身份映射、S13 素材清单/加载、实战与回放共用表现、帮助和偏好；`public/assets/s13/`：40 张本地固定版本图标。
 - GPT/Codex 定义展示字段、数据来源和读取契约；Claude 负责界面实现。不要把文档任务扩展为这些文件的重构。
 
 ### 4.5 测试、fixtures 与脚本
@@ -144,6 +149,7 @@ main 当前包含：
 - 整局与输入：`match-contract`、`match-economy`、`match-lifecycle`、`match-session`、`input-router`。
 - 保留的 M4 缺陷与底层回归：`m4-effect-combat`、`m4-effects`、`m4-ledger-bound`、`m4-review-regressions`、`m4-strategy-snapshot`。
 - 当前 M5：`m5-acceptance`、`m5-audit-boundaries`、`m5-combat`、`m5-command-phases`、`m5-content`、`m5-economy`、`m5-growth`、`m5-match-integration`、`m5-neutral-timing`、`m5-regressions`、`m5-replay`、`m5-route`、`m5-runtime-import`、`m5-serialization`、`m5-strategy-numbers`。上述名称对应 `tests/<名称>.test.ts`。
+- M6/M7 的存档、回放、应用生命周期、统计与表现层回归同样已在 main；产品浏览器入口和 M7 专项门禁见第 5.4、5.5 节，不用上面的 M5 名称列表替代当前完整测试发现结果。
 
 `tests/*-helpers.ts` 提供测试构造与断言助手。`tests/fixtures/m3/`、`m4/`、`m5/` 保存独立 oracle、断言工具和版本化 golden；`.d.cts` 为 CommonJS 测试工具提供类型声明。`full-match-golden.pre-*.json` 保存规则修订前的轨迹，不能当作当前期望覆盖回去。`tests/historical/m4/*.test.ts.txt` 是归档文本，不参加 Vitest 发现；其迁移依据见 `docs/M5_HISTORICAL_TESTS.md` 和 `docs/M5_TEST_MIGRATION.md`。
 
@@ -164,6 +170,11 @@ main 当前包含：
 ### 4.6 文档索引
 
 - `docs/PROJECT_GUIDE.md`：本详细项目说明。
+- `docs/M7_STATUS.md`：当前 M6/M7 合并事实、M7 实现与精确 CI 证据、后续路线和独立问题。
+- `M7_PLAN.md`、`docs/M7_VALIDATION.md`、`docs/M7_CODEX_AUDIT.md`、`docs/M7_WARMUP_VALIDATION.md`：M7 历史计划、修复、正式门禁与诊断证据；旧手机范围和旧后续路线不延伸为 M8 要求。
+- `M8_PLAN.md`、`docs/M8_CLAUDE_TASKS.md`：D1–D6 已全部确认 A 的 M8 后端/界面计划与交接任务；本轮合并文档后停止，实施和验收尚未开始。
+- `docs/M6_FINAL_REVIEW.md`：M6 最终技术复验；`docs/M6_REVIEW.md`、`docs/M6_VALIDATION.md` 保留中间失败和复验过程。
+- `docs/SAVE_CONTRACT.md`、`docs/REPLAY_CONTRACT.md`、`M6_GOAL.md`：已合入 M6 的存档、回放和性能契约。
 - `docs/MATCH_CONTRACT.md`、`docs/COMBAT_CONTRACT.md`：当前公共 API、阶段、原子性、事件、tick 与恢复契约。
 - `docs/M1_VALIDATION.md` 至 `docs/M5_VALIDATION.md`：各阶段真实执行记录，包含失败、中间状态和历史限制，阅读时核对日期/SHA。
 - `docs/M3_RULES.md`、根目录 `M4_RULES.md`：历史规则，不能覆盖 M5 的新内容/数值。
@@ -191,10 +202,10 @@ npm run preview
 - `typecheck`：`tsc --noEmit`；`test`：`vitest run`，不是 watch 模式。
 - `build`：先 typecheck，再 `vite build`，产物为 `dist/`；不自动执行测试。
 - `preview`：预览现有 `dist/`，默认端口通常为 4173；不自动 build，也不是生产托管服务。
-- main 的 dev/preview 显式使用 `--host 0.0.0.0`。只需本机访问时运行 `npm run dev -- --host 127.0.0.1` 或 `npm run preview -- --host 127.0.0.1`。
+- main 的 dev/preview 分别为 `vite`、`vite preview`，默认本机监听；需要明确固定 IPv4 时运行 `npm run dev -- --host 127.0.0.1` 或 `npm run preview -- --host 127.0.0.1`。分享 Pages 地址不要求暴露本机服务。
 - 单个文件验证示例：`npm test -- tests/m5-economy.test.ts`；测试名过滤示例：`npm test -- tests/rng.test.ts -t "lcg32"`。按影响面选择测试，不能用定向通过替代整阶段验收。
 
-### 5.2 当前 M5 验收入口
+### 5.2 当前沿用的 M5/M6 验收入口
 
 ```sh
 npx playwright install --with-deps chromium
@@ -232,34 +243,64 @@ node scripts/summarize-m5-ci-budget.cjs jobs.json artifacts/m5-ci-budget.json
 
 数据导入会写入 `src/simulation/content/source/s13-14.24.json`，不自动重生成全部运行时目录或 `source-manifest.ts`；输入必须是导入器规定 hash 的未修改历史原文件，不是随便下载的最新版或已有切片。只有内容维护任务才执行，并审查 diff、来源清单、内容 digest、规则版本和测试期望。预算工具必须提供同一 run、同一 SHA、每组 3 个成功样本的真实 jobs JSON，不能虚构环境或计时。
 
+### 5.4 已合入的 M6 产品验收入口
+
+```sh
+npm run test:browser -- --build=cannon --m6-journey
+npm run test:preview -- --build=cannon --m6-journey
+node scripts/m6-layout-product-smoke.cjs
+node scripts/verify-m6-storage.cjs
+node tests/m6-persistence-retry.cjs
+node tests/m6-application-failures.cjs
+node tests/m6-stats-browser.cjs
+node scripts/verify-m6-performance.cjs
+node scripts/compare-m6-evidence.cjs
+```
+
+preview 先 build；比较器要求同一干净 SHA 的完整必需产物，单条命令通过不是全阶段通过。布局脚本中的旧手机视口是历史范围，M8 不新增手机测试。
+
+### 5.5 已合入的 M7 表现、资源与预算门禁
+
+```sh
+node scripts/verify-m7-presentation.cjs --url=http://127.0.0.1:4173
+node scripts/m7-screens.cjs --url=http://127.0.0.1:4173
+node scripts/verify-m7-subpath.cjs
+node scripts/m7-budget.cjs --base=../m6-base/dist --current=dist --out=artifacts/m7-budget
+```
+
+前两项读取已启动的服务；该示例要求先普通 build 并启动 preview。子路径脚本读取构建后的 `dist/`。预算脚本还要求独立构建的 M6 基线 `631c131f1f2fd387c873f0fd8b5a238bca79dbe0`；CI 在相邻 checkout 中准备 `../m6-base/dist`，不能用不存在的路径或另一版本代替。完整准备顺序以 `.github/workflows/ci.yml` 的 `m7-presentation` 作业为准。
+
+M7 既有预算要求 JS gzip 不超过该 M6 基线的 1.10 倍、交互就绪中位数不超过 1.20 倍。原有五视口检查继续保留，不为 M8 增加手机覆盖。M8 的新增内容与性能样本按已确认的 `M8_PLAN.md` 另行验收，不把 M7 门禁当成尚未实现的 M8 验收结果。
+
 ## 6. GitHub Actions 与两个试玩地址
 
-### 6.1 原有测试工作流
+### 6.1 当前测试工作流
 
 `.github/workflows/ci.yml` 在 main push、pull_request 和手动触发时运行；Node 22，`contents: read`。PR 使用明确的 PR head SHA，证据记录 `M5_COMMIT_SHA`。
 
 - `test-and-build`：安装、单测、构建、多 seed headless、三次领域性能样本；22 分钟预算。
 - `chromium-match`：dev/preview × cannon/sniper/mage，6 个完整路线任务；每个 28 分钟预算。
 - `chromium-input`：dev/preview 两个原生输入与正常时间触摸路线任务；每个 32 分钟预算。
-- `compare-evidence`：依赖上述任务，下载同 SHA 产物并执行 `--final`；6 分钟预算。
-- 常规共 10 个 job；手动 `profile=true` 时 sample 1/2/3 共 30 个 job。预算来自已记录实测，不随意加大或删减测试规避问题。
+- `m7-presentation`：表现层、原有五视口、子路径资源及相对 M6 的预算；每个 25 分钟预算。
+- `compare-evidence`：依赖 `test-and-build`、`chromium-match`、`chromium-input`，下载同 SHA 产物并执行 M5 `--final` 与 M6 比较器；6 分钟预算。M7 是独立必需作业，不由这个比较器代验。
+- main 常规共 11 个验收 job；另有暖机和 heap 诊断 job，普通运行按条件跳过。炮手路线已启用 `--m6-journey`，输入作业还包含 M6 存储、统计、布局、失败恢复及性能检查。手动 `profile=true` 时 sample 1/2/3 共 33 个验收 job；显式诊断按各自条件另行运行。预算来自已记录实测，不随意加大或删减测试规避问题。
 
-### 6.2 Pages 正式版与临时预览
+### 6.2 Pages 正式版与 M7 旧快照
 
-- 正式版：`https://catfish-xn.github.io/cat/`，跟随 main。
-- M7 临时预览：`https://catfish-xn.github.io/cat/m7/`，固定 `claude/friendly-darwin-pak00a` 的 `d46ed54269548840ccc4644e1d67cad96199afac` 快照。
+- 正式版：[游戏](https://catfish-xn.github.io/cat/)，跟随 main；`44541f0` 已由 [Pages 37549797438](https://github.com/catfish-xn/cat/actions/runs/37549797438) 成功部署，包含 M7。
+- M7 旧快照：[历史预览](https://catfish-xn.github.io/cat/m7/)，固定到 `d46ed54269548840ccc4644e1d67cad96199afac`。原 M7 开发分支已删除，不影响 workflow 读取这个固定提交；此地址不代表最新 M7。
 - `.github/workflows/pages.yml` 是独立 build/deploy 工作流，只允许 main 的 push/手动运行进入 build。它与 CI 并行，没有以完整 CI 成功为部署前置条件；Pages 成功不等于完整测试通过。
-- main 使用 `npm run build -- --mode pages`；`vite.config.ts` 仅在 mode=pages 时设置 `/cat/`，普通开发/测试仍是 `/`。
+- main 使用 `npm run build -- --mode pages`；`vite.config.ts` 在 mode=pages 时设置 `/cat/`，普通构建使用相对 base `./`；常规 dev/preview 验收仍访问根入口。
 - 工作流把固定 M7 提交 checkout 到 `.pages-m7`，单独 `npm ci`，再 `npm run build -- --base /cat/m7/`，将其产物移到 `dist/m7`，最后上传整个 `dist`。
-- GitHub Pages 一次部署替换整个站点，因此每次都携带 main 与 M7 两份产物；不能独立上传 M7 的 dist 到站点根目录，否则会覆盖正式版。以后更新 main 会保留当前预览，M7 分支的新提交不会自动更新它。
+- GitHub Pages 一次部署替换整个站点，因此每次都携带 main 与 M7 旧快照两份产物；不能独立上传旧快照的 dist 到站点根目录，否则会覆盖正式版。以后更新 main 会保留当前快照，后续修复不会自动更新其固定 ref。
 - main 本地检查：`npm run build -- --mode pages` 后 `npm run preview -- --base /cat/`，访问 `/cat/`。在 M7 对应 checkout 检查预览：`npm run build -- --base /cat/m7/` 后 `npm run preview -- --base /cat/m7/`，访问 `/cat/m7/`。
-- 修改部署时检查 HTML 的 JS/CSS URL、静态图片、页面刷新和控制台。M7 图片加载使用 `import.meta.env.BASE_URL`，40 个图片位于该分支的 `public/assets/s13/`；不能改成域名根路径 `/assets/...`。
+- 修改部署时检查 HTML 的 JS/CSS URL、静态图片、页面刷新和控制台。main 的 M7 图片加载使用 `import.meta.env.BASE_URL`，40 个图片位于 `public/assets/s13/`；不能改成域名根路径 `/assets/...`。
 - 当前没有客户端 URL 路由，也没有任意深路径 fallback；只验证实际入口的刷新，不宣称任意 `/cat/xxx` 都能访问。
-- 仓库 Pages 来源已设为 GitHub Actions。重建环境时在 Settings → Pages → Build and deployment → Source 选择 GitHub Actions。更新/撤下预览属于部署改动，不擅自改成 M7 正式发布或合并 M7。
+- 仓库 Pages 来源已设为 GitHub Actions。重建环境时在 Settings → Pages → Build and deployment → Source 选择 GitHub Actions。更新/撤下旧快照属于部署改动，应按相应任务处理；本轮文档同步不改 workflow。
 
 ## 7. 当前开发进度与里程碑
 
-以下依据 2026-10-06 的 Git 和文档快照；执行新任务前重新 fetch 并核对，不从分支名或旧计划推定当前状态。
+以下依据 2026-10-07 的 Git 和文档快照；执行新任务前重新 fetch 并核对，不从分支名或旧计划推定当前状态。
 
 | 阶段 | 能力与当前证据边界 |
 | --- | --- |
@@ -268,20 +309,20 @@ node scripts/summarize-m5-ci-budget.cjs jobs.json artifacts/m5-ci-budget.json
 | M2 连续对局 | Match 权威、五槽商店、基础经济、结算/Continue 和同步输入；PR #3 已合并（`169f28e`） |
 | M3 成长循环 | XP/等级/人口、费用概率、三合一、法力/技能、玩家 HP 与终局；PR #4 已合并（`133a41b`） |
 | M4 策略切片 | 羁绊、装备、强化、异常、有限效果、存档契约与完整路线；PR #5 已合并（`5a4ce80`） |
-| M5 S13 单人切片 | 当前 main 玩法；19 英雄、35 轮和审计修复已由 PR #6 合并（`d8a54bb`） |
-| M6 产品化与回放 | `feat/m6-product-replay`，扫描时 head `85d5d9b`；未进入 main。分支记录对功能提交 `631c131` 的技术验收通过，后续 head 含报告/计划文档，不等于每个 head 都重新跑过同样检查 |
-| M7 表现层 | `claude/friendly-darwin-pak00a`，扫描时 head `d46ed54`；含 M6 能力和 S13 图片、身份显示、帮助、减少动效等。分支记录 F1 已确认、W2 主要功能完成、F3 回归进行中，F4 用户试玩签收未完成；已作为固定临时预览上线，未合入 main |
-| M8 后续方向 | M7 分支计划记录了从 19 英雄 / 5 职业扩充到完整 S13 的后续方向；当前扫描未见独立 M8 实施与验收证据，不把它写成已实现能力 |
-| M9 候选 | M7 计划记录立体化表现候选；尚无已实施/已验收证据，不把视觉候选项纳入当前规则任务 |
+| M5 S13 单人切片 | 领域规则基础；19 英雄、35 轮和审计修复已由 PR #6 合并（`d8a54bb`） |
+| M6 产品化与回放 | 已由 PR #7 合入 main（`a8be9fc`）。最终技术复验入口为 `docs/M6_FINAL_REVIEW.md`；旧中间失败记录保留 |
+| M7 表现层 | 已由 PR #8 合入 main（`15313a7`），随后 `44541f0` 更新桌面平台要求；身份、S13 图标、实战/回放反馈、帮助、减少动效及审计修复均在 main。当前基线 Pages 成功；CI 快照及旧成功 run 的适用范围见 `docs/M7_STATUS.md` |
+| M8 已确认规划 | D1–D6 全部选 A：8 常规组件/36 成装、第一阶段野怪、各阶段 `.7` 野怪与掉落；按 M8A 装备/通用机制、M8B 野怪/掉落交接。当前只合并文档后停止，功能尚未实施 |
+| M9 及以后 | 按费用分批补英雄和羁绊；全英雄后做纹章等特殊装备，最后补海克斯强化。旧计划中的 3D 候选不进入当前路线 |
 
 重要的状态差异：
 
-- `M5_PLAN.md`、`M5_ACCEPTANCE.md`、`M5_RULES.md`、`docs/M5_VALIDATION.md`、`docs/M5_FIX_REVIEW.md` 仍有“未验收/不合并 main/不启动 M6”等当时记录。Git 已显示 M5 合并、M6/M7 分支存在；保留历史证据，但不要复述为当前仓库阻塞。
-- main 的 README 仍有旧的“临时 watchdog/实测预算尚缺”表述；现行 CI 已使用 `docs/evidence/M5_CI_BUDGET.json` 的冻结预算。判断时核对实际工作流及最新验收记录。
-- M7 的 `docs/M7_VALIDATION.md` 记录 `de31f6a` 的 CI run `37446456876` 10/10 成功；随后布局提交有本地复测，但该记录明确未单独跑完整 CI，M7 专项表现/五视口验证也尚未全部加入 CI。不能将该 run 当作 `d46ed54` 的完整最终验收。
+- `M5_PLAN.md`、`M5_ACCEPTANCE.md`、`M5_RULES.md`、`docs/M5_VALIDATION.md`、`docs/M5_FIX_REVIEW.md` 仍有“未验收/不合并 main/不启动 M6”等当时记录。Git 已显示 M5、M6、M7 均已合并；保留历史证据，但不要复述为当前仓库阻塞。
+- 当前 CI 使用 `docs/evidence/M5_CI_BUDGET.json` 和 `src/m6/limits.ts` 的预算；旧阶段“预算尚缺”不代表当前预算可以任意修改。
+- M7 历史 CI `37540777240` 在 `77600c8` 的 11 个验收作业全部成功（2 个诊断按条件跳过），包括 M7 表现、资源、视口和预算。`6120e86` 又调整 Vite 构建模式，不能用该旧 run 冒充 `15313a7`、`44541f0` 或后续文档合并提交的完整验收；当前工作流快照、日期和证据链接见 [M7_STATUS.md](M7_STATUS.md)。
 - 分支验证报告、用户签收、Git 合并和 Pages 部署是不同状态，必须分别汇报。
 
-### 7.1 只存在于 M6/M7 分支的模块
+### 7.1 main 已合入的 M6/M7 模块
 
 | 目录/文件 | 功能与注意点 |
 | --- | --- |
@@ -293,9 +334,9 @@ node scripts/summarize-m5-ci-budget.cjs jobs.json artifacts/m5-ci-budget.json
 | `src/presentation/`（M7） | 英雄身份、视图/特效、帮助、偏好、主题、S13 素材清单和加载；不能因为目录名不同就当作规则层修改 |
 | `public/assets/s13/`（M7） | 19 英雄、5 职业、16 装备，共 40 个固定版本图片；来源/hash 在素材清单 |
 | `tests/fixtures/m6-saves/`（M7） | 用于存档兼容的固定样本 |
-| M6/M7 文档与 scripts | 存储、加载、回放、生命周期、性能、表现层与五视口验证；切换分支后重新读取真实配置，不假设 main 已有这些入口 |
+| M6/M7 文档与 scripts | M6 存储、加载、回放、生命周期和性能，以及 M7 表现层/资源/预算脚本均已在 main；切换历史提交后重读配置 |
 
-M6 记录的主要能力包括公开新局/seed、续玩、导入导出、当前局自动保存、最近三局归档、战斗回放/seek 和统计。其公开存档产品能力与 main 的底层 `serialization.ts` 不同。读取分支说明可用 `git show origin/feat/m6-product-replay:<路径>` 或 `git show origin/claude/friendly-darwin-pak00a:<路径>`；不要为阅读而覆盖当前工作区。
+上表各模块均已在 main。需要阅读 M7 合并前状态时使用固定 SHA，例如 `git show 6120e86b74934bd70d484ca93b83ab5c93b10d41:<路径>`；原开发分支已删除，不再依赖该远端分支名，也不要为阅读覆盖当前工作区。具体修改权限以 `AGENTS.md` 和当前用户授权为准，目录导航本身不扩展权限。
 
 ## 8. 代码约定与命名规范
 
@@ -367,19 +408,21 @@ arithmeticRevision = m5-audit-fix-1
 ## 10. 已知问题、限制与容易误判的地方
 
 1. **状态文档滞后**：main 中多份阶段文档仍为当时计划/审计状态；查 Git 与精确提交证据，不能把历史阻塞重新施加到当前任务，也不能删掉失败记录伪装一路通过。
-2. **版本和分支不同**：main 是 M5；M6/M7 有新的应用/存储/表现层和不同依赖。工作前检查分支、HEAD、工作区与远端，不把预览视为正式合并。
+2. **版本和分支不同**：main 已合入 M6 和 M7（PR #8，`15313a7`）；本次文档同步基线为 `44541f0`。工作前检查分支、HEAD、工作区与远端，不把历史预览、合并事实或旧成功 run 当作新提交的完整验收。
 3. **大 bundle 提示**：Vite 构建存在 Phaser 相关 chunk >500 kB 警告。这不是已证实的构建失败，也没有据此证明手机性能达标；优化需独立验证，勿在规则/文档任务顺手重构。
-4. **依赖审计历史**：M6 最终审查记录了 Vitest 3 传递依赖的审计告警，并由 M7 F0 独立升级 Vitest 5。main 仍锁定 Vitest 3.2.7；需要依赖治理时重新执行 `npm audit` 核实当时结果，不把历史告警数量视为实时状态，也不自动运行 `npm audit fix --force`。
-5. **开发监听地址**：main 默认监听所有网卡；M7 已改变默认值。分享 Pages 地址不需要暴露本机 dev server。
-6. **浏览器支持**：当前主要目标是 Chromium 桌面、触屏电脑和手机竖横屏；手机模拟不等于实体设备认证，WebKit/iPhone/iPad Safari 尚未承诺正式支持。
-7. **main 存档产品缺口**：领域 JSON 恢复不代表已有公开保存/导入/续玩按钮。M6 IndexedDB 保存成功必须以事务提交为准；异步终局归档、迟到结果和回放隔离有专门回归，未来合并时不能丢失。
+4. **依赖审计历史**：M6 最终审查记录了 Vitest 3 传递依赖的审计告警，M7 F0 已升级 Vitest 5；当前 main 锁定 5.0.3。需要依赖治理时重新执行 `npm audit` 核实当时结果，不把历史告警数量或升级事实视为实时审计结论，也不自动运行 `npm audit fix --force`。
+5. **开发监听地址**：当前 main 的 dev/preview 使用 Vite 默认本机监听，已没有 npm script 中的 `--host 0.0.0.0`。分享 Pages 地址不需要暴露本机 dev server。
+6. **浏览器支持**：当前与 M8 的正式工作范围是桌面 Chromium，不新增手机适配或手机相关测试。旧阶段触摸/手机断言与历史证据保留；不通过删测试伪造通过，也不增加新的手机验收义务。
+7. **存档与独立内存问题**：main 已有 M6 公开存档；IndexedDB 保存成功以事务提交为准，异步终局归档、迟到结果和回放隔离有专门回归。M6-MEM-01 撤销记录累积由 `codex/m6-lifecycle-retention` 独立处理，不纳入 M8，不放宽门禁。
 8. **规则的明示简化**：有限 S13 内容、固定对手、无限商店池、几何/技能局部近似均是项目边界；没有账号、多人服务、有限共享池、完整选秀或全量赛季，不借“补全说明”增加功能承诺。
-9. **M7 预览是快照**：以后 M7 有修复也不会自动进入 `/cat/m7/`；需明确更新 workflow 的固定 ref 并重新验证。main 构建与预览构建在同一 Pages job，任一失败都会阻止本次新部署。
-10. **静态站点与存储隔离**：`/cat/` 与 `/cat/m7/` 是同源不同路径，不天然隔离浏览器存储。main 当前无 M6 持久化产品层；未来双版本都持久化时需核对数据库名、schema 和兼容性，不能假设路径本身提供隔离。
-11. **素材边界**：main 未带 M7 官方素材；M7 分支有来源/hash 清单及项目免责声明。维护素材时保留来源记录，不把其使用范围扩展为已获任意商用授权。
+9. **M7 旧预览是快照**：当前 main 已含 M7 后续修复，`/cat/m7/` 仍是旧 `d46ed54`，不会自动更新；要更换必须明确修改 workflow 的固定 ref 并重新验证。main 构建与旧快照构建在同一 Pages job，任一失败都会阻止本次新部署。
+10. **静态站点与存储隔离**：`/cat/` 与 `/cat/m7/` 是同源不同路径，不天然隔离浏览器存储；main 已有 M6 持久化，必须核对数据库名、schema 和兼容性，不能假设路径本身提供隔离。
+11. **素材边界**：main 已包含 M7 的 40 张 S13 官方图标、来源/hash 清单及 README 中的 Riot 免责声明。维护素材时保留来源记录，不把其使用范围扩展为已获任意商用授权。
 12. **缺失需求记录**：`docs/UI_REQUESTS.md` 尚待真实协作需求建立；收到界面数据请求后先明确字段、来源与只读/命令边界，不直接替 Claude 改布局或视觉。
 
 ## 11. 后续协作的落地顺序
+
+本轮用户已确认 M8 的 D1–D6 全 A，并要求变基、合并文档后停止。下面是后续实施任务的接手流程，不授权本轮开始规则、界面或测试代码实现；后续以 `M8_PLAN.md` 的 B0–B10 和 Claude 任务依赖为准。
 
 1. 核对当前分支/HEAD/工作区，阅读本文件和任务相关的当前契约；不覆盖他人未提交修改。
 2. 明确任务是规则、内容、测试、存档、文档、审计还是部署；界面需求记录到 `docs/UI_REQUESTS.md`，只定义数据与语义。
