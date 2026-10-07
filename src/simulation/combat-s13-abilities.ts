@@ -1,3 +1,6 @@
+import { chooseRandomCenter, selectAbilityTargets, selectConeTargets } from './m8/targeting';
+import { targetingEnvironment } from './m8/s13-targeting';
+import { integer, safeNumber } from './m8/stats';
 import { splitTotal } from './m8/periodic';
 import { flatAmount } from './m8/s13-definitions';
 import { executeShieldEnd } from './m8/s13-mechanisms';
@@ -202,8 +205,11 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
     }
     case 'caitlyn': {
       if (opponents.length === 0) break;
-      const center = [...opponents].sort((a, b) => a.id < b.id ? -1 : 1)[ctx.draw() % opponents.length];
-      for (const enemy of opponents.filter(u => hexDistance(center.cell, u.cell) <= 1)) emit(enemy, task.amount, 'physical', task.ordinal * 100);
+      const env = targetingEnvironment(ctx.board, ctx.units, unit, ctx.tick);
+      const centerId = chooseRandomCenter(env, ctx.draw);
+      const selected = selectAbilityTargets({ kind: 'random-enemy-center', areaOrder: 'id', radius: 1, rng: 'combat', mapping: 'word-modulo-id-sorted-count', draws: 1 }, { ...env, randomCenterId: centerId });
+      const center = ctx.units.find(u => u.id === selected.centerId)!;
+      for (const id of selected.targetIds) emit(ctx.units.find(u => u.id === id)!, task.amount, 'physical', task.ordinal * 100);
       emit(center, amount(unit, ctx.tick, { ad: variable(unit, 'HeadshotPercentAD') }), 'physical', task.ordinal * 100 + 1);
       applyStatus(center, task.source, 'resistanceFlat', -variable(unit, 'ResistReduction', 20), 1200, ctx.tick, ctx.events, false, `${task.actionSeq}:${task.ordinal}`); break;
     }
@@ -219,6 +225,11 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
   const source = { ...origin(unit), sourceKind: 'attack' as const }, base = unit.runtime.nextAttackPhysical || ad(unit);
   ctx.packets.push({ source, targetId: target.id, raw: base, damageType: 'physical',
     actionSeq: seq, ordinal: 0, delivery: 'basic-attack', critEligibility: 'basic', area: false, triggeringCastActionSeq: null });
+  if (unit.attackCone) {
+    const ids = selectConeTargets(targetingEnvironment(ctx.board, ctx.units, unit, ctx.tick, { primaryId: target.id }));
+    const raw = safeNumber(integer(base) * integer(unit.attackCone.secondaryDamageBps) / 10000n);
+    for (const [index, id] of ids.entries()) ctx.packets.push({ source: origin(unit), targetId: id, raw, damageType: 'physical', actionSeq: seq, rootActionSeq: seq, parentPacketId: JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, unit.id, seq, target.id, 0]), ordinal: 100 + index, delivery: 'ability-direct', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
+  }
   unit.runtime.nextAttackPhysical = 0;
   if (unit.runtime.nextAttackMagic > 0) {
     packet(ctx, unit, target, unit.runtime.nextAttackMagic, 'magic', seq, 1, false, false, null); unit.runtime.nextAttackMagic = 0;

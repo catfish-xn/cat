@@ -37,7 +37,7 @@ describe('G08 independent mana and cast vectors (B2 §7)', () => {
     expect(() => validateManaDefinition({ initialMana: 0, maxMana: 0, unitKind: 'neutral' })).not.toThrow();
     expect(() => validateManaDefinition({ initialMana: 1, maxMana: 0, unitKind: 'neutral' })).toThrow();
     expect(() => validateManaDefinition({ initialMana: 0, maxMana: 0 })).toThrow();
-    const definition = { ...UNIT_DEFINITIONS['neutral-stage-2'], id: 'future-neutral', unitKind: 'neutral' as const, maxMana: 0 };
+    const definition = { ...UNIT_DEFINITIONS['neutral-stage-2'], id: 'future-neutral', unitKind: 'neutral' as const, monsterFamily: 'future', baseAttackSpeedBps: 8000, baseCritChanceBps: 2500, baseCritMultiplierBps: 14000, maxMana: 0 };
     expect(() => validateUnitDefinitions({ ...UNIT_DEFINITIONS, [definition.id]: definition })).not.toThrow();
     expect(resolveUnitStats(definition, 1)).toMatchObject({ initialMana: 0, maxMana: 0, unitKind: 'neutral' });
     expect(() => validateUnitDefinitions({ ...UNIT_DEFINITIONS, [definition.id]: { ...definition, initialMana: 1 } })).toThrow();

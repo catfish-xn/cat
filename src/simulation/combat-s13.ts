@@ -1,3 +1,6 @@
+import { planOpening, commitOpening, advanceOpeningTasks } from './m8/opening';
+import { targetUnit } from './m8/s13-targeting';
+import { damageTypeForTarget } from './m8/planning';
 import { EMPTY_FACTS } from './m8/triggers';
 import { emitMechanismSignal } from './m8/s13-triggers';
 import { freezeCompanions, registerDeaths, advanceReactions } from './m8/companions';
@@ -101,6 +104,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: unit.mechanismDefinitions } : {}),
       ...(unit.mechanismState ? { mechanismState: unit.mechanismState } : {}),
       ...(unit.triggerLedger ? { triggerLedger: unit.triggerLedger } : {}),
+      startingCell: unit.startingCell ?? { ...unit.cell },
       runtime: { ...EMPTY_RUNTIME, ...copy.runtime }, statuses: (copy.statuses ?? []) as S13Unit['statuses'],
       shieldLayers: (copy.shieldLayers ?? []) as S13Unit['shieldLayers'], tasks: (copy.tasks ?? []) as S13Unit['tasks'],
       cooldownTicks: unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0,
@@ -111,6 +115,17 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
   initializeMechanisms(ctx);
+  let openingState = state.openingState;
+  const openingUnits = (atTick = tick) => units.map(u => ({ ...targetUnit(u, atTick), controlled: active(u, atTick, 'stun').length > 0 || effectiveStatuses(u.mechanismState!.statuses, atTick).some(g => g.kind === 'stun') }));
+  if (state.openingDefinitions?.length && !openingState) {
+    if (state.tick !== 0) throw new RangeError('Missing consumed opening state');
+    openingState = planOpening(ctx.combatId!, ctx.board, openingUnits(state.tick), state.openingDefinitions);
+  }
+  if (openingState && !openingState.committed) {
+    const committed = commitOpening(openingState, units); openingState = committed.state;
+    for (const u of units) u.cell = committed.units.find(next => next.id === u.id)!.cell;
+    events.push(...committed.movements);
+  }
   const companionDefinitions = units.flatMap(u => u.companionDefinitions ?? []);
   let companionState = state.companionState ?? (companionDefinitions.length ? freezeCompanions(ctx.combatId!, units.filter(u => u.alive), companionDefinitions) : undefined);
   if (companionState) {
@@ -166,6 +181,16 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination });
     unit.cell = destination; unit.moveCooldownTicks = MOVE_INTERVAL_TICKS;
   });
+  if (openingState) {
+    const advanced = advanceOpeningTasks(openingState, tick, openingUnits()); openingState = advanced.state;
+    for (const task of advanced.ready) {
+      const holder = units.find(u => u.id === task.source.ownerId)!, seq = actionSeq++;
+      for (const id of task.targetIds) {
+        const target = units.find(u => u.id === id && u.alive && u.hp > 0); if (!target) continue;
+        for (const [index, effect] of task.effects.entries()) executeMechanismEffect(ctx, holder, { ...task.source, effectIndex: task.source.effectIndex + index }, target, effect, seq, index);
+      }
+    }
+  }
   // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
   for (const unit of units) {
     const firstPacket = ctx.packets.length;
@@ -280,9 +305,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   };
   ctx.packets.sort((a, b) => compareText(a.source.ownerId, b.source.ownerId) || a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
   for (let packetIndex = 0; packetIndex < ctx.packets.length; packetIndex++) {
-    const packet = ctx.packets[packetIndex], beforeDerived = ctx.packets.length;
+    let packet = ctx.packets[packetIndex]; const beforeDerived = ctx.packets.length;
     const target = units.find(u => u.id === packet.targetId); if (!target || !target.alive) continue;
     const owner = units.find(u => u.id === packet.source.ownerId);
+    const damageType = damageTypeForTarget(packet.damageType, targetUnit(target, tick), ctx.resolutionFacts!);
+    if (damageType !== packet.damageType) packet = { ...packet, damageType };
     const request = damageRequest(packet, state.combatId ?? 'standalone', tick);
     const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
     const prepared = prepareDamage(request, sample);
@@ -392,5 +419,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   if (result) { cleanupMechanisms(ctx, true); for (const unit of units) { unit.statuses = []; unit.shieldLayers = []; syncShield(unit); unit.tasks = []; } }
   if (result && companionState) companionState = advanceReactions(companionState, tick, [], true).state;
   if (result) events.push({ type: 'combatFinished', tick, result, reason: eliminated ? 'elimination' : 'timeout' });
-  return stampCombatStep({ ...state, ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state, ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

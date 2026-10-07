@@ -1,3 +1,4 @@
+import { validateNeutralInputs } from './m8/unit-inputs';
 import { validateManaDefinition } from './m8/mana';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import type { UnitDefinition } from './unit-types';
@@ -586,6 +587,7 @@ export function validateUnitDefinitions(definitions: Readonly<Record<string,Unit
   const integerAtLeast = (value:number,minimum:number) => Number.isSafeInteger(value) && value >= minimum;
   for (const [id, definition] of Object.entries(definitions)) {
     validateManaDefinition(definition);
+    validateNeutralInputs(definition);
     const s=definition.baseStats;
     if (definition.id !== id || !/^[a-z][a-z0-9-]*$/.test(id) || !definition.name || !definition.symbol || !definition.abilityId
       || !integerAtLeast(definition.color,0) || definition.color>0xffffff || !integerAtLeast(definition.cost,1) || definition.cost>5

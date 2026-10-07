@@ -16,6 +16,10 @@ export interface CombatMechanic { readonly source: CombatOrigin; readonly mechan
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 export interface CombatUnit {
+  readonly startingCell?: HexCell;
+  readonly baseCritChanceBps?: number;
+  readonly baseCritMultiplierBps?: number;
+  readonly attackCone?: { readonly secondaryDamageBps: number };
   readonly triggerLedger?: import('./m8/triggers').TriggerLedger;
   readonly encounterId?: string;
   readonly monsterFamily?: string;
@@ -39,6 +43,8 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly openingDefinitions?: readonly import('./m8/opening').OpeningDefinition[];
+  readonly openingState?: import('./m8/opening').OpeningState;
   readonly damageContributors?: Readonly<Record<string, readonly string[]>>;
   readonly nextTriggerEventSeq?: number;
   readonly companionState?: import('./m8/companions').CompanionState;

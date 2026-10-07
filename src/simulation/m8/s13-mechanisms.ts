@@ -1,6 +1,8 @@
 /** G04–G07 adapter: compiles legacy tags once and executes only finite frozen declarations. */
 import { emitMechanismSignal } from './s13-triggers';
-import { hexDistance } from '../board';
+import { hexDistance, DEFAULT_BOARD } from '../board';
+import { selectTargets, startingRows, type TargetEnvironment } from './targeting';
+import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference } from '../combat-s13-abilities';
 import { ad, ap, compareText, constantModifier, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
@@ -9,50 +11,30 @@ import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safe
 import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
 import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from './s13-definitions';
 import { canonicalSource, compareCodePoints, effectIdentity } from './identity';
-import { applyStatusContribution, advanceBurnClock, cleanseStatuses, effectiveStatuses, endStatuses, isEffective, removeStatusContributions, statusMagnitude, summarizeGroup } from './status';
+import { applyStatusContribution, advanceBurnClock, cleanseStatuses, endStatuses, removeStatusContributions, statusMagnitude, summarizeGroup } from './status';
 import { advancePeriodicTask, cleanPeriodicTasks, periodicAmount, clearRemainder } from './periodic';
 import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples } from './shield';
 import { makeHealRequest, resolveHeal, type VampRate } from './heal';
 import { rollCrit } from './crit';
-export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source): S13Unit[] {
-  const primary = units.find(u => u.id === holder.targetId);
-  const anchor = selector.anchor === 'primary-target' ? primary : holder;
-  if (!anchor) return [];
-  let candidates = selector.candidates === 'bound-target' ? units.filter(u => u.id === boundTargetId) : selector.candidates === 'board' ? [...units] : [];
-  candidates = candidates.filter(u => u.alive && u.hp > 0 && (selector.relation === 'self' ? u.id === holder.id : selector.relation === 'ally' ? u.team === holder.team : u.team !== holder.team)
-    && !(selector.excludeSelf && u.id === holder.id) && !(selector.excludePrimary && u.id === primary?.id)
-    && (selector.radius === null || hexDistance(anchor.cell, u.cell) <= selector.radius)
-    && !(selector.relation === 'enemy' && selector.candidates !== 'bound-target' && effectiveStatuses(u.mechanismState?.statuses ?? [], holder.mechanismState?.sampledAtTick ?? 0).some(g => g.kind === 'untargetable')));
-  const burnBySource = (u: S13Unit) => u.mechanismState?.statuses.some(g => g.kind === 'burn' && g.contributions.some(c => source && c.source.instanceId === source.instanceId && c.source.ownerId === source.ownerId && isEffective(c, holder.mechanismState?.sampledAtTick ?? 0))) ? 1 : 0;
-  candidates.sort((a, b) => {
-    const distance = hexDistance(anchor.cell, a.cell) - hexDistance(anchor.cell, b.cell);
-    switch (selector.order) {
-      case 'id': return compareText(a.id, b.id);
-      case 'hp-ratio-id': { const left = integer(a.hp) * integer(b.maxHp), right = integer(b.hp) * integer(a.maxHp); return (left < right ? -1 : left > right ? 1 : 0) || compareText(a.id, b.id); }
-      case 'hp-absolute-distance-id': return a.hp - b.hp || distance || compareText(a.id, b.id);
-      case 'farthest-id': return -distance || compareText(a.id, b.id);
-      case 'not-burned-by-this-instance-distance-id': return burnBySource(a) - burnBySource(b) || distance || compareText(a.id, b.id);
-      default: return distance || compareText(a.id, b.id);
-    }
-  });
-  if (selector.primary === 'first-required') {
-    if (!primary || !candidates.includes(primary)) return [];
-    candidates = [primary, ...candidates.filter(u => u !== primary)];
-  }
-  return candidates.slice(0, selector.maxTargets);
+export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source, environment: Partial<TargetEnvironment> = {}): S13Unit[] {
+  const tick = environment.tick ?? holder.mechanismState?.sampledAtTick ?? 0;
+  const ids = selectTargets(selector, targetingEnvironment(environment.board ?? DEFAULT_BOARD, units, holder, tick,
+    { source, boundTargetIds: boundTargetId ? [boundTargetId] : [], eligibility: selector.candidates === 'bound-target' ? 'bound-packet' : 'new-selection', ...environment }));
+  return ids.map(id => units.find(u => u.id === id)!);
 }
+
 function endTargets(holder: S13Unit, ctx: AbilityContext, targeting: AbilityTargeting): S13Unit[] {
   if (targeting.kind === 'fixed') return targeting.targetIds.flatMap(id => ctx.units.filter(u => u.id === id && u.alive && u.hp > 0));
-  if (targeting.kind === 'select') return selectMechanismTargets(holder, ctx.units, targeting.selector);
+  if (targeting.kind === 'select') return selectMechanismTargets(holder, ctx.units, targeting.selector, undefined, undefined, { board: ctx.board, tick: ctx.tick });
   if (targeting.kind === 'area-around-selected') {
-    const center = selectMechanismTargets(holder, ctx.units, targeting.center)[0]; if (!center) return [];
+    const center = selectMechanismTargets(holder, ctx.units, targeting.center, undefined, undefined, { board: ctx.board, tick: ctx.tick })[0]; if (!center) return [];
     return ctx.units.filter(u => u.alive && u.hp > 0 && (targeting.relation === 'ally' ? u.team === holder.team : u.team !== holder.team) && hexDistance(center.cell, u.cell) <= targeting.radius).sort((a, b) => compareText(a.id, b.id));
   }
   throw new RangeError('Unsupported G07 end targeting for this batch');
 }
-function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: SurvivalSample, absorbed?: number): AmountSample {
+function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: SurvivalSample, absorbed?: number): AmountSample & Pick<import('./stats').StatSample, 'startingRows'> {
   const before = frozen ? { id: frozen.unitId, hp: frozen.hpAfterDamage, maxHp: frozen.maxHpBeforeThresholdEffects } : undefined;
-  return { holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
+  return { startingRows: startingRows(holder.team, holder.startingCell?.row ?? holder.cell.row) ?? undefined, holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
 }
 function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source, application: StatusApplication, applicationId = 'source'): void {
   ensureMechanisms(target, ctx.tick, ctx.combatId);
@@ -184,7 +166,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     const seq = nextSeq(), firstPacket = ctx.packets.length;
     if (payable) {
       emitMechanismSignal(ctx, { event: 'periodic', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: task.targetId, cast: null });
-      const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source);
+      const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source, { board: ctx.board, tick: ctx.tick });
       const samples = new Map(targets.map(t => [t.id, effectSample(holder, t, ctx.tick)]));
       for (const target of targets) for (const [effectIndex, effect] of task.program.effects.entries()) {
         let value: number | undefined;
