@@ -1,5 +1,7 @@
 # M6 Review
 
+> 2026-10-07 状态索引：本文保留原始 Review 过程；最终技术复验见 [M6_FINAL_REVIEW.txt](../M6_FINAL_REVIEW.txt)，M6 已由 PR #7 合入 main。M7 与独立内存问题的当前状态见 [M7_STATUS.md](M7_STATUS.md)。
+
 状态：W3 修复与独立验证进行中；尚未最终 F4 同提交验收，不是合并许可。M6_GOAL 与公共合同已在 `d78be2a` 冻结，当前工作没有重新规划或扩大范围。
 
 | 发现 | 修复与证据状态 |
