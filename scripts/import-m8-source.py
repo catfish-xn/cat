@@ -12,9 +12,43 @@ ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / 'src/simulation/content/source/s13-14.24b'
 SHA256 = 'c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3'
 BYTE_LENGTH = 12061650
-COMPONENTS = frozenset('TFT_Item_' + name for name in (
-    'BFSword', 'RecurveBow', 'NeedlesslyLargeRod', 'TearOfTheGoddess',
-    'ChainVest', 'NegatronCloak', 'GiantsBelt', 'SparringGloves'))
+# Display-only planned names: identity and recipe selection always use upstream data.
+COMPONENT_NAMES = (
+    ('TFT_Item_BFSword', '暴风大剑'),
+    ('TFT_Item_RecurveBow', '反曲之弓'),
+    ('TFT_Item_NeedlesslyLargeRod', '无用大棒'),
+    ('TFT_Item_TearOfTheGoddess', '女神之泪'),
+    ('TFT_Item_ChainVest', '锁子甲'),
+    ('TFT_Item_NegatronCloak', '负极斗篷'),
+    ('TFT_Item_GiantsBelt', '巨人腰带'),
+    ('TFT_Item_SparringGloves', '拳套'),
+)
+COMPONENTS = frozenset(api for api, _ in COMPONENT_NAMES)
+# M8_PLAN.md appendix A rows 01–36, in its component-pair order.
+PLANNED_COMPLETED_NAMES = (
+    '死亡之刃', '巨人杀手', '海克斯科技枪刃', '朔极之矛', '夜之锋刃',
+    '饮血剑', '斯特拉克的挑战护手', '无尽之刃', '红霸符', '鬼索的狂暴之刃',
+    '斯塔缇克电刃', '泰坦的坚决', '卢安娜的飓风', '纳什之牙', '最后的轻语',
+    '灭世者的死亡之帽', '大天使之杖', '冕卫', '离子火花', '莫雷洛秘典',
+    '珠光护手', '蓝霸符', '圣盾使的誓约', '自适应头盔', '救赎', '正义之手',
+    '棘刺背心', '石像鬼石板甲', '日炎斗篷', '坚定之心', '巨龙之爪',
+    '薄暮法袍', '水银', '狂徒铠甲', '破防者', '窃贼手套',
+)
+PLANNED_RECIPE_NAMES = {
+    tuple(sorted(pair)): (name, f'M8_PLAN.md appendix A row {row:02d}')
+    for row, (pair, name) in enumerate(zip(
+        itertools.combinations_with_replacement([api for api, _ in COMPONENT_NAMES], 2),
+        PLANNED_COMPLETED_NAMES), start=1)
+}
+TEMPORARY_NAME_STATUS = '临时译名，未核对'
+
+
+def planned_name(record):
+    if record['apiName'] in COMPONENTS:
+        return dict(COMPONENT_NAMES)[record['apiName']], 'M8_PLAN.md §1.1'
+    # Do not infer legacy apiName from an English or Chinese display name.
+    return PLANNED_RECIPE_NAMES[tuple(sorted(record['composition']))]
+
 
 
 # Membership establishes source candidates only, never a round/Boss-pool mapping.
@@ -89,11 +123,53 @@ def effect_units(record):
     return result
 
 
+def numeric_decisions(record):
+    if record['apiName'] != 'TFT_Item_MadredsBloodrazor':
+        return None
+    effects = record['effects']
+    # One audited conversion, not a generic inference from parameter names.
+    return {
+        'status': 'source-semantics-resolved-with-explicit-project-conventions',
+        'policy': 'm8-source-precedence-2026-10-07',
+        'sourceTier': 'CommunityDragon 14.24 client effects',
+        'higherPriorityPatchReview': 'No Giant Slayer change found in 14.24 or December 17 B notes',
+        'DamageAmp': {
+            'rawValue': effects['DamageAmp'], 'sourceUnit': 'fraction',
+            'normalizedValue': int(round(round(effects['DamageAmp'], 4) * 10000)),
+            'normalizedUnit': 'Bps',
+            'conversion': 'round raw fraction to 4 decimal places, multiply by 10000, integer rounding',
+            'unitEvidence': 'own desc token @DamageAmp*100@%; effects supplies the numeric value',
+            'valueStatus': 'adopted', 'meaning': 'conditional-additional-damage-amp',
+            'meaningEvidence': record['desc'], 'damageCompositionStatus': 'desc-additional-project-stacking',
+        },
+        'HealthThreshold': {
+            'rawValue': effects['HealthThreshold'], 'normalizedValue': int(effects['HealthThreshold']),
+            'normalizedUnit': 'health-points', 'valueStatus': 'adopted',
+            'comparisonOperator': '>', 'comparisonStatus': 'desc-more-than',
+            'comparisonEvidence': record['desc'],
+        },
+        'projectConventions': {
+            'label': '项目约定，非官方证据',
+            'adoptionStatus': 'active-provisional-nonblocking',
+            'userReviewStatus': 'pending-itemized-confirmation',
+            'ledger': 'provenance/project-conventions.json',
+            'ids': ['GS-01', 'GS-02', 'GS-03', 'GS-04'],
+            'baseDamageAmpBps': int(round(round(effects['{1543aa48}'], 4) * 10000)),
+            'qualifiedCombinedItemDamageAmpBps': int(round(round(effects['{1543aa48}'] + effects['DamageAmp'], 4) * 10000)),
+            'stacking': 'same-item base plus conditional amp; not a claim about all external multipliers',
+            'unreferencedLargeBonusPct': 'preserve raw, do not apply independently',
+            'thresholdEvaluation': 'target current max Health when damage packet is resolved',
+        },
+        'runtimeEligible': False,
+    }
+
+
 def outputs(source):
     mode_index, records = select(source)
     items, recipes, coverage = [], [], []
     for index, record in records:
         api = record['apiName']
+        name_zh, name_source = planned_name(record)
         evidence = {
             'upstreamSha256': SHA256,
             'jsonPointer': f'/items/{index}',
@@ -103,23 +179,27 @@ def outputs(source):
         }
         items.append({
             'apiName': api, 'kind': 'component' if api in COMPONENTS else 'completed',
-            'nameEn': record['name'], 'nameZhCn': None,
-            'nameZhCnStatus': 'deferred-nonblocking-user-will-supply-source',
+            'nameEn': record['name'], 'nameZhCn': name_zh,
+            'nameZhCnStatus': TEMPORARY_NAME_STATUS,
+            'nameZhCnSource': name_source, 'nameZhCnDisplayOnly': True,
+            'nameZhCnReviewStatus': 'pending-manual-confirmation-not-approved',
             'composition': sorted(record['composition']),
             'sourceUnique': record['unique'], 'sourceEffects': record['effects'],
             'sourceEffectUnits': effect_units(record),
             'unitEvidence': 'own raw desc token only; unexpressed units remain unknown; no runtime conversion',
-            'source': evidence, 'mechanicsStatus': 'unknown-not-frozen',
+            'source': evidence, 'mechanicsStatus': 'desc-plus-provisional-project-conventions' if api == 'TFT_Item_MadredsBloodrazor' else 'pending-field-review',
+            'numericSourcePolicy': 'm8-source-precedence-2026-10-07',
+            'numericDecisions': numeric_decisions(record),
             'runtimeEligible': False,
         })
         if record['composition']:
             recipes.append({'resultApiName': api, 'componentApiNames': sorted(record['composition']), 'source': evidence})
         coverage.append({'apiName': api, 'source': evidence, 'rawRecord': 'verified',
                          'composition': 'verified', 'englishName': 'verified',
-                         'chineseName': 'deferred-nonblocking', 'effectUnits': 'partial-tooltip-evidence',
-                         'mechanics': 'unknown', 'patchOverlayReview': ('conflict-giant-slayer' if api == 'TFT_Item_MadredsBloodrazor' else 'partial-reviewed-see-overrides' if api in {'TFT_Item_BrambleVest', 'TFT_Item_UnstableConcoction', 'TFT_Item_BlueBuff', 'TFT_Item_PowerGauntlet', 'TFT_Item_Deathblade', 'TFT_Item_HextechGunblade', 'TFT_Item_Quicksilver'} else 'pending'),
+                         'chineseName': TEMPORARY_NAME_STATUS, 'effectUnits': 'partial-tooltip-evidence',
+                         'mechanics': 'unknown', 'patchOverlayReview': ('resolved-with-user-authorized-project-conventions' if api == 'TFT_Item_MadredsBloodrazor' else 'partial-reviewed-see-overrides' if api in {'TFT_Item_BrambleVest', 'TFT_Item_UnstableConcoction', 'TFT_Item_BlueBuff', 'TFT_Item_PowerGauntlet', 'TFT_Item_Deathblade', 'TFT_Item_HextechGunblade', 'TFT_Item_Quicksilver'} else 'pending'),
                          'implementation': 'not-started', 'independentNumericalTests': 'not-started',
-                         'freezeStatus': 'blocked'})
+                         'freezeStatus': 'provisional-source-ready-not-implemented' if api == 'TFT_Item_MadredsBloodrazor' else 'pending-field-review'})
     neutrals = [
         {'record': record, 'source': {
             'upstreamSha256': SHA256,

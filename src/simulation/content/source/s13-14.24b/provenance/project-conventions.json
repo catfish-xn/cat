@@ -1,0 +1,45 @@
+{
+  "policy": "m8-source-semantics-2026-10-07",
+  "conventions": [
+    {
+      "id": "GS-01",
+      "decision": "Map effects.{1543aa48} to this item base Damage Amp: raw 0.05000000074505806 -> 500 Bps (5%).",
+      "evidenceBoundary": "The raw number is present; its key meaning is not decoded. 14.23 base 5% is corroboration only.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "active-provisional-nonblocking",
+      "userReviewStatus": "pending-itemized-confirmation",
+      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+    },
+    {
+      "id": "GS-02",
+      "decision": "Within this item, add base 500 Bps and conditional additional 2000 Bps: 500 below/equal threshold, 2500 above. This does not define interactions with external modifiers.",
+      "evidenceBoundary": "desc establishes additional 20%; the base-key meaning and same-item addition are project choices.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "active-provisional-nonblocking",
+      "userReviewStatus": "pending-itemized-confirmation",
+      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+    },
+    {
+      "id": "GS-03",
+      "decision": "Preserve LargeBonusPct=25 in sourceEffects but do not apply it as a separate gameplay parameter in this project.",
+      "evidenceBoundary": "Not referenced by the current desc; official purpose and whether active are unconfirmed. Do not label it a proven obsolete field.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "active-provisional-nonblocking",
+      "userReviewStatus": "pending-itemized-confirmation",
+      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+    },
+    {
+      "id": "GS-04",
+      "decision": "For each damage packet at resolution, check target current maximum Health > 1750; do not use remaining Health or battle-start/attack-start snapshots.",
+      "evidenceBoundary": "desc establishes max Health and strictly greater; exact observation time is a project choice.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "active-provisional-nonblocking",
+      "userReviewStatus": "pending-itemized-confirmation",
+      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+    }
+  ]
+}

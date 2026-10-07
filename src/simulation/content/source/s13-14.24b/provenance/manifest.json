@@ -59,7 +59,6 @@
   "b1Status": "partial-not-frozen",
   "b1Blockers": [
     "unresolved-effect-units-and-mechanics",
-    "giant-slayer-source-conflict",
     "opening-and-encounter-evidence",
     "loot-and-guarantee-evidence",
     "unapproved-concrete-single-player-policy"
@@ -67,8 +66,8 @@
   "selectedArtifacts": [
     {
       "path": "normalized/items.json",
-      "bytes": 58534,
-      "sha256": "1c556206b0db6fa9efd4ed1de1ad3f6f73d43b2b1830fa3b25ad049d38ebb7e1"
+      "bytes": 71830,
+      "sha256": "5435571df8c8557ca8bf4a49beaf509dc04674a2ea1ab607510082e32873377c"
     },
     {
       "path": "normalized/recipes.json",
@@ -77,23 +76,33 @@
     },
     {
       "path": "provenance/coverage.json",
-      "bytes": 36971,
-      "sha256": "a2320b888993bbe6f0e76bd2ab91824ee6ec70956699522c2f79a65fe0185c48"
+      "bytes": 37767,
+      "sha256": "68ca49786a95e54d0f1419395e1897b29786f5a29aaf26a051eded1ac11ceced"
     },
     {
       "path": "provenance/overrides.json",
-      "bytes": 4602,
-      "sha256": "089dadf6a58266cc67d30706f2566d60fcc19b3584b13e075b148473c4ef747c"
+      "bytes": 6179,
+      "sha256": "180ab9f6ba234e03319f59d4548dc53d24b7bd6db4c2b61c6b740d6bf8cd0444"
+    },
+    {
+      "path": "provenance/project-conventions.json",
+      "bytes": 2721,
+      "sha256": "99062c07165eb8bac1401b204c192eb9a595d2dc73bc203dd9bd7ac0e367bd54"
     },
     {
       "path": "provenance/questions.md",
-      "bytes": 3299,
-      "sha256": "78879f3d8bedd3b6c3c4813e03e91046a56cd6020d935017fed95c3a3733c7ff"
+      "bytes": 3809,
+      "sha256": "c4397a6d436324ad929aa9e3324d8372fef091cffc1b47680098ea594fc182f2"
     },
     {
       "path": "provenance/single-player-policy.md",
       "bytes": 1086,
       "sha256": "b25b95e5301e14ae00edead20e466065b31f5aab2927ac8cf3192718a9abcb1c"
+    },
+    {
+      "path": "provenance/source-policy.json",
+      "bytes": 2068,
+      "sha256": "6268a8539ec29ccdc74600e36ebefa864ebcc95f280f64cb664bca4184b06a6b"
     },
     {
       "path": "raw/selected-items.json",
@@ -105,5 +114,20 @@
       "bytes": 12807,
       "sha256": "f2d954a62c44796359c6f0f00c3cd231b3e270ea01b41981cbfcb4ba821db699"
     }
-  ]
+  ],
+  "sourceAdjudicationPolicy": "provenance/source-policy.json",
+  "provisionalChineseNames": {
+    "status": "临时译名，未核对",
+    "count": 44,
+    "source": "M8_PLAN.md §1.1 / Appendix A",
+    "displayOnly": true,
+    "manualReviewList": "docs/M8_ITEM_NAMES_REVIEW.md",
+    "confirmation": "pending"
+  },
+  "projectConventions": {
+    "status": "active-provisional-nonblocking",
+    "label": "项目约定，非官方证据",
+    "ledger": "provenance/project-conventions.json",
+    "reviewList": "docs/M8_PROJECT_CONVENTIONS_REVIEW.md"
+  }
 }

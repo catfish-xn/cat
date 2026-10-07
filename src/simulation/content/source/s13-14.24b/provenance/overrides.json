@@ -67,18 +67,7 @@
       "status": "already-contained-no-change-needed"
     }
   ],
-  "conflicts": [
-    {
-      "apiName": "TFT_Item_MadredsBloodrazor",
-      "field": "effects.DamageAmp",
-      "rawValue": 0.20000000298023224,
-      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
-      "officialFact": "conditional extra damage amp changed from 25% to 15%; new base damage amp 5%",
-      "rawDescription": "Gain @DamageAmp*100@% additional Damage Amp against enemies with more than @HealthThreshold@ max Health.",
-      "status": "unresolved-do-not-rewrite-or-freeze",
-      "boundaryConflict": "Official 1750+ versus raw more than 1750; equality unknown"
-    }
-  ],
+  "conflicts": [],
   "bUpdateReview": {
     "officialSource": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
     "sections": [
@@ -86,5 +75,53 @@
       "December 10/11 corrections"
     ],
     "result": "No listed changes to these 44 ordinary item fields found; this is not complete script verification"
+  },
+  "sourcePolicy": "source-policy.json",
+  "resolvedDecisions": [
+    {
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "field": "effects.DamageAmp",
+      "rawValue": 0.20000000298023224,
+      "adoptedValue": 2000,
+      "adoptedUnit": "Bps",
+      "unit": "fraction",
+      "conversion": "round(0.20000000298023224, 4) = 0.2; 0.2 * 10000 = 2000 Bps (20%)",
+      "policy": "m8-source-precedence-2026-10-07",
+      "chosenSource": "CommunityDragon 14.24 client effects",
+      "sourceJsonPointer": "/items/1275/effects/DamageAmp",
+      "higherPriorityReview": {
+        "url": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "result": "14.24 and December 17 B sections have no Giant Slayer adjustment",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "lowerPrioritySource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "comparison": "14.23 additional 15% + base 5% equals total 20%, but client desc explicitly assigns DamageAmp to additional amp. Under user policy adopt client effects 20% as conditional additional amp.",
+      "status": "resolved-adopt-client-value-no-raw-mutation",
+      "meaning": "conditional-additional-damage-amp"
+    },
+    {
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "field": "effects.HealthThreshold",
+      "rawValue": 1750.0,
+      "adoptedValue": 1750,
+      "adoptedUnit": "health-points",
+      "sourceJsonPointer": "/items/1275/effects/HealthThreshold",
+      "comparisonOperator": ">",
+      "status": "resolved-from-desc-more-than",
+      "descEvidence": "Gain @DamageAmp*100@% additional Damage Amp against enemies with more than @HealthThreshold@ max Health."
+    }
+  ],
+  "unresolvedSemantics": [],
+  "semanticsResolution": {
+    "status": "nonblocking-desc-plus-project-conventions",
+    "officialScriptProof": false,
+    "conventions": [
+      "GS-01",
+      "GS-02",
+      "GS-03",
+      "GS-04"
+    ],
+    "ledger": "project-conventions.json",
+    "note": "Source wording establishes conditional additional amp and strict threshold; undecoded/unspecified behavior follows labelled provisional project choices."
   }
 }

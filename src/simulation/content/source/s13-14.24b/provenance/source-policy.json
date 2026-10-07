@@ -1,0 +1,36 @@
+{
+  "id": "m8-source-precedence-2026-10-07",
+  "status": "user-approved",
+  "approvedUtcDate": "2026-10-07",
+  "priorityHighToLow": [
+    "Riot 14.24 B patch 2024-12-17",
+    "Riot 14.24 patch notes",
+    "CommunityDragon 14.24 client effects",
+    "Riot 14.23 patch notes"
+  ],
+  "rules": [
+    "Compare units and calculation scope first; equivalent representations are not conflicts.",
+    "When client desc and effects numeric values disagree, effects wins.",
+    "Absent a corresponding 14.24/B change, use 14.24 client effects over 14.23 notes.",
+    "Adopt determinable fields directly and record evidence; unresolved official-source semantics remain unknown as evidence; separately labelled provisional project conventions may be adopted under the semantic rules."
+  ],
+  "numericalNormalization": {
+    "sourceValues": "preserve raw floating-point extraction exactly",
+    "ratioConvention": "round to four decimal places before multiplying by 10000 for integer Bps, as documented by the existing source importer",
+    "scope": "Only explicitly justified source units are labelled as evidence. Unconfirmed hidden/legacy-field meaning or liveness is not asserted as official fact; separately labelled project conventions may define provisional project behavior."
+  },
+  "localization": {
+    "source": "M8_PLAN.md §1.1 and Appendix A",
+    "status": "临时译名，未核对",
+    "displayOnly": true,
+    "manualConfirmation": "pending",
+    "replaceAfter": "compare each name against acquired and hash-recorded zh_cn.json"
+  },
+  "semanticRules": [
+    "desc placeholders and wording establish field meaning and combination semantics; effects supplies numbers.",
+    "more than / 超过 means >; at least / 至少 means >=.",
+    "If desc and patch notes cannot determine a detail, adopt a reasonable nonblocking project convention labelled 项目约定，非官方证据 and include it in the user confirmation list."
+  ],
+  "semanticConventionLedger": "provenance/project-conventions.json",
+  "confirmationList": "docs/M8_PROJECT_CONVENTIONS_REVIEW.md"
+}
