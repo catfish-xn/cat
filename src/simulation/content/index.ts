@@ -29,7 +29,8 @@ export function canonicalContent(value: unknown): string {
 /** FNV-1a over UTF-16 code units: deterministic in both browsers and Node; no platform API. */
 export function digestContent(value: unknown): string {
   let hash = 0x811c9dc5;
-  for (const char of canonicalContent(value).split('')) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+  const text = canonicalContent(value);
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193) >>> 0;
   return `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
 }
 export const CONTENT_DIGEST = digestContent({
