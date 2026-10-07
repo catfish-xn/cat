@@ -10,11 +10,14 @@ export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
 export interface ShieldLayer { readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
 export interface CombatStatus { readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
-export interface CombatTask { readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number }
+export interface CombatTask { readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
+  readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 export interface CombatUnit {
+  /** G03 frozen authorization projection; supplied by the content compiler, never inferred from damage source. */
+  readonly spellCrit?: import('./m8/contracts').SpellCritAuthorization;
   readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number;
   readonly abilityPower?: number; readonly baseAttackSpeedBps?: number; readonly attackSpeedBonusBps?: number; readonly shieldLayers?: readonly ShieldLayer[]; readonly statuses?: readonly CombatStatus[]; readonly tasks?: readonly CombatTask[]; readonly mechanics?: CombatMechanics; readonly runtime?: CombatRuntime;
   readonly sources?: readonly SourcedEffect[]; readonly triggers?: readonly ResolvedTrigger[]; readonly effectRuntime?: readonly EffectRuntime[];

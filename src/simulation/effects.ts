@@ -1,4 +1,6 @@
 import { S13_COMBAT_RULES } from './s13-rules';
+import { resolveStat, attackInterval } from './m8/stats';
+import type { Stat as M8Stat, StatModifier } from './m8/contracts';
 import type { ResolvedAbility } from './ability-types';
 import type { ResolvedUnitStats } from './unit-types';
 import type { CombatMechanics } from './combat-types';
@@ -138,8 +140,16 @@ export function resolveEffects(baseStats: ResolvedUnitStats, baseAbility: Resolv
     }
   }
   if (Object.values(percent).some(value => value > 40000) || speed > 20000) throw new RangeError('Effect stacking bound exceeded');
-  const stat = (name: Exclude<Stat, 'initialMana'>, base: number, minimum = 0): number =>
-    Math.max(minimum, Math.floor(multiply(add(integer(base), flat[name]), add(10000, percent[name])) / 10000));
+  const stat = (name: Exclude<Stat, 'initialMana'>, base: number, minimum = 0): number => {
+    if (baseAbility.kind !== 's13' || name === 'abilityAmount')
+      return Math.max(minimum, Math.floor(multiply(add(integer(base), flat[name]), add(10000, percent[name])) / 10000));
+    const modifiers: StatModifier[] = sources.flatMap(({ effect }) => {
+      if ((effect.kind !== 'statFlat' && effect.kind !== 'statPercentBps') || effect.stat !== name) return [];
+      return [{ stat: name as M8Stat, unit: effect.kind === 'statFlat' ? 'flat' : 'bps',
+        value: { kind: 'constant', amount: effect.kind === 'statFlat' ? effect.amount : effect.bps }, condition: { kind: 'always' }, damageFilter: null }];
+    });
+    return Math.max(minimum, resolveStat(name as M8Stat, base, modifiers, { holder: { id: 'static', hp: baseStats.health, maxHp: baseStats.health } }));
+  };
   const stats: ResolvedUnitStats = {
     ...baseStats,
     health: stat('maxHp', baseStats.health, 1), attack: stat('attackDamage', baseStats.attack),
@@ -147,7 +157,7 @@ export function resolveEffects(baseStats: ResolvedUnitStats, baseAbility: Resolv
     initialMana: Math.min(integer(baseStats.maxMana, 1), add(integer(baseStats.initialMana), flat.initialMana)),
     attackIntervalTicks: baseStats.baseAttackSpeedBps === undefined
       ? Math.max(1, Math.ceil(multiply(integer(baseStats.attackIntervalTicks, 1), 10000) / add(10000, speed)))
-      : Math.max(1, Math.ceil(S13_COMBAT_RULES.attackSpeedIntervalNumerator / multiply(integer(baseStats.baseAttackSpeedBps, 1), add(10000, speed)))),
+      : attackInterval(baseStats.baseAttackSpeedBps, speed),
     ...(baseStats.baseAttackSpeedBps === undefined ? {} : { baseAttackSpeedBps: baseStats.baseAttackSpeedBps, attackSpeedBonusBps: speed }),
   };
   const ability = { ...baseAbility, amount: stat('abilityAmount', baseAbility.amount) };

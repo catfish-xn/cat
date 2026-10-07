@@ -1,12 +1,26 @@
 import { S13_COMBAT_RULES } from './s13-rules';
 import { getNeighbors, hexDistance, type Board, type HexCell } from './board';
 import type { CombatUnit, CombatOrigin, CombatRuntime, CombatStatus, ShieldLayer, CombatTask, CombatEvent } from './combat-types';
+import { attackInterval, evaluateAmount, resolveStat, type HpSample } from './m8/stats';
+import { authorizeSpellCrit, validateSpellCrit } from './m8/crit';
+import type { SpellCritAuthorization, StatModifier } from './m8/contracts';
 export type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 export type S13Unit = Omit<Mutable<CombatUnit>, 'runtime' | 'statuses' | 'shieldLayers' | 'tasks'> & {
   runtime: Mutable<CombatRuntime>; statuses: CombatStatus[]; shieldLayers: ShieldLayer[]; tasks: CombatTask[];
 };
 export const EMPTY_RUNTIME: CombatRuntime = { attackCount: 0, castCount: 0, attackSpeedBps: 0, abilityPowerFlat: 0,
   rangeBonus: 0, nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false };
+export const hpSample = (unit: CombatUnit): HpSample => ({ id: unit.id, hp: unit.hp, maxHp: unit.maxHp });
+export const constantModifier = (stat: StatModifier['stat'], amount: number, unit: StatModifier['unit'] = 'flat'): StatModifier =>
+  ({ stat, unit, value: { kind: 'constant', amount }, condition: { kind: 'always' }, damageFilter: null });
+export function spellCrit(unit: CombatUnit): SpellCritAuthorization {
+  if (unit.spellCrit) {
+    const auth = validateSpellCrit(unit.spellCrit);
+    if ([...auth.itemSources, ...auth.nonItemSources].some(s => s.ownerId !== unit.id)) throw new RangeError('Wrong authorization holder');
+    return auth;
+  }
+  return authorizeSpellCrit([], [], champion(unit) === 'neutral' ? 0 : S13_COMBAT_RULES.attackCritBps, S13_COMBAT_RULES.critMultiplierBps);
+}
 export const compareText = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0;
 export const sourceKey = (s: CombatOrigin): string => JSON.stringify([s.ownerId, s.sourceKind, s.definitionId, s.instanceId, s.effectIndex]);
 export function compareOrigins(a: CombatOrigin, b: CombatOrigin): number {
@@ -29,17 +43,24 @@ export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind'
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
 export function ap(unit: S13Unit, tick: number): number {
-  return (unit.abilityPower ?? 100) + unit.runtime.abilityPowerFlat + active(unit, tick, 'abilityPower').reduce((n, s) => n + s.amount, 0);
+  return resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat),
+    ...active(unit, tick, 'abilityPower').map(s => constantModifier('abilityPower', s.amount))], { holder: hpSample(unit) });
 }
 export function ad(unit: S13Unit): number {
-  return Math.floor((unit.attackDamageBase ?? unit.attackDamage) * (10000 + (unit.attackDamagePercentBps ?? 0) + unit.runtime.permanentAdBps) / 10000);
+  return resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
+    [constantModifier('attackDamage', unit.attackDamagePercentBps ?? 0, 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps')], { holder: hpSample(unit) });
+}
+export function range(unit: S13Unit): number {
+  return resolveStat('range', unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus, 'hexes')], { holder: hpSample(unit) });
 }
 /** Historical floats are normalized to integer coefficient basis points before arithmetic. */
 export function amount(unit: S13Unit, tick: number, coefficients: { flat?: number; ad?: number; ap?: number; hp?: number }): number {
-  const numerator = Math.round((coefficients.flat ?? 0) * 10000) + ad(unit) * Math.round((coefficients.ad ?? 0) * 10000)
-    + ap(unit, tick) * Math.round((coefficients.ap ?? 0) * 100) + unit.maxHp * Math.round((coefficients.hp ?? 0) * 10000);
-  if (!Number.isSafeInteger(numerator) || numerator < 0) throw new RangeError('Invalid S13 amount');
-  return Math.floor(numerator / 10000);
+  const flat = coefficients.flat ?? 0;
+  if (!Number.isSafeInteger(flat)) throw new RangeError('Invalid S13 flat amount');
+  return evaluateAmount({ flat, attackDamageBps: Math.round((coefficients.ad ?? 0) * 10000),
+    abilityPowerBps: Math.round((coefficients.ap ?? 0) * 100), maxHpBps: Math.round((coefficients.hp ?? 0) * 10000),
+    missingHpBps: 0, actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'holder', sample: 'application', cap: null },
+    { holder: hpSample(unit), attackDamage: ad(unit), abilityPower: ap(unit, tick) });
 }
 export function interval(unit: S13Unit, tick: number): number {
   // R7 neutral definitions author exact integer periods; they have no speed
@@ -47,7 +68,7 @@ export function interval(unit: S13Unit, tick: number): number {
   if (champion(unit) === 'neutral') return unit.attackIntervalTicks;
   const speedBps = (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').reduce((n, s) => n + s.amount, 0);
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
-  return Math.max(1, Math.ceil(S13_COMBAT_RULES.attackSpeedIntervalNumerator / (base * (10000 + speedBps))));
+  return attackInterval(base, speedBps);
 }
 export function byDistance(from: CombatUnit, list: readonly S13Unit[], farthest = false): S13Unit[] {
   return [...list].sort((a, b) => (farthest ? -1 : 1) * (hexDistance(from.cell, a.cell) - hexDistance(from.cell, b.cell)) || compareText(a.id, b.id));

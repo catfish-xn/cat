@@ -7,7 +7,11 @@ import type { Hook } from './strategy-types';
 import { nextRandom } from './rng';
 import { executeTask, planS13Attack, planS13Cast, type AbilityContext, type S13Heal, type S13Packet } from './combat-s13-abilities';
 import { active, ad, amount, ap, byDistance, champion, compareOrigins, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, interval,
-  lowestAlly, mechanic, origin, sourceKey, syncShield, variable, type S13Unit } from './combat-s13-state';
+  mechanic, origin, range, sourceKey, syncShield, variable, hpSample, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
+import { allocateDamage, permissionsFor, prepareDamage, resolveDamage, type DamageSample } from './m8/damage';
+import { rollCrit } from './m8/crit';
+import { resolveStat, safeNumber } from './m8/stats';
+import type { DamageContext, DamageRequest, StatModifier } from './m8/contracts';
 
 function key(cell: HexCell): string { return `${cell.col}:${cell.row}`; }
 function move(state: CombatState, unit: S13Unit, target: S13Unit, occupied: ReadonlySet<string>): HexCell | undefined {
@@ -15,16 +19,20 @@ function move(state: CombatState, unit: S13Unit, target: S13Unit, occupied: Read
   for (let i = 0; i < queue.length; i++) for (const cell of getNeighbors(state.board, queue[i].cell)) {
     if (seen.has(key(cell)) || occupied.has(key(cell))) continue;
     seen.add(key(cell)); const first = queue[i].first ?? cell;
-    if (hexDistance(cell, target.cell) <= unit.attackRange + unit.runtime.rangeBonus) return first;
+    if (hexDistance(cell, target.cell) <= range(unit)) return first;
     queue.push({ cell, first });
   }
   return undefined;
 }
 function defenses(unit: S13Unit, physical: boolean, tick: number, units: readonly S13Unit[]): number {
-  const flat = active(unit, tick, 'resistanceFlat').filter(s => physical || !s.key.includes(':armor:')).reduce((sum, s) => sum + s.amount, 0);
-  const gargoyle = mechanic(unit, 'gargoyle', 'resistPerEnemy') * units.filter(u => u.alive && u.team !== unit.team && u.targetId === unit.id).length;
+  const stat = physical ? 'armor' : 'magicResist';
+  const modifiers: StatModifier[] = active(unit, tick, 'resistanceFlat').filter(s => physical || !s.key.includes(':armor:')).map(s => constantModifier(stat, s.amount));
+  for (const m of unit.mechanics ?? []) if (m.mechanic === 'gargoyle') modifiers.push({ ...constantModifier(stat, 0),
+    value: { kind: 'unit-count', perUnit: m.values.resistPerEnemy, population: 'alive-enemies-targeting-holder', sample: 'current', distinctBy: 'unitId' } });
   const shred = physical ? Math.max(0, ...active(unit, tick, 'armorReduction').map(s => s.amount)) : 0;
-  return Math.max(0, Math.floor(((physical ? unit.armor : unit.magicResist) + flat + gargoyle) * (10000 - shred) / 10000));
+  modifiers.push(constantModifier(stat, -shred, 'bps'));
+  return resolveStat(stat, physical ? unit.armor : unit.magicResist, modifiers, { holder: hpSample(unit),
+    enemiesTargetingHolder: units.filter(u => u.alive && u.team !== unit.team && u.targetId === unit.id).map(u => u.id) });
 }
 /** Authoritative read projection for renderers; it neither consumes RNG nor advances any counter. */
 export function readCombatStats(unit: CombatState['units'][number], state: CombatState): {
@@ -34,18 +42,37 @@ export function readCombatStats(unit: CombatState['units'][number], state: Comba
     statuses: [...u.statuses ?? []], tasks: [...u.tasks ?? []], shieldLayers: [...u.shieldLayers ?? []] });
   const current = working(unit), units = state.units.map(working);
   return { attackDamage: ad(current), abilityPower: ap(current, state.tick), attackIntervalTicks: interval(current, state.tick),
-    attackRange: unit.attackRange + current.runtime.rangeBonus, armor: defenses(current, true, state.tick, units), magicResist: defenses(current, false, state.tick, units) };
+    attackRange: range(current), armor: defenses(current, true, state.tick, units), magicResist: defenses(current, false, state.tick, units) };
 }
-function mitigated(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[]): number {
-  if (packet.raw === 0) return 0;
-  if (packet.alreadyMitigated) return packet.raw;
-  const resistance = defenses(target, packet.damageType === 'physical', tick, units);
-  const first = Math.floor(packet.raw * 100 / (100 + resistance));
-  let amp = owner ? mechanic(owner, 'damageAmp', 'bps') : 0;
-  if (owner) amp += mechanic(owner, 'sniper', 'damageBpsPerHex') * hexDistance(owner.cell, target.cell) + mechanic(owner, 'glassCannon', 'damageAmpBps');
-  const watcher = mechanic(target, 'watcher', target.hp * 10000 > target.maxHp * mechanic(target, 'watcher', 'thresholdBps') ? 'healthyReductionBps' : 'reductionBps');
-  const reduction = Math.max(watcher, 0, ...active(target, tick, 'damageReduction').map(s => s.amount));
-  return Math.max(1, Math.floor(first * (10000 + amp) * Math.max(0, 10000 - reduction) / 100000000));
+function damageRequest(packet: S13Packet, combatId: string, tick: number): DamageRequest {
+  const partial: DamageContext = { source: { ...packet.source, parentItemInstanceId: null }, targetId: packet.targetId,
+    damageType: packet.damageType, delivery: packet.delivery, actionSeq: packet.actionSeq, rootActionSeq: packet.actionSeq,
+    parentPacketId: packet.inherited?.parentPacketId ?? null, triggeringCastActionSeq: packet.triggeringCastActionSeq,
+    packetId: JSON.stringify([combatId, tick, packet.source.ownerId, packet.actionSeq, packet.targetId, packet.ordinal]),
+    packetOrdinal: packet.ordinal, equipmentDepth: packet.delivery === 'equipment-proc' || packet.delivery === 'item-burn' ? 1 : 0,
+    redirected: false, area: packet.area, critEligibility: packet.critEligibility, permissions: [] };
+  const context = { ...partial, permissions: permissionsFor(partial) };
+  return { context, input: packet.inherited ? { stage: 'after-mitigation', amount: packet.raw, inherited: packet.inherited } :
+    { stage: 'raw', amount: { flat: packet.raw, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 0, missingHpBps: 0,
+      actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'holder', sample: 'packet', cap: null } } };
+}
+function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
+  const amplifiers: StatModifier[] = [];
+  if (owner) for (const m of owner.mechanics ?? []) {
+    if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
+    if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
+    if (m.mechanic === 'glassCannon') amplifiers.push(constantModifier('damageAmp', m.values.damageAmpBps, 'bps'));
+  }
+  const reduction = (bps: number): StatModifier => ({ ...constantModifier('damageReduction', bps, 'bps'),
+    damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } });
+  const reductions = active(target, tick, 'damageReduction').map(s => reduction(s.amount));
+  for (const m of target.mechanics ?? []) if (m.mechanic === 'watcher') reductions.push(reduction(
+    BigInt(target.hp) * 10000n > BigInt(target.maxHp) * BigInt(m.values.thresholdBps) ? m.values.healthyReductionBps : m.values.reductionBps));
+  return { holder: hpSample(owner ?? target), target: { ...hpSample(target), hp }, attackDamage: owner ? ad(owner) : 0,
+    abilityPower: owner ? ap(owner, tick) : 0, armor: defenses(target, true, tick, units), magicResist: defenses(target, false, tick, units),
+    amplifiers, reductions, prevention: false, critical: packet.critical ?? false,
+    critMultiplierBps: owner ? spellCrit(owner).multiplierBps : S13_COMBAT_RULES.critMultiplierBps,
+    shields: [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(a.key, b.key)) };
 }
 function heal(ctx: AbilityContext, entry: S13Heal): void {
   const unit = ctx.units.find(u => u.id === entry.targetId);
@@ -54,7 +81,7 @@ function heal(ctx: AbilityContext, entry: S13Heal): void {
   unit.hp += actual;
   ctx.events.push({ type: 'heal', tick: ctx.tick, unitId: unit.id, source: entry.source, requested, actual, overheal: requested - actual, hp: unit.hp });
 }
-/** M5 is a separate versioned resolver; unchanged standalone M3/M4 battles keep their original rules. */
+/** S13 development resolver; standalone M3/M4 battles keep their original rules. */
 export function advanceS13Tick(state: CombatState): CombatStep {
   const tick = state.tick + 1, events: CombatEvent[] = [];
   const units: S13Unit[] = state.units.map(unit => ({ ...structuredClone(unit), runtime: { ...EMPTY_RUNTIME, ...unit.runtime },
@@ -80,7 +107,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       if (invocation.action.kind === 'gainMana') hookMana.set(unit.id, (hookMana.get(unit.id) ?? 0) + invocation.action.amount);
       else if (target && invocation.action.kind === 'grantShield') grantShield(target, source, invocation.action.amount, tick + invocation.action.durationTicks, tick, events);
       else if (target && invocation.action.kind === 'dealDamage') ctx.packets.push({ source, targetId: target.id, raw: invocation.action.amount,
-        damageType: invocation.action.damageType, actionSeq: seq, ordinal: 100000 + index });
+        damageType: invocation.action.damageType, actionSeq: seq, ordinal: 100000 + index,
+        delivery: source.sourceKind === 'item' ? 'equipment-proc' : 'attack-extra', critEligibility: 'never', area: false,
+        triggeringCastActionSeq: invocation.trigger.hook === 'onCast' ? seq : null });
     });
   };
   const blocked = new Set<string>();
@@ -120,7 +149,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const intents = units.map(unit => {
     if (!unit.alive || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
     const target = byDistance(unit, enemies(unit, units))[0];
-    if (!target || unit.moveCooldownTicks > 0 || hexDistance(unit.cell, target.cell) <= unit.attackRange + unit.runtime.rangeBonus) return undefined;
+    if (!target || unit.moveCooldownTicks > 0 || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
     return move(state, unit, target, occupied);
   });
   units.forEach((unit, n) => {
@@ -130,14 +159,20 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   });
   // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
   for (const unit of units) {
+    const firstPacket = ctx.packets.length;
     const target = byDistance(unit, enemies(unit, units))[0];
     if (unit.alive && unit.targetId !== (target?.id ?? null)) events.push({ type: 'targetChanged', tick, unitId: unit.id, before: unit.targetId, after: target?.id ?? null });
     unit.targetId = unit.alive ? target?.id ?? null : null;
     const due = unit.tasks.filter(t => t.executeAtTick <= tick || (t.kind === 'ireliaEnd' && unit.shieldLayers.find(s => s.key === sourceKey(t.source))?.remaining === 0));
     unit.tasks = unit.tasks.filter(t => !due.includes(t));
     for (const task of due) if ((!task.cancellable || (unit.alive && !blocked.has(unit.id))) && (unit.alive || task.kind === 'bleed' || task.kind === 'tristanaBounce')) executeTask(ctx, unit, task);
-    if (!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) continue;
-    const inRange = hexDistance(unit.cell, target.cell) <= unit.attackRange + unit.runtime.rangeBonus;
+    const rollPlannedPackets = () => {
+      const authorization = spellCrit(unit);
+      const planned = ctx.packets.slice(firstPacket).sort((a, b) => a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
+      for (const packet of planned) packet.critical = packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, authorization, ctx.draw);
+    };
+    if (!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
+    const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
     const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie'].includes(champion(unit));
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
     if (champion(unit) !== 'neutral' && !pendingVanderStrike && unit.mana >= unit.maxMana && (inRange || selfCast)) {
@@ -152,47 +187,50 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       for (const task of immediate) executeTask(ctx, unit, task);
       hooks(unit, 'onCast', seq);
     } else if (inRange && unit.cooldownTicks === 0) {
-      const seq = actionSeq++, neutral = champion(unit) === 'neutral', word = ctx.draw(), critical = !neutral && word < 0x100000000 * S13_COMBAT_RULES.attackCritBps / 10000;
+      const seq = actionSeq++, neutral = champion(unit) === 'neutral';
       unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: target.id });
-      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, target, seq, critical); unit.cooldownTicks = oldInterval;
+      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, target, seq); unit.cooldownTicks = oldInterval;
       hooks(unit, 'onAttack', seq);
       if (!neutral) attackMana.set(unit.id, S13_COMBAT_RULES.attackMana + mechanic(unit, 'extraAttackMana', 'amount'));
     }
+    rollPlannedPackets();
   }
   // Virtual health and layered shields give each packet a deterministic actual contribution and killer.
   const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>(), totals = new Map<string, { physical: number; magic: number; absorbed: number; incoming: number }>();
-  const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; amount: number }>();
+  const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; amount: number; hpAmount: number }>();
   const killed = new Map<string, CombatOrigin>();
   const ricochetActions = new Set<string>();
-  const absorb = (target: S13Unit, value: number, packet: S13Packet, redirected: boolean) => {
-    let remaining = value, absorbed = 0;
-    target.shieldLayers = [...target.shieldLayers].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(a.key, b.key)).map(layer => {
-      const taken = Math.min(layer.remaining, remaining); remaining -= taken; absorbed += taken;
-      const next = { ...layer, remaining: layer.remaining - taken, absorbed: layer.absorbed + taken };
+  const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet, legacyRaw: number) => {
+    const outcome = result.outcome, { absorbed, hpDamage: actual, context, critical } = outcome;
+    target.shieldLayers = result.shields.map(layer => {
+      const old = target.shieldLayers.find(s => s.key === layer.key)!;
+      const taken = old.remaining - layer.remaining, next = { ...old, remaining: layer.remaining, absorbed: old.absorbed + taken };
       if (taken > 0) events.push({ type: 'shieldLayerChanged', tick, unitId: target.id, layer: next, reason: 'absorbed' });
       return next;
     }); syncShield(target);
-    const before = virtualHp.get(target.id)!, actual = Math.min(before, remaining); virtualHp.set(target.id, before - actual);
+    virtualHp.set(target.id, result.hpAfter);
     hpLost.set(target.id, (hpLost.get(target.id) ?? 0) + actual);
     const total = totals.get(target.id) ?? { physical: 0, magic: 0, absorbed: 0, incoming: 0 };
-    total[packet.damageType] += value; total.absorbed += absorbed; total.incoming += value; totals.set(target.id, total);
-    events.push({ type: 'packetDamage', tick, source: packet.source, unitId: target.id, damageType: packet.damageType, raw: packet.raw, mitigated: value, absorbed,
-      hpDamage: actual, actionSeq: packet.actionSeq, packetOrdinal: packet.ordinal, critical: packet.critical ?? false, redirected });
+    total[packet.damageType] += outcome.mitigated; total.absorbed += absorbed; total.incoming += outcome.mitigated; totals.set(target.id, total);
+    // Development adapter: replay2 will publish the frozen outcome payload in B9.
+    events.push({ type: 'packetDamage', tick, source: packet.source, unitId: target.id, damageType: packet.damageType, raw: legacyRaw,
+      mitigated: outcome.mitigated, absorbed, hpDamage: actual, actionSeq: packet.actionSeq, packetOrdinal: packet.ordinal, critical, redirected: context.redirected });
     const owner = units.find(u => u.id === packet.source.ownerId);
-    if (owner && actual > 0) {
-      const damageKey = `${owner.id}:${packet.actionSeq}`, old = damageByAction.get(damageKey);
-      damageByAction.set(damageKey, { owner, source: packet.source, seq: packet.actionSeq, amount: (old?.amount ?? 0) + actual });
+    if (owner && absorbed + actual > 0 && context.permissions.includes('omnivamp')) {
+      const damageKey = JSON.stringify([owner.id, packet.actionSeq]), old = damageByAction.get(damageKey);
+      damageByAction.set(damageKey, { owner, source: packet.source, seq: packet.actionSeq,
+        amount: (old?.amount ?? 0) + absorbed + actual, hpAmount: (old?.hpAmount ?? 0) + actual });
     }
-    if (before > 0 && before - actual === 0) {
+    if (outcome.killingPacket) {
       killed.set(target.id, packet.source); events.push({ type: 'kill', tick, unitId: target.id, source: packet.source });
-      const ricochetKey = `${packet.source.ownerId}:${packet.actionSeq}`;
-      // Shared damage preserves damage/kill attribution but is not a second primary spell hit.
-      if (owner && !redirected && packet.bounce && !ricochetActions.has(ricochetKey) && remaining > actual) {
+      const ricochetKey = JSON.stringify([packet.source.ownerId, packet.actionSeq]);
+      if (owner && !context.redirected && packet.bounce && !ricochetActions.has(ricochetKey) && outcome.overkill > 0) {
         const next = byDistance(target, enemies(owner, units).filter(u => u.id !== target.id && (virtualHp.get(u.id) ?? 0) > 0))[0];
         if (next) {
           ricochetActions.add(ricochetKey);
           owner.tasks.push({ key: `${owner.id}:${packet.actionSeq}:bounce`, kind: 'tristanaBounce', source: packet.source,
-            executeAtTick: tick + 1, targetId: next.id, amount: remaining - actual, ordinal: 0, total: 1, cancellable: false, actionSeq: packet.actionSeq });
+            executeAtTick: tick + 1, targetId: next.id, amount: outcome.overkill, ordinal: 0, total: 1, cancellable: false, actionSeq: packet.actionSeq,
+            inherited: { parentPacketId: context.packetId, resolvedAtTick: tick, portion: 'overkill', critical } });
           const gain = Math.round(variable(owner, 'ASKillGain', 1.25) * 100); owner.runtime.permanentAdBps += gain;
           events.push({ type: 'growth', tick, unitId: owner.id, amountBps: gain, totalBps: owner.runtime.permanentAdBps });
         }
@@ -202,11 +240,22 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   ctx.packets.sort((a, b) => compareText(a.source.ownerId, b.source.ownerId) || a.actionSeq - b.actionSeq || compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal);
   for (const packet of ctx.packets) {
     const target = units.find(u => u.id === packet.targetId); if (!target || !target.alive) continue;
-    const owner = units.find(u => u.id === packet.source.ownerId), value = mitigated(packet, target, owner, tick, units);
+    const owner = units.find(u => u.id === packet.source.ownerId);
+    const request = damageRequest(packet, state.combatId ?? 'standalone', tick);
+    const sample = damageSample(packet, target, owner, tick, units, virtualHp.get(target.id)!);
+    const prepared = prepareDamage(request, sample);
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
       && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];
-    const transfer = protector ? Math.floor(value * Math.max(...active(protector, tick, 'redirect').map(s => s.amount)) / 10000) : 0;
-    absorb(target, value - transfer, packet, false); if (protector && transfer > 0) absorb(protector, transfer, packet, true);
+    const transfer = protector ? safeNumber(BigInt(prepared.mitigated) * BigInt(Math.max(...active(protector, tick, 'redirect').map(s => s.amount))) / 10000n) : 0;
+    commitOutcome(target, allocateDamage(request.context, { ...prepared, mitigated: prepared.mitigated - transfer }, sample.target!.hp, sample.shields), packet, prepared.rawAfterCritical);
+    if (protector && transfer > 0) {
+      const partial: DamageContext = { ...request.context, targetId: protector.id, redirected: true, critEligibility: 'never',
+        parentPacketId: request.context.packetId, packetId: JSON.stringify([request.context.packetId, 'redirect', protector.id]) };
+      const redirected: DamageRequest = { context: { ...partial, permissions: permissionsFor(partial) }, input: { stage: 'after-mitigation', amount: transfer,
+        inherited: { parentPacketId: request.context.packetId, resolvedAtTick: tick, portion: 'redirect-share', critical: prepared.critical } } };
+      const redirectSample = damageSample(packet, protector, owner, tick, units, virtualHp.get(protector.id)!);
+      commitOutcome(protector, resolveDamage(redirected, redirectSample), packet, prepared.rawAfterCritical);
+    }
   }
   for (const unit of units) {
     unit.hp = virtualHp.get(unit.id)!;
@@ -214,13 +263,16 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     if (total) events.push({ type: 'damage', tick, unitId: unit.id, amount: total.incoming, hp: unit.hp, physicalAmount: total.physical,
       magicAmount: total.magic, absorbed: total.absorbed, hpDamage: hpLost.get(unit.id) ?? 0, shield: unit.shield });
   }
-  for (const { owner, source, amount: actual } of damageByAction.values()) {
+  for (const { owner, source, amount: actual, hpAmount } of damageByAction.values()) {
     if (owner.hp <= 0) continue;
-    if (champion(owner) === 'garen') ctx.heals.push({ source: origin(owner), targetId: owner.id,
+    if (champion(owner) === 'garen' && hpAmount > 0) ctx.heals.push({ source: origin(owner), targetId: owner.id,
       amount: amount(owner, tick, { hp: variable(owner, 'HealPercentHealth') }) });
     for (const effect of [...owner.mechanics ?? []].sort((a, b) => compareOrigins(a.source, b.source))) if (effect.mechanic === 'gunblade') {
       ctx.heals.push({ source: effect.source, targetId: owner.id, amount: Math.floor(actual * (effect.values.selfHealBps ?? 1500) / 10000) });
-      const ally = lowestAlly(owner, units.filter(u => u.hp > 0));
+      const ally = units.filter(u => u.alive && u.hp > 0 && u.team === owner.team && u.id !== owner.id).sort((a, b) => {
+        const left = BigInt(a.hp) * BigInt(b.maxHp), right = BigInt(b.hp) * BigInt(a.maxHp);
+        return (left < right ? -1 : left > right ? 1 : 0) || compareText(a.id, b.id);
+      })[0];
       if (ally) ctx.heals.push({ source: effect.source, targetId: ally.id, amount: Math.floor(actual * (effect.values.allyHealBps ?? 2500) / 10000) });
     }
     void source;

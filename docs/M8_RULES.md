@@ -1,11 +1,11 @@
 # M8 B2 规则与数据合同（m8-b2-v3-review，已复审签收、合同冻结）
 
 签收日期：2026-10-07；B2 于 `feat/m8-b0-baseline@2632925` 通过用户复审签收，合同冻结。签收覆盖首轮 A01–A13 与复审 R1–R4；合同标识保持 `m8-b2-v3-review`，不因签收重命名或修改字段与规则。B3 实现必须遵守本合同与 `src/simulation/m8/contracts.ts`；合同缺项或有歧义时停止并报告，不自行修改。
-本次只交付类型、合同和可序列化的小样例，**没有实现或启用 B3–B9**。当前程序仍执行 M7/M5 规则及版本。未来实现以本合同、B1 数值归档和逐项来源为依据；未列变更沿用 [M5_RULES.md](../M5_RULES.md) R6。
+B2签收时只交付类型、合同和可序列化的小样例，没有实现或启用 B3–B9。B3第一批现已接入G01/G02/G03，实施范围、手算预期与验证见 [M8_B3_STATUS.md](M8_B3_STATUS.md)，规则差异记录在本文§16；其余批次未交付。实现以本冻结合同、B1 数值归档和逐项来源为依据；未列变更沿用 [M5_RULES.md](../M5_RULES.md) R6。
 
 用户批准原 GS-01–04、TG-01 及审计中的另外41条项目约定，共46条；批准不代表官方脚本证明。B-07 红霸符只启用选定3%增伤、不加射程；B-10 飓风暂用无距离上限，均继续待历史核验。原始 effects、原档 hash 和配方不改；来源再生成不能改变 runtimeEligible=false。归档修正见 [项目约定清单](M8_PROJECT_CONVENTIONS_REVIEW.md)。
 
-类型权威是 `src/simulation/m8/contracts.ts`、`ui-contracts.ts`；它们仅被合同样例引用，没有挂到生产入口。原有 `combat-types.ts/ability-types.ts/strategy-types.ts/match-types.ts` 和 M6 版本常量继续描述当前程序，B3–B9 接入时替换相应边界，不保留两套运行规则源。样例 `tests/m8-contracts.test.ts`、`tests/m8-audit-contracts.test.ts` 和 `tests/m8-ability-contracts.test.ts` 只证明字段、类型限制、手算验收向量和 JSON 往返，不证明装备已战斗生效。
+类型权威是 `src/simulation/m8/contracts.ts`、`ui-contracts.ts`，B3第一批未修改两份冻结类型。B2时它们仅被合同样例引用；现有S13入口已消费G01/G02/G03，旧事件暂由唯一G02结果投影，按§10到B9切换正式账本。原有 `combat-types.ts/ability-types.ts/strategy-types.ts/match-types.ts` 和 M6 版本常量继续描述尚未切换的边界，不保留两套伤害计算器。样例 `tests/m8-contracts.test.ts`、`tests/m8-audit-contracts.test.ts` 和 `tests/m8-ability-contracts.test.ts` 只证明字段、类型限制、手算验收向量和 JSON 往返，不证明B4全装备目录已战斗生效。
 
 ## 1. G01–G12 接口及消费者
 
@@ -477,3 +477,18 @@ StatusContribution.appliedAtTick明确为实际生效start，申请时间取来�
 | `git diff --check` / 改动范围 | 通过；生产差异只有m8类型声明，未改战斗执行器/内容/运行版本/digest/界面，构建资源hash与基线一致 |
 
 B2于提交2632925通过复审签收，合同冻结；B3可按冻结合同开始实现。R1金额、R3活动和R4时序向量是合同验收数据；R2直接调用已有选敌/技能规划代码作为行为证据，未新增另一套M8选敌或战斗执行器。
+
+## 16. B3第一批实施记录与规则变更表
+
+先提交B2签收状态`b5c7170`，再实施G01属性修饰、G02统一伤害包、G03暴击；未修改以上冻结规则或合同字段。现有9成装及19英雄的相关消费者已接入，装备数值/配方及英雄系数/几何不变。当前9件没有技能暴击授权提供者；开发战斗输入支持冻结授权投影，公共Match仍须等待B4编译无尽/珠光来源。详见 [M8_B3_STATUS.md](M8_B3_STATUS.md)。
+
+| 项目 | 原行为 → 本批行为 | 已冻结的批准依据 |
+| --- | --- | --- |
+| 撤销“技能不暴击”简化 | 删除`No spell critical strikes`；授权技能按实际发包独立抽词，治疗/盾/装备包不暴击，无授权不抽技能词 | §6、§10、§14 |
+| 三类统一伤害与资格 | 旧物理/魔法私有计算 → 冻结请求/结果；true绕过抗性/常规减伤，仍受增伤、防止/盾；装备包无吸血资格 | §2、§4、A08 |
+| 枪刃 | 仅HP伤且友疗可选自身 → 合资格盾吸收+HP伤、拆分后汇总一次；友疗排除自身/死者，无队友不转自疗 | §4；现有系数保持到B4/G06 |
+| 分担/溢出 | 布尔已减免标记 → 父包身份/tick/portion/暴击事实收据；不二次减免/抽词，溢出仍下一tick执行 | §6、A02 |
+| 开发期修订/digest | `m5-audit-fix-1` / `d40612fa` → `m8-b3-g01-g02-g03-1` / `5c65e9ec`；正式版本常量暂留B9/B10切换 | §10 |
+| 旧兼容性测试/golden | 新引擎拒绝旧digest且输入不变；原7份旧存档不改，原M7断言及旧golden归档；新golden的四条命令路线与旧序列相同且均获胜 | §10 D2-A；正式旧库原样导出待B9 |
+
+该表记录已批准规则的实施差异，不新增合同。历史B2验证记录保留对应提交的证据边界；本批验证结果以B3状态文档为准。

@@ -15,6 +15,7 @@ import { planRoundEconomy } from './economy';
 import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
+import { validateSpellCrit } from './m8/crit';
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
 function integer(value: unknown, min = 0): asserts value is number { requireValue(Number.isSafeInteger(value) && (value as number) >= min, 'integer'); }
@@ -222,7 +223,7 @@ export function restoreMatch(input: unknown): MatchState {
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
-      validateM5Runtime(unit, combat.tick, combatIds, combat.units);
+      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
       const sourceKeys = new Set<string>();
       for (const source of unit.sources) { requireValue(source.key === effectKey(source.source) && source.source.ownerId === unit.id && !sourceKeys.has(source.key), 'source key'); sourceKeys.add(source.key); cloneEffect(source.effect); }
@@ -241,8 +242,16 @@ export function restoreMatch(input: unknown): MatchState {
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them. */
-function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[]): void {
+function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string): void {
   if (unit.ability.kind !== 's13') return;
+  if (unit.spellCrit !== undefined) {
+    record(unit.spellCrit); list(unit.spellCrit.itemSources); list(unit.spellCrit.nonItemSources);
+    validateSpellCrit(unit.spellCrit);
+    // The current nine-item compiler has no authorization provider. B4 must
+    // bind these frozen sources to its enabled definitions before saving them.
+    requireValue(unit.spellCrit.itemSources.length === 0 && unit.spellCrit.nonItemSources.length === 0
+      && unit.spellCrit.chanceBps === (champion(unit) === 'neutral' ? 0 : 2500) && unit.spellCrit.multiplierBps === 14000, 'uncompiled spell critical sources');
+  }
   integer(unit.attackDamageBase); integer(unit.attackDamagePercentBps); integer(unit.abilityPower); integer(unit.baseAttackSpeedBps, 1); integer(unit.attackSpeedBonusBps);
   record(unit.runtime);
   for (const field of ['attackCount','castCount','attackSpeedBps','abilityPowerFlat','rangeBonus','nextAttackMagic','nextAttackPhysical','permanentAdBps']) integer(unit.runtime[field as keyof typeof unit.runtime]);
@@ -320,6 +329,19 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
     requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce'].includes(task.kind), 'task kind');
+    if (task.kind === 'tristanaBounce') {
+      record(task.inherited); id(task.inherited.parentPacketId); integer(task.inherited.resolvedAtTick);
+      requireValue(task.inherited.portion === 'overkill' && typeof task.inherited.critical === 'boolean'
+        && task.executeAtTick === task.inherited.resolvedAtTick + 1 && task.inherited.resolvedAtTick <= tick, 'inherited bounce receipt');
+      const tuple: unknown = JSON.parse(task.inherited.parentPacketId);
+      list(tuple);
+      requireValue(tuple.length === 6 && tuple[0] === combatId && tuple[1] === task.inherited.resolvedAtTick && tuple[2] === task.source.ownerId
+        && tuple[3] === task.actionSeq && typeof tuple[4] === 'string' && combatIds.has(tuple[4])
+        && tuple[5] === 0 && JSON.stringify(tuple) === task.inherited.parentPacketId, 'inherited parent packet identity');
+      const parentTarget = combatUnits.find(value => value.id === tuple[4])!;
+      requireValue(champion(owner) === 'tristana' && task.source.sourceKind === 'ability' && task.ordinal === 0
+        && task.total === 1 && !task.cancellable && !parentTarget.alive && parentTarget.team !== owner.team, 'inherited primary kill');
+    } else requireValue(task.inherited === undefined, 'unexpected inherited receipt');
     requireValue(task.targetId === null || combatIds.has(task.targetId), 'task target'); taskKeys.add(task.key);
   }
   list(unit.mechanics);

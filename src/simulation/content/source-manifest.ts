@@ -154,7 +154,6 @@ export const SOURCE_MANIFEST = freezeContent({
     "Fixed tick multi-shot cadence",
     "No Corki gameplay dash",
     "Template enemies, supply replaces carousel",
-    "No spell critical strikes",
     "HP/AD star multipliers 1/1.8/3.24"
   ]
 });

@@ -1,18 +1,20 @@
-import { S13_COMBAT_RULES } from './s13-rules';
 import { hexDistance, type Board } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, grantShield, lowestAlly, mechanic, neighborsOf,
-  origin, path, sourceKey, variable, type S13Unit } from './combat-s13-state';
+  origin, path, range, sourceKey, variable, type S13Unit } from './combat-s13-state';
+import type { CritEligibility, DamageDelivery, DamageInput } from './m8/contracts';
 export interface S13Packet { source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic'; actionSeq: number;
-  ordinal: number; critical?: boolean; bounce?: boolean; alreadyMitigated?: boolean }
+  ordinal: number; critical?: boolean; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
+  area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { source: CombatOrigin; targetId: string; amount: number }
 export interface AbilityContext {
   tick: number; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }
 function packet(ctx: AbilityContext, unit: S13Unit, target: S13Unit, raw: number, type: 'physical' | 'magic', seq: number,
-  ordinal = 0, bounce = false): void {
-  ctx.packets.push({ source: origin(unit), targetId: target.id, raw, damageType: type, actionSeq: seq, ordinal, ...(bounce ? { bounce } : {}) });
+  ordinal = 0, bounce = false, area = false, triggeringCastActionSeq: number | null = seq): void {
+  ctx.packets.push({ source: origin(unit), targetId: target.id, raw, damageType: type, actionSeq: seq, ordinal,
+    delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area, triggeringCastActionSeq, ...(bounce ? { bounce } : {}) });
 }
 function addTask(unit: S13Unit, kind: CombatTask['kind'], at: number, targetId: string | null, value: number, seq: number,
   ordinal = 0, total = 1, cancellable = false): void {
@@ -29,7 +31,8 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   const duration = (key: string, fallback = 4) => Math.round(v(key, fallback) * 20);
   const targets: string[] = [];
   const hit = (enemy: S13Unit, value: number, type: 'physical' | 'magic' = 'magic', bounce = false) => {
-    packet(ctx, unit, enemy, value, type, seq, targets.length, bounce); targets.push(enemy.id);
+    packet(ctx, unit, enemy, value, type, seq, targets.length, bounce,
+      ['darius', 'urgot', 'rell', 'scar', 'ezreal', 'garen'].includes(champion(unit))); targets.push(enemy.id);
   };
   const shield = (ally: S13Unit, value: number, ticks: number, decay = false) => {
     grantShield(ally, source, value, tick + ticks, tick, events, decay); targets.push(ally.id);
@@ -94,12 +97,12 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       targets.push(unit.id); break;
     }
     case 'kogmaw': {
-      const speedBefore = unit.runtime.attackSpeedBps, rangeBefore = unit.attackRange + unit.runtime.rangeBonus;
+      const speedBefore = unit.runtime.attackSpeedBps, rangeBefore = range(unit);
       unit.runtime.attackSpeedBps += Math.round(v('AttackSpeed', .25) * 10000);
       if (unit.runtime.castCount % v('RangeIncreaseNumAttacks', 3) === 0) unit.runtime.rangeBonus++;
       events.push({ type: 'statChanged', tick, unitId: unit.id, source, stat: 'attackSpeedBps', before: speedBefore, after: unit.runtime.attackSpeedBps });
-      if (rangeBefore !== unit.attackRange + unit.runtime.rangeBonus) events.push({ type: 'statChanged', tick, unitId: unit.id, source,
-        stat: 'range', before: rangeBefore, after: unit.attackRange + unit.runtime.rangeBonus });
+      if (rangeBefore !== range(unit)) events.push({ type: 'statChanged', tick, unitId: unit.id, source,
+        stat: 'range', before: rangeBefore, after: range(unit) });
       targets.push(unit.id); break;
     }
     case 'scar': {
@@ -157,10 +160,15 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   return targets;
 }
 export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
+  if (task.kind === 'tristanaBounce' && !task.inherited) throw new RangeError('Missing inherited Tristana receipt');
   const opponents = enemies(unit, ctx.units), target = opponents.find(u => u.id === task.targetId);
   const emit = (u: S13Unit, value: number, type: 'physical' | 'magic' = 'physical', ordinal = task.ordinal) => {
     ctx.packets.push({ source: task.source, targetId: u.id, raw: value, damageType: type, actionSeq: task.actionSeq, ordinal,
-      ...(task.kind === 'tristanaBounce' ? { alreadyMitigated: true } : {}) });
+      delivery: task.kind === 'bleed' ? 'ability-periodic' : 'ability-direct',
+      critEligibility: task.kind === 'tristanaBounce' ? 'never' : 'requires-spell-authorization',
+      area: ['caitlyn', 'ireliaEnd', 'leonaEnd', 'lorisEnd'].includes(task.kind),
+      triggeringCastActionSeq: task.actionSeq,
+      ...(task.kind === 'tristanaBounce' ? { inherited: task.inherited } : {}) });
   };
   switch (task.kind) {
     case 'bleed': if (target) emit(target, task.amount); break;
@@ -197,15 +205,15 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
     }
   }
 }
-export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number, critical: boolean): void {
+export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): void {
   const source = { ...origin(unit), sourceKind: 'attack' as const }, base = unit.runtime.nextAttackPhysical || ad(unit);
-  ctx.packets.push({ source, targetId: target.id, raw: Math.floor(base * (critical ? S13_COMBAT_RULES.critMultiplierBps : 10000) / 10000), damageType: 'physical',
-    actionSeq: seq, ordinal: 0, critical });
+  ctx.packets.push({ source, targetId: target.id, raw: base, damageType: 'physical',
+    actionSeq: seq, ordinal: 0, delivery: 'basic-attack', critEligibility: 'basic', area: false, triggeringCastActionSeq: null });
   unit.runtime.nextAttackPhysical = 0;
   if (unit.runtime.nextAttackMagic > 0) {
-    packet(ctx, unit, target, unit.runtime.nextAttackMagic, 'magic', seq, 1); unit.runtime.nextAttackMagic = 0;
+    packet(ctx, unit, target, unit.runtime.nextAttackMagic, 'magic', seq, 1, false, false, null); unit.runtime.nextAttackMagic = 0;
   }
-  if (champion(unit) === 'kogmaw') packet(ctx, unit, target, amount(unit, ctx.tick, { ap: variable(unit, 'DamageOnAttack') }), 'magic', seq, 2);
+  if (champion(unit) === 'kogmaw') packet(ctx, unit, target, amount(unit, ctx.tick, { ap: variable(unit, 'DamageOnAttack') }), 'magic', seq, 2, false, false, null);
   let ordinal = 3;
   for (const effect of [...unit.mechanics ?? []].sort((a, b) => compareOrigins(a.source, b.source))) {
     if (effect.mechanic === 'rageblade') {
@@ -216,7 +224,8 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
     if ((effect.mechanic === 'artillery' && unit.runtime.attackCount % (effect.values.everyN ?? 5) === 0) || effect.mechanic === 'titanic') {
       const bps = effect.values.adBps ?? (effect.mechanic === 'artillery' ? 12500 : 4000);
       for (const enemy of enemies(unit, ctx.units).filter(u => hexDistance(target.cell, u.cell) <= 1))
-        ctx.packets.push({ source: effect.source, targetId: enemy.id, raw: Math.floor(ad(unit) * bps / 10000), damageType: 'physical', actionSeq: seq, ordinal: ordinal++ });
+        ctx.packets.push({ source: effect.source, targetId: enemy.id, raw: Math.floor(ad(unit) * bps / 10000), damageType: 'physical', actionSeq: seq, ordinal: ordinal++,
+          delivery: 'attack-extra', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
     }
   }
 }
