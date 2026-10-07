@@ -204,7 +204,10 @@ class ImportM8SourceTests(unittest.TestCase):
         self.assertEqual(len({x['id'] for x in conventions}), len(conventions))
         pending = sum(x.get('approvalStatus', x.get('userReviewStatus')) not in ('approved', 'user-approved') for x in conventions)
         self.assertEqual(counts['pendingConventionRecords'], pending)
-        self.assertEqual(counts['approvedConventions'], 5)
+        self.assertEqual(counts['approvedConventions'], 46)
+        self.assertEqual(counts['pendingConventionRecords'], 0)
+        provisional = [x for x in conventions if x['id'] in ('B-07', 'B-10')]
+        self.assertTrue(all(x['verificationStatus'] == 'pending-historical-verification' for x in provisional))
 
     def test_thiefs_gloves_approved_tiers_stats_and_exact_pools(self):
         from itertools import combinations, product

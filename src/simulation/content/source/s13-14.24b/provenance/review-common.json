@@ -6,36 +6,47 @@
       "label": "项目约定，非官方证据",
       "decision": "Inherit baseline units into completed items: AD fraction; AS and CritChance percentage points; AP/Armor/MagicResist/Health/initial Mana points. CritChance percentage-point interpretation is a project convention; raw values are preserved.",
       "decisionZh": "未在成装文案重复显示的基础属性，沿用组件同名字段单位：AD小数比例，AS与CritChance百分数点；AP、护甲、魔抗、生命、初始法力为点数。CritChance的百分数点解释属于项目约定。",
-      "approvalStatus": "pending-itemized-confirmation",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "blocking": false
+      "approvalStatus": "user-approved",
+      "adoptionStatus": "active-user-approved",
+      "blocking": false,
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
     },
     {
       "id": "GLOBAL-STACK-01",
       "label": "项目约定，非官方证据",
       "decision": "Ordinary items consume one slot. unique=true limits duplicate apiName on a holder. Nonunique copies add base stats and maintain separate effect instances unless a specific rule overrides.",
       "decisionZh": "普通装备每件占1槽；unique=true限制同一持有者重复同apiName；非唯一装备基础属性相加、被动各自独立，明确写不叠加或具体装备例外时优先例外。",
-      "approvalStatus": "pending-itemized-confirmation",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "blocking": false
+      "approvalStatus": "user-approved",
+      "adoptionStatus": "active-user-approved",
+      "blocking": false,
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+      "b2Contract": "docs/M8_RULES.md (m8-b2-v1): authoritative interface/timing clarification; not runtime implementation or official script evidence"
     },
     {
       "id": "GLOBAL-PROC-01",
       "label": "项目约定，非官方证据",
       "decision": "Do not recursively chain equipment-triggered damage into further equipment procs. Resolve qualifying packets in a stable order, with explicitly documented item exceptions and normal attack/ability triggers retained.",
       "decisionZh": "由装备额外伤害引起的装备触发不递归连锁；每伤害包按稳定顺序处理。具体物品文案与专门约定优先，不能借此丢掉正常普攻/技能触发。",
-      "approvalStatus": "pending-itemized-confirmation",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "blocking": false
+      "approvalStatus": "user-approved",
+      "adoptionStatus": "active-user-approved",
+      "blocking": false,
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+      "b2Contract": "docs/M8_RULES.md (m8-b2-v1): authoritative interface/timing clarification; not runtime implementation or official script evidence"
     },
     {
       "id": "GLOBAL-NUMERIC-01",
       "label": "项目约定，非官方证据",
       "decision": "Fractions round to four decimals before Bps; percentage points divide by100 then same convention; seconds use50ms ticks. Retain intermediate/periodic remainders and floor nonnegative final packet amounts. Add max-HP percentage modifiers against a common base-plus-flat HP pool. Half-open durations expire before end-tick actions. These are explicit project conventions pending B2 integration, not official execution proof. Explicit documented item-specific periodic final-tick exceptions take precedence (burn final pulse and Quicksilver final stack).",
       "decisionZh": "比例先四位小数归一再转Bps；秒转50ms tick。期间累计保留余数，最终非负伤害/治疗/护盾量向下取整；百分比生命加成按共同基础加平加生命的基数相加，避免装备顺序复利。持续区间结束tick先到期再执行动作。 已明确列出的装备末tick周期例外优先（灼烧末跳、水银最终叠层）。",
-      "approvalStatus": "pending-itemized-confirmation",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "blocking": false
+      "approvalStatus": "user-approved",
+      "adoptionStatus": "active-user-approved",
+      "blocking": false,
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+      "b2Contract": "docs/M8_RULES.md (m8-b2-v1): authoritative interface/timing clarification; not runtime implementation or official script evidence"
     }
   ]
 }

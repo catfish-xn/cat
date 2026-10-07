@@ -165,26 +165,30 @@
           "id": "B-01",
           "label": "项目约定，非官方证据",
           "decision": "Shared burn/wound status rules; Morellonomicon and Red Buff damage-triggered application requires positive attack/ability damage (including absorbed shield damage), excludes equipment proc damage. Sunfire instead applies these statuses directly on its own timer under B-08. Burn uses current target max HP each second, first tick +20; the expiry tick pays the final tick before removal. Multiple burn sources do not sum: highest rate wins, equal rate refreshes expiry; wound similarly takes greatest reduction, never adds. Refresh preserves tick phase. Healing reduction applies to incoming positive healing, not shields. The expiry-tick final burn payment is an explicit periodic exception to GLOBAL-NUMERIC-01 half-open action timing; it does not extend status eligibility to new attacks at expiry.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "鬼书和红霸符由正普攻/技能伤害施加灼烧重伤（伤盾算、不由装备追加伤害施加），日炎另按自身定时器直接施加。共同状态规则：每秒取目标当前最大生命，首次1秒后；结束tick先末次灼烧付款再移除，此为通用半开持续区间的明确周期例外，不让该tick新攻击继续享受已到期状态。同类取最强不相加，同强度刷新保留跳伤相位；重伤减治疗不减护盾。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "鬼书和红霸符由正普攻/技能伤害施加灼烧重伤（伤盾算、不由装备追加伤害施加），日炎另按自身定时器直接施加。共同状态规则：每秒取目标当前最大生命，首次1秒后；结束tick先末次灼烧付款再移除，此为通用半开持续区间的明确周期例外，不让该tick新攻击继续享受已到期状态。同类取最强不相加，同强度刷新保留跳伤相位；重伤减治疗不减护盾。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         },
         {
           "id": "B-02",
           "label": "项目约定，非官方证据",
-          "decision": "MonsterCap=100 is used as a 100-health cap per burn tick against neutral-monster targets, after percent-max-HP calculation. Its official liveness and exact scope are not proven by this tooltip; no claim this is an official decoded field.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "decision": "MonsterCap=100 is used as a 100-health cap per burn pulse (once per 1 second / 20 simulation ticks) against neutral-monster targets, after percent-max-HP calculation. Its official liveness and exact scope are not proven by this tooltip; no claim this is an official decoded field.",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "将未被说明引用的MonsterCap=100暂解释为每只中立怪物每次灼烧伤害上限100；官方字段活性和适用范围仍未证实。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "将未被说明引用的MonsterCap=100暂解释为每只中立怪物每次灼烧伤害上限100；官方字段活性和适用范围仍未证实。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
       "numericalExamples": [
         {
           "given": "Target max HP 2000; 10 seconds uninterrupted; receives nominal healing 300",
-          "expected": "Burn 20 true damage at each of 10 ticks = 200 before other permitted modifiers; incoming heal 201. A neutral with max HP 20000 takes capped 100 per tick under B-02",
+          "expected": "Burn pulse: once every 1 second / 20 simulation ticks. After application at t, deal 20 true damage at t+20, t+40, ... t+200: 10 burn pulses, 200 total before permitted modifiers; incoming heal 201. A neutral with max HP 20000 is capped at 100 per burn pulse under B-02.",
           "status": "independent-hand-calculated-oracle-not-executed"
         }
       ],
@@ -558,10 +562,12 @@
           "id": "B-03",
           "label": "项目约定，非官方证据",
           "decision": "Evaluate current health/current maximum health immediately before each incoming damage packet. Above 50% uses 15% durability; equal or below uses 8%. BaseDamageReduction and EmpowerDamageReduction are not separately applied because their values duplicate tooltip-linked durability fields; official legacy/liveness remains unproven.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "坚定之心每个受伤包前检查当前生命比例：严格高于50%用15%减伤，等于或低于用8%；两项未引用的旧名称减伤字段只保留，不再重复生效。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "坚定之心每个受伤包前检查当前生命比例：严格高于50%用15%减伤，等于或低于用8%；两项未引用的旧名称减伤字段只保留，不再重复生效。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -752,10 +758,12 @@
           "id": "B-04",
           "label": "项目约定，非官方证据",
           "decision": "Map undecoded {1543aa48}=0.1 to base damage amp. Add conditional 0.15 for total 0.25 while active; 14.23 notes corroborate this total but do not decode the key. Positive shield damage triggers after the triggering packet, even if shield survives. Repeated shield damage refreshes 60 ticks; does not stack itself.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "破防者哈希字段暂映射为10%基础增伤，与触发的15%相加为25%；对护盾造成正伤害即可触发，无须破盾，触发包之后生效，重复触发刷新3秒不叠层。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "破防者哈希字段暂映射为10%基础增伤，与触发的15%相加为25%；对护盾造成正伤害即可触发，无须破盾，触发包之后生效，重复触发刷新3秒不叠层。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -928,10 +936,12 @@
           "id": "B-05",
           "label": "项目约定，非官方证据",
           "decision": "Grant AS at elapsed 40,80,...,360 ticks (9 grants), including final 18s boundary before immunity expires. Gained AS persists until combat ends. The 14.23 total +27% corroborates nine grants, while retention/order are project details. Immunity blocks new CC application rather than cleansing an already-existing status. Final grant at360 is an explicit periodic exception to GLOBAL-NUMERIC-01; immunity still expires before new crowd-control actions at that boundary.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "水银在第2、4…18秒共获得9次3%攻速，18秒边界先加攻速再结束免控；累计攻速保留到战斗结束；免控阻止新控制，不视作清除已有控制。 第18秒末次攻速是通用到期顺序的明确例外，但该边界新控制已可生效。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "水银在第2、4…18秒共获得9次3%攻速，18秒边界先加攻速再结束免控；累计攻速保留到战斗结束；免控阻止新控制，不视作清除已有控制。 第18秒末次攻速是通用到期顺序的明确例外，但该边界新控制已可生效。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -1072,10 +1082,12 @@
           "id": "B-06",
           "label": "项目约定，非官方证据",
           "decision": "Use {1543aa48}=0.15 as base damage amp, exactly once. BonusDamage=0.15 is a same-value corroborating but unreferenced field, retained but not applied independently. The tooltip has no mechanical token; this meaning is project convention, not proof of a decoded hash.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "死亡之帽哈希字段暂映射为15%增伤，只计一次；BonusDamage同值字段保留但不另应用，说明仅为风味文本，不能声称哈希已被官方解码。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "死亡之帽哈希字段暂映射为15%增伤，只计一次；BonusDamage同值字段保留但不另应用，说明仅为风味文本，不能声称哈希已被官方解码。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -1274,10 +1286,13 @@
           "id": "B-07",
           "label": "项目约定，非官方证据",
           "decision": "Red Buff uses {1543aa48}≈0.03 as base damage amp. BonusDamage≈0.06, HexRangeIncrease=1, and {9f5117db}=100 remain raw and are not applied: absent current tooltip support, their active purpose is unknown. In particular do not add old range or 6% amp. This hashed-field choice is project convention, not an official version conflict resolution.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "红霸符哈希字段暂取3%基础增伤；BonusDamage约6%、HexRangeIncrease=1及另一哈希100仅原样保留，不额外施加增伤、射程或未知效果，其历史活性未证实。"
+          "adoptionStatus": "active-provisional-user-approved",
+          "decisionZh": "红霸符哈希字段暂取3%基础增伤；BonusDamage约6%、HexRangeIncrease=1及另一哈希100仅原样保留，不额外施加增伤、射程或未知效果，其历史活性未证实。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+          "verificationStatus": "pending-historical-verification"
         }
       ],
       "unknowns": [],
@@ -1575,17 +1590,19 @@
           "id": "B-08",
           "label": "项目约定，非官方证据",
           "decision": "Sunfire first pulse is at elapsed 40 ticks, then every 40. Choose an in-range living target without this holder’s active Sunfire burn before refreshing another; rank by distance then stable unit ID. If none in range skip without banking pulses. Use B-02 cap100. Preserve existing effects.ts:142 calculation order: (base HP + flat HP) * (1 + sum of percent-HP bonuses), consistently across Warmog/Sterak/Sunfire.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "日炎首轮选敌在开战2秒后，此后每2秒；范围内优先未受本件灼烧的存活敌人，再按距离、稳定单位ID选取，无目标则跳过；怪物每跳上限沿用100。生命加成沿用现有effects.ts顺序：(基础生命+固定生命)×(1+合计比例)。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "日炎首轮选敌在开战2秒后，此后每2秒；范围内优先未受本件灼烧的存活敌人，再按距离、稳定单位ID选取，无目标则跳过；怪物每跳上限沿用100。生命加成沿用现有effects.ts顺序：(基础生命+固定生命)×(1+合计比例)。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
       "numericalExamples": [
         {
           "given": "Holder base HP1000 +150 flat HP; no other bonuses",
-          "expected": "Max HP1242=(1000+150)*1.08 under existing effects.ts order; pulses at2s,4s; selected2000maxHP enemy burns20/tick",
+          "expected": "Max HP1242=(1000+150)*1.08 under existing effects.ts order. Apply burn at 2s (simulation tick40), first burn pulse at 3s (tick60). A selected 2000maxHP enemy takes20 per burn pulse, once every1 second /20 simulation ticks; neutral cap100 is per burn pulse, not per simulation tick.",
           "status": "independent-hand-calculated-oracle-not-executed"
         }
       ],
@@ -1769,10 +1786,12 @@
           "id": "B-09",
           "label": "项目约定，非官方证据",
           "decision": "Every 100 ticks starting at100, snapshot living allies within distance<=1, including holder. Heal missingHP*1500/10000, cap by1000 per target per pulse, then incoming-heal modifiers and maxHP clamp, with final integer quantization under GLOBAL-NUMERIC-01; MaxHeal cap interpretation is project convention. Apply 1000 Bps all-damage durability for100 ticks, not only AoE despite key name. Same buff from multiple Redemptions refreshes and does not sum. Separate healing pulses still each resolve in stable order.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "救赎首次在5秒，此后每5秒，对1格内存活友军（包括自身）取样；每目标回复15%已损生命，暂将未引用的MaxHeal解释为每次每目标上限1000，再应用受治疗修正和生命上限，整数化沿用通用数值规则。10%坚韧适用于所有符合坚韧减免资格的伤害而非仅范围伤害，持续5秒且同类不叠加；多件治疗分别结算。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "救赎首次在5秒，此后每5秒，对1格内存活友军（包括自身）取样；每目标回复15%已损生命，暂将未引用的MaxHeal解释为每次每目标上限1000，再应用受治疗修正和生命上限，整数化沿用通用数值规则。10%坚韧适用于所有符合坚韧减免资格的伤害而非仅范围伤害，持续5秒且同类不叠加；多件治疗分别结算。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -1937,10 +1956,13 @@
           "id": "B-10",
           "label": "项目约定，非官方证据",
           "decision": "On each completed ordinary attack, select nearest living enemy other than its primary target, tie by stable ID; if none exists, no bolt. Bolt uses current holder AD, cannot crit and cannot generate another attack or recursively emit equipment damage procs; explicitly documented physical-damage status listeners (Last Whisper A-20) and defender damage listeners (Titan B-16) may observe the packet; it is equipment physical damage. Tooltip says nearby but no radius is given: select nearest available enemy without inventing a numeric cutoff.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "飓风每次完成普攻后向不同于主目标的最近存活敌人发射箭矢，同距离按稳定ID；无次目标则不发射。说明未给数值射程，因此不臆造距离上限；箭矢按当前攻击力55%造成物理装备伤害，不暴击、不附带攻击特效、不递归引发装备追加伤害；轻语A-20的物理伤害减甲监听和防守方泰坦B-16受伤监听属于明确允许的状态触发例外。"
+          "adoptionStatus": "active-provisional-user-approved",
+          "decisionZh": "飓风每次完成普攻后向不同于主目标的最近存活敌人发射箭矢，同距离按稳定ID；无次目标则不发射。说明未给数值射程，因此不臆造距离上限；箭矢按当前攻击力55%造成物理装备伤害，不暴击、不附带攻击特效、不递归引发装备追加伤害；轻语A-20的物理伤害减甲监听和防守方泰坦B-16受伤监听属于明确允许的状态触发例外。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+          "verificationStatus": "pending-historical-verification"
         }
       ],
       "unknowns": [],
@@ -2179,10 +2201,12 @@
           "id": "B-11",
           "label": "项目约定，非官方证据",
           "decision": "Bonus mana5 granted once per completed ordinary attack, subject to existing mana lock/cap and mana-less-unit rules; bolt/proc packets are not extra attacks. Do not change maximum mana. Attacks that complete but are blocked still count as attacks for this trigger.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "青龙刀每次完成普通攻击额外回5法力，仍受法力锁、法力上限和无法力规则限制；被格挡但已完成的攻击计数，箭矢和装备追加伤害不算新攻击，不改变最大法力。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "青龙刀每次完成普通攻击额外回5法力，仍受法力锁、法力上限和无法力规则限制；被格挡但已完成的攻击计数，箭矢和装备追加伤害不算新攻击，不改变最大法力。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -2351,10 +2375,12 @@
           "id": "B-12",
           "label": "项目约定，非官方证据",
           "decision": "Aura membership is recalculated from current positions each simulation tick, distance<=2; remove its contribution immediately on exit or holder death. Sunder uses greatest active same-family percent rather than additive reductions. Initial +25 armor/MR expires after200ticks; aura itself lasts while holder alive, not just10 seconds.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "薄暮法袍每tick按当前距离更新2格内减甲光环，离开或持有者死亡即移除；同类减甲取最高值不相加。开战25双抗只持续10秒，光环不随该加成一起结束。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "薄暮法袍每tick按当前距离更新2格内减甲光环，离开或持有者死亡即移除；同类减甲取最高值不相加。开战25双抗只持续10秒，光环不随该加成一起结束。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -2585,11 +2611,14 @@
         {
           "id": "B-13",
           "label": "项目约定，非官方证据",
-          "decision": "Count completed ordinary attacks per item, proc on3,6,9; do not count bolts/procs as attacks. Hit primary target then up to3 different nearest living enemies, tie by stable ID, no repeated target within chain. Apply shred before each item damage packet. No AP scaling/crit unless explicitly source-authorized. Hashed values4 are unreferenced candidates, not additional bounces.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "decision": "Count completed ordinary attacks per item, proc on3,6,9; do not count bolts/procs as attacks. Hit primary target then up to3 different nearest living enemies, tie by stable ID, no repeated target within chain. Apply shred before each item damage packet. No AP scaling/crit unless explicitly source-authorized. Hashed values4 are unreferenced candidates, not additional bounces. B2 fixes the distance anchor to the primary target at attack completion; sort all additional candidates once by hex distance then stable ID, not successive-hop distance.",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "电刀每件独立计普通攻击，在第3、6、9次触发；主目标后按距离和稳定ID最多命中另外3个不同敌人，单次不重复。先施加减魔抗再结算固定35魔法装备伤害，不额外按AP或暴击缩放；三个未引用哈希值4不另增跳数或星级收益。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "电刀每件独立计普通攻击，在第3、6、9次触发；主目标后按距离和稳定ID最多命中另外3个不同敌人，单次不重复。先施加减魔抗再结算固定35魔法装备伤害，不额外按AP或暴击缩放；三个未引用哈希值4不另增跳数或星级收益。 B2明确距离参照为攻击完成时的主目标，额外候选一次按距主目标六角距离和稳定ID排序，不逐跳更换参照。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+          "b2Contract": "docs/M8_RULES.md (m8-b2-v1): authoritative interface/timing clarification; not runtime implementation or official script evidence"
         }
       ],
       "unknowns": [],
@@ -2750,10 +2779,13 @@
           "id": "B-14",
           "label": "项目约定，非官方证据",
           "decision": "At or below60% current/maxHP after a damage event, if still alive, activate once; check also combat-start if already below. Add25% maxHP using B-08 formula and increase current HP by the same absolute maxHP increase (not a heal event); add35% base AD, persist to combat end. Lethal damage does not resurrect. Calculation-order convention follows B-08; precise timing and current-HP adjustment are project choices.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "血手在伤害结算后存活且生命≤60%时每战触发一次，开战已满足也检查；增加25%最大生命和35%攻击力至战斗结束，生命计算沿用固定值先加、比例后乘，并同时增加等量当前生命（不算治疗）；致死伤害不能复活。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "血手在伤害结算后存活且生命≤60%时每战触发一次，开战已满足也检查；增加25%最大生命和35%攻击力至战斗结束，生命计算沿用固定值先加、比例后乘，并同时增加等量当前生命（不算治疗）；致死伤害不能复活。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+          "b2Contract": "docs/M8_RULES.md (m8-b2-v1): authoritative interface/timing clarification; not runtime implementation or official script evidence"
         }
       ],
       "unknowns": [],
@@ -2969,11 +3001,14 @@
         {
           "id": "B-15",
           "label": "项目约定，非官方证据",
-          "decision": "Refresh generated items once per stable round ID on holder at round start; equip during a round generates at most once for that round. Reserve all3 slots; generated children occupy the reserved extra slots and cannot be independently sold, transferred, combined, dropped or converted into permanent inventory. Sell/transfer the parent moves or returns only the parent; child lifecycle ends with it. These lifecycle choices do not authorize an unverified random pool.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "decision": "Refresh generated items once per stable round ID on holder at round start; equip during a round generates at most once for that round. Reserve all3 slots; generated children occupy the reserved extra slots and cannot be independently sold, transferred, combined, dropped or converted into permanent inventory. Sell/transfer the parent moves or returns only the parent; child lifecycle ends with it. These lifecycle choices do not authorize an unverified random pool. Persist the round roll and level snapshot by [parent equipment instance ID, round ID]. Sale return, upgrade transfer, re-equip and restore reuse the same pair without RNG; only holder-bound temporary effects end and may be rebuilt.",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "窃贼手套按稳定轮次ID每轮至多刷新一次，当轮中途穿戴也不重复刷；本体连同临时件预留全部3槽。临时件不能独立出售、转移、合成、掉落或变永久物品；本体出售/转移只处理本体，子件随本体结束；此生命周期约定不批准未知抽取池。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "窃贼手套按稳定轮次ID每轮至多刷新一次，当轮中途穿戴也不重复刷；本体连同临时件预留全部3槽。临时件不能独立出售、转移、合成、掉落或变永久物品；本体出售/转移只处理本体，子件随本体结束；此生命周期约定不批准未知抽取池。 当轮组合及等级快照以“本体装备实例ID＋轮次ID”保存；卖出单位返还、升星转移、重穿和读档均恢复同一组合，不重抽、不耗RNG，只有持有者绑定的临时效果结束并可重建。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence.",
+          "b2Contract": "docs/M8_RULES.md (m8-b2-v1): authoritative interface/timing clarification; not runtime implementation or official script evidence"
         },
         {
           "id": "TG-01",
@@ -3194,10 +3229,12 @@
           "id": "B-16",
           "label": "项目约定，非官方证据",
           "decision": "Gain one stack per completed ordinary attack and one per incoming positive resolved damage packet (shield absorption counts); self-costs and zero-damage packets do not count. If both triggers occur separately both count, but one attack is not duplicated by its proc packets. Retain stacks to combat end; grant cap resists once upon reaching25, not each later attack. Damage-over-time packets can grant defender stacks but do not recursively proc equipment damage.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "泰坦每次完成普通攻击及每个实际承受正伤害包各加1层（护盾承伤计入），生命消耗和零伤害不计；两种独立事件均可计数，但攻击追加包不重复算攻击。持续到战斗结束，25层双抗只发一次；持续伤害可叠受击层但不递归触发装备伤害。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "泰坦每次完成普通攻击及每个实际承受正伤害包各加1层（护盾承伤计入），生命消耗和零伤害不计；两种独立事件均可计数，但攻击追加包不重复算攻击。持续到战斗结束，25层双抗只发一次；持续伤害可叠受击层但不递归触发装备伤害。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -3383,10 +3420,12 @@
           "id": "B-17",
           "label": "项目约定，非官方证据",
           "decision": "Evaluate current health fraction for each stat/damage/healing query, not only combat start. Exactly50% doubles neither side (strict above/below). The unreferenced {f23e83fc}=2 is retained but not applied independently: double multiplier2 comes from desc; no random branch is used. Omnivamp heals on eligible actual postmitigation damage, excludes self-costs and equipment-proc chains under GLOBAL-PROC-01; no undocumented AoE penalty introduced.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "正义之手动态检查当前生命，严格高于50%翻倍攻击/法强，严格低于翻倍吸血，恰好50%都不翻倍；哈希2不再额外应用。吸血按实际结算后合资格伤害计算，不以自身生命消耗或递归装备触发计吸血，也不臆造范围伤害吸血惩罚；在治疗前取样以避免循环。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "正义之手动态检查当前生命，严格高于50%翻倍攻击/法强，严格低于翻倍吸血，恰好50%都不翻倍；哈希2不再额外应用。吸血按实际结算后合资格伤害计算，不以自身生命消耗或递归装备触发计吸血，也不臆造范围伤害吸血惩罚；在治疗前取样以避免循环。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],
@@ -3513,10 +3552,12 @@
           "id": "B-18",
           "label": "项目约定，非官方证据",
           "decision": "Preserve existing effects.ts:142: (base HP + all flat HP including600) * (1 + sum of percentage maxHP bonuses including12%). This is the inherited project computation order, not a script proof; equipping outside combat does not generate an in-combat heal event.",
-          "approvalStatus": "pending-itemized-confirmation",
+          "approvalStatus": "user-approved",
           "blocking": false,
-          "adoptionStatus": "active-provisional-nonblocking",
-          "decisionZh": "狂徒生命沿用现有公式：(基础生命+600及其他固定生命)×(1+12%及其他生命比例)，多项比例相加不连乘；非战斗重新穿戴不伪造战斗内治疗。"
+          "adoptionStatus": "active-user-approved",
+          "decisionZh": "狂徒生命沿用现有公式：(基础生命+600及其他固定生命)×(1+12%及其他生命比例)，多项比例相加不连乘；非战斗重新穿戴不伪造战斗内治疗。",
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User approved all 41 audited project conventions and B2 audit recommendations on 2026-10-07; project policy, not official script evidence."
         }
       ],
       "unknowns": [],

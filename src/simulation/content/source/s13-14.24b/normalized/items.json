@@ -3386,12 +3386,12 @@
     }
   ],
   "reviewCounts": {
-    "approvedConventions": 5,
+    "approvedConventions": 46,
     "archivedEquipment": 44,
     "blockingEquipmentUnknowns": 0,
     "countingRule": "Conventions counted by unique ID; unknowns by explicit item issue, excluding formal localization.",
     "equipmentUnknowns": 0,
-    "pendingConventionRecords": 41,
+    "pendingConventionRecords": 0,
     "requiredEquipment": 44,
     "reviewedEffectFields": 218,
     "sourceReviewedEquipment": 44,
