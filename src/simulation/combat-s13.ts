@@ -111,10 +111,18 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 };
   }).sort(compareIds);
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
-  const ctx: AbilityContext = { resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
+  const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
   initializeMechanisms(ctx);
+  if (state.tick === 0) {
+    // Initial programs finish at tick 0 before opening occupancy/eligibility freezes.
+    ctx.tick = 0;
+    for (const unit of units) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: 0 };
+    for (const unit of units) emitMechanismSignal(ctx, { event: 'combat-start', tick: 0, actionSeq: 0, actorId: unit.id, targetId: unit.id, cast: null });
+    ctx.tick = tick;
+    for (const unit of units) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: tick };
+  }
   let openingState = state.openingState;
   const openingUnits = (atTick = tick) => units.map(u => ({ ...targetUnit(u, atTick), controlled: active(u, atTick, 'stun').length > 0 || effectiveStatuses(u.mechanismState!.statuses, atTick).some(g => g.kind === 'stun') }));
   if (state.openingDefinitions?.length && !openingState) {
@@ -139,7 +147,6 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       }
     }
   }
-  if (state.tick === 0) for (const unit of units) emitMechanismSignal(ctx, { event: 'combat-start', tick: 0, actionSeq: 0, actorId: unit.id, targetId: unit.id, cast: null });
   const startHp = new Map(units.map(u => [u.id, u.hp])), manaBefore = new Map(units.map(u => [u.id, u.mana]));
   const spent = new Map<string, number>(), attackMana = new Map<string, number>(), killMana = new Map<string, number>();
   const hookMana = new Map<string, number>();

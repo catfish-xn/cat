@@ -36,7 +36,13 @@ function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: S
   const before = frozen ? { id: frozen.unitId, hp: frozen.hpAfterDamage, maxHp: frozen.maxHpBeforeThresholdEffects } : undefined;
   return { startingRows: startingRows(holder.team, holder.startingCell?.row ?? holder.cell.row) ?? undefined, holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
 }
-function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source, application: StatusApplication, applicationId = 'source'): void {
+function clearMechanismTarget(ctx: AbilityContext, unit: S13Unit, actionSeq: number): void {
+  const before = unit.targetId; if (before === null) return;
+  unit.targetId = null;
+  ctx.events.push({ type: 'targetChanged', tick: ctx.tick, unitId: unit.id, before, after: null });
+  emitMechanismSignal(ctx, { event: 'target-changed', tick: ctx.tick, actionSeq, actorId: unit.id, targetId: null, cast: null });
+}
+function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source, application: StatusApplication, applicationId = 'source', actionSeq = 0): void {
   ensureMechanisms(target, ctx.tick, ctx.combatId);
   const identity = effectIdentity(target.mechanismState!.combatId, source, target.id, applicationId);
   const result = applyStatusContribution(target.mechanismState!.statuses, identity, application, ctx.tick);
@@ -50,8 +56,7 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
   ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, status, group, reason: 'applied' });
   if (application.kind === 'untargetable' && application.activation === 'immediate') {
     for (const enemy of ctx.units) if (enemy.team !== target.team && enemy.targetId === target.id) {
-      ctx.events.push({ type: 'targetChanged', tick: ctx.tick, unitId: enemy.id, before: target.id, after: null });
-      enemy.targetId = null;
+      clearMechanismTarget(ctx, enemy, actionSeq);
     }
   }
   if (application.kind === 'burn') synchronizeBurnTask(target, identity.key);
@@ -87,7 +92,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       const request = makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(source)), target.id, seq, ordinal, 'direct']), target.id, 'direct', null, [{ source, numerator: value, denominator: 1 }]);
       ctx.heals.push({ source, targetId: target.id, amount: value, request, ...(periodic ? { periodic } : {}) }); break;
     }
-    case 'apply-status': applyFrozenStatus(ctx, target, source, effect.status, effect.status.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'); break;
+    case 'apply-status': applyFrozenStatus(ctx, target, source, effect.status, effect.status.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source', seq); break;
     case 'modify-stat': {
       const rawModifier = effect.modifier;
       const modifier = rawModifier.value.kind === 'counter' ? { ...rawModifier, value: { kind: 'constant' as const, amount: safeNumber(integer(damageContext?.counters?.[rawModifier.value.counterId] ?? 0) * integer(rawModifier.value.perCount, Number.MIN_SAFE_INTEGER)) } } : rawModifier;
@@ -104,7 +109,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       }
       applyFrozenStatus(ctx, target, source, { kind: modifier.value.kind === 'constant' && modifier.value.amount < 0 ? 'stat-debuff' : 'stat-buff', magnitudeBps: 0,
         duration: effect.duration, stackPolicy: effect.stackPolicy, activation: effect.activation, polarity: modifier.value.kind === 'constant' && modifier.value.amount < 0 ? 'harmful' : 'beneficial', removable: modifier.value.kind === 'constant' && modifier.value.amount < 0,
-        modifier, damageFilter: null, onEnd: null }, damageContext?.applicationId ?? (effect.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source')); break;
+        modifier, damageFilter: null, onEnd: null }, damageContext?.applicationId ?? (effect.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'), seq); break;
     }
     case 'grant-shield': {
       const identity = effectIdentity(target.mechanismState!.combatId, source, target.id), legacyKey = source.parentItemInstanceId === null ? sourceKey(source) : identity.key, old = target.shieldLayers.find(l => l.key === legacyKey);
@@ -131,7 +136,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       target.mechanismState = { ...target.mechanismState!, periodicTasks: cancelAttachedBurns(target.mechanismState!.periodicTasks, result.ended.map(e => e.contribution)) };
       for (const ended of result.ended) ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, reason: 'cleansed', group: { targetId: target.id, kind: ended.contribution.application.kind, contributions: [ended.contribution], effectiveSourceKey: null, effectiveMagnitudeBps: 0, nextPulseAtTick: null },
         status: { key: ended.contribution.key, source: ended.contribution.source, kind: 'stun', amount: 0, startsAtTick: ended.contribution.appliedAtTick, expiresAtTick: ctx.tick } });
-      target.targetId = null; break;
+      clearMechanismTarget(ctx, target, seq); break;
     }
     default: throw new RangeError(`Effect ${effect.kind} belongs to a later B3 batch`);
   }
