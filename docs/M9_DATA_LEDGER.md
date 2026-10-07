@@ -40,7 +40,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 修订对象固定为`74616d2`，合同依据固定为[B2 M8_RULES.md](https://github.com/catfish-xn/cat/blob/2632925/docs/M8_RULES.md)及[contracts.ts](https://github.com/catfish-xn/cat/blob/2632925/src/simulation/m8/contracts.ts)。**(a)已有冻结项目规则/表达可复用；(b)规划与选敌适配、保留内部接入边界；(c)M9新增规则、状态或生命周期系统。** (a)不代表所有新消费者已实现；(b)不授权扩充冻结的Effect、Trigger、目标或伤害类型枚举，也不表示M9执行政策已批准。
 
-R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，现归为**普通技能46条、实验条件3条、unknown 21条**；证据写回各英雄字段表。在这71条中，仅`ASKillGainHyperroll`继续作为明确其他模式字段排除。原件JSON、指针、对象hash、七槽数组和补丁采纳数字均未改动。`unknown`表示未证实字段活跃性/绑定，不能据此删除描述已明确的技能效果；已有B2规则另列Q*-F，不重开批准。
+R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，现归为**46 普通 + 3 实验 + 4 已取证改造周期 + 17 待绑定 = 70（其中17条保留unknown）**；证据写回各英雄字段表。在这71条中，仅`ASKillGainHyperroll`继续作为明确其他模式字段排除。原件JSON、指针、对象hash、七槽数组和补丁采纳数字均未改动。`unknown`表示未证实字段活跃性/绑定，不能据此删除描述已明确的技能效果；已有B2规则另列Q*-F，不重开批准。
 
 ## 2. 补丁字段核对与14.24b采纳值
 
@@ -373,10 +373,10 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 | Q05 | 混合，见F/P/D子项 | null/hash/未引用字段归档不激活；活跃且必需的未知字段才阻塞 | 区分未启用候选与必需属性/公式；不能把保留null当成完整召唤数据。 |
 | Q06 | Sion/Black Rose局部硬缺口 | Sion原命名字段PercentReviveHealth=.75、ShieldDuration=3秒、StunDuration=1秒已知；5档公告盾AP系数.75已知 | 缺实际召唤属性、成长/分档解锁及Shield数组的阶段/星级映射；已知数字不等于系统完整，不把它们重列unknown。 |
 | Q07 | Sevika完整技能硬缺口 | 三份子技能、Jackpot挂接/AD2.5映射、概率关系缺失 | 取得正文/执行引用与随机表；不能等概率或用最大字段代填；不阻塞其他随机目标技能/抽样设施。 |
-| Q08 | Rumble自毁升级3局部conflict | 原20与公告200倍冲突；前两级/已知升级数值独立 | 取得升级level/星级/额外倍率公式；基础技能与其他已知分支可推进，暂不开放升级3须明确范围。 |
+| Q08 | Rumble四处局部数值采用待裁决 | 自毁升级3：原20与公告200倍；Tankbuster升级1/2：英雄100/150与同档改造effects 120/180；Repairing Microbots升级3：英雄最大HP比例.4与同档effects .25（见§6兰博证据表） | 同档variables/effects同优先级，不能自动选值；取得执行脚本/更高优先级证据后另行裁决。仅上述分支暂缓；基础技能不被这些冲突阻塞，其他改造仍须分别通过Q12资格/生命周期政策与取证。 |
 | Q09 | 装备数据缺口＋生命周期政策 | Scrap9光明装备本体数据硬缺；普通池、Academy选取、Enforcer10槽冲突/归还是政策问题 | 补光明装备本体表；提出暂授/没收/归还政策，不阻塞普通技能和无关低档。 |
 | Q10 | F/P/D及已批准行为变更 | 50ms、旧19几何/时序已冻结；新英雄几何/时序政策待提出 | 范德尔M9历史暴击资格已决定并单列§3.4；B3不改B2。 |
-| Q11 | Viktor核心硬缺口；普通无蓝沿合同 | Machine Herald能量3/8已知，载体mana不是能量；完整属性转换比例/资格仍缺 | 新能量系统/转换证据只卡Viktor完整机制；Amumu/Zeri普通无蓝可沿G08，不混为同一个缺口。 |
+| Q11 | Viktor核心硬缺口；Amumu与Zeri资格分开 | Machine Herald能量3/8已知，载体mana不是能量；完整属性转换比例/资格仍缺。Amumu mana=0；Zeri原mana=3，正文是每第三次攻击替换火花 | 新能量系统/转换证据只卡Viktor完整机制；Amumu普通无蓝沿G08。Zeri须显式定义普通回蓝/主动施法资格和攻击计数适配（S09(b)），不能把mana=3当普通最大法力或与Amumu并列无蓝；此澄清不阻塞本次分批规划签收。 |
 | Q12 | 经济硬缺口＋单人适配政策 | 黑市/非法装备、战利品、价格缺表卡对应经济系统；Mel救命及Emissary/Ambessa对手进度需要单人政策 | 补固定奖励表/价格/阈值；提出资格归属/唯一收据。Ambessa每对手+2双抗、PlayersDefeated/7已知；定义身份、去重、封顶/结算，不用每次胜利或PVE值替代；只卡其使者奖励和完整四使者，不卡基础技能。 |
 | Q13 | 星级/强化范围决定 | 当前1–3星、Hero未启用可推进；七槽保留，Singed B覆盖1–4星已知 | 若启用4星或Hero再核查分支，不外推4星基础属性。 |
 | Q14 | 混合，见F/P/D子项 | 旧Irelia/Rell/Loris/Tristana执行已冻结；新分享/链接/传播以政策为主 | 提出有限、确定性、防回传和同tick政策/手算例；必要的未知数值/公式局部取证。 |
@@ -4741,9 +4741,9 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 | `NumMissile` | [5,5,5] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `WoundDuration` | [5,5,5] | 普通技能；desc明确引用@WoundDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `ManaPerMissile` | [20,20,20] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Tankbuster_RefreshDuration` | [3,3,3] | unknown；改造子效果的执行引用/刷新政策未证实；仅该升级分支Q05/Q12 |
-| `Tankbuster_APDamage_Level1` | [100,100,100] | Junker King条件改造；Q08/Q12 |
-| `Tankbuster_APDamage_Level2` | [150,150,150] | Junker King条件改造；Q08/Q12 |
+| `Tankbuster_RefreshDuration` | [3,3,3] | Junker King 条件改造；周期/持续时间及字段引用已知：每3秒执行Tankbuster伤害，`/items/1151/desc`与`effects.Tankbuster_RefreshDuration`一致；仅获得对应改造后启用，首次执行/重叠/生命周期政策仍见Q12 |
+| `Tankbuster_APDamage_Level1` | 数值采用待裁决：英雄[100,100,100] / 改造effects 120 | Junker King条件改造；同源同优先级冲突，双方原值及pointer见下表；不在本轮选值；Q08/Q12 |
+| `Tankbuster_APDamage_Level2` | 数值采用待裁决：英雄[150,150,150] / 改造effects 180 | Junker King条件改造；同源同优先级冲突，双方原值及pointer见下表；不在本轮选值；Q08/Q12 |
 | `Tankbuster_APDamage_Level3` | [1600,1600,1600] | Junker King条件改造；Q08/Q12 |
 | `SelfDestruct_ResistGainIncrease` | [0.25,0.25,0.25] | Junker King条件改造；Q08/Q12 |
 | `SelfDestruct_ResistDamage_Level1` | [1.6,1.6,1.6] | Junker King条件改造；Q08/Q12 |
@@ -4754,15 +4754,35 @@ R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，
 | `Flamethrower_Damage_Level2` | [45,45,45] | Junker King条件改造；Q08/Q12 |
 | `Flamethrower_Damage_Level3` | [600,600,600] | Junker King条件改造；Q08/Q12 |
 | `Flamethrower_TicksPerSecond` | [2,2,2] | Junker King条件改造；Q08/Q12 |
-| `RepairingMicrobots_RefreshDuration` | [3,3,3] | unknown；改造子效果的执行引用/刷新政策未证实；仅该升级分支Q05/Q12 |
+| `RepairingMicrobots_RefreshDuration` | [3,3,3] | Junker King 条件改造；周期/持续时间及字段引用已知：每3秒恢复生命，`/items/1150/desc`与`effects.RepairingMicrobots_RefreshDuration`一致；仅获得对应改造后启用，首次执行/重叠/生命周期政策仍见Q12 |
 | `ReparingMicrobots_MaxHealthHeal_Level1` | [0.06,0.06,0.06] | Junker King条件改造；Q08/Q12 |
 | `ReparingMicrobots_MaxHealthHeal_Level2` | [0.06,0.06,0.06] | Junker King条件改造；Q08/Q12 |
-| `ReparingMicrobots_MaxHealthHeal_Level3` | [0.4,0.4,0.4] | Junker King条件改造；Q08/Q12 |
-| `PetriciteRod_RefreshDuration` | [5,5,5] | unknown；改造子效果的执行引用/刷新政策未证实；仅该升级分支Q05/Q12 |
+| `ReparingMicrobots_MaxHealthHeal_Level3` | 数值采用待裁决：英雄[0.4,0.4,0.4] / 改造effects 0.25 | Junker King条件改造；同源同优先级冲突，双方原值及pointer见下表；不在本轮选值；Q08/Q12 |
+| `PetriciteRod_RefreshDuration` | [5,5,5] | Junker King 条件改造；周期/持续时间及字段引用已知：每5秒发射一次，`/items/1145/desc`与`effects.PetriciteRod_RefreshDuration`一致；仅获得对应改造后启用，首次执行/重叠/生命周期政策仍见Q12 |
 | `PetriciteRod_APDamage_Level1` | [350,350,350] | Junker King条件改造；Q08/Q12 |
 | `PetriciteRod_APDamage_Level2` | [525,525,525] | Junker King条件改造；Q08/Q12 |
 | `PetriciteRod_APDamage_Level3` | [6000,6000,6000] | Junker King条件改造；Q08/Q12 |
-| `PetriciteRod_DOTDuration` | [15,15,15] | unknown；改造子效果的执行引用/周期政策未证实；仅该升级分支Q05/Q12 |
+| `PetriciteRod_DOTDuration` | [15,15,15] | Junker King 条件改造；周期/持续时间及字段引用已知：该次魔法伤害持续15秒，`/items/1145/desc`与`effects.PetriciteRod_DOTDuration`一致；仅获得对应改造后启用，首次执行/重叠/生命周期政策仍见Q12 |
+
+#### 兰博关联改造证据与同源冲突（本轮只补证，不选值）
+
+以下三件都来自§1的同一固定归档，并列于标准`TFTSet13_Evolved`的items成员集合；不是其他模式。英雄变量和物品effects在B1优先级中同属14.24客户端来源，现有优先级不能自动裁决谁覆盖谁。改造等级Level1/2/3不是英雄星级；周期有证据不等于改造购买/最强兰博归属、首次执行、重叠和生命周期政策已确定（Q12）。
+
+| 改造物品原始apiName | 原件pointer / 标准成员pointer | 完整对象SHA-256 | 正文字段绑定与已知周期 |
+| --- | --- | --- | --- |
+| `TFT13_JunkerKing_Tankbuster` | `/items/1151`；`/setData/8/items/85` | `d815dba669b93eb819d57fb05fe5a70a45f544c51dae8c575284bfa8b8e6ef65` | `@Tankbuster_RefreshDuration@` → 3秒（每3秒执行Tankbuster伤害） |
+| `TFT13_JunkerKing_RepairingMicrobots` | `/items/1150`；`/setData/8/items/82` | `a5b307950394ed13ac6988c94b229fe734de340e3c0fe18e76b6e7c020402724` | `@RepairingMicrobots_RefreshDuration@` → 3秒（每3秒恢复生命） |
+| `TFT13_JunkerKing_PertriciteRod` | `/items/1145`；`/setData/8/items/81` | `687a9a06abf09f8238c8b7f33d549364799b241e70a57b9c331052e8fd1fe3d8` | `@PetriciteRod_RefreshDuration@` → 5秒（每5秒发射一次）; `@PetriciteRod_DOTDuration@` → 15秒（该次魔法伤害持续15秒） |
+
+`TFT13_JunkerKing_PertriciteRod`及`ReparingMicrobots`均保留源档拼写，不按英文纠错重命名。英雄来源为`/setData/1/champions/37/ability/variables`；下表给出每个原始变量索引。英雄七槽原件仍在上方，物品effects直接给标量；表中的比较采用N显示，不改原始数组。
+
+| 字段 / 最小阻塞分支 | 英雄原值与pointer | 同档物品原值与pointer | 采用状态 |
+| --- | --- | --- | --- |
+| `Tankbuster_APDamage_Level1` | 原1–3星槽 `[100.0,100.0,100.0]`；`/setData/1/champions/37/ability/variables/5/value` | `120.0`；`/items/1151/effects/Tankbuster_APDamage_Level1` | **数值采用待裁决**；双方原值保留，不选择英雄值或物品值；Q08 |
+| `Tankbuster_APDamage_Level2` | 原1–3星槽 `[150.0,150.0,150.0]`；`/setData/1/champions/37/ability/variables/6/value` | `180.0`；`/items/1151/effects/Tankbuster_APDamage_Level2` | **数值采用待裁决**；双方原值保留，不选择英雄值或物品值；Q08 |
+| `ReparingMicrobots_MaxHealthHeal_Level3` | 原1–3星槽 `[0.4000000059604645,0.4000000059604645,0.4000000059604645]`；`/setData/1/champions/37/ability/variables/20/value` | `0.25`；`/items/1150/effects/ReparingMicrobots_MaxHealthHeal_Level3` | **数值采用待裁决**；双方原值保留，不选择英雄值或物品值；Q08 |
+
+Q08现限四处：以上Tankbuster升级1/2、Repairing Microbots升级3，以及自毁升级3（20/公告200倍）。不扩成基础技能或所有改造均数值不明；无冲突分支也须满足相应改造资格与Q12政策才可完整签收。
 
 ### TFT13_MissMage — Mel
 
@@ -7281,7 +7301,7 @@ Rammus待确认原件：`/setData/8/traits/17`；未找到对应63英雄或官�
 - 19现有英雄cost/基础stats/AS与tick间隔及全部已导入三元组逐字段比较：0差异；五羁绊已实现档的系数核对一致，缺失档和执行语义单列§3。
 - 每英雄机制矩阵63行，G01–G12统计由矩阵累加；S01–S13按子能力拆分(a)/(b)/(c)，另列FD01固定减伤、P01选敌与衰减；Firelight/Emissary补齐关系。统计是规划需求，不是代码已实现覆盖率。
 - 本次验证原始记录投影、JSON pointer/hash、字段覆盖和文档范围；未运行游戏对局/浏览器验收，不宣称任何新英雄或机制已通过执行测试。
-- 审阅修订校验：70条误标/45名英雄已逐条分类（普通46、实验3、unknown 21）；仅ASKillGainHyperroll保留其他模式标签。Q03/Q05/Q10/Q14各有F/P/D三种状态；范德尔M9裁决与B3冻结规则分别列明。
+- 审阅修订校验：70条误标/45名英雄已逐条分类（46 普通 + 3 实验 + 4 已取证改造周期 + 17 待绑定 = 70）；仅ASKillGainHyperroll保留其他模式标签。Q03/Q05/Q10/Q14各有F/P/D三种状态；范德尔M9裁决与B3冻结规则分别列明。
 - 独立从本文重新解析107个JSON块，与不可变原件投影相等；106个已列完整记录hash和pointer匹配（另1个为Rammus排除原件）；63行技能机制矩阵重新计数与G01–G12统计一致；8条关系强化均在标准Evolved的augments成员集合内；文内只读Python检查可离线执行。
 
 从本分支checkout离线回查原件（需要本地已fetch B1 commit；不依赖当前网络站点内容）：
