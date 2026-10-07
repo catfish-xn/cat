@@ -1,6 +1,6 @@
 # M9 S13 英雄与羁绊数据台账
 
-状态：**数据整理完成，历史证据缺口保留；未冻结为可运行目录。** 本分支仅新增本文，不修改游戏代码、内容版本、digest、规则、测试、CI或部署。英文身份和描述来自已归档原件；未取得同版本中文原件，不把临时译名当官方名称。
+状态：**数据整理完成，历史证据缺口保留；未冻结为可运行目录。** 本分支仅新增、修订本文，不修改游戏代码、内容版本、digest、规则、测试、CI或部署。英文身份和描述来自已归档原件；未取得同版本中文原件，不把临时译名当官方名称。
 
 ## 1. 基线、证据与范围
 
@@ -16,6 +16,7 @@
 | 取得时间 | 沿用B1 manifest：用户原下载时间 unknown；接收UTC 2026-10-07T02:50:39Z，归档UTC 02:52:29.147883。本文离线解压核验，不冒充新下载。 |
 | 裁决政策 | B1 `provenance/source-policy.json` 与B1版 `M8_PLAN.md` §2.1.1；当前main的计划尚未含B1补充，本文明确沿用用户指定B1规则。 |
 | 补丁证据 | [Riot 14.24（含12/10 A、12/11、12/17 B更新）](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/)；[Riot 14.23](https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/)；2026-10-07核对 |
+| 本次审阅基线 | 台账 `74616d26780add9b52b321cd2844ba8b56e3e6ee`；B2冻结合同 `2632925b44404da754129d48b49a3ad23f0f7b7d`；2026-10-07用户审阅及范德尔M9裁决 |
 | 实现对照 | main的 `units.ts`、`content/abilities.ts`、`content/traits.ts`、`source-manifest.ts`、`combat-s13*.ts`、`strategy-snapshot.ts`、`s13-rules.ts` |
 
 ### 1.1 选择器的实际边界
@@ -33,7 +34,13 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 - 英雄技能七槽原数组的1/2/3索引为1/2/3星；4星保留原索引4供后续研究，Singed的B更新明确覆盖4星。0/5/6槽只归档，不能当普通1星或自动外推。羁绊effects按minUnits/maxUnits解释，25000是开放上界标记；Emissary只有恰好1或4，不可用“>=1最高档”算法激活2/3个。
 - 审阅值 `N(x)` 为十进制四位、ROUND_HALF_UP；明确比例×10000→Bps，百分数点×100→Bps，秒×20→50ms tick。例如Singed AttackSpeed=100是100百分数点→10000Bps，Sniper=18是1800Bps/hex，Camille AD系数2.3是23000Bps，DR=.55是5500Bps。AP点数/HP/AD/格数/次数不乘10000。单位不能仅按字段名字含Percent猜测；`TOOLTIPONLY`、hash键和未解释宏不作运行换算。
 - 例：Caitlyn raw AD系数1.7999999523162842→N=1.8→18000Bps；AS .550000011920929→5500Bps；50ms攻速间隔ceil(20/.55)=37tick是项目离散化，不冒充源档整数。HP/AD升星1/1.8/3.24为main既有项目规则，本文基础stats是一星原记录，不扩充4星基础属性。
-- HERO/Hero字段：强化分支，默认不激活；Experiment字段：实验条件分支，不能像旧slice一样永久丢弃；Hyperroll/_HR、DU和PVE字段：其他模式，只保留不采用；null不等于0；哈希键及没有描述引用的字段：保留、待确认其活跃性/语义。本文不新批准任何项目约定。
+- HERO/Hero字段：强化分支，默认不激活；Experiment字段：实验条件分支，不能像旧slice一样永久丢弃；有明确模式标记和来源依据的Hyperroll/_HR、独立DU标记和PVE字段：其他模式，只保留不采用；不能用大小写不敏感的`DU`子串筛选`Duration`、`Reduction`、`Durability`等普通字段；null不等于0；哈希键及没有描述引用的字段：保留、待确认其活跃性/语义。本文不新批准任何项目约定。
+
+### 1.3 审阅修订与字段适用性
+
+修订对象固定为`74616d2`，合同依据固定为[B2 M8_RULES.md](https://github.com/catfish-xn/cat/blob/2632925/docs/M8_RULES.md)及[contracts.ts](https://github.com/catfish-xn/cat/blob/2632925/src/simulation/m8/contracts.ts)。**(a)已有冻结项目规则/表达可复用；(b)规划与选敌适配、保留内部接入边界；(c)M9新增规则、状态或生命周期系统。** (a)不代表所有新消费者已实现；(b)不授权扩充冻结的Effect、Trigger、目标或伤害类型枚举，也不表示M9执行政策已批准。
+
+R1逐条复核原71个“其他模式”标签：70条误标涉及45名英雄，现归为**普通技能46条、实验条件3条、unknown 21条**；证据写回各英雄字段表。在这71条中，仅`ASKillGainHyperroll`继续作为明确其他模式字段排除。原件JSON、指针、对象hash、七槽数组和补丁采纳数字均未改动。`unknown`表示未证实字段活跃性/绑定，不能据此删除描述已明确的技能效果；已有B2规则另列Q*-F，不重开批准。
 
 ## 2. 补丁字段核对与14.24b采纳值
 
@@ -71,7 +78,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 14.24 | `TFT13_Zeri` / `ability.PercentAttackDamage` | [1,2,3] | [2,2,2] | [2,2,2]；AD系数；比例×10000→Bps | 已包含 |
 | 14.24 | `TFT13_KogMaw` / `ability.DamageOnAttack` | [1,2,3] | [48,72,120] | [48,72,120]；AP伤害系数；按desc AP/100 | 已包含 |
 | 14.24 | `TFT13_Swain` / `ability.Heal` | [1,2,3] | [240,300,380] | [240,300,380]；HP或护盾系数；按desc AP/100 | 已包含 |
-| 14.24 | `TFT13_Swain` / `ability.HealPerSecond` | [1,2,3] | [70,90,125] | [70,90,125]；AP伤害系数；按desc AP/100 | 已包含 |
+| 14.24 | `TFT13_Swain` / `ability.HealPerSecond` | [1,2,3] | [70,90,125] | [70,90,125]；每秒治疗量，按AP/100缩放；G05＋G06 | 已包含 |
 | 14.24 | `TFT13_Jinx` / `ability.ZapPercentAD` | [3] | [20] | [20]；AD系数 | 已包含 |
 | 14.24 | `TFT13_Jinx` / `ability.FlameChompersPercentAD` | [3] | [20] | [20]；AD系数 | 已包含 |
 | 14.24 | `TFT13_Nocturne` / `stats.attackSpeed` | 基础一星 | 0.8 | 0.8；攻击/秒 | 已包含 |
@@ -133,13 +140,13 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 对象 | 14.24最终证据与处理 | 待确认 |
 | --- | --- | --- |
-| Black Rose / Sion | 4档阶段HP系数0.9/1.25/2/2.7/3.5；5档1.0/1.4/2.1/3/3.65；7档复活75%HP；5档解锁后的效果按治疗缺失生命处理，受重伤。12/10五档：护盾AP系数0.75、持续3s、眩晕1s。 | Q06：trait hash键未证明对应上述字段；保留官方目标，不能覆盖猜中的hash键。Sion候选原件见附录。 |
+| Black Rose / Sion | 4档阶段HP系数0.9/1.25/2/2.7/3.5；5档1.0/1.4/2.1/3/3.65；7档复活75%HP；5档解锁后的效果按治疗缺失生命处理，受重伤。12/10五档：护盾AP系数0.75、持续3s、眩晕1s。 | Q06：Sion候选记录已有PercentReviveHealth=.75、ShieldDuration=3、StunDuration=1（附录）；这些数字不是unknown。分档激活、实际成长与Shield星级/阶段映射尚缺，不能覆盖猜中的trait hash键。 |
 | Sevika Jackpot | 14.24公告AD比例目标2.5；Sevika主desc的三条子技能仍为未展开宏。 | Q07：不能把Spell2/3_Bonus_*值4任意改为2.5；需实际子技能/Jackpot字段映射。 |
 | Rumble 自毁升级3 | 公告20000%双抗=200倍，源SelfDestruct_ResistDamage_Level3为20。 | Q08：升级level/星级/内部额外乘数不明；前两级1.6/2.4和喷火30/45/600已匹配，最高自毁列conflict，不用20或200伪造已冻结答案。 |
 | Gangplank 近战 | 14.24移除施法净化；B更新近战AD65。原stats AD50、armor0/MRnull/mana10是换形载体记录。 | Q02：近战AD65为已确定形态目标，不能覆盖全英雄共用stats并断言远程也65；不加入已移除净化。 |
 | Enforcer(10) | 14.24没收排除非英雄和纹章；原desc概括所有敌方装备。 | Q09：数值依effects；执行资格依补丁；没收状态/归还时点仍需证据。 |
 | Urgot实验加成 | 14.24实验位移为贴近目标；施法授予8%最大HP盾及20%AS，5s；不是仅开战/施法后才可贴近。 | Q04：普通技能与实验技能分开，移动策略仍需合同。 |
-| Draven / Vander | 14.24明确斧头攻击能独立暴击；Vander强化击需要技能暴击授权。 | Q10：main按攻击通用暴击处理Vander，需要改资格；此文只记录差异。 |
+| Draven / Vander | 14.24明确斧头攻击能独立暴击；Vander强化击需要技能暴击授权。 | M9行为变更（已决定，见§3.4）：M9按14.24历史资格修正；B3继续遵守B2的basic-attack/basic，不修改冻结行为。 |
 | Viktor / Zeri | 12/17修复8 Visionary不能额外获得资源。 | Q11：通用回蓝管线须加资格；不能从Viktor载体mana100/initialMana0反推Chaos Energy。 |
 | Chem-Baron contraband | 12/17多件非法装备数值也改变，但属于特殊装备记录，不是英雄或trait数值字段。 | Q12：不把非法装备的盾/AD/AP/复活字段拼进Chem-Baron自身effects；黑市实现需另建完整特殊装备账本。 |
 | Family / Junker King | 14.24 Family5显示劫掠进度；Junker King改造的周期由源NumRounds1Star=3支持。 | Q12：显示tracker不提供完整奖励池、价格与跨轮执行数据。 |
@@ -190,46 +197,52 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 对象 | 已实现行为 / 限制 | 全量需求或待确认 | main依据 |
 | --- | --- | --- | --- |
-| 全部19 | 固定三元组、M5六角线/锥形、技能默认不暴击 | 补充1–4星政策、逐包暴击资格、全羁绊；不沿用No spell critical strikes当历史事实 | `content/source-manifest.ts`、`s13-rules.ts` |
-| Irelia | 衰减盾；盾清零也提前执行ireliaEnd；邻格范围 | 原desc说到期攻击且“周围和前方”；破盾/到期与形状需明确项目约定，不能直接称历史一致 | `combat-s13.ts`、`combat-s13-abilities.ts` |
-| Maddie | 6发固定偏移0/4/9/13/18/23tick、24tickchannel、最远目标和路径拦截 | 来源TotalSpellTime1.15s=23tick；固定6发时序为已有项目适配，需独立时序依据 | `combat-s13-abilities.ts` |
-| Darius | 4次20tick流血，整数余数分配、同源同目标替换 | 基本系数一致；重施/叠加政策未由文案证实 | `combat-s13-abilities.ts` |
-| Lux | 最低当前HP友军盾及下一攻击魔法包；没有DamageReduction效果 | DamageReduction在desc未引用，不能因字段存在新增减伤 | `combat-s13-abilities.ts` |
-| Zyra | 主目标晕、两名最近敌人副伤 | 没有实验真伤；最近的参照点为实现约定，需明确 | `combat-s13-abilities.ts` |
-| Tristana | 致命主包一次、额外HP过量才弹射；找到新敌人才+125Bps永久AD；次tick弹射不二次减伤 | 持续成长已实现，仍非完整官方过量/归因边界证据；ASKillGain名字不能当AS增长 | `combat-s13.ts`、`strategy-snapshot.ts` |
+| 全部19 | 固定三元组、M5六角线/锥形、技能默认不暴击 | 现有1–3星、50ms及19技能表达已冻结；新增4星/Hero、逐包新资格和全羁绊按最小范围登记；不沿用No spell critical strikes当历史事实 | `content/source-manifest.ts`、`s13-rules.ts` |
+| Irelia | 衰减盾；盾清零也提前执行ireliaEnd；邻格范围 | B2 §14/A03已冻结60tick衰减、真实吸收、耗尽/到期下一规划爆发及近身范围；历史“周围和前方”仍不等于现有几何，不重开项目确认 | `combat-s13.ts`、`combat-s13-abilities.ts` |
+| Maddie | 6发固定偏移0/4/9/13/18/23tick、24tickchannel、最远目标和路径拦截 | B2 §14已冻结24tick引导和6发偏移及失效回退；来源1.15s=23tick不自动替换现有离散时序；M9新增时序政策另列 | `combat-s13-abilities.ts` |
+| Darius | 4次20tick流血，整数余数分配、同源同目标替换 | B2 §14已冻结20/40/60/80tick、余数分配和同源同目标替换；历史文案未证明全部边界，不影响项目合同已定 | `combat-s13-abilities.ts` |
+| Lux | 最低当前HP友军盾及下一攻击魔法包；没有DamageReduction效果 | B2 §14已冻结绝对HP→距离→ID排序、80tick盾和ArmedAttack；DamageReduction字段未引用，历史活跃性unknown，不新增减伤 | `combat-s13-abilities.ts` |
+| Zyra | 主目标晕、两名最近敌人副伤 | B2 §14距持有者、excludePrimary和列表顺序已冻结；没有实验真伤，实验资格/效果另列Q04 | `combat-s13-abilities.ts` |
+| Tristana | 致命主包一次、额外HP过量才弹射；找到新敌人才+125Bps永久AD；次tick弹射不二次减伤 | B2 §14/A02已冻结一次溢出、下一tick固定目标及提交时成长；Match持久化已有，不写成从零新增；ASKillGain不能当AS增长 | `combat-s13.ts`、`strategy-snapshot.ts` |
 | Urgot | 爆炸+20%减甲6s | 没有实验位移/盾/AS条件分支 | `combat-s13-abilities.ts` |
-| Rell | 线伤、双向偷抗60s | 系数已一致；重复施法与负抗/独立持续需核验 | `combat-s13-abilities.ts` |
-| Leona | DR×AP后限100%，到期邻格伤害 | 常规系数一致；上限/重复覆盖为项目行为 | `combat-s13-abilities.ts` |
-| Vander | 停止攻击2.5s、抗性、下一物理攻击；队友cost<=2计数 | 下一击沿攻击crit分支：与补丁需技能crit授权冲突；低费计数含自己/备战席政策未证实 | `combat-s13-abilities.ts`、`strategy-snapshot.ts` |
-| Kog'Maw | 永久AS+25%，每3次cast加1射程、攻击魔法包 | MaxAS字段未形成技能专用cap证据；cap语义待确认，不能仅据20字段判20% | `combat-s13-abilities.ts` |
-| Scar | 最近3目标晕/伤及自疗 | 没有Firelight周期位移/追踪治疗 | `combat-s13-abilities.ts` |
-| Ezreal | 邻格群伤后中心另一个包 | 原desc的中心伤是追加还是总值以及包命中资格需源脚本；现有处理是项目口径 | `combat-s13-abilities.ts` |
-| Loris | 邻格转伤；盾到期锥形被实现为离当前最近敌人1格范围；转移仅一次 | 转伤护盾耗尽资格、扇形、受击账本与源死后行为未完整证实 | `combat-s13.ts`、`combat-s13-abilities.ts` |
-| Nami | 最多4命中、不重复单位、3格跳转 | NumBounces=3加初次命中；去重由实现选定，TimesHitTarget字段/文案不足以独立证明全部分支 | `combat-s13-abilities.ts` |
-| Corki | 每tick一弹、邻域轮转分配、每7弹倍率7、固定偷甲；没有规则侧移 | source要求侧移；MissilesPerLaunchAttack=5被排除为运行节奏依据；固定分配为项目适配 | `combat-s13-abilities.ts` |
-| Garen | 每个有效伤害action聚合后回HP（非每包）；HP/AP盾 | PassiveDamagePercent=null不填0；无Emissary最大HP共享 | `combat-s13.ts`、`content/source-manifest.ts` |
-| Zoe | 主目标/最远副目标/返回主目标，多轮副目标去重 | 基本系数一致；目标死亡、射程与去重是执行边界 | `combat-s13-abilities.ts` |
-| Caitlyn | 随机敌人作圆心，4/20发分配5s；心点头击、双抗削减60s | 源要求随机敌人簇，不是均匀抽单个敌人即可证明一致；前排偏好和BonusSearchRange单位待确认 | `combat-s13-abilities.ts` |
+| Rell | 线伤、双向偷抗60s | B2 §14及§15 R4已冻结transfer-stat、独立来源/持续、下一tick生效与敌死不撤回；历史公式证据缺口另列Q14-D，不重开冻结规则 | `combat-s13-abilities.ts` |
+| Leona | DR×AP后限100%，到期邻格伤害 | 常规系数一致；B2 §14已冻结60tick、同源替换、控制继续/死亡取消；既有上限仍按项目规则 | `combat-s13-abilities.ts` |
+| Vander | 停止攻击2.5s、抗性、下一物理攻击；队友cost<=2计数 | B2 §14冻结50tick引导、低费友军取样和下一击basic-attack/basic；M9按用户决定另作历史暴击资格变更（§3.4），B3不得修改 | `combat-s13-abilities.ts`、`strategy-snapshot.ts` |
+| Kog'Maw | 永久AS+25%，每3次cast加1射程、攻击魔法包 | B2 §14/A12已冻结本场累计AS和每3cast加1hex；Duration=60不截断本场增益；MaxAS活跃性/单位仍unknown，不仅据20判20% | `combat-s13-abilities.ts` |
+| Scar | 最近3目标晕/伤及自疗 | 普通技能最近3目标/眩晕及自疗已冻结；Firelight周期位移S01与累计承伤治疗S05/G06未实现，见§4.2 | `combat-s13-abilities.ts` |
+| Ezreal | 邻格群伤后中心另一个包 | B2 §14冻结范围包与主目标追加包分列、允许重复主目标；历史是否总值的证据另列Q03-D，不阻塞已有表达 | `combat-s13-abilities.ts` |
+| Loris | 邻格转伤；盾到期锥形被实现为离当前最近敌人1格范围；转移仅一次 | B2 §14冻结80tick盾/分担、最低ID保护者、一次转伤不重减伤和最近敌1格爆发，盾耗尽不提前爆发；历史扇形/完整归因证据另列 | `combat-s13.ts`、`combat-s13-abilities.ts` |
+| Nami | 最多4命中、不重复单位、3格跳转 | B2 §14已冻结初次+3跳、上一目标中心3格与去重；TimesHitTarget历史字段活跃性unknown，不重开已有去重 | `combat-s13-abilities.ts` |
+| Corki | 每tick一弹、邻域轮转分配、每7弹倍率7、固定偷甲；没有规则侧移 | B2 §14已冻结21/21/35弹、偏移n、目标优先及2格ID轮转、每7弹×7、下一tick平减甲；侧移归S01新系统，不重开旧分配 | `combat-s13-abilities.ts` |
+| Garen | 每个有效伤害action聚合后回HP（非每包）；HP/AP盾 | B2 §14已冻结owner/action汇总positive-hp-damage、仍存活才自疗、仅盾伤不给治疗；null保留，无Emissary共享 | `combat-s13.ts`、`content/source-manifest.ts` |
+| Zoe | 主目标/最远副目标/返回主目标，多轮副目标去重 | B2 §14已冻结4格内最远未命中副目标、返回主目标及循环次数；历史额外分支证据不足不等于该合同待决定 | `combat-s13-abilities.ts` |
+| Caitlyn | 随机敌人作圆心，4/20发分配5s；心点头击、双抗削减60s | B2 §14已冻结100tick、floor偏移、每发1词、存活敌ID排序后modulo中心和共用中心；历史敌簇/前排偏好、BonusSearchRange证据另列，B3不改抽样 | `combat-s13-abilities.ts` |
 
-上述差异审计不修改既有游戏行为；此前批准的slice简化不自动等于M9全量实现获准继续简化。
+上述项目行为依据B2冻结合同§14/§15，不因历史证据尚未齐全而再次要求批准。新增英雄的几何/时序以及历史对齐变更单独登记；本次不修改任何游戏行为。
+
+### 3.4 M9行为变更：范德尔暴击资格（已决定）
+
+**用户2026-10-07决定：M9按14.24历史规则修正范德尔强化击，B3继续遵守B2不改。** 当前B2强化击替换整个普攻包，沿`basic-attack/basic`暴击：没有技能暴击授权也可能暴击。M9目标是强化击需要技能暴击授权；无授权时不能暴击，获得授权后按技能资格计算。14.24公告明确区别德莱文斧头无需该授权，不能同时改为同一种资格。
+
+这是已批准的M9行为变更，不是待裁决Q10项，也不是B3第三批接入机制时可顺手修正的合同。M9实现时须另行同步规则/内容版本、digest、每包资格与独立验收例（至少无授权/有授权，及德莱文对照）；具体delivery合同在M9实现阶段明确，不能在本文伪称已改代码。
 
 ## 4. 每个技能的通用机制需求
 
-下面是人工对照desc/补丁的**实施需求分析**，不冒充客户端已经给出通用执行图。每个英雄一行，计入其被动、选中形态与条件实验加成；换形缺失后排技能仅注明依赖，不伪造后排数值。G08计主动施法接入（Viktor为专属资源接口）；G03计伤害包暴击资格审阅，不等于这些包默认能暴击；G05计周期/多发/延时，不把所有带持续时间的状态都算周期任务。G09计非单纯主动施法的攻击、命中、击杀、盾储能、施法计数等触发。G11没有已证实的原生技能消费者，位移和复活不冒充不可选中。G12没有普通技能直接生成临时装备的证据；Scrap/Academy/Enforcer属于羁绊需求，不计技能。
+下面是人工对照desc/补丁的**实施需求分析**，不冒充客户端已经给出通用执行图。每个英雄一行，计入其被动、选中形态与条件实验加成；换形缺失后排技能仅注明依赖，不伪造后排数值。G08计主动施法接入需求（Viktor需要M9专属资源系统，当前冻结G08没有特殊资源接口）；G03计伤害包暴击资格审阅，不等于这些包默认能暴击；G05计周期/多发/延时，不把所有带持续时间的状态都算周期任务。G09计非单纯主动施法的攻击、命中、击杀、盾储能、施法计数等触发。G11没有已证实的原生技能消费者，位移和复活不冒充不可选中。G12没有普通技能直接生成临时装备的证据；Scrap/Academy/Enforcer属于羁绊需求，不计技能。
 
-| 英雄 / apiName | 技能名 | G01–G12需求 | 超出G的机制 |
+| 英雄 / apiName | 技能名 | G01–G12需求 | 复用与扩展索引（见§4.2/§4.3） |
 | --- | --- | --- | --- |
-| Amumu / `TFT13_Amumu` | Obsolete Technology | G01, G02, G03, G05, G09, G10 | 无已识别扩展 |
-| Powder / `TFT13_Blue` | Misfit Toy | G01, G02, G03, G04, G05, G08, G10 | 无已识别扩展 |
+| Amumu / `TFT13_Amumu` | Obsolete Technology | G02, G03, G05, G09, G10 | FD01(c)：固定承伤扣减阶段，G02尚未覆盖 |
+| Powder / `TFT13_Blue` | Misfit Toy | G01, G02, G03, G04, G05, G08, G10 | P01(b)：最大敌群规划 |
 | Darius / `TFT13_Darius` | Decimate | G02, G03, G05, G06, G08, G10 | 无已识别扩展 |
 | Draven / `TFT13_Draven` | Spinning Axes | G02, G03, G08, G09 | S09 |
 | Steb / `TFT13_Fish` | Field Medicine | G02, G03, G06, G08, G09, G10 | S05 |
 | Irelia / `TFT13_Irelia` | Defiant Dance | G02, G03, G05, G07, G08, G09, G10 | S05 |
 | Lux / `TFT13_Lux` | Prismatic Barrier | G02, G03, G07, G08, G09, G10 | S09 |
-| Morgana / `TFT13_Morgana` | Tormented Soul | G02, G03, G05, G07, G08, G10 | 无已识别扩展 |
+| Morgana / `TFT13_Morgana` | Tormented Soul | G02, G03, G05, G07, G08, G10 | P01(b)：未诅咒目标资格与回退 |
 | Violet / `TFT13_Red` | 1-2-3 Combo | G02, G03, G04, G05, G08 | 无已识别扩展 |
 | Maddie / `TFT13_Shooter` | Fan the Hammer | G02, G03, G05, G08, G10 | 无已识别扩展 |
-| Singed / `TFT13_Singed` | Dangerous Mutations | G01, G08, G09, G10 | 无已识别扩展 |
+| Singed / `TFT13_Singed` | Dangerous Mutations | G01, G05, G08, G09, G10 | P01(b)：本轮伤害最多友军、4秒攻速衰减 |
 | Trundle / `TFT13_Trundle` | Desperate Chomp | G01, G02, G03, G06, G08 | 无已识别扩展 |
 | Vex / `TFT13_Vex` | Looming Darkness | G02, G03, G05, G08, G10 | 无已识别扩展 |
 | Zyra / `TFT13_Zyra` | Grasping Roots | G02, G03, G04, G05, G08, G10 | S11 |
@@ -251,14 +264,14 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | Cassiopeia / `TFT13_Cassiopeia` | Thorned Miasma | G02, G03, G08, G09, G10 | 无已识别扩展 |
 | Renni / `TFT13_Chainsaw` | Sludgerunner's Smash | G02, G03, G04, G05, G06, G08, G10 | 无已识别扩展 |
 | Ezreal / `TFT13_Ezreal` | Essence Flux | G02, G03, G08, G10 | 无已识别扩展 |
-| Scar / `TFT13_FlyGuy` | Sumpsnipe Surprise | G02, G03, G04, G06, G08, G10 | 无已识别扩展 |
+| Scar / `TFT13_FlyGuy` | Sumpsnipe Surprise | G02, G03, G04, G06, G08, G10 | 技能自身无新增扩展；羁绊Firelight见S01/S05/G06 |
 | Gangplank / `TFT13_Gangplank` | Harvest from Flames | G01, G02, G03, G06, G08, G10 | S03 |
-| Smeech / `TFT13_Gremlin` | Scrap Hacker | G01, G02, G03, G05, G08, G09, G10 | S01 |
+| Smeech / `TFT13_Gremlin` | Scrap Hacker | G01, G02, G03, G05, G08, G09, G10 | S01；P01(b)：装备最少敌人规划 |
 | Kog'Maw / `TFT13_KogMaw` | Upgrading Barrage Module | G01, G02, G03, G08, G09 | S09 |
 | Nami / `TFT13_Nami` | Ocean's Ebb | G02, G03, G08, G10 | 无已识别扩展 |
 | Nunu & Willump / `TFT13_NunuWillump` | ZOMBIE POWER!! | G01, G02, G03, G05, G08, G09, G10 | S11 |
 | Swain / `TFT13_Swain` | Demonic Ascension | G02, G03, G05, G06, G08, G09, G10 | S03 |
-| Twisted Fate / `TFT13_TwistedFate` | Wild Cards | G02, G03, G04, G06, G08, G10 | 无已识别扩展 |
+| Twisted Fate / `TFT13_TwistedFate` | Wild Cards | G02, G03, G04, G06, G08, G10 | P01(b)：最大圆形敌群规划 |
 | Ambessa / `TFT13_Ambessa` | Unrelenting Huntress | G01, G02, G03, G04, G06, G08, G09, G10 | S01, S09 |
 | Corki / `TFT13_Corki` | Broadside Barrage | G01, G02, G03, G04, G05, G08, G09, G10 | S01 |
 | Dr. Mundo / `TFT13_DrMundo` | Maximum Dosage | G01, G02, G03, G05, G06, G08, G09, G10 | S11 |
@@ -287,60 +300,106 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 机制 | 63英雄技能需求数 | 60基础 / 3补充 | 说明 |
 | --- | --- | --- | --- |
-| G01 | 30 | 28 / 2 | 属性/条件修饰 |
+| G01 | 29 | 27 / 2 | 属性/条件修饰；不把阿木木固定减伤当属性flat |
 | G02 | 62 | 59 / 3 | 物理/魔法/真实伤害包 |
 | G03 | 62 | 59 / 3 | 逐包暴击资格 |
 | G04 | 24 | 22 / 2 | 状态/削减/控制 |
-| G05 | 34 | 31 / 3 | 周期/延时/多发 |
+| G05 | 35 | 32 / 3 | 周期/延时/多发；含辛吉德衰减规划需求 |
 | G06 | 18 | 17 / 1 | 治疗/吸血 |
 | G07 | 13 | 12 / 1 | 护盾/吸收/到期 |
-| G08 | 61 | 58 / 3 | 施法/法力资格 |
+| G08 | 61 | 58 / 3 | 施法接入需求；Viktor专属资源尚未覆盖 |
 | G09 | 34 | 31 / 3 | 有限触发/计数/ICD |
 | G10 | 56 | 53 / 3 | 区域/多目标/位置 |
 | G11 | 0 | 0 / 0 | 不可选中/仇恨/清除 |
 | G12 | 0 | 0 / 0 | 临时装备授予/撤销 |
 
-### 4.2 G01–G12以外的机制及消费者
+### 4.2 机制复用与扩展需求（按子能力分类）
 
-| 编号 | 需要补的能力 | 技能消费者 | 边界/原因 |
+下表使用§1.3的(a)/(b)/(c)，同一个S编号按子能力拆行；“可复用”指冻结表达/既有行为，并不代表新英雄已施工或历史完全等价。消费者包含技能与羁绊，羁绊不重复加入§4.1技能计数。
+
+| 编号 / 子能力 | 分类 | 消费者 | 冻结能力、扩展与证据边界 |
 | --- | --- | --- | --- |
-| S01 | 规则位移／击退／拉拽 | Akali、Sett、Urgot、Smeech、Ambessa、Corki、Elise、Vi、Jayce、Sevika、Mordekaiser、Mel、Warwick | 移动路径、占格、碰撞、飞行和不可移动目标；G10只负责选目标，G11只负责仇恨。 |
-| S02 | 召唤、可放置单位与复活 | Elise、Silco、Jayce | Silco怪物、Elise后排蜘蛛、Jayce工坊及Black Rose Sion；所有权、单位生命周期、死亡/复活资格不在G11内。 |
-| S03 | 双形态目录与开战选择 | Gangplank、Swain、Elise、Jayce | Elise/Gangplank/Jayce/Swain按前后两排选形态，需双套属性/技能；G10可以选位置，不能变出缺失的形态数据。 |
-| S04 | 技能或目标的确定性随机 | Ziggs、Heimerdinger、Twitch、Caitlyn、Sevika | Sevika技能/Jackpot/改造、Caitlyn炮击、Twitch穿透和Heimer/Ziggs随机目标；G12的装备抽样不能直接代表技能概率。 |
-| S05 | 跨包数值累计、转移与链接 | Steb、Irelia、Rell、Tristana、Loris、Blitzcrank、Illaoi、LeBlanc、Malzahar、Mel | Irelia吸收量、Loris转伤、Mel护盾储能、LeBlanc链接真伤、Malzahar感染继承、Steb治疗共享、Rell双向偷抗、Tristana过量弹射和Illaoi汲取；需账本、快照和防递归。 |
-| S06 | 跨战斗永久成长 | Tristana、Mel | Tristana永久AD、Mel永久增伤及强化解锁羁绊成长；G01只改属性，G09只提供触发，仍需Match持久化与升星/出售政策。 |
-| S07 | 自适应伤害类型 | Camille | Camille按目标较低抵抗选择物理或魔法；不是看到trueDamage显示标签就判为真伤；同抗性裁决待证实。 |
-| S08 | 处决与吞噬 | Sevika、Warwick | Warwick及Sevika分支的处决阈值、击杀归因、对复活/免死/免疫目标资格；G02可记击杀，不等于已实现处决。 |
-| S09 | 替换攻击、技能轮转与动态射程 | Draven、Lux、Vander、Zeri、Kog'Maw、Ambessa、Twitch、Jinx、LeBlanc、Mordekaiser、Viktor | Draven斧头、Vander/Lux下一击、Zeri/Twitch/Mordekaiser/Viktor替换攻击、Jinx轮转、Ambessa姿态、Kog射程；需定义普攻/技能标签和消耗状态。 |
-| S10 | 专属资源和全量属性转换 | Viktor | Viktor Chaos Energy 3/8、固定0.55攻速、额外AD/AS/Mana转AP；G08只留特殊资源接口，未承诺完整执行器。 |
-| S11 | 实验格与共享实验加成 | Zyra、Urgot、Nunu & Willump、Dr. Mundo、Twitch、Warwick | Zyra/Urgot/Nunu/Mundo/Twitch/Warwick的实验增益有独立字段和开关；实验格生成、共享与七档倍增超出普通属性修饰。 |
-| S12 | 跨轮奖励、装备改造与购买 | Sevika、Rumble | Rumble永久改造、Sevika金币、Family劫掠、Chem-Baron黑市、Conqueror战利品、Academy赞助和Enforcer没收；G12仅支持临时授予。 |
-| S13 | 玩家淘汰拦截 | Mel | Mel累计PvP施法资格、一次性救命至1HP和永久增伤；必须在Match结算层，不能用战斗内G07护盾代替。 |
+| S01 规则位移、击退、拉拽 | (c) | Akali、Sett、Urgot、Smeech、Ambessa、Corki、Elise、Vi、Jayce、Sevika、Mordekaiser、Mel、Warwick；Firelight、Quickstriker | 需要权威坐标、占格、移动/飞行状态、碰撞和不可移动资格；G10攻击路径可复用，但不是移动单位命令。 |
+| S02 召唤、放置、复活 | (c) | Elise、Silco、Jayce；Black Rose/Sion | 实例身份、所有权、容量、创建/退出、死亡/复活生命周期；G11清仇恨不等于复活；召唤物属性/技能缺口见Q02/Q05/Q06。 |
+| S03 前后排镜像与开战取样 | (a) | Gangplank、Swain、Elise、Jayce；Form Swapper | 已有位置判断及开战取样可复用。 |
+| S03 双套目录与形态结果 | (c) | 同上 | 双套属性、技能和选定形态状态需M9系统；Q02阻塞完整双形态，位置已知不能补造属性。 |
+| S04 凯特琳现有随机中心 | (a) | Caitlyn | B2 §14冻结存活敌ID排序、每发1战斗词、modulo中心；共用一次选区，B3保持不变。 |
+| S04 其他目标/技能/权重规划 | (b) | Ziggs、Heimerdinger、Twitch、Sevika；High Roller | 候选集合、显式战斗RNG、抽样政策与有限AbilityPlan分开；规划后可交fixed目标；不借G12装备流，预览/失败/恢复不重抽。Sevika数据缺口统一Q07。 |
+| S05 吸收、偷抗、分担、溢出 | (a) | Irelia、Rell、Loris、Tristana | 盾真实吸收、transfer-stat、一次分担和继承溢出已有冻结表达/项目规则，沿§3.3和B2 §14。 |
+| S05 金额累计与结果取样 | (b) | Blitzcrank、Mel、Illaoi；Automata、Firelight（Zeri/Scar/Ekko消费者） | 接入absorbed/hpDamage/overkill/actual等权威金额与来源；Firelight自上次突进累计承伤→按20%/33%/40%治疗，周期6秒，复用G06；账本口径、清零/恢复/取样政策待提出。Illaoi汲取的跨目标结果取样与基础属性修饰分开。 |
+| S05 治疗分享、链接成员、感染传播 | (c) | Steb、LeBlanc、Malzahar；关系羁绊 | 需M9反应/关系模块、成员/来源/防回传/传播生命周期；最终伤害与治疗复用G02/G06。不能偷偷增加G09 heal-completed/death枚举。 |
+| S06 小炮成长与Match持久化 | (a) | Tristana | 已有成长入口及持久化、一次收据可复用，不能称全部从零新增。 |
+| S06 新成长及对手进度 | (c) | Mel；新增关系羁绊成长；Emissary/Ambessa | 新持久记录、来源、合成/出售政策；使者原desc为PlayersDefeated/7，每名已击败对手双抗+2（1/4使者档）。单人对手身份、去重、封顶7及收据政策待提出，不能每胜一场当新对手，也不能用AmbessaArmor_PVE=4替代。只影响使者奖励/四使者完整组合，不阻塞Ambessa基础技能。 |
+| S07 自适应类型解析 | (b) | Camille | 目标确定后在明确时点比较抵抗，落实为已有physical/magic请求；不新增adaptive枚举，显示trueDamage标签不代表真伤。等抗及取样时点政策待提出。 |
+| S08 处决与吞噬规则 | (c) | Sevika、Warwick；Blood Hunter | 处决资格、阈值、免死/复活/免疫交互、击杀归因及吞噬收益；不能用超大真伤或直接清零HP替代。 |
+| S09 一次强化、计数、射程 | (a) | Lux、Vander、Kog'Maw | ArmedAttack一次消费、施法计数和动态射程已有冻结表达；Vander历史资格作为已批准M9行为变更单列§3.4，B3不改。 |
+| S09 持续替换、多发弹药、姿态、轮转 | (b) | Draven、Zeri、Ambessa、Twitch、Jinx、LeBlanc、Mordekaiser、Viktor | 按状态生成有限多包计划；一次攻击完成只产生一次attack-completed，每包保留delivery/暴击资格；取消攻击不提前消费下一击，ArmedAttack一次消费不变。 |
+| S10 能量、固定攻速、属性转换 | (c) | Viktor；Machine Herald | Chaos Energy 3/8、固定0.55AS、额外AD/AS/Mana转AP需要独立系统。当前ManaState/ManaRequest只有普通法力，没有特殊资源接口；M9需新系统，B3应预留普通法力与施法提交的内部接入边界。完整转换公式仍缺Q11。 |
+| S11 实验资格、共享与来源 | (c) | Zyra、Urgot、Nunu & Willump、Dr. Mundo、Twitch、Warwick；Experiment | 实验格、共享成员、来源、倍增和存续是新系统；3/5/7档格数2/3/3、HP100/300/300已知；格位/镜像/重复来源等政策见Q04。 |
+| S11 资格确定后的具体效果 | (a) | 同上 | 伤害、护盾、攻速、控制等可组合现有表达；不表示共享系统已有，也不解锁未知宏公式。 |
+| S12 奖励、改造、购买、没收返还 | (c) | Sevika、Rumble；Family、Chem-Baron、Conqueror、Academy、Enforcer、Scrap、Junker King | 跨轮奖励表、价格、升级和装备所有权/归还属于Match系统；经济本体表缺口与执行政策分列Q09/Q12。 |
+| S12 已冻结临时装备部分 | (a) | Scrap/Enforcer的后续部分应用、撤销需求 | G12可复用TG-01抽池及应用/撤销表达；当前policyId、子件槽位和临时生命周期严格冻结，不放宽为任意改造/没收系统。 |
+| S13 玩家淘汰拦截 | (c) | Mel；Banished Mage | PvP施法资格累计、玩家HP、一次救命至1HP和终局顺序由Match结算；不是战斗护盾/不可选中；永久增伤记录同时关联S06。 |
 
-羁绊额外消费者：Black Rose→S02；Form Swapper→S03；High Roller→S04/S12；Firelight、Quickstriker→S01；Automata伤害累计→S05；Experiment→S11；Chem-Baron/Conqueror/Family/Junker King/Academy/Enforcer→S12；Machine Herald→S10；Banished Mage→S06/S13；Blood Hunter→S08；关系羁绊→跨英雄事件连动S05/S06/S09。Scrap临时合成和Enforcer没收/转授可复用G12的部分能力，但还需要S12装备来源与回滚政策。
+羁绊额外关系：Black Rose→S02；Form Swapper→S03；High Roller→S04/S12；Firelight→S01＋S05＋G06（不是只有位移）；Quickstriker→S01；Automata→S05；Emissary/Ambessa→S06/Q12；Experiment→S11；Chem-Baron/Conqueror/Family/Junker King/Academy/Enforcer/Scrap→S12；Machine Herald→S10；Banished Mage→S06/S13；Blood Hunter→S08；关系羁绊→S05/S06/S09。Scar普通技能的自疗和Firelight累计治疗是独立来源，Zeri/Ekko也因羁绊消费G06，但不算技能自身新增治疗。
+
+### 4.3 额外缺口与B3接入边界
+
+| 索引 / 分类 | 消费者与要求 | 冻结边界与最小待确认范围 |
+| --- | --- | --- |
+| FD01 (c)：固定承伤减伤阶段 | Amumu FlatDamageReduction=12/15/25，desc覆盖所有incoming damage；每秒火花另走G05/G02 | B2 G02只有百分比减伤，DamageInput没有固定扣减阶段；damageReduction属性flat不是固定HP扣减。M9须另定与抗性/百分比减伤/盾的顺序、最低伤害/零、真伤资格与多包取样；数值已知，阶段/资格政策待提出、历史脚本证据未齐。FlatDRCooldownPerAttacker=1活跃性/单位unknown（Q05-D），不能用incoming-basic-hit限缩所有承伤。此项涉及G02，不能只交G08–G12预留解决。 |
+| P01 (b)：选敌规划与衰减 | Singed本轮伤害最多友军；Powder最大敌群；Twisted Fate最大圆形敌群；Smeech装备最少敌人；Morgana未诅咒目标 | TargetSelector.order没有累计伤害/最大群等现成枚举；应在规划层算合法候选后提交fixed集合。分别提出本轮伤害口径（hpDamage或含absorbed）、取样时点、并列/空候选/回退、群中心与格域政策；不能只标G10就称已覆盖。 |
+| P01 (b)：攻速连续衰减的离散规划 | Singed AttackSpeed=100/120/160百分数点，Duration=4秒；G01＋G05 | 普通属性修饰没有衰减字段；M9须提出每tick取样、整数舍入、同源重施及到期政策。不能固定保持4秒后一次移除；衰减曲线的历史公式证据未齐（Q03-D），项目离散政策尚未批准（Q10-P）。 |
+| S04 (b)：随机规划→有限计划 | G08/G10 | 显式候选/RNG/抽样政策与词数变化一起提交；凯特琳现有ID/每发一词/modulo不变；其他技能不借装备流，失败/预览/恢复不重抽。 |
+| S05 (b)：权威结果→金额账本 | G09 | 保留source/actionSeq/packetId/parentPacketId与absorbed、hpDamage、overkill、actual；区分自然衰减与承伤。不把事件次数计数器变为金额累加器；金额状态、清零和恢复需M9合同，不扩充冻结Trigger。 |
+| S07 (b)：每目标取样→已有伤害类型 | G08/G02 | 目标确定后解析抵抗/金额，以physical或magic交G02；等抗与取样政策需M9明确，G02三种类型不变。 |
+| S09 (b)：一次动作→多个有限伤害包 | G08/G09 | attack-completed仍每动作一次；多段/穿透/双类型不重复增加鬼索、青龙刀、电刀计数；每包delivery/资格独立，取消不提前消费，ArmedAttack一次消费不变。 |
+| S10 (c)的内部接入边界 | G08 | 普通回蓝资格、成本确定、CastReceipt提交分开；未来能量不是actualManaSpent，青龙刀/蓝霸符不能直接给能量。B3仅保留边界，不实现能量玩法。 |
+| S01/S02 (c)的内部接入边界 | G10/G11 | 从权威棋盘及单位状态读取位置、存活/可选资格，不把单位集写死为开战名单；不可选中、伤害防止、死亡分开判定。B3不实现新生命周期。 |
+| S12 (c)的内部接入边界 | G12 | TG-01抽池与应用/撤销分开，保留实例/来源追溯；policyId、子件槽位及临时生命周期继续冻结。B3不扩大装备所有权玩法。 |
+
+以上(b)是规划和接入需求，不是冻结类型变更授权；(c)须在M9另写规则/schema/状态与独立验收。来源：[B2规则§2–§9、§14–§15](https://github.com/catfish-xn/cat/blob/2632925/docs/M8_RULES.md)，[B2 contracts.ts](https://github.com/catfish-xn/cat/blob/2632925/src/simulation/m8/contracts.ts)中DamageInput、ManaState、TargetSelector、Effect、AbilityPlan、ArmedAttack及临时装备类型。
 
 ## 5. 待确认项与证据边界
 
-| ID | 待确认范围 | 已知证据 | 下一证据/建议 |
-| --- | --- | --- | --- |
-| Q01 | B1 selector与14.24标准模式全量范围 | 60+3身份/共有记录一致已核实；M8旧selector仍固定TFTSet13 | 建议后续批准显式TFTSet13_Evolved标准补充/迁移策略；本次不改导入器。Rammus无对应英雄/官方上线证据，排除。 |
-| Q02 | 四名换形英雄完整属性与后排技能 | Elise/Gangplank/Jayce/Swain载体MR=null，stats有0抗性/10mana，仅一份技能 | 取得14.24客户端形态脚本/完整技能和属性表；近战GP AD65已确定，其他基础属性保持unknown，不能用0或另一个英雄代替。 |
-| Q03 | desc动态宏与遗漏技能字段 | Modified*/TFTUnitProperty/TFTTrait宏；Sevika三个子技能宏 | 取得固定版本拼接/计算脚本；系数原值可以审阅，组合公式/内部单位尚不能全部冻结。 |
-| Q04 | Experiment条件共享与加成 | 六位实验英雄的字段已保留；实验格/共享顺序与hash键不明 | 验证laboratory产生、共享、7档翻倍、获得/失去加成时点；不能沿用旧slice排除Experiment前缀。 |
-| Q05 | 原件未描述或null/hash数值字段 | 例Garen PassiveDamagePercent、GP NumBarrels、Mel DashLogic_LineWidth、trait哈希变量 | null保留，未知不填0；逐字段取得执行引用/含义证据。未引用的数值不自动激活。 |
-| Q06 | Sion成长、阶段系数、5档解锁与7档复活 | 公告值已归档，无法安全映射trait hash字段 | 取得Sion召唤参数脚本与14.24更正执行；不得将G11清仇恨视为复活。 |
-| Q07 | Sevika随机分支/Jackpot | 子技能未展开、随机概率含hash键，公告AD2.5缺字段映射 | 取得三份子技能和随机表；不得凭hash值估计概率或把最高字段当Jackpot系数。 |
-| Q08 | Rumble自毁最高级矛盾 | Level3 source20 vs 公告20000%=200倍；升级/星级口径待证实 | 保留conflict；取得改造计算公式；不沿用20也不盲改200。 |
-| Q09 | Enforcer没收与Scrap/Academy装备 | 补丁排除纹章/非英雄；全物品池/归还逻辑缺失 | 另建特殊装备/暂授生命周期证据；G12本身不足以完成没收、改造、赞助。 |
-| Q10 | 暴击资格、实际几何和技能时序 | Draven/Vander资格有官方区别；大部分技能具体包/路径/固定间隔不在desc | 逐包确定资格；固定50ms和M5几何作为项目约定供确认；治疗/盾不暴击。 |
-| Q11 | Viktor资源和无主动技能英雄资格 | 载体0/100mana不等于能量；Banished Mage有HR/DU参数；Zeri/Amumu被动 | 使用Machine Herald能量3/8；转换比例、触发/回蓝排除、被动锁蓝以客户端执行证据验证。 |
-| Q12 | 奖励/成长/玩家结算层 | Chem-Baron黑市、Family5、Conqueror箱、Rumble改造、Mel免淘汰 | 取得固定奖励表/价格/阈值/收据边界；是否纳入单人模式和适配政策需另行决定，不默认批准。 |
-| Q13 | 四星与超范围强化字段 | 原七槽保留，Singed1–4星B更新明确；其余4星和Hero分支并非main19的能力 | 英雄批次明确星级支持与强化范围；数值证据与实现资格分开。 |
-| Q14 | 递归、叠加、持续和同tick顺序 | Steb共享治疗、LeBlanc链接、Malzahar传播、Rell偷抗、Morgana削盾、转伤/过量弹射 | 补执行合同与独立例子；M8G09防递归不能替代具体来源/归因/存活政策。 |
-| Q15 | 关系羁绊激活方式 | 8条Teamup在原件traits但不在英雄常规traits；对应Trait Unlock强化物品列入标准augments | 必须满足相应强化与伙伴条件，不能仅按两英雄上场激活；条目映射见§7。 |
+“阻塞”仅指对应英雄/分支不能按完整历史机制签收，不代表全部M9停工。Q03/Q05/Q10/Q14细分为**F：已有冻结项目规则；P：待提出的M9执行政策；D：真正缺少的数据或公式**。P可提出明确政策和手算例，但本文未替用户批准；F无需重新拍板；D必须取得证据或明确不开放对应分支。字段活跃性unknown单独保留，未被启用机制引用时不阻塞。
 
-共15个分组问题；它们不是15个孤立数值字段，Q02/Q03/Q05等含多个缺口。确定的公告覆盖已直接裁决，未要求用户重新批准B1数值优先级。本台账整理完成不等于全英雄来源签收、运行实现完成或历史执行语义已全面还原。
+| ID | 范围 / 状态 | 已知事实与最小阻塞范围 | 下一证据或工作 |
+| --- | --- | --- | --- |
+| Q01 | 范围/导入决定 | 60+3及共有记录一致已核实；只影响三名6费/专属羁绊与选择器扩展，60基础英雄不受阻塞 | 后续明确采用Evolved补充/迁移范围；Rammus仍排除，本次不改导入器。 |
+| Q02 | 硬数据缺口 | 只卡Gangplank/Swain/Elise/Jayce完整双形态；载体MR=null、0抗/10mana和单技能不能补齐；GP近战AD65已确定 | 取得固定版本双形态属性/技能；不能null→0或用另一形态代填。 |
+| Q03 | 混合，见F/P/D子项 | Modified显示宏不自动硬阻塞；真正组合公式/子技能正文缺失才局部阻塞 | 逐效果对齐已知字段与宏；Sevika子技能统一Q07，不重复计缺口。 |
+| Q04 | 执行政策为主，局部公式缺口 | Experiment格数2/3/3、HP100/300/300和共享文字已知；不阻塞六位英雄普通技能 | 提出格位、镜像、重复来源、取样/存续政策；未知实验公式只卡该实验效果，保持unknown。 |
+| Q05 | 混合，见F/P/D子项 | null/hash/未引用字段归档不激活；活跃且必需的未知字段才阻塞 | 区分未启用候选与必需属性/公式；不能把保留null当成完整召唤数据。 |
+| Q06 | Sion/Black Rose局部硬缺口 | Sion原命名字段PercentReviveHealth=.75、ShieldDuration=3秒、StunDuration=1秒已知；5档公告盾AP系数.75已知 | 缺实际召唤属性、成长/分档解锁及Shield数组的阶段/星级映射；已知数字不等于系统完整，不把它们重列unknown。 |
+| Q07 | Sevika完整技能硬缺口 | 三份子技能、Jackpot挂接/AD2.5映射、概率关系缺失 | 取得正文/执行引用与随机表；不能等概率或用最大字段代填；不阻塞其他随机目标技能/抽样设施。 |
+| Q08 | Rumble自毁升级3局部conflict | 原20与公告200倍冲突；前两级/已知升级数值独立 | 取得升级level/星级/额外倍率公式；基础技能与其他已知分支可推进，暂不开放升级3须明确范围。 |
+| Q09 | 装备数据缺口＋生命周期政策 | Scrap9光明装备本体数据硬缺；普通池、Academy选取、Enforcer10槽冲突/归还是政策问题 | 补光明装备本体表；提出暂授/没收/归还政策，不阻塞普通技能和无关低档。 |
+| Q10 | F/P/D及已批准行为变更 | 50ms、旧19几何/时序已冻结；新英雄几何/时序政策待提出 | 范德尔M9历史暴击资格已决定并单列§3.4；B3不改B2。 |
+| Q11 | Viktor核心硬缺口；普通无蓝沿合同 | Machine Herald能量3/8已知，载体mana不是能量；完整属性转换比例/资格仍缺 | 新能量系统/转换证据只卡Viktor完整机制；Amumu/Zeri普通无蓝可沿G08，不混为同一个缺口。 |
+| Q12 | 经济硬缺口＋单人适配政策 | 黑市/非法装备、战利品、价格缺表卡对应经济系统；Mel救命及Emissary/Ambessa对手进度需要单人政策 | 补固定奖励表/价格/阈值；提出资格归属/唯一收据。Ambessa每对手+2双抗、PlayersDefeated/7已知；定义身份、去重、封顶/结算，不用每次胜利或PVE值替代；只卡其使者奖励和完整四使者，不卡基础技能。 |
+| Q13 | 星级/强化范围决定 | 当前1–3星、Hero未启用可推进；七槽保留，Singed B覆盖1–4星已知 | 若启用4星或Hero再核查分支，不外推4星基础属性。 |
+| Q14 | 混合，见F/P/D子项 | 旧Irelia/Rell/Loris/Tristana执行已冻结；新分享/链接/传播以政策为主 | 提出有限、确定性、防回传和同tick政策/手算例；必要的未知数值/公式局部取证。 |
+| Q15 | 激活/范围决定 | 8条关系羁绊有Trait Unlock强化映射；不阻塞普通技能 | 若不扩展强化选择则保留未启用；启用须同时满足强化与伙伴条件，不能只看两英雄同场。 |
+
+### 5.1 四组混合项的三种状态
+
+| 子项 | 状态 | 明确范围与后续处理 |
+| --- | --- | --- |
+| Q03-F | 已有冻结项目规则 | 旧19技能字段/AP缩放及组合以已有目录/B2 §14为准；只是Modified显示宏未展开、但已有明确映射/合同的，不硬阻塞或重新求批准。历史还原证据与项目可执行规则分开。 |
+| Q03-P | 待提出的M9执行政策 | 新技能组合的取样时点、整数舍入与离散规划；有数字但多种可行执行方式时提出明确政策，不据宏名默认批准。 |
+| Q03-D | 真正缺少的数据或公式 | 未建立字段→宏计算绑定的复合效果、Singed衰减曲线历史公式、未知实验宏公式等按单效果取证；Sevika子正文/Jackpot统一Q07。已知每秒治疗/伤害不得再误标为公式缺失。 |
+| Q05-F | 已有冻结项目规则 | 旧目录未启用字段继续不激活；Garen聚合伤害自疗、Lux80tick盾/无DR、Rell1200tick偷抗、Kog本场AS已有合同，即使对应历史字段引用仍unknown，也不重开项目确认。 |
+| Q05-P | 待提出的M9执行政策 | 新批次启用范围与候选字段的验证门槛、非必需字段继续归档策略；不能默认启用所有有数字字段或把null当0。政策不能代替必需数据取证。 |
+| Q05-D | 真正缺少的数据或公式 | 活跃效果必需字段的执行引用/单位、Amumu FlatDRCooldownPerAttacker活跃性与含义、召唤物必需HP/AD/完整技能、形态属性等缺口局部阻塞；未启用null/hash不阻塞别的效果。 |
+| Q10-F | 已有冻结项目规则 | 固定50ms/tick、M5几何与旧19包/时序/目标规则已冻结；Maddie偏移、CaitlynID/每发1词/modulo等沿B2 §14，不重新请求批准。治疗/护盾不暴击。 |
+| Q10-P | 待提出的M9执行政策 | 新英雄离散格域、群中心、并列目标、包时序与Singed衰减的离散化；提出明确可手算方案，不声称客户端已给出或用户已批准。 |
+| Q10-D | 真正缺少的数据或公式 | 若历史分支必需的命中路径、暴击资格、包间隔或曲线仍无源脚本/公告映射，则仅该分支缺证；旧19现有时序不因此整体阻塞。Vander资格已有公告和用户裁决，不列这里。 |
+| Q14-F | 已有冻结项目规则 | Irelia真实吸收/耗尽、Rell来源持续/敌死收益、Loris一次分担/不二次减伤、Tristana固定目标/一次溢出/提交成长已有B2合同；G09次数计数及防递归边界也已定。 |
+| Q14-P | 待提出的M9执行政策 | Steb分享来源/防回传、LeBlanc成员/链接、Malzahar死亡传播和同tick顺序、Firelight金额账本清零/取样/恢复等提出有限政策及独立手算例；不偷加heal-completed/death触发枚举或把次数改金额。 |
+| Q14-D | 真正缺少的数据或公式 | 启用效果所需的未知比例、公式或源引用必须取证；不能用生命周期政策填数字。已经保留的Steb分享等比例不再泛称全部缺数据；新增政策与历史证据欠缺分别记录。 |
+
+共15个问题分组；F/P/D为状态子项而非重复新增问题。范德尔已批准的M9行为变更另见§3.4。确定的公告覆盖继续按B1优先级裁决；本文不新增批准其他政策。台账可供按英雄/分支规划，不等于全英雄来源签收、运行实现完成或完整历史执行语义已还原。
 
 ## 6. 全英雄原始记录（63条）
 
@@ -402,9 +461,9 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `FlatDamageReduction` | [12,15,25] | 其他模式；不采用 |
+| `FlatDamageReduction` | [12,15,25] | 普通技能；desc明确引用@FlatDamageReduction@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `Damage` | [10,15,25] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DamageRefreshDuration` | [1,1,1] | 其他模式；不采用 |
+| `DamageRefreshDuration` | [1,1,1] | 普通技能；desc明确Every second，原值1秒；G05周期；不是Double Up |
 | `FlatDRCooldownPerAttacker` | [1,1,1] | 内部参数/活跃性或单位需证实；Q03/Q05 |
 
 ### TFT13_Blue — Powder
@@ -476,7 +535,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `Damage` | [350,500,700] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `IgniteDuration` | [5,5,5] | 其他模式；不采用 |
+| `IgniteDuration` | [5,5,5] | 普通技能；desc明确引用@IgniteDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `FalloffPercent` | [0.3,0.3,0.25] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `HERODamage` | [350,500,700] | 强化分支；未启用 |
 | `HEROFalloffPercent` | [0.2,0.2,0.2] | 强化分支；未启用 |
@@ -539,7 +598,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `BleedDuration` | [4,4,4] | 其他模式；不采用 |
+| `BleedDuration` | [4,4,4] | 普通技能；desc明确引用@BleedDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `PercentAttackDamage` | [2.4,2.4,2.4] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `Heal` | [150,175,200] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `BleedPercentAttackDamage` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -743,7 +802,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `ShieldDuration` | [3,3,3] | 其他模式；不采用 |
+| `ShieldDuration` | [3,3,3] | 普通技能；desc明确引用@ShieldDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `ShieldHealth` | [400,475,575] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `StrikeBaseDamage` | [70,100,150] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentShieldDamage` | [0.3,0.3,0.3] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -810,8 +869,8 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `Damage` | [360,540,900] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `Shield` | [160,180,240] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShieldDuration` | [4,4,4] | 其他模式；不采用 |
-| `DamageReduction` | [0.35,0.35,0.35] | 其他模式；不采用 |
+| `ShieldDuration` | [4,4,4] | unknown；desc未引用此时长字段；历史活跃性unknown；B2 §14已有80tick盾规则（Q05-F），不重开确认 |
+| `DamageReduction` | [0.35,0.35,0.35] | unknown；desc未描述减伤，B2也未启用；保留、不激活；Q05 |
 
 ### TFT13_Morgana — Morgana
 
@@ -867,7 +926,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `Damage` | [525,780,1300] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ShieldReavePercent` | [0.5,0.5,0.5] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [10,10,10] | 其他模式；不采用 |
+| `Duration` | [10,10,10] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Red — Violet
 
@@ -930,7 +989,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `PercentAttackDamage` | [1.35,1.35,1.35] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `StunDuration` | [0.25,0.25,0.25] | 其他模式；不采用 |
+| `StunDuration` | [0.25,0.25,0.25] | unknown；desc未明确绑定此字段的执行用途/单位；保留、不自动激活；Q05-D |
 | `APDamage` | [20,30,45] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentIncreasedAttackDamage` | [3.3,3.3,3.3] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NumStrikes` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -1074,7 +1133,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `AttackSpeed` | [100,120,160] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [4,4,4] | 其他模式；不采用 |
+| `Duration` | [4,4,4] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `DR` | [0.5,0.5,0.55] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `HEROSpellBaseDamage` | [140,210,315] | 强化分支；未启用 |
 | `HEROOmnivamp` | [0.2,0.2,0.2] | 强化分支；未启用 |
@@ -1192,7 +1251,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `Damage` | [220,330,550] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `SecondaryDamage` | [110,165,275] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DOTDuration` | [0.8,0.8,0.8] | 其他模式；不采用 |
+| `DOTDuration` | [0.8,0.8,0.8] | unknown；desc未明确绑定此字段的执行用途/单位；保留、不自动激活；Q05-D |
 
 ### TFT13_Zyra — Zyra
 
@@ -1259,10 +1318,10 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `TargetDamage` | [260,390,585] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `StunDuration` | [1,1,1] | 其他模式；不采用 |
+| `StunDuration` | [1,1,1] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `AOEDamage` | [95,140,215] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ExperimentTrueDamage` | [0.5,0.5,0.5] | 实验条件；Q04 |
-| `ExperimentDuration` | [2,2,2] | 其他模式；不采用 |
+| `ExperimentDuration` | [2,2,2] | 实验条件；desc明确引用@ExperimentDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `NumSmallerVines` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ### TFT13_Akali — Akali
@@ -1332,9 +1391,9 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `Damage` | [80,120,185] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `SecondaryDamage` | [240,360,550] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `TargetDamageAmp` | [0.15,0.15,0.15] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [4,4,4] | 其他模式；不采用 |
+| `Duration` | [4,4,4] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `FlipBackwardsSpeed` | [1300,1300,1300] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `SpeedDuringFinalKick` | [1700,1700,1700] | 其他模式；不采用 |
+| `SpeedDuringFinalKick` | [1700,1700,1700] | unknown；desc未明确绑定此字段的执行用途/单位；保留、不自动激活；Q05-D |
 
 ### TFT13_Camille — Camille
 
@@ -1444,7 +1503,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `Duration` | [3,3,3] | 其他模式；不采用 |
+| `Duration` | [3,3,3] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `Damage` | [115,175,270] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `DR` | [0.5,0.5,0.5] | 客户端字段；含义按desc，未展开宏见Q03 |
 
@@ -1509,9 +1568,9 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `ADPercent` | [1.2,1.2,1.4] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [6,6,6] | 其他模式；不采用 |
+| `Duration` | [6,6,6] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `BaseDamage` | [15,25,40] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `BleedDuration` | [1,1,1] | 其他模式；不采用 |
+| `BleedDuration` | [1,1,1] | 普通技能；desc明确引用@BleedDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `BleedTicksRate` | [0.25,0.25,0.25] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ### TFT13_Prime — Vander
@@ -1590,7 +1649,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `TauntDuration` | [2.5,2.5,2.5] | 其他模式；不采用 |
+| `TauntDuration` | [2.5,2.5,2.5] | 普通技能；desc明确引用@TauntDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `Resists` | [100,125,150] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentAttackDamage` | [4,4,4] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `BonusDamageADRatio` | [1,1,1] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -1661,9 +1720,9 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `StabDamage` | [120,180,270] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DefenseStealDuration` | [60,60,60] | 其他模式；不采用 |
+| `DefenseStealDuration` | [60,60,60] | unknown；desc未引用时长字段；历史字段活跃性unknown；B2 §14偷抗1200tick已冻结，不重开确认 |
 | `DefensesSteal` | [10,12,15] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShieldDuration` | [4,4,4] | 其他模式；不采用 |
+| `ShieldDuration` | [4,4,4] | 普通技能；desc明确引用@ShieldDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `Shield` | [300,350,400] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ### TFT13_RenataGlasc — Renata Glasc
@@ -1727,7 +1786,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `Shield` | [95,120,150] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShieldDuration` | [3,3,3] | 其他模式；不采用 |
+| `ShieldDuration` | [3,3,3] | 普通技能；desc明确引用@ShieldDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `TargetDamage` | [310,465,700] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ExplosionDamage` | [155,230,350] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `AdditionalSearchDistance` | [150,150,150] | 内部参数/活跃性或单位需证实；Q03/Q05 |
@@ -1785,7 +1844,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `Damage` | [180,270,420] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `StunDuration` | [1.5,1.5,2] | 其他模式；不采用 |
+| `StunDuration` | [1.5,1.5,2] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `SoloBonus` | [0.5,0.5,0.5] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ### TFT13_Tristana — Tristana
@@ -1919,11 +1978,11 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `PrimaryDamage` | [3,3,3.3] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `SecondaryDamage` | [1.5,1.5,1.65] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [6,6,6] | 其他模式；不采用 |
+| `Duration` | [6,6,6] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `APDamage` | [35,50,75] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ExperimentPercentHealthShield` | [0.08,0.08,0.08] | 实验条件；Q04 |
 | `ExperimentAttackSpeed` | [0.2,0.2,0.2] | 实验条件；Q04 |
-| `ExperimentDuration` | [5,5,5] | 其他模式；不采用 |
+| `ExperimentDuration` | [5,5,5] | 实验条件；desc明确引用@ExperimentDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Vladimir — Vladimir
 
@@ -2187,7 +2246,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `Shield` | [525,600,700] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `Damage` | [150,225,360] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentDamageRedirect` | [0.5,0.5,0.5] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [4,4,4] | 其他模式；不采用 |
+| `Duration` | [4,4,4] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Blitzcrank — Blitzcrank
 
@@ -2258,11 +2317,11 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `Shield` | [470,500,550] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShieldDuration` | [4,4,4] | 其他模式；不采用 |
+| `ShieldDuration` | [4,4,4] | 普通技能；desc明确引用@ShieldDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `BaseDamage` | [40,60,100] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PassiveDamagePercent` | [0.03,0.03,0.03] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PassiveCooldownSeconds` | [1,1,1] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DamageReduction` | [0.1,0.1,0.1] | 其他模式；不采用 |
+| `DamageReduction` | [0.1,0.1,0.1] | 普通技能；desc明确引用@DamageReduction@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `NumEnemies` | [3,3,3] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ### TFT13_Cassiopeia — Cassiopeia
@@ -2417,7 +2476,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `APHeal` | [300,325,375] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `MaxHealthHealingPercent` | [0.15,0.15,0.15] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `StunDuration` | [1.5,1.5,1.5] | 其他模式；不采用 |
+| `StunDuration` | [1.5,1.5,1.5] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `ADPercent` | [5,5,5] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `FinalADPercent` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `HeroAbilityDamage` | [1.1,1.1,1.1] | 强化分支；未启用 |
@@ -2541,7 +2600,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `Heal` | [220,240,270] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NumEnemies` | [3,3,3] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `StunDuration` | [1.5,1.5,1.75] | 其他模式；不采用 |
+| `StunDuration` | [1.5,1.5,1.75] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `Damage` | [80,120,180] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ### TFT13_Gangplank — Gangplank
@@ -2671,7 +2730,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `APDamage` | [70,105,170] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `LeapHexRange` | [4,4,4] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `BaseNumStabs` | [3,3,3] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DamageReductionOnLeap` | [0.3,0.3,0.3] | 其他模式；不采用 |
+| `DamageReductionOnLeap` | [0.3,0.3,0.3] | 普通技能；desc明确引用@DamageReductionOnLeap@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_KogMaw — Kog'Maw
 
@@ -2735,7 +2794,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `MaxAS` | [20,20,20] | 内部参数/活跃性或单位需证实；Q03/Q05 |
 | `AttackSpeed` | [0.25,0.25,0.25] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [60,60,60] | 其他模式；不采用 |
+| `Duration` | [60,60,60] | unknown；desc为本场持续，未绑定60秒字段；B2本场累计已冻结，不按60秒截断 |
 | `DamageOnAttack` | [48,72,120] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `RangeIncreaseNumAttacks` | [3,3,3] | 客户端字段；含义按desc，未展开宏见Q03 |
 
@@ -2872,11 +2931,11 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `Durability` | [0.5,0.5,0.55] | 其他模式；不采用 |
+| `Durability` | [0.5,0.5,0.55] | unknown；普通减伤效果见ModifiedDurability宏，但宏与此字段的计算绑定未证实；Q03-D；不排除普通减伤效果 |
 | `Damage` | [30,45,65] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `DamageTicksPerSecond` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `SecondDamage` | [150,225,340] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DamageDuration` | [3,3,3] | 其他模式；不采用 |
+| `DamageDuration` | [3,3,3] | 普通技能；desc明确引用@DamageDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `HexRadius` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ExperimentMaxHealthDamage` | [0.03,0.03,0.03] | 实验条件；Q04 |
 | `ExperimentICD` | [1,1,1] | 实验条件；Q04 |
@@ -2942,10 +3001,10 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `Heal` | [240,300,380] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `HealPerSecond` | [70,90,125] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DamagePerSecond` | [40,60,95] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [6,6,6] | 其他模式；不采用 |
-| `BonusDuration` | [2,2,2] | 其他模式；不采用 |
+| `HealPerSecond` | [70,90,125] | 普通技能；每秒治疗量，按AP/100缩放；G05＋G06；ModifiedHealPerSecond显示宏与真正缺失公式分开见Q03 |
+| `DamagePerSecond` | [40,60,95] | 普通技能；每秒魔法伤害量，按AP/100缩放；G02＋G05；与HealPerSecond分列 |
+| `Duration` | [6,6,6] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
+| `BonusDuration` | [2,2,2] | 普通技能；desc明确引用@BonusDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_TwistedFate — Twisted Fate
 
@@ -3006,7 +3065,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `BlueHeal` | [90,110,140] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `RedDamage` | [110,165,255] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `YellowDamage` | [230,345,535] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `StunDuration` | [1,1,1] | 其他模式；不采用 |
+| `StunDuration` | [1,1,1] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Ambessa — Ambessa
 
@@ -3225,7 +3284,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `PercentHealthHeal` | [0.18,0.18,0.18] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `APHeal` | [650,750,2500] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentofHealImmediately` | [0.4,0.4,0.4] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Duration` | [2,2,2] | 其他模式；不采用 |
+| `Duration` | [2,2,2] | 普通技能；desc明确引用@Duration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `APDamage` | [120,180,1000] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentHealthDamage` | [0.07,0.07,0.35] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ExperimentHealthGain` | [60,60,60] | 实验条件；Q04 |
@@ -3362,7 +3421,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `StunDuration` | [1.75,2,8] | 其他模式；不采用 |
+| `StunDuration` | [1.75,2,8] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `SearchRange` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `Damage` | [120,180,1200] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `HexRadius` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -3438,7 +3497,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `APShield` | [200,220,1500] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentHealthShield` | [0.15,0.15,0.15] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShieldDuration` | [4,4,4] | 其他模式；不采用 |
+| `ShieldDuration` | [4,4,4] | 普通技能；desc明确引用@ShieldDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `ADRatio` | [2.5,2.5,15] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `SecondaryADRatio` | [1.25,1.25,7.5] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `HealPercentHealth` | [0.015,0.015,0.05] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -3581,7 +3640,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `SpellDuration` | [3,3,3] | 其他模式；不采用 |
+| `SpellDuration` | [3,3,3] | 普通技能；desc明确引用@SpellDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `HealthSteal` | [50,75,225] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NumEnemies` | [4,4,10] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentBonusHealthSteal` | [0.5,0.5,0.5] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -3656,7 +3715,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `MinionsSpawned` | [4,4,8] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `MinionsThatAttackCurrentTarget` | [2,2,4] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `MinionDamage` | [36,55,100] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `MinionDuration` | [12,12,12] | 其他模式；不采用 |
+| `MinionDuration` | [12,12,12] | unknown；desc未明确绑定此字段的执行用途/单位；保留、不自动激活；Q05-D |
 | `MinionNumAttacks` | [5,5,5] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ### TFT13_Twitch — Twitch
@@ -3731,7 +3790,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `AttackSpeed` | [0.85,0.85,0.85] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `APDamage` | [18,25,120] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentAttackDamage` | [1.4,1.4,3] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `DamageReduction` | [0.4,0.4,0.2] | 其他模式；不采用 |
+| `DamageReduction` | [0.4,0.4,0.2] | 普通技能；desc明确引用@DamageReduction@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `ExperimentDamageTicks` | [5,5,5] | 实验条件；Q04 |
 | `ExperimentMaxHealthDamage` | [0.15,0.15,0.15] | 实验条件；Q04 |
 
@@ -3798,8 +3857,8 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `Shield` | [280,325,1200] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentAttackDamage` | [6,6,12] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentAttackDamage_SecondaryDamage` | [1.8,1.8,5] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShieldDuration` | [3,3,3] | 其他模式；不采用 |
-| `StunDuration` | [1.5,1.5,1.5] | 其他模式；不采用 |
+| `ShieldDuration` | [3,3,3] | 普通技能；desc明确引用@ShieldDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
+| `StunDuration` | [1.5,1.5,1.5] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Zoe — Zoe
 
@@ -3929,14 +3988,14 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
-| `RaidDuration` | [5,5,5] | 其他模式；不采用 |
+| `RaidDuration` | [5,5,5] | 普通技能；desc明确引用@RaidDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `TotalShots` | [4,4,20] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentAttackDamage` | [1.8,1.8,7.5] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `APDamage` | [20,30,100] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `HeadshotPercentAD` | [2.8,2.8,13.5] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `BonusSearchRange` | [630,630,630] | 内部参数/活跃性或单位需证实；Q03/Q05 |
 | `PercentShotsFocusedOnFrontline` | [0.5,0.5,0.5] | 内部参数/活跃性或单位需证实；Q03/Q05 |
-| `ResistReduction` | [20,20,20] | 其他模式；不采用 |
+| `ResistReduction` | [20,20,20] | 普通技能；desc明确引用@ResistReduction@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Jayce — Jayce
 
@@ -4026,13 +4085,13 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `PercentADSecondaryDamage` | [2.25,2.25,15] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NumAlliesShield` | [3,3,3] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `Shield` | [200,275,1800] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShieldDuration` | [4,4,4] | 其他模式；不采用 |
+| `ShieldDuration` | [4,4,4] | 普通技能；desc明确引用@ShieldDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `InitialGateDistanceBehindTheTarget` | [480,480,480] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `EnemyFlightDuration` | [0.75,0.75,0.75] | 其他模式；不采用 |
+| `EnemyFlightDuration` | [0.75,0.75,0.75] | unknown；desc未明确绑定此字段的执行用途/单位；保留、不自动激活；Q05-D |
 | `FlyingEnemyDamageRadius` | [290,290,290] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `MaxEnemySpeed` | [2300,2300,2300] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `MinEnemySpeed` | [1650,1650,1650] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ReducedSummonHealth` | [1,1,1] | 其他模式；不采用 |
+| `ReducedSummonHealth` | [1,1,1] | 普通技能；desc明确引用@ReducedSummonHealth@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Jinx — Jinx
 
@@ -4117,7 +4176,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `NumOfFlameChompers` | [3,3,3] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `FlameChompersPercentAD` | [2.65,2.65,20] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ZapPercentAD` | [2.65,2.65,20] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ZapStunDuration` | [1.25,1.5,10] | 其他模式；不采用 |
+| `ZapStunDuration` | [1.25,1.5,10] | 普通技能；desc明确引用@ZapStunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `ZapLength` | [2500,2500,2500] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `ZapWidth` | [180,180,180] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `DeathRocketPercentAD` | [7,7,90.01] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -4194,7 +4253,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `ChainTargets` | [4,4,20] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ChainDuration` | [5,5,5] | 其他模式；不采用 |
+| `ChainDuration` | [5,5,5] | 普通技能；desc明确引用@ChainDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `Damage` | [650,975,5000] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `AutoDamage` | [160,240,900] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `DamageShare` | [0.18,0.25,1] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -4342,8 +4401,8 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 变量名 | 14.24b审阅值 | 适用性/边界 |
 | --- | --- | --- |
 | `Spell1_ADPercent` | [2.4,2.4,15] | 子技能分支；Q07 |
-| `Spell1_ReducedDamagePercent` | [0.5,0.5,0.5] | 其他模式；不采用 |
-| `Spell1_MinDuration` | [2,2,2] | 其他模式；不采用 |
+| `Spell1_ReducedDamagePercent` | [0.5,0.5,0.5] | unknown；Sevika子技能正文未展开，活跃性/单位绑定unknown；统一缺口Q07 |
+| `Spell1_MinDuration` | [2,2,2] | unknown；Sevika子技能正文未展开，活跃性/单位绑定unknown；统一缺口Q07 |
 | `Spell1_Bonus_DamagePercentPerSecond` | [0.2,0.2,0.2] | 子技能分支；Q07 |
 | `Spell1_HighrollBonus` | [20,20,20] | 子技能分支；Q07 |
 | `APBonusDamage` | [20,30,500] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -4351,17 +4410,17 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `Spell2_Modifier` | [3,3,3] | 子技能分支；Q07 |
 | `Spell2_SecondaryModifier` | [1.3,1.3,1.3] | 子技能分支；Q07 |
 | `Spell2_HexKnockback` | [10,10,10] | 子技能分支；Q07 |
-| `Spell2_StunDuration` | [1.5,1.5,1.5] | 其他模式；不采用 |
+| `Spell2_StunDuration` | [1.5,1.5,1.5] | unknown；Sevika子技能正文未展开，活跃性/单位绑定unknown；统一缺口Q07 |
 | `Spell2_Bonus_KnockbackDamage` | [4,4,10] | 子技能分支；Q07 |
 | `Spell3_Modifier` | [3.2,3.2,3.2] | 子技能分支；Q07 |
 | `Spell3_BleedModifier` | [0.75,0.75,0.75] | 子技能分支；Q07 |
-| `Spell3_StunDuration` | [1.25,1.25,1.25] | 其他模式；不采用 |
+| `Spell3_StunDuration` | [1.25,1.25,1.25] | unknown；Sevika子技能正文未展开，活跃性/单位绑定unknown；统一缺口Q07 |
 | `Spell3_NumSlams` | [2,2,2] | 子技能分支；Q07 |
-| `Spell3_BleedDuration` | [5,5,5] | 其他模式；不采用 |
+| `Spell3_BleedDuration` | [5,5,5] | unknown；Sevika子技能正文未展开，活跃性/单位绑定unknown；统一缺口Q07 |
 | `Spell3_TargetPercentHealthDamage` | [0.2,0.2,0.2] | 子技能分支；Q07 |
 | `Spell3_HexRadius` | [1,1,1] | 子技能分支；Q07 |
 | `Spell3_Bonus_BleedADPercent` | [4,4,10] | 子技能分支；Q07 |
-| `Spell3_Bonus_BleedDuration` | [20,20,20] | 其他模式；不采用 |
+| `Spell3_Bonus_BleedDuration` | [20,20,20] | unknown；Sevika子技能正文未展开，活跃性/单位绑定unknown；统一缺口Q07 |
 | `Spell3_ExecutePercentage` | [0.15,0.15,1] | 子技能分支；Q07 |
 | `Spell3_ResetDashRange` | [2,2,10] | 子技能分支；Q07 |
 | `Spell3_ResetDamageFalloff` | [0.8,0.8,0.8] | 子技能分支；Q07 |
@@ -4426,7 +4485,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `Damage` | [80,120,1000] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `InfectionDamage` | [15,22,400] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `DamageTicksPerSecond` | [0.75,0.75,0.75] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShredDuration` | [4,4,4] | 其他模式；不采用 |
+| `ShredDuration` | [4,4,4] | 普通技能；desc明确引用@ShredDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Mordekaiser — Mordekaiser
 
@@ -4532,7 +4591,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `LineRange` | [1470,1470,1470] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `LineWidth` | [615,615,615] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NumAttacks` | [1,1,1] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `EmpowerDuration` | [10,10,10] | 其他模式；不采用 |
+| `EmpowerDuration` | [10,10,10] | 普通技能；desc明确引用@EmpowerDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 
 ### TFT13_Rumble — Rumble
 
@@ -4680,9 +4739,9 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | --- | --- | --- |
 | `Damage` | [500,750,4000] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NumMissile` | [5,5,5] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `WoundDuration` | [5,5,5] | 其他模式；不采用 |
+| `WoundDuration` | [5,5,5] | 普通技能；desc明确引用@WoundDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `ManaPerMissile` | [20,20,20] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `Tankbuster_RefreshDuration` | [3,3,3] | 其他模式；不采用 |
+| `Tankbuster_RefreshDuration` | [3,3,3] | unknown；改造子效果的执行引用/刷新政策未证实；仅该升级分支Q05/Q12 |
 | `Tankbuster_APDamage_Level1` | [100,100,100] | Junker King条件改造；Q08/Q12 |
 | `Tankbuster_APDamage_Level2` | [150,150,150] | Junker King条件改造；Q08/Q12 |
 | `Tankbuster_APDamage_Level3` | [1600,1600,1600] | Junker King条件改造；Q08/Q12 |
@@ -4695,15 +4754,15 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `Flamethrower_Damage_Level2` | [45,45,45] | Junker King条件改造；Q08/Q12 |
 | `Flamethrower_Damage_Level3` | [600,600,600] | Junker King条件改造；Q08/Q12 |
 | `Flamethrower_TicksPerSecond` | [2,2,2] | Junker King条件改造；Q08/Q12 |
-| `RepairingMicrobots_RefreshDuration` | [3,3,3] | 其他模式；不采用 |
+| `RepairingMicrobots_RefreshDuration` | [3,3,3] | unknown；改造子效果的执行引用/刷新政策未证实；仅该升级分支Q05/Q12 |
 | `ReparingMicrobots_MaxHealthHeal_Level1` | [0.06,0.06,0.06] | Junker King条件改造；Q08/Q12 |
 | `ReparingMicrobots_MaxHealthHeal_Level2` | [0.06,0.06,0.06] | Junker King条件改造；Q08/Q12 |
 | `ReparingMicrobots_MaxHealthHeal_Level3` | [0.4,0.4,0.4] | Junker King条件改造；Q08/Q12 |
-| `PetriciteRod_RefreshDuration` | [5,5,5] | 其他模式；不采用 |
+| `PetriciteRod_RefreshDuration` | [5,5,5] | unknown；改造子效果的执行引用/刷新政策未证实；仅该升级分支Q05/Q12 |
 | `PetriciteRod_APDamage_Level1` | [350,350,350] | Junker King条件改造；Q08/Q12 |
 | `PetriciteRod_APDamage_Level2` | [525,525,525] | Junker King条件改造；Q08/Q12 |
 | `PetriciteRod_APDamage_Level3` | [6000,6000,6000] | Junker King条件改造；Q08/Q12 |
-| `PetriciteRod_DOTDuration` | [15,15,15] | 其他模式；不采用 |
+| `PetriciteRod_DOTDuration` | [15,15,15] | unknown；改造子效果的执行引用/周期政策未证实；仅该升级分支Q05/Q12 |
 
 ### TFT13_MissMage — Mel
 
@@ -4804,7 +4863,7 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `NormalCastDamage` | [180,450,2700] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NormalCastNumEnemies` | [3,3,3] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `NormalCastNumMissilesPerEnemy` | [10,10,10] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `AuraDuration` | [4,4,4] | 其他模式；不采用 |
+| `AuraDuration` | [4,4,4] | unknown；desc未明确绑定此字段的执行用途/单位；保留、不自动激活；Q05-D |
 | `AuraDR` | [0.2,0.2,0.2] | 内部参数/活跃性或单位需证实；Q03/Q05 |
 | `DRConvertToUnstableEnergy` | [0.5,0.5,0.5] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `SpecialCastDamage` | [1390,3475,99999] | 客户端字段；含义按desc，未展开宏见Q03 |
@@ -4889,8 +4948,8 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `LaserHexLength` | [2,2,2] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `LaserMagicDamage` | [50,180,2000] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `LaserTrueDamage` | [25,90,1000] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ShredDuration` | [5,5,5] | 其他模式；不采用 |
-| `StunDuration` | [2,3,30] | 其他模式；不采用 |
+| `ShredDuration` | [5,5,5] | 普通技能；desc明确引用@ShredDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
+| `StunDuration` | [2,3,30] | 普通技能；desc明确引用@StunDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `SpellDamage` | [100,300,9999] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `PercentMaxHealthDamage` | [0.08,0.2,1] | 客户端字段；含义按desc，未展开宏见Q03 |
 
@@ -4969,10 +5028,10 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | `BaseOmnivamp` | [0.1,0.1,0.1] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `APOmnivamp` | [0.1,0.15,1] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `BloodfrenzyAS` | [0.4,0.4,0.4] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `BloodfrenzyDuration` | [4,4,4] | 其他模式；不采用 |
+| `BloodfrenzyDuration` | [4,4,4] | 普通技能；desc明确引用@BloodfrenzyDuration@；具体数值沿§2优先级，收录不等于执行政策已冻结 |
 | `DamagePercent` | [2,3.75,25] | 客户端字段；含义按desc，未展开宏见Q03 |
 | `BaseDamage` | [180,300,1088] | 客户端字段；含义按desc，未展开宏见Q03 |
-| `ExperimentStunDuration` | [1,1,1] | 其他模式；不采用 |
+| `ExperimentStunDuration` | [1,1,1] | 实验条件；实验击杀相邻敌人眩晕；desc引用WarwickCurrentExperimentBonus秒，审阅确认该时长候选；宏/共享公式仍见Q04 |
 | `ChampsToDevourTooltipOnly` | [5,5,5] | 客户端字段；含义按desc，未展开宏见Q03 |
 
 ## 7. 全羁绊原始记录、档位、效果和数值（37条）
@@ -5054,6 +5113,8 @@ B1唯一 `setData[mutator=="TFTSet13"]` 位于 `/setData/1`：84条单位记录�
 | 6 | 25000 | {"BaseValues":0.05,"NumOfItems":3,"PercentIncreaseSponsored":0.09} |
 
 ### TFT13_Ambassador — Emissary
+
+机制关系：Ambessa对手进度→S06(c)/Q12；PlayersDefeated/7及每名对手双抗+2为原件已知事实；单人身份、去重、封顶7和结算收据仍待提出政策。不能改用AmbessaArmor_PVE或每胜一场计新对手；只影响使者奖励/完整四使者，不阻塞基础技能。
 
 来源：`/setData/1/traits/6`；完整记录SHA-256 `41cfa4eaa2dc19627d9337e03e9ebc37b740ff1d3f12e9667959b2b6ed4aae02`；分类：常规/专属。
 
@@ -5756,6 +5817,8 @@ Q06：上述hash变量含义未证实；Sion阶段成长/5档盾晕/7档复活�
 | 1 | 25000 | {"Bonus1NumRockets":8,"Bonus1RocketDamage":100,"Bonus2ShieldAmount":500,"Bonus2ShieldDuration":4,"Bonus4Gold":3,"Durability":0.8,"Duration":1.5,"{01148678}":0.35,"{267deafa}":0.35,"{52aec87f}":0.1,"{592d23e5}":0.35,"{699f6a87}":0.2,"{9ad9e572}":0.005,"{9b22c5ec}":null,"{bcedb441}":1.5,"{e1fc0fa1}":0.245,"{e640e05f}":0.4} |
 
 ### TFT13_Hoverboard — Firelight
+
+机制关系：周期位移→S01(c)，自上次突进累计承伤→S05(b)金额账本→G06治疗；6秒周期、2/3/4档20%/33%/40%已知。承伤口径、清零/恢复及取样政策仍待提出，Zeri/Scar/Ekko为羁绊消费者，不重复计入技能需求数。
 
 来源：`/setData/1/traits/24`；完整记录SHA-256 `ba5464a542595503ad156eed412037d609ec7e2173b28d9f00b3f6a402340a8a`；分类：常规/专属。
 
@@ -7216,8 +7279,9 @@ Rammus待确认原件：`/setData/8/traits/17`；未找到对应63英雄或官�
 - 63英雄身份唯一；费用分布 `{"1":14,"2":13,"3":13,"4":12,"5":8,"6":3}`；全部英雄trait名称均能唯一映射到29个常规/专属trait apiName；没有用展示名代替身份。
 - 37羁绊身份唯一，29常规/专属、8关系解锁；全部档位和原始variables保留；英雄技能共408个变量名记录（含null与条件字段），羁绊逐档共434个变量键。
 - 19现有英雄cost/基础stats/AS与tick间隔及全部已导入三元组逐字段比较：0差异；五羁绊已实现档的系数核对一致，缺失档和执行语义单列§3。
-- 每英雄机制矩阵63行，G01–G12统计由矩阵累加；特殊能力S01–S13有逐英雄消费者。统计是规划需求，不是代码已实现覆盖率。
+- 每英雄机制矩阵63行，G01–G12统计由矩阵累加；S01–S13按子能力拆分(a)/(b)/(c)，另列FD01固定减伤、P01选敌与衰减；Firelight/Emissary补齐关系。统计是规划需求，不是代码已实现覆盖率。
 - 本次验证原始记录投影、JSON pointer/hash、字段覆盖和文档范围；未运行游戏对局/浏览器验收，不宣称任何新英雄或机制已通过执行测试。
+- 审阅修订校验：70条误标/45名英雄已逐条分类（普通46、实验3、unknown 21）；仅ASKillGainHyperroll保留其他模式标签。Q03/Q05/Q10/Q14各有F/P/D三种状态；范德尔M9裁决与B3冻结规则分别列明。
 - 独立从本文重新解析107个JSON块，与不可变原件投影相等；106个已列完整记录hash和pointer匹配（另1个为Rammus排除原件）；63行技能机制矩阵重新计数与G01–G12统计一致；8条关系强化均在标准Evolved的augments成员集合内；文内只读Python检查可离线执行。
 
 从本分支checkout离线回查原件（需要本地已fetch B1 commit；不依赖当前网络站点内容）：
