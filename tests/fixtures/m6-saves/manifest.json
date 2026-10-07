@@ -1,0 +1,62 @@
+{
+  "generatedFrom": "M6 signed-off product code (631c131 tree)",
+  "route": "cannon seed 42",
+  "saves": [
+    {
+      "file": "01-initial-component-choice.json.gz",
+      "jsonBytes": 2309,
+      "phase": "choice",
+      "round": 1,
+      "battles": 0,
+      "currentBattleTick": null
+    },
+    {
+      "file": "03-augment-choice.json.gz",
+      "jsonBytes": 2694,
+      "phase": "choice",
+      "round": 1,
+      "battles": 0,
+      "currentBattleTick": null
+    },
+    {
+      "file": "02-preparation.json.gz",
+      "jsonBytes": 2691,
+      "phase": "preparation",
+      "round": 1,
+      "battles": 0,
+      "currentBattleTick": null
+    },
+    {
+      "file": "04-combat-tick40-with-history.json.gz",
+      "jsonBytes": 319042,
+      "phase": "combat",
+      "round": 3,
+      "battles": 2,
+      "currentBattleTick": 40
+    },
+    {
+      "file": "05-settlement.json.gz",
+      "jsonBytes": 473232,
+      "phase": "settlement",
+      "round": 3,
+      "battles": 3,
+      "currentBattleTick": null
+    },
+    {
+      "file": "06-anomaly-offer.json.gz",
+      "jsonBytes": 4371225,
+      "phase": "choice",
+      "round": 20,
+      "battles": 16,
+      "currentBattleTick": null
+    },
+    {
+      "file": "07-game-over.json.gz",
+      "jsonBytes": 9880627,
+      "phase": "gameOver",
+      "round": 35,
+      "battles": 30,
+      "currentBattleTick": null
+    }
+  ]
+}

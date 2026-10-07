@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",
-    "preview": "vite preview --host 0.0.0.0",
+    "preview": "vite preview",
     "test:browser": "node scripts/verify-m5-browser.cjs",
     "test:preview": "node scripts/verify-m5-browser.cjs --preview",
     "test:headless": "node scripts/verify-m5-headless.cjs --multi-seed",
@@ -24,6 +24,6 @@
     "playwright": "1.63.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.0",
-    "vitest": "^3.2.4"
+    "vitest": "^5.0.3"
   }
 }

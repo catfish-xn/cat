@@ -1,0 +1,89 @@
+name: M6-M7 twelve-cycle warmup experiment
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    name: warmup-${{ matrix.revision }}-${{ matrix.mode }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 28
+    strategy:
+      fail-fast: false
+      matrix:
+        revision: [m6-main, m7]
+        mode: [dev, preview]
+        include:
+          - revision: m6-main
+            ref: a8be9fc151b9ebb895eb4097828bb74c590e2559
+          - revision: m7
+            ref: 67527610063802d995c4f95044d82c7ad4afe9dc
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: harness
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          path: target
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: target/package-lock.json
+      - run: npm ci
+        working-directory: target
+      - run: npx playwright install --with-deps chromium
+        working-directory: target
+      - run: npm run build
+        working-directory: target
+      - name: Record unchanged target and shared measurement driver
+        env:
+          TARGET_SHA: ${{ matrix.ref }}
+          HARNESS_SHA: ${{ github.sha }}
+        run: |
+          test "$(git -C target rev-parse HEAD)" = "$TARGET_SHA"
+          test -z "$(git -C target status --porcelain)"
+          mkdir -p target/artifacts/experiment
+          cp harness/scripts/verify-m5-browser.cjs target/scripts/.m7-warmup-experiment.cjs
+          node -e 'const fs=require("fs"),crypto=require("crypto"); fs.writeFileSync("target/artifacts/experiment/provenance.json",JSON.stringify({targetSha:process.env.TARGET_SHA,harnessSha:process.env.HARNESS_SHA,driverSha256:crypto.createHash("sha256").update(fs.readFileSync("target/scripts/.m7-warmup-experiment.cjs")).digest("hex"),targetCleanBeforeDriver:true,driverIsUntrackedExperiment:true},null,2))'
+      - name: Twelve warmups, thirty measured cycles, two follow-up windows
+        working-directory: target
+        env:
+          MODE: ${{ matrix.mode }}
+          M6_WARMUP_EXPERIMENT: '1'
+          M6_HEAP_DIAGNOSTICS: '0'
+          M5_EVIDENCE_DIR: artifacts/experiment
+        run: |
+          args=()
+          if [ "$MODE" = preview ]; then args+=(--preview); fi
+          node scripts/.m7-warmup-experiment.cjs "${args[@]}" --build=cannon --m6-f2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warmup-${{ matrix.revision }}-${{ matrix.mode }}
+          path: target/artifacts/experiment/
+  compare:
+    name: compare-warmup-experiment
+    needs: measure
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: warmup-*
+          path: artifacts/warmup
+      - run: node scripts/compare-m7-warmup.cjs artifacts/warmup
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: warmup-comparison
+          path: artifacts/warmup-comparison.json

@@ -1,6 +1,8 @@
 import type { CombatEvent } from '../simulation/combat-types';
 export interface FeedbackAnchor { readonly x: number; readonly y: number; readonly radius: number }
-export interface CombatFeedbackRenderer { push(events: readonly CombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>): void; reset(): void; dispose(): void }
+/** A centred rect in the same CSS coordinates as anchors (e.g. a canvas text label) that floats must not cover. */
+export interface FeedbackObstacle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
+export interface CombatFeedbackRenderer { push(events: readonly CombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[]): void; reset(): void; dispose(): void }
 interface Float { key: string; unitId: string; kind: 'damage' | 'shield' | 'heal'; amount: number; at: number; label: HTMLSpanElement }
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
 export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
@@ -21,7 +23,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   }
   return {
     push(events, at) { if (disposed) return; for (const event of events) { if (event.type === 'packetDamage') { add(event, event.unitId, 'damage', event.hpDamage, at); add(event, event.unitId, 'shield', event.absorbed, at); } else if (event.type === 'heal') add(event, event.unitId, 'heal', event.actual, at); } },
-    render(now, anchors) {
+    render(now, anchors, obstacles = []) {
       if (disposed) return;
       floats = floats.filter(item => { if (now - item.at >= 850) { item.label.remove(); return false; } return true; });
       const lanes = new Map<string, number>();
@@ -35,11 +37,12 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         let y = Math.max(16, Math.min(height - 16, anchor.y - anchor.radius - 22 - lane * 17 - age / 70));
         let placed = false;
         for (let attempt = 0; attempt < 7; attempt++) {
-          const candidate = y - attempt * 18;
+          const candidate = y - attempt * 21;
           if (candidate < 12) break;
-          const overlapsFloat = occupied.some(rect => Math.abs(rect.x - x) < rect.half + half + 3 && Math.abs(rect.y - candidate) < 17);
+          const overlapsFloat = occupied.some(rect => Math.abs(rect.x - x) < rect.half + half + 3 && Math.abs(rect.y - candidate) < 21);
           const overlapsPiece = [...anchors.values()].some(point => Math.abs(point.x - x) < point.radius + half && Math.abs(point.y - candidate) < point.radius + 10);
-          if (!overlapsFloat && !overlapsPiece) { y = candidate; placed = true; occupied.push({ x, y, half }); break; }
+          const overlapsLabel = obstacles.some(rect => Math.abs(rect.x - x) < rect.w / 2 + half + 2 && Math.abs(rect.y - candidate) < rect.h / 2 + 12);
+          if (!overlapsFloat && !overlapsPiece && !overlapsLabel) { y = candidate; placed = true; occupied.push({ x, y, half }); break; }
         }
         item.label.hidden = !placed; if (!placed) continue;
         item.label.style.left = `${x}px`; item.label.style.top = `${y}px`; item.label.style.transform = 'translate(-50%, -50%)'; item.label.style.opacity = String(Math.min(1, (850 - age) / 250));

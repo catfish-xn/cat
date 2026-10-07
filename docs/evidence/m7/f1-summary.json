@@ -1,0 +1,247 @@
+[
+  {
+    "viewport": "desktop-1440x1000",
+    "interactiveMs": 1817,
+    "errors": [],
+    "steps": {
+      "startup": {
+        "overflow": 0,
+        "piece": 85.5,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "choice": {
+        "overflow": 0,
+        "piece": 85.5,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "preparation": {
+        "overflow": 0,
+        "piece": 85.5,
+        "minFont": 12,
+        "small": 0,
+        "phase": "preparation"
+      },
+      "combat": {
+        "overflow": 0,
+        "piece": 85.5,
+        "minFont": 12,
+        "small": 0,
+        "phase": "combat"
+      },
+      "settlement": {
+        "overflow": 0,
+        "piece": 85.5,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      },
+      "replay": {
+        "overflow": 0,
+        "piece": 85.5,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      }
+    }
+  },
+  {
+    "viewport": "desktop-1440x600",
+    "interactiveMs": 2925,
+    "errors": [],
+    "steps": {
+      "startup": {
+        "overflow": 0,
+        "piece": 59.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "choice": {
+        "overflow": 0,
+        "piece": 59.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "preparation": {
+        "overflow": 0,
+        "piece": 59.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "preparation"
+      },
+      "combat": {
+        "overflow": 0,
+        "piece": 59.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "combat"
+      },
+      "settlement": {
+        "overflow": 0,
+        "piece": 59.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      },
+      "replay": {
+        "overflow": 0,
+        "piece": 59.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      }
+    }
+  },
+  {
+    "viewport": "phone-390x844",
+    "interactiveMs": 2898,
+    "errors": [],
+    "steps": {
+      "startup": {
+        "overflow": 0,
+        "piece": 41.6,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "choice": {
+        "overflow": 0,
+        "piece": 41.6,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "preparation": {
+        "overflow": 0,
+        "piece": 41.6,
+        "minFont": 12,
+        "small": 0,
+        "phase": "preparation"
+      },
+      "combat": {
+        "overflow": 0,
+        "piece": 41.6,
+        "minFont": 12,
+        "small": 0,
+        "phase": "combat"
+      },
+      "settlement": {
+        "overflow": 0,
+        "piece": 41.6,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      },
+      "replay": {
+        "overflow": 0,
+        "piece": 41.6,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      }
+    }
+  },
+  {
+    "viewport": "phone-844x390",
+    "interactiveMs": 2940,
+    "errors": [],
+    "steps": {
+      "startup": {
+        "overflow": 0,
+        "piece": 38.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "choice": {
+        "overflow": 0,
+        "piece": 38.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "preparation": {
+        "overflow": 0,
+        "piece": 38.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "preparation"
+      },
+      "combat": {
+        "overflow": 0,
+        "piece": 38.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "combat"
+      },
+      "settlement": {
+        "overflow": 0,
+        "piece": 38.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      },
+      "replay": {
+        "overflow": 0,
+        "piece": 38.8,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      }
+    }
+  },
+  {
+    "viewport": "phone-360x640",
+    "interactiveMs": 2745,
+    "errors": [],
+    "steps": {
+      "startup": {
+        "overflow": 0,
+        "piece": 38.2,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "choice": {
+        "overflow": 0,
+        "piece": 38.2,
+        "minFont": 12,
+        "small": 0,
+        "phase": "choice"
+      },
+      "preparation": {
+        "overflow": 0,
+        "piece": 38.2,
+        "minFont": 12,
+        "small": 0,
+        "phase": "preparation"
+      },
+      "combat": {
+        "overflow": 0,
+        "piece": 38.2,
+        "minFont": 12,
+        "small": 0,
+        "phase": "combat"
+      },
+      "settlement": {
+        "overflow": 0,
+        "piece": 38.2,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      },
+      "replay": {
+        "overflow": 0,
+        "piece": 38.2,
+        "minFont": 12,
+        "small": 0,
+        "phase": "settlement"
+      }
+    }
+  }
+]

@@ -240,7 +240,7 @@ export class MatchApplication {
     finally { if (!this.disposed && id === this.operation) { this.busy = false; this.syncMode(); } }
   }
   private renderReplay(snapshot: ReplaySnapshot) {
-    this.replayView?.render(snapshot.combat, this.replaySelectedUnit); this.replayPanel.render(snapshot); this.hooks.playback?.(snapshot, this.playbackRecord);
+    this.replayView?.render(snapshot.combat, this.replaySelectedUnit, snapshot.events); this.replayPanel.render(snapshot); this.hooks.playback?.(snapshot, this.playbackRecord);
   }
   selectReplayUnit(id: string | null) {
     this.replaySelectedUnit = id;
@@ -284,7 +284,7 @@ export class MatchApplication {
   }
   debug() { return { mode: this.mode, runId: this.runId, token: this.coordinator?.token ?? null, status: this.status,
     completedCount: this.history.completedRecords.length, lifecycle: { applications: MatchApplication.instances, sessions: MatchSession.liveCount, observers: this.session.observerCount }, paused: this.session.paused,
-    replay: this.playbackSession ? { tick: this.playbackSession.read().tick, endTick: this.playbackSession.read().endTick } : null }; }
+    replay: this.playbackSession ? { tick: this.playbackSession.read().tick, endTick: this.playbackSession.read().endTick, fx: { ...this.replayView?.stats } } : null }; }
   dispose() {
     if (this.disposed) return;
     this.disposed = true; MatchApplication.instances--; this.operation++; this.archiveRequest++; this.unsubscribe(); this.coordinator?.dispose(); this.repository.close();

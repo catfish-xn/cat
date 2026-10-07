@@ -1,0 +1,215 @@
+{
+  "run": {
+    "conclusion": "success",
+    "createdAt": "2026-10-06T22:28:16Z",
+    "databaseId": 37540777240,
+    "event": "workflow_dispatch",
+    "headBranch": "claude/friendly-darwin-pak00a",
+    "headSha": "77600c82bb709837ca1142abc16238765074f116",
+    "jobs": [
+      {
+        "databaseId": 112532981653,
+        "name": "test-and-build-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532981653",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:40:10Z"
+      },
+      {
+        "databaseId": 112532981830,
+        "name": "input-preview-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532981830",
+        "startedAt": "2026-10-06T22:28:22Z",
+        "completedAt": "2026-10-06T22:47:38Z"
+      },
+      {
+        "databaseId": 112532982069,
+        "name": "browser-preview-cannon-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982069",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:40:19Z"
+      },
+      {
+        "databaseId": 112532982077,
+        "name": "input-dev-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982077",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:45:30Z"
+      },
+      {
+        "databaseId": 112532982092,
+        "name": "m7-presentation-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982092",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:35:51Z"
+      },
+      {
+        "databaseId": 112532982107,
+        "name": "browser-dev-cannon-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982107",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:44:06Z"
+      },
+      {
+        "databaseId": 112532982166,
+        "name": "browser-preview-sniper-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982166",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:42:25Z"
+      },
+      {
+        "databaseId": 112532982178,
+        "name": "browser-preview-mage-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982178",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:42:13Z"
+      },
+      {
+        "databaseId": 112532982201,
+        "name": "browser-dev-sniper-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982201",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:42:48Z"
+      },
+      {
+        "databaseId": 112532982250,
+        "name": "browser-dev-mage-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532982250",
+        "startedAt": "2026-10-06T22:28:21Z",
+        "completedAt": "2026-10-06T22:42:44Z"
+      },
+      {
+        "databaseId": 112532983377,
+        "name": "heap-diagnostics",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532983377",
+        "startedAt": "2026-10-06T22:28:18Z",
+        "completedAt": "2026-10-06T22:28:18Z"
+      },
+      {
+        "databaseId": 112532983472,
+        "name": "warmup-experiment",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112532983472",
+        "startedAt": "2026-10-06T22:28:18Z",
+        "completedAt": "2026-10-06T22:28:18Z"
+      },
+      {
+        "databaseId": 112539574214,
+        "name": "compare-evidence-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240/job/112539574214",
+        "startedAt": "2026-10-06T22:47:41Z",
+        "completedAt": "2026-10-06T22:47:56Z"
+      }
+    ],
+    "status": "completed",
+    "updatedAt": "2026-10-06T22:47:56Z",
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37540777240"
+  },
+  "includesClaudeCommit": "b252c34",
+  "acceptanceJobsPassed": 11,
+  "unitTests": {
+    "files": 50,
+    "passed": 722,
+    "jobId": 112532981653
+  },
+  "comparison": {
+    "jobId": 112539574214,
+    "artifactId": 11449700899,
+    "m5Passed": true,
+    "m6Passed": true,
+    "m6Manifests": 9
+  },
+  "formalLifecycle": {
+    "dev": {
+      "warmupCycles": 2,
+      "cycles": 30,
+      "heapDiagnostics": false,
+      "warmupExperiment": false,
+      "beforeHeap": {
+        "usedSize": 15005144,
+        "totalSize": 18653184,
+        "embedderHeapUsedSize": 7295672,
+        "backingStorageSize": 13197217
+      },
+      "afterHeap": {
+        "usedSize": 15061812,
+        "totalSize": 19177472,
+        "embedderHeapUsedSize": 7578264,
+        "backingStorageSize": 13195310
+      },
+      "heapDelta": 56668,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "artifactId": 11449446872,
+      "remainingBudgetBytes": 991908,
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "sourceFingerprint": "013154fa9aa3deb0ad747c2180f5ebc28066d61177890c3137a816674c8481d1",
+      "localEvidenceSha256": "c1abe01ed1670e37e810a61c802c334cf9d7bc9c7533af7e998348422caf01c0"
+    },
+    "preview": {
+      "warmupCycles": 2,
+      "cycles": 30,
+      "heapDiagnostics": false,
+      "warmupExperiment": false,
+      "beforeHeap": {
+        "usedSize": 12420796,
+        "totalSize": 16113664,
+        "embedderHeapUsedSize": 6763160,
+        "backingStorageSize": 6163342
+      },
+      "afterHeap": {
+        "usedSize": 13453664,
+        "totalSize": 16900096,
+        "embedderHeapUsedSize": 7027248,
+        "backingStorageSize": 6163342
+      },
+      "heapDelta": 1032868,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "artifactId": 11449590826,
+      "remainingBudgetBytes": 15708,
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "sourceFingerprint": "013154fa9aa3deb0ad747c2180f5ebc28066d61177890c3137a816674c8481d1",
+      "localEvidenceSha256": "44780c27c958a3e5d9a09b028b7f630ccb32f7e652cb57ffb64067eef175371d"
+    }
+  },
+  "note": "One full acceptance run of the exact clean SHA. Subsequent report-only commits are not represented as another CI run. Not evidence of long-term memory stability."
+}

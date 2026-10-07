@@ -16,6 +16,17 @@ import { readCombatStats } from '../simulation/combat-s13';
 import { getInterestGold } from '../simulation/economy';
 import { combatEventText, originLabel } from './combat-feedback';
 import { InputRouter, type Gesture } from './input-router';
+import { getDeploymentCap } from '../simulation/match';
+import { getPlayerDeploymentCount } from '../simulation/game';
+import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
+import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
+
+type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
+const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
+const PHASE_HINT: Readonly<Record<MatchState['phase'], string>> = {
+  preparation: '购买、部署、装备后，点击开始战斗', choice: '完成三选一后继续运营', combat: '自动战斗进行中 · 运营已锁定',
+  settlement: '收入与经验已到账 · 点击继续进入下一回合', gameOver: '本局结束 · 点击新局重新开始',
+};
 
 interface PanelActions {
   readonly state: () => MatchState;
@@ -29,12 +40,18 @@ interface PanelActions {
   readonly rerollAnomaly: (choice: string, generation: number) => void;
   readonly buy: (slot: number, generation: number) => void;
   readonly deploy: (id: string, location: UnitLocation) => void;
-  readonly control: (name: 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match') => void;
+  readonly control: (name: ControlName) => void;
   readonly unitAt: (x: number, y: number) => string | undefined;
   readonly cancelGesture: () => void;
   readonly status: (message: string) => void;
+  readonly help: () => void;
 }
 
+function traitLine(definitionId: string): HTMLElement {
+  const line = element('span', '', 'shop-trait');
+  for (const label of heroTraitLabels(definitionId)) line.append(element('span', label.name, label.open ? 'trait-open' : 'trait-closed'));
+  return line;
+}
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
@@ -88,6 +105,8 @@ export function describeTraitTier(definition: import('../simulation/strategy-typ
 }
 
 const CHOICE_POINTER_QUIET_MS = 400;
+const LIFECYCLE_QUIET_MS = 400;
+const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
 
 /** Accessible DOM view over the same Match commands; it owns no game state. */
 export class StrategyPanel {
@@ -104,6 +123,7 @@ export class StrategyPanel {
   private pointerPosition: { x: number; y: number } | null = null;
   private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement } | null = null;
   private choiceToken = '';
+  private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
   private focusFrame: number | null = null;
   private combatText: HTMLElement | null = null;
@@ -116,8 +136,10 @@ export class StrategyPanel {
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
+    // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
+    const helpOpen = () => document.body.dataset.helpOpen === 'true';
     const tabWithinChoice = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab' || !choiceVisible()) return;
+      if (event.key !== 'Tab' || !choiceVisible() || helpOpen()) return;
       // Only Tab belongs to the focus boundary. D/F/E and repeat still reach the
       // existing domain command handlers without a timer or key suppression.
       const targets = Array.from(this.modal.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
@@ -127,7 +149,7 @@ export class StrategyPanel {
       else targets[index < 0 ? (event.shiftKey ? targets.length - 1 : 0) : (index + (event.shiftKey ? -1 : 1) + targets.length) % targets.length].focus({ preventScroll: true });
     };
     const retainChoiceFocus = (event: FocusEvent) => {
-      if (choiceVisible() && !this.modal.contains(event.target as Node)) this.focusChoice();
+      if (choiceVisible() && !helpOpen() && !this.modal.contains(event.target as Node)) this.focusChoice();
     };
     document.addEventListener('keydown', tabWithinChoice, true);
     document.addEventListener('focusin', retainChoiceFocus, true);
@@ -135,9 +157,10 @@ export class StrategyPanel {
     // React to the mode commit instead of assuming a single animation frame is
     // late enough to move focus into an import-hidden dialog.
     const modeObserver = new MutationObserver(() => {
+      this.modal.inert = helpOpen();
       if (!this.modal.contains(document.activeElement)) this.focusChoice();
     });
-    modeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-m6-mode'] });
+    modeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-m6-mode', 'data-help-open'] });
     this.disposers.push(() => {
       document.removeEventListener('keydown', tabWithinChoice, true);
       document.removeEventListener('focusin', retainChoiceFocus, true);
@@ -229,23 +252,57 @@ export class StrategyPanel {
     const state = this.actions.state(), ready = state.phase === 'preparation';
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.eventList = null;
-    const head = element('header'), stage = getStageRound(state.round);
-    const xp = getXpToNextLevel(state.level);
-    const interest = getInterestGold(state.gold);
-    head.append(element('h2', `${stage.stage}-${stage.round} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[getRoundKind(state.round)]}`), element('p', `生命 ${state.playerHp} · ${state.gold} 金币 · 利息档 ${interest} 金币 · 等级 ${state.level} / ${state.xp}${xp === null ? ' 满级' : ` / ${xp}`} 经验`, 'panel-hud'));
-    head.append(element('p', `${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · 强化 2-1 / 3-2 / 4-2 · 异常 4-6 · 终局 6-7`));
-    head.append(element('p', 'S13 14.24b 精选单人模式 · 无限单位池 · 补给代替选秀', 'mode-note'));
+    const stage = getStageRound(state.round), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
+    const head = element('header', '', 'hud-bar'); head.dataset.phase = state.phase;
+    const title = element('div', '', 'hud-title');
+    title.append(element('span', PHASE_LABEL[state.phase], `phase-badge phase-${state.phase}`), element('h2', `${stage.stage}-${stage.round} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[getRoundKind(state.round)]}`));
+    const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
+    head.append(title);
+    const stats = element('div', '', 'hud-stats panel-hud');
+    const chip = (label: string, value: string, kind: string) => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); stats.append(node); };
+    chip('生命', String(state.playerHp), 'hp'); chip('金币', `${state.gold}`, 'gold');
+    chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level');
+    chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
+    head.append(stats);
+    head.append(element('p', `利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${PHASE_HINT[state.phase]}`, 'hud-hint'));
     this.root.append(head);
-    const controls = element('div', '', 'mobile-controls');
-    const controlsList = [['reroll', 'D · 搜牌 2 金币'], ['buy-xp', 'F · 经验 4 金币'], ['sell', 'E · 出售选中'], ['start-combat', '开始战斗'], ['continue', '继续'], ['new-match', '新局']] as const;
-    for (const [name, label] of controlsList) controls.append(this.button(`mobile:${name}`, label, () => {
-      if (name === 'sell' && this.router.current?.kind === 'item') { this.actions.status('无出售单位目标 · 请先结束物品拖拽'); return; }
-      this.actions.control(name);
-    }));
-    const lock = this.button('shop-lock', state.shop.locked ? '解锁商店 · 已保留' : '锁定商店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !ready);
-    lock.setAttribute('aria-pressed', String(Boolean(state.shop.locked))); controls.append(lock);
-    this.root.append(controls);
+    // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
+    const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';
+    const labels: Record<ControlName, string> = { reroll: 'D · 刷新 2', 'buy-xp': 'F · 经验 4', sell: 'E · 出售', 'start-combat': state.phase === 'combat' ? '战斗进行中…' : state.phase === 'choice' ? '请先完成选择' : getRoundKind(state.round) === 'supply' ? '领取补给' : '开始战斗', continue: '继续', 'new-match': '新局' };
+    const actions = element('div', '', 'action-bar');
+    const controlButton = (name: ControlName, className: string) => {
+      const button = this.button(`mobile:${name}`, labels[name], () => {
+        if (name === 'sell' && this.router.current?.kind === 'item') { this.actions.status('无出售单位目标 · 请先结束物品拖拽'); return; }
+        if (LIFECYCLE.has(name)) {
+          // The primary button changes meaning when the phase changes (继续 → 开始战斗). A second
+          // click of the same burst must not land on the new action; deliberate clicks after the
+          // quiet window, and every D/F/E or shop input, are unaffected.
+          const now = performance.now(), guard = this.lifecycleGuard;
+          if (guard && guard.name !== name && now - guard.at < LIFECYCLE_QUIET_MS) { this.actions.status('阶段刚刚切换 · 请确认后再点击'); return; }
+          const before = this.actions.state().phase;
+          this.actions.control(name);
+          if (this.actions.state().phase !== before) this.lifecycleGuard = { at: now, name };
+          return;
+        }
+        this.actions.control(name);
+      });
+      button.classList.add(className);
+      if (name === primary && state.phase !== 'preparation' && name === 'start-combat') button.classList.add('waiting');
+      return button;
+    };
+    actions.append(controlButton(primary, 'primary-action'));
+    const controls = element('div', '', 'mobile-controls'); controls.classList.toggle('locked', !ready);
+    for (const name of ['reroll', 'buy-xp', 'sell'] as const) controls.append(controlButton(name, 'economy-action'));
+    const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !ready);
+    lock.setAttribute('aria-pressed', String(Boolean(state.shop.locked))); lock.classList.add('economy-action'); controls.append(lock);
+    actions.append(controls);
+    this.root.append(actions);
+    // Lifecycle buttons that are not the current primary action sit below the shop,
+    // keeping the shop within the first screen on small phones.
+    const secondary = element('div', '', 'secondary-controls');
+    for (const name of (['start-combat', 'continue', 'new-match'] as const).filter(name => name !== primary)) secondary.append(controlButton(name, 'secondary-action'));
     this.renderShop(state, ready);
+    this.root.append(secondary);
     const result = state.roundResults.at(-1);
     if (result) {
       const receipt = element('details', '', 'income-receipt'); receipt.dataset.debug = 'income-receipt';
@@ -281,7 +338,9 @@ export class StrategyPanel {
     for (const snapshot of deriveTraits(state.preparation, 'player')) {
       const definition = TRAIT_DEFINITIONS[snapshot.traitId], next = definition.tiers.find(tier => tier.threshold > snapshot.count);
       const row = element('article', '', snapshot.tier > 0 ? 'trait active' : 'trait'); row.dataset.debug = `trait:${snapshot.traitId}`;
-      row.append(element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`));
+      const title = element('h3', `${definition.name} · ${snapshot.count} / ${next?.threshold ?? '已满'} · 档位 ${snapshot.tier}`);
+      title.insertAdjacentHTML('afterbegin', s13IconHtml('trait', snapshot.traitId, 20, 'trait-icon'));
+      row.append(title);
       row.append(element('p', `上阵不同单位：${snapshot.memberDefinitionIds.map(id => displayUnitName(id)).join('、') || '无'}`));
       row.append(element('p', definition.tiers.map(tier => describeTraitTier(definition, tier)).join(' / ')));
       list.append(row);
@@ -295,6 +354,7 @@ export class StrategyPanel {
       const definition = ITEM_DEFINITIONS[item.definitionId];
       const button = this.button(`item:${item.id}`, `${definition.name}\n${definition.effects.map(describeEffect).join('；')}`, () => {}, !ready);
       button.setAttribute('aria-pressed', String(this.selectedItems.includes(item.id))); button.classList.add('item-card');
+      button.insertAdjacentHTML('afterbegin', s13IconHtml('item', item.definitionId, 28, 'item-icon'));
       button.dataset.itemId = item.id; button.title = `${item.id} · ${definition.id}`;
       button.addEventListener('pointerdown', event => {
         if (!ready || event.button !== 0) return;
@@ -329,6 +389,7 @@ export class StrategyPanel {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
           if (chosen) this.actions.equip(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
         }, !ready);
+        if (item) button.insertAdjacentHTML('afterbegin', s13IconHtml('item', item.definitionId, 22, 'item-icon'));
         button.dataset.equipUnit = unit.id; button.dataset.equipSlot = String(slot); slots.append(button);
       }
       row.append(slots); section.append(row);
@@ -392,6 +453,7 @@ export class StrategyPanel {
     const token = `${choice.choiceId}:${choice.generation}:${choice.step}`;
     if (token === this.choiceToken) return;
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
+    this.modal.inert = document.body.dataset.helpOpen === 'true';
     const card = element('div', '', 'choice-dialog');
     card.append(element('h2', choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
     card.append(element('p', '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
@@ -425,7 +487,8 @@ export class StrategyPanel {
     this.focusFrame = requestAnimationFrame(() => { this.focusFrame = null; this.focusChoice(); });
   }
   private focusChoice(): void {
-    if (this.modal.hidden || getComputedStyle(this.modal).display === 'none') return;
+    if (this.modal.hidden || getComputedStyle(this.modal).display === 'none' || document.body.dataset.helpOpen === 'true') return;
+    this.modal.inert = false;
     (this.modal.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? this.modal).focus({ preventScroll: true });
   }
   updateCombat(): void {
@@ -496,9 +559,19 @@ export class StrategyPanel {
     const shop = element('div', '', 'touch-shop');
     state.shop.slots.forEach((offer, slot) => {
       const definition = offer.status === 'available' ? UNIT_DEFINITIONS[offer.definitionId] : null;
-      shop.append(this.button(`mobile:buy-${slot}`, definition ? `${displayUnitName(definition.id)}\n${definition.cost} 金币` : '已购买', () => this.actions.buy(slot, state.shop.generation), !ready || !definition));
+      const affordable = definition ? state.gold >= definition.cost : false;
+      const button = this.button(`mobile:buy-${slot}`, '', () => this.actions.buy(slot, state.shop.generation), !ready || !definition);
+      button.classList.add('shop-card');
+      if (definition) {
+        const identity = getHeroIdentity(definition.id);
+        button.dataset.cost = String(definition.cost); button.classList.toggle('unaffordable', !affordable);
+        const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroPortraitHtml(definition.id, 34, heroEmblemSvg(definition.id, 34));
+        button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
+        button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}`);
+      } else button.append(element('span', '已购买', 'shop-name'));
+      shop.append(button);
     });
-    section.append(shop, element('p', `商店概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' / ')}`)); this.root.append(section);
+    section.append(shop, element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds')); this.root.append(section);
   }
   private renderBuilds(): void {
     const section = element('section', '', 'build-guide'); section.dataset.debug = 'build-guide';
@@ -510,6 +583,7 @@ export class StrategyPanel {
     for (const [title, units, route, items] of builds) { const card = element('article', '', 'trait'); card.append(element('h3', title), element('p', units), element('p', route), element('p', items)); section.append(card); }
     for (const definition of Object.values(ANOMALY_DEFINITIONS)) section.append(element('p', `${definition.name}：${definition.description}`));
     section.append(element('p', '异常适配：库奇/崔丝塔娜 可选泰坦打击；克格莫/佐伊 可选法师护甲；库奇/佐伊 可选连杀。无需特定异常才能继续。'));
+    section.append(element('p', '日程：强化 2-1 / 3-2 / 4-2 · 异常 4-6 · 终局 6-7。S13 14.24b 精选单人模式 · 无限单位池 · 补给代替选秀。', 'mode-note'));
     section.append(element('p', '目标：八人口、核心二星、输出至少两件成装、前排一件成装。4-6 绑定核心异常；组件来自开局、每阶段 .4 补给及 .7 野怪。副羁绊只保留原生身份，本版本未开放。'));
     this.root.append(section);
   }
