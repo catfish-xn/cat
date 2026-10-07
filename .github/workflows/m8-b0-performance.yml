@@ -1,0 +1,129 @@
+name: M8 B0 CI performance baseline
+on:
+  push:
+    branches: ['feat/m8-b0-baseline']
+    paths: ['.github/workflows/m8-b0-performance.yml']
+permissions:
+  contents: read
+concurrency:
+  group: m8-b0-performance
+  cancel-in-progress: false
+env:
+  M5_COMMIT_SHA: ${{ github.sha }}
+jobs:
+  test-and-build:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: test-and-build-sample${{ matrix.sample }}
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    env:
+      M5_JOB_KEY: test-and-build-sample${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22 # Three-sample measured budget; docs/evidence/M5_CI_BUDGET.json.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs tests npm test
+      - run: node scripts/ci-m5-step.cjs build npm run build
+      - run: node scripts/ci-m5-step.cjs headless npm run test:headless
+      - run: M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-headless-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/
+  chromium-input:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: input-${{ matrix.mode }}-sample${{ matrix.sample }}
+    env:
+      M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32 # Includes native input and a normal-time touch route.
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [dev]
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - run: node scripts/ci-m5-step.cjs build npm run build
+      - name: Native input and normal-time touch route
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          args=()
+          if [ "$MODE" = preview ]; then args+=(--preview); fi
+          node scripts/ci-m5-step.cjs input node scripts/verify-m5-input.cjs "${args[@]}"
+          node scripts/ci-m5-step.cjs touch-route node scripts/verify-m5-browser.cjs "${args[@]}" --build=cannon --touch
+          node scripts/ci-m5-step.cjs m6-layout node scripts/m6-layout-product-smoke.cjs "${args[@]}"
+          if [ "$MODE" = dev ]; then
+            node scripts/ci-m5-step.cjs m6-storage node scripts/verify-m6-storage.cjs
+            node scripts/ci-m5-step.cjs m6-components node tests/m6-stats-browser.cjs
+            node scripts/ci-m5-step.cjs m6-performance node scripts/verify-m6-performance.cjs
+            node scripts/ci-m5-step.cjs m6-retry node tests/m6-persistence-retry.cjs
+            node scripts/ci-m5-step.cjs m6-application-failures node tests/m6-application-failures.cjs
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/
+  m7-presentation:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: m7-presentation-sample${{ matrix.sample }}
+    env:
+      M5_JOB_KEY: m7-presentation-sample${{ matrix.sample }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - run: node scripts/ci-m5-step.cjs build npm run build
+      - name: Signed-off M6 build for paired budgets
+        run: |
+          git worktree add ../m6-base 631c131f1f2fd387c873f0fd8b5a238bca79dbe0
+          ln -s "$PWD/node_modules" ../m6-base/node_modules
+          (cd ../m6-base && npx vite build)
+      - name: M7 presentation, five viewports, sub-path deploy and budgets
+        run: |
+          mkdir -p artifacts
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort > artifacts/m7-preview.log 2>&1 &
+          until curl -s http://127.0.0.1:4173 > /dev/null; do sleep 1; done
+          node scripts/ci-m5-step.cjs m7-presentation node scripts/verify-m7-presentation.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-presentation
+          node scripts/ci-m5-step.cjs m7-screens node scripts/m7-screens.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-screens
+          node scripts/ci-m5-step.cjs m7-subpath node scripts/verify-m7-subpath.cjs
+          node scripts/ci-m5-step.cjs m7-budget node scripts/m7-budget.cjs --base=../m6-base/dist --current=dist --out=artifacts/m7-budget
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m7-presentation-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/
+
