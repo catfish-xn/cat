@@ -202,7 +202,7 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
       emit(center, amount(unit, ctx.tick, { ad: variable(unit, 'HeadshotPercentAD') }), 'physical', task.ordinal * 100 + 1);
       applyStatus(center, task.source, 'resistanceFlat', -variable(unit, 'ResistReduction', 20), 1200, ctx.tick, ctx.events, false, `${task.actionSeq}:${task.ordinal}`); break;
     }
-    case 'ireliaEnd': executeShieldEnd(ctx, unit, task.shieldEndKey ?? sourceKey(task.source), task.actionSeq); break;
+    case 'ireliaEnd': executeShieldEnd(ctx, unit, task.shieldEndKey ?? sourceKey(task.source), task.actionSeq, { area: true, triggeringCastActionSeq: task.actionSeq }); break;
     case 'leonaEnd': for (const enemy of neighborsOf(unit, ctx.units)) emit(enemy, task.amount, 'magic'); break;
     case 'lorisEnd': {
       const center = byDistance(unit, opponents)[0]; if (!center) break;

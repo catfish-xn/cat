@@ -77,4 +77,34 @@ describe('B2 A06/A07/R1 programs on the production tick pipeline', () => {
     expect(result.events.filter(e => e.type === 'statusChanged' && e.reason === 'cleansed')).toHaveLength(3);
   });
 
+  it.each(['expiry', 'cleanse'] as const)('R3 %s of short status preserves an independent same-key timer and applies again at40', reason => {
+    const s = source('anonymous', 'timer', 'p');
+    const status: StatusApplication = { ...app('stat-buff', 0, 10), activation: 'next-tick', polarity: 'beneficial', removable: false,
+      stackPolicy: { kind: 'refresh-same-instance', magnitude: 'replace', phase: 'preserve' }, modifier: modifier('armor', 10) };
+    // Timer and status deliberately use the same identity in separate namespaces.
+    const timer: PeriodicTask = { ...redemption(), ...effectIdentity('standalone', s, 'p'), nextPulseAtTick: 20, periodTicks: 20,
+      program: { definitionId: 'anonymous', targetSnapshot: 'once-per-pulse', selector: selector(), effects: [{ kind: 'apply-status', status }] } };
+    let state = advance(battle([{ ...dummy('p','player',1), mechanismDefinitions: definitions([timer]) }, dummy('e','enemy',2)]), 20).state;
+    const first = state.units.find(u => u.id === 'p')!;
+    expect(first.mechanismState!.statuses[0].contributions[0]).toMatchObject({ key: timer.key, appliedAtTick: 21, expiresAtTick: 31 });
+    if (reason === 'cleanse') {
+      // Hostile ordinary debuff shares the holder timer key, yet remains independently removable.
+      const hostile = source('anonymous', 'timer', 'e');
+      const task = { ...timer, ...effectIdentity('standalone', hostile, 'p'), program: { ...timer.program, selector: selector({ candidates: 'bound-target', relation: 'enemy' }) } };
+      const groups = applyStatusContribution([], effectIdentity('standalone', hostile, 'p'), { ...status, kind: 'stat-debuff', polarity: 'harmful', removable: true, modifier: modifier('armor', -10) }, 20).groups;
+      const cleanse = trigger({ source: source('cleanser','n','p'), event: 'post-damage-survival', listener: { subject: 'target', relationToHolder: 'self', withinHexes: null }, maxPerCombat: 1, effects: [{ kind: 'cleanse', remove: 'removable-hostile-control-dot-debuff', retarget: true }] });
+      state = { ...state, units: state.units.map(u => u.id === 'p' ? { ...u, mechanismDefinitions: { ...definitions([task]), survivalTriggers: [cleanse] }, mechanismState: { ...u.mechanismState!, statuses: groups, periodicTasks: [{ ...task, nextPulseAtTick: 40, pulseOrdinal: 1 }] } } : { ...u, cooldownTicks: 0, attackDamage: 1 }) };
+      const cleaned = stepCombat(state); state = cleaned.state;
+      expect(cleaned.events.filter(e => e.type === 'statusChanged' && e.reason === 'cleansed')).toHaveLength(1);
+      expect(state.units.find(u => u.id === 'p')!.mechanismState!.periodicTasks).toHaveLength(1);
+    }
+    state = advance(state, 31 - state.tick).state;
+    expect(state.units.find(u => u.id === 'p')!.mechanismState!.statuses).toEqual([]);
+    expect(state.units.find(u => u.id === 'p')!.mechanismState!.periodicTasks[0].nextPulseAtTick).toBe(40);
+    const next = advance(state, 9);
+    expect(next.events.filter(e => e.type === 'statusChanged' && e.reason === 'applied')).toHaveLength(1);
+    expect(next.state.units.find(u => u.id === 'p')!.mechanismState!.statuses[0].contributions[0]).toMatchObject({ appliedAtTick: 41, expiresAtTick: 51 });
+    expect(next.state.units.find(u => u.id === 'p')!.mechanismState!.periodicTasks[0].nextPulseAtTick).toBe(60);
+  });
+
 });

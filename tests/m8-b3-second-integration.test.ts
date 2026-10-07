@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
+import { executeTask, type AbilityContext } from '../src/simulation/combat-s13-abilities';
+import { maintainMechanisms } from '../src/simulation/m8/s13-mechanisms';
+import { type S13Unit, EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { EMPTY_MECHANISMS } from '../src/simulation/m8/runtime-types';
 import type { Effect, StatusGroup } from '../src/simulation/m8/contracts';
 import { applyStatusContribution } from '../src/simulation/m8/status';
@@ -103,4 +105,32 @@ describe('B3 second batch on the actual S13 step pipeline', () => {
     const recast = stepCombat({ ...first.state, tick: 19, units: first.state.units.map(u => u.id === 'p' ? { ...u, mana: 100 } : u) });
     expect(recast.state.units.find(u => u.id === 'p')!.tasks!.filter(t => t.kind === 'bleed').map(t => [t.executeAtTick, t.amount])).toEqual([[40, 50], [60, 50], [80, 50], [100, 50]]);
   });
+  it('R4 actual shield expiry emits70 area damage linked to original cast7 exactly once', () => {
+    const first = stepCombat({ ...battle([hero('irelia'), dummy('e','enemy',2)]), nextActionSeq: 7 });
+    const ctx: AbilityContext = { tick: 61, board: first.state.board, units: structuredClone(first.state.units) as S13Unit[], events: [], packets: [], heals: [], draw: () => { throw Error('No unauthorized spell RNG'); } };
+    maintainMechanisms(ctx, () => 8);
+    const holder = ctx.units.find(u => u.id === 'p')!, task = holder.tasks.find(t => t.shieldEndKey)!;
+    executeTask(ctx, holder, task);
+    // AP100: base70 + floor(0 absorbed×30%)=70; decay contributes no bonus.
+    expect(ctx.packets).toHaveLength(1);
+    expect(ctx.packets[0]).toMatchObject({ raw: 70, area: true, triggeringCastActionSeq: 7 });
+    executeTask(ctx, holder, task); expect(ctx.packets).toHaveLength(1);
+
+  });
+  it('R6 lethal240 against100HP removes all four attached tasks while combat continues', () => {
+    const killed = stepCombat(battle([hero('darius'), dummy('e','enemy',2,{hp:100}),dummy('spare','enemy',6)]));
+    expect(killed.state.status).toBe('running');
+    expect(killed.state.units.find(u => u.id === 'e')!.alive).toBe(false);
+    expect(killed.state.units.flatMap(u => u.tasks ?? []).filter(t => t.attachedDot && t.targetId === 'e')).toEqual([]);
+  });
+  it('R6 source death keeps four legitimate attached bleeds on living target and consumes them without RNG', () => {
+    const first = stepCombat(battle([hero('darius',{ hp:100 }), dummy('e','enemy',2,{ cooldownTicks:0,attackDamage:200 }),dummy('spare','player',6)]));
+    expect(first.state.units.find(u => u.id === 'p')!.alive).toBe(false);
+    expect(first.state.units.find(u => u.id === 'p')!.tasks!.filter(t => t.attachedDot).map(t => t.executeAtTick)).toEqual([21,41,61,81]);
+    const after = advance({ ...first.state, units: first.state.units.map(u => u.id === 'e' ? { ...u, cooldownTicks: 1000, attackDamage: 0 } : u) }, 80);
+    expect(after.events.filter((e): e is Extract<CombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage' && e.source.ownerId === 'p' && e.tick > 1).map(e => [e.tick,e.raw])).toEqual([[21,50],[41,50],[61,50],[81,50]]);
+    expect(after.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
+    expect(after.state.rngDraws).toBe(first.state.rngDraws);
+  });
+
 });

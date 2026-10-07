@@ -49,6 +49,7 @@ export function endShield(layer: ShieldState, reason: ShieldEndReason, definitio
 export function validateShield(layer: ShieldState, tick: number, combatId?: string): void {
   validateIdentity(layer, combatId);
   for (const n of [layer.granted, layer.remaining, layer.absorbed, layer.decayed, layer.expiredDiscarded, layer.startsAtTick, layer.expiresAtTick]) integer(n);
+  if (typeof layer.endRewardConsumed !== 'boolean' || layer.endRewardConsumed && layer.remaining > 0) throw new RangeError('Invalid shield consumption');
   if (integer(layer.remaining) + integer(layer.absorbed) + integer(layer.decayed) + integer(layer.expiredDiscarded) !== integer(layer.granted)
     || layer.startsAtTick > tick || layer.expiresAtTick <= layer.startsAtTick || layer.remaining > 0 && layer.expiresAtTick <= tick) throw new RangeError('Invalid shield conservation/lifetime');
   if (layer.decay.kind !== 'none') {

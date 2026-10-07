@@ -5,7 +5,7 @@ import type { AbilityContext, PeriodicReference } from '../combat-s13-abilities'
 import { ad, ap, compareText, constantModifier, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
-import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, SurvivalSample, TargetSelector } from './contracts';
+import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
 import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from './s13-definitions';
 import { canonicalSource, compareCodePoints, effectIdentity } from './identity';
 import { applyStatusContribution, advanceBurnClock, cleanseStatuses, effectiveStatuses, endStatuses, isEffective, removeStatusContributions, statusMagnitude, summarizeGroup } from './status';
@@ -78,15 +78,22 @@ function synchronizeBurnTask(target: S13Unit, key: string): void {
     pulseOrdinal: old?.pulseOrdinal ?? 0, pulseLimit: null, remainders: same ? old.remainders : [], finalPulse: 'before-expiry', onSourceDeath: 'persist-attached', onTargetDeath: 'cancel', program };
   target.mechanismState = { ...target.mechanismState!, periodicTasks: [...target.mechanismState!.periodicTasks.filter(t => t.key !== key), task] };
 }
+/** Burn clocks are attached to their contribution; independent program timers are not. */
+function cancelAttachedBurns(tasks: readonly PeriodicTask[], ended: readonly StatusContribution[]): PeriodicTask[] {
+  return tasks.filter(task => !ended.some(c => c.application.kind === 'burn' && task.key === c.key && task.targetId === c.targetId
+    && canonicalSource(task.source) === canonicalSource(c.source)
+    && task.program.definitionId === JSON.stringify([c.source.definitionId, c.source.effectIndex, 'burn'])));
+}
+interface DamageExecutionContext { readonly area: boolean; readonly triggeringCastActionSeq: number | null }
 export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effect: Effect, seq: number, ordinal = 0,
-  frozen?: SurvivalSample, periodic?: PeriodicReference, amountOverride?: number, absorbed?: number): void {
+  frozen?: SurvivalSample, periodic?: PeriodicReference, amountOverride?: number, absorbed?: number, damageContext?: DamageExecutionContext): void {
   const sample = effectSample(holder, target, ctx.tick, frozen, absorbed);
   const value = 'amount' in effect && typeof effect.amount !== 'number' ? amountOverride ?? evaluateAmount(effect.amount, sample) : 0;
   switch (effect.kind) {
     case 'damage': ctx.packets.push({ source, targetId: target.id, raw: value, damageType: effect.damageType, actionSeq: seq, ordinal,
-      delivery: effect.delivery, critEligibility: effect.critEligibility, area: false, triggeringCastActionSeq: null, ...(periodic ? { periodic } : {}) }); break;
+      delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(periodic ? { periodic } : {}) }); break;
     case 'heal': {
-      const request = makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, source, target.id, seq, ordinal, 'direct']), target.id, 'direct', null, [{ source, numerator: value, denominator: 1 }]);
+      const request = makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(source)), target.id, seq, ordinal, 'direct']), target.id, 'direct', null, [{ source, numerator: value, denominator: 1 }]);
       ctx.heals.push({ source, targetId: target.id, amount: value, request, ...(periodic ? { periodic } : {}) }); break;
     }
     case 'apply-status': applyFrozenStatus(ctx, target, source, effect.status, effect.status.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'); break;
@@ -124,8 +131,8 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       target.statuses = target.statuses.filter(s => !(s.contributionKeys?.some(k => keys.has(k)) || !s.contributionKeys && hostile.has(s.source.ownerId) && (s.kind === 'stun' || s.kind === 'armorReduction' || s.kind === 'resistanceFlat' && s.amount < 0)));
       for (const unit of ctx.units) {
         unit.tasks = unit.tasks.filter(t => !(t.attachedDot && t.targetId === target.id && hostile.has(t.source.ownerId)));
-        unit.mechanismState = { ...unit.mechanismState!, periodicTasks: unit.mechanismState!.periodicTasks.filter(t => !keys.has(t.key)) };
       }
+      target.mechanismState = { ...target.mechanismState!, periodicTasks: cancelAttachedBurns(target.mechanismState!.periodicTasks, result.ended.map(e => e.contribution)) };
       for (const ended of result.ended) ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, reason: 'cleansed', group: { targetId: target.id, kind: ended.contribution.application.kind, contributions: [ended.contribution], effectiveSourceKey: null, effectiveMagnitudeBps: 0, nextPulseAtTick: null },
         status: { key: ended.contribution.key, source: ended.contribution.source, kind: 'stun', amount: 0, startsAtTick: ended.contribution.appliedAtTick, expiresAtTick: ctx.tick } });
       target.targetId = null; break;
@@ -191,8 +198,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
       ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: unit.id, status, reason: 'expired' });
     for (const ended of expired.ended) if (!unit.statuses.some(s => s.contributionKeys?.includes(ended.contribution.key)))
       ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: unit.id, reason: 'expired', status: { key: ended.contribution.key, source: ended.contribution.source, kind: 'resistanceFlat', amount: 0, startsAtTick: ended.contribution.appliedAtTick, expiresAtTick: ctx.tick }, group: { targetId: unit.id, kind: ended.contribution.application.kind, contributions: [ended.contribution], effectiveSourceKey: null, effectiveMagnitudeBps: 0, nextPulseAtTick: null } });
-    const endedKeys = new Set(expired.ended.map(e => e.contribution.key));
-    unit.mechanismState = { ...unit.mechanismState!, periodicTasks: unit.mechanismState!.periodicTasks.filter(t => !endedKeys.has(t.key)), statuses: expired.groups.map(g => summarizeGroup(g, ctx.tick)) };
+    unit.mechanismState = { ...unit.mechanismState!, periodicTasks: cancelAttachedBurns(unit.mechanismState!.periodicTasks, expired.ended.map(e => e.contribution)), statuses: expired.groups.map(g => summarizeGroup(g, ctx.tick)) };
     for (const ended of expired.ended) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, ctx.units.find(u => u.id === ended.contribution.source.ownerId)!,
       { ...ended.contribution.source, effectIndex: ended.contribution.source.effectIndex + index + 1 }, unit, effect, nextSeq(), index);
     unit.statuses = unit.statuses.filter(s => !s.contributionKeys || s.contributionKeys.some(k => unit.mechanismState!.statuses.some(g => g.contributions.some(c => c.key === k))));
@@ -211,14 +217,14 @@ export function clearPeriodicAccount(ctx: AbilityContext, reference: PeriodicRef
   const owner = ctx.units.find(u => u.id === reference.holderId)!;
   owner.mechanismState = { ...owner.mechanismState!, periodicTasks: owner.mechanismState!.periodicTasks.map(t => t.key === reference.taskKey ? clearRemainder(t, reference.effectIndex, targetId) : t) };
 }
-export function executeShieldEnd(ctx: AbilityContext, holder: S13Unit, legacyKey: string, seq: number): void {
+export function executeShieldEnd(ctx: AbilityContext, holder: S13Unit, legacyKey: string, seq: number, damageContext?: DamageExecutionContext): void {
   const layer = holder.shieldLayers.find(l => l.key === legacyKey); if (!layer?.m8Grant) return;
   const state = frozenShield(layer, holder), reason = layer.endedReason ?? (state.expiresAtTick <= ctx.tick ? 'expired' : 'depleted');
   const ended = endShield(state, reason, layer.m8Grant, holder.alive && holder.hp > 0);
   const next = shieldProjection(ended.layer, layer.key, layer.m8Grant, reason); holder.shieldLayers = holder.shieldLayers.map(l => l === layer ? next : l);
   if (!ended.emitEnd) return;
   for (const target of endTargets(holder, ctx, layer.m8Grant.endTargeting)) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, holder,
-    { ...state.source, effectIndex: state.source.effectIndex + index + 1 }, target, effect, seq, index, undefined, undefined, undefined, state.absorbed);
+    { ...state.source, effectIndex: state.source.effectIndex + index + 1 }, target, effect, seq, index, undefined, undefined, undefined, state.absorbed, damageContext);
 }
 export function settleShieldEnds(ctx: AbilityContext, nextSeq: () => number): void {
   for (const unit of ctx.units) for (const layer of [...unit.shieldLayers]) if (layer.m8Grant?.endTiming === 'post-damage' && (layer.remaining === 0 || layer.expiresAtTick <= ctx.tick)) executeShieldEnd(ctx, unit, layer.key, nextSeq());
@@ -243,7 +249,7 @@ export function vampRates(unit: S13Unit, hp: number): VampRate[] {
 }
 export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['heals'][number]): void {
   const target = ctx.units.find(u => u.id === entry.targetId); if (!target || target.hp <= 0 || !target.alive) return;
-  const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, entry.source, entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
+  const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(entry.source)), entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
     [{ source: asSource(entry.source), numerator: entry.amount, denominator: 1 }]);
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick)); target.hp += outcome.actual;
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
@@ -267,6 +273,7 @@ export function cleanupMechanisms(ctx: AbilityContext, combatEnd = false): void 
       }
       unit.mechanismState = { ...unit.mechanismState!, statuses: [], activities: unit.mechanismState!.activities.map(a => a.lifecycle === 'active' ? { ...a, lifecycle: 'ended', endedAtTick: ctx.tick, endReason: reason } : a) };
     }
+    unit.tasks = unit.tasks.filter(task => !task.attachedDot || task.targetId === null || !dead.has(task.targetId));
     unit.mechanismState = { ...unit.mechanismState!, periodicTasks: combatEnd ? [] : cleanPeriodicTasks(unit.mechanismState!.periodicTasks, dead, dead) };
   }
 }

@@ -87,6 +87,13 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       check(grant.endTargeting.kind === 'select' && same(grant.endTargeting.selector, { primary: 'normal', candidates: 'board', relation: 'enemy', anchor: 'holder', radius: 1, maxTargets: 100, excludeSelf: true, excludePrimary: false, distinct: true, order: 'id', sample: 'action-completion' }), 'shield end targeting binding');
     } else check(grant.endTiming === 'post-damage' && grant.decay.kind === 'none' && grant.onEnd.length === 0 && grant.endEffects.length === 0
       && same(grant.endTargeting, { kind: 'fixed', targetIds: [unit.id], ifMissing: 'skip' }), 'ordinary shield end binding');
+    const pendingEnds = units.flatMap(u => u.tasks ?? []).filter(t => t.shieldEndKey === layer.key && t.source.ownerId === shield.source.ownerId);
+    check(shield.remaining === 0 || layer.endedReason === undefined && !shield.endRewardConsumed, 'active shield consumption/reason');
+    if (shield.remaining === 0) check(layer.endedReason !== undefined || shield.granted === 0 && !shield.endRewardConsumed, 'missing shield end reason');
+    if (shield.endRewardConsumed) check(pendingEnds.length === 0, 'consumed shield has pending end task');
+    else if (grant.endTiming === 'next-action-planning') check(pendingEnds.length === 1
+      && pendingEnds[0].executeAtTick > tick && same(asSource(pendingEnds[0].source), shield.source), 'missing/foreign shield end task');
+    else check(pendingEnds.length === 0, 'unexpected shield end task');
     if (layer.endedReason !== undefined) check(['depleted','expired','replaced','death-cleanup','combat-end'].includes(layer.endedReason) && shield.remaining === 0, 'shield end reason');
   }
   const activityKeys = new Set<string>();
