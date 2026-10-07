@@ -22,7 +22,7 @@ export function appendStats(stats: BattleStats, events: readonly (CombatEvent | 
     if (event.combatId !== stats.combatId || event.eventSeq !== nextEventSeq) throw new Error('战斗统计事件不连续或属于另一场战斗');
     nextEventSeq++;
     if (event.type === 'packetDamage') {
-      if ('outcome' in event) {
+      if ('outcome' in event && event.outcome !== undefined) {
         const outcome = event.outcome, source = row(outcome.context.source.ownerId);
         source.hpDamage += outcome.hpDamage;
         if (outcome.context.damageType === 'physical') source.physicalHpDamage += outcome.hpDamage;
@@ -31,16 +31,18 @@ export function appendStats(stats: BattleStats, events: readonly (CombatEvent | 
         row(outcome.context.targetId).shieldAbsorbed += outcome.absorbed;
         continue;
       }
+      if (!('source' in event)) throw new Error('Missing authoritative outcome');
       const source = row(event.source.ownerId); source.hpDamage += event.hpDamage;
-      if (event.damageType === 'physical') source.physicalHpDamage += event.hpDamage; else source.magicHpDamage += event.hpDamage;
+      if (event.damageType === 'physical') source.physicalHpDamage += event.hpDamage; else if (event.damageType === 'magic') source.magicHpDamage += event.hpDamage; else source.trueHpDamage = (source.trueHpDamage ?? 0) + event.hpDamage;
       row(event.unitId).shieldAbsorbed += event.absorbed;
     } else if (event.type === 'heal') {
-      if ('outcome' in event) {
+      if ('outcome' in event && event.outcome !== undefined) {
         for (const share of event.outcome.shares) {
           const source = row(share.source.ownerId); source.effectiveHealing += share.actual; source.overhealing += share.overheal;
         }
         continue;
       }
+      if (!('source' in event)) throw new Error('Missing authoritative outcome');
       const source = row(event.source.ownerId); source.effectiveHealing += event.actual; source.overhealing += event.overheal;
     }
   }

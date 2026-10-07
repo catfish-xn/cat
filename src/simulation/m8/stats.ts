@@ -114,7 +114,7 @@ export interface AmountSample {
   readonly shieldAbsorbed?: number;
 }
 /** G01: no RNG or mutation; each coefficient joins the same rational numerator. */
-export function evaluateAmount(amount: Amount, sample: AmountSample): number {
+export function amountNumerator(amount: Amount, sample: AmountSample): bigint {
   const hp = amount.hpBasis === 'holder' ? sample.holder : sample.target;
   if (!hp) throw new RangeError('Missing amount HP basis');
   integer(hp.hp); integer(hp.maxHp, 1);
@@ -134,6 +134,9 @@ export function evaluateAmount(amount: Amount, sample: AmountSample): number {
     if (sample.shieldAbsorbed === undefined) throw new RangeError('Missing shield absorption sample');
     numerator += integer(sample.shieldAbsorbed) * integer(amount.shieldAbsorbedBps);
   }
-  const value = numerator / 10000n;
+  return numerator;
+}
+export function evaluateAmount(amount: Amount, sample: AmountSample): number {
+  const value = amountNumerator(amount, sample) / 10000n;
   return safeNumber(amount.cap === null ? value : value < integer(amount.cap) ? value : integer(amount.cap));
 }

@@ -8,14 +8,18 @@ export const MAX_COMBAT_TICKS = 1200;
 export const MOVE_INTERVAL_TICKS = 5;
 export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
-export interface ShieldLayer { readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
-export interface CombatStatus { readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
-export interface CombatTask { readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
+export interface ShieldLayer { readonly m8State?: import('./m8/contracts').ShieldState; readonly m8Grant?: Extract<import('./m8/contracts').Effect, { kind: 'grant-shield' }>; readonly endedReason?: import('./m8/contracts').ShieldEndReason;  readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
+export interface CombatStatus { readonly contributionKeys?: readonly string[]; readonly activity?: import('./m8/contracts').CombatActivity;  readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
+export interface CombatTask { readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
   readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 export interface CombatUnit {
+  readonly mechanismDefinitions?: import('./m8/runtime-types').MechanismDefinitions;
+  readonly mechanismState?: import('./m8/runtime-types').MechanismState;
+  readonly maxHpBasis?: { readonly base: number; readonly flat: number; readonly bps: number; readonly bonusBps: number };
+
   /** G03 frozen authorization projection; supplied by the content compiler, never inferred from damage source. */
   readonly spellCrit?: import('./m8/contracts').SpellCritAuthorization;
   readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number;
@@ -36,12 +40,13 @@ export interface CombatState {
 }
 export type CombatEvent = CombatEventData & { readonly domain?: 'combat'; readonly combatId?: string; readonly eventSeq?: number };
 export type CombatEventData =
+  | { readonly type: 'maxHpChanged'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly beforeMax: number; readonly afterMax: number; readonly beforeHp: number; readonly afterHp: number; readonly countsAsHeal: false }
   | { readonly type: 'statChanged'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly stat: 'attackSpeedBps' | 'abilityPower' | 'range'; readonly before: number; readonly after: number }
   | { readonly type: 'targetChanged'; readonly tick: number; readonly unitId: string; readonly before: string | null; readonly after: string | null }
-  | { readonly type: 'heal'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly requested: number; readonly actual: number; readonly overheal: number; readonly hp: number }
-  | { readonly type: 'statusChanged'; readonly tick: number; readonly unitId: string; readonly status: CombatStatus; readonly reason: 'applied' | 'expired' }
-  | { readonly type: 'shieldLayerChanged'; readonly tick: number; readonly unitId: string; readonly layer: ShieldLayer; readonly reason: 'granted' | 'absorbed' | 'expired' | 'decayed' }
-  | { readonly type: 'packetDamage'; readonly tick: number; readonly source: CombatOrigin; readonly unitId: string; readonly damageType: 'physical' | 'magic'; readonly raw: number; readonly mitigated: number; readonly absorbed: number; readonly hpDamage: number; readonly actionSeq: number; readonly packetOrdinal: number; readonly critical: boolean; readonly redirected: boolean }
+  | { readonly type: 'heal'; readonly outcome?: import('./m8/contracts').HealOutcome; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly requested: number; readonly actual: number; readonly overheal: number; readonly hp: number }
+  | { readonly type: 'statusChanged'; readonly tick: number; readonly unitId: string; readonly status: CombatStatus; readonly reason: 'applied' | 'expired' | 'cleansed' | 'death-cleanup' | 'combat-end' | 'control-cancelled' | 'replaced'; readonly group?: import('./m8/contracts').StatusGroup; readonly activity?: import('./m8/contracts').CombatActivity }
+  | { readonly type: 'shieldLayerChanged'; readonly tick: number; readonly unitId: string; readonly layer: ShieldLayer; readonly reason: 'granted' | 'absorbed' | 'expired' | 'decayed'; readonly endReason?: import('./m8/contracts').ShieldEndReason }
+  | { readonly type: 'packetDamage'; readonly tick: number; readonly source: CombatOrigin; readonly unitId: string; readonly damageType: 'physical' | 'magic' | 'true'; readonly outcome?: import('./m8/contracts').DamageOutcome; readonly raw: number; readonly mitigated: number; readonly absorbed: number; readonly hpDamage: number; readonly actionSeq: number; readonly packetOrdinal: number; readonly critical: boolean; readonly redirected: boolean }
   | { readonly type: 'kill'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin }
   | { readonly type: 'growth'; readonly tick: number; readonly unitId: string; readonly amountBps: number; readonly totalBps: number }
   | { readonly type: 'effectTriggered'; readonly tick: number; readonly source: EffectSource; readonly effectKey: string; readonly action: EffectAction; readonly targetId: string }

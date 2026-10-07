@@ -15,6 +15,7 @@ import { planRoundEconomy } from './economy';
 import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
+import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
@@ -222,6 +223,7 @@ export function restoreMatch(input: unknown): MatchState {
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
+      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!);
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
       validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
@@ -322,6 +324,7 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   list(unit.tasks); const taskKeys = new Set<string>();
   for (const task of unit.tasks) {
     record(task); origin(task.source); id(task.key); integer(task.executeAtTick); integer(task.amount); integer(task.ordinal); integer(task.total,1); integer(task.actionSeq);
+    requireValue(task.attachedDot === (task.kind === 'bleed' ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
     const owner = combatUnits.find(value => value.id === task.source.ownerId)!;
     const maximumAmp = mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
       + mechanic(owner, 'sniper', 'damageBpsPerHex') * (DEFAULT_BOARD.columns + DEFAULT_BOARD.rows);

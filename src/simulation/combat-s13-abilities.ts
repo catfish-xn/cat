@@ -1,14 +1,18 @@
+import { splitTotal } from './m8/periodic';
+import { flatAmount } from './m8/s13-definitions';
+import { executeShieldEnd } from './m8/s13-mechanisms';
 import { hexDistance, type Board } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, grantShield, lowestAlly, mechanic, neighborsOf,
   origin, path, range, sourceKey, variable, type S13Unit } from './combat-s13-state';
-import type { CritEligibility, DamageDelivery, DamageInput } from './m8/contracts';
-export interface S13Packet { source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic'; actionSeq: number;
+import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
+export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
+export interface S13Packet { periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
   ordinal: number; critical?: boolean; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
-export interface S13Heal { source: CombatOrigin; targetId: string; amount: number }
+export interface S13Heal { source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
-  tick: number; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
+  tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }
 function packet(ctx: AbilityContext, unit: S13Unit, target: S13Unit, raw: number, type: 'physical' | 'magic', seq: number,
@@ -19,7 +23,7 @@ function packet(ctx: AbilityContext, unit: S13Unit, target: S13Unit, raw: number
 function addTask(unit: S13Unit, kind: CombatTask['kind'], at: number, targetId: string | null, value: number, seq: number,
   ordinal = 0, total = 1, cancellable = false): void {
   unit.tasks.push({ key: `${unit.id}:${seq}:${kind}:${ordinal}`, kind, source: origin(unit), executeAtTick: at, targetId,
-    amount: value, ordinal, total, cancellable, actionSeq: seq });
+    amount: value, ordinal, total, cancellable, actionSeq: seq, ...(kind === 'ireliaEnd' ? { shieldEndKey: sourceKey(origin(unit)) } : {}), ...(kind === 'bleed' ? { attachedDot: true } : {}) });
 }
 function replaceEndTask(unit: S13Unit, kind: CombatTask['kind'], at: number, value: number, seq: number): void {
   unit.tasks = unit.tasks.filter(t => t.kind !== kind); addTask(unit, kind, at, null, value, seq);
@@ -40,6 +44,10 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   switch (champion(unit)) {
     case 'irelia': {
       const ticks = duration('ShieldDuration', 3); shield(unit, mag('ShieldHealth'), ticks, true);
+      const layer = unit.shieldLayers.find(l => l.key === sourceKey(source))!;
+      unit.shieldLayers = unit.shieldLayers.map(l => l !== layer ? l : { ...l, m8Grant: { ...l.m8Grant!, onEnd: ['depleted', 'expired'],
+        endTargeting: { kind: 'select', selector: { primary: 'normal', candidates: 'board', relation: 'enemy', anchor: 'holder', radius: 1, maxTargets: 100, excludeSelf: true, excludePrimary: false, distinct: true, order: 'id', sample: 'action-completion' } },
+        endEffects: [{ kind: 'damage', damageType: 'magic', delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', amount: flatAmount(mag('StrikeBaseDamage'), { shieldAbsorbedBps: Math.round(v('PercentShieldDamage', .3) * 10000), sample: 'packet' }) }] } });
       replaceEndTask(unit, 'ireliaEnd', tick + ticks, mag('StrikeBaseDamage'), seq); break;
     }
     case 'maddie': {
@@ -47,7 +55,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       if (!far) break;
       const shots = [0, 4, 9, 13, 18, 23];
       shots.forEach((offset, n) => addTask(unit, 'maddie', tick + offset, far.id, physical('PercentAttackDamage', 'APDamage'), seq, n, shots.length, true));
-      applyStatus(unit, source, 'channel', 0, 24, tick, events, true); targets.push(far.id); break;
+      applyStatus(unit, source, 'channel', 0, 24, tick, events, true, '', seq); targets.push(far.id); break;
     }
     case 'darius': {
       for (const enemy of neighborsOf(unit, units)) hit(enemy, physical('PercentAttackDamage'), 'physical');
@@ -55,7 +63,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       const total = physical('BleedPercentAttackDamage');
       unit.tasks = unit.tasks.filter(t => t.kind !== 'bleed' || t.targetId !== target.id);
       for (let n = 0; n < 4; n++) addTask(unit, 'bleed', tick + (n + 1) * 20, target.id,
-        Math.floor(total / 4) + (n < total % 4 ? 1 : 0), seq, n, 4); break;
+        splitTotal(total, 4)[n], seq, n, 4); break;
     }
     case 'lux': {
       const ally = lowestAlly(unit, units, true)!; shield(ally, mag('Shield'), duration('ShieldDuration'));
@@ -80,8 +88,8 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       const steal = v('DefensesSteal');
       for (const enemy of hitUnits) {
         hit(enemy, mag('StabDamage'));
-        applyStatus(enemy, source, 'resistanceFlat', -steal, 1200, tick, events, false, `${seq}:${enemy.id}`);
-        applyStatus(unit, source, 'resistanceFlat', steal, 1200, tick, events, false, `${seq}:${enemy.id}`);
+        applyStatus(enemy, source, 'resistanceFlat', -steal, 1200, tick, events, false, JSON.stringify([seq, enemy.id]));
+        applyStatus(unit, source, 'resistanceFlat', steal, 1200, tick, events, false, JSON.stringify([seq, enemy.id]));
       } break;
     }
     case 'leona': {
@@ -91,7 +99,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
     }
     case 'vander': {
       const ticks = duration('TauntDuration', 2.5);
-      applyStatus(unit, source, 'channel', 0, ticks, tick, events, true);
+      applyStatus(unit, source, 'channel', 0, ticks, tick, events, true, '', seq);
       applyStatus(unit, source, 'resistanceFlat', mag('Resists'), ticks, tick, events, true);
       unit.runtime.nextAttackPhysical = amount(unit, tick, { ad: v('PercentAttackDamage') + v('BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count') });
       targets.push(unit.id); break;
@@ -117,7 +125,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
     }
     case 'loris': {
       const ticks = duration('Duration'); shield(unit, mag('Shield'), ticks);
-      applyStatus(unit, source, 'redirect', Math.round(v('PercentDamageRedirect', .5) * 10000), ticks, tick, events, true);
+      applyStatus(unit, source, 'redirect', Math.round(v('PercentDamageRedirect', .5) * 10000), ticks, tick, events, true, '', seq);
       replaceEndTask(unit, 'lorisEnd', tick + ticks, mag('Damage'), seq); break;
     }
     case 'nami': {
@@ -135,12 +143,13 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
         addTask(unit, 'corki', tick + n, target.id,
           amount(unit, tick, { ad: v('PercentAD') * mult, flat: v('FlatDamagePerMissile') * mult }), seq, n, total, true);
       }
-      applyStatus(unit, source, 'channel', 0, total, tick, events, true); targets.push(target.id); break;
+      applyStatus(unit, source, 'channel', 0, total, tick, events, true, '', seq); targets.push(target.id); break;
     }
     case 'garen': {
       shield(unit, amount(unit, tick, { ap: v('APShield'), hp: v('PercentHealthShield') }), duration('ShieldDuration'));
       for (const enemy of enemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 2)) hit(enemy,
-        physical(enemy.id === target.id ? 'ADRatio' : 'SecondaryADRatio'), 'physical'); break;
+        physical(enemy.id === target.id ? 'ADRatio' : 'SecondaryADRatio'), 'physical');
+      break;
     }
     case 'zoe': {
       hit(target, mag('Damage')); const seen = new Set([target.id]);
@@ -154,14 +163,14 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       const total = v('TotalShots', 4), ticks = duration('RaidDuration', 5);
       for (let n = 0; n < total; n++) addTask(unit, 'caitlyn', tick + Math.floor(n * ticks / total), null,
         physical('PercentAttackDamage', 'APDamage'), seq, n, total, true);
-      applyStatus(unit, source, 'channel', 0, ticks, tick, events, true); targets.push(target.id); break;
+      applyStatus(unit, source, 'channel', 0, ticks, tick, events, true, '', seq); targets.push(target.id); break;
     }
   }
   return targets;
 }
 export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
   if (task.kind === 'tristanaBounce' && !task.inherited) throw new RangeError('Missing inherited Tristana receipt');
-  const opponents = enemies(unit, ctx.units), target = opponents.find(u => u.id === task.targetId);
+  const opponents = enemies(unit, ctx.units), target = (task.attachedDot ? ctx.units.filter(u => u.alive && u.team !== unit.team) : opponents).find(u => u.id === task.targetId);
   const emit = (u: S13Unit, value: number, type: 'physical' | 'magic' = 'physical', ordinal = task.ordinal) => {
     ctx.packets.push({ source: task.source, targetId: u.id, raw: value, damageType: type, actionSeq: task.actionSeq, ordinal,
       delivery: task.kind === 'bleed' ? 'ability-periodic' : 'ability-direct',
@@ -193,11 +202,7 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
       emit(center, amount(unit, ctx.tick, { ad: variable(unit, 'HeadshotPercentAD') }), 'physical', task.ordinal * 100 + 1);
       applyStatus(center, task.source, 'resistanceFlat', -variable(unit, 'ResistReduction', 20), 1200, ctx.tick, ctx.events, false, `${task.actionSeq}:${task.ordinal}`); break;
     }
-    case 'ireliaEnd': {
-      const layer = unit.shieldLayers.find(s => s.key === sourceKey(task.source));
-      const total = task.amount + Math.floor((layer?.absorbed ?? 0) * Math.round(variable(unit, 'PercentShieldDamage', .3) * 10000) / 10000);
-      for (const enemy of neighborsOf(unit, ctx.units)) emit(enemy, total, 'magic'); break;
-    }
+    case 'ireliaEnd': executeShieldEnd(ctx, unit, task.shieldEndKey ?? sourceKey(task.source), task.actionSeq); break;
     case 'leonaEnd': for (const enemy of neighborsOf(unit, ctx.units)) emit(enemy, task.amount, 'magic'); break;
     case 'lorisEnd': {
       const center = byDistance(unit, opponents)[0]; if (!center) break;

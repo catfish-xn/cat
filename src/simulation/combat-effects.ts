@@ -1,7 +1,10 @@
 import type { CombatEvent, CombatState, CombatStep, CombatUnit } from './combat-types';
+import { compileMechanismDefinitions } from './m8/s13-definitions';
+import { EMPTY_MECHANISMS } from './m8/runtime-types';
+import { initializeMechanisms } from './m8/s13-mechanisms';
 import type { EffectInvocation } from './strategy-types';
 import { collectTriggers } from './effects';
-import { EMPTY_RUNTIME, grantShield, type S13Unit } from './combat-s13-state';
+import { EMPTY_RUNTIME, grantShield, ensureMechanisms, type S13Unit } from './combat-s13-state';
 export function stampCombatStep(state: CombatState, events: readonly CombatEvent[]): CombatStep {
   if (!state.strategy) return { state, events };
   const first = state.nextEventSeq ?? 0;
@@ -15,7 +18,7 @@ export function invocationEvent(invocation: EffectInvocation, tick: number): Com
 /** Tick-zero actions cannot cause damage; all start hooks share the same pre-combat boundary. */
 export function applyCombatStart(state: CombatState): CombatStep {
   if (!state.strategy || state.startEffectsApplied) return { state, events: [] };
-  if (state.status === 'finished') return stampCombatStep({ ...state, startEffectsApplied: true },
+  if (state.status === 'finished') return stampCombatStep({ ...state, units: state.units.map(unit => unit.ability.kind !== 's13' ? unit : { ...unit, mechanismDefinitions: compileMechanismDefinitions(unit, state.combatId!), mechanismState: { ...EMPTY_MECHANISMS, initialized: true, combatId: state.combatId!, sampledAtTick: 0 } }), startEffectsApplied: true },
     [{ type: 'combatFinished', tick: 0, result: state.result!, reason: 'elimination' }]);
   const effects: CombatEvent[] = [], shields: CombatEvent[] = [], mana: CombatEvent[] = [];
   const units: CombatUnit[] = state.units.map(unit => {
@@ -23,6 +26,7 @@ export function applyCombatStart(state: CombatState): CombatStep {
     if (unit.ability.kind === 's13') {
       const current: S13Unit = { ...unit, runtime: { ...EMPTY_RUNTIME, ...unit.runtime }, statuses: [...unit.statuses ?? []],
         shieldLayers: [...unit.shieldLayers ?? []], tasks: [...unit.tasks ?? []], effectRuntime: batch.runtime };
+      ensureMechanisms(current, 0, state.combatId);
       let gain = 0;
       for (const invocation of batch.invocations) {
         effects.push(invocationEvent(invocation, 0)); const source = invocation.trigger.source;
@@ -52,5 +56,10 @@ export function applyCombatStart(state: CombatState): CombatStep {
       attackGain: 0, damageGain: 0, hookGain: gain, overflow: Math.max(0, unit.mana + gain - unit.maxMana), after });
     return { ...unit, shield, shieldExpiresAtTick: expiry, mana: after, effectRuntime: batch.runtime };
   });
+  const mechanismUnits = units.filter(u => u.ability.kind === 's13') as S13Unit[];
+  if (mechanismUnits.length) {
+    initializeMechanisms({ tick: 1, combatId: state.combatId, board: state.board, units: mechanismUnits, events: shields, packets: [], heals: [], draw: () => { throw new Error('Combat start mechanisms cannot draw RNG'); } });
+    for (const unit of mechanismUnits) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: 0 };
+  }
   return stampCombatStep({ ...state, units, startEffectsApplied: true }, [...effects, ...shields, ...mana]);
 }

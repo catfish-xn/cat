@@ -27,7 +27,9 @@ export class PlaybackSession {
   read(): ReplaySnapshot {
     const record = this.requireRecord();
     if (this.snapshot) return this.snapshot;
-    return this.snapshot = deepFreeze({ combat: structuredClone(this.state), events: record.events.slice(0, this.state.nextEventSeq!), tick: this.state.tick,
+    // The private combat is detached at construction/seek and advanced immutably.
+    // Freeze it in place; record events already have deeply frozen ownership.
+    return this.snapshot = deepFreeze({ combat: this.state, events: Object.freeze(record.events.slice(0, this.state.nextEventSeq!)), tick: this.state.tick,
       endTick: record.endTick, nextEventSeq: this.state.nextEventSeq!, playing: this.playing, speed: this.speed });
   }
   private step(): void {
