@@ -56,18 +56,19 @@
   "archiveCommit": "57344b0688c33f4b473fc3ceb70c022ca701945e",
   "archiveBranch": "data/cdragon-14.24",
   "b1Branch": "feat/m8-b0-baseline",
-  "b1Status": "partial-not-frozen",
+  "b1Status": "equipment-accepted-original-plan-non-equipment-pending",
   "b1Blockers": [
-    "unresolved-effect-units-and-mechanics",
-    "opening-and-encounter-evidence",
-    "loot-and-guarantee-evidence",
-    "unapproved-concrete-single-player-policy"
+    "PVE-OPENING",
+    "PVE-ENCOUNTERS",
+    "PVE-NEUTRALS",
+    "PVE-LOOT",
+    "PVE-SINGLE-PLAYER"
   ],
   "selectedArtifacts": [
     {
       "path": "normalized/items.json",
-      "bytes": 71830,
-      "sha256": "5435571df8c8557ca8bf4a49beaf509dc04674a2ea1ab607510082e32873377c"
+      "bytes": 113969,
+      "sha256": "401f8338cc1ce68c16db2c5aa7d2e2e2070be33e159b75888885751ce1cb588d"
     },
     {
       "path": "normalized/recipes.json",
@@ -75,9 +76,24 @@
       "sha256": "e4152521ff49032688726d8cf7e826f682f5c64e2f675312ef05be80c2d8f9ac"
     },
     {
+      "path": "provenance/convention-approvals.json",
+      "bytes": 5076,
+      "sha256": "3934217516a61f4bb20355629b2275330ed066022a22f750a656d28a085dd07c"
+    },
+    {
       "path": "provenance/coverage.json",
-      "bytes": 37767,
-      "sha256": "68ca49786a95e54d0f1419395e1897b29786f5a29aaf26a051eded1ac11ceced"
+      "bytes": 43405,
+      "sha256": "0920ebf21260bd514fe2747111e62152fcf3fad7e9c5cda92eb48763356b8b74"
+    },
+    {
+      "path": "provenance/item-review-a.json",
+      "bytes": 209268,
+      "sha256": "c5fd2ab08786ed8aeb15646c21639edd89261fd5741f0f666a64a034562a817c"
+    },
+    {
+      "path": "provenance/item-review-b.json",
+      "bytes": 178014,
+      "sha256": "ccf2098886e542be289fc330fa7d63cd01b8dbe34585ea7ab85dc75c4db93a07"
     },
     {
       "path": "provenance/overrides.json",
@@ -86,13 +102,18 @@
     },
     {
       "path": "provenance/project-conventions.json",
-      "bytes": 2721,
-      "sha256": "99062c07165eb8bac1401b204c192eb9a595d2dc73bc203dd9bd7ac0e367bd54"
+      "bytes": 47412,
+      "sha256": "4c0661ba6307e70d8340787360b63a8f0a9ab2af94b37dba544c31cb0076a554"
     },
     {
       "path": "provenance/questions.md",
-      "bytes": 3809,
-      "sha256": "c4397a6d436324ad929aa9e3324d8372fef091cffc1b47680098ea594fc182f2"
+      "bytes": 1317,
+      "sha256": "78fb5db60477752ee660ddd138e0104ddbe4b3c91fdbde9e83a2ccc1ee28b9a9"
+    },
+    {
+      "path": "provenance/review-common.json",
+      "bytes": 3334,
+      "sha256": "0fdad926433e7f0d3f6f85970fe164a144c9c4df1a01b74e92404b1acf6f60f0"
     },
     {
       "path": "provenance/single-player-policy.md",
@@ -101,8 +122,8 @@
     },
     {
       "path": "provenance/source-policy.json",
-      "bytes": 2068,
-      "sha256": "6268a8539ec29ccdc74600e36ebefa864ebcc95f280f64cb664bca4184b06a6b"
+      "bytes": 2329,
+      "sha256": "be4103a68fe6a7c1cd41bdfc9501844271100ef8fe98bac6e4de84387b032750"
     },
     {
       "path": "raw/selected-items.json",
@@ -125,9 +146,24 @@
     "confirmation": "pending"
   },
   "projectConventions": {
-    "status": "active-provisional-nonblocking",
+    "status": "5-approved-and-41-provisional-nonblocking",
     "label": "项目约定，非官方证据",
     "ledger": "provenance/project-conventions.json",
     "reviewList": "docs/M8_PROJECT_CONVENTIONS_REVIEW.md"
-  }
+  },
+  "equipmentAccepted": true,
+  "equipmentAcceptanceReport": "docs/M8_B1_EQUIPMENT_ACCEPTANCE.md",
+  "equipmentReviewCounts": {
+    "approvedConventions": 5,
+    "archivedEquipment": 44,
+    "blockingEquipmentUnknowns": 0,
+    "countingRule": "Conventions counted by unique ID; unknowns by explicit item issue, excluding formal localization.",
+    "equipmentUnknowns": 0,
+    "pendingConventionRecords": 41,
+    "requiredEquipment": 44,
+    "reviewedEffectFields": 218,
+    "sourceReviewedEquipment": 44,
+    "verifiedRecipes": 36
+  },
+  "localizationStatus": "outside-B1-legacy-followup"
 }

@@ -1,45 +1,549 @@
 {
-  "policy": "m8-source-semantics-2026-10-07",
   "conventions": [
     {
-      "id": "GS-01",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Rows are relative to the owner deployment side; front=rows nearest opposing side. Branch remains fixed after movement. Back timer first fires at tick 60, no immediate pulse; front triggers once per landed attack including fully shielded hits, not per on-hit proc. Each copy contributes independent bonuses and timers; mana respects normal caps and mana-lock contract.",
+      "decisionZh": "按持有方前后两排在战斗开始锁定分支，移动不切换；后排首次在第60 tick回蓝。前排每次命中的普攻回1蓝，含全被盾吸收的攻击；附加装备伤害不重复触发，回蓝受常规上限与锁蓝约束。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-01",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "First AP increment occurs at tick 100, not combat start; increments persist until combat end without cap; each copy has its own periodic grant. Stop future pulses on death/combat end and reset growth for each combat.",
+      "decisionZh": "每100 tick加30法强，首次不在开战立即触发；无叠层上限、持续本场，死亡或战斗结束停止，每场重置。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-02",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Map StatOmnivamp to holder healing from qualifying post-mitigation damage, not LifeSteal as a second bonus. Threshold is remaining HP <=40% current maximum HP after damage, only if alive; cannot prevent a lethal hit. Snapshot max HP when granting shield; consumed or expired shield ends, no retrigger. Each copy has one independent activation per combat.",
+      "decisionZh": "只采用StatOmnivamp为20%全能吸血，不把LifeSteal再加一次。存活且受伤后当前生命≤40%现最大生命时一次性触发，致死伤害不能救回；按触发时最大生命生成25%盾，最多100 tick。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-04",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "After-cast mana refund is one grant per completed cast, obeying maximum Mana and explicitly exempt from that cast’s ordinary mana-lock; interrupted uncompleted casts grant none. Takedown means kill or damage-contributing assist in the current combat; refresh one 5% buff to 160 ticks, do not stack its magnitude.",
+      "decisionZh": "完成施法后回10蓝，可绕过该次施法的一般锁蓝但不超过蓝上限；取消施法不回蓝。击杀或本场参与造成伤害的助攻均算参与击杀，刷新同一500Bps增伤至160 tick，不叠加幅度。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-05",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Adjacent means hex distance 1. Retaliation triggers on landed attacks even when shield absorbs all damage; attack-attached independent proc packets do not trigger another retaliation. Cooldown is per equipped copy, initially ready, starts on first qualifying hit; next proc permitted at exactly +40 ticks. Reduction applies to attack-tagged damage packets, not independent item damage; retaliation cannot recursively count as an attack.",
+      "decisionZh": "邻接为六角距离1；普攻命中即能触发反伤，包括只打盾。每件初始可触发，触发后40 tick冷却且整40时允许再触发；附加装备包不递归反伤。减伤只作用普攻标签包；其余星级及哈希100字段不另行加算，也不认定其官方已废弃。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-06",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Snapshot current max HP including equipment when shield is granted. Treat both natural expiry and full depletion as shield expiry for the AP reward, once per copy; AP remains for rest of combat. Death removes the shield without granting a surviving-unit reward. Independent shields/rewards per copy; no repeat grants on restoration.",
+      "decisionZh": "开战按含装备的最大生命快照给盾；自然到期或提前耗尽都各触发一次25法强，法强持续本场。死亡清除不发奖励；ChillDuration与HexRange保留不用，不增加减速或范围效果。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-08",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Map BonusDamage to 800Bps unconditional Damage Amp; treat matching hash-key value as alternate representation and not another 8%. This field meaning is a project choice, not proven by the flavor desc or a decoded script. Keep AD stat scaling separate from outgoing Damage Amp.",
+      "decisionZh": "把BonusDamage映射为800Bps常驻伤害增幅，匹配的哈希字段不重复生效；该映射是项目选择，不是描述文字或已解码脚本证明。55%攻击力属性与8%最终增伤分开计算。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-09",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "First healing pulse at tick 40. Evaluate current maximum HP at each pulse, clamp healing to missing HP; no revive or overheal shield. Each copy has an independent timer; stop at combat end/death. Unreferenced ICD does not replace the explicit 2-second interval.",
+      "decisionZh": "首次第40 tick治疗，之后每40 tick按当时最大生命的2.5%治疗，上限为缺失生命，不复活、不转盾；死亡或战斗结束停止。未引用ICD=0.5保留不用，不取代2秒周期。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-10",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Threshold means post-damage remaining HP <=40% current max HP while alive; no lethal prevention. Snapshot max HP for shield. The duration phrase qualifies shield only: resistance grant persists until combat end, including after shield is consumed; one independent trigger per copy.",
+      "decisionZh": "受伤后存活且生命≤现最大生命40%时一次触发；盾按触发时最大生命快照、100 tick到期。额外20双抗持续本场，不随盾破或盾到期消失。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-11",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Count living hostile units whose current primary combat target is holder; one per enemy, not per damage packet/projectile. Recompute on target changes/deaths. Untargeted ambient/area damage does not add a stack. No permanent growth; each copy contributes independently.",
+      "decisionZh": "只数当前主目标为持有者的存活敌军，每个敌军算一次；换目标或死亡即时重算，范围伤害不算锁定，双抗不是永久成长。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-12",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Ordinary additive flat Health stat; preparation HP and combat HP adjustments follow the common stat-change contract rather than repeatedly healing 150 on queries.",
+      "decisionZh": "腰带加150最大生命；准备期与战斗期的当前生命调整统一走属性变更契约，查询不能反复加150生命。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-13",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Threshold is post-damage HP <=60% current max HP while alive, not lethal prevention. Bind StealthDuration=1 second to untargetability; bind DamageReduction=100 percentage points to full incoming damage prevention during that interval. These bindings are project conventions, not explicitly linked tooltip tokens. Clear removable hostile crowd-control, damage-over-time and stat debuffs, excluding equipment identity/beneficial statuses; do not dispel newly applied effects outside interval. AS applies when interval ends and persists to combat end; target selectors reacquire after untargetability.",
+      "decisionZh": "受伤后存活且生命≤60%时一次触发，不复活。把StealthDuration=1秒绑定无法选中，把DamageReduction=100绑定这20 tick内完全伤害防止，二者均是字段解释约定。清除可移除敌方控制、持续伤害及减益属性，不清装备或有益状态；结束后15%攻速持续本场，敌方重新选目标。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-14",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Gain one stack per completed basic attack, including a landed fully-shielded attack; no stack from secondary item bolts or spell hits, and none for a cancelled attack. Grant after attack completion so it affects later attacks. No stack cap or expiry before combat end; reset each combat, independent increments per copy.",
+      "decisionZh": "每次完成的普攻加一层5%攻速，包含命中护盾；取消攻击、技能或额外装备弹不加层。加层在攻击完成后影响后续攻击，无上限，战斗结束清空。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-15",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Damage dealt means positive post-mitigation damage actually removed from shield plus HP (exclude overkill beyond shield/HP); use this basis for both allied heal and omnivamp. Ally-heal targets another living allied unit, excluding holder; no other ally means no allied heal. Select lowest HP/maxHP by exact cross-products after damage resolution; ties use stable unit ID. Healing cannot crit, cause damage procs or overflow into shields. Tracker records actual restored allied HP.",
+      "decisionZh": "治疗基数取减免后实际扣除的护盾和生命之和，排除过量伤害；StatOmnivamp取15%，Omnivamp字段不再加一次。25%友军治疗排除持有者、选存活友军最低生命比例，分数交叉相乘比较、同值按稳定ID，无其他友军则不治疗；治疗不暴击、不产生伤害触发、不转盾，计数器只记实际回复。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-16",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Grant critical eligibility only to damaging ability packets, not heals/shields/item procs. Resolve multiple ability-crit grants deterministically by equipment slot then source instance ID; first grants eligibility, each redundant grant adds 1000Bps to critical damage multiplier. Already-capable from a non-item source makes all these grants redundant; re-evaluate when source changes. Crit chance source unit is adopted as percentage points; additive chance cap 100% without inventing excess conversion.",
+      "decisionZh": "技能暴击授权仅覆盖技能伤害，不覆盖治疗、护盾或装备触发。已有非装备授权先计算，装备按槽位及实例ID排序；首次授权不加暴伤，每次重复授权加1000Bps暴伤，来源变化重算。暴击率按百分点、最多100%，不擅增溢出转换。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-17",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Cast punishment shares the item’s radius: enemy must be within hex distance <=2 at completed cast. Damage basis is actual Mana spent for that cast, not starting/max Mana; free cast spending 0 gives 0. Aura re-evaluates movement and stops on holder death. Same-category Shred uses strongest magnitude rather than multiplying duplicate auras; independent Sparks each deal their cast-punishment packet. Item damage is non-crit and does not recursively trigger spell-cast events.",
+      "decisionZh": "施法惩罚也要求施法完成时在距离≤2内，取该次实际消耗法力，免费施法为0。移动重算光环、持有者死后停止；同类魔抗削减取最强不叠乘，每件各触发施法伤害。装备伤害不自动暴击、不递归施法；未引用Damage=250保留不用。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-18",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Use same deterministic ability-crit eligibility rule as Infinity Edge: damage-only ability packets; first grant supplies eligibility, redundant grants each add 1000Bps critical-damage multiplier. Equipped-source order is slot then instance ID; non-item eligibility exists first. Chance uses percentage points and caps at 100% without unproven excess conversion.",
+      "decisionZh": "与无尽共用技能暴击规则：只给技能伤害授权，非装备授权先算，再按槽位和实例ID；首次授权、重复每次加1000Bps暴伤。暴击率按百分点，最多100%，不擅增溢出转换。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-19",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Any holder-attributed positive physical damage packet, including ability or item damage, qualifies; shield-only damage counts. Apply after the triggering packet, so that packet uses old Armor. Reapplication refreshes duration, not magnitude; strongest same-category Sunder applies. Duration interval is [application tick, tick+60); do not recursively trigger on the status application.",
+      "decisionZh": "持有者归因的正物理伤害均可触发，包括技能、装备和只打盾；在该伤害包之后施加，所以首包仍用原护甲。重复刷新60 tick，不叠加削甲幅度，同类取最强，到期tick先失效。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-20",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Completed casts trigger once; interrupted casts do not. Repeated casts refresh the same per-copy buff without stacking that copy’s magnitude; multiple copies each contribute. Buff lasts [cast completion, completion+100 ticks); expires before actions at expiry tick.",
+      "decisionZh": "完成施法触发，取消不触发；同件再次触发只刷新100 tick、不叠加60%幅度，多件各自独立；到期tick先移除加速再行动。",
+      "evidenceBoundary": "Raw numbers and quoted desc are evidence; inferred field mappings, baseline inheritance, timing, source stacking and engine boundaries are project decisions. Ignored fields are not asserted obsolete.",
+      "id": "A-21",
+      "label": "项目约定，非官方证据",
+      "relatedConventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ]
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Shared burn/wound status rules; Morellonomicon and Red Buff damage-triggered application requires positive attack/ability damage (including absorbed shield damage), excludes equipment proc damage. Sunfire instead applies these statuses directly on its own timer under B-08. Burn uses current target max HP each second, first tick +20; the expiry tick pays the final tick before removal. Multiple burn sources do not sum: highest rate wins, equal rate refreshes expiry; wound similarly takes greatest reduction, never adds. Refresh preserves tick phase. Healing reduction applies to incoming positive healing, not shields. The expiry-tick final burn payment is an explicit periodic exception to GLOBAL-NUMERIC-01 half-open action timing; it does not extend status eligibility to new attacks at expiry.",
+      "decisionZh": "鬼书和红霸符由正普攻/技能伤害施加灼烧重伤（伤盾算、不由装备追加伤害施加），日炎另按自身定时器直接施加。共同状态规则：每秒取目标当前最大生命，首次1秒后；结束tick先末次灼烧付款再移除，此为通用半开持续区间的明确周期例外，不让该tick新攻击继续享受已到期状态。同类取最强不相加，同强度刷新保留跳伤相位；重伤减治疗不减护盾。",
+      "id": "B-01",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "MonsterCap=100 is used as a 100-health cap per burn tick against neutral-monster targets, after percent-max-HP calculation. Its official liveness and exact scope are not proven by this tooltip; no claim this is an official decoded field.",
+      "decisionZh": "将未被说明引用的MonsterCap=100暂解释为每只中立怪物每次灼烧伤害上限100；官方字段活性和适用范围仍未证实。",
+      "id": "B-02",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Evaluate current health/current maximum health immediately before each incoming damage packet. Above 50% uses 15% durability; equal or below uses 8%. BaseDamageReduction and EmpowerDamageReduction are not separately applied because their values duplicate tooltip-linked durability fields; official legacy/liveness remains unproven.",
+      "decisionZh": "坚定之心每个受伤包前检查当前生命比例：严格高于50%用15%减伤，等于或低于用8%；两项未引用的旧名称减伤字段只保留，不再重复生效。",
+      "id": "B-03",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Map undecoded {1543aa48}=0.1 to base damage amp. Add conditional 0.15 for total 0.25 while active; 14.23 notes corroborate this total but do not decode the key. Positive shield damage triggers after the triggering packet, even if shield survives. Repeated shield damage refreshes 60 ticks; does not stack itself.",
+      "decisionZh": "破防者哈希字段暂映射为10%基础增伤，与触发的15%相加为25%；对护盾造成正伤害即可触发，无须破盾，触发包之后生效，重复触发刷新3秒不叠层。",
+      "id": "B-04",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Grant AS at elapsed 40,80,...,360 ticks (9 grants), including final 18s boundary before immunity expires. Gained AS persists until combat ends. The 14.23 total +27% corroborates nine grants, while retention/order are project details. Immunity blocks new CC application rather than cleansing an already-existing status. Final grant at360 is an explicit periodic exception to GLOBAL-NUMERIC-01; immunity still expires before new crowd-control actions at that boundary.",
+      "decisionZh": "水银在第2、4…18秒共获得9次3%攻速，18秒边界先加攻速再结束免控；累计攻速保留到战斗结束；免控阻止新控制，不视作清除已有控制。 第18秒末次攻速是通用到期顺序的明确例外，但该边界新控制已可生效。",
+      "id": "B-05",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Use {1543aa48}=0.15 as base damage amp, exactly once. BonusDamage=0.15 is a same-value corroborating but unreferenced field, retained but not applied independently. The tooltip has no mechanical token; this meaning is project convention, not proof of a decoded hash.",
+      "decisionZh": "死亡之帽哈希字段暂映射为15%增伤，只计一次；BonusDamage同值字段保留但不另应用，说明仅为风味文本，不能声称哈希已被官方解码。",
+      "id": "B-06",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Red Buff uses {1543aa48}≈0.03 as base damage amp. BonusDamage≈0.06, HexRangeIncrease=1, and {9f5117db}=100 remain raw and are not applied: absent current tooltip support, their active purpose is unknown. In particular do not add old range or 6% amp. This hashed-field choice is project convention, not an official version conflict resolution.",
+      "decisionZh": "红霸符哈希字段暂取3%基础增伤；BonusDamage约6%、HexRangeIncrease=1及另一哈希100仅原样保留，不额外施加增伤、射程或未知效果，其历史活性未证实。",
+      "id": "B-07",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Sunfire first pulse is at elapsed 40 ticks, then every 40. Choose an in-range living target without this holder’s active Sunfire burn before refreshing another; rank by distance then stable unit ID. If none in range skip without banking pulses. Use B-02 cap100. Preserve existing effects.ts:142 calculation order: (base HP + flat HP) * (1 + sum of percent-HP bonuses), consistently across Warmog/Sterak/Sunfire.",
+      "decisionZh": "日炎首轮选敌在开战2秒后，此后每2秒；范围内优先未受本件灼烧的存活敌人，再按距离、稳定单位ID选取，无目标则跳过；怪物每跳上限沿用100。生命加成沿用现有effects.ts顺序：(基础生命+固定生命)×(1+合计比例)。",
+      "id": "B-08",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Every 100 ticks starting at100, snapshot living allies within distance<=1, including holder. Heal missingHP*1500/10000, cap by1000 per target per pulse, then incoming-heal modifiers and maxHP clamp, with final integer quantization under GLOBAL-NUMERIC-01; MaxHeal cap interpretation is project convention. Apply 1000 Bps all-damage durability for100 ticks, not only AoE despite key name. Same buff from multiple Redemptions refreshes and does not sum. Separate healing pulses still each resolve in stable order.",
+      "decisionZh": "救赎首次在5秒，此后每5秒，对1格内存活友军（包括自身）取样；每目标回复15%已损生命，暂将未引用的MaxHeal解释为每次每目标上限1000，再应用受治疗修正和生命上限，整数化沿用通用数值规则。10%坚韧适用于所有符合坚韧减免资格的伤害而非仅范围伤害，持续5秒且同类不叠加；多件治疗分别结算。",
+      "id": "B-09",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "On each completed ordinary attack, select nearest living enemy other than its primary target, tie by stable ID; if none exists, no bolt. Bolt uses current holder AD, cannot crit and cannot generate another attack or recursively emit equipment damage procs; explicitly documented physical-damage status listeners (Last Whisper A-20) and defender damage listeners (Titan B-16) may observe the packet; it is equipment physical damage. Tooltip says nearby but no radius is given: select nearest available enemy without inventing a numeric cutoff.",
+      "decisionZh": "飓风每次完成普攻后向不同于主目标的最近存活敌人发射箭矢，同距离按稳定ID；无次目标则不发射。说明未给数值射程，因此不臆造距离上限；箭矢按当前攻击力55%造成物理装备伤害，不暴击、不附带攻击特效、不递归引发装备追加伤害；轻语A-20的物理伤害减甲监听和防守方泰坦B-16受伤监听属于明确允许的状态触发例外。",
+      "id": "B-10",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Bonus mana5 granted once per completed ordinary attack, subject to existing mana lock/cap and mana-less-unit rules; bolt/proc packets are not extra attacks. Do not change maximum mana. Attacks that complete but are blocked still count as attacks for this trigger.",
+      "decisionZh": "青龙刀每次完成普通攻击额外回5法力，仍受法力锁、法力上限和无法力规则限制；被格挡但已完成的攻击计数，箭矢和装备追加伤害不算新攻击，不改变最大法力。",
+      "id": "B-11",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Aura membership is recalculated from current positions each simulation tick, distance<=2; remove its contribution immediately on exit or holder death. Sunder uses greatest active same-family percent rather than additive reductions. Initial +25 armor/MR expires after200ticks; aura itself lasts while holder alive, not just10 seconds.",
+      "decisionZh": "薄暮法袍每tick按当前距离更新2格内减甲光环，离开或持有者死亡即移除；同类减甲取最高值不相加。开战25双抗只持续10秒，光环不随该加成一起结束。",
+      "id": "B-12",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Count completed ordinary attacks per item, proc on3,6,9; do not count bolts/procs as attacks. Hit primary target then up to3 different nearest living enemies, tie by stable ID, no repeated target within chain. Apply shred before each item damage packet. No AP scaling/crit unless explicitly source-authorized. Hashed values4 are unreferenced candidates, not additional bounces.",
+      "decisionZh": "电刀每件独立计普通攻击，在第3、6、9次触发；主目标后按距离和稳定ID最多命中另外3个不同敌人，单次不重复。先施加减魔抗再结算固定35魔法装备伤害，不额外按AP或暴击缩放；三个未引用哈希值4不另增跳数或星级收益。",
+      "id": "B-13",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "At or below60% current/maxHP after a damage event, if still alive, activate once; check also combat-start if already below. Add25% maxHP using B-08 formula and increase current HP by the same absolute maxHP increase (not a heal event); add35% base AD, persist to combat end. Lethal damage does not resurrect. Calculation-order convention follows B-08; precise timing and current-HP adjustment are project choices.",
+      "decisionZh": "血手在伤害结算后存活且生命≤60%时每战触发一次，开战已满足也检查；增加25%最大生命和35%攻击力至战斗结束，生命计算沿用固定值先加、比例后乘，并同时增加等量当前生命（不算治疗）；致死伤害不能复活。",
+      "id": "B-14",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Refresh generated items once per stable round ID on holder at round start; equip during a round generates at most once for that round. Reserve all3 slots; generated children occupy the reserved extra slots and cannot be independently sold, transferred, combined, dropped or converted into permanent inventory. Sell/transfer the parent moves or returns only the parent; child lifecycle ends with it. These lifecycle choices do not authorize an unverified random pool.",
+      "decisionZh": "窃贼手套按稳定轮次ID每轮至多刷新一次，当轮中途穿戴也不重复刷；本体连同临时件预留全部3槽。临时件不能独立出售、转移、合成、掉落或变永久物品；本体出售/转移只处理本体，子件随本体结束；此生命周期约定不批准未知抽取池。",
+      "id": "B-15",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Gain one stack per completed ordinary attack and one per incoming positive resolved damage packet (shield absorption counts); self-costs and zero-damage packets do not count. If both triggers occur separately both count, but one attack is not duplicated by its proc packets. Retain stacks to combat end; grant cap resists once upon reaching25, not each later attack. Damage-over-time packets can grant defender stacks but do not recursively proc equipment damage.",
+      "decisionZh": "泰坦每次完成普通攻击及每个实际承受正伤害包各加1层（护盾承伤计入），生命消耗和零伤害不计；两种独立事件均可计数，但攻击追加包不重复算攻击。持续到战斗结束，25层双抗只发一次；持续伤害可叠受击层但不递归触发装备伤害。",
+      "id": "B-16",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Evaluate current health fraction for each stat/damage/healing query, not only combat start. Exactly50% doubles neither side (strict above/below). The unreferenced {f23e83fc}=2 is retained but not applied independently: double multiplier2 comes from desc; no random branch is used. Omnivamp heals on eligible actual postmitigation damage, excludes self-costs and equipment-proc chains under GLOBAL-PROC-01; no undocumented AoE penalty introduced.",
+      "decisionZh": "正义之手动态检查当前生命，严格高于50%翻倍攻击/法强，严格低于翻倍吸血，恰好50%都不翻倍；哈希2不再额外应用。吸血按实际结算后合资格伤害计算，不以自身生命消耗或递归装备触发计吸血，也不臆造范围伤害吸血惩罚；在治疗前取样以避免循环。",
+      "id": "B-17",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Preserve existing effects.ts:142: (base HP + all flat HP including600) * (1 + sum of percentage maxHP bonuses including12%). This is the inherited project computation order, not a script proof; equipping outside combat does not generate an in-combat heal event.",
+      "decisionZh": "狂徒生命沿用现有公式：(基础生命+600及其他固定生命)×(1+12%及其他生命比例)，多项比例相加不连乘；非战斗重新穿戴不伪造战斗内治疗。",
+      "id": "B-18",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Fractions round to four decimals before Bps; percentage points divide by100 then same convention; seconds use50ms ticks. Retain intermediate/periodic remainders and floor nonnegative final packet amounts. Add max-HP percentage modifiers against a common base-plus-flat HP pool. Half-open durations expire before end-tick actions. These are explicit project conventions pending B2 integration, not official execution proof. Explicit documented item-specific periodic final-tick exceptions take precedence (burn final pulse and Quicksilver final stack).",
+      "decisionZh": "比例先四位小数归一再转Bps；秒转50ms tick。期间累计保留余数，最终非负伤害/治疗/护盾量向下取整；百分比生命加成按共同基础加平加生命的基数相加，避免装备顺序复利。持续区间结束tick先到期再执行动作。 已明确列出的装备末tick周期例外优先（灼烧末跳、水银最终叠层）。",
+      "id": "GLOBAL-NUMERIC-01",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Do not recursively chain equipment-triggered damage into further equipment procs. Resolve qualifying packets in a stable order, with explicitly documented item exceptions and normal attack/ability triggers retained.",
+      "decisionZh": "由装备额外伤害引起的装备触发不递归连锁；每伤害包按稳定顺序处理。具体物品文案与专门约定优先，不能借此丢掉正常普攻/技能触发。",
+      "id": "GLOBAL-PROC-01",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Ordinary items consume one slot. unique=true limits duplicate apiName on a holder. Nonunique copies add base stats and maintain separate effect instances unless a specific rule overrides.",
+      "decisionZh": "普通装备每件占1槽；unique=true限制同一持有者重复同apiName；非唯一装备基础属性相加、被动各自独立，明确写不叠加或具体装备例外时优先例外。",
+      "id": "GLOBAL-STACK-01",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "active-provisional-nonblocking",
+      "approvalStatus": "pending-itemized-confirmation",
+      "blocking": false,
+      "decision": "Inherit baseline units into completed items: AD fraction; AS and CritChance percentage points; AP/Armor/MagicResist/Health/initial Mana points. CritChance percentage-point interpretation is a project convention; raw values are preserved.",
+      "decisionZh": "未在成装文案重复显示的基础属性，沿用组件同名字段单位：AD小数比例，AS与CritChance百分数点；AP、护甲、魔抗、生命、初始法力为点数。CritChance的百分数点解释属于项目约定。",
+      "id": "GLOBAL-STAT-01",
+      "label": "项目约定，非官方证据"
+    },
+    {
+      "adoptionStatus": "approved",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
       "decision": "Map effects.{1543aa48} to this item base Damage Amp: raw 0.05000000074505806 -> 500 Bps (5%).",
       "evidenceBoundary": "The raw number is present; its key meaning is not decoded. 14.23 base 5% is corroboration only.",
-      "apiName": "TFT_Item_MadredsBloodrazor",
+      "id": "GS-01",
       "label": "项目约定，非官方证据",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "userReviewStatus": "pending-itemized-confirmation",
-      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+      "userReviewStatus": "approved"
     },
     {
-      "id": "GS-02",
+      "adoptionStatus": "approved",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
       "decision": "Within this item, add base 500 Bps and conditional additional 2000 Bps: 500 below/equal threshold, 2500 above. This does not define interactions with external modifiers.",
       "evidenceBoundary": "desc establishes additional 20%; the base-key meaning and same-item addition are project choices.",
-      "apiName": "TFT_Item_MadredsBloodrazor",
+      "id": "GS-02",
       "label": "项目约定，非官方证据",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "userReviewStatus": "pending-itemized-confirmation",
-      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+      "userReviewStatus": "approved"
     },
     {
-      "id": "GS-03",
+      "adoptionStatus": "approved",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
       "decision": "Preserve LargeBonusPct=25 in sourceEffects but do not apply it as a separate gameplay parameter in this project.",
       "evidenceBoundary": "Not referenced by the current desc; official purpose and whether active are unconfirmed. Do not label it a proven obsolete field.",
-      "apiName": "TFT_Item_MadredsBloodrazor",
+      "id": "GS-03",
       "label": "项目约定，非官方证据",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "userReviewStatus": "pending-itemized-confirmation",
-      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+      "userReviewStatus": "approved"
     },
     {
-      "id": "GS-04",
+      "adoptionStatus": "approved",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
       "decision": "For each damage packet at resolution, check target current maximum Health > 1750; do not use remaining Health or battle-start/attack-start snapshots.",
       "evidenceBoundary": "desc establishes max Health and strictly greater; exact observation time is a project choice.",
-      "apiName": "TFT_Item_MadredsBloodrazor",
+      "id": "GS-04",
       "label": "项目约定，非官方证据",
-      "adoptionStatus": "active-provisional-nonblocking",
-      "userReviewStatus": "pending-itemized-confirmation",
-      "authority": "User approved choosing reasonable conventions and listing them for review without blocking B1 on 2026-10-07"
+      "userReviewStatus": "approved"
+    },
+    {
+      "adoptionStatus": "active-user-approved",
+      "approvalStatus": "user-approved",
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User explicitly approved the modified two-tier policy in parent conversation on2026-10-07",
+      "blocking": false,
+      "decision": "User-approved level-tier random policy: at generation, snapshot current player level when entering round preparation (or first in-round equip if not yet generated). Levels1–6 draw one completed item uniformly from35 ordinary completed items excluding Thief’s Gloves and one component uniformly from8 ordinary components. Level>=7 draws two distinct completed items uniformly without replacement from the same35-item pool. Sort each pool by apiName and use explicit seeded lcg32-v1. No duplicate apiName within the pair. Keep raw holder stats20 percentage-point crit chance (=2000Bps) and150 health. Temporary children cannot be sold, combined or returned as permanent inventory. Historical designer-level-pool statement was reported by user and not independently verified; neither threshold7 nor these weights are official evidence.",
+      "decisionZh": "用户已批准等级分档项目方案：进入每轮准备期生成时取当前玩家等级（当轮首次穿戴且尚未生成时取当时等级）；1—6级从35件普通成装（排除窃贼）等概率抽1件，再从8普通散件等概率抽1件；7级及以上从同一35件成装池等概率无放回抽2件，两件apiName不重复。各池按apiName排序，使用显式种子的lcg32-v1。窃贼本体按英文客户端保留20%暴击率、150生命；临时件不能出售、合成或永久返还。用户提及早期设计师等级强度组合池说明尚未独立核验，7级分界和具体池权重均为项目约定，不称官方规则。",
+      "id": "TG-01",
+      "label": "项目约定，非官方证据",
+      "sourceBoundary": {
+        "clientEvidence": "raw desc proves2randomitems/round and3slots; effects CritChance20,Health150",
+        "minorSemanticConvention": "level snapshot at round-generation time and sorted deterministic pool ordering; covered by standing minor-convention authority",
+        "projectPolicy": "level>=7 boundary,35completed/8component pools,uniform per-pool sampling,without-replacement high tier",
+        "userReportedHistoricalContext": "Early designer explanation of level-strength combination pools; unverified contextual lead only"
+      }
     }
-  ]
+  ],
+  "policy": "m8-source-semantics-2026-10-07"
 }

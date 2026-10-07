@@ -1,0 +1,3574 @@
+{
+  "schemaVersion": 1,
+  "scope": "sorted apiName indices22..43 inclusive,22 records; source-only B1 review; Chinese formal name check outside this gate",
+  "sourcePolicy": "provenance/source-policy.json",
+  "normalization": "raw preserved; ratio round4 then Bps;50ms per tick; unused/unknown fields never silentlyzero",
+  "sharedConventions": [
+    "GLOBAL-STAT-01",
+    "GLOBAL-STACK-01",
+    "GLOBAL-PROC-01",
+    "GLOBAL-NUMERIC-01"
+  ],
+  "items": [
+    {
+      "apiName": "TFT_Item_Morellonomicon",
+      "source": {
+        "jsonPointer": "/items/1355",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "2e74ce3a39bb3896022d0e83ebf61da50d0c2ca07f60f4ca3fbff5e73a3386c7",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Attacks and Abilities deal @BurnPercent@% <TFTKeyword>Burn</TFTKeyword> and @GrievousWoundsPercent@% <TFTKeyword>Wound</TFTKeyword> to enemies for @BurnDuration@ seconds.<br><br><tftitemrules>[Unique - only 1 per champion]<br><tftbold>Burn</tftbold>: Deals a percent of the target's max Health as true damage every second<br><tftbold>Wound</tftbold>: Reduces healing received</tftitemrules>",
+      "sourceComposition": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_GiantsBelt"
+      ],
+      "sourceUnique": true,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AS": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 1000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AP": {
+          "rawValue": 25.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 25,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat AP",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Health": {
+          "rawValue": 150.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 150,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "BurnDuration": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 200,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "burn and wound duration",
+          "evidence": "Own sourceDesc explicitly references @BurnDuration@ or @BurnDuration*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BurnPercent": {
+          "rawValue": 1.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 100,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "target maximum health true damage each second",
+          "evidence": "Own sourceDesc explicitly references @BurnPercent@ or @BurnPercent*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "GrievousWoundsPercent": {
+          "rawValue": 33.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3300,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "healing reduction",
+          "evidence": "Own sourceDesc explicitly references @GrievousWoundsPercent@ or @GrievousWoundsPercent*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "TicksPerSecond": {
+          "rawValue": 1.0,
+          "disposition": "used",
+          "unit": "burn-events-per-second",
+          "normalizedValue": 1,
+          "normalizedUnit": "burn-events-per-second",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "one burn event per second, i.e.20 simulation ticks per event; not20 or1000 source burn events per second",
+          "evidence": "Tooltip Burn definition says every second; numeric TicksPerSecond1 corroborates cadence but is not an interpolated tooltip token",
+          "conventionIds": [
+            "B-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "MonsterCap": {
+          "rawValue": 100.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 100,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "per-monster per-tick damage ceiling",
+          "evidence": "effects/MonsterCap is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-02"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "attacks and abilities damage an enemy",
+          "effect": "apply 100 Bps max-HP true damage/second burn and 3300 Bps wound",
+          "target": "damaged enemies",
+          "duration": "200 ticks",
+          "stacking": "refresh/non-additive B-01; unique=true",
+          "evidence": "@BurnPercent@%, @GrievousWoundsPercent@%, @BurnDuration@ seconds; Burn/Wound definitions",
+          "conventionIds": [
+            "B-01",
+            "B-02"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-01",
+          "label": "项目约定，非官方证据",
+          "decision": "Shared burn/wound status rules; Morellonomicon and Red Buff damage-triggered application requires positive attack/ability damage (including absorbed shield damage), excludes equipment proc damage. Sunfire instead applies these statuses directly on its own timer under B-08. Burn uses current target max HP each second, first tick +20; the expiry tick pays the final tick before removal. Multiple burn sources do not sum: highest rate wins, equal rate refreshes expiry; wound similarly takes greatest reduction, never adds. Refresh preserves tick phase. Healing reduction applies to incoming positive healing, not shields. The expiry-tick final burn payment is an explicit periodic exception to GLOBAL-NUMERIC-01 half-open action timing; it does not extend status eligibility to new attacks at expiry.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "鬼书和红霸符由正普攻/技能伤害施加灼烧重伤（伤盾算、不由装备追加伤害施加），日炎另按自身定时器直接施加。共同状态规则：每秒取目标当前最大生命，首次1秒后；结束tick先末次灼烧付款再移除，此为通用半开持续区间的明确周期例外，不让该tick新攻击继续享受已到期状态。同类取最强不相加，同强度刷新保留跳伤相位；重伤减治疗不减护盾。"
+        },
+        {
+          "id": "B-02",
+          "label": "项目约定，非官方证据",
+          "decision": "MonsterCap=100 is used as a 100-health cap per burn tick against neutral-monster targets, after percent-max-HP calculation. Its official liveness and exact scope are not proven by this tooltip; no claim this is an official decoded field.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "将未被说明引用的MonsterCap=100暂解释为每只中立怪物每次灼烧伤害上限100；官方字段活性和适用范围仍未证实。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Target max HP 2000; 10 seconds uninterrupted; receives nominal healing 300",
+          "expected": "Burn 20 true damage at each of 10 ticks = 200 before other permitted modifiers; incoming heal 201. A neutral with max HP 20000 takes capped 100 per tick under B-02",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-01",
+        "B-02",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": true
+      },
+      "reviewCounts": {
+        "effectFields": 8,
+        "used": 8,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "BurnPercent": "reviewed in fieldReview/BurnPercent",
+        "GrievousWoundsPercent": "reviewed in fieldReview/GrievousWoundsPercent",
+        "BurnDuration": "reviewed in fieldReview/BurnDuration"
+      }
+    },
+    {
+      "apiName": "TFT_Item_NeedlesslyLargeRod",
+      "source": {
+        "jsonPointer": "/items/1379",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "7984f38cd4e7a7e89e6b1ca0192594915a79a8a87bc509124a19719b64e74617",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "%i:scaleAP% +@AP@ Ability Power",
+      "sourceComposition": [],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AP": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 10,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat AP",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        }
+      ],
+      "conventions": [],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "One component equipped; no other modifiers",
+          "expected": "AP contribution 10 points; no conditional effect in source desc",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 1,
+        "used": 1,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "AP": "reviewed in fieldReview/AP"
+      }
+    },
+    {
+      "apiName": "TFT_Item_NegatronCloak",
+      "source": {
+        "jsonPointer": "/items/1301",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "c450a08482dca3df9c41bc46938ae97573e2c9ae50620874aca6ec7e33cedbfe",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "%i:scaleMR% +@MagicResist@ Magic Resist",
+      "sourceComposition": [],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "MagicResist": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "magic-resist-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "magic-resist-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat MR",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        }
+      ],
+      "conventions": [],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "One component equipped; no other modifiers",
+          "expected": "MagicResist contribution 20 points; no conditional effect in source desc",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 1,
+        "used": 1,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "MagicResist": "reviewed in fieldReview/MagicResist"
+      }
+    },
+    {
+      "apiName": "TFT_Item_NightHarvester",
+      "source": {
+        "jsonPointer": "/items/1383",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "521780e7df08ba937f372a4c1026fb3dd949f647bc60123709785cf642005eee",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Gain @BaseDurability*100@% Durability. While above @ThresholdForEmpower*100@% Health, instead gain @EmpoweredDurability*100@% Durability.",
+      "sourceComposition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_SparringGloves"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "Armor": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "armor-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "armor-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat armor",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Health": {
+          "rawValue": 200.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 200,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "CritChance": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "additive critical-strike chance",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "BaseDurability": {
+          "rawValue": 0.07999999821186066,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 800,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "durability at <=50%",
+          "evidence": "Own sourceDesc explicitly references @BaseDurability@ or @BaseDurability*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "EmpoweredDurability": {
+          "rawValue": 0.15000000596046448,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "replacement durability at >50%",
+          "evidence": "Own sourceDesc explicitly references @EmpoweredDurability@ or @EmpoweredDurability*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "ThresholdForEmpower": {
+          "rawValue": 0.5,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 5000,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "strict health-ratio threshold",
+          "evidence": "Own sourceDesc explicitly references @ThresholdForEmpower@ or @ThresholdForEmpower*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BaseDamageReduction": {
+          "rawValue": 8.0,
+          "disposition": "not-used",
+          "unit": "percentage-points",
+          "normalizedValue": null,
+          "normalizedUnit": "Bps",
+          "normalization": "preserve raw only; no runtime parameter generated; divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "preserve duplicate unreferenced field, do not double apply",
+          "evidence": "effects/BaseDamageReduction is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-03"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "EmpowerDamageReduction": {
+          "rawValue": 15.0,
+          "disposition": "not-used",
+          "unit": "percentage-points",
+          "normalizedValue": null,
+          "normalizedUnit": "Bps",
+          "normalization": "preserve raw only; no runtime parameter generated; divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "preserve duplicate unreferenced field, do not double apply",
+          "evidence": "effects/EmpowerDamageReduction is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-03"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "before incoming damage while above 5000 Bps health",
+          "effect": "replace 800 with 1500 Bps durability, never add to 2300",
+          "target": "holder",
+          "duration": "dynamic",
+          "stacking": "copies use GLOBAL-STACK-01; durability combination later follows combat contract",
+          "evidence": "Gain @BaseDurability*100@%; while above ... instead ...",
+          "conventionIds": [
+            "B-03"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-03",
+          "label": "项目约定，非官方证据",
+          "decision": "Evaluate current health/current maximum health immediately before each incoming damage packet. Above 50% uses 15% durability; equal or below uses 8%. BaseDamageReduction and EmpowerDamageReduction are not separately applied because their values duplicate tooltip-linked durability fields; official legacy/liveness remains unproven.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "坚定之心每个受伤包前检查当前生命比例：严格高于50%用15%减伤，等于或低于用8%；两项未引用的旧名称减伤字段只保留，不再重复生效。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Max HP 1000; otherwise unmodified incoming physical/magic damage 100",
+          "expected": "At 501 HP damage 85; at 500 HP damage 92; branch sampled before packet",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-03",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 8,
+        "used": 6,
+        "notUsed": 2
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "BaseDurability*100": "reviewed in fieldReview/BaseDurability",
+        "ThresholdForEmpower*100": "reviewed in fieldReview/ThresholdForEmpower",
+        "EmpoweredDurability*100": "reviewed in fieldReview/EmpoweredDurability"
+      }
+    },
+    {
+      "apiName": "TFT_Item_PowerGauntlet",
+      "source": {
+        "jsonPointer": "/items/1221",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "3b4d7ae3621ab971ddcc3e64701a0ef6858046e68c53538a78c5578c71fa04dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "After damaging a Shield, gain @DamageAmp*100@% additional Damage Amp for @Duration@ seconds.",
+      "sourceComposition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_SparringGloves"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AS": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AP": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 10,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat AP",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Health": {
+          "rawValue": 150.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 150,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "CritChance": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "additive critical-strike chance",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "DamageAmp": {
+          "rawValue": 0.15000000596046448,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "additional conditional damage amp",
+          "evidence": "Own sourceDesc explicitly references @DamageAmp@ or @DamageAmp*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "Duration": {
+          "rawValue": 3.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 60,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "conditional duration",
+          "evidence": "Own sourceDesc explicitly references @Duration@ or @Duration*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "{1543aa48}": {
+          "rawValue": 0.10000000149011612,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1000,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "base damage amp, hashed-key project attribution",
+          "evidence": "14.23 CORE ITEMS explicitly describes 10% base + 15% conditional; source key itself remains undecoded",
+          "conventionIds": [
+            "B-04"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "after damaging a shield",
+          "effect": "gain 1500 Bps additional damage amp over base 1000 Bps",
+          "target": "holder",
+          "duration": "60 ticks",
+          "stacking": "refresh, no stacking within item",
+          "evidence": "After damaging a Shield; @DamageAmp*100@%; @Duration@ seconds",
+          "conventionIds": [
+            "B-04"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-04",
+          "label": "项目约定，非官方证据",
+          "decision": "Map undecoded {1543aa48}=0.1 to base damage amp. Add conditional 0.15 for total 0.25 while active; 14.23 notes corroborate this total but do not decode the key. Positive shield damage triggers after the triggering packet, even if shield survives. Repeated shield damage refreshes 60 ticks; does not stack itself.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "破防者哈希字段暂映射为10%基础增伤，与触发的15%相加为25%；对护盾造成正伤害即可触发，无须破盾，触发包之后生效，重复触发刷新3秒不叠层。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Base eligible damage 100, no other modifiers; first hit damages a shield",
+          "expected": "First hit 110; subsequent active-window hit 125; surviving shield is sufficient, breaking it is unnecessary",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-04",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 7,
+        "used": 7,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "DamageAmp*100": "reviewed in fieldReview/DamageAmp",
+        "Duration": "reviewed in fieldReview/Duration"
+      }
+    },
+    {
+      "apiName": "TFT_Item_Quicksilver",
+      "source": {
+        "jsonPointer": "/items/1392",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "69d74cdedf82ba14b4543fda9af4c618963311eb8f757e0c7cae515acda43b0e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Combat start: Gain immunity to crowd control for @SpellShieldDuration@ seconds. During this time, gain @ProcAttackSpeed*100@% Attack Speed every @ProcInterval@ seconds.<br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules>",
+      "sourceComposition": [
+        "TFT_Item_SparringGloves",
+        "TFT_Item_NegatronCloak"
+      ],
+      "sourceUnique": true,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AS": {
+          "rawValue": 30.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "MagicResist": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "magic-resist-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "magic-resist-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat MR",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "CritChance": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "additive critical-strike chance",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "SpellShieldDuration": {
+          "rawValue": 18.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 360,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "crowd-control immunity duration, not a damage shield",
+          "evidence": "Own sourceDesc explicitly references @SpellShieldDuration@ or @SpellShieldDuration*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "ProcAttackSpeed": {
+          "rawValue": 0.029999999329447746,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 300,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "additive AS per grant",
+          "evidence": "Own sourceDesc explicitly references @ProcAttackSpeed@ or @ProcAttackSpeed*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "ProcInterval": {
+          "rawValue": 2.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 40,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "grant interval",
+          "evidence": "Own sourceDesc explicitly references @ProcInterval@ or @ProcInterval*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "combat start; then every 40 ticks during immunity",
+          "effect": "CC immunity 360 ticks; add 300 Bps AS nine times",
+          "target": "holder",
+          "duration": "immunity 360 ticks; AS persists rest of combat",
+          "stacking": "unique=true; accumulating additive AS",
+          "evidence": "Combat start; immunity to crowd control; @ProcAttackSpeed*100@% ... every @ProcInterval@ seconds",
+          "conventionIds": [
+            "B-05"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-05",
+          "label": "项目约定，非官方证据",
+          "decision": "Grant AS at elapsed 40,80,...,360 ticks (9 grants), including final 18s boundary before immunity expires. Gained AS persists until combat ends. The 14.23 total +27% corroborates nine grants, while retention/order are project details. Immunity blocks new CC application rather than cleansing an already-existing status. Final grant at360 is an explicit periodic exception to GLOBAL-NUMERIC-01; immunity still expires before new crowd-control actions at that boundary.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "水银在第2、4…18秒共获得9次3%攻速，18秒边界先加攻速再结束免控；累计攻速保留到战斗结束；免控阻止新控制，不视作清除已有控制。 第18秒末次攻速是通用到期顺序的明确例外，但该边界新控制已可生效。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Only Quicksilver, base AS bonus 3000 Bps",
+          "expected": "At 0 sec +3000 Bps; 2 sec +3300; 18 sec +5700 including accumulated +2700; immunity has expired after boundary processing",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-05",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": true
+      },
+      "reviewCounts": {
+        "effectFields": 6,
+        "used": 6,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "SpellShieldDuration": "reviewed in fieldReview/SpellShieldDuration",
+        "ProcAttackSpeed*100": "reviewed in fieldReview/ProcAttackSpeed",
+        "ProcInterval": "reviewed in fieldReview/ProcInterval"
+      }
+    },
+    {
+      "apiName": "TFT_Item_RabadonsDeathcap",
+      "source": {
+        "jsonPointer": "/items/331",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e59793391010f377ce09e921bb1cdd7e9495dd50f54483ecb99b2649f142ea4c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "<tftitemrules>This humble hat can help you make, or unmake, the world itself.</tftitemrules>",
+      "sourceComposition": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AP": {
+          "rawValue": 50.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 50,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat AP",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "{1543aa48}": {
+          "rawValue": 0.15000000596046448,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "single damage-amp contribution",
+          "evidence": "effects/{1543aa48} is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-06"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "BonusDamage": {
+          "rawValue": 0.15000000596046448,
+          "disposition": "not-used",
+          "unit": "fraction",
+          "normalizedValue": null,
+          "normalizedUnit": "Bps",
+          "normalization": "preserve raw only; no runtime parameter generated; round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "same-value unused candidate alias; avoid double-counting",
+          "evidence": "effects/BonusDamage is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-06"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "while equipped",
+          "effect": "50 AP and 1500 Bps damage amp",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies; no double count of BonusDamage",
+          "evidence": "effects AP=50; two raw 0.15 fields; desc is flavor only",
+          "conventionIds": [
+            "B-06"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-06",
+          "label": "项目约定，非官方证据",
+          "decision": "Use {1543aa48}=0.15 as base damage amp, exactly once. BonusDamage=0.15 is a same-value corroborating but unreferenced field, retained but not applied independently. The tooltip has no mechanical token; this meaning is project convention, not proof of a decoded hash.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "死亡之帽哈希字段暂映射为15%增伤，只计一次；BonusDamage同值字段保留但不另应用，说明仅为风味文本，不能声称哈希已被官方解码。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Eligible pre-amp damage 100; one Deathcap",
+          "expected": "Damage 115 before mitigation, not 130 or 132; flat AP contribution +50 applied separately to spell coefficients",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-06",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 3,
+        "used": 2,
+        "notUsed": 1
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {}
+    },
+    {
+      "apiName": "TFT_Item_RapidFireCannon",
+      "source": {
+        "jsonPointer": "/items/1356",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e7d234e4cc3e907769ebdd5ff5806b9c6d853775628c501ddc98036e108199ed",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Attacks and Abilities @BurnPercent@% <TFTKeyword>Burn</TFTKeyword> and @HealingReductionPct@% <TFTKeyword>Wound</TFTKeyword> enemies for @Duration@ seconds.<br><br><tftitemrules><tftbold>Burn</tftbold>: Deals a percent of the target's max Health as true damage every second<br><tftbold>Wound</tftbold>: Reduces healing received</tftitemrules>",
+      "sourceComposition": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_RecurveBow"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AS": {
+          "rawValue": 35.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3500,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "BurnPercent": {
+          "rawValue": 1.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 100,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "burn rate",
+          "evidence": "Own sourceDesc explicitly references @BurnPercent@ or @BurnPercent*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "Duration": {
+          "rawValue": 5.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 100,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "burn/wound duration",
+          "evidence": "Own sourceDesc explicitly references @Duration@ or @Duration*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "HealingReductionPct": {
+          "rawValue": 33.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3300,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "healing reduction",
+          "evidence": "Own sourceDesc explicitly references @HealingReductionPct@ or @HealingReductionPct*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "{1543aa48}": {
+          "rawValue": 0.029999999329447746,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 300,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "base damage amp",
+          "evidence": "effects/{1543aa48} is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-07"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "BonusDamage": {
+          "rawValue": 0.05999999865889549,
+          "disposition": "not-used",
+          "unit": "fraction",
+          "normalizedValue": null,
+          "normalizedUnit": "Bps",
+          "normalization": "preserve raw only; no runtime parameter generated; round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "unreferenced value retained, no extra effect or zero inferred",
+          "evidence": "effects/BonusDamage is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-07"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "HexRangeIncrease": {
+          "rawValue": 1.0,
+          "disposition": "not-used",
+          "unit": "hexes",
+          "normalizedValue": null,
+          "normalizedUnit": "hexes",
+          "normalization": "preserve raw only; no runtime parameter generated; source is already an exact integral count or stat; preserve integer",
+          "rationale": "unreferenced value retained, no extra effect or zero inferred",
+          "evidence": "effects/HexRangeIncrease is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-07"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "{9f5117db}": {
+          "rawValue": 100.0,
+          "disposition": "not-used",
+          "unit": "unknown",
+          "normalizedValue": null,
+          "normalizedUnit": "unknown",
+          "normalization": "preserve raw only; no runtime parameter generated; no invented unit or zero fallback",
+          "rationale": "unreferenced value retained, no extra effect or zero inferred",
+          "evidence": "effects/{9f5117db} is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-07"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "positive attack/ability damage",
+          "effect": "100 Bps max-HP true burn each second +3300 Bps wound; +300 Bps base damage amp",
+          "target": "damaged enemies; amp on holder",
+          "duration": "100 ticks",
+          "stacking": "B-01 non-additive burn/wound; ordinary copies do not create duplicate same-target burn",
+          "evidence": "Attacks and Abilities; @BurnPercent@%; @HealingReductionPct@%; @Duration@ seconds",
+          "conventionIds": [
+            "B-01",
+            "B-07"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-07",
+          "label": "项目约定，非官方证据",
+          "decision": "Red Buff uses {1543aa48}≈0.03 as base damage amp. BonusDamage≈0.06, HexRangeIncrease=1, and {9f5117db}=100 remain raw and are not applied: absent current tooltip support, their active purpose is unknown. In particular do not add old range or 6% amp. This hashed-field choice is project convention, not an official version conflict resolution.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "红霸符哈希字段暂取3%基础增伤；BonusDamage约6%、HexRangeIncrease=1及另一哈希100仅原样保留，不额外施加增伤、射程或未知效果，其历史活性未证实。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Target max HP2000, isolated unrefreshed debuff; report raw burn before any external modifiers",
+          "expected": "Base burn 20 per second, 5 payments =100; amp +300 Bps applies to eligible normal damage; no +1 attack range",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-07",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 8,
+        "used": 5,
+        "notUsed": 3
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "BurnPercent": "reviewed in fieldReview/BurnPercent",
+        "HealingReductionPct": "reviewed in fieldReview/HealingReductionPct",
+        "Duration": "reviewed in fieldReview/Duration"
+      }
+    },
+    {
+      "apiName": "TFT_Item_RecurveBow",
+      "source": {
+        "jsonPointer": "/items/1274",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "d4a066316b9560c8964c63ed3e79fc982812ddef17230f95d1197fb2e4d99e40",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "%i:scaleAS% +@AS@% Attack Speed",
+      "sourceComposition": [],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AS": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 1000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        }
+      ],
+      "conventions": [],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "One component equipped; no other modifiers",
+          "expected": "AS contribution 1000 Bps; no conditional effect in source desc",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 1,
+        "used": 1,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "AS": "reviewed in fieldReview/AS"
+      }
+    },
+    {
+      "apiName": "TFT_Item_RedBuff",
+      "source": {
+        "jsonPointer": "/items/1287",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "68c7b2046926a19e926fd58eb55e800977429c90429ab9f3cf8ded8e2670b530",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Gain @BonusPercentHP*100@% max Health. <br><br>Every @ICD@ seconds, deal @BurnPercent@% <TFTKeyword>Burn</TFTKeyword> and @GrievousWoundsPercent@% <TFTKeyword>Wound</TFTKeyword> to an enemy within @HexRange@ hexes for @BurnDuration@ seconds.<br><br><tftitemrules>[Unique - only 1 per champion]<br><tftbold>Burn</tftbold>: Deals a percent of the target's max Health as true damage every second<br><tftbold>Wound</tftbold>: Reduces healing received</tftitemrules>",
+      "sourceComposition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_GiantsBelt"
+      ],
+      "sourceUnique": true,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "Armor": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "armor-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "armor-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat armor",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Health": {
+          "rawValue": 150.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 150,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "BonusPercentHP": {
+          "rawValue": 0.07999999821186066,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 800,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "bonus maximum-health ratio",
+          "evidence": "Own sourceDesc explicitly references @BonusPercentHP@ or @BonusPercentHP*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BurnDuration": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 200,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "burn/wound duration",
+          "evidence": "Own sourceDesc explicitly references @BurnDuration@ or @BurnDuration*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BurnPercent": {
+          "rawValue": 1.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 100,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "max-HP burn per second",
+          "evidence": "Own sourceDesc explicitly references @BurnPercent@ or @BurnPercent*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "GrievousWoundsPercent": {
+          "rawValue": 33.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3300,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "wound amount",
+          "evidence": "Own sourceDesc explicitly references @GrievousWoundsPercent@ or @GrievousWoundsPercent*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "HexRange": {
+          "rawValue": 2.0,
+          "disposition": "used",
+          "unit": "hexes",
+          "normalizedValue": 2,
+          "normalizedUnit": "hexes",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "inclusive distance radius",
+          "evidence": "Own sourceDesc explicitly references @HexRange@ or @HexRange*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "ICD": {
+          "rawValue": 2.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 40,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "pulse interval",
+          "evidence": "Own sourceDesc explicitly references @ICD@ or @ICD*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "MonsterCap": {
+          "rawValue": 100.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 100,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "neutral per-tick burn cap",
+          "evidence": "effects/MonsterCap is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-02"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "every 40 ticks",
+          "effect": "apply 100 Bps burn +3300 Bps wound; passive +800 Bps maximum HP",
+          "target": "one enemy at distance <=2; holder gains HP",
+          "duration": "debuff 200 ticks",
+          "stacking": "unique=true; B-01 burn/wound non-additive",
+          "evidence": "Every @ICD@ seconds ... an enemy within @HexRange@ hexes ... @BurnDuration@ seconds",
+          "conventionIds": [
+            "B-01",
+            "B-02",
+            "B-08"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-08",
+          "label": "项目约定，非官方证据",
+          "decision": "Sunfire first pulse is at elapsed 40 ticks, then every 40. Choose an in-range living target without this holder’s active Sunfire burn before refreshing another; rank by distance then stable unit ID. If none in range skip without banking pulses. Use B-02 cap100. Preserve existing effects.ts:142 calculation order: (base HP + flat HP) * (1 + sum of percent-HP bonuses), consistently across Warmog/Sterak/Sunfire.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "日炎首轮选敌在开战2秒后，此后每2秒；范围内优先未受本件灼烧的存活敌人，再按距离、稳定单位ID选取，无目标则跳过；怪物每跳上限沿用100。生命加成沿用现有effects.ts顺序：(基础生命+固定生命)×(1+合计比例)。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Holder base HP1000 +150 flat HP; no other bonuses",
+          "expected": "Max HP1242=(1000+150)*1.08 under existing effects.ts order; pulses at2s,4s; selected2000maxHP enemy burns20/tick",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-08",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": true
+      },
+      "reviewCounts": {
+        "effectFields": 9,
+        "used": 9,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "BonusPercentHP*100": "reviewed in fieldReview/BonusPercentHP",
+        "ICD": "reviewed in fieldReview/ICD",
+        "BurnPercent": "reviewed in fieldReview/BurnPercent",
+        "GrievousWoundsPercent": "reviewed in fieldReview/GrievousWoundsPercent",
+        "HexRange": "reviewed in fieldReview/HexRange",
+        "BurnDuration": "reviewed in fieldReview/BurnDuration"
+      }
+    },
+    {
+      "apiName": "TFT_Item_Redemption",
+      "source": {
+        "jsonPointer": "/items/1095",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "a0b35c26a84095ae31a26cdb44616f874b260bd64b9585778c248d81aa48b263",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Heal allies within 1 hex for @MissingHealthHeal@% of their missing Health every @HealTickRate@ seconds. They also gain @AoEDamageReduction@% Durability for @HealTickRate@ seconds (this does not stack).<br><br><TFTTrackerLabel>Healing:</TFTTrackerLabel> <TFTHighlight>@TFTUnitProperty.item:TFT_Tracker_Value1@</TFTHighlight>",
+      "sourceComposition": [
+        "TFT_Item_TearOfTheGoddess",
+        "TFT_Item_GiantsBelt"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "Health": {
+          "rawValue": 150.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 150,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Mana": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "mana-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "mana-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "starting mana, not maximum mana",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AoEDamageReduction": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 1000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "all-damage durability; desc wins over old field name",
+          "evidence": "Own sourceDesc explicitly references @AoEDamageReduction@ or @AoEDamageReduction*100@; raw effects supplies value",
+          "conventionIds": [
+            "B-09"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "HealTickRate": {
+          "rawValue": 5.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 100,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "heal interval and durability duration",
+          "evidence": "Own sourceDesc explicitly references @HealTickRate@ or @HealTickRate*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "HexRadius": {
+          "rawValue": 1.0,
+          "disposition": "used",
+          "unit": "hexes",
+          "normalizedValue": 1,
+          "normalizedUnit": "hexes",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "target radius matches literal 1 hex",
+          "evidence": "Own tooltip literal allies within 1 hex; raw HexRadius1 is consistent, not interpolated",
+          "conventionIds": []
+        },
+        "MaxHeal": {
+          "rawValue": 1000.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 1000,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "per-target per-pulse cap, not official tooltip-proven",
+          "evidence": "effects/MaxHeal is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-09"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "MissingHealthHeal": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "fraction of missing health healed",
+          "evidence": "Own sourceDesc explicitly references @MissingHealthHeal@ or @MissingHealthHeal*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "every 100 ticks",
+          "effect": "heal 1500 Bps missing HP; grant1000 Bps durability",
+          "target": "allies distance<=1 including self",
+          "duration": "durability100 ticks",
+          "stacking": "durability explicitly non-stacking; heal pulses independent",
+          "evidence": "Heal allies within 1 hex ... @MissingHealthHeal@% ... @HealTickRate@ seconds; @AoEDamageReduction@% Durability ... does not stack",
+          "conventionIds": [
+            "B-09"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-09",
+          "label": "项目约定，非官方证据",
+          "decision": "Every 100 ticks starting at100, snapshot living allies within distance<=1, including holder. Heal missingHP*1500/10000, cap by1000 per target per pulse, then incoming-heal modifiers and maxHP clamp, with final integer quantization under GLOBAL-NUMERIC-01; MaxHeal cap interpretation is project convention. Apply 1000 Bps all-damage durability for100 ticks, not only AoE despite key name. Same buff from multiple Redemptions refreshes and does not sum. Separate healing pulses still each resolve in stable order.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "救赎首次在5秒，此后每5秒，对1格内存活友军（包括自身）取样；每目标回复15%已损生命，暂将未引用的MaxHeal解释为每次每目标上限1000，再应用受治疗修正和生命上限，整数化沿用通用数值规则。10%坚韧适用于所有符合坚韧减免资格的伤害而非仅范围伤害，持续5秒且同类不叠加；多件治疗分别结算。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Ally maxHP2000 current800, no healing modifiers",
+          "expected": "Missing1200 =>180 healing =>980HP; a nominal100 damage packet with only granted durability becomes90 whether AoE or single-target",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-09",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 7,
+        "used": 7,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "MissingHealthHeal": "reviewed in fieldReview/MissingHealthHeal",
+        "HealTickRate": "reviewed in fieldReview/HealTickRate",
+        "AoEDamageReduction": "reviewed in fieldReview/AoEDamageReduction",
+        "TFTUnitProperty.item:TFT_Tracker_Value1": "display-only dynamic tracker; not a missing numeric gameplay parameter"
+      }
+    },
+    {
+      "apiName": "TFT_Item_RunaansHurricane",
+      "source": {
+        "jsonPointer": "/items/1308",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "6e2f9fa7e961d6920eb1ee15a881a14b5857b11ae52db7be418e924d6850bf6f",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Attacks fire a bolt at a nearby enemy, dealing @MultiplierForDamage@% Attack Damage %i:scaleAD% as physical damage.",
+      "sourceComposition": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_RecurveBow"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AD": {
+          "rawValue": 0.25,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 2500,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "bonus attack damage ratio applied to base AD",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AS": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 1000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "MagicResist": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "magic-resist-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "magic-resist-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat MR",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AdditionalTargets": {
+          "rawValue": 1.0,
+          "disposition": "used",
+          "unit": "count",
+          "normalizedValue": 1,
+          "normalizedUnit": "count",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "one additional enemy; matches singular bolt",
+          "evidence": "Tooltip says a bolt at a nearby enemy (singular); raw AdditionalTargets1 corroborates one, without an interpolated token",
+          "conventionIds": []
+        },
+        "MultiplierForDamage": {
+          "rawValue": 55.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 5500,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "physical damage ratio of current AD",
+          "evidence": "Own sourceDesc explicitly references @MultiplierForDamage@ or @MultiplierForDamage*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "ordinary attack completes",
+          "effect": "one bolt for5500 Bps AD physical damage",
+          "target": "one nearby different enemy",
+          "duration": "instant",
+          "stacking": "one separate bolt per item instance, no recursion",
+          "evidence": "Attacks fire a bolt at a nearby enemy ... @MultiplierForDamage@% Attack Damage ... physical damage",
+          "conventionIds": [
+            "B-10",
+            "GLOBAL-PROC-01"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-10",
+          "label": "项目约定，非官方证据",
+          "decision": "On each completed ordinary attack, select nearest living enemy other than its primary target, tie by stable ID; if none exists, no bolt. Bolt uses current holder AD, cannot crit and cannot generate another attack or recursively emit equipment damage procs; explicitly documented physical-damage status listeners (Last Whisper A-20) and defender damage listeners (Titan B-16) may observe the packet; it is equipment physical damage. Tooltip says nearby but no radius is given: select nearest available enemy without inventing a numeric cutoff.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "飓风每次完成普攻后向不同于主目标的最近存活敌人发射箭矢，同距离按稳定ID；无次目标则不发射。说明未给数值射程，因此不臆造距离上限；箭矢按当前攻击力55%造成物理装备伤害，不暴击、不附带攻击特效、不递归引发装备追加伤害；轻语A-20的物理伤害减甲监听和防守方泰坦B-16受伤监听属于明确允许的状态触发例外。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Current AD200; eligible second enemy armor0",
+          "expected": "Bolt110 physical pre-mitigation; one attack counter increment, not two",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-10",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 5,
+        "used": 5,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "MultiplierForDamage": "reviewed in fieldReview/MultiplierForDamage"
+      }
+    },
+    {
+      "apiName": "TFT_Item_SparringGloves",
+      "source": {
+        "jsonPointer": "/items/1318",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "ee5618f5111bdb04f5da985014110317e7c5001b37cadd3a403feb52acf5d4b4",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "+@CritChance@ Critical Strike Chance",
+      "sourceComposition": [],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "CritChance": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "additive critical-strike chance",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        }
+      ],
+      "conventions": [],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "One component equipped; no other modifiers",
+          "expected": "CritChance contribution 2000 Bps; no conditional effect in source desc",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 1,
+        "used": 1,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "CritChance": "reviewed in fieldReview/CritChance"
+      }
+    },
+    {
+      "apiName": "TFT_Item_SpearOfShojin",
+      "source": {
+        "jsonPointer": "/items/1343",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "ac72cc71a2523479fbcaf490a5d277d38522b365028ac3463bd95c5893f0ba9e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Attacks grant @FlatManaRestore@ bonus Mana.",
+      "sourceComposition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AD": {
+          "rawValue": 0.15000000596046448,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "bonus attack damage ratio applied to base AD",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AP": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat AP",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Mana": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "mana-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "mana-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "starting mana, not maximum mana",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "FlatManaRestore": {
+          "rawValue": 5.0,
+          "disposition": "used",
+          "unit": "mana-points",
+          "normalizedValue": 5,
+          "normalizedUnit": "mana-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "additional mana per ordinary attack",
+          "evidence": "Own sourceDesc explicitly references @FlatManaRestore@ or @FlatManaRestore*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "ordinary attack completes",
+          "effect": "+5 bonus mana in addition to normal attack mana",
+          "target": "holder",
+          "duration": "instant",
+          "stacking": "ordinary item instances each grant once; caps/lock apply",
+          "evidence": "Attacks grant @FlatManaRestore@ bonus Mana",
+          "conventionIds": [
+            "B-11"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-11",
+          "label": "项目约定，非官方证据",
+          "decision": "Bonus mana5 granted once per completed ordinary attack, subject to existing mana lock/cap and mana-less-unit rules; bolt/proc packets are not extra attacks. Do not change maximum mana. Attacks that complete but are blocked still count as attacks for this trigger.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "青龙刀每次完成普通攻击额外回5法力，仍受法力锁、法力上限和无法力规则限制；被格挡但已完成的攻击计数，箭矢和装备追加伤害不算新攻击，不改变最大法力。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Normal attack mana10, holder mana20, max100, unlocked, one Shojin",
+          "expected": "New mana35; 10 normal +5 bonus; max mana remains100",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-11",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 4,
+        "used": 4,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "FlatManaRestore": "reviewed in fieldReview/FlatManaRestore"
+      }
+    },
+    {
+      "apiName": "TFT_Item_SpectralGauntlet",
+      "source": {
+        "jsonPointer": "/items/1345",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "911cabfcf8d24aef3a6cd97e24bf7a1bab40525293a2200ed5084e0a1efbf469",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "@ARReductionAmount@% <TFTKeyword>Sunder</TFTKeyword> enemies within @HexRange@ hexes. Gain @BonusResists@ Armor and Magic Resist for the first @BonusResistDuration@ seconds of combat.<br><br><tftitemrules><tftbold>Sunder</tftbold>: Reduce Armor</tftitemrules>",
+      "sourceComposition": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_GiantsBelt"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "MagicResist": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "magic-resist-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "magic-resist-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat MR",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Health": {
+          "rawValue": 150.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 150,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "ARReductionAmount": {
+          "rawValue": 30.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "Sunder armor reduction",
+          "evidence": "Own sourceDesc explicitly references @ARReductionAmount@ or @ARReductionAmount*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BonusResistDuration": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 200,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "temporary holder resists duration",
+          "evidence": "Own sourceDesc explicitly references @BonusResistDuration@ or @BonusResistDuration*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BonusResists": {
+          "rawValue": 25.0,
+          "disposition": "used",
+          "unit": "resist-points",
+          "normalizedValue": 25,
+          "normalizedUnit": "resist-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat amount granted to each of armor and MR",
+          "evidence": "Own sourceDesc explicitly references @BonusResists@ or @BonusResists*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "HexRange": {
+          "rawValue": 2.0,
+          "disposition": "used",
+          "unit": "hexes",
+          "normalizedValue": 2,
+          "normalizedUnit": "hexes",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "inclusive aura radius",
+          "evidence": "Own sourceDesc explicitly references @HexRange@ or @HexRange*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "combat-start bonus and continuous proximity",
+          "effect": "3000 Bps Sunder; holder +25armor +25MR",
+          "target": "enemies<=2hex; holder",
+          "duration": "bonus resists200ticks; aura continuous",
+          "stacking": "strongest Sunder, no multiplication between same family",
+          "evidence": "@ARReductionAmount@% Sunder enemies within @HexRange@ hexes; first @BonusResistDuration@ seconds",
+          "conventionIds": [
+            "B-12"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-12",
+          "label": "项目约定，非官方证据",
+          "decision": "Aura membership is recalculated from current positions each simulation tick, distance<=2; remove its contribution immediately on exit or holder death. Sunder uses greatest active same-family percent rather than additive reductions. Initial +25 armor/MR expires after200ticks; aura itself lasts while holder alive, not just10 seconds.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "薄暮法袍每tick按当前距离更新2格内减甲光环，离开或持有者死亡即移除；同类减甲取最高值不相加。开战25双抗只持续10秒，光环不随该加成一起结束。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Enemy armor100 in aura; holder has only base item MR20",
+          "expected": "Enemy effective armor70; holder initial added resists armor25 MR45, after10s armor0 MR20",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-12",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 6,
+        "used": 6,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "ARReductionAmount": "reviewed in fieldReview/ARReductionAmount",
+        "HexRange": "reviewed in fieldReview/HexRange",
+        "BonusResists": "reviewed in fieldReview/BonusResists",
+        "BonusResistDuration": "reviewed in fieldReview/BonusResistDuration"
+      }
+    },
+    {
+      "apiName": "TFT_Item_StatikkShiv",
+      "source": {
+        "jsonPointer": "/items/1404",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "b58a2a40c2ba7097c0b79b45c754a0ca46a527db78573ab35c68660c748b7e13",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Every 3rd attack deals @Damage@ magic damage and @MRShred@% <TFTKeyword>Shreds</TFTKeyword> @1StarBounces@ enemies for @MRShredDuration@ seconds.<br><br><tftitemrules><tftbold>Shred</tftbold>: Reduce Magic Resist</tftitemrules>",
+      "sourceComposition": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AS": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AP": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat AP",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Mana": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "mana-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "mana-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "starting mana, not maximum mana",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "1StarBounces": {
+          "rawValue": 4.0,
+          "disposition": "used",
+          "unit": "count",
+          "normalizedValue": 4,
+          "normalizedUnit": "count",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "total distinct enemies up to4, not four additional",
+          "evidence": "Own sourceDesc explicitly references @1StarBounces@ or @1StarBounces*100@; raw effects supplies value",
+          "conventionIds": [
+            "B-13"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Damage": {
+          "rawValue": 35.0,
+          "disposition": "used",
+          "unit": "damage-points",
+          "normalizedValue": 35,
+          "normalizedUnit": "damage-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "fixed magic damage per target",
+          "evidence": "Own sourceDesc explicitly references @Damage@ or @Damage*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "MRShred": {
+          "rawValue": 30.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "MR reduction",
+          "evidence": "Own sourceDesc explicitly references @MRShred@ or @MRShred*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "MRShredDuration": {
+          "rawValue": 5.0,
+          "disposition": "used",
+          "unit": "seconds",
+          "normalizedValue": 100,
+          "normalizedUnit": "ticks",
+          "normalization": "50 ms/tick; seconds * 20 (all supplied durations exactly divisible)",
+          "rationale": "shred duration",
+          "evidence": "Own sourceDesc explicitly references @MRShredDuration@ or @MRShredDuration*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "{12a15e9e}": {
+          "rawValue": 4.0,
+          "disposition": "not-used",
+          "unit": "unknown",
+          "normalizedValue": null,
+          "normalizedUnit": "unknown",
+          "normalization": "preserve raw only; no runtime parameter generated; no invented unit or zero fallback",
+          "rationale": "unreferenced hashes preserved; no extra target counts or star scaling inferred",
+          "evidence": "effects/{12a15e9e} is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-13"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "{15144cec}": {
+          "rawValue": 4.0,
+          "disposition": "not-used",
+          "unit": "unknown",
+          "normalizedValue": null,
+          "normalizedUnit": "unknown",
+          "normalization": "preserve raw only; no runtime parameter generated; no invented unit or zero fallback",
+          "rationale": "unreferenced hashes preserved; no extra target counts or star scaling inferred",
+          "evidence": "effects/{15144cec} is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-13"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "{79e2ec7b}": {
+          "rawValue": 4.0,
+          "disposition": "not-used",
+          "unit": "unknown",
+          "normalizedValue": null,
+          "normalizedUnit": "unknown",
+          "normalization": "preserve raw only; no runtime parameter generated; no invented unit or zero fallback",
+          "rationale": "unreferenced hashes preserved; no extra target counts or star scaling inferred",
+          "evidence": "effects/{79e2ec7b} is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-13"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "every third ordinary attack",
+          "effect": "35 magic damage per enemy +3000 Bps MR shred",
+          "target": "up to4 distinct enemies",
+          "duration": "shred100ticks",
+          "stacking": "shred strongest/non-additive refresh; counters independent across copies",
+          "evidence": "Every 3rd attack ... @Damage@ magic damage ... @MRShred@% ... @1StarBounces@ enemies ... @MRShredDuration@ seconds",
+          "conventionIds": [
+            "B-13",
+            "B-12"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-13",
+          "label": "项目约定，非官方证据",
+          "decision": "Count completed ordinary attacks per item, proc on3,6,9; do not count bolts/procs as attacks. Hit primary target then up to3 different nearest living enemies, tie by stable ID, no repeated target within chain. Apply shred before each item damage packet. No AP scaling/crit unless explicitly source-authorized. Hashed values4 are unreferenced candidates, not additional bounces.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "电刀每件独立计普通攻击，在第3、6、9次触发；主目标后按距离和稳定ID最多命中另外3个不同敌人，单次不重复。先施加减魔抗再结算固定35魔法装备伤害，不额外按AP或暴击缩放；三个未引用哈希值4不另增跳数或星级收益。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Four zero-MR enemies; six completed attacks",
+          "expected": "Procs on3 and6: eight35-damage packets totaling280 premitigation; not 5 targets and not AP-scaled",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-13",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 10,
+        "used": 7,
+        "notUsed": 3
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "Damage": "reviewed in fieldReview/Damage",
+        "MRShred": "reviewed in fieldReview/MRShred",
+        "1StarBounces": "reviewed in fieldReview/1StarBounces",
+        "MRShredDuration": "reviewed in fieldReview/MRShredDuration"
+      }
+    },
+    {
+      "apiName": "TFT_Item_SteraksGage",
+      "source": {
+        "jsonPointer": "/items/1193",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "23be6124ad8925f979cc7e293b7123393706c00ca20d34259f902ce9fbd09e93",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Once per combat at @HealthThreshold@% Health, gain @BonusMaxHealthPerc@% max Health and @BonusADToGive@% Attack Damage.",
+      "sourceComposition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_GiantsBelt"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AD": {
+          "rawValue": 0.15000000596046448,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "bonus attack damage ratio applied to base AD",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Health": {
+          "rawValue": 150.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 150,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "HealthThreshold": {
+          "rawValue": 60.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 6000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "health activation threshold",
+          "evidence": "Own sourceDesc explicitly references @HealthThreshold@ or @HealthThreshold*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BonusMaxHealthPerc": {
+          "rawValue": 25.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2500,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus max-HP ratio",
+          "evidence": "Own sourceDesc explicitly references @BonusMaxHealthPerc@ or @BonusMaxHealthPerc*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BonusADToGive": {
+          "rawValue": 35.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 3500,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus AD ratio",
+          "evidence": "Own sourceDesc explicitly references @BonusADToGive@ or @BonusADToGive*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "once per combat at<=6000Bps health",
+          "effect": "gain2500Bps maxHP and3500Bps AD",
+          "target": "holder",
+          "duration": "remaining combat",
+          "stacking": "one activation per item; copies independent",
+          "evidence": "Once per combat at @HealthThreshold@% Health ... @BonusMaxHealthPerc@% ... @BonusADToGive@%",
+          "conventionIds": [
+            "B-14"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-14",
+          "label": "项目约定，非官方证据",
+          "decision": "At or below60% current/maxHP after a damage event, if still alive, activate once; check also combat-start if already below. Add25% maxHP using B-08 formula and increase current HP by the same absolute maxHP increase (not a heal event); add35% base AD, persist to combat end. Lethal damage does not resurrect. Calculation-order convention follows B-08; precise timing and current-HP adjustment are project choices.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "血手在伤害结算后存活且生命≤60%时每战触发一次，开战已满足也检查；增加25%最大生命和35%攻击力至战斗结束，生命计算沿用固定值先加、比例后乘，并同时增加等量当前生命（不算治疗）；致死伤害不能复活。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Base HP1050 +150 itemHP=>1200, current720; baseAD100+15%itemAD",
+          "expected": "At equality activates: maxHP1500 current1020 (+300, not healing); AD150 after adding35%base to existing15%; no resurrection at0",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-14",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 5,
+        "used": 5,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "HealthThreshold": "reviewed in fieldReview/HealthThreshold",
+        "BonusMaxHealthPerc": "reviewed in fieldReview/BonusMaxHealthPerc",
+        "BonusADToGive": "reviewed in fieldReview/BonusADToGive"
+      }
+    },
+    {
+      "apiName": "TFT_Item_TearOfTheGoddess",
+      "source": {
+        "jsonPointer": "/items/1296",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "40b627c5edfa5b507ca361e2dd07280234ae4976c62ff95c8dc46d583d558ce8",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "%i:scaleMana% +@Mana@ Mana",
+      "sourceComposition": [],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "Mana": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "mana-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "mana-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "starting mana, not maximum mana",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        }
+      ],
+      "conventions": [],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "One component equipped; no other modifiers",
+          "expected": "Mana contribution 15 points; no conditional effect in source desc",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 1,
+        "used": 1,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "Mana": "reviewed in fieldReview/Mana"
+      }
+    },
+    {
+      "apiName": "TFT_Item_ThiefsGloves",
+      "source": {
+        "jsonPointer": "/items/1185",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "4645809c6f08ec25ccfbd8bef2f3817590d60af3221dbde2be6f13d3e0652576",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Each round: Equip 2 random items.<br><br><tftitemrules>[Consumes 3 item slots.]</tftitemrules><br>@TFTUnitProperty.:TFT_BindOnEquipTRA@",
+      "sourceComposition": [
+        "TFT_Item_SparringGloves",
+        "TFT_Item_SparringGloves"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "Health": {
+          "rawValue": 150.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 150,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "CritChance": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "additive critical-strike chance",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "each round",
+          "effect": "equip2 temporary random items under approvedTG-01: level<7 one completed+one component; level>=7 two distinct completed",
+          "target": "holder",
+          "duration": "one round; lifecycle B-15",
+          "stacking": "3slots including parent; unique=false preserved",
+          "evidence": "Each round: Equip 2 random items; [Consumes 3 item slots.]",
+          "conventionIds": [
+            "B-15",
+            "TG-01"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-15",
+          "label": "项目约定，非官方证据",
+          "decision": "Refresh generated items once per stable round ID on holder at round start; equip during a round generates at most once for that round. Reserve all3 slots; generated children occupy the reserved extra slots and cannot be independently sold, transferred, combined, dropped or converted into permanent inventory. Sell/transfer the parent moves or returns only the parent; child lifecycle ends with it. These lifecycle choices do not authorize an unverified random pool.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "窃贼手套按稳定轮次ID每轮至多刷新一次，当轮中途穿戴也不重复刷；本体连同临时件预留全部3槽。临时件不能独立出售、转移、合成、掉落或变永久物品；本体出售/转移只处理本体，子件随本体结束；此生命周期约定不批准未知抽取池。"
+        },
+        {
+          "id": "TG-01",
+          "label": "项目约定，非官方证据",
+          "decision": "User-approved level-tier random policy: at generation, snapshot current player level when entering round preparation (or first in-round equip if not yet generated). Levels1–6 draw one completed item uniformly from35 ordinary completed items excluding Thief’s Gloves and one component uniformly from8 ordinary components. Level>=7 draws two distinct completed items uniformly without replacement from the same35-item pool. Sort each pool by apiName and use explicit seeded lcg32-v1. No duplicate apiName within the pair. Keep raw holder stats20 percentage-point crit chance (=2000Bps) and150 health. Temporary children cannot be sold, combined or returned as permanent inventory. Historical designer-level-pool statement was reported by user and not independently verified; neither threshold7 nor these weights are official evidence.",
+          "decisionZh": "用户已批准等级分档项目方案：进入每轮准备期生成时取当前玩家等级（当轮首次穿戴且尚未生成时取当时等级）；1—6级从35件普通成装（排除窃贼）等概率抽1件，再从8普通散件等概率抽1件；7级及以上从同一35件成装池等概率无放回抽2件，两件apiName不重复。各池按apiName排序，使用显式种子的lcg32-v1。窃贼本体按英文客户端保留20%暴击率、150生命；临时件不能出售、合成或永久返还。用户提及早期设计师等级强度组合池说明尚未独立核验，7级分界和具体池权重均为项目约定，不称官方规则。",
+          "approvalStatus": "user-approved",
+          "adoptionStatus": "active-user-approved",
+          "blocking": false,
+          "approvedUtcDate": "2026-10-07",
+          "authority": "User explicitly approved the modified two-tier policy in parent conversation on2026-10-07",
+          "sourceBoundary": {
+            "clientEvidence": "raw desc proves2randomitems/round and3slots; effects CritChance20,Health150",
+            "userReportedHistoricalContext": "Early designer explanation of level-strength combination pools; unverified contextual lead only",
+            "projectPolicy": "level>=7 boundary,35completed/8component pools,uniform per-pool sampling,without-replacement high tier",
+            "minorSemanticConvention": "level snapshot at round-generation time and sorted deterministic pool ordering; covered by standing minor-convention authority"
+          }
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Player level6 at generation;35completed and8component candidates",
+          "expected": "One completed+one component;280 equip pairs each probability1/280; P(each completed)=1/35 andP(each component)=1/8; disjoint pools make duplicate apiName impossible",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        },
+        {
+          "given": "Player level7 at generation;35completed candidates",
+          "expected": "Two distinct completed;595 unordered pairs each probability1/595; P(a given completed appears)=2/35; first draw1/35,second1/34; no component and no Thief’s Gloves",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        },
+        {
+          "given": "Holder equips Thief’s Gloves before accounting for generated children",
+          "expected": "Own rawCritChance20 percentagepoints=>2000Bps; ownHealth150=>150HP; parent and two temporary children reserve3slots; do not replace own stats with generated-item stats",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-15",
+        "GLOBAL-NUMERIC-01",
+        "TG-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 3,
+        "evidence": "own desc [Consumes 3 item slots.]",
+        "uniquePerChampion": false,
+        "effectiveSingleCopy": "all three slots reserved; source unique=false is not rewritten to true"
+      },
+      "reviewCounts": {
+        "effectFields": 2,
+        "used": 2,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "TFTUnitProperty.:TFT_BindOnEquipTRA": "display-only dynamic tracker; not a missing numeric gameplay parameter"
+      },
+      "randomPolicy": {
+        "status": "user-approved-project-policy",
+        "conventionId": "TG-01",
+        "thresholdLevel": 7,
+        "highTierOperator": ">=",
+        "lowTier": {
+          "levelMaxInclusive": 6,
+          "completedCount": 1,
+          "componentCount": 1,
+          "completedPoolSize": 35,
+          "componentPoolSize": 8,
+          "pairCount": 280
+        },
+        "highTier": {
+          "levelMinInclusive": 7,
+          "completedCount": 2,
+          "componentCount": 0,
+          "completedPoolSize": 35,
+          "withoutReplacement": true,
+          "unorderedPairCount": 595
+        },
+        "poolIdentity": "selected-items.json composition length2 except TFT_Item_ThiefsGloves; components composition[] (8 ordinary components)",
+        "poolWeights": "uniform within each eligible pool; not claimed historical weights",
+        "noDuplicateApiName": true,
+        "temporaryLifecycleConventionId": "B-15"
+      }
+    },
+    {
+      "apiName": "TFT_Item_TitansResolve",
+      "source": {
+        "jsonPointer": "/items/1302",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "0ae93a96570b8725be74c3363e8dca59d0ff06b94383add566765d4a20247804",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Gain @StackingAD*100@% Attack Damage and @StackingSP@ Ability Power when attacking or taking damage, stacking up to @StackCap@ times.  <br><br>At full stacks, gain @BonusResistsAtStackCap@ Armor and @BonusResistsAtStackCap@ Magic Resist.",
+      "sourceComposition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_RecurveBow"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "AS": {
+          "rawValue": 10.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 1000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "bonus attack-speed ratio, not attacks per second",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "Armor": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "armor-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "armor-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat armor",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "StackingAD": {
+          "rawValue": 0.019999999552965164,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 200,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "AD per stack",
+          "evidence": "Own sourceDesc explicitly references @StackingAD@ or @StackingAD*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "StackingSP": {
+          "rawValue": 2.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 2,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "AP per stack",
+          "evidence": "Own sourceDesc explicitly references @StackingSP@ or @StackingSP*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "StackCap": {
+          "rawValue": 25.0,
+          "disposition": "used",
+          "unit": "count",
+          "normalizedValue": 25,
+          "normalizedUnit": "count",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "stack cap",
+          "evidence": "Own sourceDesc explicitly references @StackCap@ or @StackCap*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "BonusResistsAtStackCap": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "resist-points",
+          "normalizedValue": 20,
+          "normalizedUnit": "resist-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat armor and MR at full stacks",
+          "evidence": "Own sourceDesc explicitly references @BonusResistsAtStackCap@ or @BonusResistsAtStackCap*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "attacking or taking damage",
+          "effect": "+200Bps AD,+2AP per stack; at25 +20armor,+20MR",
+          "target": "holder",
+          "duration": "combat",
+          "stacking": "up to25 per instance; cap bonus once",
+          "evidence": "when attacking or taking damage; stacking up to @StackCap@; at full stacks",
+          "conventionIds": [
+            "B-16"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-16",
+          "label": "项目约定，非官方证据",
+          "decision": "Gain one stack per completed ordinary attack and one per incoming positive resolved damage packet (shield absorption counts); self-costs and zero-damage packets do not count. If both triggers occur separately both count, but one attack is not duplicated by its proc packets. Retain stacks to combat end; grant cap resists once upon reaching25, not each later attack. Damage-over-time packets can grant defender stacks but do not recursively proc equipment damage.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "泰坦每次完成普通攻击及每个实际承受正伤害包各加1层（护盾承伤计入），生命消耗和零伤害不计；两种独立事件均可计数，但攻击追加包不重复算攻击。持续到战斗结束，25层双抗只发一次；持续伤害可叠受击层但不递归触发装备伤害。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "No other stats;24 stacks then one eligible attack",
+          "expected": "24 gives4800Bps AD and48AP;25 gives5000Bps AD,50AP,+20armor,+20MR;26th leaves cap unchanged",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-16",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 6,
+        "used": 6,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "StackingAD*100": "reviewed in fieldReview/StackingAD",
+        "StackingSP": "reviewed in fieldReview/StackingSP",
+        "StackCap": "reviewed in fieldReview/StackCap",
+        "BonusResistsAtStackCap": "reviewed in fieldReview/BonusResistsAtStackCap"
+      }
+    },
+    {
+      "apiName": "TFT_Item_UnstableConcoction",
+      "source": {
+        "jsonPointer": "/items/1291",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "6183723ebc3f4a7c66be379a0d8302379375aba512e63e12f46be3bd0b6005dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Gain 2 effects:<li>@AD_NotStatBar*100@% Attack Damage and @AP_NotStatBar@ Ability Power.<li>@StatOmnivamp_NotStatBar*100@% Omnivamp.<br><br>While above @HealthThreshold*100@% health, double the Attack Damage and Ability Power. While below @HealthThreshold*100@% Health, double the Omnivamp.",
+      "sourceComposition": [
+        "TFT_Item_TearOfTheGoddess",
+        "TFT_Item_SparringGloves"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "Mana": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "mana-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "mana-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "starting mana, not maximum mana",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "CritChance": {
+          "rawValue": 20.0,
+          "disposition": "used",
+          "unit": "percentage-points",
+          "normalizedValue": 2000,
+          "normalizedUnit": "Bps",
+          "normalization": "divide percentage points by 100, round fraction to four decimal places, multiply by 10000",
+          "rationale": "additive critical-strike chance",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "AD_NotStatBar": {
+          "rawValue": 0.15000000596046448,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1500,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "base conditional-passive AD",
+          "evidence": "Own sourceDesc explicitly references @AD_NotStatBar@ or @AD_NotStatBar*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "AP_NotStatBar": {
+          "rawValue": 15.0,
+          "disposition": "used",
+          "unit": "ability-power-points",
+          "normalizedValue": 15,
+          "normalizedUnit": "ability-power-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "base conditional-passive AP",
+          "evidence": "Own sourceDesc explicitly references @AP_NotStatBar@ or @AP_NotStatBar*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "StatOmnivamp_NotStatBar": {
+          "rawValue": 0.11999999731779099,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1200,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "base omnivamp12%, already includes14.24 nerf",
+          "evidence": "Own sourceDesc explicitly references @StatOmnivamp_NotStatBar@ or @StatOmnivamp_NotStatBar*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "HealthThreshold": {
+          "rawValue": 0.5,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 5000,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "strict health threshold",
+          "evidence": "Own sourceDesc explicitly references @HealthThreshold@ or @HealthThreshold*100@; raw effects supplies value",
+          "conventionIds": []
+        },
+        "{f23e83fc}": {
+          "rawValue": 2.0,
+          "disposition": "not-used",
+          "unit": "unknown",
+          "normalizedValue": null,
+          "normalizedUnit": "unknown",
+          "normalization": "preserve raw only; no runtime parameter generated; no invented unit or zero fallback",
+          "rationale": "unused undecoded field; literal doubling comes from desc, no extra multiplier",
+          "evidence": "effects/{f23e83fc} is not a tooltip token. Meaning is project interpretation below, not official execution proof; see conventionIds and rationale",
+          "conventionIds": [
+            "B-17"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "dynamic current health >50%, <50%, or equality",
+          "effect": "always15%AD15AP12%omnivamp; >50%=>30%AD30AP12%vamp; <50%=>15%AD15AP24%vamp; =50%=>base all",
+          "target": "holder",
+          "duration": "dynamic",
+          "stacking": "no random doubling; per-instance branches",
+          "evidence": "above ... double AD/AP; below ... double Omnivamp",
+          "conventionIds": [
+            "B-17"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-17",
+          "label": "项目约定，非官方证据",
+          "decision": "Evaluate current health fraction for each stat/damage/healing query, not only combat start. Exactly50% doubles neither side (strict above/below). The unreferenced {f23e83fc}=2 is retained but not applied independently: double multiplier2 comes from desc; no random branch is used. Omnivamp heals on eligible actual postmitigation damage, excludes self-costs and equipment-proc chains under GLOBAL-PROC-01; no undocumented AoE penalty introduced.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "正义之手动态检查当前生命，严格高于50%翻倍攻击/法强，严格低于翻倍吸血，恰好50%都不翻倍；哈希2不再额外应用。吸血按实际结算后合资格伤害计算，不以自身生命消耗或递归装备触发计吸血，也不臆造范围伤害吸血惩罚；在治疗前取样以避免循环。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "1000maxHP; dealt100 eligible actual damage, no wounds",
+          "expected": "At501HP:30%AD30AP12 healing; at500HP:15%AD15AP12 healing; at499HP:15%AD15AP24 healing. Evaluate vamp from pre-heal health to avoid recursion",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-17",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07",
+        "specificDecision": "14.24 ITEMS changes base omnivamp15%→12%; raw0.1199999973 normalizes1200Bps, already contains change; do not subtract again or prefer14.23."
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 7,
+        "used": 6,
+        "notUsed": 1
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "AD_NotStatBar*100": "reviewed in fieldReview/AD_NotStatBar",
+        "AP_NotStatBar": "reviewed in fieldReview/AP_NotStatBar",
+        "StatOmnivamp_NotStatBar*100": "reviewed in fieldReview/StatOmnivamp_NotStatBar",
+        "HealthThreshold*100": "reviewed in fieldReview/HealthThreshold"
+      }
+    },
+    {
+      "apiName": "TFT_Item_WarmogsArmor",
+      "source": {
+        "jsonPointer": "/items/1399",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "961fbfa7b65c1d2b62f87115db675fd4fc2e0eaa5236ff43d2bbc6d865f6b858",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceDesc": "Gain @BonusPercentHP*100@% max health.",
+      "sourceComposition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_GiantsBelt"
+      ],
+      "sourceUnique": false,
+      "sourceNullDisposition": {
+        "id": "not-used: null; apiName is identity, not numeric zero",
+        "from": "not-used: null; composition is recipe evidence"
+      },
+      "fieldReview": {
+        "Health": {
+          "rawValue": 600.0,
+          "disposition": "used",
+          "unit": "health-points",
+          "normalizedValue": 600,
+          "normalizedUnit": "health-points",
+          "normalization": "source is already an exact integral count or stat; preserve integer",
+          "rationale": "flat maximum health",
+          "evidence": "Component key consistency; explicit component tooltip when available; otherwise GLOBAL-STAT-01 is a project unit convention",
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "evidenceBoundary": "Numerical raw value is source evidence; any undecoded/unreferenced semantic mapping is project convention, not official proof."
+        },
+        "BonusPercentHP": {
+          "rawValue": 0.11999999731779099,
+          "disposition": "used",
+          "unit": "fraction",
+          "normalizedValue": 1200,
+          "normalizedUnit": "Bps",
+          "normalization": "round raw fraction to four decimal places, multiply by 10000, integer rounding",
+          "rationale": "bonus maximum-health ratio",
+          "evidence": "Own sourceDesc explicitly references @BonusPercentHP@ or @BonusPercentHP*100@; raw effects supplies value",
+          "conventionIds": []
+        }
+      },
+      "mechanics": [
+        {
+          "trigger": "while equipped",
+          "effect": "apply reviewed base-stat fields once; do not re-add component stats after combining",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "ordinary copies follow GLOBAL-STACK-01; unique=true prohibits a second copy",
+          "evidence": "effects fields; composition is recipe evidence, not extra stats",
+          "conventionIds": [
+            "GLOBAL-STAT-01",
+            "GLOBAL-STACK-01"
+          ]
+        },
+        {
+          "trigger": "while equipped",
+          "effect": "+600flat HP, then1200Bps maxHP ratio on the shared base-plus-flat pool",
+          "target": "holder",
+          "duration": "while equipped",
+          "stacking": "flat and ratios additive by B-08/B-18",
+          "evidence": "Gain @BonusPercentHP*100@% max health; effects Health600",
+          "conventionIds": [
+            "B-18",
+            "B-08"
+          ]
+        }
+      ],
+      "conventions": [
+        {
+          "id": "B-18",
+          "label": "项目约定，非官方证据",
+          "decision": "Preserve existing effects.ts:142: (base HP + all flat HP including600) * (1 + sum of percentage maxHP bonuses including12%). This is the inherited project computation order, not a script proof; equipping outside combat does not generate an in-combat heal event.",
+          "approvalStatus": "pending-itemized-confirmation",
+          "blocking": false,
+          "adoptionStatus": "active-provisional-nonblocking",
+          "decisionZh": "狂徒生命沿用现有公式：(基础生命+600及其他固定生命)×(1+12%及其他生命比例)，多项比例相加不连乘；非战斗重新穿戴不伪造战斗内治疗。"
+        }
+      ],
+      "unknowns": [],
+      "numericalExamples": [
+        {
+          "given": "Base HP1000, no other bonuses",
+          "expected": "Maximum HP1792=(1000+600)*1.12; inherited project calculation order, not source-script proof",
+          "status": "independent-hand-calculated-oracle-not-executed"
+        }
+      ],
+      "freezeStatus": "provisional-source-ready-not-implemented",
+      "implementation": "not-started",
+      "independentNumericalTests": "not-started",
+      "runtimeEligible": false,
+      "conventionIds": [
+        "GLOBAL-STAT-01",
+        "GLOBAL-STACK-01",
+        "GLOBAL-PROC-01",
+        "B-18",
+        "GLOBAL-NUMERIC-01"
+      ],
+      "patchReview": {
+        "priority": "14.24B > 14.24 notes > 14.24 effects > 14.23 notes",
+        "higherPriorityResult": "14.24 ITEMS and December 17 B-update reviewed: no numeric override for this item, except Hand of Justice 12% already present",
+        "source": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+        "reviewedUtcDate": "2026-10-07"
+      },
+      "slotRules": {
+        "slotsConsumed": 1,
+        "evidence": "Project ordinary-item convention; unique flag preserved independently",
+        "conventionIds": [
+          "GLOBAL-STACK-01"
+        ],
+        "uniquePerChampion": false
+      },
+      "reviewCounts": {
+        "effectFields": 2,
+        "used": 2,
+        "notUsed": 0
+      },
+      "officialEvidenceLimits": "Client archive provides desc/effects, not executable server script. Minor project interpretations are labelled; provisional-source-ready is not implementation/test completion.",
+      "tooltipTokenCoverage": {
+        "BonusPercentHP*100": "reviewed in fieldReview/BonusPercentHP"
+      }
+    }
+  ],
+  "summary": {
+    "total": 22,
+    "provisionalSourceReady": 22,
+    "blockingRequiredProjectPolicy": 0,
+    "effectFieldsReviewed": 108,
+    "runtimeImplemented": 0,
+    "numericalTestsExecuted": 0
+  }
+}

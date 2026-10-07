@@ -69,7 +69,7 @@ M8 不扩充英雄/羁绊目录，不增加新海克斯或异常；现有19英�
 | [Riot 14.24 补丁及12月17日 B更新](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/) | 14.24 基础变更、12月10/11日更正、12月17日 B 覆盖；装备、掉落、单位机制变更的优先依据 | 已读取。页面不是全量装备/野怪数值表；不能只读 B 段或认为整个 `/14.24/` 静态文件已含全部热修 |
 | [Riot 14.23 赛季说明](https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/) | S13 起始的核心装备及 PvE/系统调整，建立 14.24 的继承基础 | 已读取；不是 14.24b 最终答案，必须继续叠加后续变更 |
 | [Riot 14.18 锅铲/平底锅及战术家工具说明](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-18-notes/) | 证明特殊组件/配方的范围边界；不能把该赛季的纹章映射拿来当 S13 | 已读取，用于 D1 边界，不导入其旧赛季职业配方 |
-| [CommunityDragon 14.24 英文客户端档案](https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json)；同目录 `zh_cn.json` | 客户端原始记录的社区提取档案，取得装备 `apiName/composition/effects/unique`、显示名及相关内容；中文只做名称核对 | 仓内已有选取记录与原文件 hash；本次完整文件未重新取得，不能宣称全量核验完成。它不是 Riot 官方承诺的服务端规则数据库 |
+| [CommunityDragon 14.24 英文客户端档案](https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json)；同目录 `zh_cn.json` | 客户端原始记录的社区提取档案，取得装备 `apiName/composition/effects/unique`、显示名及相关内容；中文只做名称核对 | 仓内已有选取记录与原文件 hash；现已取得用户提供完整英文原件并校验hash，44装备来源核对已完成；中文正式核对为B1之外遗留项。它不是 Riot 官方承诺的服务端规则数据库 |
 | 仓内 `src/simulation/content/source/s13-14.24.json`、`source-manifest.ts`、`scripts/import-s13-data.mjs` | 现有选取原记录、`TFTSet13` 标准模式选择器、Loris 14.24b覆盖及导入规则 | 已读取；仅含7组件/9成装，不能作为新27成装和野怪的完整来源 |
 | [Riot TFT Data Dragon 文档](https://developer.riotgames.com/docs/tft) | 官方静态名称/图标映射和版本化资产线索 | 已读取；`tft-item` 不提供完整效果、服务端掉率/保底规则，不能单独完成本阶段数据冻结 |
 | 14.24 客户端 map/中立单位/遭遇脚本、可定位历史对局录像 | 补全中立单位行为、数量站位、掉落触发时点及开场编号的原始证据 | 需要 B1 定向寻找与归档。录像只能证明可见行为，有限样本不能证明精确概率 |
@@ -87,6 +87,12 @@ M8 不扩充英雄/羁绊目录，不增加新海克斯或异常；现有19英�
 - 中文名暂取本计划 §1.1 与附件 A，标记“临时译名，未核对”，仅影响显示；逐项清单见 `docs/M8_ITEM_NAMES_REVIEW.md`。取得同版本 `zh_cn.json` 后再逐字核对，不以暂译改变 `apiName`、配方或数值。
 
 机器可读裁决规则见 `src/simulation/content/source/s13-14.24b/provenance/source-policy.json`。此规则是本项目获准的证据采纳政策，不代表缺失的客户端执行语义已经证实。
+
+### 2.1.2 本轮装备子项签收与遗留边界（2026-10-07）
+
+44装备、36配方及218个effects字段已逐项归档和核对；GS四项及窃贼TG-01等级分档获用户批准，另41项合理项目约定明确标记后暂行、待逐项确认，不阻塞装备来源签收。中文名正式核对被用户明确移出B1，保留44项临时译名待人工确认。详见 `docs/M8_B1_EQUIPMENT_ACCEPTANCE.md`。
+
+**本标记仅签收装备/配方来源，不把运行实现或原B1中开场/PvE/掉落子项写成完成。** 原计划完整B1仍有五类非装备缺口，状态与数量见 `docs/M8_B1_STATUS.md`。窃贼方案：玩家等级<7成装+散件，>=7双成装；成装池35件排除窃贼，散件8件，池内等概率且两件不重复，明确属于项目约定。
 
 ### 2.2 已发现的跨版本校验锚点
 

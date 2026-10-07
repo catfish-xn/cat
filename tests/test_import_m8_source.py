@@ -131,8 +131,8 @@ class ImportM8SourceTests(unittest.TestCase):
         self.assertEqual(decision['projectConventions']['label'], '项目约定，非官方证据')
         self.assertEqual(decision['projectConventions']['baseDamageAmpBps'], 500)
         self.assertEqual(decision['projectConventions']['qualifiedCombinedItemDamageAmpBps'], 2500)
-        self.assertEqual(decision['projectConventions']['adoptionStatus'], 'active-provisional-nonblocking')
-        self.assertEqual(decision['projectConventions']['userReviewStatus'], 'pending-itemized-confirmation')
+        self.assertEqual(decision['projectConventions']['adoptionStatus'], 'approved')
+        self.assertEqual(decision['projectConventions']['userReviewStatus'], 'approved')
         self.assertFalse(giant['runtimeEligible'])
         self.assertFalse(decision['runtimeEligible'])
         self.assertEqual(giant['sourceEffects']['LargeBonusPct'], 25.0)
@@ -143,10 +143,10 @@ class ImportM8SourceTests(unittest.TestCase):
     def test_giant_slayer_project_convention_ledger_and_reference_boundaries(self):
         import json
         ledger = json.loads((M.DEST / 'provenance/project-conventions.json').read_text())
-        entries = ledger['conventions']
+        entries = [x for x in ledger['conventions'] if x['id'].startswith('GS-')]
         self.assertEqual([x['id'] for x in entries], ['GS-01', 'GS-02', 'GS-03', 'GS-04'])
         self.assertTrue(all(x['label'] == '项目约定，非官方证据' for x in entries))
-        self.assertTrue(all(x['adoptionStatus'] == 'active-provisional-nonblocking' for x in entries))
+        self.assertTrue(all(x['adoptionStatus'] == 'approved' for x in entries))
         giant = next(x for x in M.outputs(self.source)['normalized/items.json']['items']
                      if x['apiName'] == 'TFT_Item_MadredsBloodrazor')['numericDecisions']
         # Reference samples for declared project policy, not engine execution tests.
@@ -157,6 +157,79 @@ class ImportM8SourceTests(unittest.TestCase):
         self.assertEqual(sample(1750), 500)
         self.assertEqual(sample(1751), 2500)
         self.assertEqual([sample(x) for x in [1750, 2000, 1000]], [500, 2500, 500])
+
+    def test_all_effect_fields_are_reviewed_and_normalized_independently(self):
+        import json
+        from decimal import Decimal, ROUND_HALF_UP
+        reviews = []
+        for suffix in ('a', 'b'):
+            reviews.extend(json.loads((M.DEST / f'provenance/item-review-{suffix}.json').read_text())['items'])
+        records = {x['apiName']: x for x in M.outputs(self.source)['raw/selected-items.json']}
+        self.assertEqual(len(reviews), 44)
+        self.assertEqual(sum(len(x['fieldReview']) for x in reviews), 218)
+        for review in reviews:
+            source = records[review['apiName']]
+            self.assertEqual(set(review['fieldReview']), set(source['effects']))
+            for key, field in review['fieldReview'].items():
+                self.assertEqual(field['rawValue'], source['effects'][key])
+                if field['disposition'] != 'used':
+                    self.assertTrue(field['rationale'])
+                    continue
+                value = Decimal(str(field['rawValue']))
+                if field['unit'] == 'fraction':
+                    expected = value.quantize(Decimal('.0001'), rounding=ROUND_HALF_UP) * 10000
+                elif field['unit'] == 'percentage-points':
+                    expected = (value / 100).quantize(Decimal('.0001'), rounding=ROUND_HALF_UP) * 10000
+                elif field['unit'] == 'seconds':
+                    expected = value * 20
+                else:
+                    expected = value
+                self.assertEqual(field['normalizedValue'], int(expected.to_integral_value(rounding=ROUND_HALF_UP)),
+                                 (review['apiName'], key))
+
+    def test_equipment_counts_do_not_hide_localization_or_unknowns(self):
+        output = M.outputs(self.source)
+        coverage = output['provenance/coverage.json']
+        counts = coverage['equipmentReviewCounts']
+        self.assertEqual(counts['archivedEquipment'], 44)
+        self.assertEqual(counts['verifiedRecipes'], 36)
+        self.assertEqual(counts['reviewedEffectFields'], 218)
+        issues = coverage['equipmentUnknowns']
+        self.assertEqual(counts['equipmentUnknowns'], len(issues))
+        blocked = {x['apiName'] for x in issues if x['blocking']}
+        self.assertEqual(counts['sourceReviewedEquipment'], 44 - len(blocked))
+        self.assertTrue(all(x['localizationScope'] == 'outside-B1-legacy-followup'
+                            for x in output['normalized/items.json']['items']))
+        conventions = output['provenance/project-conventions.json']['conventions']
+        self.assertEqual(len({x['id'] for x in conventions}), len(conventions))
+        pending = sum(x.get('approvalStatus', x.get('userReviewStatus')) not in ('approved', 'user-approved') for x in conventions)
+        self.assertEqual(counts['pendingConventionRecords'], pending)
+        self.assertEqual(counts['approvedConventions'], 5)
+
+    def test_thiefs_gloves_approved_tiers_stats_and_exact_pools(self):
+        from itertools import combinations, product
+        output = M.outputs(self.source)
+        items = output['normalized/items.json']['items']
+        tg = next(x for x in items if x['apiName'] == 'TFT_Item_ThiefsGloves')
+        self.assertEqual(tg['sourceEffects'], {'CritChance': 20.0, 'Health': 150.0})
+        self.assertEqual(tg['normalizedEffects']['CritChance']['value'], 2000)
+        self.assertEqual(tg['normalizedEffects']['Health']['value'], 150)
+        policy = tg['temporaryEquipmentPolicy']
+        self.assertEqual(policy['thresholdLevel'], 7)
+        self.assertEqual(policy['highTierOperator'], '>=')
+        self.assertEqual(policy['lowTier']['levelMaxInclusive'], 6)
+        self.assertEqual(policy['highTier']['levelMinInclusive'], 7)
+        completed = sorted(x['apiName'] for x in items if x['kind'] == 'completed'
+                           and x['apiName'] != 'TFT_Item_ThiefsGloves')
+        components = sorted(x['apiName'] for x in items if x['kind'] == 'component')
+        self.assertEqual((len(completed), len(components)), (35, 8))
+        low_pairs, high_pairs = list(product(completed, components)), list(combinations(completed, 2))
+        self.assertEqual((len(low_pairs), len(high_pairs)), (280, 595))
+        self.assertTrue(all(a != b for a, b in low_pairs + high_pairs))
+        self.assertTrue(all('TFT_Item_ThiefsGloves' not in pair for pair in low_pairs + high_pairs))
+        for level, expected in [(1, (1, 1)), (6, (1, 1)), (7, (2, 0)), (9, (2, 0))]:
+            tier = policy['highTier'] if level >= policy['thresholdLevel'] else policy['lowTier']
+            self.assertEqual((tier['completedCount'], tier['componentCount']), expected)
 
     def test_upstream_tamper_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "approvedConventions": [
+    {
+      "id": "GS-01",
+      "decision": "Map effects.{1543aa48} to this item base Damage Amp: raw 0.05000000074505806 -> 500 Bps (5%).",
+      "evidenceBoundary": "The raw number is present; its key meaning is not decoded. 14.23 base 5% is corroboration only.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "approved",
+      "userReviewStatus": "approved",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
+      "approvedUtcDate": "2026-10-07"
+    },
+    {
+      "id": "GS-02",
+      "decision": "Within this item, add base 500 Bps and conditional additional 2000 Bps: 500 below/equal threshold, 2500 above. This does not define interactions with external modifiers.",
+      "evidenceBoundary": "desc establishes additional 20%; the base-key meaning and same-item addition are project choices.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "approved",
+      "userReviewStatus": "approved",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
+      "approvedUtcDate": "2026-10-07"
+    },
+    {
+      "id": "GS-03",
+      "decision": "Preserve LargeBonusPct=25 in sourceEffects but do not apply it as a separate gameplay parameter in this project.",
+      "evidenceBoundary": "Not referenced by the current desc; official purpose and whether active are unconfirmed. Do not label it a proven obsolete field.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "approved",
+      "userReviewStatus": "approved",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
+      "approvedUtcDate": "2026-10-07"
+    },
+    {
+      "id": "GS-04",
+      "decision": "For each damage packet at resolution, check target current maximum Health > 1750; do not use remaining Health or battle-start/attack-start snapshots.",
+      "evidenceBoundary": "desc establishes max Health and strictly greater; exact observation time is a project choice.",
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "label": "项目约定，非官方证据",
+      "adoptionStatus": "approved",
+      "userReviewStatus": "approved",
+      "authority": "User explicitly approved all four Giant Slayer conventions on 2026-10-07",
+      "approvedUtcDate": "2026-10-07"
+    },
+    {
+      "id": "TG-01",
+      "label": "项目约定，非官方证据",
+      "decision": "User-approved level-tier random policy: at generation, snapshot current player level when entering round preparation (or first in-round equip if not yet generated). Levels1–6 draw one completed item uniformly from35 ordinary completed items excluding Thief’s Gloves and one component uniformly from8 ordinary components. Level>=7 draws two distinct completed items uniformly without replacement from the same35-item pool. Sort each pool by apiName and use explicit seeded lcg32-v1. No duplicate apiName within the pair. Keep raw holder stats20 percentage-point crit chance (=2000Bps) and150 health. Temporary children cannot be sold, combined or returned as permanent inventory. Historical designer-level-pool statement was reported by user and not independently verified; neither threshold7 nor these weights are official evidence.",
+      "decisionZh": "用户已批准等级分档项目方案：进入每轮准备期生成时取当前玩家等级（当轮首次穿戴且尚未生成时取当时等级）；1—6级从35件普通成装（排除窃贼）等概率抽1件，再从8普通散件等概率抽1件；7级及以上从同一35件成装池等概率无放回抽2件，两件apiName不重复。各池按apiName排序，使用显式种子的lcg32-v1。窃贼本体按英文客户端保留20%暴击率、150生命；临时件不能出售、合成或永久返还。用户提及早期设计师等级强度组合池说明尚未独立核验，7级分界和具体池权重均为项目约定，不称官方规则。",
+      "approvalStatus": "user-approved",
+      "adoptionStatus": "active-user-approved",
+      "blocking": false,
+      "approvedUtcDate": "2026-10-07",
+      "authority": "User explicitly approved the modified two-tier policy in parent conversation on2026-10-07",
+      "sourceBoundary": {
+        "clientEvidence": "raw desc proves2randomitems/round and3slots; effects CritChance20,Health150",
+        "userReportedHistoricalContext": "Early designer explanation of level-strength combination pools; unverified contextual lead only",
+        "projectPolicy": "level>=7 boundary,35completed/8component pools,uniform per-pool sampling,without-replacement high tier",
+        "minorSemanticConvention": "level snapshot at round-generation time and sorted deterministic pool ordering; covered by standing minor-convention authority"
+      }
+    }
+  ],
+  "localizationOutsideB1": true,
+  "approvalDate": "2026-10-07"
+}

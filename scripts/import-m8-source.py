@@ -150,8 +150,8 @@ def numeric_decisions(record):
         },
         'projectConventions': {
             'label': '项目约定，非官方证据',
-            'adoptionStatus': 'active-provisional-nonblocking',
-            'userReviewStatus': 'pending-itemized-confirmation',
+            'adoptionStatus': 'approved',
+            'userReviewStatus': 'approved',
             'ledger': 'provenance/project-conventions.json',
             'ids': ['GS-01', 'GS-02', 'GS-03', 'GS-04'],
             'baseDamageAmpBps': int(round(round(effects['{1543aa48}'], 4) * 10000)),
@@ -164,12 +164,70 @@ def numeric_decisions(record):
     }
 
 
+def read_reviews(records):
+    reviews = []
+    for name in ('item-review-a.json', 'item-review-b.json'):
+        document = json.loads((DEST / 'provenance' / name).read_text(encoding='utf-8'))
+        reviews.extend(document['items'])
+    by_api = {x['apiName']: x for x in reviews}
+    if len(reviews) != 44 or len(by_api) != 44 or set(by_api) != {x['apiName'] for _, x in records}:
+        raise ValueError('Equipment review must cover exactly 44 unique source records')
+    for index, record in records:
+        review = by_api[record['apiName']]
+        fields = review['fieldReview']
+        if set(fields) != set(record['effects']):
+            raise ValueError('Every source effects field needs an explicit review disposition')
+        if review['source']['recordCanonicalSha256'] != digest(record):
+            raise ValueError('Reviewed source record hash mismatch')
+        if review['source']['jsonPointer'] != f'/items/{index}':
+            raise ValueError('Reviewed source pointer mismatch')
+        if review['source']['upstreamSha256'] != SHA256:
+            raise ValueError('Reviewed upstream hash mismatch')
+        for key, field in fields.items():
+            if field['rawValue'] != record['effects'][key]:
+                raise ValueError('Review must preserve raw effect values, including null')
+            if field['disposition'] not in ('used', 'not-used'):
+                raise ValueError('Review disposition must be explicit')
+            if field['disposition'] == 'used' and (isinstance(field['normalizedValue'], bool)
+                    or not isinstance(field['normalizedValue'], int)):
+                raise ValueError('Used review fields require normalized integer values')
+        if not review['mechanics'] or review['runtimeEligible'] is not False:
+            raise ValueError('Source review needs explicit mechanics and must not claim runtime implementation')
+    approval = json.loads((DEST / 'provenance/convention-approvals.json').read_text(encoding='utf-8'))
+    common = json.loads((DEST / 'provenance/review-common.json').read_text(encoding='utf-8'))
+    conventions = common['conventions'] + approval['approvedConventions']
+    conventions += [c for r in reviews for c in r['conventions']]
+    by_id = {}
+    for c in conventions:
+        if c['id'] in by_id and by_id[c['id']] != c:
+            raise ValueError('Conflicting definitions for a convention ID')
+        by_id[c['id']] = c
+    for review in reviews:
+        refs = set(review.get('conventionIds', []))
+        for field in review['fieldReview'].values():
+            refs.update(field.get('conventionIds', []))
+        if not refs <= set(by_id):
+            raise ValueError('Unknown convention reference: ' + str(sorted(refs - set(by_id))))
+    unknowns = [dict(u, apiName=r['apiName']) for r in reviews for u in r['unknowns']]
+    ready = sum(not any(u.get('blocking', True) for u in r['unknowns']) for r in reviews)
+    pending = [c for c in by_id.values() if c.get('approvalStatus', c.get('userReviewStatus')) not in ('approved', 'user-approved')]
+    stats = {'archivedEquipment': 44, 'sourceReviewedEquipment': ready, 'requiredEquipment': 44,
+             'verifiedRecipes': 36, 'reviewedEffectFields': sum(len(r['fieldReview']) for r in reviews),
+             'approvedConventions': len(by_id) - len(pending), 'pendingConventionRecords': len(pending),
+             'equipmentUnknowns': len(unknowns), 'blockingEquipmentUnknowns': sum(u.get('blocking', True) for u in unknowns),
+             'countingRule': 'Conventions counted by unique ID; unknowns by explicit item issue, excluding formal localization.'}
+    return by_api, [by_id[key] for key in sorted(by_id)], unknowns, stats
+
+
 def outputs(source):
     mode_index, records = select(source)
+    reviews, conventions, unknowns, review_counts = read_reviews(records)
     items, recipes, coverage = [], [], []
     for index, record in records:
         api = record['apiName']
         name_zh, name_source = planned_name(record)
+        review = reviews[api]
+        ready = not any(u.get('blocking', True) for u in review['unknowns'])
         evidence = {
             'upstreamSha256': SHA256,
             'jsonPointer': f'/items/{index}',
@@ -187,19 +245,26 @@ def outputs(source):
             'sourceUnique': record['unique'], 'sourceEffects': record['effects'],
             'sourceEffectUnits': effect_units(record),
             'unitEvidence': 'own raw desc token only; unexpressed units remain unknown; no runtime conversion',
-            'source': evidence, 'mechanicsStatus': 'desc-plus-provisional-project-conventions' if api == 'TFT_Item_MadredsBloodrazor' else 'pending-field-review',
+            'source': evidence, 'mechanicsStatus': 'reviewed-with-labelled-conventions' if ready else 'blocked-on-explicit-unknown',
             'numericSourcePolicy': 'm8-source-precedence-2026-10-07',
             'numericDecisions': numeric_decisions(record),
+            'normalizedEffects': {key: {'value': f['normalizedValue'], 'unit': f.get('normalizedUnit', f['unit']),
+                                        'conventionIds': f.get('conventionIds', [])}
+                                  for key, f in review['fieldReview'].items() if f['disposition'] == 'used'},
+            'fieldReviewRef': 'provenance/item-review-' + ('a' if api in [x['apiName'] for _, x in records[:22]] else 'b') + '.json',
+            'sourceReviewStatus': 'complete-for-B2-with-labelled-conventions' if ready else 'blocked-on-explicit-unknown',
+            'localizationScope': 'outside-B1-legacy-followup',
+            'temporaryEquipmentPolicy': review.get('randomPolicy'),
             'runtimeEligible': False,
         })
         if record['composition']:
             recipes.append({'resultApiName': api, 'componentApiNames': sorted(record['composition']), 'source': evidence})
         coverage.append({'apiName': api, 'source': evidence, 'rawRecord': 'verified',
                          'composition': 'verified', 'englishName': 'verified',
-                         'chineseName': TEMPORARY_NAME_STATUS, 'effectUnits': 'partial-tooltip-evidence',
-                         'mechanics': 'unknown', 'patchOverlayReview': ('resolved-with-user-authorized-project-conventions' if api == 'TFT_Item_MadredsBloodrazor' else 'partial-reviewed-see-overrides' if api in {'TFT_Item_BrambleVest', 'TFT_Item_UnstableConcoction', 'TFT_Item_BlueBuff', 'TFT_Item_PowerGauntlet', 'TFT_Item_Deathblade', 'TFT_Item_HextechGunblade', 'TFT_Item_Quicksilver'} else 'pending'),
+                         'chineseName': TEMPORARY_NAME_STATUS, 'effectUnits': 'all-fields-reviewed-with-evidence-or-project-convention',
+                         'mechanics': 'reviewed-with-labelled-conventions' if ready else 'explicit-unknown-remains', 'patchOverlayReview': 'reviewed-under-approved-source-policy-see-item-review',
                          'implementation': 'not-started', 'independentNumericalTests': 'not-started',
-                         'freezeStatus': 'provisional-source-ready-not-implemented' if api == 'TFT_Item_MadredsBloodrazor' else 'pending-field-review'})
+                         'freezeStatus': 'source-ready-for-B2-not-implemented' if ready else 'blocked-on-explicit-unknown'})
     neutrals = [
         {'record': record, 'source': {
             'upstreamSha256': SHA256,
@@ -216,10 +281,13 @@ def outputs(source):
     return {
         'raw/selected-neutrals.json': neutrals,
         'raw/selected-items.json': [record for _, record in records],
-        'normalized/items.json': {'status': 'partial-source-inventory-not-runtime', 'items': items},
+        'normalized/items.json': {'status': 'equipment-source-reviewed-not-runtime', 'reviewCounts': review_counts, 'items': items},
         'normalized/recipes.json': {'status': 'verified-source-composition-only', 'recipes': recipes},
+        'provenance/project-conventions.json': {'policy': 'm8-source-semantics-2026-10-07', 'conventions': conventions},
         'provenance/coverage.json': {
-            'b1Status': 'partial-blocked', 'upstreamSha256': SHA256,
+            'b1Status': 'equipment-review-complete' if review_counts['sourceReviewedEquipment'] == 44 else 'equipment-review-partial',
+            'scopeNote': 'Original plan B1 also contains separate unresolved opening/PvE/loot work; equipment completeness alone is not whole-plan acceptance.',
+            'equipmentReviewCounts': review_counts, 'equipmentUnknowns': unknowns, 'upstreamSha256': SHA256,
             'counts': {'components': 8, 'completedItems': 36, 'recipes': 36},
             'items': coverage,
             'opening': {'status': 'unknown', 'blocks': ['B6']},
@@ -254,7 +322,7 @@ def main():
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     generate(load_source(args.source), args.output, args.check)
-    print('Verified 8 components / 36 items / 36 recipes; B1 remains partial, no runtime output')
+    print('Verified 44 archived items / 36 recipes; detailed equipment acceptance and unknown counts are in provenance/coverage.json; no runtime output')
 
 
 if __name__ == '__main__':

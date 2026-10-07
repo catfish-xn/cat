@@ -6,14 +6,74 @@
         "TFT_Item_NegatronCloak",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Adaptive Helm",
       "nameZhCn": "自适应头盔",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 24",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 10
+        },
+        "BackRowBonusAP": {
+          "conventionIds": [
+            "A-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 15
+        },
+        "FrontLineManaPerHit": {
+          "conventionIds": [
+            "A-01"
+          ],
+          "unit": "mana-points",
+          "value": 1
+        },
+        "FrontRowBonusResists": {
+          "conventionIds": [
+            "A-01"
+          ],
+          "unit": "resistance-points",
+          "value": 40
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 20
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 15
+        },
+        "ManaPerTickrate": {
+          "conventionIds": [
+            "A-01"
+          ],
+          "unit": "mana-points",
+          "value": 10
+        },
+        "ManaTickrate": {
+          "conventionIds": [
+            "A-01"
+          ],
+          "unit": "ticks",
+          "value": 60
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -46,7 +106,9 @@
         "ManaTickrate": 3.0,
         "{d357c9f2}": null
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -55,14 +117,46 @@
         "TFT_Item_NeedlesslyLargeRod",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Archangel's Staff",
       "nameZhCn": "大天使之杖",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 17",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 20
+        },
+        "APPerInterval": {
+          "conventionIds": [
+            "A-02"
+          ],
+          "unit": "ability-power-points",
+          "value": 30
+        },
+        "IntervalSeconds": {
+          "conventionIds": [
+            "A-02"
+          ],
+          "unit": "ticks",
+          "value": 100
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 15
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -85,20 +179,33 @@
         "IntervalSeconds": 5.0,
         "Mana": 15.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_BFSword",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "B.F. Sword",
       "nameZhCn": "暴风大剑",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -115,7 +222,9 @@
       "sourceEffects": {
         "AD": 0.10000000149011612
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -124,14 +233,67 @@
         "TFT_Item_BFSword",
         "TFT_Item_NegatronCloak"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Bloodthirster",
       "nameZhCn": "饮血剑",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 06",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 15
+        },
+        "HealthThreshold": {
+          "conventionIds": [
+            "A-04"
+          ],
+          "unit": "Bps",
+          "value": 4000
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 20
+        },
+        "ShieldDuration": {
+          "conventionIds": [
+            "A-04"
+          ],
+          "unit": "ticks",
+          "value": 100
+        },
+        "ShieldHealthPercent": {
+          "conventionIds": [
+            "A-04"
+          ],
+          "unit": "Bps",
+          "value": 2500
+        },
+        "StatOmnivamp": {
+          "conventionIds": [
+            "A-04"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -162,7 +324,9 @@
         "ShieldHealthPercent": 25.0,
         "StatOmnivamp": 0.20000000298023224
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -171,14 +335,60 @@
         "TFT_Item_TearOfTheGoddess",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Blue Buff",
       "nameZhCn": "蓝霸符",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 22",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 15
+        },
+        "DamageAmp": {
+          "conventionIds": [
+            "A-05"
+          ],
+          "unit": "Bps",
+          "value": 500
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 30
+        },
+        "ManaRefund": {
+          "conventionIds": [
+            "A-05"
+          ],
+          "unit": "mana-points",
+          "value": 10
+        },
+        "TakedownTimer": {
+          "conventionIds": [
+            "A-05"
+          ],
+          "unit": "ticks",
+          "value": 160
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -205,7 +415,9 @@
         "ManaRefund": 10.0,
         "TakedownTimer": 8.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": true,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -214,14 +426,53 @@
         "TFT_Item_ChainVest",
         "TFT_Item_ChainVest"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Bramble Vest",
       "nameZhCn": "棘刺背心",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 27",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "1StarAoEDamage": {
+          "conventionIds": [
+            "A-06"
+          ],
+          "unit": "magic-damage-points",
+          "value": 100
+        },
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 65
+        },
+        "AutoDamageReduction": {
+          "conventionIds": [
+            "A-06"
+          ],
+          "unit": "Bps",
+          "value": 800
+        },
+        "ICD": {
+          "conventionIds": [
+            "A-06"
+          ],
+          "unit": "ticks",
+          "value": 40
+        },
+        "PercentMaxHP": {
+          "conventionIds": [
+            "A-06"
+          ],
+          "unit": "Bps",
+          "value": 700
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -254,20 +505,33 @@
         "{6688a0d5}": 100.0,
         "{b5c2a66b}": 100.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_ChainVest",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Chain Vest",
       "nameZhCn": "锁子甲",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 20
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -284,7 +548,9 @@
       "sourceEffects": {
         "Armor": 20.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -293,14 +559,60 @@
         "TFT_Item_ChainVest",
         "TFT_Item_NeedlesslyLargeRod"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Crownguard",
       "nameZhCn": "冕卫",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 18",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 20
+        },
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 20
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 100
+        },
+        "ShieldBonusAP": {
+          "conventionIds": [
+            "A-08"
+          ],
+          "unit": "ability-power-points",
+          "value": 25
+        },
+        "ShieldDuration": {
+          "conventionIds": [
+            "A-08"
+          ],
+          "unit": "ticks",
+          "value": 160
+        },
+        "ShieldSize": {
+          "conventionIds": [
+            "A-08"
+          ],
+          "unit": "Bps",
+          "value": 2500
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -331,7 +643,9 @@
         "ShieldDuration": 8.0,
         "ShieldSize": 25.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -340,14 +654,32 @@
         "TFT_Item_BFSword",
         "TFT_Item_BFSword"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Deathblade",
       "nameZhCn": "死亡之刃",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 01",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 5500
+        },
+        "BonusDamage": {
+          "conventionIds": [
+            "A-09"
+          ],
+          "unit": "Bps",
+          "value": 800
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -368,7 +700,9 @@
         "BonusDamage": 0.07999999821186066,
         "{1543aa48}": 0.07999999821186066
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -377,14 +711,46 @@
         "TFT_Item_NegatronCloak",
         "TFT_Item_NegatronCloak"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Dragon's Claw",
       "nameZhCn": "巨龙之爪",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 31",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "HealthRegenInterval": {
+          "conventionIds": [
+            "A-10"
+          ],
+          "unit": "ticks",
+          "value": 40
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 75
+        },
+        "PercentHealthDamage": {
+          "conventionIds": [
+            "A-10"
+          ],
+          "unit": "Bps",
+          "value": 250
+        },
+        "PercentMaxHP": {
+          "conventionIds": [
+            "A-10"
+          ],
+          "unit": "Bps",
+          "value": 900
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -409,7 +775,9 @@
         "PercentHealthDamage": 2.5,
         "PercentMaxHP": 0.09000000357627869
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -418,14 +786,60 @@
         "TFT_Item_ChainVest",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Protector's Vow",
       "nameZhCn": "圣盾使的誓约",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 23",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 20
+        },
+        "HealthThreshold": {
+          "conventionIds": [
+            "A-11"
+          ],
+          "unit": "Bps",
+          "value": 4000
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 30
+        },
+        "ShieldDuration": {
+          "conventionIds": [
+            "A-11"
+          ],
+          "unit": "ticks",
+          "value": 100
+        },
+        "ShieldHealthPercent": {
+          "conventionIds": [
+            "A-11"
+          ],
+          "unit": "Bps",
+          "value": 2500
+        },
+        "Stats": {
+          "conventionIds": [
+            "A-11"
+          ],
+          "unit": "resistance-points",
+          "value": 20
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -452,7 +866,9 @@
         "ShieldHealthPercent": 25.0,
         "Stats": 20.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -461,14 +877,53 @@
         "TFT_Item_ChainVest",
         "TFT_Item_NegatronCloak"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Gargoyle Stoneplate",
       "nameZhCn": "石像鬼石板甲",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 28",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 25
+        },
+        "ArmorPerEnemy": {
+          "conventionIds": [
+            "A-12"
+          ],
+          "unit": "resistance-points",
+          "value": 10
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 100
+        },
+        "MRPerEnemy": {
+          "conventionIds": [
+            "A-12"
+          ],
+          "unit": "resistance-points",
+          "value": 10
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 25
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -493,20 +948,33 @@
         "MRPerEnemy": 10.0,
         "MagicResist": 25.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_GiantsBelt",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Giant's Belt",
       "nameZhCn": "巨人腰带",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -523,7 +991,9 @@
       "sourceEffects": {
         "Health": 150.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -532,14 +1002,60 @@
         "TFT_Item_BFSword",
         "TFT_Item_ChainVest"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Edge of Night",
       "nameZhCn": "夜之锋刃",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 05",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 20
+        },
+        "AttackSpeed": {
+          "conventionIds": [
+            "A-14"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "DamageReduction": {
+          "conventionIds": [
+            "A-14"
+          ],
+          "unit": "Bps",
+          "value": 10000
+        },
+        "HealthThreshold": {
+          "conventionIds": [
+            "A-14"
+          ],
+          "unit": "Bps",
+          "value": 6000
+        },
+        "StealthDuration": {
+          "conventionIds": [
+            "A-14"
+          ],
+          "unit": "ticks",
+          "value": 20
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -566,7 +1082,9 @@
         "HealthThreshold": 60.0,
         "StealthDuration": 1.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": true,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -575,14 +1093,39 @@
         "TFT_Item_NeedlesslyLargeRod",
         "TFT_Item_RecurveBow"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Guinsoo's Rageblade",
       "nameZhCn": "鬼索的狂暴之刃",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 10",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 10
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "AttackSpeedPerStack": {
+          "conventionIds": [
+            "A-15"
+          ],
+          "unit": "Bps",
+          "value": 500
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -603,7 +1146,9 @@
         "AS": 10.0,
         "AttackSpeedPerStack": 5.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -612,14 +1157,46 @@
         "TFT_Item_BFSword",
         "TFT_Item_NeedlesslyLargeRod"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Hextech Gunblade",
       "nameZhCn": "海克斯科技枪刃",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 03",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 20
+        },
+        "AllyHealing": {
+          "conventionIds": [
+            "A-16"
+          ],
+          "unit": "Bps",
+          "value": 2500
+        },
+        "StatOmnivamp": {
+          "conventionIds": [
+            "A-16"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -644,7 +1221,9 @@
         "Omnivamp": 15.0,
         "StatOmnivamp": 0.15000000596046448
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -653,14 +1232,39 @@
         "TFT_Item_BFSword",
         "TFT_Item_SparringGloves"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Infinity Edge",
       "nameZhCn": "无尽之刃",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 08",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 3500
+        },
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 3500
+        },
+        "CritDamageToGive": {
+          "conventionIds": [
+            "A-17"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -681,7 +1285,9 @@
         "CritChance": 35.0,
         "CritDamageToGive": 0.10000000149011612
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -690,14 +1296,60 @@
         "TFT_Item_NeedlesslyLargeRod",
         "TFT_Item_NegatronCloak"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Ionic Spark",
       "nameZhCn": "离子火花",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 19",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 15
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 100
+        },
+        "HexRange": {
+          "conventionIds": [
+            "A-18"
+          ],
+          "unit": "hexes",
+          "value": 2
+        },
+        "MRShred": {
+          "conventionIds": [
+            "A-18"
+          ],
+          "unit": "Bps",
+          "value": 3000
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "resistance-points",
+          "value": 25
+        },
+        "ManaRatio": {
+          "conventionIds": [
+            "A-18"
+          ],
+          "unit": "Bps",
+          "value": 16000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -726,7 +1378,9 @@
         "MagicResist": 25.0,
         "ManaRatio": 160.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -735,14 +1389,39 @@
         "TFT_Item_NeedlesslyLargeRod",
         "TFT_Item_SparringGloves"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Jeweled Gauntlet",
       "nameZhCn": "珠光护手",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 21",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 35
+        },
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 3500
+        },
+        "CritDamageToGive": {
+          "conventionIds": [
+            "A-19"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -763,7 +1442,9 @@
         "CritChance": 35.0,
         "CritDamageToGive": 0.10000000149011612
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -772,14 +1453,53 @@
         "TFT_Item_RecurveBow",
         "TFT_Item_SparringGloves"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Last Whisper",
       "nameZhCn": "最后的轻语",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 15",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "ArmorBreakDuration": {
+          "conventionIds": [
+            "A-20"
+          ],
+          "unit": "ticks",
+          "value": 60
+        },
+        "ArmorReductionPercent": {
+          "conventionIds": [
+            "A-20"
+          ],
+          "unit": "Bps",
+          "value": 3000
+        },
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -804,7 +1524,9 @@
         "ArmorReductionPercent": 30.0,
         "CritChance": 20.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": true,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -813,14 +1535,53 @@
         "TFT_Item_GiantsBelt",
         "TFT_Item_RecurveBow"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Nashor's Tooth",
       "nameZhCn": "纳什之牙",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 14",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 10
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "ASDuration": {
+          "conventionIds": [
+            "A-21"
+          ],
+          "unit": "ticks",
+          "value": 100
+        },
+        "AttackSpeedToGive": {
+          "conventionIds": [
+            "A-21"
+          ],
+          "unit": "Bps",
+          "value": 6000
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -845,7 +1606,9 @@
         "AttackSpeedToGive": 60.0,
         "Health": 150.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -854,14 +1617,60 @@
         "TFT_Item_BFSword",
         "TFT_Item_RecurveBow"
       ],
+      "fieldReviewRef": "provenance/item-review-a.json",
       "kind": "completed",
-      "mechanicsStatus": "desc-plus-provisional-project-conventions",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Giant Slayer",
       "nameZhCn": "巨人杀手",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 02",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2500
+        },
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 25
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "DamageAmp": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "HealthThreshold": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 1750
+        },
+        "{1543aa48}": {
+          "conventionIds": [
+            "GS-01"
+          ],
+          "unit": "Bps",
+          "value": 500
+        }
+      },
       "numericDecisions": {
         "DamageAmp": {
           "conversion": "round raw fraction to 4 decimal places, multiply by 10000, integer rounding",
@@ -887,7 +1696,7 @@
         "higherPriorityPatchReview": "No Giant Slayer change found in 14.24 or December 17 B notes",
         "policy": "m8-source-precedence-2026-10-07",
         "projectConventions": {
-          "adoptionStatus": "active-provisional-nonblocking",
+          "adoptionStatus": "approved",
           "baseDamageAmpBps": 500,
           "ids": [
             "GS-01",
@@ -901,7 +1710,7 @@
           "stacking": "same-item base plus conditional amp; not a claim about all external multipliers",
           "thresholdEvaluation": "target current max Health when damage packet is resolved",
           "unreferencedLargeBonusPct": "preserve raw, do not apply independently",
-          "userReviewStatus": "pending-itemized-confirmation"
+          "userReviewStatus": "approved"
         },
         "runtimeEligible": false,
         "sourceTier": "CommunityDragon 14.24 client effects",
@@ -934,7 +1743,9 @@
         "LargeBonusPct": 25.0,
         "{1543aa48}": 0.05000000074505806
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -943,14 +1754,68 @@
         "TFT_Item_GiantsBelt",
         "TFT_Item_NeedlesslyLargeRod"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Morellonomicon",
       "nameZhCn": "莫雷洛秘典",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 20",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 25
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "BurnDuration": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 200
+        },
+        "BurnPercent": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 100
+        },
+        "GrievousWoundsPercent": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 3300
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        },
+        "MonsterCap": {
+          "conventionIds": [
+            "B-02"
+          ],
+          "unit": "health-points",
+          "value": 100
+        },
+        "TicksPerSecond": {
+          "conventionIds": [
+            "B-01"
+          ],
+          "unit": "burn-events-per-second",
+          "value": 1
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -981,20 +1846,33 @@
         "MonsterCap": 100.0,
         "TicksPerSecond": 1.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": true,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_NeedlesslyLargeRod",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Needlessly Large Rod",
       "nameZhCn": "无用大棒",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 10
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1011,20 +1889,33 @@
       "sourceEffects": {
         "AP": 10.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_NegatronCloak",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Negatron Cloak",
       "nameZhCn": "负极斗篷",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "magic-resist-points",
+          "value": 20
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1041,7 +1932,9 @@
       "sourceEffects": {
         "MagicResist": 20.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1050,14 +1943,54 @@
         "TFT_Item_ChainVest",
         "TFT_Item_SparringGloves"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Steadfast Heart",
       "nameZhCn": "坚定之心",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 30",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "armor-points",
+          "value": 20
+        },
+        "BaseDurability": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 800
+        },
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "EmpoweredDurability": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 200
+        },
+        "ThresholdForEmpower": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 5000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1088,7 +2021,9 @@
         "Health": 200.0,
         "ThresholdForEmpower": 0.5
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1097,14 +2032,63 @@
         "TFT_Item_GiantsBelt",
         "TFT_Item_SparringGloves"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Guardbreaker",
       "nameZhCn": "破防者",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 35",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 10
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "DamageAmp": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "Duration": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 60
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        },
+        "{1543aa48}": {
+          "conventionIds": [
+            "B-04"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1133,7 +2117,9 @@
         "Health": 150.0,
         "{1543aa48}": 0.10000000149011612
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1142,14 +2128,54 @@
         "TFT_Item_NegatronCloak",
         "TFT_Item_SparringGloves"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Quicksilver",
       "nameZhCn": "水银",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 33",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 3000
+        },
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "magic-resist-points",
+          "value": 20
+        },
+        "ProcAttackSpeed": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 300
+        },
+        "ProcInterval": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 40
+        },
+        "SpellShieldDuration": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 360
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1176,7 +2202,9 @@
         "ProcInterval": 2.0,
         "SpellShieldDuration": 18.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": true,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1185,14 +2213,32 @@
         "TFT_Item_NeedlesslyLargeRod",
         "TFT_Item_NeedlesslyLargeRod"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Rabadon's Deathcap",
       "nameZhCn": "灭世者的死亡之帽",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 16",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 50
+        },
+        "{1543aa48}": {
+          "conventionIds": [
+            "B-06"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1213,7 +2259,9 @@
         "BonusDamage": 0.15000000596046448,
         "{1543aa48}": 0.15000000596046448
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1222,14 +2270,47 @@
         "TFT_Item_RecurveBow",
         "TFT_Item_RecurveBow"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Red Buff",
       "nameZhCn": "红霸符",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 09",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 3500
+        },
+        "BurnPercent": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 100
+        },
+        "Duration": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 100
+        },
+        "HealingReductionPct": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 3300
+        },
+        "{1543aa48}": {
+          "conventionIds": [
+            "B-07"
+          ],
+          "unit": "Bps",
+          "value": 300
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1260,20 +2341,33 @@
         "{1543aa48}": 0.029999999329447746,
         "{9f5117db}": 100.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_RecurveBow",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Recurve Bow",
       "nameZhCn": "反曲之弓",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1290,7 +2384,9 @@
       "sourceEffects": {
         "AS": 10.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1299,14 +2395,69 @@
         "TFT_Item_ChainVest",
         "TFT_Item_GiantsBelt"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Sunfire Cape",
       "nameZhCn": "日炎斗篷",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 29",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "armor-points",
+          "value": 20
+        },
+        "BonusPercentHP": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 800
+        },
+        "BurnDuration": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 200
+        },
+        "BurnPercent": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 100
+        },
+        "GrievousWoundsPercent": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 3300
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        },
+        "HexRange": {
+          "conventionIds": [],
+          "unit": "hexes",
+          "value": 2
+        },
+        "ICD": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 40
+        },
+        "MonsterCap": {
+          "conventionIds": [
+            "B-02"
+          ],
+          "unit": "health-points",
+          "value": 100
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1339,7 +2490,9 @@
         "ICD": 2.0,
         "MonsterCap": 100.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": true,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1348,14 +2501,61 @@
         "TFT_Item_GiantsBelt",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Redemption",
       "nameZhCn": "救赎",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 25",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AoEDamageReduction": {
+          "conventionIds": [
+            "B-09"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "HealTickRate": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 100
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        },
+        "HexRadius": {
+          "conventionIds": [],
+          "unit": "hexes",
+          "value": 1
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 15
+        },
+        "MaxHeal": {
+          "conventionIds": [
+            "B-09"
+          ],
+          "unit": "health-points",
+          "value": 1000
+        },
+        "MissingHealthHeal": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 1500
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1384,7 +2584,9 @@
         "MaxHeal": 1000.0,
         "MissingHealthHeal": 15.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1393,14 +2595,49 @@
         "TFT_Item_NegatronCloak",
         "TFT_Item_RecurveBow"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Runaan's Hurricane",
       "nameZhCn": "卢安娜的飓风",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 13",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2500
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "AdditionalTargets": {
+          "conventionIds": [],
+          "unit": "count",
+          "value": 1
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "magic-resist-points",
+          "value": 20
+        },
+        "MultiplierForDamage": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 5500
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1425,20 +2662,33 @@
         "MagicResist": 20.0,
         "MultiplierForDamage": 55.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_SparringGloves",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Sparring Gloves",
       "nameZhCn": "拳套",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1455,7 +2705,9 @@
       "sourceEffects": {
         "CritChance": 20.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1464,14 +2716,44 @@
         "TFT_Item_BFSword",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Spear of Shojin",
       "nameZhCn": "朔极之矛",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 04",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 15
+        },
+        "FlatManaRestore": {
+          "conventionIds": [],
+          "unit": "mana-points",
+          "value": 5
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 15
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1494,7 +2776,9 @@
         "FlatManaRestore": 5.0,
         "Mana": 15.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1503,14 +2787,52 @@
         "TFT_Item_GiantsBelt",
         "TFT_Item_NegatronCloak"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Evenshroud",
       "nameZhCn": "薄暮法袍",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 32",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "ARReductionAmount": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 3000
+        },
+        "BonusResistDuration": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 200
+        },
+        "BonusResists": {
+          "conventionIds": [],
+          "unit": "resist-points",
+          "value": 25
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        },
+        "HexRange": {
+          "conventionIds": [],
+          "unit": "hexes",
+          "value": 2
+        },
+        "MagicResist": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "magic-resist-points",
+          "value": 20
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1537,7 +2859,9 @@
         "HexRange": 2.0,
         "MagicResist": 20.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1546,14 +2870,61 @@
         "TFT_Item_RecurveBow",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Statikk Shiv",
       "nameZhCn": "斯塔缇克电刃",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 11",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "1StarBounces": {
+          "conventionIds": [
+            "B-13"
+          ],
+          "unit": "count",
+          "value": 4
+        },
+        "AP": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "ability-power-points",
+          "value": 15
+        },
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "Damage": {
+          "conventionIds": [],
+          "unit": "damage-points",
+          "value": 35
+        },
+        "MRShred": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 3000
+        },
+        "MRShredDuration": {
+          "conventionIds": [],
+          "unit": "ticks",
+          "value": 100
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 15
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1588,7 +2959,9 @@
         "{15144cec}": 4.0,
         "{79e2ec7b}": 4.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1597,14 +2970,47 @@
         "TFT_Item_BFSword",
         "TFT_Item_GiantsBelt"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Sterak's Gage",
       "nameZhCn": "斯特拉克的挑战护手",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 07",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "BonusADToGive": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 3500
+        },
+        "BonusMaxHealthPerc": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 2500
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        },
+        "HealthThreshold": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 6000
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1629,20 +3035,33 @@
         "Health": 150.0,
         "HealthThreshold": 60.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
       "apiName": "TFT_Item_TearOfTheGoddess",
       "composition": [],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "component",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Tear of the Goddess",
       "nameZhCn": "女神之泪",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md §1.1",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 15
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1659,7 +3078,9 @@
       "sourceEffects": {
         "Mana": 15.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1668,14 +3089,32 @@
         "TFT_Item_SparringGloves",
         "TFT_Item_SparringGloves"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Thief's Gloves",
       "nameZhCn": "窃贼手套",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 36",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 150
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1694,7 +3133,34 @@
         "CritChance": 20.0,
         "Health": 150.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": {
+        "conventionId": "TG-01",
+        "highTier": {
+          "completedCount": 2,
+          "completedPoolSize": 35,
+          "componentCount": 0,
+          "levelMinInclusive": 7,
+          "unorderedPairCount": 595,
+          "withoutReplacement": true
+        },
+        "highTierOperator": ">=",
+        "lowTier": {
+          "completedCount": 1,
+          "completedPoolSize": 35,
+          "componentCount": 1,
+          "componentPoolSize": 8,
+          "levelMaxInclusive": 6,
+          "pairCount": 280
+        },
+        "noDuplicateApiName": true,
+        "poolIdentity": "selected-items.json composition length2 except TFT_Item_ThiefsGloves; components composition[] (8 ordinary components)",
+        "poolWeights": "uniform within each eligible pool; not claimed historical weights",
+        "status": "user-approved-project-policy",
+        "temporaryLifecycleConventionId": "B-15",
+        "thresholdLevel": 7
+      },
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1703,14 +3169,52 @@
         "TFT_Item_ChainVest",
         "TFT_Item_RecurveBow"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Titan's Resolve",
       "nameZhCn": "泰坦的坚决",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 12",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AS": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 1000
+        },
+        "Armor": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "armor-points",
+          "value": 20
+        },
+        "BonusResistsAtStackCap": {
+          "conventionIds": [],
+          "unit": "resist-points",
+          "value": 20
+        },
+        "StackCap": {
+          "conventionIds": [],
+          "unit": "count",
+          "value": 25
+        },
+        "StackingAD": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 200
+        },
+        "StackingSP": {
+          "conventionIds": [],
+          "unit": "ability-power-points",
+          "value": 2
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1737,7 +3241,9 @@
         "StackingAD": 0.019999999552965164,
         "StackingSP": 2.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1746,14 +3252,52 @@
         "TFT_Item_SparringGloves",
         "TFT_Item_TearOfTheGoddess"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Hand Of Justice",
       "nameZhCn": "正义之手",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 26",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "AD_NotStatBar": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 1500
+        },
+        "AP_NotStatBar": {
+          "conventionIds": [],
+          "unit": "ability-power-points",
+          "value": 15
+        },
+        "CritChance": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "Bps",
+          "value": 2000
+        },
+        "HealthThreshold": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 5000
+        },
+        "Mana": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "mana-points",
+          "value": 15
+        },
+        "StatOmnivamp_NotStatBar": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 1200
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1782,7 +3326,9 @@
         "StatOmnivamp_NotStatBar": 0.11999999731779099,
         "{f23e83fc}": 2.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     },
     {
@@ -1791,14 +3337,30 @@
         "TFT_Item_GiantsBelt",
         "TFT_Item_GiantsBelt"
       ],
+      "fieldReviewRef": "provenance/item-review-b.json",
       "kind": "completed",
-      "mechanicsStatus": "pending-field-review",
+      "localizationScope": "outside-B1-legacy-followup",
+      "mechanicsStatus": "reviewed-with-labelled-conventions",
       "nameEn": "Warmog's Armor",
       "nameZhCn": "狂徒铠甲",
       "nameZhCnDisplayOnly": true,
       "nameZhCnReviewStatus": "pending-manual-confirmation-not-approved",
       "nameZhCnSource": "M8_PLAN.md appendix A row 34",
       "nameZhCnStatus": "临时译名，未核对",
+      "normalizedEffects": {
+        "BonusPercentHP": {
+          "conventionIds": [],
+          "unit": "Bps",
+          "value": 1200
+        },
+        "Health": {
+          "conventionIds": [
+            "GLOBAL-STAT-01"
+          ],
+          "unit": "health-points",
+          "value": 600
+        }
+      },
       "numericDecisions": null,
       "numericSourcePolicy": "m8-source-precedence-2026-10-07",
       "runtimeEligible": false,
@@ -1817,9 +3379,23 @@
         "BonusPercentHP": 0.11999999731779099,
         "Health": 600.0
       },
+      "sourceReviewStatus": "complete-for-B2-with-labelled-conventions",
       "sourceUnique": false,
+      "temporaryEquipmentPolicy": null,
       "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
     }
   ],
-  "status": "partial-source-inventory-not-runtime"
+  "reviewCounts": {
+    "approvedConventions": 5,
+    "archivedEquipment": 44,
+    "blockingEquipmentUnknowns": 0,
+    "countingRule": "Conventions counted by unique ID; unknowns by explicit item issue, excluding formal localization.",
+    "equipmentUnknowns": 0,
+    "pendingConventionRecords": 41,
+    "requiredEquipment": 44,
+    "reviewedEffectFields": 218,
+    "sourceReviewedEquipment": 44,
+    "verifiedRecipes": 36
+  },
+  "status": "equipment-source-reviewed-not-runtime"
 }
