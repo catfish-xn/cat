@@ -282,8 +282,9 @@ M7 既有预算要求 JS gzip 不超过该 M6 基线的 1.10 倍、交互就绪�
 - `chromium-match`：dev/preview × cannon/sniper/mage，6 个完整路线任务；每个 28 分钟预算。
 - `chromium-input`：dev/preview 两个原生输入与正常时间触摸路线任务；每个 32 分钟预算。
 - `m7-presentation`：表现层、原有五视口、子路径资源及相对 M6 的预算；每个 25 分钟预算。
-- `compare-evidence`：依赖 `test-and-build`、`chromium-match`、`chromium-input`，下载同 SHA 产物并执行 M5 `--final` 与 M6 比较器；6 分钟预算。M7 是独立必需作业，不由这个比较器代验。
-- main 常规共 11 个验收 job；另有暖机和 heap 诊断 job，普通运行按条件跳过。炮手路线已启用 `--m6-journey`，输入作业还包含 M6 存储、统计、布局、失败恢复及性能检查。手动 `profile=true` 时 sample 1/2/3 共 33 个验收 job；显式诊断按各自条件另行运行。预算来自已记录实测，不随意加大或删减测试规避问题。
+- `m6-retention`：独立 Chromium 原生对象回归；`npm run test:retention` 自动生成当前合法存档并启动/关闭 Vite 服务器。实际产品入口执行30轮新局/导入/回放返回，另验继续、销毁及取消/失败保护；快照不进入正式总堆测量。20分钟独立作业时限，报告与边界快照单独上传。
+- `compare-evidence`：依赖 `test-and-build`、`chromium-match`、`chromium-input`、`m6-retention`，下载同 SHA 的 M5 产物并执行 M5 `--final` 与 M6 比较器；6 分钟预算。M7 与原生对象回归是独立必需作业，不由这个比较器代验原生计数。
+- 常规共 12 个验收 job；另有暖机和 heap 诊断 job，普通运行按条件跳过。炮手路线已启用 `--m6-journey`，输入作业还包含 M6 存储、统计、布局、失败恢复及性能检查。手动 `profile=true` 时 原 sample 1/2/3 的33个作业加独立原生作业，共34个验收 job；显式诊断按各自条件另行运行。预算来自已记录实测，不随意加大或删减测试规避问题。
 - 完整应用生命周期堆增长门禁按用户 2026-10-08 决定：dev ≤1.5 MiB（1,572,864 B），preview 保持 ≤1 MiB（1,048,576 B）；执行器与证据比较器共用模式门限，证据记录实际门限。仍为2次预热/30循环、原GC及输入路径、监听器/RAF不增长；独立模块预算和历史12次暖机实验的1MiB门限不变。若preview超限或dev持续接近1.5MiB，重新调查。依据与历史结果见 [M6-MEM-01](M6_LIFECYCLE_KNOWN_ISSUE.md)。
 
 ### 6.2 Pages 正式版与 M7 旧快照

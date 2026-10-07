@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
 const url = process.env.M6_RETENTION_URL || 'http://127.0.0.1:6193';
 const output = process.env.M6_RETENTION_OUTPUT || 'artifacts/m6-retention';
 const names = ['UndoStep', 'MediaQueryFeatureExpNode', 'MediaQueryList'];
-async function nativeSnapshot(cdp, label) {
+async function nativeSnapshot(cdp, label, keep = true) {
   await cdp.send('HeapProfiler.collectGarbage');
   const chunks = [];
   const collect = ({ chunk }) => chunks.push(chunk);
@@ -14,7 +14,7 @@ async function nativeSnapshot(cdp, label) {
   try { await cdp.send('HeapProfiler.takeHeapSnapshot', { reportProgress: false }); }
   finally { cdp.off('HeapProfiler.addHeapSnapshotChunk', collect); }
   const text = chunks.join('');
-  fs.writeFileSync(path.join(output, `${label}.heapsnapshot`), text);
+  if (keep) fs.writeFileSync(path.join(output, `${label}.heapsnapshot`), text);
   const graph = JSON.parse(text), fields = graph.snapshot.meta.node_fields;
   const width = fields.length, type = fields.indexOf('type'), name = fields.indexOf('name');
   const counts = Object.fromEntries(names.map(name => [name, 0]));
@@ -26,9 +26,12 @@ async function nativeSnapshot(cdp, label) {
   return counts;
 }
 (async () => {
+  const started = performance.now();
   fs.mkdirSync(output, { recursive: true });
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
-  const report = { browser: browser.version(), cases: [], passed: false };
+  const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
+  const { execFileSync } = require('node:child_process');
+  const { sourceFingerprint } = require('../scripts/m5-evidence.cjs');
+  const report = { sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), status: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim(), sourceFingerprint: sourceFingerprint(), node: process.version, mutation: process.env.M6_RETENTION_MUTATION || null, browser: browser.version(), cases: [], passed: false };
   try {
     for (const arm of ['seed-owner', 'table-media-owner']) {
       const context = await browser.newContext();
@@ -96,8 +99,13 @@ async function nativeSnapshot(cdp, label) {
         } catch (error) { result.failure = error.stack; result.passed = false; }
       } finally { await context.close(); }
     }
+    assert(process.env.M6_RETENTION_FIXTURE, 'run npm run test:retention to start the required server and generate a current legal save');
+    report.cases.push(await require('./m6-retention-application.cjs')(browser, nativeSnapshot, {
+      url, fixture: JSON.parse(fs.readFileSync(process.env.M6_RETENTION_FIXTURE, 'utf8')),
+      progress: result => fs.writeFileSync(path.join(output, 'application-progress.json'), JSON.stringify(result, null, 2)),
+    }));
     report.passed = report.cases.every(result => result.passed);
     if (!report.passed) process.exitCode = 1;
-  } finally { await browser.close(); fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); }
+  } finally { await browser.close(); report.durationSeconds = (performance.now() - started) / 1000; fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); }
   console.log(JSON.stringify(report));
 })().catch(error => { console.error(error); process.exitCode = 1; });
