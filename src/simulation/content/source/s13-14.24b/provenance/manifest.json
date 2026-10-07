@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "referencePatch": "S13-14.24b",
+  "archivePatch": "14.24",
+  "status": "partial-source-acquisition",
+  "note": "由用户本地下载提供，经 hash 校验",
+  "acquisition": {
+    "method": "user-provided-original-file",
+    "userReportedSourceUrl": "https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json",
+    "userDownloadUtc": null,
+    "receivedUtc": "2026-10-07T02:50:39Z",
+    "archivedUtc": "2026-10-07T02:52:29.147883+00:00",
+    "locale": "en_us",
+    "mode": "TFTSet13",
+    "bytes": 12061650,
+    "sha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",
+    "archivePath": "src/simulation/content/source/s13-14.24b/raw/en_us.json.gz",
+    "archiveBytes": 964673,
+    "archiveSha256": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+    "compression": "gzip level 9, mtime=0; decompression reproduces exact supplied bytes",
+    "hashVerification": {
+      "status": "matched-existing-repository-source-hash",
+      "referenceCommit": "5aff440c702e7c8c665f05f0b419a9edbf9ea00f",
+      "referencePath": "src/simulation/content/source-manifest.ts",
+      "referenceField": "SOURCE_MANIFEST.rawSha256",
+      "archiveRoundTripVerified": true
+    },
+    "reviewer": "GPT / dot",
+    "sourceNetworkFetchPerformed": false,
+    "note": "用户下载时间未知；接收和归档时间不冒充下载时间。hash 一致证明与仓库已有来源字节一致，不代表所有游戏规则已经核验。"
+  },
+  "selection": {
+    "modeSelector": "setData[mutator === \"TFTSet13\"]",
+    "itemsSelector": "items filtered by exact standard-set membership and actual composition",
+    "status": "pending-B1-extraction"
+  },
+  "missingSources": [
+    {
+      "locale": "zh_cn",
+      "url": "https://raw.communitydragon.org/14.24/cdragon/tft/zh_cn.json",
+      "status": "not-provided-or-acquired"
+    }
+  ],
+  "runtimeContentChanged": false,
+  "b1Accepted": false
+}
