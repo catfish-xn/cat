@@ -1,0 +1,88 @@
+name: Archive CommunityDragon 14.24
+on:
+  push:
+    branches: ['data/cdragon-14.24']
+    paths:
+      - '.github/workflows/cdragon-14.24.yml'
+      - 'scripts/fetch-cdragon-14.24.py'
+      - 'tests/test_fetch_cdragon.py'
+      - 'docs/M8_DATA_ACQUISITION.md'
+permissions:
+  contents: read
+concurrency:
+  group: cdragon-14.24-data-branch
+  cancel-in-progress: false
+jobs:
+  archive:
+    if: github.repository == 'catfish-xn/cat' && github.ref == 'refs/heads/data/cdragon-14.24' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      DATA_BRANCH: data/cdragon-14.24
+      CDRAGON_ARTIFACT_NAME: cdragon-14.24-${{ github.run_id }}-${{ github.run_attempt }}
+      CDRAGON_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify isolated branch and unchanged head
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/$DATA_BRANCH"
+          test "$DATA_BRANCH" != main
+          test "$DATA_BRANCH" != "$DEFAULT_BRANCH"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -z "$(git status --porcelain)"
+          remote=$(git ls-remote --exit-code origin "refs/heads/$DATA_BRANCH" | cut -f1)
+          test "$remote" = "$EXPECTED_SHA"
+      - name: Offline collector tests
+        run: python3 -m unittest discover -s tests -p test_fetch_cdragon.py -v
+      - name: Download both original JSON archives
+        id: download
+        run: python3 scripts/fetch-cdragon-14.24.py --root .
+      - name: Retain oversized raw archive
+        if: steps.download.outputs.storage_mode == 'artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.CDRAGON_ARTIFACT_NAME }}
+          path: artifacts/cdragon-14.24/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Commit archive and provenance to data branch only
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote=$(git ls-remote --exit-code origin "refs/heads/$DATA_BRANCH" | cut -f1)
+          if [ "$remote" != "$EXPECTED_SHA" ]; then
+            echo 'Data branch changed during download; refusing to overwrite it.' >&2
+            exit 1
+          fi
+          git add -- src/simulation/content/source/s13-14.24b/provenance/download-manifest.json
+          for locale in en_us zh_cn; do
+            file="src/simulation/content/source/s13-14.24b/raw/$locale.json.gz"
+            if [ -f "$file" ] || git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+              git add -A -- "$file"
+            fi
+          done
+          if git diff --cached --quiet; then
+            echo 'Archive unchanged.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git diff --cached --name-only | while IFS= read -r file; do
+            case "$file" in
+              src/simulation/content/source/s13-14.24b/raw/en_us.json.gz|src/simulation/content/source/s13-14.24b/raw/zh_cn.json.gz|src/simulation/content/source/s13-14.24b/provenance/download-manifest.json) ;;
+              *) echo "Unexpected staged path: $file" >&2; exit 1 ;;
+            esac
+          done
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'data: archive CommunityDragon 14.24 original locales'
+          git push origin "HEAD:refs/heads/$DATA_BRANCH"
+          echo "Committed $(git rev-parse HEAD) to $DATA_BRANCH. No merge or runtime import performed." >> "$GITHUB_STEP_SUMMARY"
