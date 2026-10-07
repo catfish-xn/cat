@@ -1,9 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { makeHealRequest, resolveHeal, selectVampAlly, vampRequests } from '../src/simulation/m8/heal';
-import { context, source } from './fixtures/m8-contract-cases';
+import { amount, context, source } from './fixtures/m8-contract-cases';
 import { permissionsFor } from '../src/simulation/m8/damage';
+import { evaluateAmount } from '../src/simulation/m8/stats';
+import type { Source } from '../src/simulation/m8/contracts';
 const bt = source('bloodthirster', 'i1'), gun = source('gunblade', 'i2');
 describe('G06 one mutation and independently calculated share vectors', () => {
+  it('non-item direct healing preserves provenance and applies wound to a missing-HP request', () => {
+    const origin: Source = { ownerId: 'neutral-target', sourceKind: 'ability', definitionId: 'non-item-heal-fixture',
+      instanceId: 'neutral-target', effectIndex: 0, parentItemInstanceId: null };
+    const target = { id: 'neutral-target', hp: 400, maxHp: 1000, alive: true };
+    // Independent answers: missing600 × 50%=300; floor(300 × 67%)=201; missing600 does not cap it.
+    const requested = evaluateAmount(amount(0, { missingHpBps: 5000, hpBasis: 'target' }),
+      { holder: target, target, attackDamage: 0, abilityPower: 100 });
+    expect(requested).toBe(300);
+    const result = resolveHeal(makeHealRequest('non-item-direct', target.id, 'direct', null,
+      [{ source: origin, numerator: requested, denominator: 1 }]), target, 3300);
+    expect(result).toMatchObject({ kind: 'direct', fromPacketId: null, requested: 300, afterWound: 201,
+      actual: 201, overheal: 0, preventedByWound: 99 });
+    expect(result.shares).toEqual([{ source: origin, requested: 300, afterWound: 201, actual: 201, overheal: 0, preventedByWound: 99 }]);
+  });
   it('A10 total35, actual20: requested20/15, actual11/9, overheal9/6', () => {
     const request = makeHealRequest('h1', 'u1', 'omnivamp', 'p1', [{ source: bt, numerator: 200000, denominator: 10000 }, { source: gun, numerator: 150000, denominator: 10000 }]);
     const result = resolveHeal(request, { hp: 980, maxHp: 1000, alive: true }, 0);
