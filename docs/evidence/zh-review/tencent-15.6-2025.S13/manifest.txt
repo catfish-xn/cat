@@ -1,0 +1,29 @@
+来源：由用户本地下载提供
+下载时间：沿用用户 manifest.user.txt；不是代理下载或重新下载时间。
+本地复核时间：2026-10-07T17:08:30+08:00
+复核：四份文件的字节数及 SHA-256 均与用户 manifest 一致；原始字节未改写。
+用途：腾讯国服 S13 末期 15.6 名称和用词快照；游戏数值仍以 14.24b 为准。
+
+File: chess.js
+URL: https://game.gtimg.cn/images/lol/act/img/tft/js/15.6-2025.S13/chess.js
+Bytes: 124990
+SHA-256: 66f8738c66c7e24020cfae102cc592d149f35917c8ef1daa51fdba24a9b01ba5
+Downloaded at: 2026-10-07T17:03:47.259+08:00
+
+File: equip.js
+URL: https://game.gtimg.cn/images/lol/act/img/tft/js/15.6-2025.S13/equip.js
+Bytes: 130610
+SHA-256: 4d029a1656cd83d53b9ca38d5624e910c326362fdbc0ed0ef41fb4c414fe3ede
+Downloaded at: 2026-10-07T17:03:47.452+08:00
+
+File: race.js
+URL: https://game.gtimg.cn/images/lol/act/img/tft/js/15.6-2025.S13/race.js
+Bytes: 26541
+SHA-256: c1e552f3486a5c9ccf0531caf49d90b1b78c4d75111a4a45e9de74490a2080c8
+Downloaded at: 2026-10-07T17:03:47.579+08:00
+
+File: hex.js
+URL: https://game.gtimg.cn/images/lol/act/img/tft/js/15.6-2025.S13/hex.js
+Bytes: 186262
+SHA-256: 069141cf5fccfb71fe85487486f1a8b68bcd81e19b1473f561068517e123d33c
+Downloaded at: 2026-10-07T17:03:47.755+08:00
