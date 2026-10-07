@@ -4,12 +4,14 @@
 
 **Codex（GPT）：规则、后端、测试、文档、审计、部署**
 - 可修改：`src/simulation/`（含 `content/`）、`tests/`、`scripts/`、`docs/`、各阶段计划文件、`.github/`。
+- M8 D6-A 已由用户确认：负责 `src/m6/` 的非视觉应用集成，以及 `src/persistence/`、`src/replay/`、`src/stats/` 中的非界面模块；下列四个界面文件归 Claude，不扩大为 Codex 的界面修改权限。
 - 不修改：`src/rendering/`、`src/presentation/`、`src/main.ts`、`index.html`、`src/style.css`、`public/assets/`，除非用户明确要求。
 - 界面方面只定义"显示什么、数据从哪来"，不规定布局、颜色、动画等视觉细节。
 - 实现 `docs/UI_REQUESTS.md` 中 Claude 提出的数据需求。
 
 **Claude：界面与表现层**
 - 可修改：`src/rendering/`、`src/presentation/`、`src/main.ts`、`index.html`、`src/style.css`、`public/assets/`。
+- M8 D6-A 已由用户确认：另可修改 `src/persistence/save-controls.ts`、`src/replay/replay-panel.ts`、`src/stats/stats-panel.ts`、`src/stats/combat-feedback-renderer.ts`，仅做展示和控件回调适配；其余存储、回放、统计聚合和应用领域集成仍由 Codex 负责，不扩大到整个目录。
 - 不修改 `src/simulation/`、`tests/`、`scripts/`，可以运行测试。需要新数据或新命令时，写入 `docs/UI_REQUESTS.md`（字段、含义、用途、验收条件），由 Codex 实现。
 - 界面只调用 Match 公共命令、读取状态，不自行扣费、结算或另算规则；`match-session.ts` 是薄适配器，不能变成第二套规则引擎。
 
