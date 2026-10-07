@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "referencePatch": "S13-14.24b",
+  "archivePatch": "14.24",
+  "status": "partial-source-acquisition",
+  "note": "由用户本地下载提供，经 hash 校验",
+  "acquisition": {
+    "method": "user-provided-original-file",
+    "userReportedSourceUrl": "https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json",
+    "userDownloadUtc": null,
+    "receivedUtc": "2026-10-07T02:50:39Z",
+    "archivedUtc": "2026-10-07T02:52:29.147883+00:00",
+    "locale": "en_us",
+    "mode": "TFTSet13",
+    "bytes": 12061650,
+    "sha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",
+    "archivePath": "src/simulation/content/source/s13-14.24b/raw/en_us.json.gz",
+    "archiveBytes": 964673,
+    "archiveSha256": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+    "compression": "gzip level 9, mtime=0; decompression reproduces exact supplied bytes",
+    "hashVerification": {
+      "status": "matched-existing-repository-source-hash",
+      "referenceCommit": "5aff440c702e7c8c665f05f0b419a9edbf9ea00f",
+      "referencePath": "src/simulation/content/source-manifest.ts",
+      "referenceField": "SOURCE_MANIFEST.rawSha256",
+      "archiveRoundTripVerified": true
+    },
+    "reviewer": "GPT / dot",
+    "sourceNetworkFetchPerformed": false,
+    "note": "用户下载时间未知；接收和归档时间不冒充下载时间。hash 一致证明与仓库已有来源字节一致，不代表所有游戏规则已经核验。"
+  },
+  "selection": {
+    "modeSelector": "setData[mutator === \"TFTSet13\"]",
+    "modeJsonPointer": "/setData/1",
+    "modeItemCount": 284,
+    "globalItemCount": 2055,
+    "itemSelector": "standard-set membership intersected with eight components and actual two-component composition",
+    "components": 8,
+    "completedItems": 36,
+    "recipes": 36,
+    "neutralCandidates": 9,
+    "status": "raw-records-and-compositions-verified-partial-field-review",
+    "recordHashConvention": "sha256 of UTF-8 JSON; ensure_ascii=False, sort_keys=True, compact separators, allow_nan=False",
+    "details": "normalized/items.json and raw/selected-neutrals.json contain per-record JSON pointers and canonical hashes"
+  },
+  "missingSources": [
+    {
+      "locale": "zh_cn",
+      "url": "https://raw.communitydragon.org/14.24/cdragon/tft/zh_cn.json",
+      "status": "deferred-nonblocking-user-will-supply",
+      "note": "用户已明确中文名称核对待补，不阻塞英文来源与配方等其他工作。"
+    }
+  ],
+  "runtimeContentChanged": false,
+  "b1Accepted": false,
+  "archiveCommit": "57344b0688c33f4b473fc3ceb70c022ca701945e",
+  "archiveBranch": "data/cdragon-14.24",
+  "b1Branch": "feat/m8-b0-baseline",
+  "b1Status": "partial-not-frozen",
+  "b1Blockers": [
+    "unresolved-effect-units-and-mechanics",
+    "giant-slayer-source-conflict",
+    "opening-and-encounter-evidence",
+    "loot-and-guarantee-evidence",
+    "unapproved-concrete-single-player-policy"
+  ],
+  "selectedArtifacts": [
+    {
+      "path": "normalized/items.json",
+      "bytes": 58534,
+      "sha256": "1c556206b0db6fa9efd4ed1de1ad3f6f73d43b2b1830fa3b25ad049d38ebb7e1"
+    },
+    {
+      "path": "normalized/recipes.json",
+      "bytes": 19797,
+      "sha256": "e4152521ff49032688726d8cf7e826f682f5c64e2f675312ef05be80c2d8f9ac"
+    },
+    {
+      "path": "provenance/coverage.json",
+      "bytes": 36971,
+      "sha256": "a2320b888993bbe6f0e76bd2ab91824ee6ec70956699522c2f79a65fe0185c48"
+    },
+    {
+      "path": "provenance/overrides.json",
+      "bytes": 4602,
+      "sha256": "089dadf6a58266cc67d30706f2566d60fcc19b3584b13e075b148473c4ef747c"
+    },
+    {
+      "path": "provenance/questions.md",
+      "bytes": 3299,
+      "sha256": "78879f3d8bedd3b6c3c4813e03e91046a56cd6020d935017fed95c3a3733c7ff"
+    },
+    {
+      "path": "provenance/single-player-policy.md",
+      "bytes": 1086,
+      "sha256": "b25b95e5301e14ae00edead20e466065b31f5aab2927ac8cf3192718a9abcb1c"
+    },
+    {
+      "path": "raw/selected-items.json",
+      "bytes": 30410,
+      "sha256": "599572b3cfa8c5cffad2a7612918ebd0c44ee27c33467c572f483312bb98a0e5"
+    },
+    {
+      "path": "raw/selected-neutrals.json",
+      "bytes": 12807,
+      "sha256": "f2d954a62c44796359c6f0f00c3cd231b3e270ea01b41981cbfcb4ba821db699"
+    }
+  ]
+}

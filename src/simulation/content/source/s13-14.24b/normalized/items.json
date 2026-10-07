@@ -1,0 +1,1561 @@
+{
+  "items": [
+    {
+      "apiName": "TFT_Item_AdaptiveHelm",
+      "composition": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Adaptive Helm",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1362",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "a7cf6d96743f5ab3f57bdc380c6141649801fec6eb4b4a26f9a3cfedc78f350e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "BackRowBonusAP": "source-unit-unknown",
+        "FrontLineManaPerHit": "mana-points",
+        "FrontRowBonusResists": "source-unit-unknown",
+        "MagicResist": "source-unit-unknown",
+        "Mana": "source-unit-unknown",
+        "ManaPerTickrate": "mana-points",
+        "ManaTickrate": "seconds",
+        "{d357c9f2}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AP": 10.0,
+        "BackRowBonusAP": 15.0,
+        "FrontLineManaPerHit": 1.0,
+        "FrontRowBonusResists": 40.0,
+        "MagicResist": 20.0,
+        "Mana": 15.0,
+        "ManaPerTickrate": 10.0,
+        "ManaTickrate": 3.0,
+        "{d357c9f2}": null
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_ArchangelsStaff",
+      "composition": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Archangel's Staff",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1324",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "061eea2af9780cb6f60fb06ef250d310b535db83299bc90b994a44024e82dec6",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "APPerInterval": "source-unit-unknown",
+        "IntervalSeconds": "seconds",
+        "Mana": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AP": 20.0,
+        "APPerInterval": 30.0,
+        "IntervalSeconds": 5.0,
+        "Mana": 15.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_BFSword",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "B.F. Sword",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1359",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "1fa1455bb2537a40aa735e9587eeaa8b8a5daf4ac8621b74551ac7285c86c384",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "fraction-rendered-as-percent"
+      },
+      "sourceEffects": {
+        "AD": 0.10000000149011612
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_Bloodthirster",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_NegatronCloak"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Bloodthirster",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1321",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "4540ebdd208a36b41311f1f0f1a268c74adeb0328041141e5caf142faa672217",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "AP": "source-unit-unknown",
+        "HealthThreshold": "percentage-points",
+        "LifeSteal": "source-unit-unknown",
+        "MagicResist": "source-unit-unknown",
+        "ShieldDuration": "seconds",
+        "ShieldHealthPercent": "percentage-points",
+        "StatOmnivamp": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD": 0.15000000596046448,
+        "AP": 15.0,
+        "HealthThreshold": 40.0,
+        "LifeSteal": 20.0,
+        "MagicResist": 20.0,
+        "ShieldDuration": 5.0,
+        "ShieldHealthPercent": 25.0,
+        "StatOmnivamp": 0.20000000298023224
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_BlueBuff",
+      "composition": [
+        "TFT_Item_TearOfTheGoddess",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Blue Buff",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1368",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "1eaaebfbce2c9d620f85efcbdc72fb5bfe0c55f93fbd3a00cded03dbef746c1a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "AP": "source-unit-unknown",
+        "DamageAmp": "fraction-rendered-as-percent",
+        "Mana": "source-unit-unknown",
+        "ManaRefund": "mana-points",
+        "TakedownTimer": "seconds"
+      },
+      "sourceEffects": {
+        "AD": 0.15000000596046448,
+        "AP": 15.0,
+        "DamageAmp": 0.05000000074505806,
+        "Mana": 30.0,
+        "ManaRefund": 10.0,
+        "TakedownTimer": 8.0
+      },
+      "sourceUnique": true,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_BrambleVest",
+      "composition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_ChainVest"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Bramble Vest",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1254",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e8a2cf39a35b0aebb6aabfefca83d25b24a152a47018634e4996367e77751c36",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "1StarAoEDamage": "source-unit-unknown",
+        "2StarAoEDamage": "source-unit-unknown",
+        "3StarAoEDamage": "source-unit-unknown",
+        "Armor": "source-unit-unknown",
+        "AutoDamageReduction": "fraction-rendered-as-percent",
+        "ICD": "seconds",
+        "PercentMaxHP": "fraction-rendered-as-percent",
+        "{6688a0d5}": "source-unit-unknown",
+        "{b5c2a66b}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "1StarAoEDamage": 100.0,
+        "2StarAoEDamage": 100.0,
+        "3StarAoEDamage": 100.0,
+        "Armor": 65.0,
+        "AutoDamageReduction": 0.07999999821186066,
+        "ICD": 2.0,
+        "PercentMaxHP": 0.07000000029802322,
+        "{6688a0d5}": 100.0,
+        "{b5c2a66b}": 100.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_ChainVest",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Chain Vest",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1256",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "14c039b68c3f88a9a19079a8dc7b782459799249c59b5244c14adea3ae1f9ebe",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "Armor": "armor-points"
+      },
+      "sourceEffects": {
+        "Armor": 20.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_Crownguard",
+      "composition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Crownguard",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1358",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "c9ecd50587d6cc591806d96830c492456a368031aa652b2b1017d88528a9d429",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "Armor": "source-unit-unknown",
+        "ChillDuration": "source-unit-unknown",
+        "Health": "source-unit-unknown",
+        "HexRange": "source-unit-unknown",
+        "ShieldBonusAP": "source-unit-unknown",
+        "ShieldDuration": "seconds",
+        "ShieldSize": "percentage-points"
+      },
+      "sourceEffects": {
+        "AP": 20.0,
+        "Armor": 20.0,
+        "ChillDuration": 4.0,
+        "Health": 100.0,
+        "HexRange": 2.0,
+        "ShieldBonusAP": 25.0,
+        "ShieldDuration": 8.0,
+        "ShieldSize": 25.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_Deathblade",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_BFSword"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Deathblade",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1393",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "df040b91231dea542826a0d7f7ab1b96f037e21c0c6d73627ba592aa622ff774",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "BonusDamage": "source-unit-unknown",
+        "{1543aa48}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD": 0.550000011920929,
+        "BonusDamage": 0.07999999821186066,
+        "{1543aa48}": 0.07999999821186066
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_DragonsClaw",
+      "composition": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_NegatronCloak"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Dragon's Claw",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1194",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "cf842d62804ea43525be413ebef5e5bfc9b89174d22fe6f72772c388a05bc987",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "HealthRegenInterval": "seconds",
+        "ICD": "source-unit-unknown",
+        "MagicResist": "source-unit-unknown",
+        "PercentHealthDamage": "percentage-points",
+        "PercentMaxHP": "fraction-rendered-as-percent"
+      },
+      "sourceEffects": {
+        "HealthRegenInterval": 2.0,
+        "ICD": 0.5,
+        "MagicResist": 75.0,
+        "PercentHealthDamage": 2.5,
+        "PercentMaxHP": 0.09000000357627869
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_FrozenHeart",
+      "composition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Protector's Vow",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1044",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "239a47ecc82156ae475c2f5710fa8edcf06f6223ab4d20fc3fdb91b5f3b034e7",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "Armor": "source-unit-unknown",
+        "HealthThreshold": "percentage-points",
+        "Mana": "source-unit-unknown",
+        "ShieldDuration": "seconds",
+        "ShieldHealthPercent": "percentage-points",
+        "Stats": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "Armor": 20.0,
+        "HealthThreshold": 40.0,
+        "Mana": 30.0,
+        "ShieldDuration": 5.0,
+        "ShieldHealthPercent": 25.0,
+        "Stats": 20.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_GargoyleStoneplate",
+      "composition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_NegatronCloak"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Gargoyle Stoneplate",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1253",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "9c89d4e43b20da6fb743e9d5904f105baa8787b392b5740fc61eb1ae0d1f1f3e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "Armor": "source-unit-unknown",
+        "ArmorPerEnemy": "source-unit-unknown",
+        "Health": "source-unit-unknown",
+        "MRPerEnemy": "source-unit-unknown",
+        "MagicResist": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "Armor": 25.0,
+        "ArmorPerEnemy": 10.0,
+        "Health": 100.0,
+        "MRPerEnemy": 10.0,
+        "MagicResist": 25.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_GiantsBelt",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Giant's Belt",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1373",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "8d5bceaa6138121ab50944d98f2fefb6e1bf2bc06c46a60e7028725eea1a6763",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "Health": "health-points"
+      },
+      "sourceEffects": {
+        "Health": 150.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_GuardianAngel",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_ChainVest"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Edge of Night",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1293",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "09c28cec15c3c65116753f2dfd569823952b69893c112f925206d743b9165e6c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "Armor": "source-unit-unknown",
+        "AttackSpeed": "percentage-points",
+        "DamageReduction": "source-unit-unknown",
+        "HealthThreshold": "percentage-points",
+        "StealthDuration": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD": 0.10000000149011612,
+        "Armor": 20.0,
+        "AttackSpeed": 15.0,
+        "DamageReduction": 100.0,
+        "HealthThreshold": 60.0,
+        "StealthDuration": 1.0
+      },
+      "sourceUnique": true,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_GuinsoosRageblade",
+      "composition": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_RecurveBow"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Guinsoo's Rageblade",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1187",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "b92154c477b6cd38005aabbb7a5486c589e8865d5810ac9cca90ca64e1b89a09",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "AttackSpeedPerStack": "percentage-points"
+      },
+      "sourceEffects": {
+        "AP": 10.0,
+        "AS": 10.0,
+        "AttackSpeedPerStack": 5.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_HextechGunblade",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Hextech Gunblade",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1411",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "db3b47d1efbfaca91be9792cd035d68370aed45eedfdc68e3dcef922b136e41e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "AP": "source-unit-unknown",
+        "AllyHealing": "fraction-rendered-as-percent",
+        "Omnivamp": "source-unit-unknown",
+        "StatOmnivamp": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD": 0.20000000298023224,
+        "AP": 20.0,
+        "AllyHealing": 0.25,
+        "Omnivamp": 15.0,
+        "StatOmnivamp": 0.15000000596046448
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_InfinityEdge",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_SparringGloves"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Infinity Edge",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/927",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "9018668f94e147922dbd15696f2aa70894ca15b8ed0bbf4783589d07635f47b1",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "CritChance": "source-unit-unknown",
+        "CritDamageToGive": "fraction-rendered-as-percent"
+      },
+      "sourceEffects": {
+        "AD": 0.3499999940395355,
+        "CritChance": 35.0,
+        "CritDamageToGive": 0.10000000149011612
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_IonicSpark",
+      "composition": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_NegatronCloak"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Ionic Spark",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1190",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "00ae6024414dae751d6e7bfd5516cbfc345af48caa5ba59ab48319dc81d4e09a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "Damage": "source-unit-unknown",
+        "Health": "source-unit-unknown",
+        "HexRange": "source-unit-unknown",
+        "MRShred": "percentage-points",
+        "MagicResist": "source-unit-unknown",
+        "ManaRatio": "percentage-points"
+      },
+      "sourceEffects": {
+        "AP": 15.0,
+        "Damage": 250.0,
+        "Health": 100.0,
+        "HexRange": 2.0,
+        "MRShred": 30.0,
+        "MagicResist": 25.0,
+        "ManaRatio": 160.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_JeweledGauntlet",
+      "composition": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_SparringGloves"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Jeweled Gauntlet",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1372",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "abe9b84e9c890e7c45dae598eceb1bb4ade2d53b200e67d56f85eba4aaf9e059",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "CritChance": "source-unit-unknown",
+        "CritDamageToGive": "fraction-rendered-as-percent"
+      },
+      "sourceEffects": {
+        "AP": 35.0,
+        "CritChance": 35.0,
+        "CritDamageToGive": 0.10000000149011612
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_LastWhisper",
+      "composition": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_SparringGloves"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Last Whisper",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1371",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "84cfecededc7319288cbdf65bd02d56f2507cdba7274262e86c5bff3f07c9728",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "ArmorBreakDuration": "seconds",
+        "ArmorReductionPercent": "percentage-points",
+        "CritChance": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD": 0.15000000596046448,
+        "AS": 20.0,
+        "ArmorBreakDuration": 3.0,
+        "ArmorReductionPercent": 30.0,
+        "CritChance": 20.0
+      },
+      "sourceUnique": true,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_Leviathan",
+      "composition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_RecurveBow"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Nashor's Tooth",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1352",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "b0816135872648365982c5b30041700e73ae902300f6c878a76ebf571a1cce79",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "ASDuration": "seconds",
+        "AttackSpeedToGive": "percentage-points",
+        "Health": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AP": 10.0,
+        "AS": 10.0,
+        "ASDuration": 5.0,
+        "AttackSpeedToGive": 60.0,
+        "Health": 150.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_RecurveBow"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Giant Slayer",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1275",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "74fd1d4294c568d4130a1a4273e9320fda566dce6542e4a912eb49e0523b2a77",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "AP": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "DamageAmp": "fraction-rendered-as-percent",
+        "HealthThreshold": "source-unit-unknown",
+        "LargeBonusPct": "source-unit-unknown",
+        "{1543aa48}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD": 0.25,
+        "AP": 25.0,
+        "AS": 10.0,
+        "DamageAmp": 0.20000000298023224,
+        "HealthThreshold": 1750.0,
+        "LargeBonusPct": 25.0,
+        "{1543aa48}": 0.05000000074505806
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_Morellonomicon",
+      "composition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Morellonomicon",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1355",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "2e74ce3a39bb3896022d0e83ebf61da50d0c2ca07f60f4ca3fbff5e73a3386c7",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "BurnDuration": "seconds",
+        "BurnPercent": "percentage-points",
+        "GrievousWoundsPercent": "percentage-points",
+        "Health": "source-unit-unknown",
+        "MonsterCap": "source-unit-unknown",
+        "TicksPerSecond": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AP": 25.0,
+        "AS": 10.0,
+        "BurnDuration": 10.0,
+        "BurnPercent": 1.0,
+        "GrievousWoundsPercent": 33.0,
+        "Health": 150.0,
+        "MonsterCap": 100.0,
+        "TicksPerSecond": 1.0
+      },
+      "sourceUnique": true,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_NeedlesslyLargeRod",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Needlessly Large Rod",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1379",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "7984f38cd4e7a7e89e6b1ca0192594915a79a8a87bc509124a19719b64e74617",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "ability-power-points"
+      },
+      "sourceEffects": {
+        "AP": 10.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_NegatronCloak",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Negatron Cloak",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1301",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "c450a08482dca3df9c41bc46938ae97573e2c9ae50620874aca6ec7e33cedbfe",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "MagicResist": "magic-resist-points"
+      },
+      "sourceEffects": {
+        "MagicResist": 20.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_NightHarvester",
+      "composition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_SparringGloves"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Steadfast Heart",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1383",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "521780e7df08ba937f372a4c1026fb3dd949f647bc60123709785cf642005eee",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "Armor": "source-unit-unknown",
+        "BaseDamageReduction": "source-unit-unknown",
+        "BaseDurability": "fraction-rendered-as-percent",
+        "CritChance": "source-unit-unknown",
+        "EmpowerDamageReduction": "source-unit-unknown",
+        "EmpoweredDurability": "fraction-rendered-as-percent",
+        "Health": "source-unit-unknown",
+        "ThresholdForEmpower": "fraction-rendered-as-percent"
+      },
+      "sourceEffects": {
+        "Armor": 20.0,
+        "BaseDamageReduction": 8.0,
+        "BaseDurability": 0.07999999821186066,
+        "CritChance": 20.0,
+        "EmpowerDamageReduction": 15.0,
+        "EmpoweredDurability": 0.15000000596046448,
+        "Health": 200.0,
+        "ThresholdForEmpower": 0.5
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_PowerGauntlet",
+      "composition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_SparringGloves"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Guardbreaker",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1221",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "3b4d7ae3621ab971ddcc3e64701a0ef6858046e68c53538a78c5578c71fa04dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "CritChance": "source-unit-unknown",
+        "DamageAmp": "fraction-rendered-as-percent",
+        "Duration": "seconds",
+        "Health": "source-unit-unknown",
+        "{1543aa48}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AP": 10.0,
+        "AS": 20.0,
+        "CritChance": 20.0,
+        "DamageAmp": 0.15000000596046448,
+        "Duration": 3.0,
+        "Health": 150.0,
+        "{1543aa48}": 0.10000000149011612
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_Quicksilver",
+      "composition": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_SparringGloves"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Quicksilver",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1392",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "69d74cdedf82ba14b4543fda9af4c618963311eb8f757e0c7cae515acda43b0e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AS": "source-unit-unknown",
+        "CritChance": "source-unit-unknown",
+        "MagicResist": "source-unit-unknown",
+        "ProcAttackSpeed": "fraction-rendered-as-percent",
+        "ProcInterval": "seconds",
+        "SpellShieldDuration": "seconds"
+      },
+      "sourceEffects": {
+        "AS": 30.0,
+        "CritChance": 20.0,
+        "MagicResist": 20.0,
+        "ProcAttackSpeed": 0.029999999329447746,
+        "ProcInterval": 2.0,
+        "SpellShieldDuration": 18.0
+      },
+      "sourceUnique": true,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_RabadonsDeathcap",
+      "composition": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Rabadon's Deathcap",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/331",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e59793391010f377ce09e921bb1cdd7e9495dd50f54483ecb99b2649f142ea4c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AP": "source-unit-unknown",
+        "BonusDamage": "source-unit-unknown",
+        "{1543aa48}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AP": 50.0,
+        "BonusDamage": 0.15000000596046448,
+        "{1543aa48}": 0.15000000596046448
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_RapidFireCannon",
+      "composition": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_RecurveBow"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Red Buff",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1356",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e7d234e4cc3e907769ebdd5ff5806b9c6d853775628c501ddc98036e108199ed",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AS": "source-unit-unknown",
+        "BonusDamage": "source-unit-unknown",
+        "BurnPercent": "percentage-points",
+        "Duration": "seconds",
+        "HealingReductionPct": "percentage-points",
+        "HexRangeIncrease": "source-unit-unknown",
+        "{1543aa48}": "source-unit-unknown",
+        "{9f5117db}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AS": 35.0,
+        "BonusDamage": 0.05999999865889549,
+        "BurnPercent": 1.0,
+        "Duration": 5.0,
+        "HealingReductionPct": 33.0,
+        "HexRangeIncrease": 1.0,
+        "{1543aa48}": 0.029999999329447746,
+        "{9f5117db}": 100.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_RecurveBow",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Recurve Bow",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1274",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "d4a066316b9560c8964c63ed3e79fc982812ddef17230f95d1197fb2e4d99e40",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AS": "percentage-points"
+      },
+      "sourceEffects": {
+        "AS": 10.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_RedBuff",
+      "composition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_GiantsBelt"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Sunfire Cape",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1287",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "68c7b2046926a19e926fd58eb55e800977429c90429ab9f3cf8ded8e2670b530",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "Armor": "source-unit-unknown",
+        "BonusPercentHP": "fraction-rendered-as-percent",
+        "BurnDuration": "seconds",
+        "BurnPercent": "percentage-points",
+        "GrievousWoundsPercent": "percentage-points",
+        "Health": "source-unit-unknown",
+        "HexRange": "source-unit-unknown",
+        "ICD": "seconds",
+        "MonsterCap": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "Armor": 20.0,
+        "BonusPercentHP": 0.07999999821186066,
+        "BurnDuration": 10.0,
+        "BurnPercent": 1.0,
+        "GrievousWoundsPercent": 33.0,
+        "Health": 150.0,
+        "HexRange": 2.0,
+        "ICD": 2.0,
+        "MonsterCap": 100.0
+      },
+      "sourceUnique": true,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_Redemption",
+      "composition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Redemption",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1095",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "a0b35c26a84095ae31a26cdb44616f874b260bd64b9585778c248d81aa48b263",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AoEDamageReduction": "percentage-points",
+        "HealTickRate": "seconds",
+        "Health": "source-unit-unknown",
+        "HexRadius": "source-unit-unknown",
+        "Mana": "source-unit-unknown",
+        "MaxHeal": "source-unit-unknown",
+        "MissingHealthHeal": "percentage-points"
+      },
+      "sourceEffects": {
+        "AoEDamageReduction": 10.0,
+        "HealTickRate": 5.0,
+        "Health": 150.0,
+        "HexRadius": 1.0,
+        "Mana": 15.0,
+        "MaxHeal": 1000.0,
+        "MissingHealthHeal": 15.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_RunaansHurricane",
+      "composition": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_RecurveBow"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Runaan's Hurricane",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1308",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "6e2f9fa7e961d6920eb1ee15a881a14b5857b11ae52db7be418e924d6850bf6f",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "AdditionalTargets": "source-unit-unknown",
+        "MagicResist": "source-unit-unknown",
+        "MultiplierForDamage": "percentage-points"
+      },
+      "sourceEffects": {
+        "AD": 0.25,
+        "AS": 10.0,
+        "AdditionalTargets": 1.0,
+        "MagicResist": 20.0,
+        "MultiplierForDamage": 55.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_SparringGloves",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Sparring Gloves",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1318",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "ee5618f5111bdb04f5da985014110317e7c5001b37cadd3a403feb52acf5d4b4",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "CritChance": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "CritChance": 20.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_SpearOfShojin",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Spear of Shojin",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1343",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "ac72cc71a2523479fbcaf490a5d277d38522b365028ac3463bd95c5893f0ba9e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "AP": "source-unit-unknown",
+        "FlatManaRestore": "source-unit-unknown",
+        "Mana": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD": 0.15000000596046448,
+        "AP": 15.0,
+        "FlatManaRestore": 5.0,
+        "Mana": 15.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_SpectralGauntlet",
+      "composition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_NegatronCloak"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Evenshroud",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1345",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "911cabfcf8d24aef3a6cd97e24bf7a1bab40525293a2200ed5084e0a1efbf469",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "ARReductionAmount": "percentage-points",
+        "BonusResistDuration": "seconds",
+        "BonusResists": "source-unit-unknown",
+        "Health": "source-unit-unknown",
+        "HexRange": "source-unit-unknown",
+        "MagicResist": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "ARReductionAmount": 30.0,
+        "BonusResistDuration": 10.0,
+        "BonusResists": 25.0,
+        "Health": 150.0,
+        "HexRange": 2.0,
+        "MagicResist": 20.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_StatikkShiv",
+      "composition": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Statikk Shiv",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1404",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "b58a2a40c2ba7097c0b79b45c754a0ca46a527db78573ab35c68660c748b7e13",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "1StarBounces": "source-unit-unknown",
+        "AP": "source-unit-unknown",
+        "AS": "source-unit-unknown",
+        "Damage": "source-unit-unknown",
+        "MRShred": "percentage-points",
+        "MRShredDuration": "seconds",
+        "Mana": "source-unit-unknown",
+        "{12a15e9e}": "source-unit-unknown",
+        "{15144cec}": "source-unit-unknown",
+        "{79e2ec7b}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "1StarBounces": 4.0,
+        "AP": 15.0,
+        "AS": 15.0,
+        "Damage": 35.0,
+        "MRShred": 30.0,
+        "MRShredDuration": 5.0,
+        "Mana": 15.0,
+        "{12a15e9e}": 4.0,
+        "{15144cec}": 4.0,
+        "{79e2ec7b}": 4.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_SteraksGage",
+      "composition": [
+        "TFT_Item_BFSword",
+        "TFT_Item_GiantsBelt"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Sterak's Gage",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1193",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "23be6124ad8925f979cc7e293b7123393706c00ca20d34259f902ce9fbd09e93",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD": "source-unit-unknown",
+        "BonusADToGive": "percentage-points",
+        "BonusMaxHealthPerc": "percentage-points",
+        "Health": "source-unit-unknown",
+        "HealthThreshold": "percentage-points"
+      },
+      "sourceEffects": {
+        "AD": 0.15000000596046448,
+        "BonusADToGive": 35.0,
+        "BonusMaxHealthPerc": 25.0,
+        "Health": 150.0,
+        "HealthThreshold": 60.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_TearOfTheGoddess",
+      "composition": [],
+      "kind": "component",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Tear of the Goddess",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1296",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "40b627c5edfa5b507ca361e2dd07280234ae4976c62ff95c8dc46d583d558ce8",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "Mana": "mana-points"
+      },
+      "sourceEffects": {
+        "Mana": 15.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_ThiefsGloves",
+      "composition": [
+        "TFT_Item_SparringGloves",
+        "TFT_Item_SparringGloves"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Thief's Gloves",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1185",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "4645809c6f08ec25ccfbd8bef2f3817590d60af3221dbde2be6f13d3e0652576",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "CritChance": "source-unit-unknown",
+        "Health": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "CritChance": 20.0,
+        "Health": 150.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_TitansResolve",
+      "composition": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_RecurveBow"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Titan's Resolve",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1302",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "0ae93a96570b8725be74c3363e8dca59d0ff06b94383add566765d4a20247804",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AS": "source-unit-unknown",
+        "Armor": "source-unit-unknown",
+        "BonusResistsAtStackCap": "source-unit-unknown",
+        "StackCap": "source-unit-unknown",
+        "StackingAD": "fraction-rendered-as-percent",
+        "StackingSP": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AS": 10.0,
+        "Armor": 20.0,
+        "BonusResistsAtStackCap": 20.0,
+        "StackCap": 25.0,
+        "StackingAD": 0.019999999552965164,
+        "StackingSP": 2.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_UnstableConcoction",
+      "composition": [
+        "TFT_Item_SparringGloves",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Hand Of Justice",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1291",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "6183723ebc3f4a7c66be379a0d8302379375aba512e63e12f46be3bd0b6005dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "AD_NotStatBar": "fraction-rendered-as-percent",
+        "AP_NotStatBar": "source-unit-unknown",
+        "CritChance": "source-unit-unknown",
+        "HealthThreshold": "fraction-rendered-as-percent",
+        "Mana": "source-unit-unknown",
+        "StatOmnivamp_NotStatBar": "fraction-rendered-as-percent",
+        "{f23e83fc}": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "AD_NotStatBar": 0.15000000596046448,
+        "AP_NotStatBar": 15.0,
+        "CritChance": 20.0,
+        "HealthThreshold": 0.5,
+        "Mana": 15.0,
+        "StatOmnivamp_NotStatBar": 0.11999999731779099,
+        "{f23e83fc}": 2.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    },
+    {
+      "apiName": "TFT_Item_WarmogsArmor",
+      "composition": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_GiantsBelt"
+      ],
+      "kind": "completed",
+      "mechanicsStatus": "unknown-not-frozen",
+      "nameEn": "Warmog's Armor",
+      "nameZhCn": null,
+      "nameZhCnStatus": "deferred-nonblocking-user-will-supply-source",
+      "runtimeEligible": false,
+      "source": {
+        "jsonPointer": "/items/1399",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "961fbfa7b65c1d2b62f87115db675fd4fc2e0eaa5236ff43d2bbc6d865f6b858",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceEffectUnits": {
+        "BonusPercentHP": "fraction-rendered-as-percent",
+        "Health": "source-unit-unknown"
+      },
+      "sourceEffects": {
+        "BonusPercentHP": 0.11999999731779099,
+        "Health": 600.0
+      },
+      "sourceUnique": false,
+      "unitEvidence": "own raw desc token only; unexpressed units remain unknown; no runtime conversion"
+    }
+  ],
+  "status": "partial-source-inventory-not-runtime"
+}

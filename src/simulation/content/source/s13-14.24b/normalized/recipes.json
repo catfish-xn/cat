@@ -1,0 +1,509 @@
+{
+  "recipes": [
+    {
+      "componentApiNames": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_AdaptiveHelm",
+      "source": {
+        "jsonPointer": "/items/1362",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "a7cf6d96743f5ab3f57bdc380c6141649801fec6eb4b4a26f9a3cfedc78f350e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_ArchangelsStaff",
+      "source": {
+        "jsonPointer": "/items/1324",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "061eea2af9780cb6f60fb06ef250d310b535db83299bc90b994a44024e82dec6",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_NegatronCloak"
+      ],
+      "resultApiName": "TFT_Item_Bloodthirster",
+      "source": {
+        "jsonPointer": "/items/1321",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "4540ebdd208a36b41311f1f0f1a268c74adeb0328041141e5caf142faa672217",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_TearOfTheGoddess",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_BlueBuff",
+      "source": {
+        "jsonPointer": "/items/1368",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "1eaaebfbce2c9d620f85efcbdc72fb5bfe0c55f93fbd3a00cded03dbef746c1a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_ChainVest"
+      ],
+      "resultApiName": "TFT_Item_BrambleVest",
+      "source": {
+        "jsonPointer": "/items/1254",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e8a2cf39a35b0aebb6aabfefca83d25b24a152a47018634e4996367e77751c36",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "resultApiName": "TFT_Item_Crownguard",
+      "source": {
+        "jsonPointer": "/items/1358",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "c9ecd50587d6cc591806d96830c492456a368031aa652b2b1017d88528a9d429",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_BFSword"
+      ],
+      "resultApiName": "TFT_Item_Deathblade",
+      "source": {
+        "jsonPointer": "/items/1393",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "df040b91231dea542826a0d7f7ab1b96f037e21c0c6d73627ba592aa622ff774",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_NegatronCloak"
+      ],
+      "resultApiName": "TFT_Item_DragonsClaw",
+      "source": {
+        "jsonPointer": "/items/1194",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "cf842d62804ea43525be413ebef5e5bfc9b89174d22fe6f72772c388a05bc987",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_FrozenHeart",
+      "source": {
+        "jsonPointer": "/items/1044",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "239a47ecc82156ae475c2f5710fa8edcf06f6223ab4d20fc3fdb91b5f3b034e7",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_NegatronCloak"
+      ],
+      "resultApiName": "TFT_Item_GargoyleStoneplate",
+      "source": {
+        "jsonPointer": "/items/1253",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "9c89d4e43b20da6fb743e9d5904f105baa8787b392b5740fc61eb1ae0d1f1f3e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_ChainVest"
+      ],
+      "resultApiName": "TFT_Item_GuardianAngel",
+      "source": {
+        "jsonPointer": "/items/1293",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "09c28cec15c3c65116753f2dfd569823952b69893c112f925206d743b9165e6c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_RecurveBow"
+      ],
+      "resultApiName": "TFT_Item_GuinsoosRageblade",
+      "source": {
+        "jsonPointer": "/items/1187",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "b92154c477b6cd38005aabbb7a5486c589e8865d5810ac9cca90ca64e1b89a09",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "resultApiName": "TFT_Item_HextechGunblade",
+      "source": {
+        "jsonPointer": "/items/1411",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "db3b47d1efbfaca91be9792cd035d68370aed45eedfdc68e3dcef922b136e41e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_SparringGloves"
+      ],
+      "resultApiName": "TFT_Item_InfinityEdge",
+      "source": {
+        "jsonPointer": "/items/927",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "9018668f94e147922dbd15696f2aa70894ca15b8ed0bbf4783589d07635f47b1",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_NegatronCloak"
+      ],
+      "resultApiName": "TFT_Item_IonicSpark",
+      "source": {
+        "jsonPointer": "/items/1190",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "00ae6024414dae751d6e7bfd5516cbfc345af48caa5ba59ab48319dc81d4e09a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_SparringGloves"
+      ],
+      "resultApiName": "TFT_Item_JeweledGauntlet",
+      "source": {
+        "jsonPointer": "/items/1372",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "abe9b84e9c890e7c45dae598eceb1bb4ade2d53b200e67d56f85eba4aaf9e059",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_SparringGloves"
+      ],
+      "resultApiName": "TFT_Item_LastWhisper",
+      "source": {
+        "jsonPointer": "/items/1371",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "84cfecededc7319288cbdf65bd02d56f2507cdba7274262e86c5bff3f07c9728",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_RecurveBow"
+      ],
+      "resultApiName": "TFT_Item_Leviathan",
+      "source": {
+        "jsonPointer": "/items/1352",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "b0816135872648365982c5b30041700e73ae902300f6c878a76ebf571a1cce79",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_RecurveBow"
+      ],
+      "resultApiName": "TFT_Item_MadredsBloodrazor",
+      "source": {
+        "jsonPointer": "/items/1275",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "74fd1d4294c568d4130a1a4273e9320fda566dce6542e4a912eb49e0523b2a77",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "resultApiName": "TFT_Item_Morellonomicon",
+      "source": {
+        "jsonPointer": "/items/1355",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "2e74ce3a39bb3896022d0e83ebf61da50d0c2ca07f60f4ca3fbff5e73a3386c7",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_SparringGloves"
+      ],
+      "resultApiName": "TFT_Item_NightHarvester",
+      "source": {
+        "jsonPointer": "/items/1383",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "521780e7df08ba937f372a4c1026fb3dd949f647bc60123709785cf642005eee",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_SparringGloves"
+      ],
+      "resultApiName": "TFT_Item_PowerGauntlet",
+      "source": {
+        "jsonPointer": "/items/1221",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "3b4d7ae3621ab971ddcc3e64701a0ef6858046e68c53538a78c5578c71fa04dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_SparringGloves"
+      ],
+      "resultApiName": "TFT_Item_Quicksilver",
+      "source": {
+        "jsonPointer": "/items/1392",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "69d74cdedf82ba14b4543fda9af4c618963311eb8f757e0c7cae515acda43b0e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NeedlesslyLargeRod",
+        "TFT_Item_NeedlesslyLargeRod"
+      ],
+      "resultApiName": "TFT_Item_RabadonsDeathcap",
+      "source": {
+        "jsonPointer": "/items/331",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e59793391010f377ce09e921bb1cdd7e9495dd50f54483ecb99b2649f142ea4c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_RecurveBow"
+      ],
+      "resultApiName": "TFT_Item_RapidFireCannon",
+      "source": {
+        "jsonPointer": "/items/1356",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "e7d234e4cc3e907769ebdd5ff5806b9c6d853775628c501ddc98036e108199ed",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_GiantsBelt"
+      ],
+      "resultApiName": "TFT_Item_RedBuff",
+      "source": {
+        "jsonPointer": "/items/1287",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "68c7b2046926a19e926fd58eb55e800977429c90429ab9f3cf8ded8e2670b530",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_Redemption",
+      "source": {
+        "jsonPointer": "/items/1095",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "a0b35c26a84095ae31a26cdb44616f874b260bd64b9585778c248d81aa48b263",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_NegatronCloak",
+        "TFT_Item_RecurveBow"
+      ],
+      "resultApiName": "TFT_Item_RunaansHurricane",
+      "source": {
+        "jsonPointer": "/items/1308",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "6e2f9fa7e961d6920eb1ee15a881a14b5857b11ae52db7be418e924d6850bf6f",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_SpearOfShojin",
+      "source": {
+        "jsonPointer": "/items/1343",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "ac72cc71a2523479fbcaf490a5d277d38522b365028ac3463bd95c5893f0ba9e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_NegatronCloak"
+      ],
+      "resultApiName": "TFT_Item_SpectralGauntlet",
+      "source": {
+        "jsonPointer": "/items/1345",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "911cabfcf8d24aef3a6cd97e24bf7a1bab40525293a2200ed5084e0a1efbf469",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_RecurveBow",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_StatikkShiv",
+      "source": {
+        "jsonPointer": "/items/1404",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "b58a2a40c2ba7097c0b79b45c754a0ca46a527db78573ab35c68660c748b7e13",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_BFSword",
+        "TFT_Item_GiantsBelt"
+      ],
+      "resultApiName": "TFT_Item_SteraksGage",
+      "source": {
+        "jsonPointer": "/items/1193",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "23be6124ad8925f979cc7e293b7123393706c00ca20d34259f902ce9fbd09e93",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_SparringGloves",
+        "TFT_Item_SparringGloves"
+      ],
+      "resultApiName": "TFT_Item_ThiefsGloves",
+      "source": {
+        "jsonPointer": "/items/1185",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "4645809c6f08ec25ccfbd8bef2f3817590d60af3221dbde2be6f13d3e0652576",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_ChainVest",
+        "TFT_Item_RecurveBow"
+      ],
+      "resultApiName": "TFT_Item_TitansResolve",
+      "source": {
+        "jsonPointer": "/items/1302",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "0ae93a96570b8725be74c3363e8dca59d0ff06b94383add566765d4a20247804",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_SparringGloves",
+        "TFT_Item_TearOfTheGoddess"
+      ],
+      "resultApiName": "TFT_Item_UnstableConcoction",
+      "source": {
+        "jsonPointer": "/items/1291",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "6183723ebc3f4a7c66be379a0d8302379375aba512e63e12f46be3bd0b6005dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "componentApiNames": [
+        "TFT_Item_GiantsBelt",
+        "TFT_Item_GiantsBelt"
+      ],
+      "resultApiName": "TFT_Item_WarmogsArmor",
+      "source": {
+        "jsonPointer": "/items/1399",
+        "modeJsonPointer": "/setData/1",
+        "modeSelector": "setData[mutator === \"TFTSet13\"].items includes apiName",
+        "recordCanonicalSha256": "961fbfa7b65c1d2b62f87115db675fd4fc2e0eaa5236ff43d2bbc6d865f6b858",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    }
+  ],
+  "status": "verified-source-composition-only"
+}

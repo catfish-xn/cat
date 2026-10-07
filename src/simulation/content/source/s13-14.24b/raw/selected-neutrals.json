@@ -1,0 +1,370 @@
+[
+  {
+    "record": {
+      "ability": {
+        "desc": "<spellPassive>Passive:</spellPassive> Occasionally dash around the board.",
+        "icon": "ASSETS/Characters/TFT9_SLIME_Crab/HUD/Icons2D/TFT9_SLIME_Crab_Spell.TFT_Set13.tex",
+        "name": "Swimming Speed",
+        "variables": []
+      },
+      "apiName": "TFT9_SLIME_Crab",
+      "characterName": "TFT9_SLIME_Crab",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_ScuttleCrab.TFT_Set13.tex",
+      "name": "Rift Scuttler",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_ScuttleCrab_Mobile.TFT_Set13.tex",
+      "stats": {
+        "armor": 10.0,
+        "attackSpeed": 0.800000011920929,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 20.0,
+        "hp": null,
+        "initialMana": 0,
+        "magicResist": 10.0,
+        "mana": 100,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT9_SLIME_Crab/HUD/Icons2D/TFT9_SLIME_Crab_Spell.TFT_Set13.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/1",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "40f64b6a9226379fd7d0ee3daad7cd046f9828ac81189f918d51dd5870f0432e",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Slam the target dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage.",
+        "icon": "ASSETS/Characters/TFT_BlueGolem/HUD/TFT_BlueGolem_Spell.tex",
+        "name": "Golem Smash",
+        "variables": [
+          {
+            "name": "Damage",
+            "value": [
+              100.0,
+              300.0,
+              480.0,
+              750.0,
+              1125.0,
+              100.0,
+              100.0
+            ]
+          }
+        ]
+      },
+      "apiName": "TFT_BlueGolem",
+      "characterName": "TFT_BlueGolem",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_BlueGolem.tex",
+      "name": "Golem",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_BlueGolem_Mobile.tex",
+      "stats": {
+        "armor": 40.0,
+        "attackSpeed": 0.550000011920929,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 55.0,
+        "hp": 600.0,
+        "initialMana": 30.0,
+        "magicResist": 40.0,
+        "mana": 100,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_BlueGolem/HUD/TFT_BlueGolem_Spell.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/0",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "14f77e85e4b12625ecf15b7b421f1c572598894c75c4a14f141ea3531fad7e86",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Passive: Attacks splash in a cone behind the target.",
+        "icon": "ASSETS/Characters/TFT_ElderDragon/HUD/Dragon_Square_Elder.tex",
+        "name": "Primordial Breath",
+        "variables": []
+      },
+      "apiName": "TFT_ElderDragon",
+      "characterName": "TFT_ElderDragon",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_ElderDragon.tex",
+      "name": "Elder Dragon",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_ElderDragon_Mobile.tex",
+      "stats": {
+        "armor": 50.0,
+        "attackSpeed": 0.800000011920929,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 900.0,
+        "hp": 10000.0,
+        "initialMana": 0,
+        "magicResist": 50.0,
+        "mana": 0.0,
+        "range": 2.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_ElderDragon/HUD/Dragon_Square_Elder.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/10",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "ee9e7cf876633e0dd37f1a8bbfff145caddefe0899479f9a336686794cdbf31d",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Passive: Heal to full Health whenever an allied Krug dies.",
+        "icon": "ASSETS/Characters/TFT_Krug/HUD/AncientKrug_Square.tex",
+        "name": "Stone Salvage",
+        "variables": []
+      },
+      "apiName": "TFT_Krug",
+      "characterName": "TFT_Krug",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Krug.tex",
+      "name": "Krug",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Krug_Mobile.tex",
+      "stats": {
+        "armor": 50.0,
+        "attackSpeed": 0.800000011920929,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 110.0,
+        "hp": 1200.0,
+        "initialMana": 0,
+        "magicResist": 25.0,
+        "mana": 0.0,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_Krug/HUD/AncientKrug_Square.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/4",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "1a80acd7146922826ea42476643a2a9b44818f886e5a60ca317a5eaae8dbe0c1",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Passive: Leap to the enemy backline at the beginning of combat.",
+        "icon": "ASSETS/Characters/TFT_Murkwolf/HUD/TFT_MurkWolf_Square.tex",
+        "name": "Pack Attack",
+        "variables": []
+      },
+      "apiName": "TFT_Murkwolf",
+      "characterName": "TFT_MurkWolf",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Murkwolf.tex",
+      "name": "Murk Wolf",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Murkwolf_Mobile.tex",
+      "stats": {
+        "armor": 15.0,
+        "attackSpeed": 1.0,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 230.0,
+        "hp": 1300.0,
+        "initialMana": 0,
+        "magicResist": 15.0,
+        "mana": 0.0,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_Murkwolf/HUD/TFT_MurkWolf_Square.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/5",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "6acf94362689961b936596a76aa6580f8f69956be3370af5380eb0a53f2b8def",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Passive: Leap to the enemy backline at the beginning of combat.",
+        "icon": "ASSETS/Characters/TFT_Murkwolf/HUD/TFT_MurkWolf_Square.tex",
+        "name": "Pack Attack",
+        "variables": []
+      },
+      "apiName": "TFT_MurkwolfMini",
+      "characterName": "TFT_MurkwolfMini",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Murkwolf.tex",
+      "name": "Murkwolf",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Murkwolf_Mobile.tex",
+      "stats": {
+        "armor": 15.0,
+        "attackSpeed": 1.0,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 135.0,
+        "hp": 550.0,
+        "initialMana": 0,
+        "magicResist": 15.0,
+        "mana": 0.0,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_Murkwolf/HUD/TFT_MurkWolf_Square.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/6",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "44533e644b58098f3b2776b2cfe533e02e35a017a9f3b7d55f856d5320b2bf0f",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Passive: Gain Attack Speed whenever an allied Razorbeak dies.",
+        "icon": "ASSETS/Characters/TFT_Razorbeak/HUD/Razorbeak_Square.tex",
+        "name": "Furious Flock",
+        "variables": []
+      },
+      "apiName": "TFT_Razorbeak",
+      "characterName": "TFT_Razorbeak",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Razorbeak.tex",
+      "name": "Razorbeak",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Razorbeak_Mobile.tex",
+      "stats": {
+        "armor": 25.0,
+        "attackSpeed": 0.800000011920929,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 230.0,
+        "hp": 2400.0,
+        "initialMana": 0,
+        "magicResist": 25.0,
+        "mana": 0.0,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_Razorbeak/HUD/Razorbeak_Square.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/7",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "e69e71e027e9424ec11debb5f60ae69d7423f3cf8f83a97e91ba72b7e05e2246",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Passive: Gain Attack Speed whenever an allied Razorbeak dies.",
+        "icon": "ASSETS/Characters/TFT_Razorbeak/HUD/Razorbeak_Square.tex",
+        "name": "Furious Flock",
+        "variables": []
+      },
+      "apiName": "TFT_RazorbeakMini",
+      "characterName": "TFT_RazorbeakMini",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Razorbeak.tex",
+      "name": "Razorbeak",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_Razorbeak_Mobile.tex",
+      "stats": {
+        "armor": 25.0,
+        "attackSpeed": 0.800000011920929,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 180.0,
+        "hp": 1450.0,
+        "initialMana": 0,
+        "magicResist": 25.0,
+        "mana": 0.0,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_Razorbeak/HUD/Razorbeak_Square.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/8",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "da00028e43f972349749d673ab605825ee52ea678c88a6f8872b0f14e5acefe5",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  },
+  {
+    "record": {
+      "ability": {
+        "desc": "Combat start: Charge forward, dealing <magicDamage>@MaxHealthPct*100@%</magicDamage> max Health magic damage and stunning enemies.",
+        "icon": "ASSETS/Characters/TFT_RiftHerald/HUD/TFT9_RiftHerald_Square.tex",
+        "name": "Void Charge",
+        "variables": [
+          {
+            "name": "MaxHealthPct",
+            "value": [
+              0.5,
+              0.5,
+              0.5,
+              0.5,
+              0.5,
+              0.5,
+              0.5
+            ]
+          }
+        ]
+      },
+      "apiName": "TFT_RiftHerald",
+      "characterName": "TFT_RiftHerald",
+      "cost": 1,
+      "icon": "ASSETS/UX/TFT/ChampionSplashes/TFT_RiftHerald.tex",
+      "name": "Rift Herald",
+      "role": null,
+      "squareIcon": "ASSETS/UX/TFT/ChampionSplashes/TFT_RiftHerald_Mobile.tex",
+      "stats": {
+        "armor": 100.0,
+        "attackSpeed": 1.0,
+        "critChance": 0.25,
+        "critMultiplier": 1.399999976158142,
+        "damage": 600.0,
+        "hp": 10000.0,
+        "initialMana": 0,
+        "magicResist": 100.0,
+        "mana": 0.0,
+        "range": 1.0
+      },
+      "tileIcon": "ASSETS/Characters/TFT_RiftHerald/HUD/TFT9_RiftHerald_Square.tex",
+      "traits": []
+    },
+    "source": {
+      "jsonPointer": "/setData/1/champions/9",
+      "modeSelector": "setData[mutator === \"TFTSet13\"].champions",
+      "recordCanonicalSha256": "156e53cfa2137b69208bf88fbe3e654d90461f1eb642aff94536625d60f45a4a",
+      "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+    },
+    "status": "candidate-only-not-encounter-confirmation"
+  }
+]

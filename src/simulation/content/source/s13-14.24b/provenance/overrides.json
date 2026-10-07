@@ -1,0 +1,90 @@
+{
+  "status": "partial-official-anchor-review-no-runtime-overrides",
+  "appliedOverrides": [],
+  "reason": "No runtime normalization or patch mutation is authorized by source presence alone. All original fields are retained unchanged.",
+  "sourceObservations": [
+    {
+      "apiName": "TFT_Item_BrambleVest",
+      "field": "effects.PercentMaxHP",
+      "rawValue": 0.07000000029802322,
+      "reviewStatus": "verified-already-contained-do-not-apply-again",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+      "officialSection": "ITEMS",
+      "reviewedUtcDate": "2026-10-07"
+    },
+    {
+      "apiName": "TFT_Item_UnstableConcoction",
+      "field": "effects.StatOmnivamp_NotStatBar",
+      "rawValue": 0.11999999731779099,
+      "reviewStatus": "verified-already-contained-do-not-apply-again",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+      "officialSection": "ITEMS",
+      "reviewedUtcDate": "2026-10-07"
+    }
+  ],
+  "officialReferenceForFutureReview": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+  "otherVerifiedAnchors": [
+    {
+      "apiName": "TFT_Item_BlueBuff",
+      "facts": "Mana 30; after-cast ManaRefund 10; old maximum-Mana-reduction mechanic absent",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "officialSection": "CORE ITEMS",
+      "status": "already-contained-no-change-needed"
+    },
+    {
+      "apiName": "TFT_Item_UnstableConcoction",
+      "facts": "HealthThreshold 0.5; above doubles AD/AP, below doubles omnivamp; equality and evaluation timing unresolved",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "officialSection": "CORE ITEMS",
+      "status": "already-contained-no-change-needed"
+    },
+    {
+      "apiName": "TFT_Item_PowerGauntlet",
+      "facts": "base damage amp 10%, additional 15% after damaging a shield, Duration 3; raw hash key attribution is corroborated, not script-symbol-decoded",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "officialSection": "CORE ITEMS",
+      "status": "already-contained-no-change-needed"
+    },
+    {
+      "apiName": "TFT_Item_Deathblade",
+      "facts": "AD approximately 0.55",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "officialSection": "CORE ITEMS",
+      "status": "already-contained-no-change-needed"
+    },
+    {
+      "apiName": "TFT_Item_HextechGunblade",
+      "facts": "AD approximately 0.20, AP 20, AllyHealing 0.25, StatOmnivamp approximately 0.15",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "officialSection": "CORE ITEMS",
+      "status": "already-contained-no-change-needed"
+    },
+    {
+      "apiName": "TFT_Item_Quicksilver",
+      "facts": "SpellShieldDuration 18, ProcAttackSpeed approximately 0.03, ProcInterval 2",
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "officialSection": "CORE ITEMS",
+      "status": "already-contained-no-change-needed"
+    }
+  ],
+  "conflicts": [
+    {
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "field": "effects.DamageAmp",
+      "rawValue": 0.20000000298023224,
+      "officialSource": "https://teamfighttactics.leagueoflegends.com/en-gb/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "officialFact": "conditional extra damage amp changed from 25% to 15%; new base damage amp 5%",
+      "rawDescription": "Gain @DamageAmp*100@% additional Damage Amp against enemies with more than @HealthThreshold@ max Health.",
+      "status": "unresolved-do-not-rewrite-or-freeze",
+      "boundaryConflict": "Official 1750+ versus raw more than 1750; equality unknown"
+    }
+  ],
+  "bUpdateReview": {
+    "officialSource": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+    "sections": [
+      "December 17 B patch",
+      "December 10/11 corrections"
+    ],
+    "result": "No listed changes to these 44 ordinary item fields found; this is not complete script verification"
+  }
+}
