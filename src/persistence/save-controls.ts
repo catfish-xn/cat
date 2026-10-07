@@ -11,14 +11,14 @@ export interface SaveControlsView {
   startup: boolean; canContinue: boolean; seed: number; runId: string;
   busy: boolean; status: SaveStatus | null; hasActive: boolean;
 }
-export interface SaveControls { update(view: SaveControlsView): void; dispose(): void }
-/** Stable DOM: updates never replace seed/file inputs or interrupt a user's typing. */
+export interface SaveControls { update(view: SaveControlsView): void; releaseRunResources(): void; dispose(): void }
+/** Ordinary updates retain editing owners; an accepted run handoff releases the old undo history. */
 export function createSaveControls(host: HTMLElement, callbacks: SaveControlsCallbacks): SaveControls {
   const root = document.createElement('section'); root.className = 'm6-save-controls';
   root.setAttribute('aria-label', '对局与存档');
   const title = document.createElement('h2'); title.textContent = '开始与继续'; root.append(title);
   const seedLabel = document.createElement('label'); seedLabel.textContent = '固定种子 '; seedLabel.htmlFor = 'm6-seed-input';
-  const seed = document.createElement('input'); seed.id = 'm6-seed-input'; seed.dataset.debug = 'm6-seed-input'; seed.type = 'text'; seed.inputMode = 'numeric'; seed.placeholder = '0 至 4294967295'; seed.setAttribute('aria-label', '固定种子'); seed.style.minHeight = '44px'; seed.style.maxWidth = '100%'; seed.style.boxSizing = 'border-box';
+  let seed = document.createElement('input'); seed.id = 'm6-seed-input'; seed.dataset.debug = 'm6-seed-input'; seed.type = 'text'; seed.inputMode = 'numeric'; seed.placeholder = '0 至 4294967295'; seed.setAttribute('aria-label', '固定种子'); seed.style.minHeight = '44px'; seed.style.maxWidth = '100%'; seed.style.boxSizing = 'border-box';
   seedLabel.append(seed); root.append(seedLabel);
   const buttons: HTMLButtonElement[] = [];
   const listeners: (() => void)[] = [];
@@ -61,5 +61,20 @@ export function createSaveControls(host: HTMLElement, callbacks: SaveControlsCal
     const s = view.status;
     status.textContent = s?.kind === 'saving' ? '保存中…' : s?.kind === 'saved' ? `最近保存成功：${new Date(s.at).toLocaleTimeString()}` : s?.kind === 'failed' ? `保存失败：${s.message}。仍可导出当前局。` : '';
   }
-  return { update(next) { view = { ...next }; render(); }, dispose() { disposed = true; for (const remove of listeners) remove(); root.remove(); } };
+  return {
+    update(next) { view = { ...next }; render(); },
+    releaseRunResources() {
+      if (disposed) return;
+      // Detaching the old editable owner releases its browser undo/redo entries.
+      // Preserve the field's value, attributes, focus and selection; callbacks read the new owner.
+      const previous = seed, focused = document.activeElement === previous;
+      const start = previous.selectionStart, end = previous.selectionEnd, direction = previous.selectionDirection;
+      seed = previous.cloneNode(true) as HTMLInputElement;
+      seed.value = previous.value;
+      previous.replaceWith(seed);
+      if (focused) seed.focus({ preventScroll: true });
+      if (start !== null && end !== null) seed.setSelectionRange(start, end, direction ?? undefined);
+    },
+    dispose() { disposed = true; for (const remove of listeners) remove(); root.remove(); },
+  };
 }

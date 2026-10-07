@@ -1,8 +1,19 @@
 # M6-MEM-01：生命周期测量中的持续保留
 
-记录日期：2026-10-07。状态：**M6 已有问题，继续调查；按用户决定，不以此问题阻塞 M7 合并。** 此决定不代表内存问题已修复，不豁免其他 CI 失败，也不授权合并分支。
+记录日期：2026-10-07。状态：**M6 已有问题；用户已授权在 `feat/m8-b0-baseline` 单独修复，修复实现与验证进行中。** B3 第二批已于 `eb9c03c` 通过复审签收，R5 独立跟踪、不阻塞该签收；历史 CI 失败保留，不授权合并分支。
 
-**用户后续约束：目前只做定位，不提交内存修复代码。等 M7 合并进 main 后，再从最新 main 建立修复分支。** 当前独立分支仅保留诊断脚本、证据和记录；不在旧 M6 基线上实施修复，也不因此修改 M7。
+此前“仅定位、等待 M7 合并后再修复”的阶段限制按历史保留；本次用户明确要求基于当前 `feat/m8-b0-baseline` 修复，并允许为释放对象做最小范围修改。调查分支 `codex/m6-lifecycle-retention@fcf9199` 仅用作定位依据，不合并该旧 M6 分支；不修改冻结合同、B3 战斗机制代码、视觉、布局、操作流程、原内存门禁或测试路径。
+
+
+## 本次独立修复（2026-10-07）
+
+撤销记录的所有者是跨局复用的 seed 文本输入。真实浏览器中填写五次同值产生5个UndoStep，移除旧编辑宿主后为0。`SaveControls.releaseRunResources()` 仅在 `MatchApplication.install()` 成功接管新局/导入/继续存档后更新输入宿主，保留值、属性、焦点、选择范围和方向；普通刷新、取消或失败不更换宿主，当前局内Ctrl+Z仍可用。销毁控件时原宿主也移除，释放对应撤销/重做记录；不调用全局清空撤销栈或更改原测试输入。
+
+媒体查询链已进一步缩小到Chromium的[UA表头分页规则](https://github.com/chromium/chromium/blob/main/third_party/blink/renderer/core/html/resources/html.css)：`thead`的`break-inside: if(media(overflow-block: paged): avoid;)`在重算时产生新查询；[StyleEngine](https://github.com/chromium/chromium/blob/main/third_party/blink/renderer/core/css/style_engine.cc)的functional媒体结果表强引用这些查询。独立表格隐藏/显示30次，MediaQueryFeatureExpNode从1到31；新回归在真实StatsPanel中从11到41，复现旧问题。
+
+StatsPanel以一份面板持有的MediaQueryList保持同一分页语义：屏幕为auto、分页打印为avoid，监听媒体变化，销毁时解除监听。这避免每次重算生成留在文档缓存中的新查询，而不改变最终显示/分页规则。真实回归30次重算为11→11；销毁后MediaQueryList1→0、查询节点11→10。独立最小对照中对应查询最终为0；不是通过改变媒体环境或清空全页缓存掩盖增长。
+
+`tests/m6-retention-browser.cjs` 在实现前分别因缺少交接释放和媒体节点41≠11失败，实现后两项通过；同时核对字段值/属性/焦点/选择、固定种子回调读取新宿主、同局撤销和销毁、屏幕/打印语义。typecheck通过，相关5文件/72测试通过；构建96模块、6.88秒通过，保留既有chunk提示。原完整preview生命周期的独立快照诊断已完成：2预热/30组合循环，UndoStep0→0、MediaQueryFeatureExpNode9→9、MediaQueryList1→1，源码指纹前后一致；原脚本退出0（该诊断增长524,072B，快照扰动测量，不计入六次正式测量）。接着在干净修复提交上运行同机dev/preview各3次原生命周期验收（2预热/30循环、无快照/额外预热），最后在精确最终SHA上顺序触发两次完整CI，逐次等待全部作业结束。正式脚本、阈值、路径与冻结合同保持原样；后续结果绑定验证记录，不用诊断快照代替门禁。
 
 ## 出现在哪个版本
 

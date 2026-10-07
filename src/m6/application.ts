@@ -149,6 +149,7 @@ export class MatchApplication {
     this.mode = 'active'; this.ignoreNextDelta = true;
     this.existing = null;
     this.hooks.replace(this.session); this.refreshRecords();
+    this.controls.releaseRunResources();
   }
   private async replaceCandidate(make: () => Promise<SaveEnvelope>, allowUnsavedInitial = false) {
     if (this.busy || this.mode === 'replay') return;
