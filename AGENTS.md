@@ -59,10 +59,14 @@ npm run preview        # 预览 dist/，需先 build
 
 # 分支与部署
 
-- main 是 M5。M6 在 `feat/m6-product-replay`，M7（表现层）在 `claude/friendly-darwin-pak00a`，均未合入 main。开工前先核对分支、HEAD 和工作区，以 Git 为准。
-- Pages：正式版 `/cat/` 跟随 main；`/cat/m7/` 是固定提交快照，M7 新提交不会自动更新。M7 图片路径用 `import.meta.env.BASE_URL`，不要写成 `/assets/...`。
+- main 已包含 M6 和 M7（PR #8）；M7 开发分支 `claude/friendly-darwin-pak00a` 已删除。开工前先核对分支、HEAD 和工作区，以 Git 为准。
+- Pages：正式版 `/cat/` 跟随 main，已包含 M7；`/cat/m7/` 是旧 M7 固定提交快照。图片路径用 `import.meta.env.BASE_URL`，不要写成 `/assets/...`。
 - `artifacts/`、`dist/` 等生成物不提交。
 
 # 详细资料
 
 完整的文件职责表、验收命令、CI 说明、里程碑记录和已知问题见 `docs/PROJECT_GUIDE.md`，需要时再读，不必每次通读。
+
+# 平台优先级
+以桌面 Chromium 为主。手机不再作为优化目标，不要为手机新增布局适配或专门测试；
+现有的手机/触摸测试保持能通过即可，不必扩展。
