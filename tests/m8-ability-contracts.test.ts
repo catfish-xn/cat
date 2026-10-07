@@ -26,7 +26,7 @@ describe('all existing champion mechanisms remain representable (data contracts 
       expect(encoded('darius')).toContain('"flat":26'); // exact total101 distributed26+25+25+25
     },
     lux: () => {
-      expect(abilityPlans.lux.operations[0]).toMatchObject({ targeting: { selector: { relation: 'ally', excludeSelf: false, order: 'hp-absolute-id' } } });
+      expect(abilityPlans.lux.operations[0]).toMatchObject({ targeting: { selector: { relation: 'ally', excludeSelf: false, order: 'hp-absolute-distance-id' } } });
       expect(abilityPlans.lux.operations[1]).toMatchObject({ armed: { mode: 'append-ability-packet', consume: 'next-completed-attack', usesBasicCrit: false } });
     },
     zyra: () => {
@@ -36,7 +36,7 @@ describe('all existing champion mechanisms remain representable (data contracts 
     },
     tristana: () => expect(abilityPlans.tristana.operations[1]).toMatchObject({ kind: 'overkill-next-tick', inherit: 'after-mitigation', oncePerAction: true, freezeTargetOnCommit: true, recursive: false, growthOnCommitBps: 125 }),
     urgot: () => {
-      expect(abilityPlans.urgot.operations[1]).toMatchObject({ targeting: { selector: { anchor: 'primary-target', radius: 1 } }, effects: [{ damageType: 'physical' }, { status: { kind: 'sunder', magnitudeBps: 2000, activation: 'next-tick', duration: { ticks: 120 } } }] });
+      expect(abilityPlans.urgot.operations[0]).toMatchObject({ targeting: { selector: { anchor: 'primary-target', radius: 1 } }, primaryEffects: [{ damageType: 'physical' }, { status: { kind: 'sunder', magnitudeBps: 2000, activation: 'next-tick', duration: { ticks: 120 } } }] });
     },
     rell: () => expect(abilityPlans.rell.operations[1]).toMatchObject({ targeting: { kind: 'path', intercept: 'all-enemies' }, effects: [{}, { kind: 'transfer-stat', activation: 'next-tick', stats: ['armor', 'magicResist'], applicationIdentity: 'action-target', persistAfterTargetDeath: true, duration: { ticks: 1200 } }] }),
     leona: () => {

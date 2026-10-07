@@ -6,7 +6,7 @@ const source: Source = { ownerId: 'u1', sourceKind: 'item', definitionId: 'TFT_I
 const burn: PeriodicTask = {
   key: '["c1","u1","item","TFT_Item_Morellonomicon","i1",0,null,"u2","source"]', source, targetId: 'u2', nextPulseAtTick: 20,
   periodTicks: 20, endsAtTick: 200, pulseOrdinal: 0, pulseLimit: 10,
-  remainderNumerator: 0, remainderDenominator: 10000,
+  remainders: [],
   finalPulse: 'before-expiry', onSourceDeath: 'persist-attached', onTargetDeath: 'cancel',
   program: { definitionId: 'burn', targetSnapshot: 'once-per-pulse', selector: { primary: 'normal', candidates: 'bound-target', relation: 'enemy', anchor: 'holder', radius: null, maxTargets: 1, excludeSelf: true, excludePrimary: false, distinct: true, order: 'distance-id', sample: 'each-pulse' }, effects: [{ kind: 'damage', damageType: 'true', delivery: 'item-burn', critEligibility: 'never',
     amount: { flat: 0, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 100, missingHpBps: 0, actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'target', sample: 'each-pulse', cap: null } }] },
@@ -40,9 +40,9 @@ describe('M8 B2 data expressiveness (not combat execution)', () => {
   it('can retain a weaker source and its expiry while exposing the stronger status', () => {
     const application = { activation: 'next-tick', kind: 'shred', magnitudeBps: 3000, duration: { kind: 'ticks', ticks: 100 }, stackPolicy: { kind: 'strongest-category', category: 'shred', retainSuppressed: true }, removable: true, polarity: 'harmful', damageFilter: null, onEnd: null } as const;
     const group: StatusGroup = { targetId: 'u2', kind: 'shred', effectiveSourceKey: 'strong', effectiveMagnitudeBps: 5000, nextPulseAtTick: null,
-      contributions: [{ key: 'weak', source, targetId: 'u2', appliedAtTick: 0, expiresAtTick: 100, endRewardConsumed: false, application }, { key: 'strong', source: { ...source, instanceId: 'i2' }, targetId: 'u2', appliedAtTick: 20, expiresAtTick: 60, endRewardConsumed: false, application: { ...application, magnitudeBps: 5000 } }] };
+      contributions: [{ key: 'weak', source, targetId: 'u2', appliedAtTick: 1, expiresAtTick: 101, endRewardConsumed: false, application }, { key: 'strong', source: { ...source, instanceId: 'i2' }, targetId: 'u2', appliedAtTick: 21, expiresAtTick: 61, endRewardConsumed: false, application: { ...application, magnitudeBps: 5000, duration: { kind: 'ticks', ticks: 40 } } }] };
     expect(JSON.parse(JSON.stringify(group))).toEqual(group);
-    expect(group.contributions.map(x => x.expiresAtTick)).toEqual([100, 60]);
+    expect(group.contributions.map(x => x.expiresAtTick)).toEqual([101, 61]);
   });
   it('expresses survival gates and max-health gains separately from healing', () => {
     const survived: SurvivalSample = { unitId: 'u1', tick: 40, hpBeforeDamage: 700, hpAfterDamage: 600, maxHpBeforeThresholdEffects: 1000, survivedDamageBatch: true, receivedPositiveDamage: true };

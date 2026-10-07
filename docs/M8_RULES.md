@@ -1,6 +1,6 @@
-# M8 B2 规则与数据合同（m8-b2-v2-review，审计修订待复审）
+# M8 B2 规则与数据合同（m8-b2-v3-review，审计修订待复审）
 
-修订日期：2026-10-07；审计基线：`feat/m8-b0-baseline@0759c4b`。撤回上一版“合同已冻结、可直接接入”的签收表述，本版提交复审。
+修订日期：2026-10-07；复审基线：`feat/m8-b0-baseline@317186b`。撤回上一版“合同已冻结、可直接接入”的签收表述，本版提交复审。
 本次只交付类型、合同和可序列化的小样例，**没有实现或启用 B3–B9**。当前程序仍执行 M7/M5 规则及版本。未来实现以本合同、B1 数值归档和逐项来源为依据；未列变更沿用 [M5_RULES.md](../M5_RULES.md) R6。
 
 用户批准原 GS-01–04、TG-01 及审计中的另外41条项目约定，共46条；批准不代表官方脚本证明。B-07 红霸符只启用选定3%增伤、不加射程；B-10 飓风暂用无距离上限，均继续待历史核验。原始 effects、原档 hash 和配方不改；来源再生成不能改变 runtimeEligible=false。归档修正见 [项目约定清单](M8_PROJECT_CONVENTIONS_REVIEW.md)。
@@ -37,7 +37,7 @@
 - AD平加/百分比、AP、攻速和暴击独立来源累加；AD沿用 `(baseAD+flatAD)*(10000+sum(adBps))/10000`。攻速沿用基础每秒攻击×合计Bps，间隔向上取整且至少1tick，不重写正在等待的剩余冷却。暴击率截断到[0,10000]，无溢出转换。
 - 百分比减抗同类取强，平坦抗性修饰相加，最终抗性下限0。物理/魔法按抗性→增伤相加→减伤取强的既有顺序逐包取整；普通正伤害最终至少1。相同数值的 hash/命名字段只启用 B1 所选一次。巨杀条件每包读目标当前maxHp。
 - 本项目 true 伤害绕过抗性和常规伤害减免（含坚韧），仍受攻击方增伤、完全伤害防止及护盾影响；完全防止为0，不抬到1。burn 的比例金额最终向下取整，低于1可为0；B-02 中立怪上限100在每次 burn pulse 的增伤后封顶，再进入防止/盾。该真伤资格是 B2 项目执行选择，不声称官方语义。
-- Amount 先合并 flat、AD/AP/HP、actualManaSpentBps及actualDamageBps项再取整；后两项必须关联完成施法收据或合资格伤害结果，缺上下文时拒绝，不默认为0。周期保留有理数余数：如1001HP的1%每跳为10.01，连续100跳累计1001，不每个仿真tick丢小数。余数属于周期来源；强弱切换不挪用其他来源余数。封顶或防止掉的整数不作为下一跳欠账。
+- Amount 先合并 flat、AD/AP/HP、actualManaSpentBps及actualDamageBps项再取整；后两项必须关联完成施法收据或合资格伤害结果，缺上下文时拒绝，不默认为0。周期保留有理数余数：如1001HP的1%每跳为10.01，连续100跳累计1001，不每个仿真tick丢小数。余数以完整任务来源为外层身份，按稳定program效果序号＋实际目标ID分别保存为PeriodicTask.remainders；禁止跨目标、跨效果或跨来源借用。强弱切换不挪用其他来源余数。封顶/完全防止时丢弃超额整数并清除该账户小数，不能作为下一跳欠账；离圈/死亡/结束规则见§15 R1。
 - 正义的AD/AP在动作金额取样时、吸血在治疗阶段开始前取样；恰好50%均不翻倍。坚定之心按稳定包序的虚拟当前HP每包前取样，>50%为15%，否则8%；不把动态条件冻结到开战。
 - HP百分比比较用整数交叉相乘；任何中间乘积超安全整数界限拒绝，不静默浮点近似。正式 B3 可用 BigInt 中间运算，但持久化仍保存安全整数/有理数分子分母。
 
@@ -52,7 +52,9 @@
 5. 同步提交本批HP。**饮血、圣盾、夜刃、挑战护手统一读取本批伤害后、治疗前的 SurvivalSample**：本批receivedPositiveDamage（含盾吸收）且hpAfterDamage>0，并且 ≤ 各自阈值；不是只有从阈值上方穿越才触发。先冻结所有资格和 maxHp，再按来源key执行，防止血手改HP让同批饮血资格随槽位变化。每件每场一次，先记录 consumed 再发效果。血手另在开战取初始样本检查一次（这次豁免receivedPositiveDamage）；其余三件只响应伤害。
 6. 仍存活者获得阈值盾/净化/属性，再结算已规划直接治疗与合资格吸血。所有同批吸血比例从治疗阶段入口HP快照计算，不能前一个治疗改变同批后一个正义比例。治疗按source key→targetId→packetId结算封顶。死者不复活，死亡来源不自疗，也不经枪刃治疗队友。
 7. 幸存者获得法力；记录击杀/助攻/成长。助攻是本场曾对目标造成正实际伤害（盾也计）的来源ownerId集合，无额外时间窗；装备伤害可留归因，不因此获攻击/施法触发资格。
-8. 提交普通延迟控制/属性效果，从下一tick生效，完整持续时间从实际startsAtTick计。清理死亡目标及其可取消任务，更新光环；先消灭判定，再超时。Match处理掉落和结算后一次原子提交。
+8. 提交普通延迟控制/属性效果，从下一tick生效，完整持续时间从实际startsAtTick计（已生效同源刷新保留原start，期限按本次请求start＋duration延长，详见R4）。清理死亡目标及其可取消任务，更新光环；先消灭判定，再超时。Match处理掉落和结算后一次原子提交。
+
+明确的既有即时例外（不能推广给所有装备）：开战常驻属性/自盾；技能规划阶段蕾欧娜减伤、范德尔双抗/引导、克格莫本场攻速与射程、洛里斯分担及所有既有引导；已有鬼索攻击后成长；维护阶段大天使/水银周期成长及夜刃自然结束奖励；伤后存活阶段已批准的阈值效果。装备包中的电刀/轻语/破防者见步骤4。除此之外普通新控制/属性下一tick生效，**泰坦满层双抗与纳什攻速没有即时豁免**。同一有限效果不得因为在样例helper中省略字段而获得另一套时序。
 
 **手算边界**：1000maxHp、700HP，单包300后400HP，饮血触发250盾；两包同tick400＋400后0HP，四种保命均不触发，不能让中途300HP的临时盾救活。两包200＋200后300HP，两件饮血各250盾，供后续tick使用。血手1000maxHp/600HP触发变1250/850；这是maxHpChanged，不受重伤、不产生heal事件。血手与饮血同时合格时，饮血使用变化前maxHp算盾。
 
@@ -187,7 +189,7 @@ M8A/M8B内部批次不发布短命格式；本次不改旧常量/运行digest。
 
 D2-A：M7 format1/schema5只读保全、可原样导出，不在M8恢复或回放，不迁移、不重标版本。新IndexedDB名称冻结为`hex-autobattler-m8`，独立物理schema1；旧库使用原版本只读导出器，不能以新版materialize包装旧内容。M8新局/最近3局淘汰不触碰旧库。文件识别先版本路由，再相应校验；失败保留活动会话、槽、epoch/revision。
 
-新增恢复校验至少覆盖：来源合法性/parent链/唯一key、整数安全范围、半开期限与末跳、nextPulse/余数、同类贡献/有效值一致、每动作次数/ICD/一次标记、各RNG状态与词数、roll组合/pool等级/临时子件对齐、掉落状态/资源收据/保底对齐、完整单调事件及历史归属。禁止恢复时重抽、重触发、重发奖励。有限有理数须0<=remainderNumerator<denominator，denominator>0；不能把任意JSON往返视为验证成功。
+新增恢复校验至少覆盖：来源合法性/parent链/唯一key、整数安全范围、半开期限与末跳、nextPulse/余数、同类贡献/有效值一致、每动作次数/ICD/一次标记、各RNG状态与词数、roll组合/pool等级/临时子件对齐、掉落状态/资源收据/保底对齐、完整单调事件及历史归属。禁止恢复时重抽、重触发、重发奖励。周期账户须按[effectIndex,targetId]唯一、完整任务来源一致，0<=numerator<denominator且denominator>0，效果必须是冻结程序中的金额效果、目标必须属于本战斗；不能把任意JSON往返视为验证成功。
 
 回放BattleRecord保留开战前context、tick0 initial、完整events、endTick/nextEventSeq/result/hash；新增版本元数据和roundId选择同版本校验器。重演核对临时装备、status/周期/法力/伤害来源等完整状态，seek/倍速只影响隔离视图。新伤害事件`outcome`载荷及cast.receipt在replay2启用；其余targetChanged/kill/growth/effectTriggered/movement/attack/death/combatFinished沿用现有字段，旧汇总damage/shieldChanged在M8账本不再发，使用逐包/逐层权威事件，B3/B9同步聚合器与验证器；不得静默给旧事件格式换名字。stats分列physical/magic/true HP伤害、盾吸收、actual治疗/overheal；血手不记治疗。40tick保存、100000事件/战、256MiB、最近3局和现有性能门槛保持。
 
@@ -199,7 +201,7 @@ B3需要把本文所有手算边界变成实际执行器测试，尤其同tick�
 
 ## 12. 验证记录
 
-以下表格是上一版0759c4b的历史记录，不能作为本次审计修订通过的证据。本次验证记录在本节末单列。环境：Node24.21.0、npm11.19.0；使用与仓库package-lock完全一致的已有依赖。
+以下表格是上一版0759c4b的历史记录，不能作为本次审计修订通过的证据。各轮验证记录分开标注，本次R1–R4结果见文末。环境：Node24.21.0、npm11.19.0；使用与仓库package-lock完全一致的已有依赖。
 
 | 命令/检查 | 结果 |
 | --- | --- |
@@ -213,7 +215,7 @@ B3需要把本文所有手算边界变成实际执行器测试，尤其同tick�
 先前两次无最终输出的全量尝试主动中止，不作为通过/失败证据；上述完成运行才是0759c4b的全量结论。未运行B10浏览器/完整性能验收，也未实现B3战斗规则；不以合同样例冒充装备战斗测试。生产运行入口、当前版本和digest均未变，未修改表现层。
 
 
-本次审计修订验证（0759c4b之后的工作树，2026-10-07）：
+上一轮317186b审计修订的历史验证（不是本次R1–R4的验证结果）：
 
 | 命令/检查 | 本次结果 |
 | --- | --- |
@@ -272,13 +274,13 @@ CounterDefinition指定计数事件、每事件listener、资格、source-instan
 
 电刀attacks监听本人attack-completed（完成但被格挡也计），cap=null、firstAt=3/everyN=3。攻击1/2/3/4/5/6的计数分别1/2/3/4/5/6，发效果为否/否/是/否/否/是。selector.primary=first-required先加入仍合法的主目标，再以主目标为距离参照选至多3个其他不同目标；主目标失效整次跳过。固定集合上每目标先立即施加3000Bps shred100tick，再35魔伤。
 
-泰坦同一实例stacks计本人完成攻击和本人受到正实际伤害，cap25；ModifierValue.counter表达每层200Bps AD及2AP。counter-updated的stack-threshold-once(at25,rewardId=cap-resists)发双抗20至本场，先存consumedRewards。第24/25/26次合资格事件：层数24/25/25，AD4800/5000/5000Bps，AP48/50/50，新增双抗0/20/0。读档保留25及消费标记，不重发；多件分别计数。
+泰坦同一实例stacks计本人完成攻击和本人受到正实际伤害，cap25；ModifierValue.counter表达每层200Bps AD及2AP。counter-updated的stack-threshold-once(at25,rewardId=cap-resists)发双抗20至本场，先存consumedRewards。第24/25/26次合资格事件：层数24/25/25，AD4800/5000/5000Bps，AP48/50/50，新增双抗奖励请求0/20/0，奖励下一tick生效，不能保护同批后续包（R4）。读档保留25及消费标记，不重发；多件分别计数。
 
 ### A05 事件主体、目标与施法收据绑定
 
 TriggerContext.actorId是事件发起者，targetId是该事件承受者（可空）；cast-completed必须有匹配actor/actionSeq/tick的CastReceipt，其他事件cast=null。listener先以subject指定actor或target，按相对持有者敌我/六角距离过滤；完成施法用receipt.completionCell，不用后来移动位置。self精确匹配ownerId；ally含自身，enemy不含友军。selector.candidates=event-actor/event-target只产生该事件的唯一主体候选，之后过滤，不能退回全棋盘；空target则空集。actualManaSpentBps读取这一收据，DamageContext保存其actionSeq。
 
-持有者(3,4)，A(3,3)未施法，B(3,2)完成耗蓝80：离子监听actor/enemy/withinHexes2，选择event-actor B，仅B获得80×160%=128原始魔伤；更近A不是候选。纳什监听actor/self且选self，只在持有者自己的完成施法时加6000Bps攻速100tick。两者不共享“附近敌人任选”的选择器，也无需装备名分支。
+持有者(3,4)，A(3,3)未施法，B(3,2)完成耗蓝80：离子监听actor/enemy/withinHexes2，选择event-actor B，仅B获得80×160%=128原始魔伤；更近A不是候选。纳什监听actor/self且选self，只在持有者自己的完成施法时请求6000Bps攻速100tick，下一tick生效，同件刷新、不叠加（R4）。两者不共享“附近敌人任选”的选择器，也无需装备名分支。
 
 ### A06 有限状态结束效果
 
@@ -288,7 +290,7 @@ StatusApplication.onEnd附在一个明确的状态贡献key上，StatusContribut
 
 ### A07 周期程序、动态选区与完整序列
 
-PeriodicTask.program包含冻结definitionId、selector与有序effects[]，targetSnapshot=once-per-pulse。每次到期先选一次存活合法目标集，按稳定序对每目标执行完整序列；不能治疗一次选敌、坚韧再选敌。每跳的Amount.sample=each-pulse在该跳入口取样。任务targetId对持有者时钟是持有者，不限制program的动态多目标；对burn附着时钟则为受害者且候选bound-target。恢复保存整个程序和相位，并校验与冻结内容一致。
+PeriodicTask.program包含冻结definitionId、selector与有序effects[]，targetSnapshot=once-per-pulse。每次到期先选一次存活合法目标集，按稳定序对每目标执行完整序列；不能治疗一次选敌、坚韧再选敌。每跳的Amount.sample=each-pulse在该跳入口取样。任务targetId对持有者时钟是持有者，不限制program的动态多目标；对burn附着时钟则为受害者且候选bound-target。恢复保存整个程序、相位和按实际目标/金额效果分开的remainders，并校验与冻结内容一致（R1）。
 
 救赎period100，首次100；selector ally/holder/radius1/includeSelf，先治疗缺血15%上限1000再施加坚韧1000Bps100tick。99时B入圈、C在圈外，100的集合[u1,B]；199时B出圈、C入圈，200的集合[u1,C]。B离圈不撤销100施加的状态，其101起至201前有效；200不再给B治疗/续期。若来源150死亡，onSourceDeath=cancel阻止200及以后pulse，已施加于B的状态仍存续至201；死亡清理不追溯撤销别人的附着状态。多件救赎各自时钟与治疗，坚韧贡献仍按同类取强。
 
@@ -326,7 +328,7 @@ U7使用LegacyRecordAccess.listLegacyRecords()/exportLegacy(request)，稳定Leg
 
 ## 14. 现有19技能表达自查
 
-逐项对照现有 `combat-s13-abilities.ts`、`combat-s13.ts`、`combat-s13-state.ts` 及内容目录；不修改这些生产文件。下面的代表性已取样数据是机制样例，不是第二套星级/平衡数值目录。实际数值及星级继续从原内容取样。`tests/m8-ability-contracts.test.ts`校验目录19项完整覆盖，并逐项断言特有机制。
+初版机制名录及代表性字段检查如下；这不是“完整行为等价”证明。复审发现并修正的排序遗漏、直接调用旧代码的验收向量见§15 R2。逐项对照现有 `combat-s13-abilities.ts`、`combat-s13.ts`、`combat-s13-state.ts` 及内容目录；不修改这些生产文件。下面的代表性已取样数据是机制样例，不是第二套星级/平衡数值目录。实际数值及星级继续从原内容取样。`tests/m8-ability-contracts.test.ts`校验目录19项完整覆盖，并逐项断言特有机制。
 
 AbilityPlan保留施法收据、取样数据、有限operations/triggers；ActionTask记录绝对执行tick、source/actionSeq/ordinal、消费标记、取消规则及replaceGroup。replaceGroup非空时同组新计划替换尚未执行的旧任务。到期任务仅执行一次，保存恢复不再创建/重排任务。task.targeting每次执行选一次，payload内bound-selection引用该集合/中心，不能二次选敌或抽RNG；非任务中的选区在该operation规划时固定。无嵌套schedule。ArmedAttack同来源新授予覆盖尚未消费的一次强化，不叠加额外攻击；控制结束引导但不清除已授予的强化。源死亡/战斗清理移除强化。除明确persist的已提交任务外来源死亡不产生新效果。当前19技能的控制、路径与引导取消语义沿旧规则；新增装备技能暴击授权是已批准的独立M8变更，不改变技能系数、目标、阶段或任务时间。
 
@@ -335,7 +337,7 @@ AbilityPlan保留施法收据、取样数据、有限operations/triggers；Actio
 | 刀妹 | 线性衰减盾60tick；真实吸收独立；耗尽/到期下一规划阶段近身爆发，参见A03 |
 | 麦迪 | 最远选中目标，path首个敌人拦截；24tick引导，射击偏移0/4/9/13/18/23；原目标失效再选最远，控制/死亡取消未来段 |
 | 德莱厄斯 | 近身范围物理+自疗；主目标有限流血20/40/60/80，源死亡/控制不取消；101分成26/25/25/25，同源同目标新施法替换旧跳组 |
-| 拉克丝 | 最低绝对HP友军（含自己）80tick盾；ArmedAttack追加下一次普攻魔法包，一次消费 |
+| 拉克丝 | 绝对HP升序→距持有者距离升序→ID升序的友军（含自己）80tick盾；ArmedAttack追加下一次普攻魔法包，一次消费 |
 | 婕拉 | 主目标魔伤和20tick控制；另2个按距持有者选，excludePrimary，保留列表顺序 |
 | 崔丝塔娜 | 物理主包；继承溢出下一tick固定目标、不递归、每动作一次，提交弹射时成长，参见A02 |
 | 厄加特 | 主目标与其1格副目标物理伤害、2000Bps减甲120tick，减甲下一tick激活 |
@@ -347,9 +349,131 @@ AbilityPlan保留施法收据、取样数据、有限operations/triggers；Actio
 | 伊泽瑞尔 | 主目标1格范围包与主目标追加包分列，目标列表允许主目标重复 |
 | 洛里斯 | 80tick盾/1格50%分担，保护者最低ID，一次分担不重减伤；80tick后以当时最近敌为中心1格爆发，盾提前耗尽不提前爆发 |
 | 娜美 | 主目标再3跳，每次以上一目标为中心3格取最近未命中者，无重复 |
-| 库奇 | 21/21/35导弹，偏移n；当前主目标及2格集合按ID轮转，失效回退最近；每第7颗×7，下一tick仅平减护甲1/7，持续1200tick |
+| 库奇 | 21/21/35导弹，偏移n；原冻结瞄准目标优先＋其2格内其余敌人ID升序轮转，原目标失效才按持有者距离→ID回退；每第7颗×7，下一tick仅平减护甲1/7，持续1200tick |
 | 盖伦 | AP+自身HP盾；主目标和2格副目标物理；按owner/action聚合positive-hp-damage，仍存活才自疗一次，仅打盾不给自疗 |
 | 佐伊 | 主目标→距主目标4格内最远未命中者→返回主目标，循环2（第三星4）次，保留重复主目标 |
 | 凯特琳 | 100tick引导、4/4/20射击，偏移floor(n×100/总数)；每发1战斗词按word%存活敌ID排序列表选中心，1格范围+中心额外包共用中心，中心AD在发射时取样，双抗负修饰下一tick生效 |
 
 原凯特琳中心选择仍用现有modulo映射，不受§8“新增流拒绝采样”替换；每发中心只消费1词。AbilityTargeting.chain的nearest-previous逐跳更新参照；farthest-from-primary-return-primary固定参照，副目标去重但主目标允许每次返回。有限目标枚举不依据英雄名分支决定这些规则。
+
+
+## 15. 317186b复审修订 R1–R4（待复审）
+
+修改索引：R1 `PeriodicRemainder/PeriodicTask`；R2 `TargetSelector/AbilityTargeting/AbilityOperation` 与19计划；R3 `CombatActivity/M8CombatEvent.activityChanged/M8CombatExtension.activities`、UI `CombatStatusesView`；R4 `Effect.modify-stat.stackPolicy` 与装备/英雄声明样例。字段位于 `src/simulation/m8/contracts.ts` 和 `ui-contracts.ts`；本节是执行语义，验收数据位于 `tests/m8-rereview-contracts.test.ts`、`m8-target-order-contracts.test.ts`、`m8-effect-policy-contracts.test.ts`。没有新增M8战斗执行器。
+
+### R1 每个金额效果、每个实际目标独立余数
+
+PeriodicTask移除单一remainderNumerator/Denominator，改为remainders[]：每项effectIndex是冻结program.effects数组中的稳定零起始序号（区别于外层Source.effectIndex），targetId为本跳实际受益/承伤者，numerator/denominator保存小数。完整身份为[task.key,effectIndex,targetId]；救赎外层targetId仍是持有者，不能用它代替受益者。program.effects顺序在同版本不可重排；同一效果不能因目标排序变化改变序号。嵌套结束效果属于其独立生命周期，不挤占当前周期账户。
+
+每跳先一次性取样目标集合及金额基数，对每个金额效果/实际目标计算“本跳精确金额＋自己已有余数”，取整数请求并保存小数，再做金额cap/治疗重伤/HP封顶等阶段。适用范围仍包含周期治疗与周期伤害，不默默缩窄为仅burn。顺序或输入数组置换不得影响各账户。
+
+| 边界 | 账户政策 |
+| --- | --- |
+| 目标暂时离圈或本跳不合资格 | 保留已有小数，不积累漏过的跳数；再入圈只接自己的余数 |
+| 新目标入圈 | 缺省0；禁止继承刚离圈者或其他效果的余数 |
+| 目标死亡 | 删除此任务中该targetId的全部效果账户；本合同无复活，不重用单位ID |
+| 来源死亡 | onSourceDeath=cancel的任务与全部账户一起清理；persist-attached按原目标继续 |
+| 效果/任务结束、移除或战斗清理 | 删除相应效果或全部任务账户，不结算未来跳；到期末跳先结算再清理 |
+| 同源刷新并保留phase | 同冻结program的同账户保留；不同程序不能把旧账户迁移过去 |
+| Amount.cap、治疗缺血上限或完全防止丢弃金额 | 清除此账户余数；包括取样缺血0的治疗，避免以后出现欠账治疗 |
+| 重伤 | 对整数请求统一处理；它本身不把别人的余数转入，也不产生补偿余额 |
+
+封顶示例：1000.15请求在cap1000时最终请求1000且余数0；已有0.15余数的满血目标在下次pulse取样缺血0时清零。若只是离圈，0.15保留。被压制burn来源的账户继续按§5休眠，其他来源不能取走它；强者消失后的下一有效跳才继续自己的余额。
+
+双目标救赎，没有其他伤害/治疗/重伤：
+
+| tick | 跳前缺血A/B | 入账前余数A/B | 整数治疗A/B | 保存余数A/B |
+| --- | --- | --- | --- | --- |
+| 100 | 1 / 9 | 0 / 0 | 0 / 1 | 1500/10000 / 3500/10000 |
+| 200 | 1 / 8 | 1500 / 3500（分母均10000） | 0 / 1 | 3000 / 5500 |
+| 300 | 1 / 7 | 3000 / 5500 | 0 / 1 | 4500 / 6000 |
+
+200后保存恢复，第三跳仍为0/1。若A在200离圈、C进入，则A停在1500，B变5500，C从0到1500；300时A返回，缺血仍1，只得到0治疗、余数3000。B死亡只清B，不能转给A/C。一个程序里第二个治疗效果若有25%系数，同目标A可同时保存[effect0,A,1500/10000]和[effect1,A,2500/10000]。
+
+恢复验证：不得有重复[effectIndex,targetId]，不得有越界/已删除/非金额效果的序号、陌生或死亡目标、跨task/source账户，分子分母须为安全整数且0<=分子<分母、分母>0；必须与冻结程序及事件/检查点历史一致。目标当前离圈不构成拒绝理由。JSON往返样例只证明数据可保存，不冒充上述校验器已实现。
+
+### R2 全19英雄选敌排序复核
+
+公共前提：advanceS13Tick在进入技能规划前将单位按唯一ID代码点升序排列；主目标为持有者六角距离升序→ID升序，无HP键、行列键或第三隐含键。技能对该单位数组filter而不sort时，结果就是ID升序，不能改成距离优先。ID唯一使最后键不再并列。直接测试旧planS13Cast时必须提供这一前置排序，不能把任意数组顺序误说成旧规则。
+
+TargetSelector.hp-absolute-distance-id明确定义绝对HP升序→距anchor（拉克丝为holder）六角距离升序→ID升序；distance-id是距离升序→ID升序，farthest-id是距离降序→ID升序，绝不把整个结果反转。id只有一个升序键；不存在未列的第二/第三键。技能附着固定目标失效时的skip或fallback按下面逐项规定，不借用当前普攻目标。
+
+| 英雄 | 完整选择、并列键与输出顺序 | 旧依据 |
+| --- | --- | --- |
+| 刀妹 | 自盾self无排序；结束近身1格集合按ID升序 | planS13Cast irelia；executeTask ireliaEnd；neighborsOf |
+| 麦迪 | 开始及失效后重选：持有者距离降序→ID升序；固定路径上最先遇到的敌人，非距终点最近 | planS13Cast maddie；executeTask maddie；byDistance/path |
+| 诺手 | 近身集合ID升序；自疗self；流血冻结原主目标，失效skip，不重选 | planS13Cast darius；executeTask bleed；neighborsOf |
+| 拉克丝 | 存活同队含自己，绝对HP升序→距施法者距离升序→ID升序；附伤沿下一次普攻目标 | lowestAlly(current=true)；planS13Attack |
+| 婕拉 | 主目标先；排除主目标的副目标按距持有者升序→ID升序取2个 | planS13Cast zyra |
+| 小炮 | 主包原主目标；溢出候选须虚拟HP>0，按距被击杀者距离升序→ID升序选1，冻结后失效skip | combat-s13.ts ricochetActions分支 |
+| 厄加特 | 原主目标为中心1格全体ID升序，主目标没有输出优先权；primary-and-area按身份选主/副幅度 | planS13Cast urgot |
+| 芮尔 | 自盾先；路径成员按ID升序输出全部，不是沿路径顺序输出 | planS13Cast rell |
+| 蕾欧娜 | 施法列表为空；结束近身1格集合ID升序 | planS13Cast leona；executeTask leonaEnd |
+| 范德尔 | 施法列表self；强化普攻消费时当前主目标（距离升序→ID升序） | planS13Cast vander；planS13Attack |
+| 克格莫 | 施法列表self；普攻附伤沿同次普攻目标（距离升序→ID升序） | planS13Cast kogmaw；planS13Attack |
+| 斯卡 | 距持有者距离升序→ID升序取3，自疗self不加入伤害目标列表 | planS13Cast scar |
+| 伊泽瑞尔 | 主目标中心1格集合ID升序，再追加原主目标一次，允许目标ID重复 | planS13Cast ezreal |
+| 洛里斯 | 施法self；结束中心按当时距持有者距离升序→ID升序，范围成员ID升序；分担保护者只按ID升序，无距离次级优先 | executeTask lorisEnd；combat-s13.ts protector |
+| 娜美 | 主目标先；每跳距上一命中者距离升序→ID升序，从3格内未命中者取1 | planS13Cast nami |
+| 库奇 | 固定施法瞄准目标存活则保持；否则按距持有者升序→ID升序回退；choices=[瞄准目标,其2格内其余敌人ID升序]，ordinal取模，不能把瞄准目标也参与ID排序 | executeTask corki |
+| 盖伦 | 自盾先；原主目标中心2格全体ID升序；primary-and-area按身份分幅度，不把主目标强行提前 | planS13Cast garen |
+| 佐伊 | 原主目标→距原主目标最远未命中者（距离降序→ID升序）→原主目标；重复，副目标去重 | planS13Cast zoe |
+| 凯特琳 | cast列表保留原主目标；每射击存活敌ID升序表word%count选中心，中心1格范围ID升序，再追加中心；不额外按距离排序或抽词 | executeTask caitlyn |
+
+路径的第二层确定性来自board.getNeighbors固定E、SE、SW、W、NW、NE；每步取第一个严格靠近终点的合法邻格，不因占用绕路。麦迪按路径位置取首敌（每格唯一单位，无ID并列）；芮尔先判成员再ID升序。AbilityTargeting.path显式保存pathOrder/hitOrder；chain显式tieBreak=id，random-enemy-center显式areaOrder=id，area-around-selected显式order=id。新增primary-and-area在同一ID有序集合中按primaryId选效果序列，修正前版把厄加特/盖伦主目标总是置前的样例。
+
+拉克丝反例验收：自己900HP，A100HP距2，B100HP距1，C100HP距1且B<C，则选B；颠倒输入仍选B。自己降为100HP时因距离0选自己，99HP时也选自己。该向量直接调用旧lowestAlly，合同同时断言hp-absolute-distance-id，避免只验枚举名。
+
+全19旧代码向量使用持有者U(3,4)，敌A(5,4)、B(4,4)、C(3,3)、D(2,4)、E(1,4)：最近序B/C/D/A/E，最远序A/E/B/C/D；普通主目标B。厄加特cast A/B/C，盖伦U/A/B/C/D，伊泽瑞尔A/B/C/B，娜美B/A/C/D，佐伊B/E/B/D/B。芮尔若瞄准A，路径是B→A但cast为U/A/B；麦迪同一路径命中B。库奇前四发B/A/C/D，B死亡后回退C；凯特琳词0的伤害目标A/B/A。测试对全部19项逐一列出独立目标预期，并检查合同中的排序声明，不声称已经跑过尚不存在的M8执行器。
+
+### R3 引导与分担的领域状态、事件、恢复
+
+AbilityOperation.channel/redirect只是创建操作，成功提交必须产生独立CombatActivity：完整EffectIdentity、actionSeq、startsAtTick、expiresAtTick，以及channel的blocks/cancelOnControl或redirect的范围/比例/选择/非递归规则。每个活动key绑定施法身份；生命周期为active（endedAtTick/endReason为null）或ended（记录实际结束tick和原因）。M8CombatExtension.activities持久化这些记录；后续同来源施法以新actionSeq建立身份，旧记录标replaced，不把旧引导“复活”。
+
+新增M8CombatEvent.activityChanged，payload为权威记录，reason=applied/refreshed或expired/control-cancelled/replaced/death-cleanup/combat-end。reason与lifecycle/endReason必须一致；control-cancelled仅适用于channel，控制不暂停或移除redirect；自然到期endedAtTick=expiresAtTick，提前结束不得晚于计划到期。事件仍有domain/combatId/tick/eventSeq，作用于活动targetId；UI不重新评估控制或区域资格。旧M7的statusChanged(channel/redirect)在新B3产生状态时明确映射为对应activityChanged(applied/expired)，并绑定该次施法actionSeq；这是新版本映射，不是对旧档补造字段。旧实现没有控制取消事件，本合同的control-cancelled是未来M8账本新增事实，不宣称旧事件已存在。
+
+readCombatStatuses返回CombatStatusesView={statuses:StatusGroup[],activities:ActiveCombatActivity[]}；只有领域已判定仍有效的active条目，ended只保留在持久态/事件账本，不进入当前投影。恢复须校验活动来源、施法收据、半开期限及结束记录与事件/检查点一致；恢复不从AbilityPlan重建已取消活动、不重跑取消规则、也不重新开始引导。缺少权威活动态不能靠计划期限“修复”为active。
+
+范德尔tick10引导，期限[10,60)；tick20眩晕已生效（至40）时，活动标ended/endReason=control-cancelled/endedAtTick20，当前查询立即不含channel，已取消的可取消后续任务也不重新安排。tick40眩晕结束查询仍无引导，40或之后保存恢复仍无；既有下一击强化未被取消，不因缺引导而清掉。tick60不再为同活动发自然结束或奖励。洛里斯tick10分担[10,90)，盾可能早已耗尽，tick89查询仍有redirect；90维护发expired、投影去除分担，盾生命周期不驱动这个删除。
+
+### R4 所有样例activation与叠加政策自查
+
+StatusContribution.appliedAtTick明确为实际生效start，申请时间取来源事件；普通shred样例也已修正为申请0→生效1→到期101，另一来源申请20、持续40→[21,61)，不保留持续长度不一致的旧向量。Effect.modify-stat现在必须显式携带activation和stackPolicy；样例stats helper不再提供即时或独立叠加默认值。TriggerDefinition.stackPolicy控制触发运行态，不能代替每个持续属性自己的政策；有限Effect[]中每项政策明确。strongest-category保留各来源，但同key刷新替换该贡献并延长到期，不把同源重施变成多份；refresh-same-instance保留原有效start、幅度replace/max及较晚期限；多件的完整来源key不同。
+
+| 检查范围 | activation / 叠加结论 |
+| --- | --- |
+| 泰坦满层奖励 | next-tick；每实例已消费标记只发一次；双抗是独立一次贡献，不插入同批承伤 |
+| 纳什 | next-tick；触发声明及属性效果均refresh-same-instance、replace、phase preserve；异件独立相加 |
+| 电刀减魔抗 | immediate，主时序步骤4已有例外；strongest-category，同源刷新贡献 |
+| 夜刃防止/不可选中 | 伤后存活阶段immediate，每实例一次；只有指定状态自然结束奖励immediate，列入维护阶段例外 |
+| 救赎坚韧 / 普通shred样例 | next-tick、strongest-category；治疗取样/封顶在此前，不回溯减伤 |
+| 婕拉/斯卡控制 | next-tick、refresh-same-instance，延长控制到期；异源任一仍有效即受控 |
+| 厄加特减甲 | next-tick、strongest-category；同源刷新，不产生无限独立副本 |
+| 蕾欧娜减伤 | 旧代码immediate保留、strongest-category；同来源重施刷新 |
+| 范德尔双抗 | 旧代码immediate保留、refresh-same-instance；不可误改为同件相加 |
+| 克格莫攻速/射程 | 旧代码immediate保留、add-stacks且无上限；每3施法射程依旧独立计数 |
+| 芮尔双抗转移 | next-tick、action-target施加身份；不同施法/受害者独立贡献 |
+| 库奇护甲 / 凯特琳双抗负修饰 | next-tick、independent-instances；同施法每task.ordinal独立身份，避免覆盖前一发 |
+| 全部授盾、引导、分担与一次强化 | 使用显式操作的既有即时语义；盾同源max剩余/较晚到期，引导/分担同源替换刷新，一次强化覆盖未消费值，不从modify-stat默认推导 |
+| 石像鬼、反甲、正义等静态/条件StatModifier样例 | 是幅度/过滤声明而非事件新增属性；静态贡献开战存在，current条件按已定边界重算，不能把动态撤回延迟一tick |
+| 其他纯伤害/治疗/法力/生命调整样例 | 沿主管线所属阶段，不新增普通属性的即时豁免；伤害继承不重走减免、阈值最大生命与heal仍分离 |
+
+泰坦数值边界：固定初始护甲0、HP1000、24层，tick10两个合资格物理包各120。第一包使计数25并记录奖励已消费，但双抗startsAtTick11；第二包仍120，伤后HP760。tick11同样原始120在护甲20下为100。若错误即时则第二包100、HP780，验收明确拒绝该解释。其余属性贡献在此向量固定不变，避免把两个问题混在一起。
+
+纳什tick10施法首次[11,111)：10无增益、11至110为6000Bps、111为0。若50未到期再次施法，同key保留start11，expiry=max(111,51+100)=151，50/110/111/150均只有6000Bps，151归零；不是12000，也不能在50先撤掉再51恢复。另一真实实例才独立增加6000。保存/恢复保留有效start、延长期限和单份来源。
+
+验收不再只看gate或listener：共享装备声明放入 `tests/fixtures/m8-audit-definitions.ts`，原A04/A05与R4向量引用同一对象；`m8-effect-policy-contracts.test.ts`递归检查全部19技能计划（包括所有延期任务和结束效果）中的activation/stackPolicy，与逐英雄预期表逐项比较。原6条合同样例的burn、阈值血手、普通shred、直接heal、离子、授权及存档/掉落签名也已逐一核查：不含额外modify-stat即时默认或错误周期账户。
+
+### 本次R1–R4验证记录
+
+基线317186b，验证对象为本次待提交工作树；Node24.21.0/npm11.19.0，依赖锁未改。
+
+| 检查 | 结果 |
+| --- | --- |
+| `npm test -- --maxWorkers=2` | 56文件、817项全量通过，462.88秒；既有战斗测试未删减/改写断言 |
+| 六个M8合同测试文件定向运行 | 95项通过，1.13秒；包含19项旧规划器目标列表证据、排序反例及19计划全部显式activation/stackPolicy检查 |
+| 最后补强R3持久态/眩晕投影后单独运行 `tests/m8-rereview-contracts.test.ts` | 7项通过，340ms；说明全量运行期间末轮样例修订另有复测，不拿JSON往返冒充恢复校验器 |
+| `npm run build` | 最终工作树TypeScript/Vite通过，Vite7.60秒；既有大chunk提示保留 |
+| `git diff --check` / 改动范围 | 通过；生产差异只有m8类型声明，未改战斗执行器/内容/运行版本/digest/界面，构建资源hash与基线一致 |
+
+B2仍待复审，未签收为可直接接入。R1金额、R3活动和R4时序向量是合同验收数据；R2直接调用已有选敌/技能规划代码作为行为证据，未新增另一套M8选敌或战斗执行器。

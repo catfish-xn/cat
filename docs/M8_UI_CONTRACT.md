@@ -1,4 +1,4 @@
-# M8 B2 界面数据合同（m8-b2-v2-review，审计修订待复审）
+# M8 B2 界面数据合同（m8-b2-v3-review，审计修订待复审）
 
 2026-10-07审计修订，待复审；配套 [M8_RULES.md](M8_RULES.md)。本页规定数据、语义与入口，不规定布局、颜色或动画。类型见 `src/simulation/m8/ui-contracts.ts`；**当前只有类型签名，没有这些新查询的运行实现**。Claude可以继续U1/U2使用现有16件目录，不得将B1的44件来源归档显示成已实现战斗效果。
 
@@ -41,11 +41,12 @@ M8CombatEvent保持domain/combatId/tick/eventSeq，payload由类型化联合确�
 | packetDamage | outcome.context、raw/prevented/mitigated/absorbed/hpDamage/overkill/critical/killingPacket | 来源、父包及physical/magic/true分开；伤害排行只加hpDamage，盾伤另列 |
 | heal | healId/contributions/shares/requested/afterWound/actual/overheal/preventedByWound | 总actual只计一次；bySource用shares权威分项，不以伤害×吸血比例反算 |
 | manaChanged | reason/before/blocked/applied/overflow/after/castActionSeq | 回蓝/锁蓝/返蓝分开，不以施法前后净值算离子 |
+| activityChanged | activity.key/source/targetId/actionSeq/startsAtTick/expiresAtTick/lifecycle/endedAtTick/endReason、reason | 引导/分担真实生命周期；取消后即移除当前展示，不因计划期限尚未到达而恢复 |
 | statusChanged | group.contributions/effectiveMagnitude/effectiveSourceKey/nextPulseAtTick、reason | 显示有效状态与来源/期限；强者压制弱者不是删除 |
 | shieldLayerChanged | layer.granted/remaining/absorbed/decayed/expiredDiscarded/decay/expiresAtTick/source、reason | 自然decayed不记吸收；depleted、expired、death-cleanup分开 |
 | statChanged、maxHpChanged | before/after/source；最大HP还含前后currentHp、countsAsHeal=false | range为六角格，旧range原名映射；血手补当前生命不作治疗/吸血反馈 |
 
-readCombatStats返回增量nextEventSeq和每单位三类HP伤害、盾吸收、治疗、溢出及bySource；readCombatStatuses返回状态组。时间用50ms×剩余tick换算显示，burn pulse每20tick一次，不能显示成每50ms跳伤。统计聚合使用完整事件，seek重置或从检查点重建，不重复累加；attack动作事件不记伤害；M8不再发旧damage/shieldChanged汇总事件，不能与packetDamage双算。
+readCombatStats返回增量nextEventSeq和每单位三类HP伤害、盾吸收、治疗、溢出及bySource；readCombatStatuses返回CombatStatusesView，含statuses状态组和activities权威当前引导/分担，不能从AbilityPlan重建。时间用50ms×剩余tick换算显示，burn pulse每20tick一次，不能显示成每50ms跳伤。统计聚合使用完整事件，seek重置或从检查点重建，不重复累加；attack动作事件不记伤害；M8不再发旧damage/shieldChanged汇总事件，不能与packetDamage双算。
 
 夜刃可显示“不可选中”和“伤害防止”为两个规则状态；是否隐藏模型由Claude决定，不得让视觉隐藏改变选敌。动画合并、降频、减少动效只影响表现，不丢权威事件。契约变更事件在replay2启用，旧回放按兼容视图拒播。
 
@@ -101,3 +102,14 @@ M8SaveControlsCallbacks明确区分onExportCurrent()与onExportLegacy(request)�
 B3/B5/B8/B9实现后分别验证：查询前后canonical状态和所有RNG相同；预览/提交同条件同拒绝；临时ID不能操作；事件归属正确；只打盾不误报HP伤；true不混magic；血手不混heal；隐藏计划不泄漏；终局retained不报已领取；旧M7可导出但不可播。未实现门槛不得以假数据正式上线。
 
 Claude修改展示层及D6-A四个UI叶子；缺字段写 `docs/UI_REQUESTS.md`，说明字段/含义/用途/现有来源/期望验收/阻塞任务。Codex负责领域/类型、非视觉存档/回放/统计。本版仅审计修订合同、等待复审，不要求Claude在本步修改UI。
+
+
+## 8. R3 引导与分担的U4接线
+
+`readCombatStatuses(state)`现返回 `{statuses,activities}`，类型为CombatStatusesView；activities只允许lifecycle=active的CombatActivity。每项包含完整来源、施法actionSeq、计划起止tick和已生效的规则字段。领域负责状态有效性、控制取消及分担到期，UI只映射channel为“引导”、redirect为“伤害分担”；不能根据计划、剩余时长或眩晕结束重建状态。
+
+`activityChanged`与现有`statusChanged`是两种载荷。前者记录引导/分担应用、刷新、自然到期、控制取消、替换、死亡和战斗清理，后者继续承载状态组；不能将旧channel/redirect静默丢弃。B3映射生成新事件并同步统计消费，B9保存完整活动记录并恢复权威投影；旧M7回放仍按D2拒播，不从不含actionSeq的旧状态伪造M8记录。
+
+验收：范德尔10开始、原定60结束；20被持续至40的眩晕取消，事件携endedAtTick20及control-cancelled，查询中立刻没有引导。40眩晕结束、40后读档或seek到40，都不能再次显示引导。洛里斯10开始80tick分担，89仍显示，90的expired事件与查询去除一致，早先盾耗尽不撤掉分担。回放seek从领域检查点/权威事件重建活动，不重新执行AbilityPlan；迟到的计划或旧applied事件不能覆盖后来的结束事件。
+
+周期余数属于领域持久态，不要求UI展示或自行累计。读状态、看治疗、打开回放均不改变R1账户、触发计数或RNG。两份合同的R1–R4验收向量通过也不表示B3/B9接口已有运行实现。

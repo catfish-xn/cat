@@ -1,6 +1,6 @@
-/** B2 v2 audit revision, pending re-review; query signatures, not available runtime exports until B3–B9. */
+/** B2 v3 audit revision, pending re-review; query signatures, not available runtime exports until B3–B9. */
 import type { HexCell } from '../board';
-import type { DamageType, DropIdentity, LootPayload, M8Version, RoundDefinition, Source, StatusGroup, TemporaryEquipment } from './contracts';
+import type { CombatActivity, DamageType, DropIdentity, LootPayload, M8Version, RoundDefinition, Source, StatusGroup, TemporaryEquipment } from './contracts';
 export type EquipmentFailure = 'wrong-phase' | 'unknown-item' | 'unknown-unit' | 'same-item'
   | 'item-not-inventory' | 'invalid-recipe' | 'invalid-slot' | 'item-slot-occupied'
   | 'unique-conflict' | 'exclusive-slots' | 'temporary-item';
@@ -51,6 +51,11 @@ export type CompatibilityView =
   | { readonly status: 'current'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: M8Version['rulesVersion']; readonly canResume: true; readonly canReplay: true; readonly canExportOriginal: true; readonly reason: null }
   | { readonly status: 'legacy-preserved'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: 'm5-14.24b-v1'; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: true; readonly reason: 'new-match-required' }
   | { readonly status: 'rejected'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: string | null; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: boolean; readonly reason: 'unsupported-version' | 'digest-mismatch' | 'invalid-data' | 'capacity-exceeded' };
+/** R3: domain-resolved current effects; UI never evaluates AbilityPlan. */
+export interface CombatStatusesView {
+  readonly statuses: readonly StatusGroup[];
+  readonly activities: readonly Extract<CombatActivity, { lifecycle: 'active' }>[];
+}
 export interface CombatStatsView {
   readonly nextEventSeq: number;
   readonly units: readonly { readonly unitId: string; readonly hpDamage: Readonly<Record<DamageType, number>>; readonly shieldAbsorbed: number; readonly healing: number; readonly overheal: number; readonly bySource: readonly { readonly source: Source; readonly hpDamage: number; readonly healing: number; readonly requestedHealing: number; readonly preventedByWound: number; readonly overheal: number }[] }[];
@@ -66,7 +71,7 @@ export interface M8Queries<Match, Combat, File> {
   readLootView(state: Readonly<Match>): LootView;
   readCompatibility(file: Readonly<File>): CompatibilityView;
   readCombatStats(state: Readonly<Combat>): CombatStatsView;
-  readCombatStatuses(state: Readonly<Combat>): readonly StatusGroup[];
+  readCombatStatuses(state: Readonly<Combat>): CombatStatusesView;
 }
 
 

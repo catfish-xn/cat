@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ActionTask, DamageFilter, DamageRequest, Effect, EffectRuntime, HealOutcome, M8CombatEvent, PeriodicTask, ShieldState, StatusContribution, StatusEndReason, StatModifier, TriggerContext } from '../src/simulation/m8/contracts';
 import type { LegacyExportRequest, LegacyExportResult, LegacyRecord, LegacyRecordAccess } from '../src/simulation/m8/ui-contracts';
+import { shiv, titan, nashor } from './fixtures/m8-audit-definitions';
 import { amount, cast, context, key, modifier, selector, source, trigger } from './fixtures/m8-contract-cases';
 const roundTrip = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 const stamp = { domain: 'combat', combatId: 'c1', tick: 10, eventSeq: 1 } as const;
@@ -43,11 +44,9 @@ describe('B2 audit A01–A13: declarative examples and independent hand oracles,
     expect(Math.floor(120 * 3000 / 10000)).toBe(36); // bonus uses absorbed120, not total lost230
   });
   it('A04 declares Shiv every3 and Titan capped25 with one recoverable reward', () => {
-    const shiv = trigger({ id: 'shiv-attack', counters: [{ id: 'attacks', events: [{ event: 'attack-completed', listener: { subject: 'actor', relationToHolder: 'self', withinHexes: null }, qualifies: 'completed-event' }], scope: 'source-instance', reset: 'combat-start', cap: null }], gate: { kind: 'every-n', counterId: 'attacks', everyN: 3, firstAt: 3 }, selector: selector({ relation: 'enemy', anchor: 'primary-target', primary: 'first-required', maxTargets: 4 }), effects: [{ kind: 'apply-status', status: { activation: 'immediate', kind: 'shred', magnitudeBps: 3000, duration: { kind: 'ticks', ticks: 100 }, stackPolicy: { kind: 'strongest-category', category: 'shred', retainSuppressed: true }, removable: true, polarity: 'harmful', damageFilter: null, onEnd: null } }, { kind: 'damage', damageType: 'magic', delivery: 'equipment-proc', critEligibility: 'never', amount: amount(35) }] });
     if (shiv.gate.kind !== 'every-n') throw Error('Wrong fixture');
     const gate = shiv.gate;
     expect([1, 2, 3, 4, 5, 6].filter(n => n >= gate.firstAt && (n - gate.firstAt) % gate.everyN === 0)).toEqual([3, 6]);
-    const titan = trigger({ id: 'titan-cap', event: 'counter-updated', counters: [{ id: 'stacks', events: [{ event: 'attack-completed', listener: { subject: 'actor', relationToHolder: 'self', withinHexes: null }, qualifies: 'completed-event' }, { event: 'damage-taken', listener: { subject: 'target', relationToHolder: 'self', withinHexes: null }, qualifies: 'positive-actual-damage' }], scope: 'source-instance', reset: 'combat-start', cap: 25 }], gate: { kind: 'stack-threshold-once', counterId: 'stacks', at: 25, rewardId: 'cap-resists' }, effects: ['armor', 'magicResist'].map(stat => ({ kind: 'modify-stat' as const, activation: 'immediate' as const, modifier: modifier(stat as 'armor' | 'magicResist', 20), duration: { kind: 'combat' as const } })) });
     const runtime: EffectRuntime = { key: key(titan.source), source: titan.source, targetId: 'u1', startsAtTick: 0, expiresAtTick: null, stacks: 25, triggerCount: 1, counters: { stacks: 25 }, consumedRewards: ['cap-resists'], nextEligibleTick: 0, consumed: false, stackPolicy: { kind: 'add-stacks', cap: 25 } };
     expect([{ incomingEvent: 24, stacks: 24, reward: 0 }, { incomingEvent: 25, stacks: 25, reward: 20 }, { incomingEvent: 26, stacks: 25, reward: 0 }].map(x => x.reward)).toEqual([0, 20, 0]);
     expect(roundTrip(runtime).consumedRewards).toEqual(['cap-resists']);
@@ -60,7 +59,6 @@ describe('B2 audit A01–A13: declarative examples and independent hand oracles,
     const receipt = cast({ source: { ...source('spell', 'B-cast', 'B'), sourceKind: 'ability' }, completionCell: { col: 3, row: 2 } });
     const event: TriggerContext = { eventSeq: 7, event: 'cast-completed', tick: 10, actionSeq: 1, actorId: 'B', targetId: 'u1', cast: receipt };
     const ionic = trigger({ id: 'ionic', event: 'cast-completed', listener: { subject: 'actor', relationToHolder: 'enemy', withinHexes: 2 }, selector: selector({ primary: 'normal', candidates: 'event-actor', relation: 'enemy' }), effects: [{ kind: 'damage', damageType: 'magic', delivery: 'equipment-proc', amount: amount(0, { actualManaSpentBps: 16000 }), critEligibility: 'never' }] });
-    const nashor = trigger({ id: 'nashor', event: 'cast-completed', listener: { subject: 'actor', relationToHolder: 'self', withinHexes: null }, effects: [{ kind: 'modify-stat', activation: 'immediate', modifier: modifier('attackSpeed', 6000, { unit: 'bps' }), duration: { kind: 'ticks', ticks: 100 } }] });
     expect([ionic.selector.candidates, event.actorId, receipt.actualManaSpent * 16000 / 10000]).toEqual(['event-actor', 'B', 128]);
     expect(nashor.listener.relationToHolder).toBe('self');
     expect(roundTrip(event).cast?.targetIds).toEqual(['A']);
@@ -68,7 +66,7 @@ describe('B2 audit A01–A13: declarative examples and independent hand oracles,
     expect(ionic.listener.withinHexes).toBe(2);
   });
   it('A06 binds delayed night-edge AS to exactly one natural status end', () => {
-    const buff: Effect = { kind: 'modify-stat', activation: 'immediate', modifier: modifier('attackSpeed', 1500, { unit: 'bps' }), duration: { kind: 'combat' } };
+    const buff: Effect = { kind: 'modify-stat', stackPolicy: { kind: 'independent-instances' }, activation: 'immediate', modifier: modifier('attackSpeed', 1500, { unit: 'bps' }), duration: { kind: 'combat' } };
     const status: StatusContribution = { key: key(source('night-edge')), source: source('night-edge'), targetId: 'u1', appliedAtTick: 10, expiresAtTick: 30, endRewardConsumed: false, application: { activation: 'immediate', kind: 'damage-prevention', magnitudeBps: 10000, duration: { kind: 'ticks', ticks: 20 }, stackPolicy: { kind: 'independent-instances' }, removable: false, polarity: 'beneficial', damageFilter: null, onEnd: { reasons: ['expired'], timing: 'expiry-before-actions', effects: [buff] } } };
     expect(status.application.onEnd?.reasons).toEqual(['expired']);
     expect([{ tick: 10, as: 0 }, { tick: 29, as: 0 }, { tick: 30, as: 1500 }].map(x => x.as)).toEqual([0, 0, 1500]);
@@ -80,7 +78,7 @@ describe('B2 audit A01–A13: declarative examples and independent hand oracles,
     expect(roundTrip(exits).map(x => x.reward)).toEqual([1500, 0, 0]);
   });
   it('A07 samples Redemption each pulse and keeps heal+reduction on one target set', () => {
-    const task: PeriodicTask = { key: key(source('redemption')), source: source('redemption'), targetId: 'u1', nextPulseAtTick: 100, periodTicks: 100, endsAtTick: null, pulseOrdinal: 0, pulseLimit: null, remainderNumerator: 0, remainderDenominator: 10000, finalPulse: 'none', onSourceDeath: 'cancel', onTargetDeath: 'cancel', program: { definitionId: 'redemption-pulse', targetSnapshot: 'once-per-pulse', selector: selector({ relation: 'ally', radius: 1, maxTargets: 100, sample: 'each-pulse' }), effects: [{ kind: 'heal', amount: amount(0, { missingHpBps: 1500, cap: 1000, hpBasis: 'target', sample: 'each-pulse' }) }, { kind: 'apply-status', status: { activation: 'next-tick', kind: 'damage-reduction', magnitudeBps: 1000, duration: { kind: 'ticks', ticks: 100 }, stackPolicy: { kind: 'strongest-category', category: 'damage-reduction', retainSuppressed: true }, removable: false, polarity: 'beneficial', damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' }, onEnd: null } }] } };
+    const task: PeriodicTask = { key: key(source('redemption')), source: source('redemption'), targetId: 'u1', nextPulseAtTick: 100, periodTicks: 100, endsAtTick: null, pulseOrdinal: 0, pulseLimit: null, remainders: [], finalPulse: 'none', onSourceDeath: 'cancel', onTargetDeath: 'cancel', program: { definitionId: 'redemption-pulse', targetSnapshot: 'once-per-pulse', selector: selector({ relation: 'ally', radius: 1, maxTargets: 100, sample: 'each-pulse' }), effects: [{ kind: 'heal', amount: amount(0, { missingHpBps: 1500, cap: 1000, hpBasis: 'target', sample: 'each-pulse' }) }, { kind: 'apply-status', status: { activation: 'next-tick', kind: 'damage-reduction', magnitudeBps: 1000, duration: { kind: 'ticks', ticks: 100 }, stackPolicy: { kind: 'strongest-category', category: 'damage-reduction', retainSuppressed: true }, removable: false, polarity: 'beneficial', damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' }, onEnd: null } }] } };
     const snapshots = [{ tick: 100, selected: ['u1', 'B'] }, { tick: 200, selected: ['u1', 'C'] }]; // B exits; C enters
     expect(roundTrip(task).program.effects.map(x => x.kind)).toEqual(['heal', 'apply-status']);
     expect(snapshots.map(x => x.selected)).toEqual([['u1', 'B'], ['u1', 'C']]);

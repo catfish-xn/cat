@@ -1,4 +1,4 @@
-/** B2 audit revision v2: pending re-review, not implementation-ready signoff. No runtime imports, reducers, or production activation. */
+/** B2 audit revision v3: pending re-review, not implementation-ready signoff. No runtime imports, reducers, or production activation. */
 import type { CombatEventData, CombatOrigin } from '../combat-types';
 import type { HexCell } from '../board';
 
@@ -151,6 +151,7 @@ export interface StatusApplication {
 }
 export interface StatusContribution extends EffectIdentity {
   readonly application: StatusApplication;
+  /** Effective start tick; the request tick remains in its originating event. */
   readonly appliedAtTick: Tick;
   readonly expiresAtTick: Tick | null;
   readonly endRewardConsumed: boolean;
@@ -171,14 +172,20 @@ export interface PeriodicProgram {
   readonly targetSnapshot: 'once-per-pulse';
   readonly effects: readonly Effect[];
 }
+/** R1: outer task key owns these accounts; effectIndex is the frozen program ordinal. */
+export interface PeriodicRemainder {
+  readonly effectIndex: number;
+  readonly targetId: string;
+  readonly numerator: number;
+  readonly denominator: number;
+}
 export interface PeriodicTask extends EffectIdentity {
   readonly nextPulseAtTick: Tick;
   readonly periodTicks: Tick;
   readonly endsAtTick: Tick | null;
   readonly pulseOrdinal: number;
   readonly pulseLimit: number | null;
-  readonly remainderNumerator: number;
-  readonly remainderDenominator: number;
+  readonly remainders: readonly PeriodicRemainder[];
   readonly finalPulse: 'before-expiry' | 'none';
   readonly onSourceDeath: 'cancel' | 'persist-attached';
   readonly onTargetDeath: 'cancel';
@@ -305,12 +312,12 @@ export interface TargetSelector {
   readonly excludeSelf: boolean;
   readonly excludePrimary: boolean;
   readonly distinct: boolean;
-  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-absolute-id' | 'id' | 'not-burned-by-this-instance-distance-id';
+  readonly order: 'distance-id' | 'farthest-id' | 'hp-ratio-id' | 'hp-absolute-distance-id' | 'id' | 'not-burned-by-this-instance-distance-id';
   readonly sample: 'combat-start' | 'action-completion' | 'each-tick' | 'each-pulse';
 }
 /** Finite declarative payloads; executors are B3–B5 work. */
 export type Effect =
-  | { readonly kind: 'modify-stat'; readonly activation: 'immediate' | 'next-tick'; readonly modifier: StatModifier; readonly duration: Duration }
+  | { readonly kind: 'modify-stat'; readonly stackPolicy: StackPolicy; readonly activation: 'immediate' | 'next-tick'; readonly modifier: StatModifier; readonly duration: Duration }
   | { readonly kind: 'damage'; readonly damageType: DamageType; readonly delivery: DamageDelivery; readonly amount: Amount; readonly critEligibility: CritEligibility }
   | { readonly kind: 'apply-status'; readonly status: StatusApplication }
   | { readonly kind: 'heal'; readonly amount: Amount }
@@ -413,6 +420,7 @@ export interface M8CombatExtension {
   readonly effects: readonly EffectRuntime[];
   readonly statuses: readonly StatusGroup[];
   readonly periodicTasks: readonly PeriodicTask[];
+  readonly activities: readonly CombatActivity[];
   readonly abilityPlans: readonly AbilityPlan[];
   readonly actionTasks: readonly ActionTask[];
   readonly armedAttacks: readonly ArmedAttack[];
@@ -424,7 +432,7 @@ export interface M8CombatExtension {
 }
 /** Frozen target identifiers. Current M7 constants deliberately remain unchanged. */
 export interface M8Version {
-  readonly contractVersion: 'm8-b2-v2-review';
+  readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 6;
   readonly rulesVersion: 'm8-14.24b-v1';
   readonly contentVersion: 's13-14.24b-m8-v1';
@@ -438,6 +446,7 @@ export interface M8Version {
 export type UnchangedCombatEvent = Extract<CombatEventData, { readonly type: 'targetChanged' | 'kill' | 'growth' | 'effectTriggered' | 'movement' | 'attack' | 'death' | 'combatFinished' }>;
 export type M8CombatEvent = { readonly domain: 'combat'; readonly combatId: string; readonly tick: Tick; readonly eventSeq: number } & (
   | UnchangedCombatEvent
+  | { readonly type: 'activityChanged'; readonly activity: CombatActivity; readonly reason: 'applied' | 'refreshed' | ActivityEndReason }
   | { readonly type: 'cast'; readonly receipt: CastReceipt }
   | { readonly type: 'packetDamage'; readonly outcome: DamageOutcome }
   | { readonly type: 'heal'; readonly outcome: HealOutcome }
@@ -454,12 +463,12 @@ export type AbilityTargeting =
   | { readonly kind: 'bound-selection' }
   | { readonly kind: 'fixed'; readonly targetIds: readonly string[]; readonly ifMissing: 'skip' }
   | { readonly kind: 'select'; readonly selector: TargetSelector }
-  | { readonly kind: 'area-around-selected'; readonly center: TargetSelector; readonly radius: number; readonly relation: 'enemy' | 'ally' }
-  | { readonly kind: 'path'; readonly aimId: string; readonly intercept: 'first-enemy' | 'all-enemies'; readonly fallback: 'farthest-enemy' | 'none' }
+  | { readonly kind: 'area-around-selected'; readonly center: TargetSelector; readonly radius: number; readonly relation: 'enemy' | 'ally'; readonly order: 'id' }
+  | { readonly kind: 'path'; readonly pathOrder: 'E-SE-SW-W-NW-NE'; readonly hitOrder: 'path-position' | 'id'; readonly aimId: string; readonly intercept: 'first-enemy' | 'all-enemies'; readonly fallback: 'farthest-enemy' | 'none' }
   | { readonly kind: 'chain'; readonly primaryId: string; readonly radius: number; readonly additionalTargets: number;
-      readonly order: 'nearest-previous' | 'farthest-from-primary-return-primary'; readonly distinctSecondary: true }
+      readonly tieBreak: 'id'; readonly order: 'nearest-previous' | 'farthest-from-primary-return-primary'; readonly distinctSecondary: true }
   | { readonly kind: 'round-robin'; readonly primaryId: string; readonly radius: number; readonly ordinal: number; readonly fallback: 'nearest-enemy' }
-  | { readonly kind: 'random-enemy-center'; readonly radius: number; readonly rng: 'combat'; readonly mapping: 'word-modulo-id-sorted-count'; readonly draws: 1 };
+  | { readonly kind: 'random-enemy-center'; readonly areaOrder: 'id'; readonly radius: number; readonly rng: 'combat'; readonly mapping: 'word-modulo-id-sorted-count'; readonly draws: 1 };
 export interface ArmedAttack extends EffectIdentity {
   readonly mode: 'replace-basic' | 'append-ability-packet';
   readonly amount: Amount;
@@ -468,7 +477,21 @@ export interface ArmedAttack extends EffectIdentity {
   readonly consume: 'next-completed-attack';
   readonly blocksRecast: boolean;
 }
+/** R3: persisted authoritative activity, independent of plans and UI time inference. */
+export type ActivityEndReason = 'expired' | 'control-cancelled' | 'replaced' | 'death-cleanup' | 'combat-end';
+export type CombatActivity = EffectIdentity & {
+  readonly actionSeq: number;
+  readonly startsAtTick: Tick;
+  readonly expiresAtTick: Tick;
+} & (
+  | { readonly kind: 'channel'; readonly blocks: readonly ['move', 'attack', 'cast']; readonly cancelOnControl: true }
+  | { readonly kind: 'redirect'; readonly allyRadius: number; readonly shareBps: Bps; readonly choose: 'lowest-id'; readonly repeatMitigation: false; readonly recursive: false }
+) & (
+  | { readonly lifecycle: 'active'; readonly endedAtTick: null; readonly endReason: null }
+  | { readonly lifecycle: 'ended'; readonly endedAtTick: Tick; readonly endReason: ActivityEndReason }
+);
 export type AbilityOperation =
+  | { readonly kind: 'primary-and-area'; readonly targeting: AbilityTargeting; readonly primaryId: string; readonly primaryEffects: readonly Effect[]; readonly otherEffects: readonly Effect[] }
   | { readonly kind: 'effects'; readonly targeting: AbilityTargeting; readonly effects: readonly Effect[] }
   | { readonly kind: 'center-and-area'; readonly center: Extract<AbilityTargeting, { readonly kind: 'random-enemy-center' | 'bound-selection' }>; readonly areaEffects: readonly Effect[]; readonly centerEffects: readonly Effect[] }
   | { readonly kind: 'arm-attack'; readonly armed: ArmedAttack }
