@@ -1,6 +1,6 @@
-# M8 B2 规则与数据合同（m8-b2-v3-review，审计修订待复审）
+# M8 B2 规则与数据合同（m8-b2-v3-review，已复审签收、合同冻结）
 
-修订日期：2026-10-07；复审基线：`feat/m8-b0-baseline@317186b`。撤回上一版“合同已冻结、可直接接入”的签收表述，本版提交复审。
+签收日期：2026-10-07；B2 于 `feat/m8-b0-baseline@2632925` 通过用户复审签收，合同冻结。签收覆盖首轮 A01–A13 与复审 R1–R4；合同标识保持 `m8-b2-v3-review`，不因签收重命名或修改字段与规则。B3 实现必须遵守本合同与 `src/simulation/m8/contracts.ts`；合同缺项或有歧义时停止并报告，不自行修改。
 本次只交付类型、合同和可序列化的小样例，**没有实现或启用 B3–B9**。当前程序仍执行 M7/M5 规则及版本。未来实现以本合同、B1 数值归档和逐项来源为依据；未列变更沿用 [M5_RULES.md](../M5_RULES.md) R6。
 
 用户批准原 GS-01–04、TG-01 及审计中的另外41条项目约定，共46条；批准不代表官方脚本证明。B-07 红霸符只启用选定3%增伤、不加射程；B-10 飓风暂用无距离上限，均继续待历史核验。原始 effects、原档 hash 和配方不改；来源再生成不能改变 runtimeEligible=false。归档修正见 [项目约定清单](M8_PROJECT_CONVENTIONS_REVIEW.md)。
@@ -357,7 +357,7 @@ AbilityPlan保留施法收据、取样数据、有限operations/triggers；Actio
 原凯特琳中心选择仍用现有modulo映射，不受§8“新增流拒绝采样”替换；每发中心只消费1词。AbilityTargeting.chain的nearest-previous逐跳更新参照；farthest-from-primary-return-primary固定参照，副目标去重但主目标允许每次返回。有限目标枚举不依据英雄名分支决定这些规则。
 
 
-## 15. 317186b复审修订 R1–R4（待复审）
+## 15. 317186b复审修订 R1–R4（2632925已复审签收）
 
 修改索引：R1 `PeriodicRemainder/PeriodicTask`；R2 `TargetSelector/AbilityTargeting/AbilityOperation` 与19计划；R3 `CombatActivity/M8CombatEvent.activityChanged/M8CombatExtension.activities`、UI `CombatStatusesView`；R4 `Effect.modify-stat.stackPolicy` 与装备/英雄声明样例。字段位于 `src/simulation/m8/contracts.ts` 和 `ui-contracts.ts`；本节是执行语义，验收数据位于 `tests/m8-rereview-contracts.test.ts`、`m8-target-order-contracts.test.ts`、`m8-effect-policy-contracts.test.ts`。没有新增M8战斗执行器。
 
@@ -476,4 +476,4 @@ StatusContribution.appliedAtTick明确为实际生效start，申请时间取来�
 | `npm run build` | 最终工作树TypeScript/Vite通过，Vite7.60秒；既有大chunk提示保留 |
 | `git diff --check` / 改动范围 | 通过；生产差异只有m8类型声明，未改战斗执行器/内容/运行版本/digest/界面，构建资源hash与基线一致 |
 
-B2仍待复审，未签收为可直接接入。R1金额、R3活动和R4时序向量是合同验收数据；R2直接调用已有选敌/技能规划代码作为行为证据，未新增另一套M8选敌或战斗执行器。
+B2于提交2632925通过复审签收，合同冻结；B3可按冻结合同开始实现。R1金额、R3活动和R4时序向量是合同验收数据；R2直接调用已有选敌/技能规划代码作为行为证据，未新增另一套M8选敌或战斗执行器。
