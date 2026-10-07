@@ -1,6 +1,6 @@
 # M8 界面任务说明（可直接交给 Claude）
 
-> B2接口已冻结：以 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md) 的字段、可用门槛及 [M8_RULES.md](M8_RULES.md) 的规则为准。当前仅类型/合同，新增查询没有运行实现，U3–U7仍等待对应B任务。
+> B2接口审计修订待复审：以 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md) 的字段、可用门槛及 [M8_RULES.md](M8_RULES.md) 的规则为准。当前仅类型/合同，新增查询没有运行实现，U3–U7仍等待对应B任务。
 
 **状态：M8 方案已确认，D1–D6 均采用 A。当前会话只修订并合并文档，完成后停止；功能实施交给后续接手者。**
 

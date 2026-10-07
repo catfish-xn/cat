@@ -1,6 +1,6 @@
-# M8 B2 界面数据合同（m8-b2-v1）
+# M8 B2 界面数据合同（m8-b2-v2-review，审计修订待复审）
 
-2026-10-07冻结；配套 [M8_RULES.md](M8_RULES.md)。本页规定数据、语义与入口，不规定布局、颜色或动画。类型见 `src/simulation/m8/ui-contracts.ts`；**当前只有类型签名，没有这些新查询的运行实现**。Claude可以继续U1/U2使用现有16件目录，不得将B1的44件来源归档显示成已实现战斗效果。
+2026-10-07审计修订，待复审；配套 [M8_RULES.md](M8_RULES.md)。本页规定数据、语义与入口，不规定布局、颜色或动画。类型见 `src/simulation/m8/ui-contracts.ts`；**当前只有类型签名，没有这些新查询的运行实现**。Claude可以继续U1/U2使用现有16件目录，不得将B1的44件来源归档显示成已实现战斗效果。
 
 ## 1. 权威边界与交付门槛
 
@@ -13,7 +13,7 @@ Match为资源/操作/轮次唯一权威，Combat为战斗结算唯一权威。�
 | 战斗状态/来源/统计 | readCombatStatuses、readCombatStats | B3；实战完成，B9后才签收回放 |
 | 轮次、野怪预览 | readRoundInfo、readEncounterPreview | B6/B7；具体日程/内容须来源签收 |
 | 已揭示掉落、终局保留 | readLootView | B8；资源/收据原子性通过 |
-| 保存/回放兼容性 | readCompatibility | B9；版本路由与历史验证通过 |
+| 保存/回放兼容性、旧记录导出 | readCompatibility、listLegacyRecords、exportLegacy | B9；版本路由与历史验证通过 |
 
 泛型 M8Queries<Match,Combat,File> 是未来经过验证的领域状态适配签名，不是允许UI自行构造一套Match。新合同导入必须`import type`；本步不提供假实现、固定返回值或any占位。
 
@@ -37,13 +37,13 @@ M8CombatEvent保持domain/combatId/tick/eventSeq，payload由类型化联合确�
 
 | 事件 | 权威字段 | 显示/统计含义 |
 | --- | --- | --- |
-| cast | receipt.actualManaSpent/refundedMana/completed/completionCell/actionSeq | 完成施法事实，不能以法力净变化替代耗蓝 |
+| cast | receipt.targetIds/targetsSampledAtTick/actualManaSpent/refundedMana/completed/completionCell/actionSeq | 规划完成时的权威目标列表（保留顺序/重复）；不能以伤害目标替代，也不能以法力净变化替代耗蓝 |
 | packetDamage | outcome.context、raw/prevented/mitigated/absorbed/hpDamage/overkill/critical/killingPacket | 来源、父包及physical/magic/true分开；伤害排行只加hpDamage，盾伤另列 |
-| heal | requested/afterWound/actual/overheal/preventedByWound/source | 只累加actual为治疗；不以伤害×吸血比例反算 |
+| heal | healId/contributions/shares/requested/afterWound/actual/overheal/preventedByWound | 总actual只计一次；bySource用shares权威分项，不以伤害×吸血比例反算 |
 | manaChanged | reason/before/blocked/applied/overflow/after/castActionSeq | 回蓝/锁蓝/返蓝分开，不以施法前后净值算离子 |
 | statusChanged | group.contributions/effectiveMagnitude/effectiveSourceKey/nextPulseAtTick、reason | 显示有效状态与来源/期限；强者压制弱者不是删除 |
-| shieldLayerChanged | layer.granted/remaining/absorbed/expiresAtTick/source、reason | 授盾量不是吸收量；depleted与expired及death-cleanup不同 |
-| statChanged、maxHpChanged | before/after/source；最大HP还含前后currentHp、countsAsHeal=false | 血手补当前生命不作治疗/吸血反馈 |
+| shieldLayerChanged | layer.granted/remaining/absorbed/decayed/expiredDiscarded/decay/expiresAtTick/source、reason | 自然decayed不记吸收；depleted、expired、death-cleanup分开 |
+| statChanged、maxHpChanged | before/after/source；最大HP还含前后currentHp、countsAsHeal=false | range为六角格，旧range原名映射；血手补当前生命不作治疗/吸血反馈 |
 
 readCombatStats返回增量nextEventSeq和每单位三类HP伤害、盾吸收、治疗、溢出及bySource；readCombatStatuses返回状态组。时间用50ms×剩余tick换算显示，burn pulse每20tick一次，不能显示成每50ms跳伤。统计聚合使用完整事件，seek重置或从检查点重建，不重复累加；attack动作事件不记伤害；M8不再发旧damage/shieldChanged汇总事件，不能与packetDamage双算。
 
@@ -80,8 +80,24 @@ CompatibilityView是经过版本路由和必要验证后的结果，不是单凭
 
 文件currentRulesVersion/fileRulesVersion用于解释差异；UI不能改版本号、digest或hash解锁旧档。新局只写M8独立存储命名空间，旧M7原样导出由B9提供。保存成功只来自原生事务完成；重试/迟到回调不覆盖新局。回放1×/2×/4×、seek不改活动state/RNG/revision。
 
+### U7 旧记录目录与指定导出（A13）
+
+LegacyRecordAccess是B9存储服务签名，与只读Match投影M8Queries分开。UI调用listLegacyRecords()得到当前旧库active及历史records，不直接读取IndexedDB。每条LegacyRecord包括稳定recordRef、location、activeSlotRevision、createdAt、rules/schema/save/replay版本、canExportOriginal与reason。空旧库返回成功空数组；不可用/读取失败返回LegacyListResult失败分支，不冒充空库。
+
+recordRef={namespace:hex-autobattler-m6,runId,fingerprint}；namespace/runId定位旧局，fingerprint是B9对原保存信封及关联历史的确定性摘要，不含当前M8会话字段。activeSlotRevision仅是可空提示：旧历史记录没有保存活动槽token，必须为null，不能编造revision。active→history且内容不变时身份不变；内容或fingerprint变化须重新列目录后另选。列表同一引用只出现一次，active/history是位置而非身份。canExportOriginal只表示旧格式导出可完成，不表示M8可恢复/回放；失效记录返回invalid-record/missing-history。
+
+按钮选中一条完整引用后调用exportLegacy({requestId,recordRef})，不是无参数当前导出。B9校验引用，使用旧格式导出器重建原版本信封和其历史，不迁移、不改标版本、不以当前Match填充内容；若已保存原始文件字节则原样返回。响应成功携带同requestId/recordRef、fileName、application/json和bytes；失败携带同身份及not-found/stale-reference/invalid-record/missing-history/unavailable/read-failed。迟到响应只归属原选择，请求ID不一致不得覆盖新选项反馈；失败不自动回退导出其他记录。
+
+M8SaveControlsCallbacks明确区分onExportCurrent()与onExportLegacy(request)。已有SaveControlsCallbacks.onExport()只能适配“当前局”，不能直接承担旧记录导出。具体服务、控件适配与下载均由B9实现，本步不改存储或UI。
+
+合同例：当前new-m8/revision9运行中，列表返回old-run/fingerprint=old-content（history，activeSlotRevision=null，M7 format1）。选择后export-1只能返回该旧记录的format1内容；它若已换修订则stale-reference，响应仍指old-run/old-content，new-m8及其活动槽/revision/epoch/RNG完全不变。不能把“旧档可导出”的布尔值当成记录选择接口。
+
+### U4 审计例的展示归属（A03/A10/A11/A12）
+
+刀妹600盾自然减100再吸收120后，护盾反馈为remaining380/absorbed120/decayed100，吸收排行只增加120。饮血/枪刃合并35治疗、实际20/过量15，仅一个healId修改HP；bySource分别显示实际11/9、过量9/6，requestedHealing20/15；重伤分项也由领域shares给出。麦迪cast.targetIds=[A]、实际packet.targetId=B时分别展示施法选中A和拦截命中B，不覆盖其一。旧attackSpeedBps事件映射attackSpeed，before/after仍为Bps；abilityPower保留原名。克格莫第三次施法range3→4按statChanged直接反馈六角射程增长，不用UI计数推算。上述统计在实战和回放采用同一权威字段。
+
 ## 7. 接线验收与职责
 
 B3/B5/B8/B9实现后分别验证：查询前后canonical状态和所有RNG相同；预览/提交同条件同拒绝；临时ID不能操作；事件归属正确；只打盾不误报HP伤；true不混magic；血手不混heal；隐藏计划不泄漏；终局retained不报已领取；旧M7可导出但不可播。未实现门槛不得以假数据正式上线。
 
-Claude修改展示层及D6-A四个UI叶子；缺字段写 `docs/UI_REQUESTS.md`，说明字段/含义/用途/现有来源/期望验收/阻塞任务。Codex负责领域/类型、非视觉存档/回放/统计。这里只冻结合同，不要求Claude在本步修改UI。
+Claude修改展示层及D6-A四个UI叶子；缺字段写 `docs/UI_REQUESTS.md`，说明字段/含义/用途/现有来源/期望验收/阻塞任务。Codex负责领域/类型、非视觉存档/回放/统计。本版仅审计修订合同、等待复审，不要求Claude在本步修改UI。

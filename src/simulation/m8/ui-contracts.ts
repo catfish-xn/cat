@@ -1,4 +1,4 @@
-/** Frozen B2 query signatures, not available runtime exports until B3–B9. */
+/** B2 v2 audit revision, pending re-review; query signatures, not available runtime exports until B3–B9. */
 import type { HexCell } from '../board';
 import type { DamageType, DropIdentity, LootPayload, M8Version, RoundDefinition, Source, StatusGroup, TemporaryEquipment } from './contracts';
 export type EquipmentFailure = 'wrong-phase' | 'unknown-item' | 'unknown-unit' | 'same-item'
@@ -53,7 +53,7 @@ export type CompatibilityView =
   | { readonly status: 'rejected'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: string | null; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: boolean; readonly reason: 'unsupported-version' | 'digest-mismatch' | 'invalid-data' | 'capacity-exceeded' };
 export interface CombatStatsView {
   readonly nextEventSeq: number;
-  readonly units: readonly { readonly unitId: string; readonly hpDamage: Readonly<Record<DamageType, number>>; readonly shieldAbsorbed: number; readonly healing: number; readonly overheal: number; readonly bySource: readonly { readonly source: Source; readonly hpDamage: number; readonly healing: number }[] }[];
+  readonly units: readonly { readonly unitId: string; readonly hpDamage: Readonly<Record<DamageType, number>>; readonly shieldAbsorbed: number; readonly healing: number; readonly overheal: number; readonly bySource: readonly { readonly source: Source; readonly hpDamage: number; readonly healing: number; readonly requestedHealing: number; readonly preventedByWound: number; readonly overheal: number }[] }[];
 }
 /** State is the validated future M8 Match/Combat, never a UI-owned reconstructed state. */
 export interface M8Queries<Match, Combat, File> {
@@ -67,4 +67,41 @@ export interface M8Queries<Match, Combat, File> {
   readCompatibility(file: Readonly<File>): CompatibilityView;
   readCombatStats(state: Readonly<Combat>): CombatStatsView;
   readCombatStatuses(state: Readonly<Combat>): readonly StatusGroup[];
+}
+
+
+/** A13: this boundary belongs to B9 storage, never to Match or a UI DB reader. */
+export interface LegacyRecordRef {
+  readonly namespace: 'hex-autobattler-m6';
+  readonly runId: string;
+  readonly fingerprint: string;
+}
+export interface LegacyRecord {
+  readonly recordRef: LegacyRecordRef;
+  readonly location: 'active' | 'history';
+  /** Informational only: old historical records did not retain the active-slot token. */
+  readonly activeSlotRevision: number | null;
+  readonly createdAt: string;
+  readonly rulesVersion: 'm5-14.24b-v1';
+  readonly schemaVersion: 5;
+  readonly saveFormatVersion: 1;
+  readonly replayFormatVersion: 1;
+  readonly canExportOriginal: boolean;
+  readonly reason: 'invalid-record' | 'missing-history' | null;
+}
+export type LegacyListResult =
+  | { readonly ok: true; readonly records: readonly LegacyRecord[] }
+  | { readonly ok: false; readonly namespace: 'hex-autobattler-m6'; readonly reason: 'unavailable' | 'read-failed' };
+export interface LegacyExportRequest { readonly requestId: string; readonly recordRef: LegacyRecordRef }
+export type LegacyExportResult = LegacyExportRequest & (
+  | { readonly ok: true; readonly fileName: string; readonly mediaType: 'application/json'; readonly bytes: Uint8Array }
+  | { readonly ok: false; readonly reason: 'not-found' | 'stale-reference' | 'invalid-record' | 'missing-history' | 'unavailable' | 'read-failed' }
+);
+export interface LegacyRecordAccess {
+  listLegacyRecords(): Promise<LegacyListResult>;
+  exportLegacy(request: LegacyExportRequest): Promise<LegacyExportResult>;
+}
+export interface M8SaveControlsCallbacks {
+  onExportCurrent(): Promise<void>;
+  onExportLegacy(request: LegacyExportRequest): Promise<LegacyExportResult>;
 }

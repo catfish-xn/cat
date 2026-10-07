@@ -4,17 +4,18 @@ import type { CompatibilityView, LootView, RevealedDropView } from '../src/simul
 
 const source: Source = { ownerId: 'u1', sourceKind: 'item', definitionId: 'TFT_Item_Morellonomicon', instanceId: 'i1', effectIndex: 0, parentItemInstanceId: null };
 const burn: PeriodicTask = {
-  key: '["c1","item","i1",0,"u2"]', source, targetId: 'u2', nextPulseAtTick: 20,
+  key: '["c1","u1","item","TFT_Item_Morellonomicon","i1",0,null,"u2","source"]', source, targetId: 'u2', nextPulseAtTick: 20,
   periodTicks: 20, endsAtTick: 200, pulseOrdinal: 0, pulseLimit: 10,
   remainderNumerator: 0, remainderDenominator: 10000,
   finalPulse: 'before-expiry', onSourceDeath: 'persist-attached', onTargetDeath: 'cancel',
-  effect: { kind: 'damage', damageType: 'true', delivery: 'item-burn', critEligibility: 'never',
-    amount: { flat: 0, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 100, missingHpBps: 0, actualManaSpentBps: 0, actualDamageBps: 0, hpBasis: 'target', sample: 'each-pulse', cap: null } },
+  program: { definitionId: 'burn', targetSnapshot: 'once-per-pulse', selector: { primary: 'normal', candidates: 'bound-target', relation: 'enemy', anchor: 'holder', radius: null, maxTargets: 1, excludeSelf: true, excludePrimary: false, distinct: true, order: 'distance-id', sample: 'each-pulse' }, effects: [{ kind: 'damage', damageType: 'true', delivery: 'item-burn', critEligibility: 'never',
+    amount: { flat: 0, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 100, missingHpBps: 0, actualManaSpentBps: 0, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'target', sample: 'each-pulse', cap: null } }] },
 };
 const threshold: TriggerDefinition = {
+  id: 'threshold', listener: { subject: 'target', relationToHolder: 'self', withinHexes: null }, aggregation: 'event', counters: [], gate: { kind: 'always' },
   source: { ...source, definitionId: 'TFT_Item_SteraksGage', instanceId: 'i2' },
   event: 'post-damage-survival', condition: { kind: 'hp-ratio', subject: 'holder', op: 'lte', thresholdBps: 6000 },
-  selector: { relation: 'self', anchor: 'holder', radius: 0, maxTargets: 1, excludeSelf: false, excludePrimary: false, distinct: true, order: 'distance-id', sample: 'action-completion' },
+  selector: { primary: 'normal', candidates: 'board', relation: 'self', anchor: 'holder', radius: 0, maxTargets: 1, excludeSelf: false, excludePrimary: false, distinct: true, order: 'distance-id', sample: 'action-completion' },
   internalCooldownTicks: 0, maxPerAction: 1, maxPerCombat: 1, stackPolicy: { kind: 'independent-instances' },
   effects: [{ kind: 'change-max-hp', bonusBps: 2500, currentHp: 'add-max-delta', countsAsHeal: false }],
 };
@@ -34,19 +35,19 @@ describe('M8 B2 data expressiveness (not combat execution)', () => {
     // Independent hand-written acceptance data: 2000HP at 1% gives ten 20HP pulses.
     const expectedPulses = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200];
     expect(expectedPulses).toHaveLength(10);
-    expect(restored.effect).toMatchObject({ damageType: 'true', critEligibility: 'never' });
+    expect(restored.program.effects[0]).toMatchObject({ damageType: 'true', critEligibility: 'never' });
   });
   it('can retain a weaker source and its expiry while exposing the stronger status', () => {
-    const application = { kind: 'shred', magnitudeBps: 3000, duration: { kind: 'ticks', ticks: 100 }, stackPolicy: { kind: 'strongest-category', category: 'shred', retainSuppressed: true }, removable: true, polarity: 'harmful' } as const;
+    const application = { activation: 'next-tick', kind: 'shred', magnitudeBps: 3000, duration: { kind: 'ticks', ticks: 100 }, stackPolicy: { kind: 'strongest-category', category: 'shred', retainSuppressed: true }, removable: true, polarity: 'harmful', damageFilter: null, onEnd: null } as const;
     const group: StatusGroup = { targetId: 'u2', kind: 'shred', effectiveSourceKey: 'strong', effectiveMagnitudeBps: 5000, nextPulseAtTick: null,
-      contributions: [{ key: 'weak', source, targetId: 'u2', appliedAtTick: 0, expiresAtTick: 100, application }, { key: 'strong', source: { ...source, instanceId: 'i2' }, targetId: 'u2', appliedAtTick: 20, expiresAtTick: 60, application: { ...application, magnitudeBps: 5000 } }] };
+      contributions: [{ key: 'weak', source, targetId: 'u2', appliedAtTick: 0, expiresAtTick: 100, endRewardConsumed: false, application }, { key: 'strong', source: { ...source, instanceId: 'i2' }, targetId: 'u2', appliedAtTick: 20, expiresAtTick: 60, endRewardConsumed: false, application: { ...application, magnitudeBps: 5000 } }] };
     expect(JSON.parse(JSON.stringify(group))).toEqual(group);
     expect(group.contributions.map(x => x.expiresAtTick)).toEqual([100, 60]);
   });
   it('expresses survival gates and max-health gains separately from healing', () => {
     const survived: SurvivalSample = { unitId: 'u1', tick: 40, hpBeforeDamage: 700, hpAfterDamage: 600, maxHpBeforeThresholdEffects: 1000, survivedDamageBatch: true, receivedPositiveDamage: true };
     const lethal: SurvivalSample = { ...survived, hpAfterDamage: 0, survivedDamageBatch: false };
-    const heal: HealOutcome = { source, targetId: 'u1', requested: 300, kind: 'direct', fromPacketId: null, afterWound: 201, actual: 100, overheal: 101, preventedByWound: 99 };
+    const heal: HealOutcome = { healId: 'h1', contributions: [{ source, numerator: 300, denominator: 1 }], shares: [{ source, requested: 300, afterWound: 201, actual: 100, overheal: 101, preventedByWound: 99 }], targetId: 'u1', requested: 300, kind: 'direct', fromPacketId: null, afterWound: 201, actual: 100, overheal: 101, preventedByWound: 99 };
     expect(threshold.effects[0]).toMatchObject({ countsAsHeal: false });
     expect(lethal.survivedDamageBatch).toBe(false);
     expect(heal.actual + heal.overheal + heal.preventedByWound).toBe(300);
@@ -59,8 +60,8 @@ describe('M8 B2 data expressiveness (not combat execution)', () => {
     expect(packet.permissions).toContain('last-whisper');
   });
   it('expresses mana-spend damage and slot-independent duplicate spell authorization', () => {
-    const receipt: CastReceipt = { source, actionSeq: 7, completed: true, actualManaSpent: 80, refundedMana: 10, completionCell: { col: 3, row: 3 } };
-    const ionic: Effect = { kind: 'damage', damageType: 'magic', delivery: 'equipment-proc', critEligibility: 'never', amount: { flat: 0, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 0, missingHpBps: 0, actualManaSpentBps: 16000, actualDamageBps: 0, hpBasis: 'target', sample: 'packet', cap: null } };
+    const receipt: CastReceipt = { source, actionSeq: 7, completed: true, targetIds: ['u2'], targetsSampledAtTick: 20, actualManaSpent: 80, refundedMana: 10, completionCell: { col: 3, row: 3 } };
+    const ionic: Effect = { kind: 'damage', damageType: 'magic', delivery: 'equipment-proc', critEligibility: 'never', amount: { flat: 0, attackDamageBps: 0, abilityPowerBps: 0, maxHpBps: 0, missingHpBps: 0, actualManaSpentBps: 16000, actualDamageBps: 0, shieldAbsorbedBps: 0, hpBasis: 'target', sample: 'packet', cap: null } };
     const authorization: SpellCritAuthorization = { nonItemSources: [], itemSources: [{ ...source, definitionId: 'TFT_Item_InfinityEdge' }, { ...source, definitionId: 'TFT_Item_JeweledGauntlet', instanceId: 'i3' }], enabled: true, redundantItemBonusBps: 1000, chanceBps: 9500, multiplierBps: 15000 };
     expect(JSON.parse(JSON.stringify({ receipt, ionic, authorization }))).toEqual({ receipt, ionic, authorization });
     expect(ionic.amount.actualManaSpentBps).toBe(16000);

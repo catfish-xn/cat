@@ -1,6 +1,6 @@
 # M5 Combat contract v5
 
-> M8 B2目标合同已冻结于 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
+> M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
 
 Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`, `ability-types.ts` and `strategy-types.ts` define the boundary; [M5_RULES R5–R6](../M5_RULES.md) defines numerical rules and the19 finite abilities. Runtime S13 execution lives in `combat-s13.ts`, `combat-s13-abilities.ts` and `combat-s13-state.ts`. The legacy standalone engine remains for unchanged low-level/historical primitive tests; its max-shield behavior must not be confused with M5 layers.
 
