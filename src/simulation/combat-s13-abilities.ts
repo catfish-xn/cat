@@ -12,6 +12,8 @@ export interface S13Packet { periodic?: PeriodicReference; onPositiveHpDamageHea
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
+  castReceipts?: import('./m8/contracts').CastReceipt[];
+  manaRequests?: import('./m8/contracts').ManaRequest[];
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }

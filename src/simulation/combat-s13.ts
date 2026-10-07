@@ -1,3 +1,4 @@
+import { completeCast, damageMana, planManaCost, refundCast, resolveMana } from './m8/mana';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { getNeighbors, hexDistance, type HexCell } from './board';
 import { compareIds, eliminationResult, MOVE_INTERVAL_TICKS, type CombatState, type CombatStep, type CombatEvent, type CombatOrigin } from './combat-types';
@@ -7,7 +8,7 @@ import type { Hook } from './strategy-types';
 import { nextRandom } from './rng';
 import { executeTask, planS13Attack, planS13Cast, type AbilityContext, type S13Packet } from './combat-s13-abilities';
 import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, interval,
-  mechanic, range, syncShield, variable, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
+  mechanic, range, syncShield, variable, origin, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
 import { allocateDamage, permissionsFor, prepareDamage, resolveDamage, type DamageSample } from './m8/damage';
 import { rollCrit } from './m8/crit';
 import { resolveStat, safeNumber } from './m8/stats';
@@ -163,11 +164,14 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
     const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie'].includes(champion(unit));
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
-    if (champion(unit) !== 'neutral' && !pendingVanderStrike && unit.mana >= unit.maxMana && (inRange || selfCast)) {
+    if (champion(unit) !== 'neutral' && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (inRange || selfCast)) {
       const seq = actionSeq++, beforeCount = events.length;
-      spent.set(unit.id, unit.mana); unit.mana = 0; unit.runtime.castCount++;
+      const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.mana)!;
+      spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
       const oldInterval = interval(unit, tick);
       const targets = planS13Cast(ctx, unit, target, seq);
+      const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell }, cost.actualManaSpent);
+      (ctx.castReceipts ??= []).push(receipt);
       events.splice(beforeCount, 0, { type: 'cast', tick, sourceId: unit.id, abilityId: unit.ability.id, targetIds: targets, manaSpent: spent.get(unit.id)! });
       unit.cooldownTicks = oldInterval;
       const immediate = unit.tasks.filter(t => t.executeAtTick <= tick);
@@ -280,12 +284,25 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const owner = units.find(u => u.id === source.ownerId);
     if (owner && owner.hp > 0 && hasMechanic(owner, 'killStreak')) killMana.set(owner.id, (killMana.get(owner.id) ?? 0) + mechanic(owner, 'killStreak', 'mana'));
   }
+  for (const request of ctx.manaRequests ?? []) {
+    const target = units.find(u => u.id === request.targetId); if (!target?.alive || target.hp <= 0) continue;
+    const mana = { unitId: target.id, current: target.mana, maximum: target.maxMana, lockedUntilTick: target.manaLockedUntilTick ?? 0 };
+    const receipt = ctx.castReceipts?.find(c => c.source.ownerId === target.id && c.actionSeq === request.castActionSeq);
+    const result = request.reason === 'cast-refund' ? refundCast(mana, request, receipt!, tick) : { outcome: resolveMana(mana, request, tick) };
+    if ('receipt' in result) ctx.castReceipts = ctx.castReceipts!.map(c => c === receipt ? result.receipt : c);
+    const outcome = result.outcome; target.mana = outcome.after;
+    events.push({ type: 'manaChanged', tick, unitId: target.id, before: outcome.before, spent: 0, attackGain: 0, damageGain: 0, hookGain: outcome.applied, overflow: outcome.overflow, after: outcome.after, outcome });
+  }
   for (const unit of units) {
     if (!unit.alive || unit.hp <= 0 || champion(unit) === 'neutral') continue;
     if ((hpLost.get(unit.id) ?? 0) > 0) hooks(unit, 'onHpLoss', actionSeq);
-    const attackGain = attackMana.get(unit.id) ?? 0, damageGain = Math.min(S13_COMBAT_RULES.damageManaCap, Math.floor((hpLost.get(unit.id) ?? 0) * S13_COMBAT_RULES.damageManaBps / 10000)), hookGain = (killMana.get(unit.id) ?? 0) + (hookMana.get(unit.id) ?? 0);
-    const total = unit.mana + attackGain + damageGain + hookGain, overflow = Math.max(0, total - unit.maxMana);
-    unit.mana = Math.min(unit.maxMana, total);
+    const attackGain = attackMana.get(unit.id) ?? 0, damageGain = damageMana(hpLost.get(unit.id) ?? 0), hookGain = (killMana.get(unit.id) ?? 0) + (hookMana.get(unit.id) ?? 0);
+    let overflow = 0;
+    for (const [reason, gain] of [['attack', attackGain], ['damage', damageGain], ['kill', hookGain]] as const) {
+      const outcome = resolveMana({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 },
+        { source: asSource(origin(unit)), targetId: unit.id, amount: gain, reason, bypassLock: 'none', castActionSeq: null }, tick);
+      unit.mana = outcome.after; overflow += outcome.overflow;
+    }
     if ((spent.get(unit.id) ?? 0) + attackGain + damageGain + hookGain > 0) events.push({ type: 'manaChanged', tick, unitId: unit.id,
       before: manaBefore.get(unit.id)!, spent: spent.get(unit.id) ?? 0, attackGain, damageGain, hookGain, overflow, after: unit.mana });
     for (const effect of unit.mechanics ?? []) if (effect.mechanic === 'bulkyBuddies' && !unit.runtime.buddyTriggered) {

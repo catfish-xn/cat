@@ -90,6 +90,8 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
   const sample = effectSample(holder, target, ctx.tick, frozen, absorbed);
   const value = 'amount' in effect && typeof effect.amount !== 'number' ? amountOverride ?? evaluateAmount(effect.amount, sample) : 0;
   switch (effect.kind) {
+    case 'grant-mana':
+      (ctx.manaRequests ??= []).push({ source, targetId: target.id, amount: effect.amount, reason: effect.reason, bypassLock: effect.bypassLock, castActionSeq: effect.reason === 'cast-refund' ? seq : null }); break;
     case 'damage': ctx.packets.push({ source, targetId: target.id, raw: value, damageType: effect.damageType, actionSeq: seq, ordinal,
       delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(periodic ? { periodic } : {}) }); break;
     case 'heal': {

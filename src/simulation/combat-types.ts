@@ -16,6 +16,8 @@ export interface CombatMechanic { readonly source: CombatOrigin; readonly mechan
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 export interface CombatUnit {
+  readonly manaLockedUntilTick?: number;
+  readonly unitKind?: 'champion' | 'neutral';
   readonly mechanismDefinitions?: import('./m8/runtime-types').MechanismDefinitions;
   readonly mechanismState?: import('./m8/runtime-types').MechanismState;
   readonly maxHpBasis?: { readonly base: number; readonly flat: number; readonly bps: number; readonly bonusBps: number };
@@ -55,7 +57,7 @@ export type CombatEventData =
   | { readonly type: 'cast'; readonly tick: number; readonly sourceId: string; readonly abilityId: string; readonly targetIds: readonly string[]; readonly manaSpent: number }
   | { readonly type: 'shieldChanged'; readonly tick: number; readonly unitId: string; readonly reason: 'granted' | 'expired'; readonly before: number; readonly after: number; readonly expiresAtTick: number | null }
   | { readonly type: 'damage'; readonly tick: number; readonly unitId: string; readonly amount: number; readonly hp: number; readonly physicalAmount: number; readonly magicAmount: number; readonly absorbed: number; readonly hpDamage: number; readonly shield: number; readonly packets?: readonly (DamagePacket & { readonly mitigated: number })[] }
-  | { readonly type: 'manaChanged'; readonly tick: number; readonly unitId: string; readonly before: number; readonly spent: number; readonly attackGain: number; readonly damageGain: number; readonly hookGain?: number; readonly overflow: number; readonly after: number }
+  | { readonly type: 'manaChanged'; readonly outcome?: import('./m8/contracts').ManaOutcome; readonly tick: number; readonly unitId: string; readonly before: number; readonly spent: number; readonly attackGain: number; readonly damageGain: number; readonly hookGain?: number; readonly overflow: number; readonly after: number }
   | { readonly type: 'death'; readonly tick: number; readonly unitId: string }
   | { readonly type: 'combatFinished'; readonly tick: number; readonly result: CombatResult; readonly reason: 'elimination' | 'timeout' };
 export interface CombatStep { readonly state: CombatState; readonly events: readonly CombatEvent[] }

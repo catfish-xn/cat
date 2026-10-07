@@ -28,7 +28,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     if (strategy && !resolved) throw new Error(`Missing strategy unit: ${unit.id}`);
     const stats = resolved?.stats ?? getUnitStats(unit.definitionId, unit.starLevel);
     const ability = resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel);
-    return [{ id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
+    return [{ ...(stats.unitKind ? { unitKind: stats.unitKind } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
       cell: { ...unit.location.cell }, hp: Math.floor(stats.health * (resolved?.mechanics?.find(m => m.mechanic === 'glassCannon')?.values.startingHealthBps ?? 10000) / 10000), maxHp: stats.health,
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
