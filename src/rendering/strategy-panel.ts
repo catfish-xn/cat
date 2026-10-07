@@ -281,7 +281,7 @@ export class StrategyPanel {
           if (guard && guard.name !== name && now - guard.at < LIFECYCLE_QUIET_MS) { this.actions.status('阶段刚刚切换 · 请确认后再点击'); return; }
           const before = this.actions.state().phase;
           this.actions.control(name);
-          if (this.actions.state().phase !== before) this.lifecycleGuard = { at: now, name };
+          if (this.actions.state().phase !== before) this.lifecycleGuard = { at: performance.now(), name };
           return;
         }
         this.actions.control(name);
