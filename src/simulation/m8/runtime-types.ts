@@ -2,6 +2,7 @@ import type { Amount, Condition, EffectRuntime, PeriodicTask, Source, StatModifi
 /** Development input/compiler projections. The frozen G04–G07 records themselves are unchanged. */
 export interface VampDefinition { readonly source: Source; readonly modifier: StatModifier; readonly allyBps: number; readonly allyCondition: Condition }
 export interface MechanismDefinitions {
+  readonly eventTriggers?: readonly TriggerDefinition[];
   readonly periodicTasks: readonly PeriodicTask[];
   readonly survivalTriggers: readonly TriggerDefinition[];
   readonly vamp: readonly VampDefinition[];

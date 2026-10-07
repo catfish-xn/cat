@@ -16,6 +16,10 @@ export interface CombatMechanic { readonly source: CombatOrigin; readonly mechan
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 export interface CombatUnit {
+  readonly triggerLedger?: import('./m8/triggers').TriggerLedger;
+  readonly encounterId?: string;
+  readonly monsterFamily?: string;
+  readonly companionDefinitions?: readonly import('./m8/companions').CompanionDefinition[];
   readonly manaLockedUntilTick?: number;
   readonly unitKind?: 'champion' | 'neutral';
   readonly mechanismDefinitions?: import('./m8/runtime-types').MechanismDefinitions;
@@ -35,6 +39,9 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly damageContributors?: Readonly<Record<string, readonly string[]>>;
+  readonly nextTriggerEventSeq?: number;
+  readonly companionState?: import('./m8/companions').CompanionState;
   readonly rngState?: number; readonly rngDraws?: number; readonly nextActionSeq?: number;
   readonly strategy?: StrategySnapshot; readonly combatId?: string; readonly nextEventSeq?: number; readonly startEffectsApplied?: boolean;
   readonly board: Board; readonly units: readonly CombatUnit[]; readonly tick: number; readonly maxTicks: number;

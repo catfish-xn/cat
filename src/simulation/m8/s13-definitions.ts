@@ -1,5 +1,5 @@
 import type { CombatOrigin, CombatUnit } from '../combat-types';
-import type { Amount, Effect, PeriodicTask, Source, TargetSelector } from './contracts';
+import type { Amount, Effect, PeriodicTask, Source, TargetSelector, TriggerDefinition } from './contracts';
 import type { MechanismDefinitions } from './runtime-types';
 import { effectIdentity } from './identity';
 export const asSource = (source: CombatOrigin): Source => ({ ...source, parentItemInstanceId: 'parentItemInstanceId' in source ? (source as Source).parentItemInstanceId : null });
@@ -8,10 +8,12 @@ export const flatAmount = (flat = 0, patch: Partial<Amount> = {}): Amount => ({ 
 export const selfSelector = (patch: Partial<TargetSelector> = {}): TargetSelector => ({ primary: 'normal', candidates: 'board', relation: 'self', anchor: 'holder', radius: null,
   maxTargets: 1, excludeSelf: false, excludePrimary: false, distinct: true, order: 'distance-id', sample: 'each-pulse', ...patch });
 export function compileMechanismDefinitions(unit: CombatUnit, combatId: string): MechanismDefinitions {
+  const eventTriggers: TriggerDefinition[] = [];
   const periodicTasks: PeriodicTask[] = [], vamp: MechanismDefinitions['vamp'][number][] = [];
   for (const m of unit.mechanics ?? []) {
     const source = asSource(m.source), v = m.values;
     let effects: Effect[] | undefined;
+    if (m.mechanic === 'rageblade') eventTriggers.push({ id: 'attack-growth', source, listener: { subject: 'actor', relationToHolder: 'self', withinHexes: null }, aggregation: 'event', counters: [], gate: { kind: 'always' }, event: 'attack-completed', condition: { kind: 'always' }, selector: selfSelector({ sample: 'action-completion' }), internalCooldownTicks: 0, maxPerAction: 1, maxPerCombat: null, stackPolicy: { kind: 'add-stacks', cap: null }, effects: [{ kind: 'modify-stat', modifier: { stat: 'attackSpeed', unit: 'bps', value: { kind: 'constant', amount: v.attackSpeedBps }, condition: { kind: 'always' }, damageFilter: null }, activation: 'immediate', duration: { kind: 'combat' }, stackPolicy: { kind: 'add-stacks', cap: null } }] });
     // Legacy mechanic tags compile data only; G04–G07 executors receive frozen programs, never item IDs.
     if (m.mechanic === 'dragonClaw') effects = [{ kind: 'heal', amount: flatAmount(0, { maxHpBps: v.healMaxHpBps, sample: 'each-pulse' }) }];
     if (m.mechanic === 'archangel') effects = [{ kind: 'modify-stat', activation: 'immediate', stackPolicy: { kind: 'add-stacks', cap: null }, duration: { kind: 'combat' },
@@ -22,5 +24,5 @@ export function compileMechanismDefinitions(unit: CombatUnit, combatId: string):
     if (m.mechanic === 'gunblade') vamp.push({ source, modifier: { stat: 'omnivamp', unit: 'bps', value: { kind: 'constant', amount: v.selfHealBps }, condition: { kind: 'always' }, damageFilter: null },
       allyBps: v.allyHealBps, allyCondition: { kind: 'always' } });
   }
-  return { periodicTasks, survivalTriggers: [], vamp, ...(unit.ability.kind === 's13' && unit.ability.variables.HealPercentHealth > 0 ? { positiveDamageHeals: [{ source: asSource({ ownerId: unit.id, sourceKind: 'ability', definitionId: unit.ability.id, instanceId: unit.id, effectIndex: 0 }), amount: flatAmount(0, { maxHpBps: unit.ability.variables.HealPercentHealth, sample: 'packet' }) }] } : {}) };
+  return { ...(eventTriggers.length ? { eventTriggers } : {}), periodicTasks, survivalTriggers: [], vamp, ...(unit.ability.kind === 's13' && unit.ability.variables.HealPercentHealth > 0 ? { positiveDamageHeals: [{ source: asSource({ ownerId: unit.id, sourceKind: 'ability', definitionId: unit.ability.id, instanceId: unit.id, effectIndex: 0 }), amount: flatAmount(0, { maxHpBps: unit.ability.variables.HealPercentHealth, sample: 'packet' }) }] } : {}) };
 }

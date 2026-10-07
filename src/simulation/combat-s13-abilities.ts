@@ -7,11 +7,14 @@ import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enem
   origin, path, range, sourceKey, variable, type S13Unit } from './combat-s13-state';
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
-export interface S13Packet { periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
+export interface S13Packet { parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
   ordinal: number; critical?: boolean; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
-export interface S13Heal { source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
+export interface S13Heal { lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
+  resolutionFacts?: import('./m8/triggers').ResolutionFacts;
+  nextTriggerEventSeq?: number;
+  virtualHp?: ReadonlyMap<string, number>;
   castReceipts?: import('./m8/contracts').CastReceipt[];
   manaRequests?: import('./m8/contracts').ManaRequest[];
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
@@ -223,11 +226,6 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
   if (champion(unit) === 'kogmaw') packet(ctx, unit, target, amount(unit, ctx.tick, { ap: variable(unit, 'DamageOnAttack') }), 'magic', seq, 2, false, false, null);
   let ordinal = 3;
   for (const effect of [...unit.mechanics ?? []].sort((a, b) => compareOrigins(a.source, b.source))) {
-    if (effect.mechanic === 'rageblade') {
-      const before = unit.runtime.attackSpeedBps; unit.runtime.attackSpeedBps += effect.values.attackSpeedBps;
-      ctx.events.push({ type: 'statChanged', tick: ctx.tick, unitId: unit.id, source: effect.source,
-        stat: 'attackSpeedBps', before, after: unit.runtime.attackSpeedBps });
-    }
     if ((effect.mechanic === 'artillery' && unit.runtime.attackCount % (effect.values.everyN ?? 5) === 0) || effect.mechanic === 'titanic') {
       const bps = effect.values.adBps ?? (effect.mechanic === 'artillery' ? 12500 : 4000);
       for (const enemy of enemies(unit, ctx.units).filter(u => hexDistance(target.cell, u.cell) <= 1))

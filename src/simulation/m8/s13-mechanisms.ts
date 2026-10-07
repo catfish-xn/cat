@@ -1,4 +1,5 @@
 /** G04–G07 adapter: compiles legacy tags once and executes only finite frozen declarations. */
+import { emitMechanismSignal } from './s13-triggers';
 import { hexDistance } from '../board';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference } from '../combat-s13-abilities';
@@ -84,33 +85,38 @@ function cancelAttachedBurns(tasks: readonly PeriodicTask[], ended: readonly Sta
     && canonicalSource(task.source) === canonicalSource(c.source)
     && task.program.definitionId === JSON.stringify([c.source.definitionId, c.source.effectIndex, 'burn'])));
 }
-interface DamageExecutionContext { readonly area: boolean; readonly triggeringCastActionSeq: number | null }
+interface DamageExecutionContext { readonly applicationId?: string; readonly facts?: import('./triggers').ResolutionFacts; readonly cast?: import('./contracts').CastReceipt; readonly counters?: Readonly<Record<string, number>>; readonly area: boolean; readonly triggeringCastActionSeq: number | null }
 export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effect: Effect, seq: number, ordinal = 0,
   frozen?: SurvivalSample, periodic?: PeriodicReference, amountOverride?: number, absorbed?: number, damageContext?: DamageExecutionContext): void {
-  const sample = effectSample(holder, target, ctx.tick, frozen, absorbed);
+  const sample = { ...effectSample(holder, target, ctx.tick, frozen, absorbed), ...(damageContext?.cast ? { cast: damageContext.cast } : {}), ...(damageContext?.facts?.damage.length ? { damageOutcomes: damageContext.facts.damage } : {}) };
   const value = 'amount' in effect && typeof effect.amount !== 'number' ? amountOverride ?? evaluateAmount(effect.amount, sample) : 0;
   switch (effect.kind) {
     case 'grant-mana':
       (ctx.manaRequests ??= []).push({ source, targetId: target.id, amount: effect.amount, reason: effect.reason, bypassLock: effect.bypassLock, castActionSeq: effect.reason === 'cast-refund' ? seq : null }); break;
     case 'damage': ctx.packets.push({ source, targetId: target.id, raw: value, damageType: effect.damageType, actionSeq: seq, ordinal,
-      delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(periodic ? { periodic } : {}) }); break;
+      delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(damageContext?.facts?.damage[0] ? { parentPacketId: damageContext.facts.damage[0].context.packetId, rootActionSeq: damageContext.facts.damage[0].context.rootActionSeq } : {}), ...(periodic ? { periodic } : {}) }); break;
     case 'heal': {
       const request = makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(source)), target.id, seq, ordinal, 'direct']), target.id, 'direct', null, [{ source, numerator: value, denominator: 1 }]);
       ctx.heals.push({ source, targetId: target.id, amount: value, request, ...(periodic ? { periodic } : {}) }); break;
     }
     case 'apply-status': applyFrozenStatus(ctx, target, source, effect.status, effect.status.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'); break;
     case 'modify-stat': {
-      const modifier = effect.modifier;
+      const rawModifier = effect.modifier;
+      const modifier = rawModifier.value.kind === 'counter' ? { ...rawModifier, value: { kind: 'constant' as const, amount: safeNumber(integer(damageContext?.counters?.[rawModifier.value.counterId] ?? 0) * integer(rawModifier.value.perCount, Number.MIN_SAFE_INTEGER)) } } : rawModifier;
+      if (modifier.stat === 'attackSpeed' && modifier.unit === 'bps' && modifier.value.kind === 'constant' && effect.duration.kind === 'combat' && effect.activation === 'immediate' && !damageContext?.applicationId && effect.stackPolicy.kind === 'add-stacks' && effect.stackPolicy.cap === null && conditionHolds(modifier.condition, sample)) {
+        const before = target.runtime.attackSpeedBps; target.runtime.attackSpeedBps = safeNumber(integer(before) + integer(modifier.value.amount));
+        ctx.events.push({ type: 'statChanged', tick: ctx.tick, unitId: target.id, source, stat: 'attackSpeedBps', before, after: target.runtime.attackSpeedBps }); break;
+      }
       // Legacy unbounded combat growth is a projection of this one program/runtime.
       if (modifier.stat === 'abilityPower' && modifier.unit === 'flat' && modifier.value.kind === 'constant' && effect.duration.kind === 'combat'
-        && effect.activation === 'immediate' && effect.stackPolicy.kind === 'add-stacks' && effect.stackPolicy.cap === null && conditionHolds(modifier.condition, sample)) {
+        && effect.activation === 'immediate' && !damageContext?.applicationId && effect.stackPolicy.kind === 'add-stacks' && effect.stackPolicy.cap === null && conditionHolds(modifier.condition, sample)) {
         const before = (target.abilityPower ?? 100) + target.runtime.abilityPowerFlat;
         target.runtime.abilityPowerFlat = safeNumber(integer(target.runtime.abilityPowerFlat) + integer(modifier.value.amount));
         ctx.events.push({ type: 'statChanged', tick: ctx.tick, unitId: target.id, source, stat: 'abilityPower', before, after: (target.abilityPower ?? 100) + target.runtime.abilityPowerFlat }); break;
       }
       applyFrozenStatus(ctx, target, source, { kind: modifier.value.kind === 'constant' && modifier.value.amount < 0 ? 'stat-debuff' : 'stat-buff', magnitudeBps: 0,
         duration: effect.duration, stackPolicy: effect.stackPolicy, activation: effect.activation, polarity: modifier.value.kind === 'constant' && modifier.value.amount < 0 ? 'harmful' : 'beneficial', removable: modifier.value.kind === 'constant' && modifier.value.amount < 0,
-        modifier, damageFilter: null, onEnd: null }, effect.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'); break;
+        modifier, damageFilter: null, onEnd: null }, damageContext?.applicationId ?? (effect.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source')); break;
     }
     case 'grant-shield': {
       const identity = effectIdentity(target.mechanismState!.combatId, source, target.id), legacyKey = source.parentItemInstanceId === null ? sourceKey(source) : identity.key, old = target.shieldLayers.find(l => l.key === legacyKey);
@@ -177,6 +183,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     let current = task;
     const seq = nextSeq(), firstPacket = ctx.packets.length;
     if (payable) {
+      emitMechanismSignal(ctx, { event: 'periodic', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: task.targetId, cast: null });
       const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source);
       const samples = new Map(targets.map(t => [t.id, effectSample(holder, t, ctx.tick)]));
       for (const target of targets) for (const [effectIndex, effect] of task.program.effects.entries()) {
@@ -207,6 +214,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     unit.shieldLayers = unit.shieldLayers.map(layer => {
       const maintained = maintainShield(frozenShield(layer, unit), ctx.tick);
       const next = shieldProjection(maintained.layer, layer.key, layer.m8Grant, maintained.reason ?? layer.endedReason);
+      if (maintained.decayed > 0 && ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, shieldDecay: [...ctx.resolutionFacts.shieldDecay, { key: next.key, amount: maintained.decayed }] };
       if (maintained.decayed > 0) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: unit.id, layer: next, reason: 'decayed' });
       if (maintained.reason) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: unit.id, layer: next, reason: maintained.reason === 'expired' ? 'expired' : 'decayed', endReason: maintained.reason });
       return next;
@@ -225,6 +233,7 @@ export function executeShieldEnd(ctx: AbilityContext, holder: S13Unit, legacyKey
   const ended = endShield(state, reason, layer.m8Grant, holder.alive && holder.hp > 0);
   const next = shieldProjection(ended.layer, layer.key, layer.m8Grant, reason); holder.shieldLayers = holder.shieldLayers.map(l => l === layer ? next : l);
   if (!ended.emitEnd) return;
+  emitMechanismSignal(ctx, { event: 'shield-ended', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: holder.id, cast: null }, ctx.resolutionFacts);
   for (const target of endTargets(holder, ctx, layer.m8Grant.endTargeting)) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, holder,
     { ...state.source, effectIndex: state.source.effectIndex + index + 1 }, target, effect, seq, index, undefined, undefined, undefined, state.absorbed, damageContext);
 }
@@ -251,9 +260,11 @@ export function vampRates(unit: S13Unit, hp: number): VampRate[] {
 }
 export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['heals'][number]): void {
   const target = ctx.units.find(u => u.id === entry.targetId); if (!target || target.hp <= 0 || !target.alive) return;
+  const late = entry.lateAmount ? evaluateAmount(entry.lateAmount, { holder: hpSample(target), target: hpSample(target), attackDamage: ad(target), abilityPower: ap(target, ctx.tick) }) : entry.amount;
   const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(entry.source)), entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
-    [{ source: asSource(entry.source), numerator: entry.amount, denominator: 1 }]);
+    [{ source: asSource(entry.source), numerator: late, denominator: 1 }]);
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick)); target.hp += outcome.actual;
+  if (ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, healing: [...ctx.resolutionFacts.healing, outcome] };
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
   ctx.events.push({ type: 'heal', tick: ctx.tick, unitId: target.id, source: outcome.shares[0]?.source ?? entry.source, requested: outcome.requested, actual: outcome.actual, overheal: outcome.overheal, hp: target.hp, outcome });
 }
