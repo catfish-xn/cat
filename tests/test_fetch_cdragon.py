@@ -3,6 +3,7 @@
 import contextlib
 import gzip
 import hashlib
+import http.client
 import importlib.util
 import io
 import json
@@ -49,9 +50,15 @@ class AcquisitionTests(unittest.TestCase):
         self.network_guard = mock.patch.object(fetch.urllib.request, "build_opener", side_effect=AssertionError("Network forbidden"))
         self.network_guard.start()
         self.addCleanup(self.network_guard.stop)
+        self.sleeper = mock.Mock()
+        self.log = io.StringIO()
+        self.stderr_guard = contextlib.redirect_stderr(self.log)
+        self.stderr_guard.__enter__()
+        self.addCleanup(self.stderr_guard.__exit__, None, None, None)
 
     def acquire(self, downloader=sample_fetch, environ=None):
-        return fetch.acquire(self.root, fetcher=downloader, now=lambda: UTC, environ=ENVIRON if environ is None else environ)
+        return fetch.acquire(self.root, fetcher=downloader, now=lambda: UTC,
+                             environ=ENVIRON if environ is None else environ, sleeper=self.sleeper)
 
     def files(self):
         return {path.relative_to(self.root).as_posix(): path.read_bytes() for path in self.root.rglob("*") if path.is_file()}
@@ -74,6 +81,8 @@ class AcquisitionTests(unittest.TestCase):
             self.assertEqual(source["gzip"]["sha256"], hashlib.sha256(archive).hexdigest())
             self.assertEqual(source["url"], fetch.URL_TEMPLATE.format(locale=source["locale"]))
             self.assertEqual(source["downloaded_at_utc"], UTC)
+            self.assertEqual(source["download_attempts"], 1)
+        self.sleeper.assert_not_called()
         self.assertEqual(json.loads((self.root / fetch.MANIFEST_PATH).read_bytes()), manifest)
 
     def test_gzip_and_manifest_are_reproducible(self):
@@ -85,23 +94,157 @@ class AcquisitionTests(unittest.TestCase):
     def test_invalid_json_or_non_object_publishes_nothing(self):
         for bad in (b"<html>Error</html>", b"{", b"[]", b"null", b"123", b'{"n":NaN}', b'{"n":Infinity}', b'{"x":"\xff"}'):
             with self.subTest(payload=bad):
+                downloader = mock.Mock(side_effect=[SAMPLES["en_us"], bad])
                 with self.assertRaises(fetch.AcquisitionError):
-                    self.acquire(lambda url: SAMPLES["en_us"] if url.endswith("en_us.json") else bad)
+                    self.acquire(downloader)
+                self.assertEqual(downloader.call_count, 2)
+                self.sleeper.assert_not_called()
                 self.assertEqual(list(self.root.iterdir()), [])
 
     def test_second_download_failure_publishes_nothing(self):
-        downloader = mock.Mock(side_effect=[SAMPLES["en_us"], urllib.error.URLError("offline fixture")])
+        downloader = mock.Mock(side_effect=[SAMPLES["en_us"]] + [urllib.error.URLError("offline fixture")] * 5)
         with self.assertRaises(urllib.error.URLError):
             self.acquire(downloader)
-        self.assertEqual(downloader.call_count, 2)
+        self.assertEqual(downloader.call_count, 6)
+        self.assertEqual(self.sleeper.call_args_list, [mock.call(delay) for delay in (15, 30, 60, 120)])
         self.assertEqual(list(self.root.iterdir()), [])
 
     def test_second_download_failure_preserves_existing_outputs(self):
-        self.acquire()
-        before = self.files()
-        with self.assertRaises(urllib.error.URLError):
-            self.acquire(mock.Mock(side_effect=[b'{"new":true}', urllib.error.URLError("failed")]))
-        self.assertEqual(self.files(), before)
+        for artifact_only in (False, True):
+            with self.subTest(artifact_only=artifact_only), mock.patch.object(
+                fetch, "MAX_COMPRESSED_TOTAL_BYTES", 1 if artifact_only else 40 * 1024 * 1024
+            ):
+                self.acquire()
+                before = self.files()
+                self.sleeper.reset_mock()
+                url = fetch.URL_TEMPLATE.format(locale="zh_cn")
+                downloader = mock.Mock(side_effect=[b'{"new":true}'] + [
+                    urllib.error.HTTPError(url, 522, "Connection timed out", {}, None)
+                ] * 5)
+                with self.assertRaises(urllib.error.HTTPError):
+                    self.acquire(downloader)
+                self.assertEqual(downloader.call_args_list, [
+                    mock.call(fetch.URL_TEMPLATE.format(locale="en_us")),
+                ] + [mock.call(url)] * 5)
+                self.assertEqual(self.sleeper.call_args_list, [mock.call(delay) for delay in (15, 30, 60, 120)])
+                self.assertEqual(self.files(), before)
+
+    def test_522_then_success_retries_exact_urls_and_records_attempts(self):
+        en_url = fetch.URL_TEMPLATE.format(locale="en_us")
+        zh_url = fetch.URL_TEMPLATE.format(locale="zh_cn")
+        downloader = mock.Mock(side_effect=[
+            urllib.error.HTTPError(en_url, 522, "Connection timed out", {}, None), SAMPLES["en_us"],
+            urllib.error.HTTPError(zh_url, 522, "Connection timed out", {}, None),
+            urllib.error.HTTPError(zh_url, 522, "Connection timed out", {}, None), SAMPLES["zh_cn"],
+        ])
+        manifest = self.acquire(downloader)
+        self.assertEqual(downloader.call_args_list, [mock.call(en_url)] * 2 + [mock.call(zh_url)] * 3)
+        self.assertEqual(self.sleeper.call_args_list, [mock.call(15), mock.call(15), mock.call(30)])
+        self.assertEqual([source["download_attempts"] for source in manifest["sources"]], [2, 3])
+        logs = self.log.getvalue().splitlines()
+        self.assertEqual(len(logs), 5)
+        self.assertIn("url=" + en_url, logs[0])
+        self.assertIn("error=HTTPError: HTTP Error 522", logs[0])
+        self.assertIn("next_delay=15s", logs[0])
+        self.assertIn("attempt 2/5", logs[1])
+        self.assertIn("error=none next_delay=none; success", logs[1])
+        self.assertIn("url=" + zh_url, logs[3])
+        self.assertIn("next_delay=30s", logs[3])
+
+    def test_retryable_http_exhausts_exactly_five_attempts(self):
+        url = fetch.URL_TEMPLATE.format(locale="en_us")
+        error = urllib.error.HTTPError(url, 522, "Connection timed out", {}, None)
+        downloader = mock.Mock(side_effect=error)
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            self.acquire(downloader)
+        self.assertIs(raised.exception, error)
+        self.assertEqual(downloader.call_args_list, [mock.call(url)] * 5)
+        self.assertEqual(self.sleeper.call_args_list, [mock.call(delay) for delay in (15, 30, 60, 120)])
+        self.assertEqual(list(self.root.iterdir()), [])
+        logs = self.log.getvalue().splitlines()
+        self.assertEqual(len(logs), 5)
+        for attempt, line in enumerate(logs, start=1):
+            self.assertIn("attempt %s/5" % attempt, line)
+            self.assertIn("url=" + url, line)
+            self.assertIn("error=HTTPError: HTTP Error 522", line)
+            self.assertIn("next_delay=%ss" % (15, 30, 60, 120)[attempt - 1] if attempt < 5 else "next_delay=none; final failure", line)
+
+    def test_transient_http_statuses_are_retryable(self):
+        url = fetch.URL_TEMPLATE.format(locale="en_us")
+        for code in (408, 429, 500, 502, 503, 504, 522, 599):
+            for error_type in (urllib.error.HTTPError, fetch.AcquisitionHTTPError):
+                with self.subTest(code=code, error_type=error_type):
+                    self.sleeper.reset_mock()
+                    error = (urllib.error.HTTPError(url, code, "fixture", {}, None)
+                             if error_type is urllib.error.HTTPError else error_type(url, code))
+                    downloader = mock.Mock(side_effect=[error, SAMPLES["en_us"], SAMPLES["zh_cn"]])
+                    manifest = self.acquire(downloader)
+                    self.assertEqual(manifest["sources"][0]["download_attempts"], 2)
+                    self.sleeper.assert_called_once_with(15)
+
+    def test_403_404_and_other_permanent_http_errors_do_not_retry(self):
+        url = fetch.URL_TEMPLATE.format(locale="en_us")
+        for code in (301, 400, 401, 403, 404, 410, 451, 600):
+            for error_type in (urllib.error.HTTPError, fetch.AcquisitionHTTPError):
+                with self.subTest(code=code, error_type=error_type):
+                    error = (urllib.error.HTTPError(url, code, "fixture", {}, None)
+                             if error_type is urllib.error.HTTPError else error_type(url, code))
+                    downloader = mock.Mock(side_effect=error)
+                    with self.assertRaises(error_type):
+                        self.acquire(downloader)
+                    downloader.assert_called_once_with(url)
+                    self.sleeper.assert_not_called()
+                    self.assertEqual(list(self.root.iterdir()), [])
+                    self.assertIn("next_delay=none; final failure", self.log.getvalue())
+
+    def test_timeouts_and_network_failures_retry(self):
+        errors = (
+            fetch.AcquisitionTimeoutError("Download exceeded total deadline of 240 seconds"),
+            TimeoutError("socket timed out"),
+            urllib.error.URLError("temporary network error"),
+            ConnectionResetError("connection reset"),
+            fetch.socket.gaierror("DNS unavailable"),
+            OSError(fetch.errno.ENETUNREACH, "network unreachable"),
+        )
+        for error in errors:
+            with self.subTest(error=type(error).__name__):
+                self.sleeper.reset_mock()
+                downloader = mock.Mock(side_effect=[error, SAMPLES["en_us"], SAMPLES["zh_cn"]])
+                manifest = self.acquire(downloader)
+                self.assertEqual(manifest["sources"][0]["download_attempts"], 2)
+                self.assertEqual(downloader.call_args_list[:2], [
+                    mock.call(fetch.URL_TEMPLATE.format(locale="en_us"))
+                ] * 2)
+                self.sleeper.assert_called_once_with(15)
+
+    def test_source_validation_size_and_non_network_failures_do_not_retry(self):
+        errors = (
+            fetch.AcquisitionError("Redirect refused for fixed source"),
+            fetch.AcquisitionError("Response URL did not match the fixed source"),
+            fetch.AcquisitionError("HTTP Content-Length exceeds the download ceiling"),
+            fetch.AcquisitionError("Downloaded size does not match HTTP Content-Length"),
+            fetch.AcquisitionError("Unexpected HTTP content encoding: gzip"),
+            fetch.AcquisitionError("Strict download deadlines require a POSIX main thread"),
+            OSError(fetch.errno.EACCES, "permission denied"),
+            http.client.IncompleteRead(b"{", 10),
+        )
+        for error in errors:
+            with self.subTest(error=str(error)):
+                downloader = mock.Mock(side_effect=error)
+                with self.assertRaises(type(error)):
+                    self.acquire(downloader)
+                self.assertEqual(downloader.call_count, 1)
+                self.sleeper.assert_not_called()
+                self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_last_attempt_success_has_no_extra_sleep(self):
+        url = fetch.URL_TEMPLATE.format(locale="en_us")
+        downloader = mock.Mock(side_effect=[
+            urllib.error.HTTPError(url, 522, "Connection timed out", {}, None)
+        ] * 4 + [SAMPLES["en_us"], SAMPLES["zh_cn"]])
+        manifest = self.acquire(downloader)
+        self.assertEqual([source["download_attempts"] for source in manifest["sources"]], [5, 1])
+        self.assertEqual(self.sleeper.call_args_list, [mock.call(delay) for delay in (15, 30, 60, 120)])
 
     def test_bad_second_json_preserves_existing_outputs(self):
         self.acquire()
@@ -160,9 +303,12 @@ class AcquisitionTests(unittest.TestCase):
             self.assert_artifact(self.acquire(environ=environment))
 
     def test_injected_download_cannot_bypass_size_ceiling(self):
+        downloader = mock.Mock(side_effect=sample_fetch)
         with mock.patch.object(fetch, "MAX_DOWNLOAD_BYTES", 1):
             with self.assertRaises(fetch.AcquisitionError):
-                self.acquire()
+                self.acquire(downloader)
+        self.assertEqual(downloader.call_count, 1)
+        self.sleeper.assert_not_called()
         self.assertEqual(list(self.root.iterdir()), [])
 
     def test_publication_failure_rolls_back_existing_files(self):
@@ -250,7 +396,7 @@ class DownloadTests(unittest.TestCase):
         with mock.patch.object(fetch.signal, "getitimer", return_value=(0.0, 0.0)), mock.patch.object(fetch.signal, "signal", return_value="previous") as handler, mock.patch.object(fetch.signal, "setitimer") as timer:
             with fetch._hard_deadline(5):
                 callback = handler.call_args_list[0].args[1]
-                with self.assertRaises(fetch.AcquisitionError):
+                with self.assertRaises(fetch.AcquisitionTimeoutError):
                     callback(None, None)
             self.assertEqual(timer.call_args_list, [mock.call(fetch.signal.ITIMER_REAL, 5), mock.call(fetch.signal.ITIMER_REAL, 0)])
             self.assertEqual(handler.call_args_list[-1], mock.call(fetch.signal.SIGALRM, "previous"))
@@ -259,7 +405,7 @@ class DownloadTests(unittest.TestCase):
         opener = mock.Mock()
         opener.open.side_effect = lambda *args, **kwargs: time.sleep(1)
         with mock.patch.object(fetch, "DOWNLOAD_TIMEOUT_SECONDS", 0.01), mock.patch.object(fetch.urllib.request, "build_opener", return_value=opener):
-            with self.assertRaisesRegex(fetch.AcquisitionError, "total deadline"):
+            with self.assertRaisesRegex(fetch.AcquisitionTimeoutError, "total deadline"):
                 fetch.download(fetch.URL_TEMPLATE.format(locale="en_us"))
 
 

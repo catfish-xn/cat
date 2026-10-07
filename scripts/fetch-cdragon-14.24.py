@@ -5,8 +5,9 @@ Python 3 standard library only. Run on a POSIX GitHub Actions runner:
     python3 scripts/fetch-cdragon-14.24.py --root .
 
 Both locales must download and validate before this program changes any output.
-No retries, mirrors, newer patches, locale substitutions, or git operations are
-performed. HTTP redirects are deliberately rejected. Gzip has a zero timestamp
+Transient failures retry the same fixed URL at most five times total. No mirrors,
+newer patches, locale substitutions, or git operations are performed. HTTP
+redirects are deliberately rejected. Gzip has a zero timestamp
 and no filename, so the same input produces the same output in a given zlib
 implementation.
 
@@ -19,17 +20,21 @@ commit the repository manifest only after that upload succeeds.
 import argparse
 import contextlib
 import datetime
+import errno
 import gzip
 import hashlib
+import http.client
 import io
 import json
 import os
 from pathlib import Path
 import shutil
 import signal
+import socket
 import sys
 import tempfile
 import threading
+import time
 import urllib.error
 import urllib.request
 
@@ -40,7 +45,9 @@ BASE_PATH = Path("src/simulation/content/source/s13-14.24b")
 MANIFEST_PATH = BASE_PATH / "provenance/download-manifest.json"
 ARTIFACT_PATH = Path("artifacts/cdragon-14.24")
 MAX_DOWNLOAD_BYTES = 256 * 1024 * 1024
-DOWNLOAD_TIMEOUT_SECONDS = 120
+DOWNLOAD_TIMEOUT_SECONDS = 240
+MAX_DOWNLOAD_ATTEMPTS = 5
+RETRY_DELAYS_SECONDS = (15, 30, 60, 120)
 MAX_COMPRESSED_FILE_BYTES = 20 * 1024 * 1024
 MAX_COMPRESSED_TOTAL_BYTES = 40 * 1024 * 1024
 ARTIFACT_RETENTION_DAYS = 30
@@ -49,6 +56,18 @@ CHUNK_BYTES = 64 * 1024
 
 class AcquisitionError(RuntimeError):
     """An acquisition failed; no substitute source may be used."""
+
+
+class AcquisitionTimeoutError(AcquisitionError):
+    """A total download deadline expired; the same source may be retried."""
+
+
+class AcquisitionHTTPError(AcquisitionError):
+    """An HTTP response status, retained for the retry policy."""
+
+    def __init__(self, url, code):
+        self.code = code
+        super().__init__("Expected HTTP 200 for %s, got %s" % (url, code))
 
 
 class _RejectRedirects(urllib.request.HTTPRedirectHandler):
@@ -65,7 +84,7 @@ def _hard_deadline(seconds):
         raise AcquisitionError("An existing process alarm prevents a strict download deadline")
 
     def timed_out(signum, frame):
-        raise AcquisitionError("Download exceeded total deadline of %s seconds" % seconds)
+        raise AcquisitionTimeoutError("Download exceeded total deadline of %s seconds" % seconds)
 
     previous = signal.signal(signal.SIGALRM, timed_out)
     try:
@@ -90,7 +109,7 @@ def download(url):
     with _hard_deadline(DOWNLOAD_TIMEOUT_SECONDS):
         with opener.open(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
             if response.status != 200:
-                raise AcquisitionError("Expected HTTP 200 for %s, got %s" % (url, response.status))
+                raise AcquisitionHTTPError(url, response.status)
             if response.geturl() != url:
                 raise AcquisitionError("Response URL did not match the fixed source: " + url)
             encoding = response.headers.get("Content-Encoding", "identity").lower().strip()
@@ -138,6 +157,54 @@ def validate_json(raw, locale):
         raise AcquisitionError("Invalid UTF-8 JSON for %s: %s" % (locale, exc)) from exc
     if not isinstance(parsed, dict):
         raise AcquisitionError("Expected a JSON object for " + locale)
+
+
+def _retryable(exc):
+    # HTTPError is also a URLError/OSError: classify its status first.
+    if isinstance(exc, (urllib.error.HTTPError, AcquisitionHTTPError)):
+        return exc.code in (408, 429) or 500 <= exc.code <= 599
+    if isinstance(exc, AcquisitionTimeoutError):
+        return True
+    # Redirects, source mismatch, invalid JSON, and size failures are final.
+    if isinstance(exc, AcquisitionError):
+        return False
+    if isinstance(exc, (urllib.error.URLError, TimeoutError, ConnectionError, socket.gaierror, socket.herror)):
+        return True
+    return isinstance(exc, OSError) and exc.errno in (
+        errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET,
+        errno.EHOSTUNREACH, errno.ENETDOWN, errno.ENETRESET,
+        errno.ENETUNREACH, errno.EPIPE, errno.ETIMEDOUT,
+    )
+
+
+def _fetch_validated(url, locale, fetcher, sleeper):
+    """Retry only transient failures, always requesting the identical URL."""
+    for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
+        try:
+            raw = fetcher(url)
+            validate_json(raw, locale)
+        except (AcquisitionError, OSError, http.client.HTTPException) as exc:
+            retry = attempt < MAX_DOWNLOAD_ATTEMPTS and _retryable(exc)
+            delay = RETRY_DELAYS_SECONDS[attempt - 1] if retry else None
+            print(
+                "CommunityDragon attempt %s/%s url=%s error=%s: %s next_delay=%s; %s" % (
+                    attempt, MAX_DOWNLOAD_ATTEMPTS, url, type(exc).__name__, exc,
+                    "%ss" % delay if retry else "none",
+                    "retrying identical URL" if retry else "final failure",
+                ),
+                file=sys.stderr, flush=True,
+            )
+            if not retry:
+                raise
+            sleeper(delay)
+        else:
+            print(
+                "CommunityDragon attempt %s/%s url=%s error=none next_delay=none; success" % (
+                    attempt, MAX_DOWNLOAD_ATTEMPTS, url,
+                ),
+                file=sys.stderr, flush=True,
+            )
+            return raw, attempt
 
 
 def deterministic_gzip(raw):
@@ -218,25 +285,26 @@ def _publish(root, writes, removals):
             raise
 
 
-def acquire(root, fetcher=None, now=None, environ=None):
+def acquire(root, fetcher=None, now=None, environ=None, sleeper=None):
     """Fetch/validate both sources and publish a complete set of acquisition files."""
     fetcher = download if fetcher is None else fetcher
     now = utc_now if now is None else now
     environ = os.environ if environ is None else environ
+    sleeper = time.sleep if sleeper is None else sleeper
     sources = []
     archives = {}
     # All network reads and JSON validation happen before any filesystem writes.
     for locale in LOCALES:
         url = URL_TEMPLATE.format(locale=locale)
-        raw = fetcher(url)
+        raw, attempts = _fetch_validated(url, locale, fetcher, sleeper)
         downloaded_at = now()
-        validate_json(raw, locale)
         compressed = deterministic_gzip(raw)
         relative = BASE_PATH / "raw" / (locale + ".json.gz")
         archives[relative] = compressed
         sources.append({
             "locale": locale,
             "url": url,
+            "download_attempts": attempts,
             "downloaded_at_utc": downloaded_at,
             "raw": _fingerprint(raw),
             "gzip": dict(_fingerprint(compressed), path=relative.as_posix()),
@@ -300,7 +368,7 @@ def main(argv=None):
                 handle.write("manifest_path=%s\n" % MANIFEST_PATH.as_posix())
         print("Acquired en_us and zh_cn: %s; acquisition-only, numeric values unverified" % mode)
         return 0
-    except (AcquisitionError, OSError, urllib.error.URLError) as exc:
+    except (AcquisitionError, OSError, http.client.HTTPException) as exc:
         print("CommunityDragon acquisition failed: %s" % exc, file=sys.stderr)
         return 1
 

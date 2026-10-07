@@ -16,7 +16,9 @@ jobs:
   archive:
     if: github.repository == 'catfish-xn/cat' && github.ref == 'refs/heads/data/cdragon-14.24' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # Two locales: 2 * (5 * 240s + 15s + 30s + 60s + 120s) = 47.5 minutes.
+    # Leave time for tests, compression, artifact upload, and the guarded commit.
+    timeout-minutes: 60
     permissions:
       contents: write
     env:
