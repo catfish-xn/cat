@@ -23,9 +23,9 @@ export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[
   return ids.map(id => units.find(u => u.id === id)!);
 }
 
-function endTargets(holder: S13Unit, ctx: AbilityContext, targeting: AbilityTargeting): S13Unit[] {
+function endTargets(holder: S13Unit, ctx: AbilityContext, targeting: AbilityTargeting, area = false): S13Unit[] {
   if (targeting.kind === 'fixed') return targeting.targetIds.flatMap(id => ctx.units.filter(u => u.id === id && u.alive && u.hp > 0));
-  if (targeting.kind === 'select') return selectMechanismTargets(holder, ctx.units, targeting.selector, undefined, undefined, { board: ctx.board, tick: ctx.tick });
+  if (targeting.kind === 'select') return selectMechanismTargets(holder, ctx.units, targeting.selector, undefined, undefined, { board: ctx.board, tick: ctx.tick, eligibility: area ? 'area-hit' : 'new-selection' });
   if (targeting.kind === 'area-around-selected') {
     const center = selectMechanismTargets(holder, ctx.units, targeting.center, undefined, undefined, { board: ctx.board, tick: ctx.tick })[0]; if (!center) return [];
     return ctx.units.filter(u => u.alive && u.hp > 0 && (targeting.relation === 'ally' ? u.team === holder.team : u.team !== holder.team) && hexDistance(center.cell, u.cell) <= targeting.radius).sort((a, b) => compareText(a.id, b.id));
@@ -48,6 +48,12 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
     amount: application.modifier?.value.kind === 'constant' ? application.modifier.value.amount : application.magnitudeBps,
     startsAtTick: group.contributions.find(c => c.key === identity.key)!.appliedAtTick, expiresAtTick: group.contributions.find(c => c.key === identity.key)!.expiresAtTick ?? 1201, contributionKeys: [identity.key] };
   ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, status, group, reason: 'applied' });
+  if (application.kind === 'untargetable' && application.activation === 'immediate') {
+    for (const enemy of ctx.units) if (enemy.team !== target.team && enemy.targetId === target.id) {
+      ctx.events.push({ type: 'targetChanged', tick: ctx.tick, unitId: enemy.id, before: target.id, after: null });
+      enemy.targetId = null;
+    }
+  }
   if (application.kind === 'burn') synchronizeBurnTask(target, identity.key);
 }
 function synchronizeBurnTask(target: S13Unit, key: string): void {
@@ -216,7 +222,7 @@ export function executeShieldEnd(ctx: AbilityContext, holder: S13Unit, legacyKey
   const next = shieldProjection(ended.layer, layer.key, layer.m8Grant, reason); holder.shieldLayers = holder.shieldLayers.map(l => l === layer ? next : l);
   if (!ended.emitEnd) return;
   emitMechanismSignal(ctx, { event: 'shield-ended', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: holder.id, cast: null }, ctx.resolutionFacts);
-  for (const target of endTargets(holder, ctx, layer.m8Grant.endTargeting)) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, holder,
+  for (const target of endTargets(holder, ctx, layer.m8Grant.endTargeting, damageContext?.area)) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, holder,
     { ...state.source, effectIndex: state.source.effectIndex + index + 1 }, target, effect, seq, index, undefined, undefined, undefined, state.absorbed, damageContext);
 }
 export function settleShieldEnds(ctx: AbilityContext, nextSeq: () => number): void {

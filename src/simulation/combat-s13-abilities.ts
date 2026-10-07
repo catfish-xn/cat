@@ -6,7 +6,7 @@ import { flatAmount } from './m8/s13-definitions';
 import { executeShieldEnd } from './m8/s13-mechanisms';
 import { hexDistance, type Board } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
-import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, grantShield, lowestAlly, mechanic, neighborsOf,
+import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, areaEnemies, grantShield, lowestAlly, mechanic, neighborsOf,
   origin, path, range, sourceKey, variable, type S13Unit } from './combat-s13-state';
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
@@ -84,7 +84,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
     }
     case 'tristana': hit(target, physical('PercentAttackDamage', 'APDamage'), 'physical', true); break;
     case 'urgot': {
-      for (const enemy of enemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 1)) {
+      for (const enemy of areaEnemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 1)) {
         hit(enemy, physical(enemy.id === target.id ? 'PrimaryDamage' : 'SecondaryDamage', 'APDamage'), 'physical');
         applyStatus(enemy, source, 'armorReduction', 2000, duration('Duration', 6), tick, events);
       } break;
@@ -92,7 +92,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
     case 'rell': {
       shield(unit, mag('Shield'), duration('ShieldDuration'));
       const cells = path(ctx.board, unit.cell, target.cell);
-      const hitUnits = enemies(unit, units).filter(u => cells.some(c => c.col === u.cell.col && c.row === u.cell.row));
+      const hitUnits = areaEnemies(unit, units).filter(u => cells.some(c => c.col === u.cell.col && c.row === u.cell.row));
       const steal = v('DefensesSteal');
       for (const enemy of hitUnits) {
         hit(enemy, mag('StabDamage'));
@@ -128,7 +128,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       ctx.heals.push({ source, targetId: unit.id, amount: mag('Heal') }); break;
     }
     case 'ezreal': {
-      for (const enemy of enemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 1)) hit(enemy, physical('PercentAttackDamage', 'APDamage'), 'physical');
+      for (const enemy of areaEnemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 1)) hit(enemy, physical('PercentAttackDamage', 'APDamage'), 'physical');
       hit(target, physical('PercentCenterDamage'), 'physical'); break;
     }
     case 'loris': {
@@ -155,7 +155,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
     }
     case 'garen': {
       shield(unit, amount(unit, tick, { ap: v('APShield'), hp: v('PercentHealthShield') }), duration('ShieldDuration'));
-      for (const enemy of enemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 2)) hit(enemy,
+      for (const enemy of areaEnemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 2)) hit(enemy,
         physical(enemy.id === target.id ? 'ADRatio' : 'SecondaryADRatio'), 'physical');
       break;
     }
@@ -178,7 +178,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
 }
 export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
   if (task.kind === 'tristanaBounce' && !task.inherited) throw new RangeError('Missing inherited Tristana receipt');
-  const opponents = enemies(unit, ctx.units), target = (task.attachedDot ? ctx.units.filter(u => u.alive && u.team !== unit.team) : opponents).find(u => u.id === task.targetId);
+  const opponents = enemies(unit, ctx.units), target = (task.attachedDot || task.inherited ? areaEnemies(unit, ctx.units) : opponents).find(u => u.id === task.targetId);
   const emit = (u: S13Unit, value: number, type: 'physical' | 'magic' = 'physical', ordinal = task.ordinal) => {
     ctx.packets.push({ source: task.source, targetId: u.id, raw: value, damageType: type, actionSeq: task.actionSeq, ordinal,
       delivery: task.kind === 'bleed' ? 'ability-periodic' : 'ability-direct',
@@ -217,7 +217,7 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
     case 'leonaEnd': for (const enemy of neighborsOf(unit, ctx.units)) emit(enemy, task.amount, 'magic'); break;
     case 'lorisEnd': {
       const center = byDistance(unit, opponents)[0]; if (!center) break;
-      for (const enemy of opponents.filter(u => hexDistance(center.cell, u.cell) <= 1)) emit(enemy, task.amount, 'magic'); break;
+      for (const enemy of areaEnemies(unit, ctx.units).filter(u => hexDistance(center.cell, u.cell) <= 1)) emit(enemy, task.amount, 'magic'); break;
     }
   }
 }
@@ -239,7 +239,7 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
   for (const effect of [...unit.mechanics ?? []].sort((a, b) => compareOrigins(a.source, b.source))) {
     if ((effect.mechanic === 'artillery' && unit.runtime.attackCount % (effect.values.everyN ?? 5) === 0) || effect.mechanic === 'titanic') {
       const bps = effect.values.adBps ?? (effect.mechanic === 'artillery' ? 12500 : 4000);
-      for (const enemy of enemies(unit, ctx.units).filter(u => hexDistance(target.cell, u.cell) <= 1))
+      for (const enemy of areaEnemies(unit, ctx.units).filter(u => hexDistance(target.cell, u.cell) <= 1))
         ctx.packets.push({ source: effect.source, targetId: enemy.id, raw: Math.floor(ad(unit) * bps / 10000), damageType: 'physical', actionSeq: seq, ordinal: ordinal++,
           delivery: 'attack-extra', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
     }

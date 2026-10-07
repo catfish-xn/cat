@@ -111,9 +111,10 @@ export function interval(unit: S13Unit, tick: number): number {
 export function byDistance(from: CombatUnit, list: readonly S13Unit[], farthest = false): S13Unit[] {
   return [...list].sort((a, b) => (farthest ? -1 : 1) * (hexDistance(from.cell, a.cell) - hexDistance(from.cell, b.cell)) || compareText(a.id, b.id));
 }
+export function areaEnemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.alive && u.team !== unit.team); }
 export function enemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.alive && u.team !== unit.team && !effectiveStatuses(u.mechanismState?.statuses ?? [], unit.mechanismState?.sampledAtTick ?? 0).some(g => g.kind === 'untargetable')); }
 export function neighborsOf(unit: CombatUnit, units: readonly S13Unit[], radius = 1): S13Unit[] {
-  return enemies(unit, units).filter(u => hexDistance(unit.cell, u.cell) <= radius).sort((a, b) => compareText(a.id, b.id));
+  return areaEnemies(unit, units).filter(u => hexDistance(unit.cell, u.cell) <= radius).sort((a, b) => compareText(a.id, b.id));
 }
 export function lowestAlly(unit: CombatUnit, units: readonly S13Unit[], current = false): S13Unit | undefined {
   return units.filter(u => u.alive && u.team === unit.team).sort((a, b) =>

@@ -7,13 +7,13 @@ export interface TargetEnvironment {
   readonly board: Board; readonly units: readonly TargetUnit[]; readonly holderId: string; readonly tick: number;
   readonly primaryId?: string | null; readonly previousId?: string | null; readonly eventActorId?: string | null; readonly eventTargetId?: string | null;
   readonly eventActorCell?: HexCell; readonly boundTargetIds?: readonly string[]; readonly randomCenterId?: string | null; readonly source?: Source;
-  readonly eligibility?: 'new-selection' | 'bound-packet';
+  readonly eligibility?: 'new-selection' | 'bound-packet' | 'area-hit';
 }
 export function startingRows(team: Team, row: number): 'front-two'|'back-two'|null {
   return team==='player' ? row===4||row===5?'front-two':row===6||row===7?'back-two':null : row===2||row===3?'front-two':row===0||row===1?'back-two':null;
 }
 export function isSelectable(unit: TargetUnit, holder: TargetUnit, env: TargetEnvironment): boolean {
-  return unit.alive && unit.hp>0 && contains(env.board,unit.cell) && (unit.team===holder.team || env.eligibility==='bound-packet' || !unit.untargetable);
+  return unit.alive && unit.hp>0 && contains(env.board,unit.cell) && (unit.team===holder.team || env.eligibility==='bound-packet' || env.eligibility==='area-hit' || !unit.untargetable);
 }
 const get=(env:TargetEnvironment,id:string|null|undefined)=>env.units.find(u=>u.id===id);
 const distanceOrder=(anchor:HexCell,a:TargetUnit,b:TargetUnit,farthest=false)=>(farthest?-1:1)*(hexDistance(anchor,a.cell)-hexDistance(anchor,b.cell))||compareCodePoints(a.id,b.id);
@@ -77,17 +77,18 @@ export function selectAbilityTargets(targeting:AbilityTargeting,env:TargetEnviro
     case'select':return{targetIds:selectTargets(targeting.selector,env)};
     case'area-around-selected':{
       const center=get(env,selectTargets(targeting.center,env)[0]);if(!center)return{targetIds:[]};
-      return{centerId:center.id,targetIds:env.units.filter(u=>isSelectable(u,holder,env)&&(targeting.relation==='ally'?u.team===holder.team:u.team!==holder.team)&&hexDistance(u.cell,center.cell)<=targeting.radius).sort((a,b)=>compareCodePoints(a.id,b.id)).map(u=>u.id)};
+      return{centerId:center.id,targetIds:env.units.filter(u=>isSelectable(u,holder,{...env,eligibility:'area-hit'})&&(targeting.relation==='ally'?u.team===holder.team:u.team!==holder.team)&&hexDistance(u.cell,center.cell)<=targeting.radius).sort((a,b)=>compareCodePoints(a.id,b.id)).map(u=>u.id)};
     }
     case'random-enemy-center':{
       if(env.randomCenterId===undefined)throw new RangeError('Random center must be sampled before plan execution');
       const center=get(env,env.randomCenterId);if(!center)return{targetIds:[],centerId:null};
-      return{centerId:center.id,targetIds:opponents.filter(u=>hexDistance(u.cell,center.cell)<=targeting.radius).map(u=>u.id)};
+      return{centerId:center.id,targetIds:enemies({...env,eligibility:'area-hit'}).filter(u=>hexDistance(u.cell,center.cell)<=targeting.radius).map(u=>u.id)};
     }
     case'path':{
       const aim=opponents.find(u=>u.id===targeting.aimId)??(targeting.fallback==='farthest-enemy'?[...opponents].sort((a,b)=>distanceOrder(holder.cell,a,b,true))[0]:undefined);
       if(!aim)return{targetIds:[]};const cells=shortestPath(env.board,holder.cell,aim.cell);
-      let hits=cells.flatMap(c=>opponents.filter(u=>sameCell(u.cell,c)));
+      const members=targeting.intercept==='all-enemies'?enemies({...env,eligibility:'area-hit'}):opponents;
+      let hits=cells.flatMap(c=>members.filter(u=>sameCell(u.cell,c)));
       if(targeting.intercept==='first-enemy')hits=hits.slice(0,1);
       if(targeting.hitOrder==='id')hits.sort((a,b)=>compareCodePoints(a.id,b.id));return{targetIds:hits.map(u=>u.id)};
     }
