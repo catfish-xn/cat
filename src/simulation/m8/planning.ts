@@ -23,7 +23,7 @@ export function planEffectApplications(plan:AbilityPlan,env:TargetEnvironment,bi
     }else if(op.kind==='center-and-area'){
       const selected=selectAbilityTargets(op.center,current);
       for(const targetId of selected.targetIds)effects.push({targetId,effects:op.areaEffects,operationIndex:index});
-      const center=selected.centerId??env.boundTargetIds?.[0];
+      const center=selected.centerId;
       if(center)effects.push({targetId:center,effects:op.centerEffects,operationIndex:index});
     }else operations.push(op);
   });

@@ -6,7 +6,7 @@ export interface TargetUnit { readonly id: string; readonly team: Team; readonly
 export interface TargetEnvironment {
   readonly board: Board; readonly units: readonly TargetUnit[]; readonly holderId: string; readonly tick: number;
   readonly primaryId?: string | null; readonly previousId?: string | null; readonly eventActorId?: string | null; readonly eventTargetId?: string | null;
-  readonly eventActorCell?: HexCell; readonly boundTargetIds?: readonly string[]; readonly randomCenterId?: string | null; readonly source?: Source;
+  readonly eventActorCell?: HexCell; readonly boundTargetIds?: readonly string[]; readonly boundCenterId?: string | null; readonly randomCenterId?: string | null; readonly source?: Source;
   readonly eligibility?: 'new-selection' | 'bound-packet' | 'area-hit';
 }
 export function startingRows(team: Team, row: number): 'front-two'|'back-two'|null {
@@ -72,7 +72,7 @@ export function selectAbilityTargets(targeting:AbilityTargeting,env:TargetEnviro
   const holder=get(env,env.holderId);if(!holder)return{targetIds:[]};const opponents=enemies(env);
   const bound=(ids:readonly string[])=>ids.filter(id=>{const u=get(env,id);return u&&isSelectable(u,holder,{...env,eligibility:'bound-packet'});});
   switch(targeting.kind){
-    case'bound-selection':return{targetIds:bound(env.boundTargetIds??[])};
+    case'bound-selection':return{targetIds:bound(env.boundTargetIds??[]),centerId:env.boundCenterId == null ? null : bound([env.boundCenterId])[0] ?? null};
     case'fixed':return{targetIds:bound(targeting.targetIds)};
     case'select':return{targetIds:selectTargets(targeting.selector,env)};
     case'area-around-selected':{

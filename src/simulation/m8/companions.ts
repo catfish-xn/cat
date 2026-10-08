@@ -56,6 +56,7 @@ export function validateCompanionState(state: CompanionState, combatId: string, 
   if (JSON.stringify(state.bindings) !== JSON.stringify(freezeCompanions(combatId, members, definitions).bindings)) throw new RangeError('Opening companion roster mismatch');
   if(state.combatId!==combatId) throw new RangeError('Companion combat mismatch');
   const seen=new Set<string>();
+  const counts=new Map<string,number>();
   for(const b of state.bindings) {
     const d=definitions.find(d=>canonicalSource(d.source)===canonicalSource(b.source));
     if(!d || JSON.stringify(d.effects)!==JSON.stringify(b.effects) || new Set(b.members).size!==b.members.length || b.members.includes(b.source.ownerId)) throw new RangeError('Invalid companion binding');
@@ -66,5 +67,8 @@ export function validateCompanionState(state: CompanionState, combatId: string, 
     if(!b || !b.members.includes(r.deadUnitId) || r.targetId!==r.source.ownerId || !r.deathEventId || r.executeAtTick!==r.registeredAtTick+1 || !['pending','executed','cancelled'].includes(r.status)
       || JSON.stringify(r.effects)!==JSON.stringify(b.effects) || r.key!==JSON.stringify([combatId,r.targetId,canonicalSource(r.source),r.deadUnitId]) || seen.has(r.key)) throw new RangeError('Invalid companion reaction');
     seen.add(r.key);
+    const source=canonicalSource(r.source), count=(counts.get(source) ?? 0)+1;
+    if(count>b.maxReactions) throw new RangeError('Companion reaction count exceeds source limit');
+    counts.set(source,count);
   }
 }

@@ -23,7 +23,8 @@ export function planOpening(combatId:string,board:Board,units:readonly OpeningUn
     const key=JSON.stringify([combatId,'opening',canonicalSource(d.source)]);
     const plan:OpeningPlan={key,source:d.source,kind:d.kind,from:holder.cell,to:holder.cell,aimId:null,path:[],targetIds:[],consumed:true,result:'no-target',task:null};
     if(!holder.alive||holder.controlled){plans.push({...plan,result:'blocked'});continue;}
-    const enemies=initialUnits.filter(u=>u.alive&&u.hp>0&&u.team!==holder.team&&!u.untargetable&&contains(board,u.cell)).sort((a,b)=>hexDistance(holder.cell,b.cell)-hexDistance(holder.cell,a.cell)||compareCodePoints(a.id,b.id));
+    const pathMembers=initialUnits.filter(u=>u.alive&&u.hp>0&&u.team!==holder.team&&contains(board,u.cell));
+    const enemies=pathMembers.filter(u=>!u.untargetable).sort((a,b)=>hexDistance(holder.cell,b.cell)-hexDistance(holder.cell,a.cell)||compareCodePoints(a.id,b.id));
     if(!enemies.length){plans.push(plan);continue;}
     const free=(c:HexCell)=>contains(board,c)&&!occupied.has(cellKey(c))&&!reserved.has(cellKey(c));
     if(d.kind==='backline-jump'){
@@ -46,7 +47,7 @@ export function planOpening(combatId:string,board:Board,units:readonly OpeningUn
     const last=path.map((c,index)=>free(c)?index:-1).reduce((a,b)=>Math.max(a,b),-1);
     if(last<0){plans.push({...plan,aimId:aim.id,result:'no-space'});continue;}
     const truncated=path.slice(0,last+1),to=truncated[truncated.length-1];reserved.add(cellKey(to));
-    const targetIds=truncated.flatMap(c=>enemies.filter(u=>sameCell(u.cell,c)).map(u=>u.id));
+    const targetIds=truncated.flatMap(c=>pathMembers.filter(u=>sameCell(u.cell,c)).map(u=>u.id));
     const task:OpeningTask={key:JSON.stringify([key,'damage']),source:d.source,executeAtTick:1,status:'pending',targetIds,effects:d.effects};
     plans.push({...plan,to,aimId:aim.id,path:truncated,targetIds,result:'moved',task});
   }

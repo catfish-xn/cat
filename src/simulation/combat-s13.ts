@@ -2,7 +2,7 @@ import { planOpening, commitOpening, advanceOpeningTasks } from './m8/opening';
 import { targetUnit } from './m8/s13-targeting';
 import { damageTypeForTarget } from './m8/planning';
 import { EMPTY_FACTS } from './m8/triggers';
-import { emitMechanismSignal } from './m8/s13-triggers';
+import { emitMechanismSignal, hasMechanismSubscriber } from './m8/s13-triggers';
 import { freezeCompanions, registerDeaths, advanceReactions } from './m8/companions';
 import { executeMechanismEffect } from './m8/s13-mechanisms';
 import { completeCast, damageMana, planManaCost, refundCast, resolveMana } from './m8/mana';
@@ -249,7 +249,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>(), totals = new Map<string, { physical: number; magic: number; true: number; absorbed: number; incoming: number }>();
   const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; outcomes: DamageOutcome[]; hpAmount: number; heal?: Amount }>();
   const allOutcomes: DamageOutcome[] = [];
-  const trackAssists = units.some(u => u.mechanismDefinitions?.eventTriggers?.some(d => d.event === 'kill-or-assist'));
+  const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist');
   const damageContributors = { ...state.damageContributors };
 
   ctx.virtualHp = virtualHp;
@@ -315,6 +315,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     let packet = ctx.packets[packetIndex]; const beforeDerived = ctx.packets.length;
     const target = units.find(u => u.id === packet.targetId); if (!target || !target.alive) continue;
     const owner = units.find(u => u.id === packet.source.ownerId);
+    if (owner) for (const prefix of packet.beforeDamage ?? []) executeMechanismEffect(ctx, owner, prefix.source, target, prefix.effect, packet.actionSeq, prefix.ordinal);
     const damageType = damageTypeForTarget(packet.damageType, targetUnit(target, tick), ctx.resolutionFacts!);
     if (damageType !== packet.damageType) packet = { ...packet, damageType };
     const request = damageRequest(packet, state.combatId ?? 'standalone', tick);
