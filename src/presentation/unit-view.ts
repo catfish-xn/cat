@@ -5,11 +5,12 @@
  */
 import Phaser from 'phaser';
 import type { Unit } from '../simulation/units';
-import type { CombatUnit } from '../simulation/combat-types';
+import type { CombatState, CombatUnit } from '../simulation/combat-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
 import { championPortraitKey } from './s13-assets';
+import { statusBadges } from './combat-status';
 
 export const PIECE_RADIUS = 27;
 const C = THEME.color;
@@ -26,6 +27,9 @@ export class UnitView {
   readonly shield: Phaser.GameObjects.Graphics;
   readonly shieldLabel: Phaser.GameObjects.Text;
   readonly star: Phaser.GameObjects.Text;
+  /** Compact current-status strip (harmful left of centre, beneficial right); full names live in the panels. */
+  private readonly harmfulBadges: Phaser.GameObjects.Text;
+  private readonly beneficialBadges: Phaser.GameObjects.Text;
   private readonly emblem: Phaser.GameObjects.Graphics;
   private readonly label: Phaser.GameObjects.Text;
   private readonly costBadge: Phaser.GameObjects.Arc;
@@ -49,8 +53,10 @@ export class UnitView {
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
+    this.harmfulBadges = add.text(-1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#ffb0a0', backgroundColor: '#3a1218e6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(1, 0.5).setVisible(false);
+    this.beneficialBadges = add.text(1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#9ff0e4', backgroundColor: '#0f2e2ae6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(0, 0.5).setVisible(false);
     this.shieldLabel = add.text(0, 40, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
-    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel];
+    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.harmfulBadges, this.beneficialBadges];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
@@ -107,11 +113,12 @@ export class UnitView {
   resetMeters(): void {
     for (const meter of [this.hp, this.mana, this.shield]) meter.clear().setVisible(false).setData({ value: 0, maxValue: 0, ratio: 0, width: 0 });
     this.shieldLabel.setVisible(false).setText('');
+    this.harmfulBadges.setVisible(false).setText(''); this.beneficialBadges.setVisible(false).setText('');
     this.disc.setAlpha(1);
   }
 
   /** Combat meters: HP (team colored) with shield segment, mana below. */
-  drawCombat(unit: CombatUnit): void {
+  drawCombat(unit: CombatUnit, combat: CombatState): void {
     const alive = unit.alive, width = 52, left = -26;
     const hpRatio = unit.hp / unit.maxHp;
     this.hp.clear().setVisible(alive);
@@ -132,7 +139,12 @@ export class UnitView {
     this.shield.fillStyle(toNumber(C.shield)).fillRect(left + start, -44, Math.max(segment, unit.shield > 0 ? 2 : 0), 6);
     this.shield.setData({ value: unit.shield, maxValue: unit.maxHp, ratio: shieldRatio, width: width * shieldRatio });
     this.shieldLabel.setText(`盾 ${unit.shield}`).setVisible(alive && unit.shield > 0);
+    const badges = alive ? statusBadges(combat, unit.id) : { harmful: '', beneficial: '' };
+    this.harmfulBadges.setText(badges.harmful).setVisible(badges.harmful.length > 0);
+    this.beneficialBadges.setText(badges.beneficial).setVisible(badges.beneficial.length > 0);
   }
+  /** Debug/acceptance read of the status strip. */
+  get statusStrip(): { harmful: string; beneficial: string } { return { harmful: this.harmfulBadges.visible ? this.harmfulBadges.text : '', beneficial: this.beneficialBadges.visible ? this.beneficialBadges.text : '' }; }
 
   meter(kind: 'hp' | 'mana' | 'shield'): MeterData {
     const object = kind === 'hp' ? this.hp : kind === 'mana' ? this.mana : this.shield;
