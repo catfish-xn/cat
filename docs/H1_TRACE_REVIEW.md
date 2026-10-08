@@ -40,3 +40,5 @@ python scripts/diagnostics/verify-h1-logs.py . /tmp/h1-log-validation.json
 ```
 
 本轮修复的是证据缺失，不是运行代码；未新增浏览器测量，不改变此前超限和趋势结论。2026-10-08 22:48 UTC用户已批准新增仅workflow_dispatch的独立CI153诊断工作流；实施中，尚未运行。新文件的默认分支注册/合并仍按单独审批执行。
+
+更新：23:18 UTC用户改选临时PR标签触发，无需main注册；见H1_PR_WORKFLOW.md。旧PR14已关闭未合并。

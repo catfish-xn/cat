@@ -1,19 +1,19 @@
 {
-  "yamlSha256": "71db2df8e6f54e483f2e30ebd2def94e298b6da869137f7721afb9a53d92d6ee",
+  "yamlSha256": "28aa0847d4578c4b39274aff8701336c711cbd89022878c50f784dbde786cb90",
   "checks": {
-    "only_workflow_dispatch": true,
-    "read_only_token": true,
-    "default_source_sha": true,
-    "one_standalone_job": true,
+    "only_pull_request_labeled": true,
+    "head_branch_guard": true,
+    "same_repo_guard": true,
+    "exact_label_guard": true,
+    "read_only": true,
+    "source97": true,
+    "manual_workflow_removed": true,
     "upload_always": true,
-    "no_continue_on_error": true,
-    "probe_default_browser_matches_ci": true,
-    "bash_block_0": true,
-    "bash_block_3": true,
-    "bash_block_4": true,
-    "bash_block_5": true,
-    "bash_block_6": true
+    "bash_0": true,
+    "bash_3": true,
+    "bash_4": true,
+    "bash_5": true,
+    "bash_6": true
   },
-  "limitations": "Static parse/invariants/bash syntax and pinned registry checks only. No local browser run or GitHub execution claimed.",
-  "browserPackageSelection": "revision1243; chromium and chromium-headless-shell 153.0.8010.12"
+  "limitations": "Static only; actual PR label trigger and Chromium153 must be verified from GitHub run/artifact."
 }
