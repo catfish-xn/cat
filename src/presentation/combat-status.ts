@@ -97,7 +97,7 @@ export interface StatusRow {
   readonly appliedAtTick: number;
   readonly expiresAtTick: number | null;
   readonly nextPulseAtTick: number | null;
-  /** 'suppressed' only for unfiltered strongest-category contributions the domain did not pick. */
+  /** 'suppressed' only for unfiltered strongest-category contributions the domain did not pick (stronger or tie-break). */
   readonly state: 'effective' | 'suppressed' | 'pending' | 'active';
 }
 
@@ -145,7 +145,8 @@ function groupRow(group: StatusGroup, contribution: StatusContribution, tick: nu
 export function statusRowText(row: StatusRow, tick: number, source: SourceLabel): string {
   const parts = [row.name + (row.magnitude ? ` ${row.magnitude}` : '')];
   if (row.scope) parts.push(row.kind === 'damage-reduction' ? `${row.scope}（对每次适用伤害取最高减伤）` : row.scope);
-  if (row.state === 'suppressed') parts.push('同类更强来源生效中（本来源保留）');
+  // The domain picks one contribution (stronger, or by key on a tie); the UI never compares magnitudes.
+  if (row.state === 'suppressed') parts.push('同类状态由另一来源提供（本来源保留）');
   if (row.state === 'pending') parts.push(`第 ${row.appliedAtTick} 刻生效`);
   parts.push(row.expiresAtTick === null ? '持续至战斗结束' : `剩余 ${ticksToSeconds(row.expiresAtTick - tick)}（第 ${row.expiresAtTick} 刻结束）`);
   if (row.nextPulseAtTick !== null) parts.push(`下一跳第 ${row.nextPulseAtTick} 刻`);

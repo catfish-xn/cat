@@ -26,7 +26,7 @@
 - 合同：B2 §3、§8；`src/simulation/m8/ui-contracts.ts` 的 `CombatStatusesView` 只有类型，没有运行导出。
 - 需要：纯函数 `readCombatStatuses(combat) → {statuses: StatusGroup[], activities: CombatActivity(lifecycle='active')[]}`，不改 state/RNG。
 - 适用范围：减伤等带 `damageFilter` 的贡献按每个伤害包筛选后再取强（M8_RULES A08），组内 `effectiveSourceKey` 只是无包上下文的摘要。若希望界面显示“对哪类伤害当前生效”，请在查询中提供权威的按适用范围划分结果；界面不会自行执行过滤。
-- 当前替代路径：`combat-status.ts` 的 `statusSource(combat, unitId)` 直接读 store；带 `damageFilter` 的贡献全部显示并列出声明的适用范围，从不标为“被压制”；无过滤的同类最强（灼烧、重伤、击碎等）才依据 `effectiveSourceKey` 标注“同类更强来源生效中”。
+- 当前替代路径：`combat-status.ts` 的 `statusSource(combat, unitId)` 直接读 store；带 `damageFilter` 的贡献全部显示并列出声明的适用范围，从不标为“被压制”；无过滤的同类最强（灼烧、重伤、击碎等）才依据 `effectiveSourceKey` 标注“同类状态由另一来源提供（本来源保留）”。领域选定的可能是更强来源，也可能是同强度时按 key 选定的一份；界面不比较强弱，文案不暗示大小。
 - 交付后复核：替换 `statusSource()` 一处；8% 普攻 + 50% 技能减伤例两行都显示为有效并各带适用范围；查询前后 canonical 状态与 RNG 不变。
 
 ### UR-U4-02 M8 统计视图 `readCombatStats(combat)`（P2，B3 补交付）
@@ -41,15 +41,17 @@
 
 ### UR-U4-03 完整事件载荷：`packetDamage.outcome`、`cast.receipt`、`manaChanged.outcome`（P1，B3 开发适配 / B9 replay2）
 
-- `packetDamage.outcome`（`DamageOutcome` 全字段，含 `context.source` 完整来源、`prevented/overkill/killingPacket`）：实战未携带。界面已有显示分支，交付后无需改代码，只需复核。
+- `packetDamage.outcome`（`DamageOutcome` 全字段，含 `context.source` 完整来源、`prevented/overkill/killingPacket`）：实战未携带。界面已有读取 `outcome` 的分支，但仍从旧字段 `unitId/hpDamage/absorbed/critical/redirected` 取目标与数值：
+  - 若开发期适配**保留旧字段并附加 `outcome`**，界面可直接接入，只需复核显示。
+  - 若 B9 切换为冻结的 `packetDamage{outcome}` 结构（无旧字段，`contracts.ts` `M8CombatEvent`），界面消费端（`combat-status.ts`、`combat-feedback-renderer.ts`、统计筛选）仍需适配并小范围复核；请随交付在本文件登记切换提交。
 - `cast.receipt{targetIds,targetsSampledAtTick,actualManaSpent,refundedMana,completed,completionCell,actionSeq}`：用于“施法选中 A / 实际命中 B”（A11 麦迪例）和实际耗蓝/返蓝；当前只显示选中目标。
-- `manaChanged.outcome`：普攻/受伤/施法路径缺失。
+- `manaChanged.outcome`：普攻/受伤/击杀等回蓝路径缺失。冻结 `ManaOutcome` 表示**一笔回蓝请求**的结果，请为每种回蓝请求各自发布对应的 `ManaOutcome`；不要把施法扣蓝或同 tick 净变化塞进 `ManaOutcome`。施法消耗由界面读 `cast.receipt.actualManaSpent`，返蓝读绑定该次施法（`castActionSeq`）的 `cast-refund` outcome。
 - 交付后复核：伤害明细出现“被防止/溢出/致命”；临时子件造成的伤害显示“临时子件”标记；麦迪例同时显示选中 A 与命中 B；界面不以法力净变化推算耗蓝。
 
-### UR-U4-04 引导/分担的正式事件类型（P2，B9）
+### UR-U4-04 引导/分担按冻结的 `activityChanged` 接线（P2，B9）
 
-- 当前实战以 `statusChanged` 携带 `activity` 发出（含 `control-cancelled`、`replaced`），没有 `activityChanged` 类型。
-- 需要：确认 replay2 用哪一种；若改为 `activityChanged`，请加入 `CombatEvent` 联合，界面改读该事件。
+- B2 已冻结引导/分担使用 `activityChanged{activity, reason}`（`M8_UI_CONTRACT.md` §8、`contracts.ts` `M8CombatEvent`）。当前实战以 `statusChanged` 携带 `activity` 发出，只是开发期适配，不等于符合正式回放格式。
+- 需要：按冻结结构发布 `activityChanged` 并加入 `CombatEvent` 联合；同时通知界面，界面消费端（事件明细、筛选、飘字、状态小标）同步改读该事件并复核。
 - 验收：范德尔 10 开始、20 被眩晕取消，事件明细显示“引导 被控制打断”，状态列表在 20 起不再显示引导，40 眩晕结束后也不恢复。
 
 ### UR-U4-05 所有 `statusChanged` 路径携带正式 `group`（P1，B3）
@@ -75,13 +77,18 @@
 
 | 场景 | 输入 | 预期显示 |
 | --- | --- | --- |
-| R1 减伤适用范围 | 同一单位：8% 减伤 filter={basic-attack; physical/magic; exclude}，50% 减伤 filter={ability-direct; …}；再受 100 物理普攻 | 领域伤害 92；状态列表两行均无“同类更强来源生效中”、无 inactive 样式，各显示“适用：普攻…”“适用：技能直接伤害…” |
-| 同类最强（无过滤） | 两个 shred：30% 至 100、50% 至 60，读 tick 59 与 61 | 59：50% 行正常、30% 行“同类更强来源生效中（本来源保留）”；61：仅 30% 行且无压制文字 |
-| R2 兼容锚点 | 厄加特/蕾欧娜/芮尔/库奇技能施加；灼烧+重伤单位受致死伤害；战斗结束 | 事件日志：“护甲击碎 20%”“减伤 50%”“属性变化 −10”（UR-U4-05 交付后改为属性削弱明细）；清理显示“状态清理（阵亡清除）/（战斗结束）”，不出现“眩晕 0” |
+| R1 减伤适用范围 | 同一单位：8% 减伤 filter={basic-attack; physical/magic; exclude}，50% 减伤 filter={ability-direct; …}；再受 100 物理普攻。前提：目标护甲 0，无护盾、无暴击，无其他增伤/减伤 | 领域 HP 伤害 92；状态列表两行均无“同类状态由另一来源提供”、无 inactive 样式，各显示“适用：普攻…”“适用：技能直接伤害…” |
+| 同类最强（无过滤） | 两个 shred：30% 至 100、50% 至 60；状态快照由领域维护生成（实际战斗推进或领域维护函数），读 tick 59、60、61 | 59：50% 行正常、30% 行“同类状态由另一来源提供（本来源保留）”；60 与 61：仅 30% 行且无该文字 |
+| 同类同强度 | 两名同星厄加特对同一目标施法，各施加 20% 护甲击碎（领域按 key 选定一份） | 两行均显示“护甲击碎 20%”；领域未选中的一行显示“同类状态由另一来源提供（本来源保留）”，不出现“更强”等暗示大小的文字；界面不比较或排序 |
+| R2 兼容施加锚点 | 厄加特/蕾欧娜/芮尔/库奇技能施加（`applyStatus()` 事件，无 group、带 `contributionKeys`） | 事件日志：“护甲击碎 20%”“减伤 50%”“属性变化 -10”“属性变化 -1”；UR-U4-05 交付 group 后改按“正式 group”预期 |
+| R2a 兼容清理锚点 | 输入固定为**无 group、无 `contributionKeys`、无 activity** 的清理事件（当前 `cleanupMechanisms` 形状：`kind:'stun', amount:0`），reason 分别为 `death-cleanup`、`combat-end` | 显示“状态清理（阵亡清除）”“状态清理（战斗结束）”；不猜种类，不出现“眩晕” |
+| R2b 正式 group 清理 | 输入固定为**带正式 group** 的清理事件（group.kind 为 burn、wound），reason 为 `death-cleanup`、`combat-end` | 显示“灼烧 … 阵亡清除”“重伤 … 战斗结束”等真实种类加结束原因；后端再次丢失 group 时本场景应失败 |
 | R3 来源 | 临时子件护盾（`m8State.source.parentItemInstanceId` 非空、`layer.source` 无该字段）；临时子件状态与治疗 | 事件日志、策略面板盾行、统计面板来源均含“临时子件”，两面板格式一致 |
 | R4 治疗分项 | A10 两套：无重伤 / 33% 重伤（`resolveHeal`） | 事件含两来源各自“请求/有效/过量/重伤减少”，数值同 UR-U4-02 |
 | 三类伤害 | 物理 10、魔法 20、真实 30 各一包 | 日志“物理/魔法/真实实际生命伤害”；飘字“−10”“−20 魔”“−30 真”；选中单位详情三类分别 10/20/30 |
 | 状态与法力筛选 | 统计面板筛选选“状态”“法力”“全部事件（法力单列）” | “状态”只有 statusChanged；“法力”只有 manaChanged；“全部”不含 manaChanged |
 | 引导被控取消 | 范德尔例（UR-U4-04） | 日志“引导 被控制打断”；状态列表与棋子“引”小标在取消 tick 消失且不恢复 |
-| 护盾 | 600 盾自然衰减 100 后吸收 120；另一盾耗尽；阵亡清理 | 日志含“自然衰减”“吸收伤害”“耗尽”“阵亡清除”；剩余 380、已吸收 120、已衰减 100；统计吸收只加 120 |
+| 护盾 A：衰减后吸收 | 600 盾（线性衰减），自然衰减 100 后吸收 120 | 日志含“自然衰减”“吸收伤害”；剩余 380、已吸收 120、已衰减 100；**本子场景**统计吸收增加 120（衰减不计） |
+| 护盾 B：耗尽 | 另一盾受伤害至 0 | 日志含“吸收伤害（耗尽）”；该盾吸收量单独核对，与 A 的 120 分开统计 |
+| 护盾 C：清理 | 持盾单位阵亡 / 战斗结束 | 日志“到期（阵亡清除）/（战斗结束）”，统计吸收不增加 |
 | 只读 | 以上每个场景渲染、切换筛选、选中单位前后 | `JSON.stringify` 事件、战斗状态与 `BattleStats` 完全相同 |
