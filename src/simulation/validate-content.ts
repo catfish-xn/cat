@@ -1,3 +1,5 @@
+import { validateItemProgram } from './m8/item-program';
+import { validateComponentPool } from './component-pool';
 import { ABILITY_DEFINITIONS, validateAbilityDefinitions } from './combat-abilities';
 import { UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS, validateUnitDefinitions } from './units';
 import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL } from './match-rules';
@@ -97,7 +99,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:19,traits:5,items:16,augments:6,anomalies:3})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:19,traits:5,items:44,augments:6,anomalies:3})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);
@@ -118,16 +120,21 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     }
   }
   const components=Object.values(content.items).filter(x=>x.kind==='component').map(x=>x.id).sort();
-  if(components.length!==7) fail('M5 requires seven obtainable components');
+  validateComponentPool(content.items);
   const recipes=new Set<string>();
   for(const item of Object.values(content.items)) {
-    if(!item.name) fail('Missing item name');effects(item.effects);
+    const approved=ITEM_DEFINITIONS[item.id];
+    if(!approved||item.apiName!==approved.apiName||item.kind!==approved.kind||item.unique!==approved.unique||item.slotCost!==approved.slotCost
+      ||[...item.recipe ?? []].sort().join('|')!==[...approved.recipe ?? []].sort().join('|')) fail('Item differs from approved B1 mapping');
+    if(!item.name) fail('Missing item name');if(item.effects.length) effects(item.effects); else if(!item.combatProgram) fail('Empty item effects'); if(item.combatProgram) validateItemProgram(item.combatProgram);
     if(item.kind==='component') {if(item.recipe!==undefined) fail('Component recipe');}
     else if(item.kind==='completed') {
       if(!item.recipe||item.recipe.length!==2||item.recipe.some(id=>!components.includes(id))) fail('Invalid item recipe');
       const key=[...item.recipe!].sort().join('|');if(recipes.has(key)) fail('Duplicate recipe');recipes.add(key);
     } else fail('Invalid item kind');
   }
+  for(let a=0;a<components.length;a++) for(let b=a;b<components.length;b++) if(!recipes.has([components[a],components[b]].sort().join('|'))) fail('Missing completed recipe');
+  if(recipes.size!==36) fail('M8 requires 36 unique recipes');
   if(Object.keys(content.augments).length<5||Object.keys(content.anomalies).length<2) fail('Choice pool exhausted');
   for(const c of [...Object.values(content.augments),...Object.values(content.anomalies)]) {if(!c.name||!c.description) fail('Missing choice text');effects(c.effects);}
   const seen=new Set<string>();let priorRound=0,priorPriority=-1,priorId='';let randomComponents=0,componentChoices=0;

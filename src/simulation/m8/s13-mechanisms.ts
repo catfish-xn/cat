@@ -13,7 +13,7 @@ import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from 
 import { canonicalSource, compareCodePoints, effectIdentity } from './identity';
 import { applyStatusContribution, advanceBurnClock, cleanseStatuses, endStatuses, removeStatusContributions, statusMagnitude, summarizeGroup } from './status';
 import { advancePeriodicTask, cleanPeriodicTasks, periodicAmount, clearRemainder } from './periodic';
-import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples } from './shield';
+import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples, survivalConsumptionKeys, remainingSurvivalKeys } from './shield';
 import { makeHealRequest, resolveHeal, type VampRate } from './heal';
 import { rollCrit } from './crit';
 export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source, environment: Partial<TargetEnvironment> = {}): S13Unit[] {
@@ -53,6 +53,7 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
   const status: CombatStatus = { key: identity.key, source, kind: application.kind === 'stun' ? 'stun' : application.kind === 'sunder' ? 'armorReduction' : 'resistanceFlat',
     amount: application.modifier?.value.kind === 'constant' ? application.modifier.value.amount : application.magnitudeBps,
     startsAtTick: group.contributions.find(c => c.key === identity.key)!.appliedAtTick, expiresAtTick: group.contributions.find(c => c.key === identity.key)!.expiresAtTick ?? 1201, contributionKeys: [identity.key] };
+  target.statuses=[...target.statuses.filter(s=>s.key!==status.key),status].sort((a,b)=>compareText(a.key,b.key));
   ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, status, group, reason: 'applied' });
   if (application.kind === 'untargetable' && application.activation === 'immediate') {
     for (const enemy of ctx.units) if (enemy.team !== target.team && enemy.targetId === target.id) {
@@ -68,7 +69,7 @@ function synchronizeBurnTask(target: S13Unit, key: string): void {
     effects: [{ kind: 'damage', damageType: 'true', delivery: 'item-burn', critEligibility: 'never', amount: flatAmount(0, { maxHpBps: c.application.magnitudeBps, hpBasis: 'target', sample: 'each-pulse' }) } as const] };
   const old = target.mechanismState!.periodicTasks.find(t => t.key === key);
   const same = old && JSON.stringify(old.program) === JSON.stringify(program);
-  const task: PeriodicTask = { key, source: c.source, targetId: target.id, nextPulseAtTick: group.nextPulseAtTick!, periodTicks: 20, endsAtTick: c.expiresAtTick,
+  const task: PeriodicTask = { key, source: c.source, targetId: target.id, nextPulseAtTick: Math.max(group.nextPulseAtTick!,old?.nextPulseAtTick ?? 0), periodTicks: 20, endsAtTick: c.expiresAtTick,
     pulseOrdinal: old?.pulseOrdinal ?? 0, pulseLimit: null, remainders: same ? old.remainders : [], finalPulse: 'before-expiry', onSourceDeath: 'persist-attached', onTargetDeath: 'cancel', program };
   target.mechanismState = { ...target.mechanismState!, periodicTasks: [...target.mechanismState!.periodicTasks.filter(t => t.key !== key), task] };
 }
@@ -152,8 +153,9 @@ export function initializeMechanisms(ctx: AbilityContext): void {
       unit.mechanismState = { ...state, initialized: true, periodicTasks: [...state.periodicTasks, ...definitions.periodicTasks.map(t => { const skipped = Math.max(0, Math.ceil((ctx.tick - t.nextPulseAtTick) / t.periodTicks)); return { ...t, nextPulseAtTick: t.nextPulseAtTick + skipped * t.periodTicks, pulseOrdinal: t.pulseOrdinal + skipped }; })] };
       for (const group of state.statuses) if (group.kind === 'burn') for (const c of group.contributions) synchronizeBurnTask(unit, c.key);
       const sample: SurvivalSample = { unitId: unit.id, tick: ctx.tick - 1, hpBeforeDamage: unit.hp, hpAfterDamage: unit.hp, maxHpBeforeThresholdEffects: unit.maxHp, survivedDamageBatch: unit.hp > 0, receivedPositiveDamage: false };
+      const keys = survivalConsumptionKeys(definitions.survivalTriggers, state.combatId, unit.id);
       const eligible = consumeSurvivalTriggers(definitions.survivalTriggers, state.runtimes, sample, state.combatId, true);
-      unit.mechanismState = { ...unit.mechanismState!, runtimes: eligible.runtimes };
+      unit.mechanismState = { ...unit.mechanismState!, runtimes: eligible.runtimes, unconsumedSurvivalKeys: remainingSurvivalKeys(keys, eligible.runtimes) };
       for (const definition of eligible.fired) initial.push({ holder: unit, definition });
     }
     unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: ctx.tick };
@@ -172,7 +174,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     const advanced = advancePeriodicTask(task, ctx.tick); if (!advanced.due) { if (!advanced.task) unit.mechanismState = { ...unit.mechanismState!, periodicTasks: unit.mechanismState!.periodicTasks.filter(t => t.key !== task.key) }; return; }
     const burn = task.program.effects.some(e => e.kind === 'damage' && e.delivery === 'item-burn');
     const holder = ctx.units.find(u => u.id === task.source.ownerId)!;
-    const payable = !burn || burnWinners.get(unit.id) === task.key;
+    const payable = task.program.selector.sample !== 'each-tick' && (!burn || burnWinners.get(unit.id) === task.key);
     let current = task;
     const seq = nextSeq(), firstPacket = ctx.packets.length;
     if (payable) {
@@ -216,6 +218,26 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
   for (const unit of ctx.units) for (const task of [...unit.mechanismState!.periodicTasks].sort((a, b) => compareCodePoints(a.key, b.key))) executePulse(unit, task);
   for (const unit of ctx.units) unit.mechanismState = { ...unit.mechanismState!, statuses: advanceBurnClock(unit.mechanismState!.statuses, unit.id, ctx.tick) };
 }
+/** G10 each-tick selectors describe live auras, sampled after movement and
+ * death cleanup. Removing one source never removes another source's debuff. */
+export function refreshMechanismAuras(ctx: AbilityContext, applyNew = true): void {
+  for (const holder of ctx.units) for (const task of holder.mechanismDefinitions?.periodicTasks ?? []) {
+    if (task.program.selector.sample !== 'each-tick') continue;
+    const targets = holder.alive && holder.hp > 0 ? selectMechanismTargets(holder, ctx.units, task.program.selector, undefined, task.source, {board:ctx.board,tick:ctx.tick}) : [];
+    for (const [index,effect] of task.program.effects.entries()) {
+      const source={...task.source,effectIndex:task.source.effectIndex+index}, sourceId=canonicalSource(source);
+      for (const unit of ctx.units) {
+        const removed=removeStatusContributions(unit.mechanismState!.statuses,c=>canonicalSource(c.source)===sourceId&&!targets.some(t=>t.id===unit.id),holder.hp>0?'expired':'death-cleanup',ctx.tick);
+        unit.mechanismState={...unit.mechanismState!,statuses:removed.groups};
+        const keys=new Set(removed.ended.map(e=>e.contribution.key));
+        for (const status of unit.statuses.filter(s=>s.contributionKeys?.some(k=>keys.has(k)))) ctx.events.push({type:'statusChanged',tick:ctx.tick,unitId:unit.id,status,reason:holder.hp>0?'expired':'death-cleanup'});
+        unit.statuses=unit.statuses.filter(s=>!s.contributionKeys?.some(k=>keys.has(k)));
+      }
+      for (const target of targets) if (applyNew && !target.mechanismState!.statuses.some(g=>g.contributions.some(c=>canonicalSource(c.source)===sourceId)))
+        executeMechanismEffect(ctx,holder,source,target,effect,0,index);
+    }
+  }
+}
 export function clearPeriodicAccount(ctx: AbilityContext, reference: PeriodicReference, targetId: string): void {
   const owner = ctx.units.find(u => u.id === reference.holderId)!;
   owner.mechanismState = { ...owner.mechanismState!, periodicTasks: owner.mechanismState!.periodicTasks.map(t => t.key === reference.taskKey ? clearRemainder(t, reference.effectIndex, targetId) : t) };
@@ -238,7 +260,7 @@ export function settleSurvival(ctx: AbilityContext, before: readonly { id: strin
   for (const sample of frozen) {
     const unit = ctx.units.find(u => u.id === sample.unitId)!;
     const result = consumeSurvivalTriggers(unit.mechanismDefinitions!.survivalTriggers, unit.mechanismState!.runtimes, sample, unit.mechanismState!.combatId);
-    unit.mechanismState = { ...unit.mechanismState!, runtimes: result.runtimes };
+    unit.mechanismState = { ...unit.mechanismState!, runtimes: result.runtimes, unconsumedSurvivalKeys: remainingSurvivalKeys(unit.mechanismState!.unconsumedSurvivalKeys, result.runtimes) };
     for (const entry of result.fired) fired.push({ holder: unit, entry });
   }
   fired.sort((a, b) => compareText(canonicalSource(a.entry.definition.source), canonicalSource(b.entry.definition.source)));
@@ -282,6 +304,7 @@ export function cleanupMechanisms(ctx: AbilityContext, combatEnd = false): void 
     unit.tasks = unit.tasks.filter(task => !task.attachedDot || task.targetId === null || !dead.has(task.targetId));
     unit.mechanismState = { ...unit.mechanismState!, periodicTasks: combatEnd ? [] : cleanPeriodicTasks(unit.mechanismState!.periodicTasks, dead, dead) };
   }
+  if (!combatEnd) refreshMechanismAuras(ctx, false);
 }
 export function maintainActivities(ctx: AbilityContext, unit: S13Unit, controlled: boolean): void {
   unit.mechanismState = { ...unit.mechanismState!, activities: unit.mechanismState!.activities.map(activity => {

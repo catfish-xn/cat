@@ -1,3 +1,6 @@
+import { programEntries } from './item-program';
+import { conditionHolds } from './stats';
+import { startingRows } from './targeting';
 import type { CombatOrigin, CombatUnit } from '../combat-types';
 import type { Amount, Effect, PeriodicTask, Source, TargetSelector, TriggerDefinition } from './contracts';
 import type { MechanismDefinitions } from './runtime-types';
@@ -9,6 +12,7 @@ export const selfSelector = (patch: Partial<TargetSelector> = {}): TargetSelecto
   maxTargets: 1, excludeSelf: false, excludePrimary: false, distinct: true, order: 'distance-id', sample: 'each-pulse', ...patch });
 export function compileMechanismDefinitions(unit: CombatUnit, combatId: string): MechanismDefinitions {
   const eventTriggers: TriggerDefinition[] = [];
+  const survivalTriggers: TriggerDefinition[] = [];
   const periodicTasks: PeriodicTask[] = [], vamp: MechanismDefinitions['vamp'][number][] = [];
   for (const m of unit.mechanics ?? []) {
     const source = asSource(m.source), v = m.values;
@@ -24,5 +28,26 @@ export function compileMechanismDefinitions(unit: CombatUnit, combatId: string):
     if (m.mechanic === 'gunblade') vamp.push({ source, modifier: { stat: 'omnivamp', unit: 'bps', value: { kind: 'constant', amount: v.selfHealBps }, condition: { kind: 'always' }, damageFilter: null },
       allyBps: v.allyHealBps, allyCondition: { kind: 'always' } });
   }
-  return { ...(eventTriggers.length ? { eventTriggers } : {}), periodicTasks, survivalTriggers: [], vamp, ...(unit.ability.kind === 's13' && unit.ability.variables.HealPercentHealth > 0 ? { positiveDamageHeals: [{ source: asSource({ ownerId: unit.id, sourceKind: 'ability', definitionId: unit.ability.id, instanceId: unit.id, effectIndex: 0 }), amount: flatAmount(0, { maxHpBps: unit.ability.variables.HealPercentHealth, sample: 'packet' }) }] } : {}) };
+  for (const entry of programEntries(unit)) {
+    const {source}=entry;
+    if(entry.kind==='trigger')eventTriggers.push({...entry.declaration,source});
+    if(entry.kind==='survival') {
+      const {initialAlso,...d}=entry.declaration;
+      survivalTriggers.push({...d,source});
+      if(initialAlso)survivalTriggers.push({...d,source,event:'combat-start',listener:{...d.listener,subject:'actor'}});
+    }
+    if(entry.kind==='vamp')vamp.push({...entry.declaration,source});
+    if(entry.kind==='periodic') {
+      const p=entry.declaration;
+      if(p.condition && !conditionHolds(p.condition,{holder:unit,startingRows:startingRows(unit.team,unit.startingCell?.row ?? unit.cell.row) ?? undefined}))continue;
+      periodicTasks.push({...effectIdentity(combatId,source,unit.id),nextPulseAtTick:p.startsAtTick ?? p.periodTicks,periodTicks:p.periodTicks,
+        endsAtTick:p.endsAtTick ?? null,pulseOrdinal:0,pulseLimit:null,remainders:[],finalPulse:p.finalPulse ?? 'none',onSourceDeath:'cancel',onTargetDeath:'cancel',
+        program:{...p.program,definitionId:JSON.stringify([source.definitionId,source.effectIndex,'periodic'])}});
+    }
+    const startEffect:Effect|undefined=entry.kind==='modifier' && !['critChance','critMultiplier'].includes(entry.declaration.stat)
+      ? {kind:'modify-stat',modifier:entry.declaration,activation:'immediate',duration:{kind:'combat'},stackPolicy:{kind:'independent-instances'}}
+      : entry.kind==='effect' && !['authorize-spell-crit','temporary-equipment'].includes(entry.declaration.kind) ? entry.declaration : undefined;
+    if(startEffect)survivalTriggers.push({id:'initial',source,event:'combat-start',listener:{subject:'actor',relationToHolder:'self',withinHexes:null},aggregation:'event',counters:[],gate:{kind:'always'},condition:{kind:'always'},selector:selfSelector({sample:'combat-start'}),internalCooldownTicks:0,maxPerAction:1,maxPerCombat:1,stackPolicy:{kind:'independent-instances'},effects:[startEffect]});
+  }
+  return { ...(eventTriggers.length ? { eventTriggers } : {}), periodicTasks, survivalTriggers, vamp, ...(unit.ability.kind === 's13' && unit.ability.variables.HealPercentHealth > 0 ? { positiveDamageHeals: [{ source: asSource({ ownerId: unit.id, sourceKind: 'ability', definitionId: unit.ability.id, instanceId: unit.id, effectIndex: 0 }), amount: flatAmount(0, { maxHpBps: unit.ability.variables.HealPercentHealth, sample: 'packet' }) }] } : {}) };
 }

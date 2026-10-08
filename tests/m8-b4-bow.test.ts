@@ -1,0 +1,12 @@
+import { describe,it,expect } from 'vitest';
+import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
+import { readCombatStats } from '../src/simulation/combat-s13';
+describe('B4 bow recipes: hand vectors through actual combat',()=>{
+ it('red:100×1.03=103;target10000×1%=100 burn at t21',()=>{const r=run(wearing('red-buff'),21);expect(packets(r.events)[0].hpDamage).toBe(103);expect(packets(r.events).filter(e=>e.damageType==='true')[0].hpDamage).toBe(100);});
+ it('rageblade:10% base+5% first stack→ceil(20/1.15)=18 ticks on next attack',()=>{const r=run(wearing('rageblade'));expect(r.p.runtime?.attackSpeedBps).toBe(500);expect(readCombatStats(r.p,r.state).attackIntervalTicks).toBe(18);});
+ it('shiv:third attack hits4 distinct targets, MR100×.7=70;35×100/170→20 each',()=>{const r=run(wearing('statikk-shiv'),40,[enemy('e',1,3,{magicResist:100}),enemy('e2',2,3,{magicResist:100}),enemy('e3',3,3,{magicResist:100}),enemy('e4',4,3,{magicResist:100}),enemy('e5',5,3,{magicResist:100})]);expect(packets(r.events).filter(e=>e.source.sourceKind==='item').map(e=>[e.raw,e.hpDamage])).toEqual([[35,20],[35,20],[35,20],[35,20]]);});
+ it('titan:first attack grants2%AD+2AP on next tick;25 attacks cap at50%/50AP/+20 resists',()=>{const r=run(wearing('titans-resolve',{baseAttackSpeedBps:1000000}),27);expect(readCombatStats(r.p,r.state)).toMatchObject({attackDamage:150,abilityPower:150,armor:40,magicResist:20});expect(r.p.triggerLedger?.runtimes.every(x=>Object.values(x.counters).every(n=>n===25))).toBe(true);});
+ it('runaan:125AD×55%→68 arrow on distinct closest secondary,never crit',()=>{const r=run(wearing('runaans-hurricane'),1,[enemy(),enemy('e2',2,3)]);expect(packets(r.events).filter(e=>e.source.sourceKind==='item').map(e=>[e.unitId,e.raw,e.critical])).toEqual([['e2',68,false]]);expect(r.state.rngDraws).toBe(1);});
+ it('nashor:completed cast adds60% to10% base;ceil(20/1.7)=12 ticks at next tick',()=>{const r=run(wearing('nashors-tooth',{mana:1000}),2);expect(readCombatStats(r.p,r.state).attackIntervalTicks).toBe(12);expect(r.events.filter(e=>e.type==='cast')).toHaveLength(1);});
+ it('whisper:115 crit→161 then armor100 mitigates80;next hit armor70 gives94',()=>{const r=run(wearing('last-whisper'),18,[enemy('e',1,3,{armor:100})]);expect(packets(r.events).map(e=>e.hpDamage)).toEqual([80,94]);expect(r.events.filter(e=>e.type==='statusChanged'&&e.status.source.definitionId==='last-whisper'&&e.reason==='applied').length).toBe(2);});
+});

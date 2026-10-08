@@ -1,3 +1,4 @@
+import { compileItemCrit, itemPrograms } from './m8/item-program';
 import { compileUnitInputs } from './m8/unit-inputs';
 import type { StrategySnapshot } from './strategy-types';
 import { initializeEffectRuntime } from './effects';
@@ -42,11 +43,13 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
         maxHpBasis: { base: getUnitStats(unit.definitionId, unit.starLevel).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
+        ...(resolved?.itemPrograms ? {itemPrograms:structuredClone(resolved.itemPrograms)} : {}),
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
         runtime: { attackCount: 0, castCount: 0, attackSpeedBps: 0, abilityPowerFlat: 0, rangeBonus: 0,
           nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
+  for (const unit of units) if (itemPrograms(unit).length) (unit as {spellCrit?: CombatUnit['spellCrit']}).spellCrit = compileItemCrit(unit);
   const result = eliminationResult(units);
   return {
     board: { ...preparationState.board, deploymentZones: {
