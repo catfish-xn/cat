@@ -30,15 +30,13 @@ export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, 
     const target=ctx.units.find(u=>u.id===targetId)!;
     const beforeDamage: NonNullable<S13Packet['beforeDamage']> = [];
     for(const [index,effect] of invocation.definition.effects.entries()) {
-      // Equipment damage is a single derived layer. State listeners still see its full outcome.
-      if(effect.kind==='damage' && effect.delivery==='equipment-proc' && facts.damage.some(o=>o.context.equipmentDepth===1)) continue;
+      if(!invocation.effectIndices.includes(index)) continue;
       const source={...invocation.definition.source,effectIndex:invocation.definition.source.effectIndex+index};
       // A status prefix belongs to the following packet, not the earlier root packets
       // still waiting in the damage queue. Status-only listeners keep their event boundary.
       const ordinal = ctx.packets.length + 100000;
       if ((context.event === 'attack-completed' || context.event === 'cast-completed') && effect.kind === 'apply-status' && effect.status.activation === 'immediate'
-        && invocation.definition.effects.slice(index + 1).some(e => e.kind === 'damage'
-        && !(e.delivery === 'equipment-proc' && facts.damage.some(o => o.context.equipmentDepth === 1)))) {
+        && invocation.effectIndices.some(i => i > index && invocation.definition.effects[i].kind === 'damage')) {
         beforeDamage.push({ source, effect, ordinal }); continue;
       }
       executeMechanismEffect(ctx,holder,source,target,effect,context.actionSeq,ctx.packets.length+100000,undefined,undefined,undefined,undefined,

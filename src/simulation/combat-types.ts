@@ -16,6 +16,7 @@ export interface CombatMechanic { readonly source: CombatOrigin; readonly mechan
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
 export interface CombatUnit {
+  readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[];
   readonly startingCell?: HexCell;
   readonly baseCritChanceBps?: number;
   readonly baseCritMultiplierBps?: number;
