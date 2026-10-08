@@ -5,7 +5,7 @@
  */
 import Phaser from 'phaser';
 import type { Unit } from '../simulation/units';
-import type { CombatUnit } from '../simulation/combat-types';
+import type { CombatState, CombatUnit } from '../simulation/combat-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
@@ -118,7 +118,7 @@ export class UnitView {
   }
 
   /** Combat meters: HP (team colored) with shield segment, mana below. */
-  drawCombat(unit: CombatUnit, tick = 0): void {
+  drawCombat(unit: CombatUnit, combat: CombatState): void {
     const alive = unit.alive, width = 52, left = -26;
     const hpRatio = unit.hp / unit.maxHp;
     this.hp.clear().setVisible(alive);
@@ -139,7 +139,7 @@ export class UnitView {
     this.shield.fillStyle(toNumber(C.shield)).fillRect(left + start, -44, Math.max(segment, unit.shield > 0 ? 2 : 0), 6);
     this.shield.setData({ value: unit.shield, maxValue: unit.maxHp, ratio: shieldRatio, width: width * shieldRatio });
     this.shieldLabel.setText(`盾 ${unit.shield}`).setVisible(alive && unit.shield > 0);
-    const badges = alive ? statusBadges(unit, tick) : { harmful: '', beneficial: '' };
+    const badges = alive ? statusBadges(combat, unit.id) : { harmful: '', beneficial: '' };
     this.harmfulBadges.setText(badges.harmful).setVisible(badges.harmful.length > 0);
     this.beneficialBadges.setText(badges.beneficial).setVisible(badges.beneficial.length > 0);
   }

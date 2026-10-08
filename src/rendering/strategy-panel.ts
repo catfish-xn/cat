@@ -15,7 +15,7 @@ import type { CombatEvent, CombatOrigin } from '../simulation/combat-types';
 import { readCombatStats } from '../simulation/combat-s13';
 import { getInterestGold } from '../simulation/economy';
 import { combatEventText, originLabel } from './combat-feedback';
-import { readUnitStatusRows, statusRowText, ticksToSeconds } from '../presentation/combat-status';
+import { readUnitStatusRows, shieldSource, statusRowText, ticksToSeconds } from '../presentation/combat-status';
 import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
@@ -537,9 +537,9 @@ export class StrategyPanel {
     for (const layer of unit.shieldLayers ?? []) {
       if (layer.remaining <= 0) continue;
       const m8 = layer.m8State;
-      node.append(element('p', `盾 ${layer.remaining} / ${layer.granted}${m8 ? ` · 已吸收 ${m8.absorbed}${m8.decayed ? ` · 已衰减 ${m8.decayed}` : ''}` : ''} · 剩余 ${ticksToSeconds(layer.expiresAtTick - combat.tick)}（第 ${layer.expiresAtTick} 刻结束） · ${label(layer.source)}`, 'combat-shield'));
+      node.append(element('p', `盾 ${layer.remaining} / ${layer.granted}${m8 ? ` · 已吸收 ${m8.absorbed}${m8.decayed ? ` · 已衰减 ${m8.decayed}` : ''}` : ''} · 剩余 ${ticksToSeconds(layer.expiresAtTick - combat.tick)}（第 ${layer.expiresAtTick} 刻结束） · ${label(shieldSource(layer))}`, 'combat-shield'));
     }
-    for (const row of readUnitStatusRows(unit, combat.tick)) {
+    for (const row of readUnitStatusRows(combat, unit.id)) {
       const line = element('p', statusRowText(row, combat.tick, label), `combat-status${row.harmful ? ' harmful' : ''}${row.state === 'suppressed' || row.state === 'pending' ? ' inactive' : ''}`);
       line.dataset.debug = `combat-status:${row.kind}`; node.append(line);
     }

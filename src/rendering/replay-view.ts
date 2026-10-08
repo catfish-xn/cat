@@ -112,7 +112,7 @@ export class ReplayView {
         ctx.fillStyle = unit.mana === unit.maxMana ? C.manaFull : C.mana; ctx.fillRect(left, p.y - 35, 52 * mana, 3);
         if (unit.shield > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2); ctx.strokeStyle = C.shield; ctx.lineWidth = 3; ctx.stroke(); }
         // Same status strip as the live piece, read from this snapshot's own mechanism store.
-        const badges = statusBadges(unit, state.tick);
+        const badges = statusBadges(state, unit.id);
         ctx.font = 'bold 10px system-ui, sans-serif';
         for (const [text, align, fg, bg] of [[badges.harmful, -1, '#ffb0a0', '#3a1218e6'], [badges.beneficial, 1, '#9ff0e4', '#0f2e2ae6']] as const) {
           if (!text) continue;

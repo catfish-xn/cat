@@ -589,7 +589,7 @@ export class BoardScene extends Phaser.Scene {
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }
-      this.views.get(unit.id)?.drawCombat(unit, combat.tick);
+      this.views.get(unit.id)?.drawCombat(unit, combat);
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }

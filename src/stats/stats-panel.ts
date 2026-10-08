@@ -1,12 +1,8 @@
 import type { CombatEvent, CombatOrigin, CombatState } from '../simulation/combat-types';
 import { readCombatStats } from '../simulation/combat-s13';
-import { UNIT_DEFINITIONS } from '../simulation/units';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
-import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
-import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
-import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import type { BattleStats, UnitTotals } from './aggregate';
 import { displayUnitName } from '../rendering/display-names';
+import { originLabel } from '../rendering/combat-feedback';
 import { m8EventText, readUnitStatusRows, statusRowText } from '../presentation/combat-status';
 export interface StatsView { readonly stats: BattleStats; readonly combat: CombatState; readonly events: readonly CombatEvent[]; readonly selectedUnitId: string | null }
 export interface StatsPanel { render(view: StatsView): void; dispose(): void }
@@ -17,12 +13,8 @@ function unitName(combat: CombatState, id: string | null): string {
   const unit = combat.units.find(value => value.id === id);
   return unit ? `${displayUnitName(unit.definitionId)} ${unit.starLevel}星` : '历史单位';
 }
-function sourceName(combat: CombatState, source: CombatOrigin): string {
-  const catalog = source.sourceKind === 'item' ? ITEM_DEFINITIONS : source.sourceKind === 'trait' ? TRAIT_DEFINITIONS : source.sourceKind === 'augment' ? AUGMENT_DEFINITIONS : source.sourceKind === 'anomaly' ? ANOMALY_DEFINITIONS : UNIT_DEFINITIONS;
-  const name = ['attack', 'ability', 'enemyGrowth'].includes(source.sourceKind)
-    ? (UNIT_DEFINITIONS[source.definitionId] ? displayUnitName(source.definitionId) : undefined) : catalog[source.definitionId]?.name;
-  return `${unitName(combat, source.ownerId)} · ${SOURCE_NAMES[source.sourceKind]}${name ? `（${name}）` : ''}`;
-}
+/** Same provenance text as the strategy panel (originLabel), including the temporary-child marker. */
+function sourceName(combat: CombatState, source: CombatOrigin): string { return originLabel(source, id => unitName(combat, id)); }
 function includesUnit(event: CombatEvent, id: string): boolean {
   if ('unitId' in event && event.unitId === id || 'source' in event && event.source.ownerId === id) return true;
   if (event.type === 'attack') return event.attackerId === id || event.targetId === id;
@@ -61,7 +53,7 @@ const zero = (unitId: string): UnitTotals => ({ unitId, hpDamage: 0, physicalHpD
 export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null) => void): StatsPanel {
   const root = document.createElement('section'); root.className = 'm6-stats-panel'; root.setAttribute('aria-label', '战斗统计');
   const heading = document.createElement('h2'); heading.textContent = '战斗统计';
-  const explanation = document.createElement('p'); explanation.textContent = '伤害统计实际生命损失（物理/魔法/真实分列）；护盾按受击单位统计吸收量，自然衰减不计；治疗按来源统计有效恢复。';
+  const explanation = document.createElement('p'); explanation.textContent = '伤害统计实际生命损失，选中单位后查看物理/魔法/真实三类明细；护盾按受击单位统计吸收量，自然衰减不计；治疗按来源统计有效恢复。';
   const selection = document.createElement('select'); selection.style.minHeight = '44px'; selection.style.minWidth = '44px'; selection.setAttribute('aria-label', '统计选中单位'); selection.dataset.debug = 'm6-stats-unit';
   const filter = document.createElement('select'); filter.style.minHeight = '44px'; filter.style.minWidth = '44px'; filter.setAttribute('aria-label', '战斗事件类型'); filter.dataset.debug = 'm6-stats-filter';
   for (const [value, label] of [['all', '全部事件（法力单列）'], ['damage', '实际伤害'], ['heal', '治疗'], ['shield', '护盾'], ['status', '状态'], ['mana', '法力'], ['target', '目标变化'], ['skill', '技能与效果']]) { const option = document.createElement('option'); option.value = value; option.textContent = label; filter.append(option); }
@@ -103,7 +95,7 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
     const current = readCombatStats(unit, view.combat);
     const names = [...new Set((unit.sources ?? []).map(({ source }) => sourceName(view!.combat, { ownerId: source.ownerId, sourceKind: source.sourceKind, definitionId: source.sourceDefinitionId, instanceId: source.sourceInstanceId, effectIndex: source.effectIndex })))];
     detail.textContent = `${unitName(view.combat, unit.id)} · ${unit.alive ? '存活' : '阵亡'}；生命 ${unit.hp}/${unit.maxHp}；法力 ${unit.mana}/${unit.maxMana}；攻击力 ${current.attackDamage}；法强 ${current.abilityPower}；护甲 ${current.armor}；魔抗 ${current.magicResist}；物理实际伤害 ${totals.physicalHpDamage}；魔法实际伤害 ${totals.magicHpDamage}；真实实际伤害 ${totals.trueHpDamage ?? 0}；受击护盾吸收 ${totals.shieldAbsorbed}；有效治疗 ${totals.effectiveHealing}；过量治疗 ${totals.overhealing}；来源：${names.join('、') || '基础属性'}；目标：${unitName(view.combat, unit.targetId)}`;
-    const rows = readUnitStatusRows(unit, view.combat.tick);
+    const rows = readUnitStatusRows(view.combat, unit.id);
     effects.replaceChildren(...(rows.length ? rows.map(row => { const item = document.createElement('li'); item.dataset.kind = row.kind; item.textContent = statusRowText(row, view!.combat.tick, origin => sourceName(view!.combat, origin)); return item; })
       : [Object.assign(document.createElement('li'), { textContent: '当前效果：无' })]));
     debugText.textContent = `对局：${view.stats.runId}\n战斗：${view.stats.combatId}\n单位：${unit.id}\n内容：${unit.definitionId}\n下个事件序号：${view.stats.nextEventSeq}`;
