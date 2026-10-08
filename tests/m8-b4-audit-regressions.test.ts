@@ -91,7 +91,7 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
   }, 120000);
 });
 
-describe('B4 audit R3: complete projections and once-per-combat receipts', () => {
+describe('B4 audit R3: projection semantics and active-effect receipt references', () => {
   it.each(['kind', 'amount'])('R3a rejects Giant Slayer projection forged %s, leaving genuine save valid', field => {
     const s = itemMatch('giant-slayer'); const json = serializeMatch(s); const raw = JSON.parse(json);
     const projected = raw.combat.units.find((u: CombatUnit) => u.id === 'unit-1').statuses.find((s: { source: { definitionId: string } }) => s.source.definitionId === 'giant-slayer');
@@ -111,8 +111,8 @@ describe('B4 audit R3: complete projections and once-per-combat receipts', () =>
     expect(holder.maxHp).toBe(700); expect(holder.shield).toBe(175);
     expect(holder.mechanismState.runtimes.some((r: { source: { definitionId: string }; consumed: boolean }) => r.source.definitionId === 'bloodthirster' && r.consumed)).toBe(true);
     holder.mechanismState.runtimes = [];
-    expect(() => restoreMatch(raw)).toThrow(/missing item effect consumption/);
-    expect(() => restoreMatch(JSON.stringify(raw))).toThrow(/missing item effect consumption/);
+    expect(() => restoreMatch(raw)).toThrow(/incomplete survival consumption/);
+    expect(() => restoreMatch(JSON.stringify(raw))).toThrow(/incomplete survival consumption/);
     expect(serializeMatch(s)).toBe(original); expect(stepMatch(restoreMatch(original))).toEqual(stepMatch(s));
   });
 });

@@ -15,6 +15,8 @@ export interface MechanismState {
   readonly statuses: readonly StatusGroup[];
   readonly periodicTasks: readonly PeriodicTask[];
   readonly runtimes: readonly EffectRuntime[];
+  /** Complement of consumed survival runtimes: together they cover every compiled once-per-combat source. */
+  readonly unconsumedSurvivalKeys: readonly string[];
   readonly activities: readonly CombatActivity[];
 }
-export const EMPTY_MECHANISMS: MechanismState = { initialized: false, combatId: 'standalone', sampledAtTick: 0, statuses: [], periodicTasks: [], runtimes: [], activities: [] };
+export const EMPTY_MECHANISMS: MechanismState = { initialized: false, combatId: 'standalone', sampledAtTick: 0, statuses: [], periodicTasks: [], runtimes: [], unconsumedSurvivalKeys: [], activities: [] };

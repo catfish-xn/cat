@@ -7,6 +7,7 @@ import { compileMechanismDefinitions } from './s13-definitions';
 import { validateTriggerLedger } from './triggers';
 import { resolveStat, integer } from './stats';
 import type { MechanismDefinitions } from './runtime-types';
+import { survivalConsumptionKeys } from './shield';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
 export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;effect:Effect;survivalSource?:Source}[] {
  const compiled=compileMechanismDefinitions(unit,combatId),result:{source:Source;effect:Effect;survivalSource?:Source}[]=[];
@@ -57,6 +58,15 @@ export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,
   if(!d||!survivalKeys.has(r.key)||seen.has(r.key)||r.triggerCount!==1||!r.consumed||r.startsAtTick>tick||r.expiresAtTick!==null||r.stacks!==0||!same(r.counters,{})||r.consumedRewards.length||r.nextEligibleTick!==r.startsAtTick+d.internalCooldownTicks||!same(r.stackPolicy,d.stackPolicy))throw new Error('Invalid Match save: item survival runtime');
   seen.add(r.key);
  }
+ // Every source must be represented exactly once, even after its effects end.
+ // Missing receipts are never reinterpreted as consumed or as first-use slots.
+ const expected=new Set(survivalConsumptionKeys(definitions.survivalTriggers,combatId,unit.id));
+ if(!Array.isArray(state.unconsumedSurvivalKeys))throw new Error('Invalid Match save: incomplete survival consumption');
+ for(const key of state.unconsumedSurvivalKeys){
+  if(!expected.has(key)||seen.has(key))throw new Error('Invalid Match save: survival consumption identity');
+  seen.add(key);
+ }
+ if([...expected].some(key=>!seen.has(key)))throw new Error('Invalid Match save: incomplete survival consumption');
  const basis=unit.maxHpBasis!;
  const bonuses=unit.itemPrograms?.length?declaredEffects(unit,combatId).filter(d=>d.effect.kind==='change-max-hp'):[];
  const uniqueBonuses=new Map(bonuses.map(d=>[canonicalSource(d.source),d]));

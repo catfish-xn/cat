@@ -16,6 +16,6 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),generate=requir
   assert.deepEqual(next.routes[build].rounds.map(r=>r.eventsHash),old.routes[build].rounds.map(r=>r.eventsHash),'B3 equipment event trajectories unchanged');
   console.log(build,JSON.stringify(route.summary));
  }
- next.note=(old.note??'')+' B4 audit R1–R5: equipment catalog v2 changes content digest and state hashes; all four command sequences and complete per-round event hashes remain identical. Independent audit counterexamples prove corrected new-item behavior.';
+ next.note=(old.note??'')+' B4 audit R1–R5/R3b: equipment catalog v3 includes a complete once-per-combat consumption partition; content digest and state hashes change; all four command sequences and complete per-round event hashes remain identical. Independent audit counterexamples prove corrected new-item behavior.';
  fs.writeFileSync(file,JSON.stringify(next,null,2)+'\n');
 })().catch(e=>{console.error(e);process.exitCode=1;});

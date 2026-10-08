@@ -13,7 +13,7 @@ import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from 
 import { canonicalSource, compareCodePoints, effectIdentity } from './identity';
 import { applyStatusContribution, advanceBurnClock, cleanseStatuses, endStatuses, removeStatusContributions, statusMagnitude, summarizeGroup } from './status';
 import { advancePeriodicTask, cleanPeriodicTasks, periodicAmount, clearRemainder } from './periodic';
-import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples } from './shield';
+import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples, survivalConsumptionKeys, remainingSurvivalKeys } from './shield';
 import { makeHealRequest, resolveHeal, type VampRate } from './heal';
 import { rollCrit } from './crit';
 export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source, environment: Partial<TargetEnvironment> = {}): S13Unit[] {
@@ -153,8 +153,9 @@ export function initializeMechanisms(ctx: AbilityContext): void {
       unit.mechanismState = { ...state, initialized: true, periodicTasks: [...state.periodicTasks, ...definitions.periodicTasks.map(t => { const skipped = Math.max(0, Math.ceil((ctx.tick - t.nextPulseAtTick) / t.periodTicks)); return { ...t, nextPulseAtTick: t.nextPulseAtTick + skipped * t.periodTicks, pulseOrdinal: t.pulseOrdinal + skipped }; })] };
       for (const group of state.statuses) if (group.kind === 'burn') for (const c of group.contributions) synchronizeBurnTask(unit, c.key);
       const sample: SurvivalSample = { unitId: unit.id, tick: ctx.tick - 1, hpBeforeDamage: unit.hp, hpAfterDamage: unit.hp, maxHpBeforeThresholdEffects: unit.maxHp, survivedDamageBatch: unit.hp > 0, receivedPositiveDamage: false };
+      const keys = survivalConsumptionKeys(definitions.survivalTriggers, state.combatId, unit.id);
       const eligible = consumeSurvivalTriggers(definitions.survivalTriggers, state.runtimes, sample, state.combatId, true);
-      unit.mechanismState = { ...unit.mechanismState!, runtimes: eligible.runtimes };
+      unit.mechanismState = { ...unit.mechanismState!, runtimes: eligible.runtimes, unconsumedSurvivalKeys: remainingSurvivalKeys(keys, eligible.runtimes) };
       for (const definition of eligible.fired) initial.push({ holder: unit, definition });
     }
     unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: ctx.tick };
@@ -259,7 +260,7 @@ export function settleSurvival(ctx: AbilityContext, before: readonly { id: strin
   for (const sample of frozen) {
     const unit = ctx.units.find(u => u.id === sample.unitId)!;
     const result = consumeSurvivalTriggers(unit.mechanismDefinitions!.survivalTriggers, unit.mechanismState!.runtimes, sample, unit.mechanismState!.combatId);
-    unit.mechanismState = { ...unit.mechanismState!, runtimes: result.runtimes };
+    unit.mechanismState = { ...unit.mechanismState!, runtimes: result.runtimes, unconsumedSurvivalKeys: remainingSurvivalKeys(unit.mechanismState!.unconsumedSurvivalKeys, result.runtimes) };
     for (const entry of result.fired) fired.push({ holder: unit, entry });
   }
   fired.sort((a, b) => compareText(canonicalSource(a.entry.definition.source), canonicalSource(b.entry.definition.source)));

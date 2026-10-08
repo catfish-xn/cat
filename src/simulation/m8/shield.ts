@@ -64,6 +64,14 @@ export function survivalSamples(before: readonly { id: string; hp: number; maxHp
     return { unitId: u.id, tick, hpBeforeDamage: u.hp, hpAfterDamage: next.hp, maxHpBeforeThresholdEffects: u.maxHp, survivedDamageBatch: next.hp > 0, receivedPositiveDamage: positive.has(u.id) };
   });
 }
+/** Start/post-damage listeners of the same source share one permanent consumption identity. */
+export function survivalConsumptionKeys(definitions: readonly TriggerDefinition[], combatId: string, holderId: string): string[] {
+  return [...new Set(definitions.filter(d => d.maxPerCombat === 1).map(d => effectIdentity(combatId, d.source, holderId).key))].sort(compareCodePoints);
+}
+export function remainingSurvivalKeys(keys: readonly string[], runtimes: readonly EffectRuntime[]): string[] {
+  const consumed = new Set(runtimes.filter(r => r.consumed).map(r => r.key));
+  return keys.filter(key => !consumed.has(key));
+}
 export function consumeSurvivalTriggers(definitions: readonly TriggerDefinition[], runtimes: readonly EffectRuntime[], sample: SurvivalSample, combatId: string, initial = false): { runtimes: EffectRuntime[]; fired: { definition: TriggerDefinition; sample: SurvivalSample }[] } {
   const next = [...runtimes], fired: { definition: TriggerDefinition; sample: SurvivalSample }[] = [];
   if (!sample.survivedDamageBatch || !sample.receivedPositiveDamage && !initial) return { runtimes: next, fired };
