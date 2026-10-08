@@ -218,6 +218,7 @@ export function restoreMatch(input: unknown): MatchState {
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(canonicalContent(unit.mechanics) === canonicalContent(resolved.mechanics), 'resolved mechanics'); requireValue(canonicalContent(unit.itemPrograms ?? []) === canonicalContent(resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       const { stats } = resolved;
+      if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
       for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
       requireValue(canonicalContent(unit.ability) === canonicalContent(resolved.ability), 'resolved ability');
       requireValue(canonicalContent(unit.sources) === canonicalContent(resolved.sources) && canonicalContent(unit.triggers) === canonicalContent(resolved.triggers), 'resolved effect source/trigger');
@@ -268,7 +269,7 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   const itemSpeedAt=(at:number)=>(unit.mechanismDefinitions?.periodicTasks ?? []).reduce((n,t)=>n+t.program.effects.reduce((total,e)=>total+(e.kind==='modify-stat'&&e.modifier.stat==='attackSpeed'&&e.modifier.value.kind==='constant'&&e.duration.kind==='combat'&&e.stackPolicy.kind==='add-stacks'?e.modifier.value.amount*Math.max(0,Math.floor((Math.min(at,t.endsAtTick ?? at)-t.nextPulseAtTick)/t.periodTicks)+1):0),0),0);
   const actionSpeed = runtime.attackCount * mechanic(unit, 'rageblade', 'attackSpeedBps')
     + (isKog ? runtime.castCount * Math.round(variable(unit, 'AttackSpeed', .25) * 10000) : 0);
-  requireValue(unit.alive ? runtime.attackSpeedBps === itemSpeedAt(tick)+actionSpeed : Array.from({length:tick+1},(_,at)=>itemSpeedAt(at)+actionSpeed).includes(runtime.attackSpeedBps), 'derived attack speed');
+  requireValue(unit.alive || itemSpeedAt(tick)===0 ? runtime.attackSpeedBps === itemSpeedAt(tick)+actionSpeed : Array.from({length:tick+1},(_,at)=>itemSpeedAt(at)+actionSpeed).includes(runtime.attackSpeedBps), 'derived attack speed');
   requireValue(runtime.rangeBonus === (isKog ? Math.floor(runtime.castCount / variable(unit, 'RangeIncreaseNumAttacks', 3)) : 0), 'derived range');
   const archangels = (unit.mechanics ?? []).filter(m => m.mechanic === 'archangel');
   const maximumAp = archangels.reduce((sum, m) => sum + Math.floor(tick / m.values.periodTicks) * m.values.abilityPower, 0);
