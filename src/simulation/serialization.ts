@@ -246,7 +246,9 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(combat.status === 'running' ? eliminated === null
       : eliminated === null ? combat.tick === combat.maxTicks && combat.result === 'draw' : combat.result === eliminated, 'combat terminal consistency');
   }
-  return structuredClone(state);
+  // JSON.parse already owns an independent graph. Object callers still receive
+  // a detached copy; all validation above is identical for both inputs.
+  return typeof input === 'string' ? state : structuredClone(state);
 }
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
 

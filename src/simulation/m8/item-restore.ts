@@ -6,6 +6,7 @@ import { canonicalSource, effectIdentity, validateIdentity } from './identity';
 import { compileMechanismDefinitions } from './s13-definitions';
 import { validateTriggerLedger } from './triggers';
 import { resolveStat, integer } from './stats';
+import type { MechanismDefinitions } from './runtime-types';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
 export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;effect:Effect}[] {
  const compiled=compileMechanismDefinitions(unit,combatId),result:{source:Source;effect:Effect}[]=[];
@@ -29,8 +30,8 @@ export function isDeclaredStatus(source:Source,app:StatusApplication,units:reado
  const owner=units.find(u=>u.id===source.ownerId);if(!owner)return false;
  return declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(source)&&same(statusDeclaration(d.effect,owner,d.source),app));
 }
-export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number):void {
- const definitions=compileMechanismDefinitions(unit,combatId),state=unit.mechanismState!;
+export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,definitions:MechanismDefinitions):void {
+ const state=unit.mechanismState!;
  validateTriggerLedger(unit.triggerLedger ?? {runtimes:[],processed:{},actionCounts:{}},combatId,definitions.eventTriggers ?? []);
  for(const r of unit.triggerLedger?.runtimes ?? []){
   validateIdentity(r,combatId);integer(r.startsAtTick);integer(r.nextEligibleTick);
@@ -46,7 +47,7 @@ export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number)
   seen.add(r.key);
  }
  const basis=unit.maxHpBasis!;
- const bonuses=declaredEffects(unit,combatId).filter(d=>d.effect.kind==='change-max-hp');
+ const bonuses=unit.itemPrograms?.length?declaredEffects(unit,combatId).filter(d=>d.effect.kind==='change-max-hp'):[];
  const uniqueBonuses=new Map(bonuses.map(d=>[canonicalSource(d.source),d]));
  const expectedBonus=[...uniqueBonuses.values()].reduce((n,d)=>n+(d.effect.kind==='change-max-hp'&&state.runtimes.some(r=>r.source.definitionId===d.source.definitionId&&r.source.instanceId===d.source.instanceId&&r.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<r.source.effectIndex+32)?d.effect.bonusBps:0),0);
  if(basis.bonusBps!==expectedBonus)throw new Error('Invalid Match save: item max HP consumption');
@@ -68,9 +69,11 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
  const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
+ if(!unit.itemPrograms?.length)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
  let values=[{flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
+  if(unit.mechanismDefinitions?.periodicTasks.some(t=>canonicalSource(t.source)===canonicalSource(d.source)))continue;
   const key=canonicalSource(d.source);if(seen.has(key))continue;seen.add(key);
   const m=d.effect.modifier;
   if(m.unit!=='flat'&&m.unit!=='bps')throw new Error('Unsupported enabled sampled unit');

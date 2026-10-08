@@ -50,6 +50,12 @@ describe('B4 composed consumers and restore rejection',()=>{
   expect(s.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBeGreaterThan(0);
   expect(restoreMatch(serializeMatch(s))).toEqual(s);
  });
+ it('string restore uses its parsed independent graph;object restore still detaches the input',()=>{
+  const source=itemMatch('hand-of-justice'),json=serializeMatch(source),a=restoreMatch(json),b=restoreMatch(json),c=restoreMatch(source);
+  expect(a).toEqual(source);expect(c).toEqual(source);expect(a.combat).not.toBe(b.combat);expect(c.combat).not.toBe(source.combat);
+  if(!a.combat||!c.combat)throw new Error('combat required');
+  Object.assign(a.combat.units[0],{hp:0});Object.assign(c.combat.units[0],{hp:0});expect(serializeMatch(b)).toBe(json);expect(serializeMatch(source)).toBe(json);
+ });
  it('catalogue query is frozen,source-labelled,44 entries and consumes zero Match words',()=>{
   const s=itemMatch('jeweled-gauntlet'),before=JSON.stringify(s),a=readItemCatalog(),b=readItemCatalog();expect(a).toEqual(b);expect(a).toHaveLength(44);expect(a.every(i=>i.effectDescriptions.length&&i.referencePatch==='14.24b'&&i.evidenceStatus==='source-reviewed')).toBe(true);expect(Object.isFrozen(a)).toBe(true);expect(JSON.stringify(s)).toBe(before);
  });

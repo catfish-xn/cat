@@ -19,7 +19,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   const compiled = compileMechanismDefinitions(unit, combatId);
   check(same(definitions, compiled), 'uncompiled mechanism definitions');
   check(Array.isArray(state.statuses) && Array.isArray(state.periodicTasks) && Array.isArray(state.runtimes) && Array.isArray(state.activities), 'mechanism arrays');
-  validateItemRuntime(unit,combatId,tick);
+  validateItemRuntime(unit,combatId,tick,compiled);
   const basis = unit.maxHpBasis;
   const expectedBasis = { base: getUnitStats(unit.definitionId, unit.starLevel).health,
     flat: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
@@ -80,7 +80,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(shield.targetId === unit.id && same(shield.source, asSource(layer.source)) && layer.key === sourceKey(layer.source)
       && shield.granted === layer.granted && shield.remaining === layer.remaining && shield.absorbed === layer.absorbed
       && shield.expiresAtTick === layer.expiresAtTick && typeof shield.endRewardConsumed === 'boolean', 'shield projection');
-    const declared=units.flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant));
+    const declared=shield.source.sourceKind==='item'?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
     if(declared) {
       check(shield.decay.kind===grant.decay.kind && [...maxHpCandidates(unit,shield.startsAtTick,combatId)].some(hp=>shield.granted===Math.floor(hp*grant.amount.maxHpBps/10000)), 'item shield sampled amount');
       check(shield.remaining>0&&layer.endedReason===undefined&&!shield.endRewardConsumed&&!units.some(u=>u.tasks?.some(t=>t.shieldEndKey===layer.key)), 'item shield active lifecycle');
