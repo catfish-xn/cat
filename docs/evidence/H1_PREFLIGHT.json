@@ -35,6 +35,19 @@
         "FATAL chrome/browser/process_singleton_posix.cc:297: socket() failed: Operation not permitted (1)",
         "scoped_ptrace_attach.cc:27: ptrace: Operation not permitted (1)"
       ]
+    },
+    {
+      "number": 3,
+      "checkedAtUtc": "2026-10-08T12:57:49Z",
+      "authorization": "User explicitly approved this same command outside sandbox at 12:57:28 UTC",
+      "requestMode": "require_escalated",
+      "result": "launch-failed",
+      "exitSignal": "SIGABRT",
+      "errors": [
+        "FATAL chrome/browser/process_singleton_posix.cc:297: socket() failed: Operation not permitted (1)",
+        "scoped_ptrace_attach.cc:27: ptrace: Operation not permitted (1)"
+      ],
+      "limitation": "Requested outside-sandbox execution did not remove the observed restriction; no successful browser or heap-script execution."
     }
   ],
   "existingHeapScriptRan": false,
