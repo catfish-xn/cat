@@ -1,3 +1,4 @@
+import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
 import type { MatchState } from './match-types';
 import type {
   Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition,
@@ -37,6 +38,12 @@ export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalo
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
+    const itemPrograms: BoundItemProgram[] = [];
+    const bindItem = (definition: ItemDefinition, instanceId: string) => {
+      if (!definition.combatProgram) return;
+      validateItemProgram(definition.combatProgram);
+      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId:null},program:structuredClone(definition.combatProgram)});
+    };
     for (const trait of traits) {
       if (trait.team !== unit.team || trait.tier === 0 || !trait.targetUnitIds.includes(unit.id)) continue;
       const definition = lookup(catalog.traits, trait.traitId);
@@ -49,6 +56,7 @@ export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalo
         if (item.location.kind !== 'unit' || item.location.unitId !== unit.id) continue;
         const definition = lookup(catalog.items, item.definitionId);
         sources.push(...makeSourcedEffects(unit.id, 'item', item.definitionId, item.id, definition.effects));
+        bindItem(definition, item.id);
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
@@ -73,6 +81,7 @@ export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalo
       for (const item of getRoundEnemyItems(state.round).filter(item => item.unitId === unit.id)) {
         const definition = lookup(catalog.items, item.definitionId);
         sources.push(...makeSourcedEffects(unit.id, 'item', item.definitionId, `enemy:${state.round}:${unit.id}:${item.slot}`, definition.effects));
+        bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);
       }
     }
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
@@ -85,7 +94,7 @@ export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalo
       return { ...mechanic, targetId: buddy!.id };
     });
     if (unit.definitionId === 'vander') mechanics.push({ source: {ownerId:unit.id,sourceKind:'ability',definitionId:'vander-ability',instanceId:unit.id,effectIndex:0},mechanic:'lowCostAllies',values:{count:boardUnits.filter(other=>other.team===unit.team && UNIT_DEFINITIONS[other.definitionId].cost<=2).length}});
-    return { unitId: unit.id, ...resolved, mechanics };
+    return { unitId: unit.id, ...resolved, mechanics, ...(itemPrograms.length ? {itemPrograms} : {}) };
   });
   return { traits, units };
 }

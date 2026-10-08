@@ -1,0 +1,24 @@
+/** Compact builders of frozen B3 declarations. Values are supplied by the B1 catalogue. */
+import type { Amount, Condition, DamageFilter, Effect, StatModifier, StatusApplication, TargetSelector } from '../m8/contracts';
+import type { ItemTrigger, ItemProgram } from '../m8/item-program';
+export const always:Condition={kind:'always'};
+export const refresh={kind:'refresh-same-instance',magnitude:'replace',phase:'preserve'} as const;
+export const combat={kind:'combat'} as const;
+export const duration=(ticks:number)=>({kind:'ticks' as const,ticks});
+export const hp=(op:'gt'|'lt'|'lte',thresholdBps:number):Condition=>({kind:'hp-ratio',subject:'holder',op,thresholdBps});
+export const rows=(rows:'front-two'|'back-two'):Condition=>({kind:'starting-rows',rows});
+export const filter=(deliveries:DamageFilter['deliveries']='all'):DamageFilter=>({deliveries,damageTypes:['physical','magic'],redirected:'exclude'});
+export const amount=(patch:Partial<Amount>={}):Amount=>({flat:0,attackDamageBps:0,abilityPowerBps:0,maxHpBps:0,missingHpBps:0,actualManaSpentBps:0,actualDamageBps:0,shieldAbsorbedBps:0,hpBasis:'holder',sample:'application',cap:null,...patch});
+export const modifier=(stat:StatModifier['stat'],n:number,unit:StatModifier['unit']='flat',condition:Condition=always,damageFilter:DamageFilter|null=null):StatModifier=>({stat,unit,value:{kind:'constant',amount:n},condition,damageFilter});
+export const selector=(patch:Partial<TargetSelector>={}):TargetSelector=>({primary:'normal',candidates:'board',relation:'self',anchor:'holder',radius:null,maxTargets:1,excludeSelf:false,excludePrimary:false,distinct:true,order:'distance-id',sample:'action-completion',...patch});
+export const enemies=(patch:Partial<TargetSelector>={})=>selector({relation:'enemy',excludeSelf:true,...patch});
+export const stat=(m:StatModifier,ticks:number|null=null,activation:'immediate'|'next-tick'='immediate'):Effect=>({kind:'modify-stat',modifier:m,activation,duration:ticks===null?combat:duration(ticks),stackPolicy:refresh});
+export const status=(kind:StatusApplication['kind'],n:number,ticks:number,patch:Partial<StatusApplication>={}):Effect=>({kind:'apply-status',status:{kind,magnitudeBps:n,duration:duration(ticks),activation:'immediate',stackPolicy:['burn','wound','sunder','shred','damage-reduction'].includes(kind)?{kind:'strongest-category',category:kind,retainSuppressed:true}:refresh,polarity:['burn','wound','sunder','shred','stun'].includes(kind)?'harmful':'beneficial',removable:['burn','wound','sunder','shred','stun'].includes(kind),damageFilter:kind==='damage-reduction'?filter():null,onEnd:null,...patch}});
+export const burn=(ticks:number):Effect[]=>[status('burn',100,ticks),status('wound',3300,ticks)];
+export const shield=(bps:number,ticks:number,endEffects:readonly Effect[]=[]):Effect=>({kind:'grant-shield',amount:amount({maxHpBps:bps}),durationTicks:ticks,decay:{kind:'none'},onEnd:endEffects.length?['depleted','expired']:[],endTiming:'post-damage',endTargeting:{kind:'select',selector:selector()},endEffects});
+export const trigger=(patch:Partial<ItemTrigger>):ItemTrigger=>({id:'trigger',event:'attack-completed',listener:{subject:'actor',relationToHolder:'self',withinHexes:null},aggregation:'event',counters:[],gate:{kind:'always'},condition:always,selector:selector(),internalCooldownTicks:0,maxPerAction:1,maxPerCombat:null,stackPolicy:refresh,effects:[],...patch});
+export const survival=(thresholdBps:number,effects:readonly Effect[],initial=false):ItemTrigger=>trigger({id:'survival',event:'post-damage-survival',...(initial?{initialAlso:true as const}:{}),listener:{subject:'target',relationToHolder:'self',withinHexes:null},condition:hp('lte',thresholdBps),maxPerCombat:1,effects});
+export const damage=(damageType:'physical'|'magic',patch:Partial<Amount>):Effect=>({kind:'damage',damageType,delivery:'equipment-proc',critEligibility:'never',amount:amount(patch)});
+export const mana=(n:number,reason:'attack'|'incoming-basic-hit'|'periodic'|'cast-refund'):Effect=>({kind:'grant-mana',amount:n,reason,bypassLock:reason==='cast-refund'?'this-cast-refund':'none'});
+export const periodic=(periodTicks:number,effects:readonly Effect[],s=selector({sample:'each-pulse'}),patch:Partial<NonNullable<ItemProgram['periodic']>[number]>={}):NonNullable<ItemProgram['periodic']>[number]=>({periodTicks,program:{selector:s,targetSnapshot:'once-per-pulse',effects},...patch});
+export const vamp=(bps:number,condition:Condition=always)=>({modifier:modifier('omnivamp',bps,'bps',condition),allyBps:0,allyCondition:always});

@@ -1,3 +1,8 @@
+import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
+import { canonicalSource } from './m8/identity';
+import { asSource } from './m8/s13-definitions';
+import { validateComponentCandidates } from './component-pool';
+import { compileItemCrit } from './m8/item-program';
 import type { MatchState } from './match-types';
 import { CONTENT_DIGEST, canonicalContent } from './content';
 import { UNIT_DEFINITIONS } from './units';
@@ -130,9 +135,10 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(event?.kind === choice.kind && choice.kind !== undefined, 'choice scheduled');
     if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && choice.offers.length === 0 && choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player'), 'target substate');
     else {
-      requireValue(choice.step === 'offer' && choice.offers.length === (choice.kind === 'component' ? 7 : choice.kind === 'anomaly' ? 1 : 3) && new Set(choice.offers).size === choice.offers.length, 'offer substate');
+      requireValue(choice.step === 'offer' && choice.offers.length === (choice.kind === 'component' ? 8 : choice.kind === 'anomaly' ? 1 : 3) && new Set(choice.offers).size === choice.offers.length, 'offer substate');
       const catalog = choice.kind === 'augment' ? AUGMENT_DEFINITIONS : choice.kind === 'component' ? ITEM_DEFINITIONS : ANOMALY_DEFINITIONS;
       for (const offer of choice.offers) definitionId(offer, catalog, 'offer definition');
+      if (choice.kind === 'component') { validateComponentCandidates(choice.offers); }
       if (choice.kind === 'component') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => ITEM_DEFINITIONS[def].kind === 'component'), 'component offers');
       else if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
       else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation === choice.rerollCount + 1, 'locked target');
@@ -209,10 +215,10 @@ export function restoreMatch(input: unknown): MatchState {
     for (const unit of combat.units) {
       record(unit); requireValue(units.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = units.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
-      if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(canonicalContent(unit.mechanics) === canonicalContent(resolved.mechanics), 'resolved mechanics'); }
+      if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(canonicalContent(unit.mechanics) === canonicalContent(resolved.mechanics), 'resolved mechanics'); requireValue(canonicalContent(unit.itemPrograms ?? []) === canonicalContent(resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       const { stats } = resolved;
-      for (const [field, value] of Object.entries({ maxHp: stats.health, attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
+      for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
       requireValue(canonicalContent(unit.ability) === canonicalContent(resolved.ability), 'resolved ability');
       requireValue(canonicalContent(unit.sources) === canonicalContent(resolved.sources) && canonicalContent(unit.triggers) === canonicalContent(resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
@@ -246,13 +252,11 @@ export function serializeMatch(state: MatchState): string { return canonicalCont
 /** Runtime records are checked separately from frozen stats; restoring never executes them. */
 function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string): void {
   if (unit.ability.kind !== 's13') return;
+  requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');
   if (unit.spellCrit !== undefined) {
     record(unit.spellCrit); list(unit.spellCrit.itemSources); list(unit.spellCrit.nonItemSources);
     validateSpellCrit(unit.spellCrit);
-    // The current nine-item compiler has no authorization provider. B4 must
-    // bind these frozen sources to its enabled definitions before saving them.
-    requireValue(unit.spellCrit.itemSources.length === 0 && unit.spellCrit.nonItemSources.length === 0
-      && unit.spellCrit.chanceBps === (champion(unit) === 'neutral' ? 0 : 2500) && unit.spellCrit.multiplierBps === 14000, 'uncompiled spell critical sources');
+    requireValue(canonicalContent(unit.spellCrit) === canonicalContent(compileItemCrit(unit)), 'uncompiled spell critical sources');
   }
   integer(unit.attackDamageBase); integer(unit.attackDamagePercentBps); integer(unit.abilityPower); integer(unit.baseAttackSpeedBps, 1); integer(unit.attackSpeedBonusBps);
   record(unit.runtime);
@@ -261,9 +265,10 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   if (unit.definitionId !== 'tristana') requireValue(unit.runtime.permanentAdBps === 0, 'growth owner');
   const runtime = unit.runtime, isKog = champion(unit) === 'kogmaw';
   requireValue(runtime.attackCount + runtime.castCount <= tick, 'action count bound');
-  const expectedSpeed = runtime.attackCount * mechanic(unit, 'rageblade', 'attackSpeedBps')
+  const itemSpeedAt=(at:number)=>(unit.mechanismDefinitions?.periodicTasks ?? []).reduce((n,t)=>n+t.program.effects.reduce((total,e)=>total+(e.kind==='modify-stat'&&e.modifier.stat==='attackSpeed'&&e.modifier.value.kind==='constant'&&e.duration.kind==='combat'&&e.stackPolicy.kind==='add-stacks'?e.modifier.value.amount*Math.max(0,Math.floor((Math.min(at,t.endsAtTick ?? at)-t.nextPulseAtTick)/t.periodTicks)+1):0),0),0);
+  const actionSpeed = runtime.attackCount * mechanic(unit, 'rageblade', 'attackSpeedBps')
     + (isKog ? runtime.castCount * Math.round(variable(unit, 'AttackSpeed', .25) * 10000) : 0);
-  requireValue(runtime.attackSpeedBps === expectedSpeed, 'derived attack speed');
+  requireValue(unit.alive ? runtime.attackSpeedBps === itemSpeedAt(tick)+actionSpeed : Array.from({length:tick+1},(_,at)=>itemSpeedAt(at)+actionSpeed).includes(runtime.attackSpeedBps), 'derived attack speed');
   requireValue(runtime.rangeBonus === (isKog ? Math.floor(runtime.castCount / variable(unit, 'RangeIncreaseNumAttacks', 3)) : 0), 'derived range');
   const archangels = (unit.mechanics ?? []).filter(m => m.mechanic === 'archangel');
   const maximumAp = archangels.reduce((sum, m) => sum + Math.floor(tick / m.values.periodTicks) * m.values.abilityPower, 0);
@@ -275,17 +280,16 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   requireValue(unit.alive ? runtime.abilityPowerFlat === maximumAp : possibleAp.has(runtime.abilityPowerFlat), 'derived ability power');
   requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
   if (runtime.nextAttackMagic > 0) {
-    requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...possibleAp].some(value =>
-      Math.floor(((unit.abilityPower ?? 100) + value) * variable(unit, 'Damage') / 100) === runtime.nextAttackMagic), 'derived empowered magic');
+    requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...abilityPowerCandidates(unit,0,combatId)].some(ap=>[...possibleAp].some(value =>
+      Math.floor((ap + value) * variable(unit, 'Damage') / 100) === runtime.nextAttackMagic)), 'derived empowered magic');
   }
   if (runtime.nextAttackPhysical > 0) {
-    const attack = Math.floor(unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps!) / 10000);
     const coefficient = variable(unit, 'PercentAttackDamage') + variable(unit, 'BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count');
-    requireValue(champion(unit) === 'vander' && runtime.castCount > 0 && runtime.nextAttackPhysical === Math.floor(attack * Math.round(coefficient * 10000) / 10000), 'derived empowered physical');
+    requireValue(champion(unit) === 'vander' && runtime.castCount > 0 && [...attackDamageCandidates(unit,tick,combatId)].some(attack=>runtime.nextAttackPhysical === Math.floor(attack * Math.round(coefficient * 10000) / 10000)), 'derived empowered physical');
   }
   requireValue(!runtime.buddyTriggered || (unit.mechanics ?? []).some(m => m.mechanic === 'bulkyBuddies' && combatUnits.some(other => other.id === m.targetId && !other.alive)), 'derived buddy trigger');
   const numerator = unit.attackDamageBase! * (10000 + unit.attackDamagePercentBps! + runtime.permanentAdBps);
-  requireValue(Number.isSafeInteger(numerator) && Number.isSafeInteger(unit.baseAttackSpeedBps! * (10000 + unit.attackSpeedBonusBps! + expectedSpeed)), 'dynamic arithmetic bound');
+  requireValue(Number.isSafeInteger(numerator) && Number.isSafeInteger(unit.baseAttackSpeedBps! * (10000 + unit.attackSpeedBonusBps! + runtime.attackSpeedBps)), 'dynamic arithmetic bound');
   if (unit.ability.kind === 's13') {
     const largestCoefficient = Math.max(10000, ...Object.values(unit.ability.variables));
     requireValue(Number.isSafeInteger(largestCoefficient * (1 + Math.floor(numerator / 10000) + unit.maxHp + unit.abilityPower! + maximumAp)), 'ability arithmetic bound');
@@ -299,7 +303,7 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     } else {
       requireValue(owner.sources?.some(entry => entry.source.ownerId === source.ownerId
         && entry.source.sourceKind === source.sourceKind && entry.source.sourceDefinitionId === source.definitionId
-        && entry.source.sourceInstanceId === source.instanceId && entry.source.effectIndex === source.effectIndex), 'frozen runtime source');
+        && entry.source.sourceInstanceId === source.instanceId && entry.source.effectIndex === source.effectIndex) || declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(source))), 'frozen runtime source');
     }
   };
   list(unit.shieldLayers); const shieldKeys = new Set<string>(); let total = 0;
@@ -319,7 +323,7 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     requireValue(status.kind !== 'abilityPower' && status.kind !== 'attackSpeed', 'unsupported dynamic status source');
     requireValue(Math.abs(status.amount) <= 1000000, 'status arithmetic bound');
     if (['damageReduction','armorReduction','redirect'].includes(status.kind)) requireValue(status.amount <= 10000, 'status bps');
-    requireValue(status.key.startsWith(sourceKey(status.source)), 'status key/source'); statusKeys.add(status.key);
+    requireValue(status.key.startsWith(sourceKey(status.source)) || status.contributionKeys?.includes(status.key) && unit.mechanismState!.statuses.some(g=>g.contributions.some(c=>c.key===status.key&&canonicalSource(c.source)===canonicalSource(asSource(status.source)))), 'status key/source'); statusKeys.add(status.key);
   }
   list(unit.tasks); const taskKeys = new Set<string>();
   for (const task of unit.tasks) {

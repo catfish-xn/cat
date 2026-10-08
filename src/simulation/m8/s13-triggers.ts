@@ -30,6 +30,10 @@ export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, 
     const target=ctx.units.find(u=>u.id===targetId)!;
     const beforeDamage: NonNullable<S13Packet['beforeDamage']> = [];
     for(const [index,effect] of invocation.definition.effects.entries()) {
+      if(context.event==='damage-dealt' && effect.kind==='apply-status') {
+        const permission=['burn','wound'].includes(effect.status.kind)?'apply-item-burn':effect.status.kind==='sunder'?'last-whisper':null;
+        if(permission && !facts.damage.some(o=>o.context.permissions.includes(permission) && o.absorbed+o.hpDamage>0))continue;
+      }
       // Equipment damage is a single derived layer. State listeners still see its full outcome.
       if(effect.kind==='damage' && effect.delivery==='equipment-proc' && facts.damage.some(o=>o.context.equipmentDepth===1)) continue;
       const source={...invocation.definition.source,effectIndex:invocation.definition.source.effectIndex+index};
