@@ -1,0 +1,314 @@
+{
+ "nodeCount": {
+  "before": 253958,
+  "after": 259473
+ },
+ "totalSelfSize": {
+  "before": 20885334,
+  "after": 21955838
+ },
+ "topBySelfSizeDelta": [
+  {
+   "key": "code:",
+   "countDelta": 213,
+   "selfSizeDelta": 484544
+  },
+  {
+   "key": "code:system / TrustedByteArray",
+   "countDelta": 765,
+   "selfSizeDelta": 167052
+  },
+  {
+   "key": "code:system / ProtectedFixedArray",
+   "countDelta": 211,
+   "selfSizeDelta": 68768
+  },
+  {
+   "key": "hidden:system / WeakArrayList",
+   "countDelta": 558,
+   "selfSizeDelta": 62696
+  },
+  {
+   "key": "native:DOMRectReadOnly",
+   "countDelta": 418,
+   "selfSizeDelta": 23408
+  },
+  {
+   "key": "native:PerformanceLongAnimationFrameTiming",
+   "countDelta": 142,
+   "selfSizeDelta": 20448
+  },
+  {
+   "key": "native:TaskAttributionTiming",
+   "countDelta": 146,
+   "selfSizeDelta": 18688
+  },
+  {
+   "key": "code:system / FeedbackVector",
+   "countDelta": 128,
+   "selfSizeDelta": 17120
+  },
+  {
+   "key": "code:(BASELINE instruction stream)",
+   "countDelta": 46,
+   "selfSizeDelta": 16576
+  },
+  {
+   "key": "native:PerformanceLongTaskTiming",
+   "countDelta": 146,
+   "selfSizeDelta": 16352
+  },
+  {
+   "key": "code:(code)",
+   "countDelta": 213,
+   "selfSizeDelta": 13632
+  },
+  {
+   "key": "native:PerformanceScriptTiming",
+   "countDelta": 106,
+   "selfSizeDelta": 11872
+  },
+  {
+   "key": "native:LayoutShift",
+   "countDelta": 59,
+   "selfSizeDelta": 9440
+  },
+  {
+   "key": "code:system / TrustedWeakFixedArray",
+   "countDelta": 211,
+   "selfSizeDelta": 8908
+  },
+  {
+   "key": "native:LayoutShiftAttribution",
+   "countDelta": 209,
+   "selfSizeDelta": 8360
+  },
+  {
+   "key": "native:PerformanceResourceTiming",
+   "countDelta": 42,
+   "selfSizeDelta": 6048
+  },
+  {
+   "key": "object shape",
+   "countDelta": 137,
+   "selfSizeDelta": 5952
+  },
+  {
+   "key": "code:(instruction stream for replaceCandidate)",
+   "countDelta": 1,
+   "selfSizeDelta": 5888
+  },
+  {
+   "key": "code:(instruction stream for ao)",
+   "countDelta": 1,
+   "selfSizeDelta": 5696
+  },
+  {
+   "key": "code:system / WeakArrayList",
+   "countDelta": 136,
+   "selfSizeDelta": 5616
+  },
+  {
+   "key": "code:(instruction stream for Rh)",
+   "countDelta": 1,
+   "selfSizeDelta": 4992
+  },
+  {
+   "key": "code:system / LoadHandler",
+   "countDelta": 299,
+   "selfSizeDelta": 4908
+  },
+  {
+   "key": "array:",
+   "countDelta": 2,
+   "selfSizeDelta": 4368
+  },
+  {
+   "key": "code:(instruction stream for loadArchives)",
+   "countDelta": 1,
+   "selfSizeDelta": 4096
+  },
+  {
+   "key": "code:(instruction stream for xl)",
+   "countDelta": 1,
+   "selfSizeDelta": 3776
+  },
+  {
+   "key": "code:(instruction stream for openReplay)",
+   "countDelta": 1,
+   "selfSizeDelta": 3776
+  },
+  {
+   "key": "hidden:system / ProtectedFixedArray",
+   "countDelta": 211,
+   "selfSizeDelta": 3376
+  },
+  {
+   "key": "code:(BASELINE code)",
+   "countDelta": 46,
+   "selfSizeDelta": 2944
+  },
+  {
+   "key": "code:(instruction stream for ul)",
+   "countDelta": 1,
+   "selfSizeDelta": 2816
+  },
+  {
+   "key": "code:system / CodeWrapper",
+   "countDelta": 339,
+   "selfSizeDelta": 2712
+  }
+ ],
+ "topByCountDelta": [
+  {
+   "key": "code:system / TrustedByteArray",
+   "countDelta": 765,
+   "selfSizeDelta": 167052
+  },
+  {
+   "key": "hidden:system / WeakArrayList",
+   "countDelta": 558,
+   "selfSizeDelta": 62696
+  },
+  {
+   "key": "native:DOMRectReadOnly",
+   "countDelta": 418,
+   "selfSizeDelta": 23408
+  },
+  {
+   "key": "code:system / CodeWrapper",
+   "countDelta": 339,
+   "selfSizeDelta": 2712
+  },
+  {
+   "key": "code:system / LoadHandler",
+   "countDelta": 299,
+   "selfSizeDelta": 4908
+  },
+  {
+   "key": "native:InternalNode",
+   "countDelta": 247,
+   "selfSizeDelta": 0
+  },
+  {
+   "key": "code:",
+   "countDelta": 213,
+   "selfSizeDelta": 484544
+  },
+  {
+   "key": "code:(code)",
+   "countDelta": 213,
+   "selfSizeDelta": 13632
+  },
+  {
+   "key": "hidden:system / SharedFunctionInfoWrapper",
+   "countDelta": 211,
+   "selfSizeDelta": 1688
+  },
+  {
+   "key": "code:system / TrustedWeakFixedArray",
+   "countDelta": 211,
+   "selfSizeDelta": 8908
+  },
+  {
+   "key": "hidden:system / ProtectedFixedArray",
+   "countDelta": 211,
+   "selfSizeDelta": 3376
+  },
+  {
+   "key": "code:system / ProtectedFixedArray",
+   "countDelta": 211,
+   "selfSizeDelta": 68768
+  },
+  {
+   "key": "native:LayoutShiftAttribution",
+   "countDelta": 209,
+   "selfSizeDelta": 8360
+  },
+  {
+   "key": "native:PerformanceLongTaskTiming",
+   "countDelta": 146,
+   "selfSizeDelta": 16352
+  },
+  {
+   "key": "native:TaskAttributionTiming",
+   "countDelta": 146,
+   "selfSizeDelta": 18688
+  },
+  {
+   "key": "native:PerformanceLongAnimationFrameTiming",
+   "countDelta": 142,
+   "selfSizeDelta": 20448
+  },
+  {
+   "key": "object shape",
+   "countDelta": 137,
+   "selfSizeDelta": 5952
+  },
+  {
+   "key": "code:system / WeakArrayList",
+   "countDelta": 136,
+   "selfSizeDelta": 5616
+  },
+  {
+   "key": "code:system / FeedbackVector",
+   "countDelta": 128,
+   "selfSizeDelta": 17120
+  },
+  {
+   "key": "native:PerformanceScriptTiming",
+   "countDelta": 106,
+   "selfSizeDelta": 11872
+  },
+  {
+   "key": "code:system / WeakFixedArray",
+   "countDelta": 96,
+   "selfSizeDelta": 2600
+  },
+  {
+   "key": "native:LayoutShift",
+   "countDelta": 59,
+   "selfSizeDelta": 9440
+  },
+  {
+   "key": "code:system / AllocationSite",
+   "countDelta": 58,
+   "selfSizeDelta": 1604
+  },
+  {
+   "key": "code:(BASELINE code)",
+   "countDelta": 46,
+   "selfSizeDelta": 2944
+  },
+  {
+   "key": "code:(BASELINE instruction stream)",
+   "countDelta": 46,
+   "selfSizeDelta": 16576
+  },
+  {
+   "key": "native:PerformanceResourceTiming",
+   "countDelta": 42,
+   "selfSizeDelta": 6048
+  },
+  {
+   "key": "object:Object",
+   "countDelta": 29,
+   "selfSizeDelta": 840
+  },
+  {
+   "key": "code:system / StoreHandler",
+   "countDelta": 26,
+   "selfSizeDelta": 472
+  },
+  {
+   "key": "code:system / UncompiledDataWithoutPreparseData",
+   "countDelta": 23,
+   "selfSizeDelta": 460
+  },
+  {
+   "key": "code:(object elements)",
+   "countDelta": 18,
+   "selfSizeDelta": 700
+  }
+ ]
+}
