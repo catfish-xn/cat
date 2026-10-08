@@ -7,8 +7,9 @@ import { ROD_ITEMS } from './items-rod';
 import { TEAR_ITEMS } from './items-tear';
 import { VEST_ITEMS } from './items-vest';
 import { CLOAK_ITEMS } from './items-cloak';
+import { BELT_ITEMS } from './items-belt';
 export const ITEM_DEFINITIONS: Readonly<Record<string,ItemDefinition>> = freezeContent({
-  ...Object.fromEntries([COMPONENTS_ITEMS,SWORD_ITEMS,BOW_ITEMS,ROD_ITEMS,TEAR_ITEMS,VEST_ITEMS,CLOAK_ITEMS].flat().map(item=>[item.id,item])),
+  ...Object.fromEntries([COMPONENTS_ITEMS,SWORD_ITEMS,BOW_ITEMS,ROD_ITEMS,TEAR_ITEMS,VEST_ITEMS,CLOAK_ITEMS,BELT_ITEMS].flat().map(item=>[item.id,item])),
   ...{
   "rageblade": {
     "id": "rageblade",
