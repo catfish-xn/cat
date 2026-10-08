@@ -1,0 +1,96 @@
+{
+  "measuredAtUtc": "2026-10-08T10:02:00Z",
+  "environment": {
+    "os": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "node": "v24.19.0",
+    "npm": "11.9.0",
+    "vite": "7.3.6",
+    "zlib": "1.3.2.1-motley-3246f1b"
+  },
+  "sourceShas": {
+    "baseline": "5dce5cd07f3f400be42981742dcb2dc3ceff2009",
+    "b4": "6758a9d696080b1c2b9470dfba46a15e4989a623",
+    "u4": "5778cab29fd02a5aeb002b1e12b16f1ac4dc39bf",
+    "signedM7JsBaseline": "15313a75c6e74beec739fe52a2875c104c55eae3"
+  },
+  "b4AlreadyMergedIntoBaseline": false,
+  "method": "Build each source tree with the same baseline package-lock dependencies, then sum gzipSync(file,{level:9}).length for every dist/assets/*.js independently. No concatenation; no CSS/maps included.",
+  "oldFactor": 1.1,
+  "newFactor": 1.15,
+  "signedM7GzipBytes": 424763,
+  "oldIntegerCeilingBytes": 467239,
+  "newIntegerCeilingBytes": 488477,
+  "rounding": "The executable gate remains current/base <= factor; floor(base*factor) expresses the integer-byte ceiling, not a new gate implementation.",
+  "measurements": [
+    {
+      "kind": "m7",
+      "files": [
+        {
+          "name": "index-CsWIfx1z.js",
+          "bytes": 1497604,
+          "gzipBytes": 424763
+        }
+      ],
+      "totalGzipBytes": 424763,
+      "sourceShas": [
+        "15313a75c6e74beec739fe52a2875c104c55eae3"
+      ],
+      "headroomBytes": 63714
+    },
+    {
+      "kind": "base",
+      "files": [
+        {
+          "name": "index-fSsWzV7T.js",
+          "bytes": 1592755,
+          "gzipBytes": 453949
+        }
+      ],
+      "totalGzipBytes": 453949,
+      "sourceShas": [
+        "5dce5cd07f3f400be42981742dcb2dc3ceff2009"
+      ],
+      "headroomBytes": 34528
+    },
+    {
+      "kind": "b4",
+      "files": [
+        {
+          "name": "index-D_Ad710i.js",
+          "bytes": 1635847,
+          "gzipBytes": 466144
+        }
+      ],
+      "totalGzipBytes": 466144,
+      "sourceShas": [
+        "5dce5cd07f3f400be42981742dcb2dc3ceff2009",
+        "6758a9d696080b1c2b9470dfba46a15e4989a623"
+      ],
+      "headroomBytes": 22333
+    },
+    {
+      "kind": "b4-u4",
+      "files": [
+        {
+          "name": "index-Bz7j2LlX.js",
+          "bytes": 1645911,
+          "gzipBytes": 470088
+        }
+      ],
+      "totalGzipBytes": 470088,
+      "sourceShas": [
+        "5dce5cd07f3f400be42981742dcb2dc3ceff2009",
+        "6758a9d696080b1c2b9470dfba46a15e4989a623",
+        "5778cab29fd02a5aeb002b1e12b16f1ac4dc39bf"
+      ],
+      "headroomBytes": 18389
+    }
+  ],
+  "limitations": [
+    "Detached combination builds are bundle evidence, not combined functional CI or independent acceptance.",
+    "Local Node differs from GitHub CI Node22; CI paired build remains authoritative.",
+    "No branch was merged remotely. B4 already contains the baseline; combined B4+U4 used an uncommitted detached merge.",
+    "Local Chromium installation/launch not completed; complete desktop validation is delegated to existing GitHub CI, unchanged."
+  ],
+  "combinedTreeSha": "17fcf8701e0ec68ca2afe0fdf6a8b678a4921284"
+}
