@@ -4,8 +4,9 @@ import { COMPONENTS_ITEMS } from './items-components';
 import { SWORD_ITEMS } from './items-sword';
 import { BOW_ITEMS } from './items-bow';
 import { ROD_ITEMS } from './items-rod';
+import { TEAR_ITEMS } from './items-tear';
 export const ITEM_DEFINITIONS: Readonly<Record<string,ItemDefinition>> = freezeContent({
-  ...Object.fromEntries([COMPONENTS_ITEMS,SWORD_ITEMS,BOW_ITEMS,ROD_ITEMS].flat().map(item=>[item.id,item])),
+  ...Object.fromEntries([COMPONENTS_ITEMS,SWORD_ITEMS,BOW_ITEMS,ROD_ITEMS,TEAR_ITEMS].flat().map(item=>[item.id,item])),
   ...{
   "rageblade": {
     "id": "rageblade",

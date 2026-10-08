@@ -1,0 +1,11 @@
+import { describe,it,expect } from 'vitest';
+import { wearing,enemy,run,packets,heals } from './fixtures/m8-b4-items';
+import { readCombatStats } from '../src/simulation/combat-s13';
+describe('B4 tear recipes: hand vectors and real effects',()=>{
+ it('blue:completed1000 mana cast refunds10;kill buffs5% for160ticks',()=>{const r=run(wearing('blue-buff',{mana:1000}),1,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(r.p.mana).toBe(10);expect(r.p.mechanismState?.statuses.flatMap(g=>g.contributions).some(c=>c.application.modifier?.stat==='damageAmp'&&c.expiresAtTick===161)).toBe(true);expect(packets(r.events)[0].hpDamage).toBe(100);});
+ it('vow:positive hit at40% grants250 shield+20 permanent resists,armor20+20=40',()=>{const r=run(wearing('protectors-vow',{hp:400,cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(r.p.shield).toBe(250);expect(readCombatStats(r.p,r.state)).toMatchObject({armor:40,magicResist:20});});
+ it('helm front:armor40 mitigates100→71;gain1 incoming+floor71×.03=2 mana on top15',()=>{const r=run(wearing('adaptive-helm',{cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(packets(r.events,'e')[0].hpDamage).toBe(71);expect(r.p.mana).toBe(18);expect(readCombatStats(r.p,r.state).magicResist).toBe(60);});
+ it('helm back:AP100+10+15=125;tick60 adds10 mana,original branch survives movement',()=>{const r=run(wearing('adaptive-helm',{cell:{col:1,row:6},startingCell:{col:1,row:6},cooldownTicks:1000}),60);expect(readCombatStats(r.p,r.state).abilityPower).toBe(125);expect(r.p.mana).toBe(25);});
+ it('redemption:1150−650=500 missing;500×15%=75 at100;10% reduction applies next attack',()=>{const r=run(wearing('redemption',{hp:650,cooldownTicks:1000}),100,[enemy('e',1,3,{cooldownTicks:100,attackDamage:100})]);expect(heals(r.events).filter(e=>e.unitId==='p')[0].actual).toBe(75);expect(packets(r.events,'e')[0].hpDamage).toBe(90);});
+ it('justice:above50% AD130/AP130/vamp12%→15 heal;below AD115/vamp24%→27;equal50% none doubled',()=>{for(const [hp,ad,heal] of [[600,130,15],[490,115,27],[500,115,13]]){const r=run(wearing('hand-of-justice',{hp,baseCritChanceBps:0}));expect(packets(r.events)[0].raw).toBe(ad);expect(heals(r.events)[0].actual).toBe(heal);expect(readCombatStats(r.p,r.state).abilityPower).toBe(hp+heal>500?130:115);}});
+});
