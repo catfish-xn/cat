@@ -202,3 +202,47 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
   .shop-emblem img, .shop-emblem svg { width: 30px; height: 30px; }
   .shop-odds { margin: 3px 0 !important; }
 }
+
+/* M8 U3: item marks, codex, recipe table and description popover (static catalogue view). */
+.item-mark { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 5px; border: 1px solid #0b151f; overflow: hidden; vertical-align: middle; }
+.item-mark.kind-component { background: #3a5266; }
+.item-mark.kind-completed { background: #6b5432; }
+.item-glyph { font-size: 11px; font-weight: 700; line-height: 1; color: #f2f6f8; letter-spacing: -0.5px; }
+.item-mark .item-icon { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; }
+.item-card .item-mark { display: grid; margin: 0 auto 3px; }
+.equipment-slots .item-mark { margin-right: 4px; }
+.item-tag { display: inline-block; margin: 0 3px 0 0; padding: 0 5px; border-radius: 999px; font-size: 11px; line-height: 17px; border: 1px solid var(--c-border); color: var(--c-text-muted); white-space: nowrap; }
+.item-tag.tag-unique { border-color: #c47cff; color: #dcb8ff; }
+.item-tag.tag-slots { border-color: #4fa3ff; color: #a9d2ff; }
+.item-tag.tag-provisional { border-color: #e6bc76; color: #ffd98f; }
+.item-l10n { margin-left: 2px; font-size: 9px; color: var(--c-text-faint); }
+.item-codex { margin-top: 12px; padding: 0 9px 9px; background: var(--c-surface-alt); border-radius: 8px; }
+.item-codex .codex-note { color: var(--c-text-muted); }
+.codex-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.codex-filter { font-size: 12px; padding: 4px; }
+.codex-filter[aria-pressed="true"] { border-color: var(--c-accent); color: var(--c-accent); }
+.codex-search { width: 100%; margin-top: 6px; padding: 0 8px; }
+.codex-count { margin: 6px 0 !important; color: var(--c-text-muted); }
+.codex-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.codex-tile { display: flex; gap: 6px; align-items: center; min-height: 44px; padding: 5px; border-radius: 6px; background: var(--c-surface-raised); border: 1px solid transparent; cursor: default; }
+.codex-tile:hover, .codex-tile:focus-visible { border-color: var(--c-accent); outline: none; }
+.codex-tile-text { min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.codex-tile-tags { margin-top: 2px; }
+.codex-heading { margin: 14px 0 6px; font-size: 14px; }
+.recipe-scroll { overflow-x: auto; }
+.recipe-matrix { border-collapse: collapse; margin: 0 auto; }
+.recipe-matrix caption { caption-side: bottom; font-size: 11px; color: var(--c-text-muted); padding-top: 4px; }
+.recipe-matrix th, .recipe-matrix td { padding: 2px; text-align: center; }
+.recipe-matrix thead th, .recipe-matrix tbody th { background: var(--c-surface); }
+.recipe-matrix td { position: relative; }
+.recipe-matrix td.provisional .item-mark { outline: 2px solid #e6bc76; outline-offset: -2px; }
+.recipe-matrix td.declared::after { content: ''; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: #c47cff; }
+.recipe-matrix [data-item-def]:hover .item-mark { box-shadow: 0 0 0 2px var(--c-accent); }
+.item-popover { position: fixed; z-index: 50; padding: 10px; border-radius: 8px; background: #0b151f; border: 1px solid var(--c-border-strong); color: var(--c-text); box-shadow: 0 6px 24px #000a; pointer-events: none; font-size: 12px; line-height: 1.5; }
+.item-pop-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.item-pop-head .item-name { font-size: 14px; font-weight: 700; margin-right: 4px; }
+.item-pop-meta { margin: 2px 0 !important; color: var(--c-text-muted); font-size: 11px !important; }
+.item-pop-recipe { margin: 4px 0 !important; }
+.item-pop-effects { margin: 4px 0; padding-left: 18px; }
+.item-pop-decl { margin: 4px 0 !important; }
+.item-pop-note { margin: 6px 0 0 !important; color: var(--c-text-faint); font-size: 11px !important; }

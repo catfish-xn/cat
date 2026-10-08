@@ -20,6 +20,7 @@ import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
+import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -128,6 +129,8 @@ export class StrategyPanel {
   private focusFrame: number | null = null;
   private combatText: HTMLElement | null = null;
   private statusText: HTMLElement | null = null;
+  /** Static B4 catalogue view; built once so its filter and open state survive re-renders. */
+  private codex: HTMLElement | null = null;
 
   constructor(private readonly actions: PanelActions, private readonly router: InputRouter) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
@@ -135,6 +138,7 @@ export class StrategyPanel {
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
+    this.disposers.push(attachItemPopover(this.root));
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
     // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
     const helpOpen = () => document.body.dataset.helpOpen === 'true';
@@ -352,10 +356,11 @@ export class StrategyPanel {
     const inventory = element('div', '', 'item-inventory');
     for (const item of state.items.filter(item => item.location.kind === 'inventory')) {
       const definition = ITEM_DEFINITIONS[item.definitionId];
-      const button = this.button(`item:${item.id}`, `${definition.name}\n${definition.effects.map(describeEffect).join('；')}`, () => {}, !ready);
+      const tags = catalogEntry(item.definitionId) ? itemTags(catalogEntry(item.definitionId)!).map(tag => tag.text) : [];
+      const button = this.button(`item:${item.id}`, `${definition.name}${tags.length ? `\n${tags.join(' · ')}` : ''}`, () => {}, !ready);
       button.setAttribute('aria-pressed', String(this.selectedItems.includes(item.id))); button.classList.add('item-card');
-      button.insertAdjacentHTML('afterbegin', s13IconHtml('item', item.definitionId, 28, 'item-icon'));
-      button.dataset.itemId = item.id; button.title = `${item.id} · ${definition.id}`;
+      button.insertAdjacentHTML('afterbegin', itemMarkHtml(item.definitionId, 28));
+      button.dataset.itemDef = item.definitionId; button.dataset.itemId = item.id; button.title = `${item.id} · ${definition.id}`;
       button.addEventListener('pointerdown', event => {
         if (!ready || event.button !== 0) return;
         const gesture = this.router.begin('item', item.id, event.pointerId);
@@ -375,9 +380,7 @@ export class StrategyPanel {
       if (this.router.current) { this.actions.status('请先结束当前拖拽，再确认合成'); return; }
       this.actions.combine(selected[0], selected[1]);
     }, !ready || !recipe));
-    const recipes = element('details'); recipes.append(element('summary', '查看全部组件配方'));
-    for (const item of Object.values(ITEM_DEFINITIONS)) if (item.recipe) recipes.append(element('p', `${item.recipe.map(id => ITEM_DEFINITIONS[id].name).join(' + ')} → ${item.name}：${item.effects.map(describeEffect).join('；')}`));
-    section.append(recipes, element('h3', '单位装备 · 每单位 3 槽'));
+    section.append(element('h3', '单位装备 · 每单位 3 槽'));
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const row = element('article', '', 'equipment-row');
       row.append(element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`));
@@ -389,11 +392,12 @@ export class StrategyPanel {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
           if (chosen) this.actions.equip(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
         }, !ready);
-        if (item) button.insertAdjacentHTML('afterbegin', s13IconHtml('item', item.definitionId, 22, 'item-icon'));
+        if (item) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(item.definitionId, 22)); button.dataset.itemDef = item.definitionId; }
         button.dataset.equipUnit = unit.id; button.dataset.equipSlot = String(slot); slots.append(button);
       }
       row.append(slots); section.append(row);
     }
+    section.append(this.codex ??= createItemCodex());
     this.root.append(section);
   }
   private renderUnits(state: MatchState, ready: boolean): void {
@@ -470,7 +474,7 @@ export class StrategyPanel {
       const offers = element('div', '', 'choice-cards');
       for (const id of choice.offers) {
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
-        const button = this.button(`choice:${id}`, `${definition.name}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${definition.effects.map(describeEffect).join('；')}`, () => {
+        const button = this.button(`choice:${id}`, `${definition.name}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；')}`, () => {
           this.actions.choose(choice.choiceId, choice.generation, id);
           const after = this.actions.state().pendingChoice;
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
