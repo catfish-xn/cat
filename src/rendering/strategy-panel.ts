@@ -11,10 +11,11 @@ import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment } 
 import type { MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 import type { Effect } from '../simulation/strategy-types';
-import type { CombatEvent } from '../simulation/combat-types';
+import type { CombatEvent, CombatOrigin } from '../simulation/combat-types';
 import { readCombatStats } from '../simulation/combat-s13';
 import { getInterestGold } from '../simulation/economy';
 import { combatEventText, originLabel } from './combat-feedback';
+import { readUnitStatusRows, statusRowText, ticksToSeconds } from '../presentation/combat-status';
 import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
@@ -532,8 +533,16 @@ export class StrategyPanel {
     const ability = unit.ability;
     node.append(element('p', `技能 · ${ability.kind === 's13' ? `${displayUnitName(ability.championId)} 技能` : `${ability.kind === 'selfShield' ? '护盾' : ability.damageType === 'magic' ? '魔法伤害' : '物理伤害'} ${ability.amount}`} · 普攻间隔 ${current.attackIntervalTicks * 50}ms`));
     node.append(element('p', `当前目标 ${combat.units.find(target => target.id === unit.targetId) ? definitionName(combat.units.find(target => target.id === unit.targetId)!.definitionId) : '无'}`));
-    for (const layer of unit.shieldLayers ?? []) node.append(element('p', `盾 ${layer.remaining} / ${layer.granted} · 到期 t${layer.expiresAtTick} · ${originLabel(layer.source, id => this.combatUnitName(id))}`));
-    for (const status of unit.statuses ?? []) node.append(element('p', `${term(status.kind)} ${status.amount} · 层数 ${(unit.statuses ?? []).filter(entry => entry.kind === status.kind).length} · 到期 t${status.expiresAtTick} · ${originLabel(status.source, id => this.combatUnitName(id))}`));
+    const label = (origin: CombatOrigin) => originLabel(origin, id => this.combatUnitName(id));
+    for (const layer of unit.shieldLayers ?? []) {
+      if (layer.remaining <= 0) continue;
+      const m8 = layer.m8State;
+      node.append(element('p', `盾 ${layer.remaining} / ${layer.granted}${m8 ? ` · 已吸收 ${m8.absorbed}${m8.decayed ? ` · 已衰减 ${m8.decayed}` : ''}` : ''} · 剩余 ${ticksToSeconds(layer.expiresAtTick - combat.tick)}（第 ${layer.expiresAtTick} 刻结束） · ${label(layer.source)}`, 'combat-shield'));
+    }
+    for (const row of readUnitStatusRows(unit, combat.tick)) {
+      const line = element('p', statusRowText(row, combat.tick, label), `combat-status${row.harmful ? ' harmful' : ''}${row.state === 'suppressed' || row.state === 'pending' ? ' inactive' : ''}`);
+      line.dataset.debug = `combat-status:${row.kind}`; node.append(line);
+    }
     for (const source of unit.sources ?? []) node.append(element('p', `${term(source.source.sourceKind)} · ${definitionName(source.source.sourceDefinitionId)}：${describeEffect(source.effect)}`));
   }
   private combatUnitName(id: string | null): string {

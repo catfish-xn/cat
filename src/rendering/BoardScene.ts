@@ -589,7 +589,7 @@ export class BoardScene extends Phaser.Scene {
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }
-      this.views.get(unit.id)?.drawCombat(unit);
+      this.views.get(unit.id)?.drawCombat(unit, combat.tick);
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }
@@ -627,7 +627,7 @@ export class BoardScene extends Phaser.Scene {
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
-        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol })),
+        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip })),
       health: meters('hp'), mana: meters('mana'),
       shields: meters('shield').map(meter => ({ ...meter, text: this.views.get(meter.id)!.shieldLabel.text, labelVisible: this.views.get(meter.id)!.shieldLabel.visible })),
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,

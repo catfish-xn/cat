@@ -1,28 +1,40 @@
 import type { CombatEvent } from '../simulation/combat-types';
+import { appliedStatusFloat } from '../presentation/combat-status';
 export interface FeedbackAnchor { readonly x: number; readonly y: number; readonly radius: number }
 /** A centred rect in the same CSS coordinates as anchors (e.g. a canvas text label) that floats must not cover. */
 export interface FeedbackObstacle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
 export interface CombatFeedbackRenderer { push(events: readonly CombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[]): void; reset(): void; dispose(): void }
-interface Float { key: string; unitId: string; kind: 'damage' | 'shield' | 'heal'; amount: number; at: number; label: HTMLSpanElement }
+type FloatKind = 'physical' | 'magic' | 'true' | 'shield' | 'heal' | 'status';
+interface Float { key: string; unitId: string; kind: FloatKind; amount: number; text: string; at: number; label: HTMLSpanElement }
+/** Damage type is told apart by color and by a suffix, so color is never the only cue. */
+const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ffc58f', magic: '#c9a8ff', true: '#ffffff', shield: '#a7dcff', heal: '#78efab', status: '#ff9d8a' };
+const SUFFIX: Readonly<Record<FloatKind, string>> = { physical: '', magic: ' 魔', true: ' 真', shield: '', heal: '', status: '' };
 /** Decorative DOM layer only. Caller supplies CSS coordinates and drives the sole frame loop. */
 export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackRenderer {
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
   let floats: Float[] = [], disposed = false;
   function reset(): void { for (const item of floats) item.label.remove(); floats = []; }
-  function add(event: CombatEvent, unitId: string, kind: Float['kind'], amount: number, at: number): void {
+  function add(event: CombatEvent, unitId: string, kind: FloatKind, amount: number, at: number, text = ''): void {
     if (amount <= 0) return;
-    const key = `${event.combatId}/${event.tick}/${unitId}/${kind}`;
+    const key = `${event.combatId}/${event.tick}/${unitId}/${kind}${text}`;
     const old = floats.find(item => item.key === key);
-    if (old) { old.amount += amount; return; }
+    if (old) { if (kind !== 'status') old.amount += amount; return; }
     const perUnit = floats.filter(item => item.unitId === unitId);
     if (perUnit.length >= 3) { const first = perUnit[0]; first.label.remove(); floats = floats.filter(item => item !== first); }
     while (floats.length >= 24) floats.shift()!.label.remove();
-    const label = document.createElement('span'); Object.assign(label.style, { position: 'absolute', fontSize: '14px', fontWeight: '700', whiteSpace: 'nowrap', textShadow: '0 1px 3px #000', color: kind === 'heal' ? '#78efab' : kind === 'shield' ? '#a7dcff' : '#ffe8c2', pointerEvents: 'none' }); root.append(label);
-    floats.push({ key, unitId, kind, amount, at, label });
+    const label = document.createElement('span'); Object.assign(label.style, { position: 'absolute', fontSize: '14px', fontWeight: '700', whiteSpace: 'nowrap', textShadow: '0 1px 3px #000', color: COLORS[kind], pointerEvents: 'none' }); root.append(label);
+    floats.push({ key, unitId, kind, amount, text, at, label });
   }
   return {
-    push(events, at) { if (disposed) return; for (const event of events) { if (event.type === 'packetDamage') { add(event, event.unitId, 'damage', event.hpDamage, at); add(event, event.unitId, 'shield', event.absorbed, at); } else if (event.type === 'heal') add(event, event.unitId, 'heal', event.actual, at); } },
+    push(events, at) {
+      if (disposed) return;
+      for (const event of events) {
+        if (event.type === 'packetDamage') { add(event, event.unitId, event.outcome?.context.damageType ?? event.damageType, event.hpDamage, at); add(event, event.unitId, 'shield', event.absorbed, at); }
+        else if (event.type === 'heal') add(event, event.unitId, 'heal', event.actual, at);
+        else { const status = appliedStatusFloat(event); if (status && 'unitId' in event) add(event, event.unitId, 'status', 1, at, status); }
+      }
+    },
     render(now, anchors, obstacles = []) {
       if (disposed) return;
       floats = floats.filter(item => { if (now - item.at >= 850) { item.label.remove(); return false; } return true; });
@@ -31,7 +43,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       for (const item of floats) {
         const anchor = anchors.get(item.unitId); item.label.hidden = !anchor; if (!anchor) continue;
         const lane = lanes.get(item.unitId) ?? 0; lanes.set(item.unitId, lane + 1);
-        const age = Math.max(0, now - item.at); item.label.textContent = `${item.kind === 'damage' ? '−' : item.kind === 'heal' ? '+' : '盾 '}${item.amount}`;
+        const age = Math.max(0, now - item.at); item.label.textContent = item.kind === 'status' ? item.text : `${item.kind === 'heal' ? '+' : item.kind === 'shield' ? '盾 ' : '−'}${item.amount}${SUFFIX[item.kind]}`;
         const half = Math.max(20, item.label.offsetWidth / 2); const width = root.clientWidth, height = root.clientHeight;
         const x = Math.max(half, Math.min(width - half, anchor.x));
         let y = Math.max(16, Math.min(height - 16, anchor.y - anchor.radius - 22 - lane * 17 - age / 70));

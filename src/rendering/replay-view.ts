@@ -6,6 +6,7 @@ import { BOARD_LAYOUT } from './layout-config';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { s13AssetUrl } from '../presentation/s13-assets';
 import { THEME, costColor } from '../presentation/theme';
+import { statusBadges } from '../presentation/combat-status';
 import { canvasLabelRects as labelRects, placeLabel, type LabelRect } from '../presentation/label-layout';
 
 const C = THEME.color;
@@ -110,6 +111,15 @@ export class ReplayView {
         if (unit.shield > 0) { ctx.fillStyle = C.shield; ctx.fillRect(left + 52 * hp, p.y - 44, Math.max(2, Math.min(52 - 52 * hp, 52 * shield)), 6); }
         ctx.fillStyle = unit.mana === unit.maxMana ? C.manaFull : C.mana; ctx.fillRect(left, p.y - 35, 52 * mana, 3);
         if (unit.shield > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2); ctx.strokeStyle = C.shield; ctx.lineWidth = 3; ctx.stroke(); }
+        // Same status strip as the live piece, read from this snapshot's own mechanism store.
+        const badges = statusBadges(unit, state.tick);
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        for (const [text, align, fg, bg] of [[badges.harmful, -1, '#ffb0a0', '#3a1218e6'], [badges.beneficial, 1, '#9ff0e4', '#0f2e2ae6']] as const) {
+          if (!text) continue;
+          const w = ctx.measureText(text).width + 4, x = align < 0 ? p.x - 1 - w : p.x + 1;
+          ctx.fillStyle = bg; ctx.fillRect(x, p.y + 4, w, 12); ctx.fillStyle = fg; ctx.textAlign = 'left'; ctx.fillText(text, x + 2, p.y + 10);
+        }
+        ctx.textAlign = 'center';
       }
     }
     ctx.globalAlpha = 1;
