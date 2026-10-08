@@ -48,6 +48,19 @@
         "scoped_ptrace_attach.cc:27: ptrace: Operation not permitted (1)"
       ],
       "limitation": "Requested outside-sandbox execution did not remove the observed restriction; no successful browser or heap-script execution."
+    },
+    {
+      "number": 4,
+      "checkedAtUtc": "2026-10-08T13:03:15Z",
+      "authorization": "User explicitly authorized local socket and network permissions and requested retry",
+      "requestMode": "require_escalated",
+      "result": "launch-failed",
+      "exitSignal": "SIGABRT",
+      "errors": [
+        "FATAL chrome/browser/process_singleton_posix.cc:297: socket() failed: Operation not permitted (1)",
+        "scoped_ptrace_attach.cc:27: ptrace: Operation not permitted (1)"
+      ],
+      "limitation": "Explicit user authorization did not remove the observed execution restriction. No browser page or heap script ran."
     }
   ],
   "existingHeapScriptRan": false,
