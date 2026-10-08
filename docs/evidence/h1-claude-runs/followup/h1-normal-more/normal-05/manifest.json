@@ -1,0 +1,7654 @@
+{
+  "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "status": "",
+  "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+  "node": "v22.22.0",
+  "platform": "linux",
+  "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+  "cpuCount": 4,
+  "memoryBytes": 16876494848,
+  "loadAtStart": [
+    3.62,
+    3.83,
+    3.62
+  ],
+  "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+  "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+  "mode": "preview",
+  "build": "cannon",
+  "touch": false,
+  "checkpoints": [
+    {
+      "index": 0,
+      "stateHash": "1adef595bed65f1819832855abc34215a3716bcc129515c9292337602dd14d31"
+    },
+    {
+      "index": 1,
+      "stateHash": "e399fe6cbc622fdac2014b5d47d95cefe0ad39c38de8ad216101f36765a19ebf"
+    },
+    {
+      "index": 2,
+      "stateHash": "f90f01f804e407d08ea6d86cc51352daffdcb34af2ebd9e1f9ef1b219058ec35"
+    },
+    {
+      "index": 3,
+      "stateHash": "61dd2067233133b9ae99a53134244c629173d18b000e84d592a59d0674e348f7"
+    },
+    {
+      "index": 4,
+      "stateHash": "b8e15ba0565734eb61f8e5bff5cec98c2f05928e0b766a2f5ebc1ef68b78093c"
+    },
+    {
+      "index": 5,
+      "stateHash": "e935115563ee2f17dea2fae4f19597d0f3fa9fe28460d0aff62ec01a34ff0103"
+    },
+    {
+      "index": 6,
+      "stateHash": "06e1db33de46c50e77cdf9cae51600df8698cbb584452cc474308602fdce2668"
+    },
+    {
+      "index": 7,
+      "stateHash": "69dc93296cf58506fbe3f71a864c988a16969d2bebef56f575fd0deafb4e38b8"
+    },
+    {
+      "index": 8,
+      "stateHash": "813130134dcb438901e0d4b6acb5c201f66c1dc70b567830be2d6ae586bdc9a8"
+    },
+    {
+      "index": 9,
+      "stateHash": "e5057644c23e08895ba10dd9f98842a0947b2027eddb483c79882f5b0d7f80d5"
+    },
+    {
+      "index": 10,
+      "stateHash": "f13c7334508a40fe8849944efd85a8614a054445d7f763496b748a7dcbf77f20"
+    },
+    {
+      "index": 11,
+      "stateHash": "0b5a20fbbddbf5acd6589fdd70c9747cdf1fb46093f6e29da3f0891a487795e6"
+    },
+    {
+      "index": 12,
+      "stateHash": "7913fe684a594088d3d7a4549d22e85141af9673611179b97aa6206dd25d15f0"
+    },
+    {
+      "index": 13,
+      "stateHash": "c9496a8a62370d77eab1f1439d063f1f1e06ca6604c907507cd8b8511c0d8d39"
+    },
+    {
+      "index": 14,
+      "stateHash": "bc95ff02be52149a8025195543ba31760ba0fa25916f6ce91447308423e8ec37"
+    },
+    {
+      "index": 15,
+      "stateHash": "c3f42d65d0b2cb94cde913af5c956788eb4f5f6d8e121c1adc15335f836793f4"
+    },
+    {
+      "index": 16,
+      "stateHash": "4ba4fd34c28bcce6df2fcbd093e2366473fe7274bb1df1c8073bb42969a4e6a9"
+    }
+  ],
+  "errors": [],
+  "passed": false,
+  "versions": {
+    "schemaVersion": 5,
+    "rulesVersion": "m5-14.24b-v1",
+    "contentVersion": "s13-14.24b-slice-v1",
+    "contentDigest": "fnv1a32-utf16:2b6a9a4b",
+    "commandProtocolVersion": 2,
+    "rngAlgorithm": "lcg32-v1",
+    "tickMs": 50
+  },
+  "browser": "141.0.7390.37",
+  "nativeBeforeReload": [
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:investment-strategy-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:investment-strategy-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:investment-strategy-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:investment-strategy-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-1"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-1"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-1"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-1"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyE",
+      "repeat": false,
+      "target": "BODY"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-1"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-1"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-1"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SECTION"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-2"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-2"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-2"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SECTION"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "combine-items"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "combine-items"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "combine-items"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "combine-items"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "panel:items"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-3"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-3"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "item:item-3"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SECTION"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "equipment:unit-2:0"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "equipment:unit-2:0"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "equipment:unit-2:0"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "equipment:unit-2:0"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-0"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-0"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-0"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:buy-0"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "CANVAS"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "CANVAS"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "CANVAS"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "CANVAS"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:continue"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "shop-lock"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyF",
+      "repeat": false,
+      "target": "BODY"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:start-combat"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-continue"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-continue"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-continue"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-continue"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyD",
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyF",
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyE",
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "End",
+      "repeat": false,
+      "target": "INPUT"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "Home",
+      "repeat": false,
+      "target": "INPUT"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyD",
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyF",
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "KeyE",
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "End",
+      "repeat": false,
+      "target": "INPUT"
+    },
+    {
+      "type": "keydown",
+      "trusted": true,
+      "code": "Home",
+      "repeat": false,
+      "target": "INPUT"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "SELECT"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-export"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "mobile:new-match"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "m6-fixed-start"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:sword"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "choice:bulky-buddies-i"
+    },
+    {
+      "type": "pointerdown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mousedown",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "pointerup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    },
+    {
+      "type": "mouseup",
+      "trusted": true,
+      "code": null,
+      "repeat": false,
+      "target": "BUTTON"
+    }
+  ],
+  "m6RoundTrip": {
+    "exportedTick": 47,
+    "resumedTick": 40,
+    "importedTick": 47,
+    "sameRunIdNewEpoch": true
+  },
+  "m6RejectedImport": {
+    "missingWholeBattle": true,
+    "atomic": true
+  },
+  "m6ReplayFailureIsolation": {
+    "quotaObserved": true,
+    "switchedBattleWithoutWrite": true,
+    "durableRevisionUnchanged": true,
+    "visibilityCoverage": "Injected document.hidden getter and synthetic visibilitychange exercise production handler; not a real hidden tab or trusted user event; original descriptor restored",
+    "activeSavingRecovered": true
+  },
+  "m6ReplayReopen": {
+    "sameBattle": true,
+    "fullStateLedgerRevisionPreserved": true,
+    "nativeKeyboard": true,
+    "durableRevisionUnchanged": true
+  },
+  "m6Replay": {
+    "completedCount": 3,
+    "rounds": [
+      1,
+      2
+    ],
+    "isolated": true
+  },
+  "m6Lifecycle": {
+    "heapDiagnostics": false,
+    "warmupExperiment": false,
+    "warmupCycles": 2,
+    "cycles": 30,
+    "heapCeilingBytes": 1048576,
+    "beforeHeap": {
+      "usedSize": 13733296,
+      "totalSize": 18472960,
+      "embedderHeapUsedSize": 7612864,
+      "backingStorageSize": 7942280
+    },
+    "afterHeap": {
+      "usedSize": 15068668,
+      "totalSize": 18735104,
+      "embedderHeapUsedSize": 7490960,
+      "backingStorageSize": 7942247
+    },
+    "heapDelta": 1335372,
+    "beforeResources": {
+      "listeners": 82,
+      "pendingRaf": 1
+    },
+    "afterResources": {
+      "listeners": 82,
+      "pendingRaf": 1
+    },
+    "rows": [
+      {
+        "cycle": 1,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "e0fed724-3814-4dbf-93fd-d9ca5d80884f",
+            "revision": 52
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:43:33.741Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "e0fed724-3814-4dbf-93fd-d9ca5d80884f",
+              "revision": 52
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 2,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "8c5df231-d633-4ed7-8287-d9a3eb448b90",
+            "revision": 57
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:43:39.493Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "8c5df231-d633-4ed7-8287-d9a3eb448b90",
+              "revision": 57
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 3,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "46000534-f3cf-42d7-a541-a3afe47df153",
+            "revision": 62
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:43:45.294Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "46000534-f3cf-42d7-a541-a3afe47df153",
+              "revision": 62
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 4,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "bf5ef5e4-ae49-46e3-b428-fd76ee9d2fa8",
+            "revision": 67
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:43:50.914Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "bf5ef5e4-ae49-46e3-b428-fd76ee9d2fa8",
+              "revision": 67
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 5,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "8220f555-f567-4967-a5d6-602fd89e2d8a",
+            "revision": 72
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:43:56.822Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "8220f555-f567-4967-a5d6-602fd89e2d8a",
+              "revision": 72
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 6,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "7dcbe64e-fed3-45d9-b385-39f6a35c82ad",
+            "revision": 77
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:02.633Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "7dcbe64e-fed3-45d9-b385-39f6a35c82ad",
+              "revision": 77
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 7,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "688ffd07-de75-4393-abeb-d49973f6f670",
+            "revision": 82
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:08.400Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "688ffd07-de75-4393-abeb-d49973f6f670",
+              "revision": 82
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 8,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "08106c91-47fa-49fa-873d-6791472a6f8f",
+            "revision": 87
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:13.958Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "08106c91-47fa-49fa-873d-6791472a6f8f",
+              "revision": 87
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 9,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "3104e38b-0018-4f3a-9da2-c27fa2c9c1a6",
+            "revision": 92
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:20.201Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "3104e38b-0018-4f3a-9da2-c27fa2c9c1a6",
+              "revision": 92
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 10,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "629f4e2a-7f9e-487e-bef6-2c89b4b2b75a",
+            "revision": 97
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:25.927Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "629f4e2a-7f9e-487e-bef6-2c89b4b2b75a",
+              "revision": 97
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 11,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "50e57b98-8fd1-4d16-b10a-209bc57dbf63",
+            "revision": 102
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:31.588Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "50e57b98-8fd1-4d16-b10a-209bc57dbf63",
+              "revision": 102
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 12,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "52043b35-2605-4e16-914f-46be12542713",
+            "revision": 107
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:37.556Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "52043b35-2605-4e16-914f-46be12542713",
+              "revision": 107
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 13,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "947fe3d4-9afc-4e05-a90a-8444c76a3671",
+            "revision": 112
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:43.142Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "947fe3d4-9afc-4e05-a90a-8444c76a3671",
+              "revision": 112
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 14,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "5fdfee40-f3c9-40af-bad5-99f3bb8b2695",
+            "revision": 117
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:48.752Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "5fdfee40-f3c9-40af-bad5-99f3bb8b2695",
+              "revision": 117
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 15,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "86adbbc4-1296-4db7-9d3e-8a7c5f3706d2",
+            "revision": 122
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:44:54.247Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "86adbbc4-1296-4db7-9d3e-8a7c5f3706d2",
+              "revision": 122
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 16,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "f1f1ca06-f1ef-46eb-9d4c-83dfb547e469",
+            "revision": 127
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:00.018Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "f1f1ca06-f1ef-46eb-9d4c-83dfb547e469",
+              "revision": 127
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 17,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "ab37d72f-1bd8-4b58-a364-2f11833e2a80",
+            "revision": 132
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:05.593Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "ab37d72f-1bd8-4b58-a364-2f11833e2a80",
+              "revision": 132
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 18,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "018e2ed8-0b79-4ff4-b651-8f0df42caa05",
+            "revision": 137
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:12.031Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "018e2ed8-0b79-4ff4-b651-8f0df42caa05",
+              "revision": 137
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 19,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "87d5f8c8-324e-43ea-bbe5-17397e3694bd",
+            "revision": 142
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:17.711Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "87d5f8c8-324e-43ea-bbe5-17397e3694bd",
+              "revision": 142
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 20,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "67c601c1-ed83-43bf-bae0-ee12aff24a1a",
+            "revision": 147
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:23.634Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "67c601c1-ed83-43bf-bae0-ee12aff24a1a",
+              "revision": 147
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 21,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "89b47549-af64-46e4-9128-552aebad3e10",
+            "revision": 152
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:29.152Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "89b47549-af64-46e4-9128-552aebad3e10",
+              "revision": 152
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 22,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "f406e612-5d8b-4a03-9463-f2304a0a0472",
+            "revision": 157
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:34.749Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "f406e612-5d8b-4a03-9463-f2304a0a0472",
+              "revision": 157
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 23,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "3467bf18-bee3-4f5a-81be-2206eef7a1cd",
+            "revision": 162
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:40.602Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "3467bf18-bee3-4f5a-81be-2206eef7a1cd",
+              "revision": 162
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 24,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "88c5aa93-b119-4bbe-b9e6-35ad1c4cc4eb",
+            "revision": 167
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:46.392Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "88c5aa93-b119-4bbe-b9e6-35ad1c4cc4eb",
+              "revision": 167
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 25,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "21dd28c3-647f-4845-91f3-7e91f7bf0fad",
+            "revision": 172
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:52.017Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "21dd28c3-647f-4845-91f3-7e91f7bf0fad",
+              "revision": 172
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 26,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "473358b9-ad59-4548-be7a-f8621d3ee29c",
+            "revision": 177
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:45:57.627Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "473358b9-ad59-4548-be7a-f8621d3ee29c",
+              "revision": 177
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 27,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "f3de8784-ef89-4a13-9db3-dfc9dc59d055",
+            "revision": 182
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:46:03.371Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "f3de8784-ef89-4a13-9db3-dfc9dc59d055",
+              "revision": 182
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 28,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "ad3d2c78-2956-4670-8e2b-c87adc249d29",
+            "revision": 187
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:46:08.962Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "ad3d2c78-2956-4670-8e2b-c87adc249d29",
+              "revision": 187
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 29,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "cacc57b2-db3d-482a-9c6e-1e48ec4b4494",
+            "revision": 192
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:46:14.781Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "cacc57b2-db3d-482a-9c6e-1e48ec4b4494",
+              "revision": 192
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "cycle": 30,
+        "m6": {
+          "mode": "active",
+          "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+          "token": {
+            "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+            "activationEpoch": "1208b1d2-f632-4ed2-9d49-3a806d065e79",
+            "revision": 197
+          },
+          "status": {
+            "kind": "saved",
+            "at": "2026-10-08T15:46:20.436Z",
+            "token": {
+              "runId": "349c77cf-590b-45ec-bd01-3af1b00cd9f7",
+              "activationEpoch": "1208b1d2-f632-4ed2-9d49-3a806d065e79",
+              "revision": 197
+            }
+          },
+          "completedCount": 3,
+          "lifecycle": {
+            "applications": 1,
+            "sessions": 1,
+            "observers": 1
+          },
+          "paused": false,
+          "replay": null
+        },
+        "resources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      }
+    ]
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)\n    at verifyApplicationLifecycle (/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:54:254)\n    at async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:106:151",
+  "durationSeconds": 286.259,
+  "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57"
+}
