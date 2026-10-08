@@ -51,10 +51,10 @@ describe('M5 frozen S13 slice',()=>{
       expect(values).toHaveLength(3);expect(values.every(Number.isFinite)).toBe(true);
     }
   });
-  it('freezes exactly 5 supported traits, 8 components, 36 recipes, 6 augments and 3 anomalies',()=>{
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([5,44,6,3]);
-    expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
-    const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
+  it('freezes exactly 5 supported traits, 7 components, 9 recipes, 6 augments and 3 anomalies',()=>{
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([5,16,6,3]);
+    expect(COMPONENT_IDS).toEqual(['belt','bow','cloak','rod','sword','tear','vest']);
+    const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(9);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);
     expect(ITEM_DEFINITIONS.gunblade.recipe).toEqual(['sword','rod']);
     expect(ITEM_DEFINITIONS.warmog.effects).toEqual([{kind:'statFlat',stat:'maxHp',amount:600},{kind:'statPercentBps',stat:'maxHp',bps:1200}]);
