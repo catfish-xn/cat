@@ -184,11 +184,15 @@ jobs:
       - run: node scripts/ci-m5-step.cjs install npm ci
       - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
       - run: node scripts/ci-m5-step.cjs build npm run build
-      - name: Signed-off M6 build for paired budgets
+      - name: Signed-off M6 interaction and M7 JS budget builds
         run: |
           git worktree add ../m6-base 631c131f1f2fd387c873f0fd8b5a238bca79dbe0
           ln -s "$PWD/node_modules" ../m6-base/node_modules
           (cd ../m6-base && npx vite build)
+          # M8_PLAN §7.6: production JS gzip <= signed-off M7 x 1.10 (2026-10-08).
+          git worktree add ../m7-js-base 15313a75c6e74beec739fe52a2875c104c55eae3
+          ln -s "$PWD/node_modules" ../m7-js-base/node_modules
+          (cd ../m7-js-base && npx vite build)
       - name: M7 presentation, five viewports, sub-path deploy and budgets
         run: |
           mkdir -p artifacts
@@ -197,7 +201,7 @@ jobs:
           node scripts/ci-m5-step.cjs m7-presentation node scripts/verify-m7-presentation.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-presentation
           node scripts/ci-m5-step.cjs m7-screens node scripts/m7-screens.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-screens
           node scripts/ci-m5-step.cjs m7-subpath node scripts/verify-m7-subpath.cjs
-          node scripts/ci-m5-step.cjs m7-budget node scripts/m7-budget.cjs --base=../m6-base/dist --current=dist --out=artifacts/m7-budget
+          node scripts/ci-m5-step.cjs m7-budget node scripts/m7-budget.cjs --base=../m6-base/dist --js-base=../m7-js-base/dist --current=dist --out=artifacts/m7-budget
       - uses: actions/upload-artifact@v4
         if: always()
         with:
