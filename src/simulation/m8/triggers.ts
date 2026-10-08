@@ -1,4 +1,4 @@
-import type { CounterDefinition, DamageOutcome, EffectRuntime, HealOutcome, Source, TriggerContext, TriggerDefinition, TriggerListener } from './contracts';
+import type { CounterDefinition, DamageOutcome, Effect, EffectRuntime, HealOutcome, Source, TriggerContext, TriggerDefinition, TriggerListener } from './contracts';
 import type { HexCell, Team } from '../board';
 import { hexDistance } from '../board';
 import { canonicalSource, compareCodePoints, effectIdentity } from './identity';
@@ -37,7 +37,15 @@ function runtimeFor(combatId: string, d: TriggerDefinition, tick: number): Effec
   return { ...effectIdentity(combatId, d.source, d.source.ownerId), startsAtTick: tick, expiresAtTick: null, stacks: 0,
     triggerCount: 0, counters: {}, consumedRewards: [], nextEligibleTick: 0, consumed: false, stackPolicy: d.stackPolicy };
 }
-export interface TriggerInvocation { readonly definition: TriggerDefinition; readonly signal: TriggerSignal; readonly targetIds: readonly string[]; readonly counters: Readonly<Record<string, number>> }
+export interface TriggerInvocation { readonly definition: TriggerDefinition; readonly signal: TriggerSignal; readonly targetIds: readonly string[]; readonly counters: Readonly<Record<string, number>>; readonly effectIndices: readonly number[] }
+/** Packet qualification precedes runtime consumption; source indices stay intact. */
+function effectQualifies(effect: Effect, signal: TriggerSignal): boolean {
+  const outcomes = signal.facts.damage;
+  if (effect.kind === 'damage' && effect.delivery === 'equipment-proc' && outcomes.some(o => o.context.equipmentDepth === 1)) return false;
+  if (signal.context.event !== 'damage-dealt' || effect.kind !== 'apply-status') return true;
+  const permission = effect.status.kind === 'burn' || effect.status.kind === 'wound' ? 'apply-item-burn' : effect.status.kind === 'sunder' ? 'last-whisper' : null;
+  return permission === null || outcomes.some(o => o.context.permissions.includes(permission) && o.absorbed + o.hpDamage > 0);
+}
 /** Selection is an engine dependency, not serializable user code or an effect callback. */
 export function dispatchTriggers(combatId: string, definitions: readonly TriggerDefinition[], ledger: TriggerLedger, signal: TriggerSignal,
   units: readonly TriggerUnit[], select: (definition: TriggerDefinition, signal: TriggerSignal) => readonly string[]): { ledger: TriggerLedger; invocations: TriggerInvocation[] } {
@@ -80,15 +88,25 @@ export function dispatchTriggers(combatId: string, definitions: readonly Trigger
     const gate=d.gate, count=gate.kind==='always'?0:values[gate.counterId] ?? 0;
     if(gate.kind==='every-n' && (count<gate.firstAt || (count-gate.firstAt)%gate.everyN!==0)) continue;
     if(gate.kind==='stack-threshold-once' && (count<gate.at || old.consumedRewards.includes(gate.rewardId))) continue;
+    let effectIndices=d.effects.flatMap((effect,index)=>effectQualifies(effect,current)?[index]:[]);
+    const perPacket=signal.aggregation==='event' && ['damage-dealt','damage-taken','shield-hit','incoming-basic-hit'].includes(event.event);
+    const stateStream=derived||perPacket;
     const actionKey=JSON.stringify([identity.key,d.id,event.actorId,event.actionSeq]);
-    if((actionCounts[actionKey] ?? 0)>=d.maxPerAction) continue;
+    if((actionCounts[actionKey] ?? 0)>=d.maxPerAction) {
+      if(!stateStream) continue;
+      effectIndices=effectIndices.filter(index=>d.effects[index].kind!=='damage');
+    }
+    // An empty definition may record a gate, but ineligible declared effects
+    // never consume a trigger, cooldown, reward or damage allowance.
+    if(d.effects.length && effectIndices.length===0) continue;
+    const actionLimited=!stateStream||effectIndices.some(index=>d.effects[index].kind==='damage');
     const targetIds=select(d,current); if(targetIds.length===0) continue;
     const triggerCount=old.triggerCount+1; integer(triggerCount);
     next.set(old.key,{...old,triggerCount,nextEligibleTick:event.tick+d.internalCooldownTicks,
       consumed:d.maxPerCombat!==null && triggerCount>=d.maxPerCombat,
       consumedRewards:gate.kind==='stack-threshold-once'?[...old.consumedRewards,gate.rewardId]:old.consumedRewards});
-    actionCounts[actionKey]=(actionCounts[actionKey] ?? 0)+1;
-    invocations.push({definition:d,signal:current,targetIds:[...targetIds],counters:values});
+    if(actionLimited) actionCounts[actionKey]=(actionCounts[actionKey] ?? 0)+1;
+    invocations.push({definition:d,signal:current,targetIds:[...targetIds],counters:values,effectIndices});
   }
   return {ledger:{runtimes:[...next.values()].sort((a,b)=>compareCodePoints(a.key,b.key)),processed,actionCounts},invocations};
 }

@@ -8,14 +8,15 @@ import { validateTriggerLedger } from './triggers';
 import { resolveStat, integer } from './stats';
 import type { MechanismDefinitions } from './runtime-types';
 const same=(a:unknown,b:unknown)=>canonicalContent(a)===canonicalContent(b);
-export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;effect:Effect}[] {
- const compiled=compileMechanismDefinitions(unit,combatId),result:{source:Source;effect:Effect}[]=[];
- const collect=(source:Source,effects:readonly Effect[])=>effects.forEach((effect,i)=>{
-  const bound={...source,effectIndex:source.effectIndex+i};result.push({source:bound,effect});
-  if(effect.kind==='grant-shield')collect({...bound,effectIndex:bound.effectIndex+1},effect.endEffects);
-  if(effect.kind==='apply-status'&&effect.status.onEnd)collect({...bound,effectIndex:bound.effectIndex+1},effect.status.onEnd.effects);
+export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;effect:Effect;survivalSource?:Source}[] {
+ const compiled=compileMechanismDefinitions(unit,combatId),result:{source:Source;effect:Effect;survivalSource?:Source}[]=[];
+ const collect=(source:Source,effects:readonly Effect[],survivalSource?:Source)=>effects.forEach((effect,i)=>{
+  const bound={...source,effectIndex:source.effectIndex+i};result.push({source:bound,effect,survivalSource});
+  if(effect.kind==='grant-shield')collect({...bound,effectIndex:bound.effectIndex+1},effect.endEffects,survivalSource);
+  if(effect.kind==='apply-status'&&effect.status.onEnd)collect({...bound,effectIndex:bound.effectIndex+1},effect.status.onEnd.effects,survivalSource);
  });
- for(const d of [...compiled.eventTriggers ?? [],...compiled.survivalTriggers])collect(d.source,d.effects);
+ for(const d of compiled.eventTriggers ?? [])collect(d.source,d.effects);
+ for(const d of compiled.survivalTriggers)collect(d.source,d.effects,d.source);
  for(const p of compiled.periodicTasks)collect(p.source,p.program.effects);
  return result;
 }
@@ -29,6 +30,16 @@ export function statusDeclaration(effect:Effect,owner:CombatUnit,source:Source):
 export function isDeclaredStatus(source:Source,app:StatusApplication,units:readonly CombatUnit[],combatId:string):boolean {
  const owner=units.find(u=>u.id===source.ownerId);if(!owner)return false;
  return declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(source)&&same(statusDeclaration(d.effect,owner,d.source),app));
+}
+/** Live threshold/start effects require their once-per-combat receipt. */
+export function validateItemEffectConsumption(source:Source,at:number,units:readonly CombatUnit[],combatId:string):void {
+ const owner=units.find(u=>u.id===source.ownerId);
+ if(!owner)return;
+ for(const d of declaredEffects(owner,combatId).filter(d=>canonicalSource(d.source)===canonicalSource(source)&&d.survivalSource)) {
+  const key=effectIdentity(combatId,d.survivalSource!,owner.id).key;
+  const runtime=owner.mechanismState?.runtimes.find(r=>r.key===key);
+  if(!runtime?.consumed||runtime.triggerCount!==1||runtime.startsAtTick>at)throw new Error('Invalid Match save: missing item effect consumption');
+ }
 }
 export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,definitions:MechanismDefinitions):void {
  const state=unit.mechanismState!;

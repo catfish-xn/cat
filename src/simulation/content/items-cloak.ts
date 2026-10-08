@@ -27,7 +27,7 @@ export const CLOAK_ITEMS: readonly ItemDefinition[] = [
       "amount": 20
     }
   ],
-  combatProgram: {modifiers:[modifier('critChance',2000,'bps')],effects:[status('control-immunity',10000,360)],periodic:[periodic(40,[{kind:'modify-stat',modifier:modifier('attackSpeed',300,'bps'),activation:'immediate',duration:combat,stackPolicy:{kind:'add-stacks',cap:null}}],selector({sample:'each-pulse'}),{endsAtTick:360,finalPulse:'before-expiry'})]}
+  combatProgram: {modifiers:[modifier('critChance',2000,'bps')],effects:[status('control-immunity',10000,360,{activation:'immediate'})],periodic:[periodic(40,[{kind:'modify-stat',modifier:modifier('attackSpeed',300,'bps'),activation:'immediate',duration:combat,stackPolicy:{kind:'add-stacks',cap:null}}],selector({sample:'each-pulse'}),{endsAtTick:360,finalPulse:'before-expiry'})]}
 },
 {
   "id": "evenshroud",
@@ -56,6 +56,6 @@ export const CLOAK_ITEMS: readonly ItemDefinition[] = [
       "amount": 150
     }
   ],
-  combatProgram: {effects:[stat(modifier('armor',25),200),stat(modifier('magicResist',25),200)],periodic:[periodic(1,[status('sunder',3000,1)],enemies({radius:2,maxTargets:100,sample:'each-tick'}))]}
+  combatProgram: {effects:[stat(modifier('armor',25),200),stat(modifier('magicResist',25),200)],periodic:[periodic(1,[status('sunder',3000,1,{activation:'immediate'})],enemies({radius:2,maxTargets:100,sample:'each-tick'}))]}
 }
 ];

@@ -2,6 +2,7 @@ import { describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepCombat } from '../src/simulation/combat';
+import { readCombatStats } from '../src/simulation/combat-s13';
 import { stepMatch } from '../src/simulation/match';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { readItemCatalog } from '../src/simulation/item-catalog';
@@ -44,11 +45,16 @@ describe('B4 composed consumers and restore rejection',()=>{
    for(let i=0;i<45&&s.phase==='combat';i++)s=stepMatch(s).state;expect(restoreMatch(serializeMatch(s))).toEqual(s);
   }
  });
- it('Lux samples HoJ AP into her next attack;HP branch can change before restoring it',()=>{
+ it('Lux HoJ samples360×130%=468; crossing below50% keeps charged468 through Match save and next attack',()=>{
   let s=itemMatch('hand-of-justice','unit-3');if(s.phase!=='combat')throw new Error('combat required');
   s=stepMatch({...s,combat:{...s.combat,units:s.combat.units.map(u=>u.id==='unit-3'?{...u,mana:u.maxMana,cooldownTicks:0}:u)}}).state;
-  expect(s.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBeGreaterThan(0);
-  expect(restoreMatch(serializeMatch(s))).toEqual(s);
+  const high=s.combat!.units.find(u=>u.id==='unit-3')!;expect(high.hp*2).toBeGreaterThan(high.maxHp);expect(readCombatStats(high,s.combat!).abilityPower).toBe(130);expect(high.runtime!.nextAttackMagic).toBe(468);
+  if(s.phase!=='combat')throw new Error('combat required');
+  s=stepMatch({...s,combat:{...s.combat,units:s.combat.units.map(u=>u.id==='unit-3'?{...u,hp:190,mana:0,cooldownTicks:1000}:u)}}).state;
+  const low=s.combat!.units.find(u=>u.id==='unit-3')!;expect(low.hp*2).toBeLessThan(low.maxHp);expect(readCombatStats(low,s.combat!).abilityPower).toBe(115);expect(low.runtime!.nextAttackMagic).toBe(468);
+  const restored=restoreMatch(serializeMatch(s));expect(restored).toEqual(s);
+  const attack=(state:typeof s)=>{if(state.phase!=='combat')throw new Error('combat required');return stepMatch({...state,combat:{...state.combat,units:state.combat.units.map(u=>u.id==='unit-3'?{...u,cooldownTicks:0}:u)}});};
+  const result=attack(s);expect(attack(restored)).toEqual(result);expect(result.events.filter(e=>e.type==='packetDamage'&&e.source.ownerId==='unit-3'&&e.source.sourceKind==='ability').map(e=>e.type==='packetDamage'?e.raw:0)).toEqual([468]);expect(result.state.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBe(0);
  });
  it('string restore uses its parsed independent graph;object restore still detaches the input',()=>{
   const source=itemMatch('hand-of-justice'),json=serializeMatch(source),a=restoreMatch(json),b=restoreMatch(json),c=restoreMatch(source);
@@ -57,7 +63,7 @@ describe('B4 composed consumers and restore rejection',()=>{
   Object.assign(a.combat.units[0],{hp:0});Object.assign(c.combat.units[0],{hp:0});expect(serializeMatch(b)).toBe(json);expect(serializeMatch(source)).toBe(json);
  });
  it('catalogue query is frozen,source-labelled,44 entries and consumes zero Match words',()=>{
-  const s=itemMatch('jeweled-gauntlet'),before=JSON.stringify(s),a=readItemCatalog(),b=readItemCatalog();expect(a).toEqual(b);expect(a).toHaveLength(44);expect(a.every(i=>i.effectDescriptions.length&&i.referencePatch==='14.24b'&&i.evidenceStatus==='source-reviewed')).toBe(true);expect(Object.isFrozen(a)).toBe(true);expect(JSON.stringify(s)).toBe(before);
+  const s=itemMatch('jeweled-gauntlet'),before=JSON.stringify(s),a=readItemCatalog(),b=readItemCatalog();expect(a).toEqual(b);expect(a).toHaveLength(44);expect(a.every(i=>i.effectDescriptions.length&&i.referencePatch==='14.24b'&&i.evidenceStatus===(['red-buff','runaans-hurricane'].includes(i.id)?'approved-provisional':'source-reviewed'))).toBe(true);expect(Object.isFrozen(a)).toBe(true);expect(JSON.stringify(s)).toBe(before);
  });
  it.each(['spellCrit','program','bonus','survival','shield','burn'])('rejects forged %s rather than silently executing it',kind=>{
   let s=itemMatch(kind==='burn'?'sunfire-cape':kind==='shield'?'crownguard':kind==='bonus'?'steraks-gage':kind==='survival'?'giant-slayer':'infinity-edge');

@@ -3,7 +3,7 @@ import { freezeContent } from './freeze';
 export const SOURCE_MANIFEST = freezeContent({
   "referencePatch": "S13-14.24b",
   "contentVersion": "s13-14.24b-slice-v1",
-  "equipmentCatalogVersion": "s13-14.24b-m8-b4-v1",
+  "equipmentCatalogVersion": "s13-14.24b-m8-b4-v2",
   "equipmentArchive": "src/simulation/content/source/s13-14.24b/normalized/items.json",
   "rawUrl": "https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json",
   "rawSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",

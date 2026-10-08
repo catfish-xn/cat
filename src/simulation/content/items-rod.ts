@@ -69,7 +69,7 @@ export const ROD_ITEMS: readonly ItemDefinition[] = [
       "amount": 100
     }
   ],
-  combatProgram: {periodic:[periodic(1,[status('shred',3000,1)],enemies({radius:2,maxTargets:100,sample:'each-tick'}))],triggers:[trigger({event:'cast-completed',listener:{subject:'actor',relationToHolder:'enemy',withinHexes:2},selector:enemies({candidates:'event-actor'}),effects:[damage('magic',{actualManaSpentBps:16000})]})]}
+  combatProgram: {periodic:[periodic(1,[status('shred',3000,1,{activation:'immediate'})],enemies({radius:2,maxTargets:100,sample:'each-tick'}))],triggers:[trigger({event:'cast-completed',listener:{subject:'actor',relationToHolder:'enemy',withinHexes:2},selector:enemies({candidates:'event-actor'}),effects:[damage('magic',{actualManaSpentBps:16000})]})]}
 },
 {
   "id": "jeweled-gauntlet",

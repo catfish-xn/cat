@@ -28,7 +28,7 @@ export const BOW_ITEMS: readonly ItemDefinition[] = [
       "bps": 2000
     }
   ],
-  combatProgram: {modifiers:[modifier('critChance',2000,'bps')],triggers:[trigger({event:'damage-dealt',selector:enemies({candidates:'event-target'}),effects:[status('sunder',3000,60)]})]}
+  combatProgram: {modifiers:[modifier('critChance',2000,'bps')],triggers:[trigger({event:'damage-dealt',selector:enemies({candidates:'event-target'}),effects:[status('sunder',3000,60,{activation:'immediate'})]})]}
 },
 {
   "id": "nashors-tooth",
@@ -66,6 +66,7 @@ export const BOW_ITEMS: readonly ItemDefinition[] = [
 },
 {
   "id": "red-buff",
+  "evidenceStatus": "approved-provisional",
   "name": "红霸符",
   "kind": "completed",
   "apiName": "TFT_Item_RapidFireCannon",
@@ -90,12 +91,14 @@ export const BOW_ITEMS: readonly ItemDefinition[] = [
 },
 {
   "id": "runaans-hurricane",
+  "evidenceStatus": "approved-provisional",
   "name": "卢安娜的飓风",
   "kind": "completed",
   "apiName": "TFT_Item_RunaansHurricane",
   "unique": false,
   "slotCost": 1,
   "conventionIds": [
+    "B-10",
     "GLOBAL-STAT-01"
   ],
   "recipe": [
@@ -153,7 +156,7 @@ export const BOW_ITEMS: readonly ItemDefinition[] = [
       "amount": 15
     }
   ],
-  combatProgram: {triggers:[trigger({counters:[{id:'attacks',events:[{event:'attack-completed',listener:{subject:'actor',relationToHolder:'self',withinHexes:null},qualifies:'completed-event'}],scope:'source-instance',reset:'combat-start',cap:null}],gate:{kind:'every-n',counterId:'attacks',everyN:3,firstAt:3},selector:enemies({primary:'first-required',anchor:'primary-target',maxTargets:4}),effects:[status('shred',3000,100),damage('magic',{flat:35})]})]}
+  combatProgram: {triggers:[trigger({counters:[{id:'attacks',events:[{event:'attack-completed',listener:{subject:'actor',relationToHolder:'self',withinHexes:null},qualifies:'completed-event'}],scope:'source-instance',reset:'combat-start',cap:null}],gate:{kind:'every-n',counterId:'attacks',everyN:3,firstAt:3},selector:enemies({primary:'first-required',anchor:'primary-target',maxTargets:4}),effects:[status('shred',3000,100,{activation:'immediate'}),damage('magic',{flat:35})]})]}
 },
 {
   "id": "titans-resolve",
@@ -169,14 +172,7 @@ export const BOW_ITEMS: readonly ItemDefinition[] = [
     "vest",
     "bow"
   ],
-  "effectDescriptions": [
-    "AS: 1000 Bps",
-    "Armor: 20 armor-points",
-    "BonusResistsAtStackCap: 20 resist-points",
-    "StackCap: 25 count",
-    "StackingAD: 200 Bps",
-    "StackingSP: 2 ability-power-points"
-  ],
+  "effectDescriptions": ["每次完成普攻及每个正实际承伤包（含护盾承伤）各叠1层；每层2%攻击力、2法强，下一tick生效，持续本场，最多25层。满层额外20双抗每件只授予一次；零伤害不叠层。"],
   "effects": [
     {
       "kind": "attackSpeedBps",

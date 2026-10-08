@@ -116,7 +116,7 @@ export const TEAR_ITEMS: readonly ItemDefinition[] = [
     "belt",
     "tear"
   ],
-  "effectDescriptions": ["每5秒治疗1格内存活友军（包括自身）15%已损生命，每次每目标上限1000；同时获得10%常规减伤5秒，同类不叠加。"],
+  "effectDescriptions": ["每5秒治疗1格内存活友军（包括自身）15%已损生命，每次每目标上限1000；同时施加下一tick生效的10%常规减伤5秒，同类不叠加。"],
   "effects": [
     {
       "kind": "statFlat",
@@ -129,7 +129,7 @@ export const TEAR_ITEMS: readonly ItemDefinition[] = [
       "amount": 150
     }
   ],
-  combatProgram: {periodic:[periodic(100,[{kind:'heal',amount:amount({missingHpBps:1500,hpBasis:'target',sample:'each-pulse',cap:1000})},status('damage-reduction',1000,100)],selector({relation:'ally',radius:1,maxTargets:100,sample:'each-pulse'}))]}
+  combatProgram: {periodic:[periodic(100,[{kind:'heal',amount:amount({missingHpBps:1500,hpBasis:'target',sample:'each-pulse',cap:1000})},status('damage-reduction',1000,100,{activation:'next-tick'})],selector({relation:'ally',radius:1,maxTargets:100,sample:'each-pulse'}))]}
 },
 {
   "id": "hand-of-justice",

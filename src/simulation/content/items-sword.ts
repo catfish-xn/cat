@@ -64,7 +64,7 @@ export const SWORD_ITEMS: readonly ItemDefinition[] = [
       "amount": 20
     }
   ],
-  combatProgram: {survival:[survival(6000,[{kind:'cleanse',remove:'removable-hostile-control-dot-debuff',retarget:true},status('untargetable',10000,20,{onEnd:{reasons:['expired'],timing:'expiry-before-actions',effects:[stat(modifier('attackSpeed',1500,'bps'))]}}),status('damage-prevention',10000,20)])]}
+  combatProgram: {survival:[survival(6000,[{kind:'cleanse',remove:'removable-hostile-control-dot-debuff',retarget:true},status('untargetable',10000,20,{activation:'immediate',onEnd:{reasons:['expired'],timing:'expiry-before-actions',effects:[stat(modifier('attackSpeed',1500,'bps'))]}}),status('damage-prevention',10000,20,{activation:'immediate'})])]}
 },
 {
   "id": "infinity-edge",

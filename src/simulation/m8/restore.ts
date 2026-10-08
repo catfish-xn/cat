@@ -1,4 +1,4 @@
-import { isDeclaredStatus, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
+import { isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
 import { canonicalSource } from './identity';
 /** Development saves may only contain programs produced by the enabled content compiler. */
 import type { CombatUnit } from '../combat-types';
@@ -34,6 +34,11 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       const c = contributions.find(c => c.key === key);
       if(c && c.source.sourceKind==='item' && isDeclaredStatus(c.source,c.application,units,combatId)) {
         check(!covered.has(key) && c.targetId===unit.id && same(c.source,asSource(legacy.source)) && legacy.key===c.key && c.appliedAtTick===legacy.startsAtTick && (c.expiresAtTick ?? 1201)===legacy.expiresAtTick, 'item status source/timing projection');
+        const app=c.application;
+        const kind=app.kind==='stun'?'stun':app.kind==='sunder'?'armorReduction':'resistanceFlat';
+        const amount=app.modifier?.value.kind==='constant'?app.modifier.value.amount:app.magnitudeBps;
+        check(legacy.kind===kind && legacy.amount===amount && legacy.contributionKeys.length===1 && legacy.activity===undefined, 'item status semantic projection');
+        validateItemEffectConsumption(c.source,c.appliedAtTick,units,combatId);
         covered.add(key);continue;
       }
       check(c && !covered.has(key) && c.targetId === unit.id && c.source.ownerId === legacy.source.ownerId
@@ -82,6 +87,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       && shield.expiresAtTick === layer.expiresAtTick && typeof shield.endRewardConsumed === 'boolean', 'shield projection');
     const declared=shield.source.sourceKind==='item'?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
     if(declared) {
+      validateItemEffectConsumption(shield.source,shield.startsAtTick,units,combatId);
       check(shield.decay.kind===grant.decay.kind && [...maxHpCandidates(unit,shield.startsAtTick,combatId)].some(hp=>shield.granted===Math.floor(hp*grant.amount.maxHpBps/10000)), 'item shield sampled amount');
       check(shield.remaining>0&&layer.endedReason===undefined&&!shield.endRewardConsumed&&!units.some(u=>u.tasks?.some(t=>t.shieldEndKey===layer.key)), 'item shield active lifecycle');
       continue;
