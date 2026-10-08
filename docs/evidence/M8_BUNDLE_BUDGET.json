@@ -92,5 +92,27 @@
     "No branch was merged remotely. B4 already contains the baseline; combined B4+U4 used an uncommitted detached merge.",
     "Local Chromium installation/launch not completed; complete desktop validation is delegated to existing GitHub CI, unchanged."
   ],
-  "combinedTreeSha": "17fcf8701e0ec68ca2afe0fdf6a8b678a4921284"
+  "combinedTreeSha": "17fcf8701e0ec68ca2afe0fdf6a8b678a4921284",
+  "localValidation": {
+    "fourProductionBuilds": "passed",
+    "typecheck": "passed",
+    "nodeSyntaxCheck": "passed",
+    "diffWhitespaceCheck": "passed",
+    "onlyExecutableChange": "jsBudget: 1.10 -> 1.15",
+    "existingJsGzipMatchesAllFourResults": true,
+    "integerBoundary": {
+      "488477": "pass",
+      "488478": "fail"
+    },
+    "vitestDefault": {
+      "status": "inconclusive, stopped after RUN banner",
+      "exitCode": 130
+    },
+    "vitestTwoWorkers": {
+      "status": "inconclusive, timed out after RUN banner",
+      "timeoutSeconds": 90,
+      "exitCode": 124
+    },
+    "chromium": "not run: executable missing; official installer failed with invalid/truncated ZIP"
+  }
 }

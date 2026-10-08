@@ -47,8 +47,9 @@ Node 24.19.0、npm 11.9.0、Vite 7.3.6；所有来源的 package.json / package-
 
 - 本地四组生产构建和预算分支 typecheck 已通过。
 - 默认 npm 缓存目录不可用；改用本机可写缓存后 `npm ci` 成功，未更改锁文件或 npm 来源。
-- 本地完整单测正在执行；不以尚未完成的运行声称通过。
-- 本地 Playwright 所需 Chromium 缺失，安装尝试失败，未声称桌面测试通过；既有 GitHub CI 将执行完整桌面作业，未删除或跳过任何门禁。
-- 当前为中间检查点：下一步完成可执行差异核对、推送后开指向基线的 Draft PR，等待最终 SHA 完整 CI，通过后送全新独立 ChatGPT Pro 网页对话审计。
+- 本地完整单测未取得结果：默认 `npm test` 持续停在 Vitest RUN 后中止（退出 130）；`timeout 90s npm test -- --maxWorkers=2` 也仅停在 RUN 并超时（退出 124）。不推断代码失败或测试通过；完整 GitHub CI 是权威。
+- 本地 Playwright 所需 Chromium 缺失，官方安装器下载浏览器后报 ZIP 中央目录签名不存在，安装失败，未声称桌面测试通过；既有 GitHub CI 将执行完整桌面作业，未删除或跳过任何门禁。
+- 开发自检：去掉块注释后，与基线相比可执行文本仅 `jsBudget: 1.10` → `1.15`；直接调用原 `jsGzip()` 四组结果与证据一致；488,477 B 通过、488,478 B 不通过的边界成立。`node --check`、`git diff --check` 通过。这是编写方自检，不是独立审计。
+- 下一步：开指向基线的 Draft PR，等待最终 SHA 完整 CI，通过后送全新独立 ChatGPT Pro 网页对话审计；CI 结果与审计链接写入 PR 进度评论，避免为记录 CI 链接再次改变被验收 SHA。
 - 审计对话尚未创建，尚未签收。不合并。
 - `.github/workflows/ci.yml` 的历史注释仍提及 1.10；遵守本次不改 CI 配置的约束保留，其实际调用读取预算脚本的新系数。
