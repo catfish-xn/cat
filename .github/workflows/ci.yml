@@ -139,6 +139,28 @@ jobs:
         with:
           name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
+  m6-retention:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: m6-retention
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Independent native resources through the real application
+        run: npm run test:retention
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m6-retention-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/m6-retention/
   m7-presentation:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: m7-presentation-sample${{ matrix.sample }}
@@ -184,7 +206,7 @@ jobs:
   compare-evidence:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: compare-evidence-sample${{ matrix.sample }}
-    needs: [test-and-build, chromium-match, chromium-input]
+    needs: [test-and-build, chromium-match, chromium-input, m6-retention]
     runs-on: ubuntu-24.04
     timeout-minutes: 6 # Three measured comparison jobs, including artifact transfer.
     strategy:

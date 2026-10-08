@@ -2,10 +2,10 @@
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { sourceFingerprint } = require('./m5-evidence.cjs');
+const { sourceFingerprint, applicationHeapCeilingBytes } = require('./m5-evidence.cjs');
 const { hash } = require('./m4-evidence.cjs');
 // This frozen constants module contains only JavaScript-compatible declarations.
-// Read its values directly so the evidence checker cannot define a second budget.
+// Read module budgets directly; full-application mode limits use the shared policy.
 const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS})');
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const fingerprint = sourceFingerprint();
@@ -40,7 +40,9 @@ for (const mode of ['dev', 'preview']) {
   assert.notEqual(route.m6Lifecycle.warmupExperiment, true, 'warmup experiments cannot replace final lifecycle evidence');
   assert.equal(route.m6Lifecycle.warmupCycles ?? 2, 2, 'production warmup method remains frozen pending adoption');
   assert.equal(route.m6Lifecycle.rows.length, limits.LIFECYCLE_CYCLES);
-  assert(route.m6Lifecycle.heapDelta <= limits.MAX_POST_GC_HEAP_GROWTH_BYTES, 'full application post-GC heap');
+  assert.equal(route.mode, mode, 'full application measurement mode');
+  assert.equal(route.m6Lifecycle.heapCeilingBytes, applicationHeapCeilingBytes(mode), 'full application recorded heap ceiling');
+  assert(route.m6Lifecycle.heapDelta <= applicationHeapCeilingBytes(mode), 'full application post-GC heap');
   assert.equal(route.m6Lifecycle.afterResources.listeners, route.m6Lifecycle.beforeResources.listeners, 'full application listener cleanup');
   assert(route.m6Lifecycle.afterResources.pendingRaf <= route.m6Lifecycle.beforeResources.pendingRaf + 1, 'full application frame scheduler cleanup');
   for(const key of ['sameBattle','fullStateLedgerRevisionPreserved','nativeKeyboard','durableRevisionUnchanged'])assert.equal(route.m6ReplayReopen?.[key],true,`same-battle native reopen: ${key}`);

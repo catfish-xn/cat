@@ -66,7 +66,13 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
   const filter = document.createElement('select'); filter.style.minHeight = '44px'; filter.style.minWidth = '44px'; filter.setAttribute('aria-label', '战斗事件类型'); filter.dataset.debug = 'm6-stats-filter';
   for (const [value, label] of [['all', '全部事件'], ['damage', '实际伤害'], ['heal', '治疗'], ['shield', '护盾'], ['target', '目标变化'], ['skill', '技能与效果']]) { const option = document.createElement('option'); option.value = value; option.textContent = label; filter.append(option); }
   const table = document.createElement('table'); table.style.width = '100%'; table.style.tableLayout = 'fixed'; table.style.fontSize = '13px'; table.dataset.debug = 'm6-stats-table';
-  const head = table.createTHead().insertRow(); for (const label of ['单位', '实际伤害', '护盾吸收', '有效治疗']) { const th = document.createElement('th'); th.scope = 'col'; th.textContent = label; th.style.overflowWrap = 'anywhere'; head.append(th); }
+  const header = table.createTHead();
+  // Chromium's UA thead if(media(...)) rule retains a fresh query on every recalc.
+  // Keep the same screen/print values with one panel-owned query, released on disposal.
+  const paged = matchMedia('(overflow-block: paged)');
+  const pagination = () => { header.style.breakInside = paged.matches ? 'avoid' : 'auto'; };
+  paged.addEventListener('change', pagination); pagination();
+  const head = header.insertRow(); for (const label of ['单位', '实际伤害', '护盾吸收', '有效治疗']) { const th = document.createElement('th'); th.scope = 'col'; th.textContent = label; th.style.overflowWrap = 'anywhere'; head.append(th); }
   const body = table.createTBody();
   const detail = document.createElement('p'); detail.dataset.debug = 'm6-stats-details';
   const disclosure = document.createElement('details'); const summary = document.createElement('summary'); summary.textContent = '战斗事件明细'; summary.style.minHeight = '44px';
@@ -120,6 +126,6 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
       for (const [id, row] of rows) { const totals = next.stats.units.find(unit => unit.unitId === id) ?? zero(id); [totals.hpDamage, totals.shieldAbsorbed, totals.effectiveHealing].forEach((value, i) => { row.cells[i].textContent = String(value); }); row.button.setAttribute('aria-pressed', String(selection.value === id)); }
       renderDetail(); renderEvents();
     },
-    dispose() { disposed = true; view = null; rows.clear(); selection.removeEventListener('change', selectChanged); filter.removeEventListener('change', filterChanged); body.removeEventListener('click', rowClicked); root.remove(); },
+    dispose() { disposed = true; view = null; rows.clear(); paged.removeEventListener('change', pagination); selection.removeEventListener('change', selectChanged); filter.removeEventListener('change', filterChanged); body.removeEventListener('click', rowClicked); root.remove(); },
   };
 }

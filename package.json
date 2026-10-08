@@ -14,6 +14,7 @@
     "test:headless": "node scripts/verify-m5-headless.cjs --multi-seed",
     "test:input": "node scripts/verify-m5-input.cjs",
     "test:input:preview": "node scripts/verify-m5-input.cjs --preview",
+    "test:retention": "node scripts/verify-m6-retention.cjs",
     "test:compare": "node scripts/compare-m5-evidence.cjs",
     "test:performance": "node scripts/verify-m5-headless.cjs --repeat=3"
   },
