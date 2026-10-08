@@ -1,5 +1,6 @@
+import { shortestPath, startingRows } from './m8/targeting';
 import { S13_COMBAT_RULES } from './s13-rules';
-import { getNeighbors, hexDistance, type Board, type HexCell } from './board';
+import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatUnit, CombatOrigin, CombatRuntime, CombatStatus, ShieldLayer, CombatTask, CombatEvent } from './combat-types';
 import { attackInterval, evaluateAmount, resolveStat, type HpSample } from './m8/stats';
 import { authorizeSpellCrit, validateSpellCrit } from './m8/crit';
@@ -56,7 +57,7 @@ export function spellCrit(unit: CombatUnit): SpellCritAuthorization {
     if ([...auth.itemSources, ...auth.nonItemSources].some(s => s.ownerId !== unit.id)) throw new RangeError('Wrong authorization holder');
     return auth;
   }
-  return authorizeSpellCrit([], [], champion(unit) === 'neutral' ? 0 : S13_COMBAT_RULES.attackCritBps, S13_COMBAT_RULES.critMultiplierBps);
+  return authorizeSpellCrit([], [], unit.baseCritChanceBps ?? (champion(unit) === 'neutral' ? 0 : S13_COMBAT_RULES.attackCritBps), unit.baseCritMultiplierBps ?? S13_COMBAT_RULES.critMultiplierBps);
 }
 export const compareText = (a: string, b: string): number => a < b ? -1 : a > b ? 1 : 0;
 export const sourceKey = (s: CombatOrigin): string => JSON.stringify([s.ownerId, s.sourceKind, s.definitionId, s.instanceId, s.effectIndex]);
@@ -81,14 +82,14 @@ export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind'
 }
 export function ap(unit: S13Unit, tick: number): number {
   return resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat),
-    ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit) });
+    ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
 }
 export function ad(unit: S13Unit): number {
   return resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
-    [constantModifier('attackDamage', unit.attackDamagePercentBps ?? 0, 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit) });
+    [constantModifier('attackDamage', unit.attackDamagePercentBps ?? 0, 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
 }
 export function range(unit: S13Unit): number {
-  return resolveStat('range', unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus, 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit) });
+  return resolveStat('range', unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus, 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
 }
 /** Historical floats are normalized to integer coefficient basis points before arithmetic. */
 export function amount(unit: S13Unit, tick: number, coefficients: { flat?: number; ad?: number; ap?: number; hp?: number }): number {
@@ -102,31 +103,24 @@ export function amount(unit: S13Unit, tick: number, coefficients: { flat?: numbe
 export function interval(unit: S13Unit, tick: number): number {
   // R7 neutral definitions author exact integer periods; they have no speed
   // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
-  if (champion(unit) === 'neutral') return unit.attackIntervalTicks;
-  const speedBps = (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit) });
+  if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
+  const speedBps = (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
   return attackInterval(base, speedBps);
 }
 export function byDistance(from: CombatUnit, list: readonly S13Unit[], farthest = false): S13Unit[] {
   return [...list].sort((a, b) => (farthest ? -1 : 1) * (hexDistance(from.cell, a.cell) - hexDistance(from.cell, b.cell)) || compareText(a.id, b.id));
 }
+export function areaEnemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.alive && u.team !== unit.team); }
 export function enemies(unit: CombatUnit, units: readonly S13Unit[]): S13Unit[] { return units.filter(u => u.alive && u.team !== unit.team && !effectiveStatuses(u.mechanismState?.statuses ?? [], unit.mechanismState?.sampledAtTick ?? 0).some(g => g.kind === 'untargetable')); }
 export function neighborsOf(unit: CombatUnit, units: readonly S13Unit[], radius = 1): S13Unit[] {
-  return enemies(unit, units).filter(u => hexDistance(unit.cell, u.cell) <= radius).sort((a, b) => compareText(a.id, b.id));
+  return areaEnemies(unit, units).filter(u => hexDistance(unit.cell, u.cell) <= radius).sort((a, b) => compareText(a.id, b.id));
 }
 export function lowestAlly(unit: CombatUnit, units: readonly S13Unit[], current = false): S13Unit | undefined {
   return units.filter(u => u.alive && u.team === unit.team).sort((a, b) =>
     (current ? a.hp - b.hp : a.hp * b.maxHp - b.hp * a.maxHp) || hexDistance(unit.cell, a.cell) - hexDistance(unit.cell, b.cell) || compareText(a.id, b.id))[0];
 }
-export function path(board: Board, from: HexCell, to: HexCell): HexCell[] {
-  const result: HexCell[] = []; let cursor = from;
-  while (hexDistance(cursor, to) > 0) {
-    const next = getNeighbors(board, cursor).find(c => hexDistance(c, to) < hexDistance(cursor, to));
-    if (!next) break;
-    result.push(next); cursor = next;
-  }
-  return result;
-}
+export function path(board: Board, from: HexCell, to: HexCell): HexCell[] { return shortestPath(board, from, to); }
 export function syncShield(unit: S13Unit): void {
   unit.shield = unit.shieldLayers.reduce((n, s) => n + s.remaining, 0);
   unit.shieldExpiresAtTick = unit.shield > 0 ? Math.max(...unit.shieldLayers.filter(s => s.remaining > 0).map(s => s.expiresAtTick)) : null;

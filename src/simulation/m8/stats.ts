@@ -111,6 +111,7 @@ export interface AmountSample {
   readonly abilityPower: number;
   readonly cast?: CastReceipt;
   readonly damage?: DamageOutcome;
+  readonly damageOutcomes?: readonly DamageOutcome[];
   readonly shieldAbsorbed?: number;
 }
 /** G01: no RNG or mutation; each coefficient joins the same rational numerator. */
@@ -127,8 +128,10 @@ export function amountNumerator(amount: Amount, sample: AmountSample): bigint {
     numerator += integer(sample.cast.actualManaSpent) * integer(amount.actualManaSpentBps);
   }
   if (amount.actualDamageBps !== 0) {
-    if (!sample.damage || !sample.damage.hit || sample.damage.absorbed + sample.damage.hpDamage <= 0) throw new RangeError('Missing positive damage outcome');
-    numerator += (integer(sample.damage.absorbed) + integer(sample.damage.hpDamage)) * integer(amount.actualDamageBps);
+    const outcomes = sample.damageOutcomes ?? (sample.damage ? [sample.damage] : []);
+    const actual = outcomes.filter(d => d.hit).reduce((sum, d) => sum + integer(d.absorbed) + integer(d.hpDamage), 0n);
+    if (actual <= 0n) throw new RangeError('Missing positive damage outcome');
+    numerator += actual * integer(amount.actualDamageBps);
   }
   if (amount.shieldAbsorbedBps !== 0) {
     if (sample.shieldAbsorbed === undefined) throw new RangeError('Missing shield absorption sample');

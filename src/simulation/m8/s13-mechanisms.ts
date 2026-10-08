@@ -1,5 +1,8 @@
 /** G04–G07 adapter: compiles legacy tags once and executes only finite frozen declarations. */
-import { hexDistance } from '../board';
+import { emitMechanismSignal } from './s13-triggers';
+import { hexDistance, DEFAULT_BOARD } from '../board';
+import { selectTargets, startingRows, type TargetEnvironment } from './targeting';
+import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference } from '../combat-s13-abilities';
 import { ad, ap, compareText, constantModifier, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
@@ -8,52 +11,38 @@ import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safe
 import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
 import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from './s13-definitions';
 import { canonicalSource, compareCodePoints, effectIdentity } from './identity';
-import { applyStatusContribution, advanceBurnClock, cleanseStatuses, effectiveStatuses, endStatuses, isEffective, removeStatusContributions, statusMagnitude, summarizeGroup } from './status';
+import { applyStatusContribution, advanceBurnClock, cleanseStatuses, endStatuses, removeStatusContributions, statusMagnitude, summarizeGroup } from './status';
 import { advancePeriodicTask, cleanPeriodicTasks, periodicAmount, clearRemainder } from './periodic';
 import { consumeSurvivalTriggers, endShield, grantShieldState, maintainShield, survivalSamples } from './shield';
 import { makeHealRequest, resolveHeal, type VampRate } from './heal';
 import { rollCrit } from './crit';
-export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source): S13Unit[] {
-  const primary = units.find(u => u.id === holder.targetId);
-  const anchor = selector.anchor === 'primary-target' ? primary : holder;
-  if (!anchor) return [];
-  let candidates = selector.candidates === 'bound-target' ? units.filter(u => u.id === boundTargetId) : selector.candidates === 'board' ? [...units] : [];
-  candidates = candidates.filter(u => u.alive && u.hp > 0 && (selector.relation === 'self' ? u.id === holder.id : selector.relation === 'ally' ? u.team === holder.team : u.team !== holder.team)
-    && !(selector.excludeSelf && u.id === holder.id) && !(selector.excludePrimary && u.id === primary?.id)
-    && (selector.radius === null || hexDistance(anchor.cell, u.cell) <= selector.radius)
-    && !(selector.relation === 'enemy' && selector.candidates !== 'bound-target' && effectiveStatuses(u.mechanismState?.statuses ?? [], holder.mechanismState?.sampledAtTick ?? 0).some(g => g.kind === 'untargetable')));
-  const burnBySource = (u: S13Unit) => u.mechanismState?.statuses.some(g => g.kind === 'burn' && g.contributions.some(c => source && c.source.instanceId === source.instanceId && c.source.ownerId === source.ownerId && isEffective(c, holder.mechanismState?.sampledAtTick ?? 0))) ? 1 : 0;
-  candidates.sort((a, b) => {
-    const distance = hexDistance(anchor.cell, a.cell) - hexDistance(anchor.cell, b.cell);
-    switch (selector.order) {
-      case 'id': return compareText(a.id, b.id);
-      case 'hp-ratio-id': { const left = integer(a.hp) * integer(b.maxHp), right = integer(b.hp) * integer(a.maxHp); return (left < right ? -1 : left > right ? 1 : 0) || compareText(a.id, b.id); }
-      case 'hp-absolute-distance-id': return a.hp - b.hp || distance || compareText(a.id, b.id);
-      case 'farthest-id': return -distance || compareText(a.id, b.id);
-      case 'not-burned-by-this-instance-distance-id': return burnBySource(a) - burnBySource(b) || distance || compareText(a.id, b.id);
-      default: return distance || compareText(a.id, b.id);
-    }
-  });
-  if (selector.primary === 'first-required') {
-    if (!primary || !candidates.includes(primary)) return [];
-    candidates = [primary, ...candidates.filter(u => u !== primary)];
-  }
-  return candidates.slice(0, selector.maxTargets);
+export function selectMechanismTargets(holder: S13Unit, units: readonly S13Unit[], selector: TargetSelector, boundTargetId?: string, source?: Source, environment: Partial<TargetEnvironment> = {}): S13Unit[] {
+  const tick = environment.tick ?? holder.mechanismState?.sampledAtTick ?? 0;
+  const ids = selectTargets(selector, targetingEnvironment(environment.board ?? DEFAULT_BOARD, units, holder, tick,
+    { source, boundTargetIds: boundTargetId ? [boundTargetId] : [], eligibility: selector.candidates === 'bound-target' ? 'bound-packet' : 'new-selection', ...environment }));
+  return ids.map(id => units.find(u => u.id === id)!);
 }
-function endTargets(holder: S13Unit, ctx: AbilityContext, targeting: AbilityTargeting): S13Unit[] {
+
+function endTargets(holder: S13Unit, ctx: AbilityContext, targeting: AbilityTargeting, area = false): S13Unit[] {
   if (targeting.kind === 'fixed') return targeting.targetIds.flatMap(id => ctx.units.filter(u => u.id === id && u.alive && u.hp > 0));
-  if (targeting.kind === 'select') return selectMechanismTargets(holder, ctx.units, targeting.selector);
+  if (targeting.kind === 'select') return selectMechanismTargets(holder, ctx.units, targeting.selector, undefined, undefined, { board: ctx.board, tick: ctx.tick, eligibility: area ? 'area-hit' : 'new-selection' });
   if (targeting.kind === 'area-around-selected') {
-    const center = selectMechanismTargets(holder, ctx.units, targeting.center)[0]; if (!center) return [];
+    const center = selectMechanismTargets(holder, ctx.units, targeting.center, undefined, undefined, { board: ctx.board, tick: ctx.tick })[0]; if (!center) return [];
     return ctx.units.filter(u => u.alive && u.hp > 0 && (targeting.relation === 'ally' ? u.team === holder.team : u.team !== holder.team) && hexDistance(center.cell, u.cell) <= targeting.radius).sort((a, b) => compareText(a.id, b.id));
   }
   throw new RangeError('Unsupported G07 end targeting for this batch');
 }
-function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: SurvivalSample, absorbed?: number): AmountSample {
+function effectSample(holder: S13Unit, target: S13Unit, tick: number, frozen?: SurvivalSample, absorbed?: number): AmountSample & Pick<import('./stats').StatSample, 'startingRows'> {
   const before = frozen ? { id: frozen.unitId, hp: frozen.hpAfterDamage, maxHp: frozen.maxHpBeforeThresholdEffects } : undefined;
-  return { holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
+  return { startingRows: startingRows(holder.team, holder.startingCell?.row ?? holder.cell.row) ?? undefined, holder: before?.id === holder.id ? before : hpSample(holder), target: before?.id === target.id ? before : hpSample(target), attackDamage: ad(holder), abilityPower: ap(holder, tick), ...(absorbed !== undefined ? { shieldAbsorbed: absorbed } : {}) };
 }
-function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source, application: StatusApplication, applicationId = 'source'): void {
+function clearMechanismTarget(ctx: AbilityContext, unit: S13Unit, actionSeq: number): void {
+  const before = unit.targetId; if (before === null) return;
+  unit.targetId = null;
+  ctx.events.push({ type: 'targetChanged', tick: ctx.tick, unitId: unit.id, before, after: null });
+  emitMechanismSignal(ctx, { event: 'target-changed', tick: ctx.tick, actionSeq, actorId: unit.id, targetId: null, cast: null });
+}
+function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source, application: StatusApplication, applicationId = 'source', actionSeq = 0): void {
   ensureMechanisms(target, ctx.tick, ctx.combatId);
   const identity = effectIdentity(target.mechanismState!.combatId, source, target.id, applicationId);
   const result = applyStatusContribution(target.mechanismState!.statuses, identity, application, ctx.tick);
@@ -65,6 +54,11 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
     amount: application.modifier?.value.kind === 'constant' ? application.modifier.value.amount : application.magnitudeBps,
     startsAtTick: group.contributions.find(c => c.key === identity.key)!.appliedAtTick, expiresAtTick: group.contributions.find(c => c.key === identity.key)!.expiresAtTick ?? 1201, contributionKeys: [identity.key] };
   ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, status, group, reason: 'applied' });
+  if (application.kind === 'untargetable' && application.activation === 'immediate') {
+    for (const enemy of ctx.units) if (enemy.team !== target.team && enemy.targetId === target.id) {
+      clearMechanismTarget(ctx, enemy, actionSeq);
+    }
+  }
   if (application.kind === 'burn') synchronizeBurnTask(target, identity.key);
 }
 function synchronizeBurnTask(target: S13Unit, key: string): void {
@@ -84,31 +78,38 @@ function cancelAttachedBurns(tasks: readonly PeriodicTask[], ended: readonly Sta
     && canonicalSource(task.source) === canonicalSource(c.source)
     && task.program.definitionId === JSON.stringify([c.source.definitionId, c.source.effectIndex, 'burn'])));
 }
-interface DamageExecutionContext { readonly area: boolean; readonly triggeringCastActionSeq: number | null }
+interface DamageExecutionContext { readonly applicationId?: string; readonly facts?: import('./triggers').ResolutionFacts; readonly cast?: import('./contracts').CastReceipt; readonly counters?: Readonly<Record<string, number>>; readonly area: boolean; readonly triggeringCastActionSeq: number | null }
 export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effect: Effect, seq: number, ordinal = 0,
   frozen?: SurvivalSample, periodic?: PeriodicReference, amountOverride?: number, absorbed?: number, damageContext?: DamageExecutionContext): void {
-  const sample = effectSample(holder, target, ctx.tick, frozen, absorbed);
+  const sample = { ...effectSample(holder, target, ctx.tick, frozen, absorbed), ...(damageContext?.cast ? { cast: damageContext.cast } : {}), ...(damageContext?.facts?.damage.length ? { damageOutcomes: damageContext.facts.damage } : {}) };
   const value = 'amount' in effect && typeof effect.amount !== 'number' ? amountOverride ?? evaluateAmount(effect.amount, sample) : 0;
   switch (effect.kind) {
+    case 'grant-mana':
+      (ctx.manaRequests ??= []).push({ source, targetId: target.id, amount: effect.amount, reason: effect.reason, bypassLock: effect.bypassLock, castActionSeq: effect.reason === 'cast-refund' ? seq : null }); break;
     case 'damage': ctx.packets.push({ source, targetId: target.id, raw: value, damageType: effect.damageType, actionSeq: seq, ordinal,
-      delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(periodic ? { periodic } : {}) }); break;
+      delivery: effect.delivery, critEligibility: effect.critEligibility, area: damageContext?.area ?? false, triggeringCastActionSeq: damageContext?.triggeringCastActionSeq ?? null, ...(damageContext?.facts?.damage[0] ? { parentPacketId: damageContext.facts.damage[0].context.packetId, rootActionSeq: damageContext.facts.damage[0].context.rootActionSeq } : {}), ...(periodic ? { periodic } : {}) }); break;
     case 'heal': {
       const request = makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(source)), target.id, seq, ordinal, 'direct']), target.id, 'direct', null, [{ source, numerator: value, denominator: 1 }]);
       ctx.heals.push({ source, targetId: target.id, amount: value, request, ...(periodic ? { periodic } : {}) }); break;
     }
-    case 'apply-status': applyFrozenStatus(ctx, target, source, effect.status, effect.status.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'); break;
+    case 'apply-status': applyFrozenStatus(ctx, target, source, effect.status, effect.status.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source', seq); break;
     case 'modify-stat': {
-      const modifier = effect.modifier;
+      const rawModifier = effect.modifier;
+      const modifier = rawModifier.value.kind === 'counter' ? { ...rawModifier, value: { kind: 'constant' as const, amount: safeNumber(integer(damageContext?.counters?.[rawModifier.value.counterId] ?? 0) * integer(rawModifier.value.perCount, Number.MIN_SAFE_INTEGER)) } } : rawModifier;
+      if (modifier.stat === 'attackSpeed' && modifier.unit === 'bps' && modifier.value.kind === 'constant' && effect.duration.kind === 'combat' && effect.activation === 'immediate' && !damageContext?.applicationId && effect.stackPolicy.kind === 'add-stacks' && effect.stackPolicy.cap === null && conditionHolds(modifier.condition, sample)) {
+        const before = target.runtime.attackSpeedBps; target.runtime.attackSpeedBps = safeNumber(integer(before) + integer(modifier.value.amount));
+        ctx.events.push({ type: 'statChanged', tick: ctx.tick, unitId: target.id, source, stat: 'attackSpeedBps', before, after: target.runtime.attackSpeedBps }); break;
+      }
       // Legacy unbounded combat growth is a projection of this one program/runtime.
       if (modifier.stat === 'abilityPower' && modifier.unit === 'flat' && modifier.value.kind === 'constant' && effect.duration.kind === 'combat'
-        && effect.activation === 'immediate' && effect.stackPolicy.kind === 'add-stacks' && effect.stackPolicy.cap === null && conditionHolds(modifier.condition, sample)) {
+        && effect.activation === 'immediate' && !damageContext?.applicationId && effect.stackPolicy.kind === 'add-stacks' && effect.stackPolicy.cap === null && conditionHolds(modifier.condition, sample)) {
         const before = (target.abilityPower ?? 100) + target.runtime.abilityPowerFlat;
         target.runtime.abilityPowerFlat = safeNumber(integer(target.runtime.abilityPowerFlat) + integer(modifier.value.amount));
         ctx.events.push({ type: 'statChanged', tick: ctx.tick, unitId: target.id, source, stat: 'abilityPower', before, after: (target.abilityPower ?? 100) + target.runtime.abilityPowerFlat }); break;
       }
       applyFrozenStatus(ctx, target, source, { kind: modifier.value.kind === 'constant' && modifier.value.amount < 0 ? 'stat-debuff' : 'stat-buff', magnitudeBps: 0,
         duration: effect.duration, stackPolicy: effect.stackPolicy, activation: effect.activation, polarity: modifier.value.kind === 'constant' && modifier.value.amount < 0 ? 'harmful' : 'beneficial', removable: modifier.value.kind === 'constant' && modifier.value.amount < 0,
-        modifier, damageFilter: null, onEnd: null }, effect.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'); break;
+        modifier, damageFilter: null, onEnd: null }, damageContext?.applicationId ?? (effect.stackPolicy.kind === 'independent-instances' ? JSON.stringify([seq, ordinal]) : 'source'), seq); break;
     }
     case 'grant-shield': {
       const identity = effectIdentity(target.mechanismState!.combatId, source, target.id), legacyKey = source.parentItemInstanceId === null ? sourceKey(source) : identity.key, old = target.shieldLayers.find(l => l.key === legacyKey);
@@ -135,7 +136,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       target.mechanismState = { ...target.mechanismState!, periodicTasks: cancelAttachedBurns(target.mechanismState!.periodicTasks, result.ended.map(e => e.contribution)) };
       for (const ended of result.ended) ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, reason: 'cleansed', group: { targetId: target.id, kind: ended.contribution.application.kind, contributions: [ended.contribution], effectiveSourceKey: null, effectiveMagnitudeBps: 0, nextPulseAtTick: null },
         status: { key: ended.contribution.key, source: ended.contribution.source, kind: 'stun', amount: 0, startsAtTick: ended.contribution.appliedAtTick, expiresAtTick: ctx.tick } });
-      target.targetId = null; break;
+      clearMechanismTarget(ctx, target, seq); break;
     }
     default: throw new RangeError(`Effect ${effect.kind} belongs to a later B3 batch`);
   }
@@ -175,7 +176,8 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     let current = task;
     const seq = nextSeq(), firstPacket = ctx.packets.length;
     if (payable) {
-      const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source);
+      emitMechanismSignal(ctx, { event: 'periodic', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: task.targetId, cast: null });
+      const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source, { board: ctx.board, tick: ctx.tick });
       const samples = new Map(targets.map(t => [t.id, effectSample(holder, t, ctx.tick)]));
       for (const target of targets) for (const [effectIndex, effect] of task.program.effects.entries()) {
         let value: number | undefined;
@@ -205,6 +207,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     unit.shieldLayers = unit.shieldLayers.map(layer => {
       const maintained = maintainShield(frozenShield(layer, unit), ctx.tick);
       const next = shieldProjection(maintained.layer, layer.key, layer.m8Grant, maintained.reason ?? layer.endedReason);
+      if (maintained.decayed > 0 && ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, shieldDecay: [...ctx.resolutionFacts.shieldDecay, { key: next.key, amount: maintained.decayed }] };
       if (maintained.decayed > 0) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: unit.id, layer: next, reason: 'decayed' });
       if (maintained.reason) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: unit.id, layer: next, reason: maintained.reason === 'expired' ? 'expired' : 'decayed', endReason: maintained.reason });
       return next;
@@ -223,7 +226,8 @@ export function executeShieldEnd(ctx: AbilityContext, holder: S13Unit, legacyKey
   const ended = endShield(state, reason, layer.m8Grant, holder.alive && holder.hp > 0);
   const next = shieldProjection(ended.layer, layer.key, layer.m8Grant, reason); holder.shieldLayers = holder.shieldLayers.map(l => l === layer ? next : l);
   if (!ended.emitEnd) return;
-  for (const target of endTargets(holder, ctx, layer.m8Grant.endTargeting)) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, holder,
+  emitMechanismSignal(ctx, { event: 'shield-ended', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: holder.id, cast: null }, ctx.resolutionFacts);
+  for (const target of endTargets(holder, ctx, layer.m8Grant.endTargeting, damageContext?.area)) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, holder,
     { ...state.source, effectIndex: state.source.effectIndex + index + 1 }, target, effect, seq, index, undefined, undefined, undefined, state.absorbed, damageContext);
 }
 export function settleShieldEnds(ctx: AbilityContext, nextSeq: () => number): void {
@@ -249,9 +253,11 @@ export function vampRates(unit: S13Unit, hp: number): VampRate[] {
 }
 export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['heals'][number]): void {
   const target = ctx.units.find(u => u.id === entry.targetId); if (!target || target.hp <= 0 || !target.alive) return;
+  const late = entry.lateAmount ? evaluateAmount(entry.lateAmount, { holder: hpSample(target), target: hpSample(target), attackDamage: ad(target), abilityPower: ap(target, ctx.tick) }) : entry.amount;
   const request = entry.request ?? makeHealRequest(JSON.stringify([ctx.combatId ?? 'standalone', ctx.tick, canonicalSource(asSource(entry.source)), entry.targetId, 'direct', ctx.heals.indexOf(entry)]), entry.targetId, 'direct', null,
-    [{ source: asSource(entry.source), numerator: entry.amount, denominator: 1 }]);
+    [{ source: asSource(entry.source), numerator: late, denominator: 1 }]);
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick)); target.hp += outcome.actual;
+  if (ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, healing: [...ctx.resolutionFacts.healing, outcome] };
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
   ctx.events.push({ type: 'heal', tick: ctx.tick, unitId: target.id, source: outcome.shares[0]?.source ?? entry.source, requested: outcome.requested, actual: outcome.actual, overheal: outcome.overheal, hp: target.hp, outcome });
 }

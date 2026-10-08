@@ -154,7 +154,7 @@ export function resolveEffects(baseStats: ResolvedUnitStats, baseAbility: Resolv
     ...baseStats,
     health: stat('maxHp', baseStats.health, 1), attack: stat('attackDamage', baseStats.attack),
     armor: stat('armor', baseStats.armor), magicResist: stat('magicResist', baseStats.magicResist),
-    initialMana: Math.min(integer(baseStats.maxMana, 1), add(integer(baseStats.initialMana), flat.initialMana)),
+    initialMana: Math.min(integer(baseStats.maxMana), add(integer(baseStats.initialMana), flat.initialMana)),
     attackIntervalTicks: baseStats.baseAttackSpeedBps === undefined
       ? Math.max(1, Math.ceil(multiply(integer(baseStats.attackIntervalTicks, 1), 10000) / add(10000, speed)))
       : attackInterval(baseStats.baseAttackSpeedBps, speed),

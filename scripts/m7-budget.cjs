@@ -2,9 +2,11 @@
  * M7 hard budgets (M7_PLAN §5) measured as a pair on the same machine:
  *  - production JS gzip  <= baseline × 1.10
  *  - first interactive   <= baseline median × 1.20 (navigation → public 以固定种子开始 enabled)
- * The baseline is a build of the signed-off M6 tree. Both dist folders are served from the
+ * The historical interaction baseline is the signed-off M6 tree. M8 CI supplies a separate
+ * --js-base signed-off M7 build, per M8_PLAN §7.6 (2026-10-08); thresholds stay unchanged.
+ * Both interaction dist folders are served from the
  * root by the same static server; samples alternate base/current to share machine noise.
- * Usage: node scripts/m7-budget.cjs --base=<base dist> --current=<current dist> [--samples=9]
+ * Usage: node scripts/m7-budget.cjs --base=<base dist> --current=<current dist> [--js-base=<JS base dist>] [--samples=9]
  */
 const fs = require('node:fs');
 const http = require('node:http');
@@ -14,6 +16,7 @@ const { chromium } = require('playwright');
 
 const arg = (name, fallback) => (process.argv.find(value => value.startsWith(`--${name}=`)) ?? `=${fallback}`).split('=').slice(1).join('=');
 const baseDir = path.resolve(arg('base', '')), currentDir = path.resolve(arg('current', 'dist')), samples = Number(arg('samples', '9'));
+const jsBaseDir = path.resolve(arg('js-base', baseDir));
 const out = arg('out', 'artifacts/m7-budget');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png' };
 
@@ -33,7 +36,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
 
 (async () => {
   if (!fs.existsSync(path.join(baseDir, 'index.html'))) throw new Error(`missing base build at ${baseDir}`);
-  const size = { base: jsGzip(baseDir), current: jsGzip(currentDir) };
+  const size = { base: jsGzip(jsBaseDir), current: jsGzip(currentDir) };
   const servers = { base: await serve(baseDir), current: await serve(currentDir) };
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const times = { base: [], current: [] };
@@ -48,6 +51,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
     }
   } finally { await browser.close(); for (const server of Object.values(servers)) server.close(); }
   const result = {
+    baselineDirectories: { js: jsBaseDir, interactive: baseDir },
     jsGzipBytes: size, jsRatio: size.current / size.base, jsBudget: 1.10,
     interactiveMs: { base: times.base, current: times.current, baseMedian: median(times.base), currentMedian: median(times.current) },
     interactiveRatio: median(times.current) / median(times.base), interactiveBudget: 1.20,
