@@ -17,7 +17,7 @@ export type Effect =
   | { readonly kind: 'trigger'; readonly hook: Hook; readonly everyN: number; readonly action: EffectAction };
 export interface TraitTier { readonly threshold: number; readonly effects: readonly Effect[]; readonly memberEffects?: readonly Effect[] }
 export interface TraitDefinition { readonly id: string; readonly name: string; readonly target: 'members' | 'team'; readonly tiers: readonly TraitTier[] }
-export interface ItemDefinition { readonly id: string; readonly name: string; readonly kind: 'component' | 'completed'; readonly effects: readonly Effect[]; readonly recipe?: readonly [string, string] }
+export interface ItemDefinition { readonly id: string; readonly name: string; readonly kind: 'component' | 'completed'; readonly effects: readonly Effect[]; readonly recipe?: readonly [string, string]; readonly apiName?: string; readonly unique?: boolean; readonly slotCost?: 1 | 3; readonly effectDescriptions?: readonly string[]; readonly evidenceStatus?: 'source-reviewed' | 'approved-provisional'; readonly conventionIds?: readonly string[]; readonly combatProgram?: import('./m8/item-program').ItemProgram }
 export interface ChoiceDefinition { readonly id: string; readonly name: string; readonly description: string; readonly effects: readonly Effect[] }
 export interface ItemInstance { readonly id: string; readonly definitionId: string; readonly location: { readonly kind: 'inventory' } | { readonly kind: 'unit'; readonly unitId: string; readonly slot: number } }
 export interface OwnedAugment { readonly definitionId: string; readonly choiceId: string; readonly acquiredRound: number }
@@ -37,7 +37,7 @@ export interface EffectSource { readonly sourceKind: SourceKind; readonly source
 export interface SourcedEffect { readonly key: string; readonly source: EffectSource; readonly effect: Effect }
 export interface ResolvedTrigger { readonly key: string; readonly source: EffectSource; readonly hook: Hook; readonly everyN: number; readonly action: EffectAction }
 export interface TraitSnapshot { readonly team: Team; readonly traitId: string; readonly count: number; readonly tier: number; readonly memberDefinitionIds: readonly string[]; readonly targetUnitIds: readonly string[] }
-export interface StrategyUnitSnapshot { readonly unitId: string; readonly stats: ResolvedUnitStats; readonly ability: ResolvedAbility; readonly sources: readonly SourcedEffect[]; readonly triggers: readonly ResolvedTrigger[]; readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number; readonly abilityPower?: number; readonly mechanics?: import('./combat-types').CombatMechanics }
+export interface StrategyUnitSnapshot { readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[]; readonly unitId: string; readonly stats: ResolvedUnitStats; readonly ability: ResolvedAbility; readonly sources: readonly SourcedEffect[]; readonly triggers: readonly ResolvedTrigger[]; readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number; readonly abilityPower?: number; readonly mechanics?: import('./combat-types').CombatMechanics }
 export interface StrategySnapshot { readonly traits: readonly TraitSnapshot[]; readonly units: readonly StrategyUnitSnapshot[] }
 export interface EffectRuntime { readonly key: string; readonly count: number }
 export interface EffectInvocation { readonly trigger: ResolvedTrigger; readonly targetId: string; readonly action: EffectAction }

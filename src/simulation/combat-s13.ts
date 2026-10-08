@@ -1,3 +1,4 @@
+import { startingRows } from './m8/targeting';
 import { planOpening, commitOpening, advanceOpeningTasks } from './m8/opening';
 import { targetUnit } from './m8/s13-targeting';
 import { damageTypeForTarget } from './m8/planning';
@@ -21,7 +22,7 @@ import { rollCrit } from './m8/crit';
 import { resolveStat, safeNumber } from './m8/stats';
 import type { Amount, DamageContext, DamageRequest, DamageOutcome, StatModifier } from './m8/contracts';
 
-import { initializeMechanisms, maintainMechanisms, maintainActivities, settleSurvival, settleShieldEnds, vampRates, commitMechanismHeal, cleanupMechanisms, clearPeriodicAccount } from './m8/s13-mechanisms';
+import { initializeMechanisms, maintainMechanisms, maintainActivities, settleSurvival, settleShieldEnds, vampRates, commitMechanismHeal, cleanupMechanisms, clearPeriodicAccount, refreshMechanismAuras } from './m8/s13-mechanisms';
 import { effectiveStatuses, isEffective, statusMagnitude } from './m8/status';
 import { recordShieldAbsorption } from './m8/shield';
 import { vampRequests } from './m8/heal';
@@ -47,7 +48,7 @@ function defenses(unit: S13Unit, physical: boolean, tick: number, units: readonl
     value: { kind: 'unit-count', perUnit: m.values.resistPerEnemy, population: 'alive-enemies-targeting-holder', sample: 'current', distinctBy: 'unitId' } });
   const shred = Math.max(statusMagnitude(unit.mechanismState?.statuses ?? [], physical ? 'sunder' : 'shred', tick), ...(physical ? active(unit, tick, 'armorReduction').filter(s => !s.contributionKeys).map(s => s.amount) : [0]));
   modifiers.push(constantModifier(stat, -shred, 'bps'));
-  return resolveStat(stat, physical ? unit.armor : unit.magicResist, modifiers, { holder: hpSample(unit),
+  return resolveStat(stat, physical ? unit.armor : unit.magicResist, modifiers, { holder: hpSample(unit), startingRows: startingRows(unit.team,unit.startingCell?.row ?? unit.cell.row) ?? undefined,
     enemiesTargetingHolder: units.filter(u => u.alive && u.team !== unit.team && u.targetId === unit.id).map(u => u.id) });
 }
 /** Authoritative read projection for renderers; it neither consumes RNG nor advances any counter. */
@@ -81,7 +82,7 @@ function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undef
   }
   const reduction = (bps: number): StatModifier => ({ ...constantModifier('damageReduction', bps, 'bps'),
     damageFilter: { deliveries: 'all', damageTypes: ['physical', 'magic'], redirected: 'exclude' } });
-  const reductions = [...active(target, tick, 'damageReduction').filter(s => !s.contributionKeys).map(s => reduction(s.amount)), ...(target.mechanismState?.statuses ?? []).filter(g => g.kind === 'damage-reduction').flatMap(g => g.contributions.filter(c => isEffective(c, tick)).map(c => ({ ...constantModifier('damageReduction', c.application.magnitudeBps, 'bps'), damageFilter: c.application.damageFilter! })))];
+  const reductions = [...statusModifiers(target, 'damageReduction', tick), ...active(target, tick, 'damageReduction').filter(s => !s.contributionKeys).map(s => reduction(s.amount)), ...(target.mechanismState?.statuses ?? []).filter(g => g.kind === 'damage-reduction').flatMap(g => g.contributions.filter(c => isEffective(c, tick)).map(c => ({ ...constantModifier('damageReduction', c.application.magnitudeBps, 'bps'), damageFilter: c.application.damageFilter! })))];
   for (const m of target.mechanics ?? []) if (m.mechanic === 'watcher') reductions.push(reduction(
     BigInt(target.hp) * 10000n > BigInt(target.maxHp) * BigInt(m.values.thresholdBps) ? m.values.healthyReductionBps : m.values.reductionBps));
   return { holder: hpSample(owner ?? target), target: { ...hpSample(target), hp }, attackDamage: owner ? ad(owner) : 0,
@@ -188,6 +189,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     reserved.add(key(destination)); events.push({ type: 'movement', tick, unitId: unit.id, from: unit.cell, to: destination });
     unit.cell = destination; unit.moveCooldownTicks = MOVE_INTERVAL_TICKS;
   });
+  refreshMechanismAuras(ctx);
   if (openingState) {
     const advanced = advanceOpeningTasks(openingState, tick, openingUnits()); openingState = advanced.state;
     for (const task of advanced.ready) {

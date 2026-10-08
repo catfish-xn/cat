@@ -1,7 +1,7 @@
 import type { CombatEvent, CombatState, CombatStep, CombatUnit } from './combat-types';
 import { compileMechanismDefinitions } from './m8/s13-definitions';
 import { EMPTY_MECHANISMS } from './m8/runtime-types';
-import { initializeMechanisms } from './m8/s13-mechanisms';
+import { initializeMechanisms, refreshMechanismAuras } from './m8/s13-mechanisms';
 import type { EffectInvocation } from './strategy-types';
 import { collectTriggers } from './effects';
 import { EMPTY_RUNTIME, grantShield, ensureMechanisms, type S13Unit } from './combat-s13-state';
@@ -60,6 +60,7 @@ export function applyCombatStart(state: CombatState): CombatStep {
   if (mechanismUnits.length) {
     initializeMechanisms({ tick: 1, combatId: state.combatId, board: state.board, units: mechanismUnits, events: shields, packets: [], heals: [], draw: () => { throw new Error('Combat start mechanisms cannot draw RNG'); } });
     for (const unit of mechanismUnits) unit.mechanismState = { ...unit.mechanismState!, sampledAtTick: 0 };
+    refreshMechanismAuras({tick:0,combatId:state.combatId,board:state.board,units:mechanismUnits,events:shields,packets:[],heals:[],draw:()=>{throw new Error('Auras cannot draw RNG');}});
   }
   return stampCombatStep({ ...state, units, startEffectsApplied: true }, [...effects, ...shields, ...mana]);
 }

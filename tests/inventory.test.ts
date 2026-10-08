@@ -22,11 +22,14 @@ const preparation: GameState = freeze({
   units: [unit('board-unit', 'player', true), unit('bench-unit', 'player', false), unit('enemy-unit', 'enemy', true)],
 });
 
-// Independent transcription of M5_RULES R5; production recipes are only the actual under test.
+// Independent transcription of signed B1 / M8_PLAN appendix A; production recipes are only the actual under test.
 const recipes = [
-  ['bow', 'rod', 'rageblade'], ['sword', 'sword', 'deathblade'], ['sword', 'tear', 'shojin'],
-  ['rod', 'tear', 'archangel'], ['rod', 'rod', 'deathcap'], ['belt', 'belt', 'warmog'],
-  ['cloak', 'cloak', 'dragons-claw'], ['vest', 'cloak', 'gargoyle'], ['sword', 'rod', 'gunblade'],
+ ['sword','sword','deathblade'],['sword','bow','giant-slayer'],['sword','rod','gunblade'],['sword','tear','shojin'],['sword','vest','edge-of-night'],['sword','cloak','bloodthirster'],['sword','belt','steraks-gage'],['sword','gloves','infinity-edge'],
+ ['bow','bow','red-buff'],['bow','rod','rageblade'],['bow','tear','statikk-shiv'],['bow','vest','titans-resolve'],['bow','cloak','runaans-hurricane'],['bow','belt','nashors-tooth'],['bow','gloves','last-whisper'],
+ ['rod','rod','deathcap'],['rod','tear','archangel'],['rod','vest','crownguard'],['rod','cloak','ionic-spark'],['rod','belt','morellonomicon'],['rod','gloves','jeweled-gauntlet'],
+ ['tear','tear','blue-buff'],['tear','vest','protectors-vow'],['tear','cloak','adaptive-helm'],['tear','belt','redemption'],['tear','gloves','hand-of-justice'],
+ ['vest','vest','bramble-vest'],['vest','cloak','gargoyle'],['vest','belt','sunfire-cape'],['vest','gloves','steadfast-heart'],
+ ['cloak','cloak','dragons-claw'],['cloak','belt','evenshroud'],['cloak','gloves','quicksilver'],['belt','belt','warmog'],['belt','gloves','guardbreaker'],['gloves','gloves','thiefs-gloves'],
 ] as const;
 
 describe('atomic inventory composition', () => {
@@ -48,25 +51,23 @@ describe('atomic inventory composition', () => {
   it('accounts for every authored unordered recipe exactly once', () => {
     const authored = Object.values(ITEM_DEFINITIONS).filter(definition => definition.kind === 'completed');
     expect(authored.map(definition => definition.id).sort()).toEqual(recipes.map(([, , id]) => id).sort());
-    expect(new Set(recipes.map(([a, b]) => [a, b].sort().join('+'))).size).toBe(9);
+    expect(new Set(recipes.map(([a, b]) => [a, b].sort().join('+'))).size).toBe(36);
     expect(Object.values(ITEM_DEFINITIONS).filter(definition => definition.kind === 'component').map(value => value.id).sort())
-      .toEqual(['belt', 'bow', 'cloak', 'rod', 'sword', 'tear', 'vest']);
+      .toEqual(['belt', 'bow', 'cloak', 'gloves', 'rod', 'sword', 'tear', 'vest']);
   });
 
-  it('rejects all nineteen unopened component pairs in both orders without changing resources', () => {
-    const components = ['sword', 'bow', 'rod', 'tear', 'vest', 'cloak', 'belt'];
-    const openPairs = new Set(recipes.map(([a, b]) => [a, b].sort().join('+')));
-    let unopened = 0;
-    for (let i = 0; i < components.length; i++) for (let j = i; j < components.length; j++) {
-      const a = components[i], b = components[j];
-      if (openPairs.has([a, b].sort().join('+'))) continue;
-      unopened++;
-      const items = freeze([item('item-1', a), item('item-2', b)]), before = JSON.stringify(items);
-      expect(planCombine(items, 3, 'item-1', 'item-2')).toEqual({ ok: false, reason: 'invalid-recipe' });
-      expect(planCombine(items, 3, 'item-2', 'item-1')).toEqual({ ok: false, reason: 'invalid-recipe' });
+  it('every one of the 36 component pairs is now open;completed materials remain invalid and unchanged', () => {
+    for (const [a,b] of recipes) {
+      const items=freeze([item('item-1',a),item('item-2',b)]),before=JSON.stringify(items);
+      expect(planCombine(items,3,'item-1','item-2').ok).toBe(true);
+      expect(planCombine(items,3,'item-2','item-1').ok).toBe(true);
       expect(JSON.stringify(items)).toBe(before);
     }
-    expect(unopened).toBe(19);
+    for (const completed of recipes.map(x=>x[2])) {
+      const items=freeze([item('item-1',completed),item('item-2','gloves')]),before=JSON.stringify(items);
+      expect(planCombine(items,3,'item-1','item-2')).toEqual({ok:false,reason:'invalid-recipe'});
+      expect(JSON.stringify(items)).toBe(before);
+    }
   });
 
   it('rejects same instance, unknown/stale instances, equipped components and completed materials atomically', () => {

@@ -1,3 +1,4 @@
+import { COMPONENT_POOL, COMPONENT_POOL_VERSION } from '../component-pool';
 import { S13_COMBAT_RULES } from '../s13-rules';
 import { ABILITY_DEFINITIONS } from '../combat-abilities';
 import { M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS } from '../units';
@@ -40,5 +41,6 @@ export const CONTENT_DIGEST = digestContent({
   enemyTemplates: ENEMY_TEMPLATES, enemyPositions: ENEMY_POSITIONS, enemyGrowth: ENEMY_GROWTH,
   opponents: Array.from({length:35},(_,index)=>({round:index+1,units:createRoundEnemies(index+1),items:getRoundEnemyItems(index+1)})),
   economy: { rules: MATCH_RULES, stages: STAGE_PLAYER_DAMAGE, income: ECONOMY_RULES, experience: XP_TO_NEXT_LEVEL },
+  componentPool: {version:COMPONENT_POOL_VERSION,entries:COMPONENT_POOL},
   reference: SOURCE_MANIFEST, combatRules: S13_COMBAT_RULES,
 });

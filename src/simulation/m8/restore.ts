@@ -1,9 +1,11 @@
+import { isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
+import { canonicalSource } from './identity';
 /** Development saves may only contain programs produced by the enabled content compiler. */
 import type { CombatUnit } from '../combat-types';
 import { canonicalContent } from '../content';
 import { getUnitStats } from '../unit-stats';
 import { sourceKey } from '../combat-s13-state';
-import { asSource, compileMechanismDefinitions } from './s13-definitions';
+import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from './s13-definitions';
 import { validateIdentity } from './identity';
 import { validateStatusGroups } from './status';
 import { validatePeriodicTask } from './periodic';
@@ -17,12 +19,12 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   const compiled = compileMechanismDefinitions(unit, combatId);
   check(same(definitions, compiled), 'uncompiled mechanism definitions');
   check(Array.isArray(state.statuses) && Array.isArray(state.periodicTasks) && Array.isArray(state.runtimes) && Array.isArray(state.activities), 'mechanism arrays');
-  check(state.runtimes.length === 0, 'uncompiled survival trigger runtimes');
+  validateItemRuntime(unit,combatId,tick,compiled);
   const basis = unit.maxHpBasis;
   const expectedBasis = { base: getUnitStats(unit.definitionId, unit.starLevel).health,
     flat: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
     bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 };
-  check(same(basis, expectedBasis), 'resolved maximum health basis');
+  check(same({...basis,bonusBps:0}, expectedBasis), 'resolved maximum health basis');
   validateStatusGroups(state.statuses, tick, combatId);
   const contributions = state.statuses.flatMap(g => g.contributions), covered = new Set<string>();
   for (const legacy of unit.statuses ?? []) {
@@ -30,6 +32,15 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(Array.isArray(legacy.contributionKeys) && legacy.contributionKeys.length > 0, 'missing status contribution projection');
     for (const key of legacy.contributionKeys) {
       const c = contributions.find(c => c.key === key);
+      if(c && c.source.sourceKind==='item' && isDeclaredStatus(c.source,c.application,units,combatId)) {
+        check(!covered.has(key) && c.targetId===unit.id && same(c.source,asSource(legacy.source)) && legacy.key===c.key && c.appliedAtTick===legacy.startsAtTick && (c.expiresAtTick ?? 1201)===legacy.expiresAtTick, 'item status source/timing projection');
+        const app=c.application;
+        const kind=app.kind==='stun'?'stun':app.kind==='sunder'?'armorReduction':'resistanceFlat';
+        const amount=app.modifier?.value.kind==='constant'?app.modifier.value.amount:app.magnitudeBps;
+        check(legacy.kind===kind && legacy.amount===amount && legacy.contributionKeys.length===1 && legacy.activity===undefined, 'item status semantic projection');
+        validateItemEffectConsumption(c.source,c.appliedAtTick,units,combatId);
+        covered.add(key);continue;
+      }
       check(c && !covered.has(key) && c.targetId === unit.id && c.source.ownerId === legacy.source.ownerId
         && c.source.sourceKind === legacy.source.sourceKind && c.source.definitionId === legacy.source.definitionId
         && c.source.instanceId === legacy.source.instanceId && c.source.parentItemInstanceId === null
@@ -53,13 +64,20 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   const ids = new Set(units.map(u => u.id)), dead = new Set(units.filter(u => !u.alive).map(u => u.id)), taskKeys = new Set<string>();
   for (const task of state.periodicTasks) {
     validatePeriodicTask(task, ids, dead, tick, combatId);
+    const burn=contributions.find(c=>c.key===task.key&&c.application.kind==='burn');
+    if(burn) {
+      const program={definitionId:JSON.stringify([burn.source.definitionId,burn.source.effectIndex,'burn']),selector:selfSelector({candidates:'bound-target',relation:'enemy',maxTargets:1}),targetSnapshot:'once-per-pulse',effects:[{kind:'damage',damageType:'true',delivery:'item-burn',critEligibility:'never',amount:flatAmount(0,{maxHpBps:burn.application.magnitudeBps,hpBasis:'target',sample:'each-pulse'})}]};
+      check(!taskKeys.has(task.key)&&task.targetId===unit.id&&same(task.source,burn.source)&&task.periodTicks===20&&task.endsAtTick===burn.expiresAtTick&&task.finalPulse==='before-expiry'&&task.onSourceDeath==='persist-attached'&&task.onTargetDeath==='cancel'&&task.pulseLimit===null&&same(task.program,program)&&task.nextPulseAtTick===state.statuses.find(g=>g.contributions.some((c: import('./contracts').StatusContribution)=>c.key===burn.key))!.nextPulseAtTick,'item burn program');
+      taskKeys.add(task.key);continue;
+    }
     const definition = compiled.periodicTasks.find(t => t.key === task.key);
     check(definition && !taskKeys.has(task.key) && same({ ...task, nextPulseAtTick: definition.nextPulseAtTick, pulseOrdinal: 0, remainders: [] }, definition), 'periodic program/source binding');
-    check(task.pulseOrdinal === Math.floor(tick / task.periodTicks) && task.nextPulseAtTick === (task.pulseOrdinal + 1) * task.periodTicks, 'periodic phase');
-    for (const r of task.remainders) check(r.targetId === unit.id && r.denominator === 10000 && r.numerator > 0, 'compiled periodic account');
+    check(task.pulseOrdinal === Math.max(0,Math.floor((tick-definition!.nextPulseAtTick)/task.periodTicks)+1) && task.nextPulseAtTick === definition!.nextPulseAtTick+task.pulseOrdinal*task.periodTicks, 'periodic phase');
+    for (const r of task.remainders) check(ids.has(r.targetId) && r.denominator > 0 && r.numerator > 0, 'compiled periodic account');
     taskKeys.add(task.key);
   }
-  check(state.periodicTasks.length === (!unit.alive || finished ? 0 : compiled.periodicTasks.length), 'lost periodic tasks');
+  check(state.periodicTasks.filter(t=>t.onSourceDeath==='cancel').length === (!unit.alive || finished ? 0 : compiled.periodicTasks.filter(t=>t.endsAtTick===null||t.endsAtTick>tick).length), 'lost periodic tasks');
+  check(contributions.filter(c=>c.application.kind==='burn').every(c=>taskKeys.has(c.key)), 'lost attached burn task');
   for (const layer of unit.shieldLayers ?? []) {
     check(layer.m8State && layer.m8Grant, 'missing frozen shield record/declaration');
     const shield = layer.m8State, grant = layer.m8Grant;
@@ -67,6 +85,13 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(shield.targetId === unit.id && same(shield.source, asSource(layer.source)) && layer.key === sourceKey(layer.source)
       && shield.granted === layer.granted && shield.remaining === layer.remaining && shield.absorbed === layer.absorbed
       && shield.expiresAtTick === layer.expiresAtTick && typeof shield.endRewardConsumed === 'boolean', 'shield projection');
+    const declared=shield.source.sourceKind==='item'?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
+    if(declared) {
+      validateItemEffectConsumption(shield.source,shield.startsAtTick,units,combatId);
+      check(shield.decay.kind===grant.decay.kind && [...maxHpCandidates(unit,shield.startsAtTick,combatId)].some(hp=>shield.granted===Math.floor(hp*grant.amount.maxHpBps/10000)), 'item shield sampled amount');
+      check(shield.remaining>0&&layer.endedReason===undefined&&!shield.endRewardConsumed&&!units.some(u=>u.tasks?.some(t=>t.shieldEndKey===layer.key)), 'item shield active lifecycle');
+      continue;
+    }
     check(grant.kind === 'grant-shield' && grant.durationTicks > 0 && grant.amount.sample === 'application'
       && grant.amount.flat >= 0 && grant.amount.attackDamageBps === 0 && grant.amount.abilityPowerBps === 0 && grant.amount.maxHpBps === 0
       && grant.amount.missingHpBps === 0 && grant.amount.actualManaSpentBps === 0 && grant.amount.actualDamageBps === 0
@@ -83,7 +108,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
         && end.amount.attackDamageBps === 0 && end.amount.abilityPowerBps === 0 && end.amount.maxHpBps === 0 && end.amount.missingHpBps === 0
         && end.amount.actualManaSpentBps === 0 && end.amount.actualDamageBps === 0 && end.amount.cap === null && end.amount.hpBasis === 'holder', 'shield end amount binding');
       const apAtGrant = (owner.abilityPower ?? 100) + (owner.mechanics ?? []).filter(m => m.mechanic === 'archangel').reduce((n, m) => n + Math.floor(shield.startsAtTick / m.values.periodTicks) * m.values.abilityPower, 0);
-      check(end.amount.flat === Math.floor(apAtGrant * owner.ability.variables.StrikeBaseDamage / 1000000), 'shield end sampled damage');
+      check(end.amount.flat === Math.floor(apAtGrant * owner.ability.variables.StrikeBaseDamage / 1000000) || [...abilityPowerCandidates(owner,shield.startsAtTick,combatId)].some(ap=>end.amount.flat===Math.floor(ap*(owner.ability.kind==='s13'?owner.ability.variables.StrikeBaseDamage:0)/1000000)), 'shield end sampled damage');
       check(grant.endTargeting.kind === 'select' && same(grant.endTargeting.selector, { primary: 'normal', candidates: 'board', relation: 'enemy', anchor: 'holder', radius: 1, maxTargets: 100, excludeSelf: true, excludePrimary: false, distinct: true, order: 'id', sample: 'action-completion' }), 'shield end targeting binding');
     } else check(grant.endTiming === 'post-damage' && grant.decay.kind === 'none' && grant.onEnd.length === 0 && grant.endEffects.length === 0
       && same(grant.endTargeting, { kind: 'fixed', targetIds: [unit.id], ifMissing: 'skip' }), 'ordinary shield end binding');
