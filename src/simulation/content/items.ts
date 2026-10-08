@@ -1,8 +1,9 @@
 import type { ItemDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 import { COMPONENTS_ITEMS } from './items-components';
+import { SWORD_ITEMS } from './items-sword';
 export const ITEM_DEFINITIONS: Readonly<Record<string,ItemDefinition>> = freezeContent({
-  ...Object.fromEntries([COMPONENTS_ITEMS].flat().map(item=>[item.id,item])),
+  ...Object.fromEntries([COMPONENTS_ITEMS,SWORD_ITEMS].flat().map(item=>[item.id,item])),
   ...{
   "rageblade": {
     "id": "rageblade",
