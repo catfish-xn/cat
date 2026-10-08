@@ -1,0 +1,22 @@
+
+> hex-autobattler@0.1.0 build
+> npm run typecheck && vite build
+
+
+> hex-autobattler@0.1.0 typecheck
+> tsc --noEmit
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 119 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     0.40 kB │ gzip:   0.31 kB
+dist/assets/index-sYdxdVpK.css     13.32 kB │ gzip:   3.40 kB
+dist/assets/index-Bz7j2LlX.js   1,645.91 kB │ gzip: 472.10 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.07s

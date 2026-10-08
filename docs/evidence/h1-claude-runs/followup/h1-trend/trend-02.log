@@ -1,0 +1,11 @@
+AssertionError [ERR_ASSERTION]: each follow-up 30-cycle window retains the historical 1MiB ceiling
+    at verifyApplicationLifecycle (/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:50:5)
+    at async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:106:151 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+{"passed":false,"mode":"preview","build":"cannon","touch":false,"durationSeconds":654.716}

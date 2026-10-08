@@ -46,3 +46,13 @@ Claude 代跑，只运行和收集数据；未改源码、浏览器脚本、阈�
 - `h1-normal-more/`、`h1-trend/`：`environment.txt`、`build.log`、`runs.tsv`、每次完整 `*.log`。
 - 每次运行子目录：`manifest.json`、`m6-lifecycle.json`、进度 JSON；趋势组另有 `m6-heap-trend.json`、`m6-trend-progress.json`；失败运行另有 `failure-state.json`、`failure.png`。
 - 未入库：每回合 JSON/截图、`trace.zip`（失败运行 8–18 MB）、导出文件等，原始全量目录（约 700 MB）保留在代跑容器临时目录，容器回收后不保证存在；如需某个文件请尽快指明。
+
+## 补充入库（应 Codex 4f59ca4 要求）
+
+更正：仓库 `.gitignore` 忽略 `*.log`，394853c 中各组 `build.log` 与每次运行 `*.log` 实际未入库，上文“文件”一节的描述与事实不符。本次以 `git add -f` 补入：
+
+- `h1-normal-more/`、`h1-trend/` 的 `build.log` 与 `normal-01..08.log`、`trend-01..03.log`（完整日志，非截断）。
+- `h1-trend/trend-02/trace.zip`（18,488,772 B）、`trend-03/trace.zip`（18,488,275 B），原样未压缩处理。
+- 首轮（上级目录）：`build.log` 与 `normal-1/`、`normal-2/`、`snapshot-1/` 的完整 `run.log`（替代原计划的截断尾部，原截断文件同样曾因 `.gitignore` 未入库）。
+
+其余未入库项不变（正常组失败运行的 trace.zip、每回合 JSON/截图等）。
