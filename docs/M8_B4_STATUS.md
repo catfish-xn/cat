@@ -116,7 +116,7 @@ U4 增加 3,912 B（约 3.82 KiB），已经超限 2,175 B（约 2.12 KiB）；�
 
 基线精确 SHA `5dce5cd07f3f400be42981742dcb2dc3ceff2009`，当前运行代码精确 SHA `65252f332c1f1f15523cfd01b497c425089997bd`。同机 Node 24.21.0、Chromium 153.0.8010.12、相同 lockfile；顺序为 B3-1→B4-1→B3-2→B4-2→B3-3→B4-3，每份新建浏览器并串行执行。本次六份是新测量，之前 1,666,760 B（约 1.59 MiB）的 B4 样本和快照诊断另保留，未混入这三次比较。
 
-两版脚本 SHA256 相同：`6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25`。调用原 `scripts/verify-m5-browser.cjs --preview --build=cannon --m6-f2`：2 次预热、30 次新局→导入→回放返回、原 GC 和原 1,048,576 B 门禁，无堆快照／额外预热。测量期间本任务不并发运行构建或其他浏览器。六份子脚本均完整结束，2 份堆断言失败退出1、4份通过退出0，全部保留。全部测量工作区干净、源码指纹前后相等；原脚本 runnerHash、硬件、loadAtStart、before/afterHeap、逐循环应用实例与资源数量见入库 JSON。
+两版脚本的 JSON 编码字符串 `runnerHash` 相同：`6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25`。原始脚本字节 SHA256 为 `1a5e52defeb2c30fc9e524a1edf958a0f3a9de56b515ed7f738a2bf867356c05`。调用原 `scripts/verify-m5-browser.cjs --preview --build=cannon --m6-f2`：2 次预热、30 次新局→导入→回放返回、原 GC 和原 1,048,576 B 门禁，无堆快照／额外预热。测量期间本任务不并发运行构建或其他浏览器。六份子脚本均完整结束，2 份堆断言失败退出1、4份通过退出0，全部保留。全部测量工作区干净、源码指纹前后相等；原脚本 runnerHash、硬件、loadAtStart、before/afterHeap、逐循环应用实例与资源数量见入库 JSON。
 
 | 次数 | B3 增长 B | B3 门禁 | B4 增长 B | B4 门禁 | B4−B3 B |
 | --- | ---: | --- | ---: | --- | ---: |
@@ -135,3 +135,7 @@ U4 增加 3,912 B（约 3.82 KiB），已经超限 2,175 B（约 2.12 KiB）；�
 该补充只提交文档和证据，CI #91仍绑定运行代码65252f3，不把旧CI冒称为证据提交新SHA的完整CI。
 
 入库证据：[`docs/evidence/M8_B4_CI_EVIDENCE.json`](evidence/M8_B4_CI_EVIDENCE.json)。包含原CI、首轮日志身份、六份完整测量数据、三组固定存档对照、原快照诊断及最新U4构建资产哈希。
+
+## R1～R5、H2 审计修复追加
+
+上述65252f3/39ca01c记录保留为原交付证据。运行修复提交6e0d902的处理表、B3影响、反例复现、93文件1165项验证及固定U4重新测量，见[审计修复报告](M8_B4_AUDIT_FIXES.md)和[本轮本地证据](evidence/M8_B4_AUDIT_LOCAL_EVIDENCE.json)。B4单独gzip465933B，余1306B；加固定U4 5778cab后469878B，超2639B。H1仅登记；冻结合同、G12、包体优化和门禁均未改。完整CI必须绑定最终追加提交SHA，以本次签收汇报的运行链接为准，不复用原CI #91。
