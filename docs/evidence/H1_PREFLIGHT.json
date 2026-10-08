@@ -1,0 +1,48 @@
+{
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "checkedAtUtc": "2026-10-08T12:41:01Z",
+  "browser": "Chromium 154.0.8037.57 Debian 13",
+  "node": "v24.19.0",
+  "executable": "/usr/bin/chromium",
+  "requestedViewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "launchOptions": {
+    "headless": true,
+    "args": [
+      "--no-sandbox",
+      "--enable-unsafe-swiftshader"
+    ]
+  },
+  "attempts": [
+    {
+      "number": 1,
+      "result": "launch-failed",
+      "exitSignal": "SIGABRT",
+      "errors": [
+        "crashpad mkdir: No such file or directory",
+        "chrome_crashpad_handler: --database is required",
+        "FATAL chrome/browser/process_singleton_posix.cc:297: socket() failed: Operation not permitted (1)"
+      ]
+    },
+    {
+      "number": 2,
+      "result": "launch-failed",
+      "exitSignal": "SIGABRT",
+      "adjustment": "tool-reviewed retry with writable temporary HOME/XDG_CONFIG_HOME/XDG_CACHE_HOME; no system settings changed",
+      "errors": [
+        "FATAL chrome/browser/process_singleton_posix.cc:297: socket() failed: Operation not permitted (1)",
+        "scoped_ptrace_attach.cc:27: ptrace: Operation not permitted (1)"
+      ]
+    }
+  ],
+  "existingHeapScriptRan": false,
+  "diagnosticSamplesCollected": 0,
+  "currentCiDiagnosticCoverage": false,
+  "legacyWorkflowPinnedRefs": [
+    "631c131f1f2fd387c873f0fd8b5a238bca79dbe0",
+    "111e9f8305ab4a7da8e67bd7f96a2318cabe5df0"
+  ],
+  "status": "blocked-awaiting-user-decision"
+}
