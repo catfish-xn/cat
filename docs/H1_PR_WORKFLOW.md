@@ -17,9 +17,9 @@
 
 ## 固定采样配置
 
-本次job env明确记录：source97f38a0e787a4edcb35df4a59823bb1d106def67、preview、normal、3次。变更目标或组别时只在此临时YAML中追加提交，接受review后再贴标签；每批请求、workflow merge SHA、PR head定义SHA与实际source SHA分别入artifact。
+首批c136ab3固定为source97f38a0e787a4edcb35df4a59823bb1d106def67、preview、normal、3次；当前后续配置为同source、preview、extended、1次、6窗口，需当前批次结束核对后再次贴标签才运行。变更目标或组别时只在此临时YAML中追加提交，接受review后再贴标签；每批请求、workflow merge SHA、PR head定义SHA与实际source SHA分别入artifact。
 
-可用组别与原脚本一致：normal=2次预热/30周期无快照；snapshot=同参数带快照扰动组；warmup-trend=已有12预热/3×30周期对照组。mode支持preview/dev，样本数1–5。组别不能混算。本版尚不包含原2预热连续多窗和B4重触发专项负载。
+可用组别与原脚本一致：normal=2次预热/30周期无快照；snapshot=同参数带快照扰动组；warmup-trend=已有12预热/3×30周期对照组。mode支持preview/dev，样本数1–5。组别不能混算。新增extended/extended-snapshot组提供原2预热连续多窗独立副本，详见H1_EXTENDED_WINDOWS.md；B4重触发专项负载仍未实现。
 
 ## 保持不变的边界
 

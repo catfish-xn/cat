@@ -1,5 +1,5 @@
 {
-  "yamlSha256": "28aa0847d4578c4b39274aff8701336c711cbd89022878c50f784dbde786cb90",
+  "yamlSha256": "a226fe4a231d585cef2fa91ce807ce378f428a73441a921ba452f9772de700a0",
   "checks": {
     "only_pull_request_labeled": true,
     "head_branch_guard": true,
@@ -7,13 +7,13 @@
     "exact_label_guard": true,
     "read_only": true,
     "source97": true,
-    "manual_workflow_removed": true,
+    "harness_pinned_to_pr_head": true,
     "upload_always": true,
     "bash_0": true,
-    "bash_3": true,
     "bash_4": true,
     "bash_5": true,
-    "bash_6": true
+    "bash_6": true,
+    "bash_7": true
   },
-  "limitations": "Static only; actual PR label trigger and Chromium153 must be verified from GitHub run/artifact."
+  "limitations": "Static only; extended probe has only prepare-only/offline module resolution validation locally. No browser run claimed."
 }
