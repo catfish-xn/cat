@@ -1,0 +1,294 @@
+{
+  "merge": {
+    "pr": 16,
+    "url": "https://github.com/catfish-xn/cat/pull/16",
+    "base": "feat/m8-b0-baseline",
+    "method": "merge",
+    "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+    "parents": [
+      "e896cc0aafa8e4c8a77620c2a33a287f40bab378",
+      "d20a3d3027ca952ab99ba27c4433fb5d0a0312fc"
+    ],
+    "auditHead": "e3af61b55deac960c2d44085f4440b87342e6f11",
+    "documentationOnlyAcceptanceCommit": "114951c22c0b332d4d68623dca475ee1552ed722"
+  },
+  "ci": {
+    "id": 37898349556,
+    "run_number": 129,
+    "run_attempt": 1,
+    "head_sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+    "head_branch": "feat/m8-b0-baseline",
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556",
+    "created_at": "2026-10-09T07:19:23Z",
+    "updated_at": "2026-10-09T07:48:25Z"
+  },
+  "jobs": [
+    {
+      "id": 113714832917,
+      "name": "m6-retention",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:28Z",
+      "completed_at": "2026-10-09T07:26:28Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714832917"
+    },
+    {
+      "id": 113714832940,
+      "name": "test-and-build-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:28Z",
+      "completed_at": "2026-10-09T07:33:45Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714832940"
+    },
+    {
+      "id": 113714832999,
+      "name": "input-preview-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:27Z",
+      "completed_at": "2026-10-09T07:35:51Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714832999"
+    },
+    {
+      "id": 113714833019,
+      "name": "m7-presentation-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:29Z",
+      "completed_at": "2026-10-09T07:27:14Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833019"
+    },
+    {
+      "id": 113714833034,
+      "name": "browser-dev-cannon-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:28Z",
+      "completed_at": "2026-10-09T07:35:53Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833034"
+    },
+    {
+      "id": 113714833070,
+      "name": "browser-preview-mage-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:29Z",
+      "completed_at": "2026-10-09T07:34:33Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833070"
+    },
+    {
+      "id": 113714833129,
+      "name": "browser-dev-sniper-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:28Z",
+      "completed_at": "2026-10-09T07:34:29Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833129"
+    },
+    {
+      "id": 113714833144,
+      "name": "browser-preview-cannon-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:29Z",
+      "completed_at": "2026-10-09T07:35:36Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833144"
+    },
+    {
+      "id": 113714833155,
+      "name": "input-dev-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:25:16Z",
+      "completed_at": "2026-10-09T07:47:09Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833155"
+    },
+    {
+      "id": 113714833200,
+      "name": "browser-preview-sniper-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:19:28Z",
+      "completed_at": "2026-10-09T07:35:33Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833200"
+    },
+    {
+      "id": 113714833358,
+      "name": "browser-dev-mage-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:25:54Z",
+      "completed_at": "2026-10-09T07:40:49Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833358"
+    },
+    {
+      "id": 113714833977,
+      "name": "heap-diagnostics",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-10-09T07:19:25Z",
+      "completed_at": "2026-10-09T07:19:25Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714833977"
+    },
+    {
+      "id": 113714834207,
+      "name": "warmup-experiment",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-10-09T07:19:26Z",
+      "completed_at": "2026-10-09T07:19:25Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113714834207"
+    },
+    {
+      "id": 113723333837,
+      "name": "compare-evidence-sample1",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-09T07:48:08Z",
+      "completed_at": "2026-10-09T07:48:24Z",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37898349556/job/113723333837"
+    }
+  ],
+  "requiredPassed": 12,
+  "optionalSkipped": 2,
+  "actualReruns": 0,
+  "previewNormalHeap": {
+    "heapDiagnostics": false,
+    "warmupExperiment": false,
+    "warmupCycles": 2,
+    "cycles": 30,
+    "heapCeilingBytes": 1048576,
+    "heapDelta": -27340,
+    "beforeResources": {
+      "listeners": 84,
+      "pendingRaf": 1
+    },
+    "afterResources": {
+      "listeners": 84,
+      "pendingRaf": 1
+    }
+  },
+  "m5FinalComparison": [
+    {
+      "build": "cannon",
+      "evidenceClass": "final-clean-commit",
+      "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+      "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+      "checkpoints": 182,
+      "rounds": 30,
+      "finalHash": "a7b2c48bb9c8dee310602ff0c8c1c063f52b27a274714db10a3440c4ce45d34c",
+      "passed": true
+    },
+    {
+      "build": "sniper",
+      "evidenceClass": "final-clean-commit",
+      "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+      "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+      "checkpoints": 178,
+      "rounds": 30,
+      "finalHash": "44986b4e1e447dca5928dfc3fb27c5ff19d8b8c6353119f616ec4dad76948394",
+      "passed": true
+    },
+    {
+      "build": "mage",
+      "evidenceClass": "final-clean-commit",
+      "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+      "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+      "checkpoints": 172,
+      "rounds": 30,
+      "finalHash": "a91abab0f89e4fae83cbff0ec02d8e483dc34aa1cbc8893241be2e83cdd0cea3",
+      "passed": true
+    }
+  ],
+  "m6FinalComparison": {
+    "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+    "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+    "records": [
+      {
+        "folder": "m5-dev-cannon",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "a0ceee5dcd47d8b489f429798a8c0a4d4abeac2dc04b405660a1796e6ed289df",
+        "passed": true
+      },
+      {
+        "folder": "m5-input-dev",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "d81755355dbef7bafecd6d27c32f4c659d345d1b78da82cd6207d1d346db6f4c",
+        "passed": true
+      },
+      {
+        "folder": "m6-layout-dev",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "3c8dfcd8194f3fa3c5c883ac6946822c95ffcbdc9eb19dbfd42477ba348721aa",
+        "passed": true
+      },
+      {
+        "folder": "m5-preview-cannon",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "14dcf8e55db294f90d3c94429716aaf056ba61ad88d65e94bbfe64fdf04836f9",
+        "passed": true
+      },
+      {
+        "folder": "m5-input-preview",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "0ac80211b428f58a21ebb0da9b20975680741167d88c1a90b1f63b554d7d225e",
+        "passed": true
+      },
+      {
+        "folder": "m6-layout-preview",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "1bb1b50d6889f8d774393acf30176c6edd99d528261e97e49801f41aae02f032",
+        "passed": true
+      },
+      {
+        "folder": "m6-storage",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "810866be2628b3938fd0e9deaf68d3046990d549ebb0ca4351e17718dd77c134",
+        "passed": true
+      },
+      {
+        "folder": "m6-application-failures",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "53609b7b9bee23bb557fff233527f9fee2fd1c8e3b9639ba7736c36b89f583d0",
+        "passed": true
+      },
+      {
+        "folder": "m6-performance",
+        "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+        "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+        "manifestHash": "7e82e8130ba8e5e38fd8c17ed76d29e85444e38e5341229efbc7dd42b6fc686f",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  "finalValidation": {
+    "sha": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+    "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+    "dirty": "",
+    "runId": "37898349556",
+    "commandCount": 46,
+    "allCommandExitCodesZero": true,
+    "allCommandsAttempt1": true
+  },
+  "comparisonArtifactHashes": {
+    "m5-cross-mode-comparison.json": "cc4bae989b35e91999bc943fe2c43e089b81a5d0b4886c28e8dc58a16cbb9317",
+    "m6-final-comparison.json": "291633c329377d2305bd542b17c5a04f4ab549483059624f1f36d67e6937ca8a",
+    "m6-validation.json": "139bd846b18813944c3150ef87f23e53e0321e09202bea5eb27b57fd85acf4ae",
+    "M6_VALIDATION.md": "a20a9b4c94d57c06c5f50fd37c7683ca2fd45a60078955613f80d6d3891e4803",
+    "M6_REVIEW.md": "51f3a979aef0f03383e216b1c02720ab24bf2655d69b2d47691825836de3f28d"
+  },
+  "scopeNote": "Post-merge results are documented on feat/m8-b5 only; no second merge or baseline changes. Prior performance fluctuations remain a non-blocking follow-up; prior failures are not rewritten."
+}

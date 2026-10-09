@@ -6,7 +6,7 @@
 
 ## 当前交接摘要（以此处为最新状态）
 
-第二轮审计处理已完成：用户选择**先修 R1、保留现有装备玩法，规则扩展另批处理**。R1 修复提交 `20551f26fa738f090898a29360435ab1fdb1e8c5`；R2 输入补丁已在 `8e16da2` 交付，本轮补齐隔离负向证据。[本轮完整 CI #124](https://github.com/catfish-xn/cat/actions/runs/37887531022/attempts/3) 最终12/12必需作业成功，堆与输入性能失败分别定位留证后各实际复验一次；不冒称首轮全过。后续提交仅补文档，详细反例、限制及最终验收结论见文末；下方中途进度保留为历史快照。**用户转交的最终审计结论：B5于 `e3af61b55deac960c2d44085f4440b87342e6f11` 通过最终复审，可以签收；R1、R2、R3及文档版本歧义均已关闭，无本轮审计遗留阻塞。**用户已批准转Ready并按B4/U4方式合并；当前合并执行进度见文末。
+第二轮审计处理已完成：用户选择**先修 R1、保留现有装备玩法，规则扩展另批处理**。R1 修复提交 `20551f26fa738f090898a29360435ab1fdb1e8c5`；R2 输入补丁已在 `8e16da2` 交付，本轮补齐隔离负向证据。[本轮完整 CI #124](https://github.com/catfish-xn/cat/actions/runs/37887531022/attempts/3) 最终12/12必需作业成功，堆与输入性能失败分别定位留证后各实际复验一次；不冒称首轮全过。后续提交仅补文档，详细反例、限制及最终验收结论见文末；下方中途进度保留为历史快照。**用户转交的最终审计结论：B5于 `e3af61b55deac960c2d44085f4440b87342e6f11` 通过最终复审，可以签收；R1、R2、R3及文档版本歧义均已关闭，无本轮审计遗留阻塞。**PR #16已转Ready并按B4/U4一致的merge commit方式合入 `feat/m8-b0-baseline`；合并SHA为 `5bd7968ee31e107e12701145aa4fdac0bec7ea8d`，合并后验收见文末。
 
 | 阶段 | 已推送提交 | 交付 |
 | --- | --- | --- |
@@ -466,3 +466,12 @@ R2 针对 `0298a3f` 的交付缺口已由 `8e16da2` 补齐，基线/B5 的两次
 - GitHub分支查询显示目标baseline未protected，适用rules API返回空列表，无最新提交必需CI要求，因此不因114951c的纯文档变化额外重跑合并前完整CI。
 - 目标baseline现为U3静态合并提交 `e896cc0aafa8e4c8a77620c2a33a287f40bab378`。同步该基线仅在 `docs/UI_REQUESTS.md` 冲突；双方独立追加记录均完整保留。U3已签收源文件由Git直接合入，不手改界面；无B5规则调整，不rebase/force push。
 - 基线同步使用追加merge commit；PR合并后对合并SHA运行完整默认CI，最终结果向用户汇报。合并后的CI不得用旧#124代替。原性能归因边界、未覆盖负载和另批玩法扩展继续保留。
+
+## 批准合并执行结果与 baseline 验收（2026-10-09）
+
+- 用户批准后，[PR #16](https://github.com/catfish-xn/cat/pull/16)已从Draft转Ready并合入指定目标 `feat/m8-b0-baseline`。合并方式为与B4/U4一致的merge commit，无squash/rebase/force push；合并提交 **`5bd7968ee31e107e12701145aa4fdac0bec7ea8d`**，双父提交为既有baseline `e896cc0` 与B5同步提交 `d20a3d3`。目标基线的U3静态实现通过Git原样整合，只在UI_REQUESTS文档保留双方追加内容解决冲突。同步后的typecheck/生产构建通过。
+- 合并前确认：114951c相对最终审计HEAD e3af61b仅改交接文档；目标分支未protected、适用rules为空，无最新提交CI要求。正常堆门禁在已审计CI #124中实际执行且通过（dev -592904B≤1572864B、preview 211556B≤1048576B），未被跳过；跳过的是可选heap-diagnostics。该CI受测20551f2，与e3af61b可执行代码一致，无e3af61b独立run。
+- 合并后单独启动[完整默认 CI #129](https://github.com/catfish-xn/cat/actions/runs/37898349556)，受测提交为精确合并SHA5bd7968，默认profile/heap_diagnostics/warmup_experiment均false。目标分支的现有CI不自动覆盖普通baseline push，因此使用既有workflow_dispatch；未改工作流、预算、断言或阈值。
+- 合并后CI最终结果：**#129 / attempt1 completed/success，12/12必需作业首轮全部通过**；2个可选诊断按原配置skipped，无失败、无重跑、无未完成作业。覆盖测试/构建/headless/重复性能、六路线、两组输入、M6资源、M7、存储/性能/重试/应用失败及最终比较；不沿用旧#124代替本次验收。
+- 已下载核对本次preview-cannon原始堆产物：heapDiagnostics=false、warmupExperiment=false，原2预热/30循环，heapDelta **-27340B≤1048576B**；listeners84→84、RAF1→1。dev-cannon作业也已成功。正常应用堆门禁并未跳过。最终比较实际执行通过：M5三路线各30场，182/178/172命令检查点一致；M6九份记录通过、dirty为空，全部命令exitCode0且attempt1，均绑定5bd7968和源码指纹 `569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8`。完整作业状态与比较产物哈希见 [合并验收证据](https://github.com/catfish-xn/cat/blob/feat/m8-b5/docs/evidence/M8_B5_MERGE_VALIDATION.json)。
+- 性能首轮波动继续作为非阻塞跟踪项，原失败、前后本地超限与归因限制完整保留；不扩展装备玩法。此结果文档在B5分支登记，不改变已合并baseline的受测SHA，也不追加第二次合并。
