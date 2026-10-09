@@ -4,6 +4,29 @@
 依赖图按 `58c901188b7da9c1534ec3fcb949d2554cb1fbdd:docs/M8_DEPENDENCY_MAP.md` 第3/5/6节读取；不将远端更晚基线混入本分支。
 用户授权尽可能多完成；每阶段自检、`[wip]` 提交、推送后再继续。不开正式PR、不送审、不合并、不rebase/force push；必要CI只开指向 `feat/m8-b0-baseline` 的草稿PR。
 
+## 当前交接摘要（以此处为最新状态）
+
+| 阶段 | 已推送提交 | 交付 |
+| --- | --- | --- |
+| 1 | `633f28a` | 唯一/三槽/独占、命令失败原子性、恢复约束 |
+| 2 | `fb32637` | 共用校验的预览、只读装备视图 |
+| 3 | `12d70ad` | TG生命周期、真实战斗来源、严格局部恢复 |
+| 4 | `1e1e554` | IF-GRANT、永久库存查询、完整升星返还验收 |
+
+四阶段领域实现均为 `[wip]`，未经送审/签收；下方各阶段“未完成/下一步”是当时记录，请以本摘要与最后复验记录为准。当前唯一已知编译阻塞：`BoardScene.ts:360` 未覆盖四项EquipmentFailure，待用户授权最小文案接线；未修改任何界面文件。
+
+本次建议的最小接线是向既有 `messages` 表添加以下四项（仅供获授权的开发者应用）：
+
+```ts
+'same-item': '请选择两件不同的组件实例合成',
+'unique-conflict': '该单位已装备同一件唯一装备',
+'exclusive-slots': '独占装备不能与其他装备同时穿戴',
+'temporary-item': '临时装备不能单独操作',
+```
+
+最终固定代码 `1e1e554` 的 `npm test -- --maxWorkers=1` 已通过：98文件/1231测试，1096.34秒。参数仅限制本次本地并发，测试时限、断言、门禁和CI配置未改。上一轮全量失败已由此次固定代码复验覆盖；构建仍因上述四项文案枚举阻塞，桌面浏览器和CI未执行。
+
+
 ## 阶段 1：唯一 / 三槽 / 独占及失败原子性
 
 状态：领域实现完成，已提交并推送 `633f28a`；编译接线与全量验证状态见下文。
@@ -124,3 +147,14 @@ IF-GRANT 给B8的接法（必须作为一个领域事务）：
 2. 四项 `BoardScene.ts` 拒绝文案是已定位的唯一已知编译接线阻塞，用户授权仍待回复；不扩大Codex UI权限。需补 `same-item`、`unique-conflict`、`exclusive-slots`、`temporary-item`，无视觉改动需求。
 3. 固定最终代码后复验全量/构建及适当桌面Chromium路径；不要调整180秒回放时限、体积预算或CI配置来掩盖失败。需要CI时只开指向 `feat/m8-b0-baseline` 的草稿PR。
 4. 验证完成后由接手开发者送审；本任务不送审、不合并、不开正式PR。U3动态界面可消费现有 `item-selectors.ts` 接口，不能自行重算规则。
+
+
+## 最终复验 / 可继续工作的精确提交
+
+- 四阶段实现HEAD：`1e1e554de7c44b1d7bb812d5636130e997100cca`，已核对远端 `refs/heads/feat/m8-b5` 一致。本节所在后续提交仅更新交接文档。
+- `npm test -- --maxWorkers=1`：**98文件 / 1231测试全部通过**，运行1096.34秒；完整保留既有180秒/120秒用例限制。覆盖此前旧golden捕获和回放超时失败项，不需要修改门禁、阈值或CI配置。
+- `npm run build`：在typecheck阶段失败，仍仅 `src/rendering/BoardScene.ts:360` 的 `Record<MatchFailure,string>` 缺 `same-item/unique-conflict/exclusive-slots/temporary-item`；Vite构建未执行。无权擅改Claude界面文件，四条可应用文案见顶部；等待用户明确授权或交Claude。
+- 桌面Chromium/完整浏览器验收未执行；没有因全量单测通过就标记构建、体积预算、浏览器或CI通过。未建PR、未送审、未合并；需要CI时按用户要求开草稿PR指向 `feat/m8-b0-baseline`。
+- `git diff --check`通过；冻结五文件、G12源码及两份G12测试、CI配置与97f38a0的diff为空。没有rebase或force push。
+- 规则/目录/存档变化最终值：目录 `s13-14.24b-m8-b5-v1`，实例规则 `m8-b5-instances-v2`，digest `fnv1a32-utf16:47dd941a`；必需新增 `equipmentState` / `temporaryEquipment`，schema5/save1/replay1仍是开发边界，旧digest档严格拒绝，B9正式格式切换未越界实施。
+- 当前剩余工作：获得四条UI文案接线授权并落实 → `npm run build` → 适当桌面Chromium和草稿CI → 由后续开发者送审。B5领域功能已写完，不能将本次编写完成等同整体签收。
