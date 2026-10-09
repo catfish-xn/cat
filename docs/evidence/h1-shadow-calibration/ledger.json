@@ -1,0 +1,120 @@
+{
+  "schema": "h1-shadow-v1",
+  "status": "active-existing-ci-artifact-collection",
+  "activatedAtUtc": "2026-10-09T09:14:31Z",
+  "activationMergeSha": "f90e438933f341938c238980e1249d8904468c53",
+  "approvedPolicy": "original ceilings warn-only; on-demand long-window diagnosis; no fixed 3x6; no numerical threshold change",
+  "ceilingsBytes": {
+    "preview": 1048576,
+    "dev": 1572864
+  },
+  "collection": "Existing normal CI cannon route artifacts, collected even on route failure. No new job, browser run or scheduled monitor. Ledger enrollment at acceptance review.",
+  "strata": [
+    "sourceSha",
+    "browser",
+    "node",
+    "mode",
+    "cpu"
+  ],
+  "retainIdentity": [
+    "sourceSha",
+    "runId",
+    "attempt",
+    "sampleId"
+  ],
+  "deduplication": "Authoritative selection is fixed to attempt=1, sample=1, cannon for each mode and independent run, including profile runs. Missing/failed/ineligible sample1 is retained as such, never replaced by sample2/3 or retries. Other observations are archived separately without entering the frequency count.",
+  "frequentWarningReviewTrigger": {
+    "withinLastIndependentRuns": 5,
+    "minimumWarnings": 2,
+    "perMatchedStratum": true,
+    "meaning": "Operational review trigger only; not statistical significance, leak proof, merge blocking or automatic CI dispatch."
+  },
+  "prospectiveSamples": [],
+  "excludedOrInvalidSamples": [],
+  "referenceSamples": [
+    {
+      "sampleId": "37900191209:1:browser-preview-cannon-sample1",
+      "cohort": "pre-activation-reference",
+      "prospectiveHoldout": false,
+      "runId": 37900191209,
+      "attempt": 1,
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "sourceSha": "7667e7c01d6847e92d1a59e755ec8e3f1ae42c06",
+      "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "warmupCycles": 2,
+      "cycles": 30,
+      "beforeBytes": 14683040,
+      "afterBytes": 14877932,
+      "deltaBytes": 194892,
+      "ceilingBytes": 1048576,
+      "warning": false,
+      "diagnosis": "insufficient-evidence",
+      "diagnosisReason": "One 30-cycle endpoint interval cannot determine a sustained late trend.",
+      "artifactId": 11603200520,
+      "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37900191209/artifacts/11603200520",
+      "archiveSha256": "5fa7c780d66390c2692a76c1b4caf9ca0f8580d6d1ec904501c04c2a29d3ec5d",
+      "manifestSha256": "ad6caa9c784831f9fa9c2a85ce6c85fcf333bde3e630476b0fe1fc5cd6e6014f"
+    },
+    {
+      "sampleId": "37900191209:1:browser-dev-cannon-sample1",
+      "cohort": "pre-activation-reference",
+      "prospectiveHoldout": false,
+      "runId": 37900191209,
+      "attempt": 1,
+      "mode": "dev",
+      "build": "cannon",
+      "touch": false,
+      "sourceSha": "7667e7c01d6847e92d1a59e755ec8e3f1ae42c06",
+      "sourceFingerprint": "569228e555692174f013be544796352fa6fdc8eafbd70fb75e785a36656d6cd8",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "warmupCycles": 2,
+      "cycles": 30,
+      "beforeBytes": 17420288,
+      "afterBytes": 18735380,
+      "deltaBytes": 1315092,
+      "ceilingBytes": 1572864,
+      "warning": false,
+      "diagnosis": "insufficient-evidence",
+      "diagnosisReason": "One 30-cycle endpoint interval cannot determine a sustained late trend.",
+      "artifactId": 11602882705,
+      "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37900191209/artifacts/11602882705",
+      "archiveSha256": "24ee6adfd960892b8e7387c13b8737556a57dc99a682dafe9ac509ba7bec4352",
+      "manifestSha256": "5ad93666df84c659f6a54d00b9ccbab7de4b7d8b989639ecfea01878c4252de4"
+    }
+  ],
+  "currentSummary": {
+    "referenceSamples": 2,
+    "referenceWarnings": 0,
+    "prospectiveSamples": 0,
+    "longWindowTriggered": false,
+    "diagnosis": "insufficient-evidence"
+  },
+  "nextEnrollment": "After activation, existing CI for a commit containing the approved policy; verify raw evidence and retain all failures. Historical reference samples cannot become prospective holdouts.",
+  "authoritativeSelection": {
+    "attempt": 1,
+    "sample": 1,
+    "build": "cannon",
+    "modes": [
+      "preview",
+      "dev"
+    ],
+    "profileSelection": "sample1 only",
+    "missingOrFailureFallback": false
+  },
+  "integrityFields": [
+    "sourceFingerprint"
+  ],
+  "crossVersionPolicy": "Different exact SHAs stay separate even when fingerprints or trees match. Recurring warnings across versions are reviewed individually, never pooled into 2/5; insufficient same-SHA samples do not demonstrate stability and do not justify rerunning CI to fill a quota.",
+  "prospectiveEligibility": {
+    "runCreatedAtUtcOnOrAfter": "2026-10-09T09:14:31Z",
+    "requiresAncestorSha": "7667e7c01d6847e92d1a59e755ec8e3f1ae42c06",
+    "artifactOrRetryCompletionTimeIsNotEnrollmentTime": true
+  }
+}
