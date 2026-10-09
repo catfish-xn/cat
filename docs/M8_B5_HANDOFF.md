@@ -333,4 +333,4 @@ await touchInput.detach();
 - 审计独立项 **B5-M7-INPUT** 仍必须核实。原34处assert调用逐项文本及顺序一致；仅输入驱动变化，400ms和其他门禁/CI未变。对照证据/永久链接/原始产物指纹见 [报告](https://github.com/catfish-xn/cat/blob/feat/m8-b5/docs/M8_B5_CLICK_LATENCY.md)与 [机器证据](https://github.com/catfish-xn/cat/blob/feat/m8-b5/docs/evidence/M8_B5_NATIVE_TOUCH_FIX.json)。
 - 本次结果补记只改 `docs/M8_B5_CLICK_LATENCY.md`、`docs/evidence/M8_B5_NATIVE_TOUCH_FIX.json` 和本交接文件；相对已通过CI的8e16da2，没有可执行源码/脚本/依赖/工作流变化。明确区分CI受测SHA与后续文档SHA，不因纯文档补记重复整轮测试。
 - 未覆盖边界仍为前述U3动态联调、TG最大合法长程负载、后续正式存档/新日程及B8收据集成；本轮输入驱动修复不改变存档、digest、目录/规则版本，也不修复或重定义B3/B4已签收行为。下一步由接手开发者审计，本文不代替签收；不送审、不合并。
-- 结果补记前的远端核对发现PR引用未同步：`refs/heads/feat/m8-b5`和GitHub Git Ref API均为已通过CI的8e16da2，但PR #16 API及`refs/pull/16/head`仍返回0298a3f。PR摘要已更新为真实修复及CI结果，状态仍Draft。审计前必须核对PR实际head已追上分支；在此之前按明确修复SHA/分支链接读取，不能把旧PR引用当作已验收修复。没有通过关闭重开、改目标分支或合并来绕过此差异。
+- 结果补记前曾发现PR引用未同步：分支与Git Ref API为8e16da2，PR API及`refs/pull/16/head`为0298a3f。**结果文档79c4d7e推送后，已用git ls-remote复核分支与PR head均为79c4d7e，差异消除。** PR摘要已更新为真实修复及CI结果，状态仍Draft；没有关闭重开、改目标分支或合并。该异常及恢复作为历史记录保留，审计仍须区分修复受测SHA8e16da2与后续纯文档提交。
