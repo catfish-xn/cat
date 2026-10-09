@@ -35,3 +35,9 @@ npm run build
 新增用例覆盖致死／存活／封顶、已有免控、本包授予免控、完全防伤、护盾、同 tick 前后其他包、多目标与输入置换、泛化 ID、多组 damage/control 绑定、来源取消、位移后局部续算和 JSON 往返、唯一消费及 0RNG。未修复基线上 10 项失败、4 项通过；修复后 14 项通过。
 
 恢复测试覆盖 B3 的 `OpeningState` 校验和 tick 边界纯状态往返，不能代替尚未接入的 B7 Match/B9 完整存档验收。B7 原 characterization 明确断言旧缺陷，合入修复后的后续 B7 集成应由其负责人更新；本提交不修改该文件。
+
+规则 digest 变化后的旧对局 golden 由 `scripts/update-m8-b3-control-golden.cjs` 严格校验后更新。脚本读取下述固定基线 JSON，并先核对其 SHA-256；四条路线共 120 场的完整事件哈希、所有命令及将 digest 换回旧值后的完整终态哈希必须全部一致，才写入新 digest 和对应状态哈希。这不是重新接受行为差异。实际运行四条路线均通过该门禁。
+
+```sh
+git show 5bd7968ee31e107e12701145aa4fdac0bec7ea8d:tests/fixtures/m5/full-match-golden.json | node scripts/update-m8-b3-control-golden.cjs
+```
