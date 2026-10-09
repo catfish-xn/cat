@@ -98,9 +98,9 @@ export function cloneEffect(effect: Effect): Effect {
 }
 
 export function makeSourcedEffects(ownerId: string, sourceKind: SourceKind, sourceDefinitionId: string,
-  sourceInstanceId: string, effects: readonly Effect[]): SourcedEffect[] {
+  sourceInstanceId: string, effects: readonly Effect[], parentItemInstanceId?: string): SourcedEffect[] {
   return effects.map((effect, effectIndex) => {
-    const source: EffectSource = { ownerId, sourceKind, sourceDefinitionId, sourceInstanceId, effectIndex };
+    const source: EffectSource = { ownerId, sourceKind, sourceDefinitionId, sourceInstanceId, effectIndex, ...(parentItemInstanceId ? { parentItemInstanceId } : {}) };
     return { key: effectKey(source), source, effect: cloneEffect(effect) };
   });
 }
@@ -164,7 +164,8 @@ export function resolveEffects(baseStats: ResolvedUnitStats, baseAbility: Resolv
   const abilityPower = stat('abilityPower', S13_COMBAT_RULES.abilityPowerBase);
   const mechanics: CombatMechanics = sources.flatMap(entry => entry.effect.kind === 'mechanic' ? [{
     source: { ownerId: entry.source.ownerId, sourceKind: entry.source.sourceKind, definitionId: entry.source.sourceDefinitionId,
-      instanceId: entry.source.sourceInstanceId, effectIndex: entry.source.effectIndex }, mechanic: entry.effect.mechanic, values: { ...entry.effect.values },
+      instanceId: entry.source.sourceInstanceId, effectIndex: entry.source.effectIndex,
+      ...(entry.source.parentItemInstanceId ? { parentItemInstanceId: entry.source.parentItemInstanceId } : {}) }, mechanic: entry.effect.mechanic, values: { ...entry.effect.values },
   }] : []);
   const mageArmor = mechanics.filter(m => m.mechanic === 'mageArmor').reduce((sum, m) => sum + Math.floor(abilityPower * (m.values.apBps ?? 0) / 10000), 0);
   const resolvedStats = mageArmor ? { ...stats, armor: stats.armor + mageArmor, magicResist: stats.magicResist + mageArmor } : stats;

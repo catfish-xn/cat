@@ -39,10 +39,10 @@ export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalo
   const units = boardUnits.map(unit => {
     const sources: SourcedEffect[] = [];
     const itemPrograms: BoundItemProgram[] = [];
-    const bindItem = (definition: ItemDefinition, instanceId: string) => {
+    const bindItem = (definition: ItemDefinition, instanceId: string, parentItemInstanceId: string | null = null) => {
       if (!definition.combatProgram) return;
       validateItemProgram(definition.combatProgram);
-      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId:null},program:structuredClone(definition.combatProgram)});
+      itemPrograms.push({ source: {ownerId:unit.id,sourceKind:'item',definitionId:definition.id,instanceId,effectIndex:(definition.effects.length+1)*1024,parentItemInstanceId},program:structuredClone(definition.combatProgram)});
     };
     for (const trait of traits) {
       if (trait.team !== unit.team || trait.tier === 0 || !trait.targetUnitIds.includes(unit.id)) continue;
@@ -57,6 +57,11 @@ export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalo
         const definition = lookup(catalog.items, item.definitionId);
         sources.push(...makeSourcedEffects(unit.id, 'item', item.definitionId, item.id, definition.effects));
         bindItem(definition, item.id);
+      }
+      for (const child of state.temporaryEquipment.filter(item => item.holderId === unit.id)) {
+        const definition = lookup(catalog.items, child.definitionId);
+        sources.push(...makeSourcedEffects(unit.id, 'item', child.definitionId, child.temporaryId, definition.effects, child.parentItemInstanceId));
+        bindItem(definition, child.temporaryId, child.parentItemInstanceId);
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
