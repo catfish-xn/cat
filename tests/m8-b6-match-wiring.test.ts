@@ -114,19 +114,20 @@ describe('B6 installed round, opening and restore transactions',()=>{
   });
   it('restores 36-38 preparation/combat/settlement and ends only at 6-7 with no regeneration',()=>{
     // Strong explicit domain fixture exercises every round and strict local restore.
-    // It is not an acquisition route or B9 application/history capacity acceptance.
+    // It is not an acquisition route, maximum-unit-load benchmark or B9 application/history capacity acceptance.
     let state=createMatch();
-    state={...state,level:9,nextUnitSerial:10,nextItemSerial:28,
-      // Fixed high-damage equipment keeps this identity/restore test well below
-      // the unchanged default timeout without skipping any round or combat.
-      items:Array.from({length:27},(_,i)=>({id:`item-${i+1}`,definitionId:'deathblade',
+    state={...state,level:9,nextUnitSerial:4,nextItemSerial:10,
+      // Three equipped holders preserve the full 33-battle route and all late
+      // restore boundaries, with fewer irrelevant per-holder item runtimes.
+      // No synthetic combat result, precomputed checkpoint or timeout change.
+      items:Array.from({length:9},(_,i)=>({id:`item-${i+1}`,definitionId:'deathblade',
         location:{kind:'unit' as const,unitId:`unit-${Math.floor(i/3)+1}`,slot:i%3}})),
       preparation:{...state.preparation,units:[
       ...state.preparation.units.filter(u=>u.team==='enemy'),
-      ...Array.from({length:9},(_,i)=>({id:`unit-${i+1}`,definitionId:'caitlyn',team:'player' as const,starLevel:3 as const,
+      ...Array.from({length:3},(_,i)=>({id:`unit-${i+1}`,definitionId:'caitlyn',team:'player' as const,starLevel:3 as const,
         location:{kind:'board' as const,cell:{col:i%7,row:4+Math.floor(i/7)}}})),
     ]}};
-    const seen:string[]=[];
+    const seen:string[]=[];let lateRestoreCount=0;
     while(state.phase!=='gameOver') {
       while(state.phase==='choice') {
         const c=state.pendingChoice!;
@@ -135,16 +136,17 @@ describe('B6 installed round, opening and restore transactions',()=>{
       }
       if(state.phase==='settlement') {state=accepted(nextRound(state,state.round));continue;}
       const late=state.round>=getCatalogRoundById('6-5').ordinal;
-      if(late) {seen.push(state.roundDefinitionId);roundTrip(state);}
+      if(late) {seen.push(state.roundDefinitionId);roundTrip(state);lateRestoreCount++;}
       state=accepted(startMatchCombat(state));
       if(late) {
         const generation=vi.spyOn(enemies,'createRoundEnemies'),items=vi.spyOn(enemies,'getRoundEnemyItems');
-        try {roundTrip(state);expect(generation).not.toHaveBeenCalled();expect(items).not.toHaveBeenCalled();}
+        try {roundTrip(state);lateRestoreCount++;expect(generation).not.toHaveBeenCalled();expect(items).not.toHaveBeenCalled();}
         finally {generation.mockRestore();items.mockRestore();}
       }
       while(state.phase==='combat') state=stepMatch(state).state;
-      if(late) roundTrip(state);
+      if(late) {roundTrip(state);lateRestoreCount++;}
     }
+    expect(lateRestoreCount).toBe(9);
     expect(seen).toEqual(['6-5','6-6','6-7']);
     expect(state).toMatchObject({roundDefinitionId:'6-7',outcome:'victory'});
     expect(state.roundResults).toHaveLength(ROUND_CATALOG.length);
