@@ -15,7 +15,7 @@ describe('H1 full-application heap warning', () => {
 
   it('keeps the separate preview/dev ceilings and permits post-GC shrinkage', () => {
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    for (const [mode, ceiling] of [['preview', 1_048_576], ['dev', 1_572_864]] as const) {
+    for (const [mode, ceiling] of [['preview', 1_048_576], ['dev', 1_572_864]]) {
       expect(applicationHeapGate(mode, { usedSize: 0 }, { usedSize: ceiling + 1 }).exceeded).toBe(true);
       expect(applicationHeapGate(mode, { usedSize: 0 }, { usedSize: ceiling }).exceeded).toBe(false);
       warnApplicationHeap(applicationHeapGate(mode, { usedSize: 0 }, { usedSize: ceiling }));

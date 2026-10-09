@@ -25,10 +25,10 @@ function validRoute() {
   };
 }
 
-function compare(route: ReturnType<typeof validRoute>) {
+function compare(route) {
   const warn = vi.fn();
-  const fakeRequire = (name: string) => {
-    if (name === 'node:fs') return { readFileSync: (file: string) => {
+  const fakeRequire = (name) => {
+    if (name === 'node:fs') return { readFileSync: (file) => {
       if (file === 'src/m6/limits.ts') return readFileSync(new URL('../src/m6/limits.ts', import.meta.url), 'utf8');
       if (file === 'artifacts/m5-dev-cannon/manifest.json') return JSON.stringify(route);
       if (file === 'artifacts/m5-input-dev/manifest.json') throw reachedNextCheck;
@@ -52,17 +52,17 @@ describe('H1 warning integration in the real evidence comparator', () => {
   });
 
   it.each([
-    ['null reading', (r: ReturnType<typeof validRoute>) => { Object.assign(r.m6Lifecycle.beforeHeap, { usedSize: null }); r.m6Lifecycle.afterHeap.usedSize = 2_015_536; }],
-    ['string readings', (r: ReturnType<typeof validRoute>) => { Object.assign(r.m6Lifecycle.beforeHeap, { usedSize: '50000000' }); Object.assign(r.m6Lifecycle.afterHeap, { usedSize: '52015536' }); }],
-    ['negative readings', (r: ReturnType<typeof validRoute>) => { r.m6Lifecycle.beforeHeap.usedSize = -3_000_000; r.m6Lifecycle.afterHeap.usedSize = -984_464; }],
-    ['forged warning', (r: ReturnType<typeof validRoute>) => { r.m6Lifecycle.heapGate.exceeded = false; }],
-    ['missing warning', (r: ReturnType<typeof validRoute>) => { Reflect.deleteProperty(r.m6Lifecycle, 'heapGate'); }],
-    ['wrong delta', (r: ReturnType<typeof validRoute>) => { r.m6Lifecycle.heapDelta++; }],
-    ['listener retained', (r: ReturnType<typeof validRoute>) => { r.m6Lifecycle.afterResources.listeners++; }],
-    ['RAF retained', (r: ReturnType<typeof validRoute>) => { r.m6Lifecycle.afterResources.pendingRaf += 2; }],
-    ['wrong SHA', (r: ReturnType<typeof validRoute>) => { r.sha = 'b'.repeat(40); }],
-    ['source changed', (r: ReturnType<typeof validRoute>) => { r.finalSourceFingerprint = 'changed'; }],
-  ] as const)('still blocks %s', (_name, mutate) => {
+    ['null reading', (r) => { Object.assign(r.m6Lifecycle.beforeHeap, { usedSize: null }); r.m6Lifecycle.afterHeap.usedSize = 2_015_536; }],
+    ['string readings', (r) => { Object.assign(r.m6Lifecycle.beforeHeap, { usedSize: '50000000' }); Object.assign(r.m6Lifecycle.afterHeap, { usedSize: '52015536' }); }],
+    ['negative readings', (r) => { r.m6Lifecycle.beforeHeap.usedSize = -3_000_000; r.m6Lifecycle.afterHeap.usedSize = -984_464; }],
+    ['forged warning', (r) => { r.m6Lifecycle.heapGate.exceeded = false; }],
+    ['missing warning', (r) => { Reflect.deleteProperty(r.m6Lifecycle, 'heapGate'); }],
+    ['wrong delta', (r) => { r.m6Lifecycle.heapDelta++; }],
+    ['listener retained', (r) => { r.m6Lifecycle.afterResources.listeners++; }],
+    ['RAF retained', (r) => { r.m6Lifecycle.afterResources.pendingRaf += 2; }],
+    ['wrong SHA', (r) => { r.sha = 'b'.repeat(40); }],
+    ['source changed', (r) => { r.finalSourceFingerprint = 'changed'; }],
+  ])('still blocks %s', (_name, mutate) => {
     const route = validRoute(); mutate(route);
     const { error } = compare(route);
     expect(error).toBeInstanceOf(Error);
