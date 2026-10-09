@@ -74,7 +74,7 @@ describe('atomic inventory composition', () => {
     const items = freeze([item('item-1', 'sword'), item('item-2', 'rod'), item('item-3', 'vest', 'board-unit'), item('item-4', 'gunblade')]);
     const before = JSON.stringify(items);
     for (const [a, b, reason] of [
-      ['item-1', 'item-1', 'invalid-recipe'], ['missing', 'item-2', 'unknown-item'],
+      ['item-1', 'item-1', 'same-item'], ['missing', 'item-2', 'unknown-item'],
       ['item-1', 'missing', 'unknown-item'], ['item-3', 'item-2', 'item-not-inventory'],
       ['item-1', 'item-3', 'item-not-inventory'], ['item-4', 'item-2', 'invalid-recipe'],
       ['item-1', 'item-4', 'invalid-recipe'],
@@ -125,7 +125,7 @@ describe('equipment and sale return plans', () => {
     }
     expect(planEquip(items, preparation, 'missing', 'board-unit', 0)).toEqual({ ok: false, reason: 'unknown-item' });
     expect(planEquip(items, preparation, 'item-1', 'missing', 0)).toEqual({ ok: false, reason: 'unknown-unit' });
-    expect(planEquip(items, preparation, 'item-1', 'enemy-unit', 0)).toEqual({ ok: false, reason: 'enemy-unit' });
+    expect(planEquip(items, preparation, 'item-1', 'enemy-unit', 0)).toEqual({ ok: false, reason: 'unknown-unit' });
     expect(planEquip(items, preparation, 'item-2', 'bench-unit', 0)).toEqual({ ok: false, reason: 'item-not-inventory' });
     expect(planEquip(items, preparation, 'item-1', 'board-unit', 1)).toEqual({ ok: false, reason: 'item-slot-occupied' });
     expect(JSON.stringify(items)).toBe(before);

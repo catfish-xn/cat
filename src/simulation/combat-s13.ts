@@ -158,7 +158,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       events.push(invocationEvent(invocation, tick));
       const original = invocation.trigger.source;
       const source: CombatOrigin = { ownerId: original.ownerId, sourceKind: original.sourceKind, definitionId: original.sourceDefinitionId,
-        instanceId: original.sourceInstanceId, effectIndex: original.effectIndex };
+        instanceId: original.sourceInstanceId, effectIndex: original.effectIndex, ...(original.parentItemInstanceId ? { parentItemInstanceId: original.parentItemInstanceId } : {}) };
       const target = units.find(u => u.id === invocation.targetId);
       if (invocation.action.kind === 'gainMana') hookMana.set(unit.id, (hookMana.get(unit.id) ?? 0) + invocation.action.amount);
       else if (target && invocation.action.kind === 'grantShield') grantShield(target, source, invocation.action.amount, tick + invocation.action.durationTicks, tick, events);

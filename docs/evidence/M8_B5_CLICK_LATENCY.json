@@ -1,0 +1,2213 @@
+{
+  "metadata": {
+    "shas": {
+      "base": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "b5": "e10c2541e57797b38bbd62a98b600739a94eb0b7"
+    },
+    "builds": {
+      "base": "/tmp/m8-b5-click-study/base/dist",
+      "b5": "/tmp/m8-b5-click-study/b5/dist"
+    },
+    "gateHash": "518ef64aa54a272baed1e8e59cf0d82ac8c60c83ac09ae529461222476b93fda",
+    "workerHash": "42b1fd60a9fba219ac91f4ac5f2570c112463ea3eaf4f315f706ac767e1b91db",
+    "node": "v24.21.0",
+    "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+    "cpuCount": 4,
+    "memory": 8322404352,
+    "pairs": 5,
+    "profilePairs": 1,
+    "assets": {
+      "base": {
+        "index-Bz7j2LlX.js": "e374dff7b09d30b1a134f09e098fb3e5fbecd80811178b986f46982aeaecf1b5"
+      },
+      "b5": {
+        "index-BKQBLiJ-.js": "736c53aafe1fe9a635c64cc41f0fbde940da7afe697343b08e80d53d956879ad"
+      }
+    }
+  },
+  "rows": [
+    {
+      "name": "timing-1-base",
+      "profile": false,
+      "label": "base",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:27:09.775Z",
+      "loadAtStart": [
+        0.99,
+        0.95,
+        2.23
+      ],
+      "clickGapMs": 317.8,
+      "firstHandlerMs": 58.9,
+      "afterHandlerMs": 258.9,
+      "firstTapApiMs": 293.91,
+      "ackAfterHandlerMs": 9.785,
+      "waitApiMs": 41.763,
+      "secondApiToClickMs": 207.352,
+      "secondHandlerMs": 4.5,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -7.9,
+          "durationMs": 185
+        },
+        {
+          "relativeToFirstClickMs": 186.2,
+          "durationMs": 116
+        },
+        {
+          "relativeToFirstClickMs": 314.2,
+          "durationMs": 103
+        }
+      ]
+    },
+    {
+      "name": "timing-1-b5",
+      "profile": false,
+      "label": "b5",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:29:22.950Z",
+      "loadAtStart": [
+        5.62,
+        2.74,
+        2.72
+      ],
+      "clickGapMs": 421,
+      "firstHandlerMs": 45.3,
+      "afterHandlerMs": 375.7,
+      "firstTapApiMs": 480.918,
+      "ackAfterHandlerMs": 6.99,
+      "waitApiMs": 41.579,
+      "secondApiToClickMs": 327.131,
+      "secondHandlerMs": 6.7,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -4.1,
+          "durationMs": 54
+        },
+        {
+          "relativeToFirstClickMs": 51,
+          "durationMs": 117
+        },
+        {
+          "relativeToFirstClickMs": 175.8,
+          "durationMs": 113
+        },
+        {
+          "relativeToFirstClickMs": 298.6,
+          "durationMs": 119
+        }
+      ]
+    },
+    {
+      "name": "timing-2-b5",
+      "profile": false,
+      "label": "b5",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:31:36.264Z",
+      "loadAtStart": [
+        5.57,
+        3.67,
+        3.07
+      ],
+      "clickGapMs": 365.7,
+      "firstHandlerMs": 44.8,
+      "afterHandlerMs": 320.9,
+      "firstTapApiMs": 374.609,
+      "ackAfterHandlerMs": 4.434,
+      "waitApiMs": 41.137,
+      "secondApiToClickMs": 275.33,
+      "secondHandlerMs": 4.7,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -5,
+          "durationMs": 54
+        },
+        {
+          "relativeToFirstClickMs": 51.7,
+          "durationMs": 154
+        },
+        {
+          "relativeToFirstClickMs": 213.3,
+          "durationMs": 143
+        },
+        {
+          "relativeToFirstClickMs": 361.1,
+          "durationMs": 125
+        }
+      ]
+    },
+    {
+      "name": "timing-2-base",
+      "profile": false,
+      "label": "base",
+      "passed": false,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:33:48.575Z",
+      "loadAtStart": [
+        5.15,
+        4.11,
+        3.31
+      ],
+      "clickGapMs": 502,
+      "firstHandlerMs": 34.4,
+      "afterHandlerMs": 467.6,
+      "firstTapApiMs": 532.584,
+      "ackAfterHandlerMs": 5.049,
+      "waitApiMs": 41.115,
+      "secondApiToClickMs": 421.436,
+      "secondHandlerMs": 18.3,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": 40.2,
+          "durationMs": 110
+        },
+        {
+          "relativeToFirstClickMs": 172.2,
+          "durationMs": 185
+        },
+        {
+          "relativeToFirstClickMs": 367,
+          "durationMs": 129
+        }
+      ]
+    },
+    {
+      "name": "timing-3-base",
+      "profile": false,
+      "label": "base",
+      "passed": false,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:36:00.253Z",
+      "loadAtStart": [
+        5.57,
+        4.5,
+        3.55
+      ],
+      "clickGapMs": 472,
+      "firstHandlerMs": 46.7,
+      "afterHandlerMs": 425.3,
+      "firstTapApiMs": 299.421,
+      "ackAfterHandlerMs": 9.192,
+      "waitApiMs": 41.201,
+      "secondApiToClickMs": 374.907,
+      "secondHandlerMs": 25.4,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -7.9,
+          "durationMs": 211
+        },
+        {
+          "relativeToFirstClickMs": 206.4,
+          "durationMs": 125
+        },
+        {
+          "relativeToFirstClickMs": 338.5,
+          "durationMs": 124
+        }
+      ]
+    },
+    {
+      "name": "timing-3-b5",
+      "profile": false,
+      "label": "b5",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:38:12.931Z",
+      "loadAtStart": [
+        5.35,
+        4.73,
+        3.76
+      ],
+      "clickGapMs": 280.9,
+      "firstHandlerMs": 38.5,
+      "afterHandlerMs": 242.4,
+      "firstTapApiMs": 448.786,
+      "ackAfterHandlerMs": 8.222,
+      "waitApiMs": 44.086,
+      "secondApiToClickMs": 190.092,
+      "secondHandlerMs": 4.4,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -4.8,
+          "durationMs": 155
+        },
+        {
+          "relativeToFirstClickMs": 153.2,
+          "durationMs": 119
+        },
+        {
+          "relativeToFirstClickMs": 275.2,
+          "durationMs": 118
+        }
+      ]
+    },
+    {
+      "name": "timing-4-b5",
+      "profile": false,
+      "label": "b5",
+      "passed": false,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:40:26.868Z",
+      "loadAtStart": [
+        5.2,
+        4.83,
+        3.92
+      ],
+      "clickGapMs": 448.7,
+      "firstHandlerMs": 37.5,
+      "afterHandlerMs": 411.2,
+      "firstTapApiMs": 382.083,
+      "ackAfterHandlerMs": 5.559,
+      "waitApiMs": 41.127,
+      "secondApiToClickMs": 364.514,
+      "secondHandlerMs": 21.2,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -1.7,
+          "durationMs": 149
+        },
+        {
+          "relativeToFirstClickMs": 157,
+          "durationMs": 175
+        },
+        {
+          "relativeToFirstClickMs": 337,
+          "durationMs": 109
+        }
+      ]
+    },
+    {
+      "name": "timing-4-base",
+      "profile": false,
+      "label": "base",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:42:39.988Z",
+      "loadAtStart": [
+        5,
+        4.91,
+        4.08
+      ],
+      "clickGapMs": 434.1,
+      "firstHandlerMs": 45.5,
+      "afterHandlerMs": 388.6,
+      "firstTapApiMs": 394.454,
+      "ackAfterHandlerMs": 14.223,
+      "waitApiMs": 44.191,
+      "secondApiToClickMs": 330.187,
+      "secondHandlerMs": 11.1,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -4.7,
+          "durationMs": 174
+        },
+        {
+          "relativeToFirstClickMs": 173.2,
+          "durationMs": 121
+        },
+        {
+          "relativeToFirstClickMs": 298,
+          "durationMs": 134
+        }
+      ]
+    },
+    {
+      "name": "timing-5-base",
+      "profile": false,
+      "label": "base",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:44:54.264Z",
+      "loadAtStart": [
+        5.79,
+        5.19,
+        4.29
+      ],
+      "clickGapMs": 313.3,
+      "firstHandlerMs": 45.2,
+      "afterHandlerMs": 268.1,
+      "firstTapApiMs": 317.727,
+      "ackAfterHandlerMs": 10.267,
+      "waitApiMs": 41.649,
+      "secondApiToClickMs": 216.184,
+      "secondHandlerMs": 4.6,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -5.6,
+          "durationMs": 167
+        },
+        {
+          "relativeToFirstClickMs": 163.2,
+          "durationMs": 134
+        },
+        {
+          "relativeToFirstClickMs": 307.7,
+          "durationMs": 127
+        }
+      ]
+    },
+    {
+      "name": "timing-5-b5",
+      "profile": false,
+      "label": "b5",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:47:07.085Z",
+      "loadAtStart": [
+        5.46,
+        5.21,
+        4.41
+      ],
+      "clickGapMs": 323.9,
+      "firstHandlerMs": 53.1,
+      "afterHandlerMs": 270.8,
+      "firstTapApiMs": 350.017,
+      "ackAfterHandlerMs": 8.615,
+      "waitApiMs": 41.19,
+      "secondApiToClickMs": 220.994,
+      "secondHandlerMs": 7.4,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -3.4,
+          "durationMs": 169
+        },
+        {
+          "relativeToFirstClickMs": 176.3,
+          "durationMs": 138
+        },
+        {
+          "relativeToFirstClickMs": 320.6,
+          "durationMs": 137
+        }
+      ]
+    },
+    {
+      "name": "profile-1-base",
+      "profile": true,
+      "label": "base",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:49:20.675Z",
+      "loadAtStart": [
+        5.72,
+        5.27,
+        4.54
+      ],
+      "clickGapMs": 372.2,
+      "firstHandlerMs": 48.5,
+      "afterHandlerMs": 323.7,
+      "firstTapApiMs": 621.642,
+      "ackAfterHandlerMs": 8.52,
+      "waitApiMs": 43.497,
+      "secondApiToClickMs": 271.683,
+      "secondHandlerMs": 6.9,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -6.2,
+          "durationMs": 61
+        },
+        {
+          "relativeToFirstClickMs": 56.6,
+          "durationMs": 131
+        },
+        {
+          "relativeToFirstClickMs": 202.2,
+          "durationMs": 147
+        },
+        {
+          "relativeToFirstClickMs": 366.3,
+          "durationMs": 123
+        }
+      ]
+    },
+    {
+      "name": "profile-1-b5",
+      "profile": true,
+      "label": "b5",
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "startedAt": "2026-10-09T03:51:39.036Z",
+      "loadAtStart": [
+        6.02,
+        5.43,
+        4.69
+      ],
+      "clickGapMs": 428.4,
+      "firstHandlerMs": 55.1,
+      "afterHandlerMs": 373.3,
+      "firstTapApiMs": 294.612,
+      "ackAfterHandlerMs": 4.652,
+      "waitApiMs": 41.659,
+      "secondApiToClickMs": 326.989,
+      "secondHandlerMs": 3.7,
+      "longTasksBetweenClicks": [
+        {
+          "relativeToFirstClickMs": -9.5,
+          "durationMs": 240
+        },
+        {
+          "relativeToFirstClickMs": 251.2,
+          "durationMs": 162
+        },
+        {
+          "relativeToFirstClickMs": 424.2,
+          "durationMs": 123
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "base": {
+      "samples": 5,
+      "failed": 2,
+      "clickGapMs": {
+        "min": 313.3,
+        "median": 434.1,
+        "max": 502,
+        "mean": 407.84
+      },
+      "firstHandlerMs": {
+        "min": 34.4,
+        "median": 45.5,
+        "max": 58.9,
+        "mean": 46.14
+      },
+      "afterHandlerMs": {
+        "min": 258.9,
+        "median": 388.6,
+        "max": 467.6,
+        "mean": 361.7
+      },
+      "ackAfterHandlerMs": {
+        "min": 5.049,
+        "median": 9.785,
+        "max": 14.223,
+        "mean": 9.703
+      },
+      "waitApiMs": {
+        "min": 41.115,
+        "median": 41.649,
+        "max": 44.191,
+        "mean": 41.984
+      },
+      "secondApiToClickMs": {
+        "min": 207.352,
+        "median": 330.187,
+        "max": 421.436,
+        "mean": 310.013
+      }
+    },
+    "b5": {
+      "samples": 5,
+      "failed": 1,
+      "clickGapMs": {
+        "min": 280.9,
+        "median": 365.7,
+        "max": 448.7,
+        "mean": 368.04
+      },
+      "firstHandlerMs": {
+        "min": 37.5,
+        "median": 44.8,
+        "max": 53.1,
+        "mean": 43.84
+      },
+      "afterHandlerMs": {
+        "min": 242.4,
+        "median": 320.9,
+        "max": 411.2,
+        "mean": 324.2
+      },
+      "ackAfterHandlerMs": {
+        "min": 4.434,
+        "median": 6.99,
+        "max": 8.615,
+        "mean": 6.764
+      },
+      "waitApiMs": {
+        "min": 41.127,
+        "median": 41.19,
+        "max": 44.086,
+        "mean": 41.824
+      },
+      "secondApiToClickMs": {
+        "min": 190.092,
+        "median": 275.33,
+        "max": 364.514,
+        "mean": 275.612
+      }
+    }
+  },
+  "profiles": [
+    {
+      "name": "profile-1-base",
+      "pid": 299317,
+      "tid": 299317,
+      "marks": [
+        {
+          "name": "click-study:9:capture:mobile:continue",
+          "ts": 653525863138
+        },
+        {
+          "name": "click-study:9:bubble:mobile:continue",
+          "ts": 653525911634
+        },
+        {
+          "name": "click-study:14:capture:mobile:start-combat",
+          "ts": 653526235389
+        },
+        {
+          "name": "click-study:14:bubble:mobile:start-combat",
+          "ts": 653526242206
+        }
+      ],
+      "windows": {
+        "handler": {
+          "durationMs": 48.496,
+          "sampleCount": 48,
+          "self": [
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:248122",
+              "ms": 3.539
+            },
+            {
+              "frame": "(anonymous) ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:27840",
+              "ms": 3.421
+            },
+            {
+              "frame": "bindTexture :0",
+              "ms": 3.397
+            },
+            {
+              "frame": "(anonymous) ../../src/rendering/strategy-panel.ts:569",
+              "ms": 3.336
+            },
+            {
+              "frame": "qu ../../src/presentation/unit-view.ts:43",
+              "ms": 2.372
+            },
+            {
+              "frame": "measureText :0",
+              "ms": 2.266
+            },
+            {
+              "frame": "renderItems ../../src/rendering/strategy-panel.ts:351",
+              "ms": 2.002
+            },
+            {
+              "frame": "element ../../src/rendering/strategy-panel.ts:56",
+              "ms": 1.777
+            },
+            {
+              "frame": "mark :0",
+              "ms": 1.76
+            },
+            {
+              "frame": "fillText :0",
+              "ms": 1.64
+            },
+            {
+              "frame": "updateText ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:82872",
+              "ms": 1.505
+            },
+            {
+              "frame": "(anonymous) ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:75532",
+              "ms": 1.449
+            },
+            {
+              "frame": "(anonymous) ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:83394",
+              "ms": 1.397
+            },
+            {
+              "frame": "initialize ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:75039",
+              "ms": 1.341
+            },
+            {
+              "frame": "panelControl ../../src/rendering/BoardScene.ts:283",
+              "ms": 1.328
+            },
+            {
+              "frame": "P.50792.n.emit ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:183",
+              "ms": 1.165
+            },
+            {
+              "frame": "initialize ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:212383",
+              "ms": 1.162
+            },
+            {
+              "frame": "P.50792.n.removeListener ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:271",
+              "ms": 1.159
+            },
+            {
+              "frame": "canvasToTexture ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:183159",
+              "ms": 1.115
+            },
+            {
+              "frame": "texParameteri :0",
+              "ms": 1.106
+            },
+            {
+              "frame": "add ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:208853",
+              "ms": 1.106
+            },
+            {
+              "frame": "setVisible ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:47634",
+              "ms": 1.104
+            },
+            {
+              "frame": "save :0",
+              "ms": 1.099
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:81394",
+              "ms": 1.096
+            },
+            {
+              "frame": "replaceChildren :0",
+              "ms": 1.093
+            }
+          ],
+          "inclusive": [
+            {
+              "frame": "(root) :0",
+              "ms": 48.496
+            },
+            {
+              "frame": "panelControl ../../src/rendering/BoardScene.ts:283",
+              "ms": 45.658
+            },
+            {
+              "frame": "name ../../src/rendering/BoardScene.ts:159",
+              "ms": 45.658
+            },
+            {
+              "frame": "(anonymous) ../../src/rendering/strategy-panel.ts:275",
+              "ms": 45.658
+            },
+            {
+              "frame": "sync ../../src/rendering/BoardScene.ts:437",
+              "ms": 43.435
+            },
+            {
+              "frame": "command ../../src/rendering/BoardScene.ts:382",
+              "ms": 43.435
+            },
+            {
+              "frame": "reconcileTokens ../../src/rendering/BoardScene.ts:406",
+              "ms": 26.823
+            },
+            {
+              "frame": "qu ../../src/presentation/unit-view.ts:43",
+              "ms": 21.078
+            },
+            {
+              "frame": "createToken ../../src/rendering/BoardScene.ts:423",
+              "ms": 21.078
+            },
+            {
+              "frame": "updateText ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:82872",
+              "ms": 13.828
+            },
+            {
+              "frame": "setText ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:82248",
+              "ms": 12.993
+            },
+            {
+              "frame": "render ../../src/rendering/strategy-panel.ts:252",
+              "ms": 9.295
+            },
+            {
+              "frame": "update ../../src/presentation/unit-view.ts:76",
+              "ms": 7.569
+            },
+            {
+              "frame": "(anonymous) ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:83394",
+              "ms": 7.241
+            },
+            {
+              "frame": "initialize ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:81738",
+              "ms": 5.844
+            },
+            {
+              "frame": "destroy ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:35283",
+              "ms": 5.745
+            },
+            {
+              "frame": "removeAll ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:48656",
+              "ms": 5.745
+            },
+            {
+              "frame": "preDestroy ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:49134",
+              "ms": 5.745
+            },
+            {
+              "frame": "destroy ../../src/presentation/unit-view.ts:154",
+              "ms": 5.745
+            },
+            {
+              "frame": "canvasToTexture ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:183159",
+              "ms": 5.618
+            },
+            {
+              "frame": "renderItems ../../src/rendering/strategy-panel.ts:351",
+              "ms": 4.866
+            },
+            {
+              "frame": "syncHud ../../src/rendering/BoardScene.ts:451",
+              "ms": 4.763
+            },
+            {
+              "frame": "_processTexture ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:194385",
+              "ms": 4.503
+            },
+            {
+              "frame": "update ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:194347",
+              "ms": 4.503
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:248122",
+              "ms": 3.539
+            }
+          ],
+          "domainFrames": [],
+          "persistenceFrames": [
+            {
+              "frame": "render ../../src/persistence/save-controls.ts:50",
+              "ms": 0.895
+            },
+            {
+              "frame": "update ../../src/persistence/save-controls.ts:65",
+              "ms": 0.895
+            },
+            {
+              "frame": "notify ../../src/persistence/coordinator.ts:26",
+              "ms": 0.895
+            },
+            {
+              "frame": "drain ../../src/persistence/coordinator.ts:31",
+              "ms": 0.895
+            },
+            {
+              "frame": "start ../../src/persistence/coordinator.ts:27",
+              "ms": 0.895
+            },
+            {
+              "frame": "enqueue ../../src/persistence/coordinator.ts:20",
+              "ms": 0.895
+            },
+            {
+              "frame": "(anonymous) ../../src/persistence/repository.ts:100",
+              "ms": 0.752
+            },
+            {
+              "frame": "write ../../src/persistence/repository.ts:96",
+              "ms": 0.752
+            }
+          ],
+          "traceTotals": [
+            {
+              "frame": "EventDispatch",
+              "ms": 48.527
+            },
+            {
+              "frame": "RunTask",
+              "ms": 48.496
+            },
+            {
+              "frame": "ThreadControllerImpl::RunTask",
+              "ms": 48.496
+            },
+            {
+              "frame": "FunctionCall",
+              "ms": 45.656
+            },
+            {
+              "frame": "ParseHTML",
+              "ms": 1.234
+            },
+            {
+              "frame": "UpdateLayoutTree",
+              "ms": 0.27
+            },
+            {
+              "frame": "Layout",
+              "ms": 0.197
+            }
+          ],
+          "commits": [],
+          "tasks": [
+            {
+              "startMs": -6.188,
+              "durationMs": 61.634
+            }
+          ]
+        },
+        "between": {
+          "durationMs": 323.755,
+          "sampleCount": 283,
+          "self": [
+            {
+              "frame": "(program) :0",
+              "ms": 269.942
+            },
+            {
+              "frame": "i ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:53701",
+              "ms": 7.736
+            },
+            {
+              "frame": "batchQuad ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:179175",
+              "ms": 6.425
+            },
+            {
+              "frame": "(garbage collector) :0",
+              "ms": 5.259
+            },
+            {
+              "frame": "getX ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:47448",
+              "ms": 4.231
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:49423",
+              "ms": 3.7
+            },
+            {
+              "frame": "(anonymous) :15",
+              "ms": 3.674
+            },
+            {
+              "frame": "batchFillPath ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:187104",
+              "ms": 3.038
+            },
+            {
+              "frame": "p ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74928",
+              "ms": 2.424
+            },
+            {
+              "frame": "batchLine ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:187227",
+              "ms": 2.396
+            },
+            {
+              "frame": "getY ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:47465",
+              "ms": 2.152
+            },
+            {
+              "frame": "bufferData :0",
+              "ms": 1.95
+            },
+            {
+              "frame": "earcut ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97266",
+              "ms": 1.772
+            },
+            {
+              "frame": "isEarHashed ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97428",
+              "ms": 1.352
+            },
+            {
+              "frame": "postBatch ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:176163",
+              "ms": 1.188
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:182818",
+              "ms": 1.12
+            },
+            {
+              "frame": "e ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:53677",
+              "ms": 1.119
+            },
+            {
+              "frame": "setScissor ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:181786",
+              "ms": 1.091
+            },
+            {
+              "frame": "requestAnimationFrame :0",
+              "ms": 0.809
+            },
+            {
+              "frame": "setStrokeStyle ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74744",
+              "ms": 0.565
+            },
+            {
+              "frame": "mark :0",
+              "ms": 0.53
+            },
+            {
+              "frame": "(idle) :0",
+              "ms": 0.497
+            },
+            {
+              "frame": "update ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:208573",
+              "ms": 0.447
+            },
+            {
+              "frame": "render ../../src/stats/combat-feedback-renderer.ts:38",
+              "ms": 0.174
+            },
+            {
+              "frame": "p ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74362",
+              "ms": 0.164
+            }
+          ],
+          "inclusive": [
+            {
+              "frame": "(root) :0",
+              "ms": 323.755
+            },
+            {
+              "frame": "(program) :0",
+              "ms": 269.942
+            },
+            {
+              "frame": "step ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:31350",
+              "ms": 43.853
+            },
+            {
+              "frame": "step ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:17180",
+              "ms": 43.044
+            },
+            {
+              "frame": "step ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:18212",
+              "ms": 43.044
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:182818",
+              "ms": 41.858
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:11715",
+              "ms": 41.858
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:201027",
+              "ms": 41.858
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:198266",
+              "ms": 41.858
+            },
+            {
+              "frame": "i ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:53701",
+              "ms": 22.6
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:49423",
+              "ms": 15.928
+            },
+            {
+              "frame": "r ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:75600",
+              "ms": 11.234
+            },
+            {
+              "frame": "batchFillPath ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:187104",
+              "ms": 9.503
+            },
+            {
+              "frame": "batchLine ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:187227",
+              "ms": 8.821
+            },
+            {
+              "frame": "batchQuad ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:179175",
+              "ms": 6.425
+            },
+            {
+              "frame": "p ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74928",
+              "ms": 5.884
+            },
+            {
+              "frame": "batchStrokePath ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:187179",
+              "ms": 5.361
+            },
+            {
+              "frame": "(garbage collector) :0",
+              "ms": 5.259
+            },
+            {
+              "frame": "p ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74362",
+              "ms": 5.156
+            },
+            {
+              "frame": "getX ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:47448",
+              "ms": 4.231
+            },
+            {
+              "frame": "(anonymous) :15",
+              "ms": 3.674
+            },
+            {
+              "frame": "earcut ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97266",
+              "ms": 3.124
+            },
+            {
+              "frame": "getY ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:47465",
+              "ms": 2.152
+            },
+            {
+              "frame": "bufferData :0",
+              "ms": 1.95
+            },
+            {
+              "frame": "flush ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:178810",
+              "ms": 1.95
+            }
+          ],
+          "domainFrames": [],
+          "persistenceFrames": [],
+          "traceTotals": [
+            {
+              "frame": "RunTask",
+              "ms": 322.252
+            },
+            {
+              "frame": "ThreadControllerImpl::RunTask",
+              "ms": 315.052
+            },
+            {
+              "frame": "Commit",
+              "ms": 224.05
+            },
+            {
+              "frame": "FunctionCall",
+              "ms": 57.547
+            },
+            {
+              "frame": "FireAnimationFrame",
+              "ms": 48.354
+            },
+            {
+              "frame": "EventDispatch",
+              "ms": 10.163
+            },
+            {
+              "frame": "Paint",
+              "ms": 7.301
+            },
+            {
+              "frame": "Layout",
+              "ms": 3.574
+            },
+            {
+              "frame": "UpdateLayoutTree",
+              "ms": 2.325
+            },
+            {
+              "frame": "PaintImage",
+              "ms": 2.045
+            },
+            {
+              "frame": "PrePaint",
+              "ms": 1.691
+            },
+            {
+              "frame": "BlinkScheduler_PerformMicrotaskCheckpoint",
+              "ms": 0.897
+            },
+            {
+              "frame": "HitTest",
+              "ms": 0.556
+            },
+            {
+              "frame": "Layerize",
+              "ms": 0.54
+            },
+            {
+              "frame": "SimpleWatcher::OnHandleReady",
+              "ms": 0.375
+            },
+            {
+              "frame": "Receive mojo reply",
+              "ms": 0.347
+            },
+            {
+              "frame": "TimerFire",
+              "ms": 0.13
+            },
+            {
+              "frame": "IntersectionObserverController::computeIntersections",
+              "ms": 0.092
+            },
+            {
+              "frame": "UpdateLayer",
+              "ms": 0.052
+            },
+            {
+              "frame": "Responsiveness.Renderer.UserInteraction",
+              "ms": 0.017
+            }
+          ],
+          "commits": [
+            {
+              "startMs": 49.87,
+              "durationMs": 89.156,
+              "threadCpuMs": 2.604
+            },
+            {
+              "startMs": 165.952,
+              "durationMs": 134.894,
+              "threadCpuMs": 3.325
+            }
+          ],
+          "tasks": [
+            {
+              "startMs": -54.684,
+              "durationMs": 61.634
+            },
+            {
+              "startMs": 7.34,
+              "durationMs": 0.013
+            },
+            {
+              "startMs": 7.432,
+              "durationMs": 0.009
+            },
+            {
+              "startMs": 7.489,
+              "durationMs": 0.007
+            },
+            {
+              "startMs": 7.56,
+              "durationMs": 0.026
+            },
+            {
+              "startMs": 7.629,
+              "durationMs": 0.463
+            },
+            {
+              "startMs": 8.161,
+              "durationMs": 130.872
+            },
+            {
+              "startMs": 144.268,
+              "durationMs": 0.015
+            },
+            {
+              "startMs": 144.315,
+              "durationMs": 0.008
+            },
+            {
+              "startMs": 144.362,
+              "durationMs": 5.093
+            },
+            {
+              "startMs": 149.515,
+              "durationMs": 0.065
+            },
+            {
+              "startMs": 149.622,
+              "durationMs": 0.008
+            },
+            {
+              "startMs": 149.663,
+              "durationMs": 0.004
+            },
+            {
+              "startMs": 149.699,
+              "durationMs": 0.01
+            },
+            {
+              "startMs": 149.738,
+              "durationMs": 0.005
+            },
+            {
+              "startMs": 149.775,
+              "durationMs": 0.023
+            },
+            {
+              "startMs": 149.85,
+              "durationMs": 0.254
+            },
+            {
+              "startMs": 150.14,
+              "durationMs": 0.006
+            },
+            {
+              "startMs": 150.177,
+              "durationMs": 0.013
+            },
+            {
+              "startMs": 150.219,
+              "durationMs": 0.004
+            },
+            {
+              "startMs": 150.249,
+              "durationMs": 0.017
+            },
+            {
+              "startMs": 150.299,
+              "durationMs": 0.005
+            },
+            {
+              "startMs": 150.331,
+              "durationMs": 0.068
+            },
+            {
+              "startMs": 150.441,
+              "durationMs": 0.024
+            },
+            {
+              "startMs": 150.5,
+              "durationMs": 0.023
+            },
+            {
+              "startMs": 150.556,
+              "durationMs": 0.023
+            },
+            {
+              "startMs": 150.617,
+              "durationMs": 0.146
+            },
+            {
+              "startMs": 150.81,
+              "durationMs": 0.386
+            },
+            {
+              "startMs": 151.232,
+              "durationMs": 1.26
+            },
+            {
+              "startMs": 153.52,
+              "durationMs": 0.017
+            },
+            {
+              "startMs": 153.573,
+              "durationMs": 0.016
+            },
+            {
+              "startMs": 153.626,
+              "durationMs": 147.229
+            },
+            {
+              "startMs": 300.979,
+              "durationMs": 4.635
+            },
+            {
+              "startMs": 305.8,
+              "durationMs": 0.039
+            },
+            {
+              "startMs": 305.866,
+              "durationMs": 11.108
+            },
+            {
+              "startMs": 317.195,
+              "durationMs": 0.011
+            },
+            {
+              "startMs": 317.252,
+              "durationMs": 0.007
+            },
+            {
+              "startMs": 317.324,
+              "durationMs": 0.008
+            },
+            {
+              "startMs": 317.413,
+              "durationMs": 0.01
+            },
+            {
+              "startMs": 317.471,
+              "durationMs": 0.024
+            },
+            {
+              "startMs": 317.54,
+              "durationMs": 0.192
+            },
+            {
+              "startMs": 317.799,
+              "durationMs": 123.785
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "profile-1-b5",
+      "pid": 299677,
+      "tid": 299677,
+      "marks": [
+        {
+          "name": "click-study:9:capture:mobile:continue",
+          "ts": 653660513198
+        },
+        {
+          "name": "click-study:9:bubble:mobile:continue",
+          "ts": 653660568196
+        },
+        {
+          "name": "click-study:14:capture:mobile:start-combat",
+          "ts": 653660941552
+        },
+        {
+          "name": "click-study:14:bubble:mobile:start-combat",
+          "ts": 653660945314
+        }
+      ],
+      "windows": {
+        "handler": {
+          "durationMs": 54.998,
+          "sampleCount": 46,
+          "self": [
+            {
+              "frame": "updateText ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:82872",
+              "ms": 11.272
+            },
+            {
+              "frame": "measureText :0",
+              "ms": 8.957
+            },
+            {
+              "frame": "earcutLinked ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97348",
+              "ms": 3.122
+            },
+            {
+              "frame": "P.50792.n.emit ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:183",
+              "ms": 2.702
+            },
+            {
+              "frame": "append :0",
+              "ms": 2.272
+            },
+            {
+              "frame": "texImage2D :0",
+              "ms": 2.213
+            },
+            {
+              "frame": "reconcileTokens ../../src/rendering/BoardScene.ts:410",
+              "ms": 1.883
+            },
+            {
+              "frame": "destroy ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:216170",
+              "ms": 1.881
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:248122",
+              "ms": 1.805
+            },
+            {
+              "frame": "texParameteri :0",
+              "ms": 1.705
+            },
+            {
+              "frame": "(program) :0",
+              "ms": 1.385
+            },
+            {
+              "frame": "update ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:194347",
+              "ms": 1.308
+            },
+            {
+              "frame": "save :0",
+              "ms": 1.276
+            },
+            {
+              "frame": "bindTexture :0",
+              "ms": 1.196
+            },
+            {
+              "frame": "fillText :0",
+              "ms": 1.152
+            },
+            {
+              "frame": "syncFont ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:83907",
+              "ms": 1.135
+            },
+            {
+              "frame": "(anonymous) ../../src/rendering/strategy-panel.ts:569",
+              "ms": 1.126
+            },
+            {
+              "frame": "replaceChildren :0",
+              "ms": 1.123
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:243786",
+              "ms": 1.115
+            },
+            {
+              "frame": "generateRoundRolls ../../src/simulation/m8/equipment.ts:30",
+              "ms": 1.105
+            },
+            {
+              "frame": "syncShadow ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:83942",
+              "ms": 1.101
+            },
+            {
+              "frame": "acceptEquipment ../../src/simulation/match.ts:39",
+              "ms": 1.098
+            },
+            {
+              "frame": "createToken ../../src/rendering/BoardScene.ts:427",
+              "ms": 1.061
+            },
+            {
+              "frame": "removeFromDisplayList ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:35187",
+              "ms": 0.627
+            },
+            {
+              "frame": "(anonymous) ../../src/persistence/repository.ts:100",
+              "ms": 0.461
+            }
+          ],
+          "inclusive": [
+            {
+              "frame": "(root) :0",
+              "ms": 54.998
+            },
+            {
+              "frame": "panelControl ../../src/rendering/BoardScene.ts:283",
+              "ms": 52.999
+            },
+            {
+              "frame": "name ../../src/rendering/BoardScene.ts:159",
+              "ms": 52.999
+            },
+            {
+              "frame": "(anonymous) ../../src/rendering/strategy-panel.ts:275",
+              "ms": 52.999
+            },
+            {
+              "frame": "sync ../../src/rendering/BoardScene.ts:441",
+              "ms": 50.796
+            },
+            {
+              "frame": "command ../../src/rendering/BoardScene.ts:386",
+              "ms": 50.796
+            },
+            {
+              "frame": "reconcileTokens ../../src/rendering/BoardScene.ts:410",
+              "ms": 42.174
+            },
+            {
+              "frame": "createToken ../../src/rendering/BoardScene.ts:427",
+              "ms": 35.31
+            },
+            {
+              "frame": "Cd ../../src/presentation/unit-view.ts:43",
+              "ms": 34.249
+            },
+            {
+              "frame": "updateText ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:82872",
+              "ms": 28.686
+            },
+            {
+              "frame": "setText ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:82248",
+              "ms": 26.666
+            },
+            {
+              "frame": "update ../../src/presentation/unit-view.ts:76",
+              "ms": 16.498
+            },
+            {
+              "frame": "(anonymous) ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:83394",
+              "ms": 14.002
+            },
+            {
+              "frame": "initialize ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:81738",
+              "ms": 12.887
+            },
+            {
+              "frame": "measureText :0",
+              "ms": 8.957
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:81394",
+              "ms": 8.033
+            },
+            {
+              "frame": "canvasToTexture ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:183159",
+              "ms": 6.422
+            },
+            {
+              "frame": "_processTexture ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:194385",
+              "ms": 5.114
+            },
+            {
+              "frame": "destroy ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:35283",
+              "ms": 4.981
+            },
+            {
+              "frame": "removeAll ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:48656",
+              "ms": 4.981
+            },
+            {
+              "frame": "preDestroy ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:49134",
+              "ms": 4.981
+            },
+            {
+              "frame": "destroy ../../src/presentation/unit-view.ts:154",
+              "ms": 4.981
+            },
+            {
+              "frame": "update ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:194347",
+              "ms": 4.717
+            },
+            {
+              "frame": "render ../../src/rendering/strategy-panel.ts:252",
+              "ms": 4.521
+            },
+            {
+              "frame": "syncHud ../../src/rendering/BoardScene.ts:455",
+              "ms": 4.101
+            }
+          ],
+          "domainFrames": [
+            {
+              "frame": "acceptEquipment ../../src/simulation/match.ts:39",
+              "ms": 2.203
+            },
+            {
+              "frame": "nextRound ../../src/simulation/match.ts:231",
+              "ms": 2.203
+            },
+            {
+              "frame": "generateRoundRolls ../../src/simulation/m8/equipment.ts:30",
+              "ms": 1.105
+            },
+            {
+              "frame": "planTemporaryEquipment ../../src/simulation/temporary-equipment.ts:28",
+              "ms": 1.105
+            }
+          ],
+          "persistenceFrames": [
+            {
+              "frame": "(anonymous) ../../src/persistence/repository.ts:100",
+              "ms": 0.461
+            },
+            {
+              "frame": "write ../../src/persistence/repository.ts:96",
+              "ms": 0.461
+            }
+          ],
+          "traceTotals": [
+            {
+              "frame": "EventDispatch",
+              "ms": 55.028
+            },
+            {
+              "frame": "RunTask",
+              "ms": 54.998
+            },
+            {
+              "frame": "ThreadControllerImpl::RunTask",
+              "ms": 54.998
+            },
+            {
+              "frame": "FunctionCall",
+              "ms": 53.535
+            },
+            {
+              "frame": "ParseHTML",
+              "ms": 0.488
+            },
+            {
+              "frame": "Layout",
+              "ms": 0.467
+            },
+            {
+              "frame": "UpdateLayoutTree",
+              "ms": 0.104
+            }
+          ],
+          "commits": [],
+          "tasks": [
+            {
+              "startMs": -8.236,
+              "durationMs": 237.981
+            }
+          ]
+        },
+        "between": {
+          "durationMs": 373.356,
+          "sampleCount": 309,
+          "self": [
+            {
+              "frame": "(program) :0",
+              "ms": 347.26
+            },
+            {
+              "frame": "(anonymous) ../../src/persistence/repository.ts:104",
+              "ms": 6.133
+            },
+            {
+              "frame": "p ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74928",
+              "ms": 3.119
+            },
+            {
+              "frame": "setStrokeStyle ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74744",
+              "ms": 3.003
+            },
+            {
+              "frame": "i ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:53701",
+              "ms": 2.945
+            },
+            {
+              "frame": "isEarHashed ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97428",
+              "ms": 2.529
+            },
+            {
+              "frame": "bufferData :0",
+              "ms": 1.708
+            },
+            {
+              "frame": "batchStrokePath ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:187179",
+              "ms": 1.508
+            },
+            {
+              "frame": "sortLinked ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97648",
+              "ms": 1.088
+            },
+            {
+              "frame": "getX ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:47448",
+              "ms": 1.088
+            },
+            {
+              "frame": "e ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:35842",
+              "ms": 1.071
+            },
+            {
+              "frame": "batchTexture ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:186784",
+              "ms": 0.918
+            },
+            {
+              "frame": "r ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:75600",
+              "ms": 0.7
+            },
+            {
+              "frame": "render ../../src/stats/combat-feedback-renderer.ts:38",
+              "ms": 0.176
+            },
+            {
+              "frame": "mark :0",
+              "ms": 0.11
+            }
+          ],
+          "inclusive": [
+            {
+              "frame": "(root) :0",
+              "ms": 373.356
+            },
+            {
+              "frame": "(program) :0",
+              "ms": 347.26
+            },
+            {
+              "frame": "step ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:17180",
+              "ms": 19.853
+            },
+            {
+              "frame": "step ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:18212",
+              "ms": 19.853
+            },
+            {
+              "frame": "step ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:31350",
+              "ms": 19.853
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:182818",
+              "ms": 16.674
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:11715",
+              "ms": 16.674
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:201027",
+              "ms": 16.674
+            },
+            {
+              "frame": "render ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:198266",
+              "ms": 16.674
+            },
+            {
+              "frame": "i ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:53701",
+              "ms": 11.937
+            },
+            {
+              "frame": "batchFillPath ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:187104",
+              "ms": 6.413
+            },
+            {
+              "frame": "(anonymous) ../../src/persistence/repository.ts:104",
+              "ms": 6.133
+            },
+            {
+              "frame": "r ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:75600",
+              "ms": 3.819
+            },
+            {
+              "frame": "g ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:49423",
+              "ms": 3.819
+            },
+            {
+              "frame": "earcutLinked ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97348",
+              "ms": 3.617
+            },
+            {
+              "frame": "earcut ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97266",
+              "ms": 3.617
+            },
+            {
+              "frame": "update ../../src/rendering/BoardScene.ts:544",
+              "ms": 3.179
+            },
+            {
+              "frame": "step ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:201003",
+              "ms": 3.179
+            },
+            {
+              "frame": "update ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:198235",
+              "ms": 3.179
+            },
+            {
+              "frame": "p ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74928",
+              "ms": 3.119
+            },
+            {
+              "frame": "setStrokeStyle ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:74744",
+              "ms": 3.003
+            },
+            {
+              "frame": "applyRing ../../src/presentation/unit-view.ts:107",
+              "ms": 3.003
+            },
+            {
+              "frame": "setRing ../../src/presentation/unit-view.ts:106",
+              "ms": 3.003
+            },
+            {
+              "frame": "syncSelection ../../src/rendering/BoardScene.ts:497",
+              "ms": 3.003
+            },
+            {
+              "frame": "isEarHashed ../../../../../root/projects/hex-autobattler/node_modules/phaser/dist/phaser.js:97428",
+              "ms": 2.529
+            }
+          ],
+          "domainFrames": [],
+          "persistenceFrames": [
+            {
+              "frame": "(anonymous) ../../src/persistence/repository.ts:104",
+              "ms": 6.133
+            }
+          ],
+          "traceTotals": [
+            {
+              "frame": "RunTask",
+              "ms": 372.927
+            },
+            {
+              "frame": "ThreadControllerImpl::RunTask",
+              "ms": 369.243
+            },
+            {
+              "frame": "Commit",
+              "ms": 304.535
+            },
+            {
+              "frame": "FunctionCall",
+              "ms": 38.595
+            },
+            {
+              "frame": "FireAnimationFrame",
+              "ms": 23.168
+            },
+            {
+              "frame": "SimpleWatcher::OnHandleReady",
+              "ms": 10.27
+            },
+            {
+              "frame": "Receive mojo reply",
+              "ms": 10.231
+            },
+            {
+              "frame": "EventDispatch",
+              "ms": 6.26
+            },
+            {
+              "frame": "BlinkScheduler_PerformMicrotaskCheckpoint",
+              "ms": 2.378
+            },
+            {
+              "frame": "Responsiveness.Renderer.UserInteraction",
+              "ms": 2.249
+            },
+            {
+              "frame": "Layout",
+              "ms": 1.884
+            },
+            {
+              "frame": "Paint",
+              "ms": 1.866
+            },
+            {
+              "frame": "UpdateLayoutTree",
+              "ms": 1.405
+            },
+            {
+              "frame": "PrePaint",
+              "ms": 1.166
+            },
+            {
+              "frame": "TimerFire",
+              "ms": 1.139
+            },
+            {
+              "frame": "Layerize",
+              "ms": 0.37
+            },
+            {
+              "frame": "HitTest",
+              "ms": 0.327
+            },
+            {
+              "frame": "PaintImage",
+              "ms": 0.199
+            },
+            {
+              "frame": "IntersectionObserverController::computeIntersections",
+              "ms": 0.078
+            },
+            {
+              "frame": "UpdateLayer",
+              "ms": 0.042
+            }
+          ],
+          "commits": [
+            {
+              "startMs": 19.22,
+              "durationMs": 155.521,
+              "threadCpuMs": 3.219
+            },
+            {
+              "startMs": 209.621,
+              "durationMs": 149.014,
+              "threadCpuMs": 3.224
+            }
+          ],
+          "tasks": [
+            {
+              "startMs": -63.234,
+              "durationMs": 237.981
+            },
+            {
+              "startMs": 175.84,
+              "durationMs": 0.019
+            },
+            {
+              "startMs": 175.881,
+              "durationMs": 0.033
+            },
+            {
+              "startMs": 177.411,
+              "durationMs": 0.011
+            },
+            {
+              "startMs": 177.461,
+              "durationMs": 0.016
+            },
+            {
+              "startMs": 177.514,
+              "durationMs": 0.008
+            },
+            {
+              "startMs": 177.556,
+              "durationMs": 0.007
+            },
+            {
+              "startMs": 177.596,
+              "durationMs": 0.027
+            },
+            {
+              "startMs": 177.663,
+              "durationMs": 0.09
+            },
+            {
+              "startMs": 177.879,
+              "durationMs": 5.526
+            },
+            {
+              "startMs": 183.505,
+              "durationMs": 0.038
+            },
+            {
+              "startMs": 183.588,
+              "durationMs": 0.012
+            },
+            {
+              "startMs": 183.643,
+              "durationMs": 0.019
+            },
+            {
+              "startMs": 183.705,
+              "durationMs": 0.007
+            },
+            {
+              "startMs": 183.745,
+              "durationMs": 10.283
+            },
+            {
+              "startMs": 194.077,
+              "durationMs": 0.026
+            },
+            {
+              "startMs": 194.131,
+              "durationMs": 0.005
+            },
+            {
+              "startMs": 194.169,
+              "durationMs": 0.036
+            },
+            {
+              "startMs": 194.232,
+              "durationMs": 0.018
+            },
+            {
+              "startMs": 194.276,
+              "durationMs": 0.018
+            },
+            {
+              "startMs": 194.32,
+              "durationMs": 0.02
+            },
+            {
+              "startMs": 194.369,
+              "durationMs": 1.232
+            },
+            {
+              "startMs": 195.646,
+              "durationMs": 0.013
+            },
+            {
+              "startMs": 195.692,
+              "durationMs": 0.398
+            },
+            {
+              "startMs": 196.135,
+              "durationMs": 162.508
+            },
+            {
+              "startMs": 358.731,
+              "durationMs": 0.03
+            },
+            {
+              "startMs": 358.792,
+              "durationMs": 7.083
+            },
+            {
+              "startMs": 366.035,
+              "durationMs": 0.009
+            },
+            {
+              "startMs": 366.082,
+              "durationMs": 0.005
+            },
+            {
+              "startMs": 366.128,
+              "durationMs": 0.005
+            },
+            {
+              "startMs": 366.17,
+              "durationMs": 0.005
+            },
+            {
+              "startMs": 366.211,
+              "durationMs": 0.007
+            },
+            {
+              "startMs": 366.265,
+              "durationMs": 0.033
+            },
+            {
+              "startMs": 366.352,
+              "durationMs": 2.74
+            },
+            {
+              "startMs": 369.147,
+              "durationMs": 123.53
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "method": {
+    "samples": "Five alternating pairs with unchanged M7 prelude, tap sequence and assertions; one separate profiled pair; all outcomes retained.",
+    "measurement": "Native click window capture to bubble approximates synchronous handler; afterHandler is second capture minus first bubble. Product guard begins near the end of first handler, not at capture.",
+    "clocks": "Driver/browser timeOrigin + performance.now align epochs; cross-process decomposition is approximate. clickGap and handler use the same browser clock.",
+    "profiling": "1ms V8 sampling; timestamp-sorted intervals clipped to trace windows, approximate inclusive stack weights. Trace native Commit wall time vs thread CPU is separate. Nested trace/inclusive values are not additive.",
+    "scope": "Existing Chromium touch gate only. Not a new mobile acceptance test; not a full CI pass; no proof about every host or maximum TG load.",
+    "orderEffect": "Warm pure costs run baseline then B5 after all browser samples; microbenchmark only, not a paired end-to-end effect estimate."
+  },
+  "pureCosts": {
+    "method": "Isolated Chromium page; exact archived TS bundled with esbuild; naturally captured profile beforeState; 500 warmup + 7 x 1000 calls per operation, no rendering or IO; not an end-to-end latency gate.",
+    "results": {
+      "base": {
+        "round": 1,
+        "phase": "settlement",
+        "itemCount": 2,
+        "beforeJsonBytes": 21577,
+        "afterJsonBytes": 2978,
+        "timings": {
+          "nextRound": {
+            "msPerCall": [
+              0.013200000047683716,
+              0.010700000047683716,
+              0.011199999928474426,
+              0.01,
+              0.010899999976158143,
+              0.0125,
+              0.015600000023841858
+            ],
+            "medianMs": 0.011199999928474426
+          },
+          "fixedCapture": {
+            "msPerCall": [
+              0.0635,
+              0.05089999997615814,
+              0.05,
+              0.0615,
+              0.05879999995231629,
+              0.06360000002384186,
+              0.05329999995231628
+            ],
+            "medianMs": 0.05879999995231629
+          },
+          "structuredClone": {
+            "msPerCall": [
+              0.03330000007152557,
+              0.03919999992847443,
+              0.039,
+              0.038,
+              0.03470000004768371,
+              0.033100000023841857,
+              0.0385
+            ],
+            "medianMs": 0.038
+          }
+        }
+      },
+      "b5": {
+        "round": 1,
+        "phase": "settlement",
+        "itemCount": 2,
+        "rollCount": 0,
+        "temporaryCount": 0,
+        "beforeJsonBytes": 21673,
+        "afterJsonBytes": 3074,
+        "timings": {
+          "nextRound": {
+            "msPerCall": [
+              0.025300000071525573,
+              0.02339999997615814,
+              0.02289999997615814,
+              0.021300000071525573,
+              0.021299999952316285,
+              0.020799999952316284,
+              0.02090000009536743
+            ],
+            "medianMs": 0.021300000071525573
+          },
+          "fixedCapture": {
+            "msPerCall": [
+              0.0555,
+              0.05310000002384186,
+              0.05189999997615814,
+              0.04910000002384186,
+              0.04670000004768372,
+              0.0475,
+              0.04819999992847443
+            ],
+            "medianMs": 0.04910000002384186
+          },
+          "structuredClone": {
+            "msPerCall": [
+              0.0325,
+              0.034799999952316286,
+              0.034800000071525575,
+              0.03439999997615814,
+              0.033299999952316285,
+              0.038700000047683716,
+              0.03510000002384186
+            ],
+            "medianMs": 0.034799999952316286
+          },
+          "planTemporaryEquipment": {
+            "msPerCall": [
+              0.009,
+              0.007800000071525573,
+              0.007599999904632568,
+              0.007700000047683716,
+              0.007399999976158142,
+              0.008399999976158142,
+              0.007700000047683716
+            ],
+            "medianMs": 0.007700000047683716
+          }
+        }
+      }
+    }
+  },
+  "pairedDeltasMs": [
+    {
+      "pair": 1,
+      "clickGap": 103.2,
+      "handler": -13.6
+    },
+    {
+      "pair": 2,
+      "clickGap": -136.3,
+      "handler": 10.4
+    },
+    {
+      "pair": 3,
+      "clickGap": -191.1,
+      "handler": -8.2
+    },
+    {
+      "pair": 4,
+      "clickGap": 14.6,
+      "handler": -8
+    },
+    {
+      "pair": 5,
+      "clickGap": 10.6,
+      "handler": 7.9
+    }
+  ],
+  "rawEvidenceSha256": {
+    "timing-1-base/report.json": "18d52b370102c700b1ded808d164c66a65e4c73aba41fe2236382fb377bccb27",
+    "timing-1-base/worker.log": "fc48ffab0b3732d4dbb36f016dd02549185f8ab1fa06db5a65e323b647806876",
+    "timing-1-b5/report.json": "3f9e1543915833a787ac11e353cbfe3a68b32f16cf7c294f66f9d5693e282b86",
+    "timing-1-b5/worker.log": "29d37a168aee61b9486330054ed739054f504c7a531bef11a3b6227924f314ed",
+    "timing-2-b5/report.json": "78aeae9507a0cbe18d26d4e16ecd8ed3878ef70725c3991a4e31edc7a6b5cb01",
+    "timing-2-b5/worker.log": "c9597e9d0bf08286754238d97563fdee459f3008a3d0d27d337225d6e5d50ae5",
+    "timing-2-base/report.json": "c3ce5d36dafafde45384b43a7409339270caa959a4452ff9ed3f264affa98432",
+    "timing-2-base/worker.log": "5a21e44fe0aa273158ac1a66b99382c9de5e282dc2ff56a7177585c1a0fe5e3b",
+    "timing-3-base/report.json": "49e8c24243702fe8140e184d78e279a78c97ea63d9cfae19cb317a806ab33b39",
+    "timing-3-base/worker.log": "d777da4ecca9f93ed8b51afd2a068491e565ac490e0b548c6bef72d3222f3614",
+    "timing-3-b5/report.json": "aa2184e90d60e996482bff05af202146f69374b5ae671f0180ace7dcab7811ad",
+    "timing-3-b5/worker.log": "ad5c5a07d89e5da96a600ab037539e210e327fcf970cd545e0ede6989a00325b",
+    "timing-4-b5/report.json": "eeed6a7fd66915d353e0a10bd5b66b83d5eefb4c67fe21e1c9e9e56a81f3ec80",
+    "timing-4-b5/worker.log": "f53b683a15f33bf6f101c16017e301d8b9ba88bb730c04fa114612a04f8c0889",
+    "timing-4-base/report.json": "aab45fc92c9c0d4bfc372f7944ae3e0b53a9b67412c56b4c3c9aa7c6be0c13de",
+    "timing-4-base/worker.log": "16a83fdd8fc46ff8549236cc5134d265048a87d4d550f2b79722bda0e79ab4ee",
+    "timing-5-base/report.json": "8c9cd0c0cde032c606870b8d5d8c53f80d0408208415eae26b5c1ed455bbb185",
+    "timing-5-base/worker.log": "3608329d30c2bfc89c87713775ae19b2661469c6ae19eb6973b35e025ca1038a",
+    "timing-5-b5/report.json": "a8acf0fdbf5dd768c170a3721008b8f679f3ae0ca4a79fc8845b91e74ceea988",
+    "timing-5-b5/worker.log": "bb39e3f4e0589777cc8a6de85600d222b95d14dbb88c3b34d9514c61ea259c19",
+    "profile-1-base/report.json": "0e3a5ba3257bfcb45145e1510eb53b02377e4bb29fa7dd1ca83b115cb9288049",
+    "profile-1-base/worker.log": "3674b9d86918b083291742db2502d4594616152d923f250d9d551a3ad79a9694",
+    "profile-1-base/cpu-profile.json": "51d810f8613345f9afa62baef9dd8246af16d872a049115211d4bae71334cd5b",
+    "profile-1-base/trace.json": "d6420cbf129ea55bf56747aad51ec4d9412214673fceed3ef6b66d97b37d1ef0",
+    "profile-1-b5/report.json": "2962d911d7b2cf84061b15a927179b5f3a3fd9acb652301c0cec1739b52e3559",
+    "profile-1-b5/worker.log": "3a6d6cb43890a658dab2262fcbe40c0f13a42ebcf4977895c86c8345d3b3dab7",
+    "profile-1-b5/cpu-profile.json": "3c8acd5f6c0486d4814a005314e2ebae04a1d764e3b334968f7c1430b8d586f4",
+    "profile-1-b5/trace.json": "5be06ce4926072c7fb60af1498c506b1ca2a9beb8e5b4f3c6cb029bf61b1b694"
+  },
+  "analysisScriptsSha256": {
+    "scripts/diagnose-m8-b5-click-latency.cjs": "62ac151e804155149aa34dae113437efa8df646654859bde84d32a94beb5d824",
+    "scripts/analyze-m8-b5-click-latency.cjs": "2a8eac5bc252bcdc7d9f87e4135a4a79745598ec2b6544f20f332b8d56c17fc7",
+    "scripts/diagnose-m8-b5-click-pure-cost.cjs": "266215e245bc992959ff522a542fb1a4b0d0d453f93768c1cab3510e5ac7941d"
+  }
+}

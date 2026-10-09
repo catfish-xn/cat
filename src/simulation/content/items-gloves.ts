@@ -15,7 +15,7 @@ export const GLOVES_ITEMS: readonly ItemDefinition[] = [
     "gloves",
     "gloves"
   ],
-  "effectDescriptions": ["暴击率+20%；本体与临时件占用3槽。TG-01临时装备生成、刷新、清理在B5接入；B4仅本体属性生效。"],
+  "effectDescriptions": ["暴击率+20%；本体与临时件占用3槽。每轮首次穿戴生成临时装备：7级及以上两件成装，以下成装＋组件；同轮保持组合，新轮刷新。"],
   "effects": [
     {
       "kind": "statFlat",

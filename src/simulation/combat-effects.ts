@@ -31,7 +31,7 @@ export function applyCombatStart(state: CombatState): CombatStep {
       for (const invocation of batch.invocations) {
         effects.push(invocationEvent(invocation, 0)); const source = invocation.trigger.source;
         if (invocation.action.kind === 'grantShield') grantShield(current, { ownerId: source.ownerId, sourceKind: source.sourceKind,
-          definitionId: source.sourceDefinitionId, instanceId: source.sourceInstanceId, effectIndex: source.effectIndex },
+          definitionId: source.sourceDefinitionId, instanceId: source.sourceInstanceId, effectIndex: source.effectIndex, ...(source.parentItemInstanceId ? { parentItemInstanceId: source.parentItemInstanceId } : {}) },
         invocation.action.amount, invocation.action.durationTicks, 0, shields);
         else if (invocation.action.kind === 'gainMana') gain += invocation.action.amount;
       }

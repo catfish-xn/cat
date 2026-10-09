@@ -1,0 +1,51 @@
+import { ITEM_DEFINITIONS } from './content/items';
+import { validateCombine, validateEquip } from './inventory';
+import type { MatchState } from './match-types';
+import type { CombinePreview, EquipPreview, UnitEquipmentView } from './m8/ui-contracts';
+import { getRoundEnemyItems } from './round-enemies';
+import type { ItemInstance } from './strategy-types';
+import { isTemporaryItemId } from './temporary-equipment';
+
+export { readItemCatalog } from './item-catalog';
+
+export interface InventoryItemView { readonly itemInstanceId: string; readonly definitionId: string }
+/** Permanent inventory only; unresolved rewards and temporary children are never stock. */
+export function readItemInventory(state: Readonly<MatchState>): readonly InventoryItemView[] {
+  return state.items.filter(item => item.location.kind === 'inventory')
+    .map(item => ({ itemInstanceId: item.id, definitionId: item.definitionId }))
+    .sort((a, b) => a.itemInstanceId < b.itemInstanceId ? -1 : a.itemInstanceId > b.itemInstanceId ? 1 : 0);
+}
+
+/** These are the public command validators; a preview never allocates an instance. */
+export function previewCombine(state: Readonly<MatchState>, aId: string, bId: string): CombinePreview {
+  if (state.phase !== 'preparation') return { allowed: false, reason: 'wrong-phase' };
+  if (isTemporaryItemId(state, aId) || isTemporaryItemId(state, bId)) return { allowed: false, reason: 'temporary-item' };
+  return validateCombine(state.items, aId, bId);
+}
+
+export function previewEquip(state: Readonly<MatchState>, itemId: string, unitId: string, slot: number): EquipPreview {
+  if (state.phase !== 'preparation') return { allowed: false, reason: 'wrong-phase', conflictingItemIds: [] };
+  if (isTemporaryItemId(state, itemId)) return { allowed: false, reason: 'temporary-item', conflictingItemIds: [] };
+  return validateEquip(state.items, state.preparation, itemId, unitId, slot);
+}
+
+/** Detached projection in every phase; reading never repairs or generates equipment. */
+export function readUnitEquipment(state: Readonly<MatchState>, unitId: string): UnitEquipmentView | null {
+  const unit = state.preparation.units.find(unit => unit.id === unitId);
+  if (!unit) return null;
+  const items: readonly ItemInstance[] = unit.team === 'player' ? state.items : getRoundEnemyItems(state.round).map(item => ({
+    id: `enemy:${state.round}:${item.unitId}:${item.slot}`, definitionId: item.definitionId,
+    location: { kind: 'unit', unitId: item.unitId, slot: item.slot },
+  }));
+  const held = items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId);
+  const exclusive = held.find(item => ITEM_DEFINITIONS[item.definitionId].slotCost === 3);
+  return {
+    unitId,
+    slots: ([0, 1, 2] as const).map(slot => ({
+      slot,
+      itemInstanceId: held.find(item => item.location.kind === 'unit' && item.location.slot === slot)?.id ?? null,
+      reservedByItemInstanceId: exclusive && slot !== 0 ? exclusive.id : null,
+    })),
+    temporaryItems: state.temporaryEquipment.filter(item => item.holderId === unitId).map(item => ({ ...item })),
+  };
+}

@@ -20,6 +20,8 @@ export interface RoundResult {
   readonly baseDamage: number; readonly survivingEnemyCount: number; readonly playerDamage: number; readonly hpLost: number;
 }
 export interface MatchBase {
+  readonly equipmentState: import('./m8/equipment').EquipmentState;
+  readonly temporaryEquipment: readonly import('./m8/contracts').TemporaryEquipment[];
   readonly schemaVersion: 5; readonly rulesVersion: 'm5-14.24b-v1'; readonly contentVersion: 's13-14.24b-slice-v1'; readonly contentDigest: string;
   readonly commandProtocolVersion: 2; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
   readonly roundDefinitionId: string; readonly streak: Streak; readonly outcome: 'victory' | 'defeat' | null;
@@ -42,7 +44,8 @@ export type MatchState = MatchBase & (
 );
 export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
-  | 'stale-choice' | 'invalid-choice' | 'invalid-target';
+  | 'stale-choice' | 'invalid-choice' | 'invalid-target'
+  | import('./m8/ui-contracts').EquipmentFailure;
 export type MatchCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly state: MatchState; readonly reason: MatchFailure };
 export interface MatchStep { readonly state: MatchState; readonly events: readonly MatchEvent[] }
