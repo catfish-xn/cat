@@ -1,5 +1,5 @@
 {
-  "method": "Node-ID set comparison is descriptive only: same IDs with changed labels occur, so intersections cannot universally prove object survival. Same-ID/same-label is separately reported but remains conditional on stable profiler identity; BFS from synthetic root excluding weak edges and conditional ephemeron key-value-pair internal edges; shortest graph paths, not dominators or retained sizes. Shortcut edges retained and labeled; internal/native edges do not by themselves prove application ownership. Self-size deltas are not Runtime.getHeapUsage deltas.",
+  "method": "Node-ID set comparison is descriptive only: same IDs with changed labels occur, so intersections cannot universally prove object survival. Same-ID/same-label is separately reported but remains conditional on stable profiler identity; BFS from synthetic root excluding weak edges and conditional ephemeron-table and numbered WeakMap key-value-pair internal edges; shortest graph paths, not dominators or retained sizes. Shortcut edges retained and labeled; internal/native edges do not by themselves prove application ownership. Self-size deltas are not Runtime.getHeapUsage deltas.",
   "source_commit": "e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce",
   "runtime_commit": "97f38a0e787a4edcb35df4a59823bb1d106def67",
   "browser": "Chromium 141.0.7390.37; CI 153.0.8010.12",
@@ -9474,9 +9474,9 @@
   },
   "reachability": {
     "total": 259473,
-    "reachable_excluding_weak_and_conditional_ephemeron_edges": 259184,
-    "unreachable": 289,
-    "conditional_ephemeron_edges_ignored": 273,
+    "reachable_excluding_weak_and_conditional_ephemeron_edges": 258879,
+    "unreachable": 594,
+    "conditional_ephemeron_edges_ignored": 2091,
     "weak_edges_ignored": 71967
   },
   "performance_incoming": [

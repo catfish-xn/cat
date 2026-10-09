@@ -2,7 +2,16 @@
 Name-based application probes and representative IDs are evidence-specific.
 This is not a generic leak detector or a replacement for the browser gate.
 """
-import json,gzip,collections,hashlib,sys,os
+import json,gzip,collections,hashlib,sys,os,re
+def conditional_edge(t, name):
+ if t != 'internal' or not isinstance(name, str): return False
+ normalized=re.sub(r'^\d+ / ', '', name)
+ if normalized.startswith('part of key -> value pair in ephemeron table'): return True
+ if re.fullmatch(r'part of key \(.*? @\d+\) -> value \(.*? @\d+\) pair in WeakMap \(table @\d+\)', normalized, flags=re.S): return True
+ assert 'part of key' not in normalized and 'ephemeron table' not in normalized, 'Unclassified conditional edge: '+name
+ return False
+def allowed_edge(t, name):
+ return t != 'weak' and not conditional_edge(t, name)
 class Snapshot:
  def __init__(self,path):
   self.raw=json.load(gzip.open(path));m=self.raw['snapshot']['meta'];self.nf=m['node_fields'];self.ef=m['edge_fields'];self.nw=len(self.nf);self.ew=len(self.ef);self.n=self.raw['nodes'];self.e=self.raw['edges'];self.s=self.raw['strings'];self.nt=m['node_types'][0];self.et=m['edge_types'][0];self.count=len(self.n)//self.nw
@@ -28,7 +37,7 @@ class Snapshot:
   while q:
    u=q.popleft()
    for v,t,n,p in self.edges(u):
-    if t!='weak' and not str(n).startswith('part of key -> value pair in ephemeron table') and self.parent[v] is None:self.parent[v]=(u,t,n);q.append(v)
+    if allowed_edge(t,n) and self.parent[v] is None:self.parent[v]=(u,t,n);q.append(v)
  def path(self,i):
   if self.parent[i] is None:return None
   r=[]
@@ -58,10 +67,10 @@ for k in targets:
   if sig not in sigs:sigs.add(sig);reps.append(i)
   if len(reps)>=3:break
  groups[k]={'before_count':bs.get(k,[0,0])[0],'after_count':len(inds),'new_ids':len(new),'same_id_same_label':len(surv),'same_id_changed_label':len(changed),'before_group_not_matched_after':bs.get(k,[0,0])[0]-len(surv),'new_self_size':sum(a.n[i*a.nw+3] for i in new),'new_reachable_nonweak_non_ephemeron':sum(a.parent[i] is not None for i in new),'representatives':[{'node':a.desc(i),'present_before':a.n[i*a.nw+2] in b.ids,'nonweak_shortest_path':a.path(i)} for i in reps]}
-result={'method':'Node-ID set comparison is descriptive only: same IDs with changed labels occur, so intersections cannot universally prove object survival. Same-ID/same-label is separately reported but remains conditional on stable profiler identity; BFS from synthetic root excluding weak edges and conditional ephemeron key-value-pair internal edges; shortest graph paths, not dominators or retained sizes. Shortcut edges retained and labeled; internal/native edges do not by themselves prove application ownership. Self-size deltas are not Runtime.getHeapUsage deltas.','source_commit':'e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce','runtime_commit':'97f38a0e787a4edcb35df4a59823bb1d106def67','browser':'Chromium 141.0.7390.37; CI 153.0.8010.12','before_nodes':b.count,'after_nodes':a.count,'before_self_size':sum(b.n[i*b.nw+3] for i in range(b.count)),'after_self_size':sum(a.n[i*a.nw+3] for i in range(a.count)),'top_deltas':rows[:80],'groups':groups}
+result={'method':'Node-ID set comparison is descriptive only: same IDs with changed labels occur, so intersections cannot universally prove object survival. Same-ID/same-label is separately reported but remains conditional on stable profiler identity; BFS from synthetic root excluding weak edges and conditional ephemeron-table and numbered WeakMap key-value-pair internal edges; shortest graph paths, not dominators or retained sizes. Shortcut edges retained and labeled; internal/native edges do not by themselves prove application ownership. Self-size deltas are not Runtime.getHeapUsage deltas.','source_commit':'e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce','runtime_commit':'97f38a0e787a4edcb35df4a59823bb1d106def67','browser':'Chromium 141.0.7390.37; CI 153.0.8010.12','before_nodes':b.count,'after_nodes':a.count,'before_self_size':sum(b.n[i*b.nw+3] for i in range(b.count)),'after_self_size':sum(a.n[i*a.nw+3] for i in range(a.count)),'top_deltas':rows[:80],'groups':groups}
 result['id_label_changes']=[{'before':b.desc(b.ids[a.n[i*a.nw+2]]),'after':a.desc(i)} for i in range(a.count) if a.n[i*a.nw+2] in b.ids and b.key(b.ids[a.n[i*a.nw+2]])!=a.key(i)]
 result['snapshot_sha256']={label:hashlib.sha256(open(path,'rb').read()).hexdigest() for label,path in [('before',sys.argv[1] if len(sys.argv)>1 else base+'/before.heapsnapshot.gz'),('after',sys.argv[2] if len(sys.argv)>2 else base+'/after.heapsnapshot.gz')]}
-result['reachability']={'total':a.count,'reachable_excluding_weak_and_conditional_ephemeron_edges':sum(p is not None for p in a.parent),'unreachable':sum(p is None for p in a.parent),'conditional_ephemeron_edges_ignored':sum(a.et[a.e[p]]!='weak' and isinstance(a.e[p+1],int) and a.et[a.e[p]] not in ('hidden','element') and str(a.s[a.e[p+1]]).startswith('part of key -> value pair in ephemeron table') for p in range(0,len(a.e),a.ew)),'weak_edges_ignored':sum(a.et[a.e[p]]=='weak' for p in range(0,len(a.e),a.ew))}
+result['reachability']={'total':a.count,'reachable_excluding_weak_and_conditional_ephemeron_edges':sum(p is not None for p in a.parent),'unreachable':sum(p is None for p in a.parent),'conditional_ephemeron_edges_ignored':sum(conditional_edge(t,n) for i in range(a.count) for _,t,n,_ in a.edges(i)),'weak_edges_ignored':sum(a.et[a.e[p]]=='weak' for p in range(0,len(a.e),a.ew))}
 result['performance_incoming']=[]
 for u in range(a.count):
  for v,t,n,p in a.edges(u):
@@ -76,7 +85,7 @@ for group in groups.values():
   path=rep['nonweak_shortest_path']
   if path:
    assert path[0]['from']['id']==1 and path[-1]['to']['id']==rep['node']['id']
-   assert all(e['edge_type']!='weak' and not str(e['edge_name']).startswith('part of key -> value pair in ephemeron table') for e in path)
+   assert all(allowed_edge(e['edge_type'],e['edge_name']) for e in path)
    assert all(x['to']['id']==y['from']['id'] for x,y in zip(path,path[1:]))
 assert sum(r['delta_self_size'] for r in rows)==result['after_self_size']-result['before_self_size']
 result['validation']='Passed: group partitions, path continuity/root/target/excluded-edge checks, all-category delta reconciliation.'

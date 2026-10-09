@@ -5,8 +5,8 @@
 - 证据固定提交 `e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce`，运行代码 `97f38a0e787a4edcb35df4a59823bb1d106def67`。
 - 输入为 `docs/evidence/h1-claude-runs/snapshot-1/{before,after}.heapsnapshot.gz`；Chromium 141.0.7390.37，CI 为 153.0.8010.12。只有一个 30 循环窗口，且快照采集会扰动测量。
 - `scripts/diagnostics/analyze-h1-retention.py` 仅使用 Python 标准库，解析快照 metadata，而非依赖固定 V8 版本类型编号。执行：`python analyze.py before.heapsnapshot.gz after.heapsnapshot.gz retention-evidence.json`。第三参数指定输出路径；省略时写入脚本同目录 `retention-evidence.json`，stdout 是可读摘要。
-- 从 synthetic root 做广度优先搜索，排除 weak 边及 `part of key -> value pair in ephemeron table` 条件边。保留并明确标注 root shortcut 边；它是快照根别名，不代表应用属性。输出是一条非弱最短可达路径，**不是支配树、独占所有权或 retained-size 测算**。
-- after 共259,473节点，259,184可从上述图到达，289不可到达，排除71,967条weak边。不可达不等于泄漏或垃圾，可能涉及被保守剔除的条件边/特殊根语义。
+- 从 synthetic root 做广度优先搜索，排除 weak 边、ephemeron-table 条件边及带编号/对象名的 WeakMap key→value 条件边。解析、计数和路径验证共用分类函数；未知条件边格式直接拒绝分析。保留并明确标注 root shortcut 边；它是快照根别名，不代表应用属性。输出是一条非弱最短可达路径，**不是支配树、独占所有权或 retained-size 测算**。
+- after 共259,473节点，258,879可从上述图到达，594不可到达，排除71,967条weak边及2,091条条件边。不可达不等于泄漏或垃圾，可能涉及被保守剔除的条件边/特殊根语义。
 - 节点ID跨快照有110例同ID标签不同，详见 JSON `id_label_changes`。例如306483由Object变成FeedbackVector，10824由InternalNode变成DOMRectReadOnly。只记录观察，不推断其产生原因。ID交集不能普遍证明对象存活；`same_id_same_label`也只是条件性身份匹配。`new_ids`表示after ID不在before集合，不把它绝对解释成新分配对象。类型汇总self_size净变化不依赖该身份假设。
 
 ## 发现1：性能条目及DOMRect有具体浏览器性能对象保留链
@@ -67,8 +67,12 @@ python scripts/diagnostics/analyze-h1-retention.py /tmp/h1-reproduce/before.gz /
 cmp /tmp/h1-reproduce/retention-evidence.json docs/evidence/h1-retention/retention-evidence.json
 ```
 
-离线分析已复跑，机器证据逐字节一致；结果SHA256为 `7e666922da4093d9c7c316e7ed1290dfcfa619607112da11453c7ff959f463fd`。这验证解析可复现，不是浏览器测试或独立审计签收。现有门禁、测试预期、CI、运行代码均未修改。
+离线分析已复跑，机器证据逐字节一致；结果SHA256为 `76448d43c4e51cb6f4c4bb54735964017c5b3bdaf5bac13dfab7150b95e7def6`。这验证解析可复现，不是浏览器测试或独立审计签收。现有门禁、测试预期、CI、运行代码均未修改。
 
 ## 下一步与状态
 
 补测的可执行包装和分组说明见 [H1_FOLLOWUP_RUNS.md](H1_FOLLOWUP_RUNS.md)：先追加8次原参数正常组，以及独立的3次历史预热实验连续窗口组。新旧预热组不可混算。误报率、现行参数连续趋势、dev、B4重触发负载和CI153验证仍未完成；H1尚未签收，完整诊断报告后续再送新的独立Pro审计对话。
+
+## 2026-10-09 解析分类修正
+
+准备CI153分析时发现旧解析只排除了273条ephemeron-table条件边，漏排1,818条编号WeakMap条件内部边。现已统一剔除，after可达数由259,184更正为258,879（减少305），不可达数由289更正为594。旧结果保留在Git历史；原二进制快照没有变化。全部已报告groups及Performance传入代表路径逐项比较不变，总self-size、code净增与其比例也不变；此修正只纠正图可达统计，不能据此证明没有其他泄漏。分类器已通过7项合成边检查，完整快照重跑及组/路径对比通过。
