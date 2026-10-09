@@ -13,6 +13,7 @@ import { planPurchase, transferUpgradeResources } from './upgrades';
 import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
 import { planCombine, planEquip, returnUnitItems } from './inventory';
+import { previewCombine, previewEquip } from './item-selectors';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { getRoundSchedule, getRoundKind, getStageRound } from './round-schedule';
 import { planReward } from './rewards';
@@ -234,12 +235,14 @@ export function nextRound(state: MatchState, expectedRound: number): MatchComman
 }
 
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
-  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  const preview = previewCombine(state, aId, bId);
+  if (!preview.allowed) return fail(state, preview.reason);
   const plan = planCombine(state.items, state.nextItemSerial, aId, bId);
   return plan.ok ? accept({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial }, plan.events) : fail(state, plan.reason);
 }
 export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
-  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  const preview = previewEquip(state, itemId, unitId, slot);
+  if (!preview.allowed) return fail(state, preview.reason);
   const plan = planEquip(state.items, state.preparation, itemId, unitId, slot);
   return plan.ok ? accept({ ...state, items: plan.items }, plan.events) : fail(state, plan.reason);
 }
