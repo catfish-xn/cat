@@ -1,0 +1,56 @@
+{
+  "runId": 37900065144,
+  "artifactId": 11603454240,
+  "artifactName": "h1-scaling-preview-37900065144-1",
+  "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37900065144/artifacts/11603454240",
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "definitionSha": "f485ff7496116d101d3d5543db257776d558fd75",
+  "apiDigest": "sha256:e0d59056a0c6cf304d4c7eb147abd550526b816198ee759c672dfa94620a5b3f",
+  "archiveSha256": "e0d59056a0c6cf304d4c7eb147abd550526b816198ee759c672dfa94620a5b3f",
+  "archiveBytes": 64240439,
+  "archiveMembers": 245,
+  "allMemberCrcPassed": true,
+  "inputFiles": {
+    "environment.json": {
+      "bytes": 624,
+      "sha256": "f2df0c2bde582cb5cf3e5cc8328a3e0cfbab9ad389733db980fda2fdbe356852"
+    },
+    "request.txt": {
+      "bytes": 286,
+      "sha256": "8e165de14b91b43543cd4dc349b739182bc16e8ce73a39b9945f7271d319275e"
+    },
+    "runs.tsv": {
+      "bytes": 103,
+      "sha256": "3000ccb14839bd8630614a7bcdfc6e739b0896e6ec7109a80b3530fbd5fe5df4"
+    },
+    "source-status.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "preview-extended-01/manifest.json": {
+      "bytes": 1080430,
+      "sha256": "39a1da5da40865ecaaa31dc2b7b2f84fe0b7ceea40fab51c1688e5a33dcf22c0"
+    },
+    "preview-extended-01/m6-lifecycle.json": {
+      "bytes": 16906,
+      "sha256": "49d02addb93d443e1583da508af34e9076a841551c61cd94dbe4034313c206a3"
+    },
+    "preview-extended-01/m6-heap-trend.json": {
+      "bytes": 6008,
+      "sha256": "1372702b572674e34a08668a0ed8a7e46367ceef925a7a92e2291b10eca2508c"
+    },
+    "preview-extended-01/derivation.json": {
+      "bytes": 907,
+      "sha256": "5678db7c4b9b2edf0bdef113abe6fe8eaaccd0cafc6f0e498dc2ab5bc7cba7c8"
+    },
+    "preview-extended-01/h1-derived-probe.cjs": {
+      "bytes": 34799,
+      "sha256": "5b942caef8de6bcf027ccabcdf4bd656a920ff567dbb4c5dc645581aedd5137a"
+    },
+    "preview-extended-01.log": {
+      "bytes": 91,
+      "sha256": "4213bacbca730542f905a3098ca54b10b5b4a3bf1bfd9b3f49e10034767a2944"
+    }
+  },
+  "limitation": "Retains complete inputs used by offline analyzer; large trace/screenshots/install logs remain in linked artifact. Snapshot-free fixed-source diagnostic, not a formal gate."
+}

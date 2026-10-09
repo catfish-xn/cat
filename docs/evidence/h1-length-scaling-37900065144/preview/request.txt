@@ -1,0 +1,10 @@
+workflow_merge_sha=f485ff7496116d101d3d5543db257776d558fd75
+source_sha=97f38a0e787a4edcb35df4a59823bb1d106def67
+mode=preview
+probe=extended
+samples=1
+run_id=37900065144
+attempt=1
+definition_sha=f485ff7496116d101d3d5543db257776d558fd75
+trigger=isolated-branch-push
+protocol=30-90-300-v1

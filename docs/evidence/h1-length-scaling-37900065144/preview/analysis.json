@@ -1,0 +1,146 @@
+{
+  "protocol": "30-90-300-v1",
+  "runId": 37900065144,
+  "definitionSha": "f485ff7496116d101d3d5543db257776d558fd75",
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "mode": "preview",
+  "sample": "preview-extended-01",
+  "environment": {
+    "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+    "workflowMergeSha": "f485ff7496116d101d3d5543db257776d558fd75",
+    "definitionSha": "f485ff7496116d101d3d5543db257776d558fd75",
+    "browser": "153.0.8010.12",
+    "launchSelection": "Playwright default headless Chromium; CHROMIUM_PATH unset, matching existing CI",
+    "node": "v22.23.3",
+    "platform": "linux",
+    "release": "6.17.0-1022-azure",
+    "cpu": "AMD EPYC 7763 64-Core Processor",
+    "cpuCount": 4,
+    "memoryBytes": 16766414848,
+    "load": [
+      0.58,
+      0.2,
+      0.07
+    ],
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "diagnosticOnly": true
+  },
+  "process": {
+    "sample": "preview-extended-01",
+    "started_utc": "2026-10-09T07:39:22Z",
+    "ended_utc": "2026-10-09T08:22:15Z",
+    "exit_code": "0"
+  },
+  "durationSeconds": 2558.884,
+  "originalDiagnosticPassed": true,
+  "originalDiagnosticFailure": null,
+  "identityAndOriginalAssertionsVerified": true,
+  "allWindowResourcesVerified": true,
+  "levelsBytes": [
+    14534240,
+    14168756,
+    15086264,
+    15295808,
+    14962948,
+    14946536,
+    15742508,
+    15518436,
+    15641484,
+    15220580,
+    15246948
+  ],
+  "deltasBytes": [
+    -365484,
+    917508,
+    209544,
+    -332860,
+    -16412,
+    795972,
+    -224072,
+    123048,
+    -420904,
+    26368
+  ],
+  "checkpointsBytes": {
+    "0": 14534240,
+    "30": 14168756,
+    "90": 15295808,
+    "180": 15742508,
+    "300": 15246948
+  },
+  "metrics": {
+    "startup0to30Bytes": -365484,
+    "middle30to90Bytes": 1127052,
+    "middleBytesPerCycle": 18784.2,
+    "late90to300Bytes": -48860,
+    "lateBytesPerCycle": -232.66666666666666,
+    "late90to180Bytes": 446700,
+    "tail180to300Bytes": -495560,
+    "tailBytesPerCycle": -4129.666666666667,
+    "lastThreeLevelRangeBytes": 420904,
+    "lastThreeLevelMedianBytes": 15246948,
+    "total0to300Bytes": 712708,
+    "maxWindowIncreaseBytes": 917508,
+    "largestLatePeakToTroughDeclineBytes": 521928,
+    "lateDrawdownPeakCycle": 180,
+    "lateDrawdownTroughCycle": 270,
+    "largestLateWindowDeclineBytes": -420904
+  },
+  "conditionalResolution": {
+    "assumedDisturbanceBytes": 1572864,
+    "targetBytesPerCycle": 16384,
+    "lateRateLowerBytesPerCycle": -7722.495238095238,
+    "lateRateUpperBytesPerCycle": 7257.161904761905,
+    "observedLateExceedsDisturbance": false,
+    "tailIncreaseExceedsDisturbance": false,
+    "lateWindowDisturbanceExceedsAssumption": false,
+    "latePeakToTroughDeclineExceedsAssumption": false,
+    "largeLateDecline": false,
+    "note": "Conditional engineering band from limited historical data; not a confidence interval or calibrated power. No automatic leak/no-leak verdict."
+  },
+  "inputs": {
+    "environment.json": {
+      "bytes": 624,
+      "sha256": "f2df0c2bde582cb5cf3e5cc8328a3e0cfbab9ad389733db980fda2fdbe356852"
+    },
+    "request.txt": {
+      "bytes": 286,
+      "sha256": "8e165de14b91b43543cd4dc349b739182bc16e8ce73a39b9945f7271d319275e"
+    },
+    "runs.tsv": {
+      "bytes": 103,
+      "sha256": "3000ccb14839bd8630614a7bcdfc6e739b0896e6ec7109a80b3530fbd5fe5df4"
+    },
+    "source-status.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "preview-extended-01/manifest.json": {
+      "bytes": 1080430,
+      "sha256": "39a1da5da40865ecaaa31dc2b7b2f84fe0b7ceea40fab51c1688e5a33dcf22c0"
+    },
+    "preview-extended-01/m6-lifecycle.json": {
+      "bytes": 16906,
+      "sha256": "49d02addb93d443e1583da508af34e9076a841551c61cd94dbe4034313c206a3"
+    },
+    "preview-extended-01/m6-heap-trend.json": {
+      "bytes": 6008,
+      "sha256": "1372702b572674e34a08668a0ed8a7e46367ceef925a7a92e2291b10eca2508c"
+    },
+    "preview-extended-01/derivation.json": {
+      "bytes": 907,
+      "sha256": "5678db7c4b9b2edf0bdef113abe6fe8eaaccd0cafc6f0e498dc2ab5bc7cba7c8"
+    },
+    "preview-extended-01/h1-derived-probe.cjs": {
+      "bytes": 34799,
+      "sha256": "5b942caef8de6bcf027ccabcdf4bd656a920ff567dbb4c5dc645581aedd5137a"
+    },
+    "preview-extended-01.log": {
+      "bytes": 91,
+      "sha256": "4213bacbca730542f905a3098ca54b10b5b4a3bf1bfd9b3f49e10034767a2944"
+    }
+  }
+}
