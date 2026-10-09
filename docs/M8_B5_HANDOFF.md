@@ -219,7 +219,7 @@ IF-GRANT 给B8的接法（必须作为一个领域事务）：
 - B3伤害/治疗/盾/状态/百分比/时序与随机算法未改；普通来源不增加父字段，普通盾仍只接受原sourceKey。临时来源贯穿既有通用编译/程序，盾投影保留父ID并只接受完整effectIdentity key；`m8/restore.ts`的分支是精确验证新来源，没有放宽普通恢复。
 - B4八组件/36成装的属性、配方和程序数值保持已签收值；TG本体开始拥有已批准的真实子件生命周期，因此实际TG战斗结果可变化。唯一/三槽/独占由原目录元数据在实例层执行，升星冲突返库存；这是B5有意补齐的行为，不按装备名/ID特判。
 - B4 Match级测试夹具以前直接注入TG本体，现补为合法装备流和绑定；原低层本体数值测试保留，不删断言。既有inventory失败码预期更新为冻结失败码，upgrades虚构blade夹具改真实sword，不改资源转移预期。
-- `full-match-golden.pre-m8-b5.json`保留97f38a0原始golden；`update-m8-b5-golden.cjs`对cannon/sniper/mage/blademaster四路线强制核对全部命令及30场战斗逐轮完整事件哈希不变。状态哈希只因新态/目录/规则/digest变动更新，不能用新golden替代独立数值oracle。
+- `full-match-golden.pre-m8-b5.json`保留97f38a0原始golden；`update-m8-b5-golden.cjs`对cannon/sniper/mage/sniper-caitlyn四路线强制核对全部命令及30场战斗逐轮完整事件哈希不变。状态哈希只因新态/目录/规则/digest变动更新，不能用新golden替代独立数值oracle。
 - 五份冻结合同、G12源码及两份测试与97f38a0 diff为空；原B3/B4测试纳入98文件/1231项本地全量，完整GitHub CI将再次验证。尚未完成CI时不把本地通过当GitHub结果。
 
 ### 验收覆盖与剩余边界
@@ -230,3 +230,52 @@ IF-GRANT 给B8的接法（必须作为一个领域事务）：
 - IF-GRANT验证当前组件选择/旧奖励及helper；B8权威lootReceipts、资格/保底/终局解决原子接入未在本批实现。B6新最低1级/38轮需同步装备局部恢复边界。
 - 完整CI的堆门禁如首轮失败，保留具体run/job/数字/日志；确认与B5无关后只重跑一次并注明，不改门禁、阈值、预热或CI配置。重复失败不能当偶发通过处理。
 - 草稿PR与各CI run及实际结果将在本节后续记录；完成审计准备不等同送审或用户签收。
+
+## 草稿PR、完整CI首轮与双触定位（最新）
+
+- [草稿PR #16](https://github.com/catfish-xn/cat/pull/16)：`feat/m8-b5 → feat/m8-b0-baseline`，仍是Draft，未送审/签收/合并。审计索引提交 `7002998aa8196fd4707b1be6fd3bf942634a7b14`。
+- [完整CI #113 / run 37874820358](https://github.com/catfish-xn/cat/actions/runs/37874820358/attempts/1)：已全部结束，**总体failure**；12个必需作业中11成功、1失败，可选暖机/堆诊断2项按原配置跳过。没有诊断模式代验收、没有重跑掩盖原失败。
+
+| 必需作业 | 首轮结果 / 实际覆盖 |
+| --- | --- |
+| test-and-build | 成功：98文件/1231测试、typecheck、生产构建、headless多seed、重复性能 |
+| browser-{dev,preview}-{cannon,sniper,mage}（6项） | 全部成功；三构筑分别182/178/172命令检查点、30场战斗，完整状态及事件账本 |
+| input-{dev,preview}（2项） | 全部成功；原生输入、既有touch路线及配置中原M6专用检查 |
+| m6-retention | 成功；独立原生对象/资源门禁 |
+| compare-evidence | 成功；同一干净7002998与源码指纹的M5最终比较、M6比较；不能代验未通过的M7 |
+| m7-presentation | **失败**：`scripts/verify-m7-presentation.cjs:145`，两次触摸继续后实际combat；后续screens/subpath/budget同作业步骤未执行，不能报通过 |
+
+本轮两次预热/30循环的完整应用堆实测：dev **269884 B ≤1572864 B**，listeners83→83/RAF1→1；preview **217620 B ≤1048576 B**，listeners82→82/RAF1→1。门限/预热/方法不变，均首轮通过，本轮没有堆失败重跑。
+
+### 双触失败的反例与定位证据
+
+1. 原CI失败日志：[job 113640880811](https://github.com/catfish-xn/cat/actions/runs/37874820358/job/113640880811)，02:32:25 UTC，`double tap on 继续 must not start combat`；原失败产物保留。B5没有改该脚本或 `strategy-panel.ts` 的400ms生命周期防护。
+2. 用原M7全脚本在本地顺序对照：97f38a0隔离构建通过全脚本；当前B5构建复现同一第145行失败。一次基线通过不能证明B5因果，也不能把复现失败当CI随机抖动。
+3. 仓库外脚本副本保持原完整断言，仅监听trusted原生事件时间；失败时click间隔 **562.5ms**（65809.2→66371.7），第二个click目标从 `mobile:continue` 变为 `mobile:start-combat`，结果combat。超过原产品400ms防护窗口，说明原脚本40ms等待不等于真实输入间隔：前后自动化往返/确认额外延长了间隔。
+4. 局部原输入通过样本间隔245.4ms、结果preparation。准备的输入驱动补丁只将双触排队为两次Chromium原生 `Input.dispatchTouchEvent`，不等待第一次release确认后才开始40ms间隔。局部实测两次trusted click目标仍为continue→start-combat，间隔131.5ms；完整脚本诊断的双触检查也通过，间隔51.1ms；随后7项原M7检查全部通过（passed=true），包括继续双激活、回放、奖励帮助层与头像回退。未使用DOM `.click()`、伪造领域状态、加大产品窗口或删第二次操作。
+5. 被放弃的 `Input.synthesizeTapGesture` 候选未产生足够click，不能证明覆盖，未入库、未算通过；仅保留确实发出两次原生click的方案。诊断副本不替代原门禁或GitHub验收。
+6. 当前原约束“不改门禁、阈值、CI配置”仍有效；补丁已在仓库外准备且局部验证，因修改位置属于门禁脚本，已向用户申请仅输入驱动的明确例外，**尚未应用仓库脚本**。修复后必须追加提交并跑完整CI，不以一次不变代码重跑掩盖失败。
+
+原完整M7对照与诊断产物在 `/tmp/m8-b5-ci-{baseline,current}-m7-evidence`、`/tmp/m8-b5-full-m7-current-probe`、`/tmp/m8-b5-full-m7-dispatch-fixed-probe`；原CI永久链接如上。最终比较产物在CI `m5-comparison-sample1-7002998...`，已核对SHA、干净工作区与源码指纹；生成物不提交。
+
+继承的已知问题：B4 `M8_B4_STATUS.md` 的R3b记录泰坦已有层刷新后当前属性查询可提前一tick显示新幅度，实际命中取样仍按原值。B5未改对应status时序逻辑，不将这项记为已修。此前“除cannon外未实跑”的缺口已由本轮三构筑dev/preview补齐；剩余M7子路径/展示/体积预算、U3动态联调、TG最大合法长程负载及后续正式存档/新日程边界仍需准确区分。
+
+### 待授权的输入驱动补丁（仅方案，尚未应用）
+
+替换原第140–142行两次tap与中间等待，后面的700ms等待、两项双触结果断言、刻意Start及全部其他检查保持原样。原400ms产品窗口、测试时限、CI配置保持原样；不改变B5领域/存档/digest。用户已被请求确认原“不改门禁”约束的这一精确输入驱动例外，未收到确认前不应用。
+
+```js
+// Queue the second native touch without waiting for the first release acknowledgement.
+// Driver round trips must not turn the intended 40ms burst into deliberate clicks.
+const touchInput = await touch.context.newCDPSession(touch.page);
+const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+await touchInput.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+const firstRelease = touchInput.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+await new Promise(resolve => setTimeout(resolve, 40));
+const secondPress = touchInput.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+const secondRelease = touchInput.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+await Promise.all([firstRelease, secondPress, secondRelease]);
+await touchInput.detach();
+```
+
+本节文档追加提交只更新交接，不冒充已修复驱动或已通过完整CI。当前完整CI证据仍绑定7002998；新文档HEAD的自动CI如启动，也不能消除已记录的输入驱动问题。授权后实际修复需另行追加提交、原M7全脚本验收及完整GitHub CI，仍不送审、不合并。
