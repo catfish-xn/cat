@@ -81,41 +81,98 @@ function describe(entry: Entry): HTMLElement {
 
 /**
  * One floating description popover for any element carrying data-item-def inside `scope`.
- * Shown on hover/focus, hidden on leave/blur/Escape/pointerdown; never intercepts pointers.
+ * Shown on hover/focus; hidden on leave/blur/Escape/pointerdown. While shown it watches its
+ * anchor, so a panel rebuild, tab switch, collapsed codex or filtered-out tile closes it.
+ * A scroll keeps a still-focused, still-visible keyboard anchor (native Tab scrolls the
+ * focused item into view) and only closes hover anchors. Never intercepts pointers.
  */
 export function attachItemPopover(scope: HTMLElement): () => void {
   const pop = el('div', '', 'item-popover'); pop.setAttribute('role', 'tooltip'); pop.id = 'item-popover'; pop.hidden = true; pop.dataset.debugItemPopover = 'true';
   document.body.append(pop);
-  let anchor: HTMLElement | null = null;
-  const hide = () => { if (anchor) anchor.removeAttribute('aria-describedby'); anchor = null; pop.hidden = true; pop.replaceChildren(); };
-  const show = (target: HTMLElement) => {
-    const entry = catalogEntry(target.dataset.itemDef ?? ''); if (!entry) { hide(); return; }
-    if (anchor === target && !pop.hidden) return;
-    hide(); anchor = target; target.setAttribute('aria-describedby', pop.id);
-    pop.replaceChildren(describe(entry)); pop.dataset.itemDef = entry.id; pop.hidden = false;
+  let anchor: HTMLElement | null = null, via: 'hover' | 'focus' = 'hover';
+  const usable = (node: HTMLElement) => {
+    if (!node.isConnected || !scope.contains(node)) return false;
+    const rect = node.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight;
+  };
+  const watcher = new MutationObserver(() => { if (anchor && !usable(anchor)) hide(); });
+  function hide(): void {
+    watcher.disconnect();
+    if (anchor) anchor.removeAttribute('aria-describedby');
+    anchor = null; pop.hidden = true; pop.replaceChildren(); delete pop.dataset.itemDef;
+  }
+  function place(target: HTMLElement): void {
     const rect = target.getBoundingClientRect(), width = Math.min(320, window.innerWidth - 16);
     pop.style.width = `${width}px`;
-    const left = Math.max(8, Math.min(window.innerWidth - width - 8, rect.left - width - 10 >= 8 ? rect.left - width - 10 : rect.left));
+    const beside = rect.left - width - 10 >= 8;
+    const left = Math.max(8, Math.min(window.innerWidth - width - 8, beside ? rect.left - width - 10 : rect.left));
     const height = pop.offsetHeight;
-    const top = rect.left - width - 10 >= 8 ? Math.max(8, Math.min(window.innerHeight - height - 8, rect.top))
+    const top = beside ? Math.max(8, Math.min(window.innerHeight - height - 8, rect.top))
       : (rect.bottom + 8 + height <= window.innerHeight ? rect.bottom + 8 : Math.max(8, rect.top - height - 8));
     pop.style.left = `${left}px`; pop.style.top = `${top}px`;
-  };
+  }
+  function show(target: HTMLElement, how: 'hover' | 'focus'): void {
+    const entry = catalogEntry(target.dataset.itemDef ?? ''); if (!entry) { hide(); return; }
+    if (anchor === target && !pop.hidden) { via = how; place(target); return; }
+    hide(); anchor = target; via = how; target.setAttribute('aria-describedby', pop.id);
+    pop.replaceChildren(describe(entry)); pop.dataset.itemDef = entry.id; pop.hidden = false;
+    place(target);
+    watcher.observe(scope, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'hidden', 'class', 'style'] });
+  }
   const target = (event: Event) => (event.target instanceof Element ? event.target.closest<HTMLElement>('[data-item-def]') : null);
-  const over = (event: PointerEvent) => { if (event.pointerType === 'mouse') { const t = target(event); if (t && scope.contains(t)) show(t); } };
-  const out = (event: PointerEvent) => { const t = target(event); if (t && t === anchor && !(event.relatedTarget instanceof Node && t.contains(event.relatedTarget))) hide(); };
-  const focus = (event: FocusEvent) => { const t = target(event); if (t) show(t); else hide(); };
+  const over = (event: PointerEvent) => { if (event.pointerType === 'mouse') { const t = target(event); if (t && scope.contains(t)) show(t, 'hover'); } };
+  const out = (event: PointerEvent) => {
+    const t = target(event);
+    if (t && t === anchor && via === 'hover' && !(event.relatedTarget instanceof Node && t.contains(event.relatedTarget))) hide();
+  };
+  const focus = (event: FocusEvent) => { const t = target(event); if (t) show(t, 'focus'); else hide(); };
   const blur = (event: FocusEvent) => { if (target(event) === anchor && !(event.relatedTarget instanceof Node && anchor?.contains(event.relatedTarget))) hide(); };
   const key = (event: KeyboardEvent) => { if (event.key === 'Escape' && !pop.hidden) hide(); };
+  const scrolled = () => {
+    if (!anchor) return;
+    const focused = document.activeElement instanceof Node && anchor.contains(document.activeElement);
+    if (via === 'focus' && focused && usable(anchor)) place(anchor); else hide();
+  };
   scope.addEventListener('pointerover', over); scope.addEventListener('pointerout', out);
   scope.addEventListener('focusin', focus); scope.addEventListener('focusout', blur);
-  scope.addEventListener('pointerdown', hide); document.addEventListener('keydown', key); window.addEventListener('scroll', hide, true);
+  scope.addEventListener('pointerdown', hide); document.addEventListener('keydown', key); window.addEventListener('scroll', scrolled, true);
   return () => {
     scope.removeEventListener('pointerover', over); scope.removeEventListener('pointerout', out);
     scope.removeEventListener('focusin', focus); scope.removeEventListener('focusout', blur);
-    scope.removeEventListener('pointerdown', hide); document.removeEventListener('keydown', key); window.removeEventListener('scroll', hide, true);
+    scope.removeEventListener('pointerdown', hide); document.removeEventListener('keydown', key); window.removeEventListener('scroll', scrolled, true);
     hide(); pop.remove();
   };
+}
+
+/**
+ * Keyboard access for the recipe table (ARIA grid pattern): one Tab stop, arrow keys move
+ * between component headers and results, Home/End jump within a row, Ctrl+Home/End to the
+ * first/last result. Focus drives the same description popover as hover.
+ */
+function installGridNavigation(table: HTMLTableElement): void {
+  const grid = Array.from(table.rows, row => Array.from(row.cells) as HTMLElement[]);
+  const focusable = (r: number, c: number) => Boolean(grid[r]?.[c]?.dataset.itemDef);
+  for (const [r, row] of grid.entries()) for (const [c, cell] of row.entries()) if (focusable(r, c)) cell.tabIndex = -1;
+  let active: [number, number] = [1, 1];
+  grid[1][1].tabIndex = 0;
+  const activate = (r: number, c: number, move: boolean) => {
+    grid[active[0]][active[1]].tabIndex = -1; active = [r, c]; grid[r][c].tabIndex = 0;
+    if (move) grid[r][c].focus();
+  };
+  table.addEventListener('focusin', event => {
+    const cell = event.target instanceof Element ? event.target.closest<HTMLElement>('th,td') : null;
+    if (!cell) return;
+    for (const [r, row] of grid.entries()) { const c = row.indexOf(cell); if (c >= 0 && focusable(r, c)) { activate(r, c, false); return; } }
+  });
+  table.addEventListener('keydown', event => {
+    const [r, c] = active, last = grid.length - 1, end = grid[r].length - 1;
+    const target: [number, number] | null = event.key === 'ArrowUp' ? [r - 1, c] : event.key === 'ArrowDown' ? [r + 1, c]
+      : event.key === 'ArrowLeft' ? [r, c - 1] : event.key === 'ArrowRight' ? [r, c + 1]
+      : event.key === 'Home' ? (event.ctrlKey ? [1, 1] : [r, r === 0 ? 1 : 0]) : event.key === 'End' ? (event.ctrlKey ? [last, grid[last].length - 1] : [r, end]) : null;
+    if (!target) return;
+    event.preventDefault();
+    if (focusable(target[0], target[1])) activate(target[0], target[1], true);
+  });
 }
 
 type Filter = 'all' | 'component' | 'completed' | 'unique' | 'slots' | 'provisional';
@@ -162,6 +219,7 @@ export function createItemCodex(): HTMLElement {
   const components = list.filter(entry => entry.kind === 'component');
   root.append(el('h4', `合成表 · ${list.filter(e => e.recipe).length} 条配方`, 'codex-heading'));
   const table = el('table', '', 'recipe-matrix'); table.dataset.debug = 'recipe-matrix';
+  table.setAttribute('role', 'grid'); table.setAttribute('aria-label', '组件合成表');
   table.append(el('caption', '行与列为两件组件，交点为配方结果（静态配方，不代表当前可合成）'));
   const head = table.createTHead().insertRow(); head.append(el('th'));
   for (const component of components) { const th = el('th'); th.scope = 'col'; th.dataset.itemDef = component.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(component.id, 26)); th.setAttribute('aria-label', component.name); head.append(th); }
@@ -178,8 +236,9 @@ export function createItemCodex(): HTMLElement {
       if (result.unique || result.slotCost > 1) cell.classList.add('declared');
     }
   }
+  installGridNavigation(table);
   const scroller = el('div', '', 'recipe-scroll'); scroller.append(table); root.append(scroller);
-  root.append(el('p', '交点带黄框：规则暂定；带角标：唯一或占多槽。悬停或聚焦查看完整说明。', 'codex-note'));
+  root.append(el('p', '交点带黄框：规则暂定；带角标：唯一或占多槽。悬停查看说明；键盘按 Tab 进入合成表，方向键移动，Home/End 到行首行尾，Esc 关闭说明。', 'codex-note'));
 
   let filter: Filter = 'all';
   function apply(): void {

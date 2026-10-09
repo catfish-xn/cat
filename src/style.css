@@ -246,3 +246,9 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .item-pop-effects { margin: 4px 0; padding-left: 18px; }
 .item-pop-decl { margin: 4px 0 !important; }
 .item-pop-note { margin: 6px 0 0 !important; color: var(--c-text-faint); font-size: 11px !important; }
+/* Chromium's UA thead rule uses break-inside:if(media(overflow-block: paged)), which leaves a new
+   media-query node in the style engine on every recalc (M6-MEM-01). A static author rule keeps the
+   same screen (auto) / paged print (avoid) result, so no per-recalc query is created. */
+.recipe-matrix thead { break-inside: auto; }
+@media (overflow-block: paged) { .recipe-matrix thead { break-inside: avoid; } }
+.recipe-matrix [data-item-def]:focus-visible { outline: 3px solid #ffd782; outline-offset: -2px; }
