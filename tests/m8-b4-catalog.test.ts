@@ -1,9 +1,10 @@
+import { reachRound } from './match-helpers';
 import { describe,it,expect } from 'vitest';
 import frozen from '../src/simulation/content/source/s13-14.24b/normalized/items.json';
 import { ITEM_DEFINITIONS,COMPONENT_IDS } from '../src/simulation/content/items';
 import { validateContent } from '../src/simulation/validate-content';
 import { validateComponentPool,validateComponentCandidates,COMPONENT_POOL } from '../src/simulation/component-pool';
-import { createMatch,selectChoice,stepMatch } from '../src/simulation/match';
+import { selectChoice,stepMatch } from '../src/simulation/match';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { stepCombat } from '../src/simulation/combat';
@@ -25,7 +26,7 @@ describe('B4 catalogue and IF-POOL',()=>{
   }
  });
  it('eight API sorted candidates;old selection emits exactly one ScheduleReceipt,zero RNG',()=>{
-  const before=createMatch(42);expect(before.pendingChoice?.offers).toEqual(COMPONENT_POOL.map(x=>x.definitionId));validateComponentCandidates(before.pendingChoice!.offers);
+  const before=reachRound('2-4',false);expect(before.pendingChoice?.offers).toEqual(COMPONENT_POOL.map(x=>x.definitionId));validateComponentCandidates(before.pendingChoice!.offers);
   expect(restoreMatch(serializeMatch(before))).toEqual(before);
   const r=selectChoice(before,before.pendingChoice!.choiceId,0,'gloves');if(!r.ok)throw new Error(r.reason);
   expect(r.state.scheduleReceipts).toHaveLength(before.scheduleReceipts.length+1);expect(r.state.items.filter(i=>i.definitionId==='gloves')).toHaveLength(1);expect(r.state.choiceRngState).toBe(before.choiceRngState);

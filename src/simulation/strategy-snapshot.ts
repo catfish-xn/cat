@@ -5,7 +5,7 @@ import type {
 } from './strategy-types';
 import { UNIT_DEFINITIONS } from './units';
 import { getUnitStats } from './unit-stats';
-import { getRoundEnemyItems } from './round-enemies';
+import { readRoundEnemyProjection } from './round-enemies';
 import { hexDistance } from './board';
 import { resolveAbility } from './combat-abilities';
 import { deriveTraits } from './trait-snapshot';
@@ -83,7 +83,7 @@ export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalo
         sources.push(...makeSourcedEffects(unit.id, 'anomaly', binding.definitionId, binding.choiceId, definition.effects));
       }
     } else {
-      for (const item of getRoundEnemyItems(state.round).filter(item => item.unitId === unit.id)) {
+      for (const item of readRoundEnemyProjection(state.round).items.filter(item => item.unitId === unit.id)) {
         const definition = lookup(catalog.items, item.definitionId);
         sources.push(...makeSourcedEffects(unit.id, 'item', item.definitionId, `enemy:${state.round}:${unit.id}:${item.slot}`, definition.effects));
         bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);

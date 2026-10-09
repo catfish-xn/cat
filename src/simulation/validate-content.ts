@@ -8,7 +8,8 @@ import { ITEM_DEFINITIONS } from './content/items';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { S13_ABILITY_DATA } from './content/abilities';
-import { ROUND_SCHEDULE } from './round-schedule';
+import { FINAL_ROUND, ROUND_SCHEDULE } from './round-schedule';
+import { ROUND_CATALOG } from './content/round-catalog';
 import type { AbilityDefinition } from './ability-types';
 import type { CostTier, UnitDefinition } from './unit-types';
 import type { ChoiceDefinition, Effect, ItemDefinition, ScheduleEvent, Stat, TraitDefinition } from './strategy-types';
@@ -90,8 +91,8 @@ export function validateStatBounds(content:ContentCatalogs):void {
     const ability=content.abilities[unit.abilityId];
     if(ability && !Number.isSafeInteger(Math.max(...ability.amountByStar)*10000*56)) fail(`Ability arithmetic bound: ${unit.id}`);
   }
-  // 1200 ticks, at most one AA per tick, three identical items, 35 rounds.
-  const maxima={ragebladeStacks:1200*3,archangelTicks:1200/100,interestHp:35*5*8,pumpingBps:35*50};
+  // Conservative bound over the explicit finite campaign; no ordinal formula.
+  const maxima={ragebladeStacks:1200*3,archangelTicks:1200/100,interestHp:ROUND_CATALOG.length*5*8,pumpingBps:ROUND_CATALOG.length*50};
   if(Object.values(maxima).some(n=>!Number.isSafeInteger(n))) fail('Dynamic bounds overflow');
 }
 export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
@@ -137,23 +138,19 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
   if(recipes.size!==36) fail('M8 requires 36 unique recipes');
   if(Object.keys(content.augments).length<5||Object.keys(content.anomalies).length<2) fail('Choice pool exhausted');
   for(const c of [...Object.values(content.augments),...Object.values(content.anomalies)]) {if(!c.name||!c.description) fail('Missing choice text');effects(c.effects);}
-  const seen=new Set<string>();let priorRound=0,priorPriority=-1,priorId='';let randomComponents=0,componentChoices=0;
-  for(const {round,event:e} of content.schedule.fixed) {
-    if(!integer(round,1)||round>35||round<priorRound||!e.id||seen.has(e.id)||!integer(e.priority)
-      ||(round===priorRound&&(e.priority<priorPriority||(e.priority===priorPriority&&e.id<=priorId)))) fail('Schedule order or ID');
-    seen.add(e.id);priorRound=round;priorPriority=e.priority;priorId=e.id;
-    if(!['before','after'].includes(e.timing??'before')) fail('Invalid schedule timing');
-    if(e.kind==='reward') {
-      if(e.timing!=='after'||![7,14,21,28].includes(round)||e.components.some(id=>!components.includes(id))||!integer(e.randomComponents)||!integer(e.gold)||e.recruitIfEmpty) fail('Invalid PvE reward');
-      randomComponents+=e.randomComponents;
-    } else if(e.kind==='component') componentChoices++;
-    else if(e.kind==='augment') {if(e.timing!=='before'||![1,9,16].includes(round)) fail('Invalid augment schedule');}
-    else if(e.kind==='anomaly') {if(e.timing!=='before'||round!==20) fail('Invalid anomaly schedule');}
-    else fail('Unknown schedule event');
+  // This development schedule contains only the approved semantic nodes. PvE drops
+  // are not installed until B8; any extra/altered node remains invalid content.
+  if(content.schedule.fixed.length!==ROUND_SCHEDULE.fixed.length) fail('Incomplete acquisition schedule');
+  for(const [index,entry] of content.schedule.fixed.entries()) {
+    const expected=ROUND_SCHEDULE.fixed[index];
+    if(!integer(entry.round,1)||entry.round>FINAL_ROUND||entry.round!==expected.round
+      ||Object.keys(entry.event).length!==Object.keys(expected.event).length
+      ||Object.entries(expected.event).some(([key,value])=>entry.event[key as keyof ScheduleEvent]!==value)) fail('Invalid semantic schedule');
   }
-  const aug=content.schedule.fixed.filter(x=>x.event.kind==='augment').map(x=>x.round).join(',');
-  const anomaly=content.schedule.fixed.filter(x=>x.event.kind==='anomaly').map(x=>x.round).join(',');
-  if(aug!=='1,9,16'||anomaly!=='20'||randomComponents!==4||componentChoices!==11||!content.units[content.schedule.fallbackDefinitionId]) fail('Incomplete acquisition schedule');
+  if(content.schedule.recurring.fromRound!==ROUND_SCHEDULE.recurring.fromRound
+    ||content.schedule.recurring.everyRounds!==ROUND_SCHEDULE.recurring.everyRounds
+    ||content.schedule.recurring.randomComponents!==0
+    ||content.schedule.fallbackDefinitionId!==ROUND_SCHEDULE.fallbackDefinitionId) fail('Invalid finite schedule boundary');
   for(let level=1;level<=9;level++) {
     const row=SHOP_ODDS[level];if(!row||row.length!==5||row.some(x=>!integer(x))||row.reduce((a,b)=>a+b,0)!==100) fail('Invalid shop odds');
     if(level<9&&!integer(XP_TO_NEXT_LEVEL[level],1)) fail('Invalid XP');

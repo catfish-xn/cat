@@ -1,6 +1,13 @@
 import type { CostTier } from './unit-types';
-export const MATCH_RULES = Object.freeze({ initialGold: 10, rerollCost: 2, roundIncome: 5, shopSize: 5,
-  initialLevel: 3, maxLevel: 9, initialHp: 100, xpPurchaseCost: 4, xpPurchaseAmount: 4, roundXp: 2 });
+import { freezeContent } from './content/freeze';
+
+/** Approved M8B OPENING initialization, shared by Match and the content digest. */
+export const OPENING_INITIAL_STATE = freezeContent({
+  gold:0, level:1, xp:0, hp:100,
+  unit:{definitionId:'irelia',id:'unit-1',starLevel:1,cell:{col:1,row:4}}, nextUnitSeq:2,
+} as const);
+export const MATCH_RULES = Object.freeze({ initialGold: OPENING_INITIAL_STATE.gold, rerollCost: 2, roundIncome: 5, shopSize: 5,
+  initialLevel: OPENING_INITIAL_STATE.level, maxLevel: 9, initialHp: OPENING_INITIAL_STATE.hp, xpPurchaseCost: 4, xpPurchaseAmount: 4, roundXp: 2 });
 export const DEFAULT_MATCH_SEED = 42;
 export const XP_TO_NEXT_LEVEL: Readonly<Record<number, number>> = Object.freeze({ 1:2, 2:2, 3:6, 4:10, 5:20, 6:36, 7:48, 8:76 });
 export const SHOP_ODDS: Readonly<Record<number, readonly [number, number, number, number, number]>> = Object.freeze({
@@ -17,3 +24,10 @@ export const SHOP_CATALOG: readonly string[] = Object.freeze(Object.values(SHOP_
 export const STAGE_PLAYER_DAMAGE: Readonly<Record<number, number>> = Object.freeze({ 2:2, 3:5, 4:8, 5:10, 6:12 });
 export const ECONOMY_RULES = Object.freeze({ interestDivisor: 10, interestCap: 5, victoryGold: 1, pveFailureDamage: 3,
   streakThresholds: Object.freeze([Object.freeze({ count: 2, gold: 1 }), Object.freeze({ count: 4, gold: 2 }), Object.freeze({ count: 6, gold: 3 })]) });
+
+/** Frozen numeric policy: the planner and digest consume these exact parameters. */
+export const OPENING_ECONOMY_RULES = freezeContent({
+  version:'m8b-opening-project-v1',
+  rounds:{'1-2':{baseGold:2,naturalXp:2},'1-3':{baseGold:3,naturalXp:2},'1-4':{baseGold:5,naturalXp:0}},
+  interest:0, victoryGold:0, streakGold:0, updateStreak:false, pveFailureDamage:ECONOMY_RULES.pveFailureDamage,
+} as const);

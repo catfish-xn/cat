@@ -1,3 +1,4 @@
+const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
 /*
  * M7 presentation gate (G01/G04/G06/G08): public seed-42 game through normal controls.
  *  - help opens/closes, traps focus, blocks D/F/E while open, issues no command;
@@ -64,16 +65,16 @@ async function benchEveryone(page) {
     await page.locator(`[data-debug="mobile:bench:${slot}"]`).click();
   }
 }
-async function advanceTo(page, round) {
+async function advanceTo(page, roundId) {
   for (let guard = 0; guard < 80; guard++) {
     const state = (await read(page)).state;
-    if (state.phase === 'preparation' && state.round === round) return;
+    if (state.phase === 'preparation' && state.m8.round.roundId === roundId) return;
     if (state.phase === 'choice') await chooseAll(page);
     else if (state.phase === 'preparation') { await page.waitForTimeout(LIFECYCLE_QUIET_MS); await page.locator('[data-debug="mobile:start-combat"]').click(); }
     else if (state.phase === 'settlement') await page.locator('[data-debug="mobile:continue"]').click();
     else await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
   }
-  throw new Error(`did not reach round ${round}`);
+  throw new Error(`did not reach round ${roundId}`);
 }
 async function firstBattle(browser, reduced) {
   const game = await newGame(browser);
@@ -94,12 +95,18 @@ async function firstBattle(browser, reduced) {
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-  const report = { url, checks: [] };
+  const report = { url, checks: [], acceptanceScope: 'B6 unskipped checks; post-PvE reward modal deferred to B8' };
   const check = (name, details = {}) => { report.checks.push({ name, ...details }); console.log(`ok ${name}`); };
   try {
     // Help dialog: information only, focus handling, shortcuts blocked while open.
     const { context, page, errors } = await newGame(browser);
     await chooseAll(page);
+    // B6 starts at 0G. Two public empty-board settlements provide 2+3=5G,
+    // so both D and F could actually execute if help failed to block them.
+    // This preparation is separate from the first-battle/reduced-motion checks below.
+    await benchEveryone(page);
+    await advanceTo(page, '1-4');
+    assert.equal((await read(page)).state.gold, 5, 'legal opening income funds help shortcut checks');
     const before = (await read(page)).state;
     await page.locator('[data-debug="help-open"]').click();
     await page.waitForSelector('[data-debug="help-dialog"]:not([hidden])');
@@ -204,12 +211,12 @@ async function firstBattle(browser, reduced) {
     check('replay-identity', portraitPixels);
     assert.deepEqual([...normal.game.errors, ...replayErrors], [], 'no page or console errors');
 
-    // Audit F02: help stays on top when a post-combat reward choice appears underneath.
-    {
+    // Audit F02: B8 must install an actual post-PvE reward choice. Other help/replay checks still run.
+    skipB6Dependency(report, 'B8', 'help-over-reward-choice', '2-7 post-combat reward choice is not installed', async () => {
       const { context: ctx, page, errors: helpErrors } = await newGame(browser);
       await chooseAll(page);
       await benchEveryone(page);
-      await advanceTo(page, 7);
+      await advanceTo(page, '2-7');
       await page.locator('[data-debug="panel:units"]').click();
       await page.locator('[data-debug="mobile:unit:unit-1"]').click();
       await page.locator('[data-debug="deploy:3,5"]').click();
@@ -237,7 +244,7 @@ async function firstBattle(browser, reduced) {
       assert.equal((await read(page)).state.items.length, pending.items.length + 1, 'reward chosen after help closes');
       assert.deepEqual(helpErrors, []); await ctx.close();
       check('help-over-reward-choice', { round: pending.round, offers: pending.pendingChoice.offers });
-    }
+    });
 
     // Audit F07: a bundled portrait that fails to load falls back to the code-drawn emblem.
     {

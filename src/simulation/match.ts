@@ -4,7 +4,9 @@ import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
 import { DEFAULT_BOARD } from './board';
-import { planRoundEconomy } from './economy';
+import { planCatalogRoundEconomy, OPENING_INITIAL_STATE } from './opening-economy';
+import { getCatalogRoundByOrdinal, getNextCatalogRound } from './round-selectors';
+import { freezeContent } from './content/freeze';
 import { COMPONENT_IDS } from './content/items';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
@@ -18,7 +20,7 @@ import { initializeStreams } from './m8/equipment';
 import { planTemporaryEquipment } from './temporary-equipment';
 import { planPermanentItemGrant } from './item-grants';
 import { buildStrategySnapshot } from './strategy-snapshot';
-import { getRoundSchedule, getRoundKind, getStageRound } from './round-schedule';
+import { ROUND_PREPARATION_RULES, getRoundSchedule, getRoundKind } from './round-schedule';
 import { planReward } from './rewards';
 import { CONTENT_DIGEST } from './content';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -74,22 +76,34 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
   return { state: { ...state, phase: timing === 'after' ? 'settlement' : 'preparation',
     combat: timing === 'after' ? state.combat : null, pendingChoice: null } as MatchState, events };
 }
+/** One preparation transaction owns identity and the frozen enemy projection. B7/B8 attach
+ * their complete plan here later; pending content is explicit, never an empty loot promise. */
+function prepareRound(round: number): MatchState['m8'] {
+  const definition = getCatalogRoundByOrdinal(round);
+  return freezeContent({round:definition,encounterPlan:null,preparation:{
+    version:ROUND_PREPARATION_RULES.version,roundId:definition.roundId,encounterId:definition.encounterId,
+    contentStatus:definition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',
+    enemies:createRoundEnemies(round),
+  }});
+}
 export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
   validateSeed(seed); validateContent();
+  const m8 = prepareRound(1);
   const initial: MatchState = { schemaVersion: 5, rulesVersion: 'm5-14.24b-v1', contentVersion: 's13-14.24b-slice-v1',
     commandProtocolVersion: 2, rngAlgorithm: 'lcg32-v1', tickMs: 50,
-    roundDefinitionId: '2-1', streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
+    m8, roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
     contentDigest: CONTENT_DIGEST, seed,
     equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
     items: [], nextItemSerial: 1, augments: [], anomalyBinding: null, pendingChoice: null, scheduleReceipts: [],
     choiceRngState: (seed ^ 0x9e3779b9) >>> 0, rewardRngState: (seed ^ 0x85ebca6b) >>> 0, nextMatchEventSeq: 0,
     ...generateShop(seed, 1, MATCH_RULES.initialLevel), round: 1, gold: MATCH_RULES.initialGold,
-    level: MATCH_RULES.initialLevel, xp: 0, playerHp: MATCH_RULES.initialHp, nextUnitSerial: 4,
+    level: MATCH_RULES.initialLevel, xp: OPENING_INITIAL_STATE.xp, playerHp: MATCH_RULES.initialHp, nextUnitSerial: OPENING_INITIAL_STATE.nextUnitSeq,
     preparation: { board: structuredClone(DEFAULT_BOARD), benchSize: 9, units: [
-      ...['irelia', 'maddie', 'lux'].map((definitionId, index) => ({ id: `unit-${index + 1}`, definitionId,
-        team: 'player' as const, starLevel: 1 as const, location: { kind: 'board' as const, cell: { col: index * 2 + 1, row: index === 0 ? 4 : 7 } } })),
-      ...createRoundEnemies(1)] }, roundResults: [], phase: 'preparation', combat: null };
+      { id:OPENING_INITIAL_STATE.unit.id,definitionId:OPENING_INITIAL_STATE.unit.definitionId,
+        team:'player',starLevel:OPENING_INITIAL_STATE.unit.starLevel,
+        location:{kind:'board',cell:{...OPENING_INITIAL_STATE.unit.cell}} },
+      ...m8.preparation.enemies] }, roundResults: [], phase: 'preparation', combat: null };
   const entered = enterScheduledEvents(initial);
   return accept(entered.state, entered.events).state;
 }
@@ -180,16 +194,16 @@ function mergeGrowth(state: MatchState, events: readonly import('./unit-types').
 /** Income, XP, HP, persistent growth and the settlement identity commit once together. */
 function settleRound(state: MatchState, combat: FinishedCombat | null): MatchState {
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
-  const roundKind = getRoundKind(state.round), { stage } = getStageRound(state.round);
+  const {kind:roundKind,isFinal,roundId} = state.m8.round;
   const survivingEnemyCount = combat?.units.filter(unit => unit.alive && unit.team === 'enemy').length ?? 0;
-  const plan = planRoundEconomy({ stage, roundKind, result: combat?.result ?? null, gold: state.gold,
+  const plan = planCatalogRoundEconomy({ roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
   for (const unit of combat?.units ?? []) if (unit.team === 'player' && (unit.runtime?.permanentAdBps ?? 0) > 0) {
     growth.set(unit.id, (growth.get(unit.id) ?? 0) + unit.runtime!.permanentAdBps);
   }
-  const terminal = plan.hpAfter === 0 || state.round === 35;
-  const outcome = terminal ? state.round === 35 && plan.hpAfter > 0 && combat?.result === 'playerWin' ? 'victory' as const : 'defeat' as const : null;
+  const terminal = plan.hpAfter === 0 || isFinal;
+  const outcome = terminal ? isFinal && plan.hpAfter > 0 && combat?.result === 'playerWin' ? 'victory' as const : 'defeat' as const : null;
   return { ...state, phase: terminal ? 'gameOver' : 'settlement', outcome, combat,
     gold: plan.goldAfter, playerHp: plan.hpAfter, streak: plan.streakAfter, level: plan.progression.level, xp: plan.progression.xp,
     persistentGrowth: [...growth].map(([unitId,attackDamageBps]) => ({unitId,attackDamageBps})).sort((a,b)=>a.unitId.localeCompare(b.unitId)),
@@ -197,7 +211,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null): MatchSta
       pumpingRounds: state.augmentProgress.pumpingRounds + (state.augments.some(a => a.definitionId === 'pumping-up-i') ? 1 : 0),
       investmentHp: state.augmentProgress.investmentHp + (state.augments.some(a => a.definitionId === 'investment-strategy-i') ? 8 * plan.incomeBreakdown.interest : 0),
     },
-    roundResults: [...state.roundResults, { round: state.round, settlementId: `round-${state.round}-settled`, roundKind,
+    roundResults: [...state.roundResults, { round: state.round, roundId, settlementId: `round-${state.round}-settled`, roundKind,
       result: combat?.result ?? 'supply', combatTicks: combat?.tick ?? 0,
       income: plan.income, incomeBreakdown: plan.incomeBreakdown, interestBasis: plan.interestBasis,
       streakBefore: state.streak, streakAfter: plan.streakAfter, goldBefore: state.gold, goldAfter: plan.goldAfter,
@@ -232,13 +246,14 @@ export function nextRound(state: MatchState, expectedRound: number): MatchComman
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
   if (expectedRound !== state.round) return fail(state, 'stale-round');
   if (state.roundResults.length !== state.round || state.roundResults.at(-1)?.round !== state.round) return fail(state, 'unsettled-round');
-  if (state.round >= 35) return fail(state, 'wrong-phase');
-  const round = state.round + 1, stageRound = getStageRound(round);
+  const definition = getNextCatalogRound(state.m8.round.roundId);
+  if (!definition) return fail(state, 'wrong-phase');
+  const round = definition.ordinal, m8 = prepareRound(round);
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
-  const entered = enterScheduledEvents({ ...state, round, roundDefinitionId: `${stageRound.stage}-${stageRound.round}`, phase: 'preparation', combat: null,
-    preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...createRoundEnemies(round)] }, ...refresh });
+  const entered = enterScheduledEvents({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null,
+    preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
   return acceptEquipment(entered.state, entered.events);
 }
 

@@ -1,0 +1,16 @@
+{
+  "firstParent": "9e0b35465bab14b5adc8d1446a1bb2d045018286",
+  "secondParent": "0411ad65c1933e87df840042f38cfe1ce834d127",
+  "mergeBase": "adf24b4ef6f5ec65b3abd59adc050ad2b6b82880",
+  "conflicts": [
+    {
+      "path": "tests/fixtures/m5/full-match-golden.json",
+      "baseBlob": "dbbcb6ad8d988e30b8de6de13aa8c57a3ed6aa6f",
+      "b6Blob": "747910e65755b91dbb9fbfd5c6f73955ba7f7463",
+      "b3Blob": "a112e0039142df4b688eef6defb04e403cbce979",
+      "archivePath": "tests/fixtures/m5/full-match-golden.pre-b6-b3-sync.json",
+      "archiveSha256": "1adf09af7b7508277599703677a9d3fdc7d87b46799384671fbbcd7694204395",
+      "resolution": "B6 33-battle shape retained; all commands/events and digest-normalized complete states verified unchanged before accepting only new contentDigest/stateHash values"
+    }
+  ]
+}

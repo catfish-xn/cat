@@ -1,0 +1,30 @@
+{
+  "cannon": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "formedBattles": 0,
+    "componentGrants": 5
+  },
+  "sniper": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "formedBattles": 0,
+    "componentGrants": 5
+  },
+  "mage": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "formedBattles": 0,
+    "componentGrants": 5
+  },
+  "sniper-caitlyn": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "formedBattles": 0,
+    "componentGrants": 5
+  }
+}

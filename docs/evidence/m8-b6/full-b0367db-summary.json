@@ -1,0 +1,22 @@
+{
+  "sha": "b0367db8e3ac63ec9925a3b1e560b7b2b6216d81",
+  "node": "22.23.3",
+  "command": "npm test",
+  "sourceDiffSha256AtStartAndEnd": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "startedUtc": "2026-10-09T08:09:18Z",
+  "completionObservedUtc": "2026-10-09T08:18:53Z",
+  "vitestDurationSeconds": 446.02,
+  "exitCode": 1,
+  "files": {"total": 102, "passed": 97, "failed": 5},
+  "tests": {"total": 1312, "passed": 1287, "failed": 10, "skippedAfterSetupFailure": 15},
+  "failures": [
+    {"file": "tests/m5-route.test.ts", "tests": 4, "reason": "formedBattles 0, required >=3; five component grants cannot satisfy the preserved full-build requirement", "owner": "B8 loot integration; no threshold change"},
+    {"file": "tests/m6-integration.test.ts", "tests": 4, "reason": "validateEnvelope rejects 33 completed battles under the unchanged MAX_BATTLE_RECORDS=30", "owner": "B9 application/save/replay capacity integration"},
+    {"file": "tests/m6-replay.test.ts", "tests": 1, "reason": "the preserved post-combat reward choice was not encountered; B8 drop choices are not installed", "owner": "B8 choice integration"},
+    {"file": "tests/m8-b6-match-wiring.test.ts", "tests": 1, "reason": "new full-campaign strong domain fixture exceeded unchanged default 5000ms under the full run", "owner": "B6; replace irrelevant slow fixture combat without increasing timeout"},
+    {"file": "tests/m5-runtime-import.test.ts", "tests": 0, "skipped": 15, "reason": "old first-battle setup did not produce statuses with the new neutral placeholder; beforeAll failed", "owner": "B6; use real public 2-1/purchased roster to generate the required transient records"}
+  ],
+  "build": {"command": "npm run build", "exitCode": 0, "typecheck": "passed", "viteBuild": "passed", "jsBytesReportedKb": 1675.20, "gzipBytesReportedKb": 481.08},
+  "logs": ["full-b0367db.log.gz", "build-b0367db.log.gz"],
+  "claim": "Completed full run with real failures; not a CI or merge acceptance. No source/test files changed while this run was active."
+}

@@ -1,3 +1,4 @@
+import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { wearing, enemy, run, packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
@@ -67,7 +68,7 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
       ? { ...u, definitionId: 'garen', starLevel: 3 } : u.team === 'player' ? { ...u, location: { kind: 'bench', slot: Number(u.id.slice(5)) - 2 } } : u) },
       items: [...s.items, ...['titans-resolve', 'warmog', 'gunblade'].map((definitionId, slot) => ({ id: `item-${s.nextItemSerial + slot}`, definitionId, location: { kind: 'unit' as const, unitId: 'unit-1', slot } }))], nextItemSerial: s.nextItemSerial + 3 };
     expect(restoreMatch(serializeMatch(s))).toEqual(s);
-    while (s.round < 22) {
+    while (s.round < getCatalogRoundById('5-1').ordinal) {
       s = resolveM5Choices(s);
       if (s.phase === 'preparation') s = accepted(startMatchCombat(s));
       while (s.phase === 'combat') s = stepMatch(s).state;

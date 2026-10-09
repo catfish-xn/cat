@@ -1,6 +1,6 @@
 /* UR-U3-08: desktop native input through the real BoardScene / StrategyPanel.
  * Test-only main-module instrumentation captures the scene; fixture setup injects
- * permanent inventory after public opening choices, then uses public commands.
+ * permanent inventory after real opening progression and paid hero purchases.
  * No hit-test, preview, event handler, CSS or rule is stubbed. This fixture suite
  * supplements (does not replace) the uninjected full-match CI input gate.
  * Run from the reviewed checkout: node scripts/verify-m8-u3-dynamic.cjs
@@ -17,7 +17,7 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
   fs.mkdirSync(output, { recursive: true });
   const report = { sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
     runnerHash: createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),
-    viewport: [1440, 1000], fixture: 'public opening choices + permanent inventory; real BoardScene callbacks',
+    viewport: [1440, 1000], fixture: 'real public opening to 2-1 + paid Maddie/Lux + permanent inventory; real BoardScene callbacks',
     checks: [], errors: [], passed: false };
   const { createServer } = await import('vite');
   const server = await createServer({ server: { host: '127.0.0.1', port: 0 } });
@@ -61,9 +61,22 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
         const feedback = await import('/src/presentation/equipment-feedback.ts');
         const accepted = result => { if (!result.ok) throw Error(result.reason); return result.state; };
         let state = api.createMatch(42);
-        while (state.phase === 'choice') {
-          const c = state.pendingChoice;
-          state = accepted(api.selectChoice(state, c.choiceId, c.generation, c.offers[0]));
+        // B6 setup only: real empty-board losses earn 2+3+5G and reach the
+        // original 2-1 test round. Paid shop heroes are not B8 reward evidence.
+        state = accepted(api.deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: 0 }));
+        for (let guard = 0; guard < 20; guard++) {
+          if (state.roundDefinitionId === '2-1' && state.phase === 'preparation') break;
+          if (state.phase === 'choice') {
+            const c = state.pendingChoice;
+            state = accepted(api.selectChoice(state, c.choiceId, c.generation, c.offers[0]));
+          } else if (state.phase === 'preparation') state = accepted(api.startMatchCombat(state));
+          else if (state.phase === 'settlement') state = accepted(api.nextRound(state, state.round));
+          else throw Error(`Unexpected U3 preparation phase ${state.phase}`);
+        }
+        if (state.roundDefinitionId !== '2-1' || state.phase !== 'preparation') throw Error('U3 fixture did not reach real 2-1');
+        for (const id of ['maddie', 'lux']) {
+          const slot = state.shop.slots.findIndex(offer => offer.status === 'available' && offer.definitionId === id);
+          state = accepted(api.buyUnit(state, slot, state.shop.generation));
         }
         for (const [index, id] of ['unit-1', 'unit-2', 'unit-3'].entries())
           state = accepted(api.deployMatchUnit(state, id, { kind: 'board', cell: { col: 1 + 2 * index, row: 4 } }));

@@ -10,7 +10,7 @@ export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: 
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
-  readonly round: number; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
+  readonly round: number; readonly roundId: string; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
   readonly settlementId: string; readonly roundKind: RoundKind;
   readonly incomeBreakdown: { readonly base: number; readonly win: number; readonly interest: number; readonly streak: number };
   readonly interestBasis: number; readonly streakBefore: Streak; readonly streakAfter: Streak; readonly xpRequested: number;
@@ -19,7 +19,17 @@ export interface RoundResult {
   readonly xpBefore: number; readonly xpAfter: number; readonly hpBefore: number; readonly hpAfter: number;
   readonly baseDamage: number; readonly survivingEnemyCount: number; readonly playerDamage: number; readonly hpLost: number;
 }
+/** B6 freezes the existing enemy projection once. Full PvE content/loot remains B7/B8. */
+export interface RoundPreparation {
+  readonly version: 'm8-b6-preparation-v1';
+  readonly roundId: string;
+  readonly encounterId: string | null;
+  readonly contentStatus: 'pending-b7-b8' | 'not-pve';
+  readonly enemies: readonly import('./unit-types').Unit[];
+}
 export interface MatchBase {
+  readonly m8: Pick<import('./m8/contracts').M8MatchExtension, 'round' | 'encounterPlan'> & {readonly preparation: RoundPreparation};
+
   readonly equipmentState: import('./m8/equipment').EquipmentState;
   readonly temporaryEquipment: readonly import('./m8/contracts').TemporaryEquipment[];
   readonly schemaVersion: 5; readonly rulesVersion: 'm5-14.24b-v1'; readonly contentVersion: 's13-14.24b-slice-v1'; readonly contentDigest: string;
