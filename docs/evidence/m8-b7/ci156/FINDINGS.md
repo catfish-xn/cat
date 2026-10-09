@@ -57,5 +57,3 @@ This historical success must not be represented as passing CI for the B7 integra
 
 Each .sanitized.log retains the complete failing test/route step output, its first failure, stack, outcome and existing skips. Setup/checkout, shell/environment configuration, upload and cleanup sections were excluded; ANSI formatting and runner workspace path prefixes were stripped. No credentials or environment configuration are retained.
 jobs.json gives exact job IDs, links, file mapping, first-failure timestamps and retained line counts.
-
-

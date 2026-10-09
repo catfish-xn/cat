@@ -35,7 +35,15 @@ describe('M6 independent route/history/playback/session integration', () => {
       expect(verified.settledMatch).toEqual(original.after);
       const playback = new PlaybackSession(record);
       expect(playback.read().combat).toEqual(record.initial);
-      expect(playback.read().events).toEqual(record.events.filter(event => event.tick === 0));
+      // Event tick is the semantic phase, not the committed-prefix boundary.
+      // B3 emits tick-0 opening moves during the first step, after initial capture.
+      const independentlyStarted = api.startMatchCombat(record.context);
+      if (!independentlyStarted.ok) throw new Error('record context cannot start');
+      const initialEvents = combatEvents(independentlyStarted.events);
+      expect(record.initial).toEqual(independentlyStarted.state.combat);
+      expect(record.initial.nextEventSeq).toBe(initialEvents.length);
+      expect(playback.read().events).toEqual(initialEvents);
+      expect(record.events.slice(0, initialEvents.length)).toEqual(initialEvents);
       // Independent expected SHA256 comes from the original command route's every-tick Match output.
       const trajectory = trajectories.get(record.combatId)!;
       playback.play();

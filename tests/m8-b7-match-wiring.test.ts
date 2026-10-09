@@ -64,6 +64,20 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     expect(['settlement','gameOver']).toContain(s.phase);
     expect(s.combat!.units.filter(u=>u.team==='enemy').every(u=>u.mana===0 && u.maxMana===0)).toBe(true);
   });
+  it.each(['3-7','6-7'])('%s separates captured initial events from tick-zero opening moves committed by the first step',roundId=>{
+    const preparedState=prepared(roundId),start=api.startMatchCombat(preparedState);
+    if(!start.ok) throw new Error('fixture cannot start');
+    const initial=start.state.combat!,initialEvents=start.events.filter(e=>e.domain==='combat');
+    expect(initial.tick).toBe(0);expect(initial.nextEventSeq).toBe(initialEvents.length);
+    expect(initial.openingState).toBeUndefined();
+    expect(initialEvents.some(e=>e.type==='movement')).toBe(false);
+    const first=api.stepMatch(start.state),moves=first.events.filter(e=>e.type==='movement' && e.tick===0);
+    expect(first.state.combat!.tick).toBe(1);expect(moves.length).toBe(roundId==='3-7'?5:1);
+    for(const e of moves) expect(e.eventSeq).toBeGreaterThanOrEqual(initial.nextEventSeq!);
+    expect(first.state.combat!.openingState!.committed).toBe(true);
+    expect(api.stepMatch(first.state).events.filter(e=>e.type==='movement' && e.tick===0)).toEqual([]);
+    roundTrip(start.state);roundTrip(first.state);
+  });
   it('replaces the B6 stage-one placeholder with independently enumerated 2/3/4 minions',()=>{
     expect([1,2,3].map(n=>createRoundEnemies(n).map(u=>u.definitionId))).toEqual([
       ['pve-minion-melee-a','pve-minion-melee-a'],
