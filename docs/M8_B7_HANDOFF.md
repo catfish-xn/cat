@@ -1,6 +1,14 @@
-# B7 current integration handoff — implementation ready, acceptance pending
+# B7 current integration handoff — accepted integration merged; cleanup follow-up
 
 **Current scope supersedes the historical narrowed-subset record below.** All eight fixed encounters, 12 neutral definitions and 25 deployments now run through ordinary Match Start/step. Herald uses the accepted upstream damage-before-control fix; its old lethal characterization is replaced by retained lethal/no-stun and added surviving/damage-before-stun assertions. Nothing in the historical “Herald incomplete” section is a current acceptance claim.
+
+## Accepted checkpoint and cleanup scope
+
+- Per the user's confirmation, Claude accepted fixed commit `889a2a5cab70afc6769b1746fcb0ecb9fa1c2737` with no blocking findings. The full independent audit report/vectors have not been supplied here; this records that confirmation, not a replacement audit or self-signoff. [Approval archive](https://github.com/catfish-xn/cat/pull/21#issuecomment-6091221857).
+- [CI161](https://github.com/catfish-xn/cat/actions/runs/37970916638) passed on its first attempt: 13 required checks green, two optional checks skipped; unit tests 111 files, 1422 passed and 10 existing approved skips. This is remote CI evidence; local Chromium remained blocked and is not claimed as locally passed.
+- PR #21 merged into `feat/m8-b0-baseline` at `87782695f864ba5d493d7a40c9c3652b48aacc86`, parents `947ac7151e180a70446aeece09d8c9e500f2a4b9` and accepted `889a2a5cab70afc6769b1746fcb0ecb9fa1c2737`, tree `00700f1dc32376212ff81104958d6e3cbbe4f47d`.
+- Authorized follow-up `chore/m8-b7-cleanup` derives restore control timing from the trusted duration/task, confines zero maximum mana to neutral units, and documents observation receipts. New independent local regression vectors supplement the existing tests; Claude's separate audit-vector branch remains pending delivery by the user and is not fabricated or replaced here.
+- B8 has not started. Its equipment-catalog changes must also update corresponding strict restore assumptions and tests: [issue #23 reminder](https://github.com/catfish-xn/cat/issues/23#issuecomment-6091227862).
 
 ## Scope and integration
 
@@ -11,7 +19,7 @@
 - Narrow B7 restore validates catalog-bound identity, immutable declarations, opening and companion one-shot consumption, source/effect/target identity and exact status lifetime. Observation-only death/control receipts reject retimed krug healing and deleted Herald stun without changing events, effects or RNG. This is structural same-version consistency, not cryptographic authenticity against jointly forged entire histories.
 - B8 remains explicitly pending: `encounterPlan=null`, contentStatus `ready-b7-pending-b8`; no fake empty loot plan. B9 formats/capacity, frozen contracts, G12, UI and CI/gates remain untouched.
 
-Project convention pending approval: B6's fixed PvP round has no encounterId, so readonly preview uses `pvp:<roundId>`. This changes no round identity, formation, random draw or game state.
+User-approved project convention: B6's fixed PvP round has no encounterId, so readonly preview uses `pvp:<roundId>`. UI must not use this preview identifier as an asset key or loot key. This changes no round identity, formation, random draw or game state.
 
 ## Validation and evidence
 
@@ -20,12 +28,12 @@ Project convention pending approval: B6's fixed PvP round has no encounterId, so
 - First isolated integrated full run: 1416 passed / 4 failed / 10 existing skipped, 477.91s. All four failures were the old M6 assumption that every eventual event tagged tick0 belonged to captured initial state. The approved test adaptation compares an independent ordinary Start result instead; every original subsequent trajectory/hash/seek assertion remains. B3 and Playback are unchanged. See [full logs, old/new assertion rationale and restore evidence](evidence/m8-b7/integration-receipts/README.md).
 - Second isolated full run on local `8f5959ef9222bc31d07f840ed81406f85c6cc144` / remote `06912ce8966bb3430e7d82c2b91d4c5ce7f77486` was **interrupted**, with no terminal summary; no pass is claimed. CI157/158 both hit the unchanged 5000 ms B6 late-round fixture timeout. The test-only 9-hero/27-item → 3-hero/9-item adjustment preserves all 33 real battles, 38 settlements, original assertions and nine late restore boundaries; all samples and rationale are in [fixture-cost evidence](evidence/m8-b7/fixture-cost/README.md).
 - **Final isolated original `npm test`: 111 files passed; 1422 passed / 10 existing skipped (1432 total), exit0, 506.99s.** Fixed local `e1c48aa8352b285117097fafd497bfd1699e2750` and remote `57137c214381a1633587db8ce7b74f1fba1de15d` share tree `45d68632002279b38269ccbd4e0621a3e43c7d98`. All M6 per-tick/hash/seek checks and the unchanged B6 timeout pass. [Raw complete log](evidence/m8-b7/integration-receipts/final-full-unit.log.gz).
-- Runtime/build output is unchanged after the earlier successful typecheck/production build. Later changes are tests and evidence only. Remote final CI and fresh independent Pro audit remain pending; final merge requires user approval.
+- Runtime/build output is unchanged after the earlier successful typecheck/production build. Later changes are tests and evidence only. This earlier pending state is superseded by the accepted checkpoint, CI161 and PR #21 merge recorded above. Cleanup changes still require their own verification and later independent review.
 - Golden migration preserves the exact old 947 fixture. Independent comparison proves unchanged four-route commands, economics, rewards and Match RNG streams. Eight PvE event streams change; cannon's nine additional PvP changes trace solely to one extra +125 bps Tristana growth at 4-7. [Reproduction and detailed proof](evidence/m8-b7/golden/README.md). No golden assertion, skip or threshold was relaxed.
 
 ## Budget and remaining limits
 
-Node22.23.3 `zlib.gzipSync(bytes,{level:9})`, all production JS: **485743 B**, versus exact rebuilt 947 **480941 B**, delta **+4802 B**. This exceeds the preferred B7 +4000 B by **802 B** after attempted deduplication; safety checks and independent consumption receipts are retained. The unchanged effective ceiling is **488477 B**, leaving **2734 B**. Final CI paired measurement remains authoritative; no budget/method change.
+Node22.23.3 `zlib.gzipSync(bytes,{level:9})`, all production JS: **485743 B**, versus exact rebuilt 947 **480941 B**, delta **+4802 B**. The user accepted this **+4802 B** increase, which exceeds the preferred B7 +4000 B by **802 B** after attempted deduplication; safety checks and independent consumption receipts are retained. The unchanged effective ceiling is **488477 B**, leaving **2734 B**. Final CI paired measurement remains authoritative; no budget/method change.
 
 The domain preview is currently tree-shaken because U5 has not imported it. Its first UI use has an unknown additional bundle cost; this is not a zero-cost delivered preview UI. Synthetic late-round fixtures use explicitly documented earlier wins and strong test heroes, not an honest full-campaign/balance claim. Four real seed42 routes still have zero fully formed battles and five component grants under existing B8/B9 deferrals. Stage1 specified-hero vectors are fixture boundaries, not implemented B8 rewards.
 
