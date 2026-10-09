@@ -6,6 +6,8 @@
 
 ## 当前交接摘要（以此处为最新状态）
 
+第二轮审计处理：用户已明确选择**先修 R1、保留现有装备玩法，规则扩展另批处理**。本轮修复历史 TG 抽取等级的所属轮次上下界，详细反例、兼容性及验证见文末；R2 输入补丁已在后续 `8e16da2` 交付，旧审计 HEAD `0298a3f` 未包含该提交。后续 CI 必须绑定本轮 R1 修复 SHA，不能用先前 #120 替代。
+
 | 阶段 | 已推送提交 | 交付 |
 | --- | --- | --- |
 | 1 | `633f28a` | 唯一/三槽/独占、命令失败原子性、恢复约束 |
@@ -334,3 +336,43 @@ await touchInput.detach();
 - 本次结果补记只改 `docs/M8_B5_CLICK_LATENCY.md`、`docs/evidence/M8_B5_NATIVE_TOUCH_FIX.json` 和本交接文件；相对已通过CI的8e16da2，没有可执行源码/脚本/依赖/工作流变化。明确区分CI受测SHA与后续文档SHA，不因纯文档补记重复整轮测试。
 - 未覆盖边界仍为前述U3动态联调、TG最大合法长程负载、后续正式存档/新日程及B8收据集成；本轮输入驱动修复不改变存档、digest、目录/规则版本，也不修复或重定义B3/B4已签收行为。下一步由接手开发者审计，本文不代替签收；不送审、不合并。
 - 结果补记前曾发现PR引用未同步：分支与Git Ref API为8e16da2，PR API及`refs/pull/16/head`为0298a3f。**结果文档79c4d7e推送后，已用git ls-remote复核分支与PR head均为79c4d7e，差异消除。** PR摘要已更新为真实修复及CI结果，状态仍Draft；没有关闭重开、改目标分支或合并。该异常及恢复作为历史记录保留，审计仍须区分修复受测SHA8e16da2与后续纯文档提交。
+
+## 第二轮审计修复：R1 历史抽取等级（2026-10-09）
+
+范围决定：用户选择先修 R1，保留普通穿戴不自动合成、升星不跨英雄合成、主单位原装备优先及既定转移顺序。自动合成和成装优先另批定义规则，不作为本轮新增玩法。
+
+根因：冻结 G12 能重放随机数与抽样池，但它不持有 Match 的历史经济。原 Match 校验仅要求抽取等级不高于当前等级；当前到七级后，将首轮实际三级改成七级，并将相同 RNG words 对应的组件改为成装，仍可通过 RNG 重放。这个反例是历史真实性漏洞，不是 RNG 算法错误。
+
+| 文件 | 本轮修改与设计理由 |
+| --- | --- |
+| `src/simulation/temporary-equipment.ts` | 逐 roll 校验所属轮次：下界为首轮初始等级或上一轮 `levelAfter`；上界为已结算轮 `levelBefore` 或未结算当前轮当前等级。用区间保留同轮先抽后 F、先 F 后首次穿戴；结算被动经验不属于该轮装备生成时点。 |
+| `src/simulation/serialization.ts` | 把装备交叉校验移到轮次结构、身份、经济历史及当前结算总量验证之后，确保依据可信。保留原有结构/装备位置及全部严格校验。 |
+| `tests/m8-b5-equipment-history.test.ts` | 新增 8 项真实公开命令回归；不注入资源、轮次或结算。拒绝路径覆盖对象/字符串恢复与序列化，保持输入不变。 |
+| `docs/M8_B5_HANDOFF.md` | 记录用户范围决定、缺陷、反例、版本影响和实际受测提交；本轮仍为 `[wip]`，不代替复审签收。 |
+
+### R1 审计反例与测试索引
+
+以下测试均位于 `tests/m8-b5-equipment-history.test.ts`：
+
+| 手算边界/反例 | 对应测试名 |
+| --- | --- |
+| seed42 首轮三级，已到第8轮七级；旧 roll 伪造七级双成装，RNG 状态和当前子件均不变，冻结 G12 单独仍接受，Match 必须拒绝 | `rejects a historical level3 roll forged as level7 with RNG-consistent two completed items` |
+| 第3轮结算升到四级，第4轮补给/当前第8轮下界都是四级；伪造三级且 RNG pair 不变也须拒绝（两例） | `rejects a roll below the previous settlement level in a %s` |
+| 第3轮结算前三级、被动经验结算后四级，不得把装备抽取等级写为四级 | `uses levelBefore rather than passive levelAfter as the settled-round upper bound` |
+| 本轮先以四级抽取，再 F 到七级：当前、结算后、下一轮历史三种保存恢复都合法 | `preserves a legal pre-F roll through current, settled and historical save/restore` |
+| 本轮起始四级，先 F 到七级再首次穿戴，七级抽取合法 | `allows the first equip after same-round F at the upper bound, not only the starting level` |
+| 伪造结算 `levelAfter` 必须先被轮次经济校验拒绝，不能先消费该值检查装备 | `validates round economy before consulting its level bounds for equipment` |
+| 完整公开对局的 SaveEnvelope 与 BattleHistory 先正常通过；只改 Match 旧 roll、不改归档，完整存档入口必须拒绝 | `rejects the forged historical level through full save-envelope validation without changing archived battles` |
+
+修复前上述 8 项实际为 **5 失败、3 通过**，失败均是错误接受伪造；修复后 B5 五文件 **70/70 通过**，包含全部 8 项。类型检查及生产构建通过。全量本地回归和对应提交完整 CI 的结果补记于下方，未完成前不得沿用 #120 宣称本轮通过。
+
+### 格式、版本及 B3/B4 影响（本轮单独声明）
+
+- 本轮无新增状态/字段、无格式迁移、无内容或随机抽样规则改变。Match schema5 / save1 / replay1、目录 `s13-14.24b-m8-b5-v1`、实例规则 `m8-b5-instances-v2`、digest `fnv1a32-utf16:47dd941a` 均不变；这是落实原历史约束的恢复校验修复，不改变合法运行规则，因此不更新内容 digest 或规则版本。
+- 合法保存恢复继续逐值往返；旧实现错误接受的伪造档现在严格拒绝，不补抽、不修正或迁移。既有 B5 新状态/相对施工基线的版本差异仍见前文，不能将“本轮无格式变化”误读为整个 B5 无变化。
+- 不修改 B3/B4 内容、战斗、时序、装备数值或事件生成；仅影响不合法历史数据的接受范围与拒绝顺序。冻结合同、G12及其测试、CI/阈值均不动。原有 B4 R3b 查询显示时序限制仍保留，未宣称本轮修复。
+- 仍未覆盖 U3 动态联调、TG 最大合法长程负载、后续正式存档/新日程及 B8 集成。三构筑 dev/preview 已有 #120 覆盖，本轮仍须完整 CI 复验；不扩展手机适配。
+
+### R2 独立核验项 B5-M7-INPUT
+
+R2 针对 `0298a3f` 的交付缺口已由 `8e16da2` 补齐，基线/B5 的两次 trusted click、窗口内间隔、原 M7 全脚本及完整 CI #120 证据见前文。第二轮不重复改输入驱动；额外按附件要求在 `/tmp` 隔离副本关闭产品防护，核验原双触断言的负向敏感性，结果登记在延迟报告中。仓库产品 400ms、全部断言、门禁和 CI 配置保持不变，审计方仍需单列核实。

@@ -5,6 +5,7 @@ import type { TemporaryEquipment } from './m8/contracts';
 import { createEquipmentPool, generateRoundRolls, initializeStreams, projectTemporaryEquipment,
   reconcileTemporaryEquipment, validateEquipmentState, validateTemporaryEquipment } from './m8/equipment';
 import { getStageRound } from './round-schedule';
+import { MATCH_RULES } from './match-rules';
 import type { ItemDefinition, StrategyEvent } from './strategy-types';
 
 export const grantsTemporaryEquipment = (definition: ItemDefinition): boolean =>
@@ -43,7 +44,7 @@ export function isTemporaryItemId(state: Readonly<MatchState>, id: string): bool
   return state.equipmentState.rolls.some(roll => [1, 2].some(slot => JSON.stringify([roll.parentItemInstanceId, roll.roundId, slot]) === id));
 }
 
-/** Strict local restore: replay the independent stream, validate parents/rounds and exact bindings. */
+/** Strict local restore after round-history validation: replay RNG, check round levels and exact bindings. */
 export function validateMatchEquipment(state: Readonly<MatchState>): void {
   validateEquipmentState(state.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(state.seed).equipment);
   if (!Number.isInteger(state.round) || state.round < 1 || state.round > 35) throw new Error('Invalid equipment round');
@@ -52,8 +53,14 @@ export function validateMatchEquipment(state: Readonly<MatchState>): void {
   for (const roll of state.equipmentState.rolls) {
     const parent = state.items.find(item => item.id === roll.parentItemInstanceId), round = roundIds.indexOf(roll.roundId);
     if (!parent || !grantsTemporaryEquipment(ITEM_DEFINITIONS[parent.definitionId]) || ITEM_DEFINITIONS[parent.definitionId].slotCost !== 3
-      || round < 0 || round < previousRound || roll.playerLevelSnapshot < 3 || roll.playerLevelSnapshot > state.level) {
+      || round < 0 || round < previousRound || roll.playerLevelSnapshot < MATCH_RULES.initialLevel || roll.playerLevelSnapshot > state.level) {
       throw new Error('Invalid equipment parent/round/level');
+    }
+    // F may raise the level after the first roll; settlement XP occurs after all rolls in that round.
+    const startingLevel = round === 0 ? MATCH_RULES.initialLevel : state.roundResults[round - 1].levelAfter;
+    const lastRollLevel = state.roundResults[round]?.levelBefore ?? state.level;
+    if (roll.playerLevelSnapshot < startingLevel || roll.playerLevelSnapshot > lastRollLevel) {
+      throw new Error('Invalid equipment round level');
     }
     previousRound = round;
   }

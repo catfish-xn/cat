@@ -98,7 +98,6 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(checkEquipmentPlacement(state.items, item, item.location.unitId, item.location.slot).allowed, 'equipment constraints');
   }
   record(raw.equipmentState); record(raw.equipmentState.equipment); list(raw.equipmentState.rolls); list(raw.temporaryEquipment);
-  validateMatchEquipment(state);
   list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();
   for (const augment of state.augments) {
     record(augment); definitionId(augment.definitionId, AUGMENT_DEFINITIONS, 'augment definition');
@@ -198,6 +197,8 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
   if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
+  // Equipment history uses these validated round identities and pre/post-settlement level bounds.
+  validateMatchEquipment(state);
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && state.round === 35), 'terminal boundary');
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
