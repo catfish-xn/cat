@@ -1,0 +1,1613 @@
+{
+  "commit": "a062cececca3424d1c2b414f7b1a2a016a77f1a0",
+  "scope": "offline diagnostic, not acceptance audit",
+  "checks": [
+    "trend-02: pinned bytes/hash, all member CRC/SHA256, JSON parsing, action pairing, expected counts/configuration verified",
+    "trend-03: pinned bytes/hash, all member CRC/SHA256, JSON parsing, action pairing, expected counts/configuration verified",
+    "Both ordered class/method/selector/expression sequences identical (excludes parameters/results/timing)"
+  ],
+  "runs": {
+    "trend-02": {
+      "bytes": 18488772,
+      "sha256": "0b1bfd7b3bb57f795aaf54e744c2203e91f785d40a0377a5769d011ec439dcbd",
+      "git_blob": "f270ade9c7b1d4b267060fb9afc9182c3394c225",
+      "members": [
+        {
+          "name": "trace.trace",
+          "bytes": 275925156,
+          "compressed_bytes": 18467746,
+          "crc32": "b57c55ab",
+          "crc_verified": true,
+          "sha256": "31b25f9cf93f66dcf74ef824197ec56167c3b9d2ccab0b17d10326a338f6caa7"
+        },
+        {
+          "name": "trace.network",
+          "bytes": 0,
+          "compressed_bytes": 2,
+          "crc32": "00000000",
+          "crc_verified": true,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "trace.stacks",
+          "bytes": 419247,
+          "compressed_bytes": 20643,
+          "crc32": "3e9aee72",
+          "crc_verified": true,
+          "sha256": "6aa87e2bf7d5e8da8d605c7e5af3452393e2d9b6b773bea325cc8c9f03d8a04a"
+        }
+      ],
+      "tested_sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "browser": "141.0.7390.37",
+      "manifest_errors": [],
+      "heap_windows": {
+        "warmupCycles": 12,
+        "cyclesPerWindow": 30,
+        "heapDiagnostics": false,
+        "windows": [
+          {
+            "window": 1,
+            "cycles": 30,
+            "beforeHeap": {
+              "usedSize": 14258868,
+              "totalSize": 18735104,
+              "embedderHeapUsedSize": 7746056,
+              "backingStorageSize": 7942250
+            },
+            "afterHeap": {
+              "usedSize": 14463928,
+              "totalSize": 19259392,
+              "embedderHeapUsedSize": 7745024,
+              "backingStorageSize": 7942250
+            },
+            "heapDelta": 205060,
+            "beforeResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            },
+            "afterResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "window": 2,
+            "cycles": 30,
+            "beforeHeap": {
+              "usedSize": 14463928,
+              "totalSize": 19259392,
+              "embedderHeapUsedSize": 7745024,
+              "backingStorageSize": 7942250
+            },
+            "afterHeap": {
+              "usedSize": 15045472,
+              "totalSize": 20570112,
+              "embedderHeapUsedSize": 7882208,
+              "backingStorageSize": 7942250
+            },
+            "heapDelta": 581544,
+            "beforeResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            },
+            "afterResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "window": 3,
+            "cycles": 30,
+            "beforeHeap": {
+              "usedSize": 15045472,
+              "totalSize": 20570112,
+              "embedderHeapUsedSize": 7882208,
+              "backingStorageSize": 7942250
+            },
+            "afterHeap": {
+              "usedSize": 16215936,
+              "totalSize": 19783680,
+              "embedderHeapUsedSize": 7656944,
+              "backingStorageSize": 7942247
+            },
+            "heapDelta": 1170464,
+            "beforeResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            },
+            "afterResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          }
+        ],
+        "persistentGrowth": true
+      },
+      "console": [
+        {
+          "line": 9,
+          "type": "console",
+          "messageType": "log",
+          "text": "%c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent",
+          "location": {
+            "url": "http://127.0.0.1:4176/assets/index-Bz7j2LlX.js",
+            "lineNumber": 0,
+            "columnNumber": 75584
+          },
+          "time": 9816.055,
+          "pageId": "page@6759cb17f712507d3b15aa7e50d3833a"
+        },
+        {
+          "line": 10,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x15640015f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10145.428,
+          "pageId": "page@6759cb17f712507d3b15aa7e50d3833a"
+        },
+        {
+          "line": 13,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x15640015f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10157.907,
+          "pageId": "page@6759cb17f712507d3b15aa7e50d3833a"
+        },
+        {
+          "line": 14,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x15640015f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10209.348,
+          "pageId": "page@6759cb17f712507d3b15aa7e50d3833a"
+        },
+        {
+          "line": 15,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x15640015f000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10252.177,
+          "pageId": "page@6759cb17f712507d3b15aa7e50d3833a"
+        },
+        {
+          "line": 852,
+          "type": "console",
+          "messageType": "log",
+          "text": "%c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent",
+          "location": {
+            "url": "http://127.0.0.1:4176/assets/index-Bz7j2LlX.js",
+            "lineNumber": 0,
+            "columnNumber": 75584
+          },
+          "time": 60180.642,
+          "pageId": "page@6759cb17f712507d3b15aa7e50d3833a"
+        }
+      ],
+      "errors": [],
+      "lifecycle_actions": [
+        {
+          "line": 4,
+          "type": "before",
+          "callId": "call@8",
+          "startTime": 9387.306,
+          "class": "BrowserContext",
+          "method": "newPage",
+          "params": {}
+        },
+        {
+          "line": 7,
+          "type": "before",
+          "callId": "call@12",
+          "startTime": 9465.099,
+          "class": "Frame",
+          "method": "goto",
+          "params": {
+            "url": "http://127.0.0.1:4176",
+            "waitUntil": "load",
+            "timeout": 30000
+          }
+        },
+        {
+          "line": 849,
+          "type": "before",
+          "callId": "call@543",
+          "startTime": 59905.902,
+          "class": "Page",
+          "method": "reload",
+          "params": {
+            "waitUntil": "load",
+            "timeout": 30000
+          }
+        },
+        {
+          "line": 1416,
+          "type": "before",
+          "callId": "call@884",
+          "startTime": 100830.826,
+          "class": "BrowserContext",
+          "method": "newCDPSession",
+          "params": {
+            "page": {
+              "guid": "page@6759cb17f712507d3b15aa7e50d3833a"
+            }
+          }
+        }
+      ],
+      "resource_reads": [
+        {
+          "before_line": 3472,
+          "after_line": 3473,
+          "time": 165218.86,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 3647,
+          "after_line": 3648,
+          "time": 171040.696,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 3822,
+          "after_line": 3823,
+          "time": 176912.329,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 3997,
+          "after_line": 3998,
+          "time": 182469.962,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4172,
+          "after_line": 4173,
+          "time": 188118.302,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4347,
+          "after_line": 4348,
+          "time": 193595.291,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4522,
+          "after_line": 4523,
+          "time": 199159.997,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4697,
+          "after_line": 4698,
+          "time": 204867.683,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4872,
+          "after_line": 4873,
+          "time": 210186.858,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5047,
+          "after_line": 5048,
+          "time": 215901.728,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5222,
+          "after_line": 5223,
+          "time": 221681.228,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5397,
+          "after_line": 5398,
+          "time": 227290.847,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5572,
+          "after_line": 5573,
+          "time": 232862.707,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5747,
+          "after_line": 5748,
+          "time": 238499.085,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5922,
+          "after_line": 5923,
+          "time": 243972.404,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6097,
+          "after_line": 6098,
+          "time": 249686.389,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6272,
+          "after_line": 6273,
+          "time": 255392.953,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6447,
+          "after_line": 6448,
+          "time": 260911.714,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6622,
+          "after_line": 6623,
+          "time": 266490.655,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6797,
+          "after_line": 6798,
+          "time": 271990.364,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6972,
+          "after_line": 6973,
+          "time": 277605.755,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7147,
+          "after_line": 7148,
+          "time": 283326.055,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7322,
+          "after_line": 7323,
+          "time": 288916.921,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7497,
+          "after_line": 7498,
+          "time": 294683.817,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7672,
+          "after_line": 7673,
+          "time": 300266.919,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7847,
+          "after_line": 7848,
+          "time": 305839.536,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8022,
+          "after_line": 8023,
+          "time": 311662.801,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8197,
+          "after_line": 8198,
+          "time": 317413.142,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8372,
+          "after_line": 8373,
+          "time": 323217.446,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8547,
+          "after_line": 8548,
+          "time": 328963.664,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8722,
+          "after_line": 8723,
+          "time": 334461.244,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8726,
+          "after_line": 8727,
+          "time": 334714.359,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 13860,
+          "after_line": 13861,
+          "time": 495121.791,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 18994,
+          "after_line": 18995,
+          "time": 654617.662,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        }
+      ],
+      "input_drains": [
+        {
+          "before_line": 3470,
+          "after_line": 3471,
+          "time": 165029.707,
+          "returned_event_count": 358
+        },
+        {
+          "before_line": 8724,
+          "after_line": 8725,
+          "time": 334511.045,
+          "returned_event_count": 720
+        },
+        {
+          "before_line": 13858,
+          "after_line": 13859,
+          "time": 494922.375,
+          "returned_event_count": 720
+        },
+        {
+          "before_line": 18992,
+          "after_line": 18993,
+          "time": 654422.822,
+          "returned_event_count": 720
+        }
+      ],
+      "last_actions": [
+        {
+          "line": 18974,
+          "callId": "call@8574",
+          "method": "Frame.waitForFunction",
+          "expression": "()=>window.__CAT_DEBUG__.read().m6.mode==='replay'",
+          "selector": null
+        },
+        {
+          "line": 18976,
+          "callId": "call@8576",
+          "method": "Frame.click",
+          "expression": null,
+          "selector": "#replay-root >> internal:role=button[name=\"返回当前局\"s]"
+        },
+        {
+          "line": 18990,
+          "callId": "call@8578",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__CAT_DEBUG__.read()",
+          "selector": null
+        },
+        {
+          "line": 18992,
+          "callId": "call@8580",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>{const events=window.__M5_NATIVE_INPUTS__;window.__M5_NATIVE_INPUTS__=[];return events;}",
+          "selector": null
+        },
+        {
+          "line": 18994,
+          "callId": "call@8586",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__M6_RESOURCES__.read()",
+          "selector": null
+        },
+        {
+          "line": 18996,
+          "callId": "call@8588",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__M5_NATIVE_INPUTS__",
+          "selector": null
+        },
+        {
+          "line": 18998,
+          "callId": "call@8590",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__CAT_DEBUG__?.read()",
+          "selector": null
+        },
+        {
+          "line": 19000,
+          "callId": "call@8592",
+          "method": "Page.screenshot",
+          "expression": null,
+          "selector": null
+        }
+      ],
+      "keyword_matches": {
+        "HeapProfiler": [],
+        "collectGarbage": [],
+        "Runtime.getHeapUsage": [],
+        "usedJSHeapSize": []
+      },
+      "stacks": {
+        "files": [
+          "async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs",
+          "/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs"
+        ],
+        "count": 4288
+      },
+      "context": {
+        "version": 9,
+        "type": "context-options",
+        "origin": "library",
+        "browserName": "chromium",
+        "playwrightVersion": "1.63.0",
+        "options": {
+          "noDefaultViewport": false,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "isMobile": false,
+          "hasTouch": false,
+          "selectorEngines": [],
+          "acceptDownloads": "accept"
+        },
+        "platform": "linux",
+        "wallTime": 1791478204800,
+        "monotonicTime": 9383.157,
+        "sdkLanguage": "javascript",
+        "testIdAttributeName": "data-testid"
+      },
+      "event_type_counts": {
+        "context-options": 1,
+        "before": 4279,
+        "after": 4279,
+        "event": 209,
+        "log": 9248,
+        "console": 6,
+        "input": 982
+      },
+      "method_counts": {
+        "BrowserContext.addInitScript": 1,
+        "BrowserContext.newPage": 1,
+        "Frame.goto": 1,
+        "Frame.waitForFunction": 850,
+        "Frame.evaluateExpression": 1372,
+        "Frame.fill": 103,
+        "Frame.click": 648,
+        "Frame.waitForSelector": 429,
+        "Frame.queryCount": 427,
+        "Page.mouseMove": 3,
+        "Page.keyboardPress": 18,
+        "Page.screenshot": 2,
+        "Page.mouseDown": 1,
+        "Page.mouseUp": 1,
+        "Page.__waitInfo__": 2,
+        "Page.reload": 1,
+        "Frame.setInputFiles": 104,
+        "Dialog.accept": 206,
+        "Frame.selectOption": 104,
+        "Frame.focus": 2,
+        "Frame.inputValue": 2,
+        "BrowserContext.newCDPSession": 1
+      },
+      "selector_counts": {
+        "fill [data-debug=\"m6-seed-input\"]": 103,
+        "click [data-debug=\"m6-fixed-start\"]": 103,
+        "waitForSelector [data-debug=\"choice:sword\"]": 206,
+        "queryCount [data-debug=\"choice:sword\"]": 206,
+        "click [data-debug=\"choice:sword\"]": 206,
+        "waitForSelector [data-debug=\"choice:investment-strategy-i\"]": 1,
+        "queryCount [data-debug=\"choice:investment-strategy-i\"]": 1,
+        "click [data-debug=\"choice:investment-strategy-i\"]": 1,
+        "waitForSelector [data-debug=\"mobile:buy-1\"]": 1,
+        "queryCount [data-debug=\"mobile:buy-1\"]": 1,
+        "click [data-debug=\"mobile:buy-1\"]": 1,
+        "waitForSelector canvas": 2,
+        "waitForSelector [data-debug=\"panel:items\"]": 2,
+        "queryCount [data-debug=\"panel:items\"]": 2,
+        "click [data-debug=\"panel:items\"]": 2,
+        "waitForSelector [data-debug=\"item:item-1\"]": 1,
+        "queryCount [data-debug=\"item:item-1\"]": 1,
+        "click [data-debug=\"item:item-1\"]": 1,
+        "waitForSelector [data-debug=\"item:item-2\"]": 1,
+        "queryCount [data-debug=\"item:item-2\"]": 1,
+        "click [data-debug=\"item:item-2\"]": 1,
+        "waitForSelector [data-debug=\"combine-items\"]": 1,
+        "queryCount [data-debug=\"combine-items\"]": 1,
+        "click [data-debug=\"combine-items\"]": 1,
+        "waitForSelector [data-debug=\"item:item-3\"]": 1,
+        "queryCount [data-debug=\"item:item-3\"]": 1,
+        "click [data-debug=\"item:item-3\"]": 1,
+        "waitForSelector [data-debug=\"equipment:unit-2:0\"]": 1,
+        "queryCount [data-debug=\"equipment:unit-2:0\"]": 1,
+        "click [data-debug=\"equipment:unit-2:0\"]": 1,
+        "waitForSelector [data-debug=\"mobile:start-combat\"]": 3,
+        "queryCount [data-debug=\"mobile:start-combat\"]": 3,
+        "click [data-debug=\"mobile:start-combat\"]": 3,
+        "waitForSelector [data-debug=\"mobile:continue\"]": 2,
+        "queryCount [data-debug=\"mobile:continue\"]": 2,
+        "click [data-debug=\"mobile:continue\"]": 2,
+        "waitForSelector [data-debug=\"mobile:buy-0\"]": 1,
+        "queryCount [data-debug=\"mobile:buy-0\"]": 1,
+        "click [data-debug=\"mobile:buy-0\"]": 1,
+        "waitForSelector [data-debug=\"shop-lock\"]": 2,
+        "queryCount [data-debug=\"shop-lock\"]": 2,
+        "click [data-debug=\"shop-lock\"]": 2,
+        "click [data-debug=\"m6-export\"]": 2,
+        "click [data-debug=\"m6-continue\"]": 1,
+        "setInputFiles [data-debug=\"m6-import\"]": 104,
+        "selectOption internal:label=\"选择已完成战斗\"i": 104,
+        "click #replay-root >> internal:role=button[name=\"暂停\"s]": 4,
+        "click #replay-root >> internal:role=button[name=\"4×\"s]": 2,
+        "click #replay-root >> internal:role=button[name=\"播放\"s]": 2,
+        "focus internal:label=\"按 tick 跳转\"i": 2,
+        "click #replay-root >> internal:role=button[name=\"返回当前局\"s]": 105,
+        "click internal:label=\"选择已完成战斗\"i": 2,
+        "inputValue internal:label=\"选择已完成战斗\"i": 2,
+        "waitForSelector [data-debug=\"mobile:new-match\"]": 102,
+        "queryCount [data-debug=\"mobile:new-match\"]": 102,
+        "click [data-debug=\"mobile:new-match\"]": 102,
+        "waitForSelector [data-debug=\"choice:bulky-buddies-i\"]": 102,
+        "queryCount [data-debug=\"choice:bulky-buddies-i\"]": 102,
+        "click [data-debug=\"choice:bulky-buddies-i\"]": 102
+      },
+      "event_counts": {
+        "BrowserContext.page": 1,
+        "BrowserContext.download": 2,
+        "BrowserContext.dialog": 206
+      },
+      "expression_counts": {
+        "()=>window.__CAT_DEBUG__.read()": 1133,
+        "()=>window.__CAT_DEBUG__.read().state.phase==='combat'": 192,
+        "()=>new Promise((resolve,reject)=>{const open=indexedDB.open('hex-autobattler-m6');open.onerror=()=>reject(open.error);open.onsuccess=()=>{const db=open.result,tx=db.transaction(['metadata','runs'],'readonly'),current=tx.objectStore('metadata').get('current');current.onsuccess=()=>{const run=tx.objectStore('runs').get(current.result.runId);run.onsuccess=()=>resolve({token:current.result,match:run.result.match,events:run.result.currentBattle.events});};tx.oncomplete=()=>db.close();tx.onabort=()=>reject(tx.error);};})": 1,
+        "()=>window.__M5_NATIVE_INPUTS__": 2,
+        "()=>{const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(this.name==='runs')throw new DOMException('M6 independent quota injection','QuotaExceededError');return put.apply(this,args);};window.__M6_RESTORE_QUOTA__=()=>{IDBObjectStore.prototype.put=put;delete window.__M6_RESTORE_QUOTA__;};}": 1,
+        "()=>window.__M6_RESTORE_QUOTA__()": 1,
+        "()=>{const descriptor=Object.getOwnPropertyDescriptor(document,'hidden');try{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));}finally{if(descriptor)Object.defineProperty(document,'hidden',descriptor);else delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));}}": 1,
+        "()=>new Promise((resolve,reject)=>{const open=indexedDB.open('hex-autobattler-m6');open.onsuccess=()=>{const db=open.result,tx=db.transaction('metadata','readonly'),request=tx.objectStore('metadata').get('current');request.onsuccess=()=>resolve(request.result);tx.oncomplete=()=>db.close();tx.onabort=()=>reject(tx.error);};open.onerror=()=>reject(open.error);})": 2,
+        "()=>{const events=window.__M5_NATIVE_INPUTS__;window.__M5_NATIVE_INPUTS__=[];return events;}": 4,
+        "()=>window.__M6_RESOURCES__.read()": 34,
+        "()=>window.__CAT_DEBUG__?.read()": 1
+      },
+      "paired_actions": 4279,
+      "page_ids": [
+        "page@6759cb17f712507d3b15aa7e50d3833a"
+      ],
+      "last_action_end_ms": 655133.863,
+      "debug_read_result_jsonl_bytes": 271955310,
+      "action_signature_sha256": "194c53a2d8efb6a8fef4d1e39437cbe70b5a28193d5f0f4d303a407240d8038c",
+      "missing": [
+        "network requests/responses (empty trace.network)",
+        "DOM snapshots and screenshot resources",
+        "CDP send/response records, GC evidence and heap usage responses",
+        "heap snapshots, allocation profiles, retainer paths",
+        "browser close/context close actions (outside saved interval)"
+      ]
+    },
+    "trend-03": {
+      "bytes": 18488275,
+      "sha256": "0c2bd6435e4f598d9b0b5ed22b71ec2cd10216134758df733341db80b09379a4",
+      "git_blob": "f199375d427a949bc816c6474467b430f9ea8518",
+      "members": [
+        {
+          "name": "trace.trace",
+          "bytes": 275923532,
+          "compressed_bytes": 18467249,
+          "crc32": "2fa37017",
+          "crc_verified": true,
+          "sha256": "1f30a792b493505d954396b09b8b22b5dda411141792514d6c56475ee8d2faff"
+        },
+        {
+          "name": "trace.network",
+          "bytes": 0,
+          "compressed_bytes": 2,
+          "crc32": "00000000",
+          "crc_verified": true,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "name": "trace.stacks",
+          "bytes": 419247,
+          "compressed_bytes": 20643,
+          "crc32": "3e9aee72",
+          "crc_verified": true,
+          "sha256": "6aa87e2bf7d5e8da8d605c7e5af3452393e2d9b6b773bea325cc8c9f03d8a04a"
+        }
+      ],
+      "tested_sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "browser": "141.0.7390.37",
+      "manifest_errors": [],
+      "heap_windows": {
+        "warmupCycles": 12,
+        "cyclesPerWindow": 30,
+        "heapDiagnostics": false,
+        "windows": [
+          {
+            "window": 1,
+            "cycles": 30,
+            "beforeHeap": {
+              "usedSize": 14244348,
+              "totalSize": 18997248,
+              "embedderHeapUsedSize": 7706656,
+              "backingStorageSize": 7942250
+            },
+            "afterHeap": {
+              "usedSize": 14559352,
+              "totalSize": 19521536,
+              "embedderHeapUsedSize": 7698856,
+              "backingStorageSize": 7942250
+            },
+            "heapDelta": 315004,
+            "beforeResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            },
+            "afterResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "window": 2,
+            "cycles": 30,
+            "beforeHeap": {
+              "usedSize": 14559352,
+              "totalSize": 19521536,
+              "embedderHeapUsedSize": 7698856,
+              "backingStorageSize": 7942250
+            },
+            "afterHeap": {
+              "usedSize": 15162724,
+              "totalSize": 20832256,
+              "embedderHeapUsedSize": 7885976,
+              "backingStorageSize": 7942250
+            },
+            "heapDelta": 603372,
+            "beforeResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            },
+            "afterResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "window": 3,
+            "cycles": 30,
+            "beforeHeap": {
+              "usedSize": 15162724,
+              "totalSize": 20832256,
+              "embedderHeapUsedSize": 7885976,
+              "backingStorageSize": 7942250
+            },
+            "afterHeap": {
+              "usedSize": 15238536,
+              "totalSize": 20570112,
+              "embedderHeapUsedSize": 7949192,
+              "backingStorageSize": 7942250
+            },
+            "heapDelta": 75812,
+            "beforeResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            },
+            "afterResources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          }
+        ],
+        "persistentGrowth": true
+      },
+      "console": [
+        {
+          "line": 9,
+          "type": "console",
+          "messageType": "log",
+          "text": "%c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent",
+          "location": {
+            "url": "http://127.0.0.1:4176/assets/index-Bz7j2LlX.js",
+            "lineNumber": 0,
+            "columnNumber": 75584
+          },
+          "time": 9730.424,
+          "pageId": "page@26678d576b4a8f5108dca02e60f334eb"
+        },
+        {
+          "line": 10,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x2c0c00119a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10064.646,
+          "pageId": "page@26678d576b4a8f5108dca02e60f334eb"
+        },
+        {
+          "line": 12,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x2c0c00119a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10067.937,
+          "pageId": "page@26678d576b4a8f5108dca02e60f334eb"
+        },
+        {
+          "line": 14,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x2c0c00119a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10114.866,
+          "pageId": "page@26678d576b4a8f5108dca02e60f334eb"
+        },
+        {
+          "line": 15,
+          "type": "console",
+          "messageType": "warning",
+          "text": "[.WebGL-0x2c0c00119a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+          "location": {
+            "url": "http://127.0.0.1:4176/",
+            "lineNumber": 0,
+            "columnNumber": 0
+          },
+          "time": 10160.416,
+          "pageId": "page@26678d576b4a8f5108dca02e60f334eb"
+        },
+        {
+          "line": 852,
+          "type": "console",
+          "messageType": "log",
+          "text": "%c %c %c %c %c Phaser v3.90.0 (WebGL | Web Audio) %c https://phaser.io/v390 background: #ff0000 background: #ffff00 background: #00ff00 background: #00ffff color: #ffffff; background: #000000 background: transparent",
+          "location": {
+            "url": "http://127.0.0.1:4176/assets/index-Bz7j2LlX.js",
+            "lineNumber": 0,
+            "columnNumber": 75584
+          },
+          "time": 60503.37,
+          "pageId": "page@26678d576b4a8f5108dca02e60f334eb"
+        }
+      ],
+      "errors": [],
+      "lifecycle_actions": [
+        {
+          "line": 4,
+          "type": "before",
+          "callId": "call@8",
+          "startTime": 9326.931,
+          "class": "BrowserContext",
+          "method": "newPage",
+          "params": {}
+        },
+        {
+          "line": 7,
+          "type": "before",
+          "callId": "call@12",
+          "startTime": 9400.799,
+          "class": "Frame",
+          "method": "goto",
+          "params": {
+            "url": "http://127.0.0.1:4176",
+            "waitUntil": "load",
+            "timeout": 30000
+          }
+        },
+        {
+          "line": 849,
+          "type": "before",
+          "callId": "call@543",
+          "startTime": 60217.119,
+          "class": "Page",
+          "method": "reload",
+          "params": {
+            "waitUntil": "load",
+            "timeout": 30000
+          }
+        },
+        {
+          "line": 1416,
+          "type": "before",
+          "callId": "call@884",
+          "startTime": 102013.279,
+          "class": "BrowserContext",
+          "method": "newCDPSession",
+          "params": {
+            "page": {
+              "guid": "page@26678d576b4a8f5108dca02e60f334eb"
+            }
+          }
+        }
+      ],
+      "resource_reads": [
+        {
+          "before_line": 3472,
+          "after_line": 3473,
+          "time": 167895.623,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 3647,
+          "after_line": 3648,
+          "time": 173467.169,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 3822,
+          "after_line": 3823,
+          "time": 179153.35,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 3997,
+          "after_line": 3998,
+          "time": 184782.025,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4172,
+          "after_line": 4173,
+          "time": 190582.086,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4347,
+          "after_line": 4348,
+          "time": 196153.988,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4522,
+          "after_line": 4523,
+          "time": 201800.877,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4697,
+          "after_line": 4698,
+          "time": 207625.964,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 4872,
+          "after_line": 4873,
+          "time": 213422.42,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5047,
+          "after_line": 5048,
+          "time": 219214.554,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5222,
+          "after_line": 5223,
+          "time": 225041.135,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5397,
+          "after_line": 5398,
+          "time": 230524.254,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5572,
+          "after_line": 5573,
+          "time": 236106.715,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5747,
+          "after_line": 5748,
+          "time": 241779.038,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 5922,
+          "after_line": 5923,
+          "time": 247222.677,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6097,
+          "after_line": 6098,
+          "time": 253056.109,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6272,
+          "after_line": 6273,
+          "time": 258761.73,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6447,
+          "after_line": 6448,
+          "time": 264373.34,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6622,
+          "after_line": 6623,
+          "time": 269994.143,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6797,
+          "after_line": 6798,
+          "time": 275642.707,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 6972,
+          "after_line": 6973,
+          "time": 281642.202,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7147,
+          "after_line": 7148,
+          "time": 287224.675,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7322,
+          "after_line": 7323,
+          "time": 292788.919,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7497,
+          "after_line": 7498,
+          "time": 298313.238,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7672,
+          "after_line": 7673,
+          "time": 303883.114,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 7847,
+          "after_line": 7848,
+          "time": 309621.168,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8022,
+          "after_line": 8023,
+          "time": 315258.718,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8197,
+          "after_line": 8198,
+          "time": 320929.443,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8372,
+          "after_line": 8373,
+          "time": 326613.044,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8547,
+          "after_line": 8548,
+          "time": 332014.731,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8722,
+          "after_line": 8723,
+          "time": 337636.232,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 8726,
+          "after_line": 8727,
+          "time": 337883.024,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 13860,
+          "after_line": 13861,
+          "time": 499348.58,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "before_line": 18994,
+          "after_line": 18995,
+          "time": 660938.321,
+          "value": {
+            "listeners": 82,
+            "pendingRaf": 1
+          }
+        }
+      ],
+      "input_drains": [
+        {
+          "before_line": 3470,
+          "after_line": 3471,
+          "time": 167699.561,
+          "returned_event_count": 358
+        },
+        {
+          "before_line": 8724,
+          "after_line": 8725,
+          "time": 337687.961,
+          "returned_event_count": 720
+        },
+        {
+          "before_line": 13858,
+          "after_line": 13859,
+          "time": 499131.14,
+          "returned_event_count": 720
+        },
+        {
+          "before_line": 18992,
+          "after_line": 18993,
+          "time": 660723.675,
+          "returned_event_count": 720
+        }
+      ],
+      "last_actions": [
+        {
+          "line": 18974,
+          "callId": "call@8574",
+          "method": "Frame.waitForFunction",
+          "expression": "()=>window.__CAT_DEBUG__.read().m6.mode==='replay'",
+          "selector": null
+        },
+        {
+          "line": 18976,
+          "callId": "call@8576",
+          "method": "Frame.click",
+          "expression": null,
+          "selector": "#replay-root >> internal:role=button[name=\"返回当前局\"s]"
+        },
+        {
+          "line": 18990,
+          "callId": "call@8578",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__CAT_DEBUG__.read()",
+          "selector": null
+        },
+        {
+          "line": 18992,
+          "callId": "call@8580",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>{const events=window.__M5_NATIVE_INPUTS__;window.__M5_NATIVE_INPUTS__=[];return events;}",
+          "selector": null
+        },
+        {
+          "line": 18994,
+          "callId": "call@8586",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__M6_RESOURCES__.read()",
+          "selector": null
+        },
+        {
+          "line": 18996,
+          "callId": "call@8588",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__M5_NATIVE_INPUTS__",
+          "selector": null
+        },
+        {
+          "line": 18998,
+          "callId": "call@8590",
+          "method": "Frame.evaluateExpression",
+          "expression": "()=>window.__CAT_DEBUG__?.read()",
+          "selector": null
+        },
+        {
+          "line": 19000,
+          "callId": "call@8592",
+          "method": "Page.screenshot",
+          "expression": null,
+          "selector": null
+        }
+      ],
+      "keyword_matches": {
+        "HeapProfiler": [],
+        "collectGarbage": [],
+        "Runtime.getHeapUsage": [],
+        "usedJSHeapSize": []
+      },
+      "stacks": {
+        "files": [
+          "async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs",
+          "/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs"
+        ],
+        "count": 4288
+      },
+      "context": {
+        "version": 9,
+        "type": "context-options",
+        "origin": "library",
+        "browserName": "chromium",
+        "playwrightVersion": "1.63.0",
+        "options": {
+          "noDefaultViewport": false,
+          "viewport": {
+            "width": 1440,
+            "height": 1000
+          },
+          "isMobile": false,
+          "hasTouch": false,
+          "selectorEngines": [],
+          "acceptDownloads": "accept"
+        },
+        "platform": "linux",
+        "wallTime": 1791478864055,
+        "monotonicTime": 9321.907,
+        "sdkLanguage": "javascript",
+        "testIdAttributeName": "data-testid"
+      },
+      "event_type_counts": {
+        "context-options": 1,
+        "before": 4279,
+        "after": 4279,
+        "event": 209,
+        "log": 9248,
+        "console": 6,
+        "input": 982
+      },
+      "method_counts": {
+        "BrowserContext.addInitScript": 1,
+        "BrowserContext.newPage": 1,
+        "Frame.goto": 1,
+        "Frame.waitForFunction": 850,
+        "Frame.evaluateExpression": 1372,
+        "Frame.fill": 103,
+        "Frame.click": 648,
+        "Frame.waitForSelector": 429,
+        "Frame.queryCount": 427,
+        "Page.mouseMove": 3,
+        "Page.keyboardPress": 18,
+        "Page.screenshot": 2,
+        "Page.mouseDown": 1,
+        "Page.mouseUp": 1,
+        "Page.__waitInfo__": 2,
+        "Page.reload": 1,
+        "Frame.setInputFiles": 104,
+        "Dialog.accept": 206,
+        "Frame.selectOption": 104,
+        "Frame.focus": 2,
+        "Frame.inputValue": 2,
+        "BrowserContext.newCDPSession": 1
+      },
+      "selector_counts": {
+        "fill [data-debug=\"m6-seed-input\"]": 103,
+        "click [data-debug=\"m6-fixed-start\"]": 103,
+        "waitForSelector [data-debug=\"choice:sword\"]": 206,
+        "queryCount [data-debug=\"choice:sword\"]": 206,
+        "click [data-debug=\"choice:sword\"]": 206,
+        "waitForSelector [data-debug=\"choice:investment-strategy-i\"]": 1,
+        "queryCount [data-debug=\"choice:investment-strategy-i\"]": 1,
+        "click [data-debug=\"choice:investment-strategy-i\"]": 1,
+        "waitForSelector [data-debug=\"mobile:buy-1\"]": 1,
+        "queryCount [data-debug=\"mobile:buy-1\"]": 1,
+        "click [data-debug=\"mobile:buy-1\"]": 1,
+        "waitForSelector canvas": 2,
+        "waitForSelector [data-debug=\"panel:items\"]": 2,
+        "queryCount [data-debug=\"panel:items\"]": 2,
+        "click [data-debug=\"panel:items\"]": 2,
+        "waitForSelector [data-debug=\"item:item-1\"]": 1,
+        "queryCount [data-debug=\"item:item-1\"]": 1,
+        "click [data-debug=\"item:item-1\"]": 1,
+        "waitForSelector [data-debug=\"item:item-2\"]": 1,
+        "queryCount [data-debug=\"item:item-2\"]": 1,
+        "click [data-debug=\"item:item-2\"]": 1,
+        "waitForSelector [data-debug=\"combine-items\"]": 1,
+        "queryCount [data-debug=\"combine-items\"]": 1,
+        "click [data-debug=\"combine-items\"]": 1,
+        "waitForSelector [data-debug=\"item:item-3\"]": 1,
+        "queryCount [data-debug=\"item:item-3\"]": 1,
+        "click [data-debug=\"item:item-3\"]": 1,
+        "waitForSelector [data-debug=\"equipment:unit-2:0\"]": 1,
+        "queryCount [data-debug=\"equipment:unit-2:0\"]": 1,
+        "click [data-debug=\"equipment:unit-2:0\"]": 1,
+        "waitForSelector [data-debug=\"mobile:start-combat\"]": 3,
+        "queryCount [data-debug=\"mobile:start-combat\"]": 3,
+        "click [data-debug=\"mobile:start-combat\"]": 3,
+        "waitForSelector [data-debug=\"mobile:continue\"]": 2,
+        "queryCount [data-debug=\"mobile:continue\"]": 2,
+        "click [data-debug=\"mobile:continue\"]": 2,
+        "waitForSelector [data-debug=\"mobile:buy-0\"]": 1,
+        "queryCount [data-debug=\"mobile:buy-0\"]": 1,
+        "click [data-debug=\"mobile:buy-0\"]": 1,
+        "waitForSelector [data-debug=\"shop-lock\"]": 2,
+        "queryCount [data-debug=\"shop-lock\"]": 2,
+        "click [data-debug=\"shop-lock\"]": 2,
+        "click [data-debug=\"m6-export\"]": 2,
+        "click [data-debug=\"m6-continue\"]": 1,
+        "setInputFiles [data-debug=\"m6-import\"]": 104,
+        "selectOption internal:label=\"选择已完成战斗\"i": 104,
+        "click #replay-root >> internal:role=button[name=\"暂停\"s]": 4,
+        "click #replay-root >> internal:role=button[name=\"4×\"s]": 2,
+        "click #replay-root >> internal:role=button[name=\"播放\"s]": 2,
+        "focus internal:label=\"按 tick 跳转\"i": 2,
+        "click #replay-root >> internal:role=button[name=\"返回当前局\"s]": 105,
+        "click internal:label=\"选择已完成战斗\"i": 2,
+        "inputValue internal:label=\"选择已完成战斗\"i": 2,
+        "waitForSelector [data-debug=\"mobile:new-match\"]": 102,
+        "queryCount [data-debug=\"mobile:new-match\"]": 102,
+        "click [data-debug=\"mobile:new-match\"]": 102,
+        "waitForSelector [data-debug=\"choice:bulky-buddies-i\"]": 102,
+        "queryCount [data-debug=\"choice:bulky-buddies-i\"]": 102,
+        "click [data-debug=\"choice:bulky-buddies-i\"]": 102
+      },
+      "event_counts": {
+        "BrowserContext.page": 1,
+        "BrowserContext.download": 2,
+        "BrowserContext.dialog": 206
+      },
+      "expression_counts": {
+        "()=>window.__CAT_DEBUG__.read()": 1133,
+        "()=>window.__CAT_DEBUG__.read().state.phase==='combat'": 192,
+        "()=>new Promise((resolve,reject)=>{const open=indexedDB.open('hex-autobattler-m6');open.onerror=()=>reject(open.error);open.onsuccess=()=>{const db=open.result,tx=db.transaction(['metadata','runs'],'readonly'),current=tx.objectStore('metadata').get('current');current.onsuccess=()=>{const run=tx.objectStore('runs').get(current.result.runId);run.onsuccess=()=>resolve({token:current.result,match:run.result.match,events:run.result.currentBattle.events});};tx.oncomplete=()=>db.close();tx.onabort=()=>reject(tx.error);};})": 1,
+        "()=>window.__M5_NATIVE_INPUTS__": 2,
+        "()=>{const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(...args){if(this.name==='runs')throw new DOMException('M6 independent quota injection','QuotaExceededError');return put.apply(this,args);};window.__M6_RESTORE_QUOTA__=()=>{IDBObjectStore.prototype.put=put;delete window.__M6_RESTORE_QUOTA__;};}": 1,
+        "()=>window.__M6_RESTORE_QUOTA__()": 1,
+        "()=>{const descriptor=Object.getOwnPropertyDescriptor(document,'hidden');try{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));}finally{if(descriptor)Object.defineProperty(document,'hidden',descriptor);else delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));}}": 1,
+        "()=>new Promise((resolve,reject)=>{const open=indexedDB.open('hex-autobattler-m6');open.onsuccess=()=>{const db=open.result,tx=db.transaction('metadata','readonly'),request=tx.objectStore('metadata').get('current');request.onsuccess=()=>resolve(request.result);tx.oncomplete=()=>db.close();tx.onabort=()=>reject(tx.error);};open.onerror=()=>reject(open.error);})": 2,
+        "()=>{const events=window.__M5_NATIVE_INPUTS__;window.__M5_NATIVE_INPUTS__=[];return events;}": 4,
+        "()=>window.__M6_RESOURCES__.read()": 34,
+        "()=>window.__CAT_DEBUG__?.read()": 1
+      },
+      "paired_actions": 4279,
+      "page_ids": [
+        "page@26678d576b4a8f5108dca02e60f334eb"
+      ],
+      "last_action_end_ms": 661530.228,
+      "debug_read_result_jsonl_bytes": 271953581,
+      "action_signature_sha256": "194c53a2d8efb6a8fef4d1e39437cbe70b5a28193d5f0f4d303a407240d8038c",
+      "missing": [
+        "network requests/responses (empty trace.network)",
+        "DOM snapshots and screenshot resources",
+        "CDP send/response records, GC evidence and heap usage responses",
+        "heap snapshots, allocation profiles, retainer paths",
+        "browser close/context close actions (outside saved interval)"
+      ]
+    }
+  }
+}

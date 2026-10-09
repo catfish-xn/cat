@@ -1,0 +1,422 @@
+{
+  "evidence_revision": "a062cececca3424d1c2b414f7b1a2a016a77f1a0",
+  "prior_revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+  "runs": [
+    {
+      "log": "docs/evidence/h1-claude-runs/normal-1/run.log",
+      "sha256": "bd9d2af4a697db59ecaeaa5abc94d03155c396a77bdb04f78262e85a1fb515ea",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 851.739
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/normal-2/run.log",
+      "sha256": "3d33ffef4625921cad458f3d56173a8e29175edd0e6e795379ecbecb4259c6cb",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 851.741
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/snapshot-1/run.log",
+      "sha256": "e22a51b598bacfeaa715095da56dd04b47c74efd5d4109db5dcac7697da7468f",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 865.594
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01.log",
+      "sha256": "d8cf8bdb9a2ff71f1d4841d2fe6abdfb5dacbb169d0c499d3d29f6361a958cc2",
+      "bytes": 596,
+      "summary": {
+        "passed": false,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 295.735
+      },
+      "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)"
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02.log",
+      "sha256": "dd78c1fc01d3696e6a29973ca24c0ae9f2c7419d6d725b324c8ef4df52a47f40",
+      "bytes": 596,
+      "summary": {
+        "passed": false,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 295.286
+      },
+      "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)"
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03.log",
+      "sha256": "89aca516edc15ac2b5c8dade022d813a31013e1a56c77e6d77ed7493c078204e",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 862.205
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04.log",
+      "sha256": "55b25323e6525b32d6546c790b702413bd62dc4862aa2c01a269251d52d3b9d5",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 854.915
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05.log",
+      "sha256": "586cc9fa93cd0c69bb8401017939e12f346d044bf4582b6ae22843df42571fa7",
+      "bytes": 596,
+      "summary": {
+        "passed": false,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 286.259
+      },
+      "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)"
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06.log",
+      "sha256": "6c476f0c1ca715095899c80f083b0ce26eef1a88e59bd4d3a1d91b89a918e943",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 848.683
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07.log",
+      "sha256": "af965575bc0a6309896a9a045a6f0b004d17635d5bee3df77e726f807b7c8e6b",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 850.268
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08.log",
+      "sha256": "a3def24603bd48af46c92ecafc2c694d8bf65ab43338d175375c05342831e110",
+      "bytes": 90,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 851.653
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01.log",
+      "sha256": "4a9f280f645423d78b69b9dc85f142d90405a5841240f9bb27ada4e9fd9cebd1",
+      "bytes": 89,
+      "summary": {
+        "passed": true,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 1224.6
+      },
+      "failure": null
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02.log",
+      "sha256": "d9167c2d18a11b4118cf831f97792ac626fcfb6f96f2b9fca84bf4753607822e",
+      "bytes": 598,
+      "summary": {
+        "passed": false,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 654.716
+      },
+      "failure": "AssertionError [ERR_ASSERTION]: each follow-up 30-cycle window retains the historical 1MiB ceiling"
+    },
+    {
+      "log": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03.log",
+      "sha256": "2b5204dbfb579db97dbe01d5477949c96a88b055a6437f73872b27cb4f3f85bd",
+      "bytes": 625,
+      "summary": {
+        "passed": false,
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "durationSeconds": 661.149
+      },
+      "failure": "AssertionError [ERR_ASSERTION]: persistent post-warmup growth: investigate as a potential real leak, do not accept the method"
+    }
+  ],
+  "builds": [
+    {
+      "path": "docs/evidence/h1-claude-runs/build.log",
+      "sha256": "318d3c6677738aeb10d55e982e535d147502e653a4024db8de04d62569d8f9d4",
+      "bytes": 806,
+      "status": "typecheck command and completed Vite build recorded; process exit status not separately captured"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/build.log",
+      "sha256": "ffa2cd0d59c6046f8cbc649977a39bb35dc9422ddf3a5ec608a4657d3a0b4f59",
+      "bytes": 806,
+      "status": "typecheck command and completed Vite build recorded; process exit status not separately captured"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/build.log",
+      "sha256": "cdc4563868b082983d579a85a6afef620ce5795d8ab15a4bb62ade5f11fa51c5",
+      "bytes": 806,
+      "status": "typecheck command and completed Vite build recorded; process exit status not separately captured"
+    }
+  ],
+  "changed_files": [
+    "A\tdocs/evidence/h1-claude-runs/build.log",
+    "M\tdocs/evidence/h1-claude-runs/followup/README.md",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/build.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-trend/build.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-trend/trend-01.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-trend/trend-02.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-trend/trend-02/trace.zip",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-trend/trend-03.log",
+    "A\tdocs/evidence/h1-claude-runs/followup/h1-trend/trend-03/trace.zip",
+    "A\tdocs/evidence/h1-claude-runs/normal-1/run.log",
+    "A\tdocs/evidence/h1-claude-runs/normal-2/run.log",
+    "A\tdocs/evidence/h1-claude-runs/snapshot-1/run.log"
+  ],
+  "checks": [
+    {
+      "check": "normal-1/run.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "normal-1/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "normal-1/run.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "normal-2/run.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "normal-2/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "normal-2/run.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "snapshot-1/run.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "snapshot-1/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "snapshot-1/run.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03.log final summary matches manifest",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03/manifest.json unchanged since prior evidence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03.log failure first line matches",
+      "ok": true
+    },
+    {
+      "check": "build.log contains completed Vite build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/build.log contains completed Vite build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/build.log contains completed Vite build",
+      "ok": true
+    },
+    {
+      "check": "only additions plus followup README correction",
+      "ok": true
+    }
+  ],
+  "failed_checks": [],
+  "limitations": [
+    "No browser runs were performed. Added logs reconcile with previous manifests, not independent re-execution.",
+    "Original runtime heap data unchanged. Vite printed gzip is not the level-9 budget measurement.",
+    "Normal failure trace archives and per-round artifacts were not included in this supplement."
+  ]
+}

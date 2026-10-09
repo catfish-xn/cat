@@ -1,0 +1,469 @@
+{
+  "runtimeSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "mode": "preview",
+  "samples": [
+    {
+      "runId": 37859458842,
+      "sample": "preview-normal-01",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14828636,
+      "afterBytes": 14634800,
+      "deltaBytes": -193836,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-08T23:27:23Z",
+      "endedUtc": "2026-10-08T23:42:49Z"
+    },
+    {
+      "runId": 37859458842,
+      "sample": "preview-normal-02",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14132204,
+      "afterBytes": 15946812,
+      "deltaBytes": 1814608,
+      "exceeded": true,
+      "exitCode": 1,
+      "startedUtc": "2026-10-08T23:42:49Z",
+      "endedUtc": "2026-10-08T23:48:16Z"
+    },
+    {
+      "runId": 37859458842,
+      "sample": "preview-normal-03",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14639716,
+      "afterBytes": 14642004,
+      "deltaBytes": 2288,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-08T23:48:16Z",
+      "endedUtc": "2026-10-09T00:03:37Z"
+    },
+    {
+      "runId": 37870725740,
+      "sample": "preview-normal-01",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14100716,
+      "afterBytes": 14601292,
+      "deltaBytes": 500576,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T01:40:23Z",
+      "endedUtc": "2026-10-09T01:55:31Z"
+    },
+    {
+      "runId": 37870725740,
+      "sample": "preview-normal-02",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14437200,
+      "afterBytes": 14627672,
+      "deltaBytes": 190472,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T01:55:31Z",
+      "endedUtc": "2026-10-09T02:10:39Z"
+    },
+    {
+      "runId": 37870725740,
+      "sample": "preview-normal-03",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14120912,
+      "afterBytes": 15544824,
+      "deltaBytes": 1423912,
+      "exceeded": true,
+      "exitCode": 1,
+      "startedUtc": "2026-10-09T02:10:39Z",
+      "endedUtc": "2026-10-09T02:15:51Z"
+    },
+    {
+      "runId": 37874122823,
+      "sample": "preview-normal-01",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 13950140,
+      "afterBytes": 14618580,
+      "deltaBytes": 668440,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T02:21:22Z",
+      "endedUtc": "2026-10-09T02:36:32Z"
+    },
+    {
+      "runId": 37874122823,
+      "sample": "preview-normal-02",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14073716,
+      "afterBytes": 14375840,
+      "deltaBytes": 302124,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T02:36:32Z",
+      "endedUtc": "2026-10-09T02:51:36Z"
+    },
+    {
+      "runId": 37874122823,
+      "sample": "preview-normal-03",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14371792,
+      "afterBytes": 14606096,
+      "deltaBytes": 234304,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T02:51:36Z",
+      "endedUtc": "2026-10-09T03:06:43Z"
+    },
+    {
+      "runId": 37878055798,
+      "sample": "preview-normal-01",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 14138968,
+      "afterBytes": 16154504,
+      "deltaBytes": 2015536,
+      "exceeded": true,
+      "exitCode": 1,
+      "startedUtc": "2026-10-09T03:11:23Z",
+      "endedUtc": "2026-10-09T03:15:38Z"
+    },
+    {
+      "runId": 37878055798,
+      "sample": "preview-normal-02",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 15524796,
+      "afterBytes": 14923400,
+      "deltaBytes": -601396,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T03:15:38Z",
+      "endedUtc": "2026-10-09T03:28:46Z"
+    },
+    {
+      "runId": 37878055798,
+      "sample": "preview-normal-03",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "beforeBytes": 15658700,
+      "afterBytes": 15770452,
+      "deltaBytes": 111752,
+      "exceeded": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T03:28:46Z",
+      "endedUtc": "2026-10-09T03:41:51Z"
+    }
+  ],
+  "overall": {
+    "n": 12,
+    "exceedances": 3,
+    "observedExceedanceFraction": 0.25,
+    "meanBytes": 539065,
+    "medianBytes": 268214.0,
+    "sampleStandardDeviationBytes": 808320.8502319091,
+    "medianAbsoluteDeviationBytes": 333076.0,
+    "minBytes": -601396,
+    "maxBytes": 2015536,
+    "rangeBytes": 2616932,
+    "sortedDeltasBytes": [
+      -601396,
+      -193836,
+      2288,
+      111752,
+      190472,
+      234304,
+      302124,
+      500576,
+      668440,
+      1423912,
+      1814608,
+      2015536
+    ],
+    "histogram": {
+      "negative": 2,
+      "zero_to_half_MiB": 6,
+      "above_half_to_one_MiB": 1,
+      "above_one_MiB": 3
+    },
+    "beforeRangeBytes": [
+      13950140,
+      15658700
+    ],
+    "afterRangeBytes": [
+      14375840,
+      16154504
+    ],
+    "wilson95UnderIndependentIdenticallyDistributedAssumption": [
+      0.08894166839405471,
+      0.5323053349335657
+    ]
+  },
+  "byJob": {
+    "37859458842": {
+      "n": 3,
+      "exceedances": 1,
+      "observedExceedanceFraction": 0.3333333333333333,
+      "meanBytes": 541020,
+      "medianBytes": 2288,
+      "sampleStandardDeviationBytes": 1107310.2325689942,
+      "medianAbsoluteDeviationBytes": 196124,
+      "minBytes": -193836,
+      "maxBytes": 1814608,
+      "rangeBytes": 2008444,
+      "sortedDeltasBytes": [
+        -193836,
+        2288,
+        1814608
+      ],
+      "histogram": {
+        "negative": 1,
+        "zero_to_half_MiB": 1,
+        "above_half_to_one_MiB": 0,
+        "above_one_MiB": 1
+      },
+      "beforeRangeBytes": [
+        14132204,
+        14828636
+      ],
+      "afterRangeBytes": [
+        14634800,
+        15946812
+      ],
+      "wilson95UnderIndependentIdenticallyDistributedAssumption": [
+        0.06149194472039621,
+        0.7923403991979522
+      ]
+    },
+    "37870725740": {
+      "n": 3,
+      "exceedances": 1,
+      "observedExceedanceFraction": 0.3333333333333333,
+      "meanBytes": 704986.6666666666,
+      "medianBytes": 500576,
+      "sampleStandardDeviationBytes": 641623.9933834561,
+      "medianAbsoluteDeviationBytes": 310104,
+      "minBytes": 190472,
+      "maxBytes": 1423912,
+      "rangeBytes": 1233440,
+      "sortedDeltasBytes": [
+        190472,
+        500576,
+        1423912
+      ],
+      "histogram": {
+        "negative": 0,
+        "zero_to_half_MiB": 2,
+        "above_half_to_one_MiB": 0,
+        "above_one_MiB": 1
+      },
+      "beforeRangeBytes": [
+        14100716,
+        14437200
+      ],
+      "afterRangeBytes": [
+        14601292,
+        15544824
+      ],
+      "wilson95UnderIndependentIdenticallyDistributedAssumption": [
+        0.06149194472039621,
+        0.7923403991979522
+      ]
+    },
+    "37874122823": {
+      "n": 3,
+      "exceedances": 0,
+      "observedExceedanceFraction": 0.0,
+      "meanBytes": 401622.6666666667,
+      "medianBytes": 302124,
+      "sampleStandardDeviationBytes": 233545.50975202527,
+      "medianAbsoluteDeviationBytes": 67820,
+      "minBytes": 234304,
+      "maxBytes": 668440,
+      "rangeBytes": 434136,
+      "sortedDeltasBytes": [
+        234304,
+        302124,
+        668440
+      ],
+      "histogram": {
+        "negative": 0,
+        "zero_to_half_MiB": 2,
+        "above_half_to_one_MiB": 1,
+        "above_one_MiB": 0
+      },
+      "beforeRangeBytes": [
+        13950140,
+        14371792
+      ],
+      "afterRangeBytes": [
+        14375840,
+        14618580
+      ],
+      "wilson95UnderIndependentIdenticallyDistributedAssumption": [
+        5.551115123125783e-17,
+        0.5614970317550454
+      ]
+    },
+    "37878055798": {
+      "n": 3,
+      "exceedances": 1,
+      "observedExceedanceFraction": 0.3333333333333333,
+      "meanBytes": 508630.6666666667,
+      "medianBytes": 111752,
+      "sampleStandardDeviationBytes": 1352855.4173293365,
+      "medianAbsoluteDeviationBytes": 713148,
+      "minBytes": -601396,
+      "maxBytes": 2015536,
+      "rangeBytes": 2616932,
+      "sortedDeltasBytes": [
+        -601396,
+        111752,
+        2015536
+      ],
+      "histogram": {
+        "negative": 1,
+        "zero_to_half_MiB": 1,
+        "above_half_to_one_MiB": 0,
+        "above_one_MiB": 1
+      },
+      "beforeRangeBytes": [
+        14138968,
+        15658700
+      ],
+      "afterRangeBytes": [
+        14923400,
+        16154504
+      ],
+      "wilson95UnderIndependentIdenticallyDistributedAssumption": [
+        0.06149194472039621,
+        0.7923403991979522
+      ]
+    }
+  },
+  "byCpu": {
+    "AMD EPYC 7763 64-Core Processor": {
+      "n": 9,
+      "exceedances": 2,
+      "observedExceedanceFraction": 0.2222222222222222,
+      "meanBytes": 549209.7777777778,
+      "medianBytes": 302124,
+      "sampleStandardDeviationBytes": 663613.9701606985,
+      "medianAbsoluteDeviationBytes": 299836,
+      "minBytes": -193836,
+      "maxBytes": 1814608,
+      "rangeBytes": 2008444,
+      "sortedDeltasBytes": [
+        -193836,
+        2288,
+        190472,
+        234304,
+        302124,
+        500576,
+        668440,
+        1423912,
+        1814608
+      ],
+      "histogram": {
+        "negative": 1,
+        "zero_to_half_MiB": 5,
+        "above_half_to_one_MiB": 1,
+        "above_one_MiB": 2
+      },
+      "beforeRangeBytes": [
+        13950140,
+        14828636
+      ],
+      "afterRangeBytes": [
+        14375840,
+        15946812
+      ],
+      "wilson95UnderIndependentIdenticallyDistributedAssumption": [
+        0.06322510711784671,
+        0.5474110308930111
+      ]
+    },
+    "AMD EPYC 9V74 80-Core Processor": {
+      "n": 3,
+      "exceedances": 1,
+      "observedExceedanceFraction": 0.3333333333333333,
+      "meanBytes": 508630.6666666667,
+      "medianBytes": 111752,
+      "sampleStandardDeviationBytes": 1352855.4173293365,
+      "medianAbsoluteDeviationBytes": 713148,
+      "minBytes": -601396,
+      "maxBytes": 2015536,
+      "rangeBytes": 2616932,
+      "sortedDeltasBytes": [
+        -601396,
+        111752,
+        2015536
+      ],
+      "histogram": {
+        "negative": 1,
+        "zero_to_half_MiB": 1,
+        "above_half_to_one_MiB": 0,
+        "above_one_MiB": 1
+      },
+      "beforeRangeBytes": [
+        14138968,
+        15658700
+      ],
+      "afterRangeBytes": [
+        14923400,
+        16154504
+      ],
+      "wilson95UnderIndependentIdenticallyDistributedAssumption": [
+        0.06149194472039621,
+        0.7923403991979522
+      ]
+    }
+  },
+  "inputSha256": {
+    "docs/evidence/h1-ci153-normal/environment.json": "f74c5e38c06b7bcb4ccf9d532fa5ba16783e009b29e1299f6173d2df37ab49e3",
+    "docs/evidence/h1-ci153-normal/provenance.json": "55520adbfaf2c0f2e49e3fea3f8a86b8e38c8859d081317ac3d045b1cab7cb2d",
+    "docs/evidence/h1-ci153-normal/request.txt": "5c9c4b30fa843e6ca035e86c530981d7c38639f44c7df11505363e3c4c2d00cd",
+    "docs/evidence/h1-ci153-normal/runs.tsv": "4c01dc0c66edb4840faea781214c1f2e5aa499e418891779e3a79716d1ef6cbd",
+    "docs/evidence/h1-ci153-normal/preview-normal-01/m6-lifecycle.json": "26bbd81b7bafa8a723155d2cf61f61e24c9bac261dddb9eef9ca6f951512ed01",
+    "docs/evidence/h1-ci153-normal/preview-normal-02/m6-lifecycle.json": "ac99415e436b96f62d4d03a5706b034873cd848209c57c57464bb0e9163fd08f",
+    "docs/evidence/h1-ci153-normal/preview-normal-03/m6-lifecycle.json": "5bf3d55b44aa23d801832b253e9e21803793ffa20d77cdb4b0f0fe960276abfb",
+    "docs/evidence/h1-ci153-normal-batch2/environment.json": "d1af6be9d60cb1584b473638f98b92e83634161378d61e7286b663b3a519b610",
+    "docs/evidence/h1-ci153-normal-batch2/provenance.json": "e78753c94fc972f7fd16059082f80bc11877e300b475bc97179de736b3335c92",
+    "docs/evidence/h1-ci153-normal-batch2/request.txt": "74bd0cae9fbb71de3470517a0141702ba597078bcf5b0187b5e7041e1a43f42c",
+    "docs/evidence/h1-ci153-normal-batch2/runs.tsv": "ecbcc5f14f3abbbd4b3f23815c8054b93be71a412051445839c7995dcb734025",
+    "docs/evidence/h1-ci153-normal-batch2/preview-normal-01/m6-lifecycle.json": "073cfe6bf750927449bbd13b7affb7092058ad582e26034b84b013803f01a128",
+    "docs/evidence/h1-ci153-normal-batch2/preview-normal-02/m6-lifecycle.json": "afb3e666b1213289ab625b265958c24ea089dd401a2c22f0d52146cc4f9fae6d",
+    "docs/evidence/h1-ci153-normal-batch2/preview-normal-03/m6-lifecycle.json": "8908d0e8c9e5bad4d15da1cf6aa35866b017f80b55c763ded4afe458f2c99548",
+    "docs/evidence/h1-ci153-normal-batch3/environment.json": "a449d43d6f36489f351417f67bbf54082b10229eb45372bf8b7db841eabe7e2b",
+    "docs/evidence/h1-ci153-normal-batch3/provenance.json": "ee35ecbf21220e2a68f5716fb843a4671a0c86cfba39b8c66bc028b60deb1002",
+    "docs/evidence/h1-ci153-normal-batch3/request.txt": "f9188352ad16d649afe0a0a0d3bbe68307c11dc7d819d2704f58cf5278ade667",
+    "docs/evidence/h1-ci153-normal-batch3/runs.tsv": "1d0e1b23db035bd48a4ea07a3d6f9b4ca332ec21a48a44dddf066f9dfca988e3",
+    "docs/evidence/h1-ci153-normal-batch3/preview-normal-01/m6-lifecycle.json": "b8adb254ef8e74167b7e3f67f662a91d52748da2bef8b8c03a66d9e8b499d914",
+    "docs/evidence/h1-ci153-normal-batch3/preview-normal-02/m6-lifecycle.json": "528c7ab92f576fb81e7a6fa8fa0f1901260bef7e937fe64aa0dea75f5c79893e",
+    "docs/evidence/h1-ci153-normal-batch3/preview-normal-03/m6-lifecycle.json": "933631e33701736ab2cfee8fb0ebf509a4b036bfb5d507a688beb9d0415d054a",
+    "docs/evidence/h1-ci153-normal-batch4/environment.json": "0c9ebd4c5654b7c78a308648de7e584f787087bc6d909e4b9afee3703a948ddd",
+    "docs/evidence/h1-ci153-normal-batch4/provenance.json": "5f9016d6af59cc386bf7e6092d0dc8e841e64efd1244f2c8020d546581dab5e8",
+    "docs/evidence/h1-ci153-normal-batch4/request.txt": "55434fdefbac05f818d22450023c09e2a7b743f0aad1fc08576ff1c251d89a23",
+    "docs/evidence/h1-ci153-normal-batch4/runs.tsv": "ffb864937cde06d00d94c6c2fedf20328e51d45a67ce4ee09600b502bfbacce6",
+    "docs/evidence/h1-ci153-normal-batch4/preview-normal-01/m6-lifecycle.json": "bec41ce016d9145c6b9109066cc7991f4ae427d7ca47abcdf6fb40e9516cf289",
+    "docs/evidence/h1-ci153-normal-batch4/preview-normal-02/m6-lifecycle.json": "cb68cf277705f242079bc60bab5a36a87d15fa8d344aec47a2ad82613fa06258",
+    "docs/evidence/h1-ci153-normal-batch4/preview-normal-03/m6-lifecycle.json": "4e4d3365ed19a7353f3e69e68be7348c86b7ae8e208a91abd83ce5ad3858579c"
+  },
+  "interpretation": "All twelve predeclared original-parameter processes retained, no replacement. Descriptive distribution of endpoint deltas, not established pure noise or false-positive rate. CPU/job variation and shared host within job limit iid assumptions; Wilson bounds are only a precision reference under that assumption. Do not pool Chromium141, snapshot/trend/B4/dev or ordinary-CI reruns. No Gaussian model or gate change."
+}

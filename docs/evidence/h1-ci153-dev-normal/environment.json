@@ -1,0 +1,23 @@
+{
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "workflowMergeSha": "532ea3720a2a720278227070ae362acb892091ff",
+  "definitionSha": "3b1c8e0b4846a37166e0785c5325c3eeaec05e7f",
+  "browser": "153.0.8010.12",
+  "launchSelection": "Playwright default headless Chromium; CHROMIUM_PATH unset, matching existing CI",
+  "node": "v22.23.3",
+  "platform": "linux",
+  "release": "6.17.0-1022-azure",
+  "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "cpuCount": 4,
+  "memoryBytes": 16765374464,
+  "load": [
+    0.83,
+    0.38,
+    0.15
+  ],
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "diagnosticOnly": true
+}

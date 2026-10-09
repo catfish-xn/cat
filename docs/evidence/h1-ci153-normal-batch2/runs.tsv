@@ -1,0 +1,4 @@
+sample	started_utc	ended_utc	exit_code
+preview-normal-01	2026-10-09T01:40:23Z	2026-10-09T01:55:31Z	0
+preview-normal-02	2026-10-09T01:55:31Z	2026-10-09T02:10:39Z	0
+preview-normal-03	2026-10-09T02:10:39Z	2026-10-09T02:15:51Z	1

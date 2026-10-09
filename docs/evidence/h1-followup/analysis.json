@@ -1,0 +1,2212 @@
+{
+  "evidence_revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+  "source_revision": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "analysis_kind": "read-only diagnosis; not acceptance audit",
+  "reconstructed_runner_hash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+  "reconstructed_source_fingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+  "threshold_bytes": 1048576,
+  "normal_runs": [
+    {
+      "run": "normal-1",
+      "group": "old",
+      "before": 13624772,
+      "after": 14433132,
+      "delta": 808360,
+      "margin_bytes": 240216,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 851.739,
+      "errors": []
+    },
+    {
+      "run": "normal-2",
+      "group": "old",
+      "before": 13649040,
+      "after": 14677876,
+      "delta": 1028836,
+      "margin_bytes": 19740,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 851.741,
+      "errors": []
+    },
+    {
+      "run": "followup/h1-normal-more/normal-01",
+      "group": "new",
+      "before": 13746124,
+      "after": 14922024,
+      "delta": 1175900,
+      "margin_bytes": -127324,
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)\n    at verifyApplicationLifecycle (/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:54:254)\n    at async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:106:151",
+      "duration_seconds": 295.735,
+      "errors": [],
+      "exit_code": 1,
+      "started_utc": "2026-10-08T15:02:52Z",
+      "ended_utc": "2026-10-08T15:07:50Z"
+    },
+    {
+      "run": "followup/h1-normal-more/normal-02",
+      "group": "new",
+      "before": 13657072,
+      "after": 15312480,
+      "delta": 1655408,
+      "margin_bytes": -606832,
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)\n    at verifyApplicationLifecycle (/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:54:254)\n    at async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:106:151",
+      "duration_seconds": 295.286,
+      "errors": [],
+      "exit_code": 1,
+      "started_utc": "2026-10-08T15:07:50Z",
+      "ended_utc": "2026-10-08T15:12:48Z"
+    },
+    {
+      "run": "followup/h1-normal-more/normal-03",
+      "group": "new",
+      "before": 13743716,
+      "after": 14345112,
+      "delta": 601396,
+      "margin_bytes": 447180,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 862.205,
+      "errors": [],
+      "exit_code": 0,
+      "started_utc": "2026-10-08T15:12:48Z",
+      "ended_utc": "2026-10-08T15:27:15Z"
+    },
+    {
+      "run": "followup/h1-normal-more/normal-04",
+      "group": "new",
+      "before": 13622436,
+      "after": 14273820,
+      "delta": 651384,
+      "margin_bytes": 397192,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 854.915,
+      "errors": [],
+      "exit_code": 0,
+      "started_utc": "2026-10-08T15:27:15Z",
+      "ended_utc": "2026-10-08T15:41:35Z"
+    },
+    {
+      "run": "followup/h1-normal-more/normal-05",
+      "group": "new",
+      "before": 13733296,
+      "after": 15068668,
+      "delta": 1335372,
+      "margin_bytes": -286796,
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)\n    at verifyApplicationLifecycle (/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:54:254)\n    at async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:106:151",
+      "duration_seconds": 286.259,
+      "errors": [],
+      "exit_code": 1,
+      "started_utc": "2026-10-08T15:41:35Z",
+      "ended_utc": "2026-10-08T15:46:24Z"
+    },
+    {
+      "run": "followup/h1-normal-more/normal-06",
+      "group": "new",
+      "before": 13811520,
+      "after": 14414704,
+      "delta": 603184,
+      "margin_bytes": 445392,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 848.683,
+      "errors": [],
+      "exit_code": 0,
+      "started_utc": "2026-10-08T15:46:24Z",
+      "ended_utc": "2026-10-08T16:00:38Z"
+    },
+    {
+      "run": "followup/h1-normal-more/normal-07",
+      "group": "new",
+      "before": 13686464,
+      "after": 14485404,
+      "delta": 798940,
+      "margin_bytes": 249636,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 850.268,
+      "errors": [],
+      "exit_code": 0,
+      "started_utc": "2026-10-08T16:00:38Z",
+      "ended_utc": "2026-10-08T16:14:54Z"
+    },
+    {
+      "run": "followup/h1-normal-more/normal-08",
+      "group": "new",
+      "before": 13664552,
+      "after": 14427712,
+      "delta": 763160,
+      "margin_bytes": 285416,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 851.653,
+      "errors": [],
+      "exit_code": 0,
+      "started_utc": "2026-10-08T16:14:54Z",
+      "ended_utc": "2026-10-08T16:29:10Z"
+    }
+  ],
+  "statistics": {
+    "old2": {
+      "n": 2,
+      "mean": 918598,
+      "median": 918598.0,
+      "sample_sd": 155900.07468888524,
+      "minimum": 808360,
+      "maximum": 1028836,
+      "range": 220476,
+      "above_ceiling": 0,
+      "proportion": 0.0,
+      "wilson_95": [
+        0.0,
+        0.6576197724933469
+      ]
+    },
+    "new8": {
+      "n": 8,
+      "mean": 948093,
+      "median": 781050.0,
+      "sample_sd": 393849.0742447271,
+      "minimum": 601396,
+      "maximum": 1655408,
+      "range": 1054012,
+      "above_ceiling": 3,
+      "proportion": 0.375,
+      "wilson_95": [
+        0.13684428582359742,
+        0.6942576053973727
+      ]
+    },
+    "combined10_descriptive_only": {
+      "n": 10,
+      "mean": 942194,
+      "median": 803650.0,
+      "sample_sd": 351428.2626830751,
+      "minimum": 601396,
+      "maximum": 1655408,
+      "range": 1054012,
+      "above_ceiling": 3,
+      "proportion": 0.3,
+      "wilson_95": [
+        0.10779126740630099,
+        0.6032218525388546
+      ]
+    }
+  },
+  "trend_runs": [
+    {
+      "run": "followup/h1-trend/trend-01",
+      "group": "trend",
+      "before": 15125052,
+      "after": 14749744,
+      "delta": -375308,
+      "margin_bytes": 1423884,
+      "passed": true,
+      "failure": null,
+      "duration_seconds": 1224.6,
+      "errors": [],
+      "exit_code": 0,
+      "started_utc": "2026-10-08T16:29:23Z",
+      "ended_utc": "2026-10-08T16:49:55Z",
+      "heap_sequence": [
+        15125052,
+        14749744,
+        15326920,
+        15386720
+      ],
+      "window_deltas": [
+        -375308,
+        577176,
+        59800
+      ],
+      "net_growth": 261668,
+      "persistent_growth": false
+    },
+    {
+      "run": "followup/h1-trend/trend-02",
+      "group": "trend",
+      "before": 14258868,
+      "after": 14463928,
+      "delta": 205060,
+      "margin_bytes": 843516,
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: each follow-up 30-cycle window retains the historical 1MiB ceiling\n    at verifyApplicationLifecycle (/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:50:5)\n    at async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:106:151",
+      "duration_seconds": 654.716,
+      "errors": [],
+      "exit_code": 1,
+      "started_utc": "2026-10-08T16:49:55Z",
+      "ended_utc": "2026-10-08T17:00:54Z",
+      "heap_sequence": [
+        14258868,
+        14463928,
+        15045472,
+        16215936
+      ],
+      "window_deltas": [
+        205060,
+        581544,
+        1170464
+      ],
+      "net_growth": 1957068,
+      "persistent_growth": true
+    },
+    {
+      "run": "followup/h1-trend/trend-03",
+      "group": "trend",
+      "before": 14244348,
+      "after": 14559352,
+      "delta": 315004,
+      "margin_bytes": 733572,
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: persistent post-warmup growth: investigate as a potential real leak, do not accept the method\n    at verifyApplicationLifecycle (/tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:52:4)\n    at async /tmp/claude-0/-home-user-cat/62935aa6-7ea1-50fc-91e5-a6af1ff84e41/scratchpad/h1/scripts/verify-m5-browser.cjs:106:151",
+      "duration_seconds": 661.149,
+      "errors": [],
+      "exit_code": 1,
+      "started_utc": "2026-10-08T17:00:54Z",
+      "ended_utc": "2026-10-08T17:12:00Z",
+      "heap_sequence": [
+        14244348,
+        14559352,
+        15162724,
+        15238536
+      ],
+      "window_deltas": [
+        315004,
+        603372,
+        75812
+      ],
+      "net_growth": 994188,
+      "persistent_growth": true
+    }
+  ],
+  "identity_records": [
+    {
+      "run": "normal-1",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        0.49,
+        0.14,
+        0.04
+      ]
+    },
+    {
+      "run": "normal-2",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        4.49,
+        3.9,
+        2.47
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-01",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        0.6,
+        0.14,
+        0.04
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-02",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        4.17,
+        2.55,
+        1.1
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-03",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        4.71,
+        3.76,
+        2.03
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-04",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        4.32,
+        4.13,
+        3.27
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-05",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        3.62,
+        3.83,
+        3.62
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-06",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        3.96,
+        3.88,
+        3.69
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-07",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        4.19,
+        3.99,
+        3.92
+      ]
+    },
+    {
+      "run": "followup/h1-normal-more/normal-08",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        3.89,
+        3.9,
+        3.93
+      ]
+    },
+    {
+      "run": "followup/h1-trend/trend-01",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        3.51,
+        3.71,
+        3.8
+      ]
+    },
+    {
+      "run": "followup/h1-trend/trend-02",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        3.83,
+        3.78,
+        3.82
+      ]
+    },
+    {
+      "run": "followup/h1-trend/trend-03",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "browser": "141.0.7390.37",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.22.0",
+      "platform": "linux",
+      "cpu": "Intel(R) Xeon(R) Processor @ 2.10GHz",
+      "cpuCount": 4,
+      "memoryBytes": 16876494848,
+      "loadAtStart": [
+        4.24,
+        3.97,
+        3.87
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "check": "normal-1 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "normal-1 sha",
+      "ok": true
+    },
+    {
+      "check": "normal-1 status",
+      "ok": true
+    },
+    {
+      "check": "normal-1 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "normal-1 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "normal-1 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "normal-1 browser",
+      "ok": true
+    },
+    {
+      "check": "normal-1 mode",
+      "ok": true
+    },
+    {
+      "check": "normal-1 build",
+      "ok": true
+    },
+    {
+      "check": "normal-1 touch",
+      "ok": true
+    },
+    {
+      "check": "normal-1 diffHash",
+      "ok": true
+    },
+    {
+      "check": "normal-1 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "normal-1 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "normal-1 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "normal-1 row sequence",
+      "ok": true
+    },
+    {
+      "check": "normal-1 resource counters",
+      "ok": true
+    },
+    {
+      "check": "normal-1 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "normal-1 old evidence unchanged at new revision",
+      "ok": true
+    },
+    {
+      "check": "normal-2 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "normal-2 sha",
+      "ok": true
+    },
+    {
+      "check": "normal-2 status",
+      "ok": true
+    },
+    {
+      "check": "normal-2 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "normal-2 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "normal-2 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "normal-2 browser",
+      "ok": true
+    },
+    {
+      "check": "normal-2 mode",
+      "ok": true
+    },
+    {
+      "check": "normal-2 build",
+      "ok": true
+    },
+    {
+      "check": "normal-2 touch",
+      "ok": true
+    },
+    {
+      "check": "normal-2 diffHash",
+      "ok": true
+    },
+    {
+      "check": "normal-2 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "normal-2 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "normal-2 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "normal-2 row sequence",
+      "ok": true
+    },
+    {
+      "check": "normal-2 resource counters",
+      "ok": true
+    },
+    {
+      "check": "normal-2 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "normal-2 old evidence unchanged at new revision",
+      "ok": true
+    },
+    {
+      "check": "h1-normal-more tsv count",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-01 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-02 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-03 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-04 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-05 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-06 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-07 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-normal-more/normal-08 pass vs heap threshold",
+      "ok": true
+    },
+    {
+      "check": "h1-trend tsv count",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 trend configuration",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 trend progress complete",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 first window lifecycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 contiguous windows",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 trend arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 persistentGrowth definition",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-01 window counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 trend configuration",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 trend progress complete",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 first window lifecycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 contiguous windows",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 trend arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 persistentGrowth definition",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-02 window counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 manifest/lifecycle equality",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 sha",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 status",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 runnerHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 sourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 finalSourceFingerprint",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 browser",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 mode",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 build",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 touch",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 diffHash",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 browser errors empty",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 lifecycle delta arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 lifecycle config",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 row sequence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 resource counters",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 app lifecycle counts",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 progress cycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 tsv pass consistency",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 failure presence",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 failure files",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 trend configuration",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 trend progress complete",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 first window lifecycle",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 contiguous windows",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 trend arithmetic",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 persistentGrowth definition",
+      "ok": true
+    },
+    {
+      "check": "followup/h1-trend/trend-03 window counters",
+      "ok": true
+    }
+  ],
+  "check_count": 298,
+  "failed_checks": [],
+  "committed_log_files": [],
+  "input_hashes": [
+    {
+      "path": "docs/evidence/h1-claude-runs/normal-1/manifest.json",
+      "revision": "e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce",
+      "sha256": "2691b522c39f72997e26b70822272f6d5d83f36515cd374fae1bf5e55973b4ec"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/normal-1/m6-lifecycle.json",
+      "revision": "e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce",
+      "sha256": "07b09e12994e5b3b4febe298edc2bb4d8fd359bc9975248a56df6205b14d87d0"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/normal-2/manifest.json",
+      "revision": "e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce",
+      "sha256": "854913e7eabe18fe1a404427ec32b9b50ff14782dc93d34630e03ea20535d074"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/normal-2/m6-lifecycle.json",
+      "revision": "e0bcc67a36b0bc3d4e5c7eff47ee07d338da4cce",
+      "sha256": "fa32188be42538ba5c8aed24983abb0402b516207ce6da525254f07554081dc2"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "47ea96998912f2120291f2f12182cb2c9ae4e884a9180ef98113e999f3bf1079"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "c600126163b19ef9425eadcb59b3052561b2ada5c15d9db34f6bb43f8b063a8e"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "67bc5f7e1882496d9b7a7901ade05267927d6b9d4067ef99e8ba09d85663f305"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "80cefcd92a8947111044a804112e3d01907114b6883569012b9cee7396d5b185"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "dd4e88fe24d348ade179be02a4a69cdda0964ec7facdfb8b95cee6fc54e7c9e2"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "0a900287aa5b3a45670fbae0eb8c3d9e58961766404d33bf173c34b5311d7d21"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "ce53719ca6804628649f30a4951d63bb1f1496c68be4abb3004d2d4030f95886"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "9bdef34554f5ed02452b9a80d1e4a73012c35efb7b5b0af5ad341582896bd914"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "5dcc350ef4fa965d613edb7502cae01fe7d3464ce66bc8d73368e99469e6ac01"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "e88768b5a1ad8cc23933d7eaa9905cd6b5adbf63b55866446e2e4f798d0d7093"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "5c4b2de0f188e5c72f63ea1fdd1e06e028efc6a2c21b60de2ac1f5749b55161c"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "68550e380cac804084d7c111fe658cf7677ef55a280f95954446ac5e6880fc0e"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "f68b5c29b16bbc03d5f1536637b7696609e266ca8225b5281add85415cf264ad"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "b74f3e3e8f1e1903290516de7ac27bae74c22fc722c983d955d713f85f4743e9"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "78b40bdb8dac9e40c2434c093197c4a4f554616f4cc77b8f126e75602d1b1e70"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "a21b0cf8a52016c489d2f364bc0e43b400559d9277bcd13cd5425195c315ff1d"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "1efd03a554ae0b1fefab4fc5bf8ea5b0f86c1bbdd8c8ca6af9343309ea9f14eb"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "84dcd7b36bcac9504fd3627b8dd5b3e8907235120ffcf14a0fa1cc29540f03d7"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "fd6206cc237d9f5bfdec8b6c30410f1476a22f0cd26899f12cc320bd247875be"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "2a13eadd5d05753e53b339dc35cb125e7e3286321274c70f3247a9ca4f88dcca"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "1e7c11086df24a5bdfda0a1db13ea32b9b248a911fe941c7f21a7d0102335884"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "c1686c5da905635c3b9430d4ed94d6f5668b127db836c03f7a25d139606939d0"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/environment.txt",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "909a49bbc45f8ff23dfe6a9dc0e279e032a83418a0314e72cf231fda71a14699"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01/failure-state.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "3138be02ce76e5979f6deae11780b97f22aec68c8428be467690206580682c48"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "c600126163b19ef9425eadcb59b3052561b2ada5c15d9db34f6bb43f8b063a8e"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "47ea96998912f2120291f2f12182cb2c9ae4e884a9180ef98113e999f3bf1079"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-01/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "cf7f348abdd631634830b824bb9e50c10d889f416e44a8bbae1d5ffdd4a773b2"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02/failure-state.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "eb4d3da3445f89dc3ec867a4bd9aa22974d41c202e51e7b2c3ed805d035d95ce"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "80cefcd92a8947111044a804112e3d01907114b6883569012b9cee7396d5b185"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "67bc5f7e1882496d9b7a7901ade05267927d6b9d4067ef99e8ba09d85663f305"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-02/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "3cf8219db6c9c8b74d28ed039ec82501a115ad84e531a9e3132a4651a1cffe88"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "0a900287aa5b3a45670fbae0eb8c3d9e58961766404d33bf173c34b5311d7d21"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "dd4e88fe24d348ade179be02a4a69cdda0964ec7facdfb8b95cee6fc54e7c9e2"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-03/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "466dd80bac55dcbebbac83550a0b6f1035a1dd57ba1f3f9a1278c73815ccba7c"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "9bdef34554f5ed02452b9a80d1e4a73012c35efb7b5b0af5ad341582896bd914"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "ce53719ca6804628649f30a4951d63bb1f1496c68be4abb3004d2d4030f95886"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-04/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "686d5cea797dc3bc46ddd1872f427d7eaf79e1ce8247e8d837d2339b5ad43469"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05/failure-state.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "df0b75d8294a9f090e4cdd4d8fee5d3cd730ef1d64cb063a1f5c21021bb577cb"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "e88768b5a1ad8cc23933d7eaa9905cd6b5adbf63b55866446e2e4f798d0d7093"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "5dcc350ef4fa965d613edb7502cae01fe7d3464ce66bc8d73368e99469e6ac01"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-05/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "79d237d64ba1232e7e2e57aa93ab7c327af38bce93412ed2e3b1efa47c1b6b19"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "68550e380cac804084d7c111fe658cf7677ef55a280f95954446ac5e6880fc0e"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "5c4b2de0f188e5c72f63ea1fdd1e06e028efc6a2c21b60de2ac1f5749b55161c"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-06/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "cf923e4756b225748c65540acbc741d80d3f1c61d7aeb954f60e8f2f4beab4a9"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "b74f3e3e8f1e1903290516de7ac27bae74c22fc722c983d955d713f85f4743e9"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "f68b5c29b16bbc03d5f1536637b7696609e266ca8225b5281add85415cf264ad"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-07/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "5e86f144de28eb0c349e97afdbaa519bec301b83b72459be855ee8cc7e0527fb"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "a21b0cf8a52016c489d2f364bc0e43b400559d9277bcd13cd5425195c315ff1d"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "78b40bdb8dac9e40c2434c093197c4a4f554616f4cc77b8f126e75602d1b1e70"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/normal-08/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "6f853ab3b97b51225a01454b13c43348fda3db1ab8983821bc68657cd5eeccfa"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-normal-more/runs.tsv",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "a52c988c9f674ce791e290308054dbcd96dca3fea0b6c97a8250e10e6fb3575b"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/environment.txt",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "8d712ba9bab16c3e75765092900dccfb6dac425f72ab5af11b09b181b754998e"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/runs.tsv",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "7422298e48103aef0b12d7af97d0afd2d6496046df0b9e024aa0f46bfc01044a"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/m6-heap-trend.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "bbf912a9c1abb7478375883f6fea78a90328003a6dd3b11eba9083e027c75ee7"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "84dcd7b36bcac9504fd3627b8dd5b3e8907235120ffcf14a0fa1cc29540f03d7"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/m6-trend-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "f3c40ec17e56c1a62c1f7e14119195e175f303449ca4ab30ad4de105b6b75cef"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "1efd03a554ae0b1fefab4fc5bf8ea5b0f86c1bbdd8c8ca6af9343309ea9f14eb"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-01/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "e3fbd0e070dc960c2aed20da0a13601519b0902c0174dbddacbd625f338b8006"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/failure-state.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "48a6e71bd02dd8e66e2948623aac5a4691dd06e9b62677fe261d80641e92fe8f"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/m6-heap-trend.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "ed11a4b3aa2fe2ed50402b69a152089f9f402b8840f9506a13a4aabffb705c38"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "2a13eadd5d05753e53b339dc35cb125e7e3286321274c70f3247a9ca4f88dcca"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/m6-trend-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "f3c40ec17e56c1a62c1f7e14119195e175f303449ca4ab30ad4de105b6b75cef"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "fd6206cc237d9f5bfdec8b6c30410f1476a22f0cd26899f12cc320bd247875be"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-02/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "4b9342b8db8d5a20d33c84525937676ca6a3b67b6519b21145cf9399690906ca"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/failure-state.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "56fe02eb0e783abad76d1a6d47683f6f98743d98eb0c4f5ec08592d4f1be7f8c"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/m6-heap-trend.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "d9eb40e5e66683602eacc0a82f90685d1b2bdff987dc7cfdf3d66fbf3902ac56"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/m6-lifecycle-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "03504e4615f8e90afc7d97d65cefb6c99d39df233cab85044ef3c5d4c30fbf04"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/m6-lifecycle.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "c1686c5da905635c3b9430d4ed94d6f5668b127db836c03f7a25d139606939d0"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/m6-trend-progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "f3c40ec17e56c1a62c1f7e14119195e175f303449ca4ab30ad4de105b6b75cef"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/manifest.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "1e7c11086df24a5bdfda0a1db13ea32b9b248a911fe941c7f21a7d0102335884"
+    },
+    {
+      "path": "docs/evidence/h1-claude-runs/followup/h1-trend/trend-03/progress.json",
+      "revision": "394853cbdd7e305100c148c435cd18e9e6b81f98",
+      "sha256": "2c3216ea8820402114bc53519c6150960fea61f312fad112ee4d2deed0ceeaf4"
+    }
+  ]
+}
