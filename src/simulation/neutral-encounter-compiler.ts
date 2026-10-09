@@ -1,7 +1,7 @@
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
 import { compareIds, type CombatUnit } from './combat-types';
 import type { Unit, ResolvedUnitStats } from './unit-types';
-import { NEUTRAL_DEFINITIONS } from './content/neutrals';
+import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
 import { freezeContent } from './content/freeze';
 import type { Source } from './m8/contracts';
@@ -22,9 +22,8 @@ export interface CompiledNeutralEncounter {
 }
 
 /**
- * Isolated content compiler, not a Match/start/restore entry point.
- * Callers explicitly supply these outputs to the existing B3 combat executor.
- * No global registration, RNG, player resources, rewards, or combat execution.
+ * Pure trusted content compiler used by Match preparation, combat and restore.
+ * No RNG, player resources, rewards or combat execution.
  */
 export function compileNeutralEncounter(roundId: string): CompiledNeutralEncounter {
   const encounter = NEUTRAL_ENCOUNTERS.find(entry => entry.roundId === roundId);
@@ -40,7 +39,7 @@ export function compileNeutralEncounter(roundId: string): CompiledNeutralEncount
     if (!Object.hasOwn(NEUTRAL_DEFINITIONS, slot.definitionId)) throw new RangeError(`Unknown neutral definition: ${slot.definitionId}`);
     const definition = NEUTRAL_DEFINITIONS[slot.definitionId], mechanism = definition.mechanism;
     const id = JSON.stringify(['pve', roundId, encounter.encounterId, slot.slotId]);
-    const abilityId = mechanism.kind === 'none' ? 'neutral-attack' : mechanism.id;
+    const abilityId = neutralAbilityId(definition);
     const stats: ResolvedUnitStats = {
       unitKind: definition.unitKind, monsterFamily: definition.monsterFamily,
       health: definition.health, attack: definition.attack, armor: definition.armor, magicResist: definition.magicResist,
@@ -82,4 +81,10 @@ export function compileNeutralEncounter(roundId: string): CompiledNeutralEncount
   return freezeContent({ roundId, encounterId: encounter.encounterId, catalogVersion: NEUTRAL_ENCOUNTER_CATALOG_VERSION,
     policyVersion: NEUTRAL_ENCOUNTER_POLICY_VERSION, encounterRngDraws: 0,
     deployment: deployment.sort(compareIds), units: units.sort(compareIds), openingDefinitions });
+}
+
+/** Finite, immutable same-version plans. No query or restore recompiles/randomizes an encounter. */
+export const COMPILED_NEUTRAL_ENCOUNTERS = freezeContent(NEUTRAL_ENCOUNTERS.map(e => compileNeutralEncounter(e.roundId)));
+export function readNeutralCombatUnit(id: string): CombatUnit | undefined {
+  return COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e => e.units).find(u => u.id === id);
 }

@@ -1,7 +1,7 @@
 import { validateItemProgram } from './m8/item-program';
 import { validateComponentPool } from './component-pool';
 import { ABILITY_DEFINITIONS, validateAbilityDefinitions } from './combat-abilities';
-import { UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS, validateUnitDefinitions } from './units';
+import { UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS, M8_NEUTRAL_UNIT_DEFINITIONS, validateUnitDefinitions } from './units';
 import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL } from './match-rules';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/items';
@@ -160,6 +160,6 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
 /** No neutral or legacy unit can accidentally become purchasable. */
 export function validateAcquisitionIsolation():void {
   const active=new Set(Object.values(SHOP_CATALOG_BY_COST).flat());
-  for(const id of Object.keys(NEUTRAL_UNIT_DEFINITIONS)) if(active.has(id)) fail('Neutral unit in shop');
+  for(const id of Object.keys({...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS})) if(active.has(id)) fail('Neutral unit in shop');
   for(const id of active) if(!M5_UNIT_DEFINITIONS[id]||UNIT_DEFINITIONS[id]!==M5_UNIT_DEFINITIONS[id]) fail('Invalid active acquisition ID');
 }

@@ -1,3 +1,11 @@
+# Current status: fixed upstream, B7 regression migrated
+
+2026-10-09: accepted B3 fix from PR22 is included by baseline `947ac7151e180a70446aeece09d8c9e500f2a4b9`, merged into B7 at remote checkpoint `da801827d8fd267fef23c1648f091af4baf4c55c`. B7 does not reimplement the generic damage/control pipeline. Its old characterization now retains the same HP100/maxHP1000/raw150 vector but requires zero applied stun and zero fake cleanup; the added HP1000→850 vector requires packetDamage before the [2,12) stun. See `tests/m8-b7-known-limitations.test.ts` and `docs/evidence/m8-b7/baseline-merge/`.
+
+The original evidence below records the historical defect, not the current implementation. Formal B7 integration/audit remains in progress.
+
+---
+
 # M8 B7：伤害与控制提交顺序问题记录
 
 状态：**先锋偏差已复现、未修复；先锋机制不在本步签收范围内。** 用户同意先交付独立目录、编译器和问题证据，通用层修复另行安排。本记录不授权修改 B3、被冻结合同或其他效果。

@@ -1,3 +1,19 @@
+# B7 integration in progress after approved baseline merge
+
+2026-10-09: user authorized merging `947ac7151e180a70446aeece09d8c9e500f2a4b9` into the existing B7 branch with a merge commit, then completing the mechanisms/formal wiring. Remote merge checkpoint `da801827d8fd267fef23c1648f091af4baf4c55c` has the same tree as locally tested `bef68643fca9570f9c106b089c4551b50472b354`. No textual conflicts. The B3 bug characterization is now a lethal/no-stun plus surviving/damage-before-stun regression, not a deleted or skipped assertion.
+
+The integration currently installs all eight fixed encounters, trusted snapshots, readonly `readEncounterPreview`, zero-mana/crit/classification validation, opening and companion consumption validation. B8 loot remains explicitly pending (`encounterPlan=null`, preparation contentStatus `ready-b7-pending-b8`); B9 format/capacity is untouched. This is a checkpoint, not completion, audit signoff or merge approval.
+
+ENCOUNTERS §3 explicitly permits a cost-1 legacy structure adapter. `NEUTRAL_DEFINITIONS` remains the authoritative no-cost catalog; `M8_NEUTRAL_UNIT_DEFINITIONS` supplies old display/stat consumers, with `unitKind=neutral` and empty traits. This is not a buying price. Shop acquisition and player restore stay hero-only; direct neutral purchase is rejected. Old UI can still display “1费”; accurate neutral badges/details remain U5 work, and no UI file is changed here.
+
+Project convention pending approval: because B6's PvP RoundDefinition.encounterId is null, the readonly preview identifies a public fixed PvP opponent as `pvp:<roundId>`. This does not change round identity, RNG, opponent composition or introduce a special encounter pool. Supply preview stays null. New neutral rule summaries come from approved mechanism declarations; hero summaries describe implemented skills rather than historical unsupported tooltip clauses.
+
+Validation so far: the fixed merge tree passed original `npm test`: 110 files, 1392 passed and 10 existing skipped (1402 total), 499.07 seconds on Node22.23.3. First integration production build passed and measured 484678 B for all JS gzip9, +3737 B vs baseline947 (480941 B). Later final build and full regression remain to run; do not present these preliminary numbers as final. New synthetic late-round boundary tests run real Start/step/canonical serialize/restore for all eight encounters; the earlier synthetic wins and three-star test roster do not prove an honest full campaign or balance. B8's approved opening hero/component rewards are still unavailable.
+
+Historical narrowed-subset handoff below is preserved as evidence of the earlier blocked state; its “no runtime imports” and “Herald incomplete” statements are superseded by this active integration section, not retroactively rewritten.
+
+---
+
 # M8 B7 独立内容子集交接（范围缩小，未签收）
 
 ## 状态与范围

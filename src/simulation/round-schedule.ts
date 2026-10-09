@@ -5,7 +5,7 @@ import { getCatalogRoundByOrdinal } from './round-selectors';
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export const ROUND_RULES_VERSION = 'm8-b6-round-opening-v1';
 export const FINAL_ROUND = ROUND_CATALOG.at(-1)!.ordinal;
-export const ROUND_PREPARATION_RULES = freezeContent({version:'m8-b6-preparation-v1',pveContent:'pending-b7-b8',openingEnemyPlaceholder:'neutral-stage-2'} as const);
+export const ROUND_PREPARATION_RULES = freezeContent({version:'m8-b7-preparation-v1',pveContent:'ready-b7-pending-b8'} as const);
 const fixed: {readonly round:number;readonly event:ScheduleEvent}[] = ROUND_CATALOG.flatMap(round =>
   (ROUND_SEMANTIC_NODES[round.roundId] ?? []).map(node => ({round:round.ordinal,event:{
     id:`round:${round.roundId}:${node}`,kind:node === 'supply' ? 'component' as const : node,

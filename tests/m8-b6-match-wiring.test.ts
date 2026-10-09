@@ -22,7 +22,7 @@ const concede = (state:MatchState) => {
   return accepted(startMatchCombat(state));
 };
 
-// Handwritten OPENING expectations. Enemy content is explicitly a B7 placeholder.
+// Handwritten OPENING expectations; B7 now supplies the approved neutral roster, B8 loot remains pending.
 describe('B6 installed round, opening and restore transactions',()=>{
   it('starts directly in 1-2 with one permanent hero, no legacy package and one five-slot shop',()=>{
     const state=createMatch(42);
@@ -31,7 +31,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(state.preparation.units.filter(u=>u.team==='player')).toEqual([{id:'unit-1',definitionId:'irelia',team:'player',starLevel:1,location:{kind:'board',cell:{col:1,row:4}}}]);
     expect(state.shop.generation).toBe(1); expect(state.shop.slots).toHaveLength(5);
     expect(readRoundInfo(state)).toBe(state.m8.round);
-    expect(state.m8.preparation).toMatchObject({roundId:'1-2',encounterId:'minions-a-v1',contentStatus:'pending-b7-b8'});
+    expect(state.m8.preparation).toMatchObject({roundId:'1-2',encounterId:'minions-a-v1',contentStatus:'ready-b7-pending-b8'});
     expect(state.m8.encounterPlan).toBeNull();
     roundTrip(state);
   });

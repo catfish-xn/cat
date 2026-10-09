@@ -1,3 +1,4 @@
+import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
 import { hexDistance } from './board';
 import { compareIds, type CombatUnit } from './combat-types';
 import type { AbilityDefinition, DamagePacket, ResolvedAbility } from './ability-types';
@@ -43,7 +44,7 @@ validateAbilityDefinitions();
 /** Copy only resolved numbers into battle state, never content-table objects or callbacks. */
 export function resolveAbility(abilityId: string, starLevel: StarLevel): ResolvedAbility {
   if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid star level');
-  if (abilityId === 'neutral-attack') return { id: abilityId, amount: 0, kind: 's13', championId: 'neutral', variables: {} };
+  if (abilityId === 'neutral-attack' || Object.values(NEUTRAL_DEFINITIONS).some(d => neutralAbilityId(d) === abilityId)) return { id: abilityId, amount: 0, kind: 's13', championId: 'neutral', variables: {} };
   if (Object.hasOwn(S13_ABILITY_DATA, abilityId)) {
     const definition = S13_ABILITY_DATA[abilityId];
     return { id: abilityId, amount: 0, kind: 's13', championId: definition.championId,

@@ -41,7 +41,11 @@ function neutral(id: string, name: string, monsterFamily: MonsterFamily, health:
     baseCritChanceBps: 2500, baseCritMultiplierBps: 14000, traits: [], equipment: [], mechanism };
 }
 
-/** M8B_ENCOUNTERS §3–4 / POLICY P-N01–13, P-M01–05. No runtime registration here. */
+export function neutralAbilityId(definition: NeutralDefinition): string {
+  return definition.mechanism.kind === 'none' ? 'neutral-attack' : definition.mechanism.id;
+}
+
+/** M8B_ENCOUNTERS §3–4 / POLICY P-N01–13, P-M01–05. */
 export const NEUTRAL_DEFINITIONS: Readonly<Record<string, NeutralDefinition>> = freezeContent({
   'pve-minion-melee-a': neutral('pve-minion-melee-a', '近战小兵 A', 'minion', 110, 8, 5000, 0, 0, 1),
   'pve-minion-melee-b': neutral('pve-minion-melee-b', '近战小兵 B', 'minion', 160, 10, 6000, 0, 0, 1),

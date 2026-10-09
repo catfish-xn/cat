@@ -1,3 +1,4 @@
+import { validateNeutralCombat } from './neutral-restore';
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
 import { checkEquipmentPlacement } from './equipment-policy';
 import { validateMatchEquipment } from './temporary-equipment';
@@ -76,7 +77,7 @@ export function restoreMatch(input: unknown): MatchState {
   const enemyProjection = readRoundEnemyProjection(state.round);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(canonicalContent(state.m8.round) === canonicalContent(roundDefinition), 'm8 round identity');
-  requireValue(state.m8.encounterPlan === null, 'B7/B8 encounter plan not installed');
+  requireValue(state.m8.encounterPlan === null, 'B8 loot encounter plan not installed');
   requireValue(canonicalContent(state.m8.preparation) === canonicalContent({
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
@@ -245,6 +246,7 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(canonicalContent(combat.units.map(unit => unit.id).sort()) === canonicalContent(expectedIds), 'combat roster');
     if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.survivingEnemyCount === combat.units.filter(unit=>unit.alive&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
+    const neutralStatuses = validateNeutralCombat(combat, state.preparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {
       record(unit); requireValue(units.get(unit.id)?.location.kind === 'board', 'combat unit origin');
@@ -257,16 +259,16 @@ export function restoreMatch(input: unknown): MatchState {
       requireValue(canonicalContent(unit.ability) === canonicalContent(resolved.ability), 'resolved ability');
       requireValue(canonicalContent(unit.sources) === canonicalContent(resolved.sources) && canonicalContent(unit.triggers) === canonicalContent(resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
-      requireValue(unit.maxHp >= 1 && unit.maxMana >= 1 && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
+      requireValue(unit.maxHp >= 1 && unit.maxMana >= 0 && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(state.preparation.board, unit.cell), 'combat cell');
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
-      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!);
+      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses);
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
-      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!);
+      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
       const sourceKeys = new Set<string>();
       for (const source of unit.sources) { requireValue(source.key === effectKey(source.source) && source.source.ownerId === unit.id && !sourceKeys.has(source.key), 'source key'); sourceKeys.add(source.key); cloneEffect(source.effect); }
@@ -289,7 +291,7 @@ export function restoreMatch(input: unknown): MatchState {
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them. */
-function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string): void {
+function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>): void {
   if (unit.ability.kind !== 's13') return;
   requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');
   if (unit.spellCrit !== undefined) {
@@ -333,12 +335,12 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     const largestCoefficient = Math.max(10000, ...Object.values(unit.ability.variables));
     requireValue(Number.isSafeInteger(largestCoefficient * (1 + Math.floor(numerator / 10000) + unit.maxHp + unit.abilityPower! + maximumAp)), 'ability arithmetic bound');
   }
-  const origin = (source: import('./combat-types').CombatOrigin) => {
+  const origin = (source: import('./combat-types').CombatOrigin, neutralStatus = false) => {
     record(source); id(source.ownerId); id(source.definitionId); id(source.instanceId); integer(source.effectIndex);
     requireValue(combatIds.has(source.ownerId) && ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(source.sourceKind), 'runtime source');
     const owner = combatUnits.find(value => value.id === source.ownerId)!;
     if (source.sourceKind === 'ability' || source.sourceKind === 'attack') {
-      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && source.effectIndex === 0 && source.parentItemInstanceId == null, 'ability source identity');
+      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && (source.effectIndex === 0 || neutralStatus) && source.parentItemInstanceId == null, 'ability source identity');
     } else {
       requireValue(owner.sources?.some(entry => entry.source.ownerId === source.ownerId
         && entry.source.sourceKind === source.sourceKind && entry.source.sourceDefinitionId === source.definitionId
@@ -358,7 +360,7 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   requireValue(total === unit.shield && unit.shieldExpiresAtTick === (total ? Math.max(...unit.shieldLayers.filter(l => l.remaining > 0).map(l => l.expiresAtTick)) : null), 'shield aggregate');
   list(unit.statuses); const statusKeys = new Set<string>();
   for (const status of unit.statuses) {
-    record(status); origin(status.source); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
+    record(status); origin(status.source, neutralStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
     requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
     requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
     requireValue(status.kind !== 'abilityPower' && status.kind !== 'attackSpeed', 'unsupported dynamic status source');

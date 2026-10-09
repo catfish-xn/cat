@@ -36,7 +36,7 @@ function validateRoster(preparation: GameState): void {
 
 /** Plan first, commit in Match only after success; the pending card occupies no slot. */
 export function planPurchase(preparation: GameState, definitionId: string, candidateId: string): PurchasePlanResult {
-  if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId)) throw new RangeError(`Unknown unit definition: ${definitionId}`);
+  if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId) || UNIT_DEFINITIONS[definitionId].unitKind === 'neutral') throw new RangeError(`Unknown unit definition: ${definitionId}`);
   validateRoster(preparation);
   if (preparation.units.some(unit => unit.id === candidateId)) throw new Error(`Duplicate unit ID: ${candidateId}`);
   let units: Candidate[] = [...preparation.units, { id: candidateId, definitionId, team: 'player', starLevel: 1, location: null }];

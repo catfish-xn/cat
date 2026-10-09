@@ -98,9 +98,10 @@ describe('B7 isolated approved content, not the enabled Match catalog', () => {
     for (const invalid of ['', '1-1', '2-1', '7-7', '__proto__', 'constructor']) expect(() => compileNeutralEncounter(invalid)).toThrow(RangeError);
   });
 
-  it('does not add any definition to the active unit registry or champion shop', () => {
+  it('registers a truthful neutral display adapter without adding champion acquisition or traits', () => {
     for (const id of Object.keys(NEUTRAL_DEFINITIONS)) {
-      expect(Object.hasOwn(UNIT_DEFINITIONS, id)).toBe(false);
+      expect(UNIT_DEFINITIONS[id]).toMatchObject({unitKind:'neutral',monsterFamily:NEUTRAL_DEFINITIONS[id].monsterFamily,traits:[]});
+      expect(NEUTRAL_DEFINITIONS[id]).not.toHaveProperty('cost');
       expect(SHOP_CATALOG).not.toContain(id);
     }
     expect(UNIT_DEFINITIONS['neutral-stage-2'].unitKind).toBeUndefined();

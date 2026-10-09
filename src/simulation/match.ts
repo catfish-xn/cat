@@ -31,6 +31,7 @@ import type { FinishedCombat, MatchCommandResult, MatchEvent, MatchFailure, Matc
 export * from './match-types';
 export { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 export { getXpToNextLevel, getShopOdds } from './progression';
+export { readEncounterPreview } from './encounter-selectors';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
@@ -76,8 +77,8 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
   return { state: { ...state, phase: timing === 'after' ? 'settlement' : 'preparation',
     combat: timing === 'after' ? state.combat : null, pendingChoice: null } as MatchState, events };
 }
-/** One preparation transaction owns identity and the frozen enemy projection. B7/B8 attach
- * their complete plan here later; pending content is explicit, never an empty loot promise. */
+/** One preparation transaction freezes B7 enemies. B8 will install its complete loot plan;
+ * encounterPlan=null remains explicit, never an empty loot promise. */
 function prepareRound(round: number): MatchState['m8'] {
   const definition = getCatalogRoundByOrdinal(round);
   return freezeContent({round:definition,encounterPlan:null,preparation:{

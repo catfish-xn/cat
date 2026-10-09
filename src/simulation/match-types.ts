@@ -19,12 +19,12 @@ export interface RoundResult {
   readonly xpBefore: number; readonly xpAfter: number; readonly hpBefore: number; readonly hpAfter: number;
   readonly baseDamage: number; readonly survivingEnemyCount: number; readonly playerDamage: number; readonly hpLost: number;
 }
-/** B6 freezes the existing enemy projection once. Full PvE content/loot remains B7/B8. */
+/** B7 freezes approved enemies; encounterPlan remains null until B8 installs complete loot. */
 export interface RoundPreparation {
-  readonly version: 'm8-b6-preparation-v1';
+  readonly version: 'm8-b7-preparation-v1';
   readonly roundId: string;
   readonly encounterId: string | null;
-  readonly contentStatus: 'pending-b7-b8' | 'not-pve';
+  readonly contentStatus: 'ready-b7-pending-b8' | 'not-pve';
   readonly enemies: readonly import('./unit-types').Unit[];
 }
 export interface MatchBase {
