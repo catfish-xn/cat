@@ -58,7 +58,7 @@
     "runId": 37887531022,
     "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022",
     "headSha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
-    "status": "in_progress",
+    "status": "completed",
     "snapshotBeforeReviewHandoff": {
       "conclusion": "",
       "jobs": [
@@ -890,7 +890,7 @@
       ],
       "status": "in_progress"
     },
-    "note": "Partial snapshot only; full run not yet finished; test/build/headless steps passed, performance and route/input jobs still running; preview-cannon first heap failure retained.",
+    "note": "Early snapshot retained as history; latest finalRun/finalJobs/finalComparisons govern final result. All required jobs success on exact fix SHA; later commits are docs only.",
     "testAndBuild": {
       "jobId": 113680778478,
       "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778478",
@@ -999,7 +999,241 @@
         }
       ]
     },
-    "retryClarification": "Attempt2 reran preview-cannon once: success; input-dev status was inherited from first failure. Attempt3 now executes input-dev for its first and only retry (job113691471754), no new preview-cannon execution. Both fixed SHA20551f2, no source/config/threshold changes."
+    "retryClarification": "Attempt1:9 required success,2 failed,comparison skipped. Attempt2 actually reran only preview-cannon once, success211556B. Attempt3 actually reran only input-dev once, success capture24.3ms/cachedSeek39.3ms and all later checks, then final comparison success. Carried-forward job records have copied timestamps; no repeated retry of either failing job. No code/config/budget changes.",
+    "conclusion": "success",
+    "runNumber": 124,
+    "finalAttempt": 3,
+    "requiredJobsPassed": 12,
+    "optionalJobsSkipped": 2,
+    "finalRun": {
+      "conclusion": "success",
+      "event": "workflow_dispatch",
+      "head_sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37887531022",
+      "id": 37887531022,
+      "run_attempt": 3,
+      "run_number": 124,
+      "status": "completed"
+    },
+    "finalJobs": [
+      {
+        "id": 113691471754,
+        "name": "input-dev-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691471754"
+      },
+      {
+        "id": 113691472490,
+        "name": "heap-diagnostics",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691472490"
+      },
+      {
+        "id": 113691472745,
+        "name": "warmup-experiment",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691472745"
+      },
+      {
+        "id": 113691473397,
+        "name": "test-and-build-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691473397"
+      },
+      {
+        "id": 113691473669,
+        "name": "browser-preview-mage-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691473669"
+      },
+      {
+        "id": 113691473980,
+        "name": "browser-preview-sniper-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691473980"
+      },
+      {
+        "id": 113691474579,
+        "name": "browser-dev-sniper-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691474579"
+      },
+      {
+        "id": 113691498570,
+        "name": "browser-dev-cannon-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691498570"
+      },
+      {
+        "id": 113691501807,
+        "name": "browser-dev-mage-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691501807"
+      },
+      {
+        "id": 113691502503,
+        "name": "m7-presentation-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691502503"
+      },
+      {
+        "id": 113691511510,
+        "name": "input-preview-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691511510"
+      },
+      {
+        "id": 113691512945,
+        "name": "browser-preview-cannon-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691512945"
+      },
+      {
+        "id": 113691513741,
+        "name": "m6-retention",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691513741"
+      },
+      {
+        "id": 113696499088,
+        "name": "compare-evidence-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113696499088"
+      }
+    ],
+    "finalComparisons": {
+      "m5": [
+        {
+          "build": "cannon",
+          "evidenceClass": "final-clean-commit",
+          "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+          "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "checkpoints": 182,
+          "rounds": 30,
+          "finalHash": "a7b2c48bb9c8dee310602ff0c8c1c063f52b27a274714db10a3440c4ce45d34c",
+          "passed": true
+        },
+        {
+          "build": "sniper",
+          "evidenceClass": "final-clean-commit",
+          "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+          "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "checkpoints": 178,
+          "rounds": 30,
+          "finalHash": "44986b4e1e447dca5928dfc3fb27c5ff19d8b8c6353119f616ec4dad76948394",
+          "passed": true
+        },
+        {
+          "build": "mage",
+          "evidenceClass": "final-clean-commit",
+          "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+          "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "checkpoints": 172,
+          "rounds": 30,
+          "finalHash": "a91abab0f89e4fae83cbff0ec02d8e483dc34aa1cbc8893241be2e83cdd0cea3",
+          "passed": true
+        }
+      ],
+      "m6": {
+        "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+        "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+        "records": [
+          {
+            "folder": "m5-dev-cannon",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "dbbb18b42cb6989c3a3e0a520b28c922f524e3837b2390891f18684b8c91cf33",
+            "passed": true
+          },
+          {
+            "folder": "m5-input-dev",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "c6df980ca82dd33ad3cfa19c61fb70d709fa788899a246a4e882e84a3172338e",
+            "passed": true
+          },
+          {
+            "folder": "m6-layout-dev",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "5d68d03ea0d32466be8ed75b8cab875d6ab5ee1c070f1569dec08a7799cc3e43",
+            "passed": true
+          },
+          {
+            "folder": "m5-preview-cannon",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "f928fac98f1b6f3d113a06794e91f52b984664000dcb3c07c52ddc2b7d2fd70e",
+            "passed": true
+          },
+          {
+            "folder": "m5-input-preview",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "c6a327c6d2992aeb3df9acfec4388cbcc5cd006f35b941a2bb688430cc893d71",
+            "passed": true
+          },
+          {
+            "folder": "m6-layout-preview",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "42057f3523029116d70d5b0abe1e8d86a73257b9ac127eababbe4044eaca993e",
+            "passed": true
+          },
+          {
+            "folder": "m6-storage",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "829c34bc49aa254e43e64c2a45495e03f7e29e8743efd5aa571df77a1156fe80",
+            "passed": true
+          },
+          {
+            "folder": "m6-application-failures",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "2f19b5bc83e2369bda97ac136a846675bddb9f24bd244a76b991fc956c6b8701",
+            "passed": true
+          },
+          {
+            "folder": "m6-performance",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "f7ea58afbba3c354af65d6caa7f8261707d2cb21a4040cafc36e5f1db3bcf6b2",
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "validation": {
+        "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+        "dirty": "",
+        "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+        "runId": "37887531022",
+        "passed": true
+      },
+      "allRecordedCommandsSuccessful": true,
+      "fileSha256": {
+        "m5-cross-mode-comparison.json": "f9955b7585cc1fe913966a3a2e43cfe79f4b59d89971422a28d777300138bbb0",
+        "M6_VALIDATION.md": "b3a4ff075d928bf1265b0b30ec0e33050b5d1c4c41ebfe71379bee5adead9169",
+        "m6-final-comparison.json": "c4c5da6e27ffd84c7cbc7de0a09db153cac715a8e050496efa1aab7f9c851bc5",
+        "M6_REVIEW.md": "c9b21057d7e1ca39a0e8c81f7c6200918421784f872fdf66cd2c4df97d7a670e",
+        "m6-validation.json": "8f4e2ad67de4cb13f88951d648f5b64bc8cde9d02818eff3fad6676507aa3401"
+      }
+    }
   },
   "heapFirstFailure": {
     "jobId": 113680778586,
@@ -2438,7 +2672,9 @@
       }
     },
     "logSha256": "7ac202dfcd2ef59109975c7ecbfc0e7add1daa5d05f3a47cd09aa5e2cdd59c35",
-    "lifecycleSha256": "ce8025bcff82d1e84fbc7c3d3acbfed47ef7fd4f0919d0bdeb204144919eca31"
+    "lifecycleSha256": "ce8025bcff82d1e84fbc7c3d3acbfed47ef7fd4f0919d0bdeb204144919eca31",
+    "artifactId": 11597548793,
+    "artifactArchiveSha256": "e659ebe84c813a451749cabd70937250c932d428cb0bd385d40e4540f7c8eab4"
   },
   "devHeapFirstPass": {
     "heapDiagnostics": false,
@@ -2467,5 +2703,83 @@
       "listeners": 83,
       "pendingRaf": 1
     }
+  },
+  "performanceSingleRetry": {
+    "jobId": 113691471754,
+    "attempt": 3,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691471754",
+    "passed": true,
+    "performance": {
+      "passed": true,
+      "durationMs": 108547.909609,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 24.300000000046566,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 10.5,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 76.80000000004657,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 317.60000000009313,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 5384.800000000047,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 740.5,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 39.300000000046566,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.19999999995343387,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "lifecycle": 193956
+    },
+    "logSha256": "98c0fcc3a8bddbe21e23e20eea51e49b4b3602dd5cf19f8d5da3d98b92c626c1",
+    "inputCases": 100,
+    "normalTimeTouchRoutePassed": true,
+    "viewports": 5,
+    "storageChecks": 33,
+    "componentChecks": 17,
+    "persistenceRetryChecks": 4,
+    "applicationFailureChecks": 9,
+    "sameCodeConfigBudgets": true
   }
 }
