@@ -22,6 +22,7 @@ import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
+import { EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT } from '../presentation/equipment-feedback';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -157,7 +158,7 @@ export class BoardScene extends Phaser.Scene {
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
       control: name => this.panelControl(name),
-      unitAt: (x, y) => this.playerUnitAt(x, y), cancelGesture: () => this.clearDrag(),
+      unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
     }, this.inputRouter);
     this.input.dragDistanceThreshold = 6;
@@ -291,11 +292,15 @@ export class BoardScene extends Phaser.Scene {
       else this.setStatus('请先在单位面板选择一个我方单位');
     }
   }
-  private playerUnitAt(x: number, y: number): string | undefined {
+  /**
+   * Item drop target: any visible piece under the pointer, either team. Ownership is not
+   * filtered here, so an enemy drop reaches previewEquip and shows its 'unknown-unit' reason.
+   */
+  private boardUnitAt(x: number, y: number): string | undefined {
     const rect = this.game.canvas.getBoundingClientRect();
     const px = (x - rect.left) * this.scale.gameSize.width / rect.width;
     const py = (y - rect.top) * this.scale.gameSize.height / rect.height;
-    return this.state.units.find(unit => unit.team === 'player' && (() => {
+    return this.state.units.find(unit => (() => {
       const token = this.tokens.get(unit.id);
       return token?.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29;
     })())?.id;
@@ -373,12 +378,8 @@ export class BoardScene extends Phaser.Scene {
       'insufficient-gold': '金币不足', 'bench-full': '备战席已满 · 请先部署或出售单位',
       'stale-round': '此回合已结束，请使用当前 Continue', 'unsettled-round': '当前回合尚未结算',
       'max-level': '已达最高等级 · 无需继续购买经验', 'population-cap': '人口已满 · 按 F 升级或先移回一个单位',
-      'unknown-item': '物品已不存在', 'item-not-inventory': '只能操作物品备战席中的装备',
-      'invalid-recipe': '请选择两件不同的组件实例合成', 'item-slot-occupied': '该装备槽已有物品',
-      'same-item': '请选择两件不同的组件实例合成',
-      'unique-conflict': '该单位已装备同一件唯一装备',
-      'exclusive-slots': '独占装备不能与其他装备同时穿戴',
-      'temporary-item': '临时装备不能单独操作',
+      // Equipment-only codes share the preview wording (U3 dynamic; replaces the B5 interim copy).
+      ...Object.fromEntries(EQUIPMENT_COMMAND_FAILURES.map(code => [code, EQUIPMENT_FAILURE_TEXT[code]])) as Record<typeof EQUIPMENT_COMMAND_FAILURES[number], string>,
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
     return messages[reason];
