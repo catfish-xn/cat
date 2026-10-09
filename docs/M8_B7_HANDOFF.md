@@ -10,6 +10,14 @@ Project convention pending approval: because B6's PvP RoundDefinition.encounterI
 
 Validation so far: the fixed merge tree passed original `npm test`: 110 files, 1392 passed and 10 existing skipped (1402 total), 499.07 seconds on Node22.23.3. First integration production build passed and measured 484678 B for all JS gzip9, +3737 B vs baseline947 (480941 B). Later final build and full regression remain to run; do not present these preliminary numbers as final. New synthetic late-round boundary tests run real Start/step/canonical serialize/restore for all eight encounters; the earlier synthetic wins and three-star test roster do not prove an honest full campaign or balance. B8's approved opening hero/component rewards are still unavailable.
 
+Current restore hardening adds observation-only neutral death/control receipts. It rejects retiming consumed krug healing and deleting active Herald stun, including deletion of its receipt, without altering B3 execution. Independent aura (0/1/2), Quicksilver and Edge of Night valid-save probes passed. See [receipt regression evidence](evidence/m8-b7/integration-receipts/README.md) for exact safety scope and unresolved full-suite status.
+
+The golden migration preserves the exact old fixture and validates unchanged commands/economy independently; [route evidence](evidence/m8-b7/golden/README.md) explains all eight PvE changes and cannon's subsequent Tristana-growth PvP differences. No assertion was deleted or skipped to accept the new content.
+
+Current production measurement is **485743 B all-JS gzip9 with Node22**, +4802 B versus 947; it exceeds the preferred B7 +4000 B by 802 B. The exact remaining headroom is **2734 B** under the unchanged effective ceiling 488477 B. The extra safety validation is retained after attempted deduplication; this over-target allocation requires final review. Preview is currently tree-shaken, and U5's first real import will add an unknown cost. Final full regression and CI remain pending.
+
+## HISTORICAL RECORD ONLY — superseded narrowed subset, not current acceptance
+
 Historical narrowed-subset handoff below is preserved as evidence of the earlier blocked state; its “no runtime imports” and “Herald incomplete” statements are superseded by this active integration section, not retroactively rewritten.
 
 ---

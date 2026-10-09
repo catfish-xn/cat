@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { COMPILED_NEUTRAL_ENCOUNTERS } from '../src/simulation/neutral-encounter-compiler';
+import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { NEUTRAL_DEFINITIONS } from '../src/simulation/content/neutrals';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { createRoundEnemies, getRoundEnemyItems } from '../src/simulation/round-enemies';
@@ -117,6 +118,79 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     corrupt(s,x=>{x.combat.openingState.initialUnits[0].cell.col=6;});
     corrupt(s,x=>{x.combat.openingState.plans[0].to.col=6;});
     if(id==='6-7') for(const status of ['pending','cancelled']) corrupt(s,x=>{x.combat.openingState.plans[0].task.status=status;});
+  });
+
+  it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud']])('restores Herald action identity after earlier tick-one aura maintenance: %j',(...ids)=>{
+    const items=ids as string[];
+    let s=prepared('6-7');
+    s={...s,items:items.map((definitionId,slot)=>({id:`item-${s.nextItemSerial+slot}`,definitionId,location:{kind:'unit' as const,unitId:'unit-1',slot}})),
+      nextItemSerial:s.nextItemSerial+items.length,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?{...u,definitionId:'garen',starLevel:3,location:{kind:'board',cell:{col:3,row:4}}}:u)}};
+    s=accepted(api.startMatchCombat(s));roundTrip(s);s=api.stepMatch(s).state;roundTrip(s);
+    const c=s.combat!.units.find(u=>u.id==='unit-1')!.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.source.definitionId==='void-charge-project-v1')!;
+    expect(c).toBeDefined();expect(JSON.parse(JSON.parse(c.key)[8])).toEqual([items.length,1]);
+    corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');target.maxMana=0;target.mana=0;});
+    corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');const status=target.mechanismState.statuses.flatMap((g:any)=>g.contributions).find((c:any)=>c.source.definitionId==='void-charge-project-v1');status.source.effectIndex=2;});
+  });
+  it.each(['quicksilver','edge-of-night'])('round-trips legal Herald item immunity/cleanup boundaries with %s',definitionId=>{
+    let s=prepared('6-7');
+    s={...s,items:[{id:`item-${s.nextItemSerial}`,definitionId,location:{kind:'unit' as const,unitId:'unit-1',slot:0}}],
+      nextItemSerial:s.nextItemSerial+1,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?{...u,definitionId:'garen',starLevel:3,location:{kind:'board',cell:{col:3,row:4}}}:u)}};
+    s=accepted(api.startMatchCombat(s));roundTrip(s);
+    for(let tick=0;tick<15;tick++) {s=api.stepMatch(s).state;roundTrip(s);}
+    if(definitionId==='quicksilver') expect(s.combat!.neutralReceipts!.controls).toEqual([]);
+    else expect(s.combat!.neutralReceipts!.controls).toHaveLength(1);
+  });
+  it('pins the current catalog assumptions used by pure opening restore, without executing combatStart',()=>{
+    const first=Object.values(ITEM_DEFINITIONS).flatMap(d=>d.combatProgram?.periodic ?? []).filter(p=>(p.startsAtTick ?? p.periodTicks)===1);
+    expect(first).toHaveLength(2);
+    for(const p of first) {expect(p.condition).toBeUndefined();expect(p.program.selector.sample).toBe('each-tick');
+      expect(p.program.effects.every(e=>e.kind==='apply-status' && ['shred','sunder'].includes(e.status.kind))).toBe(true);}
+    const initial=Object.values(ITEM_DEFINITIONS).flatMap(d=>d.combatProgram?.survival ?? []).filter(t=>t.initialAlso);
+    expect(initial).toHaveLength(1);expect(initial[0].condition).toMatchObject({kind:'hp-ratio',subject:'holder',op:'lte',thresholdBps:6000});
+  });
+  it('rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts',()=>{
+    let s=battleFixture('2-7');
+    while(s.phase==='combat' && !s.combat.companionState?.reactions.some(r=>r.status==='executed' && s.combat!.units.some(u=>u.id===r.targetId && u.alive && u.hp<u.maxHp))) s=api.stepMatch(s).state;
+    expect(s.phase).toBe('combat');roundTrip(s);
+    const r=s.combat!.companionState!.reactions.find(r=>r.status==='executed' && s.combat!.units.some(u=>u.id===r.targetId && u.alive && u.hp<u.maxHp))!;
+    expect(r).toBeDefined();
+    corrupt(s,x=>{const row=x.combat.companionState.reactions.find((v:any)=>v.key===r.key);row.status='pending';row.registeredAtTick=x.combat.tick;row.executeAtTick=x.combat.tick+1;row.deathEventId=JSON.stringify([x.combat.combatId,x.combat.tick,0]);});
+    corrupt(s,x=>{delete x.combat.neutralReceipts;});
+    corrupt(s,x=>{x.combat.neutralReceipts.deaths=[];});
+    corrupt(s,x=>{x.combat.neutralReceipts.deaths.push(x.combat.neutralReceipts.deaths[0]);});
+    corrupt(s,x=>{x.combat.neutralReceipts.deaths[0].tick++;});
+    corrupt(s,x=>{x.combat.neutralReceipts.deaths[0].eventSeq++;});
+  });
+  it('rejects deletion of active Herald control, its receipt, or both, and forged cleanup',()=>{
+    let s=prepared('6-7');
+    s={...s,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?{...u,definitionId:'garen',starLevel:3,location:{kind:'board',cell:{col:3,row:4}}}:u)}};
+    s=api.stepMatch(accepted(api.startMatchCombat(s))).state;roundTrip(s);
+    expect(s.combat!.neutralReceipts!.controls).toHaveLength(1);
+    const erase=(x:any)=>{const u=x.combat.units.find((u:any)=>u.id==='unit-1');u.mechanismState.statuses=[];u.statuses=[];};
+    corrupt(s,erase);corrupt(s,x=>{x.combat.neutralReceipts.controls=[];});
+    corrupt(s,x=>{erase(x);x.combat.neutralReceipts.controls=[];});
+    corrupt(s,x=>{erase(x);const r=x.combat.neutralReceipts.controls[0];r.removedAtTick=1;r.removedEventSeq=x.combat.nextEventSeq-1;r.removedReason='expired';});
+    corrupt(s,x=>{x.combat.neutralReceipts.controls.push(x.combat.neutralReceipts.controls[0]);});
+    for(let i=0;i<11;i++) s=api.stepMatch(s).state;
+    roundTrip(s);expect(s.combat!.neutralReceipts!.controls[0]).toMatchObject({removedAtTick:12,removedReason:'expired'});
+  });
+  it.each([0,1,42,0xffffffff])('stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed %i (B8 grant boundaries supplied by fixture)',seed=>{
+    let s=api.createMatch(seed);
+    for(let i=0;i<3;i++) {
+      s=accepted(api.startMatchCombat(s));
+      while(s.phase==='combat') s=api.stepMatch(s).state;
+      expect(s.combat!.result).toBe('playerWin');expect(s.playerHp).toBe(100);roundTrip(s);
+      s=accepted(api.nextRound(s,s.round));
+      if(i<2) {
+        // Only the design-specified post-drop hero boundary is supplied; no reward/receipt implementation is claimed.
+        const id=`unit-${i+2}`,definitionId=i===0?'maddie':'lux';
+        s={...s,nextUnitSerial:i+3,preparation:{...s.preparation,units:[...s.preparation.units,{id,definitionId,team:'player',starLevel:1,location:{kind:'bench',slot:0}}]}};
+        s=accepted(api.deployMatchUnit(s,id,{kind:'board',cell:{col:3+i*2,row:7}}));
+        roundTrip(s);
+      }
+    }
+    expect(s).toMatchObject({roundDefinitionId:'2-1',gold:10,level:3,xp:0,playerHp:100});
+    expect(s.items).toEqual([]); // B8 two component choices remain unimplemented.
   });
   it('restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption',()=>{
     let s=battleFixture('4-7');

@@ -85,6 +85,5 @@ export function compileNeutralEncounter(roundId: string): CompiledNeutralEncount
 
 /** Finite, immutable same-version plans. No query or restore recompiles/randomizes an encounter. */
 export const COMPILED_NEUTRAL_ENCOUNTERS = freezeContent(NEUTRAL_ENCOUNTERS.map(e => compileNeutralEncounter(e.roundId)));
-export function readNeutralCombatUnit(id: string): CombatUnit | undefined {
-  return COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e => e.units).find(u => u.id === id);
-}
+const NEUTRAL_COMBAT_UNITS = new Map(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e => e.units.map(u => [u.id,u] as const)));
+export function readNeutralCombatUnit(id: string): CombatUnit | undefined { return NEUTRAL_COMBAT_UNITS.get(id); }

@@ -1,3 +1,4 @@
+import { recordNeutralReceipts } from './neutral-receipts';
 import { COMPILED_NEUTRAL_ENCOUNTERS, readNeutralCombatUnit } from './neutral-encounter-compiler';
 import { compileItemCrit, itemPrograms } from './m8/item-program';
 import { compileUnitInputs } from './m8/unit-inputs';
@@ -61,7 +62,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       enemy: { ...preparationState.board.deploymentZones.enemy },
     } },
     ...(strategy ? { strategy: structuredClone(strategy), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
-    ...(units.some(u=>u.unitKind==='neutral') ? {openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
+    ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };
@@ -72,5 +73,5 @@ export function createCombatWithEvents(preparation: GameState, strategy: Strateg
 }
 export function stepCombat(state: CombatState): CombatStep {
   if (state.status === 'finished') return { state, events: [] };
-  return advanceCombatTick(state);
+  return recordNeutralReceipts(advanceCombatTick(state));
 }

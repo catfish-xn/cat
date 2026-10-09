@@ -44,12 +44,12 @@ validateAbilityDefinitions();
 /** Copy only resolved numbers into battle state, never content-table objects or callbacks. */
 export function resolveAbility(abilityId: string, starLevel: StarLevel): ResolvedAbility {
   if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid star level');
-  if (abilityId === 'neutral-attack' || Object.values(NEUTRAL_DEFINITIONS).some(d => neutralAbilityId(d) === abilityId)) return { id: abilityId, amount: 0, kind: 's13', championId: 'neutral', variables: {} };
   if (Object.hasOwn(S13_ABILITY_DATA, abilityId)) {
     const definition = S13_ABILITY_DATA[abilityId];
     return { id: abilityId, amount: 0, kind: 's13', championId: definition.championId,
       variables: Object.fromEntries(Object.entries(definition.variables).map(([key, values]) => [key, Math.round(values[starLevel - 1] * 10000)])) };
   }
+  if (abilityId === 'neutral-attack' || Object.values(NEUTRAL_DEFINITIONS).some(d => neutralAbilityId(d) === abilityId)) return { id: abilityId, amount: 0, kind: 's13', championId: 'neutral', variables: {} };
   const definition = ABILITY_DEFINITIONS[abilityId];
   if (!definition) throw new Error(`Unknown ability: ${abilityId}`);
   if (![1, 2, 3].includes(starLevel)) throw new RangeError('Invalid star level');
