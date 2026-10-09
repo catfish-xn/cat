@@ -295,3 +295,8 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - `compare-m6-evidence.cjs`仅应用分组同步消费已列8个上游B8/B9 skip并保留原通过断言callback；所有容量内phase/G04/ROOT04/存储/布局/回放仍必通过，任何未知skip失败。性能分组仍原样未改，等待用户最终决定；不是整文件/整job跳过。
 - 性能准备依赖已完整集中为[待决定范围](evidence/m8-b6/performance-pending-scope.md)：列8项测量中4项受完整导入准备影响、独立可继续4项、full-load覆盖/导入、原12次activation精确冷DB序列及聚合消费要求。替代准备只能标诊断，不冒充原门禁；本检查点仍未实施该待决部分。
 - [CI141（d7daccc）](https://github.com/catfish-xn/cat/actions/runs/37908217035)的M7 presentation和M6 retention已成功；本检查点新增浏览器尾段及比较适配不在该SHA，仍需其后固定提交验证。
+
+### 9.6 生成报告范围修正
+
+- `compare-m6-evidence.cjs`生成的JSON/Markdown/stdout全部明确B6非跳过范围；附每个manifest的skipped批次/原因、浏览器已执行前段与未执行尾段，以及`fullApplicationRoutePassed:false`。移除错误的“新规则/golden不变、全部正常应用路线通过”当前态断言；附带旧M6文档仍保留，明确属于旧SHA历史，不被本次结论背书。
+- 该修正只影响报告结论和元数据，没有修改待批准的M6性能测量/验证分组。模块性能依赖仍暂停等待用户决定。

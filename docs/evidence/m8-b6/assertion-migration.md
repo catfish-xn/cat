@@ -1560,3 +1560,8 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 旧：G02全部phase及ROOT03/P2/R4无条件必须有passed:true；阶段标签仍initial_component_0/1/reward_choice。
 新：G02活跃10个样本（含真正supply_choice）全部仍必通过；只对已列B8开场1-3/1-4/post-PvE和B9终态、ROOT03/P2/R4逐项保留原通过断言callback为明确skip。严格核验上游完整8项skip集合与G02样本集合，未知缺失不放过。原30/90/117断言留在对应B9 callback，未改阈值。
 理由：用户授权的应用场景skip必须被聚合器透明识别，不能伪造passed:true；没有更改该文件性能测量分组。
+
+## A139 · scripts/compare-m6-evidence.cjs · generated report scope
+旧：生成报告无条件声称“全部正常路线”“原领域规则与golden不变”“全部必需机器门禁通过”。
+新：报告明确只为本SHA的B6非跳过检查，附逐manifest的skipped/归属/原因、已执行与省略的浏览器轮次、fullApplicationRoutePassed=false；旧审计文档仍保留且明确历史身份。
+理由：允许依赖skip不能让自动生成报告冒称完整33战应用或B8内容已通过；仅修输出结论与元数据，不改变性能测量/验证分组。
