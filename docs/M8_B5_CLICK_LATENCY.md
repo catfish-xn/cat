@@ -1,6 +1,6 @@
 # B5 双触延迟对照调查
 
-本次只调查，不改 `verify-m7-presentation.cjs`、400ms 产品防护、界面或 CI 配置。用户要求先比较精确基线与 B5，再决定是否允许改输入驱动。
+本文前半记录只读调查；后续用户明确授权仅修改 `verify-m7-presentation.cjs` 的双触输入驱动。400ms 产品防护、全部断言、界面和 CI 配置不变，授权后的改动与验收在文末单列。
 
 ## 结论及边界
 
@@ -96,7 +96,7 @@
 
 B5 有约 0.01ms 的预热领域增量，绝不能表述成零开销；但它既不能解释数百毫秒等待，又在防护计时前执行。复制结果的小幅差异不构成性能改善证明。当前没有需要为本次失败修复的 B5 计算热点；不改冻结 G12，不削弱保存/恢复校验。
 
-## 下一步供用户决定
+## 调查完成时的建议（历史记录，后续授权见文末）
 
 证据支持：在这个既有 CI 场景及当前环境下，顺序等待两次 tap API 不能可靠表达“40ms 双触”，已有渲染提交阻塞使第二个原生 click 迟到。建议仅授权原脚本中的输入驱动例外：排队两次 Chromium 原生触摸，不等第一次 release ACK 后才开始中间 40ms；保留原结果断言、400ms 产品窗口、其他检查和 CI 配置。该方案仍**未应用**，本轮也没有用候选驱动的通过结果替代原输入。
 
@@ -115,9 +115,39 @@ ln -s "$PWD/node_modules" "$study_dir/base/node_modules"
 ln -s "$PWD/node_modules" "$study_dir/b5/node_modules"
 (cd "$study_dir/base" && npx vite build --sourcemap)
 (cd "$study_dir/b5" && npx vite build --sourcemap)
-node scripts/diagnose-m8-b5-click-latency.cjs --base="$study_dir/base/dist" --b5="$study_dir/b5/dist" --out=artifacts/m8-b5-click-repro --pairs=5 --profile-pairs=1
+node scripts/diagnose-m8-b5-click-latency.cjs --gate="$study_dir/base/scripts/verify-m7-presentation.cjs" --base="$study_dir/base/dist" --b5="$study_dir/b5/dist" --out=artifacts/m8-b5-click-repro --pairs=5 --profile-pairs=1
 node scripts/analyze-m8-b5-click-latency.cjs --study=artifacts/m8-b5-click-repro
 node scripts/diagnose-m8-b5-click-pure-cost.cjs --study=artifacts/m8-b5-click-repro
 ```
 
 本次未改存档格式、digest、目录版本、冻结合同、G12 或其测试，也没有更改原门禁/阈值。只增加只读调查脚本、证据和交接文档。
+
+## 授权后的输入驱动修复（独立审计项 B5-M7-INPUT）
+
+用户在完成上述调查后明确授权：只调整 M7 双触检查的输入驱动，采用原生触摸排队；保留全部断言与400ms阈值，不改CI配置和其他门禁。该授权取代前文的“待决定”，不扩大到产品界面或领域代码。
+
+### 改动与审计边界
+
+- `scripts/verify-m7-presentation.cjs` 只替换原第140–142行：在同一CDP会话发送第一次touchStart，发送touchEnd而不等待ACK，保留40ms间隔，再按顺序排入第二次touchStart/touchEnd，最后等待全部ACK并在finally释放会话。
+- 没有使用DOM `.click()`、合成JavaScript事件、修改时钟/领域状态、关闭原后台页面或改变构建负载。仍由Chromium派发真实原生触摸及click。
+- 修改前脚本SHA256为 `518ef64aa54a272baed1e8e59cf0d82ac8c60c83ac09ae529461222476b93fda`，修改后为 `e14a32900b6785c6091040c16c80bd3b7151793be0f0cac058d18218a8424d50`。已验证替换块以外字节完全相同，包含原700ms等待、双击/双触结果断言、刻意Start和全部后续检查。
+- `strategy-panel.ts` 的 `LIFECYCLE_QUIET_MS = 400` 与防护起点未变。没有修改其他门禁、CI配置、冻结合同、G12、存档格式、digest或目录/规则版本。
+- 新增可选观察器 `scripts/probe-m7-native-touch.cjs`：通过Node preload只读监听touch页面的原生capture/bubble事件，不进入CI配置、不替代任何门禁断言。独立验证确有两次trusted click、目标continue→start-combat、总间隔及处理后间隔均在原400ms窗口内。
+- 历史对照脚本增加 `--gate` 参数，用精确基线中的旧顺序驱动复现修改前数据；不悄悄用修复后的驱动覆盖旧失败。上一阶段机器证据内的脚本指纹绑定提交0298a3f，历史证据不改写。
+
+### 对照及全脚本验证
+
+修改前的完整十次对照见上文：基线2/5失败（502.0、472.0ms，总间隔；处理后467.6、425.3ms），B5 1/5失败（448.7ms；处理后411.2ms）。这些原始失败与trace证据保留，不通过重跑删除。
+
+修改后在相同的基线97f38a0与B5 e10c254生产资产上，运行**当前完整M7脚本**，只附只读计时观察器；两版资产SHA256与原对照一致。当前B5相对e10c254没有产品代码差异，新增的只是文档/诊断工具/本输入驱动。两版完整M7均已通过7项检查；完整GitHub CI结果在实际结束后追加，不提前记通过。
+
+| 产品版本 | 修改前五次click间隔 min/median/max | 修改前失败 | 修改后实测click间隔 | 修改后处理结束→第二click |
+| --- | --- | --- | ---: | ---: |
+| 精确基线97f38a0 | 313.3 / 434.1 / 502.0ms | 2/5 | **42.2ms** | **9.3ms** |
+| B5 e10c254（当前相同产品代码） | 280.9 / 365.7 / 448.7ms | 1/5 | **61.9ms** | **8.4ms** |
+
+修改后的两组输入均观察到两次 `trusted: true` 的原生click，目标依次为 `mobile:continue`、`mobile:start-combat`；总间隔与处理后间隔均小于未改动的400ms。没有仅凭脚本中的40ms定时器推断实际间隔。每版修改后各一次完整脚本验证，不把这个样本量写成跨机器无偶发失败的保证。
+
+两版均通过 `help-dialog`、`reduced-motion-equivalence`、`continue-double-activation`、`replay-feedback`、`replay-identity`、`help-over-reward-choice`、`portrait-404-fallback`。原始观察记录、完整脚本report、指纹和对照资产见 [M8_B5_NATIVE_TOUCH_FIX.json](evidence/M8_B5_NATIVE_TOUCH_FIX.json)。生成的截图/日志留在 `artifacts/m8-b5-fixed-driver`，不提交生成物目录。
+
+审计方请单独核实 **B5-M7-INPUT**：这一项是用户明确授权的门禁输入驱动修复，不是B5领域实现；重点复核替换块以外字节一致、原断言和400ms未变、基线也会失败的历史证据，以及修复后两次trusted click确实落入窗口。CI仍以无preload的正常脚本执行，不用诊断模式代验收。

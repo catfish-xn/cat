@@ -1,0 +1,1015 @@
+{
+  "auditItem": "B5-M7-INPUT",
+  "authorization": "User explicitly authorized only native queued touch input in the existing M7 double-tap check, keeping all assertions, 400ms threshold, other gates and CI unchanged.",
+  "beforeInvestigationCommit": "0298a3f5ff807d520eeb1dffd6df94b24a05e9c7",
+  "originalGateSha256": "518ef64aa54a272baed1e8e59cf0d82ac8c60c83ac09ae529461222476b93fda",
+  "patchedGateSha256": "e14a32900b6785c6091040c16c80bd3b7151793be0f0cac058d18218a8424d50",
+  "sameOutsideDriverBlock": true,
+  "productAssets": {
+    "base": {
+      "index-Bz7j2LlX.js": "e374dff7b09d30b1a134f09e098fb3e5fbecd80811178b986f46982aeaecf1b5"
+    },
+    "b5": {
+      "index-BKQBLiJ-.js": "736c53aafe1fe9a635c64cc41f0fbde940da7afe697343b08e80d53d956879ad"
+    }
+  },
+  "method": "Run the complete current M7 gate against each unchanged archived production build, with read-only preload observing touch page capture/bubble. Both native click gaps and after-handler gaps asserted <400ms by external validation, not by changing the gate.",
+  "results": [
+    {
+      "label": "base",
+      "productSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "scriptSha256": "e14a32900b6785c6091040c16c80bd3b7151793be0f0cac058d18218a8424d50",
+      "probeSha256": "5ed34239605c0302255548a091683a805fb5de6d672f72f95e3c7ded5274a74b",
+      "checks": [
+        {
+          "name": "help-dialog",
+          "goldBefore": 10,
+          "goldAfterD": 8
+        },
+        {
+          "name": "reduced-motion-equivalence",
+          "result": "enemyWin",
+          "events": 622
+        },
+        {
+          "name": "continue-double-activation",
+          "mouseRound": 2,
+          "mousePhase": "preparation",
+          "touchPhase": "preparation"
+        },
+        {
+          "name": "replay-feedback",
+          "specs": 218,
+          "casts": 11,
+          "attacks": 76,
+          "expected": {
+            "attacks": 76,
+            "casts": 11
+          },
+          "maxFloats": 12
+        },
+        {
+          "name": "replay-identity",
+          "width": 960,
+          "colors": 304
+        },
+        {
+          "name": "help-over-reward-choice",
+          "round": 7,
+          "offers": [
+            "sword",
+            "vest",
+            "belt",
+            "rod",
+            "cloak",
+            "bow",
+            "gloves",
+            "tear"
+          ]
+        },
+        {
+          "name": "portrait-404-fallback",
+          "broken": 0,
+          "fallbacks": 3,
+          "darius": 3
+        }
+      ],
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "measurement": {
+        "first": {
+          "id": 13,
+          "type": "click",
+          "phase": "capture",
+          "name": "mobile:continue",
+          "at": 50785.89999997616,
+          "trusted": true
+        },
+        "second": {
+          "id": 14,
+          "type": "click",
+          "phase": "capture",
+          "name": "mobile:start-combat",
+          "at": 50828.10000002384,
+          "trusted": true
+        },
+        "clickGapMs": 42.200000047683716,
+        "firstHandlerMs": 32.90000009536743,
+        "afterHandlerMs": 9.299999952316284
+      },
+      "probe": {
+        "browser": "153.0.8010.12",
+        "records": [
+          {
+            "events": [
+              {
+                "id": 0,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22359,
+                "trusted": true
+              },
+              {
+                "id": 0,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22362.600000023842,
+                "trusted": true
+              },
+              {
+                "id": 1,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22362.700000047684,
+                "trusted": true
+              },
+              {
+                "id": 1,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22362.800000071526,
+                "trusted": true
+              },
+              {
+                "id": 2,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22363.100000023842,
+                "trusted": true
+              },
+              {
+                "id": 2,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22363.100000023842,
+                "trusted": true
+              },
+              {
+                "id": 3,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22363.200000047684,
+                "trusted": true
+              },
+              {
+                "id": 3,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22363.399999976158,
+                "trusted": true
+              },
+              {
+                "id": 4,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22367.700000047684,
+                "trusted": true
+              },
+              {
+                "id": 4,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22404.800000071526,
+                "trusted": true
+              },
+              {
+                "id": 5,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50416.200000047684,
+                "trusted": true
+              },
+              {
+                "id": 5,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50416.300000071526,
+                "trusted": true
+              },
+              {
+                "id": 6,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50416.39999997616,
+                "trusted": true
+              },
+              {
+                "id": 6,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50416.39999997616,
+                "trusted": true
+              },
+              {
+                "id": 7,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50655.10000002384,
+                "trusted": true
+              },
+              {
+                "id": 7,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50655.200000047684,
+                "trusted": true
+              },
+              {
+                "id": 8,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50655.300000071526,
+                "trusted": true
+              },
+              {
+                "id": 8,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50655.300000071526,
+                "trusted": true
+              },
+              {
+                "id": 9,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50657.700000047684,
+                "trusted": true
+              },
+              {
+                "id": 9,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50657.800000071526,
+                "trusted": true
+              },
+              {
+                "id": 10,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50657.800000071526,
+                "trusted": true
+              },
+              {
+                "id": 10,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50657.800000071526,
+                "trusted": true
+              },
+              {
+                "id": 11,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50660.39999997616,
+                "trusted": true
+              },
+              {
+                "id": 11,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50660.39999997616,
+                "trusted": true
+              },
+              {
+                "id": 12,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50660.60000002384,
+                "trusted": true
+              },
+              {
+                "id": 12,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50660.60000002384,
+                "trusted": true
+              },
+              {
+                "id": 13,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50785.89999997616,
+                "trusted": true
+              },
+              {
+                "id": 13,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50818.800000071526,
+                "trusted": true
+              },
+              {
+                "id": 14,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 50828.10000002384,
+                "trusted": true
+              },
+              {
+                "id": 14,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 50831.10000002384,
+                "trusted": true
+              },
+              {
+                "id": 15,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53067.200000047684,
+                "trusted": true
+              },
+              {
+                "id": 15,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53067.5,
+                "trusted": true
+              },
+              {
+                "id": 16,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53067.60000002384,
+                "trusted": true
+              },
+              {
+                "id": 16,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53067.60000002384,
+                "trusted": true
+              },
+              {
+                "id": 17,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53068.39999997616,
+                "trusted": true
+              },
+              {
+                "id": 17,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53068.5,
+                "trusted": true
+              },
+              {
+                "id": 18,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53068.60000002384,
+                "trusted": true
+              },
+              {
+                "id": 18,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53068.60000002384,
+                "trusted": true
+              },
+              {
+                "id": 19,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53072.800000071526,
+                "trusted": true
+              },
+              {
+                "id": 19,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53089.39999997616,
+                "trusted": true
+              }
+            ],
+            "measurement": {
+              "first": {
+                "id": 13,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50785.89999997616,
+                "trusted": true
+              },
+              "second": {
+                "id": 14,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 50828.10000002384,
+                "trusted": true
+              },
+              "clickGapMs": 42.200000047683716,
+              "firstHandlerMs": 32.90000009536743,
+              "afterHandlerMs": 9.299999952316284
+            }
+          }
+        ]
+      },
+      "report": {
+        "url": "http://127.0.0.1:45353",
+        "checks": [
+          {
+            "name": "help-dialog",
+            "goldBefore": 10,
+            "goldAfterD": 8
+          },
+          {
+            "name": "reduced-motion-equivalence",
+            "result": "enemyWin",
+            "events": 622
+          },
+          {
+            "name": "continue-double-activation",
+            "mouseRound": 2,
+            "mousePhase": "preparation",
+            "touchPhase": "preparation"
+          },
+          {
+            "name": "replay-feedback",
+            "specs": 218,
+            "casts": 11,
+            "attacks": 76,
+            "expected": {
+              "attacks": 76,
+              "casts": 11
+            },
+            "maxFloats": 12
+          },
+          {
+            "name": "replay-identity",
+            "width": 960,
+            "colors": 304
+          },
+          {
+            "name": "help-over-reward-choice",
+            "round": 7,
+            "offers": [
+              "sword",
+              "vest",
+              "belt",
+              "rod",
+              "cloak",
+              "bow",
+              "gloves",
+              "tear"
+            ]
+          },
+          {
+            "name": "portrait-404-fallback",
+            "broken": 0,
+            "fallbacks": 3,
+            "darius": 3
+          }
+        ],
+        "passed": true
+      },
+      "rawSha256": {
+        "native-touch.json": "45ed7c687ed7df5e2af05077071e4d357a99d8973f558db8fba28f3833c78932",
+        "report.json": "3882294ae0409deee33de88ebe5e5d400b31364a38376d94a024e2c32998677b",
+        "worker.log": "f8b1005429ad7c882a7991cd1535f913e32d86780e910062769e25cdb8d68096"
+      }
+    },
+    {
+      "label": "b5",
+      "productSha": "e10c2541e57797b38bbd62a98b600739a94eb0b7",
+      "scriptSha256": "e14a32900b6785c6091040c16c80bd3b7151793be0f0cac058d18218a8424d50",
+      "probeSha256": "5ed34239605c0302255548a091683a805fb5de6d672f72f95e3c7ded5274a74b",
+      "checks": [
+        {
+          "name": "help-dialog",
+          "goldBefore": 10,
+          "goldAfterD": 8
+        },
+        {
+          "name": "reduced-motion-equivalence",
+          "result": "enemyWin",
+          "events": 622
+        },
+        {
+          "name": "continue-double-activation",
+          "mouseRound": 2,
+          "mousePhase": "preparation",
+          "touchPhase": "preparation"
+        },
+        {
+          "name": "replay-feedback",
+          "specs": 218,
+          "casts": 11,
+          "attacks": 76,
+          "expected": {
+            "attacks": 76,
+            "casts": 11
+          },
+          "maxFloats": 11
+        },
+        {
+          "name": "replay-identity",
+          "width": 960,
+          "colors": 304
+        },
+        {
+          "name": "help-over-reward-choice",
+          "round": 7,
+          "offers": [
+            "sword",
+            "vest",
+            "belt",
+            "rod",
+            "cloak",
+            "bow",
+            "gloves",
+            "tear"
+          ]
+        },
+        {
+          "name": "portrait-404-fallback",
+          "broken": 0,
+          "fallbacks": 3,
+          "darius": 3
+        }
+      ],
+      "passed": true,
+      "browser": "153.0.8010.12",
+      "measurement": {
+        "first": {
+          "id": 13,
+          "type": "click",
+          "phase": "capture",
+          "name": "mobile:continue",
+          "at": 50874.59999990463,
+          "trusted": true
+        },
+        "second": {
+          "id": 14,
+          "type": "click",
+          "phase": "capture",
+          "name": "mobile:start-combat",
+          "at": 50936.5,
+          "trusted": true
+        },
+        "clickGapMs": 61.90000009536743,
+        "firstHandlerMs": 53.5,
+        "afterHandlerMs": 8.400000095367432
+      },
+      "probe": {
+        "browser": "153.0.8010.12",
+        "records": [
+          {
+            "events": [
+              {
+                "id": 0,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22991,
+                "trusted": true
+              },
+              {
+                "id": 0,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22991.799999952316,
+                "trusted": true
+              },
+              {
+                "id": 1,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22991.899999976158,
+                "trusted": true
+              },
+              {
+                "id": 1,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22992,
+                "trusted": true
+              },
+              {
+                "id": 2,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22992.299999952316,
+                "trusted": true
+              },
+              {
+                "id": 2,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22992.299999952316,
+                "trusted": true
+              },
+              {
+                "id": 3,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 22992.399999976158,
+                "trusted": true
+              },
+              {
+                "id": 3,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 22992.5,
+                "trusted": true
+              },
+              {
+                "id": 4,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 23133.599999904633,
+                "trusted": true
+              },
+              {
+                "id": 4,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 23177.299999952316,
+                "trusted": true
+              },
+              {
+                "id": 5,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50600,
+                "trusted": true
+              },
+              {
+                "id": 5,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50600.199999928474,
+                "trusted": true
+              },
+              {
+                "id": 6,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50600.299999952316,
+                "trusted": true
+              },
+              {
+                "id": 6,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50600.299999952316,
+                "trusted": true
+              },
+              {
+                "id": 7,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50863.699999928474,
+                "trusted": true
+              },
+              {
+                "id": 7,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50863.699999928474,
+                "trusted": true
+              },
+              {
+                "id": 8,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50863.89999997616,
+                "trusted": true
+              },
+              {
+                "id": 8,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50863.89999997616,
+                "trusted": true
+              },
+              {
+                "id": 9,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50866.89999997616,
+                "trusted": true
+              },
+              {
+                "id": 9,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50867,
+                "trusted": true
+              },
+              {
+                "id": 10,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50867,
+                "trusted": true
+              },
+              {
+                "id": 10,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50867.09999990463,
+                "trusted": true
+              },
+              {
+                "id": 11,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50867.39999997616,
+                "trusted": true
+              },
+              {
+                "id": 11,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50867.799999952316,
+                "trusted": true
+              },
+              {
+                "id": 12,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50867.89999997616,
+                "trusted": true
+              },
+              {
+                "id": 12,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50867.89999997616,
+                "trusted": true
+              },
+              {
+                "id": 13,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50874.59999990463,
+                "trusted": true
+              },
+              {
+                "id": 13,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:continue",
+                "at": 50928.09999990463,
+                "trusted": true
+              },
+              {
+                "id": 14,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 50936.5,
+                "trusted": true
+              },
+              {
+                "id": 14,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 50939.5,
+                "trusted": true
+              },
+              {
+                "id": 15,
+                "type": "pointerdown",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53359.799999952316,
+                "trusted": true
+              },
+              {
+                "id": 15,
+                "type": "pointerdown",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53360.09999990463,
+                "trusted": true
+              },
+              {
+                "id": 16,
+                "type": "touchstart",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53360.199999928474,
+                "trusted": true
+              },
+              {
+                "id": 16,
+                "type": "touchstart",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53360.199999928474,
+                "trusted": true
+              },
+              {
+                "id": 17,
+                "type": "pointerup",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53360.59999990463,
+                "trusted": true
+              },
+              {
+                "id": 17,
+                "type": "pointerup",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53360.699999928474,
+                "trusted": true
+              },
+              {
+                "id": 18,
+                "type": "touchend",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53363,
+                "trusted": true
+              },
+              {
+                "id": 18,
+                "type": "touchend",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53363,
+                "trusted": true
+              },
+              {
+                "id": 19,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 53368.09999990463,
+                "trusted": true
+              },
+              {
+                "id": 19,
+                "type": "click",
+                "phase": "bubble",
+                "name": "mobile:start-combat",
+                "at": 53383.5,
+                "trusted": true
+              }
+            ],
+            "measurement": {
+              "first": {
+                "id": 13,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:continue",
+                "at": 50874.59999990463,
+                "trusted": true
+              },
+              "second": {
+                "id": 14,
+                "type": "click",
+                "phase": "capture",
+                "name": "mobile:start-combat",
+                "at": 50936.5,
+                "trusted": true
+              },
+              "clickGapMs": 61.90000009536743,
+              "firstHandlerMs": 53.5,
+              "afterHandlerMs": 8.400000095367432
+            }
+          }
+        ]
+      },
+      "report": {
+        "url": "http://127.0.0.1:39537",
+        "checks": [
+          {
+            "name": "help-dialog",
+            "goldBefore": 10,
+            "goldAfterD": 8
+          },
+          {
+            "name": "reduced-motion-equivalence",
+            "result": "enemyWin",
+            "events": 622
+          },
+          {
+            "name": "continue-double-activation",
+            "mouseRound": 2,
+            "mousePhase": "preparation",
+            "touchPhase": "preparation"
+          },
+          {
+            "name": "replay-feedback",
+            "specs": 218,
+            "casts": 11,
+            "attacks": 76,
+            "expected": {
+              "attacks": 76,
+              "casts": 11
+            },
+            "maxFloats": 11
+          },
+          {
+            "name": "replay-identity",
+            "width": 960,
+            "colors": 304
+          },
+          {
+            "name": "help-over-reward-choice",
+            "round": 7,
+            "offers": [
+              "sword",
+              "vest",
+              "belt",
+              "rod",
+              "cloak",
+              "bow",
+              "gloves",
+              "tear"
+            ]
+          },
+          {
+            "name": "portrait-404-fallback",
+            "broken": 0,
+            "fallbacks": 3,
+            "darius": 3
+          }
+        ],
+        "passed": true
+      },
+      "rawSha256": {
+        "native-touch.json": "5672635bb6cec3084ae906d3ca8aef50d811ae0342e790179ab386dd066c5556",
+        "report.json": "5c3954e91f31d89a823bddaeb5c83e06d52f515664b78f241440c61853336df7",
+        "worker.log": "f8b1005429ad7c882a7991cd1535f913e32d86780e910062769e25cdb8d68096"
+      }
+    }
+  ],
+  "ci": {
+    "status": "pending full CI after this repair is committed and pushed",
+    "previousFailure": "https://github.com/catfish-xn/cat/actions/runs/37874820358"
+  }
+}

@@ -3,6 +3,7 @@
  * contexts. Alternates immutable production builds; every outcome is retained.
  * Usage: node scripts/diagnose-m8-b5-click-latency.cjs --base=/path/dist
  *   --b5=/path/dist --out=artifacts/m8-b5-click-study --pairs=5 --profile-pairs=1
+ * Use --gate=/archived/scripts/verify-m7-presentation.cjs for the original sequential driver.
  * Source maps permit mapping the separate CPU profiles back to original TS.
  */
 const fs = require('node:fs'), path = require('node:path'), http = require('node:http');
@@ -13,7 +14,7 @@ const pairs = Number(arg('pairs', '5')), profilePairs = Number(arg('profile-pair
 const builds = { base: path.resolve(arg('base', '')), b5: path.resolve(arg('b5', '')) };
 const shas = { base: '97f38a0e787a4edcb35df4a59823bb1d106def67', b5: arg('b5-sha', 'e10c2541e57797b38bbd62a98b600739a94eb0b7') };
 const hash = s => crypto.createHash('sha256').update(s).digest('hex');
-const original = fs.readFileSync(path.join(__dirname, 'verify-m7-presentation.cjs'), 'utf8');
+const original = fs.readFileSync(path.resolve(arg('gate', path.join(__dirname, 'verify-m7-presentation.cjs'))), 'utf8');
 
 function installProbe({ profile }) {
   const events = [], tasks = [], timers = [], animations = [];
