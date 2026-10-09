@@ -1,4 +1,5 @@
 import type { RoundDefinition } from './m8/contracts';
+import type { MatchState } from './match-types';
 import { ROUND_CATALOG } from './content/round-catalog';
 
 /** Catalog-only query, not the frozen readRoundInfo(Match) runtime API.
@@ -22,3 +23,6 @@ export function getNextCatalogRound(roundId: string): RoundDefinition | null {
   const round = getCatalogRoundById(roundId);
   return round.isFinal ? null : getCatalogRoundByOrdinal(round.ordinal + 1);
 }
+
+/** Frozen UI query: return the current transaction's authoritative round definition. */
+export function readRoundInfo(state: Readonly<MatchState>): RoundDefinition { return state.m8.round; }

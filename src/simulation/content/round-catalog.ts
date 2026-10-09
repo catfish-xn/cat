@@ -1,8 +1,8 @@
 import type { RoundDefinition } from '../m8/contracts';
 import { freezeContent } from './freeze';
 
-/** Isolated M8B schedule, not installed in Match or the content digest.
- * B6-Q1/Q2/Q3 are provisional project conventions; see docs/M8_B6_HANDOFF.md.
+/** Authoritative M8B schedule, installed in Match and the content digest.
+ * B6-Q1/Q2/Q3 are approved project conventions; see docs/M8_B6_HANDOFF.md.
  * Encounter IDs are from M8B_ENCOUNTERS §2, without importing B7 monster content.
  */
 export const ROUND_CATALOG: readonly RoundDefinition[] = freezeContent<RoundDefinition[]>([

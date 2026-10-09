@@ -1,14 +1,9 @@
-import { freezeContent } from './content/freeze';
-import type { EconomyStreak } from './economy';
-import { ECONOMY_RULES } from './match-rules';
+import { planRoundEconomy, type EconomyStreak, type RoundEconomyInput, type RoundEconomyPlan } from './economy';
+import { MATCH_RULES, OPENING_ECONOMY_RULES } from './match-rules';
 import { grantXp } from './progression';
 import { getCatalogRoundById } from './round-selectors';
 
-/** OPENING §2: initialization data only; no Match creation or unit allocation. */
-export const OPENING_INITIAL_STATE = freezeContent({
-  gold:0, level:1, xp:0, hp:100,
-  unit:{definitionId:'irelia',id:'unit-1',starLevel:1,cell:{col:1,row:4}}, nextUnitSeq:2,
-} as const);
+export { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from './match-rules';
 
 export interface OpeningEconomyInput {
   readonly roundId: string;
@@ -51,14 +46,28 @@ export function planOpeningEconomy(input: OpeningEconomyInput): OpeningEconomyPl
     || (kind === null) !== (count === 0)) throw new RangeError('Invalid opening streak');
 
   // OPENING §3.1: approved 2/3/5G and 2/2/0XP, independent of combat outcome.
-  const base = round.subround === 2 ? 2 : round.subround === 3 ? 3 : 5;
-  const naturalXp = round.subround === 4 ? 0 : 2;
+  const parameters = OPENING_ECONOMY_RULES.rounds[round.roundId as keyof typeof OPENING_ECONOMY_RULES.rounds];
+  if (!parameters) throw new RangeError('Missing opening economy parameters');
+  const {baseGold:base,naturalXp} = parameters;
   const goldAfter = input.gold + base;
   if (!Number.isSafeInteger(goldAfter)) throw new RangeError('Invalid settled opening gold');
   return {
     kind:'opening', roundId:round.roundId, income:base,
-    incomeBreakdown:{base,win:0,interest:0,streak:0}, goldAfter, naturalXp,
-    playerDamage:input.result === 'playerWin' ? 0 : ECONOMY_RULES.pveFailureDamage,
+    incomeBreakdown:{base,win:OPENING_ECONOMY_RULES.victoryGold,interest:OPENING_ECONOMY_RULES.interest,streak:OPENING_ECONOMY_RULES.streakGold}, goldAfter, naturalXp,
+    playerDamage:input.result === 'playerWin' ? 0 : OPENING_ECONOMY_RULES.pveFailureDamage,
     streakAfter:{...input.streak}, progression:grantXp(input.level,input.xp,naturalXp),
   };
+}
+
+/** The shared settlement/restore boundary uses catalog identity, never an ordinal formula. */
+export function planCatalogRoundEconomy(input: Omit<RoundEconomyInput, 'stage' | 'roundKind'> & {readonly roundId:string}): RoundEconomyPlan {
+  const round = getCatalogRoundById(input.roundId);
+  const opening = planOpeningEconomy(input);
+  if (opening.kind === 'existing-rules') return planRoundEconomy({...input,stage:round.stage,roundKind:round.kind});
+  if (!Number.isSafeInteger(input.hp) || input.hp < 0 || input.hp > MATCH_RULES.initialHp
+    || !Number.isSafeInteger(input.enemySurvivors) || input.enemySurvivors < 0) throw new RangeError('Invalid opening resources');
+  const hpAfter = Math.max(0,input.hp-opening.playerDamage);
+  return {goldAfter:opening.goldAfter,hpAfter,income:opening.income,incomeBreakdown:opening.incomeBreakdown,
+    interestBasis:input.gold,streakAfter:opening.streakAfter,baseDamage:OPENING_ECONOMY_RULES.pveFailureDamage,
+    playerDamage:opening.playerDamage,hpLost:input.hp-hpAfter,progression:opening.progression};
 }
