@@ -1,7 +1,8 @@
 import type { Unit, StarLevel } from './unit-types';
 import { M5_UNIT_DEFINITIONS } from './units';
-import { FINAL_ROUND, ROUND_PREPARATION_RULES, getRoundKind, getStageRound } from './round-schedule';
+import { FINAL_ROUND, getRoundKind, getStageRound } from './round-schedule';
 import { freezeContent } from './content/freeze';
+import { COMPILED_NEUTRAL_ENCOUNTERS } from './neutral-encounter-compiler';
 import { ROUND_CATALOG } from './content/round-catalog';
 /** Frontline precedes backline. Duplicate fill at stage two is intentional and never counts twice for traits. */
 export const ENEMY_TEMPLATES=freezeContent([
@@ -20,9 +21,7 @@ function templateIndex(round:number):number {
 function idsForRound(round:number):readonly string[] {
   const {stage,round:sub}=getStageRound(round),kind=getRoundKind(round);
   if(kind==='supply') return [];
-  // Stage 1 deliberately uses an existing neutral placeholder until B7 integration.
-  if(stage===1) return [ROUND_PREPARATION_RULES.openingEnemyPlaceholder];
-  if(kind==='pve') return Array.from({length:stage<4?3:stage===4?4:1},()=>`neutral-stage-${stage}`);
+  if(kind==='pve') return [];
   const count=stage===2?(sub>=5?4:3):stage+2;
   let pool:readonly string[]=ENEMY_TEMPLATES[templateIndex(round)];
   if(stage===2) pool=pool.filter(id=>M5_UNIT_DEFINITIONS[id].cost<=2);
@@ -30,9 +29,14 @@ function idsForRound(round:number):readonly string[] {
 }
 export function createRoundEnemies(round:number):readonly Unit[] {
   const {stage}=getStageRound(round),kind=getRoundKind(round);
+  if(kind==='pve') {
+    const encounter=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.roundId===ROUND_CATALOG[round-1].roundId);
+    if(!encounter) throw new RangeError('Missing approved neutral encounter');
+    return encounter.deployment;
+  }
   return idsForRound(round).map((definitionId,index)=>({
     id:round===1?`enemy-${index+1}`:`enemy-r${round}-${index+1}`,definitionId,team:'enemy',
-    starLevel:(kind==='pve'?1:stage>=5?2:stage===4&&index<3?2:stage===3&&index===0?2:1) as StarLevel,
+    starLevel:(stage>=5?2:stage===4&&index<3?2:stage===3&&index===0?2:1) as StarLevel,
     location:{kind:'board',cell:{col:ENEMY_POSITIONS[index][0],row:ENEMY_POSITIONS[index][1]}},
   }));
 }

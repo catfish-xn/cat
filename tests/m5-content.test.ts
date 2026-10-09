@@ -106,7 +106,7 @@ describe('M5 finite campaign content',()=>{
     expect(createRoundEnemies(getCatalogRoundById('2-1').ordinal)).toHaveLength(3);expect(createRoundEnemies(getCatalogRoundById('2-5').ordinal)).toHaveLength(4);
     expect(createRoundEnemies(getCatalogRoundById('3-1').ordinal)).toHaveLength(5);expect(createRoundEnemies(getCatalogRoundById('4-1').ordinal)).toHaveLength(6);
     expect(createRoundEnemies(getCatalogRoundById('5-1').ordinal)).toHaveLength(7);expect(createRoundEnemies(getCatalogRoundById('6-1').ordinal)).toHaveLength(8);
-    expect(createRoundEnemies(getCatalogRoundById('2-4').ordinal)).toEqual([]);expect(createRoundEnemies(getCatalogRoundById('6-7').ordinal).map(u=>u.definitionId)).toEqual(['neutral-stage-6']);
+    expect(createRoundEnemies(getCatalogRoundById('2-4').ordinal)).toEqual([]);expect(createRoundEnemies(getCatalogRoundById('6-7').ordinal).map(u=>u.definitionId)).toEqual(['pve-rift-herald']);
     expect(createRoundEnemies(getCatalogRoundById('4-1').ordinal).map(u=>u.starLevel)).toEqual([2,2,2,1,1,1]);
     for(const {ordinal:round} of ROUND_CATALOG) {
       expect(getEnemyGrowthBps(round)).toBe(0);

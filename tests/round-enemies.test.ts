@@ -14,7 +14,8 @@ describe('deterministic round enemy templates', () => {
       const cells = new Set<string>();
       for (const unit of units) {
         expect(unit.team).toBe('enemy');
-        expect(unit.id.startsWith('enemy-')).toBe(true);
+        if (ROUND_CATALOG[round-1].kind==='pve') expect(JSON.parse(unit.id)).toEqual(['pve',ROUND_CATALOG[round-1].roundId,unit.encounterId,expect.any(String)]);
+        else expect(unit.id.startsWith('enemy-')).toBe(true);
         expect(UNIT_DEFINITIONS[unit.definitionId]).toBeDefined();
         expect(unit.location.kind).toBe('board');
         if (unit.location.kind !== 'board') throw new Error('Enemy is not deployed');
@@ -27,7 +28,7 @@ describe('deterministic round enemy templates', () => {
   it('uses the frozen stage populations and supply/PvE boundaries (M5 R7)', () => {
     expect(['2-1','2-2','2-3','2-4','2-5','2-6','2-7','3-2','3-3'].map(id => createRoundEnemies(getCatalogRoundById(id).ordinal).length)).toEqual([3,3,3,0,4,4,3,5,5]);
     expect(['4-1','5-1','6-1'].map(id => createRoundEnemies(getCatalogRoundById(id).ordinal).length)).toEqual([6,7,8]);
-    expect(createRoundEnemies(getCatalogRoundById('6-7').ordinal).map(unit => [unit.definitionId, unit.starLevel])).toEqual([['neutral-stage-6',1]]);
+    expect(createRoundEnemies(getCatalogRoundById('6-7').ordinal).map(unit => [unit.definitionId, unit.starLevel])).toEqual([['pve-rift-herald',1]]);
     expect(createRoundEnemies(2).map(unit => unit.id)).not.toEqual(createRoundEnemies(1).map(unit => unit.id));
     expect(() => createRoundEnemies(ROUND_CATALOG.length+1)).toThrow(RangeError);
   });

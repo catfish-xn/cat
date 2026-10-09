@@ -1,3 +1,5 @@
+import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
+import { attackInterval } from './m8/stats';
 import { validateNeutralInputs } from './m8/unit-inputs';
 import { validateManaDefinition } from './m8/mana';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
@@ -580,8 +582,18 @@ export const NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> =
     "traits": []
   }
 });
+/** ENCOUNTERS §3 permits cost 1 solely as a legacy display-type adapter, never an acquisition price.
+ * The authoritative neutral catalog has no cost; all purchasing/grants remain M5-catalog-only. */
+export const M8_NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = freezeContent(Object.fromEntries(
+  Object.values(NEUTRAL_DEFINITIONS).map(d => [d.id, {
+    id:d.id,name:d.name,symbol:'兽',color:9993582,cost:1,traits:[],unitKind:d.unitKind,monsterFamily:d.monsterFamily,
+    baseStats:{health:d.health,attack:d.attack,armor:d.armor,magicResist:d.magicResist},
+    attackRange:d.attackRange,attackIntervalTicks:attackInterval(d.baseAttackSpeedBps,0),baseAttackSpeedBps:d.baseAttackSpeedBps,
+    initialMana:d.initialMana,maxMana:d.maxMana,abilityId:neutralAbilityId(d),
+    baseCritChanceBps:d.baseCritChanceBps,baseCritMultiplierBps:d.baseCritMultiplierBps,
+  }])));
 export const M5_UNIT_IDS: readonly string[] = Object.freeze(Object.keys(M5_UNIT_DEFINITIONS).sort());
-export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS});
+export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
 /** Reject malformed IDs and fields without silently changing shop sampling. */
 export function validateUnitDefinitions(definitions: Readonly<Record<string,UnitDefinition>> = UNIT_DEFINITIONS, catalogByCost = SHOP_CATALOG_BY_COST): void {
   const integerAtLeast = (value:number,minimum:number) => Number.isSafeInteger(value) && value >= minimum;

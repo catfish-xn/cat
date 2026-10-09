@@ -1,0 +1,1673 @@
+{
+  "baseline": {
+    "path": "/tmp/b7-merge-validation",
+    "tree": "bda9a75e20cdee8f40860704a89c301d2a27b886",
+    "archivedGoldenSha256": "983806603e27718f263d280c0a4fd42740226bca1e56163f9b5d214ef8ec5fac"
+  },
+  "method": "Existing generate-m5-route.run with own Vite SSR Match modules, seed 42, normal commands, retainStates=true; no route state changes, fixtures or repository files written.",
+  "sourceEquality": {
+    "scripts/generate-m5-route.cjs": {
+      "equal": true,
+      "beforeSha256": "eefbc3c1ebab30e8c5fe3e1e1af4d56364e65873afddad5fc13104150291c8e5",
+      "afterSha256": "eefbc3c1ebab30e8c5fe3e1e1af4d56364e65873afddad5fc13104150291c8e5"
+    },
+    "tests/fixtures/m5/oracle.cjs": {
+      "equal": true,
+      "beforeSha256": "1efff9dd3c68c2a26dd0b7648fbf8f294e2683e1931d08a0b3e7fd9fb6179fdb",
+      "afterSha256": "1efff9dd3c68c2a26dd0b7648fbf8f294e2683e1931d08a0b3e7fd9fb6179fdb"
+    },
+    "src/simulation/combat-s13.ts": {
+      "equal": true,
+      "beforeSha256": "4f9cd935314976cd0c72f3389657902e1358a0c3573e25b55ddd40678778ee02",
+      "afterSha256": "4f9cd935314976cd0c72f3389657902e1358a0c3573e25b55ddd40678778ee02"
+    },
+    "src/simulation/combat-s13-abilities.ts": {
+      "equal": true,
+      "beforeSha256": "ebccefa914660fbfd1ddda2a7ed35d89fb20c0bcba945a7e1033b643f9013054",
+      "afterSha256": "ebccefa914660fbfd1ddda2a7ed35d89fb20c0bcba945a7e1033b643f9013054"
+    },
+    "src/simulation/strategy-snapshot.ts": {
+      "equal": true,
+      "beforeSha256": "7bc7334e79032ffce664777487e433ab6d9cd35a165b8dc49e0e50fde699affe",
+      "afterSha256": "7bc7334e79032ffce664777487e433ab6d9cd35a165b8dc49e0e50fde699affe"
+    }
+  },
+  "checks": {
+    "baselineRoutesExactlyMatchArchivedGolden": true,
+    "allCurrentEventHashesMatchNewGolden": true,
+    "allNormalCommandsUnchanged": true,
+    "allOracleAssertionsPassed": true,
+    "all38SettlementsPerRouteEqualExceptCombatTicks": true,
+    "allEconomicAndBuildCheckpointsEqual": true,
+    "allRewardReceiptsEqual": true,
+    "allMatchRngStreamsEqualAfterEveryCommand": true,
+    "noUnexpectedEventChanges": true
+  },
+  "sources": [
+    {
+      "file": "src/simulation/round-enemies.ts",
+      "lines": "30-40",
+      "fact": "Only PvE rounds take compiled neutral deployment; PvP roster projection remains unchanged."
+    },
+    {
+      "file": "src/simulation/combat-s13.ts",
+      "lines": "292-303",
+      "fact": "Killing, nonredirected Tristana overkill with a next enemy queues ricochet, increments runtime permanent AD and emits growth."
+    },
+    {
+      "file": "src/simulation/match.ts",
+      "lines": "202-210",
+      "fact": "Settlement adds runtime permanent AD to persistentGrowth once."
+    },
+    {
+      "file": "src/simulation/strategy-snapshot.ts",
+      "lines": "92-95",
+      "fact": "Next snapshot compiles persistentGrowth into the Tristana ability AD-percent source."
+    },
+    {
+      "file": "src/simulation/neutral-receipts.ts",
+      "lines": "12-28",
+      "fact": "Receipt adapter returns the step unchanged without neutralReceipts; otherwise changes only receipt state, never events."
+    }
+  ],
+  "routes": {
+    "cannon": {
+      "commands": {
+        "equal": true,
+        "count": 158,
+        "sha256": "e24fd8539ecc578a4cd669ad0d7db913c20fe8a1a1327a26d7b084faee717978"
+      },
+      "summary": {
+        "before": {
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "build": "cannon",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 89,
+          "gold": 212,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 10471,
+          "commands": 158
+        },
+        "after": {
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "build": "cannon",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 89,
+          "gold": 212,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 10324,
+          "commands": 158
+        }
+      },
+      "oracle": {
+        "bothPassed": true,
+        "costs": {
+          "purchases": 56,
+          "sales": 0,
+          "saleLoss": 0,
+          "rerolls": 32,
+          "xp": 84,
+          "anomaly": 1,
+          "income": 377,
+          "rewards": 8
+        },
+        "all38NonTimingSettlementsEqual": true,
+        "allEconomicBuildCheckpointsEqual": true,
+        "scheduleReceiptsEqual": true,
+        "componentGrants": 5,
+        "allFourMatchRngStreamsEqualAfterEveryCommand": true
+      },
+      "changedPvE": [
+        {
+          "round": 1,
+          "roundId": "1-2",
+          "ticks": {
+            "before": 308,
+            "after": 164
+          },
+          "eventCount": {
+            "before": 146,
+            "after": 120
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "targetChanged",
+              "tick": 1,
+              "unitId": "enemy-1",
+              "before": null,
+              "after": "unit-1"
+            },
+            "after": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m01\"]",
+              "from": {
+                "col": 2,
+                "row": 3
+              },
+              "to": {
+                "col": 2,
+                "row": 4
+              }
+            }
+          }
+        },
+        {
+          "round": 2,
+          "roundId": "1-3",
+          "ticks": {
+            "before": 377,
+            "after": 274
+          },
+          "eventCount": {
+            "before": 203,
+            "after": 174
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "targetChanged",
+              "tick": 1,
+              "unitId": "enemy-r2-1",
+              "before": null,
+              "after": "unit-1"
+            },
+            "after": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "[\"pve\",\"1-3\",\"minions-b-v1\",\"m01\"]",
+              "from": {
+                "col": 2,
+                "row": 3
+              },
+              "to": {
+                "col": 2,
+                "row": 4
+              }
+            }
+          }
+        },
+        {
+          "round": 3,
+          "roundId": "1-4",
+          "ticks": {
+            "before": 342,
+            "after": 445
+          },
+          "eventCount": {
+            "before": 153,
+            "after": 320
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "targetChanged",
+              "tick": 1,
+              "unitId": "enemy-r3-1",
+              "before": null,
+              "after": "unit-1"
+            },
+            "after": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "[\"pve\",\"1-4\",\"minions-c-v1\",\"m01\"]",
+              "from": {
+                "col": 2,
+                "row": 3
+              },
+              "to": {
+                "col": 2,
+                "row": 4
+              }
+            }
+          }
+        },
+        {
+          "round": 10,
+          "roundId": "2-7",
+          "ticks": {
+            "before": 110,
+            "after": 122
+          },
+          "eventCount": {
+            "before": 151,
+            "after": 167
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "enemy-r10-3",
+              "from": {
+                "col": 5,
+                "row": 3
+              },
+              "to": {
+                "col": 5,
+                "row": 4
+              }
+            },
+            "after": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "[\"pve\",\"2-7\",\"krugs-v1\",\"k03\"]",
+              "from": {
+                "col": 5,
+                "row": 3
+              },
+              "to": {
+                "col": 5,
+                "row": 4
+              }
+            }
+          }
+        },
+        {
+          "round": 17,
+          "roundId": "3-7",
+          "ticks": {
+            "before": 137,
+            "after": 137
+          },
+          "eventCount": {
+            "before": 265,
+            "after": 300
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "unit-18",
+              "from": {
+                "col": 0,
+                "row": 4
+              },
+              "to": {
+                "col": 0,
+                "row": 3
+              }
+            },
+            "after": {
+              "type": "movement",
+              "tick": 0,
+              "unitId": "[\"pve\",\"3-7\",\"wolves-v1\",\"w00\"]",
+              "from": {
+                "col": 3,
+                "row": 2
+              },
+              "to": {
+                "col": 0,
+                "row": 7
+              }
+            }
+          }
+        },
+        {
+          "round": 24,
+          "roundId": "4-7",
+          "ticks": {
+            "before": 115,
+            "after": 101
+          },
+          "eventCount": {
+            "before": 295,
+            "after": 329
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "enemy-r24-4",
+              "from": {
+                "col": 0,
+                "row": 2
+              },
+              "to": {
+                "col": 0,
+                "row": 3
+              }
+            },
+            "after": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+              "from": {
+                "col": 3,
+                "row": 2
+              },
+              "to": {
+                "col": 3,
+                "row": 3
+              }
+            }
+          }
+        },
+        {
+          "round": 31,
+          "roundId": "5-7",
+          "ticks": {
+            "before": 75,
+            "after": 74
+          },
+          "eventCount": {
+            "before": 218,
+            "after": 236
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "unit-13",
+              "from": {
+                "col": 5,
+                "row": 4
+              },
+              "to": {
+                "col": 4,
+                "row": 4
+              }
+            },
+            "after": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "unit-1",
+              "from": {
+                "col": 1,
+                "row": 4
+              },
+              "to": {
+                "col": 2,
+                "row": 4
+              }
+            }
+          }
+        },
+        {
+          "round": 38,
+          "roundId": "6-7",
+          "ticks": {
+            "before": 117,
+            "after": 117
+          },
+          "eventCount": {
+            "before": 338,
+            "after": 342
+          },
+          "firstDifference": {
+            "index": 0,
+            "before": {
+              "type": "movement",
+              "tick": 1,
+              "unitId": "unit-13",
+              "from": {
+                "col": 5,
+                "row": 4
+              },
+              "to": {
+                "col": 4,
+                "row": 4
+              }
+            },
+            "after": {
+              "type": "movement",
+              "tick": 0,
+              "unitId": "[\"pve\",\"6-7\",\"rift-herald-v1\",\"h01\"]",
+              "from": {
+                "col": 3,
+                "row": 1
+              },
+              "to": {
+                "col": 2,
+                "row": 5
+              }
+            }
+          }
+        }
+      ],
+      "changedPvP": [
+        25,
+        26,
+        27,
+        29,
+        30,
+        32,
+        34,
+        36,
+        37
+      ],
+      "pvpStartsIdentical": [
+        4,
+        5,
+        6,
+        8,
+        9,
+        11,
+        12,
+        13,
+        15,
+        16,
+        18,
+        19,
+        20,
+        22,
+        23
+      ]
+    },
+    "sniper": {
+      "commands": {
+        "equal": true,
+        "count": 160,
+        "sha256": "c12d29c6c6fb01e677fb610b76388da41926ac5795c3e929bb0f49be08331498"
+      },
+      "summary": {
+        "before": {
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "build": "sniper",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 60,
+          "gold": 222,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 13069,
+          "commands": 160
+        },
+        "after": {
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "build": "sniper",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 60,
+          "gold": 222,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 12973,
+          "commands": 160
+        }
+      },
+      "oracle": {
+        "bothPassed": true,
+        "costs": {
+          "purchases": 53,
+          "sales": 0,
+          "saleLoss": 0,
+          "rerolls": 40,
+          "xp": 84,
+          "anomaly": 1,
+          "income": 392,
+          "rewards": 8
+        },
+        "all38NonTimingSettlementsEqual": true,
+        "allEconomicBuildCheckpointsEqual": true,
+        "scheduleReceiptsEqual": true,
+        "componentGrants": 5,
+        "allFourMatchRngStreamsEqualAfterEveryCommand": true
+      },
+      "changedPvE": [
+        {
+          "round": 1,
+          "roundId": "1-2",
+          "ticks": {
+            "before": 308,
+            "after": 164
+          },
+          "eventCount": {
+            "before": 146,
+            "after": 120
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "targetChanged",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 2,
+          "roundId": "1-3",
+          "ticks": {
+            "before": 118,
+            "after": 89
+          },
+          "eventCount": {
+            "before": 83,
+            "after": 80
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 3,
+          "roundId": "1-4",
+          "ticks": {
+            "before": 89,
+            "after": 117
+          },
+          "eventCount": {
+            "before": 67,
+            "after": 148
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 10,
+          "roundId": "2-7",
+          "ticks": {
+            "before": 105,
+            "after": 117
+          },
+          "eventCount": {
+            "before": 162,
+            "after": 180
+          },
+          "firstDifference": {
+            "index": 1,
+            "beforeType": "targetChanged",
+            "afterType": "targetChanged",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 17,
+          "roundId": "3-7",
+          "ticks": {
+            "before": 138,
+            "after": 154
+          },
+          "eventCount": {
+            "before": 294,
+            "after": 365
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 0
+          }
+        },
+        {
+          "round": 24,
+          "roundId": "4-7",
+          "ticks": {
+            "before": 169,
+            "after": 163
+          },
+          "eventCount": {
+            "before": 464,
+            "after": 558
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 31,
+          "roundId": "5-7",
+          "ticks": {
+            "before": 188,
+            "after": 207
+          },
+          "eventCount": {
+            "before": 428,
+            "after": 453
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 38,
+          "roundId": "6-7",
+          "ticks": {
+            "before": 269,
+            "after": 277
+          },
+          "eventCount": {
+            "before": 646,
+            "after": 630
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 0
+          }
+        }
+      ],
+      "changedPvP": [],
+      "pvpStartsIdentical": [
+        4,
+        5,
+        6,
+        8,
+        9,
+        11,
+        12,
+        13,
+        15,
+        16,
+        18,
+        19,
+        20,
+        22,
+        23,
+        25,
+        26,
+        27,
+        29,
+        30,
+        32,
+        33,
+        34,
+        36,
+        37
+      ]
+    },
+    "mage": {
+      "commands": {
+        "equal": true,
+        "count": 157,
+        "sha256": "fee2a8e15b05333f5c04f8685efe9aea6258a87bc83d0a445f7658509c961303"
+      },
+      "summary": {
+        "before": {
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "build": "mage",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 44,
+          "gold": 250,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 12912,
+          "commands": 157
+        },
+        "after": {
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "build": "mage",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 44,
+          "gold": 250,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 12814,
+          "commands": 157
+        }
+      },
+      "oracle": {
+        "bothPassed": true,
+        "costs": {
+          "purchases": 50,
+          "sales": 0,
+          "saleLoss": 0,
+          "rerolls": 22,
+          "xp": 84,
+          "anomaly": 1,
+          "income": 399,
+          "rewards": 8
+        },
+        "all38NonTimingSettlementsEqual": true,
+        "allEconomicBuildCheckpointsEqual": true,
+        "scheduleReceiptsEqual": true,
+        "componentGrants": 5,
+        "allFourMatchRngStreamsEqualAfterEveryCommand": true
+      },
+      "changedPvE": [
+        {
+          "round": 1,
+          "roundId": "1-2",
+          "ticks": {
+            "before": 308,
+            "after": 164
+          },
+          "eventCount": {
+            "before": 146,
+            "after": 120
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "targetChanged",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 2,
+          "roundId": "1-3",
+          "ticks": {
+            "before": 147,
+            "after": 147
+          },
+          "eventCount": {
+            "before": 121,
+            "after": 152
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "targetChanged",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 3,
+          "roundId": "1-4",
+          "ticks": {
+            "before": 118,
+            "after": 147
+          },
+          "eventCount": {
+            "before": 101,
+            "after": 203
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "targetChanged",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 10,
+          "roundId": "2-7",
+          "ticks": {
+            "before": 138,
+            "after": 147
+          },
+          "eventCount": {
+            "before": 212,
+            "after": 225
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 17,
+          "roundId": "3-7",
+          "ticks": {
+            "before": 106,
+            "after": 117
+          },
+          "eventCount": {
+            "before": 189,
+            "after": 255
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 0
+          }
+        },
+        {
+          "round": 24,
+          "roundId": "4-7",
+          "ticks": {
+            "before": 137,
+            "after": 127
+          },
+          "eventCount": {
+            "before": 369,
+            "after": 421
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 31,
+          "roundId": "5-7",
+          "ticks": {
+            "before": 199,
+            "after": 195
+          },
+          "eventCount": {
+            "before": 378,
+            "after": 423
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 38,
+          "roundId": "6-7",
+          "ticks": {
+            "before": 292,
+            "after": 303
+          },
+          "eventCount": {
+            "before": 536,
+            "after": 589
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 0
+          }
+        }
+      ],
+      "changedPvP": [],
+      "pvpStartsIdentical": [
+        4,
+        5,
+        6,
+        8,
+        9,
+        11,
+        12,
+        13,
+        15,
+        16,
+        18,
+        19,
+        20,
+        22,
+        23,
+        25,
+        26,
+        27,
+        29,
+        30,
+        32,
+        33,
+        34,
+        36,
+        37
+      ]
+    },
+    "sniper-caitlyn": {
+      "commands": {
+        "equal": true,
+        "count": 163,
+        "sha256": "1a5b9df444b21a36b10be65351fb9d5b56a691aec204ba236a944a2d87849b92"
+      },
+      "summary": {
+        "before": {
+          "caitlynBattles": 12,
+          "caitlynCasts": 22,
+          "build": "sniper-caitlyn",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 61,
+          "gold": 217,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 12692,
+          "commands": 163
+        },
+        "after": {
+          "caitlynBattles": 12,
+          "caitlynCasts": 22,
+          "build": "sniper-caitlyn",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 38,
+          "hp": 61,
+          "gold": 217,
+          "formedAt": null,
+          "formedBattles": 0,
+          "boundBattles": 14,
+          "transitioned": false,
+          "ticks": 12583,
+          "commands": 163
+        }
+      },
+      "oracle": {
+        "bothPassed": true,
+        "costs": {
+          "purchases": 58,
+          "sales": 0,
+          "saleLoss": 0,
+          "rerolls": 40,
+          "xp": 84,
+          "anomaly": 1,
+          "income": 392,
+          "rewards": 8
+        },
+        "all38NonTimingSettlementsEqual": true,
+        "allEconomicBuildCheckpointsEqual": true,
+        "scheduleReceiptsEqual": true,
+        "componentGrants": 5,
+        "allFourMatchRngStreamsEqualAfterEveryCommand": true
+      },
+      "changedPvE": [
+        {
+          "round": 1,
+          "roundId": "1-2",
+          "ticks": {
+            "before": 308,
+            "after": 164
+          },
+          "eventCount": {
+            "before": 146,
+            "after": 120
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "targetChanged",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 2,
+          "roundId": "1-3",
+          "ticks": {
+            "before": 118,
+            "after": 89
+          },
+          "eventCount": {
+            "before": 83,
+            "after": 80
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 3,
+          "roundId": "1-4",
+          "ticks": {
+            "before": 89,
+            "after": 117
+          },
+          "eventCount": {
+            "before": 67,
+            "after": 148
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 10,
+          "roundId": "2-7",
+          "ticks": {
+            "before": 105,
+            "after": 117
+          },
+          "eventCount": {
+            "before": 162,
+            "after": 180
+          },
+          "firstDifference": {
+            "index": 1,
+            "beforeType": "targetChanged",
+            "afterType": "targetChanged",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 17,
+          "roundId": "3-7",
+          "ticks": {
+            "before": 138,
+            "after": 154
+          },
+          "eventCount": {
+            "before": 294,
+            "after": 365
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 0
+          }
+        },
+        {
+          "round": 24,
+          "roundId": "4-7",
+          "ticks": {
+            "before": 169,
+            "after": 163
+          },
+          "eventCount": {
+            "before": 464,
+            "after": 558
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 31,
+          "roundId": "5-7",
+          "ticks": {
+            "before": 171,
+            "after": 176
+          },
+          "eventCount": {
+            "before": 396,
+            "after": 402
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 1
+          }
+        },
+        {
+          "round": 38,
+          "roundId": "6-7",
+          "ticks": {
+            "before": 217,
+            "after": 226
+          },
+          "eventCount": {
+            "before": 505,
+            "after": 506
+          },
+          "firstDifference": {
+            "index": 0,
+            "beforeType": "movement",
+            "afterType": "movement",
+            "beforeTick": 1,
+            "afterTick": 0
+          }
+        }
+      ],
+      "changedPvP": [],
+      "pvpStartsIdentical": [
+        4,
+        5,
+        6,
+        8,
+        9,
+        11,
+        12,
+        13,
+        15,
+        16,
+        18,
+        19,
+        20,
+        22,
+        23,
+        25,
+        26,
+        27,
+        29,
+        30,
+        32,
+        33,
+        34,
+        36,
+        37
+      ]
+    }
+  },
+  "cannonAttribution": {
+    "unitId": "unit-4",
+    "definitionId": "tristana",
+    "firstPersistentDivergence": {
+      "round": 24,
+      "roundId": "4-7",
+      "kind": "pve",
+      "started": {
+        "before": [
+          {
+            "unitId": "unit-4",
+            "attackDamageBps": 1000
+          }
+        ],
+        "after": [
+          {
+            "unitId": "unit-4",
+            "attackDamageBps": 1000
+          }
+        ]
+      },
+      "growthEvents": {
+        "before": [],
+        "after": [
+          {
+            "type": "growth",
+            "tick": 77,
+            "unitId": "unit-4",
+            "amountBps": 125,
+            "totalBps": 125,
+            "domain": "combat",
+            "combatId": "round-24",
+            "eventSeq": 225
+          }
+        ]
+      },
+      "ended": {
+        "before": [
+          {
+            "unitId": "unit-4",
+            "attackDamageBps": 1000
+          }
+        ],
+        "after": [
+          {
+            "unitId": "unit-4",
+            "attackDamageBps": 1125
+          }
+        ]
+      }
+    },
+    "conclusion": "One extra +125 bps Tristana growth event in B7 PvE 4-7 persists thereafter. All later growth events match exactly; all PvP preparation and seeds match; all differing combat-start leaf values are only Tristana persistent AD source, aggregate AD bps, and derived attack. No PvP simulation change is needed to explain the observed hashes.",
+    "pvpInputDifferences": [
+      {
+        "round": 25,
+        "roundId": "5-1",
+        "preparationEqual": true,
+        "battleSeed": 1448697402,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            116,
+            117
+          ],
+          "sources.0.effect.bps": [
+            1000,
+            1125
+          ],
+          "attackDamagePercentBps": [
+            5500,
+            5625
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 26,
+        "roundId": "5-2",
+        "preparationEqual": true,
+        "battleSeed": 1848498257,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            117,
+            118
+          ],
+          "sources.0.effect.bps": [
+            1125,
+            1250
+          ],
+          "attackDamagePercentBps": [
+            5625,
+            5750
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 27,
+        "roundId": "5-3",
+        "preparationEqual": true,
+        "battleSeed": 953955708,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            117,
+            118
+          ],
+          "sources.0.effect.bps": [
+            1125,
+            1250
+          ],
+          "attackDamagePercentBps": [
+            5625,
+            5750
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 29,
+        "roundId": "5-5",
+        "preparationEqual": true,
+        "battleSeed": 369693355,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            118,
+            119
+          ],
+          "sources.0.effect.bps": [
+            1250,
+            1375
+          ],
+          "attackDamagePercentBps": [
+            5750,
+            5875
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 30,
+        "roundId": "5-6",
+        "preparationEqual": true,
+        "battleSeed": 3406301198,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            118,
+            119
+          ],
+          "sources.0.effect.bps": [
+            1250,
+            1375
+          ],
+          "attackDamagePercentBps": [
+            5750,
+            5875
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 32,
+        "roundId": "6-1",
+        "preparationEqual": true,
+        "battleSeed": 932348528,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            119,
+            120
+          ],
+          "sources.0.effect.bps": [
+            1375,
+            1500
+          ],
+          "attackDamagePercentBps": [
+            5875,
+            6000
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 33,
+        "roundId": "6-2",
+        "preparationEqual": true,
+        "battleSeed": 734540559,
+        "TristanaStrategyChanges": {
+          "sources.0.effect.bps": [
+            1500,
+            1625
+          ],
+          "attackDamagePercentBps": [
+            6000,
+            6125
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 34,
+        "roundId": "6-3",
+        "preparationEqual": true,
+        "battleSeed": 912819490,
+        "TristanaStrategyChanges": {
+          "sources.0.effect.bps": [
+            1500,
+            1625
+          ],
+          "attackDamagePercentBps": [
+            6000,
+            6125
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 36,
+        "roundId": "6-5",
+        "preparationEqual": true,
+        "battleSeed": 2770027033,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            120,
+            121
+          ],
+          "sources.0.effect.bps": [
+            1625,
+            1750
+          ],
+          "attackDamagePercentBps": [
+            6125,
+            6250
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      },
+      {
+        "round": 37,
+        "roundId": "6-6",
+        "preparationEqual": true,
+        "battleSeed": 4019733668,
+        "TristanaStrategyChanges": {
+          "stats.attack": [
+            120,
+            121
+          ],
+          "sources.0.effect.bps": [
+            1625,
+            1750
+          ],
+          "attackDamagePercentBps": [
+            6125,
+            6250
+          ]
+        },
+        "combatUnitChangesExactlyMirrorStrategy": true
+      }
+    ],
+    "firstEventDifferences": [
+      {
+        "round": 25,
+        "roundId": "5-1",
+        "tick": 1,
+        "eventSeq": 43,
+        "target": "enemy-r25-1",
+        "raw": [
+          116,
+          117
+        ],
+        "mitigated": [
+          53,
+          54
+        ],
+        "critical": false,
+        "combatTicks": 277,
+        "eventCounts": {
+          "before": 1076,
+          "after": 1076
+        }
+      },
+      {
+        "round": 26,
+        "roundId": "5-2",
+        "tick": 1,
+        "eventSeq": 43,
+        "target": "enemy-r26-1",
+        "raw": [
+          117,
+          118
+        ],
+        "mitigated": [
+          41,
+          42
+        ],
+        "critical": false,
+        "combatTicks": 307,
+        "eventCounts": {
+          "before": 1353,
+          "after": 1353
+        }
+      },
+      {
+        "round": 27,
+        "roundId": "5-3",
+        "tick": 1,
+        "eventSeq": 44,
+        "target": "enemy-r27-1",
+        "raw": [
+          117,
+          118
+        ],
+        "mitigated": [
+          54,
+          54
+        ],
+        "critical": false,
+        "combatTicks": 279,
+        "eventCounts": {
+          "before": 1178,
+          "after": 1178
+        }
+      },
+      {
+        "round": 29,
+        "roundId": "5-5",
+        "tick": 1,
+        "eventSeq": 43,
+        "target": "enemy-r29-1",
+        "raw": [
+          118,
+          119
+        ],
+        "mitigated": [
+          54,
+          55
+        ],
+        "critical": false,
+        "combatTicks": 194,
+        "eventCounts": {
+          "before": 1000,
+          "after": 1000
+        }
+      },
+      {
+        "round": 30,
+        "roundId": "5-6",
+        "tick": 1,
+        "eventSeq": 43,
+        "target": "enemy-r30-1",
+        "raw": [
+          118,
+          119
+        ],
+        "mitigated": [
+          42,
+          42
+        ],
+        "critical": false,
+        "combatTicks": 273,
+        "eventCounts": {
+          "before": 1330,
+          "after": 1330
+        }
+      },
+      {
+        "round": 32,
+        "roundId": "6-1",
+        "tick": 1,
+        "eventSeq": 47,
+        "target": "enemy-r32-1",
+        "raw": [
+          119,
+          120
+        ],
+        "mitigated": [
+          55,
+          55
+        ],
+        "critical": false,
+        "combatTicks": 263,
+        "eventCounts": {
+          "before": 1371,
+          "after": 1371
+        }
+      },
+      {
+        "round": 34,
+        "roundId": "6-3",
+        "tick": 243,
+        "eventSeq": 1276,
+        "target": "enemy-r34-4",
+        "raw": [
+          168,
+          169
+        ],
+        "mitigated": [
+          53,
+          53
+        ],
+        "critical": true,
+        "combatTicks": 292,
+        "eventCounts": {
+          "before": 1591,
+          "after": 1591
+        }
+      },
+      {
+        "round": 36,
+        "roundId": "6-5",
+        "tick": 1,
+        "eventSeq": 47,
+        "target": "enemy-r36-1",
+        "raw": [
+          120,
+          121
+        ],
+        "mitigated": [
+          55,
+          56
+        ],
+        "critical": false,
+        "combatTicks": 253,
+        "eventCounts": {
+          "before": 1306,
+          "after": 1306
+        }
+      },
+      {
+        "round": 37,
+        "roundId": "6-6",
+        "tick": 1,
+        "eventSeq": 46,
+        "target": "enemy-r37-1",
+        "raw": [
+          120,
+          121
+        ],
+        "mitigated": [
+          55,
+          56
+        ],
+        "critical": false,
+        "combatTicks": 248,
+        "eventCounts": {
+          "before": 1693,
+          "after": 1693
+        }
+      }
+    ],
+    "round33": "6-2 starts with different persistent AD bps but the same integer attack (120), producing byte-identical events. Round 34 first differs only at tick 243 after that round\u2019s matching growth event, raw crit damage 168 vs 169.",
+    "finalPersistentGrowth": {
+      "before": [
+        {
+          "unitId": "unit-4",
+          "attackDamageBps": 1625
+        }
+      ],
+      "after": [
+        {
+          "unitId": "unit-4",
+          "attackDamageBps": 1750
+        }
+      ]
+    },
+    "verifiedAllowedDifferenceLeaves": [
+      "Tristana.strategy.stats.attack",
+      "Tristana.strategy.sources[0].effect.bps",
+      "Tristana.strategy.attackDamagePercentBps",
+      "Tristana.combat.attackDamage",
+      "Tristana.combat.sources[0].effect.bps",
+      "Tristana.combat.attackDamagePercentBps"
+    ]
+  },
+  "limitations": [
+    "Seed-42 normal-route evidence only, not all-seed balance or B8 loot completeness.",
+    "All four routes retain formedBattles=0; unchanged victory does not prove complete builds.",
+    "State hashes necessarily change from B7 content/runtime metadata and PvE history; this comparison attributes gameplay events and independently checks economics rather than treating newly recorded hashes as proof."
+  ]
+}

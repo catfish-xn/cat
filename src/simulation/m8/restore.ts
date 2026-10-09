@@ -13,7 +13,7 @@ import { validateShield } from './shield';
 import { integer } from './stats';
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`Invalid Match save: ${message}`); }
-export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number): void {
+export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set()): void {
   const state = unit.mechanismState, definitions = unit.mechanismDefinitions;
   check(state && definitions && state.initialized === true && state.combatId === combatId && state.sampledAtTick === tick, 'mechanism initialization/namespace');
   const compiled = compileMechanismDefinitions(unit, combatId);
@@ -32,13 +32,13 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(Array.isArray(legacy.contributionKeys) && legacy.contributionKeys.length > 0, 'missing status contribution projection');
     for (const key of legacy.contributionKeys) {
       const c = contributions.find(c => c.key === key);
-      if(c && c.source.sourceKind==='item' && isDeclaredStatus(c.source,c.application,units,combatId)) {
+      if(c && (neutralStatuses.has(c.key) || c.source.sourceKind==='item' && isDeclaredStatus(c.source,c.application,units,combatId))) {
         check(!covered.has(key) && c.targetId===unit.id && same(c.source,asSource(legacy.source)) && legacy.key===c.key && c.appliedAtTick===legacy.startsAtTick && (c.expiresAtTick ?? 1201)===legacy.expiresAtTick, 'item status source/timing projection');
         const app=c.application;
         const kind=app.kind==='stun'?'stun':app.kind==='sunder'?'armorReduction':'resistanceFlat';
         const amount=app.modifier?.value.kind==='constant'?app.modifier.value.amount:app.magnitudeBps;
         check(legacy.kind===kind && legacy.amount===amount && legacy.contributionKeys.length===1 && legacy.activity===undefined, 'item status semantic projection');
-        validateItemEffectConsumption(c.source,c.appliedAtTick,units,combatId);
+        if (!neutralStatuses.has(c.key)) validateItemEffectConsumption(c.source,c.appliedAtTick,units,combatId);
         covered.add(key);continue;
       }
       check(c && !covered.has(key) && c.targetId === unit.id && c.source.ownerId === legacy.source.ownerId

@@ -1,3 +1,5 @@
+import { recordNeutralReceipts } from './neutral-receipts';
+import { COMPILED_NEUTRAL_ENCOUNTERS, readNeutralCombatUnit } from './neutral-encounter-compiler';
 import { compileItemCrit, itemPrograms } from './m8/item-program';
 import { compileUnitInputs } from './m8/unit-inputs';
 import type { StrategySnapshot } from './strategy-types';
@@ -30,7 +32,10 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     if (strategy && !resolved) throw new Error(`Missing strategy unit: ${unit.id}`);
     const stats = resolved?.stats ?? getUnitStats(unit.definitionId, unit.starLevel);
     const ability = resolved ? structuredClone(resolved.ability) : resolveAbility(stats.abilityId, unit.starLevel);
-    return [{ ...compileUnitInputs(stats), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
+    const neutral = stats.unitKind === 'neutral' ? readNeutralCombatUnit(unit.id) : undefined;
+    if (stats.unitKind === 'neutral' && (!neutral || neutral.definitionId !== unit.definitionId || neutral.encounterId !== unit.encounterId || unit.team !== 'enemy')) throw new RangeError('Invalid neutral combat identity');
+    return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
+      ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileUnitInputs(stats), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
       cell: { ...unit.location.cell }, hp: Math.floor(stats.health * (resolved?.mechanics?.find(m => m.mechanic === 'glassCannon')?.values.startingHealthBps ?? 10000) / 10000), maxHp: stats.health,
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
@@ -57,6 +62,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       enemy: { ...preparationState.board.deploymentZones.enemy },
     } },
     ...(strategy ? { strategy: structuredClone(strategy), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
+    ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };
@@ -67,5 +73,5 @@ export function createCombatWithEvents(preparation: GameState, strategy: Strateg
 }
 export function stepCombat(state: CombatState): CombatStep {
   if (state.status === 'finished') return { state, events: [] };
-  return advanceCombatTick(state);
+  return recordNeutralReceipts(advanceCombatTick(state));
 }
