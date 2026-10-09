@@ -1586,3 +1586,9 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 旧：8项一律真实样本及passed；fullLoadRoundTrip必须verified、30战。
 新：仅capture/write/activation/completeImport允许精确skipped形状，保留原检查callback；拒绝伪造actual/samples/passed与未知skip。完整full-load战数恢复断言由同目录产生的completeBattleCount提供；B8/B9依赖分别列明。其余4项、模块生命周期继续原阈值。新增独立bounded导入必须3真实样本/max≤30000ms/全对象与IDB读回通过。
 理由：严格聚合用户批准的精确跳过，报告明确未测量与独立有限覆盖。CI配置、原预算、采样公式、原12次activation顺序均不改。
+
+
+## A144 · scripts/verify-m8-u3-dynamic.cjs · preserve U3's real 2-1 interaction fixture
+旧：createMatch(42)选择起手offer后直接部署unit-1/2/3，假定3级/三英雄/2-1。
+新：公开空阵完成1-2/1-3/1-4，按原first-offer策略选择2-1强化；公开付费买麦迪/拉克丝得到unit-2/3，再执行原部署和完全相同的7物品fixture。手算0+2+3+5-1-1=8G，XP0+2+2+0升到3级；准备目标始终是原2-1，不改后面临时装备2-1文字。
+理由：合入U3新脚本后暴露旧准备假设，用户允许仅测试前置按新日程迁移。原10场原生交互/全部断言从首个check至文件结束与baseline逐字相同，未删/skip/改数值/改时间，不碰U3视觉。直接提取同一setup源执行五种状态证明合法，真正Chromium验证仍待CI。

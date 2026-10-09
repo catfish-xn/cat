@@ -311,3 +311,12 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - 新独立浏览器boundedCompleteImport在原独立测量/生命周期之后执行：冷DB完整exportFile→validateFile→候选MatchSession/BattleHistory→原生activate，3次max仍30000ms；全对象/输入不变/IDB读回比较在计时外。明确只覆盖30战6-3结算，不覆盖原33战6-7终态或15装备最大负载，notEquivalentToFullPayload=true。该新门禁尚待CI，Node耗时不是浏览器/IDB性能通过证据。
 - 本检查点Node22定向2文件14项通过、typecheck及脚本语法/diff检查通过。[诊断清单](evidence/m8-b6/checkpoint7-bounded-feasibility.json)与checkpoint7-*.log.gz保存真实日志。这是693f019加当前WIP的可行性诊断，不作为固定新SHA终验；本机Chromium限制不再重试。独立Pro审计与最终CI由root安排，未自签收。
 - 新集成baseline已到f90e438933f341938c238980e1249d8904468c53（其他线H1 warn-only）；本worktree未自行合入或覆盖。root后续处理共享脚本整合并保留H1新政策，整合后须重新固定SHA/CI/审计。阶段1怪物仍待B7接入，B8内容与B9完整应用容量均未签收。
+
+
+### 9.8 最新baseline纯合并与U3准备适配（独立提交）
+
+- 用户批准最新baseline同步进B6后，fetch核准`adf24b4ef6f5ec65b3abd59adc050ad2b6b82880`，已用纯merge `e86b0ac07b53a799f80b25da6009366217cb7a5f`引入H1 warn-only与U3，parents为88efdc4/adf24b4，tree为1589b35ae29b652193fcd3a3f0df7d8c75570e01。未rebase，未把B6合回baseline。
+- 文本冲突0；两自动合并共享脚本的行段、双方意图与保留结果逐一写入[合并核对账本](evidence/m8-b6/baseline-merge-ledger.md)。H1真实heap元数据/告警政策、监听器/RAF检查，以及B6精确B8/B9 skip均保留。baseline的视觉/样式/CI、H1 helper与测试全文未改。
+- 纯merge tree定向4文件37项通过，typecheck通过，日志checkpoint8-merge-*.log.gz。新增U3job已带入；先前旧HEAD缺脚本的MODULE_NOT_FOUND属于baseline推进后的集成缺口，不以重跑旧SHA规避。
+- 之后单独适配U3测试脚本前置：真实公开空阵三场获2+3+5G/2+2+0XP，到原2-1，原首offer策略后公开购买麦迪/拉克丝，最终3级/8G/三英雄，再执行原部署和原7物品fixture。未伪造B8奖励；原10场交互/断言全部逐字保留，没有UI改动或新skip，逐项说明见账本A144。
+- 直接执行同一setup源码的Node诊断确认五种准备empty/tg/occupied/full/unique均合法，记录脚本sha256并确认原10段交互源码未变。完整可复现诊断代码/日志已入包。该诊断不是Chromium原生输入，真正U3/性能/整套CI及独立审计仍待最新固定SHA。

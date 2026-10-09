@@ -57,14 +57,14 @@ CI140 artifact11604394523确认6-5第31战后触发应用30战限制，6-6tick0�
 
 | 文件 | skip ID/恢复条件 | 明确保留范围 |
 | --- | --- | --- |
-| `scripts/verify-m5-browser.cjs:115` | `browser-round-6-5`、`browser-round-6-6`、`browser-round-6-7`，B9正式应用容量接线后恢复 | 原完整命令循环、整state/事件比较代码保留；这些轮次的命令、浏览器帧、截图/快照未执行，manifest逐项skipped。 |
-| `scripts/verify-m5-browser.cjs:132` | `browser-complete-application-route`，B9接线后恢复完整终态/归档 | `fullApplicationRoutePassed:false`，不能用headless的6-7终态替代浏览器结果；非跳过检查通过才passed。 |
+| `scripts/verify-m5-browser.cjs:117` | `browser-round-6-5`、`browser-round-6-6`、`browser-round-6-7`，B9正式应用容量接线后恢复 | 原完整命令循环、整state/事件比较代码保留；这些轮次的命令、浏览器帧、截图/快照未执行，manifest逐项skipped。 |
+| `scripts/verify-m5-browser.cjs:134` | `browser-complete-application-route`，B9接线后恢复完整终态/归档 | `fullApplicationRoutePassed:false`，不能用headless的6-7终态替代浏览器结果；非跳过检查通过才passed。 |
 | `scripts/compare-m5-evidence.cjs:43` | `${build}-browser-snapshot-6-5/6-6/6-7`（cannon/sniper/mage），B9接线后恢复 | 完整33战领域route.json在dev/preview全文对比；浏览器仅前30战快照真实对比，尾3战原文件读取/比较callback明确skipped，不造文件。 |
 | `scripts/compare-m5-evidence.cjs:73` | `touch-browser-snapshot-6-5/6-6/6-7`，B9接线后恢复 | 触摸dev/preview同一严格集合；容量内快照/事件全部对比。 |
 
 比较器额外拒绝：双方省略集合不恰好等于目录尾3战、缺任何容量内轮次或命令checkpoint、boundary state hash不等于完整领域路线下一start的beforeHash、额外未列skip，以及虚称fullApplicationRoutePassed=true。原SHA/sourceFingerprint/version/clean-tree/error/逐对象检查不变；输入脚本也只能有表中5个B8 skip ID。边界常量30由单测强制等于未修改的MAX_BATTLE_RECORDS，B9改容量必须移除此B6适配。
 
-`compare-m6-evidence.cjs` 的应用分组同步只消费前表8个已授权skip（B8 G02开场1-3/1-4/post-PvE，B9 G02终态、ROOT03、P2两分支、R4），逐项保留对应通过断言callback并写`m6-application-deferred-comparisons.json`。容量内10个真实phase样本、G04/ROOT04、repository、回放/布局/生命周期仍须通过，manifest任何新增skip或样本缺口直接失败。性能分组未改，仍待用户对性能准备结构的明确决定。
+`compare-m6-evidence.cjs` 的应用分组同步只消费前表8个已授权skip（B8 G02开场1-3/1-4/post-PvE，B9 G02终态、ROOT03、P2两分支、R4），逐项保留对应通过断言callback并写`m6-application-deferred-comparisons.json`。容量内10个真实phase样本、G04/ROOT04、repository、回放/布局/生命周期仍须通过，manifest任何新增skip或样本缺口直接失败。此为检查点五的历史状态；性能分组后续获明确批准，现行范围见下一节。
 
 
 ### 性能严格拆分（2026-10-09 用户已批准；新SHA浏览器待执行）
@@ -77,7 +77,10 @@ CI140 artifact11604394523确认6-5第31战后触发应用30战限制，6-6tick0�
 | `scripts/verify-m6-performance.cjs:76` | `full-import-dependent-pipeline`；capture/write各12、activation12、completeImport3 | B9，原33战完整validateFile前置超30。整个原callback保留，精确四指标status=skipped且无samples/actual/passed；原阈值不改。B9容量接入后恢复完整测量及原冷DB首次null/12次activation顺序，关联issue #23。 |
 | `scripts/verify-m6-performance.cjs:111` | `current-prefix-validation`（条件式） | B9，仅实际completed+current>MAX_BATTLE_RECORDS才跳；容量内原validateFile必须执行。B9后恢复完整最大current前置。 |
 | `scripts/verify-m6-performance.cjs:132` | `full-load-import-roundtrip` | B9，原完整第五路线导入超容量；保留完整对象/预算检查callback，报告没有verified:true或虚构毫秒。B9后恢复，满装备覆盖另归B8。 |
-| `scripts/compare-m6-evidence.cjs:179` | `performance-capture/write/activation/completeImport` | 同上四指标；保留原样本数/公式/阈值检查callback，仅消费精确skipped形状，拒绝未知pending或假0ms。 |
-| `scripts/compare-m6-evidence.cjs:183`、`:188` | `full-load-15-equipment` / `full-load-import-roundtrip` | 分别B8/B9，消费上述同名skip并保留原通过断言；恢复条件同上。 |
+| `scripts/compare-m6-evidence.cjs:183` | `performance-capture/write/activation/completeImport` | 同上四指标；保留原样本数/公式/阈值检查callback，仅消费精确skipped形状，拒绝未知pending或假0ms。 |
+| `scripts/compare-m6-evidence.cjs:186`、`:191` | `full-load-15-equipment` / `full-load-import-roundtrip` | 分别B8/B9，消费上述同名skip并保留原通过断言；恢复条件同上。 |
 
 fullCapture12、firstSeek3、cachedSeek12、原40tick统计、3次预热+30次生命周期仍运行原硬门禁；完整五路线仍选原最大complete/current/单战负载。独立boundedCompleteImport在其后真实运行30战完整格式验证/候选构建/原生IDB激活，3次max≤原30000ms，明确不等价于完整33战或满装备。现只有Node可行性诊断和14项定向测试通过，不能将尚未执行的浏览器门禁称为通过。
+
+
+最新baseline的H1 warn-only按原政策整体保留，见baseline-merge-ledger.md；不是新增B8/B9 skip。U3新脚本仅迁移公开准备，10个原生交互场景全保留，无新增U3 skip。
