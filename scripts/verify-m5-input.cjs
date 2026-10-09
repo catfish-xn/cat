@@ -24,7 +24,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   const report = { mode, coverage: metricsOnly ? 'observation-only' : 'full-input-gate', sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
     status: execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim(), node: process.version,
     sourceFingerprint: sourceFingerprint(), runnerHash: hash(fs.readFileSync(__filename, 'utf8')), context: { hasTouch: true, isMobile: false }, evidenceKind: 'production-model browser consistency; not independent rule answers',
-    interactions: [], errors: [], passed: false };
+    interactions: [], errors: [], passed: false, acceptanceScope: 'B6 unskipped checks', fullOpeningItemScenarioPassed: false };
   let server, model, browser, context, page;
   try {
     const { createServer } = await import('vite');
@@ -402,6 +402,6 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     report.durationSeconds = (Date.now() - started) / 1000; report.finalSourceFingerprint = sourceFingerprint();
     if (context) await context.tracing.stop({ path: path.join(output, 'trace.zip') }).catch(() => {});
     fs.writeFileSync(path.join(output, 'manifest.json'), JSON.stringify(report, null, 2));
-    await browser?.close(); await model?.close(); server?.kill(); console.log(JSON.stringify({ mode, passed: report.passed, cases: report.interactions.length, durationSeconds: report.durationSeconds }));
+    await browser?.close(); await model?.close(); server?.kill(); console.log(JSON.stringify({ mode, passed: report.passed, acceptanceScope: 'B6 unskipped checks', skipped: report.skipped ?? [], cases: report.interactions.length, durationSeconds: report.durationSeconds }));
   }
 })();

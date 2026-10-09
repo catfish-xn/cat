@@ -1545,3 +1545,18 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 旧：最终round35、30战；initial_component_0/1及reward_choice混合旧起手包/后PvE。
 新：终轮由ROUND_CATALOG末项、战数由kind!=supply推导；缺1-3/1-4开场choice与真正post_pve_choice分别B8跳过，现有supply_choice继续。G02仅明确game_over超限样本B9跳过；其他超限标签直接失败要求复核。ROOT03、P2两个分支、R4首次import即被满档容量阻止，各自callback完整保留为B9跳过；其余G04/ROOT04与容量内G02全跑。
 理由：不改实际30战容量或30/90历史断言，不裁剪档案伪造有效存档；满档应用竞争尚待B9，不宣称通过。
+
+## A136 · scripts/verify-m5-browser.cjs and compare-m5-evidence.cjs · B9 exact browser tail
+旧：应用33战全路线，31战后抛冻结边界错误，6-6tick0触发原75秒timeout；比较器要求全部browser snapshot存在。
+新：严格到现有30战容量，6-4补给仍跑，6-5准备state必须等于完整领域路线下一start.before；只有6-5/6-6/6-7原战斗/后续命令/快照/完整终态断言明确B9跳过。完整33战领域route全文比较、前30场浏览器快照与全部命令checkpoint比较继续；未知缺文件/未知skip/双方不一致直接失败。fullApplicationRoutePassed=false与独立skipped证据防止误称完整应用通过。
+理由：CI140原始artifact已确认B9实际边界；用户批准精确尾段与透明比较，不改75秒/CI/性能阈值，不伪造浏览器输出。冻结30仅用于测试边界，并由单测校验必须等于生产MAX_BATTLE_RECORDS；尾轮身份精确来自目录且只允许6-5/6-6/6-7。
+
+## A137 · tests/m6-integration.test.ts · B8 sold-opening-history subcase
+旧：cannon完整路线必须实际sell且历史仍含已售棋子。
+新：两条原断言保留为单独[B8] it.skip；其余cannon逐战/前缀/缺战/暂停/篡改检查继续。
+理由：缺原起手麦迪/拉克丝，真实路线只买最终编队，所以没有原过渡售出；普通合法卖棋冻结历史仍由m6-replay覆盖。此次不是B9容量断言，不混写归属。
+
+## A138 · scripts/compare-m6-evidence.cjs · exact application-dependency consumption
+旧：G02全部phase及ROOT03/P2/R4无条件必须有passed:true；阶段标签仍initial_component_0/1/reward_choice。
+新：G02活跃10个样本（含真正supply_choice）全部仍必通过；只对已列B8开场1-3/1-4/post-PvE和B9终态、ROOT03/P2/R4逐项保留原通过断言callback为明确skip。严格核验上游完整8项skip集合与G02样本集合，未知缺失不放过。原30/90/117断言留在对应B9 callback，未改阈值。
+理由：用户授权的应用场景skip必须被聚合器透明识别，不能伪造passed:true；没有更改该文件性能测量分组。

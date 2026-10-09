@@ -2,7 +2,7 @@
 
 用户于2026-10-09明确授权：原断言保留，只跳过明确依赖B8/B9的项；清单之外所有检查必须通过。该清单不是B8/B9验收，也不能把历史失败改写成通过。最终审计包须绑定固定SHA；任何后续修改重新打包。
 
-## Vitest（9个显式 `it.skip`，其他同文件断言继续）
+## Vitest（10个显式 `it.skip`，其他同文件断言继续）
 
 | 文件/位置 | 测试名或参数 | 归属/依赖 | 保留的原断言与恢复条件 |
 | --- | --- | --- | --- |
@@ -10,7 +10,7 @@
 | 同上 | `[B8] cannon: complete-build battles and full component grant chain` | B8，缺起手过渡英雄及完整组件 | 保留formed>=3、transitioned=true、卖过渡棋回收装备、15次组件授予。其余胜利/独立账本/四来源同场/异常/升星/锁店/终态拒绝全部继续。B8接线后恢复。 |
 | 同上 | `[B8] sniper: complete-build battles and full component grant chain` | 同上 | 同上，独立参数实例。 |
 | 同上 | `[B8] mage: complete-build battles and full component grant chain` | 同上 | 同上，独立参数实例。 |
-| `tests/m6-integration.test.ts:108` | `[B9] cannon: full 33-battle envelope acceptance` | B9，应用存档上限仍30战 | 保留完整envelope通过与原删整战拒绝；33战逐tick回放/前缀/暂停/篡改检查继续。另在合法两战+当前prefix上明确拒绝“历史缺战或重战”，避免容量假阳性。B9容量接线后恢复。 |
+| `tests/m6-integration.test.ts:113` | `[B9] cannon: full 33-battle envelope acceptance` | B9，应用存档上限仍30战 | 保留完整envelope通过与原删整战拒绝；33战逐tick回放/前缀/暂停/篡改检查继续。另在合法两战+当前prefix上明确拒绝“历史缺战或重战”，避免容量假阳性。B9容量接线后恢复。 |
 | 同上 | `[B9] sniper: full 33-battle envelope acceptance` | 同上 | 保留完整envelope通过；每战回放仍执行。 |
 | 同上 | `[B9] mage: full 33-battle envelope acceptance` | 同上 | 同上，独立参数实例。 |
 | 同上 | `[B9] sniper-caitlyn: full 33-battle envelope acceptance` | 同上 | 同上，独立参数实例。 |
@@ -49,8 +49,19 @@
 
 ### 新暴露的B8历史子断言
 
-`tests/m6-integration.test.ts` 的 `[B8] cannon: completed history retains sold opening transition units` 单独保留“路线实际卖出”和“旧历史仍含已售英雄”两条断言。新起手不含原过渡英雄，route.buyShop只购买最终编队成员；B8英雄链缺失使这两条在解开容量短路后才暴露。普通首战卖出与冻结历史另由m6-replay真实覆盖；B8接线后恢复此完整路线断言。Vitest清单因此为10个明确跳过，不是9个。
+`tests/m6-integration.test.ts:108` 的 `[B8] cannon: completed history retains sold opening transition units` 单独保留“路线实际卖出”和“旧历史仍含已售英雄”两条断言。新起手不含原过渡英雄，route.buyShop只购买最终编队成员；B8英雄链缺失使这两条在解开容量短路后才暴露。普通首战卖出与冻结历史另由m6-replay真实覆盖；B8接线后恢复此完整路线断言。Vitest清单因此为10个明确跳过，不是9个。
 
-### 待实施的B9浏览器尾段（本检查点仍失败）
+### B9浏览器尾段（检查点五已实施，待CI验证）
 
-CI140 artifact11604394523确认6-5第31战后触发应用30战限制，6-6tick0停住；见`ci140-browser/README.md`。尚未把此新发现加入任何执行跳过；下一检查点需要保留容量内完整浏览器/回放/生命周期覆盖，并逐条保留31～33战与完整终态比较的B9断言，不得整任务skip或增加超时。
+CI140 artifact11604394523确认6-5第31战后触发应用30战限制，6-6tick0停住；见`ci140-browser/README.md`。检查点五在真正第31战开战前保留并明确跳过6-5/6-6/6-7，防止已知30战应用上限导致错误吞掉后续检查。容量内全部30战、6-4补给及其后到6-5准备的公开操作、回放/生命周期/种子验证继续；未将完整领域33战结果称为浏览器结果。
+
+| 文件 | skip ID/恢复条件 | 明确保留范围 |
+| --- | --- | --- |
+| `scripts/verify-m5-browser.cjs:115` | `browser-round-6-5`、`browser-round-6-6`、`browser-round-6-7`，B9正式应用容量接线后恢复 | 原完整命令循环、整state/事件比较代码保留；这些轮次的命令、浏览器帧、截图/快照未执行，manifest逐项skipped。 |
+| `scripts/verify-m5-browser.cjs:132` | `browser-complete-application-route`，B9接线后恢复完整终态/归档 | `fullApplicationRoutePassed:false`，不能用headless的6-7终态替代浏览器结果；非跳过检查通过才passed。 |
+| `scripts/compare-m5-evidence.cjs:43` | `${build}-browser-snapshot-6-5/6-6/6-7`（cannon/sniper/mage），B9接线后恢复 | 完整33战领域route.json在dev/preview全文对比；浏览器仅前30战快照真实对比，尾3战原文件读取/比较callback明确skipped，不造文件。 |
+| `scripts/compare-m5-evidence.cjs:73` | `touch-browser-snapshot-6-5/6-6/6-7`，B9接线后恢复 | 触摸dev/preview同一严格集合；容量内快照/事件全部对比。 |
+
+比较器额外拒绝：双方省略集合不恰好等于目录尾3战、缺任何容量内轮次或命令checkpoint、boundary state hash不等于完整领域路线下一start的beforeHash、额外未列skip，以及虚称fullApplicationRoutePassed=true。原SHA/sourceFingerprint/version/clean-tree/error/逐对象检查不变；输入脚本也只能有表中5个B8 skip ID。边界常量30由单测强制等于未修改的MAX_BATTLE_RECORDS，B9改容量必须移除此B6适配。
+
+`compare-m6-evidence.cjs` 的应用分组同步只消费前表8个已授权skip（B8 G02开场1-3/1-4/post-PvE，B9 G02终态、ROOT03、P2两分支、R4），逐项保留对应通过断言callback并写`m6-application-deferred-comparisons.json`。容量内10个真实phase样本、G04/ROOT04、repository、回放/布局/生命周期仍须通过，manifest任何新增skip或样本缺口直接失败。性能分组未改，仍待用户对性能准备结构的明确决定。

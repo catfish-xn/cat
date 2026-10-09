@@ -1,3 +1,4 @@
+const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
 /* F4: require M6 product evidence from the same clean commit as the M5 gates. */
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
@@ -9,7 +10,7 @@ const { hash } = require('./m4-evidence.cjs');
 const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS})');
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const fingerprint = sourceFingerprint();
-const records = [];
+const records = [], deferredApplicationComparisons = {};
 function read(folder) {
   const file = `artifacts/${folder}/manifest.json`;
   const report = JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -90,19 +91,29 @@ assert.equal(unavailable.tick, 40);
 assert.equal(unavailable.wholeMatchAndLedgerEqual, true);
 assert(Number.isSafeInteger(unavailable.nextEventSeq) && unavailable.nextEventSeq > 0);
 const phases = failures.results.G02_all_phase_native_roundtrip_and_exact_next_transition;
-assert.equal(phases?.passed, true, 'all-phase application save/continue matrix');
-assert.deepEqual(phases.samples.map(row => row.phase).sort(), [
-  'initial_component_0', 'initial_component_1', 'augment', 'anomaly_target', 'anomaly_offer',
-  'preparation', 'combat_39', 'combat_40', 'combat_41', 'settlement',
-  'supply_settlement', 'reward_choice', 'game_over',
-].sort());
-assert(phases.samples.every(row => row.passed));
+assert.equal(phases?.status, 'passed-with-explicit-skips', 'application phase results must disclose partial coverage');
+const livePhases=['augment','anomaly_target','anomaly_offer','preparation','combat_39','combat_40','combat_41','settlement','supply_settlement','supply_choice'];
+assert.deepEqual(phases.samples.map(row=>row.phase).sort(),[...livePhases,'game_over'].sort(),'unknown missing or extra phase sample');
+for(const phase of livePhases)assert.equal(phases.samples.find(row=>row.phase===phase)?.passed,true,`${phase}: real application roundtrip`);
+assert.deepEqual(phases.samples.find(row=>row.phase==='game_over'),{phase:'game_over',status:'skipped',owner:'B9'});
+assert.deepEqual(failures.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
+ ...['opening_choice_1-3','opening_choice_1-4','post_pve_choice'].map(id=>['skipped','B8',`G02-${id}`]),
+ ...['G02-game_over','ROOT_03_same_run_completion_archive_refresh','P2-stale-archive-success','P2-stale-archive-reject','R4_inflight_combat_then_pending_terminal_commit'].map(id=>['skipped','B9',id]),
+],'application may omit only the explicitly approved B8/B9 cases');
+for(const phase of ['opening_choice_1-3','opening_choice_1-4','post_pve_choice'])skipB6Dependency(deferredApplicationComparisons,'B8',`G02-${phase}`,'The corresponding real application phase is explicitly deferred until B8 choice integration',()=>{
+ assert.equal(phases.samples.find(row=>row.phase===phase)?.passed,true,`${phase}: full phase roundtrip`);
+});
+skipB6Dependency(deferredApplicationComparisons,'B9','G02-game_over','The full 33-battle terminal application import is explicitly deferred',()=>{
+ assert(phases.samples.every(row=>row.passed),'all-phase application save/continue matrix');
+});
+skipB6Dependency(deferredApplicationComparisons,'B9','ROOT_03_same_run_completion_archive_refresh','Full archive application scenario was not executed beyond the 30-battle capacity',()=>{
 const archive = failures.results.ROOT_03_same_run_completion_archive_refresh;
 assert.equal(archive?.passed, true);
 assert.equal(archive.displayedBattles, 90);
 assert.equal(archive.currentBattles, 30);
 assert.deepEqual(archive.durableRunIds, [failures.fixture.ids.C, failures.fixture.ids.D, failures.fixture.ids.A]);
 assert.deepEqual(archive.live, { applications: 1, sessions: 1, observers: 1 });
+});
 for (const key of ['ROOT_04_initialize_dispose_then_idb_abort', 'ROOT_04_import_dispose_then_file_failure', 'ROOT_04_candidate_dispose_then_activation_abort']) {
   const result = failures.results[key];
   assert.equal(result?.passed, true, key);
@@ -112,14 +123,19 @@ for (const key of ['ROOT_04_initialize_dispose_then_idb_abort', 'ROOT_04_import_
   assert.equal(result.saveChildren, 0);
 }
 for(const [key,sameRun] of [['P2_stale_archive_success_after_new_run',false],['P2_stale_archive_reject_after_same_run_new_epoch',true]]){
+ skipB6Dependency(deferredApplicationComparisons,'B9',`P2-stale-archive-${sameRun?'reject':'success'}`,'The original complete-archive activation scenario is explicitly deferred',()=>{
  const result=failures.results[key];assert.equal(result?.passed,true,key);assert.equal(result.fullStateLedgerStatusRevisionEqual,true);assert.equal(result.optionsUnchanged,true);assert.equal(result.sameRunNewEpoch,sameRun);
+ });
 }
+skipB6Dependency(deferredApplicationComparisons,'B9','R4_inflight_combat_then_pending_terminal_commit','The original final-battle application prefix cannot be imported before B9 capacity integration',()=>{
 const r4=failures.results.R4_inflight_combat_then_pending_terminal_commit;
 assert.equal(r4?.passed,true,'in-flight combat write followed by pending terminal commit');
 assert.equal(r4.inflightTick,80);assert.equal(r4.terminalTick,117);assert.equal(r4.pendingTerminalCount,1);assert.equal(r4.actualNativeTransactions,2);
 assert.equal(r4.oldCommitRefreshCount,0);assert.equal(r4.finalCommitRefreshCount,1);assert.equal(r4.displayedBattles,90);
 assert.deepEqual(r4.durableRunIds,[failures.fixture.ids.C,failures.fixture.ids.D,failures.fixture.ids.A]);
 for(const key of ['completeTerminalSnapshotEqual','savedWithoutFalseFailure','revisionAdvancedExactlyTwice','saveControlsSuccess','allRefreshesSettled'])assert.equal(r4[key],true,`R4 ${key}`);
+});
+fs.writeFileSync('artifacts/m6-application-deferred-comparisons.json',JSON.stringify(deferredApplicationComparisons,null,2));
 const performance = read('m6-performance');
 const expectedGates = {
   capture: ['p95', 'incrementalCaptureP95'], write: ['p95', 'incrementalWriteP95'],

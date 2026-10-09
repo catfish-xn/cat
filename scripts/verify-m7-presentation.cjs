@@ -95,7 +95,7 @@ async function firstBattle(browser, reduced) {
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-  const report = { url, checks: [] };
+  const report = { url, checks: [], acceptanceScope: 'B6 unskipped checks; post-PvE reward modal deferred to B8' };
   const check = (name, details = {}) => { report.checks.push({ name, ...details }); console.log(`ok ${name}`); };
   try {
     // Help dialog: information only, focus handling, shortcuts blocked while open.

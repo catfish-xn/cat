@@ -283,3 +283,15 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - CI140三条browser路线另有实际normal-time battle timeout，当前只读等待最后round/failure-state定位，尚未归属、未改75秒超时、未添加路线整体跳过。该未定问题仍阻止本检查点宣称清单外全绿。
 - 检查点四补充：M6逐战集成定向3通过/4个授权B9跳过/1失败；解开容量短路后cannon原“路线实际卖出起手过渡棋”断言暴露缺B8英雄链，已只把相邻两条独立拆为第10个明确跳过，保留所有其他回放；该最新拆分尚待复验，原失败日志`checkpoint4-integration.log.gz`保留。
 - [CI140 browser原始证据](evidence/m8-b6/ci140-browser/README.md)已定位B9：6-5第31战后错误“战斗历史超过冻结边界”，最终6-6tick0、31个记录、未暂停，导致原75秒正常时间等待超时。相关manifest/progress/failure-state/server原件gzip归档。此新发现尚未改脚本跳过，下一检查点精确处理容量外尾段及比较，不增加timeout，不跳整browser任务。
+
+### 9.5 检查点五：B9浏览器尾段与透明比较（待CI）
+
+- 已按用户明确批准的边界保留前30场实际浏览器战斗、6-4补给、6-5准备及全部先前命令/事件/回放/生命周期覆盖。只把6-5、6-6、6-7和完整应用终态逐项B9跳过，原代码保留；不再触发已知第31战应用异常，也不改75秒超时。manifest和stdout明确`fullApplicationRoutePassed:false`，领域33战路线与浏览器未执行尾段严格区分。
+- 比较器继续比较完整领域route的initial/final/ledger/actions/rounds及真实前段browser snapshot。仅双方完全一致且精确为6-5/6-6/6-7的快照读取/比较callback标B9 skipped；新增严格校验30场身份、所有boundary前命令checkpoint、boundary state hash和完整skip集合，未知省略仍失败。touch两模式相同处理；输入只能出现已列5个B8 skip。未改CI、SHA/sourceFingerprint/版本/clean-tree/错误门禁或测量阈值。
+- 新边界/准备元数据单测9/9通过；cannon完整33战逐tick回放及此前被短路的39/40/41prefix、暂停、缺战负例定向真实通过（1通过，8个因`-t`筛选未执行，不能把该8项称为批准skip统计）。日志`checkpoint5-boundary.log.gz`与`checkpoint5-cannon-integration.log.gz`。
+- 清单统一为10个Vitest依赖skip，更新[完整清单](evidence/m8-b6/deferred-assertions.md)及账本A136～A137。新浏览器边界尚待新SHA CI实际验证，未宣称整线绿。
+- **性能准备阻塞待批准**：`verify-m6-performance.cjs`后续完整导入/满载导入实际依赖B9、15装备输入依赖B8；只跳最终断言不足以启动其余测量。涉及repository层合法领域payload前置与独立测量callback拆分，已交由用户决定，当前未修改该文件或full-load helper，也未改测量法。其他已授权工作继续。
+- 检查点五补充：`npm run test:headless`原样24 seeds完整执行，09:03:53～09:06:42 UTC退出0，仅seed42成型断言记录1项B8 skipped；全部路线实际胜利到6-7，原样时钟/RSS/事件账本测量保留。属d7daccc+本检查点WIP诊断，起止源码/测试/脚本diff哈希同为`f62775fae249317e811f2e2c8dc553c3eb9d14fd27aed5fd16447022220fa83b`，不是固定新SHA终验；原日志和manifest归档`checkpoint5-headless*`。
+- `compare-m6-evidence.cjs`仅应用分组同步消费已列8个上游B8/B9 skip并保留原通过断言callback；所有容量内phase/G04/ROOT04/存储/布局/回放仍必通过，任何未知skip失败。性能分组仍原样未改，等待用户最终决定；不是整文件/整job跳过。
+- 性能准备依赖已完整集中为[待决定范围](evidence/m8-b6/performance-pending-scope.md)：列8项测量中4项受完整导入准备影响、独立可继续4项、full-load覆盖/导入、原12次activation精确冷DB序列及聚合消费要求。替代准备只能标诊断，不冒充原门禁；本检查点仍未实施该待决部分。
+- [CI141（d7daccc）](https://github.com/catfish-xn/cat/actions/runs/37908217035)的M7 presentation和M6 retention已成功；本检查点新增浏览器尾段及比较适配不在该SHA，仍需其后固定提交验证。

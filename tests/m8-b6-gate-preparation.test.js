@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+import { MAX_BATTLE_RECORDS } from '../src/m6/limits';
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { prepareB6Opening } from '../scripts/b6-public-preparation.cjs';
-import { skipB6Dependency } from '../scripts/b6-deferred-assertions.cjs';
+import { B6_APPLICATION_CAPACITY, b6DeferredBrowserRounds, validateB6BrowserBoundary, skipB6Dependency } from '../scripts/b6-deferred-assertions.cjs';
 
 // Domain-backed adapter checks setup commands and income only. It is explicitly
 // NOT native browser evidence: CI separately exercises the real locator path.
@@ -42,6 +44,27 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
   });
   it('reproduces public opening setup for the same seed',async()=>{
     expect(await prepareB6Opening(pageAdapter(4294967295),'1-3')).toEqual(await prepareB6Opening(pageAdapter(4294967295),'1-3'));
+  });
+  it('limits browser deferrals to the exact three B9 tail combats',()=>{
+    expect(B6_APPLICATION_CAPACITY).toBe(MAX_BATTLE_RECORDS);
+    const route={rounds:ROUND_CATALOG.filter(round=>round.kind!=='supply').map(round=>({roundDefinitionId:round.roundId,round:round.ordinal}))};
+    expect(b6DeferredBrowserRounds(route).map(round=>round.roundDefinitionId)).toEqual(['6-5','6-6','6-7']);
+    expect(()=>b6DeferredBrowserRounds({rounds:route.rounds.slice(1)})).toThrow('Unapproved B9 browser omission set');
+  });
+  it('rejects unknown browser omissions, missing prefix checkpoints and false full-route claims',()=>{
+    // Synthetic metadata unit vectors only, never emitted as browser acceptance evidence.
+    const rounds=ROUND_CATALOG.filter(round=>round.kind!=='supply').map(round=>({roundDefinitionId:round.roundId,round:round.ordinal}));
+    const actions=rounds.map((round,index)=>({index,round:round.round,command:{type:'start'},beforeHash:`before-${index}`,afterHash:`after-${index}`}));
+    const route={rounds,actions},deferred=rounds.slice(B6_APPLICATION_CAPACITY).map(round=>round.roundDefinitionId);
+    const manifest={deferredBrowserRounds:deferred,completedBrowserRounds:rounds.slice(0,B6_APPLICATION_CAPACITY).map(round=>round.roundDefinitionId),
+      applicationBoundary:{completedBattles:B6_APPLICATION_CAPACITY,roundId:'6-5',phase:'preparation',stateHash:'before-30'},
+      checkpoints:actions.slice(0,B6_APPLICATION_CAPACITY).map(entry=>({index:entry.index,stateHash:entry.afterHash})),fullApplicationRoutePassed:false,
+      skipped:[...deferred.map(id=>({status:'skipped',owner:'B9',id:`browser-round-${id}`})),{status:'skipped',owner:'B9',id:'browser-complete-application-route'}]};
+    expect([...validateB6BrowserBoundary(manifest,route)]).toEqual(rounds.slice(B6_APPLICATION_CAPACITY).map(round=>round.round));
+    for(const mutate of [value=>value.deferredBrowserRounds.shift(),value=>value.completedBrowserRounds.pop(),value=>value.checkpoints.pop(),
+      value=>value.applicationBoundary.stateHash='wrong',value=>value.fullApplicationRoutePassed=true,value=>value.skipped.push({status:'skipped',owner:'B8',id:'extra'})]){
+      const invalid=structuredClone(manifest);mutate(invalid);expect(()=>validateB6BrowserBoundary(invalid,route)).toThrow();
+    }
   });
   it('records skipped ownership without executing or labeling the body passed',()=>{
     const body=vi.fn(),report={};const log=vi.spyOn(console,'log').mockImplementation(()=>{});
