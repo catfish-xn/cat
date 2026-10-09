@@ -376,3 +376,18 @@ await touchInput.detach();
 ### R2 独立核验项 B5-M7-INPUT
 
 R2 针对 `0298a3f` 的交付缺口已由 `8e16da2` 补齐，基线/B5 的两次 trusted click、窗口内间隔、原 M7 全脚本及完整 CI #120 证据见前文。第二轮不重复改输入驱动；额外按附件要求在 `/tmp` 隔离副本关闭产品防护，核验原双触断言的负向敏感性，结果登记在延迟报告中。仓库产品 400ms、全部断言、门禁和 CI 配置保持不变，审计方仍需单列核实。
+
+负向验证已完成：先关闭隔离副本全部防护，原鼠标双击断言先失败；再仅让触摸环境绕过防护，原完整脚本到第154行双触断言按预期失败（实际 `combat`，退出1）。两次click均trusted、目标continue→start-combat，间隔43.6ms，第一次处理后9.4ms，均在原400ms内。仓库未引入此变异。完整事件、变异/资产指纹及失败报告见 [延迟报告](https://github.com/catfish-xn/cat/blob/feat/m8-b5/docs/M8_B5_CLICK_LATENCY.md) 与机器证据 `round2NegativeControl`；这个故意失败样本只证明断言敏感性，不冒充正常M7通过。
+
+### R1 实际提交与验收进度
+
+- R1 已提交推送：`20551f26fa738f090898a29360435ab1fdb1e8c5`，仅两份领域源码、新回归文件及交接文档。之后的双触负向证据/结果补记均为纯文档，不改变受测产品。
+- [本轮完整 CI / run 37887531022](https://github.com/catfish-xn/cat/actions/runs/37887531022/attempts/1) 使用该精确SHA、workflow_dispatch默认参数；结果见下方补记，不用旧#120替代。本轮没有改CI、测试时限、断言或其他门禁。
+- 本地默认全量首轮：99文件中97通过、2失败；1233通过、6失败，726.89秒。原日志明确全部失败是 `tests/m5-replay.test.ts` 的sniper/mage/sniper-caitlyn三项180000ms超时，以及 `tests/m6-integration.test.ts` 同三构筑120000ms超时；没有值/事件不一致断言。本次曾与构建和负向浏览器诊断并发，不能仅凭超时即认定环境偶发，更不能报全量通过。
+- 浏览器诊断与该轮全量结束后，按原180/120秒时限，以 `npm test -- tests/m5-replay.test.ts tests/m6-integration.test.ts --maxWorkers=1` 单独复验两文件；只限制本次本地worker并发，不改变测试或CI配置，原失败记录保留。复验及CI实际结果待结束后补记。
+- CI首轮 [preview-cannon作业113680778586](https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778586) 堆门禁失败：**2029636B >1048576B**；两次预热/30循环、无诊断。已保留[原产物11597381206](https://github.com/catfish-xn/cat/actions/runs/37887531022/artifacts/11597381206)。listeners全程82、RAF全程1、applications/sessions/observers全程各1；该活跃快照及3份归档均为0条roll，未执行R1新增的等级区间分支。本轮无新增持久引用，结合以上检查，按用户对首轮堆偶发失败的既有授权，仅做一次同SHA/同门限/同预热重跑；不能由这些计数推断所有负载都无泄漏。整轮尚运行时API拒绝启动重跑（HTTP403，workflow already running），该请求没有产生一次运行。实际重跑结果在结束后补记。
+- M7首轮 [作业113680778554](https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778554) 已通过：全部7项交互、原有视口、`/cat/`子路径及预算。JS gzip473392/424763B=1.114485≤原1.15，首交互734/683ms=1.074671≤原1.20；M6独立原生资源作业也已通过。完整本轮机器证据登记在 `docs/evidence/M8_B5_ROUND2_VALIDATION.json`，仍须等全部必需作业结束才判定整体结果。
+
+### 供用户先行复审的交接快照
+
+用户要求代码修好后先告知并交复审，开发者继续等待CI。R1代码已修好并推送为 `20551f26fa738f090898a29360435ab1fdb1e8c5`；本次追加仅为负向验证及进度文档，与受测修复SHA没有可执行代码差异。R2正常/负向证据均已备齐。当前CI测试、构建、headless步骤及完整M7/M6资源作业通过，其他长任务与单次堆重跑尚未完成，**不能据此宣称完整CI通过或签收**。PR #16仍Draft；由用户/接手开发者送复审，我继续跟进CI，不送审、不合并。

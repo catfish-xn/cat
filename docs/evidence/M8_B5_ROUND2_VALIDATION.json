@@ -1,0 +1,963 @@
+{
+  "audit": "M8 B5 round2 R1 and B5-M7-INPUT",
+  "fixCommit": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+  "scope": "R1 history-level bounds; existing equipment gameplay retained by user decision; R2 input driver already committed as 8e16da2",
+  "local": {
+    "targeted": {
+      "files": 5,
+      "tests": 70,
+      "passed": true
+    },
+    "build": {
+      "passed": true,
+      "logSha256": "0ab373b2b5f45eb5ca9f84a420926fedef23916ff5afe9e0977cd607a3eb7ef4"
+    },
+    "fullFirst": {
+      "passed": false,
+      "files": 99,
+      "passedFiles": 97,
+      "failedFiles": 2,
+      "tests": 1239,
+      "passedTests": 1233,
+      "failedTests": 6,
+      "durationSeconds": 726.89,
+      "logSha256": "b839f17a5e379343852b29a4021843e41c460ebd53edd9f147128c922c3451a6",
+      "failures": [
+        {
+          "file": "tests/m5-replay.test.ts",
+          "builds": [
+            "sniper",
+            "mage",
+            "sniper-caitlyn"
+          ],
+          "reason": "Test timed out in 180000ms"
+        },
+        {
+          "file": "tests/m6-integration.test.ts",
+          "builds": [
+            "sniper",
+            "mage",
+            "sniper-caitlyn"
+          ],
+          "reason": "Test timed out in 120000ms"
+        }
+      ]
+    },
+    "isolatedRecheck": {
+      "status": "running",
+      "command": "npm test -- tests/m5-replay.test.ts tests/m6-integration.test.ts --maxWorkers=1",
+      "unchangedTimeouts": true
+    }
+  },
+  "ci": {
+    "runId": 37887531022,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022",
+    "headSha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+    "status": "in_progress",
+    "snapshotBeforeReviewHandoff": {
+      "conclusion": "",
+      "jobs": [
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778342,
+          "name": "input-dev-sample1",
+          "startedAt": "2026-10-09T05:18:32Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Native input and normal-time touch route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778342"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778478,
+          "name": "test-and-build-sample1",
+          "startedAt": "2026-10-09T05:13:54Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs tests npm test",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs headless npm run test:headless",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Run M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance",
+              "number": 8,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 9,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 17,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 18,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778478"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778488,
+          "name": "browser-preview-mage-sample1",
+          "startedAt": "2026-10-09T05:19:50Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778488"
+        },
+        {
+          "completedAt": "2026-10-09T05:21:55Z",
+          "conclusion": "success",
+          "databaseId": 113680778530,
+          "name": "m6-retention",
+          "startedAt": "2026-10-09T05:14:53Z",
+          "status": "completed",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Independent native resources through the real application",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 13,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 14,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 15,
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778530"
+        },
+        {
+          "completedAt": "2026-10-09T05:21:33Z",
+          "conclusion": "success",
+          "databaseId": 113680778554,
+          "name": "m7-presentation-sample1",
+          "startedAt": "2026-10-09T05:13:42Z",
+          "status": "completed",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Signed-off M6 interaction and M7 JS budget builds",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "M7 presentation, five viewports, sub-path deploy and budgets",
+              "number": 8,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 9,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 17,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 18,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 19,
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778554"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778585,
+          "name": "input-preview-sample1",
+          "startedAt": "2026-10-09T05:14:59Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Native input and normal-time touch route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778585"
+        },
+        {
+          "completedAt": "2026-10-09T05:18:30Z",
+          "conclusion": "failure",
+          "databaseId": 113680778586,
+          "name": "browser-preview-cannon-sample1",
+          "startedAt": "2026-10-09T05:13:33Z",
+          "status": "completed",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "failure",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "completed"
+            },
+            {
+              "conclusion": "skipped",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 17,
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778586"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778696,
+          "name": "browser-preview-sniper-sample1",
+          "startedAt": "2026-10-09T05:15:09Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778696"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778703,
+          "name": "browser-dev-mage-sample1",
+          "startedAt": "2026-10-09T05:15:38Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778703"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778731,
+          "name": "browser-dev-cannon-sample1",
+          "startedAt": "2026-10-09T05:15:46Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778731"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778789,
+          "name": "browser-dev-sniper-sample1",
+          "startedAt": "2026-10-09T05:16:13Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778789"
+        },
+        {
+          "completedAt": "2026-10-09T05:13:15Z",
+          "conclusion": "skipped",
+          "databaseId": 113680779691,
+          "name": "heap-diagnostics",
+          "startedAt": "2026-10-09T05:13:16Z",
+          "status": "completed",
+          "steps": [],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680779691"
+        },
+        {
+          "completedAt": "2026-10-09T05:13:15Z",
+          "conclusion": "skipped",
+          "databaseId": 113680779874,
+          "name": "warmup-experiment",
+          "startedAt": "2026-10-09T05:13:16Z",
+          "status": "completed",
+          "steps": [],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680779874"
+        }
+      ],
+      "status": "in_progress"
+    },
+    "note": "Partial snapshot only; full run not yet finished; test/build/headless steps passed, performance and route/input jobs still running; preview-cannon first heap failure retained."
+  },
+  "heapFirstFailure": {
+    "jobId": 113680778586,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778586",
+    "artifactId": 11597381206,
+    "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37887531022/artifacts/11597381206",
+    "artifactArchiveSha256": "bb1d3ec79d8510c1d4550feea351051c4be2ecfdb19f631608185838d19723b2",
+    "logSha256": "853e9867ff8153eb0f28c305741064a659736188601c526af4351abdfa1ddb24",
+    "lifecycleSha256": "78a3c10626f56d92596d36f69c05c7540953972bab8c81ae1fff1b78c00a675d",
+    "manifest": {
+      "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+      "status": "",
+      "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+      "node": "v22.23.3",
+      "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+      "cpuCount": 4,
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25"
+    },
+    "measurement": {
+      "heapDiagnostics": false,
+      "warmupExperiment": false,
+      "warmupCycles": 2,
+      "cycles": 30,
+      "heapCeilingBytes": 1048576,
+      "beforeHeap": {
+        "usedSize": 14359660,
+        "totalSize": 17948672,
+        "embedderHeapUsedSize": 7620416,
+        "backingStorageSize": 6319846
+      },
+      "afterHeap": {
+        "usedSize": 16389296,
+        "totalSize": 19783680,
+        "embedderHeapUsedSize": 8217048,
+        "backingStorageSize": 6319783
+      },
+      "heapDelta": 2029636,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      }
+    },
+    "resourceValuesAcrossAll30Cycles": {
+      "listeners": [
+        82
+      ],
+      "pendingRaf": [
+        1
+      ]
+    },
+    "activeRolls": 0,
+    "archivedRollCounts": [
+      0,
+      0,
+      0
+    ],
+    "lifecycleValuesAcrossAll30Cycles": [
+      {
+        "applications": 1,
+        "observers": 1,
+        "sessions": 1
+      }
+    ],
+    "retryRationale": "No added persistent state/references in R1; new per-roll bounds branch never executes in this zero-roll lifecycle fixture; retained native/app owners remain constant. Keep failed first measurement. One unchanged retry under user authorization, no threshold/warmup/CI changes. This is not proof of absence of leaks at all workloads.",
+    "earlyRetryRequest": {
+      "started": false,
+      "httpStatus": 403,
+      "reason": "The workflow run containing this job is already running"
+    }
+  }
+}

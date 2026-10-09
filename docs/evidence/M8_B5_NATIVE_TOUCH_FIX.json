@@ -1245,5 +1245,363 @@
     },
     "previousFailure": "https://github.com/catfish-xn/cat/actions/runs/37874820358"
   },
-  "assertCallsUnchanged": 34
+  "assertCallsUnchanged": 34,
+  "round2NegativeControl": {
+    "productCommit": "0ece5b914c67bf47a3c2e5dad8390b43b441b952",
+    "date": "2026-10-09",
+    "isolation": "git archive into /tmp; no repository UI or threshold changes",
+    "mutation": {
+      "file": "src/rendering/strategy-panel.ts",
+      "before": "if (guard && guard.name !== name && now - guard.at < LIFECYCLE_QUIET_MS)",
+      "after": "if (navigator.maxTouchPoints === 0 && guard && guard.name !== name && now - guard.at < LIFECYCLE_QUIET_MS)",
+      "sourceSha256": "8a26dc06507afe79dca55c48d1033414a1f3cf5de0d5902495e2ef1f7b744a5c",
+      "mutantSha256": "027983b8467a62a6c40e71fa8db4c162fcb3e8a08c8d8728250df90b46d2c3b4",
+      "purpose": "Disable lifecycle guard only in touch context, retaining desktop guard so unchanged full gate reaches double-tap assertion."
+    },
+    "allInputsDisabledTrial": {
+      "mutation": "LIFECYCLE_QUIET_MS = 400 -> 0 in isolated copy",
+      "result": "original desktop double-click assertion failed first with actual combat; did not reach touch check",
+      "reportSha256": "80888446df89d34b69eaa7d04e795147df8cab01067ce82c6192317619a37080"
+    },
+    "gateSha256": "e14a32900b6785c6091040c16c80bd3b7151793be0f0cac058d18218a8424d50",
+    "probeSha256": "5ed34239605c0302255548a091683a805fb5de6d672f72f95e3c7ded5274a74b",
+    "expectedGateExit": 1,
+    "expectedFailure": "double tap on 继续 must not start combat",
+    "actualPhase": "combat",
+    "gateReport": {
+      "url": "http://127.0.0.1:39449",
+      "checks": [
+        {
+          "name": "help-dialog",
+          "goldBefore": 10,
+          "goldAfterD": 8
+        },
+        {
+          "name": "reduced-motion-equivalence",
+          "result": "enemyWin",
+          "events": 622
+        }
+      ],
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: double tap on 继续 must not start combat\n    at /root/projects/hex-autobattler/scripts/verify-m7-presentation.cjs:154:14"
+    },
+    "nativeInput": {
+      "browser": "153.0.8010.12",
+      "records": [
+        {
+          "events": [
+            {
+              "id": 0,
+              "type": "pointerdown",
+              "phase": "capture",
+              "name": "mobile:start-combat",
+              "at": 42474.699999928474,
+              "trusted": true
+            },
+            {
+              "id": 0,
+              "type": "pointerdown",
+              "phase": "bubble",
+              "name": "mobile:start-combat",
+              "at": 42474.89999997616,
+              "trusted": true
+            },
+            {
+              "id": 1,
+              "type": "touchstart",
+              "phase": "capture",
+              "name": "mobile:start-combat",
+              "at": 42475,
+              "trusted": true
+            },
+            {
+              "id": 1,
+              "type": "touchstart",
+              "phase": "bubble",
+              "name": "mobile:start-combat",
+              "at": 42475.10000002384,
+              "trusted": true
+            },
+            {
+              "id": 2,
+              "type": "pointerup",
+              "phase": "capture",
+              "name": "mobile:start-combat",
+              "at": 42478.10000002384,
+              "trusted": true
+            },
+            {
+              "id": 2,
+              "type": "pointerup",
+              "phase": "bubble",
+              "name": "mobile:start-combat",
+              "at": 42478.199999928474,
+              "trusted": true
+            },
+            {
+              "id": 3,
+              "type": "touchend",
+              "phase": "capture",
+              "name": "mobile:start-combat",
+              "at": 42478.299999952316,
+              "trusted": true
+            },
+            {
+              "id": 3,
+              "type": "touchend",
+              "phase": "bubble",
+              "name": "mobile:start-combat",
+              "at": 42478.299999952316,
+              "trusted": true
+            },
+            {
+              "id": 4,
+              "type": "click",
+              "phase": "capture",
+              "name": "mobile:start-combat",
+              "at": 42717.199999928474,
+              "trusted": true
+            },
+            {
+              "id": 4,
+              "type": "click",
+              "phase": "bubble",
+              "name": "mobile:start-combat",
+              "at": 42768.60000002384,
+              "trusted": true
+            },
+            {
+              "id": 5,
+              "type": "pointerdown",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 96981.79999995232,
+              "trusted": true
+            },
+            {
+              "id": 5,
+              "type": "pointerdown",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 96981.89999997616,
+              "trusted": true
+            },
+            {
+              "id": 6,
+              "type": "touchstart",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 96982.10000002384,
+              "trusted": true
+            },
+            {
+              "id": 6,
+              "type": "touchstart",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 96982.10000002384,
+              "trusted": true
+            },
+            {
+              "id": 7,
+              "type": "pointerup",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97308,
+              "trusted": true
+            },
+            {
+              "id": 7,
+              "type": "pointerup",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 97308,
+              "trusted": true
+            },
+            {
+              "id": 8,
+              "type": "touchend",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97308.39999997616,
+              "trusted": true
+            },
+            {
+              "id": 8,
+              "type": "touchend",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 97308.5,
+              "trusted": true
+            },
+            {
+              "id": 9,
+              "type": "pointerdown",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97310.60000002384,
+              "trusted": true
+            },
+            {
+              "id": 9,
+              "type": "pointerdown",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 97310.69999992847,
+              "trusted": true
+            },
+            {
+              "id": 10,
+              "type": "touchstart",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97310.69999992847,
+              "trusted": true
+            },
+            {
+              "id": 10,
+              "type": "touchstart",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 97310.69999992847,
+              "trusted": true
+            },
+            {
+              "id": 11,
+              "type": "pointerup",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97312.29999995232,
+              "trusted": true
+            },
+            {
+              "id": 11,
+              "type": "pointerup",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 97312.29999995232,
+              "trusted": true
+            },
+            {
+              "id": 12,
+              "type": "touchend",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97312.5,
+              "trusted": true
+            },
+            {
+              "id": 12,
+              "type": "touchend",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 97312.5,
+              "trusted": true
+            },
+            {
+              "id": 13,
+              "type": "click",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97320.60000002384,
+              "trusted": true
+            },
+            {
+              "id": 13,
+              "type": "click",
+              "phase": "bubble",
+              "name": "mobile:continue",
+              "at": 97354.79999995232,
+              "trusted": true
+            },
+            {
+              "id": 14,
+              "type": "click",
+              "phase": "capture",
+              "name": "mobile:start-combat",
+              "at": 97364.19999992847,
+              "trusted": true
+            },
+            {
+              "id": 14,
+              "type": "click",
+              "phase": "bubble",
+              "name": "mobile:start-combat",
+              "at": 97378.19999992847,
+              "trusted": true
+            }
+          ],
+          "measurement": {
+            "first": {
+              "id": 13,
+              "type": "click",
+              "phase": "capture",
+              "name": "mobile:continue",
+              "at": 97320.60000002384,
+              "trusted": true
+            },
+            "second": {
+              "id": 14,
+              "type": "click",
+              "phase": "capture",
+              "name": "mobile:start-combat",
+              "at": 97364.19999992847,
+              "trusted": true
+            },
+            "clickGapMs": 43.59999990463257,
+            "firstHandlerMs": 34.199999928474426,
+            "afterHandlerMs": 9.399999976158142
+          }
+        }
+      ]
+    },
+    "results": [
+      {
+        "label": "b5",
+        "productSha": "0ece5b914c67bf47a3c2e5dad8390b43b441b952",
+        "mutation": "isolated strategy-panel.ts guard skipped only when navigator.maxTouchPoints > 0",
+        "productAssets": {
+          "index-Cw14rKwt.js": "afae95e3b62a216daa2860227f74a666e8eafa3282a1e579ebfab178bf380118"
+        },
+        "scriptSha256": "e14a32900b6785c6091040c16c80bd3b7151793be0f0cac058d18218a8424d50",
+        "probeSha256": "5ed34239605c0302255548a091683a805fb5de6d672f72f95e3c7ded5274a74b",
+        "checks": [
+          {
+            "name": "help-dialog",
+            "goldBefore": 10,
+            "goldAfterD": 8
+          },
+          {
+            "name": "reduced-motion-equivalence",
+            "result": "enemyWin",
+            "events": 622
+          }
+        ],
+        "passed": false,
+        "browser": "153.0.8010.12",
+        "measurement": {
+          "first": {
+            "id": 13,
+            "type": "click",
+            "phase": "capture",
+            "name": "mobile:continue",
+            "at": 97320.60000002384,
+            "trusted": true
+          },
+          "second": {
+            "id": 14,
+            "type": "click",
+            "phase": "capture",
+            "name": "mobile:start-combat",
+            "at": 97364.19999992847,
+            "trusted": true
+          },
+          "clickGapMs": 43.59999990463257,
+          "firstHandlerMs": 34.199999928474426,
+          "afterHandlerMs": 9.399999976158142
+        }
+      }
+    ],
+    "externalValidation": "Confirmed exit 1, original touch assertion failure, two trusted clicks continue -> start-combat, clickGapMs and afterHandlerMs both >0 and <400. Negative-control harness exits 0 only on expected rejection."
+  }
 }

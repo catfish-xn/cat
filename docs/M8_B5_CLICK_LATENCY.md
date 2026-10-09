@@ -161,3 +161,20 @@ node scripts/diagnose-m8-b5-click-pure-cost.cjs --study=artifacts/m8-b5-click-re
 堆门禁沿用2次预热/30次循环、无诊断：dev **259632B ≤1572864B**，listeners83→83/RAF1→1；preview **238776B ≤1048576B**，listeners82→82/RAF1→1。均首轮通过，无堆失败或重跑。完整数据、作业永久链接与原日志/比较产物指纹已补入机器证据。
 
 最终补记提交只更新本报告、机器证据与交接文档；CI受测SHA明确为8e16da2，不把后续纯文档SHA冒充运行过CI。原34处assert调用经语法树提取后逐项比对，内容和顺序均不变。PR保持Draft，不送审、不合并。
+
+## 第二轮补充：双触负向控制（2026-10-09）
+
+独立审计项 **B5-M7-INPUT** 补齐“防护失效时原断言必须失败”的证据；本轮没有再次修改输入驱动。以 `0ece5b914c67bf47a3c2e5dad8390b43b441b952` 执行 `git archive` 到 `/tmp`，链接相同依赖并生产构建；只在隔离副本制造防护缺陷，仓库 UI、400ms、原脚本和 CI 配置不变。
+
+1. 首次把隔离副本 `LIFECYCLE_QUIET_MS` 从400改为0：原完整脚本在鼠标双击断言先失败，实际 `combat`，尚未到双触检查。这证明鼠标断言有效，但不能作为触摸证据，原失败报告保留。
+2. 为单独走到触摸检查，重建隔离副本：恢复400，仅将防护条件 `if (guard && …)` 改成 `if (navigator.maxTouchPoints === 0 && guard && …)`。桌面鼠标防护保留，只有触摸环境绕过防护；原完整 M7 脚本、前置步骤、全部断言和等待均不改。使用既有只读 preload 记录原生事件，不注入点击或状态。
+3. 第二次运行按预期在 `verify-m7-presentation.cjs:154` 原断言 `double tap on 继续 must not start combat` 失败，脚本退出1，实际 `combat`；前面的帮助、reduced-motion及鼠标双击检查已通过。不能把这个故意损坏产品的运行记作正常验收通过。
+
+| 事件 | 目标 | isTrusted | performance.now() |
+| --- | --- | --- | ---: |
+| 第一次 click | `mobile:continue` | true | 97320.600ms |
+| 第二次 click | `mobile:start-combat` | true | 97364.200ms |
+
+总间隔 **43.6ms**，第一次同步处理 **34.2ms**，处理结束到第二 click **9.4ms**；总间隔和处理后间隔均在原400ms内。外部验证器检查原断言失败、两次trusted事件/目标及两个窗口条件，全部满足后才退出0。该反例结合前文正常基线/B5各7项通过，表明新驱动既能触发被防护的真实输入，也能检出防护失效，不是通过漏发第二次点击变绿。
+
+完整原生事件、负向gate报告、源文件/隔离变异/生产资产/脚本SHA256已追加到 [机器证据](evidence/M8_B5_NATIVE_TOUCH_FIX.json) 的 `round2NegativeControl`，历史正常对照及旧失败记录不覆盖。复现时按以上单行变异构建隔离归档，用静态HTTP服务托管dist，执行文首同一 `node --require=./scripts/probe-m7-native-touch.cjs scripts/verify-m7-presentation.cjs --url=… --out=…`；预期原脚本退出1。仅作为断言敏感性证据，不替代本轮 R1 SHA `20551f26fa738f090898a29360435ab1fdb1e8c5` 的正常完整CI。
