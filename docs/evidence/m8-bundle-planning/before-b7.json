@@ -1,0 +1,15 @@
+{
+  "label": "947ac7151e180a70446aeece09d8c9e500f2a4b9",
+  "node": "v22.23.3",
+  "zlib": "1.3.1-e00f703",
+  "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+  "files": [
+    {
+      "file": "index-PhUSLuTZ.js",
+      "rawBytes": 1680515,
+      "gzip9Bytes": 480941,
+      "sha256": "b4e06e86db37dd22310f083bb29a969bb9b0d3636f26d80265bb94b774181b01"
+    }
+  ],
+  "totalGzip9Bytes": 480941
+}

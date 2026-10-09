@@ -1,0 +1,4 @@
+// Diagnostic reachability probe only. Not a UI implementation or a production change.
+import { readEncounterPreview } from './simulation/encounter-selectors';
+import { readRoundInfo } from './simulation/round-selectors';
+Object.assign(globalThis, { __BUDGET_PROBE__: { readEncounterPreview, readRoundInfo } });

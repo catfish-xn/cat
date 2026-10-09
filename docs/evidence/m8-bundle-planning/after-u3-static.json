@@ -1,0 +1,15 @@
+{
+  "label": "e896cc0aafa8e4c8a77620c2a33a287f40bab378",
+  "node": "v22.23.3",
+  "zlib": "1.3.1-e00f703",
+  "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+  "files": [
+    {
+      "file": "index-B4KrJ6e2.js",
+      "rawBytes": 1656812,
+      "gzip9Bytes": 474009,
+      "sha256": "d42dc121706d8c11ca8b509c707d3bae5f236daedc13d8a2504b5ef424fc03ab"
+    }
+  ],
+  "totalGzip9Bytes": 474009
+}
