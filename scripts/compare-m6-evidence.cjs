@@ -42,8 +42,9 @@ for (const mode of ['dev', 'preview']) {
   assert.equal(route.m6Lifecycle.rows.length, limits.LIFECYCLE_CYCLES);
   assert.equal(route.mode, mode, 'full application measurement mode');
   assert.equal(route.m6Lifecycle.heapCeilingBytes, applicationHeapCeilingBytes(mode), 'full application recorded heap ceiling');
-  assert.equal(route.m6Lifecycle.heapDelta, route.m6Lifecycle.afterHeap.usedSize - route.m6Lifecycle.beforeHeap.usedSize, 'full application heap delta matches raw readings');
-  assert.deepEqual(route.m6Lifecycle.heapGate, applicationHeapGate(mode, route.m6Lifecycle.heapDelta), 'full application heap warning matches measured overrun');
+  const heapGate = applicationHeapGate(mode, route.m6Lifecycle.beforeHeap, route.m6Lifecycle.afterHeap);
+  assert.equal(route.m6Lifecycle.heapDelta, heapGate.deltaBytes, 'full application heap delta matches raw readings');
+  assert.deepEqual(route.m6Lifecycle.heapGate, heapGate, 'full application heap warning matches measured overrun');
   warnApplicationHeap(route.m6Lifecycle.heapGate);
   assert.equal(route.m6Lifecycle.afterResources.listeners, route.m6Lifecycle.beforeResources.listeners, 'full application listener cleanup');
   assert(route.m6Lifecycle.afterResources.pendingRaf <= route.m6Lifecycle.beforeResources.pendingRaf + 1, 'full application frame scheduler cleanup');

@@ -10,8 +10,9 @@ function applicationHeapCeilingBytes(mode){
 }
 // H1 (2026-10-09): retain the measurement and ceiling, but report an overrun
 // without failing the full-application route or its evidence comparison.
-function applicationHeapGate(mode,deltaBytes){
- if(!Number.isSafeInteger(deltaBytes))throw new TypeError('Invalid full-application heap delta');
+function applicationHeapGate(mode,beforeHeap,afterHeap){
+ for(const heap of [beforeHeap,afterHeap])if(!Number.isSafeInteger(heap?.usedSize)||heap.usedSize<0)throw new TypeError('Invalid full-application heap reading');
+ const deltaBytes=afterHeap.usedSize-beforeHeap.usedSize;
  const ceilingBytes=applicationHeapCeilingBytes(mode);
  return {policy:'warn-only',deltaBytes,ceilingBytes,exceeded:deltaBytes>ceilingBytes};
 }
