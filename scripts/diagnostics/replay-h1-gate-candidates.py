@@ -81,6 +81,18 @@ def main():
         if process_id in process_ids: raise ValueError('Duplicate run/sample process identity')
         process_ids.add(process_id)
         if environment['sourceSha']!='97f38a0e787a4edcb35df4a59823bb1d106def67' or environment['browser']!='153.0.8010.12': raise ValueError('Runtime/browser identity mismatch')
+        if 'samples' in provenance:
+            matches=[s for s in provenance['samples'] if s['sample']==path.parent.name]
+            if len(matches)!=1: raise ValueError('Missing or ambiguous manifest sample identity')
+            identity=matches[0]['manifestIdentity']
+        else:
+            if path.parent.name!=f'{a.mode}-extended-01': raise ValueError('Unexpected single-sample directory')
+            identity=provenance['manifestIdentity']
+        if any(identity[k]!=v for k,v in {'sha':environment['sourceSha'],'browser':environment['browser'],'node':environment['node'],'mode':a.mode,'build':'cannon','status':'','touch':False}.items()):
+            raise ValueError('Manifest/environment/mode identity mismatch')
+        diagnostic=identity['h1ExtendedDiagnostic']
+        if any(diagnostic[k]!=v for k,v in {'sourceSha':environment['sourceSha'],'warmupCycles':2,'cyclesPerWindow':30,'windows':6,'snapshots':False}.items()):
+            raise ValueError('Manifest diagnostic protocol mismatch')
         life_path=path.with_name('m6-lifecycle.json');life_raw=life_path.read_bytes();life=json.loads(life_raw)
         if t['heapDiagnostics'] or t['warmupCycles']!=2 or t['cyclesPerWindow']!=30 or len(t['windows'])!=6:
             raise ValueError('Only complete six-window original-warmup nonsnapshot traces accepted')
