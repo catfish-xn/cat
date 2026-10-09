@@ -1,0 +1,47 @@
+{
+  "previousSha": "9e0b35465bab14b5adc8d1446a1bb2d045018286",
+  "b3BaselineSha": "0411ad65c1933e87df840042f38cfe1ce834d127",
+  "archiveSha256": "1adf09af7b7508277599703677a9d3fdc7d87b46799384671fbbcd7694204395",
+  "verified": [
+    {
+      "build": "cannon",
+      "commands": 158,
+      "battles": 33,
+      "commandsUnchanged": true,
+      "completeEventsUnchanged": true,
+      "completeStatesUnchangedExceptContentDigest": true,
+      "oldDigest": "fnv1a32-utf16:eb9d2788",
+      "newDigest": "fnv1a32-utf16:c1704f5d"
+    },
+    {
+      "build": "sniper",
+      "commands": 160,
+      "battles": 33,
+      "commandsUnchanged": true,
+      "completeEventsUnchanged": true,
+      "completeStatesUnchangedExceptContentDigest": true,
+      "oldDigest": "fnv1a32-utf16:eb9d2788",
+      "newDigest": "fnv1a32-utf16:c1704f5d"
+    },
+    {
+      "build": "mage",
+      "commands": 157,
+      "battles": 33,
+      "commandsUnchanged": true,
+      "completeEventsUnchanged": true,
+      "completeStatesUnchangedExceptContentDigest": true,
+      "oldDigest": "fnv1a32-utf16:eb9d2788",
+      "newDigest": "fnv1a32-utf16:c1704f5d"
+    },
+    {
+      "build": "sniper-caitlyn",
+      "commands": 163,
+      "battles": 33,
+      "commandsUnchanged": true,
+      "completeEventsUnchanged": true,
+      "completeStatesUnchangedExceptContentDigest": true,
+      "oldDigest": "fnv1a32-utf16:eb9d2788",
+      "newDigest": "fnv1a32-utf16:c1704f5d"
+    }
+  ]
+}

@@ -1598,3 +1598,9 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 旧（B6新增比较器错误）：所有checkpoint.stateHash一律等于route.actions[i].afterHash，把Start的即时tick0与原浏览器等待结算后的记录比较。
 新：仅Start按同轮唯一round.after完整状态重新算hash并核对round.stateHash；其他命令仍action.afterHash。全部索引/数量/边界/原精确skip检查保留。
 理由：CI150真实artifact证明command0.after和round1.after逐对象一致，实际hash825df5…；原错误期望b5c692…属于combat/tick0。这是实现错误，不是旧断言放宽。8路1226checkpoint/32篡改负例已用原产物验证，真实CI仍等待修复SHA。
+
+
+## A146 · tests/fixtures/m5/full-match-golden.json · B3 sync guarded digest-only integration
+旧：9e B6的四条33战路线，digest eb9d2788；另041 B3仍是四条旧30战路线。
+新：保留9e全部638命令/132战事件及观察，只接受合并生产代码产生的digest c1704f5d和132个派生stateHash。每个完整结算状态将digest替回旧值后，hash均严格等于9e；没有更改其他版本或行为期望。
+理由：同时保留已批准B6新日程与B3通用顺序修复。旧B6文件逐字另存pre-b6-b3-sync，固定SHA守卫更新器与原冲突/验证日志全部保留；任何行为变化即停止，而非宽松记录新golden。新CI/审计仍需最终merge SHA。

@@ -20,6 +20,7 @@ export const S13_COMBAT_RULES = Object.freeze({
   attackSpeedStacking: 'original-base-times-sum-static-runtime-status-final-ceil',
   packetOrder: 'owner-action-target-ordinal',
   statusTiming: 'new-action-status-next-tick-full-duration',
+  openingControlTiming: 'm8-b3-v1-bound-packet-then-surviving-target-next-tick-stun',
   periodicTiming: 'final-before-expiry-ordinary-before-actions-per-task-effect-target-rational-remainders',
   statusStacking: 'same-instance-refresh-independent-instances-strongest-retains-suppressed-burn-clock-only',
   healingPipeline: 'exact-merge-once-wound-cap-three-stage-largest-remainder-source-shares',
