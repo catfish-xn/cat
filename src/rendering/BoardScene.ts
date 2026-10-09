@@ -158,7 +158,7 @@ export class BoardScene extends Phaser.Scene {
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
       deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
       control: name => this.panelControl(name),
-      unitAt: (x, y) => this.playerUnitAt(x, y), cancelGesture: () => this.clearDrag(),
+      unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
     }, this.inputRouter);
     this.input.dragDistanceThreshold = 6;
@@ -292,11 +292,15 @@ export class BoardScene extends Phaser.Scene {
       else this.setStatus('请先在单位面板选择一个我方单位');
     }
   }
-  private playerUnitAt(x: number, y: number): string | undefined {
+  /**
+   * Item drop target: any visible piece under the pointer, either team. Ownership is not
+   * filtered here, so an enemy drop reaches previewEquip and shows its 'unknown-unit' reason.
+   */
+  private boardUnitAt(x: number, y: number): string | undefined {
     const rect = this.game.canvas.getBoundingClientRect();
     const px = (x - rect.left) * this.scale.gameSize.width / rect.width;
     const py = (y - rect.top) * this.scale.gameSize.height / rect.height;
-    return this.state.units.find(unit => unit.team === 'player' && (() => {
+    return this.state.units.find(unit => (() => {
       const token = this.tokens.get(unit.id);
       return token?.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29;
     })())?.id;
