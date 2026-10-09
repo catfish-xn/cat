@@ -22,6 +22,9 @@ import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
+import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
+import { equipmentFailureText, slotList, slotViews, temporaryItemText } from '../presentation/equipment-feedback';
+import type { EquipPreview } from '../simulation/m8/ui-contracts';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -194,9 +197,13 @@ export class StrategyPanel {
       const unitId = target?.dataset.equipUnit ?? this.actions.unitAt(event.clientX, event.clientY);
       if (!unitId) { this.actions.status('物品未装备 · 请放到我方单位或空装备槽'); return; }
       const state = this.actions.state();
-      const slot = target ? Number(target.dataset.equipSlot) : [0, 1, 2].find(index => !state.items.some(item => item.location.kind === 'unit' && item.location.unitId === unitId && item.location.slot === index));
-      if (slot === undefined) { this.actions.status('该单位的 3 个装备槽已满'); return; }
-      this.actions.equip(drag.gesture.id, unitId, slot);
+      if (target) { this.actions.equip(drag.gesture.id, unitId, Number(target.dataset.equipSlot)); return; }
+      // Dropped on a board piece: use the first slot the domain preview accepts (three-slot items reserve 1–3).
+      const previews = [0, 1, 2].map(slot => previewEquip(state, drag.gesture.id, unitId, slot));
+      const slot = previews.findIndex(preview => preview.allowed);
+      if (slot >= 0) { this.actions.equip(drag.gesture.id, unitId, slot); return; }
+      const main = previews.find(preview => !preview.allowed && preview.reason !== 'item-slot-occupied') ?? previews[0];
+      this.actions.status(main.allowed ? '' : main.reason === 'item-slot-occupied' ? '该单位的 3 个装备槽已满' : equipmentFailureText(main.reason));
     };
     const cancel = () => this.actions.cancelGesture();
     const cancelPointer = (event: PointerEvent) => {
@@ -373,33 +380,89 @@ export class StrategyPanel {
       inventory.append(button);
     }
     section.append(inventory);
-    const definitions = this.selectedItems.map(id => ITEM_DEFINITIONS[state.items.find(item => item.id === id)!.definitionId]);
-    const recipe = definitions.length === 2 ? Object.values(ITEM_DEFINITIONS).find(item => item.recipe && [...item.recipe].sort().join('|') === definitions.map(item => item.id).sort().join('|')) : undefined;
-    section.append(element('p', `选择：${definitions.map(definition => definition.name).join(' + ') || '无'}${recipe ? ` → ${recipe.name}` : ''}`));
+    // Combine and equip legality come from the B5 previews (same validators as the commands);
+    // the commands still re-check the current state when clicked.
+    const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? ITEM_DEFINITIONS[item.definitionId].name : '已不存在的物品'; };
     const selected = [...this.selectedItems];
-    section.append(this.button('combine-items', recipe ? `合成 ${recipe.name}` : '选择两件组件合成', () => {
+    const combine = ready && selected.length === 2 ? previewCombine(state, selected[0], selected[1]) : null;
+    const resultName = combine?.allowed ? ITEM_DEFINITIONS[combine.resultDefinitionId]?.name ?? combine.resultDefinitionId : '';
+    const choice = element('p', `选择：${selected.map(itemName).join(' + ') || '无'}${combine?.allowed ? ` → ${resultName}` : ''}`, 'combine-selection');
+    section.append(choice);
+    if (combine && !combine.allowed) { const hint = element('p', `无法合成：${equipmentFailureText(combine.reason)}`, 'equip-hint denied'); hint.dataset.debug = 'combine-preview'; hint.dataset.reason = combine.reason; section.append(hint); }
+    section.append(this.button('combine-items', combine?.allowed ? `合成 ${resultName}` : combine ? '无法合成' : '选择两件组件合成', () => {
       if (this.router.current) { this.actions.status('请先结束当前拖拽，再确认合成'); return; }
       this.actions.combine(selected[0], selected[1]);
-    }, !ready || !recipe));
+    }, !ready || !combine?.allowed));
     section.append(element('h3', '单位装备 · 每单位 3 槽'));
+    const chosen = ready ? this.selectedItems.filter(id => state.items.some(item => item.id === id)).at(-1) : undefined;
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const row = element('article', '', 'equipment-row');
       row.append(element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`));
+      const view = readUnitEquipment(state, unit.id);
+      const previews: EquipPreview[] | null = chosen ? [0, 1, 2].map(slot => previewEquip(state, chosen, unit.id, slot)) : null;
+      const conflicts = new Set(previews?.flatMap(preview => preview.allowed ? [] : preview.conflictingItemIds) ?? []);
       const slots = element('div', '', 'equipment-slots');
-      for (let slot = 0; slot < 3; slot++) {
-        const item = state.items.find(item => item.location.kind === 'unit' && item.location.unitId === unit.id && item.location.slot === slot);
-        const chosen = this.selectedItems.at(-1);
-        const button = this.button(`equipment:${unit.id}:${slot}`, item ? ITEM_DEFINITIONS[item.definitionId].name : `空槽 ${slot + 1}`, () => {
+      for (const entry of view ? slotViews(view) : []) {
+        const { slot } = entry, item = entry.itemInstanceId ? state.items.find(value => value.id === entry.itemInstanceId) : undefined;
+        const reserved = !item && entry.reservedByItemInstanceId !== null;
+        const label = item ? ITEM_DEFINITIONS[item.definitionId].name
+          : entry.temporary ? `临时 · ${ITEM_DEFINITIONS[entry.temporary.definitionId]?.name ?? entry.temporary.definitionId}`
+          : reserved ? `${itemName(entry.reservedByItemInstanceId!)} 占用` : `空槽 ${slot + 1}`;
+        const button = this.button(`equipment:${unit.id}:${slot}`, label, () => {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
           if (chosen) this.actions.equip(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
-        }, !ready);
+        }, !ready || reserved);
         if (item) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(item.definitionId, 22)); button.dataset.itemDef = item.definitionId; }
+        else if (entry.temporary) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.temporary.definitionId, 22)); button.dataset.itemDef = entry.temporary.definitionId; }
+        if (reserved) { button.classList.add('slot-reserved'); button.dataset.reservedBy = entry.reservedByItemInstanceId!; }
+        if (entry.temporary) { button.classList.add('slot-temporary'); button.dataset.temporaryId = entry.temporary.temporaryId; }
+        const preview = previews?.[slot];
+        if (preview) {
+          button.classList.add(preview.allowed ? 'equip-ok' : 'equip-denied');
+          button.dataset.preview = preview.allowed ? 'allowed' : preview.reason;
+          button.title = preview.allowed ? `可装备${preview.occupiedSlots.length > 1 ? `，占用槽 ${slotList(preview.occupiedSlots)}` : ''}` : equipmentFailureText(preview.reason);
+        }
+        if (item && conflicts.has(item.id)) button.classList.add('equip-conflict');
         button.dataset.equipUnit = unit.id; button.dataset.equipSlot = String(slot); slots.append(button);
       }
-      row.append(slots); section.append(row);
+      row.append(slots);
+      if (previews) row.append(this.equipHint(previews, itemName));
+      for (const temporary of view?.temporaryItems ?? []) row.append(element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, itemName(temporary.parentItemInstanceId)), 'temporary-line'));
+      section.append(row);
     }
     section.append(this.codex ??= createItemCodex());
     this.root.append(section);
+  }
+  /** Unit detail: slots and temporary children from readUnitEquipment(); temporaries are read-only. */
+  private appendEquipmentDetail(node: HTMLElement, state: MatchState, unitId: string): void {
+    // Enemy loadouts are not player instances (no permanent IDs to name); only player units get the detail.
+    if (state.preparation.units.find(unit => unit.id === unitId)?.team !== 'player') return;
+    const view = readUnitEquipment(state, unitId);
+    if (!view) return;
+    const name = (id: string | null) => { const item = id ? state.items.find(entry => entry.id === id) : undefined; return item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : null; };
+    const slots = slotViews(view).map(entry => entry.itemInstanceId ? name(entry.itemInstanceId) : entry.temporary ? `临时·${ITEM_DEFINITIONS[entry.temporary.definitionId]?.name ?? entry.temporary.definitionId}`
+      : entry.reservedByItemInstanceId ? `（${name(entry.reservedByItemInstanceId) ?? '独占装备'}占用）` : '空');
+    const line = element('p', `装备槽：${slots.map((text, slot) => `${slot + 1} ${text}`).join(' · ')}`, 'unit-equipment'); line.dataset.debug = `unit-equipment:${unitId}`;
+    node.append(line);
+    for (const temporary of view.temporaryItems) {
+      const item = element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, name(temporary.parentItemInstanceId) ?? '已移除的装备'), 'temporary-line');
+      item.dataset.itemDef = temporary.definitionId; item.tabIndex = 0; node.append(item);
+    }
+  }
+  /** One line per unit while an item is chosen: where it fits, or why not and what conflicts. */
+  private equipHint(previews: readonly EquipPreview[], itemName: (id: string) => string): HTMLElement {
+    const allowed = previews.flatMap((preview, slot) => preview.allowed ? [{ slot, preview }] : []);
+    if (allowed.length) {
+      const span = allowed[0].preview.allowed ? allowed[0].preview.occupiedSlots : [];
+      const hint = element('p', span.length > 1 ? `可装备 · 将占用槽 ${slotList(span)}` : `可装备到槽 ${slotList(allowed.map(entry => entry.slot))}`, 'equip-hint ok');
+      hint.dataset.preview = 'allowed'; return hint;
+    }
+    // Every slot refused: show the most specific reason (an occupied slot is the least informative).
+    const denied = previews.filter((preview): preview is Extract<EquipPreview, { allowed: false }> => !preview.allowed);
+    const main = denied.find(preview => preview.reason !== 'item-slot-occupied') ?? denied[0];
+    const conflicts = [...new Set(main.conflictingItemIds)];
+    const hint = element('p', `不可装备：${main.reason === 'item-slot-occupied' ? '三个装备槽均已有装备' : equipmentFailureText(main.reason)}${conflicts.length ? `（冲突：${conflicts.map(itemName).join('、')}）` : ''}`, 'equip-hint denied');
+    hint.dataset.preview = main.reason; return hint;
   }
   private renderUnits(state: MatchState, ready: boolean): void {
     const section = element('section'); section.append(element('h3', '先选单位，再点部署位置'));
@@ -509,6 +572,7 @@ export class StrategyPanel {
         const definition = UNIT_DEFINITIONS[selected.definitionId], stats = getUnitStats(selected.definitionId, selected.starLevel);
         node.append(element('h3', `${displayUnitName(selected.definitionId)} ${'★'.repeat(selected.starLevel)}`), element('p', `基础 生命 ${stats.health} · 攻击力 ${stats.attack} · 护甲 ${stats.armor} · 魔抗 ${stats.magicResist} · 法力 ${stats.initialMana}/${stats.maxMana}`));
         node.append(element('p', `职业：${definition.traits.map(id => TRAIT_DEFINITIONS[id]?.name ?? `${id}（本版本未开放）`).join(' / ')}`));
+        this.appendEquipmentDetail(node, state, selected.id);
       }
       return;
     }
@@ -518,6 +582,7 @@ export class StrategyPanel {
     if (!unit) return;
     const base = getUnitStats(unit.definitionId, unit.starLevel);
     const current = readCombatStats(unit, combat);
+    this.appendEquipmentDetail(node, state, unit.id);
     node.append(element('h3', `战斗 · ${displayUnitName(unit.definitionId)}`));
     node.append(element('p', `生命 ${unit.hp}/${unit.maxHp} · 法力 ${unit.mana}/${unit.maxMana} · 盾 ${unit.shield}`));
     node.append(element('p', `基础最大生命 ${base.health} → 本场最大生命 ${unit.maxHp}`));

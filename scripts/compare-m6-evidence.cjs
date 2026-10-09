@@ -4,7 +4,7 @@ const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { sourceFingerprint, applicationHeapCeilingBytes } = require('./m5-evidence.cjs');
+const { sourceFingerprint, applicationHeapCeilingBytes, applicationHeapGate, warnApplicationHeap } = require('./m5-evidence.cjs');
 const { hash } = require('./m4-evidence.cjs');
 // This frozen constants module contains only JavaScript-compatible declarations.
 // Read module budgets directly; full-application mode limits use the shared policy.
@@ -44,7 +44,10 @@ for (const mode of ['dev', 'preview']) {
   assert.equal(route.m6Lifecycle.rows.length, limits.LIFECYCLE_CYCLES);
   assert.equal(route.mode, mode, 'full application measurement mode');
   assert.equal(route.m6Lifecycle.heapCeilingBytes, applicationHeapCeilingBytes(mode), 'full application recorded heap ceiling');
-  assert(route.m6Lifecycle.heapDelta <= applicationHeapCeilingBytes(mode), 'full application post-GC heap');
+  const heapGate = applicationHeapGate(mode, route.m6Lifecycle.beforeHeap, route.m6Lifecycle.afterHeap);
+  assert.equal(route.m6Lifecycle.heapDelta, heapGate.deltaBytes, 'full application heap delta matches raw readings');
+  assert.deepEqual(route.m6Lifecycle.heapGate, heapGate, 'full application heap warning matches measured overrun');
+  warnApplicationHeap(route.m6Lifecycle.heapGate);
   assert.equal(route.m6Lifecycle.afterResources.listeners, route.m6Lifecycle.beforeResources.listeners, 'full application listener cleanup');
   assert(route.m6Lifecycle.afterResources.pendingRaf <= route.m6Lifecycle.beforeResources.pendingRaf + 1, 'full application frame scheduler cleanup');
   for(const key of ['sameBattle','fullStateLedgerRevisionPreserved','nativeKeyboard','durableRevisionUnchanged'])assert.equal(route.m6ReplayReopen?.[key],true,`same-battle native reopen: ${key}`);

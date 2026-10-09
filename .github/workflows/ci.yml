@@ -139,6 +139,32 @@ jobs:
         with:
           name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
+  m8-u3-dynamic:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: m8-u3-dynamic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      M5_JOB_KEY: m8-u3-dynamic
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - name: Desktop equipment previews and native board drops (UR-U3-08)
+        run: node scripts/ci-m5-step.cjs m8-u3-dynamic node scripts/verify-m8-u3-dynamic.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m8-u3-dynamic-${{ env.M5_COMMIT_SHA }}
+          path: |
+            artifacts/m8-u3-dynamic/
+            artifacts/m5-ci-timing-m8-u3-dynamic/
   m6-retention:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: m6-retention
