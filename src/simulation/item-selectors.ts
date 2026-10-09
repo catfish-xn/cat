@@ -8,6 +8,14 @@ import { isTemporaryItemId } from './temporary-equipment';
 
 export { readItemCatalog } from './item-catalog';
 
+export interface InventoryItemView { readonly itemInstanceId: string; readonly definitionId: string }
+/** Permanent inventory only; unresolved rewards and temporary children are never stock. */
+export function readItemInventory(state: Readonly<MatchState>): readonly InventoryItemView[] {
+  return state.items.filter(item => item.location.kind === 'inventory')
+    .map(item => ({ itemInstanceId: item.id, definitionId: item.definitionId }))
+    .sort((a, b) => a.itemInstanceId < b.itemInstanceId ? -1 : a.itemInstanceId > b.itemInstanceId ? 1 : 0);
+}
+
 /** These are the public command validators; a preview never allocates an instance. */
 export function previewCombine(state: Readonly<MatchState>, aId: string, bId: string): CombinePreview {
   if (state.phase !== 'preparation') return { allowed: false, reason: 'wrong-phase' };

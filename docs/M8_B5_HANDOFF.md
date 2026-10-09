@@ -98,3 +98,29 @@
 - 工作区另有 `docs/M8_U3_AUDIT.md`，属于同时进行的其他任务，不纳入B5提交。
 
 下一阶段：完整升星链/满槽/多本体返还验收、IF-GRANT唯一永久实例与调用方一次收据的原子接点；新增永久库存只读查询。B8掉落资格/解决账本不提前实现。
+
+## 阶段 4：升星返还与 IF-GRANT
+
+状态：领域实现和定向验收完成，随本阶段 `[wip]` 提交推送；最终全量复验另记，不代表送审或签收。
+
+- 新增 `item-grants.ts`：`planPermanentItemGrant(state,{definitionId,receiptId},committedReceiptIds)` 仅规划一个永久实例；成功返回资源state与单项 `grantedItemIds`，失败返回**同一输入state引用**与有限失败码。校验空身份、调用方已提交收据、未知目录定义、安全serial/ID冲突。零经济、零随机、零事件，无新收据账本。
+- `match.ts`组件选择与 `rewards.ts`旧日程奖励接入该helper，与原 `ScheduleReceipt` 同次Match提交；旧批量日程奖励在局部副本规划每件，整批成功才提交原一份收据，任意失败不提交局部资源。没有新增公开grant命令，不更改协议2。
+- `item-selectors.ts`新增 `readItemInventory(state)`：返回按永久ID排序的独立 `{itemInstanceId,definitionId}[]`，仅含真实库存，不含已穿戴、临时件或未解决选择。
+- 新增 `tests/m8-b5-grant-upgrade.test.ts`：一次授予/调用方已提交收据后重试、错误定义/身份/serial、真实组件选择一次收据与保存重试、旧日程批量原子性、库存查询隔离；真实购买连锁1→2→3星，多TG冲突只返父永久实例并清子件/不重抽，唯一冲突/独占双向/满槽返还，重复购买与失败购买完全不变。
+- `upgrades.ts`的通用限制已在阶段1接入；第4阶段补真实Match级联与永久ID/roll/临时绑定守恒验收，不改变survivor选择规则，不拆临时子件返库存。
+
+IF-GRANT 给B8的接法（必须作为一个领域事务）：
+
+1. 调用方先校验掉落资格/未解决状态，从自己的权威 `lootReceipts` 提取 `receiptId` 列表传helper；不传UI自行构造的已领取列表。
+2. helper成功后，以返回的单项 `grantedItemIds` 创建那一份原形状LootReceipt，并将库存、序号、收据、解决记录和计数同次提交；helper本身不提交，也不能充当公开领取入口。
+3. 重试读取**已提交后的**收据列表，返回duplicate-grant；不得只提交库存而漏提交收据。未解决选择保持选择，不先造库存。
+4. 失败不创建收据、不计保底、不改状态；库存查询直接调用 `readItemInventory`。完整掉落资格/解决/终局顺序和B8恢复仍由B8负责，本批没有假装实现IF-LOOT。
+
+本阶段无新增持久态，不改变目录/规则/digest（仍 `47dd941a`）；有效旧命令的输出保持一致。定向4文件/88测试通过（grant/upgrade 14项、temporary 25项、既有upgrade与serialization）；测试夹具priority字段补齐后，grant/upgrade 14项再次通过；typecheck复验仍仅BoardScene四项枚举缺失。
+
+## 后续开发者优先事项
+
+1. 先读本文件的版本/测试失败历史及各阶段SHA；不要误把 `[wip]` 当已审签。基线97f38a0；阶段1 `633f28a`、阶段2 `fb32637`、阶段3 `12d70ad`，阶段4见本节提交。
+2. 四项 `BoardScene.ts` 拒绝文案是已定位的唯一已知编译接线阻塞，用户授权仍待回复；不扩大Codex UI权限。需补 `same-item`、`unique-conflict`、`exclusive-slots`、`temporary-item`，无视觉改动需求。
+3. 固定最终代码后复验全量/构建及适当桌面Chromium路径；不要调整180秒回放时限、体积预算或CI配置来掩盖失败。需要CI时只开指向 `feat/m8-b0-baseline` 的草稿PR。
+4. 验证完成后由接手开发者送审；本任务不送审、不合并、不开正式PR。U3动态界面可消费现有 `item-selectors.ts` 接口，不能自行重算规则。

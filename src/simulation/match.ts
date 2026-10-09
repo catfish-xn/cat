@@ -16,6 +16,7 @@ import { planCombine, planEquip, returnUnitItems } from './inventory';
 import { previewCombine, previewEquip } from './item-selectors';
 import { initializeStreams } from './m8/equipment';
 import { planTemporaryEquipment } from './temporary-equipment';
+import { planPermanentItemGrant } from './item-grants';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { getRoundSchedule, getRoundKind, getStageRound } from './round-schedule';
 import { planReward } from './rewards';
@@ -288,14 +289,16 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const choice = state.pendingChoice!;
   if (typeof definitionId !== 'string' || choice.step !== 'offer' || !choice.offers.includes(definitionId)) return fail(state, 'invalid-choice');
   if (choice.kind === 'anomaly' && !state.preparation.units.some(unit => unit.id === choice.targetId && unit.team === 'player')) return fail(state, 'invalid-target');
-  const itemId = choice.kind === 'component' ? `item-${state.nextItemSerial}` : null;
+  const granted = choice.kind === 'component' ? planPermanentItemGrant(state, { definitionId, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
+  if (granted && !granted.ok) return fail(state, 'invalid-choice');
+  const itemId = granted?.ok ? granted.grantedItemIds[0] : null;
   const acquisitionGold = choice.kind === 'augment' && definitionId === 'placebo' ? 8 : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
   let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,
     scheduleReceipts: [...state.scheduleReceipts, receipt],
-    items: itemId ? [...state.items, { id: itemId, definitionId, location: { kind: 'inventory' as const } }] : state.items,
-    nextItemSerial: state.nextItemSerial + (itemId ? 1 : 0),
+    items: granted?.ok ? granted.state.items : state.items,
+    nextItemSerial: granted?.ok ? granted.state.nextItemSerial : state.nextItemSerial,
     augments: choice.kind === 'augment' ? [...state.augments, { definitionId, choiceId, acquiredRound: state.round }] : state.augments,
     anomalyBinding: choice.kind === 'anomaly' ? { definitionId, unitId: choice.targetId!, choiceId, boundRound: state.round } : state.anomalyBinding };
   const events: MatchEvent[] = [{ type: 'choiceSelected', choiceId, definitionId, unitId: choice.targetId }];
