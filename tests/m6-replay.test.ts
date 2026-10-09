@@ -6,6 +6,7 @@ import type { CombatEvent } from '../src/simulation/combat';
 import type { MatchState } from '../src/simulation/match-types';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { readyMatch, accepted, resolveM5Choices } from './match-helpers';
+import { getCatalogRoundById } from '../src/simulation/round-selectors';
 
 function battle(initial = readyMatch(42), maxTick = Infinity) {
   const history = new BattleHistory('test-run');
@@ -133,7 +134,7 @@ describe('M6 isolated battle records and replay',()=>{
   });
   it('keeps completed records through after-choice and exposes frozen history/snapshot references',async()=>{
     const history=new BattleHistory('choice-run');let match=readyMatch(42);let sawChoice=false;
-    for(let round=0;round<7&&!sawChoice;round++) {
+    while(match.round<=getCatalogRoundById('2-7').ordinal&&!sawChoice) {
       const before=match,start=startMatchCombat(match);if(!start.ok)throw Error(start.reason);match=start.state;
       history.observe({before,after:match,events:start.events.filter((e):e is CombatEvent=>e.domain==='combat'),reason:'command'});
       while(match.phase==='combat'){const before=match,next=stepMatch(match);match=next.state;history.observe({before,after:match,events:next.events.filter((e):e is CombatEvent=>e.domain==='combat'),reason:'tick'});}

@@ -116,9 +116,14 @@ describe('B6 installed round, opening and restore transactions',()=>{
     // Strong explicit domain fixture exercises every round and strict local restore.
     // It is not an acquisition route or B9 application/history capacity acceptance.
     let state=createMatch();
-    state={...state,level:9,nextUnitSerial:10,preparation:{...state.preparation,units:[
+    state={...state,level:9,nextUnitSerial:10,nextItemSerial:28,
+      // Fixed high-damage equipment keeps this identity/restore test well below
+      // the unchanged default timeout without skipping any round or combat.
+      items:Array.from({length:27},(_,i)=>({id:`item-${i+1}`,definitionId:'deathblade',
+        location:{kind:'unit' as const,unitId:`unit-${Math.floor(i/3)+1}`,slot:i%3}})),
+      preparation:{...state.preparation,units:[
       ...state.preparation.units.filter(u=>u.team==='enemy'),
-      ...Array.from({length:9},(_,i)=>({id:`unit-${i+1}`,definitionId:'garen',team:'player' as const,starLevel:3 as const,
+      ...Array.from({length:9},(_,i)=>({id:`unit-${i+1}`,definitionId:'caitlyn',team:'player' as const,starLevel:3 as const,
         location:{kind:'board' as const,cell:{col:i%7,row:4+Math.floor(i/7)}}})),
     ]}};
     const seen:string[]=[];

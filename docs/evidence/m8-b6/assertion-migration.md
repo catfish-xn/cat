@@ -1471,3 +1471,31 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
     expect(() => createRoundEnemies(ROUND_CATALOG.length+1)).toThrow(RangeError);
 ```
 理由：同一2+阶段敌阵数字不变，改按目录roundId定位；遍历上界由ROUND_CATALOG给出，不批量35→38。
+
+## A122 · tests/m5-runtime-import.test.ts · transient-record setup
+旧输入：`startMatchCombat(readyMatch())`，旧初始PvP战斗期望可观测shieldLayers/statuses/tasks。
+新输入：`startMatchCombat(purchasedThreeHeroMatch())`，通过真实开场推进和2-1商店购买进入原PvP语义场景。
+理由：当前1-2中立占位没有原敌方技能状态；15条篡改拒绝断言全部保留并实际执行，不把beforeAll跳过记为通过。
+
+## A123 · scripts/verify-m5-headless.cjs · terminal ordinal
+旧值：seed42路线`assert.equal(route.summary.round,35)`。
+新值：`assert.equal(route.summary.round,ROUND_CATALOG.at(-1).ordinal)`，目录从同一Vite加载环境读取。
+理由：最终节点为目录6-7；胜利/成型>=3/异常出战>=2、采样、重复次数、24 seeds、时钟、RSS与事件账本测量全部不改。
+
+## A124 · scripts/verify-m7-presentation.cjs · help shortcut precondition
+旧输入：新局选择完毕便直接打开帮助；旧起手10G可支付D/F。
+新输入：先用既有benchEveryone/advanceTo公开让阵至1-4，确认2+3=5G；再打开帮助。原完整状态不变及关闭帮助后扣2G断言原样保留，手算5→3。
+理由：新起手0G无法验证D是否恢复；至少5G才能同时让D与F具备真实可执行前提。该准备与后续firstBattle/reduced-motion测量是独立newGame，不改变后者场景。
+
+## A125 · scripts/verify-m7-presentation.cjs · help-over-reward target
+旧输入：`advanceTo(page,7)`，旧语义2-7。
+新输入：`advanceTo(page,'2-7')`，helper按state.m8.round.roundId定位；新帮助准备同样按'1-4'定位。
+理由：仅目录身份迁移。2-7战后必须出现choice的断言保留，B8未接时仍失败；不改成补给或其他模态场景来放过门禁。
+
+## N001 · tests/m8-b6-match-wiring.test.ts · new, not a legacy assertion change
+首轮全量中新增强阵容fixture超过默认5秒。改为明确标注的九名三星凯特琳、每人三件deathblade（死亡之刃），以减少无关战斗tick；完整38轮、33战、36～38各phase恢复、终点、篡改拒绝断言不变。没有增加timeout或跳过测试。该输入不证明正常获取或B8收益链。
+
+## A126 · tests/m6-replay.test.ts · after-choice search bound
+旧输入：最多7场战斗内寻找战后choice，隐含旧起点2-1。
+新输入：按目录检索到原奖励节点2-7（含本轮），保留必须遇见战后choice及冻结历史引用全部断言。
+理由：新起点增加三场开场；搜索上界按稳定roundId推导，不把不存在的B8奖励误判为纯循环提前停止，也不改为检查准备期/补给choice。

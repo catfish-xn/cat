@@ -64,16 +64,16 @@ async function benchEveryone(page) {
     await page.locator(`[data-debug="mobile:bench:${slot}"]`).click();
   }
 }
-async function advanceTo(page, round) {
+async function advanceTo(page, roundId) {
   for (let guard = 0; guard < 80; guard++) {
     const state = (await read(page)).state;
-    if (state.phase === 'preparation' && state.round === round) return;
+    if (state.phase === 'preparation' && state.m8.round.roundId === roundId) return;
     if (state.phase === 'choice') await chooseAll(page);
     else if (state.phase === 'preparation') { await page.waitForTimeout(LIFECYCLE_QUIET_MS); await page.locator('[data-debug="mobile:start-combat"]').click(); }
     else if (state.phase === 'settlement') await page.locator('[data-debug="mobile:continue"]').click();
     else await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
   }
-  throw new Error(`did not reach round ${round}`);
+  throw new Error(`did not reach round ${roundId}`);
 }
 async function firstBattle(browser, reduced) {
   const game = await newGame(browser);
@@ -100,6 +100,12 @@ async function firstBattle(browser, reduced) {
     // Help dialog: information only, focus handling, shortcuts blocked while open.
     const { context, page, errors } = await newGame(browser);
     await chooseAll(page);
+    // B6 starts at 0G. Two public empty-board settlements provide 2+3=5G,
+    // so both D and F could actually execute if help failed to block them.
+    // This preparation is separate from the first-battle/reduced-motion checks below.
+    await benchEveryone(page);
+    await advanceTo(page, '1-4');
+    assert.equal((await read(page)).state.gold, 5, 'legal opening income funds help shortcut checks');
     const before = (await read(page)).state;
     await page.locator('[data-debug="help-open"]').click();
     await page.waitForSelector('[data-debug="help-dialog"]:not([hidden])');
@@ -209,7 +215,7 @@ async function firstBattle(browser, reduced) {
       const { context: ctx, page, errors: helpErrors } = await newGame(browser);
       await chooseAll(page);
       await benchEveryone(page);
-      await advanceTo(page, 7);
+      await advanceTo(page, '2-7');
       await page.locator('[data-debug="panel:units"]').click();
       await page.locator('[data-debug="mobile:unit:unit-1"]').click();
       await page.locator('[data-debug="deploy:3,5"]').click();

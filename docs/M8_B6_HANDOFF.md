@@ -260,3 +260,14 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - **B8待办**：阶段1指定英雄/两组件及后续PvE掉落；当前公开路线完整成型/15组件门禁预期仍失败。**B9待办**：应用/存储/历史原30战容量到33战的正式切换；本批不改其实现或门禁。
 - 冻结合同、G12专属用例、U3动态UI和CI配置/阈值/测量方法均未修改。此处只是实施检查点，尚未全量终验或独立Pro签收。
 - 检查点二最终定向合跑：Node22.23.3 `npm run typecheck`通过；26文件/484项全部通过，实际日志为`docs/evidence/m8-b6/checkpoint2-targeted.log.gz`；`git diff --check`通过。该26文件集合未包含四条公开路线与M6完整集成，不等同全量通过。
+
+### 9.3 检查点三：固定提交全量失败证据与范围内修复
+
+- 对固定`b0367db8e3ac63ec9925a3b1e560b7b2b6216d81`以Node22.23.3完整运行`npm test`：102文件中97通过/5失败，1312项中1287通过/10失败/15项因beforeAll失败未执行；实际耗时446.02秒、退出1。运行起止源码diff均为空，未在运行中修改源码或测试。[完整分组摘要](evidence/m8-b6/full-b0367db-summary.json)、[原始日志](evidence/m8-b6/full-b0367db.log.gz)保留真实失败；同提交`npm run build`退出0，[构建日志](evidence/m8-b6/build-b0367db.log.gz)。
+- GitHub [CI138单测原始作业](https://github.com/catfish-xn/cat/actions/runs/37903167497/job/113730234865)确认同一1287/10/15分组，并非本地偶发。[M7 presentation](https://github.com/catfish-xn/cat/actions/runs/37903167497/job/113730234592)原帮助关闭后D快捷键因0G失败；[input-preview](https://github.com/catfish-xn/cat/actions/runs/37903167497/job/113730234926)原起手资源操作实际报insufficient-gold。
+- 两项B6自身问题已在本检查点修复：runtime-import通过真实开场与2-1付费三英雄准备获取statuses，15条篡改拒绝测试真实执行；新增完整目录领域fixture改为九名三星凯特琳与明确输入的27件死亡之刃，减少无关战斗计算，保留38轮/33战及36～38准备、战中、结算恢复全部断言，不调高5秒超时。这不是正常获取或B8收益证据。两文件定向31项通过；完整目录用例单文件实测约1.73秒，最终全量并发表现仍待新提交验证。
+- 纯旧脚本锚点及M6 replay寻找战后choice的旧7场上界已迁移（按目录到2-7且保留必须出现奖励的断言）：headless终点由目录末项推导；M7帮助覆盖奖励目标仍为原语义2-7。帮助快捷键测试先通过两场公开空阵让负到1-4，手算2+3=5G，再验证帮助拦截与关闭后D扣2G；独立firstBattle/reduced-motion场景不变。逐项旧/新值、理由和新fixture说明追加到[账本A122～A126/N001](evidence/m8-b6/assertion-migration.md)。
+- `npm run test:headless`本地实际退出1，前两条路线到目录末轮后，原`formedBattles>=3`断言仍失败；没有改成型门槛、采样、时钟、RSS或重复次数。[日志](evidence/m8-b6/checkpoint3-headless-anchor.log.gz)。M7脚本`node --check`通过；本地Chromium在launch阶段遭`socket() Operation not permitted`，正常调用与获准的原样重试均在页面断言前退出1，见[首次日志](evidence/m8-b6/checkpoint3-m7-presentation.log.gz)与[原样重试日志](evidence/m8-b6/checkpoint3-m7-presentation-escalated.log.gz)，不记作页面验证通过。
+- **保留的跨阶段阻塞**：B8对应4条公开路线成型失败、M6 replay缺战后choice，以及输入脚本缺原起手组件/三英雄链。当前2-4仅一次补给，无法合法取得原输入测量所需两组件；推进到3-4会改动原首次战斗测量场景，本批不这样规避。B9对应4条M6完整集成的33战超过既有30战档案容量；30战/90快照实现与门禁保持原样。M7后续2-7战后choice覆盖也仍需B8，不替换成别的模态来放过。
+- 本检查点不重跑旧失败SHA刷绿；下一次完整验证针对修复后的新提交。当前并非完整CI通过或独立审计签收，阶段1怪物仍待B7接入。
+- 本检查点最后复核：typecheck通过、两项B6相关文件31/31通过，日志`checkpoint3-targeted.log.gz`；M6 replay按目录检索至2-7后仍为7通过/1失败（缺战后choice），日志`checkpoint3-after-choice.log.gz`，进一步确认该保留断言需要B8。headless原始manifest另存`checkpoint3-headless-manifest.json`，其起止sourceFingerprint一致；未将未完成的24 seeds测量宣称通过。
