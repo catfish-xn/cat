@@ -1,0 +1,61 @@
+{
+  "runId": 37900191209,
+  "runUrl": "https://github.com/catfish-xn/cat/actions/runs/37900191209",
+  "sourceSha": "7667e7c01d6847e92d1a59e755ec8e3f1ae42c06",
+  "purpose": "warn-only PR validation, separate from fixed-source length scaling",
+  "limitations": "Both archived cannon samples are below original ceilings; neither exercises a real over-ceiling browser run. Tests cover warning behavior. Other successful jobs are recorded in ci-status.json, not sampled here.",
+  "samples": [
+    {
+      "mode": "preview",
+      "artifactId": 11603200520,
+      "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37900191209/artifacts/11603200520",
+      "artifactName": "m5-browser-preview-cannon-sample1-7667e7c01d6847e92d1a59e755ec8e3f1ae42c06",
+      "apiSizeBytes": 26992087,
+      "apiDigest": "sha256:5fa7c780d66390c2692a76c1b4caf9ca0f8580d6d1ec904501c04c2a29d3ec5d",
+      "archiveBytes": 26992087,
+      "archiveSha256": "5fa7c780d66390c2692a76c1b4caf9ca0f8580d6d1ec904501c04c2a29d3ec5d",
+      "memberCount": 234,
+      "allCrcPassed": true,
+      "files": [
+        {
+          "member": "m5-preview-cannon/manifest.json",
+          "archivedPath": "preview/manifest.json",
+          "bytes": 181276,
+          "sha256": "ad6caa9c784831f9fa9c2a85ce6c85fcf333bde3e630476b0fe1fc5cd6e6014f"
+        },
+        {
+          "member": "m5-preview-cannon/m6-lifecycle.json",
+          "archivedPath": "preview/m6-lifecycle.json",
+          "bytes": 16999,
+          "sha256": "46c9c08b483fb539af1ec84348ca2be384de9c8b1abe41a0553cb68a80a8b727"
+        }
+      ]
+    },
+    {
+      "mode": "dev",
+      "artifactId": 11602882705,
+      "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37900191209/artifacts/11602882705",
+      "artifactName": "m5-browser-dev-cannon-sample1-7667e7c01d6847e92d1a59e755ec8e3f1ae42c06",
+      "apiSizeBytes": 26997840,
+      "apiDigest": "sha256:24ee6adfd960892b8e7387c13b8737556a57dc99a682dafe9ac509ba7bec4352",
+      "archiveBytes": 26997840,
+      "archiveSha256": "24ee6adfd960892b8e7387c13b8737556a57dc99a682dafe9ac509ba7bec4352",
+      "memberCount": 234,
+      "allCrcPassed": true,
+      "files": [
+        {
+          "member": "m5-dev-cannon/manifest.json",
+          "archivedPath": "dev/manifest.json",
+          "bytes": 181277,
+          "sha256": "5ad93666df84c659f6a54d00b9ccbab7de4b7d8b989639ecfea01878c4252de4"
+        },
+        {
+          "member": "m5-dev-cannon/m6-lifecycle.json",
+          "archivedPath": "dev/m6-lifecycle.json",
+          "bytes": 17004,
+          "sha256": "f7c1f74afd1afa5dffb7b6acb22da139f7dbedfa08f791a82c6cf292db27d313"
+        }
+      ]
+    }
+  ]
+}
