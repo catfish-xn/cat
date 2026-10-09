@@ -24,7 +24,7 @@
 'temporary-item': '临时装备不能单独操作',
 ```
 
-最终固定代码 `1e1e554` 的 `npm test -- --maxWorkers=1` 已通过：98文件/1231测试，1096.34秒。参数仅限制本次本地并发，测试时限、断言、门禁和CI配置未改。上一轮全量失败已由此次固定代码复验覆盖；本次四条文案补齐后的构建与桌面 Chromium 验收结果见文末，CI未执行。
+最终固定代码 `1e1e554` 的 `npm test -- --maxWorkers=1` 已通过：98文件/1231测试，1096.34秒。参数仅限制本次本地并发，测试时限、断言、门禁和CI配置未改。上一轮全量失败已由此次固定代码复验覆盖；本次四条文案补齐后的构建、桌面 Chromium 验收及最新CI状态见文末。
 
 
 ## 阶段 1：唯一 / 三槽 / 独占及失败原子性
@@ -171,3 +171,62 @@ IF-GRANT 给B8的接法（必须作为一个领域事务）：
 - 无新增测试用例：仅补四条静态文案，沿用已通过的98文件/1231测试领域全量证据；本次新增构建和桌面preview完整路线验证。不宣称其他构筑、dev模式、完整input门禁、体积/性能预算、最终比较或CI通过；本次未开PR、未送审、未合并。
 - `git diff --check`通过；相对97f38a0，冻结五文件、G12与两份测试、CI配置diff均为空。本次变更文件仅 `src/rendering/BoardScene.ts`、`docs/M8_B5_HANDOFF.md`、`docs/UI_REQUESTS.md`；其他任务的未跟踪 `docs/M8_U3_AUDIT.md` / `docs/M8_U3_REVIEW.md` 保留且不纳入提交。
 - 下一步：由后续开发者按审核要求补所需证据并送审；如需CI，只开指向 `feat/m8-b0-baseline` 的草稿PR。Claude在U3动态部分打磨临时文案并消费共用预览/只读接口。B6仍需同步轮次/最低等级恢复边界，B8按阶段4说明原子接入IF-GRANT。
+
+## 送审前审计索引与CI准备
+
+用户最新授权：由Codex开草稿PR `feat/m8-b5 → feat/m8-b0-baseline` 并跑完整GitHub CI，修复本次引入的问题并追加提交；送审仍由接手开发者负责，不转正式PR、不合并。目标分支当前为 `10a8367`，相对精确施工基线 `97f38a0` 仅多依赖图文档提交与合并提交，B5未合并或重写目标分支历史。
+
+### 四阶段关键反例与可定位测试
+
+以下测试名为源码中的完整标题；`%s` 行还列出参数值。文件均位于 `tests/`，可用 `npm test -- tests/<文件>` 单独定位；这是反例索引，不替代完整CI。
+
+| 阶段 / 文件 | 关键反例与断言 | 对应测试名 |
+| --- | --- | --- |
+| 1 / `m8-b5-instances.test.ts` | blue-buff / last-whisper / quicksilver同持有者重复拒绝，跨持有者允许 | `%s is unique per holder, not per inventory or team` |
+| 1 / 同上 | 普通装备已三件，第四件不花资源、不分配事件序号 | `allows three nonunique copies but refuses a fourth without spending resources or event IDs` |
+| 1 / 同上 | 三槽本体从0/1/2任意输入归一0；普通与独占双向冲突 | `three-slot item requested at %s uses canonical parent slot 0 and reserves all slots`；`cannot equip an exclusive parent over an ordinary item in slot %s` |
+| 1 / 同上 | 同实例合成、未知身份、非法槽位按冻结优先级拒绝；输入state引用/完整JSON不变 | `phase then identity then input then conflicts; same item has the frozen reason` |
+| 1 / 同上 | 重放已成功合成不再次消费；篡改唯一/独占/本体槽位存档拒绝 | `successful combine consumes exactly two IDs and one serial; stale replay fails atomically`；`restore rejects invalid unique, exclusive or parent-slot placements` |
+| 2 / `m8-b5-queries.test.ts` | 各phase/身份/槽位/位置/冲突的125组合成及875组穿戴，预览与实际命令一致 | `preview and command agree over identities, locations, recipes, slots, conflicts and phase` |
+| 2 / 同上 | 预览后槽已被占或组件已消耗，旧成功预览不能授权命令 | `a previous successful preview never authorizes a stale command` |
+| 2 / 同上 | 查询修改不回写，预留槽没有伪永久ID，未知单位null，恢复后视图一致 | `known units have three slots, reserved slots have no fake permanent IDs; unknown returns null` |
+| 3 / `m8-b5-temporary.test.ts` | 3/6级成装+组件，7/9级两成装；独立手写LCG词，其他RNG与永久ID零消耗 | `level %s uses the approved pool and an independent stream` |
+| 3 / 同上 | F从6升7、出售/恢复/同轮重穿不能重抽 | `F, sale, same-round re-equip and restore preserve the original level6 roll across level7` |
+| 3 / 同上 | 换轮只抽一次，重复Continue/step零抽；库存本体延迟到首次穿戴生成 | `next round revokes old children and rolls once; failed/duplicate Continue and step do not draw`；`inventory parents do not refresh until first equip in a new round` |
+| 3 / 同上 | 当前/已撤销临时ID不能变成库存命令或触发重抽，查询副本不能回写 | `queries and temporary-ID commands cannot redraw, consume children or issue permanent IDs` |
+| 3 / 同上 | 43种子件经真实Match快照、战斗、恢复；伪造旧source-only盾key拒绝；真实反甲父链 | `all 43 eligible child definitions bind through real Match snapshots and restore`；`children contribute real stats/programs and parent provenance through combat and restore` |
+| 3 / 同上 | 改流/词数/组合/父/未来轮级/holder/缺兄弟或绑定/期限/库存父携子/永久化子件等13种篡改拒绝，不修复 | `restore rejects %s instead of rerolling or repairing`；`combat restore rejects a forged temporary program parent chain` |
+| 4 / `m8-b5-grant-upgrade.test.ts` | 一次永久授予，调用方已提交收据后重试拒绝；非法定义/空身份/serial零局部提交 | `plans exactly one permanent %s with no receipt/economy/RNG work`；`rejects bad definitions, grant identities and serials without any partial state` |
+| 4 / 同上 | 真实选择的一件库存和一份收据原子提交，恢复后重试不补发；批量中坏定义不部分授予 | `real choice commits exactly one item and one caller-owned receipt; restore/retry cannot regrant`；`legacy multi-component reward uses one caller receipt and rejects a bad batch atomically` |
+| 4 / 同上 | 真实购买链式1→2→3星、多TG只返冲突父、不拆子件、不重抽、永久ID守恒 | `chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling` |
+| 4 / 同上 | unique / exclusive survivor / exclusive incoming / full ordinary冲突返还；失败购买完整资源/RNG/事件不变 | `returns %s conflicts and preserves permanent IDs across the complete command`；`failed purchase preserves roll ledger, children, resources and event serials` |
+
+### 存档、digest与版本改动对照
+
+| 项目 | 精确基线97f38a0 | B5最终领域代码 | 兼容性 / 理由 |
+| --- | --- | --- | --- |
+| Match持久态 | 无装备独立流/子件字段 | 必需 `equipmentState{equipment:{state,draws},rolls}`、`temporaryEquipment[]` | 局部严格校验及保存→恢复已在本批完成，不能缺字段后恢复时补抽 |
+| 战斗来源 | 永久/普通来源 | 可选 `parentItemInstanceId` | 临时子件来源必须精确绑定父实例；普通来源JSON保持原形状 |
+| 装备目录版本 | `s13-14.24b-m8-b4-v3` | `s13-14.24b-m8-b5-v1` | 补TG生命周期说明；不改36成装数值 |
+| 实例规则修订 | 未单列 | `m8-b5-instances-v2`（阶段1先为v1） | 通用实例限制与TG池纳入content digest |
+| content digest | `fnv1a32-utf16:2b6a9a4b` | `fnv1a32-utf16:47dd941a`（阶段1中间值db25532e） | 由内容/规则计算，不手填；旧digest开发档严格拒绝，无迁移/重标 |
+| Match schema / save / replay / command / RNG / tick | 5 / 1 / 1 / 2 / lcg32-v1 / 50ms | 均不变 | 当前开发边界；正式schema6/save2/replay2等切换由B9/B10负责，未冒充正式格式兼容 |
+
+四条UI文案及本次审计文档不再改变以上值。目录/digest不同使B3/B4开发期旧档被拒绝，这是预期兼容性变化，不能通过放宽恢复、缺字段默认值或保留旧digest绕过。
+
+### 对B3、B4已签收行为的影响
+
+- B3伤害/治疗/盾/状态/百分比/时序与随机算法未改；普通来源不增加父字段，普通盾仍只接受原sourceKey。临时来源贯穿既有通用编译/程序，盾投影保留父ID并只接受完整effectIdentity key；`m8/restore.ts`的分支是精确验证新来源，没有放宽普通恢复。
+- B4八组件/36成装的属性、配方和程序数值保持已签收值；TG本体开始拥有已批准的真实子件生命周期，因此实际TG战斗结果可变化。唯一/三槽/独占由原目录元数据在实例层执行，升星冲突返库存；这是B5有意补齐的行为，不按装备名/ID特判。
+- B4 Match级测试夹具以前直接注入TG本体，现补为合法装备流和绑定；原低层本体数值测试保留，不删断言。既有inventory失败码预期更新为冻结失败码，upgrades虚构blade夹具改真实sword，不改资源转移预期。
+- `full-match-golden.pre-m8-b5.json`保留97f38a0原始golden；`update-m8-b5-golden.cjs`对cannon/sniper/mage/blademaster四路线强制核对全部命令及30场战斗逐轮完整事件哈希不变。状态哈希只因新态/目录/规则/digest变动更新，不能用新golden替代独立数值oracle。
+- 五份冻结合同、G12源码及两份测试与97f38a0 diff为空；原B3/B4测试纳入98文件/1231项本地全量，完整GitHub CI将再次验证。尚未完成CI时不把本地通过当GitHub结果。
+
+### 验收覆盖与剩余边界
+
+- 已有本地：98文件/1231测试全量、生产构建、桌面cannon preview完整路线。其他构筑桌面实跑、dev模式、原input、retention、M7体积/交互预算及最终比较，等待本次完整GitHub CI填补；不新增手机测试，现有CI自带的触摸覆盖照常执行。
+- 四条临时文案的U3动态界面整合/打磨尚未验收；本次仅解决类型枚举文案映射，不宣称完整装备UI联调。
+- 旧四路线不含TG最大合法多父/多轮负载；43子件矩阵验证真实绑定和恢复，但不是每种子件长程组合全事件的性能证明。M8最终33战/PvE/掉落与最大保存容量、正式save2/replay2仍由后续批次承担。
+- IF-GRANT验证当前组件选择/旧奖励及helper；B8权威lootReceipts、资格/保底/终局解决原子接入未在本批实现。B6新最低1级/38轮需同步装备局部恢复边界。
+- 完整CI的堆门禁如首轮失败，保留具体run/job/数字/日志；确认与B5无关后只重跑一次并注明，不改门禁、阈值、预热或CI配置。重复失败不能当偶发通过处理。
+- 草稿PR与各CI run及实际结果将在本节后续记录；完成审计准备不等同送审或用户签收。
