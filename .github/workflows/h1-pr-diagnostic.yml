@@ -26,8 +26,8 @@ jobs:
     env:
       SOURCE_SHA: '97f38a0e787a4edcb35df4a59823bb1d106def67'
       PROBE_MODE: 'dev'
-      PROBE_KIND: 'normal'
-      SAMPLE_COUNT: '3'
+      PROBE_KIND: 'extended'
+      SAMPLE_COUNT: '1'
       H1_WINDOWS: '6'
       H1_DEFINITION_SHA: ${{ github.event.pull_request.head.sha }}
       H1_PR_NUMBER: ${{ github.event.number }}

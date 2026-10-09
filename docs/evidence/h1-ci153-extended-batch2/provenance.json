@@ -1,0 +1,119 @@
+{
+  "runId": 37880678916,
+  "definitionSha": "f30a5e5ea1dd9705d324bfc6ddb9a671748d8369",
+  "artifactId": 11595514257,
+  "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37880678916/artifacts/11595514257",
+  "archiveBytes": 94866144,
+  "archiveSha256": "a5d60df5c99991a59e4c13e950bb3df84c8e0d90c48ed371b4078fc30da9d8a1",
+  "archiveMembers": 481,
+  "allMemberCrcPassed": true,
+  "samples": [
+    {
+      "sample": "preview-extended-01",
+      "manifestSha256": "aff1f1baed104bf7e46522bd09f3b79a8085e9b9f4971c79741a93e9bd17bae0",
+      "manifestIdentity": {
+        "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+        "status": "",
+        "node": "v22.23.3",
+        "browser": "153.0.8010.12",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "runnerHash": "11444b5a53bcd247312eca8926f2c8fd7b78fa9293f8a6be21d20adf5288d568",
+        "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "passed": true,
+        "errors": [],
+        "durationSeconds": 1797.94,
+        "h1ExtendedDiagnostic": {
+          "kind": "independent extended-window diagnosis, not acceptance",
+          "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+          "sourceRunnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+          "warmupCycles": 2,
+          "cyclesPerWindow": 30,
+          "windows": 6,
+          "snapshots": false,
+          "changes": [
+            "Enable the existing follow-up window block without the historical twelve-cycle warmup",
+            "Extend that diagnostic block to the requested equal window count",
+            "Optionally take separate perturbing snapshots at later window boundaries and label them accurately",
+            "Preserve every existing assertion and threshold; no source files edited"
+          ]
+        }
+      },
+      "levelsBytes": [
+        14513948,
+        14613340,
+        15063644,
+        15517848,
+        15397472,
+        15400340,
+        15506104
+      ],
+      "deltasBytes": [
+        99392,
+        450304,
+        454204,
+        -120376,
+        2868,
+        105764
+      ],
+      "netGrowthBytes": 992156
+    },
+    {
+      "sample": "preview-extended-02",
+      "manifestSha256": "eb92a2b885984be130ab1b5d815f2be6ba11df8763e16a820cad9314ae3d4a99",
+      "manifestIdentity": {
+        "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+        "status": "",
+        "node": "v22.23.3",
+        "browser": "153.0.8010.12",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "runnerHash": "1003a8b49783167d55644a04e1dff4e0b2250242f705fa9f9e3a9ed0cec04039",
+        "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "passed": true,
+        "errors": [],
+        "durationSeconds": 1809.905,
+        "h1ExtendedDiagnostic": {
+          "kind": "independent extended-window diagnosis, not acceptance",
+          "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+          "sourceRunnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+          "warmupCycles": 2,
+          "cyclesPerWindow": 30,
+          "windows": 6,
+          "snapshots": false,
+          "changes": [
+            "Enable the existing follow-up window block without the historical twelve-cycle warmup",
+            "Extend that diagnostic block to the requested equal window count",
+            "Optionally take separate perturbing snapshots at later window boundaries and label them accurately",
+            "Preserve every existing assertion and threshold; no source files edited"
+          ]
+        }
+      },
+      "levelsBytes": [
+        14987252,
+        16017176,
+        15056192,
+        15251964,
+        15344416,
+        15004728,
+        14950564
+      ],
+      "deltasBytes": [
+        1029924,
+        -960984,
+        195772,
+        92452,
+        -339688,
+        -54164
+      ],
+      "netGrowthBytes": -36688
+    }
+  ],
+  "limitations": "Two same-job independent browser processes. Continuous windows share endpoints, not independent samples. No snapshots. No signoff/no-leak inference from exit0. Full manifests/traces remain artifact until2026-11-08."
+}
