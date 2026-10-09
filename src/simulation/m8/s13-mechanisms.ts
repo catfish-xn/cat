@@ -4,7 +4,7 @@ import { hexDistance, DEFAULT_BOARD } from '../board';
 import { selectTargets, startingRows, type TargetEnvironment } from './targeting';
 import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
-import type { AbilityContext, PeriodicReference } from '../combat-s13-abilities';
+import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
 import { ad, ap, compareText, constantModifier, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
@@ -80,6 +80,20 @@ function cancelAttachedBurns(tasks: readonly PeriodicTask[], ended: readonly Sta
     && task.program.definitionId === JSON.stringify([c.source.definitionId, c.source.effectIndex, 'burn'])));
 }
 interface DamageExecutionContext { readonly applicationId?: string; readonly facts?: import('./triggers').ResolutionFacts; readonly cast?: import('./contracts').CastReceipt; readonly counters?: Readonly<Record<string, number>>; readonly area: boolean; readonly triggeringCastActionSeq: number | null }
+/** Explicit finite sequence consumer: bind delayed stun to the preceding damage
+ * for this action/target. Ordinary Effect consumers retain their own timing. */
+export function executeDamageControlSequence(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effects: readonly Effect[], seq: number): void {
+  let precedingDamage: S13Packet | undefined;
+  for (const [ordinal, effect] of effects.entries()) {
+    const effectSource = { ...source, effectIndex: source.effectIndex + ordinal };
+    if (precedingDamage && effect.kind === 'apply-status' && effect.status.kind === 'stun' && effect.status.activation === 'next-tick') {
+      (precedingDamage.afterDamageControl ??= []).push({ source: effectSource, effect, ordinal });
+      continue;
+    }
+    executeMechanismEffect(ctx, holder, effectSource, target, effect, seq, ordinal);
+    if (effect.kind === 'damage') precedingDamage = ctx.packets[ctx.packets.length - 1];
+  }
+}
 export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, source: Source, target: S13Unit, effect: Effect, seq: number, ordinal = 0,
   frozen?: SurvivalSample, periodic?: PeriodicReference, amountOverride?: number, absorbed?: number, damageContext?: DamageExecutionContext): void {
   const sample = { ...effectSample(holder, target, ctx.tick, frozen, absorbed), ...(damageContext?.cast ? { cast: damageContext.cast } : {}), ...(damageContext?.facts?.damage.length ? { damageOutcomes: damageContext.facts.damage } : {}) };

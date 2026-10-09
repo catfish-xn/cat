@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { combineItems, equipItem, createMatch, startMatchCombat } from '../src/simulation/match';
+import { combineItems, equipItem, startMatchCombat } from '../src/simulation/match';
 import { previewCombine, previewEquip, readUnitEquipment, readItemCatalog } from '../src/simulation/item-selectors';
 import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
-import { accepted, freeze, readyMatch } from './match-helpers';
+import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },
 });
 function fixture(): MatchState {
-  const state = readyMatch();
+  const state = purchasedThreeHeroMatch();
   return freeze(planTemporaryEquipment({ ...state, nextItemSerial: 40, items: [...state.items,
     item(20, 'sword'), item(21, 'rod'), item(22, 'blue-buff'), item(23, 'blue-buff', 'unit-1'),
     item(24, 'thiefs-gloves'), item(25, 'thiefs-gloves', 'unit-2'), item(26, 'vest', 'unit-1', 2),
@@ -41,7 +41,7 @@ describe('B5 shared command previews and read-only equipment', () => {
   });
   it('preview and command agree over identities, locations, recipes, slots, conflicts and phase', () => {
     const base = fixture();
-    const phases = [base, createMatch(), accepted(startMatchCombat(base)), { ...base, phase: 'settlement' as const, combat: null }, { ...base, phase: 'gameOver' as const, combat: null }];
+    const phases = [base, reachRound('2-1',false), accepted(startMatchCombat(base)), { ...base, phase: 'settlement' as const, combat: null }, { ...base, phase: 'gameOver' as const, combat: null }];
     for (const state of phases) {
       const before = JSON.stringify(state);
       for (const a of ['missing', 'item-20', 'item-21', 'item-23', 'item-24']) {

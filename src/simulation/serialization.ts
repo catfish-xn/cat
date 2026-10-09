@@ -11,14 +11,17 @@ import { UNIT_DEFINITIONS } from './units';
 import { ITEM_DEFINITIONS } from './content/items';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
-import { getRoundKind, getStageRound, getRoundSchedule } from './round-schedule';
+import { FINAL_ROUND, ROUND_PREPARATION_RULES, getRoundKind, getRoundSchedule } from './round-schedule';
 import { validateSeed } from './rng';
 import { cloneEffect, effectKey } from './effects';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { eliminationResult } from './combat-types';
-import { createRoundEnemies } from './round-enemies';
-import { XP_TO_NEXT_LEVEL } from './match-rules';
-import { planRoundEconomy } from './economy';
+import { readRoundEnemyProjection } from './round-enemies';
+import { MATCH_RULES, OPENING_INITIAL_STATE, XP_TO_NEXT_LEVEL } from './match-rules';
+import { planCatalogRoundEconomy } from './opening-economy';
+import { getCatalogRoundByOrdinal } from './round-selectors';
+import { freezeContent } from './content/freeze';
+import { grantXp } from './progression';
 import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
@@ -39,6 +42,15 @@ function checkSerial(instanceId: string, prefix: string, next: number): void {
   requireValue(new RegExp(`^${prefix}-[1-9][0-9]*$`).test(instanceId), `${prefix} ID`);
   requireValue(Number(instanceId.slice(prefix.length + 1)) < next, `${prefix} serial`);
 }
+/** Across preparation, XP can only increase in paid four-XP transactions (or cap). */
+function totalExperience(level:number,xp:number):number {
+  grantXp(level,xp,0); // Validate normalized values before using them as indices.
+  return xp+Object.entries(XP_TO_NEXT_LEVEL).filter(([from])=>Number(from)<level).reduce((sum,[,amount])=>sum+amount,0);
+}
+function validPreparationExperience(before:number,level:number,xp:number):boolean {
+  const after=totalExperience(level,xp),cap=totalExperience(MATCH_RULES.maxLevel,0);
+  return after>=before && (after===cap || (after-before)%MATCH_RULES.xpPurchaseAmount===0);
+}
 /** Validates plain JSON and all persistent references before returning an independent state.
  * It never draws RNG, grants rewards, rebuilds offers, or executes combatStart.
  */
@@ -51,7 +63,7 @@ export function restoreMatch(input: unknown): MatchState {
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
   for (const name of ['gold', 'xp', 'playerHp', 'nextMatchEventSeq']) integer(raw[name]);
   for (const name of ['round', 'level', 'nextItemSerial', 'nextUnitSerial']) integer(raw[name], 1);
-  requireValue((raw.level as number) >= 3 && (raw.level as number) <= 9 && (raw.playerHp as number) <= 100, 'level/HP bounds');
+  requireValue((raw.level as number) >= 1 && (raw.level as number) <= 9 && (raw.playerHp as number) <= 100, 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
   record(raw.preparation); record(raw.preparation.board); record(raw.preparation.board.deploymentZones);
   const board = raw.preparation.board; record(board.deploymentZones);
@@ -59,6 +71,16 @@ export function restoreMatch(input: unknown): MatchState {
   for (const team of ['player','enemy']) { record(board.deploymentZones[team]); integer(board.deploymentZones[team].firstRow); integer(board.deploymentZones[team].lastRow); }
   integer(raw.preparation.benchSize, 1); list(raw.preparation.units);
   const state = raw as unknown as MatchState;
+  requireValue(state.round <= FINAL_ROUND, 'round bounds');
+  const roundDefinition = getCatalogRoundByOrdinal(state.round);
+  const enemyProjection = readRoundEnemyProjection(state.round);
+  record(state.m8); record(state.m8.round); record(state.m8.preparation);
+  requireValue(canonicalContent(state.m8.round) === canonicalContent(roundDefinition), 'm8 round identity');
+  requireValue(state.m8.encounterPlan === null, 'B7/B8 encounter plan not installed');
+  requireValue(canonicalContent(state.m8.preparation) === canonicalContent({
+    version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
+    contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
+  }), 'round preparation freeze');
   requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
   requireValue(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9, 'board rules');
   const units = new Map<string, MatchState['preparation']['units'][number]>(); const locations = new Set<string>();
@@ -75,7 +97,7 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(!locations.has(key), 'occupied location'); locations.add(key);
   }
   requireValue(canonicalContent(state.preparation.units.filter(unit=>unit.team==='enemy').sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0))
-    === canonicalContent([...createRoundEnemies(state.round)].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)), 'enemy roster identity');
+    === canonicalContent([...enemyProjection.units].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)), 'enemy roster identity');
   requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board').length <= state.level, 'population cap');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
@@ -170,24 +192,26 @@ export function restoreMatch(input: unknown): MatchState {
   const settled = state.roundResults.length === state.round;
   requireValue(state.roundResults.length === state.round - (settled ? 0 : 1), 'history length');
   let streak = { kind: null as 'win' | 'loss' | null, count: 0 };
+  let experienceAfter = totalExperience(OPENING_INITIAL_STATE.level,OPENING_INITIAL_STATE.xp);
   for (const [i, result] of state.roundResults.entries()) {
-    record(result); requireValue(result.round === i + 1 && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
+    record(result); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(canonicalContent(result.streakBefore) === canonicalContent(streak), 'history streak before');
-    const expected = planRoundEconomy({ stage: getStageRound(i+1).stage, roundKind: result.roundKind,
+    requireValue(validPreparationExperience(experienceAfter,result.levelBefore,result.xpBefore), 'history XP preparation chain');
+    const expected = planCatalogRoundEconomy({ roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
-    requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === 2, 'history XP');
+    requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
     requireValue(result.baseDamage === expected.baseDamage && result.playerDamage === expected.playerDamage && result.hpAfter === expected.hpAfter && result.hpLost === expected.hpLost, 'history damage');
     requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && canonicalContent(result.incomeBreakdown) === canonicalContent(expected.incomeBreakdown), 'history income');
     requireValue(canonicalContent(result.streakAfter) === canonicalContent(expected.streakAfter), 'history streak'); streak = expected.streakAfter;
+    experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
     requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0), 'history ticks');
   }
   requireValue(canonicalContent(state.streak) === canonicalContent(streak), 'current streak');
-  const stageRound = getStageRound(state.round);
-  requireValue(state.round <= 35 && state.roundDefinitionId === `${stageRound.stage}-${stageRound.round}`, 'round definition');
-  requireValue(state.phase === 'gameOver' ? state.outcome === (state.round === 35 && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');
+  requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
+  requireValue(state.phase === 'gameOver' ? state.outcome === (roundDefinition.isFinal && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');
   record(state.augmentProgress); integer(state.augmentProgress.pumpingRounds); integer(state.augmentProgress.investmentHp);
   const pump = state.augments.find(a => a.definitionId === 'pumping-up-i'), investment = state.augments.find(a => a.definitionId === 'investment-strategy-i');
   requireValue(state.augmentProgress.pumpingRounds === (pump ? state.roundResults.filter(r => r.round >= pump.acquiredRound).length : 0), 'pumping progress');
@@ -197,9 +221,10 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
   if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
+  if (!settled) requireValue(validPreparationExperience(experienceAfter,state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   validateMatchEquipment(state);
-  requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && state.round === 35), 'terminal boundary');
+  requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
     record(state.combat); const combat = state.combat;
@@ -257,7 +282,9 @@ export function restoreMatch(input: unknown): MatchState {
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
-  return typeof input === 'string' ? state : structuredClone(state);
+  const restored=typeof input === 'string' ? state : structuredClone(state);
+  freezeContent(restored.m8);
+  return restored;
 }
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
 

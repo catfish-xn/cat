@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { planPermanentItemGrant } from '../src/simulation/item-grants';
 import { readItemInventory } from '../src/simulation/item-selectors';
-import { buyUnit, combineItems, createMatch, equipItem, selectChoice, sellUnit } from '../src/simulation/match';
+import { buyUnit, combineItems, equipItem, selectChoice, sellUnit } from '../src/simulation/match';
 import { planReward } from '../src/simulation/rewards';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
-import { accepted, freeze, readyMatch } from './match-helpers';
+import { accepted, freeze, readyMatch, reachRound } from './match-helpers';
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },
@@ -53,7 +53,7 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
     }
   });
   it('real choice commits exactly one item and one caller-owned receipt; restore/retry cannot regrant', () => {
-    const state = freeze(createMatch(42)), choice = state.pendingChoice!;
+    const state = freeze(reachRound('2-4',false)), choice = state.pendingChoice!;
     const next = accepted(selectChoice(state, choice.choiceId, choice.generation, 'gloves'));
     expect(next.items).toHaveLength(state.items.length + 1);
     expect(next.nextItemSerial).toBe(state.nextItemSerial + 1);
@@ -79,7 +79,7 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
   });
   it('inventory view contains only real inventory IDs, is detached and remains correct after combine/equip/sale', () => {
     let state = readyMatch();
-    state = { ...state, nextItemSerial: 30, items: [...state.items, item(20, 'gloves'), item(21, 'gloves')] };
+    state = { ...state, nextItemSerial: 30, items: [...state.items, item(20, 'gloves'), item(21, 'gloves'), item(22, 'sword')] };
     state = accepted(combineItems(state, 'item-20', 'item-21'));
     state = accepted(equipItem(state, 'item-30', 'unit-1', 0));
     const before = JSON.stringify(state), view = readItemInventory(freeze(state));

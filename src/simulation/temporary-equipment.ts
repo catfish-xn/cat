@@ -4,7 +4,8 @@ import type { MatchState } from './match-types';
 import type { TemporaryEquipment } from './m8/contracts';
 import { createEquipmentPool, generateRoundRolls, initializeStreams, projectTemporaryEquipment,
   reconcileTemporaryEquipment, validateEquipmentState, validateTemporaryEquipment } from './m8/equipment';
-import { getStageRound } from './round-schedule';
+import { FINAL_ROUND } from './round-schedule';
+import { ROUND_CATALOG } from './content/round-catalog';
 import { MATCH_RULES } from './match-rules';
 import type { ItemDefinition, StrategyEvent } from './strategy-types';
 
@@ -47,8 +48,8 @@ export function isTemporaryItemId(state: Readonly<MatchState>, id: string): bool
 /** Strict local restore after round-history validation: replay RNG, check round levels and exact bindings. */
 export function validateMatchEquipment(state: Readonly<MatchState>): void {
   validateEquipmentState(state.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(state.seed).equipment);
-  if (!Number.isInteger(state.round) || state.round < 1 || state.round > 35) throw new Error('Invalid equipment round');
-  const roundIds = Array.from({ length: state.round }, (_, i) => { const r = getStageRound(i + 1); return `${r.stage}-${r.round}`; });
+  if (!Number.isInteger(state.round) || state.round < 1 || state.round > FINAL_ROUND) throw new Error('Invalid equipment round');
+  const roundIds = ROUND_CATALOG.slice(0,state.round).map(round => round.roundId);
   let previousRound = -1;
   for (const roll of state.equipmentState.rolls) {
     const parent = state.items.find(item => item.id === roll.parentItemInstanceId), round = roundIds.indexOf(roll.roundId);

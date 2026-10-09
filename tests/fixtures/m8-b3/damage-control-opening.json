@@ -1,0 +1,125 @@
+{
+  "referenceCommit": "3b0d55f923d7225587872340f62b203de31f8f41",
+  "referenceEntry": "compileNeutralEncounter('6-7')",
+  "unit": {
+    "unitKind": "neutral",
+    "monsterFamily": "rift-herald",
+    "baseAttackSpeedBps": 10000,
+    "baseCritChanceBps": 2500,
+    "baseCritMultiplierBps": 14000,
+    "spellCrit": {
+      "nonItemSources": [],
+      "itemSources": [],
+      "enabled": false,
+      "redundantItemBonusBps": 0,
+      "chanceBps": 2500,
+      "multiplierBps": 14000
+    },
+    "id": "[\"pve\",\"6-7\",\"rift-herald-v1\",\"h01\"]",
+    "definitionId": "pve-rift-herald",
+    "encounterId": "rift-herald-v1",
+    "team": "enemy",
+    "starLevel": 1,
+    "cell": {
+      "col": 3,
+      "row": 1
+    },
+    "startingCell": {
+      "col": 3,
+      "row": 1
+    },
+    "hp": 9000,
+    "maxHp": 9000,
+    "maxHpBasis": {
+      "base": 9000,
+      "flat": 0,
+      "bps": 0,
+      "bonusBps": 0
+    },
+    "attackDamage": 120,
+    "attackDamageBase": 120,
+    "attackDamagePercentBps": 0,
+    "abilityPower": 100,
+    "attackRange": 2,
+    "attackIntervalTicks": 20,
+    "attackSpeedBonusBps": 0,
+    "cooldownTicks": 0,
+    "moveCooldownTicks": 0,
+    "armor": 60,
+    "magicResist": 60,
+    "mana": 0,
+    "maxMana": 0,
+    "shield": 0,
+    "shieldExpiresAtTick": null,
+    "ability": {
+      "id": "void-charge-project-v1",
+      "amount": 0,
+      "kind": "s13",
+      "championId": "neutral",
+      "variables": {}
+    },
+    "sources": [],
+    "triggers": [],
+    "effectRuntime": [],
+    "mechanics": [],
+    "itemPrograms": [],
+    "shieldLayers": [],
+    "statuses": [],
+    "tasks": [],
+    "alive": true,
+    "targetId": null
+  },
+  "openingDefinitions": [
+    {
+      "kind": "path-charge",
+      "source": {
+        "ownerId": "[\"pve\",\"6-7\",\"rift-herald-v1\",\"h01\"]",
+        "sourceKind": "ability",
+        "definitionId": "void-charge-project-v1",
+        "instanceId": "[\"pve\",\"6-7\",\"rift-herald-v1\",\"h01\"]",
+        "effectIndex": 0,
+        "parentItemInstanceId": null
+      },
+      "effects": [
+        {
+          "kind": "damage",
+          "damageType": "magic",
+          "delivery": "ability-direct",
+          "critEligibility": "never",
+          "amount": {
+            "flat": 0,
+            "attackDamageBps": 0,
+            "abilityPowerBps": 0,
+            "maxHpBps": 1500,
+            "missingHpBps": 0,
+            "actualManaSpentBps": 0,
+            "actualDamageBps": 0,
+            "shieldAbsorbedBps": 0,
+            "hpBasis": "target",
+            "sample": "packet",
+            "cap": 300
+          }
+        },
+        {
+          "kind": "apply-status",
+          "status": {
+            "kind": "stun",
+            "magnitudeBps": 0,
+            "activation": "next-tick",
+            "duration": {
+              "kind": "ticks",
+              "ticks": 10
+            },
+            "stackPolicy": {
+              "kind": "independent-instances"
+            },
+            "removable": true,
+            "polarity": "harmful",
+            "damageFilter": null,
+            "onEnd": null
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+const {skipB6Dependency,validateB6BrowserBoundary}=require('./b6-deferred-assertions.cjs');
 const fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
 const {hash}=require('./m4-evidence.cjs');
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
@@ -14,7 +15,13 @@ function validateManifest(manifest){
  for(const key of requiredVersions){const value=manifest.versions?.[key];assert(value!==undefined&&value!==null&&value!=='',`missing version ${key}`);}
  if(finalGate)assert.equal(manifest.sha,currentSha,'evidence HEAD must equal current HEAD');
 }
-const comparisons=[];
+const comparisons=[],deferredComparisons={};
+function compareBrowserRound(folderA,folderB,round,label){
+ const snapshots=[folderA,folderB].map(folder=>read(path.join(folder,`round-${round}.json`)));
+ assert.deepEqual(snapshots[0].state,snapshots[1].state,`${label} complete state`);
+ assert.deepEqual(snapshots[0].combatEvents,snapshots[1].combatEvents,`${label} full events`);
+}
+
 let sharedSha,sharedFingerprint,sharedVersions;
 for(const build of ['cannon','sniper','mage']){
  const folders=['dev','preview'].map(mode=>`artifacts/m5-${mode}-${build}`),manifests=folders.map(folder=>read(path.join(folder,'manifest.json')));
@@ -30,8 +37,12 @@ for(const build of ['cannon','sniper','mage']){
  assert.equal(manifests[0].sourceFingerprint,manifests[1].sourceFingerprint);assert.deepEqual(manifests[0].versions,manifests[1].versions);assert.deepEqual(manifests[0].checkpoints,manifests[1].checkpoints,'all operation checkpoints');
  const routes=folders.map(folder=>read(path.join(folder,'route.json')));
  for(const key of ['initial','final','ledger','actions','rounds'])assert.deepEqual(routes[0][key],routes[1][key],`${build} complete ${key}`);
- for(const round of routes[0].rounds){const snapshots=folders.map(folder=>read(path.join(folder,`round-${round.round}.json`)));assert.deepEqual(snapshots[0].state,snapshots[1].state,'browser observed complete state');assert.deepEqual(snapshots[0].combatEvents,snapshots[1].combatEvents,'browser observed full events');}
- comparisons.push({build,evidenceClass:finalGate?'final-clean-commit':'development-validation',sha:sharedSha,sourceFingerprint:manifests[0].sourceFingerprint,checkpoints:manifests[0].checkpoints.length,rounds:routes[0].rounds.length,finalHash:hash(routes[0].final),passed:true});
+ const skippedRounds=validateB6BrowserBoundary(manifests[0],routes[0]);validateB6BrowserBoundary(manifests[1],routes[1]);
+ assert.deepEqual(manifests[0].deferredBrowserRounds,manifests[1].deferredBrowserRounds,'both modes must disclose the same omissions');
+ for(const round of routes[0].rounds){const compare=()=>compareBrowserRound(folders[0],folders[1],round.round,'browser observed');
+  if(skippedRounds.has(round.round))skipB6Dependency(deferredComparisons,'B9',`${build}-browser-snapshot-${round.roundDefinitionId}`,'Both browser jobs explicitly omitted this application-capacity tail; complete domain route comparison above still executed',compare);else compare();}
+
+ comparisons.push({build,evidenceClass:finalGate?'final-clean-commit':'development-validation',sha:sharedSha,sourceFingerprint:manifests[0].sourceFingerprint,checkpoints:manifests[0].checkpoints.length,rounds:routes[0].rounds.length,finalHash:hash(routes[0].final),fullApplicationRoutePassed:false,browserBattlesCompared:routes[0].rounds.length-skippedRounds.size,skippedBrowserRoundIds:manifests[0].deferredBrowserRounds,domainRouteComparedInFull:true,passed:true});
 }
 if(finalGate){
  for(const mode of ['dev','preview'])for(const name of [`m5-input-${mode}`,`m5-${mode}-cannon-touch`]){
@@ -44,12 +55,24 @@ if(finalGate){
   assert.equal(manifest.finalSourceFingerprint,sharedFingerprint,`${name} source drift`);
   assert.deepEqual(manifest.errors,[]);
   assert.deepEqual(manifest.versions,sharedVersions);
-  if(name.startsWith('m5-input-'))assert.equal(manifest.coverage,'full-input-gate','observation-only is not the required input gate');
+  if(name.startsWith('m5-input-')){
+   assert.equal(manifest.coverage,'full-input-gate','observation-only is not the required input gate');
+   assert.equal(manifest.fullOpeningItemScenarioPassed,false);
+   assert.deepEqual(manifest.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
+    'mouse-back-to-back-opening-components','touch-back-to-back-opening-components',
+    'normal-opening-rageblade-recipe-and-equipment','normal-opening-rageblade-stat-event','normal-opening-rageblade-dynamic-as',
+   ].map(id=>['skipped','B8',id]),'input may defer only the five explicitly listed B8 cases');
+  }
  }
- for(const {round} of read('artifacts/m5-dev-cannon-touch/route.json').rounds){
-  const snapshots=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/round-${round}.json`));
-  assert.deepEqual(snapshots[0].state,snapshots[1].state,`touch R${round} complete state`);
-  assert.deepEqual(snapshots[0].combatEvents,snapshots[1].combatEvents,`touch R${round} events`);
+ const touchRoutes=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/route.json`));
+ for(const key of ['initial','final','ledger','actions','rounds'])assert.deepEqual(touchRoutes[0][key],touchRoutes[1][key],`touch complete domain ${key}`);
+ const touchManifests=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/manifest.json`));
+ const touchSkipped=validateB6BrowserBoundary(touchManifests[0],touchRoutes[0]);validateB6BrowserBoundary(touchManifests[1],touchRoutes[1]);
+ for(const {round,roundDefinitionId} of touchRoutes[0].rounds){
+  const compare=()=>compareBrowserRound('artifacts/m5-dev-cannon-touch','artifacts/m5-preview-cannon-touch',round,`touch R${round}`);
+  if(touchSkipped.has(round))skipB6Dependency(deferredComparisons,'B9',`touch-browser-snapshot-${roundDefinitionId}`,'Both touch jobs explicitly omitted the same B9 application-capacity tail',compare);else compare();
  }
+
 }
+fs.writeFileSync('artifacts/m5-cross-mode-deferred-assertions.json',JSON.stringify(deferredComparisons,null,2));
 fs.writeFileSync('artifacts/m5-cross-mode-comparison.json',JSON.stringify(comparisons,null,2));console.log(JSON.stringify(comparisons));

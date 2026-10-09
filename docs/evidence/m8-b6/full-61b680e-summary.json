@@ -1,0 +1,54 @@
+{
+  "sha": "61b680ec531ba07a21d40c910e7b3cdbb5aa00b4",
+  "node": "22.23.3",
+  "command": "npm test",
+  "sourceDiffSha256AtStartAndEnd": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "startedUtc": "2026-10-09T08:33:11Z",
+  "completionObservedUtc": "2026-10-09T08:40:35Z",
+  "vitestDurationSeconds": 433.1,
+  "exitCode": 1,
+  "files": {
+    "total": 102,
+    "passed": 99,
+    "failed": 3
+  },
+  "tests": {
+    "total": 1312,
+    "passed": 1303,
+    "failed": 9,
+    "skippedAfterSetupFailure": 0
+  },
+  "failures": [
+    {
+      "file": "tests/m5-route.test.ts",
+      "tests": 4,
+      "reason": "formedBattles 0, required >=3; five component grants cannot satisfy the preserved full-build requirement",
+      "owner": "B8 loot integration; no threshold change"
+    },
+    {
+      "file": "tests/m6-integration.test.ts",
+      "tests": 4,
+      "reason": "validateEnvelope rejects 33 completed battles under the unchanged MAX_BATTLE_RECORDS=30",
+      "owner": "B9 application/save/replay capacity integration"
+    },
+    {
+      "file": "tests/m6-replay.test.ts",
+      "tests": 1,
+      "reason": "the preserved post-combat reward choice was not encountered; B8 drop choices are not installed",
+      "owner": "B8 choice integration"
+    }
+  ],
+  "build": {
+    "command": "npm run build",
+    "exitCode": 0,
+    "typecheck": "passed",
+    "viteBuild": "passed",
+    "jsBytesReportedKb": 1675.2,
+    "gzipBytesReportedKb": 481.08
+  },
+  "logs": [
+    "full-61b680e.log.gz",
+    "build-61b680e.log.gz"
+  ],
+  "claim": "Completed fixed-SHA full run: B6 fixes passed, 9 B8/B9 failures preserved, zero skipped. This historical run predates the user-authorized explicit dependency skips."
+}

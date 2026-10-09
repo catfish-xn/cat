@@ -1,10 +1,10 @@
 import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
-import {accepted,readyMatch,finish,emptyBoard} from './match-helpers';
+import {accepted,reachRound,readyMatch,finish,emptyBoard} from './match-helpers';
 import type {MatchState,MatchCommandResult} from '../src/simulation/match-types';
 const states={} as Record<MatchState['phase'],MatchState>;
 beforeAll(()=>{
- states.choice=api.createMatch();states.preparation=readyMatch();
+ states.choice=reachRound('2-1',false);states.preparation=readyMatch();
  states.combat=accepted(api.startMatchCombat(states.preparation));states.settlement=finish(states.combat);
  // Explicit HP boundary fixture; never counted as a natural-route victory.
  states.gameOver=accepted(api.startMatchCombat(emptyBoard({...states.preparation,playerHp:1})));

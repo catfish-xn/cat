@@ -5,7 +5,7 @@ import { damageTypeForTarget } from './m8/planning';
 import { EMPTY_FACTS } from './m8/triggers';
 import { emitMechanismSignal, hasMechanismSubscriber } from './m8/s13-triggers';
 import { freezeCompanions, registerDeaths, advanceReactions } from './m8/companions';
-import { executeMechanismEffect } from './m8/s13-mechanisms';
+import { executeDamageControlSequence, executeMechanismEffect } from './m8/s13-mechanisms';
 import { completeCast, damageMana, planManaCost, refundCast, resolveMana } from './m8/mana';
 import { S13_COMBAT_RULES } from './s13-rules';
 import { getNeighbors, hexDistance, type HexCell } from './board';
@@ -196,7 +196,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const holder = units.find(u => u.id === task.source.ownerId)!, seq = actionSeq++;
       for (const id of task.targetIds) {
         const target = units.find(u => u.id === id && u.alive && u.hp > 0); if (!target) continue;
-        for (const [index, effect] of task.effects.entries()) executeMechanismEffect(ctx, holder, { ...task.source, effectIndex: task.source.effectIndex + index }, target, effect, seq, index);
+        executeDamageControlSequence(ctx, holder, task.source, target, task.effects, seq);
       }
     }
   }
@@ -335,6 +335,12 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         inherited: { parentPacketId: request.context.packetId, resolvedAtTick: tick, portion: 'redirect-share', critical: prepared.critical } } };
       const redirectSample = damageSample(packet, protector, owner, tick, units, virtualHp.get(protector.id)!);
       commitOutcome(protector, resolveDamage(redirected, redirectSample), packet, prepared.rawAfterCritical);
+    }
+    // The bound target's virtual HP is authoritative here; alive/hp are committed
+    // after the batch. Prevention and full shield absorption still allow control.
+    // Redirect outcomes do not inherit this continuation or change its target.
+    if (owner && target.alive && (virtualHp.get(target.id) ?? 0) > 0) {
+      for (const control of packet.afterDamageControl ?? []) executeMechanismEffect(ctx, owner, control.source, target, control.effect, packet.actionSeq, control.ordinal);
     }
     const rootSeq = request.context.rootActionSeq;
     if (!aggregatedActions.has(rootSeq) && !ctx.packets.slice(packetIndex + 1).some(p => (p.rootActionSeq ?? p.actionSeq) === rootSeq)) {

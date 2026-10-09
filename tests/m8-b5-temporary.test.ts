@@ -5,10 +5,10 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { MatchState } from '../src/simulation/match-types';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { planTemporaryEquipment, validateMatchEquipment } from '../src/simulation/temporary-equipment';
-import { accepted, emptyBoard, freeze, readyMatch } from './match-helpers';
+import { accepted, emptyBoard, freeze, reachRound, purchasedThreeHeroMatch } from './match-helpers';
 
 function inventory(level = 6, seed = 42): MatchState {
-  const state = readyMatch(seed);
+  const state = seed===42 ? purchasedThreeHeroMatch() : reachRound('2-1',true,seed);
   return { ...state, level, xp: 0, gold: 100, nextItemSerial: 30,
     items: [...state.items, { id: 'item-20', definitionId: 'thiefs-gloves', location: { kind: 'inventory' } }] };
 }

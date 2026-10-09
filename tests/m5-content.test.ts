@@ -1,3 +1,5 @@
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
+import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { M5_UNIT_DEFINITIONS, M5_UNIT_IDS, NEUTRAL_UNIT_DEFINITIONS, UNIT_DEFINITIONS } from '../src/simulation/units';
 import { ITEM_DEFINITIONS, COMPONENT_IDS } from '../src/simulation/content/items';
@@ -82,35 +84,37 @@ describe('M5 frozen S13 slice',()=>{
 });
 
 describe('M5 finite campaign content',()=>{
-  it('maps absolute rounds to 2-1 through 6-7, with explicit kinds and no round 36',()=>{
-    expect(getStageRound(1)).toEqual({stage:2,round:1});expect(getStageRound(20)).toEqual({stage:4,round:6});expect(getStageRound(35)).toEqual({stage:6,round:7});
-    const kinds=Array.from({length:35},(_,i)=>getRoundKind(i+1));
-    expect(kinds.filter(k=>k==='pvp')).toHaveLength(25);expect(kinds.filter(k=>k==='pve')).toHaveLength(5);expect(kinds.filter(k=>k==='supply')).toHaveLength(5);
-    for(const invalid of [0,36,1.5,NaN,Infinity]) expect(()=>getRoundKind(invalid)).toThrow();
+  it('maps the catalog from 1-2 to 6-7 with 38 progression rounds and 33 battles',()=>{
+    expect(getStageRound(1)).toEqual({stage:1,round:2});expect(getStageRound(getCatalogRoundById('4-6').ordinal)).toEqual({stage:4,round:6});
+    expect(getStageRound(ROUND_CATALOG.at(-1)!.ordinal)).toEqual({stage:6,round:7});
+    const kinds=ROUND_CATALOG.map(r=>getRoundKind(r.ordinal));
+    expect(kinds.filter(k=>k==='pvp')).toHaveLength(25);expect(kinds.filter(k=>k==='pve')).toHaveLength(8);expect(kinds.filter(k=>k==='supply')).toHaveLength(5);
+    for(const invalid of [0,ROUND_CATALOG.length+1,1.5,NaN,Infinity]) expect(()=>getRoundKind(invalid)).toThrow();
   });
-  it('makes 15 components reachable and freezes 3 augments and the 4-6 anomaly',()=>{
-    const events=Array.from({length:35},(_,i)=>({round:i+1,events:getRoundSchedule(i+1)}));
-    expect(events.filter(r=>r.events.some(e=>e.kind==='augment')).map(r=>r.round)).toEqual([1,9,16]);
-    expect(events.filter(r=>r.events.some(e=>e.kind==='anomaly')).map(r=>r.round)).toEqual([20]);
-    expect(events.flatMap(r=>r.events).filter(e=>e.kind==='component')).toHaveLength(11);
-    expect(events.flatMap(r=>r.events).reduce((n,e)=>n+(e.kind==='reward'?e.randomComponents:0),0)).toBe(4);
-    expect(getRoundSchedule(1).map(e=>e.kind)).toEqual(['component','component','augment']);
-    expect(getRoundSchedule(7).map(e=>[e.kind,e.timing])).toEqual([['reward','after'],['component','after']]);
-    expect(getRoundSchedule(35)).toEqual([]);
+  it('freezes three augments, the 4-6 anomaly and five supplies; B8 owns the missing PvE drop chain',()=>{
+    const events=ROUND_CATALOG.map(r=>({round:r.roundId,events:getRoundSchedule(r.ordinal)}));
+    expect(events.filter(r=>r.events.some(e=>e.kind==='augment')).map(r=>r.round)).toEqual(['2-1','3-2','4-2']);
+    expect(events.filter(r=>r.events.some(e=>e.kind==='anomaly')).map(r=>r.round)).toEqual(['4-6']);
+    expect(events.flatMap(r=>r.events).filter(e=>e.kind==='component')).toHaveLength(5);
+    expect(events.flatMap(r=>r.events).reduce((n,e)=>n+(e.kind==='reward'?e.randomComponents:0),0)).toBe(0);
+    expect(getRoundSchedule(1)).toEqual([]);
+    expect(getRoundSchedule(getCatalogRoundById('2-1').ordinal).map(e=>e.kind)).toEqual(['augment']);
+    expect(getRoundSchedule(getCatalogRoundById('2-7').ordinal)).toEqual([]);
+    expect(getRoundSchedule(getCatalogRoundById('6-7').ordinal)).toEqual([]);
   });
   it('uses public fixed opponent difficulty, no invisible growth, and no enemies for supplies',()=>{
-    expect(createRoundEnemies(1)).toHaveLength(3);expect(createRoundEnemies(5)).toHaveLength(4);
-    expect(createRoundEnemies(8)).toHaveLength(5);expect(createRoundEnemies(15)).toHaveLength(6);
-    expect(createRoundEnemies(22)).toHaveLength(7);expect(createRoundEnemies(29)).toHaveLength(8);
-    expect(createRoundEnemies(4)).toEqual([]);expect(createRoundEnemies(35).map(u=>u.definitionId)).toEqual(['neutral-stage-6']);
-    expect(createRoundEnemies(15).map(u=>u.starLevel)).toEqual([2,2,2,1,1,1]);
-    for(let round=1;round<=35;round++) {
+    expect(createRoundEnemies(getCatalogRoundById('2-1').ordinal)).toHaveLength(3);expect(createRoundEnemies(getCatalogRoundById('2-5').ordinal)).toHaveLength(4);
+    expect(createRoundEnemies(getCatalogRoundById('3-1').ordinal)).toHaveLength(5);expect(createRoundEnemies(getCatalogRoundById('4-1').ordinal)).toHaveLength(6);
+    expect(createRoundEnemies(getCatalogRoundById('5-1').ordinal)).toHaveLength(7);expect(createRoundEnemies(getCatalogRoundById('6-1').ordinal)).toHaveLength(8);
+    expect(createRoundEnemies(getCatalogRoundById('2-4').ordinal)).toEqual([]);expect(createRoundEnemies(getCatalogRoundById('6-7').ordinal).map(u=>u.definitionId)).toEqual(['neutral-stage-6']);
+    expect(createRoundEnemies(getCatalogRoundById('4-1').ordinal).map(u=>u.starLevel)).toEqual([2,2,2,1,1,1]);
+    for(const {ordinal:round} of ROUND_CATALOG) {
       expect(getEnemyGrowthBps(round)).toBe(0);
       const units=createRoundEnemies(round);expect(new Set(units.map(u=>u.id)).size).toBe(units.length);
       expect(new Set(units.map(u=>u.location.kind==='board'?`${u.location.cell.col},${u.location.cell.row}`:'')).size).toBe(units.length);
       for(const item of getRoundEnemyItems(round)){expect(units.some(u=>u.id===item.unitId)).toBe(true);expect(ITEM_DEFINITIONS[item.definitionId].kind).toBe('completed');}
     }
-    expect(getRoundEnemyItems(15)).toHaveLength(1);expect(getRoundEnemyItems(22)).toHaveLength(3);expect(getRoundEnemyItems(29)).toHaveLength(5);
-    expect(getRoundEnemyItems(35)).toEqual([]);
+    expect(getRoundEnemyItems(getCatalogRoundById('4-1').ordinal)).toHaveLength(1);expect(getRoundEnemyItems(getCatalogRoundById('5-1').ordinal)).toHaveLength(3);expect(getRoundEnemyItems(getCatalogRoundById('6-1').ordinal)).toHaveLength(5);
+    expect(getRoundEnemyItems(getCatalogRoundById('6-7').ordinal)).toEqual([]);
   });
 });
