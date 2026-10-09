@@ -1,0 +1,57 @@
+{
+  "runId": 37874466844,
+  "sha": "a3ea85c5facb2ceaf556244e26391ca20b5ff0f5",
+  "results": [
+    {
+      "attempt": "first",
+      "artifactId": 11591608337,
+      "archiveBytes": 10255689,
+      "archiveSha256": "b9386cbaa88706a2f5f12ebaf58649180d2a6cf1f7da15c4d2611f958bf0578e",
+      "archiveMembers": 39,
+      "crcPassed": true,
+      "manifestSha256": "c59607a630c333119b48b12a638ee03ac3a7d88ea88b835aabda34e54b2098c9",
+      "manifestIdentity": {
+        "sha": "a3ea85c5facb2ceaf556244e26391ca20b5ff0f5",
+        "status": "",
+        "node": "v22.23.3",
+        "browser": "153.0.8010.12",
+        "cpu": "AMD EPYC 9V45 96-Core Processor",
+        "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+        "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "passed": false,
+        "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)\n    at verifyApplicationLifecycle (/home/runner/work/cat/cat/scripts/verify-m5-browser.cjs:54:254)\n    at async /home/runner/work/cat/cat/scripts/verify-m5-browser.cjs:106:151",
+        "durationSeconds": 192.53
+      },
+      "beforeBytes": 14489140,
+      "afterBytes": 16151552,
+      "deltaBytes": 1662412
+    },
+    {
+      "attempt": "retry",
+      "artifactId": 11592753632,
+      "archiveBytes": 26389621,
+      "archiveSha256": "9dd439c3c330fef552e39ecd2558bf72d04c8e6c54d929118efcbc12fc94cd3c",
+      "archiveMembers": 234,
+      "crcPassed": true,
+      "manifestSha256": "16f8753c21859028f86c4cafb25587ec24774c5a872159ebfa49576d39e90be5",
+      "manifestIdentity": {
+        "sha": "a3ea85c5facb2ceaf556244e26391ca20b5ff0f5",
+        "status": "",
+        "node": "v22.23.3",
+        "browser": "153.0.8010.12",
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+        "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "passed": true,
+        "failure": null,
+        "durationSeconds": 904.531
+      },
+      "beforeBytes": 14739160,
+      "afterBytes": 14519800,
+      "deltaBytes": -219360
+    }
+  ],
+  "scope": "Ordinary CI, separate from predeclared diagnostic sample frequency. One failed-jobs API retry requested; GitHub reran all dependency jobs for downstream compare, latest attempt12requiredjobs successful. First failure artifact still exists."
+}
