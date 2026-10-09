@@ -8,4 +8,14 @@ function applicationHeapCeilingBytes(mode){
  if(mode==='preview')return 1024*1024;
  throw new RangeError(`Unknown application measurement mode: ${mode}`);
 }
-module.exports={sourceFingerprint,applicationHeapCeilingBytes};
+// H1 (2026-10-09): retain the measurement and ceiling, but report an overrun
+// without failing the full-application route or its evidence comparison.
+function applicationHeapGate(mode,deltaBytes){
+ if(!Number.isSafeInteger(deltaBytes))throw new TypeError('Invalid full-application heap delta');
+ const ceilingBytes=applicationHeapCeilingBytes(mode);
+ return {policy:'warn-only',deltaBytes,ceilingBytes,exceeded:deltaBytes>ceilingBytes};
+}
+function warnApplicationHeap(gate){
+ if(gate.exceeded)console.warn(`::warning title=H1 application heap::post-GC growth ${gate.deltaBytes} B exceeds ${gate.ceilingBytes} B; warn-only pending H1 investigation`);
+}
+module.exports={sourceFingerprint,applicationHeapCeilingBytes,applicationHeapGate,warnApplicationHeap};
