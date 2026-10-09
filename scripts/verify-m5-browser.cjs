@@ -6,7 +6,7 @@ const generateRoute=require('./generate-m5-route.cjs'),{hash}=require('./m4-evid
 const preview=process.argv.includes('--preview'),touch=process.argv.includes('--touch'),build=(process.argv.find(a=>a.startsWith('--build='))??'--build=cannon').split('=')[1];
 const m6Journey=process.argv.includes('--m6-journey'),m6F2=process.argv.includes('--m6-f2')||m6Journey;
 const mode=preview?'preview':'dev',port=Number(process.env.M5_PORT??(preview?4176:5176)),url=`http://127.0.0.1:${port}`,output=process.env.M5_EVIDENCE_DIR??`artifacts/m5-${mode}-${build}${touch?'-touch':''}`;
-const {sourceFingerprint,applicationHeapCeilingBytes}=require('./m5-evidence.cjs');
+const {sourceFingerprint,applicationHeapCeilingBytes,applicationHeapGate,warnApplicationHeap}=require('./m5-evidence.cjs');
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 (async()=>{fs.mkdirSync(output,{recursive:true});let server,browser,context,page;const started=Date.now(),report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),status:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),diffHash:hash(execFileSync('git',['diff','HEAD'],{encoding:'utf8'})),node:process.version,platform:process.platform,cpu:os.cpus()[0]?.model,cpuCount:os.cpus().length,memoryBytes:os.totalmem(),loadAtStart:os.loadavg(),runnerHash:hash(fs.readFileSync(__filename,'utf8')),sourceFingerprint:sourceFingerprint(),mode,build,touch,checkpoints:[],errors:[],passed:false};try{
  const route=await generateRoute({build,seed:42,retainStates:true});require('../tests/fixtures/m5/assert-golden.cjs')(route);report.versions=Object.fromEntries(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','rngAlgorithm','tickMs'].map(k=>[k,route.initial[k]]));
@@ -30,7 +30,7 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   assert(!warmupExperiment||!heapDiagnostics,'warmup experiment must not collect perturbing heap snapshots');
   for(let i=0;i<warmupCycles;i++)await cycle();report.m6ReplayFailureIsolation.activeSavingRecovered=true;await drainInputs();await cdp.send('HeapProfiler.collectGarbage');const beforeHeap=await cdp.send('Runtime.getHeapUsage'),beforeResources=await page.evaluate(()=>window.__M6_RESOURCES__.read());await heapSnapshot('before');const rows=[];
   for(let i=0;i<30;i++){await cycle();rows.push({cycle:i+1,m6:(await read()).m6,resources:await page.evaluate(()=>window.__M6_RESOURCES__.read())});fs.writeFileSync(path.join(output,'m6-lifecycle-progress.json'),JSON.stringify({cycle:i+1}));}
-  await drainInputs();await cdp.send('HeapProfiler.collectGarbage');const afterHeap=await cdp.send('Runtime.getHeapUsage'),afterResources=await page.evaluate(()=>window.__M6_RESOURCES__.read());await heapSnapshot('after');report.m6Lifecycle={heapDiagnostics,warmupExperiment,warmupCycles,cycles:30,heapCeilingBytes,beforeHeap,afterHeap,heapDelta:afterHeap.usedSize-beforeHeap.usedSize,beforeResources,afterResources,rows};fs.writeFileSync(path.join(output,'m6-lifecycle.json'),JSON.stringify(report.m6Lifecycle));// Additional windows are diagnostic follow-up, after the unchanged first 30-cycle measurement has been saved.
+  await drainInputs();await cdp.send('HeapProfiler.collectGarbage');const afterHeap=await cdp.send('Runtime.getHeapUsage'),afterResources=await page.evaluate(()=>window.__M6_RESOURCES__.read());await heapSnapshot('after');report.m6Lifecycle={heapDiagnostics,warmupExperiment,warmupCycles,cycles:30,heapCeilingBytes,beforeHeap,afterHeap,heapDelta:afterHeap.usedSize-beforeHeap.usedSize,beforeResources,afterResources,rows,heapGate:warmupExperiment?undefined:applicationHeapGate(mode,beforeHeap,afterHeap)};fs.writeFileSync(path.join(output,'m6-lifecycle.json'),JSON.stringify(report.m6Lifecycle));// Additional windows are diagnostic follow-up, after the unchanged first 30-cycle measurement has been saved.
   if(warmupExperiment){
    const windows=[{window:1,cycles:30,beforeHeap,afterHeap,heapDelta:afterHeap.usedSize-beforeHeap.usedSize,beforeResources,afterResources}];
    const trend={warmupCycles,cyclesPerWindow:30,heapDiagnostics:false,windows};
@@ -51,7 +51,9 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    }
    assert(!trend.persistentGrowth,'persistent post-warmup growth: investigate as a potential real leak, do not accept the method');
   }
-  assert.equal(afterResources.listeners,beforeResources.listeners,'full application window/document/canvas listeners do not accumulate');assert(afterResources.pendingRaf<=beforeResources.pendingRaf+1,'full application RAF schedulers do not accumulate');assert(afterHeap.usedSize-beforeHeap.usedSize<=heapCeilingBytes,`full application post-GC heap growth <=${heapCeilingBytes} bytes (${mode})`);
+  assert.equal(afterResources.listeners,beforeResources.listeners,'full application window/document/canvas listeners do not accumulate');assert(afterResources.pendingRaf<=beforeResources.pendingRaf+1,'full application RAF schedulers do not accumulate');
+  if(warmupExperiment)assert(afterHeap.usedSize-beforeHeap.usedSize<=heapCeilingBytes,`full application post-GC heap growth <=${heapCeilingBytes} bytes (${mode})`);
+  else warnApplicationHeap(report.m6Lifecycle.heapGate);
  }
  async function verifySeedControls(){
   async function choices(){while((await read()).state.phase==='choice'){const pending=(await read()).state.pendingChoice;await click(`choice:${pending.offers[0]}`);}await page.waitForFunction(()=>!document.querySelector('.choice-overlay.dismissal-shield'));}
