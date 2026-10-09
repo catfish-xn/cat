@@ -42,7 +42,8 @@ export type MatchState = MatchBase & (
 );
 export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
-  | 'stale-choice' | 'invalid-choice' | 'invalid-target';
+  | 'stale-choice' | 'invalid-choice' | 'invalid-target'
+  | import('./m8/ui-contracts').EquipmentFailure;
 export type MatchCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly state: MatchState; readonly reason: MatchFailure };
 export interface MatchStep { readonly state: MatchState; readonly events: readonly MatchEvent[] }

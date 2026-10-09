@@ -1,4 +1,5 @@
 import { contains, isDeploymentCell } from './board';
+import { checkEquipmentPlacement } from './equipment-policy';
 import type { GameState } from './game';
 import type { PurchasePlanResult } from './match-types';
 import type { AnomalyBinding, ItemInstance, StrategyEvent } from './strategy-types';
@@ -78,8 +79,6 @@ export function transferUpgradeResources(
   let nextItems = [...items], anomalyBinding = binding;
   const events: StrategyEvent[] = [];
   for (const upgrade of upgradeEvents) {
-    const occupiedSlots = new Set(nextItems.flatMap(item => item.location.kind === 'unit' && item.location.unitId === upgrade.survivorId
-      ? [item.location.slot] : []));
     for (const consumedId of [...upgrade.consumedIds].sort()) {
       const consumedItems = nextItems.filter(item => item.location.kind === 'unit' && item.location.unitId === consumedId)
         .sort((a, b) => {
@@ -89,12 +88,11 @@ export function transferUpgradeResources(
       const returnedIds: string[] = [];
       for (const item of consumedItems) {
         let slot = 0;
-        while (occupiedSlots.has(slot) && slot < 3) slot++;
+        while (slot < 3 && !checkEquipmentPlacement(nextItems, item, upgrade.survivorId, slot).allowed) slot++;
         const location: ItemInstance['location'] = slot < 3
           ? { kind: 'unit', unitId: upgrade.survivorId, slot } : { kind: 'inventory' };
         nextItems = nextItems.map(candidate => candidate.id === item.id ? { ...candidate, location } : candidate);
         if (slot < 3) {
-          occupiedSlots.add(slot);
           events.push({ type: 'itemEquipped', itemId: item.id, unitId: upgrade.survivorId, slot });
         } else returnedIds.push(item.id);
       }

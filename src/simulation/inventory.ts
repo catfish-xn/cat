@@ -1,4 +1,5 @@
 import { ITEM_DEFINITIONS } from './content/items';
+import { checkEquipmentPlacement } from './equipment-policy';
 import type { GameState } from './game';
 import type { MatchFailure } from './match-types';
 import type { ItemInstance, StrategyEvent } from './strategy-types';
@@ -8,7 +9,7 @@ export type CombinePlanResult = {
   readonly items: readonly ItemInstance[];
   readonly nextItemSerial: number;
   readonly events: readonly StrategyEvent[];
-} | { readonly ok: false; readonly reason: 'unknown-item' | 'invalid-recipe' | 'item-not-inventory' };
+} | { readonly ok: false; readonly reason: 'unknown-item' | 'same-item' | 'invalid-recipe' | 'item-not-inventory' };
 
 export type EquipPlanResult = {
   readonly ok: true;
@@ -22,9 +23,9 @@ const compareIds = (a: ItemInstance, b: ItemInstance) => a.id < b.id ? -1 : a.id
 export function planCombine(
   items: readonly ItemInstance[], nextItemSerial: number, aId: string, bId: string,
 ): CombinePlanResult {
-  if (aId === bId) return { ok: false, reason: 'invalid-recipe' };
   const a = items.find(item => item.id === aId), b = items.find(item => item.id === bId);
   if (!a || !b) return { ok: false, reason: 'unknown-item' };
+  if (aId === bId) return { ok: false, reason: 'same-item' };
   if (a.location.kind !== 'inventory' || b.location.kind !== 'inventory') {
     return { ok: false, reason: 'item-not-inventory' };
   }
@@ -54,16 +55,15 @@ export function planCombine(
 export function planEquip(
   items: readonly ItemInstance[], preparation: GameState, itemId: string, unitId: string, slot: number,
 ): EquipPlanResult {
-  if (!Number.isInteger(slot) || slot < 0 || slot > 2) return { ok: false, reason: 'invalid-slot' };
   const item = items.find(candidate => candidate.id === itemId);
   if (!item) return { ok: false, reason: 'unknown-item' };
-  if (item.location.kind !== 'inventory') return { ok: false, reason: 'item-not-inventory' };
   const unit = preparation.units.find(candidate => candidate.id === unitId);
-  if (!unit) return { ok: false, reason: 'unknown-unit' };
-  if (unit.team !== 'player') return { ok: false, reason: 'enemy-unit' };
-  if (items.some(candidate => candidate.location.kind === 'unit' && candidate.location.unitId === unitId && candidate.location.slot === slot)) {
-    return { ok: false, reason: 'item-slot-occupied' };
-  }
+  if (!unit || unit.team !== 'player') return { ok: false, reason: 'unknown-unit' };
+  if (item.location.kind !== 'inventory') return { ok: false, reason: 'item-not-inventory' };
+  const placement = checkEquipmentPlacement(items, item, unitId, slot);
+  if (!placement.allowed) return { ok: false, reason: placement.reason };
+  // Three-slot parents always occupy slot 0; slots 1/2 are reserved for children.
+  slot = placement.occupiedSlots[0];
   return {
     ok: true,
     items: items.map(candidate => candidate.id === itemId

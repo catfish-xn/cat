@@ -1,4 +1,5 @@
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
+import { checkEquipmentPlacement } from './equipment-policy';
 import { canonicalSource } from './m8/identity';
 import { asSource } from './m8/s13-definitions';
 import { validateComponentCandidates } from './component-pool';
@@ -90,6 +91,10 @@ export function restoreMatch(input: unknown): MatchState {
       requireValue(item.location.slot <= 2, 'equipment slot'); const key = `${item.location.unitId}:${item.location.slot}`;
       requireValue(!equipment.has(key), 'occupied equipment slot'); equipment.add(key);
     } else requireValue(item.location.kind === 'inventory', 'item location');
+  }
+  for (const item of state.items) if (item.location.kind === 'unit') {
+    requireValue(ITEM_DEFINITIONS[item.definitionId].slotCost !== 3 || item.location.slot === 0, 'exclusive parent slot');
+    requireValue(checkEquipmentPlacement(state.items, item, item.location.unitId, item.location.slot).allowed, 'equipment constraints');
   }
   list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();
   for (const augment of state.augments) {
