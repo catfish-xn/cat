@@ -1,0 +1,173 @@
+{
+  "method": "Fixed ordered filenames from a single six-window snapshot run; verify same-session provenance separately. Selected counts are descriptive only; no per-resource mapping or global capacity/leak claim. self_size differs from Runtime.usedSize. Conditional classifier rejects unknown patterns.",
+  "boundaries": [
+    {
+      "label": "before",
+      "file": "before.heapsnapshot",
+      "sha256": "97d74cd10bc75c7afe01e9ee571f2d6f0228627374c907263e0e02e2d2d8c77d",
+      "nodes": 340710,
+      "self_size": 28460127,
+      "selected_counts": {
+        "native:blink::NetworkResourcesData::ResourceData": 61,
+        "native:PerformanceResourceTiming": 36,
+        "native:PerformanceLongTaskTiming": 11,
+        "native:TaskAttributionTiming": 11,
+        "native:PerformanceLongAnimationFrameTiming": 40,
+        "native:LayoutShift": 101,
+        "native:DOMRectReadOnly": 326,
+        "object:Object": 18495,
+        "object:Array": 4187,
+        "closure:*": 12432
+      },
+      "excluded_conditional_formats": {
+        "numbered_weakmap": 2720,
+        "legacy_ephemeron": 265
+      },
+      "strict_reachable": 336890
+    },
+    {
+      "label": "window-1",
+      "file": "after.heapsnapshot",
+      "sha256": "0ef782b4ee974aeb706df07d3bcb979abb21c63ba847190239865db9f561c7ed",
+      "nodes": 345682,
+      "self_size": 29538859,
+      "selected_counts": {
+        "native:blink::NetworkResourcesData::ResourceData": 79,
+        "native:PerformanceResourceTiming": 54,
+        "native:PerformanceLongTaskTiming": 94,
+        "native:TaskAttributionTiming": 94,
+        "native:PerformanceLongAnimationFrameTiming": 200,
+        "native:LayoutShift": 150,
+        "native:DOMRectReadOnly": 672,
+        "object:Object": 18521,
+        "object:Array": 4199,
+        "closure:*": 12432
+      },
+      "excluded_conditional_formats": {
+        "numbered_weakmap": 2422,
+        "legacy_ephemeron": 277
+      },
+      "strict_reachable": 341856
+    },
+    {
+      "label": "window-2",
+      "file": "window-2.heapsnapshot",
+      "sha256": "96610119febe3d7aa903848de61476355287e757be9eb7263591be7fcc0521b8",
+      "nodes": 336909,
+      "self_size": 29357049,
+      "selected_counts": {
+        "native:blink::NetworkResourcesData::ResourceData": 103,
+        "native:PerformanceResourceTiming": 78,
+        "native:PerformanceLongTaskTiming": 158,
+        "native:TaskAttributionTiming": 158,
+        "native:PerformanceLongAnimationFrameTiming": 200,
+        "native:LayoutShift": 150,
+        "native:DOMRectReadOnly": 672,
+        "object:Object": 18521,
+        "object:Array": 4199,
+        "closure:*": 12432
+      },
+      "excluded_conditional_formats": {
+        "numbered_weakmap": 2380,
+        "legacy_ephemeron": 300
+      },
+      "strict_reachable": 333046
+    },
+    {
+      "label": "window-3",
+      "file": "window-3.heapsnapshot",
+      "sha256": "1af69d061b0b69f999618468051c36ebd2f447cfdf0630652a3017c1adb4580c",
+      "nodes": 337714,
+      "self_size": 29576401,
+      "selected_counts": {
+        "native:blink::NetworkResourcesData::ResourceData": 124,
+        "native:PerformanceResourceTiming": 99,
+        "native:PerformanceLongTaskTiming": 200,
+        "native:TaskAttributionTiming": 200,
+        "native:PerformanceLongAnimationFrameTiming": 200,
+        "native:LayoutShift": 150,
+        "native:DOMRectReadOnly": 672,
+        "object:Object": 18521,
+        "object:Array": 4199,
+        "closure:*": 12432
+      },
+      "excluded_conditional_formats": {
+        "numbered_weakmap": 2436,
+        "legacy_ephemeron": 300
+      },
+      "strict_reachable": 333851
+    },
+    {
+      "label": "window-4",
+      "file": "window-4.heapsnapshot",
+      "sha256": "ee6d483cfac52518988be247f0de571782df5d20133e4cf11107eb74d4c9842f",
+      "nodes": 337700,
+      "self_size": 29667261,
+      "selected_counts": {
+        "native:blink::NetworkResourcesData::ResourceData": 147,
+        "native:PerformanceResourceTiming": 122,
+        "native:PerformanceLongTaskTiming": 200,
+        "native:TaskAttributionTiming": 200,
+        "native:PerformanceLongAnimationFrameTiming": 200,
+        "native:LayoutShift": 150,
+        "native:DOMRectReadOnly": 672,
+        "object:Object": 18521,
+        "object:Array": 4199,
+        "closure:*": 12432
+      },
+      "excluded_conditional_formats": {
+        "numbered_weakmap": 2358,
+        "legacy_ephemeron": 293
+      },
+      "strict_reachable": 333858
+    },
+    {
+      "label": "window-5",
+      "file": "window-5.heapsnapshot",
+      "sha256": "1f9e85ba58548bd6f83cabb84c28a276f23306cdca77e86cd8b3a1075a1fa14d",
+      "nodes": 338019,
+      "self_size": 29744905,
+      "selected_counts": {
+        "native:blink::NetworkResourcesData::ResourceData": 173,
+        "native:PerformanceResourceTiming": 148,
+        "native:PerformanceLongTaskTiming": 200,
+        "native:TaskAttributionTiming": 200,
+        "native:PerformanceLongAnimationFrameTiming": 200,
+        "native:LayoutShift": 150,
+        "native:DOMRectReadOnly": 672,
+        "object:Object": 18521,
+        "object:Array": 4199,
+        "closure:*": 12432
+      },
+      "excluded_conditional_formats": {
+        "numbered_weakmap": 2422,
+        "legacy_ephemeron": 293
+      },
+      "strict_reachable": 334177
+    },
+    {
+      "label": "window-6",
+      "file": "window-6.heapsnapshot",
+      "sha256": "124ba0f65b06bb7a9f6ba69168577af1ca421222e3d2dcccb3c3ea2f99e16821",
+      "nodes": 338385,
+      "self_size": 29783165,
+      "selected_counts": {
+        "native:blink::NetworkResourcesData::ResourceData": 196,
+        "native:PerformanceResourceTiming": 171,
+        "native:PerformanceLongTaskTiming": 200,
+        "native:TaskAttributionTiming": 200,
+        "native:PerformanceLongAnimationFrameTiming": 200,
+        "native:LayoutShift": 150,
+        "native:DOMRectReadOnly": 672,
+        "object:Object": 18521,
+        "object:Array": 4199,
+        "closure:*": 12432
+      },
+      "excluded_conditional_formats": {
+        "numbered_weakmap": 2428,
+        "legacy_ephemeron": 320
+      },
+      "strict_reachable": 334516
+    }
+  ]
+}
