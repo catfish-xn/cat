@@ -1,5 +1,5 @@
 {
-  "yamlSha256": "eaa122e1aa0d64e8fb9d1f6c224014ec28396a7a61750507e0f5dc95b87c8e35",
+  "yamlSha256": "4b59a583a1329dab3b416587679fd8417638220a119947bfcea3fb197b1b808e",
   "checks": {
     "only_pull_request_labeled": true,
     "head_branch_guard": true,

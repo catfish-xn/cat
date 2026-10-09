@@ -38,3 +38,7 @@ node scripts/diagnostics/h1-b4-module.cjs --source /absolute/clean-97f38a0 --out
 ```
 
 临时workflow的b4-module组仅允许mode=dev，避免把Vite源模块模式标成preview。该组需先把临时YAML配置改为b4-module，再单独重贴专用标签；当前配置仍是extended，B4浏览器负载尚未运行。
+
+## CI153已完成
+
+定义0399167、run37867121590完成6窗共720战（另8战预热），原数据见docs/evidence/h1-ci153-b4/。这是模块数据，不替代完整应用或单件归因；当前下一组为独立完整应用快照。
