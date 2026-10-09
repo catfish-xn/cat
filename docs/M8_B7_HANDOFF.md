@@ -1,0 +1,92 @@
+# M8 B7 独立内容子集交接（范围缩小，未签收）
+
+## 状态与范围
+
+2026-10-09；固定接手基线 `5bd7968ee31e107e12701145aa4fdac0bec7ea8d`，分支 `feat/m8-b7`。
+
+**本步未签收。用户已同意先交付独立目录、编译器和问题证据；先锋机制标为未完成，修复另行安排。** 不继续扩展功能，后续完整 CI 和独立 Pro 审计仅验收该缩小子集，不把先锋机制计为完成。
+三份新增运行模块已由协调者保存到 checkpoint `4d84c5012362cfd22db03383947f47b2387672de`；本文和测试是该 checkpoint 后的交接补充。独立审计、最终验收及合并均未进行。
+
+本步只准备批准的中立目录、阵型、纯编译器及复用既有 B3 的独立向量。没有启动正式 Match 遭遇；正式接线须等 B6 二期合并及新的后续授权。设计来源为 `M8_PLAN.md`、`docs/M8_DEPENDENCY_MAP.md`、`docs/M8B_ENCOUNTERS.md`、`docs/M8B_CONTRACT_ADDENDUM.md`、`docs/M8B_POLICY.md`。所有数值是已批准的项目首版，不代表 14.24b 完整历史还原或实战平衡通过。
+
+## 本步文件清单（全部新增）
+
+| 文件 | 交付内容 |
+| --- | --- |
+| `src/simulation/content/neutrals.ts` | 12 个独立中立定义，显式 family、固定一星、HP/AD/AS/双抗/射程、AP100、0/0 法力、2500/14000Bps 基础暴击及五类机制声明；无商店 cost 占位、无装备、无羁绊 |
+| `src/simulation/content/neutral-encounters.ts` | 8 场、25 个部署槽的 roundId/encounterId/slotId/definitionId/坐标；阶段 1 数量为 2/3/4 |
+| `src/simulation/neutral-encounter-compiler.ts` | 独立纯函数 `compileNeutralEncounter(roundId)`；拒绝非目录轮次，校验部署区/槽/格位，输出冻结部署与 B3 CombatUnit/开场声明 |
+| `tests/m8-b7-catalog.test.ts` | 5 项目录/编译测试，完整独立表、25 个身份/站位、机制 source、冻结/确定性、现有目录隔离 |
+| `tests/m8-b7-mechanisms.test.ts` | 21 项真实新目录编译产物的 B3 执行及局部 JSON 续算向量 |
+| `tests/m8-b7-known-limitations.test.ts` | 1 项已知偏差的现状复现；不是批准语义的通过证明 |
+| `docs/M8_B7_HANDOFF.md` | 当前交接、实际检查、阻塞和后续接点 |
+| `docs/M8_B7_DAMAGE_CONTROL_ORDER.md` | 用户追加授权的开发者问题记录：先锋最小复现、预期/实际、基线接点、后果与未实施的修复方向 |
+
+临时 `node_modules` 符号链接仅用于本地复用与当前锁文件相同的依赖，不属于提交文件。未修改 package/lock、任何既有源文件、既有测试、冻结合同/G12、UI、CI 或门禁。
+
+## 纯编译边界与既有执行器复用
+
+- 入口仅接受显式 roundId，输出 `roundId/encounterId/catalogVersion/policyVersion/encounterRngDraws/deployment/units/openingDefinitions`，不接受或消耗 RNG。
+- 实例 ID 为 canonical JSON 数组 `["pve", roundId, encounterId, slotId]`，不使用数组序号或旧 round 整数。所有实例固定敌方一星。
+- 目录中的 family 是显式数据。机制编译分支依据有限 `mechanism.kind`，不按定义 ID 或中文名称分支执行。
+- 通过既有 `attackInterval` 和 `compileUnitInputs` 编译基础 AS/暴击；没有直接给测试对象手塞 spellCrit=2500 来冒充内容编译。
+- 石甲虫/鸟映射到既有 `companionDefinitions`；狼/先锋映射到 `openingDefinitions`；龙映射到 `attackCone`。伤害、治疗、控制、死亡清理、开场几何及 RNG 均由既有 B3 执行器处理，没有新增一套战斗循环。
+- `catalogVersion=m8b-encounters-project-v1` 与 `policyVersion=m8b-pve-project-v1` 是批准设计中的目录/政策身份元数据，不是全局版本切换。`content/index.ts`、内容 digest、规则版本和序列化均未改变。
+- `NEUTRAL_DEFINITIONS` 独立于当前 `UNIT_DEFINITIONS` 和 `SHOP_CATALOG`；没有加入英雄获取池、羁绊或装备池。
+
+## 已执行的独立数值与边界向量
+
+| 场景 | 已核验结果 |
+| --- | --- |
+| 所有 8 场真实编译结果各推进 50 tick | 无施法，所有新中立始终 0/0 法力；输入未被改写。这不是完整对局/平衡验收 |
+| 石甲虫两只同 tick 正式死亡 | 当 tick 不治疗；两笔任务在下一 tick 执行并各自即时取样缺血 |
+| 缺血 200、3300Bps 重伤 | `floor(200×0.67)=134`，再 `floor(66×0.67)=44`，最终 HP378；无重伤为 200+0，最终 HP400 |
+| 石甲虫在治疗执行 tick 被致死 | 不复活、不治疗，反应取消 |
+| 五狼/单个后排目标 | 按稳定 ID 预订四个相邻格，第五狼 no-space 消费一次；输入顺序不影响计划；0 伤害/0 RNG，续算不重跳 |
+| 鸟 0/1/2/5 死亡层数 | 下一 tick 间隔为 25/22/20/15，等待冷却 7 只递减为 6；逐死者贡献、无双重延期、无重复层 |
+| 鸟真实小鸟死亡 | 同族大鸟于下一 tick 从 25 改为 22 tick，每死者固定 1500Bps |
+| 龙 word0（前驱 RNG 状态 634785765） | 85AD 主包119，最多两个副包各29；主目标500→381、次目标500→471；全动作只消费一个词，不递归普攻 |
+| 先锋合法开场路径 | `(3,1)→(4,2)→(3,3)→(3,4)→(2,5)`；tick1 伤害任务一次，目标 maxHP1000/4000 分别150/300原始魔伤；存活者眩晕 `[2,12)` |
+| 先锋免控/完全防伤 | 免控阻止眩晕；完全防伤不阻止眩晕。存在下节所述致死/事件时序偏差 |
+
+鸟的 0/1/2/5 层批量向量明确使用“合成的正式死亡清理后边界”，不是声称这些死亡全由实战击杀模拟；另有一项真实小鸟死亡端到端验证。局部 JSON 往返只检查相同 CombatState 的确定性续算，不代表 Match/save/replay 恢复验证器已接受这些新内容。
+
+## 阻塞：先锋控制早于伤害提交
+
+批准语义（`M8B_ENCOUNTERS.md §4.5`）：冲锋先造成伤害，随后只给仍存活且不免控的目标施加从下一 tick 开始的 10 tick 眩晕。
+
+当前复现（`tests/m8-b7-known-limitations.test.ts`）：
+
+1. 使用 `compileNeutralEncounter('6-7')` 的真实先锋，冷却固定以隔离冲锋；目标位于 `(3,4)`，maxHP1000、currentHP100、魔抗0、无盾。
+2. tick0 先锋位移到 `(2,5)`；tick1 请求150原始魔伤。
+3. 既有引擎先记录 `statusChanged(reason='applied', kind='stun', startsAtTick=2, expiresAtTick=12)`，之后记录致死的 `packetDamage(raw=150,hpDamage=100)`。
+4. 死亡清理再移除眩晕；目标最终死亡且无存留状态，但已经出现不符合批准先后顺序的施加事件，也向最终致死目标施加过控制。
+
+根源是基线 `src/simulation/combat-s13.ts:193–199` 顺序调用开场 effects；`src/simulation/m8/s13-mechanisms.ts:90–91` 对 damage 只排待结算包，而同文件 `:96` 对 apply-status 立即登记。该差异来自既有通用执行器，新目录首次用完整先锋伤害+控制内容揭示它。
+
+本步没有修改通用层，也没有通过特殊 ID 判断或独立战斗结算规避。现有 damage-dealt 触发依赖正伤害，不能简单替换为它，否则“完全防伤不等于免控”也会改变。用户已决定本步先交目录/编译器及证据，先锋修复另行安排。开发者可直接使用的记录见 [M8_B7_DAMAGE_CONTROL_ORDER.md](M8_B7_DAMAGE_CONTROL_ORDER.md)。
+
+**已知偏差测试是 characterization：它的绿色只证明偏差可稳定复现，不能记为批准的先锋存活过滤/事件时序验收通过。**
+
+## 实际检查与未执行项目
+
+使用已安装的 Node **22.23.3**（与当前 CI 版本一致），依赖锁文件在复用前已比较一致。
+
+```sh
+npm run typecheck
+npm test -- tests/m8-b7-catalog.test.ts tests/m8-b7-mechanisms.test.ts tests/m8-b7-known-limitations.test.ts
+```
+
+最终暂停检查：typecheck 通过；**3 个测试文件、27 项测试通过**，其中1项为上述已知偏差的事实测试。未使用实现输出生成预期快照或替换既有 golden。
+
+完整 `npm test`、build、浏览器/性能/输入/完整 Match 门禁、远端最终 CI、独立 Pro 审计均**未执行**；发现阻塞后按协调指令停止，不把定向绿色扩大成完整验收。暂停消息到达前正在编写的额外边界测试因一个未完成的类型声明未通过，已移除该未完成文件，随后重新执行上面的最终检查通过；该文件不在交付中。
+
+隔离证明：从固定基线比较，运行源差异只有上列三个新增模块；扫描全部 `src/**/*.ts` 对 `neutral-encounter-compiler`、`content/neutrals`、`content/neutral-encounters` 的引用，只有新增编译器对两个新增目录的引用。没有任何既有运行入口 import 新模块。目录测试另证明12个新定义都不在现有单位登记和商店中。
+
+## 后续接点（未获本步实施/签收）
+
+1. 按用户最新决定只验收独立目录/编译器/证据子集；完成全量检查及独立 Pro 审计前不签收。先锋机制保持未完成，修复另行授权，不改通用层。
+2. B6 二期合并后由共享文件 owner 正式接入 round-enemies、开战快照、公开预览、内容校验/digest 与版本/恢复；不要只向旧守卫叠加字段。
+3. `deployment` 只是隔离部署数据，现有 `getUnitStats`/Match/序列化不认识这些新定义；不能直接混入现有 Match 并声称可保存。
+4. 把新目录/机制声明纳入同版本可信内容校验、开场/死亡消费状态和零蓝/暴击投影恢复；执行8场完整遭遇、阶段1主路线及平衡观察。
+5. B8 掉落与唯一收据、B9完整恢复/回放及B10最终验收仍在各自授权范围内，不由本子集替代。
