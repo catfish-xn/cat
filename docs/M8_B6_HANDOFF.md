@@ -346,3 +346,11 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - 唯一冲突为golden四路线digest/rounds及末尾note。完整原冲突、stage blob、双方意图和逐段解决见[账本](evidence/m8-b6/b3-sync/README.md)。B3生产执行器/14项测试原样引入，B6新目录/开场/恢复源码保持；不能取旧30战theirs，也不能保留旧B6 digest忽略B3。
 - 9e的33战golden已逐字备份，SHA256为1adf09af7b7508277599703677a9d3fdc7d87b46799384671fbbcd7694204395。新严格更新器实际跑四路线，638命令、132场完整事件哈希、132场仅digest归一化的完整状态哈希全部与9e相等，其他版本/真实获取观察也相等，才写入统一digest c1704f5d和派生stateHash。没有重新接受行为差异，原B6宽松轨迹记录器未用于此次同步。
 - 同一合并代码10文件135项定向真实通过，含B3/B6/G12/H1；build/typecheck通过，日志已保存。最新固定merge SHA后仍要新CI、新体积构建绑定和完整包独立审计；§9.10的480808B只是同步前9e/ac历史数值，不能继续冒称同步后最终体积。
+
+
+### 9.12 独立审计R1：组件收据负例的目标身份修正
+
+- 新独立审计固定4004561对0411ad6提出唯一阻塞R1（medium）：A001/A002到真实2-4后仍改`scheduleReceipts[0]`，实际命中2-1强化收据及`choice receipt values`，未覆盖原意中的组件收据。生产对真正组件篡改已正确拒绝，本次仅修测试及账本，不修改恢复实现。
+- 两个独立参数用例均先断言未篡改公开2-4底座可恢复且完整相等；按`eventId=round:2-4:supply`和`kind=component`锁定且断言唯一收据、原itemIds长度1/gold0，分别重复其真实item ID或设gold999，精确断言`Invalid Match save: component receipt values`。A001/A002保留初次误选索引的历史说明并给出纠正后的代码/理由。
+- Node22定向16/16通过，build/typecheck通过；全量107文件通过、1364通过/10个既有批准skip（1374总计），470.12秒，退出0。运行12:46:55～12:54:46 UTC，起止代码diff SHA256相同，期间未修改源码/测试；[运行元数据](evidence/m8-b6/audit-r1-receipts/run-metadata.json)及targeted/build/full-unit.log.gz保存真实证据。测试总数+1来自原单个用例中的两种破坏拆成两个独立参数实例，未新增skip。
+- 上述是4004561加本次测试修复的冻结工作树验证，不是新SHA的CI或独立签收。新提交仍需重新CI、打包和R1复审；生产/冻结合同/G12/U3/阈值/CI配置/既有skip集合无改动，也没有再次同步baseline或改golden。

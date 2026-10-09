@@ -13,27 +13,31 @@
 - 任何历史/终点的索引变化均按roundId查目录。B9应用30容量不改，不能把领域33战fixture当应用验收。
 - Golden仅新版本轨迹记录。pre-m8-b6字节保留；更新器不改变胜利/15组件/完整成型门禁。
 
-## A001 · tests/m4-review-regressions.test.ts · @@ -70 +71 @@ describe('review regressions: runtime commands and safe restore', () => {
-旧值/旧输入：
+## A001 · tests/m4-review-regressions.test.ts · duplicate component item IDs
+旧值/旧输入：`mutable(ready())`的起手组件收据，破坏为重复item ID后要求恢复拒绝。
+初次B6迁移：改为`mutable(reachRound('2-4'))`，但仍写`scheduleReceipts[0]`。独立审计R1确认该索引现在是`round:2-1:augment`，因此此前实际命中`choice receipt values`，并未覆盖账本原先声称的2-4组件分支。这是测试假阳性，保留历史说明，不算原覆盖已成立。
+修正后的输入与断言：
 ```ts
-    const duplicate = mutable(ready());
+const base = reachRound('2-4');
+expect(restoreMatch(mutable(base))).toEqual(base);
+const invalid = mutable(base);
+const receipts = invalid.scheduleReceipts.filter((receipt: MatchState['scheduleReceipts'][number]) =>
+  receipt.eventId === 'round:2-4:supply' && receipt.kind === 'component');
+expect(receipts).toHaveLength(1);
+const receipt = receipts[0];
+expect(receipt.itemIds).toHaveLength(1);
+expect(receipt.gold).toBe(0);
+receipt.itemIds = [receipt.itemIds[0], receipt.itemIds[0]];
+expect(() => restoreMatch(invalid)).toThrow(/^Invalid Match save: component receipt values$/);
 ```
-新值/新输入：
-```ts
-    const duplicate = mutable(reachRound('2-4')); 
-```
-理由：收据破坏测试取真实2-4供给收据，保留重复ID与999虚构金币拒绝；其余冻结数值不改。
+理由：继续用公开命令到真实2-4；先证明未篡改底座合法，再按稳定eventId/kind锁定唯一组件收据，复用其真实item ID并单独破坏重复项。明确断言生产组件分支的完整错误文本，不依赖收据数组顺序，不放宽任何恢复校验。与A002是两个独立参数化用例。
 
-## A002 · tests/m4-review-regressions.test.ts · @@ -73 +74 @@ describe('review regressions: runtime commands and safe restore', () => {
-旧值/旧输入：
-```ts
-    const wrongGold = mutable(ready());
-```
-新值/新输入：
-```ts
-    const wrongGold = mutable(reachRound('2-4'));
-```
-理由：收据破坏测试取真实2-4供给收据，保留重复ID与999虚构金币拒绝；其余冻结数值不改。
+## A002 · tests/m4-review-regressions.test.ts · invented component gold
+旧值/旧输入：`mutable(ready())`的起手组件收据，设gold=999后要求恢复拒绝。
+初次B6迁移：`mutable(reachRound('2-4'))`仍写`scheduleReceipts[0].gold=999`，同A001误伤2-1强化收据，实际命中`choice receipt values`而非目标组件分支。
+修正后的输入：独立重建并验证未篡改2-4底座，按`eventId === 'round:2-4:supply' && kind === 'component'`取得且断言唯一收据，确认原itemIds长度1、gold0；只将该收据gold改为999。
+修正后的断言：`expect(() => restoreMatch(invalid)).toThrow(/^Invalid Match save: component receipt values$/)`。
+理由：0→999的非法金币向量不变，目标收据从不稳定数组索引改为稳定日程事件身份；两个负例互不共享篡改状态。独立审计已证实生产组件分支正确拒绝，本修订仅恢复测试意图，不修改生产代码、阈值或skip。
 
 ## A003 · tests/m5-acceptance.test.ts · @@ -23,2 +23,2 @@ describe('M5 independent frozen numerical acceptance answers',()=>{
 旧值/旧输入：

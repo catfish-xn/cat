@@ -67,13 +67,19 @@ describe('review regressions: runtime commands and safe restore', () => {
     invalid.combat.units[0].targetId = invalid.combat.units[0].id;
     expect(() => restoreMatch(invalid)).toThrow();
   });
-  it('rejects reward receipts with duplicate item IDs or invented fixed gold', () => {
-    const duplicate = mutable(reachRound('2-4'));
-    duplicate.scheduleReceipts[0].itemIds = ['item-1', 'item-1'];
-    expect(() => restoreMatch(duplicate)).toThrow();
-    const wrongGold = mutable(reachRound('2-4'));
-    wrongGold.scheduleReceipts[0].gold = 999;
-    expect(() => restoreMatch(wrongGold)).toThrow();
+  it.each(['duplicate item IDs', 'invented fixed gold'] as const)('rejects a component receipt with %s', violation => {
+    const base = reachRound('2-4');
+    expect(restoreMatch(mutable(base))).toEqual(base);
+    const invalid = mutable(base);
+    const receipts = invalid.scheduleReceipts.filter((receipt: MatchState['scheduleReceipts'][number]) =>
+      receipt.eventId === 'round:2-4:supply' && receipt.kind === 'component');
+    expect(receipts).toHaveLength(1);
+    const receipt = receipts[0];
+    expect(receipt.itemIds).toHaveLength(1);
+    expect(receipt.gold).toBe(0);
+    if (violation === 'duplicate item IDs') receipt.itemIds = [receipt.itemIds[0], receipt.itemIds[0]];
+    else receipt.gold = 999;
+    expect(() => restoreMatch(invalid)).toThrow(/^Invalid Match save: component receipt values$/);
   });
 });
 
