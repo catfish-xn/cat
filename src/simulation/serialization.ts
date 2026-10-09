@@ -1,5 +1,6 @@
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
 import { checkEquipmentPlacement } from './equipment-policy';
+import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
 import { asSource } from './m8/s13-definitions';
 import { validateComponentCandidates } from './component-pool';
@@ -96,6 +97,8 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(ITEM_DEFINITIONS[item.definitionId].slotCost !== 3 || item.location.slot === 0, 'exclusive parent slot');
     requireValue(checkEquipmentPlacement(state.items, item, item.location.unitId, item.location.slot).allowed, 'equipment constraints');
   }
+  record(raw.equipmentState); record(raw.equipmentState.equipment); list(raw.equipmentState.rolls); list(raw.temporaryEquipment);
+  validateMatchEquipment(state);
   list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();
   for (const augment of state.augments) {
     record(augment); definitionId(augment.definitionId, AUGMENT_DEFINITIONS, 'augment definition');
@@ -307,17 +310,19 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     requireValue(combatIds.has(source.ownerId) && ['attack','ability','trait','item','augment','anomaly','enemyGrowth'].includes(source.sourceKind), 'runtime source');
     const owner = combatUnits.find(value => value.id === source.ownerId)!;
     if (source.sourceKind === 'ability' || source.sourceKind === 'attack') {
-      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && source.effectIndex === 0, 'ability source identity');
+      requireValue(source.definitionId === owner.ability.id && source.instanceId === owner.id && source.effectIndex === 0 && source.parentItemInstanceId == null, 'ability source identity');
     } else {
       requireValue(owner.sources?.some(entry => entry.source.ownerId === source.ownerId
         && entry.source.sourceKind === source.sourceKind && entry.source.sourceDefinitionId === source.definitionId
-        && entry.source.sourceInstanceId === source.instanceId && entry.source.effectIndex === source.effectIndex) || declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(source))), 'frozen runtime source');
+        && entry.source.sourceInstanceId === source.instanceId && entry.source.effectIndex === source.effectIndex
+        && (entry.source.parentItemInstanceId ?? null) === (source.parentItemInstanceId ?? null)) || declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(asSource(source))), 'frozen runtime source');
     }
   };
   list(unit.shieldLayers); const shieldKeys = new Set<string>(); let total = 0;
   for (const layer of unit.shieldLayers) {
     record(layer); origin(layer.source); integer(layer.granted); integer(layer.remaining); integer(layer.absorbed); integer(layer.expiresAtTick);
-    requireValue(layer.key === sourceKey(layer.source) && !shieldKeys.has(layer.key) && layer.remaining <= layer.granted && (layer.remaining === 0 || layer.expiresAtTick > tick), 'shield layer');
+    requireValue(layer.key === (layer.source.parentItemInstanceId ? layer.m8State?.key : sourceKey(layer.source))
+      && !shieldKeys.has(layer.key) && layer.remaining <= layer.granted && (layer.remaining === 0 || layer.expiresAtTick > tick), 'shield layer');
     shieldKeys.add(layer.key); total += layer.remaining;
     if (layer.grantedAtTick !== undefined || layer.decayDurationTicks !== undefined) { integer(layer.grantedAtTick); integer(layer.decayDurationTicks,1); requireValue(layer.grantedAtTick! <= tick && layer.expiresAtTick === layer.grantedAtTick! + layer.decayDurationTicks!, 'shield decay timing'); }
     if (layer.decayPerTick !== undefined) integer(layer.decayPerTick, 1);

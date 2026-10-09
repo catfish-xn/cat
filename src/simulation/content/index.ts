@@ -1,4 +1,5 @@
 import { COMPONENT_POOL, COMPONENT_POOL_VERSION } from '../component-pool';
+import { TEMPORARY_EQUIPMENT_POOL } from '../temporary-equipment';
 import { EQUIPMENT_RULES_VERSION } from '../equipment-policy';
 import { S13_COMBAT_RULES } from '../s13-rules';
 import { ABILITY_DEFINITIONS } from '../combat-abilities';
@@ -36,7 +37,7 @@ export function digestContent(value: unknown): string {
   return `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
 }
 export const CONTENT_DIGEST = digestContent({
-  equipmentRulesVersion: EQUIPMENT_RULES_VERSION,
+  equipmentRulesVersion: EQUIPMENT_RULES_VERSION, temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
   units: M5_UNIT_DEFINITIONS, neutralUnits: NEUTRAL_UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, s13Abilities: S13_ABILITY_DATA, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
   augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
   shopCatalog: SHOP_CATALOG_BY_COST, shopOdds: SHOP_ODDS,

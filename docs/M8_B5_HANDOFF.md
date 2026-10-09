@@ -53,7 +53,48 @@
 - 装备视图返回分离的三槽对象；三槽本体只在0槽拥有永久ID，1/2槽仅 `reservedByItemInstanceId` 指向本体。未知单位返回null；已知敌方按既有战斗来源 `enemy:round:unitId:slot` 投影装备，这些ID不能作为玩家库存命令参数。
 - 临时子件暂为空，第3阶段接入真实态；读取不触发生成、补发或修复。当前静态/永久视图可用，不宣称TG完整查询验收通过。
 - 新增 `tests/m8-b5-queries.test.ts`：独立手写枪刃配方/三槽占用/冲突ID预期；跨phase、未知身份、输入、位置、配方的预览-命令一致性；过期预览不能授权提交；返回对象隔离；保存恢复后查询一致；深冻结状态重复查询无资源/事件/RNG变化。
-- 定向 `npm test -- tests/m8-b5-queries.test.ts tests/m8-b5-instances.test.ts tests/inventory.test.ts tests/upgrades.test.ts`：4文件/84测试通过。预览测试新增6项，其中包含125组跨phase合成和875组穿戴组合检查。
+- 定向 `npm test -- tests/m8-b5-queries.test.ts tests/m8-b5-instances.test.ts tests/inventory.test.ts tests/upgrades.test.ts`：4文件/84测试通过。预览测试新增5项，其中包含125组跨phase合成和875组穿戴组合检查。
 - 本阶段不新增状态、不更改存档格式、目录版本、规则修订或digest（仍 `db25532e`）；阶段1的四项界面枚举授权仍待回复，不能声称build通过。
 
 下一步：第3阶段在可编辑模块中接G12，保留独立equipment stream与roll账本，给Match/快照/来源/恢复/查询接线；同一批完成新态严格局部校验和保存恢复。不得修改G12及冻结合同。
+
+## 阶段 3：TG-01 Match 生命周期与局部恢复
+
+状态：领域实现与定向/恢复回归完成，随本阶段 `[wip]` 提交推送；本阶段未动冻结G12及其测试。
+
+文件与职责：
+
+- 新增 `temporary-equipment.ts`：从目录 `temporary-equipment` effect识别生成者，调用G12冻结池生成/投影/差分/校验；固定池为35成装+8组件，禁止按名称或ID识别机制。
+- `match-types.ts`：新增必需 `equipmentState{equipment:{state,draws},rolls}`、`temporaryEquipment`；`match.ts`只在成功穿戴/购买升星/出售/换轮事务接入。空库存不抽；同轮等级改变/重穿/转移不重抽；新轮清理旧绑定后生成新key。部署到备战席保留本轮组合，但不上战斗快照。
+- `strategy-types.ts`：增加 `equipmentRolled` / `temporaryEquipmentChanged` 完整领域事件；生成和移除/应用均由Match事件序号盖章。新增可选父实例来源字段，普通来源JSON形状不变。
+- `strategy-snapshot.ts` / `effects.ts` / `combat-types.ts` / `combat-effects.ts` / `combat-s13.ts` / `combat-s13-state.ts`：临时件的静态属性、旧mechanic和完整ItemProgram走现有通用编译/执行链，并保留父永久ID；不重做G12或另写战斗机制。
+- `serialization.ts`：新字段必需；从可信seed重放equipment流验证roll；检查父物品仍存在且具有生成机制、轮次不超前/倒退、等级上界、当前持有者与两个子件精确对应。拒绝缺roll、缺子件、错holder/slot/期限/来源链，不恢复时生成。战斗策略与程序继续按完整权威快照比较。
+- `item-selectors.ts`：查询返回独立临时对象副本；当前或历史临时ID用于equip/combine均拒绝 `temporary-item`，不会被误当永久实例。
+- `content/items-gloves.ts` / `content/source-manifest.ts` / `equipment-policy.ts` / `content/index.ts`：更新目录说明与开发修订，固定池纳入digest，详见下文。
+- `tests/m8-b5-temporary.test.ts`：独立LCG词/池索引的3/6/7/9级向量；F跨级同轮保持、出售重穿、真实tick0结算/跨轮刷新、库存延迟生成、失败/查询零词、批生成ID排序；43种临时子定义经真实Match快照/战斗/恢复；父来源与反甲真实反击；13种篡改拒绝与战斗父链拒绝。
+- `tests/fixtures/m8-b4-match.ts`、`tests/m8-b5-queries.test.ts`：将原直接注入本体的夹具补成合法装备生命周期状态，不删除既有B4低层本体数值测试。
+- `scripts/update-m8-b5-golden.cjs`、当前golden：保留97f38a0的归档；仍严格要求四条命令序列和完整逐轮事件哈希不变，仅新字段/版本/digest导致状态哈希变化。
+
+设计决定：
+
+1. 本轮父roll随永久本体保留，卖单位只清当前临时绑定，不删roll；跨轮保留历史roll用于可信RNG验证。gameOver保留本轮已冻结装备供历史/快照核验，新局重新初始化空账本；没有终局可操作临时库存。
+2. `equipmentState` 与永久 `items` 完全分开；helper不分配永久ID、不授奖、不消费其他RNG。开战只复制已冻结装备，不补抽。
+3. 保存旧schema5开发边界但新字段必需、digest不同，旧开发档严格拒绝。B9正式版本切换另行负责；不把本批新增态恢复推迟到B9。
+4. 当前校验按旧日程35轮/最低3级约束，B6接新1级/38轮时必须同步 `validateMatchEquipment` 的轮次/等级边界；不能只改Match日程。
+
+阶段3版本变化：装备目录 `s13-14.24b-m8-b4-v3 → s13-14.24b-m8-b5-v1`；实例规则 `m8-b5-instances-v1 → m8-b5-instances-v2`；新增上述两个必需Match字段及可选临时父来源字段，schema/save/replay版本号不变，digest改变。冻结合同未改。
+
+### 全量自检历史（不报全绿）
+
+阶段1首次全量：95文件，1176通过/11失败。8项为全量启动早于golden写完，捕获 `2b6a9a4b` 而运行 `db25532e`；其中4项路线已在写完后独立通过，4项M6集成待固定最终代码后重跑。另3项M5逐tick回放超过180000ms；未改时限/门禁，后续隔离复验。该次运行期间还进行了定向检查，不能当性能基线或最终B5验收证据。
+
+### 阶段3自检与补充
+
+- `npm test -- m8 inventory upgrades m5-serialization m4-strategy-snapshot`：51文件/572测试通过，包含未修改的G12原测试。
+- 43子定义矩阵暴露临时护盾投影缺口：`combat-s13-state.ts`以前丢弃父ID，`serialization.ts`与`m8/restore.ts`只检查旧source-only key；现保留父ID，按既有运行态定义精确检查临时shield的完整effectIdentity key。临时/普通分支均只有一个合法key，父链、目标、金额与声明仍完整验证；不是放宽校验。新增伪造旧key反例。
+- 四旧路线重建再次通过：命令和完整逐轮事件哈希均与基线相同；仅状态字段/版本/digest变化。最终阶段3digest：`fnv1a32-utf16:47dd941a`。
+- `npm run typecheck`仍仅四项已知BoardScene文案枚举阻塞；未获界面修改授权，未改该文件。
+- 全量/浏览器/生产build尚不宣称通过；不改CI、预算、阈值。后续最终固定代码需复验第1阶段已记录的全量失败项。
+- 工作区另有 `docs/M8_U3_AUDIT.md`，属于同时进行的其他任务，不纳入B5提交。
+
+下一阶段：完整升星链/满槽/多本体返还验收、IF-GRANT唯一永久实例与调用方一次收据的原子接点；新增永久库存只读查询。B8掉落资格/解决账本不提前实现。

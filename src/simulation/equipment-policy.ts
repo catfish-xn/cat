@@ -3,7 +3,7 @@ import type { EquipPreview } from './m8/ui-contracts';
 import type { ItemInstance } from './strategy-types';
 
 /** Development rule revision; included in the content digest, not a save-format switch. */
-export const EQUIPMENT_RULES_VERSION = 'm8-b5-instances-v1';
+export const EQUIPMENT_RULES_VERSION = 'm8-b5-instances-v2';
 
 /** Shared by equip, upgrade transfer and restore; callers validate identity/location first. */
 export function checkEquipmentPlacement(

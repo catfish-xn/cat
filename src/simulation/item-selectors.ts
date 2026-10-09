@@ -4,17 +4,20 @@ import type { MatchState } from './match-types';
 import type { CombinePreview, EquipPreview, UnitEquipmentView } from './m8/ui-contracts';
 import { getRoundEnemyItems } from './round-enemies';
 import type { ItemInstance } from './strategy-types';
+import { isTemporaryItemId } from './temporary-equipment';
 
 export { readItemCatalog } from './item-catalog';
 
 /** These are the public command validators; a preview never allocates an instance. */
 export function previewCombine(state: Readonly<MatchState>, aId: string, bId: string): CombinePreview {
   if (state.phase !== 'preparation') return { allowed: false, reason: 'wrong-phase' };
+  if (isTemporaryItemId(state, aId) || isTemporaryItemId(state, bId)) return { allowed: false, reason: 'temporary-item' };
   return validateCombine(state.items, aId, bId);
 }
 
 export function previewEquip(state: Readonly<MatchState>, itemId: string, unitId: string, slot: number): EquipPreview {
   if (state.phase !== 'preparation') return { allowed: false, reason: 'wrong-phase', conflictingItemIds: [] };
+  if (isTemporaryItemId(state, itemId)) return { allowed: false, reason: 'temporary-item', conflictingItemIds: [] };
   return validateEquip(state.items, state.preparation, itemId, unitId, slot);
 }
 
@@ -35,6 +38,6 @@ export function readUnitEquipment(state: Readonly<MatchState>, unitId: string): 
       itemInstanceId: held.find(item => item.location.kind === 'unit' && item.location.slot === slot)?.id ?? null,
       reservedByItemInstanceId: exclusive && slot !== 0 ? exclusive.id : null,
     })),
-    temporaryItems: [],
+    temporaryItems: state.temporaryEquipment.filter(item => item.holderId === unitId).map(item => ({ ...item })),
   };
 }

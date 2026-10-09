@@ -16,6 +16,6 @@ const fs=require('node:fs'),assert=require('node:assert/strict'),generate=requir
   assert.deepEqual(next.routes[build].rounds.map(r=>r.eventsHash),old.routes[build].rounds.map(r=>r.eventsHash),'B3 equipment event trajectories unchanged');
   console.log(build,JSON.stringify(route.summary));
  }
- next.note=(old.note??'')+' B5 stage 1: frozen GLOBAL-STACK-01 and equipment input rules now enforced. Equipment rule revision changes digest/state hashes; all four command sequences and complete per-round event hashes remain identical. Independent m8-b5-instances tests prove placement, atomic failure and restore rejection; no numerical rule oracle regenerated.';
+ next.note=(old.note??'')+' B5 stages 1–3: frozen GLOBAL-STACK-01, equipment input rules and TG-01 lifecycle now enforced. The new independent equipmentState/temporaryEquipment fields and equipment rules/catalog revisions change digest/state hashes; all four command sequences and complete per-round event hashes remain identical. Independent m8-b5-instances/queries/temporary tests prove placement, atomic failure, deterministic lifecycle, real child combat binding and restore rejection; no numerical rule oracle regenerated.';
  fs.writeFileSync(file,JSON.stringify(next,null,2)+'\n');
 })().catch(e=>{console.error(e);process.exitCode=1;});

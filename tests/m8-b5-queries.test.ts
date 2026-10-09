@@ -4,6 +4,7 @@ import { previewCombine, previewEquip, readUnitEquipment, readItemCatalog } from
 import type { MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
+import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
 import { accepted, freeze, readyMatch } from './match-helpers';
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
@@ -11,10 +12,10 @@ const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemI
 });
 function fixture(): MatchState {
   const state = readyMatch();
-  return freeze({ ...state, nextItemSerial: 40, items: [...state.items,
+  return freeze(planTemporaryEquipment({ ...state, nextItemSerial: 40, items: [...state.items,
     item(20, 'sword'), item(21, 'rod'), item(22, 'blue-buff'), item(23, 'blue-buff', 'unit-1'),
     item(24, 'thiefs-gloves'), item(25, 'thiefs-gloves', 'unit-2'), item(26, 'vest', 'unit-1', 2),
-  ] });
+  ] }).state);
 }
 
 describe('B5 shared command previews and read-only equipment', () => {
@@ -76,7 +77,7 @@ describe('B5 shared command previews and read-only equipment', () => {
       { slot: 0, itemInstanceId: 'item-25', reservedByItemInstanceId: null },
       { slot: 1, itemInstanceId: null, reservedByItemInstanceId: 'item-25' },
       { slot: 2, itemInstanceId: null, reservedByItemInstanceId: 'item-25' },
-    ], temporaryItems: [] });
+    ], temporaryItems: state.temporaryEquipment.filter(item => item.holderId === 'unit-2') });
     const view = readUnitEquipment(state, 'unit-1')!;
     expect(view.slots.map(s => s.itemInstanceId)).toEqual(['item-23', null, 'item-26']);
     Object.assign(view.slots[0], { itemInstanceId: 'tampered' });

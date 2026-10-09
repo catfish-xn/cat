@@ -33,7 +33,7 @@ export type ScheduleEvent = { readonly timing?: 'before' | 'after' } & (
   | { readonly id: string; readonly priority: number; readonly kind: 'reward'; readonly components: readonly string[]; readonly randomComponents: number; readonly gold: number; readonly recruitIfEmpty: boolean }
   | { readonly id: string; readonly priority: number; readonly kind: 'augment' | 'anomaly' | 'component' });
 export type SourceKind = 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth';
-export interface EffectSource { readonly sourceKind: SourceKind; readonly sourceDefinitionId: string; readonly sourceInstanceId: string; readonly ownerId: string; readonly effectIndex: number }
+export interface EffectSource { readonly parentItemInstanceId?: string; readonly sourceKind: SourceKind; readonly sourceDefinitionId: string; readonly sourceInstanceId: string; readonly ownerId: string; readonly effectIndex: number }
 export interface SourcedEffect { readonly key: string; readonly source: EffectSource; readonly effect: Effect }
 export interface ResolvedTrigger { readonly key: string; readonly source: EffectSource; readonly hook: Hook; readonly everyN: number; readonly action: EffectAction }
 export interface TraitSnapshot { readonly team: Team; readonly traitId: string; readonly count: number; readonly tier: number; readonly memberDefinitionIds: readonly string[]; readonly targetUnitIds: readonly string[] }
@@ -42,6 +42,8 @@ export interface StrategySnapshot { readonly traits: readonly TraitSnapshot[]; r
 export interface EffectRuntime { readonly key: string; readonly count: number }
 export interface EffectInvocation { readonly trigger: ResolvedTrigger; readonly targetId: string; readonly action: EffectAction }
 export type StrategyEvent =
+ | { readonly type: 'equipmentRolled'; readonly roll: import('./m8/contracts').EquipmentRoundRoll }
+ | { readonly type: 'temporaryEquipmentChanged'; readonly removed: readonly import('./m8/contracts').TemporaryEquipment[]; readonly applied: readonly import('./m8/contracts').TemporaryEquipment[] }
  | { readonly type: 'itemCombined'; readonly consumedIds: readonly string[]; readonly itemId: string; readonly definitionId: string }
  | { readonly type: 'itemEquipped'; readonly itemId: string; readonly unitId: string; readonly slot: number }
  | { readonly type: 'itemsReturned'; readonly itemIds: readonly string[]; readonly unitId: string }

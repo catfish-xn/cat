@@ -14,6 +14,8 @@ import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
 import { planCombine, planEquip, returnUnitItems } from './inventory';
 import { previewCombine, previewEquip } from './item-selectors';
+import { initializeStreams } from './m8/equipment';
+import { planTemporaryEquipment } from './temporary-equipment';
 import { buildStrategySnapshot } from './strategy-snapshot';
 import { getRoundSchedule, getRoundKind, getStageRound } from './round-schedule';
 import { planReward } from './rewards';
@@ -33,6 +35,10 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
   return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
 };
+function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
+  const planned = planTemporaryEquipment(state);
+  return accept(planned.state, [...events, ...planned.events]);
+}
 /** Only the uncompleted anomaly node may defer choice while its roster is empty. */
 export function needsAnomalyRecruitment(state: MatchState): boolean {
   return state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')
@@ -74,6 +80,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
     roundDefinitionId: '2-1', streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
     contentDigest: CONTENT_DIGEST, seed,
+    equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
     items: [], nextItemSerial: 1, augments: [], anomalyBinding: null, pendingChoice: null, scheduleReceipts: [],
     choiceRngState: (seed ^ 0x9e3779b9) >>> 0, rewardRngState: (seed ^ 0x85ebca6b) >>> 0, nextMatchEventSeq: 0,
     ...generateShop(seed, 1, MATCH_RULES.initialLevel), round: 1, gold: MATCH_RULES.initialGold,
@@ -116,7 +123,7 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
-  return accept(entered.state, [...plan.events, ...resources.events, ...entered.events]);
+  return acceptEquipment(entered.state, [...plan.events, ...resources.events, ...entered.events]);
 }
 export function sellUnit(state: MatchState, unitId: string): MatchCommandResult {
   if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
@@ -125,7 +132,7 @@ export function sellUnit(state: MatchState, unitId: string): MatchCommandResult 
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
   const returned = returnUnitItems(state.items, unitId);
   const removesBinding = state.anomalyBinding?.unitId === unitId;
-  return accept({ ...state, items: returned.items, anomalyBinding: removesBinding ? null : state.anomalyBinding, persistentGrowth: state.persistentGrowth.filter(growth => growth.unitId !== unitId), gold: state.gold + getUnitSellPrice(unit),
+  return acceptEquipment({ ...state, items: returned.items, anomalyBinding: removesBinding ? null : state.anomalyBinding, persistentGrowth: state.persistentGrowth.filter(growth => growth.unitId !== unitId), gold: state.gold + getUnitSellPrice(unit),
     preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.id !== unitId) } }, [...returned.events, ...(removesBinding ? [{ type: 'anomalyRemoved' as const, unitId }] : [])]);
 }
 export function setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
@@ -231,7 +238,7 @@ export function nextRound(state: MatchState, expectedRound: number): MatchComman
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
   const entered = enterScheduledEvents({ ...state, round, roundDefinitionId: `${stageRound.stage}-${stageRound.round}`, phase: 'preparation', combat: null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...createRoundEnemies(round)] }, ...refresh });
-  return accept(entered.state, entered.events);
+  return acceptEquipment(entered.state, entered.events);
 }
 
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
@@ -244,7 +251,7 @@ export function equipItem(state: MatchState, itemId: string, unitId: string, slo
   const preview = previewEquip(state, itemId, unitId, slot);
   if (!preview.allowed) return fail(state, preview.reason);
   const plan = planEquip(state.items, state.preparation, itemId, unitId, slot);
-  return plan.ok ? accept({ ...state, items: plan.items }, plan.events) : fail(state, plan.reason);
+  return plan.ok ? acceptEquipment({ ...state, items: plan.items }, plan.events) : fail(state, plan.reason);
 }
 function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {
   if (state.phase !== 'choice') return 'wrong-phase';

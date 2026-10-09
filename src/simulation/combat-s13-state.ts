@@ -33,7 +33,7 @@ export function statusModifiers(unit: S13Unit, stat: StatModifier['stat'], tick 
   return index.values.get(stat) ?? [];
 }
 export function shieldProjection(state: import('./m8/contracts').ShieldState, legacyKey: string, definition?: Extract<Effect, { kind: 'grant-shield' }>, endedReason?: import('./m8/contracts').ShieldEndReason): ShieldLayer {
-  return { key: legacyKey, source: { ownerId: state.source.ownerId, sourceKind: state.source.sourceKind, definitionId: state.source.definitionId, instanceId: state.source.instanceId, effectIndex: state.source.effectIndex }, granted: state.granted, remaining: state.remaining, absorbed: state.absorbed, expiresAtTick: state.expiresAtTick,
+  return { key: legacyKey, source: { ownerId: state.source.ownerId, sourceKind: state.source.sourceKind, definitionId: state.source.definitionId, instanceId: state.source.instanceId, effectIndex: state.source.effectIndex, ...(state.source.parentItemInstanceId ? { parentItemInstanceId: state.source.parentItemInstanceId } : {}) }, granted: state.granted, remaining: state.remaining, absorbed: state.absorbed, expiresAtTick: state.expiresAtTick,
     m8State: state, ...(definition ? { m8Grant: definition } : {}), ...(endedReason ? { endedReason } : {}),
     ...(state.decay.kind === 'linear-initial-grant' ? { grantedAtTick: state.decay.grantedAtTick, decayDurationTicks: state.decay.durationTicks } : {}) };
 }

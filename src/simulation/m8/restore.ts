@@ -82,7 +82,8 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(layer.m8State && layer.m8Grant, 'missing frozen shield record/declaration');
     const shield = layer.m8State, grant = layer.m8Grant;
     validateShield(shield, tick, combatId);
-    check(shield.targetId === unit.id && same(shield.source, asSource(layer.source)) && layer.key === sourceKey(layer.source)
+    check(shield.targetId === unit.id && same(shield.source, asSource(layer.source))
+      && layer.key === (shield.source.parentItemInstanceId === null ? sourceKey(layer.source) : shield.key)
       && shield.granted === layer.granted && shield.remaining === layer.remaining && shield.absorbed === layer.absorbed
       && shield.expiresAtTick === layer.expiresAtTick && typeof shield.endRewardConsumed === 'boolean', 'shield projection');
     const declared=shield.source.sourceKind==='item'?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
