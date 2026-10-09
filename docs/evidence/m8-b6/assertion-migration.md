@@ -1499,3 +1499,49 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 旧输入：最多7场战斗内寻找战后choice，隐含旧起点2-1。
 新输入：按目录检索到原奖励节点2-7（含本轮），保留必须遇见战后choice及冻结历史引用全部断言。
 理由：新起点增加三场开场；搜索上界按稳定roundId推导，不把不存在的B8奖励误判为纯循环提前停止，也不改为检查准备期/补给choice。
+
+## A127 · tests/m5-route.test.ts · B8 dependency assertions split
+旧：四条真实路线测试遇formed>=3立即失败，后续断言无法执行；三普通路线还要求transitioned、过渡棋卖出返装、15组件。
+新：四条路线仍实际执行golden/独立账本/胜利/异常/四来源/升星/锁店/Caitlyn伤害/终态拒绝；上述缺B8英雄/组件链的原断言移入四个明确[B8] it.skip，代码与数值原样保留。
+理由：用户新授权只跳跨批次断言。定向发现transitioned=false后按实现核查，原过渡英雄来自已删除起手麦迪/拉克丝包，buyShop不会另购非最终编队成员；返装随该过渡链缺失，归B8而非改false为成功。
+
+## A128 · tests/m6-integration.test.ts · B9 positive full-envelope split
+旧：完整33战validateEnvelope要求通过，在30战容量处失败并遮蔽后续前缀断言；删第一战负例仍32>30，存在容量假阳性。
+新：仅四构筑完整存档正向断言拆成四个[B9] it.skip，原满档删战断言一并保留；普通测试继续逐战回放及2战+当前战prefix，后者新增删整战必须明确报“历史缺战或重战”。
+理由：不扩大B9容量，不把已执行回放计为skip，也不让容量限制冒充缺战校验通过。
+
+## A129 · tests/m6-replay.test.ts · B8 after-choice split
+旧：真实战后choice场景要求sawChoice=true。
+新：完整场景原代码保留为[B8] it.skip；普通首场结束新增同样的冻结history/snapshot引用检查，继续真实执行。
+理由：缺B8战后choice只影响依赖的场景，不连带取消冻结引用覆盖。
+
+## A130 · scripts/verify-m5-headless.cjs · B8 formed-only deferral
+旧：seed42在formedBattles>=3退出。
+新：仅该断言callback保留且记录SKIPPED [B8]；其他路线/seed/重复/胜利/异常/账本/测量均执行。
+理由：最新用户授权；不改3为0、不改采样和门槛，manifest.skipped可审查。
+
+## A131 · scripts/verify-m5-input.cjs · legal setup and first-combat scope
+旧：reset即10G/三英雄/两组件；起手背靠背组件模态、羊刀Lux首战。
+新：快捷键先合法三场2+3+5=10G；DDFE后10-2-2-4+1=3，原失败F仍保留。普通模态改真实2-1强化并断言执行次数>0；单组件操作真实到2-4取1件，再Continue到2-5装备准备。仅连续起手组件与原首战羊刀链/动态AS明确B8跳过，原断言代码保留。
+新首战仍独立New Match回1-2，空历史/空物品/仅unit-1，六项当前属性UI对照改读真实选中的unit-1；普通原速战斗、整账本、4Hz观察、帧窗口、重开清理不改。证据重命名current-stats不冒称动态AS。
+理由：真实合法前置不能被误列为B8；不把3-4或合成假资源替换首次战斗测量。
+
+## A132 · scripts/verify-m7-presentation.cjs · B8 F02-only deferral
+旧：要求2-7战后phase=choice、模态层保持帮助焦点、选择奖励后items+1。
+新：F02依赖段原样callback保留并明确SKIPPED [B8]；其他帮助、双激活、首战/replay/404头像继续。
+理由：CI140已实际跑到该断言，得到settlement；不是UI回归或本机浏览器偶发。
+
+## A133 · scripts/verify-m5-browser.cjs · random/fixed seed reroll setup
+旧：random/fixed两路新开场直接D，默认可付2G。
+新：两路都用同样公开空阵1-2失利，Continue到1-3取得2G后重抽，仍比较接受结果、完整state、events和RNG。
+理由：新起手0G下恢复真正可执行前提；不跳种子复现或改成失败命令一致。
+
+## A134 · scripts/m6-layout-product-smoke.cjs · real focus modal
+旧：新局即等待起手choice焦点。
+新：公开空阵走完开场，到2-1真实强化choice再执行原Tab/Shift+Tab与CSS/旋转/触摸断言。
+理由：无起手模态不能导致空测或被当B8跳过；布局阈值/动作保留。
+
+## A135 · tests/m6-application-failures.cjs · catalog anchors and explicit dependencies
+旧：最终round35、30战；initial_component_0/1及reward_choice混合旧起手包/后PvE。
+新：终轮由ROUND_CATALOG末项、战数由kind!=supply推导；缺1-3/1-4开场choice与真正post_pve_choice分别B8跳过，现有supply_choice继续。G02仅明确game_over超限样本B9跳过；其他超限标签直接失败要求复核。ROOT03、P2两个分支、R4首次import即被满档容量阻止，各自callback完整保留为B9跳过；其余G04/ROOT04与容量内G02全跑。
+理由：不改实际30战容量或30/90历史断言，不裁剪档案伪造有效存档；满档应用竞争尚待B9，不宣称通过。

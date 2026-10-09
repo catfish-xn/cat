@@ -132,7 +132,14 @@ describe('M6 isolated battle records and replay',()=>{
     history.observe({before:envelope.match,after:envelope.match,events:[],reason:'command'});
     expect(history.completedRecords).toHaveLength(1);
   });
-  it('keeps completed records through after-choice and exposes frozen history/snapshot references',async()=>{
+  it('exposes frozen history/snapshot references after an ordinary completed battle',()=>{
+    const {history}=battle();const first=history.completedRecords[0];
+    expect(history.completedRecords[0]).toBe(first);expect(Object.isFrozen(first.context.preparation.units)).toBe(true);
+    const playback=new PlaybackSession(first),snapshot=playback.read();
+    expect(playback.advance(50)).toBe(snapshot);expect(Object.isFrozen(snapshot.combat.units)).toBe(true);
+  });
+  // B8 must restore an actual post-combat reward choice before this scenario can execute.
+  it.skip('[B8] keeps completed records through after-choice and exposes frozen history/snapshot references',async()=>{
     const history=new BattleHistory('choice-run');let match=readyMatch(42);let sawChoice=false;
     while(match.round<=getCatalogRoundById('2-7').ordinal&&!sawChoice) {
       const before=match,start=startMatchCombat(match);if(!start.ok)throw Error(start.reason);match=start.state;

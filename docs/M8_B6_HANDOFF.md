@@ -271,3 +271,15 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - **保留的跨阶段阻塞**：B8对应4条公开路线成型失败、M6 replay缺战后choice，以及输入脚本缺原起手组件/三英雄链。当前2-4仅一次补给，无法合法取得原输入测量所需两组件；推进到3-4会改动原首次战斗测量场景，本批不这样规避。B9对应4条M6完整集成的33战超过既有30战档案容量；30战/90快照实现与门禁保持原样。M7后续2-7战后choice覆盖也仍需B8，不替换成别的模态来放过。
 - 本检查点不重跑旧失败SHA刷绿；下一次完整验证针对修复后的新提交。当前并非完整CI通过或独立审计签收，阶段1怪物仍待B7接入。
 - 本检查点最后复核：typecheck通过、两项B6相关文件31/31通过，日志`checkpoint3-targeted.log.gz`；M6 replay按目录检索至2-7后仍为7通过/1失败（缺战后choice），日志`checkpoint3-after-choice.log.gz`，进一步确认该保留断言需要B8。headless原始manifest另存`checkpoint3-headless-manifest.json`，其起止sourceFingerprint一致；未将未完成的24 seeds测量宣称通过。
+
+### 9.4 新授权验收边界与检查点四（2026-10-09）
+
+- 用户明确更新B6通过标准：B8/B9依赖断言不能删除，改为明确跳过、注明批次并逐项列清单供审计；清单以外所有检查必须通过。该授权替代此前“保留失败但不skip”的实施停点，不改写历史结果。最终证据包绑定固定SHA，包含相对feat/m8-b0-baseline完整差异、改动全文/测试及CI链接或日志；不含密钥/令牌/环境配置，后续改动需重新送审。
+- 固定`61b680ec531ba07a21d40c910e7b3cdbb5aa00b4`原样全量完成：102文件99通过/3失败，1312项1303通过/9失败/**0跳过**，433.10秒；build通过。运行期间源码/测试/脚本diff起止为空。[摘要](evidence/m8-b6/full-61b680e-summary.json)、[单测日志](evidence/m8-b6/full-61b680e.log.gz)、[构建日志](evidence/m8-b6/build-61b680e.log.gz)。[CI140单测](https://github.com/catfish-xn/cat/actions/runs/37905614966/job/113738227990)同样1303/9/0，实际532.77秒。该9失败永远保留为这次历史失败，不能回写成新标准下通过。
+- B6自身runtime-import的15项与新增完整38轮恢复用例已在本地固定SHA和CI140真实执行通过；没有增加超时。[CI140 M7](https://github.com/catfish-xn/cat/actions/runs/37905614966/job/113738228072)已通过帮助/reduced-motion/双激活/回放，实际失败准确落在2-7战后choice（B8）。[input-dev](https://github.com/catfish-xn/cat/actions/runs/37905614966/job/113738228127)最早0G重抽准备失败，不能整体归B8。
+- [显式跳过清单](evidence/m8-b6/deferred-assertions.md)逐项记录文件/行号/测试或skip ID/归属/依赖/恢复条件。Vitest拆为4个B8路线子用例、4个B9完整envelope子用例、1个B8战后choice用例；正常四路线、逐战回放、合法prefix缺战拒绝、冻结引用继续。脚本仅对列明callback记录`SKIPPED [B8/B9]`和manifest.skipped，不把跳过项标passed，不跳整任务。
+- 新`scripts/b6-public-preparation.cjs`只通过原生公共UI动作真实获金/供给，未注入资源或改时钟。快捷键、普通模态、单件拖拽/旋转/命中、布局焦点、随机/固定种子重抽仍执行；首战观察单独重开至1-2，只跳明确缺B8的羊刀链/动态AS。领域适配器单测证明准备命令合法和2/3/5G，不代替浏览器证据。新增条目详见[账本A127～A135](evidence/m8-b6/assertion-migration.md)。
+- 当前定向：四路线4通过/4个授权B8跳过；准备helper与replay合跑15通过/1个授权B8跳过。M6逐战集成仍在运行，浏览器验证继续只使用GitHub CI；本机socket限制不再重试。
+- CI140三条browser路线另有实际normal-time battle timeout，当前只读等待最后round/failure-state定位，尚未归属、未改75秒超时、未添加路线整体跳过。该未定问题仍阻止本检查点宣称清单外全绿。
+- 检查点四补充：M6逐战集成定向3通过/4个授权B9跳过/1失败；解开容量短路后cannon原“路线实际卖出起手过渡棋”断言暴露缺B8英雄链，已只把相邻两条独立拆为第10个明确跳过，保留所有其他回放；该最新拆分尚待复验，原失败日志`checkpoint4-integration.log.gz`保留。
+- [CI140 browser原始证据](evidence/m8-b6/ci140-browser/README.md)已定位B9：6-5第31战后错误“战斗历史超过冻结边界”，最终6-6tick0、31个记录、未暂停，导致原75秒正常时间等待超时。相关manifest/progress/failure-state/server原件gzip归档。此新发现尚未改脚本跳过，下一检查点精确处理容量外尾段及比较，不增加timeout，不跳整browser任务。

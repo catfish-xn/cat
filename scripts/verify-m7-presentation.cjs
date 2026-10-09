@@ -1,3 +1,4 @@
+const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
 /*
  * M7 presentation gate (G01/G04/G06/G08): public seed-42 game through normal controls.
  *  - help opens/closes, traps focus, blocks D/F/E while open, issues no command;
@@ -210,8 +211,8 @@ async function firstBattle(browser, reduced) {
     check('replay-identity', portraitPixels);
     assert.deepEqual([...normal.game.errors, ...replayErrors], [], 'no page or console errors');
 
-    // Audit F02: help stays on top when a post-combat reward choice appears underneath.
-    {
+    // Audit F02: B8 must install an actual post-PvE reward choice. Other help/replay checks still run.
+    skipB6Dependency(report, 'B8', 'help-over-reward-choice', '2-7 post-combat reward choice is not installed', async () => {
       const { context: ctx, page, errors: helpErrors } = await newGame(browser);
       await chooseAll(page);
       await benchEveryone(page);
@@ -243,7 +244,7 @@ async function firstBattle(browser, reduced) {
       assert.equal((await read(page)).state.items.length, pending.items.length + 1, 'reward chosen after help closes');
       assert.deepEqual(helpErrors, []); await ctx.close();
       check('help-over-reward-choice', { round: pending.round, offers: pending.pendingChoice.offers });
-    }
+    });
 
     // Audit F07: a bundled portrait that fails to load falls back to the code-drawn emblem.
     {

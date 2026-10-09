@@ -1,3 +1,5 @@
+const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
+const { prepareB6Opening } = require('./b6-public-preparation.cjs');
 /* Native Chromium input gate. Browser state is read-only. Production Match is a
  * consistency model, never an independent mathematical oracle. No combat clock
  * is accelerated and no resources, fixtures, or restored states are injected. */
@@ -128,11 +130,23 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert.deepEqual(await state(), structuredClone(api.createMatch(42))); await chooseAll();
       return state();
     }
+    async function fundedReset() {
+      await reset(); const prepared = await prepareB6Opening(page, '2-1');
+      assert.equal(prepared.gold, 10, 'three public opening settlements provide 2+3+5G');
+      return prepared;
+    }
+    async function itemReset() {
+      await reset(); const prepared = await prepareB6Opening(page, '2-5');
+      assert.equal(prepared.items.length, 1, 'real 2-4 supply grants the item used by native item-input tests');
+      return prepared;
+    }
     if (!metricsOnly) {
     // Every modal transition, including back-to-back component choices, protects
     // the remaining confirming pointer burst. It does not suppress keyboard D/F.
     for (const method of ['mouse', 'touch']) {
-      if (method === 'touch') { await chooseAll(); await click('mobile:new-match'); await startFixed42(); }
+      await reset(); await prepareB6Opening(page, '2-1', { resolveChoices: false, redeploy: false });
+      assert.equal((await state()).pendingChoice?.kind, 'augment', 'normal modal burst coverage must execute');
+      let modalChecks = 0;
       while ((await state()).phase === 'choice') {
         await quiet(); const before = await state(), choice = before.pendingChoice;
         const node = page.locator(`[data-debug="choice:${choice.offers[0]}"]`); await node.scrollIntoViewIfNeeded();
@@ -145,6 +159,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
             await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
           }
         }
+        modalChecks++;
         const finishedChoices = !expected.pendingChoice;
         if (finishedChoices) {
           // Dispatch before serializing the evidence; serialization can itself
@@ -164,19 +179,23 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
           assert(keys.every(input => input.shieldActive), 'native D/F really dispatched during pointer protection');
         }
       }
+      assert(modalChecks > 0, `${method}: real modal burst assertions executed`);
+      skipB6Dependency(report, 'B8', `${method}-back-to-back-opening-components`, 'The removed legacy starting component pair has no B8 replacement yet', () => {
+        assert(modalChecks >= 2, 'back-to-back opening component confirmations both executed');
+      });
     }
     await quiet();
     // Explicitly exercise the Chromium compatibility-mouse stream on a hybrid
     // laptop; native mouse immediately afterwards remains a distinct command.
     {
-      const before = await reset(), start = await offset(); await click('reroll', true);
+      const before = await fundedReset(), start = await offset(); await click('reroll', true);
       const expected = accepted(api.rerollShop(before)); const { inputs } = await record('one-native-canvas-touch-one-command', before, expected, start);
       assert.equal(inputs.filter(input => input.type === 'touchstart').length, 1);
       assert(inputs.some(input => input.type === 'mousedown' && input.firesTouchEvents === true), 'actual compatibility mouse event');
       const mouseStart = await offset(); await click('reroll'); await record('immediate-real-mouse-after-touch', expected, accepted(api.rerollShop(expected)), mouseStart);
     }
     {
-      const before = await reset(); await page.locator('canvas').scrollIntoViewIfNeeded();
+      const before = await fundedReset(); await page.locator('canvas').scrollIntoViewIfNeeded();
       const token = (await read()).tokens.find(unit => unit.id === 'unit-1'); await page.mouse.move(token.screenX, token.screenY);
       const start = await offset();
       for (const [type, key, code, windowsVirtualKeyCode, autoRepeat = false] of [
@@ -238,7 +257,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     await resizeViewport(page, { width: 1440, height: 1000 });
     {
-      const before = await reset(); await click('panel:items');
+      const before = await itemReset(); await click('panel:items');
       await page.locator('[data-debug="equipment:unit-1:0"]').scrollIntoViewIfNeeded();
       let snap = await read(); const item = snap.bounds['item:item-1'], equip = snap.bounds['equipment:unit-1:0'];
       async function dragItem() {
@@ -264,7 +283,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     await resizeViewport(page, { width: 390, height: 844 });
     {
-      const before = await reset(); await click('panel:items'); await page.locator('[data-debug="item:item-1"]').scrollIntoViewIfNeeded();
+      const before = await itemReset(); await click('panel:items'); await page.locator('[data-debug="item:item-1"]').scrollIntoViewIfNeeded();
       const bounds = (await read()).bounds['item:item-1'], start = await offset();
       await touch('touchStart', [{ id: 13, x: bounds.centerX, y: bounds.centerY }]); assert.equal((await read()).gesture?.kind, 'item');
       await resizeViewport(page, { width: 844, height: 390 }); await touch('touchEnd');
@@ -283,7 +302,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       }
       await record('trait-team-member-and-combined-benefits-visible', traitBefore, traitBefore, traitStart);
       await page.screenshot({ path: path.join(output, 'trait-audit-benefits.png') });
-      const before = await reset(); await click('panel:items', true);
+      const before = await itemReset(); await click('panel:items', true);
       const target = page.locator('[data-debug="item:item-1"]');
       await target.evaluate(node => node.scrollIntoView({ block: 'start' }));
       const coveredBy = await target.evaluate(node => {
@@ -303,7 +322,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // New Match resets listeners as well as domain state. Two resets then one D
     // must still produce exactly one accepted command.
     await resizeViewport(page, { width: 1440, height: 1000 }); await reset();
-    const before = await reset(), start = await offset(); await page.keyboard.press('d');
+    const before = await fundedReset(), start = await offset(); await page.keyboard.press('d');
     await record('repeated-new-match-does-not-duplicate-listeners', before, accepted(api.rerollShop(before)), start);
     await click('mobile:new-match'); await startFixed42(); await chooseAll(['bow', 'rod']);
     } else { await chooseAll(['bow', 'rod']); }
@@ -313,6 +332,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // the browser state or clock.
     // Normal opening components produce Rageblade on Lux, so dynamic AS is
     // exercised by actual attacks rather than a synthetic stat fixture.
+    skipB6Dependency(report, 'B8', 'normal-opening-rageblade-recipe-and-equipment', 'Original first-combat Lux/two-component grant chain awaits B8', async () => {
     let buildBefore = await state(), buildStart = await offset();
     await click('panel:items'); await click('item:item-1'); await click('item:item-2'); await click('combine-items');
     let buildExpected = accepted(api.combineItems(buildBefore, 'item-1', 'item-2'));
@@ -322,7 +342,12 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     buildExpected = accepted(api.equipItem(buildBefore, rageblade.id, 'unit-3', 0));
     await record('normal-opening-rageblade-equipped', buildBefore, buildExpected, buildStart);
     await click('panel:units'); await click('mobile:unit:unit-3');
+    });
+    await click('panel:units'); await click('mobile:unit:unit-1');
     const combatBefore = await state();
+    assert.equal(combatBefore.m8.round.roundId, '1-2', 'wall-time observation still measures the original first combat');
+    assert.deepEqual(combatBefore.roundResults, []); assert.deepEqual(combatBefore.items, []);
+    assert.deepEqual(combatBefore.preparation.units.filter(unit => unit.team === 'player').map(unit => unit.id), ['unit-1']);
     let result = api.startMatchCombat(combatBefore), expectedCombat = accepted(result);
     const expectedEvents = result.events.filter(event => 'tick' in event);
     while (expectedCombat.phase === 'combat') {
@@ -337,16 +362,22 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.evaluate(() => { window.__M5_FRAME_LABEL__ = 'post-combat'; });
     const combatRecord = await record('normal-wall-time-combat-for-observation', combatBefore, expectedCombat, combatInputStart);
     assert.deepEqual(combatRecord.snap.combatEvents, expectedEvents); assert(expectedEvents.length > 0);
-    assert(expectedEvents.some(event => event.type === 'statChanged' && event.source.definitionId === 'rageblade'));
-    const lux = expectedCombat.combat.units.find(unit => unit.id === 'unit-3');
-    const stats = readCombatStats(lux, expectedCombat.combat);
+    skipB6Dependency(report, 'B8', 'normal-opening-rageblade-stat-event', 'First-combat Rageblade requires the B8 opening components', () => {
+      assert(expectedEvents.some(event => event.type === 'statChanged' && event.source.definitionId === 'rageblade'));
+    });
+    const selected = expectedCombat.combat.units.find(unit => unit.id === 'unit-1');
+    const stats = readCombatStats(selected, expectedCombat.combat);
     const currentDisplayed = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-debug^="combat-stat:"]')].map(node => [node.dataset.debug, Number(node.dataset.current)])));
     assert.deepEqual(currentDisplayed, { 'combat-stat:ad': stats.attackDamage, 'combat-stat:ap': stats.abilityPower,
       'combat-stat:attack-interval': stats.attackIntervalTicks * initial.tickMs, 'combat-stat:armor': stats.armor,
       'combat-stat:magic-resist': stats.magicResist, 'combat-stat:range': stats.attackRange });
-    assert(stats.attackIntervalTicks < lux.attackIntervalTicks, 'normal Rageblade attacks change current AS beyond frozen stat');
-    fs.writeFileSync(path.join(output, 'dynamic-stats.json'), JSON.stringify({ unit: lux, expectedProjection: stats, currentDisplayed, evidenceKind: 'production selector to UI consistency' }));
-    await page.screenshot({ path: path.join(output, 'dynamic-stats.png') });
+    skipB6Dependency(report, 'B8', 'normal-opening-rageblade-dynamic-as', 'Dynamic Rageblade AS requires the B8 Lux/component chain', () => {
+      const lux = expectedCombat.combat.units.find(unit => unit.id === 'unit-3');
+      const stats = readCombatStats(lux, expectedCombat.combat);
+      assert(stats.attackIntervalTicks < lux.attackIntervalTicks, 'normal Rageblade attacks change current AS beyond frozen stat');
+    });
+    fs.writeFileSync(path.join(output, 'current-stats.json'), JSON.stringify({ unit: selected, expectedProjection: stats, currentDisplayed, evidenceKind: 'first-combat current selector to UI consistency; Rageblade dynamic AS explicitly skipped under B8' }));
+    await page.screenshot({ path: path.join(output, 'current-stats.png') });
     const afterCombatMetrics = await sampleObserver('after-normal-combat');
     const resetStart = await offset(); await click('mobile:new-match'); await startFixed42();
     const resetRecord = await record('new-match-clears-ledger-effects-and-tweens', expectedCombat, initial, resetStart);
