@@ -375,6 +375,10 @@ export class BoardScene extends Phaser.Scene {
       'max-level': '已达最高等级 · 无需继续购买经验', 'population-cap': '人口已满 · 按 F 升级或先移回一个单位',
       'unknown-item': '物品已不存在', 'item-not-inventory': '只能操作物品备战席中的装备',
       'invalid-recipe': '请选择两件不同的组件实例合成', 'item-slot-occupied': '该装备槽已有物品',
+      'same-item': '请选择两件不同的组件实例合成',
+      'unique-conflict': '该单位已装备同一件唯一装备',
+      'exclusive-slots': '独占装备不能与其他装备同时穿戴',
+      'temporary-item': '临时装备不能单独操作',
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
     return messages[reason];
