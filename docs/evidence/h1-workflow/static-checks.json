@@ -1,5 +1,5 @@
 {
-  "yamlSha256": "a226fe4a231d585cef2fa91ce807ce378f428a73441a921ba452f9772de700a0",
+  "yamlSha256": "bace157743bb2217d0df87a84cb4df213e11ea77f59eb861e2e1b6cdb7356629",
   "checks": {
     "only_pull_request_labeled": true,
     "head_branch_guard": true,
@@ -13,7 +13,8 @@
     "bash_4": true,
     "bash_5": true,
     "bash_6": true,
-    "bash_7": true
+    "bash_7": true,
+    "b4_mode_separated": true
   },
   "limitations": "Static only; extended probe has only prepare-only/offline module resolution validation locally. No browser run claimed."
 }

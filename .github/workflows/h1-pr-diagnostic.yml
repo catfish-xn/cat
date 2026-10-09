@@ -40,9 +40,10 @@ jobs:
           mkdir -p "$H1_EVIDENCE"
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$PROBE_MODE" == preview || "$PROBE_MODE" == dev ]]
-          [[ "$PROBE_KIND" == normal || "$PROBE_KIND" == snapshot || "$PROBE_KIND" == warmup-trend || "$PROBE_KIND" == extended || "$PROBE_KIND" == extended-snapshot ]]
+          [[ "$PROBE_KIND" == normal || "$PROBE_KIND" == snapshot || "$PROBE_KIND" == warmup-trend || "$PROBE_KIND" == extended || "$PROBE_KIND" == extended-snapshot || "$PROBE_KIND" == b4-module ]]
           [[ "$SAMPLE_COUNT" =~ ^[1-5]$ ]]
           [[ "$H1_WINDOWS" =~ ^([2-9]|10)$ ]]
+          if [[ "$PROBE_KIND" == b4-module ]]; then [[ "$PROBE_MODE" == dev ]]; fi
           printf 'workflow_merge_sha=%s\nsource_sha=%s\nmode=%s\nprobe=%s\nsamples=%s\nrun_id=%s\nattempt=%s\n' \
             "$GITHUB_SHA" "$SOURCE_SHA" "$PROBE_MODE" "$PROBE_KIND" "$SAMPLE_COUNT" \
             "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$H1_EVIDENCE/request.txt"
@@ -54,7 +55,7 @@ jobs:
           path: source
           persist-credentials: false
       - name: Check out separately versioned diagnostic harness
-        if: startsWith(env.PROBE_KIND, 'extended')
+        if: startsWith(env.PROBE_KIND, 'extended') || env.PROBE_KIND == 'b4-module'
         uses: actions/checkout@v4
         timeout-minutes: 5
         with:
@@ -139,6 +140,8 @@ jobs:
             if [[ "$PROBE_KIND" == extended || "$PROBE_KIND" == extended-snapshot ]]; then
               command=(node "$GITHUB_WORKSPACE/harness/scripts/diagnostics/h1-extended-window.cjs" --source "$PWD" --output "$H1_EVIDENCE/$label" --mode "$PROBE_MODE" --windows "$H1_WINDOWS")
               [[ "$PROBE_KIND" != extended-snapshot ]] || command+=(--snapshots)
+            elif [[ "$PROBE_KIND" == b4-module ]]; then
+              command=(node "$GITHUB_WORKSPACE/harness/scripts/diagnostics/h1-b4-module.cjs" --source "$PWD" --output "$H1_EVIDENCE/$label" --windows "$H1_WINDOWS" --battles 30)
             fi
             set +e
             env -u CHROMIUM_PATH -u M6_HEAP_DIAGNOSTICS -u M6_WARMUP_EXPERIMENT \
