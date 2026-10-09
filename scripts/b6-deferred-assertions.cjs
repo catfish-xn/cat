@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { hash } = require('./m4-evidence.cjs');
 /* User-approved B6-only dependency boundary. Keep each original assertion body
  * visible; this helper NEVER executes it or reports it as passed. B8/B9 must
  * remove the matching deferral and rerun the original gate after integration. */
@@ -38,7 +39,18 @@ function validateB6BrowserBoundary(manifest,route){
  const firstOmitted=route.actions.findIndex(entry=>entry.command.type==='start'&&entry.round===tail[0].round);
  assert(firstOmitted>=0,'full domain route must contain the first omitted battle');
  assert.equal(manifest.checkpoints.length,firstOmitted,'all command checkpoints before the exact boundary must be present');
- for(let i=0;i<firstOmitted;i++)assert.deepEqual(manifest.checkpoints[i],{index:route.actions[i].index,stateHash:route.actions[i].afterHash},'browser command checkpoint must match its domain route');
+ for(let i=0;i<firstOmitted;i++){
+  const action=route.actions[i];let stateHash=action.afterHash;
+  // The native runner observes Start after the normal-time battle settles;
+  // action.afterHash instead identifies the immediate command result (tick 0).
+  if(action.command.type==='start'){
+   const rounds=route.rounds.filter(round=>round.round===action.round);
+   assert.equal(rounds.length,1,'each observed Start must have exactly one completed domain battle');
+   stateHash=hash(rounds[0].after);
+   assert.equal(rounds[0].stateHash,stateHash,'completed domain state hash must match its full state');
+  }
+  assert.deepEqual(manifest.checkpoints[i],{index:action.index,stateHash},'browser command checkpoint must match its observed domain phase');
+ }
  assert.equal(manifest.applicationBoundary.stateHash,route.actions[firstOmitted].beforeHash,'boundary state must equal the first omitted start preparation');
  return new Set(tail.map(round=>round.round));
 }

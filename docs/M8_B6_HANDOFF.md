@@ -320,3 +320,21 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - 纯merge tree定向4文件37项通过，typecheck通过，日志checkpoint8-merge-*.log.gz。新增U3job已带入；先前旧HEAD缺脚本的MODULE_NOT_FOUND属于baseline推进后的集成缺口，不以重跑旧SHA规避。
 - 之后单独适配U3测试脚本前置：真实公开空阵三场获2+3+5G/2+2+0XP，到原2-1，原首offer策略后公开购买麦迪/拉克丝，最终3级/8G/三英雄，再执行原部署和原7物品fixture。未伪造B8奖励；原10场交互/断言全部逐字保留，没有UI改动或新skip，逐项说明见账本A144。
 - 直接执行同一setup源码的Node诊断确认五种准备empty/tg/occupied/full/unique均合法，记录脚本sha256并确认原10段交互源码未变。完整可复现诊断代码/日志已入包。该诊断不是Chromium原生输入，真正U3/性能/整套CI及独立审计仍待最新固定SHA。
+
+
+### 9.9 CI150比较器观察时刻错误与严格修复
+
+- 固定ac76255的12个主CI作业全部成功，包含U3十场原生交互与新独立30战真实导入；[compare-evidence](https://github.com/catfish-xn/cat/actions/runs/37917616047/job/113784136193)确实失败，不能宣称全绿。根因是B6新增边界校验把Start的即时tick0 hash错当成浏览器正常等待整场结算后的checkpoint；不是哈希算法、乱序、配错产物或flaky。
+- 修复仅在比较器中按原观察时刻核对：Start对应唯一同轮round.after的完整状态hash，并核对声明的round.stateHash；非Start仍action.afterHash。边界/所有前段命令/精确尾3战/未知skip拒绝全部保留，无生产、浏览器行为、CI或阈值变更。
+- [证据目录](evidence/m8-b6/ci150-comparison/README.md)保存原失败摘录、官方ZIP来源/SHA256、关键原manifest/command、修正后的全M5比较日志及可复現负例代码。八份ZIP均核准SHA/CRC；三路线dev/preview和touch合计1226checkpoint（240 Start、986非Start）真实全部比对，32例篡改/漏记录全部拒绝，4文件37定向与typecheck通过。
+- 该本机比较使用“修复WIP脚本 + 固定ac76255原浏览器产物”，不是修复新SHA验收。新提交须再跑CI并重新打包送审；未合入后来B3 baseline0411ad6。
+- 性能历史实录也保存：CI148 firstSeek第三样本2271ms失败保留，不能称偶发；CI150同脚本三样本740/729/969.3ms通过，独立30战完整导入5669.7/5521.4/5761.3ms且原生IDB读回相等。硬件不同，当前无证据定性前次失败因果；没有额外预热、丢样本、调阈值或新增skip。
+
+
+### 9.10 JS gzip增量与U5余量（固定受测ac76255，非假想整合）
+
+- 按用户要求附[独立只读体积证据](evidence/m8-b6/js-gzip-20261009/README.md)，包括五份真实build日志、工具版本、逐产物SHA256、原始JSON、测量/文本残留探针代码。沿用现有`m7-budget.cjs`的每个JS分别gzip level9求和与1.15倍阈值，没有改门禁或做打包优化。
+- 同工具链实测：0411ad6基线479197B，B6受测ac76255为480808B，raw-head增量1611B；整数有效门槛488477B，B6剩余7669B（约7.489KiB），041基线原余量9280B。该剩余可供U5规划，**不是给U5/B7的已批准预算分配**。
+- B6尚未合入0411ad6的B3改动，所以上述是两个实际head的比较，不是假想合并后增量；B7正式接线、B3同步及U5后必须重测。B7隔离内容当前相对自身5bd基线生产增量0B，因为尚未接入；相对041的负差不能当作优化节省。
+- 当前比较器修复只改脚本/测试/文档，`src`及构建输入相对受测ac无改动；仍明确该报告测的是ac，不冒称修复新SHA已测。root保存新SHA后体积专员将重新构建绑定，最终审计包附新关联证据。
+- 只读探针发现英文技能文本/来源metadata由运行时content digest保留、既有__CAT_DEBUG__存在；未量化可删除节省，未删除内容或改digest/调试支撑，不擅自扩成瘦包优化。

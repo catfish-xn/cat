@@ -1,0 +1,58 @@
+[
+  {
+    "artifactId": 11611455870,
+    "name": "m5-input-dev-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "610799d7cee56f19ed8147610658302cb2c1f29798a6a446ed9d54cc51c9fa44",
+    "file": "b6-ci150-11611455870.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11611455870"
+  },
+  {
+    "artifactId": 11611370569,
+    "name": "m5-browser-dev-sniper-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "c7fa3395015af8f4551cb766bf4d0f5f12204676b5e851b8a35aea2bc51276af",
+    "file": "b6-ci150-11611370569.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11611370569"
+  },
+  {
+    "artifactId": 11610589604,
+    "name": "m5-browser-preview-mage-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "34c9ef8e1e5c9bd49d67879c2458ad56564439192b2214e585206422f661333f",
+    "file": "b6-ci150-11610589604.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11610589604"
+  },
+  {
+    "artifactId": 11610589568,
+    "name": "m5-browser-dev-mage-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "16eaa4650885f874f1420409e6a4a4432c090eace4897d633e6fb0ef5fd42edc",
+    "file": "b6-ci150-11610589568.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11610589568"
+  },
+  {
+    "artifactId": 11610469921,
+    "name": "m5-browser-preview-sniper-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "661c9ef50da7f669f9f9bf77272485c4654efc01efb92ed0eec8f1bafd4de005",
+    "file": "b6-ci150-11610469921.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11610469921"
+  },
+  {
+    "artifactId": 11610368215,
+    "name": "m5-input-preview-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "c94f2b1a3ad2f08ec798633af5a28b66bee88de56bba0cc05a9804ccde070ef2",
+    "file": "b6-ci150-11610368215.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11610368215"
+  },
+  {
+    "artifactId": 11610043443,
+    "name": "m5-browser-dev-cannon-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "1574799bed8b8ec5112b19974365bdb30ebdbd0cbaab51556a6e15d36b53144a",
+    "file": "b6-ci150-dev-cannon.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11610043443"
+  },
+  {
+    "artifactId": 11610038325,
+    "name": "m5-browser-preview-cannon-sample1-ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "sha256": "f9d204f53612dbc7623e146a41d09eb23c13c8ea27806f96dd4ed96c98450d99",
+    "file": "b6-ci150-11610038325.zip",
+    "sourceUrl": "https://github.com/catfish-xn/cat/actions/runs/37917616047/artifacts/11610038325"
+  }
+]

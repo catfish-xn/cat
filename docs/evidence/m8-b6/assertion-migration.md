@@ -1592,3 +1592,9 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 旧：createMatch(42)选择起手offer后直接部署unit-1/2/3，假定3级/三英雄/2-1。
 新：公开空阵完成1-2/1-3/1-4，按原first-offer策略选择2-1强化；公开付费买麦迪/拉克丝得到unit-2/3，再执行原部署和完全相同的7物品fixture。手算0+2+3+5-1-1=8G，XP0+2+2+0升到3级；准备目标始终是原2-1，不改后面临时装备2-1文字。
 理由：合入U3新脚本后暴露旧准备假设，用户允许仅测试前置按新日程迁移。原10场原生交互/全部断言从首个check至文件结束与baseline逐字相同，未删/skip/改数值/改时间，不碰U3视觉。直接提取同一setup源执行五种状态证明合法，真正Chromium验证仍待CI。
+
+
+## A145 · scripts/b6-deferred-assertions.cjs · correct observed Start checkpoint phase
+旧（B6新增比较器错误）：所有checkpoint.stateHash一律等于route.actions[i].afterHash，把Start的即时tick0与原浏览器等待结算后的记录比较。
+新：仅Start按同轮唯一round.after完整状态重新算hash并核对round.stateHash；其他命令仍action.afterHash。全部索引/数量/边界/原精确skip检查保留。
+理由：CI150真实artifact证明command0.after和round1.after逐对象一致，实际hash825df5…；原错误期望b5c692…属于combat/tick0。这是实现错误，不是旧断言放宽。8路1226checkpoint/32篡改负例已用原产物验证，真实CI仍等待修复SHA。
