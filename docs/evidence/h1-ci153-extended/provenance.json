@@ -1,0 +1,55 @@
+{
+  "runId": 37863254735,
+  "definitionSha": "8becae833a0b9da8681905cbca6008af7b12b755",
+  "artifactId": 11588635788,
+  "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37863254735/artifacts/11588635788",
+  "archiveBytes": 47477780,
+  "archiveSha256": "66095b7b90a26f2a68019eeb500a9464d567060c67342337c6450e70fae816f0",
+  "archiveMembers": 245,
+  "allMemberCrcPassed": true,
+  "manifestSha256": "cb575320b127131520788c7c6ae5faa680ce81b6d71fb5da80573146b38964cd",
+  "manifestIdentity": {
+    "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+    "status": "",
+    "node": "v22.23.3",
+    "browser": "153.0.8010.12",
+    "runnerHash": "11444b5a53bcd247312eca8926f2c8fd7b78fa9293f8a6be21d20adf5288d568",
+    "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+    "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+    "mode": "preview",
+    "build": "cannon",
+    "touch": false,
+    "passed": true,
+    "errors": [],
+    "durationSeconds": 1824.397,
+    "h1ExtendedDiagnostic": {
+      "kind": "independent extended-window diagnosis, not acceptance",
+      "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "sourceRunnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "warmupCycles": 2,
+      "cyclesPerWindow": 30,
+      "windows": 6,
+      "snapshots": false,
+      "changes": [
+        "Enable the existing follow-up window block without the historical twelve-cycle warmup",
+        "Extend that diagnostic block to the requested equal window count",
+        "Optionally take separate perturbing snapshots at later window boundaries and label them accurately",
+        "Preserve every existing assertion and threshold; no source files edited"
+      ]
+    }
+  },
+  "deltas": [
+    271144,
+    -369592,
+    567376,
+    326492,
+    316544,
+    -204784
+  ],
+  "netGrowth": 907180,
+  "positiveWindows": 4,
+  "negativeWindows": 2,
+  "allOriginalAssertionLinesPreserved": true,
+  "derivedCodeAndWrapperHashesVerified": true,
+  "limitations": "One derived diagnostic run, not original single-window acceptance or proof of no leak. No snapshots in this group."
+}
