@@ -1,0 +1,2863 @@
+{
+  "mode": "preview",
+  "limitBytes": 1048576,
+  "runtimeSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "browser": "153.0.8010.12",
+  "identityNote": "Runtime/browser identities verified in linked batch provenance, not encoded in trend alone; input hashes pin exact traces.",
+  "rule": {
+    "processes": 3,
+    "warmupCycles": 2,
+    "windows": 6,
+    "cyclesPerWindow": 30,
+    "D": "H1-H0",
+    "G": "median(H4,H5,H6)-median(H1,H2,H3)",
+    "T": "H6-H3",
+    "K": "max(Ht-H(t-1)),t=1..6",
+    "perProcessHit": "any selected metric > unchanged mode limit",
+    "quorum": ">=2 hits block;1 hit review with no automatic pass;0 hits pass only observed window;fewer/more than3 processes cannot claim quorum"
+  },
+  "inputs": [
+    {
+      "label": "initial",
+      "path": "docs/evidence/h1-ci153-extended/preview-extended-01/m6-heap-trend.json",
+      "runId": 37863254735,
+      "sample": "preview-extended-01",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "provenanceSha256": "ac563d051aca40c7d9cd5f144c96b6474c352028f0d11dfedffb0f9468416a51",
+      "environmentSha256": "9a4ab8f12477812f4095a0088176b29f07728912e8647be5b6a6c1a3c02e90db",
+      "sha256": "735a1b954e8686409e88aead9c98a320c8c26f29cd5f2df3a57947d9417e52af",
+      "lifecycleSha256": "e7a7c849ba9df352ff97ea3a4065822aff2ed17160a302c37b4a4c729cea0518",
+      "levelsBytes": [
+        14615792,
+        14886936,
+        14517344,
+        15084720,
+        15411212,
+        15727756,
+        15522972
+      ]
+    },
+    {
+      "label": "repeat-01",
+      "path": "docs/evidence/h1-ci153-extended-batch2/preview-extended-01/m6-heap-trend.json",
+      "runId": 37880678916,
+      "sample": "preview-extended-01",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "provenanceSha256": "83775382a71731da359a91742726e7b4d609d48b0f61d07ffad0abac5817e924",
+      "environmentSha256": "3a05a3eb58083a629827a95d80c357591071793993a366d4852859f257e661d6",
+      "sha256": "214130b7c67de1aaca5816ff6ca9b894c3669cf8da9862db78feb096a2c7b80a",
+      "lifecycleSha256": "162008973f2aed87a9c855d05133d5c45c3824187b1b9439377ec47fcfe824a9",
+      "levelsBytes": [
+        14513948,
+        14613340,
+        15063644,
+        15517848,
+        15397472,
+        15400340,
+        15506104
+      ]
+    },
+    {
+      "label": "repeat-02",
+      "path": "docs/evidence/h1-ci153-extended-batch2/preview-extended-02/m6-heap-trend.json",
+      "runId": 37880678916,
+      "sample": "preview-extended-02",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "node": "v22.23.3",
+      "provenanceSha256": "83775382a71731da359a91742726e7b4d609d48b0f61d07ffad0abac5817e924",
+      "environmentSha256": "3a05a3eb58083a629827a95d80c357591071793993a366d4852859f257e661d6",
+      "sha256": "4b3976a74809211c47ed88f7de043644017cea9bbc695e6d0e60b76aef9d98a2",
+      "lifecycleSha256": "c557e19e7fcf2557c9b63992574aa84d691503cbaf9d6444cba9a072164c0ba2",
+      "levelsBytes": [
+        14987252,
+        16017176,
+        15056192,
+        15251964,
+        15344416,
+        15004728,
+        14950564
+      ]
+    }
+  ],
+  "observed": {
+    "perProcessMetricsBytes": [
+      {
+        "D": 271144,
+        "G": 636036,
+        "T": 438252,
+        "K": 567376
+      },
+      {
+        "D": 99392,
+        "G": 336696,
+        "T": -11744,
+        "K": 454204
+      },
+      {
+        "D": 1029924,
+        "G": -247236,
+        "T": -301400,
+        "K": 1029924
+      }
+    ],
+    "variants": {
+      "DG": {
+        "hits": [
+          false,
+          false,
+          false
+        ],
+        "hitCount": 0,
+        "processCount": 3,
+        "state": "pass_observation_window"
+      },
+      "DGT": {
+        "hits": [
+          false,
+          false,
+          false
+        ],
+        "hitCount": 0,
+        "processCount": 3,
+        "state": "pass_observation_window"
+      },
+      "DGTK": {
+        "hits": [
+          false,
+          false,
+          false
+        ],
+        "hitCount": 0,
+        "processCount": 3,
+        "state": "pass_observation_window"
+      }
+    }
+  },
+  "syntheticScenarios": [
+    {
+      "profile": "linear",
+      "fractionOfL": "0/1",
+      "amountBytes": 0,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 636036,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "linear",
+      "fractionOfL": "1/16",
+      "amountBytes": 65536,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        65536,
+        131072,
+        196608,
+        262144,
+        327680,
+        393216
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 336680,
+          "G": 963716,
+          "T": 634860,
+          "K": 632912
+        },
+        {
+          "D": 164928,
+          "G": 533304,
+          "T": 184864,
+          "K": 519740
+        },
+        {
+          "D": 1095460,
+          "G": -104792,
+          "T": -104792,
+          "K": 1095460
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            true
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            true
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            true
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        }
+      }
+    },
+    {
+      "profile": "linear",
+      "fractionOfL": "1/8",
+      "amountBytes": 131072,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        131072,
+        262144,
+        393216,
+        524288,
+        655360,
+        786432
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 402216,
+          "G": 1291396,
+          "T": 831468,
+          "K": 698448
+        },
+        {
+          "D": 230464,
+          "G": 729912,
+          "T": 381472,
+          "K": 585276
+        },
+        {
+          "D": 1160996,
+          "G": 91816,
+          "T": 91816,
+          "K": 1160996
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            false,
+            true
+          ],
+          "hitCount": 2,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            false,
+            true
+          ],
+          "hitCount": 2,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            false,
+            true
+          ],
+          "hitCount": 2,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "linear",
+      "fractionOfL": "1/4",
+      "amountBytes": 262144,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        262144,
+        524288,
+        786432,
+        1048576,
+        1310720,
+        1572864
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 533288,
+          "G": 1889396,
+          "T": 1224684,
+          "K": 829520
+        },
+        {
+          "D": 361536,
+          "G": 1123128,
+          "T": 774688,
+          "K": 716348
+        },
+        {
+          "D": 1292068,
+          "G": 354596,
+          "T": 485032,
+          "K": 1292068
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "linear",
+      "fractionOfL": "1/2",
+      "amountBytes": 524288,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        524288,
+        1048576,
+        1572864,
+        2097152,
+        2621440,
+        3145728
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 795432,
+          "G": 2783276,
+          "T": 2011116,
+          "K": 1091664
+        },
+        {
+          "D": 623680,
+          "G": 1909560,
+          "T": 1561120,
+          "K": 978492
+        },
+        {
+          "D": 1554212,
+          "G": 1084704,
+          "T": 1271464,
+          "K": 1554212
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "linear",
+      "fractionOfL": "1/1",
+      "amountBytes": 1048576,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        1048576,
+        2097152,
+        3145728,
+        4194304,
+        5242880,
+        6291456
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 1319720,
+          "G": 4356140,
+          "T": 3583980,
+          "K": 1615952
+        },
+        {
+          "D": 1147968,
+          "G": 3482424,
+          "T": 3133984,
+          "K": 1502780
+        },
+        {
+          "D": 2078500,
+          "G": 3094264,
+          "T": 2844328,
+          "K": 2078500
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "linear",
+      "fractionOfL": "2/1",
+      "amountBytes": 2097152,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        2097152,
+        4194304,
+        6291456,
+        8388608,
+        10485760,
+        12582912
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 2368296,
+          "G": 7501868,
+          "T": 6729708,
+          "K": 2664528
+        },
+        {
+          "D": 2196544,
+          "G": 6628152,
+          "T": 6279712,
+          "K": 2551356
+        },
+        {
+          "D": 3127076,
+          "G": 6239992,
+          "T": 5990056,
+          "K": 3127076
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "linear",
+      "fractionOfL": "4/1",
+      "amountBytes": 4194304,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        4194304,
+        8388608,
+        12582912,
+        16777216,
+        20971520,
+        25165824
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 4465448,
+          "G": 13793324,
+          "T": 13021164,
+          "K": 4761680
+        },
+        {
+          "D": 4293696,
+          "G": 12919608,
+          "T": 12571168,
+          "K": 4648508
+        },
+        {
+          "D": 5224228,
+          "G": 12531448,
+          "T": 12281512,
+          "K": 5224228
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "0/1",
+      "amountBytes": 0,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 636036,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "1/16",
+      "amountBytes": 65536,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        65536,
+        131072,
+        196608
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 832644,
+          "T": 634860,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 467768,
+          "T": 184864,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -104792,
+          "T": -104792,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "1/8",
+      "amountBytes": 131072,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        131072,
+        262144,
+        393216
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1029252,
+          "T": 831468,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 598840,
+          "T": 381472,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": 91816,
+          "T": 91816,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "1/4",
+      "amountBytes": 262144,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        262144,
+        524288,
+        786432
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1365108,
+          "T": 1224684,
+          "K": 588636
+        },
+        {
+          "D": 99392,
+          "G": 860984,
+          "T": 774688,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": 354596,
+          "T": 485032,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "1/2",
+      "amountBytes": 524288,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        524288,
+        1048576,
+        1572864
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1889396,
+          "T": 2011116,
+          "K": 850780
+        },
+        {
+          "D": 99392,
+          "G": 1385272,
+          "T": 1561120,
+          "K": 630052
+        },
+        {
+          "D": 1029924,
+          "G": 801340,
+          "T": 1271464,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            false
+          ],
+          "hitCount": 2,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "1/1",
+      "amountBytes": 1048576,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        1048576,
+        2097152,
+        3145728
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 2937972,
+          "T": 3583980,
+          "K": 1375068
+        },
+        {
+          "D": 99392,
+          "G": 2433848,
+          "T": 3133984,
+          "K": 1154340
+        },
+        {
+          "D": 1029924,
+          "G": 1849916,
+          "T": 2844328,
+          "K": 1141028
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "2/1",
+      "amountBytes": 2097152,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        2097152,
+        4194304,
+        6291456
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 5035124,
+          "T": 6729708,
+          "K": 2423644
+        },
+        {
+          "D": 99392,
+          "G": 4531000,
+          "T": 6279712,
+          "K": 2202916
+        },
+        {
+          "D": 1029924,
+          "G": 3947068,
+          "T": 5990056,
+          "K": 2189604
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "late_ramp_after_3",
+      "fractionOfL": "4/1",
+      "amountBytes": 4194304,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        4194304,
+        8388608,
+        12582912
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 9229428,
+          "T": 13021164,
+          "K": 4520796
+        },
+        {
+          "D": 99392,
+          "G": 8725304,
+          "T": 12571168,
+          "K": 4300068
+        },
+        {
+          "D": 1029924,
+          "G": 8141372,
+          "T": 12281512,
+          "K": 4286756
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "0/1",
+      "amountBytes": 0,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 636036,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "1/16",
+      "amountBytes": 65536,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        131072,
+        131072,
+        262144,
+        262144,
+        393216
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1029252,
+          "T": 700396,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 467768,
+          "T": 250400,
+          "K": 581376
+        },
+        {
+          "D": 1029924,
+          "G": -39256,
+          "T": -39256,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "1/8",
+      "amountBytes": 131072,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        262144,
+        262144,
+        524288,
+        524288,
+        786432
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1365108,
+          "T": 962540,
+          "K": 588636
+        },
+        {
+          "D": 99392,
+          "G": 598840,
+          "T": 512544,
+          "K": 712448
+        },
+        {
+          "D": 1029924,
+          "G": 222888,
+          "T": 222888,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "1/4",
+      "amountBytes": 262144,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        524288,
+        524288,
+        1048576,
+        1048576,
+        1572864
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1734700,
+          "T": 1486828,
+          "K": 850780
+        },
+        {
+          "D": 99392,
+          "G": 860984,
+          "T": 1036832,
+          "K": 974592
+        },
+        {
+          "D": 1029924,
+          "G": 616740,
+          "T": 747176,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "1/2",
+      "amountBytes": 524288,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        1048576,
+        1048576,
+        2097152,
+        2097152,
+        3145728
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 2258988,
+          "T": 2535404,
+          "K": 1375068
+        },
+        {
+          "D": 99392,
+          "G": 1385272,
+          "T": 2085408,
+          "K": 1498880
+        },
+        {
+          "D": 1029924,
+          "G": 1336800,
+          "T": 1795752,
+          "K": 1141028
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "1/1",
+      "amountBytes": 1048576,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        2097152,
+        2097152,
+        4194304,
+        4194304,
+        6291456
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 3307564,
+          "T": 4632556,
+          "K": 2423644
+        },
+        {
+          "D": 99392,
+          "G": 2433848,
+          "T": 4182560,
+          "K": 2547456
+        },
+        {
+          "D": 1029924,
+          "G": 2385376,
+          "T": 3892904,
+          "K": 2189604
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "2/1",
+      "amountBytes": 2097152,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        4194304,
+        4194304,
+        8388608,
+        8388608,
+        12582912
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 5404716,
+          "T": 8826860,
+          "K": 4520796
+        },
+        {
+          "D": 99392,
+          "G": 4531000,
+          "T": 8376864,
+          "K": 4644608
+        },
+        {
+          "D": 1029924,
+          "G": 4482528,
+          "T": 8087208,
+          "K": 4286756
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "two_window_stairs",
+      "fractionOfL": "4/1",
+      "amountBytes": 4194304,
+      "amountMeaning": "retained bytes per30-cycle window, or average per window for stairs",
+      "offsetsBytes": [
+        0,
+        0,
+        8388608,
+        8388608,
+        16777216,
+        16777216,
+        25165824
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 9599020,
+          "T": 17215468,
+          "K": 8715100
+        },
+        {
+          "D": 99392,
+          "G": 8725304,
+          "T": 16765472,
+          "K": 8838912
+        },
+        {
+          "D": 1029924,
+          "G": 8676832,
+          "T": 16475816,
+          "K": 8481060
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "0/1",
+      "amountBytes": 0,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 636036,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "1/16",
+      "amountBytes": 65536,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 701572,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 515840
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "1/8",
+      "amountBytes": 131072,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        131072,
+        131072,
+        131072,
+        131072,
+        131072
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 767108,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 581376
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "1/4",
+      "amountBytes": 262144,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        262144,
+        262144,
+        262144,
+        262144,
+        262144
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 898180,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 712448
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "1/2",
+      "amountBytes": 524288,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        524288,
+        524288,
+        524288,
+        524288,
+        524288
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1005628,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 974592
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "1/1",
+      "amountBytes": 1048576,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        1048576,
+        1048576,
+        1048576,
+        1048576,
+        1048576
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1005628,
+          "T": 438252,
+          "K": 678984
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 1498880
+        },
+        {
+          "D": 1029924,
+          "G": -51464,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            true,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "2/1",
+      "amountBytes": 2097152,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        2097152,
+        2097152,
+        2097152,
+        2097152,
+        2097152
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1005628,
+          "T": 438252,
+          "K": 1727560
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 2547456
+        },
+        {
+          "D": 1029924,
+          "G": -51464,
+          "T": -301400,
+          "K": 1136168
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_2",
+      "fractionOfL": "4/1",
+      "amountBytes": 4194304,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        4194304,
+        4194304,
+        4194304,
+        4194304,
+        4194304
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 1005628,
+          "T": 438252,
+          "K": 3824712
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 4644608
+        },
+        {
+          "D": 1029924,
+          "G": -51464,
+          "T": -301400,
+          "K": 3233320
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "0/1",
+      "amountBytes": 0,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 636036,
+          "T": 438252,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": -11744,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -247236,
+          "T": -301400,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "1/16",
+      "amountBytes": 65536,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        65536
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 701572,
+          "T": 503788,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": 53792,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -235864,
+          "T": -235864,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "1/8",
+      "amountBytes": 131072,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        131072
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 767108,
+          "T": 569324,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": 119328,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -170328,
+          "T": -170328,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "1/4",
+      "amountBytes": 262144,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        262144
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 840820,
+          "T": 700396,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": 250400,
+          "K": 454204
+        },
+        {
+          "D": 1029924,
+          "G": -39256,
+          "T": -39256,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "1/2",
+      "amountBytes": 524288,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        524288
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 840820,
+          "T": 962540,
+          "K": 567376
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": 512544,
+          "K": 630052
+        },
+        {
+          "D": 1029924,
+          "G": 92452,
+          "T": 222888,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGTK": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "1/1",
+      "amountBytes": 1048576,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1048576
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 840820,
+          "T": 1486828,
+          "K": 843792
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": 1036832,
+          "K": 1154340
+        },
+        {
+          "D": 1029924,
+          "G": 92452,
+          "T": 747176,
+          "K": 1029924
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            false,
+            false
+          ],
+          "hitCount": 1,
+          "processCount": 3,
+          "state": "review_no_auto_pass"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            false
+          ],
+          "hitCount": 2,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "2/1",
+      "amountBytes": 2097152,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2097152
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 840820,
+          "T": 2535404,
+          "K": 1892368
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": 2085408,
+          "K": 2202916
+        },
+        {
+          "D": 1029924,
+          "G": 92452,
+          "T": 1795752,
+          "K": 2042988
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    },
+    {
+      "profile": "permanent_step_at_6",
+      "fractionOfL": "4/1",
+      "amountBytes": 4194304,
+      "amountMeaning": "one-time retained amount",
+      "offsetsBytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4194304
+      ],
+      "perProcessMetricsBytes": [
+        {
+          "D": 271144,
+          "G": 840820,
+          "T": 4632556,
+          "K": 3989520
+        },
+        {
+          "D": 99392,
+          "G": 336696,
+          "T": 4182560,
+          "K": 4300068
+        },
+        {
+          "D": 1029924,
+          "G": 92452,
+          "T": 3892904,
+          "K": 4140140
+        }
+      ],
+      "variants": {
+        "DG": {
+          "hits": [
+            false,
+            false,
+            false
+          ],
+          "hitCount": 0,
+          "processCount": 3,
+          "state": "pass_observation_window"
+        },
+        "DGT": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        },
+        "DGTK": {
+          "hits": [
+            true,
+            true,
+            true
+          ],
+          "hitCount": 3,
+          "processCount": 3,
+          "state": "block"
+        }
+      }
+    }
+  ],
+  "positiveGridScenarioCounts": {
+    "DG": {
+      "review_no_auto_pass": 4,
+      "block": 14,
+      "pass_observation_window": 17
+    },
+    "DGT": {
+      "review_no_auto_pass": 5,
+      "block": 16,
+      "pass_observation_window": 14
+    },
+    "DGTK": {
+      "review_no_auto_pass": 5,
+      "block": 19,
+      "pass_observation_window": 11
+    }
+  },
+  "selfTests": {
+    "passed": 11,
+    "checks": [
+      "DG misses middle permanent step",
+      "DGT misses middle permanent step",
+      "K detects middle permanent step",
+      "DG misses final permanent step",
+      "T detects final permanent step",
+      "one hit means review not block/pass",
+      "two hits block",
+      "zero hits only passes observation window",
+      "one process never fabricates quorum",
+      "strict greater-than threshold",
+      "slow window growth accumulates in G/T"
+    ]
+  },
+  "limitations": [
+    "Not a gate implementation and no measurement/threshold changed.",
+    "Observed reference trajectories have no independent no-leak ground truth; pass counts are not false-positive estimates.",
+    "Synthetic overlays are explicit mathematical sensitivity scenarios, not measured real leaks or real FNR.",
+    "All processes receive the same deterministic retention overlay; no GC/JIT/object-graph feedback simulated.",
+    "Grid outcomes are not universal detection minima; reference noise/growth can assist or mask detection.",
+    "Scenario counts have no probability weights and are not independent experimental samples.",
+    "Review is neither automatic block nor automatic pass; do not relabel it as either.",
+    "Snapshot/Chromium141/B4/normal single-window data are excluded from trajectory replay."
+  ]
+}
