@@ -252,3 +252,13 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .recipe-matrix thead { break-inside: auto; }
 @media (overflow-block: paged) { .recipe-matrix thead { break-inside: avoid; } }
 .recipe-matrix [data-item-def]:focus-visible { outline: 3px solid #ffd782; outline-offset: -2px; }
+/* M8 U3 dynamic: equip/combine previews from the B5 queries, reserved and temporary slots. */
+.equipment-slots button.equip-ok { border-color: #5fd68a; box-shadow: inset 0 0 0 1px #5fd68a; }
+.equipment-slots button.equip-denied { border-color: #f08080; opacity: .75; }
+.equipment-slots button.equip-conflict { outline: 2px solid #ffb36b; outline-offset: -2px; }
+.equipment-slots button.slot-reserved { border-style: dashed; color: var(--c-text-muted); }
+.equipment-slots button.slot-temporary { border-style: dashed; border-color: #c9a8ff; }
+.equip-hint { margin: 6px 0 0 !important; font-size: 12px !important; }
+.equip-hint.ok { color: #9be8b4; }
+.equip-hint.denied { color: #ffb0a0; }
+.temporary-line { margin: 4px 0 0 !important; font-size: 12px !important; color: #d9c8ff; }

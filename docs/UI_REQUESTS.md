@@ -132,6 +132,8 @@
 - 当前状态：U3 静态图鉴与合成表只展示配方，文案注明“不代表当前可合成 / 可装备”。**既有 U1 行为**：策略面板“合成”按钮仍按静态配方匹配决定是否可点，最终以 `session.combine` 结果为准；本次未扩大该逻辑，也未使用 `planCombine/planEquip`。B5 交付后改为读 `previewCombine(...).allowed/reason`，装备槽改读 `previewEquip`。
 - 验收：B5 交付后，拒绝组合（含 `same-item`、`unique-conflict`、`exclusive-slots`、`temporary-item`）在点击前显示后端原因，与命令拒绝一致。
 
+- **U3 动态部分接线（`feat/m8-u3-dynamic`，基于 `feat/m8-b5@7002998`，[wip] 未送审）**：合成按钮改读 `previewCombine`（移除静态配方匹配）；选中物品后各槽读 `previewEquip` 标出可装备/拒绝原因/冲突装备，三槽装备显示“将占用槽 1、2、3”；槽位与单位详情读 `readUnitEquipment`，独占预留槽与临时子件只读显示（来源父装备、有效轮次、不可操作）；拖到棋盘单位时取第一个预览允许的槽。拒绝文案集中在 `src/presentation/equipment-feedback.ts`，预览提示与 `BoardScene` 命令失败提示共用。B5 合入基线后 rebase 送审。
+
 ### UR-U3-06 约定编号的可读说明（P3，文档/内容）
 
 - 现状：浮窗原样显示 `conventionIds`（如 `A-01`、`GLOBAL-STAT-01`），玩家看不懂。
@@ -165,3 +167,20 @@
 | `temporary-item` | 临时装备不能单独操作 |
 
 - 验收：保留四种拒绝原因各自的准确语义，界面读取领域失败码；不自行重新校验装备规则、不改变命令失败原子性。B5 构建与桌面验收结果见 `docs/M8_B5_HANDOFF.md` 最新记录。
+- **已由 U3 动态部分接手**：四条临时文案已移入共用映射 `EQUIPMENT_FAILURE_TEXT`（`src/presentation/equipment-feedback.ts`），`BoardScene` 的命令失败提示与预览提示读同一份，四条文案同时打磨。`wrong-phase`、`unknown-unit`、`invalid-slot` 与非装备命令共用，命令提示仍沿用 `BoardScene` 原有分阶段文案。
+
+### UR-U3-08 U3 动态部分桌面 Chromium 验证（P1，Codex 编写；Claude 不改 tests/、CI）
+
+视口 1440×1000。状态由公开 `createMatch` + 选择命令得到；与 `tests/m8-b5-*.test.ts` 相同，可把永久装备实例放入库存作为夹具，此后只走 `equipItem`/`combineItems` 公开命令。说明：`same-item` 与 `temporary-item` 无法通过正常点击产生（再次点击同一物品会取消选中；临时件不在库存、槽位不可操作），这两项按领域码 + 面板文案核对。
+
+| 场景 | 输入 | 预期 |
+| --- | --- | --- |
+| unique-conflict | 蓝霸符装到 u1；再选第二件蓝霸符 | u1 各槽 `data-preview=unique-conflict`，已装蓝霸符的槽标冲突；行提示含唯一冲突文案与“冲突：蓝霸符”；其他单位为 allowed；点击 u1 槽命令同样拒绝 `unique-conflict`，状态与提示文案一致 |
+| exclusive-slots（TG 加入） | u1 有蓝霸符；选窃贼手套 | u1 三槽均 `exclusive-slots`，蓝霸符标冲突；空单位提示“可装备 · 将占用槽 1、2、3” |
+| TG 穿戴与临时件 | 窃贼手套点 u2 的槽 3 | 命令成功，本体规范到槽 1；槽 2/3 显示“临时 · 名称”、虚线、禁用；行内与单位详情各 2 行“来自 窃贼手套 · 槽 N · 仅 2-1 本轮有效 · 不可操作” |
+| exclusive-slots（已有 TG） | u2 持窃贼手套；选普通装备 | u2 槽 1 为 `exclusive-slots`，窃贼手套标冲突，提示含“冲突：窃贼手套” |
+| temporary-item | 领域：`previewEquip/previewCombine/equipItem` 传临时 ID | 三者均 `temporary-item`；状态序列化不变；文案取共用表 |
+| same-item | 领域：`previewCombine/combineItems(a,a)`；面板选中 `[a,a]` | 领域均 `same-item`；面板 `combine-preview` 显示共用文案，合成按钮禁用 |
+| invalid-recipe / 允许合成 | 选大剑+成装；再选两把大剑 | 前者 `invalid-recipe` 提示；后者按钮“合成 死亡之刃”可点，命令成功 |
+| 拖放到棋盘单位 | 把物品拖到持 TG 的单位 / 普通单位 | 前者显示 `exclusive-slots` 文案、不发命令；后者装到第一个预览允许的槽 |
+| 只读 | 每次选中、预览、渲染前后 | `MatchState` 序列化完全相同，RNG 与 `equipmentState` 不变 |
