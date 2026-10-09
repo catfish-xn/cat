@@ -65,3 +65,19 @@ CI140 artifact11604394523确认6-5第31战后触发应用30战限制，6-6tick0�
 比较器额外拒绝：双方省略集合不恰好等于目录尾3战、缺任何容量内轮次或命令checkpoint、boundary state hash不等于完整领域路线下一start的beforeHash、额外未列skip，以及虚称fullApplicationRoutePassed=true。原SHA/sourceFingerprint/version/clean-tree/error/逐对象检查不变；输入脚本也只能有表中5个B8 skip ID。边界常量30由单测强制等于未修改的MAX_BATTLE_RECORDS，B9改容量必须移除此B6适配。
 
 `compare-m6-evidence.cjs` 的应用分组同步只消费前表8个已授权skip（B8 G02开场1-3/1-4/post-PvE，B9 G02终态、ROOT03、P2两分支、R4），逐项保留对应通过断言callback并写`m6-application-deferred-comparisons.json`。容量内10个真实phase样本、G04/ROOT04、repository、回放/布局/生命周期仍须通过，manifest任何新增skip或样本缺口直接失败。性能分组未改，仍待用户对性能准备结构的明确决定。
+
+
+### 性能严格拆分（2026-10-09 用户已批准；新SHA浏览器待执行）
+
+恢复总跟踪：[issue #23](https://github.com/catfish-xn/cat/issues/23)。B9合入并完成正式容量切换后，必须恢复原完整33战导入/原样本原则与阈值，经CI及独立审计才关闭；新增真实≤30战路径不能替代这项恢复。B8满装备条件也须重新核实，不能永久保留skip。
+
+| 文件/位置 | skip ID / 测量项 | 归属、依赖及解除条件 |
+| --- | --- | --- |
+| `scripts/verify-m6-performance.cjs:41` | `full-load-15-equipment` | B8，真实完整掉落链未接；保留原9玩家/8敌/15装备断言。第五路线及实际观察继续，B8接入后恢复该最大负载覆盖。 |
+| `scripts/verify-m6-performance.cjs:76` | `full-import-dependent-pipeline`；capture/write各12、activation12、completeImport3 | B9，原33战完整validateFile前置超30。整个原callback保留，精确四指标status=skipped且无samples/actual/passed；原阈值不改。B9容量接入后恢复完整测量及原冷DB首次null/12次activation顺序，关联issue #23。 |
+| `scripts/verify-m6-performance.cjs:111` | `current-prefix-validation`（条件式） | B9，仅实际completed+current>MAX_BATTLE_RECORDS才跳；容量内原validateFile必须执行。B9后恢复完整最大current前置。 |
+| `scripts/verify-m6-performance.cjs:132` | `full-load-import-roundtrip` | B9，原完整第五路线导入超容量；保留完整对象/预算检查callback，报告没有verified:true或虚构毫秒。B9后恢复，满装备覆盖另归B8。 |
+| `scripts/compare-m6-evidence.cjs:179` | `performance-capture/write/activation/completeImport` | 同上四指标；保留原样本数/公式/阈值检查callback，仅消费精确skipped形状，拒绝未知pending或假0ms。 |
+| `scripts/compare-m6-evidence.cjs:183`、`:188` | `full-load-15-equipment` / `full-load-import-roundtrip` | 分别B8/B9，消费上述同名skip并保留原通过断言；恢复条件同上。 |
+
+fullCapture12、firstSeek3、cachedSeek12、原40tick统计、3次预热+30次生命周期仍运行原硬门禁；完整五路线仍选原最大complete/current/单战负载。独立boundedCompleteImport在其后真实运行30战完整格式验证/候选构建/原生IDB激活，3次max≤原30000ms，明确不等价于完整33战或满装备。现只有Node可行性诊断和14项定向测试通过，不能将尚未执行的浏览器门禁称为通过。

@@ -300,3 +300,14 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 
 - `compare-m6-evidence.cjs`生成的JSON/Markdown/stdout全部明确B6非跳过范围；附每个manifest的skipped批次/原因、浏览器已执行前段与未执行尾段，以及`fullApplicationRoutePassed:false`。移除错误的“新规则/golden不变、全部正常应用路线通过”当前态断言；附带旧M6文档仍保留，明确属于旧SHA历史，不被本次结论背书。
 - 该修正只影响报告结论和元数据，没有修改待批准的M6性能测量/验证分组。模块性能依赖仍暂停等待用户决定。
+
+
+### 9.7 检查点七：已批准性能边界与真实30战导入覆盖（浏览器待CI）
+
+- 用户2026-10-09批准严格性能方案，并补充要求评估≤30战真实完整导入；恢复跟踪[issue #23](https://github.com/catfish-xn/cat/issues/23)。B9合入并放开导入容量后必须恢复原完整测量、原样本原则和阈值，经CI及独立审计才关闭。≤30战覆盖不能替代该恢复。批准状态覆盖§9.5/9.6的历史待批停点；[完整方案](evidence/m8-b6/performance-pending-scope.md)保留历史并明确最新状态。
+- [CI144固定693f019的input-dev](https://github.com/catfish-xn/cat/actions/runs/37910007217/job/113752621538)已实际通过原生input、touch-route、五viewport、storage33检查和stats17检查，随后在旧性能终轮35断言以38!==35失败；不是新领域错误。现终轮/战数由目录推导，helper的原18/28策略锚点对应4-4/5-7，见账本A140～A143。
+- 精确B9 skip原capture/write/activation/completeImport四项，原callback/12次activation顺序、冷DB首次null及门槛保留，无额外预热或假样本。full-load15装备覆盖归B8；完整fullLoadRoundTrip归B9；current-prefix仅实际超容量才跳。其余四测量和3次预热+30次模块生命周期保留。清单/聚合器拒绝未知skip、假actual或passed。
+- 五条原策略仍真实生成并参与原最大负载选择。新增独立≤30战覆盖在第30战刚结算现场保存完整状态与全部历史，未截断33战终态。真实Node评估全部为6-3结算，最大sniper20,780,416字节，完整validateFile(validateBattleCollection)8744.80ms且对象相等；full-load实际最多5装备，所以15装备仍明确待B8。另固定693f019 cannon独立验证14,773,941字节/6074.62ms，字节差异来自runId，不冒称同一payload。
+- 新独立浏览器boundedCompleteImport在原独立测量/生命周期之后执行：冷DB完整exportFile→validateFile→候选MatchSession/BattleHistory→原生activate，3次max仍30000ms；全对象/输入不变/IDB读回比较在计时外。明确只覆盖30战6-3结算，不覆盖原33战6-7终态或15装备最大负载，notEquivalentToFullPayload=true。该新门禁尚待CI，Node耗时不是浏览器/IDB性能通过证据。
+- 本检查点Node22定向2文件14项通过、typecheck及脚本语法/diff检查通过。[诊断清单](evidence/m8-b6/checkpoint7-bounded-feasibility.json)与checkpoint7-*.log.gz保存真实日志。这是693f019加当前WIP的可行性诊断，不作为固定新SHA终验；本机Chromium限制不再重试。独立Pro审计与最终CI由root安排，未自签收。
+- 新集成baseline已到f90e438933f341938c238980e1249d8904468c53（其他线H1 warn-only）；本worktree未自行合入或覆盖。root后续处理共享脚本整合并保留H1新政策，整合后须重新固定SHA/CI/审计。阶段1怪物仍待B7接入，B8内容与B9完整应用容量均未签收。

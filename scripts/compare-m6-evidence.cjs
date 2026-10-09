@@ -1,3 +1,4 @@
+const {RESTORATION_ISSUE,DEFERRED_PERFORMANCE_GATES,assertDeferredPerformanceGate,assertBoundedImportGate}=require('./b6-performance-gates.cjs');
 const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
 /* F4: require M6 product evidence from the same clean commit as the M5 gates. */
 const fs = require('node:fs');
@@ -7,7 +8,7 @@ const { sourceFingerprint, applicationHeapCeilingBytes } = require('./m5-evidenc
 const { hash } = require('./m4-evidence.cjs');
 // This frozen constants module contains only JavaScript-compatible declarations.
 // Read module budgets directly; full-application mode limits use the shared policy.
-const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS})');
+const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS, MAX_BATTLE_RECORDS})');
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const fingerprint = sourceFingerprint();
 const records = [], deferredApplicationComparisons = {};
@@ -137,6 +138,19 @@ for(const key of ['completeTerminalSnapshotEqual','savedWithoutFalseFailure','re
 });
 fs.writeFileSync('artifacts/m6-application-deferred-comparisons.json',JSON.stringify(deferredApplicationComparisons,null,2));
 const performance = read('m6-performance');
+const deferredPerformanceComparisons={};
+assert.equal(performance.restorationIssue,RESTORATION_ISSUE);
+assert.deepEqual(performance.routes.map(route=>route.build),['cannon','sniper','mage','sniper-caitlyn','full-load'],'all five original workload policies participate');
+assert.deepEqual(performance.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
+ ['skipped','B8','full-load-15-equipment'],['skipped','B9','full-load-import-roundtrip'],
+],'unknown performance workload deferral');
+assert.deepEqual(performance.measurements.deferredMetrics,DEFERRED_PERFORMANCE_GATES);
+const currentIsOverCapacity=performance.measurements.incrementalBattleCount+1>limits.MAX_BATTLE_RECORDS;
+assert.deepEqual(performance.measurements.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
+ ['skipped','B9','full-import-dependent-pipeline'],...(currentIsOverCapacity?[['skipped','B9','current-prefix-validation']]:[]),
+],'only an actually oversized original current prefix may skip validation');
+assert(performance.measurements.skipped.every(entry=>entry.restorationIssue===RESTORATION_ISSUE));
+
 const expectedGates = {
   capture: ['p95', 'incrementalCaptureP95'], write: ['p95', 'incrementalWriteP95'],
   fullCapture: ['p95', 'fullCaptureP95'], activation: ['max', 'activationWriteP95'],
@@ -147,7 +161,9 @@ assert.equal(performance.measurements.gates.length, Object.keys(expectedGates).l
 for (const [name, [metric, budget]] of Object.entries(expectedGates)) {
   const matching = performance.measurements.gates.filter(g => g.name === name);
   assert.equal(matching.length, 1, `${name} must have exactly one gate`);
-  const gate = matching[0], samples = performance.measurements.summary[name].samples;
+  const gate=matching[0];
+  const verifyOriginalGate=()=>{
+   const samples = performance.measurements.summary[name].samples;
   assert(samples.length > 0 && samples.every(Number.isFinite), `${name} real samples`);
   const minimumSamples = ['capture', 'write', 'fullCapture', 'activation', 'cachedSeek'].includes(name) ? 12 : ['completeImport', 'firstSeek'].includes(name) ? 3 : 1;
   assert(samples.length >= minimumSamples, `${name} measured sample count`);
@@ -158,11 +174,24 @@ for (const [name, [metric, budget]] of Object.entries(expectedGates)) {
   assert.equal(gate.actual, actual, `${name} sample-derived result`);
   assert.equal(gate.passed, true);
   assert(actual <= gate.ceiling, `${name} exceeds frozen budget`);
+  };
+  if(DEFERRED_PERFORMANCE_GATES.includes(name)){
+   assertDeferredPerformanceGate(gate,performance.measurements.summary[name],name,metric,limits.PERFORMANCE_BUDGET_MS[budget]);
+   skipB6Dependency(deferredPerformanceComparisons,'B9',`performance-${name}`,`Restore the original complete validated-import preparation and genuine samples after B9; ${RESTORATION_ISSUE}`,verifyOriginalGate);
+  }else verifyOriginalGate();
 }
-assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enemies === 8 && load.equipped === 15), 'same measured legal full-load scenario');
-assert.equal(performance.measurements.fullLoadRoundTrip?.verified, true);
-assert.equal(performance.measurements.fullLoadRoundTrip.battles, 30);
-assert(performance.measurements.fullLoadRoundTrip.milliseconds <= limits.PERFORMANCE_BUDGET_MS.completeImport, 'full-load import/activation roundtrip budget');
+skipB6Dependency(deferredPerformanceComparisons,'B8','full-load-15-equipment',`Restore the original maximal equipment coverage after B8; ${RESTORATION_ISSUE}`,()=>{
+ assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enemies === 8 && load.equipped === 15), 'same measured legal full-load scenario');
+});
+assert(Array.isArray(performance.fullLoadObserved)&&performance.fullLoadObserved.length>0,'actual fifth-route load observations retained');
+assert.deepEqual(performance.measurements.fullLoadRoundTrip,{status:'skipped',owner:'B9',restorationIssue:RESTORATION_ISSUE});
+skipB6Dependency(deferredPerformanceComparisons,'B9','full-load-import-roundtrip',`Restore complete full-load import after B9; bounded import cannot close ${RESTORATION_ISSUE}`,()=>{
+ assert.equal(performance.measurements.fullLoadRoundTrip?.verified, true);
+ assert.equal(performance.measurements.fullLoadRoundTrip.battles, performance.measurements.completeBattleCount);
+ assert(performance.measurements.fullLoadRoundTrip.milliseconds <= limits.PERFORMANCE_BUDGET_MS.completeImport, 'full-load import/activation roundtrip budget');
+});
+assertBoundedImportGate(performance.boundedImport,performance.payload.boundedComplete,limits.MAX_BATTLE_RECORDS,limits.PERFORMANCE_BUDGET_MS.completeImport);
+fs.writeFileSync('artifacts/m6-performance-deferred-comparisons.json',JSON.stringify(deferredPerformanceComparisons,null,2));
 assert.equal(performance.lifecycle.cycles, limits.LIFECYCLE_CYCLES);
 assert.equal(performance.lifecycle.extraListeners, 0);
 assert.equal(performance.lifecycle.remainingComponentRoots, 0);
@@ -208,15 +237,15 @@ const audit = { sha, dirty: '', sourceFingerprint: fingerprint, generatedAt: new
   acceptanceScope: 'B6 non-deferred checks only; B8/B9 items are not passed', fullApplicationRoutePassed: false,
   skipped: records.flatMap(record => record.skipped.map(entry => ({ folder: record.folder, ...entry }))),
   applicationDeferredComparisons: deferredApplicationComparisons.skipped ?? [],
-  performance: performance.measurements, moduleLifecycle: performance.lifecycle,
+  performance: performance.measurements, boundedImport: performance.boundedImport, performanceDeferredComparisons: deferredPerformanceComparisons.skipped ?? [], moduleLifecycle: performance.lifecycle,
   applicationLifecycle: Object.fromEntries(['dev', 'preview'].map(mode => [mode,
     JSON.parse(fs.readFileSync(`artifacts/m5-${mode}-cannon/manifest.json`, 'utf8')).m6Lifecycle])),
   passed: true };
 fs.writeFileSync('artifacts/m6-validation.json', JSON.stringify(audit, null, 2));
 const commandRows = commands.map(step => `| ${step.job} | \`${[step.command, ...step.args].join(' ')}\` | ${step.durationSeconds} | 0 |`).join('\n');
-const budgetRows = performance.measurements.gates.map(gate => `| ${gate.name} | ${gate.metric} | ${gate.actual} | ${gate.ceiling} | 通过 |`).join('\n');
+const budgetRows = performance.measurements.gates.map(gate => `| ${gate.name} | ${gate.metric} | ${gate.status==='skipped'?'未测量':gate.actual} | ${gate.ceiling} | ${gate.status==='skipped'?'B9 skipped，issue #23':'通过'} |`).concat(`| boundedCompleteImport（独立≤30战，非原最大payload） | max | ${performance.boundedImport.actual} | ${performance.boundedImport.ceiling} | 通过 |`).join('\n');
 const header = `# M6 同提交机器验证\n\n状态：仅本SHA的B6非跳过检查通过；显式列出的B8/B9依赖尚未验收，完整33战浏览器应用路线未执行通过。这不代表用户最终验收，不自动合并。\n\nSHA：\`${sha}\`；dirty：空；sourceFingerprint：\`${fingerprint}\`；seed：42。完整版本/digest、Node/Chromium/硬件、实际命令与耗时、证据 hash 均见同包 \`m6-validation.json\`。本报告只在B6允许的非跳过检查与精确依赖清单对照成功后生成。完整领域33战数据与浏览器仅执行前30战的证据分开；全部skipped ID、归属、原因和执行范围见JSON，不把跳过或历史结果提升为完整通过。\n`;
 fs.writeFileSync('artifacts/M6_VALIDATION.md', `${header}\n## 实际命令\n\n| CI job | 命令 | 耗时秒 | 退出码 |\n|---|---|---:|---:|\n${commandRows}\n\n## 冻结性能预算\n\n| 项目 | 统计 | 实测ms | 冻结ms | 结果 |\n|---|---|---:|---:|---|\n${budgetRows}\n\n## 历史记录与限制\n\n以下为本提交文档中的历史记录；旧 SHA/dirty 结果保持历史身份。真实后台切换没有被合成 visibility 事件冒充；heap snapshot 诊断没有被最终门禁采用。\n\n${fs.readFileSync('docs/M6_VALIDATION.md', 'utf8')}`);
 fs.writeFileSync('artifacts/M6_REVIEW.md', `${header}\n本报告适用B6新日程/开场版本。四条完整领域路线仍有独立账本与真实回放；浏览器、输入及应用仅对清单外已执行部分作结论。B8起手/掉落选择、B9完整档案与浏览器尾段均有显式skipped，不能称完整路线或全部历史验收通过。下面保留的旧审查文字只属于各自历史SHA；本次范围和结果由同SHA的 \`m6-validation.json\` 和两项 comparison 决定。\n\n${fs.readFileSync('docs/M6_REVIEW.md', 'utf8')}`);
-fs.writeFileSync('artifacts/m6-final-comparison.json', JSON.stringify({ sha, sourceFingerprint: fingerprint, acceptanceScope: audit.acceptanceScope, fullApplicationRoutePassed: false, skipped: audit.skipped, applicationDeferredComparisons: audit.applicationDeferredComparisons, records, passed: true }, null, 2));
+fs.writeFileSync('artifacts/m6-final-comparison.json', JSON.stringify({ sha, sourceFingerprint: fingerprint, acceptanceScope: audit.acceptanceScope, fullApplicationRoutePassed: false, skipped: audit.skipped, applicationDeferredComparisons: audit.applicationDeferredComparisons, performanceDeferredComparisons: audit.performanceDeferredComparisons, boundedImport: audit.boundedImport, records, passed: true }, null, 2));
 console.log(JSON.stringify({ sha, manifests: records.length, acceptanceScope: audit.acceptanceScope, fullApplicationRoutePassed: false, skipped: audit.skipped, passed: true }));

@@ -1,3 +1,26 @@
+# 性能准备依赖：严格方案已获批准并实施，浏览器数值待 CI
+
+2026-10-09 09:48 UTC 用户批准下述严格拆分，并要求评估真实≤30战完整导入覆盖。恢复跟踪：[issue #23](https://github.com/catfish-xn/cat/issues/23)。B9合入并放开正式导入容量后，必须恢复原完整payload测量、原样本原则、顺序与阈值；经CI和独立审计才关闭issue。≤30战覆盖不能代替该恢复。
+
+## 已实施边界
+
+- 精确跳过capture/write/activation/completeImport四项受原完整导入准备影响的测量；保留原callback、原12次activation的冷DB/null与后续token顺序及原阈值。没有替代准备预热，没有伪造0ms、samples或passed:true。
+- full-load第五条真实策略仍参与三个最大payload选择；缺15装备覆盖单独B8 skip。原完整fullLoadRoundTrip单独B9 skip。只有实际completed+current超过现容量时才跳current-prefix验证。
+- fullCapture×12、firstSeek×3、cachedSeek×12、40tick统计及原3次预热+30次生命周期照原callback和门槛执行。聚合器只消费精确四项pending，其他样本和数值仍硬检查。
+- 新增独立boundedCompleteImport：五条真实路线在第30战刚结束的onStep现场保存完整状态与全部历史，选择其中JSON字节数最大的存档；不是截断33战终态。它在原独立测量及生命周期之后执行，避免先给它们额外预热。
+- boundedCompleteImport完整调用exportFile → validateFile(validateBattleCollection) → MatchSession/BattleHistory → 原生SaveRepository.activate，独立冷DB首次null、后续token，共3次max，沿用completeImport的30000ms。完整对象/输入不变/原生IDB读回比较在计时外。
+- 新门禁只覆盖30战、6-3结算存档，不覆盖完整33战、6-7终态或15装备最大负载，报告明确notEquivalentToFullPayload。原33战completeImport继续B9 skipped。替代前置没有作为原测量结果上报。
+
+## 实际可行性证据（Node诊断，不是浏览器性能验收）
+
+五路线均真实完成33战；30战现场存档全部为6-3结算。最大为sniper，20,780,416字节；完整exportFile/validateFile路径成功，validateFile实测8744.80ms，完整对象相等。另固定693f019的cannon独立验证14,773,941字节、validateFile6074.62ms，原对象未改变、独立恢复图。字节差异来自各诊断runId，不冒称同一payload。完整日志和五路线清单见checkpoint7-bounded-feasibility.json及checkpoint7-*.log.gz。
+
+浏览器/原生IDB实际路径和30000ms门禁尚未执行，须等新固定SHA的GitHub CI；本机已确认socket限制，不再重试Chromium。定向2文件14项通过，typecheck及脚本语法检查通过。此处可行性诊断不替代最终固定SHA证据。
+
+---
+
+## 历史提案（保留原待批状态，已被上文批准覆盖）
+
 # 性能准备依赖：待用户决定，尚未实施
 
 本稿是一次性完整范围说明，不授权修改，也不构成性能通过证据。截止检查点五，`verify-m6-performance.cjs`、`verify-m6-full-load-helper.cjs`及`compare-m6-evidence.cjs`性能分组均未修改。应用分组的既有B8/B9 skip透明消费不属于本稿待决内容。

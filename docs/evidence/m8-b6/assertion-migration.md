@@ -1565,3 +1565,24 @@ import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch }
 旧：生成报告无条件声称“全部正常路线”“原领域规则与golden不变”“全部必需机器门禁通过”。
 新：报告明确只为本SHA的B6非跳过检查，附逐manifest的skipped/归属/原因、已执行与省略的浏览器轮次、fullApplicationRoutePassed=false；旧审计文档仍保留且明确历史身份。
 理由：允许依赖skip不能让自动生成报告冒称完整33战应用或B8内容已通过；仅修输出结论与元数据，不改变性能测量/验证分组。
+
+
+## A140 · scripts/verify-m6-full-load-helper.cjs · semantic strategy anchors
+旧：源码策略匹配state.round<18?7:8，新增九级策略阈值28。
+新：精确匹配生成器已有roundOrdinal('4-4')锚点，九级目标按roundOrdinal('5-7')；保留garen目标及逐库存装备策略。
+理由：原18/28对应稳定4-4/5-7，不批量将轮次数字加3；五条真实策略仍参与最大payload选择。
+
+## A141 · scripts/verify-m6-performance.cjs · catalog cardinality and strict pending measurements
+旧：终轮35、完整历史30；完整导入后测capture/write/activation/completeImport，full-load必须9玩家/8敌/15装备。
+新：终轮由ROUND_CATALOG末项ordinal、战数由kind!=supply推导；原四测量callback和样本/冷DB顺序/数值门槛保留为明确B9 skip；缺15装备单独B8 skip，原fullLoadRoundTrip单独B9 skip。仅实际超限current跳格式验证。
+理由：用户2026-10-09批准严格方案。没有假发装备、缩小原最大payload或用替代准备冒充原门禁；原8项中其余4项以及生命周期继续。issue #23要求B9后恢复完整测量。
+
+## A142 · scripts/verify-m6-performance.cjs · separate real bounded import gate
+旧：没有独立容量内完整导入性能覆盖。
+新：在五路线真实第30战现场保存全量合法envelope，取字节最大者；独立冷DB完整exportFile/validateFile/候选构建/原生activate，共3次max仍30000ms，且完整对象与读回比较。放在原独立测量/生命周期之后。
+理由：落实用户≤30战可行性评估并保留真实性能路径覆盖。实测Node最大sniper20,780,416字节/6-3结算，完整格式验证8744.80ms；浏览器数值待CI。该30战覆盖不是原33战最大payload，不能解除B9 skip或关闭issue #23。
+
+## A143 · scripts/compare-m6-evidence.cjs · exact performance skip and bounded gate consumption
+旧：8项一律真实样本及passed；fullLoadRoundTrip必须verified、30战。
+新：仅capture/write/activation/completeImport允许精确skipped形状，保留原检查callback；拒绝伪造actual/samples/passed与未知skip。完整full-load战数恢复断言由同目录产生的completeBattleCount提供；B8/B9依赖分别列明。其余4项、模块生命周期继续原阈值。新增独立bounded导入必须3真实样本/max≤30000ms/全对象与IDB读回通过。
+理由：严格聚合用户批准的精确跳过，报告明确未测量与独立有限覆盖。CI配置、原预算、采样公式、原12次activation顺序均不改。
