@@ -391,3 +391,28 @@ R2 针对 `0298a3f` 的交付缺口已由 `8e16da2` 补齐，基线/B5 的两次
 ### 供用户先行复审的交接快照
 
 用户要求代码修好后先告知并交复审，开发者继续等待CI。R1代码已修好并推送为 `20551f26fa738f090898a29360435ab1fdb1e8c5`；本次追加仅为负向验证及进度文档，与受测修复SHA没有可执行代码差异。R2正常/负向证据均已备齐。当前CI测试、构建、headless步骤及完整M7/M6资源作业通过，其他长任务与单次堆重跑尚未完成，**不能据此宣称完整CI通过或签收**。PR #16仍Draft；由用户/接手开发者送复审，我继续跟进CI，不送审、不合并。
+
+本地超时复验结果：上述两文件按原时限单worker复验 **2文件/8项全部通过**，990.85秒；保留首轮1233通过/6超时记录，不将其改写为首轮通过。正常CI的test-and-build原日志确认 **99文件/1239项全部通过**（551.79秒），typecheck/build、headless多seed与重复性能均通过。没有为本轮失败改测试、时限或CI配置。
+
+### 首轮CI新发现的M6性能失败与受控对照
+
+首轮最终为9个必需作业success、2个failure、最终比较因依赖失败skipped，另2个可选诊断skipped。除preview-cannon堆失败外，[input-dev作业113680778342](https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778342) 在后续 `verify-m6-performance.cjs:123` 失败：capture P95 **81.4ms >50ms**、cachedSeek max **111.5ms >100ms**。此前100项原生输入、正常时间完整触摸路线、五视口、33项存储与17项组件检查均已通过；后续retry/application-failures检查尚未执行。不能把这个作业笼统描述为输入断言失败。
+
+原12个capture样本为81.4/43.8/52.3/20.4/17.9/17.3/18.2/16.8/16.8/17.1/18.5/17.2ms，cachedSeek只有第11个样本111.5ms超预算。所有样本和原日志/manifest指纹保留于机器证据，未删除首个冷样本、增加预热、修改预算或脚本。
+
+代码核验：capture计时段执行 `BattleHistory.capturePrefix` 的digest/deepFreeze及 `SaveCoordinator.enqueue → fixedCapture → repository.commit` 的复制/冻结；cachedSeek执行检查点clone、`stepCombat`和read。两段均不调用本轮 `restoreMatch/validateMatchEquipment`；相关模块在R1前后字节不变。构造/完整导入可以调用历史恢复，但属于独立的firstSeek/completeImport计时段，它们均通过。
+
+在同机串行运行**原完整性能脚本**，精确源码分别为R1前 `0ece5b9` 和R1后 `20551f2`，共享相同依赖/Chromium 153.0.8010.12，不改变预算或工作负载。两个工作树的受跟踪源码无修改；原manifest准确记录了 `?? node_modules`（共享依赖符号链接），因此不能冒称工作区完全干净或用本地对照代替CI。
+
+| 指标 | R1前 | R1后 | 原门限 |
+| --- | ---: | ---: | ---: |
+| capture P95 | 77.7ms（失败） | 62.0ms（失败） | 50ms |
+| cachedSeek max | 62.4ms（通过） | 46.1ms（通过） | 100ms |
+| completeImport max | 11777.9ms | 11653.7ms | 30000ms |
+| firstSeek max | 1640.2ms | 1676.1ms | 2000ms |
+
+两版本完整脚本均因capture失败，**不能记为本地性能验收通过**。相同脚本指纹、浏览器、载荷尺寸（完整24803012B、增量2026215B、最大战斗记录1834558B）及除耗时外的五构筑摘要均一致。R1前已经复现capture超预算，且没有观察到R1使两项失败指标变慢；这些证据支持不是本轮历史校验新增的计算退化，不能证明所有负载和机器均无性能风险。依此保留原结果，对input-dev安排一次原配置复验；不靠循环重跑消除失败。
+
+重跑次数以实际job ID/起止时间为准：attempt2仅实际执行preview-cannon（job113687150359）；input-dev的attempt2记录只是继承首轮失败，并没有第二次执行。CLI泛化错误和已在运行时的403请求不算一次测试。堆作业结束后再针对input-dev做一次复验，分别登记每个作业实际执行次数；最终结果见后续补记。dev-cannon首轮堆为 **-592904B ≤1572864B**，listeners83→83/RAF1→1，原2次预热/30循环不变。
+
+最新进度补记：attempt2的preview-cannon唯一一次重跑已通过（job113687150359），堆211556B≤1048576B、listeners82→82/RAF1→1、原2次预热/30循环，干净20551f2且源码指纹97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0一致。首轮2029636B失败仍保留。attempt3仅实际重跑input-dev（job113691471754），这是该作业首次复验；其他已通过作业继承结果，未再次执行。该输入复验与最终比较尚未结束，不能提前宣称完整CI通过。本次进度提交只更新交接及机器证据，不改变20551f2的受测代码。
