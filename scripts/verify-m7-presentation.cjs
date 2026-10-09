@@ -137,9 +137,18 @@ async function firstBattle(browser, reduced) {
       await touch.page.locator('[data-debug="mobile:start-combat"]').tap();
       await touch.page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase === 'settlement', null, { timeout: 120000 });
       const box = await touch.page.locator('[data-debug="mobile:continue"]').boundingBox();
-      await touch.page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
-      await touch.page.waitForTimeout(40);
-      await touch.page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+      // Queue the second native touch without waiting for the first release acknowledgement.
+      // Driver round trips must not turn the intended 40ms burst into deliberate clicks.
+      const touchInput = await touch.context.newCDPSession(touch.page);
+      const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      try {
+        await touchInput.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+        const firstRelease = touchInput.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await new Promise(resolve => setTimeout(resolve, 40));
+        const secondPress = touchInput.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+        const secondRelease = touchInput.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await Promise.all([firstRelease, secondPress, secondRelease]);
+      } finally { await touchInput.detach(); }
       await touch.page.waitForTimeout(700);
       const touched = (await read(touch.page)).state;
       assert.notEqual(touched.phase, 'combat', 'double tap on 继续 must not start combat');

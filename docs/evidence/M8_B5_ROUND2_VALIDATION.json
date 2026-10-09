@@ -1,0 +1,2785 @@
+{
+  "audit": "M8 B5 round2 R1 and B5-M7-INPUT",
+  "fixCommit": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+  "scope": "R1 history-level bounds; existing equipment gameplay retained by user decision; R2 input driver already committed as 8e16da2",
+  "local": {
+    "targeted": {
+      "files": 5,
+      "tests": 70,
+      "passed": true
+    },
+    "build": {
+      "passed": true,
+      "logSha256": "0ab373b2b5f45eb5ca9f84a420926fedef23916ff5afe9e0977cd607a3eb7ef4"
+    },
+    "fullFirst": {
+      "passed": false,
+      "files": 99,
+      "passedFiles": 97,
+      "failedFiles": 2,
+      "tests": 1239,
+      "passedTests": 1233,
+      "failedTests": 6,
+      "durationSeconds": 726.89,
+      "logSha256": "b839f17a5e379343852b29a4021843e41c460ebd53edd9f147128c922c3451a6",
+      "failures": [
+        {
+          "file": "tests/m5-replay.test.ts",
+          "builds": [
+            "sniper",
+            "mage",
+            "sniper-caitlyn"
+          ],
+          "reason": "Test timed out in 180000ms"
+        },
+        {
+          "file": "tests/m6-integration.test.ts",
+          "builds": [
+            "sniper",
+            "mage",
+            "sniper-caitlyn"
+          ],
+          "reason": "Test timed out in 120000ms"
+        }
+      ]
+    },
+    "isolatedRecheck": {
+      "status": "completed",
+      "command": "npm test -- tests/m5-replay.test.ts tests/m6-integration.test.ts --maxWorkers=1",
+      "unchangedTimeouts": true,
+      "passed": true,
+      "files": 2,
+      "tests": 8,
+      "durationSeconds": 990.85,
+      "logSha256": "88a95dce4f4e1381e2154e7d66e7e8ef981e05bf97ce86e614a7d46b5087c51e"
+    }
+  },
+  "ci": {
+    "runId": 37887531022,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022",
+    "headSha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+    "status": "completed",
+    "snapshotBeforeReviewHandoff": {
+      "conclusion": "",
+      "jobs": [
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778342,
+          "name": "input-dev-sample1",
+          "startedAt": "2026-10-09T05:18:32Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Native input and normal-time touch route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778342"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778478,
+          "name": "test-and-build-sample1",
+          "startedAt": "2026-10-09T05:13:54Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs tests npm test",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs headless npm run test:headless",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Run M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance",
+              "number": 8,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 9,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 17,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 18,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778478"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778488,
+          "name": "browser-preview-mage-sample1",
+          "startedAt": "2026-10-09T05:19:50Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778488"
+        },
+        {
+          "completedAt": "2026-10-09T05:21:55Z",
+          "conclusion": "success",
+          "databaseId": 113680778530,
+          "name": "m6-retention",
+          "startedAt": "2026-10-09T05:14:53Z",
+          "status": "completed",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Independent native resources through the real application",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 13,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 14,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 15,
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778530"
+        },
+        {
+          "completedAt": "2026-10-09T05:21:33Z",
+          "conclusion": "success",
+          "databaseId": 113680778554,
+          "name": "m7-presentation-sample1",
+          "startedAt": "2026-10-09T05:13:42Z",
+          "status": "completed",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Signed-off M6 interaction and M7 JS budget builds",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "M7 presentation, five viewports, sub-path deploy and budgets",
+              "number": 8,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 9,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 17,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 18,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 19,
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778554"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778585,
+          "name": "input-preview-sample1",
+          "startedAt": "2026-10-09T05:14:59Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Native input and normal-time touch route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778585"
+        },
+        {
+          "completedAt": "2026-10-09T05:18:30Z",
+          "conclusion": "failure",
+          "databaseId": 113680778586,
+          "name": "browser-preview-cannon-sample1",
+          "startedAt": "2026-10-09T05:13:33Z",
+          "status": "completed",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "failure",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "completed"
+            },
+            {
+              "conclusion": "skipped",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 17,
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778586"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778696,
+          "name": "browser-preview-sniper-sample1",
+          "startedAt": "2026-10-09T05:15:09Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778696"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778703,
+          "name": "browser-dev-mage-sample1",
+          "startedAt": "2026-10-09T05:15:38Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778703"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778731,
+          "name": "browser-dev-cannon-sample1",
+          "startedAt": "2026-10-09T05:15:46Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778731"
+        },
+        {
+          "completedAt": "0001-01-01T00:00:00Z",
+          "conclusion": "",
+          "databaseId": 113680778789,
+          "name": "browser-dev-sniper-sample1",
+          "startedAt": "2026-10-09T05:16:13Z",
+          "status": "in_progress",
+          "steps": [
+            {
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 2,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run actions/setup-node@v4",
+              "number": 3,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs install npm ci",
+              "number": 4,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium",
+              "number": 5,
+              "status": "completed"
+            },
+            {
+              "conclusion": "success",
+              "name": "Run node scripts/ci-m5-step.cjs build npm run build",
+              "number": 6,
+              "status": "completed"
+            },
+            {
+              "conclusion": "",
+              "name": "Normal-time complete route",
+              "number": 7,
+              "status": "in_progress"
+            },
+            {
+              "conclusion": "",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 8,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/setup-node@v4",
+              "number": 15,
+              "status": "pending"
+            },
+            {
+              "conclusion": "",
+              "name": "Post Run actions/checkout@v4",
+              "number": 16,
+              "status": "pending"
+            }
+          ],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778789"
+        },
+        {
+          "completedAt": "2026-10-09T05:13:15Z",
+          "conclusion": "skipped",
+          "databaseId": 113680779691,
+          "name": "heap-diagnostics",
+          "startedAt": "2026-10-09T05:13:16Z",
+          "status": "completed",
+          "steps": [],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680779691"
+        },
+        {
+          "completedAt": "2026-10-09T05:13:15Z",
+          "conclusion": "skipped",
+          "databaseId": 113680779874,
+          "name": "warmup-experiment",
+          "startedAt": "2026-10-09T05:13:16Z",
+          "status": "completed",
+          "steps": [],
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680779874"
+        }
+      ],
+      "status": "in_progress"
+    },
+    "note": "Early snapshot retained as history; latest finalRun/finalJobs/finalComparisons govern final result. All required jobs success on exact fix SHA; later commits are docs only.",
+    "testAndBuild": {
+      "jobId": 113680778478,
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778478",
+      "passed": true,
+      "files": 99,
+      "tests": 1239,
+      "testDurationSeconds": 551.79,
+      "typecheck": true,
+      "build": true,
+      "headless": true,
+      "repeatPerformance": true,
+      "logSha256": "e3e40cedda81d25111020c7ead1c2dd8ab2ac6c4132ec54b231344bbd3cf333b"
+    },
+    "m7": {
+      "jobId": 113680778554,
+      "passed": true,
+      "checks": 7,
+      "subpath": "/cat/",
+      "jsGzipBytes": {
+        "base": 424763,
+        "current": 473392
+      },
+      "jsRatio": 1.114485018704548,
+      "jsBudget": 1.15,
+      "interactiveMedianMs": {
+        "base": 683,
+        "current": 734
+      },
+      "interactiveRatio": 1.0746705710102489,
+      "interactiveBudget": 1.2,
+      "logSha256": "e38136b381180be38a174b7ba4658f0c4be5d065ebfff536cb36c8318b4f2dcb"
+    },
+    "firstAttempt": {
+      "status": "completed",
+      "conclusion": "failure",
+      "jobs": [
+        {
+          "id": 113680778342,
+          "name": "input-dev-sample1",
+          "conclusion": "failure"
+        },
+        {
+          "id": 113680778478,
+          "name": "test-and-build-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778488,
+          "name": "browser-preview-mage-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778530,
+          "name": "m6-retention",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778554,
+          "name": "m7-presentation-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778585,
+          "name": "input-preview-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778586,
+          "name": "browser-preview-cannon-sample1",
+          "conclusion": "failure"
+        },
+        {
+          "id": 113680778696,
+          "name": "browser-preview-sniper-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778703,
+          "name": "browser-dev-mage-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778731,
+          "name": "browser-dev-cannon-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680778789,
+          "name": "browser-dev-sniper-sample1",
+          "conclusion": "success"
+        },
+        {
+          "id": 113680779691,
+          "name": "heap-diagnostics",
+          "conclusion": "skipped"
+        },
+        {
+          "id": 113680779874,
+          "name": "warmup-experiment",
+          "conclusion": "skipped"
+        },
+        {
+          "id": 113686660367,
+          "name": "compare-evidence-sample${{ matrix.sample }}",
+          "conclusion": "skipped"
+        }
+      ]
+    },
+    "retryClarification": "Attempt1:9 required success,2 failed,comparison skipped. Attempt2 actually reran only preview-cannon once, success211556B. Attempt3 actually reran only input-dev once, success capture24.3ms/cachedSeek39.3ms and all later checks, then final comparison success. Carried-forward job records have copied timestamps; no repeated retry of either failing job. No code/config/budget changes.",
+    "conclusion": "success",
+    "runNumber": 124,
+    "finalAttempt": 3,
+    "requiredJobsPassed": 12,
+    "optionalJobsSkipped": 2,
+    "finalRun": {
+      "conclusion": "success",
+      "event": "workflow_dispatch",
+      "head_sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+      "html_url": "https://github.com/catfish-xn/cat/actions/runs/37887531022",
+      "id": 37887531022,
+      "run_attempt": 3,
+      "run_number": 124,
+      "status": "completed"
+    },
+    "finalJobs": [
+      {
+        "id": 113691471754,
+        "name": "input-dev-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691471754"
+      },
+      {
+        "id": 113691472490,
+        "name": "heap-diagnostics",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691472490"
+      },
+      {
+        "id": 113691472745,
+        "name": "warmup-experiment",
+        "status": "completed",
+        "conclusion": "skipped",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691472745"
+      },
+      {
+        "id": 113691473397,
+        "name": "test-and-build-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691473397"
+      },
+      {
+        "id": 113691473669,
+        "name": "browser-preview-mage-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691473669"
+      },
+      {
+        "id": 113691473980,
+        "name": "browser-preview-sniper-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691473980"
+      },
+      {
+        "id": 113691474579,
+        "name": "browser-dev-sniper-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691474579"
+      },
+      {
+        "id": 113691498570,
+        "name": "browser-dev-cannon-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691498570"
+      },
+      {
+        "id": 113691501807,
+        "name": "browser-dev-mage-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691501807"
+      },
+      {
+        "id": 113691502503,
+        "name": "m7-presentation-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691502503"
+      },
+      {
+        "id": 113691511510,
+        "name": "input-preview-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691511510"
+      },
+      {
+        "id": 113691512945,
+        "name": "browser-preview-cannon-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691512945"
+      },
+      {
+        "id": 113691513741,
+        "name": "m6-retention",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691513741"
+      },
+      {
+        "id": 113696499088,
+        "name": "compare-evidence-sample1",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113696499088"
+      }
+    ],
+    "finalComparisons": {
+      "m5": [
+        {
+          "build": "cannon",
+          "evidenceClass": "final-clean-commit",
+          "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+          "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "checkpoints": 182,
+          "rounds": 30,
+          "finalHash": "a7b2c48bb9c8dee310602ff0c8c1c063f52b27a274714db10a3440c4ce45d34c",
+          "passed": true
+        },
+        {
+          "build": "sniper",
+          "evidenceClass": "final-clean-commit",
+          "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+          "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "checkpoints": 178,
+          "rounds": 30,
+          "finalHash": "44986b4e1e447dca5928dfc3fb27c5ff19d8b8c6353119f616ec4dad76948394",
+          "passed": true
+        },
+        {
+          "build": "mage",
+          "evidenceClass": "final-clean-commit",
+          "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+          "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "checkpoints": 172,
+          "rounds": 30,
+          "finalHash": "a91abab0f89e4fae83cbff0ec02d8e483dc34aa1cbc8893241be2e83cdd0cea3",
+          "passed": true
+        }
+      ],
+      "m6": {
+        "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+        "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+        "records": [
+          {
+            "folder": "m5-dev-cannon",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "dbbb18b42cb6989c3a3e0a520b28c922f524e3837b2390891f18684b8c91cf33",
+            "passed": true
+          },
+          {
+            "folder": "m5-input-dev",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "c6df980ca82dd33ad3cfa19c61fb70d709fa788899a246a4e882e84a3172338e",
+            "passed": true
+          },
+          {
+            "folder": "m6-layout-dev",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "5d68d03ea0d32466be8ed75b8cab875d6ab5ee1c070f1569dec08a7799cc3e43",
+            "passed": true
+          },
+          {
+            "folder": "m5-preview-cannon",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "f928fac98f1b6f3d113a06794e91f52b984664000dcb3c07c52ddc2b7d2fd70e",
+            "passed": true
+          },
+          {
+            "folder": "m5-input-preview",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "c6a327c6d2992aeb3df9acfec4388cbcc5cd006f35b941a2bb688430cc893d71",
+            "passed": true
+          },
+          {
+            "folder": "m6-layout-preview",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "42057f3523029116d70d5b0abe1e8d86a73257b9ac127eababbe4044eaca993e",
+            "passed": true
+          },
+          {
+            "folder": "m6-storage",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "829c34bc49aa254e43e64c2a45495e03f7e29e8743efd5aa571df77a1156fe80",
+            "passed": true
+          },
+          {
+            "folder": "m6-application-failures",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "2f19b5bc83e2369bda97ac136a846675bddb9f24bd244a76b991fc956c6b8701",
+            "passed": true
+          },
+          {
+            "folder": "m6-performance",
+            "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+            "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+            "manifestHash": "f7ea58afbba3c354af65d6caa7f8261707d2cb21a4040cafc36e5f1db3bcf6b2",
+            "passed": true
+          }
+        ],
+        "passed": true
+      },
+      "validation": {
+        "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+        "dirty": "",
+        "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+        "runId": "37887531022",
+        "passed": true
+      },
+      "allRecordedCommandsSuccessful": true,
+      "fileSha256": {
+        "m5-cross-mode-comparison.json": "f9955b7585cc1fe913966a3a2e43cfe79f4b59d89971422a28d777300138bbb0",
+        "M6_VALIDATION.md": "b3a4ff075d928bf1265b0b30ec0e33050b5d1c4c41ebfe71379bee5adead9169",
+        "m6-final-comparison.json": "c4c5da6e27ffd84c7cbc7de0a09db153cac715a8e050496efa1aab7f9c851bc5",
+        "M6_REVIEW.md": "c9b21057d7e1ca39a0e8c81f7c6200918421784f872fdf66cd2c4df97d7a670e",
+        "m6-validation.json": "8f4e2ad67de4cb13f88951d648f5b64bc8cde9d02818eff3fad6676507aa3401"
+      }
+    }
+  },
+  "heapFirstFailure": {
+    "jobId": 113680778586,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778586",
+    "artifactId": 11597381206,
+    "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37887531022/artifacts/11597381206",
+    "artifactArchiveSha256": "bb1d3ec79d8510c1d4550feea351051c4be2ecfdb19f631608185838d19723b2",
+    "logSha256": "853e9867ff8153eb0f28c305741064a659736188601c526af4351abdfa1ddb24",
+    "lifecycleSha256": "78a3c10626f56d92596d36f69c05c7540953972bab8c81ae1fff1b78c00a675d",
+    "manifest": {
+      "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+      "status": "",
+      "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+      "node": "v22.23.3",
+      "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+      "cpuCount": 4,
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25"
+    },
+    "measurement": {
+      "heapDiagnostics": false,
+      "warmupExperiment": false,
+      "warmupCycles": 2,
+      "cycles": 30,
+      "heapCeilingBytes": 1048576,
+      "beforeHeap": {
+        "usedSize": 14359660,
+        "totalSize": 17948672,
+        "embedderHeapUsedSize": 7620416,
+        "backingStorageSize": 6319846
+      },
+      "afterHeap": {
+        "usedSize": 16389296,
+        "totalSize": 19783680,
+        "embedderHeapUsedSize": 8217048,
+        "backingStorageSize": 6319783
+      },
+      "heapDelta": 2029636,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      }
+    },
+    "resourceValuesAcrossAll30Cycles": {
+      "listeners": [
+        82
+      ],
+      "pendingRaf": [
+        1
+      ]
+    },
+    "activeRolls": 0,
+    "archivedRollCounts": [
+      0,
+      0,
+      0
+    ],
+    "lifecycleValuesAcrossAll30Cycles": [
+      {
+        "applications": 1,
+        "observers": 1,
+        "sessions": 1
+      }
+    ],
+    "retryRationale": "No added persistent state/references in R1; new per-roll bounds branch never executes in this zero-roll lifecycle fixture; retained native/app owners remain constant. Keep failed first measurement. One unchanged retry under user authorization, no threshold/warmup/CI changes. This is not proof of absence of leaks at all workloads.",
+    "earlyRetryRequest": {
+      "started": false,
+      "httpStatus": 403,
+      "reason": "The workflow run containing this job is already running"
+    }
+  },
+  "performanceFirstFailure": {
+    "jobId": 113680778342,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113680778342",
+    "inputCasesPassed": 100,
+    "normalTimeTouchRoutePassed": true,
+    "viewportChecksPassed": true,
+    "storageChecksPassed": 33,
+    "componentChecksPassed": 17,
+    "report": {
+      "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+      "dirty": "",
+      "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+      "scriptHash": "a10764d1b37950e202b71d2e94ca07bf5694cc77abc7b41d8e5ddd28aee244ca",
+      "node": "v22.23.3",
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "cpuCount": 4,
+      "memoryBytes": 16765378560,
+      "loadAtStart": [
+        3.58,
+        3.84,
+        2.64
+      ],
+      "startedAt": "2026-10-09T05:34:27.956Z",
+      "passed": false,
+      "method": "Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 9-player/8-enemy/15-equipment policy. Module lifecycle is separate from E full application/Phaser lifecycle.",
+      "fullLoadCoverage": [
+        {
+          "round": 33,
+          "players": 9,
+          "enemies": 8,
+          "equipped": 15
+        },
+        {
+          "round": 34,
+          "players": 9,
+          "enemies": 8,
+          "equipped": 15
+        },
+        {
+          "round": 35,
+          "players": 9,
+          "enemies": 1,
+          "equipped": 15
+        }
+      ],
+      "routes": [
+        {
+          "build": "cannon",
+          "bytes": 17276627,
+          "incrementalBytes": 1124389,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.4818089999998847,
+              "p95": 1.0047780000004423,
+              "p99": 1.5871319999996558,
+              "max": 6.094617999999969
+            },
+            "build": "cannon",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 86,
+            "gold": 218,
+            "formedAt": 20,
+            "formedBattles": 14,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 8167,
+            "commands": 182,
+            "durationSeconds": 11.096
+          }
+        },
+        {
+          "build": "sniper",
+          "bytes": 24803012,
+          "incrementalBytes": 2026215,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.49238100000002305,
+              "p95": 0.8402189999978873,
+              "p99": 1.5027750000008382,
+              "max": 26.68944300000294
+            },
+            "build": "sniper",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 82,
+            "gold": 214,
+            "formedAt": 19,
+            "formedBattles": 15,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 11832,
+            "commands": 178,
+            "durationSeconds": 15.723
+          }
+        },
+        {
+          "build": "mage",
+          "bytes": 21715734,
+          "incrementalBytes": 1674150,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.4448630000006233,
+              "p95": 0.7946960000044783,
+              "p99": 1.567533999994339,
+              "max": 2.4796629999982542
+            },
+            "build": "mage",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 62,
+            "gold": 237,
+            "formedAt": 19,
+            "formedBattles": 15,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 11859,
+            "commands": 172,
+            "durationSeconds": 14.563
+          }
+        },
+        {
+          "build": "sniper-caitlyn",
+          "bytes": 24253152,
+          "incrementalBytes": 1952282,
+          "summary": {
+            "caitlynBattles": 12,
+            "caitlynCasts": 23,
+            "tickTimingMs": {
+              "p50": 0.4867679999952088,
+              "p95": 0.846149000004516,
+              "p99": 1.787692000005336,
+              "max": 3.054928999998083
+            },
+            "build": "sniper-caitlyn",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 100,
+            "gold": 218,
+            "formedAt": 19,
+            "formedBattles": 3,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 11428,
+            "commands": 182,
+            "durationSeconds": 15.235
+          }
+        },
+        {
+          "build": "full-load",
+          "bytes": 19195236,
+          "incrementalBytes": 1248875,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.47964199999842094,
+              "p95": 0.9754729999986012,
+              "p99": 1.8937689999947906,
+              "max": 2.629594999998517
+            },
+            "build": "cannon",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 85,
+            "gold": 131,
+            "formedAt": null,
+            "formedBattles": 0,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 10259,
+            "commands": 206,
+            "durationSeconds": 13.826
+          }
+        }
+      ],
+      "routeGenerationMs": 71728.67374299999,
+      "payload": {
+        "completeBytes": 24803012,
+        "incrementalBytes": 2026215,
+        "incrementalCombatId": "round-34",
+        "incrementalEvents": 3469,
+        "largestRecordBytes": 1834558,
+        "largestRecordCombatId": "round-34"
+      },
+      "browser": "153.0.8010.12",
+      "errors": [],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              81.4000000001397,
+              43.800000000046566,
+              52.300000000046566,
+              20.399999999906868,
+              17.899999999906868,
+              17.300000000046566,
+              18.199999999953434,
+              16.800000000046566,
+              16.799999999813735,
+              17.100000000093132,
+              18.5,
+              17.199999999953434
+            ],
+            "p95": 81.4000000001397,
+            "max": 81.4000000001397
+          },
+          "write": {
+            "samples": [
+              16.100000000093132,
+              30.399999999906868,
+              27.600000000093132,
+              10.199999999953434,
+              9,
+              9.699999999953434,
+              9.5,
+              8.900000000139698,
+              9.899999999906868,
+              8.599999999860302,
+              9.400000000139698,
+              9.800000000046566
+            ],
+            "p95": 30.399999999906868,
+            "max": 30.399999999906868
+          },
+          "fullCapture": {
+            "samples": [
+              89.5,
+              107.80000000004657,
+              91.80000000004657,
+              90.5,
+              92.0999999998603,
+              92.9000000001397,
+              93.0999999998603,
+              92.70000000018626,
+              94.29999999981374,
+              92.5,
+              93.4000000001397,
+              91.30000000004657
+            ],
+            "p95": 107.80000000004657,
+            "max": 107.80000000004657
+          },
+          "activation": {
+            "samples": [
+              276.0999999998603,
+              403.5,
+              278.80000000004657,
+              238.5,
+              186.9000000001397,
+              183.69999999995343,
+              190,
+              180.19999999995343,
+              206,
+              184.89999999990687,
+              181.70000000018626,
+              191.79999999981374
+            ],
+            "p95": 403.5,
+            "max": 403.5
+          },
+          "completeImport": {
+            "samples": [
+              5916.5,
+              5863.5,
+              5981.59999999986
+            ],
+            "p95": 5981.59999999986,
+            "max": 5981.59999999986
+          },
+          "firstSeek": {
+            "samples": [
+              914.9000000001397,
+              905.8000000000466,
+              950.3999999999069
+            ],
+            "p95": 950.3999999999069,
+            "max": 950.3999999999069
+          },
+          "cachedSeek": {
+            "samples": [
+              5,
+              21.699999999953434,
+              24.699999999953434,
+              27.100000000093132,
+              19.800000000046566,
+              21.199999999953434,
+              25.300000000046566,
+              3.1000000000931323,
+              14.600000000093132,
+              21.699999999953434,
+              111.5,
+              27
+            ],
+            "p95": 111.5,
+            "max": 111.5
+          },
+          "statsBatch": {
+            "samples": [
+              0.30000000004656613,
+              0.09999999986030161,
+              0.20000000018626451,
+              0,
+              0.09999999986030161,
+              0.10000000009313226,
+              0.09999999986030161,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0.09999999986030161,
+              0,
+              0.10000000009313226,
+              0
+            ],
+            "p95": 0.30000000004656613,
+            "max": 0.30000000004656613
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 81.4000000001397,
+            "ceiling": 50,
+            "passed": false
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 30.399999999906868,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 107.80000000004657,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 403.5,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 5981.59999999986,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 950.3999999999069,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 111.5,
+            "ceiling": 100,
+            "passed": false
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.30000000004656613,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "fullLoadRoundTrip": {
+          "milliseconds": 5617.200000000186,
+          "verified": true,
+          "battles": 30
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 30,
+        "incrementalBattleCount": 28,
+        "completedHistoryWrittenOnIncrementalSave": 0,
+        "method": "capture includes actual capturePrefix digest/deepFreeze plus synchronous enqueue/repository cloning; write spans coordinator saving through transaction-complete saved; complete import includes actual file validation, candidate construction and activation"
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 5889828,
+          "totalSize": 7077888,
+          "embedderHeapUsedSize": 573712,
+          "backingStorageSize": 2002230
+        },
+        "after": {
+          "usedSize": 6083132,
+          "totalSize": 7077888,
+          "embedderHeapUsedSize": 817808,
+          "backingStorageSize": 2002230
+        },
+        "heapDeltaBytes": 193304,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "failure": "AssertionError [ERR_ASSERTION]: Frozen performance budget exceeded: [{\"name\":\"capture\",\"metric\":\"p95\",\"actual\":81.4000000001397,\"ceiling\":50,\"passed\":false},{\"name\":\"cachedSeek\",\"metric\":\"max\",\"actual\":111.5,\"ceiling\":100,\"passed\":false}]\n\n2 !== 0\n\n    at /home/runner/work/cat/cat/scripts/verify-m6-performance.cjs:123:72",
+      "endedAt": "2026-10-09T05:36:37.368Z",
+      "durationMs": 129462.358306,
+      "finalSourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+      "peakProcessRssBytes": 1773404160,
+      "loadAtEnd": [
+        1.5,
+        2.91,
+        2.45
+      ]
+    },
+    "reportSha256": "7b3ae635aa879d0a1c3c2cdbc1729c0d0f6b9606e3b1b3d65d94f44c91a76e9d",
+    "callPath": "capturePrefix -> digest/deepFreeze plus coordinator.enqueue -> fixedCapture (structuredClone/freeze) -> repository.commit; cachedSeek -> checkpoint clone/stepCombat/read. Neither timed segment calls restoreMatch/validateMatchEquipment; all these measured modules and generated legal state are unchanged by R1.",
+    "retry": "Exactly one unchanged failed-job retry after retaining first evidence; before-R1 original script also reproduced capture 77.7ms >50. After-R1 controlled measurement still running. No threshold/CI/test change."
+  },
+  "performanceControlledComparison": {
+    "method": "One sequential before/after original full script on same host/dependencies/browser; retained both failures, no extra warmup, no altered budgets. Exact tracked source clean; metadata correctly shows untracked shared node_modules symlink, not a fully clean worktree.",
+    "samples": [
+      {
+        "label": "before",
+        "report": {
+          "sha": "0ece5b914c67bf47a3c2e5dad8390b43b441b952",
+          "dirty": "?? node_modules",
+          "sourceFingerprint": "008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07",
+          "scriptHash": "a10764d1b37950e202b71d2e94ca07bf5694cc77abc7b41d8e5ddd28aee244ca",
+          "node": "v24.21.0",
+          "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+          "cpuCount": 4,
+          "memoryBytes": 8322404352,
+          "loadAtStart": [
+            0.51,
+            0.86,
+            1.57
+          ],
+          "startedAt": "2026-10-09T05:40:41.603Z",
+          "passed": false,
+          "method": "Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 9-player/8-enemy/15-equipment policy. Module lifecycle is separate from E full application/Phaser lifecycle.",
+          "fullLoadCoverage": [
+            {
+              "round": 33,
+              "players": 9,
+              "enemies": 8,
+              "equipped": 15
+            },
+            {
+              "round": 34,
+              "players": 9,
+              "enemies": 8,
+              "equipped": 15
+            },
+            {
+              "round": 35,
+              "players": 9,
+              "enemies": 1,
+              "equipped": 15
+            }
+          ],
+          "routes": [
+            {
+              "build": "cannon",
+              "bytes": 17276627,
+              "incrementalBytes": 1124389,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.8523150000000896,
+                  "p95": 1.833972000000358,
+                  "p99": 3.10364299999992,
+                  "max": 16.636755999999878
+                },
+                "build": "cannon",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 86,
+                "gold": 218,
+                "formedAt": 20,
+                "formedBattles": 14,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 8167,
+                "commands": 182,
+                "durationSeconds": 19.328
+              }
+            },
+            {
+              "build": "sniper",
+              "bytes": 24803012,
+              "incrementalBytes": 2026215,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.9338879999995697,
+                  "p95": 1.7549160000016855,
+                  "p99": 2.4823600000017905,
+                  "max": 16.166621000000305
+                },
+                "build": "sniper",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 82,
+                "gold": 214,
+                "formedAt": 19,
+                "formedBattles": 15,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 11832,
+                "commands": 178,
+                "durationSeconds": 28.476
+              }
+            },
+            {
+              "build": "mage",
+              "bytes": 21715734,
+              "incrementalBytes": 1674150,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.8668439999964903,
+                  "p95": 1.6292090000060853,
+                  "p99": 2.380678000001353,
+                  "max": 9.545905000006314
+                },
+                "build": "mage",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 62,
+                "gold": 237,
+                "formedAt": 19,
+                "formedBattles": 15,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 11859,
+                "commands": 172,
+                "durationSeconds": 26.637
+              }
+            },
+            {
+              "build": "sniper-caitlyn",
+              "bytes": 24253152,
+              "incrementalBytes": 1952282,
+              "summary": {
+                "caitlynBattles": 12,
+                "caitlynCasts": 23,
+                "tickTimingMs": {
+                  "p50": 0.8810930000036024,
+                  "p95": 1.7194430000090506,
+                  "p99": 2.5820959999982733,
+                  "max": 11.941111000007368
+                },
+                "build": "sniper-caitlyn",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 100,
+                "gold": 218,
+                "formedAt": 19,
+                "formedBattles": 3,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 11428,
+                "commands": 182,
+                "durationSeconds": 27.053
+              }
+            },
+            {
+              "build": "full-load",
+              "bytes": 19195236,
+              "incrementalBytes": 1248875,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.8551129999978002,
+                  "p95": 1.7836969999916619,
+                  "p99": 2.5318180000031134,
+                  "max": 7.869216000006418
+                },
+                "build": "cannon",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 85,
+                "gold": 131,
+                "formedAt": null,
+                "formedBattles": 0,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 10259,
+                "commands": 206,
+                "durationSeconds": 23.698
+              }
+            }
+          ],
+          "routeGenerationMs": 128088.73832100001,
+          "payload": {
+            "completeBytes": 24803012,
+            "incrementalBytes": 2026215,
+            "incrementalCombatId": "round-34",
+            "incrementalEvents": 3469,
+            "largestRecordBytes": 1834558,
+            "largestRecordCombatId": "round-34"
+          },
+          "browser": "153.0.8010.12",
+          "errors": [],
+          "measurements": {
+            "summary": {
+              "capture": {
+                "samples": [
+                  77.69999992847443,
+                  31.100000023841858,
+                  31.09999990463257,
+                  34.60000002384186,
+                  44.5,
+                  33.799999952316284,
+                  36.800000071525574,
+                  36.700000047683716,
+                  34.800000071525574,
+                  48.89999997615814,
+                  55,
+                  51.60000002384186
+                ],
+                "p95": 77.69999992847443,
+                "max": 77.69999992847443
+              },
+              "write": {
+                "samples": [
+                  26.299999952316284,
+                  27.899999976158142,
+                  19.199999928474426,
+                  22.100000023841858,
+                  24.299999952316284,
+                  21.59999990463257,
+                  25.699999928474426,
+                  23.700000047683716,
+                  21.899999976158142,
+                  27.299999952316284,
+                  31.299999952316284,
+                  27.699999928474426
+                ],
+                "p95": 31.299999952316284,
+                "max": 31.299999952316284
+              },
+              "fullCapture": {
+                "samples": [
+                  330.7999999523163,
+                  279.2000000476837,
+                  359.5,
+                  329.5,
+                  238.29999995231628,
+                  242.10000002384186,
+                  232.79999995231628,
+                  224.20000004768372,
+                  238.10000002384186,
+                  270.09999990463257,
+                  248.30000007152557,
+                  228.89999997615814
+                ],
+                "p95": 359.5,
+                "max": 359.5
+              },
+              "activation": {
+                "samples": [
+                  488.5,
+                  448.5,
+                  523.1000000238419,
+                  469.39999997615814,
+                  363.2999999523163,
+                  407,
+                  464.2999999523163,
+                  387.10000002384186,
+                  429,
+                  403.5,
+                  424.39999997615814,
+                  425
+                ],
+                "p95": 523.1000000238419,
+                "max": 523.1000000238419
+              },
+              "completeImport": {
+                "samples": [
+                  11478.099999904633,
+                  11777.899999976158,
+                  11255.699999928474
+                ],
+                "p95": 11777.899999976158,
+                "max": 11777.899999976158
+              },
+              "firstSeek": {
+                "samples": [
+                  1611.3999999761581,
+                  1640.1999999284744,
+                  1592.7000000476837
+                ],
+                "p95": 1640.1999999284744,
+                "max": 1640.1999999284744
+              },
+              "cachedSeek": {
+                "samples": [
+                  6.099999904632568,
+                  37.39999997615814,
+                  32.40000009536743,
+                  41.199999928474426,
+                  35.200000047683716,
+                  44.89999997615814,
+                  62.39999997615814,
+                  2.899999976158142,
+                  11,
+                  18,
+                  28.200000047683716,
+                  32.799999952316284
+                ],
+                "p95": 62.39999997615814,
+                "max": 62.39999997615814
+              },
+              "statsBatch": {
+                "samples": [
+                  0.19999992847442627,
+                  0.20000004768371582,
+                  0.19999992847442627,
+                  0,
+                  0,
+                  0.20000004768371582,
+                  0.10000002384185791,
+                  0,
+                  0.09999990463256836,
+                  0,
+                  0.10000002384185791,
+                  0.10000002384185791,
+                  0,
+                  0.10000002384185791,
+                  0.10000002384185791,
+                  0
+                ],
+                "p95": 0.20000004768371582,
+                "max": 0.20000004768371582
+              }
+            },
+            "gates": [
+              {
+                "name": "capture",
+                "metric": "p95",
+                "actual": 77.69999992847443,
+                "ceiling": 50,
+                "passed": false
+              },
+              {
+                "name": "write",
+                "metric": "p95",
+                "actual": 31.299999952316284,
+                "ceiling": 250,
+                "passed": true
+              },
+              {
+                "name": "fullCapture",
+                "metric": "p95",
+                "actual": 359.5,
+                "ceiling": 500,
+                "passed": true
+              },
+              {
+                "name": "activation",
+                "metric": "max",
+                "actual": 523.1000000238419,
+                "ceiling": 1000,
+                "passed": true
+              },
+              {
+                "name": "completeImport",
+                "metric": "max",
+                "actual": 11777.899999976158,
+                "ceiling": 30000,
+                "passed": true
+              },
+              {
+                "name": "firstSeek",
+                "metric": "max",
+                "actual": 1640.1999999284744,
+                "ceiling": 2000,
+                "passed": true
+              },
+              {
+                "name": "cachedSeek",
+                "metric": "max",
+                "actual": 62.39999997615814,
+                "ceiling": 100,
+                "passed": true
+              },
+              {
+                "name": "statsBatch",
+                "metric": "max",
+                "actual": 0.20000004768371582,
+                "ceiling": 5,
+                "passed": true
+              }
+            ],
+            "fullLoadRoundTrip": {
+              "milliseconds": 10815.300000071526,
+              "verified": true,
+              "battles": 30
+            },
+            "limits": {
+              "incrementalCaptureP95": 50,
+              "incrementalWriteP95": 250,
+              "fullCaptureP95": 500,
+              "activationWriteP95": 1000,
+              "completeImport": 30000,
+              "firstSeek": 2000,
+              "cachedSeek": 100,
+              "stats40TickBatch": 5
+            },
+            "completeBattleCount": 30,
+            "incrementalBattleCount": 28,
+            "completedHistoryWrittenOnIncrementalSave": 0,
+            "method": "capture includes actual capturePrefix digest/deepFreeze plus synchronous enqueue/repository cloning; write spans coordinator saving through transaction-complete saved; complete import includes actual file validation, candidate construction and activation"
+          },
+          "lifecycle": {
+            "cycles": 30,
+            "extraListeners": 0,
+            "remainingComponentRoots": 0,
+            "before": {
+              "usedSize": 5900668,
+              "totalSize": 6815744,
+              "embedderHeapUsedSize": 598320,
+              "backingStorageSize": 2000657
+            },
+            "after": {
+              "usedSize": 6090504,
+              "totalSize": 7602176,
+              "embedderHeapUsedSize": 593392,
+              "backingStorageSize": 2000657
+            },
+            "heapDeltaBytes": 189836,
+            "maxHeapGrowthBytes": 1048576,
+            "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+          },
+          "failure": "AssertionError [ERR_ASSERTION]: Frozen performance budget exceeded: [{\"name\":\"capture\",\"metric\":\"p95\",\"actual\":77.69999992847443,\"ceiling\":50,\"passed\":false}]\n\n1 !== 0\n\n    at /tmp/m8-b5-round2-perf-before/scripts/verify-m6-performance.cjs:123:72",
+          "endedAt": "2026-10-09T05:44:42.441Z",
+          "durationMs": 241012.97452,
+          "finalSourceFingerprint": "008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07",
+          "peakProcessRssBytes": 1740554240,
+          "loadAtEnd": [
+            2.3,
+            1.52,
+            1.66
+          ]
+        },
+        "manifestSha256": "b2095587fff7b95a3c3bb61acaa402341b84823446953ed818d1c0cacba4923f",
+        "trackedSourceUnmodified": true,
+        "untrackedDependencyLink": "node_modules -> /root/projects/hex-autobattler/node_modules",
+        "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f"
+      },
+      {
+        "label": "after",
+        "report": {
+          "sha": "20551f26fa738f090898a29360435ab1fdb1e8c5",
+          "dirty": "?? node_modules",
+          "sourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "scriptHash": "a10764d1b37950e202b71d2e94ca07bf5694cc77abc7b41d8e5ddd28aee244ca",
+          "node": "v24.21.0",
+          "cpu": "Intel Xeon Processor (Skylake, IBRS)",
+          "cpuCount": 4,
+          "memoryBytes": 8322404352,
+          "loadAtStart": [
+            2.3,
+            1.52,
+            1.66
+          ],
+          "startedAt": "2026-10-09T05:44:43.763Z",
+          "passed": false,
+          "method": "Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 9-player/8-enemy/15-equipment policy. Module lifecycle is separate from E full application/Phaser lifecycle.",
+          "fullLoadCoverage": [
+            {
+              "round": 33,
+              "players": 9,
+              "enemies": 8,
+              "equipped": 15
+            },
+            {
+              "round": 34,
+              "players": 9,
+              "enemies": 8,
+              "equipped": 15
+            },
+            {
+              "round": 35,
+              "players": 9,
+              "enemies": 1,
+              "equipped": 15
+            }
+          ],
+          "routes": [
+            {
+              "build": "cannon",
+              "bytes": 17276627,
+              "incrementalBytes": 1124389,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.8386350000000675,
+                  "p95": 1.743758999997226,
+                  "p99": 2.524846999996953,
+                  "max": 12.594894000000295
+                },
+                "build": "cannon",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 86,
+                "gold": 218,
+                "formedAt": 20,
+                "formedBattles": 14,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 8167,
+                "commands": 182,
+                "durationSeconds": 18.716
+              }
+            },
+            {
+              "build": "sniper",
+              "bytes": 24803012,
+              "incrementalBytes": 2026215,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.9338980000029551,
+                  "p95": 1.7138689999992494,
+                  "p99": 2.4142219999994268,
+                  "max": 8.40731699999742
+                },
+                "build": "sniper",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 82,
+                "gold": 214,
+                "formedAt": 19,
+                "formedBattles": 15,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 11832,
+                "commands": 178,
+                "durationSeconds": 28.192
+              }
+            },
+            {
+              "build": "mage",
+              "bytes": 21715734,
+              "incrementalBytes": 1674150,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.8947879999977886,
+                  "p95": 1.6702899999945657,
+                  "p99": 2.607540999997582,
+                  "max": 11.264609999998356
+                },
+                "build": "mage",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 62,
+                "gold": 237,
+                "formedAt": 19,
+                "formedBattles": 15,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 11859,
+                "commands": 172,
+                "durationSeconds": 27.472
+              }
+            },
+            {
+              "build": "sniper-caitlyn",
+              "bytes": 24253152,
+              "incrementalBytes": 1952282,
+              "summary": {
+                "caitlynBattles": 12,
+                "caitlynCasts": 23,
+                "tickTimingMs": {
+                  "p50": 0.8858489999984158,
+                  "p95": 1.6638660000025993,
+                  "p99": 2.3242730000056326,
+                  "max": 8.978617000000668
+                },
+                "build": "sniper-caitlyn",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 100,
+                "gold": 218,
+                "formedAt": 19,
+                "formedBattles": 3,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 11428,
+                "commands": 182,
+                "durationSeconds": 26.794
+              }
+            },
+            {
+              "build": "full-load",
+              "bytes": 19195236,
+              "incrementalBytes": 1248875,
+              "summary": {
+                "caitlynBattles": 0,
+                "caitlynCasts": 0,
+                "tickTimingMs": {
+                  "p50": 0.8679709999996703,
+                  "p95": 1.7904170000110753,
+                  "p99": 2.6189980000053765,
+                  "max": 8.142221000001882
+                },
+                "build": "cannon",
+                "seed": 42,
+                "outcome": "victory",
+                "round": 35,
+                "hp": 85,
+                "gold": 131,
+                "formedAt": null,
+                "formedBattles": 0,
+                "boundBattles": 14,
+                "transitioned": true,
+                "ticks": 10259,
+                "commands": 206,
+                "durationSeconds": 23.983
+              }
+            }
+          ],
+          "routeGenerationMs": 128297.193212,
+          "payload": {
+            "completeBytes": 24803012,
+            "incrementalBytes": 2026215,
+            "incrementalCombatId": "round-34",
+            "incrementalEvents": 3469,
+            "largestRecordBytes": 1834558,
+            "largestRecordCombatId": "round-34"
+          },
+          "browser": "153.0.8010.12",
+          "errors": [],
+          "measurements": {
+            "summary": {
+              "capture": {
+                "samples": [
+                  62,
+                  45.89999997615814,
+                  34.60000002384186,
+                  33.5,
+                  35.10000002384186,
+                  32.799999952316284,
+                  58.700000047683716,
+                  33.60000002384186,
+                  32.89999997615814,
+                  33.60000002384186,
+                  32.799999952316284,
+                  35.299999952316284
+                ],
+                "p95": 62,
+                "max": 62
+              },
+              "write": {
+                "samples": [
+                  24.299999952316284,
+                  21.5,
+                  20.300000071525574,
+                  24.899999976158142,
+                  23.299999952316284,
+                  22,
+                  19.300000071525574,
+                  17.100000023841858,
+                  24.300000071525574,
+                  20,
+                  21.200000047683716,
+                  22.40000009536743
+                ],
+                "p95": 24.899999976158142,
+                "max": 24.899999976158142
+              },
+              "fullCapture": {
+                "samples": [
+                  222.79999995231628,
+                  274.8000000715256,
+                  227.90000009536743,
+                  219.19999992847443,
+                  228.5,
+                  226.20000004768372,
+                  222.29999995231628,
+                  220.5,
+                  224.30000007152557,
+                  234.89999997615814,
+                  253.09999990463257,
+                  269.3000000715256
+                ],
+                "p95": 274.8000000715256,
+                "max": 274.8000000715256
+              },
+              "activation": {
+                "samples": [
+                  488.2999999523163,
+                  388.60000002384186,
+                  492.8000000715256,
+                  487,
+                  453.5,
+                  594,
+                  395.89999997615814,
+                  402.7000000476837,
+                  401.6999999284744,
+                  399.7000000476837,
+                  384.5,
+                  417
+                ],
+                "p95": 594,
+                "max": 594
+              },
+              "completeImport": {
+                "samples": [
+                  11653.699999928474,
+                  11231.399999976158,
+                  10708.200000047684
+                ],
+                "p95": 11653.699999928474,
+                "max": 11653.699999928474
+              },
+              "firstSeek": {
+                "samples": [
+                  1676.1000000238419,
+                  1542.7999999523163,
+                  1610.7000000476837
+                ],
+                "p95": 1676.1000000238419,
+                "max": 1676.1000000238419
+              },
+              "cachedSeek": {
+                "samples": [
+                  6.5,
+                  22.600000023841858,
+                  30.09999990463257,
+                  41.10000002384186,
+                  35.300000071525574,
+                  37.200000047683716,
+                  46.10000002384186,
+                  3.1999999284744263,
+                  13,
+                  17.799999952316284,
+                  23.100000023841858,
+                  25.600000023841858
+                ],
+                "p95": 46.10000002384186,
+                "max": 46.10000002384186
+              },
+              "statsBatch": {
+                "samples": [
+                  0.19999992847442627,
+                  0.20000004768371582,
+                  0.19999992847442627,
+                  0.10000002384185791,
+                  0.10000002384185791,
+                  0.10000002384185791,
+                  0,
+                  0.19999992847442627,
+                  0,
+                  0,
+                  0.10000002384185791,
+                  0.10000002384185791,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "p95": 0.20000004768371582,
+                "max": 0.20000004768371582
+              }
+            },
+            "gates": [
+              {
+                "name": "capture",
+                "metric": "p95",
+                "actual": 62,
+                "ceiling": 50,
+                "passed": false
+              },
+              {
+                "name": "write",
+                "metric": "p95",
+                "actual": 24.899999976158142,
+                "ceiling": 250,
+                "passed": true
+              },
+              {
+                "name": "fullCapture",
+                "metric": "p95",
+                "actual": 274.8000000715256,
+                "ceiling": 500,
+                "passed": true
+              },
+              {
+                "name": "activation",
+                "metric": "max",
+                "actual": 594,
+                "ceiling": 1000,
+                "passed": true
+              },
+              {
+                "name": "completeImport",
+                "metric": "max",
+                "actual": 11653.699999928474,
+                "ceiling": 30000,
+                "passed": true
+              },
+              {
+                "name": "firstSeek",
+                "metric": "max",
+                "actual": 1676.1000000238419,
+                "ceiling": 2000,
+                "passed": true
+              },
+              {
+                "name": "cachedSeek",
+                "metric": "max",
+                "actual": 46.10000002384186,
+                "ceiling": 100,
+                "passed": true
+              },
+              {
+                "name": "statsBatch",
+                "metric": "max",
+                "actual": 0.20000004768371582,
+                "ceiling": 5,
+                "passed": true
+              }
+            ],
+            "fullLoadRoundTrip": {
+              "milliseconds": 10586.799999952316,
+              "verified": true,
+              "battles": 30
+            },
+            "limits": {
+              "incrementalCaptureP95": 50,
+              "incrementalWriteP95": 250,
+              "fullCaptureP95": 500,
+              "activationWriteP95": 1000,
+              "completeImport": 30000,
+              "firstSeek": 2000,
+              "cachedSeek": 100,
+              "stats40TickBatch": 5
+            },
+            "completeBattleCount": 30,
+            "incrementalBattleCount": 28,
+            "completedHistoryWrittenOnIncrementalSave": 0,
+            "method": "capture includes actual capturePrefix digest/deepFreeze plus synchronous enqueue/repository cloning; write spans coordinator saving through transaction-complete saved; complete import includes actual file validation, candidate construction and activation"
+          },
+          "lifecycle": {
+            "cycles": 30,
+            "extraListeners": 0,
+            "remainingComponentRoots": 0,
+            "before": {
+              "usedSize": 5910088,
+              "totalSize": 7340032,
+              "embedderHeapUsedSize": 597616,
+              "backingStorageSize": 2002230
+            },
+            "after": {
+              "usedSize": 6101092,
+              "totalSize": 7340032,
+              "embedderHeapUsedSize": 593288,
+              "backingStorageSize": 2002230
+            },
+            "heapDeltaBytes": 191004,
+            "maxHeapGrowthBytes": 1048576,
+            "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+          },
+          "failure": "AssertionError [ERR_ASSERTION]: Frozen performance budget exceeded: [{\"name\":\"capture\",\"metric\":\"p95\",\"actual\":62,\"ceiling\":50,\"passed\":false}]\n\n1 !== 0\n\n    at /tmp/m8-b5-round2-perf-after/scripts/verify-m6-performance.cjs:123:72",
+          "endedAt": "2026-10-09T05:48:41.857Z",
+          "durationMs": 238382.741281,
+          "finalSourceFingerprint": "97d52e0a03dc571c7cca7610c72666b49a84c6c6931872122eedb745208c8ca0",
+          "peakProcessRssBytes": 1753370624,
+          "loadAtEnd": [
+            2.19,
+            1.76,
+            1.72
+          ]
+        },
+        "manifestSha256": "9311078b246bddc1396b95c6e5dbdb95060521647b75765bdb239e90e607a988",
+        "trackedSourceUnmodified": true,
+        "untrackedDependencyLink": "node_modules -> /root/projects/hex-autobattler/node_modules",
+        "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f"
+      }
+    ],
+    "payloadIdentical": true,
+    "onlyRouteSummaryDifferences": "durationSeconds and tickTimingMs; all other summaries and byte counts identical",
+    "interpretation": "capture exceeds 50ms both before R1 (77.7) and after (62.0); cachedSeek passes both (62.4/46.1 <=100). Both entire local performance runs FAILED capture; no claim of local performance acceptance. No observed R1 slowdown in these metrics; not proof for all environments or workloads."
+  },
+  "heapSingleRetry": {
+    "jobId": 113687150359,
+    "attempt": 2,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113687150359",
+    "passed": true,
+    "measurement": {
+      "heapDiagnostics": false,
+      "warmupExperiment": false,
+      "warmupCycles": 2,
+      "cycles": 30,
+      "heapCeilingBytes": 1048576,
+      "beforeHeap": {
+        "usedSize": 14188196,
+        "totalSize": 17686528,
+        "embedderHeapUsedSize": 7695456,
+        "backingStorageSize": 6319846
+      },
+      "afterHeap": {
+        "usedSize": 14399752,
+        "totalSize": 17948672,
+        "embedderHeapUsedSize": 8108880,
+        "backingStorageSize": 6317881
+      },
+      "heapDelta": 211556,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      }
+    },
+    "logSha256": "7ac202dfcd2ef59109975c7ecbfc0e7add1daa5d05f3a47cd09aa5e2cdd59c35",
+    "lifecycleSha256": "ce8025bcff82d1e84fbc7c3d3acbfed47ef7fd4f0919d0bdeb204144919eca31",
+    "artifactId": 11597548793,
+    "artifactArchiveSha256": "e659ebe84c813a451749cabd70937250c932d428cb0bd385d40e4540f7c8eab4"
+  },
+  "devHeapFirstPass": {
+    "heapDiagnostics": false,
+    "warmupExperiment": false,
+    "warmupCycles": 2,
+    "cycles": 30,
+    "heapCeilingBytes": 1572864,
+    "beforeHeap": {
+      "usedSize": 17692632,
+      "totalSize": 21012480,
+      "embedderHeapUsedSize": 7898088,
+      "backingStorageSize": 14149865
+    },
+    "afterHeap": {
+      "usedSize": 17099728,
+      "totalSize": 22585344,
+      "embedderHeapUsedSize": 8384256,
+      "backingStorageSize": 14147834
+    },
+    "heapDelta": -592904,
+    "beforeResources": {
+      "listeners": 83,
+      "pendingRaf": 1
+    },
+    "afterResources": {
+      "listeners": 83,
+      "pendingRaf": 1
+    }
+  },
+  "performanceSingleRetry": {
+    "jobId": 113691471754,
+    "attempt": 3,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37887531022/job/113691471754",
+    "passed": true,
+    "performance": {
+      "passed": true,
+      "durationMs": 108547.909609,
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 24.300000000046566,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 10.5,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 76.80000000004657,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 317.60000000009313,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 5384.800000000047,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 740.5,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 39.300000000046566,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.19999999995343387,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "lifecycle": 193956
+    },
+    "logSha256": "98c0fcc3a8bddbe21e23e20eea51e49b4b3602dd5cf19f8d5da3d98b92c626c1",
+    "inputCases": 100,
+    "normalTimeTouchRoutePassed": true,
+    "viewports": 5,
+    "storageChecks": 33,
+    "componentChecks": 17,
+    "persistenceRetryChecks": 4,
+    "applicationFailureChecks": 9,
+    "sameCodeConfigBudgets": true
+  }
+}
