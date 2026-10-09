@@ -6,7 +6,7 @@ The original evidence below records the historical defect, not the current imple
 
 ---
 
-# M8 B7：伤害与控制提交顺序问题记录
+# HISTORICAL RECORD ONLY — M8 B7 伤害与控制提交顺序问题记录
 
 状态：**先锋偏差已复现、未修复；先锋机制不在本步签收范围内。** 用户同意先交付独立目录、编译器和问题证据，通用层修复另行安排。本记录不授权修改 B3、被冻结合同或其他效果。
 
