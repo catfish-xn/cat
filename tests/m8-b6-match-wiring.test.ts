@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { buyUnit, buyXp, createMatch, deployMatchUnit, nextRound, setShopLock, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
+import { buyUnit, buyXp, createMatch, deployMatchUnit, nextRound, selectChoice, selectAnomalyTarget, setShopLock, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readRoundInfo, getCatalogRoundById } from '../src/simulation/round-selectors';
 import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from '../src/simulation/content/round-catalog';
@@ -13,6 +13,7 @@ const roundTrip = (state:MatchState) => {
   const restored=restoreMatch(serializeMatch(state));
   expect(restored).toEqual(state);
   expect(restored).not.toBe(state);
+  expect(Object.isFrozen(restored.m8.round)).toBe(true);expect(Object.isFrozen(restored.m8.preparation)).toBe(true);
   return restored;
 };
 const concede = (state:MatchState) => {
@@ -110,6 +111,51 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(Object.isFrozen(OPENING_INITIAL_STATE)).toBe(true);expect(Object.isFrozen(OPENING_ECONOMY_RULES.rounds['1-4'])).toBe(true);
     expect(CONTENT_DIGEST).toMatch(/^fnv1a32-utf16:/);
     expect(digestContent(OPENING_ECONOMY_RULES)).not.toBe(digestContent({...OPENING_ECONOMY_RULES,rounds:{...OPENING_ECONOMY_RULES.rounds,'1-4':{baseGold:5,naturalXp:2}}}));
+  });
+  it('restores 36-38 preparation/combat/settlement and ends only at 6-7 with no regeneration',()=>{
+    // Strong explicit domain fixture exercises every round and strict local restore.
+    // It is not an acquisition route or B9 application/history capacity acceptance.
+    let state=createMatch();
+    state={...state,level:9,nextUnitSerial:10,preparation:{...state.preparation,units:[
+      ...state.preparation.units.filter(u=>u.team==='enemy'),
+      ...Array.from({length:9},(_,i)=>({id:`unit-${i+1}`,definitionId:'garen',team:'player' as const,starLevel:3 as const,
+        location:{kind:'board' as const,cell:{col:i%7,row:4+Math.floor(i/7)}}})),
+    ]}};
+    const seen:string[]=[];
+    while(state.phase!=='gameOver') {
+      while(state.phase==='choice') {
+        const c=state.pendingChoice!;
+        state=accepted(c.step==='target'?selectAnomalyTarget(state,c.choiceId,c.generation,'unit-1'):
+          selectChoice(state,c.choiceId,c.generation,c.offers.find(id=>id!=='glass-cannon-i')!));
+      }
+      if(state.phase==='settlement') {state=accepted(nextRound(state,state.round));continue;}
+      const late=state.round>=getCatalogRoundById('6-5').ordinal;
+      if(late) {seen.push(state.roundDefinitionId);roundTrip(state);}
+      state=accepted(startMatchCombat(state));
+      if(late) {
+        const generation=vi.spyOn(enemies,'createRoundEnemies'),items=vi.spyOn(enemies,'getRoundEnemyItems');
+        try {roundTrip(state);expect(generation).not.toHaveBeenCalled();expect(items).not.toHaveBeenCalled();}
+        finally {generation.mockRestore();items.mockRestore();}
+      }
+      while(state.phase==='combat') state=stepMatch(state).state;
+      if(late) roundTrip(state);
+    }
+    expect(seen).toEqual(['6-5','6-6','6-7']);
+    expect(state).toMatchObject({roundDefinitionId:'6-7',outcome:'victory'});
+    expect(state.roundResults).toHaveLength(ROUND_CATALOG.length);
+    expect(state.roundResults.filter(r=>r.roundKind!=='supply')).toHaveLength(33);
+    const repeated=nextRound(state,state.round);expect(repeated).toEqual({ok:false,state,reason:'wrong-phase'});expect(repeated.state).toBe(state);
+  });
+  it('rejects dropped progression and impossible one/two-XP preparation grants while allowing paid XP',()=>{
+    let state=createMatch();state=accepted(nextRound(concede(state),1));
+    expect(()=>restoreMatch({...state,level:1,xp:0})).toThrow('current XP preparation chain');
+    expect(()=>restoreMatch({...state,xp:1})).toThrow('current XP preparation chain');
+    const second=concede(state),forged=structuredClone(second);
+    Object.assign(forged.roundResults[1],{levelBefore:1,levelAfter:2});Object.assign(forged,{level:2});
+    expect(()=>restoreMatch(forged)).toThrow('history XP preparation chain');
+    state=accepted(nextRound(second,2));
+    expect(()=>restoreMatch({...state,xp:2})).toThrow('current XP preparation chain');
+    roundTrip(accepted(buyXp(state)));
   });
   it.each(['round','prepared-id','encounter','status','enemy','plan','history-id','history-xp'] as const)('rejects tampered %s without repairing or mutating it',field=>{
     const state=concede(createMatch()),raw=structuredClone(state);

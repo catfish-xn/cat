@@ -1,3 +1,4 @@
+import { reachRound } from './match-helpers';
 import { describe, expect, it } from 'vitest';
 import { createMatch, selectChoice, deployMatchUnit, startMatchCombat, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
@@ -67,10 +68,10 @@ describe('review regressions: runtime commands and safe restore', () => {
     expect(() => restoreMatch(invalid)).toThrow();
   });
   it('rejects reward receipts with duplicate item IDs or invented fixed gold', () => {
-    const duplicate = mutable(ready());
+    const duplicate = mutable(reachRound('2-4'));
     duplicate.scheduleReceipts[0].itemIds = ['item-1', 'item-1'];
     expect(() => restoreMatch(duplicate)).toThrow();
-    const wrongGold = mutable(ready());
+    const wrongGold = mutable(reachRound('2-4'));
     wrongGold.scheduleReceipts[0].gold = 999;
     expect(() => restoreMatch(wrongGold)).toThrow();
   });

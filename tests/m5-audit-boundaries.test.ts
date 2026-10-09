@@ -1,20 +1,22 @@
+import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
-import { accepted, readyMatch, finish } from './match-helpers';
+import { accepted, purchasedThreeHeroMatch, finish } from './match-helpers';
 import { describeEffect, describeTraitTier } from '../src/rendering/strategy-panel';
 import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { run } from '../scripts/generate-m5-route.cjs';
 import type { MatchState } from '../src/simulation/match-types';
 let before19: MatchState, anomaly: MatchState;
-beforeAll(async () => {
-  const route = await run(api, { build: 'cannon', seed: 42, retainStates: true });
-  before19 = (route.actions.find((a: any) => a.round === 19 && a.command.type === 'start') as any).before;
-  anomaly = (route.actions.find((a: any) => a.round === 20 && a.command.type === 'target') as any).before;
-}, 120000);
 
 describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling', () => {
+beforeAll(async () => {
+  const route = await run(api, { build: 'cannon', seed: 42, retainStates: true });
+  before19 = (route.actions.find((a: any) => a.round === getCatalogRoundById('4-5').ordinal && a.command.type === 'start') as any).before;
+  anomaly = (route.actions.find((a: any) => a.round === getCatalogRoundById('4-6').ordinal && a.command.type === 'target') as any).before;
+}, 120000);
+
   it.each([false, true])('sells the real 4-5 roster, recruits at4-6 and completes once (exhausted lock=%s)', exhausted => {
     let s = before19;
     for (const unit of s.preparation.units.filter(u => u.team === 'player')) s = accepted(api.sellUnit(s, unit.id));
@@ -27,7 +29,7 @@ describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling
     s = finish(accepted(api.startMatchCombat(s)));
     expect(s.playerHp).toBeGreaterThan(0);
     const previousShop = s.shop, previousRandom = s.rngState;
-    s = accepted(api.nextRound(s, 19));
+    s = accepted(api.nextRound(s, getCatalogRoundById('4-5').ordinal));
     if (exhausted) {
       expect(s.shop.generation).toBe(previousShop.generation + 1); expect(s.shop.locked).toBe(false);
       let word = BigInt(previousRandom); for (let i = 0; i < 10; i++) word = (word * 1664525n + 1013904223n) % 4294967296n;
@@ -42,7 +44,7 @@ describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling
     expect(s.pendingChoice?.step).toBe('target'); expect(s.nextUnitSerial).toBe(before.nextUnitSerial + 1);
     expect(result.ok && result.events.filter(e => e.type === 'choiceOpened')).toHaveLength(1);
     expect(api.buyUnit(s, slot, s.shop.generation).state).toBe(s);
-    expect(api.nextRound(s, 19).state).toBe(s); expect(restoreMatch(s)).toEqual(s);
+    expect(api.nextRound(s, getCatalogRoundById('4-5').ordinal).state).toBe(s); expect(restoreMatch(s)).toEqual(s);
     const c = s.pendingChoice!, target = s.preparation.units.find(u => u.team === 'player')!;
     s = accepted(api.selectAnomalyTarget(s, c.choiceId, c.generation, target.id));
     const offer = s.pendingChoice!; s = accepted(api.selectChoice(s, offer.choiceId, offer.generation, offer.offers[0]));
@@ -59,7 +61,7 @@ describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling
   it('preserves an affordable recruitment offer when repeated D/F exhaust discretionary gold', () => {
     let s = before19;
     for (const u of s.preparation.units.filter(u => u.team === 'player')) s = accepted(api.sellUnit(s, u.id));
-    s = accepted(api.nextRound(finish(accepted(api.startMatchCombat(s))), 19));
+    s = accepted(api.nextRound(finish(accepted(api.startMatchCombat(s))), getCatalogRoundById('4-5').ordinal));
     for (let n = 0; n < 100; n++) { const r = api.rerollShop(s); if (!r.ok) { expect(r.state).toBe(s); break; } s = r.state; }
     for (let n = 0; n < 100; n++) { const r = api.buyXp(s); if (!r.ok) { expect(r.state).toBe(s); break; } s = r.state; }
     const slot = s.shop.slots.findIndex(o => o.status === 'available' &&
@@ -88,14 +90,14 @@ describe('M5 audit: normal empty-roster recovery and full-range anomaly sampling
 
 describe('M5 audit: dynamic restore and truthful strategy descriptions', () => {
   it.each(['abilityPowerFlat', 'attackSpeedBps', 'rangeBonus', 'nextAttackMagic', 'nextAttackPhysical', 'permanentAdBps'] as const)('rejects unsupported/overflow %s before ticking', field => {
-    const state = accepted(api.startMatchCombat(readyMatch())), invalid = structuredClone(state);
+    const state = accepted(api.startMatchCombat(purchasedThreeHeroMatch())), invalid = structuredClone(state);
     const lux = invalid.combat!.units.find(u => u.definitionId === 'lux')!;
     (lux.runtime as any)[field] = Number.MAX_SAFE_INTEGER;
     expect(() => restoreMatch(invalid)).toThrow(); expect(() => restoreMatch(JSON.stringify(invalid))).toThrow();
     expect(restoreMatch(state)).toEqual(state);
   });
   it('rejects small AP corruption too when Lux has no periodic AP source', () => {
-    const state = accepted(api.startMatchCombat(readyMatch())), invalid = structuredClone(state);
+    const state = accepted(api.startMatchCombat(purchasedThreeHeroMatch())), invalid = structuredClone(state);
     (invalid.combat!.units.find(u => u.definitionId === 'lux')!.runtime as any).abilityPowerFlat = 30;
     expect(() => restoreMatch(invalid)).toThrow('derived ability power');
   });

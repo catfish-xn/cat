@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { combineItems, equipItem, createMatch } from '../src/simulation/match';
+import { combineItems, equipItem } from '../src/simulation/match';
 import type { MatchCommandResult, MatchState } from '../src/simulation/match-types';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { transferUpgradeResources } from '../src/simulation/upgrades';
-import { accepted, freeze, readyMatch } from './match-helpers';
+import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },
 });
 function stateWith(items: readonly ItemInstance[]): MatchState {
-  const state = readyMatch();
+  const state = purchasedThreeHeroMatch();
   return { ...state, items: [...state.items, ...items], nextItemSerial: 100 };
 }
 function rejected(state: MatchState, run: (s: MatchState) => MatchCommandResult, reason: string) {
@@ -49,8 +49,8 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     for (const slot of [0, 1, 2]) rejected(state, s => equipItem(s, 'item-21', 'unit-1', slot), 'exclusive-slots');
   });
   it('phase then identity then input then conflicts; same item has the frozen reason', () => {
-    rejected(createMatch(), s => equipItem(s, 'missing', 'missing', -1), 'wrong-phase');
-    rejected(createMatch(), s => combineItems(s, 'missing', 'missing'), 'wrong-phase');
+    rejected(reachRound('2-1',false), s => equipItem(s, 'missing', 'missing', -1), 'wrong-phase');
+    rejected(reachRound('2-1',false), s => combineItems(s, 'missing', 'missing'), 'wrong-phase');
     const state = stateWith([item(20, 'sword'), item(21, 'sword', 'unit-1')]);
     rejected(state, s => equipItem(s, 'missing', 'unit-1', -1), 'unknown-item');
     rejected(state, s => equipItem(s, 'item-20', 'missing', -1), 'unknown-unit');

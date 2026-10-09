@@ -247,3 +247,16 @@ Q项接入注意：批准后roundId作为canonical tuple的身份元素固定，
 - 新开发修订`m8-b6-round-opening-v1`进入digest。digest覆盖实际初始化、冻结开场经济参数、目录、语义节点、准备政策与38轮敌阵投影；正式M8 schema/rules迁移留B9。
 - Node22.23.3定向验证：`npm test -- tests/m8-b6-round-catalog.test.ts tests/m8-b6-opening-economy.test.ts tests/m8-b6-match-wiring.test.ts`，3文件/71项通过。涵盖三开场准备/战中/结算往返、真实失利与运营不回填、重复命令、锁店、2-1选择、恢复不重生成、篡改拒绝。
 - 此检查点未迁移旧测试及独立oracle/golden，也未运行全量；不能据定向通过宣称整条CI通过。完整麦迪/拉克丝/组件收益链归B8；完整33战应用/历史容量归B9，均未修改或签收。
+
+### 9.2 检查点二：旧断言迁移、XP链加固与新轨迹
+
+- [逐项旧/新断言及输入账本](evidence/m8-b6/assertion-migration.md)以`7c24d513c627d34ece6ff355c44077fc5c621e1a`为比较基线，列出121个旧测试diff片段及各自理由，并集中写出OPENING手算值。没有新增skip/todo；公开路线原胜利、成型、15组件要求保留，B9容量不改。
+- 新的真实命令helper可到达指定roundId；种子42在2-1用公开商店付费购买麦迪/拉克丝，专供多持有者测试，不冒充B8奖励。纯命令经济旧向量明确命名`economyFixture`，显式保留原单元测试输入，不作为起手资源证据；IF-GRANT装备微型fixture同样单独标记。
+- 额外只读复核发现两处严格性缺口并已加固：恢复校验逐轮累计XP不能回退、准备期增量只能由4XP购买达到（允许等级9截断）；恢复后保留m8深冻结。对应拒绝降级、篡改历史和1-4凭空+2XP向量已添加。
+- 战斗快照的敌方装备改读预编译冻结投影；恢复后段PvP不再间接调用敌阵生成。新增强阵容领域fixture真实推进全部38轮，验证36～38准备/战中/结算往返、33战及6-7终点；该fixture不证明正常获取、平衡或B9应用容量。
+- 首次全量诊断已在明确失败后以SIGINT停止，退出130，未完成全量。固定工作树哈希、命令、时间及原始gzip日志见[诊断记录](evidence/m8-b6/first-full-diagnostic.md)，不把跳过或未结束用例记为通过。
+- `oracle.cjs`手写38轮ID及1/2级商店/XP规则，结算含历史roundId与开场2/3/5G、2/2/0XP；不调用生产日程/结算推导期望。路线原阶段策略阈值改为按稳定roundId定位，tick上界按战斗kind数量推导。
+- 原当前golden字节保留为`tests/fixtures/m5/full-match-golden.pre-m8-b6.json`。新增透明更新器`scripts/update-m8-b6-golden.cjs`已实际运行；四路线独立经济/资源/RNG账本通过，均到6-7胜利、33战，但成型战斗均0、组件授予均5。结果见[实际路线摘要](evidence/m8-b6/route-observations.json)。新golden只记录轨迹，未将0成型/5组件改成成功门槛。
+- **B8待办**：阶段1指定英雄/两组件及后续PvE掉落；当前公开路线完整成型/15组件门禁预期仍失败。**B9待办**：应用/存储/历史原30战容量到33战的正式切换；本批不改其实现或门禁。
+- 冻结合同、G12专属用例、U3动态UI和CI配置/阈值/测量方法均未修改。此处只是实施检查点，尚未全量终验或独立Pro签收。
+- 检查点二最终定向合跑：Node22.23.3 `npm run typecheck`通过；26文件/484项全部通过，实际日志为`docs/evidence/m8-b6/checkpoint2-targeted.log.gz`；`git diff --check`通过。该26文件集合未包含四条公开路线与M6完整集成，不等同全量通过。

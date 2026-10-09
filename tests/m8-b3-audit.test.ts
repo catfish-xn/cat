@@ -1,9 +1,10 @@
+import { planPermanentItemGrant } from '../src/simulation/item-grants';
 import { describe, expect, it } from 'vitest';
-import { createMatch, selectChoice, combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch } from '../src/simulation/match';
+import { combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { BattleHistory, validateBattleRecord } from '../src/replay';
 import type { CombatEvent } from '../src/simulation/combat';
-import { accepted, battle } from './match-helpers';
+import { accepted, battle, purchasedThreeHeroMatch } from './match-helpers';
 import { validateShield, grantShieldState, endShield } from '../src/simulation/m8/shield';
 import { type S13Unit } from '../src/simulation/combat-s13-state';
 import { type AbilityContext } from '../src/simulation/combat-s13-abilities';
@@ -25,11 +26,9 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     for (const [value, expected] of vectors) expect(digestContent(value)).toBe(expected);
   });
   it('R1 real dragon claw: tick39 canonical save→restore→tick40 complete events equal and continued archive validates', () => {
-    let state = createMatch(42);
-    while (state.phase === 'choice') {
-      const c = state.pendingChoice!;
-      state = accepted(selectChoice(state, c.choiceId, c.generation, c.kind === 'component' ? 'cloak' : c.offers.find(id => id !== 'placebo' && id !== 'glass-cannon-i')!));
-    }
+    let state=purchasedThreeHeroMatch();
+    // Explicit item-mechanism input through IF-GRANT; not B8 acquisition evidence.
+    for(let i=0;i<2;i++) {const grant=planPermanentItemGrant(state,{definitionId:'cloak',receiptId:`claw-fixture-${i}`},[]);if(!grant.ok)throw new Error(grant.reason);state=grant.state;}
     const cloaks = state.items.filter(i => i.definitionId === 'cloak');
     state = accepted(combineItems(state, cloaks[0].id, cloaks[1].id));
     state = accepted(equipItem(state, state.items.find(i => i.definitionId === 'dragons-claw')!.id, 'unit-1', 0));
@@ -41,12 +40,13 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     const start = startMatchCombat(state); if (!start.ok) throw Error(start.reason);
     observe(start, 'command');
     while (state.combat!.tick < 39) observe(stepMatch(state), 'tick');
-    expect(state.combat!.units.find(u => u.id === 'unit-1')).toMatchObject({ hp: 699, maxHp: 763 });
+    const beforeHeal=state.combat!.units.find(u=>u.id==='unit-1')!;
+    expect(beforeHeal.maxHp).toBe(763);expect(beforeHeal.maxHp-beforeHeal.hp).toBeGreaterThanOrEqual(19);
     const restored = restoreMatch(serializeMatch(state)), direct = stepMatch(state), continued = stepMatch(restored);
-    // floor(763×250/10000)=19; 699+19=718. Identity must survive key sorting.
+    // floor(763×250/10000)=19. New battle-seed/round trajectory changes pre-heal HP; the fixed arithmetic stays 19.
     expect(continued.events).toEqual(direct.events);
     expect(continued.state).toEqual(direct.state);
-    expect(continued.events.find(e => e.type === 'heal' && e.unitId === 'unit-1')).toMatchObject({ requested: 19, actual: 19, hp: 718 });
+    expect(continued.events.find(e => e.type === 'heal' && e.unitId === 'unit-1')).toMatchObject({ requested: 19, actual: 19, hp: beforeHeal.hp+19 });
     const resumed = new BattleHistory('audit-r1', [], history.capturePrefix());
     resumed.observe({ before: restored, after: continued.state, events: continued.events.filter((e): e is CombatEvent => e.domain === 'combat'), reason: 'tick' });
     expect(validateBattleRecord(resumed.capturePrefix()!).terminal).toEqual(continued.state.combat);
