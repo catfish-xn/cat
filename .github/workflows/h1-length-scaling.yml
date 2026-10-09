@@ -1,0 +1,167 @@
+name: H1 30-90-300 length scaling (not acceptance)
+
+# Temporary investigation only. Never merge this workflow into any target branch.
+on:
+  push:
+    branches: [diag/h1-length-scaling]
+    paths: [.github/workflows/h1-length-scaling.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: h1-length-scaling-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: H1 scaling ${{ matrix.mode }}
+    if: ${{ github.repository == 'catfish-xn/cat' && github.ref == 'refs/heads/diag/h1-length-scaling' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [preview, dev]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      SOURCE_SHA: '97f38a0e787a4edcb35df4a59823bb1d106def67'
+      PROBE_MODE: ${{ matrix.mode }}
+      PROBE_KIND: 'extended'
+      SAMPLE_COUNT: '1'
+      H1_WINDOWS: '10'
+      H1_DEFINITION_SHA: ${{ github.sha }}
+      H1_EVIDENCE: ${{ github.workspace }}/h1-evidence
+    steps:
+      - name: Validate pinned configuration and retain workflow identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$H1_EVIDENCE"
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PROBE_MODE" == preview || "$PROBE_MODE" == dev ]]
+          [[ "$PROBE_KIND" == normal || "$PROBE_KIND" == snapshot || "$PROBE_KIND" == warmup-trend || "$PROBE_KIND" == extended || "$PROBE_KIND" == extended-snapshot || "$PROBE_KIND" == b4-module ]]
+          [[ "$SAMPLE_COUNT" =~ ^[1-5]$ ]]
+          [[ "$H1_WINDOWS" =~ ^([2-9]|10)$ ]]
+          if [[ "$PROBE_KIND" == b4-module ]]; then [[ "$PROBE_MODE" == dev ]]; fi
+          printf 'workflow_merge_sha=%s\nsource_sha=%s\nmode=%s\nprobe=%s\nsamples=%s\nrun_id=%s\nattempt=%s\n' \
+            "$GITHUB_SHA" "$SOURCE_SHA" "$PROBE_MODE" "$PROBE_KIND" "$SAMPLE_COUNT" \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" > "$H1_EVIDENCE/request.txt"
+          printf 'definition_sha=%s\ntrigger=isolated-branch-push\nprotocol=30-90-300-v1\n' "$H1_DEFINITION_SHA" >> "$H1_EVIDENCE/request.txt"
+      - uses: actions/checkout@v4
+        timeout-minutes: 5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          path: source
+          persist-credentials: false
+      - name: Check out separately versioned diagnostic harness
+        if: startsWith(env.PROBE_KIND, 'extended') || env.PROBE_KIND == 'b4-module'
+        uses: actions/checkout@v4
+        timeout-minutes: 5
+        with:
+          ref: ${{ github.sha }}
+          path: harness
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        timeout-minutes: 5
+        with:
+          node-version: '22.23.3'
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+      - name: Install locked dependencies and CI Chromium
+        timeout-minutes: 25
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "$SOURCE_SHA" ]]
+          [[ -z "$(git status --porcelain)" ]]
+          npm ci 2>&1 | tee "$H1_EVIDENCE/install.log"
+          # Reject an incompatible target instead of silently measuring another browser.
+          node -e "const bs=require(require('node:path').join(require('node:path').dirname(require.resolve('playwright-core/package.json')),'browsers.json')).browsers;for(const name of ['chromium','chromium-headless-shell'])if(bs.find(x=>x.name===name)?.browserVersion!=='153.0.8010.12')throw Error('Target lockfile does not select CI Chromium 153.0.8010.12');console.log(JSON.stringify(bs.filter(x=>['chromium','chromium-headless-shell'].includes(x.name))));" \
+            2>&1 | tee "$H1_EVIDENCE/browser-selection.log"
+          npx --no-install playwright install --with-deps chromium 2>&1 | tee "$H1_EVIDENCE/browser-install.log"
+      - name: Verify actual desktop Chromium version
+        timeout-minutes: 5
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u CHROMIUM_PATH DEBUG=pw:browser node <<'NODE' 2>&1 | tee "$H1_EVIDENCE/preflight.log"
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const os = require('node:os');
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
+            try {
+              const version = browser.version();
+              const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+              await page.setContent('<title>H1 desktop preflight</title>');
+              if (version !== '153.0.8010.12' || await page.title() !== 'H1 desktop preflight') throw Error('Chromium preflight mismatch');
+              fs.writeFileSync(path.join(process.env.H1_EVIDENCE, 'environment.json'), JSON.stringify({
+                sourceSha: process.env.SOURCE_SHA, workflowMergeSha: process.env.GITHUB_SHA, definitionSha: process.env.H1_DEFINITION_SHA,
+                browser: version, launchSelection: 'Playwright default headless Chromium; CHROMIUM_PATH unset, matching existing CI', node: process.version,
+                platform: process.platform, release: os.release(), cpu: os.cpus()[0]?.model,
+                cpuCount: os.cpus().length, memoryBytes: os.totalmem(), load: os.loadavg(),
+                viewport: { width: 1440, height: 1000 }, diagnosticOnly: true
+              }, null, 2));
+              console.log('Verified desktop Chromium ' + version);
+            } finally { await browser.close(); }
+          })().catch(error => { console.error(error); process.exitCode = 1; });
+          NODE
+      - name: Build unchanged source
+        timeout-minutes: 15
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build 2>&1 | tee "$H1_EVIDENCE/build.log"
+          git status --porcelain > "$H1_EVIDENCE/source-status.txt"
+          [[ ! -s "$H1_EVIDENCE/source-status.txt" ]]
+      - name: Collect diagnostic batch preserving raw results
+        timeout-minutes: 80
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--m6-journey --build=cannon)
+          [[ "$PROBE_MODE" != preview ]] || args+=(--preview)
+          extra=()
+          [[ "$PROBE_KIND" != snapshot ]] || extra+=(M6_HEAP_DIAGNOSTICS=1)
+          [[ "$PROBE_KIND" != warmup-trend ]] || extra+=(M6_WARMUP_EXPERIMENT=1)
+          printf 'sample\tstarted_utc\tended_utc\texit_code\n' > "$H1_EVIDENCE/runs.tsv"
+          failed=0
+          for (( i=1; i<=SAMPLE_COUNT; i++ )); do
+            label=$(printf '%s-%s-%02d' "$PROBE_MODE" "$PROBE_KIND" "$i")
+            start=$(date -u +%FT%TZ)
+            printf 'Starting %s at %s\n' "$label" "$start" | tee "$H1_EVIDENCE/$label-start.txt"
+            command=(node scripts/verify-m5-browser.cjs "${args[@]}")
+            if [[ "$PROBE_KIND" == extended || "$PROBE_KIND" == extended-snapshot ]]; then
+              command=(node "$GITHUB_WORKSPACE/harness/scripts/diagnostics/h1-extended-window.cjs" --source "$PWD" --output "$H1_EVIDENCE/$label" --mode "$PROBE_MODE" --windows "$H1_WINDOWS")
+              [[ "$PROBE_KIND" != extended-snapshot ]] || command+=(--snapshots)
+            elif [[ "$PROBE_KIND" == b4-module ]]; then
+              command=(node "$GITHUB_WORKSPACE/harness/scripts/diagnostics/h1-b4-module.cjs" --source "$PWD" --output "$H1_EVIDENCE/$label" --windows "$H1_WINDOWS" --battles 30)
+            fi
+            set +e
+            env -u CHROMIUM_PATH -u M6_HEAP_DIAGNOSTICS -u M6_WARMUP_EXPERIMENT \
+              M5_EVIDENCE_DIR="$H1_EVIDENCE/$label" "${extra[@]}" \
+              timeout --kill-after=10s 75m "${command[@]}" \
+              > "$H1_EVIDENCE/$label.log" 2>&1
+            status=$?
+            set -e
+            printf '%s\t%s\t%s\t%s\n' "$label" "$start" "$(date -u +%FT%TZ)" "$status" | tee -a "$H1_EVIDENCE/runs.tsv"
+            cat "$H1_EVIDENCE/$label.log"
+            if (( status != 0 )); then failed=1; fi
+            # Preserve timeouts and stop rather than contaminate later samples.
+            if (( status == 124 || status == 137 )); then break; fi
+          done
+          exit "$failed"
+      - name: Upload all raw diagnostic results, including failures
+        timeout-minutes: 20
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: h1-scaling-${{ matrix.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: h1-evidence/
+          if-no-files-found: error
+          retention-days: 30
