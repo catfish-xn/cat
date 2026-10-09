@@ -51,7 +51,7 @@
 
 `tests/m6-integration.test.ts:108` 的 `[B8] cannon: completed history retains sold opening transition units` 单独保留“路线实际卖出”和“旧历史仍含已售英雄”两条断言。新起手不含原过渡英雄，route.buyShop只购买最终编队成员；B8英雄链缺失使这两条在解开容量短路后才暴露。普通首战卖出与冻结历史另由m6-replay真实覆盖；B8接线后恢复此完整路线断言。Vitest清单因此为10个明确跳过，不是9个。
 
-### B9浏览器尾段（检查点五已实施，待CI验证）
+### B9浏览器尾段（检查点五已实施；[CI #153](https://github.com/catfish-xn/cat/actions/runs/37933488743) 已通过，固定 SHA da7937d）
 
 CI140 artifact11604394523确认6-5第31战后触发应用30战限制，6-6tick0停住；见`ci140-browser/README.md`。检查点五在真正第31战开战前保留并明确跳过6-5/6-6/6-7，防止已知30战应用上限导致错误吞掉后续检查。容量内全部30战、6-4补给及其后到6-5准备的公开操作、回放/生命周期/种子验证继续；未将完整领域33战结果称为浏览器结果。
 
@@ -67,7 +67,7 @@ CI140 artifact11604394523确认6-5第31战后触发应用30战限制，6-6tick0�
 `compare-m6-evidence.cjs` 的应用分组同步只消费前表8个已授权skip（B8 G02开场1-3/1-4/post-PvE，B9 G02终态、ROOT03、P2两分支、R4），逐项保留对应通过断言callback并写`m6-application-deferred-comparisons.json`。容量内10个真实phase样本、G04/ROOT04、repository、回放/布局/生命周期仍须通过，manifest任何新增skip或样本缺口直接失败。此为检查点五的历史状态；性能分组后续获明确批准，现行范围见下一节。
 
 
-### 性能严格拆分（2026-10-09 用户已批准；新SHA浏览器待执行）
+### 性能严格拆分（2026-10-09 用户已批准；[CI #153](https://github.com/catfish-xn/cat/actions/runs/37933488743) 已通过，固定 SHA da7937d；下文“现只有Node”保留为当时的历史记录）
 
 恢复总跟踪：[issue #23](https://github.com/catfish-xn/cat/issues/23)。B9合入并完成正式容量切换后，必须恢复原完整33战导入/原样本原则与阈值，经CI及独立审计才关闭；新增真实≤30战路径不能替代这项恢复。B8满装备条件也须重新核实，不能永久保留skip。
 
