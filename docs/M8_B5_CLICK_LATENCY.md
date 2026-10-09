@@ -2,13 +2,13 @@
 
 本文前半记录只读调查；后续用户明确授权仅修改 `verify-m7-presentation.cjs` 的双触输入驱动。400ms 产品防护、全部断言、界面和 CI 配置不变，授权后的改动与验收在文末单列。
 
-## 结论及边界
+## 修复前调查的结论及边界
 
 - **未观察到 B5 使本场景的点击处理或双触间隔稳定变慢。** 基线五次中两次、B5 五次中一次复现原双触断言失败，证明该失败不需要 B5 代码。这个小样本不能证明所有机器和所有装备负载下完全没有性能回归。
 - 几百毫秒主要花在第二次 tap 请求到原生 click 派发之间；两版主线程 trace 均显示既有渲染提交的大量等待。不是中间的 40ms 定时器实际睡了几百毫秒，也没有发现预览/装备查询被这个按钮调用。
 - B5 确实增加了换轮装备计划，不能说“没有新增计算”：单次采样约 1.1ms，预热隔离测量约 0.008ms/次。它位于第一次同步处理内；产品在处理结束后才启动防护计时。现有证据不支持它是防护结束后数百毫秒输入延迟的来源，因此本轮不凭空改 B5 或跳过校验。
 - 原先的 **562.5ms** 仅有事件时刻，没有对应完整 trace，无法事后还原那个单次样本的全部因果。此前从该数字直接归因“驱动额外等待”的结论过早，本报告以多次对照、分段计时和主线程采样取代该推断。
-- 原 CI #113 仍为失败；本报告不冒充修复、重跑成功、签收或送审。PR #16 保持 Draft。
+- 原 CI #113 仍为失败；此调查阶段不包含输入驱动修复，也不冒充重跑成功、签收或送审。PR #16 保持 Draft。
 
 ## 方法与版本
 
@@ -120,7 +120,7 @@ node scripts/analyze-m8-b5-click-latency.cjs --study=artifacts/m8-b5-click-repro
 node scripts/diagnose-m8-b5-click-pure-cost.cjs --study=artifacts/m8-b5-click-repro
 ```
 
-本次未改存档格式、digest、目录版本、冻结合同、G12 或其测试，也没有更改原门禁/阈值。只增加只读调查脚本、证据和交接文档。
+以上调查阶段未改存档格式、digest、目录版本、冻结合同、G12 或其测试，也没有更改原门禁/阈值。只增加只读调查脚本、证据和交接文档。
 
 ## 授权后的输入驱动修复（独立审计项 B5-M7-INPUT）
 
@@ -151,3 +151,13 @@ node scripts/diagnose-m8-b5-click-pure-cost.cjs --study=artifacts/m8-b5-click-re
 两版均通过 `help-dialog`、`reduced-motion-equivalence`、`continue-double-activation`、`replay-feedback`、`replay-identity`、`help-over-reward-choice`、`portrait-404-fallback`。原始观察记录、完整脚本report、指纹和对照资产见 [M8_B5_NATIVE_TOUCH_FIX.json](evidence/M8_B5_NATIVE_TOUCH_FIX.json)。生成的截图/日志留在 `artifacts/m8-b5-fixed-driver`，不提交生成物目录。
 
 审计方请单独核实 **B5-M7-INPUT**：这一项是用户明确授权的门禁输入驱动修复，不是B5领域实现；重点复核替换块以外字节一致、原断言和400ms未变、基线也会失败的历史证据，以及修复后两次trusted click确实落入窗口。CI仍以无preload的正常脚本执行，不用诊断模式代验收。
+
+修复提交：`8e16da2f53c4d2d715f663a719a1329e54330568`。正常完整 [CI #120](https://github.com/catfish-xn/cat/actions/runs/37883266293/attempts/1) 已在此SHA **首轮全部通过**：12个必需作业success，2个可选诊断按原配置skipped；workflow_dispatch默认输入，非诊断模式，无失败重跑。原失败 [CI #113](https://github.com/catfish-xn/cat/actions/runs/37874820358) 保留，不将新运行冒充原失败的重跑成功。
+
+原始日志确认98文件/1231测试全部通过（368.72秒），typecheck、生产构建、headless多seed和重复性能通过；六条构筑dev/preview、两组输入、M6 retention、M7及最终M5/M6比较全部通过。M5/M6最终产物均绑定干净8e16da2及源码指纹 `008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07`。
+
+[M7作业原始记录](https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531607)确认7项完整交互检查、原有五视口、`/cat/`子路径40资源零失败、预算均实际执行通过。JS gzip **473332/424763 = 1.114344 ≤ 既有1.15**；首交互中位数 **747/687ms = 1.087336 ≤ 1.20**。沿用基线批准的门槛；没有修改工作流中历史注释或任何阈值。
+
+堆门禁沿用2次预热/30次循环、无诊断：dev **259632B ≤1572864B**，listeners83→83/RAF1→1；preview **238776B ≤1048576B**，listeners82→82/RAF1→1。均首轮通过，无堆失败或重跑。完整数据、作业永久链接与原日志/比较产物指纹已补入机器证据。
+
+最终补记提交只更新本报告、机器证据与交接文档；CI受测SHA明确为8e16da2，不把后续纯文档SHA冒充运行过CI。原34处assert调用经语法树提取后逐项比对，内容和顺序均不变。PR保持Draft，不送审、不合并。

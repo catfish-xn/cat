@@ -1009,7 +1009,241 @@
     }
   ],
   "ci": {
-    "status": "pending full CI after this repair is committed and pushed",
+    "runId": 37883266293,
+    "number": 120,
+    "attempt": 1,
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293",
+    "headSha": "8e16da2f53c4d2d715f663a719a1329e54330568",
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "success",
+    "requiredSuccessCount": 12,
+    "optionalSkippedCount": 2,
+    "reruns": 0,
+    "jobs": [
+      {
+        "name": "m7-presentation-sample1",
+        "id": 113667531607,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531607",
+        "conclusion": "success"
+      },
+      {
+        "name": "input-preview-sample1",
+        "id": 113667531633,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531633",
+        "conclusion": "success"
+      },
+      {
+        "name": "input-dev-sample1",
+        "id": 113667531641,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531641",
+        "conclusion": "success"
+      },
+      {
+        "name": "test-and-build-sample1",
+        "id": 113667531685,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531685",
+        "conclusion": "success"
+      },
+      {
+        "name": "m6-retention",
+        "id": 113667531694,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531694",
+        "conclusion": "success"
+      },
+      {
+        "name": "browser-dev-cannon-sample1",
+        "id": 113667531730,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531730",
+        "conclusion": "success"
+      },
+      {
+        "name": "browser-preview-sniper-sample1",
+        "id": 113667531743,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531743",
+        "conclusion": "success"
+      },
+      {
+        "name": "browser-dev-sniper-sample1",
+        "id": 113667531759,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531759",
+        "conclusion": "success"
+      },
+      {
+        "name": "browser-preview-mage-sample1",
+        "id": 113667531800,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531800",
+        "conclusion": "success"
+      },
+      {
+        "name": "browser-preview-cannon-sample1",
+        "id": 113667531805,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531805",
+        "conclusion": "success"
+      },
+      {
+        "name": "browser-dev-mage-sample1",
+        "id": 113667531860,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531860",
+        "conclusion": "success"
+      },
+      {
+        "name": "heap-diagnostics",
+        "id": 113667532177,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667532177",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "warmup-experiment",
+        "id": 113667532628,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667532628",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "compare-evidence-sample1",
+        "id": 113674341431,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113674341431",
+        "conclusion": "success"
+      }
+    ],
+    "tests": {
+      "files": 98,
+      "tests": 1231,
+      "durationSeconds": 368.72,
+      "typecheck": "success",
+      "build": "success",
+      "headless": "success",
+      "repeatPerformance": "success"
+    },
+    "m7Budget": {
+      "baselineDirectories": {
+        "js": "/home/runner/work/cat/m7-js-base/dist",
+        "interactive": "/home/runner/work/cat/m6-base/dist"
+      },
+      "jsGzipBytes": {
+        "base": 424763,
+        "current": 473332
+      },
+      "jsRatio": 1.1143437634633901,
+      "jsBudget": 1.15,
+      "interactiveMs": {
+        "base": [
+          687,
+          700,
+          672,
+          692,
+          686,
+          687,
+          715,
+          670,
+          679
+        ],
+        "current": [
+          750,
+          747,
+          744,
+          750,
+          700,
+          740,
+          708,
+          752,
+          748
+        ],
+        "baseMedian": 687,
+        "currentMedian": 747
+      },
+      "interactiveRatio": 1.0873362445414847,
+      "interactiveBudget": 1.2,
+      "passed": true
+    },
+    "heaps": [
+      {
+        "mode": "dev",
+        "heapDiagnostics": false,
+        "warmupExperiment": false,
+        "warmupCycles": 2,
+        "cycles": 30,
+        "heapDelta": 259632,
+        "heapCeilingBytes": 1572864,
+        "beforeResources": {
+          "listeners": 83,
+          "pendingRaf": 1
+        },
+        "afterResources": {
+          "listeners": 83,
+          "pendingRaf": 1
+        }
+      },
+      {
+        "mode": "preview",
+        "heapDiagnostics": false,
+        "warmupExperiment": false,
+        "warmupCycles": 2,
+        "cycles": 30,
+        "heapDelta": 238776,
+        "heapCeilingBytes": 1048576,
+        "beforeResources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        "afterResources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        }
+      }
+    ],
+    "m5Comparison": [
+      {
+        "build": "cannon",
+        "evidenceClass": "final-clean-commit",
+        "sha": "8e16da2f53c4d2d715f663a719a1329e54330568",
+        "sourceFingerprint": "008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07",
+        "checkpoints": 182,
+        "rounds": 30,
+        "finalHash": "a7b2c48bb9c8dee310602ff0c8c1c063f52b27a274714db10a3440c4ce45d34c",
+        "passed": true
+      },
+      {
+        "build": "sniper",
+        "evidenceClass": "final-clean-commit",
+        "sha": "8e16da2f53c4d2d715f663a719a1329e54330568",
+        "sourceFingerprint": "008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07",
+        "checkpoints": 178,
+        "rounds": 30,
+        "finalHash": "44986b4e1e447dca5928dfc3fb27c5ff19d8b8c6353119f616ec4dad76948394",
+        "passed": true
+      },
+      {
+        "build": "mage",
+        "evidenceClass": "final-clean-commit",
+        "sha": "8e16da2f53c4d2d715f663a719a1329e54330568",
+        "sourceFingerprint": "008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07",
+        "checkpoints": 172,
+        "rounds": 30,
+        "finalHash": "a91abab0f89e4fae83cbff0ec02d8e483dc34aa1cbc8893241be2e83cdd0cea3",
+        "passed": true
+      }
+    ],
+    "m6Comparison": {
+      "passed": true,
+      "sha": "8e16da2f53c4d2d715f663a719a1329e54330568",
+      "sourceFingerprint": "008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07",
+      "records": 9
+    },
+    "cleanValidation": {
+      "sha": "8e16da2f53c4d2d715f663a719a1329e54330568",
+      "dirty": "",
+      "passed": true,
+      "sourceFingerprint": "008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07"
+    },
+    "rawSha256": {
+      "m7Log": "ba8b1ce0f1d147816bb99af982cbc999ff6bab4ef7b4631a08c455aa75a6492a",
+      "testsLog": "7a92b11efb3ec7024f80aa785f929dacac9bdfd257f71c0752e6a7a695a453ed",
+      "m5Comparison": "f0809a4d477f7dcbb11a2c2004237e622069c0722c56d926e79ce4002f06466a",
+      "m6Comparison": "96c9745606f0ce3e03b38fd27d4140022f86c901167c8ca97ed94f995f92ccdd",
+      "m6Validation": "19368c851f45ca99f3aca746f028faa8417c502a60056b14b24a9489bece7f85"
+    },
     "previousFailure": "https://github.com/catfish-xn/cat/actions/runs/37874820358"
-  }
+  },
+  "assertCallsUnchanged": 34
 }

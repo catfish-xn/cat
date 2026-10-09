@@ -322,4 +322,15 @@ await touchInput.detach();
 - 修复后在**相同生产资产、完整原M7前置负载**下，基线与B5各运行一次完整M7脚本，两版均通过全部7项检查。两次trusted click均为continue→start-combat；基线click间隔**42.2ms**、处理后**9.3ms**，B5为**61.9ms / 8.4ms**，均在原400ms窗口内。
 - 原脚本SHA256 `518ef64aa54a272baed1e8e59cf0d82ac8c60c83ac09ae529461222476b93fda`；修复后 `e14a32900b6785c6091040c16c80bd3b7151793be0f0cac058d18218a8424d50`。三份本轮涉及的脚本通过`node --check`；完整CI在本阶段提交推送后按正常配置执行，不使用诊断模式。
 - **审计方必须单列 B5-M7-INPUT 核实**：授权范围、替换块外字节一致、断言/400ms不变、基线偶发失败的对照证据、修复后实际原生间隔及正常完整CI结果。这个修复不等于B5领域回归修复，也不等于已签收。
-- 目前完整CI待运行，原#113失败仍保留；下一步提交推送、跑完整GitHub CI并按实际结果追加记录。PR #16保持Draft，不送审、不合并。
+- 修复已提交推送为 `8e16da2f53c4d2d715f663a719a1329e54330568`；完整CI结果见下一节。原#113失败仍保留。PR #16保持Draft，不送审、不合并。
+
+## 输入驱动修复后的完整CI结果（最新）
+
+- [完整CI #120 / run 37883266293 / attempt 1](https://github.com/catfish-xn/cat/actions/runs/37883266293/attempts/1)：**12/12必需作业首轮全部成功**，两个可选诊断按原配置跳过，无失败或重跑。正常workflow_dispatch默认输入，修复SHA为 `8e16da2f53c4d2d715f663a719a1329e54330568`。
+- 全量98文件/1231测试（原日志368.72秒）、typecheck/build、headless多seed/重复性能通过；cannon/sniper/mage × dev/preview六路线、两组input、M6 retention、M7以及最终比较全部通过。最终M5/M6证据均为干净8e16da2，源码指纹 `008a880c749e7fd8a2348e51eedda614bb7c0f81372e886e869bf91375644e07` 一致。
+- [M7作业113667531607](https://github.com/catfish-xn/cat/actions/runs/37883266293/job/113667531607)原日志确认完整7项检查、原有五视口、`/cat/`子路径和预算通过，填补原#113未执行的剩余M7覆盖。JS gzip473332B / 基线424763B = 1.114344 ≤既有1.15；首交互747/687ms = 1.087336 ≤1.20。没有新增手机适配或测试，仅运行原有门禁。
+- 堆首轮实测：dev **259632B ≤1572864B**（listeners83→83、RAF1→1），preview **238776B ≤1048576B**（82→82、1→1）；沿用原2次预热/30循环，无诊断、无堆失败重跑。
+- 审计独立项 **B5-M7-INPUT** 仍必须核实。原34处assert调用逐项文本及顺序一致；仅输入驱动变化，400ms和其他门禁/CI未变。对照证据/永久链接/原始产物指纹见 [报告](https://github.com/catfish-xn/cat/blob/feat/m8-b5/docs/M8_B5_CLICK_LATENCY.md)与 [机器证据](https://github.com/catfish-xn/cat/blob/feat/m8-b5/docs/evidence/M8_B5_NATIVE_TOUCH_FIX.json)。
+- 本次结果补记只改 `docs/M8_B5_CLICK_LATENCY.md`、`docs/evidence/M8_B5_NATIVE_TOUCH_FIX.json` 和本交接文件；相对已通过CI的8e16da2，没有可执行源码/脚本/依赖/工作流变化。明确区分CI受测SHA与后续文档SHA，不因纯文档补记重复整轮测试。
+- 未覆盖边界仍为前述U3动态联调、TG最大合法长程负载、后续正式存档/新日程及B8收据集成；本轮输入驱动修复不改变存档、digest、目录/规则版本，也不修复或重定义B3/B4已签收行为。下一步由接手开发者审计，本文不代替签收；不送审、不合并。
+- 结果补记前的远端核对发现PR引用未同步：`refs/heads/feat/m8-b5`和GitHub Git Ref API均为已通过CI的8e16da2，但PR #16 API及`refs/pull/16/head`仍返回0298a3f。PR摘要已更新为真实修复及CI结果，状态仍Draft。审计前必须核对PR实际head已追上分支；在此之前按明确修复SHA/分支链接读取，不能把旧PR引用当作已验收修复。没有通过关闭重开、改目标分支或合并来绕过此差异。
