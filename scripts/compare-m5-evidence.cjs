@@ -106,8 +106,9 @@ function validateU6Report(report){
   const {createServer}=await import('vite');
   const server=await createServer({root:path.resolve(__dirname,'..'),server:{middlewareMode:true,ws:false},optimizeDeps:{noDiscovery:true,include:[]},appType:'custom',logLevel:'error'});
   try{const {readCombatStats}=await server.ssrLoadModule('/src/simulation/combat-s13.ts');
+   const api=await server.ssrLoadModule('/src/simulation/match.ts');
    assert.equal(b8InputEvidence.length,2,'both input modes carry B8 Rageblade evidence');
-   for(const {name,manifest} of b8InputEvidence)validateB8RagebladeEvidence(manifest,`artifacts/${name}`,{readCombatStats});
+   for(const {name,manifest} of b8InputEvidence)validateB8RagebladeEvidence(manifest,`artifacts/${name}`,{api,readCombatStats});
   }finally{await server.close();}
  }
  fs.writeFileSync('artifacts/m5-cross-mode-deferred-assertions.json',JSON.stringify(deferredComparisons,null,2));
