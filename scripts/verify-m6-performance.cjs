@@ -57,9 +57,8 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
    const envelope={kind:'hex-autobattler-save',saveFormatVersion:1,replayFormatVersion:1,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
    if(build==='full-load'){
     const loads=history.completedRecords.map(record=>({round:record.context.round,players:record.context.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length,enemies:record.context.preparation.units.filter(u=>u.team==='enemy').length,equipped:record.context.items.filter(i=>i.location.kind==='unit').length}));
-    skipB6Dependency(report,'B8','full-load-15-equipment',`The real command route awaits B8 loot; restore the original maximal-load coverage under ${RESTORATION_ISSUE}`,()=>{
-     assert(loads.some(load=>load.players===9&&load.enemies===8&&load.equipped===15),'same F1 maximal legal population/equipment load');
-    });report.fullLoadObserved=loads;report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.equipped===15);fullLoadEnvelope=envelope;
+    // B8 loot now supplies the real command route's components: the original F1 maximal load runs again.
+    assert(loads.some(load=>load.players===9&&load.enemies===8&&load.equipped===15),'same F1 maximal legal population/equipment load');report.fullLoadObserved=loads;report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.equipped===15);fullLoadEnvelope=envelope;
    }
    const bytes=Buffer.byteLength(JSON.stringify(envelope));routes.push({build,bytes,incrementalBytes:currentBytes,summary:route.summary});
    if(!largestComplete||bytes>largestComplete.bytes)largestComplete={bytes,envelope};

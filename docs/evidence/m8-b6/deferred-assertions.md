@@ -1,5 +1,25 @@
 # B6 已授权的 B8/B9 显式跳过清单
 
+## B8 处置（节点1，2026-10-10，审计 P2-3 后全仓核查）
+
+全仓按 `skipB6Dependency(…'B8'…)`、`[B8]`、`awaits/requires B8` 检索，原清单所有 B8 项及审计补列的 headless、G02、最大装备负载、帮助弹窗与 M6 比较器均已处置。下表为处置结果；B9 项范围不变，见下文原表。
+
+| 原位置 | 项 | 处置 | 依据／说明 |
+| --- | --- | --- | --- |
+| `tests/m5-route.test.ts` | `[B8]` ×4 complete-build/组件链 | 已恢复 | 15 件组件按 M8B_LOOT“6-7结算”拆为补给5＋掉落10；另加 6-7 胜利终局视图 |
+| `tests/m6-integration.test.ts` | `[B8]` 出售过渡英雄仍留历史 | 已恢复（原样执行） | 真实 B8 掉落英雄被出售 |
+| `tests/m6-replay.test.ts` | `[B8]` 战后选择保留记录 | 已恢复（原样执行） | 真实 1-3 掉落选择 |
+| `scripts/verify-m5-headless.cjs` | `${build}-42-formed-battles` | 已恢复为直接断言 | 本机 24 路线通过、无 skip；seed42 formed 3/14/15/15 |
+| `scripts/verify-m5-input.cjs` | Rageblade ×3 | 已恢复（迁至真实 2-1） | 断言本体不变；最终比较器绑定产物、哈希、事件与攻速字段 |
+| `scripts/verify-m5-input.cjs` | back-to-back ×2 | **归档：不再适用**（用户批准） | 冻结日程每回合至多一个选择；未验证连续弹窗；另补真实 1-3/1-4 连击 |
+| `scripts/verify-m7-presentation.cjs` | `help-over-reward-choice` | 已恢复（真实 1-3 掉落选择） | B8 只对真实击杀授予选择；原准备（全员下场、2-7 仅 Irelia）经无界面复现为 forfeited、无 PendingChoice。原断言全部保留，改用无下场开局的首个战后奖励选择 1-3，并断言其为已赚得的掉落选择 |
+| `tests/m6-application-failures.cjs` | `G02-opening_choice_1-3/1-4`、`G02-post_pve_choice` | 已恢复 | 三个阶段并入必需样本，执行完整导入/Continue/下一转移比较 |
+| `scripts/verify-m6-performance.cjs` | `full-load-15-equipment` | 已恢复为直接断言 | 真实 full-load 路线在 6-5/6-6 达到 9 玩家/8 敌/15 装备 |
+| `scripts/compare-m5-evidence.cjs` | 输入延期 | 已更新 | 零 skip、两项归档、Rageblade 产物校验 |
+| `scripts/compare-m6-evidence.cjs` | G02 三项、`full-load-15-equipment` | 已更新 | 三阶段列为必过阶段；满载为直接断言；只允许原 B9 项 |
+| `tests/m8-b6-gate-preparation.test.js` | 辅助函数单测中的 `'B8'` | 保留 | 测试 skip 辅助函数本身，不是延期 |
+
+
 用户于2026-10-09明确授权：原断言保留，只跳过明确依赖B8/B9的项；清单之外所有检查必须通过。该清单不是B8/B9验收，也不能把历史失败改写成通过。最终审计包须绑定固定SHA；任何后续修改重新打包。
 
 ## Vitest（10个显式 `it.skip`，其他同文件断言继续）
