@@ -184,47 +184,73 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     }
     expect(allEvents.some(e => e.type === 'packetDamage' && e.source.instanceId === childId && e.source.parentItemInstanceId === 'item-3')).toBe(true);
   });
-  it('all 43 eligible child definitions bind through real Match snapshots and restore', () => {
-    const seen = new Set<string>(), shieldChildren: string[] = [];
-    // Plan inside this test's budget. Prefer two unseen children, breaking ties
-    // by ascending seed, before paying for another complete public opening.
+  /* User-approved test structure (2026-10-10, TG P2-1 plan A): the original single
+   * 43-definition test could not finish its 35 required public routes inside one
+   * 5-second budget. The same 35 routes, in the same greedy order, now run as fixed
+   * groups that each keep the default 5-second timeout; the overall time budget is
+   * therefore 5 x 5 s, not 5 s. Every group prepares its own routes from createMatch,
+   * shares no state with other tests, and asserts the definitions it ACTUALLY bound. */
+  const TG_ROUND_GROUPS = 5;
+  /** Pure planning only: the original greedy choice over 512 candidates (two unseen
+   * children first, ties by ascending seed), computed afresh by each caller. */
+  function plannedTemporaryRoutes() {
     const candidates = Array.from({ length: 512 }, (_, seed) => {
       const matchSeed = Math.imul(seed, 2654435761) >>> 0;
       const planned = generateRoundRolls({ equipment: initializeStreams(matchSeed).equipment, rolls: [] },
         [{ parentItemInstanceId: 'item-3', roundId: '2-5', playerLevel: 6 }], TEMPORARY_EQUIPMENT_POOL);
       return { matchSeed, children: planned.rolls[0].children };
     });
-    let publicRoutes = 0;
+    const seen = new Set<string>(), routes: { matchSeed: number; children: readonly string[] }[] = [];
     while (seen.size < 43) {
       const additions = (candidate: typeof candidates[number]) => candidate.children.filter(child => !seen.has(child)).length;
       const selected = candidates.reduce((best, candidate) => additions(candidate) > additions(best) ? candidate : best);
-      expect(additions(selected)).toBeGreaterThan(0);
-      const { matchSeed, children } = selected;
-      // Coverage is recorded only after the actual public route has bound it.
-      let state = equipped(6, matchSeed);
-      publicRoutes++;
-      expect(pair(state)).toEqual(children);
-      for (const child of state.temporaryEquipment) seen.add(child.definitionId);
-      state = accepted(startMatchCombat(state));
-      expect(restoreMatch(serializeMatch(state))).toEqual(state);
-      const shield = state.combat?.units.flatMap(unit => unit.shieldLayers ?? []).find(layer => layer.source.parentItemInstanceId);
-      if (shield) {
-        const corrupt = JSON.parse(serializeMatch(state));
-        const layer = corrupt.combat.units.flatMap((unit: any) => unit.shieldLayers).find((layer: any) => layer.source.parentItemInstanceId);
-        // A legacy source-only key is not a valid temporary shield identity.
-        layer.key = JSON.stringify([layer.source.ownerId, layer.source.sourceKind, layer.source.definitionId, layer.source.instanceId, layer.source.effectIndex]);
-        expect(() => restoreMatch(corrupt)).toThrow('Invalid Match save: shield projection');
-        shieldChildren.push(shield.source.definitionId);
-      }
-      for (let i = 0; i < 3 && state.phase === 'combat'; i++) state = stepMatch(state).state;
-      const restored = restoreMatch(serializeMatch(state));
-      expect(stepMatch(restored)).toEqual(stepMatch(state));
+      if (!additions(selected)) throw new Error('TG plan cannot reach 43 definitions');
+      routes.push(selected); for (const child of selected.children) seen.add(child);
     }
-    expect(seen.size).toBe(43);
-    expect([...seen].sort()).toEqual([...TEMPORARY_EQUIPMENT_POOL.completed, ...TEMPORARY_EQUIPMENT_POOL.components].map(item => item.definitionId).sort());
-    expect(publicRoutes).toBe(35); // One completed child per level-six roll is the lower bound.
-    expect(shieldChildren).toEqual(['crownguard']); // Keep the corruption branch non-vacuous.
+    const size = Math.ceil(routes.length / TG_ROUND_GROUPS);
+    return Array.from({ length: TG_ROUND_GROUPS }, (_, group) => routes.slice(group * size, (group + 1) * size));
+  }
+  /** One actual public route: bind, restore at combat start, corrupt any temporary shield, step and resume. */
+  function bindRealRoute(matchSeed: number, children: readonly string[]) {
+    let state = equipped(6, matchSeed);
+    expect(pair(state)).toEqual(children);
+    const bound = state.temporaryEquipment.map(child => child.definitionId);
+    state = accepted(startMatchCombat(state));
+    expect(restoreMatch(serializeMatch(state))).toEqual(state);
+    const shield = state.combat?.units.flatMap(unit => unit.shieldLayers ?? []).find(layer => layer.source.parentItemInstanceId);
+    if (shield) {
+      const corrupt = JSON.parse(serializeMatch(state));
+      const layer = corrupt.combat.units.flatMap((unit: any) => unit.shieldLayers).find((layer: any) => layer.source.parentItemInstanceId);
+      // A legacy source-only key is not a valid temporary shield identity.
+      layer.key = JSON.stringify([layer.source.ownerId, layer.source.sourceKind, layer.source.definitionId, layer.source.instanceId, layer.source.effectIndex]);
+      expect(() => restoreMatch(corrupt)).toThrow('Invalid Match save: shield projection');
+    }
+    for (let i = 0; i < 3 && state.phase === 'combat'; i++) state = stepMatch(state).state;
+    const restored = restoreMatch(serializeMatch(state));
+    expect(stepMatch(restored)).toEqual(stepMatch(state));
+    return { bound, shieldChild: shield?.source.definitionId ?? null };
+  }
+  it('the fixed TG route plan covers all 43 eligible children in 35 routes, with exactly one shield child', () => {
+    const groups = plannedTemporaryRoutes(), routes = groups.flat();
+    expect(groups.map(group => group.length)).toEqual([7, 7, 7, 7, 7]);
+    expect(routes).toHaveLength(35); // One completed child per level-six roll is the lower bound.
+    expect(new Set(routes.map(route => route.matchSeed)).size).toBe(35);
+    // The public preparation cache is keyed by seed; no other test in this file uses these seeds.
+    expect(routes.some(route => route.matchSeed === 42)).toBe(false);
+    expect([...new Set(routes.flatMap(route => route.children))].sort()).toEqual(
+      [...TEMPORARY_EQUIPMENT_POOL.completed, ...TEMPORARY_EQUIPMENT_POOL.components].map(item => item.definitionId).sort());
+    expect(routes.filter(route => route.children.includes('crownguard'))).toHaveLength(1);
   });
+  it.each(Array.from({ length: TG_ROUND_GROUPS }, (_, group) => group))(
+    'TG route group %i binds its eligible children through real Match snapshots and restore', group => {
+      const routes = plannedTemporaryRoutes()[group];
+      const actual = routes.map(route => bindRealRoute(route.matchSeed, route.children));
+      // Coverage is what the public routes actually bound, not the plan.
+      expect(actual.map(result => result.bound)).toEqual(routes.map(route => route.children));
+      // Keep the corruption branch non-vacuous: the one crownguard route really grants a temporary shield.
+      expect(actual.flatMap(result => result.shieldChild ? [result.shieldChild] : []))
+        .toEqual(routes.some(route => route.children.includes('crownguard')) ? ['crownguard'] : []);
+    });
   it('combat restore rejects a forged temporary program parent chain', () => {
     const state = accepted(startMatchCombat(equipped()));
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
