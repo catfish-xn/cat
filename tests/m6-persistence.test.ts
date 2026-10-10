@@ -6,7 +6,7 @@ import { BattleHistory } from '../src/replay/history';
 import { fixedCapture, mergeCaptures } from '../src/persistence/capture-ownership';
 import { SaveError } from '../src/persistence/repository';
 import { createMatch } from '../src/simulation/match';
-import { MAX_SAVE_BYTES } from '../src/m6/limits';
+import { MAX_BATTLE_RECORDS, MAX_SAVE_BYTES } from '../src/m6/limits';
 import type { CapturedSave, SaveEnvelope, SaveStatus, SlotToken } from '../src/m6/contracts';
 const envelope = (): SaveEnvelope => ({ kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1, runId: 'test-run', createdAt: '2026-10-06T00:00:00.000Z', match: createMatch(42), battles: [], currentBattle: null });
 const captured = (): CapturedSave => ({ match: createMatch(42), currentBattle: null, battleKeys: [], addedBattles: [] });
@@ -39,7 +39,7 @@ describe('M6 seed and file boundaries', () => {
   });
   it('rejects a bare M5 state and record/event overflow before history', async () => {
     await expect(validateEnvelope(createMatch(42), vi.fn())).rejects.toThrow();
-    await expect(validateEnvelope({ ...envelope(), battles: Array(31).fill({ events: [] }) }, vi.fn())).rejects.toThrow('数量');
+    await expect(validateEnvelope({ ...envelope(), battles: Array(MAX_BATTLE_RECORDS + 1).fill({ events: [] }) }, vi.fn())).rejects.toThrow('数量');
     await expect(validateEnvelope({ ...envelope(), battles: [{ events: Array(100001).fill(null) }] }, vi.fn())).rejects.toThrow('边界');
   });
 });

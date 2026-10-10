@@ -1,6 +1,8 @@
 /** F1 measured engineering limits; evidence and measurement scope: M6_GOAL.md. */
 export const MAX_SAVE_BYTES = 256 * 1024 * 1024;
-export const MAX_BATTLE_RECORDS = 30;
+/** B9: one record per non-supply round of the frozen catalog (38 rounds, 5 supply). Kept a literal so
+ * evidence scripts can evaluate this file standalone; tests pin it to the catalog. */
+export const MAX_BATTLE_RECORDS = 33;
 export const MAX_EVENTS_PER_BATTLE = 100_000;
 export const AUTOSAVE_TICKS = 40;
 export const MAX_COMPLETED_RUNS = 3;

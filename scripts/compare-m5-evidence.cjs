@@ -1,4 +1,4 @@
-const {skipB6Dependency,validateB6BrowserBoundary}=require('./b6-deferred-assertions.cjs');
+const {validateFullBrowserRoute}=require('./b6-deferred-assertions.cjs');
 const fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
 const {hash}=require('./m4-evidence.cjs');
 const read=file=>JSON.parse(fs.readFileSync(file,'utf8'));
@@ -37,12 +37,10 @@ for(const build of ['cannon','sniper','mage']){
  assert.equal(manifests[0].sourceFingerprint,manifests[1].sourceFingerprint);assert.deepEqual(manifests[0].versions,manifests[1].versions);assert.deepEqual(manifests[0].checkpoints,manifests[1].checkpoints,'all operation checkpoints');
  const routes=folders.map(folder=>read(path.join(folder,'route.json')));
  for(const key of ['initial','final','ledger','actions','rounds'])assert.deepEqual(routes[0][key],routes[1][key],`${build} complete ${key}`);
- const skippedRounds=validateB6BrowserBoundary(manifests[0],routes[0]);validateB6BrowserBoundary(manifests[1],routes[1]);
- assert.deepEqual(manifests[0].deferredBrowserRounds,manifests[1].deferredBrowserRounds,'both modes must disclose the same omissions');
- for(const round of routes[0].rounds){const compare=()=>compareBrowserRound(folders[0],folders[1],round.round,'browser observed');
-  if(skippedRounds.has(round.round))skipB6Dependency(deferredComparisons,'B9',`${build}-browser-snapshot-${round.roundDefinitionId}`,'Both browser jobs explicitly omitted this application-capacity tail; complete domain route comparison above still executed',compare);else compare();}
+ validateFullBrowserRoute(manifests[0],routes[0]);validateFullBrowserRoute(manifests[1],routes[1]);
+ for(const round of routes[0].rounds)compareBrowserRound(folders[0],folders[1],round.round,'browser observed');
 
- comparisons.push({build,evidenceClass:finalGate?'final-clean-commit':'development-validation',sha:sharedSha,sourceFingerprint:manifests[0].sourceFingerprint,checkpoints:manifests[0].checkpoints.length,rounds:routes[0].rounds.length,finalHash:hash(routes[0].final),fullApplicationRoutePassed:false,browserBattlesCompared:routes[0].rounds.length-skippedRounds.size,skippedBrowserRoundIds:manifests[0].deferredBrowserRounds,domainRouteComparedInFull:true,passed:true});
+ comparisons.push({build,evidenceClass:finalGate?'final-clean-commit':'development-validation',sha:sharedSha,sourceFingerprint:manifests[0].sourceFingerprint,checkpoints:manifests[0].checkpoints.length,rounds:routes[0].rounds.length,finalHash:hash(routes[0].final),fullApplicationRoutePassed:true,browserBattlesCompared:routes[0].rounds.length,skippedBrowserRoundIds:[],domainRouteComparedInFull:true,passed:true});
 }
 if(finalGate){
  for(const mode of ['dev','preview'])for(const name of [`m5-input-${mode}`,`m5-${mode}-cannon-touch`]){
@@ -70,11 +68,8 @@ if(finalGate){
  const touchRoutes=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/route.json`));
  for(const key of ['initial','final','ledger','actions','rounds'])assert.deepEqual(touchRoutes[0][key],touchRoutes[1][key],`touch complete domain ${key}`);
  const touchManifests=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/manifest.json`));
- const touchSkipped=validateB6BrowserBoundary(touchManifests[0],touchRoutes[0]);validateB6BrowserBoundary(touchManifests[1],touchRoutes[1]);
- for(const {round,roundDefinitionId} of touchRoutes[0].rounds){
-  const compare=()=>compareBrowserRound('artifacts/m5-dev-cannon-touch','artifacts/m5-preview-cannon-touch',round,`touch R${round}`);
-  if(touchSkipped.has(round))skipB6Dependency(deferredComparisons,'B9',`touch-browser-snapshot-${roundDefinitionId}`,'Both touch jobs explicitly omitted the same B9 application-capacity tail',compare);else compare();
- }
+ validateFullBrowserRoute(touchManifests[0],touchRoutes[0]);validateFullBrowserRoute(touchManifests[1],touchRoutes[1]);
+ for(const {round} of touchRoutes[0].rounds)compareBrowserRound('artifacts/m5-dev-cannon-touch','artifacts/m5-preview-cannon-touch',round,`touch R${round}`);
 
 }
 // The U6 job is part of the final evidence: its report must exist, match this commit and contain

@@ -1,7 +1,7 @@
 import { MatchSession } from '../rendering/match-session';
 import { createMatch } from '../simulation/match';
 import type { BattleRecord, SaveEnvelope, SaveStatus, SessionChange, SlotToken } from './contracts';
-import { AUTOSAVE_TICKS } from './limits';
+import { AUTOSAVE_TICKS, MAX_BATTLE_RECORDS } from './limits';
 import { SaveRepository, saveError } from '../persistence/repository';
 import { SaveCoordinator } from '../persistence/coordinator';
 import { createSeed, createRunId } from '../persistence/seed';
@@ -101,7 +101,7 @@ export class MatchApplication {
     if (change.reason !== 'tick' || phaseChanged || change.after.combat !== null && change.after.combat.tick % AUTOSAVE_TICKS === 0) this.enqueue();
     this.replayPanel.setEnabled(this.mode === 'active' && ['preparation','settlement','gameOver'].includes(change.after.phase));
     // Do not materialize all historical records during a frame update.
-    if (completed.length > 30) throw new Error('战斗历史超过冻结边界');
+    if (completed.length > MAX_BATTLE_RECORDS) throw new Error('战斗历史超过冻结边界');
   }
   private envelope(): SaveEnvelope {
     return { kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1,
