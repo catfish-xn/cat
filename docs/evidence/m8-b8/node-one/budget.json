@@ -78,5 +78,25 @@
       }
     ],
     "total": 505225
+  },
+  {
+    "label": "B8 probe after Q1 revert and P2-4 (U6 UI files at c0109ac, readLootView exported)",
+    "files": [
+      {
+        "file": "index-YaHrXGuU.js",
+        "gzip9": 503508
+      }
+    ],
+    "total": 503508
+  },
+  {
+    "label": "integrated candidate after Q1 revert and P2-4",
+    "files": [
+      {
+        "file": "index-px3kamYK.js",
+        "gzip9": 504905
+      }
+    ],
+    "total": 504905
   }
 ]
