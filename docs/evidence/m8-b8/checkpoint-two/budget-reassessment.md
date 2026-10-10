@@ -4,7 +4,7 @@
 
 B8累计从U5固定基线2acb9acfe90ad7936083fa2c7018dd482b6b222f的488964 B起算，含①全部成本；不是从②重算。Node22.23.3 / Vite7.3.6，同依赖、逐emitted JS gzip9求和。现中值10000 B、严格超过13000 B暂停仍有效，总552191 B不变。用户允许在超线期间完成现有已授权缺陷和BoardScene边界例外，然后重评；③范围已有规划批准，但未获②签收前的实施权限；B9、新玩法及进一步结构优化均未获当前实施授权。
 
-当前受测源码：6484a53c55d5199270fc7822df5ca58c2796819f，tree cc027ed92d9c2dd8006b2a84caeb74a965bef243。对应远端75c8be53e8ccc7ac669fb8527175b7f46b573662；CI183生产gzip9同为502900 B。原样npm test为110文件通过/15失败、1674项通过/92失败/10既有skip；npm run build（含typecheck）通过。详情见post-fixes-verification.md，不能以专项代替。
+当前受测源码：6484a53c55d5199270fc7822df5ca58c2796819f，tree cc027ed92d9c2dd8006b2a84caeb74a965bef243。对应远端75c8be53e8ccc7ac669fb8527175b7f46b573662；CI183生产gzip9同为502900 B。原样npm test为110文件通过/15失败、1674项通过/92失败/10既有skip；npm run build（含typecheck）通过。CI183终态failure：3成功/9失败/3skip，CI单测563.50s与本机92失败/10skip一致；详情见post-fixes-verification.md，不能以专项代替。
 
 ## 2. 前后实验
 

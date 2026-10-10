@@ -127,7 +127,7 @@
 2. seed1公开购买两Lux后部署，真实1-3的unit-5掉落合并使unit-3升星，消费原Combat的unit-4及新候选unit-5；旧Combat视图保留原星级、不可拖、不复活为准备单位，Continue销毁一次并清tokens/views/namedObjects/renderedCells/旧选择。
 3. 从上述真实finished状态新建MatchSession，再调用真实sync重建被消费旧ID。所有tokens先disableInteractive/禁拖，然后仅当前准备单位可重新选择；旧ID明确disabled+不可拖，点击不改变选择，出售被wrong-phase原子拒绝，Continue清理完整。
 
-3/3与全局typecheck通过，原始日志`token-lifecycle-targeted.log.gz`、`token-lifecycle-typecheck.log.gz`。**这不是Chromium或CI通过证明**；input-dev/preview与M7触屏原门禁须由后续同SHA CI重验，CI174首失败不覆盖或删除。该文件例外及证据必须列入②外部送审。
+3/3与全局typecheck通过，原始日志`token-lifecycle-targeted.log.gz`、`token-lifecycle-typecheck.log.gz`。**这不是Chromium或CI通过证明**；该专项提交时input-dev/preview与M7触屏原门禁尚待同SHA CI重验；后续CI183局部成功及整run失败见下节，CI174首失败不覆盖或删除。该文件例外及证据必须列入②外部送审。
 
 ### CI174 修复：共享装备 fixture 使用真实公共路线
 
@@ -144,3 +144,5 @@
 [完整B8预算重评建议](budget-reassessment.md)按修复后实测重新估②余项、③查询组合、④runtime收尾，保留B9中9000/暂停11700及U6/U7待估非零，不修改现有门禁。[golden静态分析](golden-static-review.md)保留原字节SHA256与条件，不刷新golden，也不把首个digest短路后的检查记通过。
 
 CI183同75c8的input dev/preview各31case真实验证通过，原undefined.input未重现；但后续touch-route因golden失败，两个job整体仍失败。M7整job通过；六构筑browser仍未跨golden前置。具体job链接与原日志见验证报告。②仍未完成且未外部签收，不解除剩余延期，不合PR、不进入③/B9。
+
+CI183已于05:36:49Z结束failure（attempt1、75c8）：3成功M7/U3/retention、9失败test/六browser/两input、3skip compare/两optional。CI单测15文件失败/110通过、92项失败/1674通过/10skip，563.50s，与本机一致；test job后续build/headless/performance未执行。精确job与原始元数据见固定验证报告，不把retention成功或input局部成功扩大为全CI通过。

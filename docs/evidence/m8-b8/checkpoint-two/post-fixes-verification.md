@@ -52,9 +52,20 @@
 
 其中8项golden及B6/B7的3项旧阶段前提为当前已知新语义适配；其余81项是具体缺来源/重复注入的首个失败。没有据此声称所有后续领域实现正确。已确认真实生产缺陷为BoardScene终帧对象未创建，本次已修；真实浏览器同SHA的input局部和M7已有下节通过证据，但完整route仍被golden挡住。
 
+## CI183同SHA最终状态（首跑，不重跑）
+
+[完整run38027546769](https://github.com/catfish-xn/cat/actions/runs/38027546769)，attempt1，固定75c8，2026-10-10 **05:36:49Z**终态 **failure**：15 jobs为3 success、9 failure、3 skipped。
+
+- 成功：[M7 114141496269](https://github.com/catfish-xn/cat/actions/runs/38027546769/job/114141496269)、[U3 114141496144](https://github.com/catfish-xn/cat/actions/runs/38027546769/job/114141496144)、[retention 114141496336](https://github.com/catfish-xn/cat/actions/runs/38027546769/job/114141496336)。retention不能再被概括为golden前置未执行。
+- 失败：[test/build 114141496369](https://github.com/catfish-xn/cat/actions/runs/38027546769/job/114141496369)、6个browser、2个input。test原样结果为15文件失败/110通过、92项失败/1674通过/10skip，**563.50s**，与本机失败集合/计数一致。test job里的后续build、headless、performance步骤为skipped；本机原样build成功的证据独立保留，不能替CI未执行步骤盖章。
+- 3个skipped jobs：compare-evidence因前置失败未执行，warmup-experiment与heap-diagnostics为2个optional；不算成功，不把可选未跑算新测试skip。
+- 两input各自31case passed:true之后，touch-route因golden首检失败，故job仍failure；6browser全部在golden前置失败，没有进入其真实浏览器路线。M7/U3/retention的成功和其他失败不得互相替代。
+- 原GitHub run/jobs元数据、test/U3/retention日志与artifact完整性清单已归档`ci183-*`；12个已执行job的checkout均核对75c8，12份原artifact共53975001 B由监控保存并核对GitHub SHA256。未将这些大ZIP放入仓库。
+- M7现有1.30预算门禁通过仅说明全局口径502900/424763=1.183954；**B8独立13000 B暂停线仍超**，不构成②签收。
+
 ## 尚未执行/通过与下一步边界
 
-- [golden静态分析](golden-static-review.md)给出精确旧SHA256和审计迁移条件；当前没有刷新golden、没有改变assert/hash范围。它阻断原m5-route/m6integration，并阻断`verify-m5-browser`进入Chromium；CI180/181这些失败作业不能作为UI真实验证。headless/retention/compare等对应前置或golden依赖也不能冒称通过。
+- [golden静态分析](golden-static-review.md)给出精确旧SHA256和审计迁移条件；当前没有刷新golden、没有改变assert/hash范围。它阻断原m5-route/m6integration，并阻断`verify-m5-browser`进入Chromium；CI180/181这些失败作业不能作为UI真实验证。headless/compare等未执行项不能冒称通过；CI183 retention实际成功，见下方独立记录。
 - 15组件必须保留完整10 LootReceipt+5 supply ScheduleReceipt口径；旧B8延期body仅数ScheduleReceipt不能直接解除、不能降至5、不能伪装来源。既有B8/B9延期仍原样，不扩skip。
 - CI183固定远端75c8已有真实UI证据：input-dev [job114141496349](https://github.com/catfish-xn/cat/actions/runs/38027546769/job/114141496349) 的verify-m5-input为31cases passed:true、173.167s；input-preview [job114141496391](https://github.com/catfish-xn/cat/actions/runs/38027546769/job/114141496391) 为31cases passed:true、231.077s。原undefined.input未重现，两者仍保留5项既有B8 skip；后续touch-route都因golden digest失败，**整个input job仍failure**。
 - 同SHA [M7 job114141496269](https://github.com/catfish-xn/cat/actions/runs/38027546769/job/114141496269) 整job success：presentation、五视口、subpath和budget通过，原触屏双击Continue语义包含在既有门禁。CI生产gzip9 502900与本机同值；相对M7base424763比1.183954，交互545/525ms。原日志归档为ci183-input-dev.log.gz、ci183-input-preview.log.gz、ci183-m7.log.gz。本报告没有本机运行Chromium。
