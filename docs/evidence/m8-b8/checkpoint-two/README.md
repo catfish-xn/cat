@@ -128,3 +128,11 @@
 3. 从上述真实finished状态新建MatchSession，再调用真实sync重建被消费旧ID。所有tokens先disableInteractive/禁拖，然后仅当前准备单位可重新选择；旧ID明确disabled+不可拖，点击不改变选择，出售被wrong-phase原子拒绝，Continue清理完整。
 
 3/3与全局typecheck通过，原始日志`token-lifecycle-targeted.log.gz`、`token-lifecycle-typecheck.log.gz`。**这不是Chromium或CI通过证明**；input-dev/preview与M7触屏原门禁须由后续同SHA CI重验，CI174首失败不覆盖或删除。该文件例外及证据必须列入②外部送审。
+
+### CI174 修复：共享装备 fixture 使用真实公共路线
+
+旧 `itemMatch` 在1-2直接注入永久装备、修改开场英雄身份，没有合法出生/消费，严格fold拒绝是预期。现 helper 通过seed42真实开场死亡与Maddie/Lux掉落、1-3/1-4两次公开组件选择、真实combine/equip/deploy获得单件；三/四组件再经公开弃权和2-4/3-4 scheduled选择获得。缓存只保存首次真实执行的快照，每次deep-clone；没有写资源/receipt/provenance/敌人/HP。
+
+这将正控战斗移到2-1或3-5，**敌人不再是旧1-2**。非目标英雄上板凳且目标站前排，使Bulky/Manaflow无加成，原单BT175/双BT350/tick101过期和Lux HoJ468等独立数值保持。原B4 catalog/integration/R3b/audit四文件所有原断言、数值、指定错误原因和完整restore未修改：117/118通过，61个共享入口失败消除。唯一未过为另有自己fixture的5-1三星Garen+三成装注入，仍报current resource fold，未假装修好。
+
+新增4项真实来源、Lux身份、四组件来源与缓存隔离通过，typecheck通过。原日志 `equipment-fixture-targeted.log.gz`、`equipment-fixture-provenance-final.log.gz`、`equipment-fixture-typecheck-final.log.gz`；仍不等于全量或CI通过。
