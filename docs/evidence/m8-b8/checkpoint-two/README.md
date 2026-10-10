@@ -90,3 +90,7 @@
 主要保留成本是 frozen loot 的独立恢复/身份、资源出生与消费的全历史折叠、原始 combat basis 及当战原子 suffix 验证、默认运行授予/选择/终局处理。压缩包的跨模块字典使单模块数字不可直接相加，本次没有伪造逐模块归因。进一步削减至少1422 B需要更广的编码/序列化结构重构，涉及恢复边界与错误拒绝路径；可维护性和重新验证成本显著，不能保证下一轮回线。②剩余缺陷修复、完整组合验证与③视图/隐藏信息接线尚有成本，未实施的代码无法给出可靠字节承诺；至少还需1422 B加这些新增成本的空间。本轮结果等待预算决定。
 
 验证：`optimization-targeted.log.gz`记录5文件139项通过；`optimization-typecheck.log.gz`记录原样typecheck通过。全量和CI尚未通过，CI174的真实UI异常及测试参考/fixture问题另见诊断报告；以上不代表②签收。
+
+### CI174 修复：独立命令参考补资源事实
+
+`command-oracle.cjs` 的旧参考只构造买卖后资源和事件，未构造②新增的出生／升级／出售来源，导致原 `match-economy` 30失败/12通过。现按该参考自己的 purchase 和价格模型，独立追加事实和 acquisitionSequence；保留原命令失败零变化、选择优先级、价格和完整 result 深相等。没有从实际 result 复制来源，也没有生产 imports。旧42项原样全通过，新6项手算回归通过，typecheck通过。前后原始日志为 `command-oracle-before.log.gz` / `command-oracle-targeted.log.gz`。这些 command-unit 输入是明确的局部机制 fixture，不作为完整真实资源路线证明。本提交不改变生产行为，亦不代表全CI通过。
