@@ -24,3 +24,13 @@
 - 新3支及既有B8 restore七项共10/10通过，最终全局typecheck与受测SHA随批次记录。
 
 经济＋reveal最终原样两文件6/6通过（6.53s），原始日志`live-economy-reveal-final.log.gz`；统一全局typecheck通过，日志`live-combinations-typecheck.log.gz`。针对检查通过不代表最终全量/CI。
+
+## 真实stock＋本战delta与掉落立即合并
+
+`tests/m8-b8-live-growth.test.ts`固定seed49，仅重放公开采购/部署/战斗命令，不从存档注入状态。两Tristana实际前战stock为unit13=250、unit17=125，3-7公开将Corki暂置备战，unit17当战tick74再获125；tick166实际掉落candidate unit25使unit13升二星，最终为250+125+125=500。旧Combat仍保存原两英雄与各自delta，奖励后roster不反向改写开战依据。
+
+- 真准备、开战、活跃揭示、最后tick前、待选、选后六边界完整strictrestore；从tick74恢复分支剩余每tick完整state/events等价，Start完整事件也相同。
+- 候选unit25记唯一真实receipt/birth并被消费，没有留在准备阵容或重建为Combat单位；本战sourceDeltas只保存原unit17的125，既有375不可重复算。
+- 重复step、失败Start、旧choice、重复Continue均保原引用、调用前后序列化不变；选择及Continue不再次提交成长。
+- 20项精确篡改拒绝覆盖stock/delta、source身份/步长、唯一commit、receipt候选、消费与basis等。复活已消费成长ID先命中既有persistent growth schema边界，明确保留该实际拒绝层，不假称总会进入后续fold。
+- 最终26/26（六正向＋20负控）、全局typecheck通过，原日志同批封存。该真实奖励案例是一层；两层stock/delta级联仍由既有纯runtime/fold向量覆盖，真实九卡采购的同命令两层升级及restore另在B5正控，不混称真实两层奖励路线。
