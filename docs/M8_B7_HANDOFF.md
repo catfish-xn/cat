@@ -13,7 +13,13 @@
 
 ## Cleanup verification checkpoint (before audit-branch integration)
 
-Local `f042e7d2f620754e572b4c27f81d2fbf07e97e25` and remote `3fd72a8e7afe097a836fb585d31ec529880d9df1` share tree `c59d4122a6468df400c968053a7d7183d0bf0cd7`: original isolated `npm test` passed 112 files, 1427 tests, 10 existing skips in 420.52s; typecheck/build and five targeted cases passed. Mutation probes prove the three timing cases fail with the old restore timing, and the precise hero-minimum case fails when only the old mana predicate is restored. All JS gzip9 totals 485816 B, cleanup delta +73 B. [Complete evidence and raw logs](evidence/m8-b7/cleanup/README.md). The merged audit vectors and later approved budget-only change require a new final check; this checkpoint does not claim their acceptance.
+Local `f042e7d2f620754e572b4c27f81d2fbf07e97e25` and remote `3fd72a8e7afe097a836fb585d31ec529880d9df1` share tree `c59d4122a6468df400c968053a7d7183d0bf0cd7`: original isolated `npm test` passed 112 files, 1427 tests, 10 existing skips in 420.52s; typecheck/build and five targeted cases passed. Mutation probes prove the three timing cases fail with the old restore timing, and the precise hero-minimum case fails when only the old mana predicate is restored. All JS gzip9 totals 485816 B, cleanup delta +73 B. [Complete evidence and raw logs](evidence/m8-b7/cleanup/README.md). This earlier checkpoint does not claim acceptance of the subsequently integrated audit vectors or approved budget-only change; their final local checks are recorded below.
+
+## Final integrated cleanup checks
+
+The supplied audit/request branches, stronger boundary assertions, approved planning report and separate numeric-only M7×1.30 cap change are integrated. Tested local `442bd706eff8cc9cb69a55dacc951e312577c82e` / remote `b3bc1ebaca81892d9379c69c768adfcaf971f7d1` share tree `59c063c1affad478031001616c8df937dfacd37e`. **Original isolated npm test:113 files,1441 passed/10 existing approved skips,432.38s,exit0**; targeted19/typecheck/build/script-syntax checks pass. JS gzip9 is **485816 B**, +73 B cleanup increment, approved effective ceiling **552191 B**, remaining **66375 B**. [Final evidence and raw logs](evidence/m8-b7/cleanup-integration/README.md). Remote CI and subsequent Claude review of this cleanup are still separate, not self-signed here.
+
+The [UR-U5-01/02 frozen-contract proposal](M8_U5_PREVIEW_CONTRACT_CHANGE.md) is documentation awaiting approval, with no type/runtime implementation. U5 may proceed on the already approved adapter path. The [M8-only budget plan](M8_REMAINING_JS_BUDGET_PLAN.md) retains all19 hero descriptions and requires each future batch to stop and report if its actual increase exceeds its original central estimate×1.30; M9 must reassess the cap.
 
 ## Scope and integration
 
@@ -38,7 +44,7 @@ User-approved project convention: B6's fixed PvP round has no encounterId, so re
 
 ## Budget and remaining limits
 
-Node22.23.3 `zlib.gzipSync(bytes,{level:9})`, all production JS: **485743 B**, versus exact rebuilt 947 **480941 B**, delta **+4802 B**. The user accepted this **+4802 B** increase, which exceeds the preferred B7 +4000 B by **802 B** after attempted deduplication; safety checks and independent consumption receipts are retained. The unchanged effective ceiling is **488477 B**, leaving **2734 B**. Final CI paired measurement remains authoritative; no budget/method change.
+Node22.23.3 `zlib.gzipSync(bytes,{level:9})`, all production JS: **485743 B**, versus exact rebuilt 947 **480941 B**, delta **+4802 B**. The user accepted this **+4802 B** increase, which exceeds the preferred B7 +4000 B by **802 B** after attempted deduplication; safety checks and independent consumption receipts are retained. At that accepted B7 checkpoint the effective ceiling was **488477 B**, leaving **2734 B**. The later user-approved M8-only change raises the factor to M7×1.30 in a separate commit, as recorded above; the paired all-JS gzip9 method and other gates remain unchanged. Final CI paired measurement remains authoritative.
 
 The domain preview is currently tree-shaken because U5 has not imported it. Its first UI use has an unknown additional bundle cost; this is not a zero-cost delivered preview UI. Synthetic late-round fixtures use explicitly documented earlier wins and strong test heroes, not an honest full-campaign/balance claim. Four real seed42 routes still have zero fully formed battles and five component grants under existing B8/B9 deferrals. Stage1 specified-hero vectors are fixture boundaries, not implemented B8 rewards.
 
