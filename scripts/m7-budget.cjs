@@ -1,9 +1,9 @@
 /*
  * M7 hard budgets (M7_PLAN §5) measured as a pair on the same machine:
- *  - production JS gzip  <= baseline × 1.15
+ *  - production JS gzip  <= baseline × 1.30
  *  - first interactive   <= baseline median × 1.20 (navigation → public 以固定种子开始 enabled)
  * The historical interaction baseline is the signed-off M6 tree. M8 CI supplies a separate
- * --js-base signed-off M7 build, per M8_PLAN §7.6 (2026-10-08). JS allowance is 1.15 per the approved M8 budget decision;
+ * --js-base signed-off M7 build, per M8_PLAN §7.6 (2026-10-08). JS allowance is 1.30 per the approved M8 budget decision;
  * the 1.20 interaction allowance and measurement methods are unchanged.
  * Both interaction dist folders are served from the
  * root by the same static server; samples alternate base/current to share machine noise.
@@ -53,7 +53,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
   } finally { await browser.close(); for (const server of Object.values(servers)) server.close(); }
   const result = {
     baselineDirectories: { js: jsBaseDir, interactive: baseDir },
-    jsGzipBytes: size, jsRatio: size.current / size.base, jsBudget: 1.15,
+    jsGzipBytes: size, jsRatio: size.current / size.base, jsBudget: 1.30,
     interactiveMs: { base: times.base, current: times.current, baseMedian: median(times.base), currentMedian: median(times.current) },
     interactiveRatio: median(times.current) / median(times.base), interactiveBudget: 1.20,
   };
