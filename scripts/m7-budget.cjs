@@ -3,7 +3,8 @@
  *  - production JS gzip  <= baseline × 1.30
  *  - first interactive   <= baseline median × 1.20 (navigation → public 以固定种子开始 enabled)
  * The historical interaction baseline is the signed-off M6 tree. M8 CI supplies a separate
- * --js-base signed-off M7 build, per M8_PLAN §7.6 (2026-10-08). JS allowance is 1.30 per the approved M8 budget decision;
+ * --js-base signed-off M7 build, per M8_PLAN §7.6. The M8-only 1.30 allowance follows
+ * docs/M8_REMAINING_JS_BUDGET_PLAN.md §7 (2026-10-10): batch stop lines apply; M9 must reassess, not inherit 1.30;
  * the 1.20 interaction allowance and measurement methods are unchanged.
  * Both interaction dist folders are served from the
  * root by the same static server; samples alternate base/current to share machine noise.

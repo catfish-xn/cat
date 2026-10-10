@@ -215,7 +215,7 @@ jobs:
           git worktree add ../m6-base 631c131f1f2fd387c873f0fd8b5a238bca79dbe0
           ln -s "$PWD/node_modules" ../m6-base/node_modules
           (cd ../m6-base && npx vite build)
-          # M8_PLAN §7.6: production JS gzip <= signed-off M7 x 1.10 (2026-10-08).
+          # M8_PLAN §7.6: production JS gzip <= signed-off M7 x 1.30 (M8-only; budget plan §7, 2026-10-10).
           git worktree add ../m7-js-base 15313a75c6e74beec739fe52a2875c104c55eae3
           ln -s "$PWD/node_modules" ../m7-js-base/node_modules
           (cd ../m7-js-base && npx vite build)
