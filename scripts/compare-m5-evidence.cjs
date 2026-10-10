@@ -93,7 +93,15 @@ function validateU6Report(report){
 }
 (async()=>{
  if(finalGate){
-  validateU6Report(read('artifacts/m8-u6-loot/report.json'));
+  // CI downloads the U6 artifact outside artifacts/ so its timing folder is not counted as a tenth M6 execution job.
+  const u6Dir=process.env.M8_U6_EVIDENCE_DIR||'artifacts';
+  validateU6Report(read(path.join(u6Dir,'m8-u6-loot/report.json')));
+  if(process.env.M8_U6_EVIDENCE_DIR){
+   const timing=path.join(u6Dir,'m5-ci-timing-m8-u6-loot');
+   const steps=fs.readdirSync(timing).filter(name=>name.endsWith('.json')).map(name=>read(path.join(timing,name)));
+   assert(steps.some(step=>step.step==='m8-u6-loot'),'U6 gate timing recorded');
+   for(const step of steps){assert.equal(step.sha,currentSha,'U6 timing commit');assert.equal(step.exitCode,0,`U6 ${step.step} failed`);assert.equal(step.signal,null,`U6 ${step.step} interrupted`);}
+  }
   const {validateB8RagebladeEvidence}=require('./b8-input-evidence.cjs');
   const {createServer}=await import('vite');
   const server=await createServer({root:path.resolve(__dirname,'..'),server:{middlewareMode:true,ws:false},optimizeDeps:{noDiscovery:true,include:[]},appType:'custom',logLevel:'error'});

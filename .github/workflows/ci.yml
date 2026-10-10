@@ -286,8 +286,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: m8-u6-loot-${{ env.M5_COMMIT_SHA }}
-          path: artifacts/
+          path: u6-evidence/
       - run: node scripts/compare-m5-evidence.cjs --final
+        env:
+          M8_U6_EVIDENCE_DIR: u6-evidence
       - run: node scripts/compare-m6-evidence.cjs
       - uses: actions/upload-artifact@v4
         if: always()
