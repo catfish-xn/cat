@@ -1,0 +1,907 @@
+{
+  "baselineRemote": "75c8be53e8ccc7ac669fb8527175b7f46b573662",
+  "run": "https://github.com/catfish-xn/cat/actions/runs/38027546769",
+  "sourceLog": "post-fixes-full-test.log.gz",
+  "numbering": "Order of the 92 original FAIL case headings; IDs never renumbered. Targeted success is not final CI signoff.",
+  "cases": [
+    {
+      "id": "CI183-001",
+      "file": "tests/m4-ledger-bound.test.ts",
+      "originalCase": "M4 observer safety retained under M5 finite-content capacity > retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-002",
+      "file": "tests/m5-growth.test.ts",
+      "originalCase": "permanent Tristana growth is a conserved Match resource > commits actual battle growth once and never regrants it on restore, duplicate step or Continue",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-003",
+      "file": "tests/m5-route.test.ts",
+      "originalCase": "M5 ordinary three-build routes and independent resource ledger > normally buys five-cost Caitlyn and fields her for at least two real battles",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-004",
+      "file": "tests/m5-route.test.ts",
+      "originalCase": "M5 ordinary three-build routes and independent resource ledger > cannon: ordinary purchases/rewards to 6-7 with a complete build",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-005",
+      "file": "tests/m5-route.test.ts",
+      "originalCase": "M5 ordinary three-build routes and independent resource ledger > sniper: ordinary purchases/rewards to 6-7 with a complete build",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-006",
+      "file": "tests/m5-route.test.ts",
+      "originalCase": "M5 ordinary three-build routes and independent resource ledger > mage: ordinary purchases/rewards to 6-7 with a complete build",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-007",
+      "file": "tests/m6-integration.test.ts",
+      "originalCase": "M6 independent route/history/playback/session integration > cannon: every completed battle has exact original state/events and isolated playback",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-008",
+      "file": "tests/m6-integration.test.ts",
+      "originalCase": "M6 independent route/history/playback/session integration > sniper: every completed battle has exact original state/events and isolated playback",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-009",
+      "file": "tests/m6-integration.test.ts",
+      "originalCase": "M6 independent route/history/playback/session integration > mage: every completed battle has exact original state/events and isolated playback",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-010",
+      "file": "tests/m6-integration.test.ts",
+      "originalCase": "M6 independent route/history/playback/session integration > sniper-caitlyn: every completed battle has exact original state/events and isolated playback",
+      "firstFailureClass": "old-golden",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-011",
+      "file": "tests/m8-b3-audit.test.ts",
+      "originalCase": "B3 audit independent lifecycle and identity expectations > R1 real dragon claw: tick39 canonical save→restore→tick40 complete events equal and continued archive validates",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-012",
+      "file": "tests/m8-b4-audit-regressions.test.ts",
+      "originalCase": "B4 audit R1: qualified packets and counter projections > 5-1 real Match progression with Titan/Warmog/Gunblade saves through enemy same-action double damage",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-013",
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "originalCase": "B5 audit R1: equipment roll level belongs to its round history > preserves a legal pre-F roll through current, settled and historical save/restore",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-014",
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "originalCase": "B5 audit R1: equipment roll level belongs to its round history > allows the first equip after same-round F at the upper bound, not only the starting level",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-015",
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "originalCase": "B5 audit R1: equipment roll level belongs to its round history > rejects the forged historical level through full save-envelope validation without changing archived battles",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-016",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 IF-GRANT and atomic permanent inventory queries > plans exactly one permanent sword with no receipt/economy/RNG work",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-017",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 IF-GRANT and atomic permanent inventory queries > plans exactly one permanent gloves with no receipt/economy/RNG work",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-018",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 IF-GRANT and atomic permanent inventory queries > plans exactly one permanent blue-buff with no receipt/economy/RNG work",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-019",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 IF-GRANT and atomic permanent inventory queries > plans exactly one permanent thiefs-gloves with no receipt/economy/RNG work",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-020",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 IF-GRANT and atomic permanent inventory queries > inventory view contains only real inventory IDs, is detached and remains correct after combine/equip/sale",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-021",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 real purchase recursive upgrades and equipment returns > chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-022",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 real purchase recursive upgrades and equipment returns > returns unique conflicts and preserves permanent IDs across the complete command",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-023",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 real purchase recursive upgrades and equipment returns > returns exclusive survivor conflicts and preserves permanent IDs across the complete command",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-024",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 real purchase recursive upgrades and equipment returns > returns exclusive incoming conflicts and preserves permanent IDs across the complete command",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-025",
+      "file": "tests/m8-b5-grant-upgrade.test.ts",
+      "originalCase": "B5 real purchase recursive upgrades and equipment returns > returns full ordinary conflicts and preserves permanent IDs across the complete command",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-026",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > blue-buff is unique per holder, not per inventory or team",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-027",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > last-whisper is unique per holder, not per inventory or team",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-028",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > quicksilver is unique per holder, not per inventory or team",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-029",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > allows three nonunique copies but refuses a fourth without spending resources or event IDs",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-030",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > three-slot item requested at 0 uses canonical parent slot 0 and reserves all slots",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-031",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > three-slot item requested at 1 uses canonical parent slot 0 and reserves all slots",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-032",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > three-slot item requested at 2 uses canonical parent slot 0 and reserves all slots",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-033",
+      "file": "tests/m8-b5-instances.test.ts",
+      "originalCase": "B5 permanent equipment constraints and atomic commands > successful combine consumes exactly two IDs and one serial; stale replay fails atomically",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-034",
+      "file": "tests/m8-b5-queries.test.ts",
+      "originalCase": "B5 shared command previews and read-only equipment > known units have three slots, reserved slots have no fake permanent IDs; unknown returns null",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-acquisition-exact-controls.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-035",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > level 3 uses the approved pool and an independent stream",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-036",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > level 6 uses the approved pool and an independent stream",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-037",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > level 7 uses the approved pool and an independent stream",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-038",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > level 9 uses the approved pool and an independent stream",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-039",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > F, sale, same-round re-equip and restore preserve the original level6 roll across level7",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-040",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > next round revokes old children and rolls once; failed/duplicate Continue and step do not draw",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-041",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > inventory parents do not refresh until first equip in a new round",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-042",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > children contribute real stats/programs and parent provenance through combat and restore",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-043",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > all 43 eligible child definitions bind through real Match snapshots and restore",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-044",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > combat restore rejects a forged temporary program parent chain",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-045",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects stream instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-046",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects draw count instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-047",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects forged pair instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-048",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects missing ledger instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-049",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects unknown parent instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-050",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects future round instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-051",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects future level instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-052",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects wrong holder instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-053",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects missing sibling instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-054",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects missing projection instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-055",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects wrong expiry instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-056",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects inventory parent with children instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-057",
+      "file": "tests/m8-b5-temporary.test.ts",
+      "originalCase": "B5 Match TG-01 lifecycle and save validation > restore rejects permanent child instead of rerolling or repairing",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "b5-tg-original-timeout-tests.log.gz",
+        "note": "Original mechanism assertions retained; each caller/source control rebuilt legally with precise original-boundary rejection. See failure-closure.md."
+      }
+    },
+    {
+      "id": "CI183-058",
+      "file": "tests/m8-b6-match-wiring.test.ts",
+      "originalCase": "B6 installed round, opening and restore transactions > concedes the three opening battles once: 2/3/5G, 2/2/0XP, fixed 3HP and no streak",
+      "firstFailureClass": "old-phase-assumption",
+      "status": "targeted-passed",
+      "coverage": {
+        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
+        "log": "phase-opening-seven.log.gz",
+        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+      }
+    },
+    {
+      "id": "CI183-059",
+      "file": "tests/m8-b6-match-wiring.test.ts",
+      "originalCase": "B6 installed round, opening and restore transactions > restores real preparation, running combat and settlement at all three opening identities without generating again",
+      "firstFailureClass": "old-phase-assumption",
+      "status": "targeted-passed",
+      "coverage": {
+        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
+        "log": "phase-opening-seven.log.gz",
+        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+      }
+    },
+    {
+      "id": "CI183-060",
+      "file": "tests/m8-b6-match-wiring.test.ts",
+      "originalCase": "B6 installed round, opening and restore transactions > restores 36-38 preparation/combat/settlement and ends only at 6-7 with no regeneration",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-061",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "originalCase": "B7 audit: Match save/restore of real encounters > 2-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-062",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "originalCase": "B7 audit: Match save/restore of real encounters > 3-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-063",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "originalCase": "B7 audit: Match save/restore of real encounters > 4-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-064",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "originalCase": "B7 audit: Match save/restore of real encounters > 5-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-065",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "originalCase": "B7 audit: Match save/restore of real encounters > 6-7: restoring at every opening and mechanism tick reproduces the continuous run",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-066",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "originalCase": "B7 audit: Match save/restore of real encounters > 6-7 rejects retimed stun, forged death, un-expired receipt and forged removal reasons",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-067",
+      "file": "tests/m8-b7-audit-vectors.test.ts",
+      "originalCase": "B7 audit: Match save/restore of real encounters > 2-7 rejects deleting an executed krug reaction whose holder is still alive",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-068",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > 1-3 freezes, starts, runs to settlement and resumes canonical saves",
+      "firstFailureClass": "old-phase-assumption",
+      "status": "targeted-passed",
+      "coverage": {
+        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
+        "log": "phase-opening-seven.log.gz",
+        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+      }
+    },
+    {
+      "id": "CI183-069",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > 1-4 freezes, starts, runs to settlement and resumes canonical saves",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-070",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > 2-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-071",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > 3-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-072",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > 4-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-073",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > 5-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-074",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > 6-7 freezes, starts, runs to settlement and resumes canonical saves",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-075",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-076",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-077",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: undefined",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-078",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-079",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-080",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-081",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-082",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-083",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-084",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-085",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed 0 (B8 grant boundaries supplied by fixture)",
+      "firstFailureClass": "duplicate-manual-grant",
+      "status": "targeted-passed",
+      "coverage": {
+        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
+        "log": "phase-opening-seven.log.gz",
+        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+      }
+    },
+    {
+      "id": "CI183-086",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed 1 (B8 grant boundaries supplied by fixture)",
+      "firstFailureClass": "duplicate-manual-grant",
+      "status": "targeted-passed",
+      "coverage": {
+        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
+        "log": "phase-opening-seven.log.gz",
+        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+      }
+    },
+    {
+      "id": "CI183-087",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed 42 (B8 grant boundaries supplied by fixture)",
+      "firstFailureClass": "duplicate-manual-grant",
+      "status": "targeted-passed",
+      "coverage": {
+        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
+        "log": "phase-opening-seven.log.gz",
+        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+      }
+    },
+    {
+      "id": "CI183-088",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed 4294967295 (B8 grant boundaries supplied by fixture)",
+      "firstFailureClass": "duplicate-manual-grant",
+      "status": "targeted-passed",
+      "coverage": {
+        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
+        "log": "phase-opening-seven.log.gz",
+        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+      }
+    },
+    {
+      "id": "CI183-089",
+      "file": "tests/m8-b7-match-wiring.test.ts",
+      "originalCase": "B7 installed encounters and trusted Match restore > restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-090",
+      "file": "tests/m8-u5-preview.test.ts",
+      "originalCase": "U5 EncounterPreview additive opening-state contract > does not replace opening mana/health with live PvP values after enemy casts and damage",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-091",
+      "file": "tests/m8-u5-preview.test.ts",
+      "originalCase": "U5 EncounterPreview additive opening-state contract > retains opening range/cells/intervals after real bird deaths and next-tick speed stacks",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    },
+    {
+      "id": "CI183-092",
+      "file": "tests/m8-u5-preview.test.ts",
+      "originalCase": "U5 EncounterPreview additive opening-state contract > keeps the final current encounter available at gameOver without inventing a next encounter",
+      "firstFailureClass": "old-resource-fixture",
+      "status": "pending",
+      "coverage": null
+    }
+  ]
+}
