@@ -2,10 +2,11 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { wearing, enemy, run, packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
-import { accepted, readyMatch, resolveM5Choices } from './match-helpers';
+import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
+import { publicNeutralEquipmentChoice } from './fixtures/m8-neutral-public-route';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { stepCombat, type CombatUnit } from '../src/simulation/combat';
-import { startMatchCombat, stepMatch, nextRound, type MatchState } from '../src/simulation/match';
+import { startMatchCombat, stepMatch, nextRound, selectChoice, buyXp, deployMatchUnit, sellUnit, combineItems, equipItem } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { readItemCatalog } from '../src/simulation/item-catalog';
@@ -61,22 +62,61 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
   });
 
   it('5-1 real Match progression with Titan/Warmog/Gunblade saves through enemy same-action double damage', () => {
-    let s: MatchState = readyMatch();
-    // A valid strong preparation fixture; rounds, enemy templates and combat
-    // are subsequently produced only by the public Match commands.
-    s = { ...s, preparation: { ...s.preparation, units: s.preparation.units.map(u => u.id === 'unit-1'
-      ? { ...u, definitionId: 'garen', starLevel: 3 } : u.team === 'player' ? { ...u, location: { kind: 'bench', slot: Number(u.id.slice(5)) - 2 } } : u) },
-      items: [...s.items, ...['titans-resolve', 'warmog', 'gunblade'].map((definitionId, slot) => ({ id: `item-${s.nextItemSerial + slot}`, definitionId, location: { kind: 'unit' as const, unitId: 'unit-1', slot } }))], nextItemSerial: s.nextItemSerial + 3 };
+    // The old synthetic Garen was a durable damage recipient, not a Garen-stat
+    // oracle. The original Irelia has genuinely upgraded through shop purchases;
+    // Warmog/Gunblade already have real component grants and combine provenance.
+    let s = publicNeutralEquipmentChoice();
     expect(restoreMatch(serializeMatch(s))).toEqual(s);
     while (s.round < getCatalogRoundById('5-1').ordinal) {
-      s = resolveM5Choices(s);
-      if (s.phase === 'preparation') s = accepted(startMatchCombat(s));
+      while (s.phase === 'choice') {
+        const choice = s.pendingChoice!;
+        if (choice.kind === 'component') {
+          expect(['4-4', '4-7']).toContain(s.roundDefinitionId);
+          const component = s.roundDefinitionId === '4-4' ? 'bow' : 'vest';
+          s = accepted(selectChoice(s, choice.choiceId, choice.generation, component));
+        } else s = resolveM5Choices(s);
+      }
+      if (s.phase === 'preparation') {
+        while (s.level < 8 && s.gold >= 4) s = accepted(buyXp(s));
+        s = accepted(startMatchCombat(s));
+      }
       while (s.phase === 'combat') s = stepMatch(s).state;
-      s = resolveM5Choices(s);
+      if (s.phase === 'choice') continue;
       expect(s.phase).toBe('settlement');
       s = accepted(nextRound(s, s.round));
     }
     s = resolveM5Choices(s); expect(s.roundDefinitionId).toBe('5-1');
+    const components = ['bow', 'vest'].map(definitionId => s.items.find(item =>
+      item.definitionId === definitionId && item.location.kind === 'inventory')!);
+    expect(components.every(Boolean)).toBe(true);
+    s = accepted(combineItems(s, components[0].id, components[1].id));
+    for (const definitionId of ['warmog', 'gunblade']) {
+      const item = s.items.find(item => item.definitionId === definitionId)!;
+      expect(item).toBeDefined();
+      // Equipment can return only through a real sale; equip never teleports it.
+      if (item.location.kind === 'unit') s = accepted(sellUnit(s, item.location.unitId));
+    }
+    for (const [slot, definitionId] of ['titans-resolve', 'warmog', 'gunblade'].entries()) {
+      const item = s.items.find(item => item.definitionId === definitionId && item.location.kind === 'inventory')!;
+      expect(item).toBeDefined();
+      s = accepted(equipItem(s, item.id, 'unit-1', slot));
+    }
+    expect(s.preparation.units.find(unit => unit.id === 'unit-1')).toMatchObject({ definitionId: 'irelia', starLevel: 2 });
+    s = emptyBoard(s);
+    s = accepted(deployMatchUnit(s, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
+    const preparedSave = serializeMatch(s);
+    expect(restoreMatch(preparedSave)).toEqual(s);
+    const forged = JSON.parse(preparedSave);
+    const titanFact = forged.resourceProvenance.entries.find((entry: { kind: string; event?: { definitionId: string } }) =>
+      entry.kind === 'item-combined' && entry.event?.definitionId === 'titans-resolve');
+    expect(titanFact).toBeDefined();
+    // Preserve a well-formed, ordered two-input combine, but replace one real
+    // consumed component with an unowned instance. This must fail ownership,
+    // rather than an unrelated duplicate-ID, schema or combat-basis check.
+    titanFact.event.consumedIds = [titanFact.event.consumedIds[0], 'item-999999'].sort();
+    expect(() => restoreMatch(forged)).toThrow(/^Invalid resource provenance: combination recipe\/ownership$/);
+    expect(() => restoreMatch(JSON.stringify(forged))).toThrow(/^Invalid resource provenance: combination recipe\/ownership$/);
+    expect(serializeMatch(s)).toBe(preparedSave);
     s = accepted(startMatchCombat(s)); expect(restoreMatch(serializeMatch(s))).toEqual(s);
     let witnessed = false;
     for (let tick = 0; tick < 120 && s.phase === 'combat'; tick++) {

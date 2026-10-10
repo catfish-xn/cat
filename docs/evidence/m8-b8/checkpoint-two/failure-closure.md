@@ -35,3 +35,10 @@
 - 002：真实收入到3-5、九次付费Tristana购买递归升三星，真实四组件合成Gunblade/Deathblade；原每击杀125、只结算一次、完整restore、重复step无事件、Continue/stale不重授全保留，新增伪造growth+125精确拒绝。原假Irelia改定义路径不再作为合法存档。纯250+375=625合并/出售机制例保持。
 - 011：真实开场两次cloak选择、公开合成/装备，原tick39恢复→tick40完整事件/763HP/floor19治疗及历史验证保持；同例伪造receipt birth binding精确拒绝。
 - 专项分别2/2、2/2、B3与真实装备helper组10/10；全局typecheck通过。日志与本批树一同保留，仍非最终全量/CI。
+
+## 批次E：5-1三装备同action双包正控（012）
+
+- 真正4-4选bow、4-5/4-6/4-7战斗、4-7选vest、5-1合成Titan；Warmog/Gunblade来自真实早期组件/合成，公开出售原持有人返还后装备原Irelia二星。原假Garen三星仅为耐久受击对象，没有Garen数值/技能预期被改写。
+- 原120tick每tick完整restore与nextstep state/events全等、同action同source双正伤害至少+2层及25封顶断言全保持。同例真实三装准备可恢复后，伪造Titan消费输入为未拥有item-999999（格式和排序合法），对象/JSON两入口均精确拒绝`Invalid resource provenance: combination recipe/ownership`；原state不变。
+- 完整B4文件14/14通过；一次并发未完成golden guard的Node类型错误阻断全局typecheck，guard迁至既有支持的mjs后本批最终全局typecheck通过。没有更改全局配置、类型依赖或timeout/skip。
+- 至此原92的84项已各有专项闭环，剩003–010八项golden；仍待最终同树全量及②真实组合恢复验证。

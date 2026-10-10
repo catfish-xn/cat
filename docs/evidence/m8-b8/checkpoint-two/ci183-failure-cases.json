@@ -97,8 +97,8 @@
       "file": "tests/m8-b4-audit-regressions.test.ts",
       "originalCase": "B4 audit R1: qualified packets and counter projections > 5-1 real Match progression with Titan/Warmog/Gunblade saves through enemy same-action double damage",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "neutral-fixtures-b4-titan-final.log.gz: full file 14/14; real 4-4/4-7 ingredients and public sale return; original double-packet/120tick state-event restore; exact forged combination ownership rejection"
     },
     {
       "id": "CI183-013",
