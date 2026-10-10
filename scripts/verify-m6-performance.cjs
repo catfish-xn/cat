@@ -1,3 +1,7 @@
+// Enable the narrow process lifecycle channel before any Playwright import.
+// Preserve caller DEBUG selectors, including explicit negative selectors.
+const priorBrowserDebug=process.env.DEBUG??'';
+process.env.DEBUG=[priorBrowserDebug,'pw:browser'].filter(Boolean).join(',');
 const {skipB6Dependency}=require('./b6-deferred-assertions.cjs');
 const {boundedImportEnvelope}=require('./b6-performance-fixtures.cjs');
 const {RESTORATION_ISSUE,assertBoundedImportGate}=require('./b6-performance-gates.cjs');
@@ -10,7 +14,7 @@ const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evid
  const started=performance.now();const report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirty:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),sourceFingerprint:sourceFingerprint(),scriptHash:hash(fs.readFileSync(__filename,'utf8')),node:process.version,cpu:os.cpus()[0]?.model,cpuCount:os.cpus().length,memoryBytes:os.totalmem(),loadAtStart:os.loadavg(),startedAt:new Date().toISOString(),passed:false,acceptanceScope:'B6 explicit B8/B9 dependencies deferred; bounded import is a separate real-path gate',restorationIssue:RESTORATION_ISSUE,method:'Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 command policy; its missing 15-equipment coverage is explicitly B8-deferred. Module lifecycle is separate from E full application/Phaser lifecycle.'};
  // Diagnostics stay outside timed callbacks and preserve the original failure path.
  const diagnosticPrefix='__M6_PERF_DIAGNOSTIC__',diagnosticFile=path.join(output,'diagnostics.jsonl');
- report.diagnostics={schemaVersion:1,file:'diagnostics.jsonl',browserProcessExit:'not exposed by the public Browser API returned by chromium.launch',events:[],writeErrors:[]};
+ report.diagnostics={schemaVersion:1,file:'diagnostics.jsonl',browserProcessExit:'pw:browser stderr records Chromium PID and process exitCode/signal',debug:{prior:priorBrowserDebug,effective:process.env.DEBUG,negativeSelectorsPreserved:priorBrowserDebug.split(/[\s,]+/).filter(value=>value.startsWith('-'))},events:[],writeErrors:[]};
  let diagnosticStage='setup',diagnosticCleanupStarted=false;
  const diagnostic=(event,details={})=>{
   const entry={sequence:report.diagnostics.events.length,event,at:new Date().toISOString(),elapsedMs:performance.now()-started,stage:diagnosticStage,cleanupStarted:diagnosticCleanupStarted,details};
@@ -22,7 +26,7 @@ const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evid
  const diagnosticPhase=(stage,details={})=>{diagnosticStage=stage;diagnostic('stage',details);};
  process.once('exit',code=>diagnostic('process-exit',{processKind:'node',pid:process.pid,exitCode:code}));
  diagnosticPhase('setup');
- let server,browser;
+ let server,browser,page;
  try{
   const {createServer}=await import('vite');server=await createServer({root:path.resolve(__dirname,'..'),plugins:[{name:'m6-perf-page',configureServer(s){s.middlewares.use((req,res,next)=>{if(req.url==='/__m6_perf'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><body></body>');}else next();});}}],server:{host:'127.0.0.1',port:0},optimizeDeps:{noDiscovery:true,include:[]}});await server.listen();
   const api=await server.ssrLoadModule('/src/simulation/match.ts'),replay=await server.ssrLoadModule('/src/replay/index.ts');
@@ -67,7 +71,9 @@ const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evid
   diagnosticPhase('browser-launch');
   browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined,headless:true,args:['--no-sandbox']});report.browser=browser.version();
   browser.on('disconnected',()=>diagnostic('browser-disconnected',{connected:browser.isConnected()}));
-  diagnosticPhase('page-create');const page=await browser.newPage();
+  diagnosticPhase('page-create');page=await browser.newPage();
+  page.on('close',()=>diagnostic('page-close',{closed:page.isClosed(),browserConnected:browser.isConnected()}));
+  page.context().on('close',()=>diagnostic('context-close',{pageClosed:page.isClosed(),browserConnected:browser.isConnected()}));
   page.on('crash',()=>diagnostic('page-crash',{closed:page.isClosed(),browserConnected:browser.isConnected()}));
   report.errors=[];page.on('pageerror',error=>report.errors.push(error.message));page.on('console',message=>{if(message.type()==='error')report.errors.push(message.text());});
   page.on('console',message=>{
@@ -231,6 +237,6 @@ const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evid
   assertBoundedImportGate(report.boundedImport,report.payload.boundedComplete,MAX_BATTLE_RECORDS,report.measurements.limits.completeImport);
   assert.equal(report.errors.length,0,'browser errors');assert.equal(sourceFingerprint(),report.sourceFingerprint,'source changed during measurement');
   const failures=report.measurements.gates.filter(g=>g.status!=='skipped'&&!g.passed);assert.equal(failures.length,0,`Frozen performance budget exceeded: ${JSON.stringify(failures)}`);report.passed=true;
- }catch(error){report.failure=error.stack;console.error(error);process.exitCode=1;}
- finally{report.endedAt=new Date().toISOString();report.durationMs=performance.now()-started;report.finalSourceFingerprint=sourceFingerprint();report.peakProcessRssBytes=process.resourceUsage().maxRSS*1024;report.loadAtEnd=os.loadavg();diagnosticCleanupStarted=true;diagnosticPhase('script-cleanup-start',{failureRecorded:Boolean(report.failure)});fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify(report,null,2));await browser?.close();await server?.close();console.log(JSON.stringify({passed:report.passed,durationMs:report.durationMs,acceptanceScope:report.acceptanceScope,skipped:[...(report.skipped??[]),...(report.measurements?.skipped??[])],gates:report.measurements?.gates,boundedImport:report.boundedImport,lifecycle:report.lifecycle?.heapDeltaBytes,failure:report.failure}));}
+ }catch(error){diagnostic('script-catch',{pageClosed:page?.isClosed()??null,browserConnected:browser?.isConnected()??null,message:String(error)});report.failure=error.stack;console.error(error);process.exitCode=1;}
+ finally{report.endedAt=new Date().toISOString();report.durationMs=performance.now()-started;report.finalSourceFingerprint=sourceFingerprint();report.peakProcessRssBytes=process.resourceUsage().maxRSS*1024;report.loadAtEnd=os.loadavg();diagnosticCleanupStarted=true;diagnosticPhase('script-cleanup-start',{failureRecorded:Boolean(report.failure)});fs.writeFileSync(path.join(output,'manifest.json'),JSON.stringify(report,null,2));diagnostic('browser-close-call',{location:'script-finally',connected:browser?.isConnected()??null,pageClosed:page?.isClosed()??null});await browser?.close();diagnostic('browser-close-return',{location:'script-finally'});await server?.close();console.log(JSON.stringify({passed:report.passed,durationMs:report.durationMs,acceptanceScope:report.acceptanceScope,skipped:[...(report.skipped??[]),...(report.measurements?.skipped??[])],gates:report.measurements?.gates,boundedImport:report.boundedImport,lifecycle:report.lifecycle?.heapDeltaBytes,failure:report.failure}));}
 })();
