@@ -114,3 +114,17 @@
 - `match-session` 五轮：未解choice的Continue先拒绝，再公开选择；购买路线Lux固定unit-3/bench0，原英雄全字段、重复Continue、轮数/商店代次保留。
 
 最终原3文件40/40通过、typecheck通过；补交叉验证combatEventCount与完整Combat ledger长度和连续eventSeq。原始前后与类型日志 `lifecycle-targeted-before.log.gz`、`lifecycle-targeted.log.gz`、`lifecycle-typecheck.log.gz`。并发测试工作区结果不替代最终固定SHA全量和CI。
+
+### CI174 真实缺陷：用户批准的 BoardScene 文件例外
+
+用户明确批准仅 `src/rendering/BoardScene.ts` 的显示对象创建／同步／清理修复，不扩到UI重构、样式或U6。原异常链为 seed42 合法1-2终帧授Maddie/unit-2后，`update → syncCombat`先读新preparation，尚未createToken，触发 `Cannot read properties of undefined (reading 'input')`。这是运行缺陷，不是oracle期望差异。
+
+最小修改：combat退出帧先调用既有reconcileTokens，再渲染；reconciliation在finished Combat仍展示时也保留/创建其所需的旧ID视图，Continue清Combat后依原清理移除。该旧视图仅用Combat快照投影显示，不回写preparation。未用可选链或跳过同步掩盖缺对象，未改掉落规则/授予时间。
+
+新增3项显示对象替身测试执行真实BoardScene createToken/reconcileTokens/sync/syncCombat/update/selection和真实MatchSession命令：
+
+1. seed42合法1-2新增Maddie，验证创建早于读取、恰创建一次、bench显示/选择、不可拖动、重复update不重建、Continue后同对象恢复拖动及旧敌人清理。
+2. seed1公开购买两Lux后部署，真实1-3的unit-5掉落合并使unit-3升星，消费原Combat的unit-4及新候选unit-5；旧Combat视图保留原星级、不可拖、不复活为准备单位，Continue销毁一次并清tokens/views/namedObjects/renderedCells/旧选择。
+3. 从上述真实finished状态新建MatchSession，再调用真实sync重建被消费旧ID。所有tokens先disableInteractive/禁拖，然后仅当前准备单位可重新选择；旧ID明确disabled+不可拖，点击不改变选择，出售被wrong-phase原子拒绝，Continue清理完整。
+
+3/3与全局typecheck通过，原始日志`token-lifecycle-targeted.log.gz`、`token-lifecycle-typecheck.log.gz`。**这不是Chromium或CI通过证明**；input-dev/preview与M7触屏原门禁须由后续同SHA CI重验，CI174首失败不覆盖或删除。该文件例外及证据必须列入②外部送审。

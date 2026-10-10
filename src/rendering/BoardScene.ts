@@ -414,7 +414,14 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private reconcileTokens() {
-    const ids = new Set(this.state.units.map(unit => unit.id));
+    const units = [...this.state.units], ids = new Set(units.map(unit => unit.id));
+    // Rewards can consume an old unit while its finished combat is still displayed.
+    // Keep that combat view until Continue clears it, including restored settlements.
+    for (const unit of this.session.combat?.units ?? []) if (!ids.has(unit.id)) {
+      units.push({ id: unit.id, definitionId: unit.definitionId, team: unit.team,
+        starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell } });
+      ids.add(unit.id);
+    }
     for (const [id, token] of this.tokens) {
       if (ids.has(id)) continue;
       this.views.get(id)?.destroy(); if (token.active) token.destroy();
@@ -423,7 +430,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.selectedId === id) this.selectedId = null;
     }
     const items = this.session.state.items;
-    for (const unit of this.state.units) {
+    for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
       const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
         .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
@@ -554,6 +561,8 @@ export class BoardScene extends Phaser.Scene {
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
     const events = this.session.advance(delta);
+    // A settlement can grant new units before the frame renders its final combat.
+    if (this.session.phase !== 'combat') this.reconcileTokens();
     this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
     // Rewards may leave combat directly for a component choice (for example 2-7).
     // Render every phase exit, including choices, before waiting for more input.
