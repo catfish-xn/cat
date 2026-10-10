@@ -26,6 +26,8 @@ import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, ite
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
 import { equipmentFailureText, slotList, slotViews, temporaryItemText } from '../presentation/equipment-feedback';
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
+import { readEncounterPreview, readLootView } from '../simulation/match';
+import { lootPanelSection, lootTerminalSummary } from '../presentation/loot-view';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -134,6 +136,8 @@ export class StrategyPanel {
   private dismissalTimer: number | null = null;
   private focusFrame: number | null = null;
   private combatText: HTMLElement | null = null;
+  private lootSection: HTMLElement | null = null;
+  private lootKey = '';
   private statusText: HTMLElement | null = null;
   /** Static B4 catalogue view; built once so its filter and open state survive re-renders. */
   private codex: HTMLElement | null = null;
@@ -334,6 +338,7 @@ export class StrategyPanel {
       receipt.append(element('p', `基础 ${income.base} + 胜利 ${income.win} + 利息 ${income.interest}（基数 ${result.interestBasis}）+ 连胜败 ${income.streak} = ${result.income} 金币；余额 ${result.goldBefore} → ${result.goldAfter}；经验 +${result.xpAwarded}/${result.xpRequested}`));
       this.root.append(receipt);
     }
+    this.lootSection = this.lootPanel(state); if (this.lootSection) this.root.append(this.lootSection);
     this.statusText = element('p', ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局` : '战斗与回合结算期间构筑已锁定', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
@@ -355,6 +360,16 @@ export class StrategyPanel {
     owned.append(element('p', binding ? `异常： ${ANOMALY_DEFINITIONS[binding.definitionId].name} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
     this.root.append(owned);
     this.renderChoice(state); this.lastCombatTick = -1; this.updateCombat();
+  }
+  /** U6: the domain's LootView only; PvE rounds after Start. Nothing here grants, settles or decides Continue. */
+  private lootPanel(state: MatchState): HTMLElement | null {
+    if (state.m8.round.kind !== 'pve' || state.phase === 'preparation') { this.lootKey = ''; return null; }
+    const view = readLootView(state);
+    this.lootKey = JSON.stringify([view, state.pendingChoice?.choiceId ?? null]);
+    // Drop sources are the round's public neutral units (same unit IDs as the encounter preview).
+    const names = new Map(readEncounterPreview(state)?.units.map(unit => [unit.unitId, unit.name]) ?? []);
+    const labels = { sourceName: (id: string | null) => (id && names.get(id)) || '本回合野怪' };
+    return state.phase === 'gameOver' ? lootTerminalSummary(view, labels) : lootPanelSection(view, labels, state.pendingChoice);
   }
   private renderTraits(state: MatchState): void {
     const list = element('section', '', 'trait-list'); list.dataset.debug = 'trait-panel';
@@ -534,8 +549,11 @@ export class StrategyPanel {
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
     this.modal.inert = document.body.dataset.helpOpen === 'true';
     const card = element('div', '', 'choice-dialog');
-    card.append(element('h2', choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
-    card.append(element('p', '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
+    // A component pick in a PvE round is the monster reward (8 fixed candidates); supply rounds keep their own wording.
+    const loot = choice.kind === 'component' && state.m8.round.kind === 'pve';
+    card.dataset.choiceSource = loot ? 'loot' : choice.kind;
+    card.append(element('h2', loot ? '野怪奖励 · 选择一件组件' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
+    card.append(element('p', loot ? `固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。完成选择前不能继续。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');
@@ -576,6 +594,13 @@ export class StrategyPanel {
     if (combat && this.lastCombatId === combat.combatId && this.lastCombatTick === combat.tick) return;
     if (combat && this.lastCombatId === combat.combatId && combat.status === 'running' && combat.tick - this.lastCombatTick < 2) return;
     this.lastCombatId = combat?.combatId; this.lastCombatTick = combat?.tick ?? -1;
+    // Drops are revealed mid-combat by the domain; refresh only when the projection changes.
+    if (this.lootSection && combat?.status === 'running') {
+      const view = readLootView(state);
+      if (JSON.stringify([view, state.pendingChoice?.choiceId ?? null]) !== this.lootKey) {
+        const next = this.lootPanel(state); if (next) { this.lootSection.replaceWith(next); this.lootSection = next; }
+      }
+    }
     node.replaceChildren();
     if (!combat) {
       const selected = state.preparation.units.find(unit => unit.id === this.actions.selectedUnit());

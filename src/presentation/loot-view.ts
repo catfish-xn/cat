@@ -26,7 +26,8 @@ const itemName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
 /** Status wording mirrors the frozen semantics table; UI never infers a receipt from animation or gold. */
 const STATUS: Readonly<Record<RevealedDropView['status'], { label: string; note: string }>> = {
   granted: { label: '已入库', note: '奖励已实际发放' },
-  revealed: { label: '处理中', note: '领域正在本次结算中自动处理，无需操作' },
+  // 'revealed' only exists between the source's death and the end-of-combat grant.
+  revealed: { label: '已揭示', note: '战斗结束后自动入库，无需操作' },
   'pending-capacity': { label: '等待空位', note: '英雄备战席已满：出售或合成升星释放空位后会自动入库' },
   'retained-terminal': { label: '终局保留', note: '对局已结束，此奖励只作记录保留：未入库、不折算金币、不可领取' },
 };

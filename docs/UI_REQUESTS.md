@@ -57,6 +57,20 @@
 5. 奖励英雄出现在棋盘或备战席时，依赖 DOT 在 B8 分支修复的 BoardScene 生命周期提交（`07f269c`），U6 不重复修改该处。
 6. 接线后重新实测包体（静态阶段探针：引入三个渲染函数约 +1,416 B），并请 Codex 补充 U6 界面自动回归。
 
+### U6 接线状态（2026-10-10，Claude 接手 B8＋U6 后）
+
+`readLootView` 已在 B8 分支实现（`src/simulation/loot-view.ts`，经 `match.ts` 导出），策略面板已接线。以下记录每项请求的实际处理结果；**没有修改冻结的 `LootView` 形状**，需要改合同的部分仍列为待决定。
+
+| 项 | 处理结果 | 证据 |
+| --- | --- | --- |
+| UR-U6-01 | 已解决的组件选择只在其 LootReceipt 存在后以 `status:'granted'` 行出现（dropId 为选择的 dropId，payload 取自收据）；未解决的选择和未用到的终局备用组件不出现。冻结形状无法区分 `player-choice`／`terminal-fallback`，界面不区分；如需区分须另行增补合同 | `tests/m8-b8-loot-view.test.ts` 选择后与终局三场景 |
+| UR-U6-02 | `phase==='choice'` 时 `canContinue=false, reason='unsettled-round'`，不伪装成 `pending-capacity`；选择与满席并存时，选择完成后才转为 `pending-capacity`。原因顺序与 `nextRound` 守卫一致，测试逐例比对命令结果 | 同上 `agreesWithContinue` |
+| UR-U6-03 | 未改合同；`PendingChoice` 仍无来源字段。界面以 `m8.round.kind==='pve'` 加 `choice.kind==='component'` 判断为野怪组件选择（不解析 `choiceId`），选择框不写具体怪物名 | `strategy-panel.ts` `renderChoice` |
+| UR-U6-04 | 已确认：`roundId` 恒为当前回合；`sourceUnitId` 与同回合 `readEncounterPreview().units[].unitId` 同一编码，测试断言每条已揭示掉落恰好匹配一个预览单位 | 测试“mid-combat”用例 |
+| UR-U6-05 | 已确认：战斗进行中返回 `revealed` 行，界面显示“已揭示 · 战斗结束后自动入库” | 同上；浏览器实测 1-3 战中截图 |
+
+接线内容：PvE 回合开战后（战斗、选择、结算）显示 `lootPanelSection`，终局显示 `lootTerminalSummary`；战斗中仅在投影变化时刷新。Continue 是否可用、原因及等待入库数量全部来自 `LootView`，界面不发领取命令、不按金币或动画推断收据。
+
 ## U5 第一阶段与 `.7` 野怪遭遇预览（开工前接口盘点）
 
 **交付状态（2026-10-10）：U5 已独立审查并合入。** PR #26 已审查 SHA `855430157b6947d4b9710db3b08f6842f1c9347d`（[CI #168](https://github.com/catfish-xn/cat/actions/runs/38019557635) 成功，无 P0–P2），合并提交 `d64c381260c4c862d813da7e8c7c983813ce89e0`，合并后的 tree 与已审查 HEAD 完全一致。预览已改读 UR-U5-01/02 正式字段，不再依赖旧适配层。包体实测 488,964 B，距总上限 552,191 B 余 63,227 B。仍未完成：6-7 先锋的实机导入和完整应用验证由 B9 补验；非阻塞 P3「U5 界面自动回归」登记为 [#27](https://github.com/catfish-xn/cat/issues/27)。独立审查证据：Codex 原审查记录已补记为 [PR #26 评论 6093541375](https://github.com/catfish-xn/cat/pull/26#issuecomment-6093541375)，内含原始 `u5-review-evidence.json` 的完整副本（35,015 B，SHA-256 `12b86d324d5b9d5abaa6a0fff71c1f063a4470d89d33d927bf13ff3b1440662a`）。时间顺序：审查结论先由用户在会话中转达；随后 PR 于 03:50:57Z 合并，本记录首版（`2acb9ac`）于 03:52:24Z 写入，当时 PR 上尚无审查记录；原审查记录于 03:59:55Z 补记（均为 2026-10-10 UTC）。该评论是对原审查（针对 `8554301`、CI #168）的补记，不是重新审查，也不构成对合并提交的新签收。H1 维持 [H1_WARN_ONLY.md](H1_WARN_ONLY.md) 原记录，不因本次 CI 全绿而关闭。

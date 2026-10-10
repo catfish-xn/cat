@@ -112,6 +112,9 @@ describe('B8 readLootView over real public routes', () => {
     }
     expect(result).toMatchObject({ pendingClaims: [], canContinue: false, reason: 'unsettled-round' });
     expect(JSON.stringify(result)).not.toContain(choice.dropId);
+    // UR-U6-04: the source is the same unit identity the public encounter preview lists.
+    const preview = api.readEncounterPreview(state)!;
+    for (const drop of result.revealedDrops) expect(preview.units.filter(unit => unit.unitId === drop.sourceUnitId)).toHaveLength(1);
   });
 
   it('after combat: granted receipts, a full-bench hero pending, and the unresolved choice withheld', () => {
