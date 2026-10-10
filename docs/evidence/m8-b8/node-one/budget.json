@@ -48,5 +48,15 @@
       }
     ],
     "total": 505000
+  },
+  {
+    "label": "cand-final (tests/scripts/docs only since bbb3368)",
+    "files": [
+      {
+        "file": "index-W5HKOESq.js",
+        "gzip9": 505000
+      }
+    ],
+    "total": 505000
   }
 ]
