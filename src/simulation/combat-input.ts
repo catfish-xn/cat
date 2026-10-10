@@ -107,10 +107,10 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   }
   const players = input.preparation.units.filter(unit => unit.team === 'player');
   requireBasis(players.filter(unit => unit.location.kind === 'board').length <= basis.playerLevel);
-  requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units)));
+  requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
   requireBasis(equal(sorted(input.preparation.units.filter(unit => unit.team === 'enemy')), sorted(readRoundEnemyProjection(authority.round).units)));
   requireBasis(Array.isArray(input.items));
-  requireBasis(equal(sorted(input.items.map(({id,definitionId}) => ({id,definitionId}))), sorted(authority.resources.items)));
+  requireBasis(equal(sorted(input.items.map(({id,definitionId}) => ({id,definitionId}))), sorted(authority.resources.items.map(({id,definitionId}) => ({id,definitionId})))));
   const itemIds = new Set<string>();
   for (const item of input.items) {
     record(item); record(item.location); requireBasis(!itemIds.has(item.id) && Object.hasOwn(ITEM_DEFINITIONS, item.definitionId)); itemIds.add(item.id);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch } from '../src/simulation/match';
+import { createMatch, combineItems, deployMatchUnit, equipItem, nextRound, selectChoice, startMatchCombat } from '../src/simulation/match';
+import { accepted, emptyBoard, reachRound } from './match-helpers';
 import { freezeCombatInput, restoreCombatInput, type CombatInputAuthority } from '../src/simulation/combat-input';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { nextRandom } from '../src/simulation/rng';
@@ -23,6 +24,8 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
     const restored = restoreCombatInput(basis, authority);
     expect(restored).toEqual(basis); expect(restored).not.toBe(basis);
     expect(state).toEqual(before);
+    expect(restoreCombatInput(basis,{...authority,resources:{...authority.resources,
+      units:state.preparation.units.filter(unit => unit.team === 'player')}})).toEqual(basis);
   });
   it.each(['battleSeed','nextUnitSerial','nextItemSerial','playerLevel','provenancePrefixLength','equipmentRollPrefixLength'] as const)('rejects altered %s against independent authority', field => {
     const { basis, authority } = fixture();
@@ -52,6 +55,41 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
       {temporaryEquipment:[{temporaryId:'fake'}]},
       {augments:[{definitionId:'investment-strategy-i',choiceId:'fake',acquiredRound:1}]},
     ]) expect(() => restoreCombatInput({...basis,inputs:{...basis.inputs,...patch}},authority)).toThrow();
+  });
+  it('uses the seventh battle word at 2-5, with no draw for the preceding supply', () => {
+    const state = reachRound('2-5');
+    expect(nextRandom(state.battleSeedRngState).word).toBe(890455596);
+  });
+  it('binds public later-round inputs, skips supply battle seeds and preserves original G12 children', () => {
+    let state = createMatch(42);
+    while (state.roundDefinitionId !== '3-5') {
+      if (state.phase === 'choice') {
+        const choice = state.pendingChoice!;
+        state = accepted(selectChoice(state,choice.choiceId,choice.generation,
+          choice.kind === 'component' ? 'gloves' : choice.offers.find(id => id !== 'placebo')!));
+      } else if (state.phase === 'preparation') state = accepted(startMatchCombat(emptyBoard(state)));
+      else state = accepted(nextRound(state,state.round));
+    }
+    state = accepted(combineItems(state,'item-1','item-2'));
+    state = accepted(equipItem(state,'item-3','unit-1',0));
+    state = accepted(deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
+    const basis = freezeCombatInput(state,nextRandom(state.battleSeedRngState).word,10);
+    const authority: CombatInputAuthority = { seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+      playerLevel:state.level,provenancePrefixLength:10,equipmentRollPrefixLength:state.equipmentState.rolls.length,
+      resources:{units:state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),
+        items:state.items.map(({id,definitionId}) => ({id,definitionId})),persistentGrowth:[],nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial},
+      equipmentRolls:state.equipmentState.rolls,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults };
+    expect(restoreCombatInput(basis,authority)).toEqual(basis);
+    expect(basis.inputs.temporaryEquipment).toHaveLength(2);
+    const player = buildStrategySnapshot(basis.inputs).units.find(unit => unit.unitId === 'unit-1')!;
+    expect([...new Set(player.sources.filter(effect => effect.source.parentItemInstanceId === 'item-3')
+      .map(effect => effect.source.sourceInstanceId))].sort())
+      .toEqual(basis.inputs.temporaryEquipment.map(child => child.temporaryId).sort());
+    expect(buildStrategySnapshot(basis.inputs)).toEqual(buildStrategySnapshot(state));
+    const wrongChild = {...basis,inputs:{...basis.inputs,temporaryEquipment:basis.inputs.temporaryEquipment.map(child => ({...child,holderId:'unit-2'}))}};
+    expect(() => restoreCombatInput(wrongChild,authority)).toThrow();
+    expect(() => restoreCombatInput({...basis,battleSeed:nextRandom(basis.battleSeed).word},authority)).toThrow();
+    expect(() => restoreCombatInput({...basis,equipmentRollPrefixLength:0},authority)).toThrow();
   });
   it('rejects non-JSON inputs and never mutates authoritative resource references', () => {
     const { basis, authority } = fixture(), before = structuredClone(authority);
