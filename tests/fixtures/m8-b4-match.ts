@@ -131,3 +131,6 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
   state = accepted(deployMatchUnit(state, unitId, { kind: 'board', cell: { col: unitId === 'unit-1' ? 1 : 5, row: 4 } }));
   return accepted(startMatchCombat(state));
 }
+
+/** Public-command component acquisition, before any combine/equip/start. */
+export { equipmentPreparation as publicEquipmentPreparation };

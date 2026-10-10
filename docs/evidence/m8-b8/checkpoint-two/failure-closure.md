@@ -28,3 +28,10 @@
 - U5原opening-vs-live mana/HP/AS、只读查询、终局当前敌人预览原断言保持，输入改同一真实前缀。
 - 每个负控先证明未篡改版本可恢复，再检查原指定错误；未用不相关resource fold提前拒绝冒充原机制拒绝。
 - 原四文件完整120/120通过、0skip，39.83s，最终全局typecheck通过；日志`neutral-fixtures-four-files-final.log.gz`与类型日志。未变timeout/worker或生产实现。
+
+## 批次D：容量层、真实成长、龙爪来源（001/002/011）
+
+- 001：原九三星/27成装/完整events、deep-copy、20MiB界限和Continue/NewMatch清空压力断言全部保留。原命令路线前缀先完整restore；同例膨胀容量中间态以对象/JSON明确拒绝current resource fold，然后只用于observer机制压力。没有伪造来源使超合法资源上限的状态可保存。
+- 002：真实收入到3-5、九次付费Tristana购买递归升三星，真实四组件合成Gunblade/Deathblade；原每击杀125、只结算一次、完整restore、重复step无事件、Continue/stale不重授全保留，新增伪造growth+125精确拒绝。原假Irelia改定义路径不再作为合法存档。纯250+375=625合并/出售机制例保持。
+- 011：真实开场两次cloak选择、公开合成/装备，原tick39恢复→tick40完整事件/763HP/floor19治疗及历史验证保持；同例伪造receipt birth binding精确拒绝。
+- 专项分别2/2、2/2、B3与真实装备helper组10/10；全局typecheck通过。日志与本批树一同保留，仍非最终全量/CI。

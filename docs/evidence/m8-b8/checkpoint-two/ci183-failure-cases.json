@@ -9,16 +9,16 @@
       "file": "tests/m4-ledger-bound.test.ts",
       "originalCase": "M4 observer safety retained under M5 finite-content capacity > retains complete event sequences, deep-copy isolation, and clears at Continue/New Match",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "m4-capacity-layer.log.gz: original observer stress retained; real base restore and exact synthetic fold rejection; 2/2"
     },
     {
       "id": "CI183-002",
       "file": "tests/m5-growth.test.ts",
       "originalCase": "permanent Tristana growth is a conserved Match resource > commits actual battle growth once and never regrants it on restore, duplicate step or Continue",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "public-tristana-growth.log.gz: actual nine paid cards and earned items; growth +125, restore/idempotency and forged growth rejection; 2/2"
     },
     {
       "id": "CI183-003",
@@ -89,8 +89,8 @@
       "file": "tests/m8-b3-audit.test.ts",
       "originalCase": "B3 audit independent lifecycle and identity expectations > R1 real dragon claw: tick39 canonical save→restore→tick40 complete events equal and continued archive validates",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "b3-public-claw.log.gz: genuine two cloak choices, exact birth rejection, original tick39/40 heal/events/history; 10/10 grouped controls"
     },
     {
       "id": "CI183-012",
