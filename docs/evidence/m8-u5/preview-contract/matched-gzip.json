@@ -1,0 +1,69 @@
+{
+  "node": "v22.23.3",
+  "zlib": "1.3.1-e00f703",
+  "method": "sum each dist/assets/*.js gzip level 9",
+  "probe": "\nimport { readEncounterPreview as u5Preview } from './simulation/match';\nimport { readRoundInfo as u5Round } from './simulation/round-selectors';\nObject.assign(globalThis, { __U5_QUERY_PROBE__: { readEncounterPreview: u5Preview, readRoundInfo: u5Round } });\n",
+  "trees": {
+    "baseline": {
+      "root": "/tmp/u5-preview-baseline-8e8b375",
+      "sha": "8e8b375c2d0840a1034ecffbaf86dde813f48493",
+      "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f"
+    },
+    "current": {
+      "root": "/workspace/scratch/2d61d723fa5a/cat-u5-preview",
+      "sha": "52c98b67e1a43779277a3ba2ce0231d451cbf161",
+      "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f"
+    }
+  },
+  "measurements": {
+    "baseline": {
+      "production": {
+        "files": [
+          {
+            "file": "index-D4Seod_F.js",
+            "bytes": 1696667,
+            "gzip9Bytes": 485816
+          }
+        ],
+        "gzip9Bytes": 485816
+      },
+      "queryReachable": {
+        "files": [
+          {
+            "file": "index-CHQ2I-6Q.js",
+            "bytes": 1699892,
+            "gzip9Bytes": 487463
+          }
+        ],
+        "gzip9Bytes": 487463
+      }
+    },
+    "current": {
+      "production": {
+        "files": [
+          {
+            "file": "index-C3XgV0ot.js",
+            "bytes": 1696753,
+            "gzip9Bytes": 485873
+          }
+        ],
+        "gzip9Bytes": 485873
+      },
+      "queryReachable": {
+        "files": [
+          {
+            "file": "index-tm3lXNFW.js",
+            "bytes": 1700563,
+            "gzip9Bytes": 487769
+          }
+        ],
+        "gzip9Bytes": 487769
+      }
+    }
+  },
+  "delta": {
+    "production": 57,
+    "queryReachable": 306
+  },
+  "currentReachableVsBaselineProduction": 1953
+}
