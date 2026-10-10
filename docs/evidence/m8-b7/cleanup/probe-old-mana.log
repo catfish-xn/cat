@@ -1,0 +1,45 @@
+(node:56) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run tests/m8-b7-cleanup.test.ts
+
+(node:69) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ RUN  v5.0.3 /tmp/b7-cleanup-probe
+
+(node:81) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/m8-b7-cleanup.test.ts (5 tests | 1 failed) 90ms
+   ❯ B7 cleanup independent restore boundaries (5)
+     × retains the hero minimum even if a future trusted strategy resolves zero maximum mana 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/m8-b7-cleanup.test.ts > B7 cleanup independent restore boundaries > retains the hero minimum even if a future trusted strategy resolves zero maximum mana
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ tests/m8-b7-cleanup.test.ts:111:46
+    109|     // rather than allowing a preceding catalog mismatch to make this …
+    110|     timing.heroManaZero = true;
+    111|     try { expect(() => restoreMatch(forged)).toThrow('Invalid Match sa…
+       |                                              ^
+    112|     finally { timing.heroManaZero = false; }
+    113|     expect(restoreMatch(saved)).toEqual(JSON.parse(saved));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  01:53:59
+   Duration  1.02s (transform 77%, import 12%, tests 10%)
+
