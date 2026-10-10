@@ -287,3 +287,7 @@ fixture 可用于精确 helper 边界，但至少一组 Match 向量必须经真
 ## 9. 本文交付说明
 
 最初检查点①交接只记录设计；本次按用户批准更新②／③实施顺序。已核对现行 Match、serialization、strategy-snapshot、upgrades、temporary-equipment、neutral-restore、inventory 及 M8B 权威文档；未运行上述 B8 功能门禁，也未把①纯 freeze 的自恢复等同于 live Match 恢复。后续交付须逐项列出实际代码、独立向量、验证结果和剩余范围。
+
+### ②实际交付补充（2026-10-10）
+
+上节“未运行功能门禁”描述的是最初交接时点，历史保留。当前默认领域接线、前移最小选择/必要终局、严格恢复及真实组合已实现；固定125868本机原样132文件、1852通过/10原skip，typecheck/build通过。实际代码、例外、包体、失败闭环和待完成CI见 [②送审包](evidence/m8-b8/checkpoint-two/REVIEW_PACKAGE.md)。最终含送审材料HEAD仍须自身全绿CI及用户转外部Codex签收，不能用①或内部预检替代；③/B9边界不变。

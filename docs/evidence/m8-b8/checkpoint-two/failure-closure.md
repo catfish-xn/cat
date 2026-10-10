@@ -54,3 +54,9 @@
 ### F后续：工具可移植性与原样guard收口
 
 原受审工具/guard和f574审计字节另保留，当前工具只在固定远端50786a与本地2814中优先选择实际存在且whole/src树均精确相等的对象；183源指纹不变。新增5项ref拒绝控制，原19正文不变；**原样24/24通过**及typecheck通过，新portable审计67ad只读重新核八条capture/独立资源与旧新候选，candidate仍8d129，没有重新apply。旧19的单worker执行仅诊断证据，不当成原样门禁；原日志未覆盖。具体限制与两代hash见`golden/portable/README.md`，这仍是内部技术预检。
+
+## 固定 125868 的本机全量闭环
+
+2026-10-10：远端1258682c02020edc7b6b665e448678e0c889c2d4、本地bfaff72030d3a25ecc862d3cbb923f4057788eeb，132文件全部通过，1852 passed /10既有skip，505.67s；typecheck/build通过。至此原CI183的92项不再仅有专项相加，已由当前固定源码原样全量覆盖。CI200的TG43、Herald5及M5 sniper共7项超时在该本机全量也通过；旧失败日志保留，新旧路线/计时边界例外分别见TG、Herald和restore-fold-reuse证据，不将Herald分层误称生产提速。
+
+CI200 input-dev M6页面关闭尚未在本机证明解决：只增加最小诊断记录，等待真实新CI结果。10原unit与5原native-input延期未扩大，也未因本机绿解除。最终含送审材料HEAD必须取得自己的全绿CI，不能用125868源码等价代替最终SHA验收。原始结果见 [candidate-125868-full](candidate-125868-full/README.md)。
