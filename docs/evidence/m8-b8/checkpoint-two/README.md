@@ -102,3 +102,15 @@
 独立结算补 combatEventCount，真实入账gold先于interest；公开settlement参考从独立计划+正式死亡求未授gold，不以actual roundResult反推。手算9/49/50+1→16/60/61、投资向量、英雄非金币对照及重复事件/错误payload/source/receipt反向拒绝通过。新增24例+原audit-boundaries20例共44/44通过，原beforeAll失败后未执行的7例已执行；typecheck通过。seed42金币路径和seed230四档英雄路径均由真实公开命令完成38轮/33战；未改路线脚本或门禁。原日志为 `loot-oracle-targeted.log.gz`、`loot-oracle-typecheck.log.gz`、`loot-oracle-seed230.log.gz`。
 
 这是独立参考适配的单独提交，不把参考缺项归为领域缺陷，也不掩盖另行发现的真实BoardScene异常、未修完的fixture和生命周期旧前提。全CI及②验收仍未完成。
+
+### CI174 修复：原生命周期断言对应已批真实奖励
+
+仅测试适配，不改变生产路径。原3文件40项中35通过、5失败；以下逐项保持原约束并补实际新行为，而不是宽化断言：
+
+- `match-contract` 弃权旧两事件，改完整 `combatFinished → lootForfeited → roundSettled`；独立校验1-2/m01/slot0身份、零授予、tick0与唯一结算。
+- `match-lifecycle` stale/unsettled 用例：未解自选先证明 wrong-phase 且原state零变化，通过公开选择后仍精确检查 stale-round/unsettled-round。
+- `match-lifecycle` 冻结快照：running preparation 仍严格相等；终帧独立预期唯一 Maddie/unit-2/一星/bench0 出生及完整receipt/provenance/事件顺序，原对象与combat basis保持不变。
+- `match-session` Continue：原英雄所有字段/星级/位置不变，独立追加实际Maddie和Lux；先公开sword选择，完整receipt/resolution/事件相等，50ms与partial clock原检查保留。
+- `match-session` 五轮：未解choice的Continue先拒绝，再公开选择；购买路线Lux固定unit-3/bench0，原英雄全字段、重复Continue、轮数/商店代次保留。
+
+最终原3文件40/40通过、typecheck通过；补交叉验证combatEventCount与完整Combat ledger长度和连续eventSeq。原始前后与类型日志 `lifecycle-targeted-before.log.gz`、`lifecycle-targeted.log.gz`、`lifecycle-typecheck.log.gz`。并发测试工作区结果不替代最终固定SHA全量和CI。
