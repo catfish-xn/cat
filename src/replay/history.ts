@@ -2,7 +2,8 @@ import type { BattleRecord, SaveEnvelope, SessionChange } from '../m6/contracts'
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { startMatchCombat, stepMatch } from '../simulation/match';
 import type { MatchState } from '../simulation/match-types';
-import type { CombatState, CombatEvent } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { MAX_COMBAT_TICKS } from '../simulation/combat-types';
 import { restoreMatch } from '../simulation/serialization';
 import { canonicalContent, digestContent } from '../simulation/content';
@@ -97,7 +98,7 @@ export async function validateBattleCollection(envelope: SaveEnvelope): Promise<
   } else check(envelope.currentBattle === null, '已结束战斗重复前缀');
 }
 
-interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: CombatEvent[] }
+interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[] }
 function capture(runId: string, working: WorkingRecord): BattleRecord {
   const { context, initial, terminal, events } = working;
   // Context, initial state and individual events are already owned and deeply frozen.

@@ -3,7 +3,8 @@ import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
-import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
+import { COMBAT_TICK_MS } from '../simulation/combat';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -77,7 +78,7 @@ export class BoardScene extends Phaser.Scene {
   private overlay!: Phaser.GameObjects.Graphics;
   private status!: Phaser.GameObjects.Text;
   private count!: Phaser.GameObjects.Text;
-  private recentCombatEvents: CombatEvent[] = [];
+  private recentCombatEvents: LedgerCombatEvent[] = [];
   private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
   private renderedCastCount = 0;
   private renderedUpgradeCount = 0;
@@ -395,7 +396,7 @@ export class BoardScene extends Phaser.Scene {
     if (this.session.phase !== 'preparation') this.selectedId = null;
     if (!this.session.combat) this.recentCombatEvents = [];
     this.sync();
-    this.showEvents(result.events.filter((event): event is CombatEvent => 'tick' in event));
+    this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
     const upgrades = result.events.filter(event => event.type === 'unitUpgraded');
     for (const event of upgrades) {
       const token = this.tokens.get(event.survivorId);
@@ -616,7 +617,7 @@ export class BoardScene extends Phaser.Scene {
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }
-  private showEvents(events: readonly CombatEvent[]) {
+  private showEvents(events: readonly LedgerCombatEvent[]) {
     const combat = this.session.combat;
     if (!combat) return;
     this.strategyPanel?.observeEvents(events);

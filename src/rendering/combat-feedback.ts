@@ -1,4 +1,5 @@
-import type { CombatEvent, CombatOrigin } from '../simulation/combat-types';
+import type { CombatOrigin } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
@@ -22,7 +23,7 @@ export function originLabel(source: CombatOrigin, lookup?: UnitNameLookup): stri
   return `${lookup ? `${lookup(source.ownerId)} · ` : ''}${SOURCES[source.sourceKind]}${label ? ` · ${label}` : ''}${parent ? ' · 临时子件' : ''}`;
 }
 /** Read event facts only: never reconstruct damage or trigger rules from unit HP. */
-export function combatEventText(event: CombatEvent, name: UnitNameLookup = unnamed): string | null {
+export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup = unnamed): string | null {
   const prefix = `第 ${event.tick} 刻`, source = (origin: CombatOrigin) => originLabel(origin, name);
   switch (event.type) {
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;

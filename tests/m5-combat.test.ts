@@ -7,6 +7,7 @@ import { applyCombatStart } from '../src/simulation/combat-effects';
 import { makeSourcedEffects, resolveEffects, cloneEffect } from '../src/simulation/effects';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { battle, unit } from './combat-helpers';
+import { packets, heals, casts } from './helpers/replay2-views';
 
 function hero(name: string, id = 'p', overrides: Partial<CombatUnit> = {}): CombatUnit {
   return unit(id, id.startsWith('e') ? 'enemy' : 'player', id.startsWith('e') ? 2 : 1, 3, {
@@ -27,7 +28,6 @@ function advance(initial: CombatState, ticks: number): { state: CombatState; eve
   for (let n = 0; n < ticks && state.status === 'running'; n++) { const step = stepCombat(state); state = step.state; events.push(...step.events); }
   return { state, events };
 }
-const packets = (events: readonly CombatEvent[]) => events.filter(e => e.type === 'packetDamage');
 
 describe('M5 independent finite combat rules', () => {
   it('resolves all 19 historical abilities as integer-only isolated snapshots', () => {
@@ -49,7 +49,7 @@ describe('M5 independent finite combat rules', () => {
     for (const name of Object.values(S13_ABILITY_DATA).map(a => a.championId)) {
       const state = battle([hero(name), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)], { rngState: 42, rngDraws: 0 });
       const step = stepCombat(state);
-      expect(step.events.some(e => e.type === 'cast' && e.sourceId === 'p'), name).toBe(true);
+      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(true);
       expect(stepCombat(JSON.parse(JSON.stringify(step.state)))).toEqual(stepCombat(step.state));
       expect(step.state.units.every(u => Number.isSafeInteger(u.hp) && Number.isSafeInteger(u.shield)), name).toBe(true);
     }
@@ -107,9 +107,9 @@ describe('M5 independent finite combat rules', () => {
     const nami = stepCombat(battle([hero('nami'), ...roster]));
     expect(packets(nami.events).filter(p => p.source.ownerId === 'p')).toHaveLength(4);
     const zoe = stepCombat(battle([hero('zoe'), ...roster]));
-    const cast = zoe.events.find(e => e.type === 'cast');
+    const cast = casts(zoe.events)[0];
     // On the odd-r grid both far candidates are distance 2; code-point ID selects e3 first.
-    expect(cast?.type === 'cast' ? cast.targetIds : []).toEqual(['e', 'e3', 'e', 'e4', 'e']);
+    expect(cast?.targetIds ?? []).toEqual(['e', 'e3', 'e', 'e4', 'e']);
   });
   it('Corki emits 21 packets one per tick, empowering every seventh and storing per-missile shred', () => {
     const result = advance(battle([hero('corki'), dummy()]), 21);
@@ -167,7 +167,7 @@ describe('M5 independent finite combat rules', () => {
     const result = stepCombat(battle([hero('scar', 'p', { hp: 50 }), hero('zyra', 'e', { hp: 50 })]));
     expect(result.state.result).toBe('draw');
     expect(result.state.units.every(u => !u.alive && u.hp === 0 && u.mana === 0)).toBe(true);
-    expect(result.events.filter(e => e.type === 'heal')).toEqual([]);
+    expect(heals(result.events)).toEqual([]);
   });
   it('damage mana is floor(HP loss×3%) and positive damage rounds each separate packet', () => {
     const result = stepCombat(battle([hero('ezreal'), hero('lux', 'e', { mana: 0, cooldownTicks: 1000, armor: 100 })]));
@@ -183,7 +183,7 @@ describe('M5 independent finite combat rules', () => {
   it('Gunblade consumes actual HP damage, healing cannot recursively cause damage', () => {
     const result = stepCombat(battle([hero('zyra', 'p', { hp: 4000, mechanics: [mechanic('p', 'gunblade', { selfHealBps: 1500, allyHealBps: 2500 })] }),
       dummy('e', 2, 3, { hp: 100 }), dummy('p2', 0, 3, { hp: 100, maxHp: 1000 })]));
-    expect(result.events.filter(e => e.type === 'heal').map(e => [e.unitId, e.requested, e.actual])).toEqual([['p', 15, 15], ['p2', 25, 25]]);
+    expect(heals(result.events).map(e => [e.unitId, e.requested, e.actual])).toEqual([['p', 15, 15], ['p2', 25, 25]]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(1);
   });
   it('roundtrips every tick and stays invariant under unit enumeration, including multishots and RNG', () => {
@@ -219,7 +219,7 @@ describe('M5 independent finite combat rules', () => {
     const owner = result.state.units.find(u => u.id === 'p')!;
     // 5000*.15+200=950 shield, passive5000*.015=75.
     expect(owner.shieldLayers![0]).toMatchObject({ granted: 950, remaining: 950, expiresAtTick: 81 });
-    expect(result.events.filter(e => e.type === 'heal')).toEqual([expect.objectContaining({ unitId: 'p', requested: 75, actual: 75 })]);
+    expect(heals(result.events)).toEqual([expect.objectContaining({ unitId: 'p', requested: 75, actual: 75 })]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([250, 125, 125]);
   });
   it('Irelia integer linear decay conserves exactly 400 shield over 60 ticks', () => {
@@ -277,7 +277,7 @@ describe('M5 independent finite combat rules', () => {
     expect(attack.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'rageblade'), before: 0, after: 500 });
     const periodic = stepCombat(battle([{ ...owner, cooldownTicks: 1000 }, dummy()], { tick: 199 }));
     expect(periodic.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'archangel'), before: 100, after: 130 });
-    expect(periodic.events.find(e => e.type === 'heal')).toMatchObject({ source: source('p', 'dragonClaw'), requested: 125, actual: 125 });
+    expect(heals(periodic.events)[0]).toMatchObject({ source: source('p', 'dragonClaw'), requested: 125, actual: 125 });
   });
   it('Bulky Buddies grants its one-time sourced shield only after the frozen buddy dies', () => {
     const buddy = { ...mechanic('p', 'bulkyBuddies', { shieldMaxHpBps: 1000, durationTicks: 200 }), targetId: 'a' };
@@ -289,7 +289,7 @@ describe('M5 independent finite combat rules', () => {
   it('Scar, Nami, Zoe and Caitlyn have explicit independent one-star damage and healing answers', () => {
     const scar = stepCombat(battle([hero('scar', 'p', { hp: 4900 }), dummy(), dummy('e2', 3, 3), dummy('e3', 4, 3)]));
     expect(packets(scar.events).map(p => p.raw)).toEqual([80, 80, 80]);
-    expect(scar.events.find(e => e.type === 'heal')).toMatchObject({ requested: 220, actual: 100, overheal: 120 });
+    expect(heals(scar.events)[0]).toMatchObject({ requested: 220, actual: 100, overheal: 120 });
     expect(scar.state.units.find(u => u.id === 'e')!.statuses![0]).toMatchObject({ startsAtTick: 2, expiresAtTick: 32 });
     for (const [name, expected] of [['nami', 120], ['zoe', 140]] as const) {
       const result = stepCombat(battle([hero(name), dummy()]));
@@ -304,7 +304,7 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(kog.events).map(p => [p.damageType, p.raw, p.critical])).toEqual([['physical', 100, false], ['magic', 72, false]]);
     const darius = stepCombat(battle([hero('darius', 'p', { hp: 4700 }), dummy(), dummy('e2', 1, 2)]));
     expect(packets(darius.events).map(p => p.raw)).toEqual([240, 240]);
-    expect(darius.events.find(e => e.type === 'heal')).toMatchObject({ requested: 150, actual: 150 });
+    expect(heals(darius.events)[0]).toMatchObject({ requested: 150, actual: 150 });
     expect(darius.state.units.find(u => u.id === 'p')!.tasks!.map(t => t.targetId)).toEqual(['e', 'e', 'e', 'e']);
   });
   it('same-source shields refresh strongest remaining amount without firing an old end task', () => {

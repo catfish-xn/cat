@@ -6,7 +6,8 @@
  * Entry points take the whole combat snapshot plus a unit id, so switching to the frozen
  * readCombatStatuses(combat) query (UR-U4-01) only changes statusSource() below.
  */
-import { COMBAT_TICK_MS, type CombatEvent, type CombatOrigin, type CombatState, type CombatStatus, type ShieldLayer } from '../simulation/combat-types';
+import { COMBAT_TICK_MS, type CombatOrigin, type CombatState, type CombatStatus, type ShieldLayer } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { CombatActivity, DamageDelivery, DamageFilter, DamageType, Stat, StatusContribution, StatusGroup, StatusKind } from '../simulation/m8/contracts';
 
 export const DAMAGE_TYPE_NAMES: Readonly<Record<DamageType, string>> = { physical: '物理', magic: '魔法', true: '真实' };
@@ -28,8 +29,6 @@ const STAT_NAMES: Readonly<Record<Stat, string>> = {
 const DELIVERY_NAMES: Readonly<Record<DamageDelivery, string>> = {
   'basic-attack': '普攻', 'ability-direct': '技能直接伤害', 'ability-periodic': '技能持续伤害', 'attack-extra': '普攻附加伤害', 'equipment-proc': '装备触发伤害', 'item-burn': '装备灼烧',
 };
-/** Legacy statChanged keeps attackSpeed in Bps and range in hexes (B2 §3 mapping). */
-const LEGACY_STAT_NAMES: Readonly<Record<string, string>> = { attackSpeedBps: '攻速', abilityPower: '法强', range: '射程' };
 export const STATUS_REASON_NAMES: Readonly<Record<string, string>> = {
   applied: '生效', refreshed: '刷新', expired: '到期', cleansed: '被净化', 'source-lost': '来源失效', 'death-cleanup': '阵亡清除',
   replaced: '被替换', 'combat-end': '战斗结束', 'control-cancelled': '被控制打断',
@@ -45,7 +44,8 @@ export type SourceLabel = (source: CombatOrigin) => string;
 const pct = (bps: number) => `${bps / 100}%`;
 const signed = (text: string, value: number) => `${value > 0 ? '+' : ''}${text}`;
 export const ticksToSeconds = (ticks: number) => `${(Math.max(0, ticks) * COMBAT_TICK_MS / 1000).toFixed(1)}秒`;
-const legacyStatValue = (stat: string, value: number) => stat === 'attackSpeedBps' ? pct(value) : stat === 'range' ? `${value}格` : String(value);
+/** statChanged keeps attackSpeed in Bps and range in hexes (B2 §3 mapping). */
+const statValue = (stat: Stat, value: number) => stat === 'attackSpeed' ? pct(value) : stat === 'range' ? `${value}格` : String(value);
 
 /**
  * Legacy compatibility anchor (statusChanged without group). Only fields whose meaning
@@ -62,8 +62,6 @@ const LEGACY_ANCHOR: Readonly<Record<CombatStatus['kind'], { name: string; value
   channel: { name: '引导', value: () => '' },
   redirect: { name: '伤害分担', value: pct },
 };
-/** A legacy anchor is a real stored record only when it links to contributions or an activity. */
-const trustedAnchor = (status: CombatStatus) => Boolean(status.contributionKeys?.length || status.activity);
 
 function magnitudeText(contribution: StatusContribution): string {
   const modifier = contribution.application.modifier;
@@ -166,72 +164,99 @@ export function statusBadges(combat: CombatState, unitId: string): { harmful: st
 
 /** Full provenance when the domain kept it: m8State/outcome carry parentItemInstanceId, legacy fields do not. */
 export const shieldSource = (layer: ShieldLayer): CombatOrigin => layer.m8State?.source ?? layer.source;
-export function eventSource(event: CombatEvent): CombatOrigin | null {
+/** replay2 statusChanged: applied/refreshed carry the post-change group (show its most recently applied
+ * contribution); end events list exactly the ended contributions (show the first). */
+export function eventContribution(event: Extract<LedgerCombatEvent, { type: 'statusChanged' }>): StatusContribution | undefined {
+  const contributions = event.group.contributions;
+  if (event.reason !== 'applied' && event.reason !== 'refreshed') return contributions[0];
+  return [...contributions].sort((a, b) => b.appliedAtTick - a.appliedAtTick || (a.key < b.key ? 1 : a.key > b.key ? -1 : 0))[0];
+}
+/** The unit an event is about (target of damage/heal/status/shield/activity/mana, actor of a cast). */
+export function eventUnitId(event: LedgerCombatEvent): string | null {
   switch (event.type) {
-    case 'packetDamage': return event.outcome?.context.source ?? event.source;
-    case 'heal': return event.outcome?.shares[0]?.source ?? event.source;
-    case 'shieldLayerChanged': return shieldSource(event.layer);
-    case 'statusChanged': return event.group?.contributions.find(c => c.key === event.status.key)?.source ?? event.group?.contributions[0]?.source ?? event.activity?.source ?? event.status.source;
-    case 'manaChanged': return event.outcome?.source ?? null;
+    case 'packetDamage': return event.outcome.context.targetId;
+    case 'heal': return event.outcome.targetId;
+    case 'shieldLayerChanged': return event.layer.targetId;
+    case 'statusChanged': return event.group.targetId;
+    case 'activityChanged': return event.activity.targetId;
+    case 'manaChanged': return event.outcome.targetId;
+    case 'cast': return event.receipt.source.ownerId;
+    case 'attack': return event.attackerId;
+    case 'effectTriggered': return event.targetId;
+    case 'combatFinished': return null;
+    default: return event.unitId;
+  }
+}
+export function eventSource(event: LedgerCombatEvent): CombatOrigin | null {
+  switch (event.type) {
+    case 'packetDamage': return event.outcome.context.source;
+    case 'heal': return event.outcome.shares[0]?.source ?? null;
+    case 'shieldLayerChanged': return event.layer.source;
+    case 'statusChanged': return eventContribution(event)?.source ?? null;
+    case 'activityChanged': return event.activity.source;
+    case 'manaChanged': return event.outcome.source;
+    case 'cast': return event.receipt.source;
     case 'kill': case 'statChanged': case 'maxHpChanged': return event.source;
     default: return null;
   }
 }
 
-/** Status name carried by a statusChanged event; unknown compatibility anchors stay neutral. */
-export function eventStatusName(event: Extract<CombatEvent, { type: 'statusChanged' }>): string {
-  if (event.activity) return ACTIVITY_NAMES[event.activity.kind];
-  if (event.group) return STATUS_KIND_NAMES[event.group.kind];
-  return trustedAnchor(event.status) ? LEGACY_ANCHOR[event.status.kind]?.name ?? '状态' : '状态';
+/** Status name carried by a statusChanged event. */
+export function eventStatusName(event: Extract<LedgerCombatEvent, { type: 'statusChanged' }>): string {
+  return STATUS_KIND_NAMES[event.group.kind];
 }
 /** Harmful status kinds worth a short float on the board when applied. */
-export function appliedStatusFloat(event: CombatEvent): string | null {
-  if (event.type !== 'statusChanged' || event.reason !== 'applied' || event.activity) return null;
-  const kind: StatusKind | null = event.group ? event.group.kind
-    : !trustedAnchor(event.status) ? null : event.status.kind === 'stun' ? 'stun' : event.status.kind === 'armorReduction' ? 'sunder' : null;
-  return kind && ['burn', 'wound', 'sunder', 'shred', 'stun', 'untargetable', 'damage-prevention'].includes(kind) ? STATUS_KIND_NAMES[kind] : null;
+export function appliedStatusFloat(event: LedgerCombatEvent): string | null {
+  if (event.type !== 'statusChanged' || event.reason !== 'applied') return null;
+  const kind = event.group.kind;
+  return ['burn', 'wound', 'sunder', 'shred', 'stun', 'untargetable', 'damage-prevention'].includes(kind) ? STATUS_KIND_NAMES[kind] : null;
 }
 
 /** Shared event sentences for the strategy log and the stats panel. */
-export function m8EventText(event: CombatEvent, name: UnitNameLookup, source: SourceLabel): string | null {
+export function m8EventText(event: LedgerCombatEvent, name: UnitNameLookup, source: SourceLabel): string | null {
   const from = eventSource(event);
   switch (event.type) {
     case 'packetDamage': {
-      // Live events do not carry outcome yet (UR-U4-03); the outcome-only details appear once it is published.
-      const o = event.outcome, type = DAMAGE_TYPE_NAMES[o?.context.damageType ?? event.damageType];
-      const extra = [o && o.prevented > 0 ? `被防止 ${o.prevented}` : '', o && o.overkill > 0 ? `溢出 ${o.overkill}` : '', event.critical ? '暴击' : '', event.redirected ? '分担' : '', o?.killingPacket ? '致命' : ''].filter(Boolean);
-      return `${source(from!)} → ${name(event.unitId)}：${type}实际生命伤害 ${event.hpDamage}，护盾吸收 ${event.absorbed}${extra.length ? ` · ${extra.join(' · ')}` : ''}`;
+      const o = event.outcome, type = DAMAGE_TYPE_NAMES[o.context.damageType];
+      const extra = [o.prevented > 0 ? `被防止 ${o.prevented}` : '', o.overkill > 0 ? `溢出 ${o.overkill}` : '', o.critical ? '暴击' : '', o.context.redirected ? '分担' : '', o.killingPacket ? '致命' : ''].filter(Boolean);
+      return `${source(from!)} → ${name(o.context.targetId)}：${type}实际生命伤害 ${o.hpDamage}，护盾吸收 ${o.absorbed}${extra.length ? ` · ${extra.join(' · ')}` : ''}`;
     }
     case 'heal': {
       const o = event.outcome;
-      if (!o) return `${source(from!)} → ${name(event.unitId)}：有效治疗 ${event.actual}，过量治疗 ${event.overheal}`;
       // One heal event, one HP change; the per-source split is the domain's shares[], shown verbatim.
       const shares = o.shares.map(s => `${source(s.source)}：请求 ${s.requested}，有效 ${s.actual}，过量 ${s.overheal}，重伤减少 ${s.preventedByWound}`);
-      return `${o.shares.length > 1 ? `${o.shares.length} 个来源` : source(from!)} → ${name(event.unitId)}：请求 ${o.requested}，有效治疗 ${event.actual}，过量治疗 ${event.overheal}，重伤减少 ${o.preventedByWound}${o.shares.length > 1 ? `（${shares.join('；')}）` : ''}`;
+      return `${o.shares.length > 1 ? `${o.shares.length} 个来源` : from ? source(from) : '治疗'} → ${name(o.targetId)}：请求 ${o.requested}，有效治疗 ${o.actual}，过量治疗 ${o.overheal}，重伤减少 ${o.preventedByWound}${o.shares.length > 1 ? `（${shares.join('；')}）` : ''}`;
     }
     case 'shieldLayerChanged': {
-      const m8 = event.layer.m8State, end = event.endReason && event.endReason !== event.reason ? `（${SHIELD_REASON_NAMES[event.endReason] ?? event.endReason}）` : '';
-      const ledger = m8 ? `，已吸收 ${m8.absorbed}${m8.decayed ? `，已衰减 ${m8.decayed}` : ''}${m8.expiredDiscarded ? `，到期作废 ${m8.expiredDiscarded}` : ''}` : '';
-      return `${source(from!)} → ${name(event.unitId)}：护盾${SHIELD_REASON_NAMES[event.reason] ?? event.reason}${end}，剩余 ${event.layer.remaining}${ledger}，到期第 ${event.layer.expiresAtTick} 刻`;
+      const layer = event.layer;
+      const ledger = `，已吸收 ${layer.absorbed}${layer.decayed ? `，已衰减 ${layer.decayed}` : ''}${layer.expiredDiscarded ? `，到期作废 ${layer.expiredDiscarded}` : ''}`;
+      return `${source(from!)} → ${name(layer.targetId)}：护盾${SHIELD_REASON_NAMES[event.reason] ?? event.reason}，剩余 ${layer.remaining}${ledger}，到期第 ${layer.expiresAtTick} 刻`;
     }
     case 'statusChanged': {
-      const contribution = event.group?.contributions.find(c => c.key === event.status.key) ?? event.group?.contributions[0];
-      const reason = STATUS_REASON_NAMES[event.activity?.endReason ?? event.reason] ?? event.reason;
-      if (!contribution && !event.activity && !trustedAnchor(event.status)) return `${name(event.unitId)}：状态清理（${reason}）`;
-      const detail = contribution ? magnitudeText(contribution) : event.activity ? (event.activity.kind === 'redirect' ? pct(event.activity.shareBps) : '') : LEGACY_ANCHOR[event.status.kind]?.value(event.status.amount) ?? '';
-      const until = event.reason !== 'applied' ? '' : contribution ? (contribution.expiresAtTick === null ? '，持续至战斗结束' : `，至第 ${contribution.expiresAtTick} 刻`)
-        : `，至第 ${event.activity?.expiresAtTick ?? event.status.expiresAtTick} 刻`;
-      return `${source(from!)} → ${name(event.unitId)}：${eventStatusName(event)}${detail ? ` ${detail}` : ''} ${reason}${until}`;
+      const contribution = eventContribution(event), reason = STATUS_REASON_NAMES[event.reason] ?? event.reason;
+      if (!contribution) return `${name(event.group.targetId)}：${eventStatusName(event)} ${reason}`;
+      const detail = magnitudeText(contribution);
+      const until = event.reason !== 'applied' && event.reason !== 'refreshed' ? '' : contribution.expiresAtTick === null ? '，持续至战斗结束' : `，至第 ${contribution.expiresAtTick} 刻`;
+      const more = event.group.contributions.length > 1 && event.reason !== 'applied' && event.reason !== 'refreshed' ? `（共 ${event.group.contributions.length} 项）` : '';
+      return `${source(contribution.source)} → ${name(event.group.targetId)}：${eventStatusName(event)}${detail ? ` ${detail}` : ''} ${reason}${more}${until}`;
+    }
+    case 'activityChanged': {
+      const a = event.activity, reason = STATUS_REASON_NAMES[event.reason] ?? event.reason;
+      const detail = a.kind === 'redirect' ? ` ${pct(a.shareBps)}` : '';
+      const until = event.reason === 'applied' || event.reason === 'refreshed' ? `，至第 ${a.expiresAtTick} 刻` : '';
+      return `${source(a.source)} → ${name(a.targetId)}：${ACTIVITY_NAMES[a.kind]}${detail} ${reason}${until}`;
     }
     case 'manaChanged': {
       const o = event.outcome;
-      if (o) return `${source(o.source)} → ${name(event.unitId)}：${MANA_REASON_NAMES[o.reason] ?? '法力'} ${o.applied}${o.blocked ? `，锁蓝阻止 ${o.blocked}` : ''}${o.overflow ? `，溢出 ${o.overflow}` : ''}，法力 ${o.before} → ${o.after}`;
-      const parts = [event.spent ? `消耗 ${event.spent}` : '', event.attackGain ? `普攻 +${event.attackGain}` : '', event.damageGain ? `受伤 +${event.damageGain}` : '', event.hookGain ? `效果 +${event.hookGain}` : '', event.overflow ? `溢出 ${event.overflow}` : ''].filter(Boolean);
-      return `${name(event.unitId)} 法力 ${event.before} → ${event.after}${parts.length ? `（${parts.join('，')}）` : ''}`;
+      return `${source(o.source)} → ${name(o.targetId)}：${MANA_REASON_NAMES[o.reason] ?? '法力'} ${o.applied}${o.blocked ? `，锁蓝阻止 ${o.blocked}` : ''}${o.overflow ? `，溢出 ${o.overflow}` : ''}，法力 ${o.before} → ${o.after}`;
     }
     case 'maxHpChanged': return `${source(event.source)} → ${name(event.unitId)}：最大生命 ${event.beforeMax} → ${event.afterMax}，当前生命 ${event.beforeHp} → ${event.afterHp}（不计治疗）`;
-    case 'statChanged': return `${source(event.source)} → ${name(event.unitId)}：${LEGACY_STAT_NAMES[event.stat] ?? event.stat} ${legacyStatValue(event.stat, event.before)} → ${legacyStatValue(event.stat, event.after)}`;
-    case 'cast': return `${name(event.sourceId)} 施放技能 → ${event.targetIds.map(name).join('、') || '无目标'}`;
+    case 'statChanged': return `${source(event.source)} → ${name(event.unitId)}：${STAT_NAMES[event.stat]} ${statValue(event.stat, event.before)} → ${statValue(event.stat, event.after)}`;
+    case 'cast': {
+      const r = event.receipt;
+      const mana = [r.actualManaSpent ? `消耗法力 ${r.actualManaSpent}` : '', r.refundedMana ? `返还 ${r.refundedMana}` : ''].filter(Boolean);
+      return `${name(r.source.ownerId)} 施放技能 → ${r.targetIds.map(name).join('、') || '无目标'}${mana.length ? `（${mana.join('，')}）` : ''}`;
+    }
     default: return null;
   }
 }

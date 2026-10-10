@@ -1,10 +1,11 @@
-import type { CombatEvent, CombatOrigin, CombatState } from '../simulation/combat-types';
+import type { CombatOrigin, CombatState } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { readCombatStats } from '../simulation/combat-s13';
 import type { BattleStats, UnitTotals } from './aggregate';
 import { displayUnitName } from '../rendering/display-names';
 import { originLabel } from '../rendering/combat-feedback';
-import { m8EventText, readUnitStatusRows, statusRowText } from '../presentation/combat-status';
-export interface StatsView { readonly stats: BattleStats; readonly combat: CombatState; readonly events: readonly CombatEvent[]; readonly selectedUnitId: string | null }
+import { eventSource, eventUnitId, m8EventText, readUnitStatusRows, statusRowText } from '../presentation/combat-status';
+export interface StatsView { readonly stats: BattleStats; readonly combat: CombatState; readonly events: readonly LedgerCombatEvent[]; readonly selectedUnitId: string | null }
 export interface StatsPanel { render(view: StatsView): void; dispose(): void }
 type EventFilter = 'all' | 'damage' | 'heal' | 'shield' | 'status' | 'mana' | 'target' | 'skill';
 const SOURCE_NAMES: Record<CombatOrigin['sourceKind'], string> = { attack: '普攻', ability: '技能', item: '装备', trait: '羁绊', augment: '强化', anomaly: '异常', enemyGrowth: '敌方成长' };
@@ -15,24 +16,23 @@ function unitName(combat: CombatState, id: string | null): string {
 }
 /** Same provenance text as the strategy panel (originLabel), including the temporary-child marker. */
 function sourceName(combat: CombatState, source: CombatOrigin): string { return originLabel(source, id => unitName(combat, id)); }
-function includesUnit(event: CombatEvent, id: string): boolean {
-  if ('unitId' in event && event.unitId === id || 'source' in event && event.source.ownerId === id) return true;
-  if (event.type === 'attack') return event.attackerId === id || event.targetId === id;
-  if (event.type === 'cast') return event.sourceId === id || event.targetIds.includes(id);
+function includesUnit(event: LedgerCombatEvent, id: string): boolean {
+  if (eventUnitId(event) === id || eventSource(event)?.ownerId === id) return true;
+  if (event.type === 'attack') return event.targetId === id;
+  if (event.type === 'cast') return event.receipt.targetIds.includes(id);
   if (event.type === 'targetChanged') return event.before === id || event.after === id;
-  if (event.type === 'shieldLayerChanged') return event.layer.source.ownerId === id;
-  if (event.type === 'statusChanged') return event.status.source.ownerId === id || event.group?.contributions.some(c => c.source.ownerId === id) === true;
-  if (event.type === 'heal' && event.outcome) return event.outcome.shares.some(share => share.source.ownerId === id);
-  return event.type === 'effectTriggered' && event.targetId === id;
+  if (event.type === 'statusChanged') return event.group.contributions.some(c => c.source.ownerId === id);
+  if (event.type === 'heal') return event.outcome.shares.some(share => share.source.ownerId === id);
+  return false;
 }
-function matches(event: CombatEvent, filter: EventFilter): boolean {
+function matches(event: LedgerCombatEvent, filter: EventFilter): boolean {
   // Mana changes accompany nearly every attack, so they are listed under their own filter.
   return filter === 'all' && event.type !== 'manaChanged' || filter === 'damage' && event.type === 'packetDamage' || filter === 'heal' && event.type === 'heal'
-    || filter === 'shield' && event.type === 'shieldLayerChanged' || filter === 'status' && event.type === 'statusChanged'
+    || filter === 'shield' && event.type === 'shieldLayerChanged' || filter === 'status' && (event.type === 'statusChanged' || event.type === 'activityChanged')
     || filter === 'mana' && event.type === 'manaChanged' || filter === 'target' && event.type === 'targetChanged'
     || filter === 'skill' && ['cast', 'effectTriggered', 'statChanged', 'maxHpChanged', 'growth'].includes(event.type);
 }
-function eventText(event: CombatEvent, combat: CombatState): string | null {
+function eventText(event: LedgerCombatEvent, combat: CombatState): string | null {
   const name = (id: string | null) => unitName(combat, id);
   const prefix = `第 ${event.tick} tick：`;
   switch (event.type) {

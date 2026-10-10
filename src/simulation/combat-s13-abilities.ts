@@ -2,7 +2,7 @@ import { chooseRandomCenter, selectAbilityTargets, selectConeTargets } from './m
 import { targetingEnvironment } from './m8/s13-targeting';
 import { integer, safeNumber } from './m8/stats';
 import { splitTotal } from './m8/periodic';
-import { flatAmount } from './m8/s13-definitions';
+import { asSource, flatAmount } from './m8/s13-definitions';
 import { executeShieldEnd } from './m8/s13-mechanisms';
 import { hexDistance, type Board } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
@@ -117,8 +117,8 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       const speedBefore = unit.runtime.attackSpeedBps, rangeBefore = range(unit);
       unit.runtime.attackSpeedBps += Math.round(v('AttackSpeed', .25) * 10000);
       if (unit.runtime.castCount % v('RangeIncreaseNumAttacks', 3) === 0) unit.runtime.rangeBonus++;
-      events.push({ type: 'statChanged', tick, unitId: unit.id, source, stat: 'attackSpeedBps', before: speedBefore, after: unit.runtime.attackSpeedBps });
-      if (rangeBefore !== range(unit)) events.push({ type: 'statChanged', tick, unitId: unit.id, source,
+      events.push({ type: 'statChanged', tick, unitId: unit.id, source: asSource(source), stat: 'attackSpeed', before: speedBefore, after: unit.runtime.attackSpeedBps });
+      if (rangeBefore !== range(unit)) events.push({ type: 'statChanged', tick, unitId: unit.id, source: asSource(source),
         stat: 'range', before: rangeBefore, after: range(unit) });
       targets.push(unit.id); break;
     }

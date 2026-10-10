@@ -5,7 +5,7 @@ import { selectTargets, startingRows, type TargetEnvironment } from './targeting
 import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
-import { ad, ap, compareText, constantModifier, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
+import { ad, ap, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
 import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
@@ -54,7 +54,7 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
     amount: application.modifier?.value.kind === 'constant' ? application.modifier.value.amount : application.magnitudeBps,
     startsAtTick: group.contributions.find(c => c.key === identity.key)!.appliedAtTick, expiresAtTick: group.contributions.find(c => c.key === identity.key)!.expiresAtTick ?? 1201, contributionKeys: [identity.key] };
   target.statuses=[...target.statuses.filter(s=>s.key!==status.key),status].sort((a,b)=>compareText(a.key,b.key));
-  ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, status, group, reason: 'applied' });
+  ctx.events.push({ type: 'statusChanged', tick: ctx.tick, group, reason: 'applied' });
   if (application.kind === 'untargetable' && application.activation === 'immediate') {
     for (const enemy of ctx.units) if (enemy.team !== target.team && enemy.targetId === target.id) {
       clearMechanismTarget(ctx, enemy, actionSeq);
@@ -113,7 +113,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       const modifier = rawModifier.value.kind === 'counter' ? { ...rawModifier, value: { kind: 'constant' as const, amount: safeNumber(integer(damageContext?.counters?.[rawModifier.value.counterId] ?? 0) * integer(rawModifier.value.perCount, Number.MIN_SAFE_INTEGER)) } } : rawModifier;
       if (modifier.stat === 'attackSpeed' && modifier.unit === 'bps' && modifier.value.kind === 'constant' && effect.duration.kind === 'combat' && effect.activation === 'immediate' && !damageContext?.applicationId && effect.stackPolicy.kind === 'add-stacks' && effect.stackPolicy.cap === null && conditionHolds(modifier.condition, sample)) {
         const before = target.runtime.attackSpeedBps; target.runtime.attackSpeedBps = safeNumber(integer(before) + integer(modifier.value.amount));
-        ctx.events.push({ type: 'statChanged', tick: ctx.tick, unitId: target.id, source, stat: 'attackSpeedBps', before, after: target.runtime.attackSpeedBps }); break;
+        ctx.events.push({ type: 'statChanged', tick: ctx.tick, unitId: target.id, source, stat: 'attackSpeed', before, after: target.runtime.attackSpeedBps }); break;
       }
       // Legacy unbounded combat growth is a projection of this one program/runtime.
       if (modifier.stat === 'abilityPower' && modifier.unit === 'flat' && modifier.value.kind === 'constant' && effect.duration.kind === 'combat'
@@ -131,7 +131,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
       const state = grantShieldState(identity, value, effect, ctx.tick, old ? frozenShield(old, target) : undefined);
       const layer = shieldProjection(state, legacyKey, effect);
       target.shieldLayers = [...target.shieldLayers.filter(l => l.key !== legacyKey), layer]; syncShield(target);
-      ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: target.id, layer, reason: 'granted' }); break;
+      ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, layer: layer.m8State!, reason: 'granted' }); break;
     }
     case 'change-max-hp': {
       const basis = target.maxHpBasis ?? { base: target.maxHp, flat: 0, bps: 0, bonusBps: 0 };
@@ -149,8 +149,7 @@ export function executeMechanismEffect(ctx: AbilityContext, holder: S13Unit, sou
         unit.tasks = unit.tasks.filter(t => !(t.attachedDot && t.targetId === target.id && hostile.has(t.source.ownerId)));
       }
       target.mechanismState = { ...target.mechanismState!, periodicTasks: cancelAttachedBurns(target.mechanismState!.periodicTasks, result.ended.map(e => e.contribution)) };
-      for (const ended of result.ended) ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: target.id, reason: 'cleansed', group: { targetId: target.id, kind: ended.contribution.application.kind, contributions: [ended.contribution], effectiveSourceKey: null, effectiveMagnitudeBps: 0, nextPulseAtTick: null },
-        status: { key: ended.contribution.key, source: ended.contribution.source, kind: 'stun', amount: 0, startsAtTick: ended.contribution.appliedAtTick, expiresAtTick: ctx.tick } });
+      ctx.events.push(...endedStatusEvents(ctx.tick, target.id, result.ended, 'cleansed'));
       clearMechanismTarget(ctx, target, seq); break;
     }
     default: throw new RangeError(`Effect ${effect.kind} belongs to a later B3 batch`);
@@ -212,10 +211,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     if (task.finalPulse === 'before-expiry' && task.endsAtTick === ctx.tick) executePulse(unit, task);
   for (const unit of ctx.units) {
     const expired = endStatuses(unit.mechanismState!.statuses, ctx.tick);
-    for (const status of unit.statuses) if (status.contributionKeys?.some(k => expired.ended.some(e => e.contribution.key === k)))
-      ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: unit.id, status, reason: 'expired' });
-    for (const ended of expired.ended) if (!unit.statuses.some(s => s.contributionKeys?.includes(ended.contribution.key)))
-      ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: unit.id, reason: 'expired', status: { key: ended.contribution.key, source: ended.contribution.source, kind: 'resistanceFlat', amount: 0, startsAtTick: ended.contribution.appliedAtTick, expiresAtTick: ctx.tick }, group: { targetId: unit.id, kind: ended.contribution.application.kind, contributions: [ended.contribution], effectiveSourceKey: null, effectiveMagnitudeBps: 0, nextPulseAtTick: null } });
+    ctx.events.push(...endedStatusEvents(ctx.tick, unit.id, expired.ended, 'expired'));
     unit.mechanismState = { ...unit.mechanismState!, periodicTasks: cancelAttachedBurns(unit.mechanismState!.periodicTasks, expired.ended.map(e => e.contribution)), statuses: expired.groups.map(g => summarizeGroup(g, ctx.tick)) };
     for (const ended of expired.ended) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, ctx.units.find(u => u.id === ended.contribution.source.ownerId)!,
       { ...ended.contribution.source, effectIndex: ended.contribution.source.effectIndex + index + 1 }, unit, effect, nextSeq(), index);
@@ -224,8 +220,8 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
       const maintained = maintainShield(frozenShield(layer, unit), ctx.tick);
       const next = shieldProjection(maintained.layer, layer.key, layer.m8Grant, maintained.reason ?? layer.endedReason);
       if (maintained.decayed > 0 && ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, shieldDecay: [...ctx.resolutionFacts.shieldDecay, { key: next.key, amount: maintained.decayed }] };
-      if (maintained.decayed > 0) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: unit.id, layer: next, reason: 'decayed' });
-      if (maintained.reason) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: unit.id, layer: next, reason: maintained.reason === 'expired' ? 'expired' : 'decayed', endReason: maintained.reason });
+      if (maintained.decayed > 0) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, layer: next.m8State!, reason: 'decayed' });
+      if (maintained.reason) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, layer: next.m8State!, reason: maintained.reason });
       return next;
     }); syncShield(unit);
   }
@@ -244,7 +240,7 @@ export function refreshMechanismAuras(ctx: AbilityContext, applyNew = true): voi
         const removed=removeStatusContributions(unit.mechanismState!.statuses,c=>canonicalSource(c.source)===sourceId&&!targets.some(t=>t.id===unit.id),holder.hp>0?'expired':'death-cleanup',ctx.tick);
         unit.mechanismState={...unit.mechanismState!,statuses:removed.groups};
         const keys=new Set(removed.ended.map(e=>e.contribution.key));
-        for (const status of unit.statuses.filter(s=>s.contributionKeys?.some(k=>keys.has(k)))) ctx.events.push({type:'statusChanged',tick:ctx.tick,unitId:unit.id,status,reason:holder.hp>0?'expired':'death-cleanup'});
+        ctx.events.push(...endedStatusEvents(ctx.tick,unit.id,removed.ended,holder.hp>0?'expired':'death-cleanup'));
         unit.statuses=unit.statuses.filter(s=>!s.contributionKeys?.some(k=>keys.has(k)));
       }
       for (const target of targets) if (applyNew && !target.mechanismState!.statuses.some(g=>g.contributions.some(c=>canonicalSource(c.source)===sourceId)))
@@ -295,7 +291,7 @@ export function commitMechanismHeal(ctx: AbilityContext, entry: AbilityContext['
   const outcome = resolveHeal(request, target, statusMagnitude(target.mechanismState!.statuses, 'wound', ctx.tick)); target.hp += outcome.actual;
   if (ctx.resolutionFacts) ctx.resolutionFacts = { ...ctx.resolutionFacts, healing: [...ctx.resolutionFacts.healing, outcome] };
   if (entry.periodic && (outcome.actual < outcome.afterWound || target.hp === target.maxHp)) clearPeriodicAccount(ctx, entry.periodic, target.id);
-  ctx.events.push({ type: 'heal', tick: ctx.tick, unitId: target.id, source: outcome.shares[0]?.source ?? entry.source, requested: outcome.requested, actual: outcome.actual, overheal: outcome.overheal, hp: target.hp, outcome });
+  ctx.events.push({ type: 'heal', tick: ctx.tick, outcome });
 }
 export function cleanupMechanisms(ctx: AbilityContext, combatEnd = false): void {
   const dead = new Set(ctx.units.filter(u => u.hp <= 0 || !u.alive).map(u => u.id));
@@ -303,15 +299,13 @@ export function cleanupMechanisms(ctx: AbilityContext, combatEnd = false): void 
     const reason = combatEnd ? 'combat-end' as const : 'death-cleanup' as const;
     if (combatEnd || dead.has(unit.id)) {
       for (const activity of unit.mechanismState!.activities.filter(a => a.lifecycle === 'active')) {
-        const status = unit.statuses.find(s => s.activity?.key === activity.key)!;
-        ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: unit.id, status, reason, activity: { ...activity, lifecycle: 'ended', endedAtTick: ctx.tick, endReason: reason } });
+        ctx.events.push({ type: 'activityChanged', tick: ctx.tick, reason, activity: { ...activity, lifecycle: 'ended', endedAtTick: ctx.tick, endReason: reason } });
       }
       const removed = removeStatusContributions(unit.mechanismState!.statuses, () => true, reason, ctx.tick);
-      for (const e of removed.ended) ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: unit.id, reason,
-        status: { key: e.contribution.key, source: e.contribution.source, kind: 'stun', amount: 0, startsAtTick: e.contribution.appliedAtTick, expiresAtTick: ctx.tick } });
+      ctx.events.push(...endedStatusEvents(ctx.tick, unit.id, removed.ended, reason));
       for (const layer of unit.shieldLayers) {
         const state = frozenShield(layer, unit), next = endShield(state, reason, layer.m8Grant ?? { kind: 'grant-shield', amount: flatAmount(layer.granted), durationTicks: 1, decay: { kind: 'none' }, onEnd: [], endTiming: 'post-damage', endTargeting: { kind: 'fixed', targetIds: [], ifMissing: 'skip' }, endEffects: [] }, false);
-        if (next.emitEnd) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, unitId: unit.id, layer: shieldProjection(next.layer, layer.key, layer.m8Grant, reason), reason: 'expired', endReason: reason });
+        if (next.emitEnd) ctx.events.push({ type: 'shieldLayerChanged', tick: ctx.tick, layer: shieldProjection(next.layer, layer.key, layer.m8Grant, reason).m8State!, reason });
       }
       unit.mechanismState = { ...unit.mechanismState!, statuses: [], activities: unit.mechanismState!.activities.map(a => a.lifecycle === 'active' ? { ...a, lifecycle: 'ended', endedAtTick: ctx.tick, endReason: reason } : a) };
     }
@@ -326,8 +320,7 @@ export function maintainActivities(ctx: AbilityContext, unit: S13Unit, controlle
     const reason = activity.expiresAtTick <= ctx.tick ? 'expired' as const : activity.kind === 'channel' && controlled ? 'control-cancelled' as const : null;
     if (!reason) return activity;
     const ended = { ...activity, lifecycle: 'ended' as const, endedAtTick: reason === 'expired' ? activity.expiresAtTick : ctx.tick, endReason: reason };
-    const status = unit.statuses.find(s => s.activity?.key === activity.key);
-    if (status) ctx.events.push({ type: 'statusChanged', tick: ctx.tick, unitId: unit.id, status: { ...status, activity: ended }, reason, activity: ended });
+    if (unit.statuses.some(s => s.activity?.key === activity.key)) ctx.events.push({ type: 'activityChanged', tick: ctx.tick, activity: ended, reason });
     return ended;
   }) };
   unit.statuses = unit.statuses.filter(s => !s.activity || unit.mechanismState!.activities.some(a => a.key === s.activity!.key && a.lifecycle === 'active'));

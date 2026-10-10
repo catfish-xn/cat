@@ -12,7 +12,8 @@ import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment } 
 import type { MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 import type { Effect } from '../simulation/strategy-types';
-import type { CombatEvent, CombatOrigin } from '../simulation/combat-types';
+import type { CombatOrigin } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { readCombatStats } from '../simulation/combat-s13';
 import { getInterestGold } from '../simulation/economy';
 import { combatEventText, originLabel } from './combat-feedback';
@@ -664,7 +665,7 @@ export class StrategyPanel {
     const unit = state.combat?.units.find(value => value.id === id) ?? state.preparation.units.find(value => value.id === id);
     return unit ? `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}` : '历史单位';
   }
-  observeEvents(events: readonly CombatEvent[]): void {
+  observeEvents(events: readonly LedgerCombatEvent[]): void {
     if (!events.length) return;
     if (events.length && events[0].combatId !== this.eventCombatId) { this.eventTexts = []; this.eventCombatId = events[0].combatId; }
     for (const event of events) { const text = combatEventText(event, id => this.combatUnitName(id)); if (text) this.eventTexts.push(text); }

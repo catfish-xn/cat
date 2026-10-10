@@ -1,9 +1,10 @@
-import type { CombatEvent, CombatResult, CombatStartFailure, CombatState } from './combat';
+import type { CombatResult, CombatStartFailure, CombatState } from './combat';
+import type { LedgerCombatEvent } from './combat-types';
 import type { DeploymentFailure, GameState } from './game';
 import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, ScheduleReceipt, StrategyEvent } from './strategy-types';
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
-export type MatchEvent = CombatEvent | ((UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }) & { readonly domain?: 'match'; readonly eventSeq?: number });
+export type MatchEvent = LedgerCombatEvent | ((UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }) & { readonly domain?: 'match'; readonly eventSeq?: number });
 export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased' };
 export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[]; readonly locked?: boolean }
 export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: number }

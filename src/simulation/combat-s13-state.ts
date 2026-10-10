@@ -134,7 +134,16 @@ export function grantShield(unit: S13Unit, source: CombatOrigin, value: number, 
   const state = grantShieldState(effectIdentity(unit.mechanismState!.combatId, asSource(source), unit.id), value, definition, tick, old ? frozenShield(old, unit) : undefined);
   const layer = shieldProjection(state, key, definition);
   unit.shieldLayers = [...unit.shieldLayers.filter(s => s.key !== key), layer].sort((a, b) => a.expiresAtTick - b.expiresAtTick || compareText(a.m8State!.key, b.m8State!.key));
-  syncShield(unit); events.push({ type: 'shieldLayerChanged', tick, unitId: unit.id, layer, reason: 'granted' });
+  syncShield(unit); events.push({ type: 'shieldLayerChanged', tick, layer: layer.m8State!, reason: 'granted' });
+}
+/** B9 replay2: an end event lists exactly the contributions that ended, one event per status kind
+ * (first-seen order); applied/refreshed events carry the target's post-change group instead. */
+export function endedStatusEvents(tick: number, targetId: string, ended: readonly { readonly contribution: StatusContribution }[],
+  reason: import('./m8/contracts').StatusEndReason): CombatEvent[] {
+  const byKind = new Map<StatusContribution['application']['kind'], StatusContribution[]>();
+  for (const { contribution } of ended) byKind.set(contribution.application.kind, [...byKind.get(contribution.application.kind) ?? [], contribution]);
+  return [...byKind].map(([kind, contributions]) => ({ type: 'statusChanged', tick, reason,
+    group: { targetId, kind, contributions, effectiveSourceKey: null, effectiveMagnitudeBps: 0, nextPulseAtTick: null } }));
 }
 
 export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatStatus['kind'], value: number, duration: number,
@@ -147,12 +156,12 @@ export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatSta
     const activity: CombatActivity = { ...identity, actionSeq: actionSeq ?? unit.runtime.castCount, startsAtTick: tick, expiresAtTick: tick + duration,
       ...(kind === 'channel' ? { kind: 'channel', blocks: ['move', 'attack', 'cast'], cancelOnControl: true } as const : { kind: 'redirect', allyRadius: 1, shareBps: value, choose: 'lowest-id', repeatMitigation: false, recursive: false } as const),
       lifecycle: 'active', endedAtTick: null, endReason: null };
-    for (const previous of unit.statuses.filter(s => s.activity?.kind === kind && s.activity.lifecycle === 'active')) events.push({ type: 'statusChanged', tick, unitId: unit.id, status: previous, reason: 'replaced', activity: { ...previous.activity!, lifecycle: 'ended', endedAtTick: tick, endReason: 'replaced' } });
+    for (const previous of unit.statuses.filter(s => s.activity?.kind === kind && s.activity.lifecycle === 'active')) events.push({ type: 'activityChanged', tick, reason: 'replaced', activity: { ...previous.activity!, lifecycle: 'ended', endedAtTick: tick, endReason: 'replaced' } });
     const activities = unit.mechanismState!.activities.map(a => a.kind === kind && a.lifecycle === 'active' ? { ...a, lifecycle: 'ended' as const, endedAtTick: tick, endReason: 'replaced' as const } : a);
     unit.mechanismState = { ...unit.mechanismState!, activities: [...activities, activity] };
     const status: CombatStatus = { key, source, kind, amount: value, startsAtTick: tick, expiresAtTick: tick + duration, activity };
     unit.statuses = [...unit.statuses.filter(s => s.key !== key), status].sort((a, b) => compareText(a.key, b.key));
-    events.push({ type: 'statusChanged', tick, unitId: unit.id, status, reason: 'applied', activity }); return;
+    events.push({ type: 'activityChanged', tick, activity, reason: 'applied' }); return;
   }
   const kinds = { stun: 'stun', damageReduction: 'damage-reduction', armorReduction: 'sunder', resistanceFlat: value < 0 ? 'stat-debuff' : 'stat-buff', attackSpeed: 'stat-buff', abilityPower: 'stat-buff' } as const;
   const frozenKind = kinds[kind];
@@ -180,6 +189,6 @@ export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatSta
   const contribution: StatusContribution = groups.flatMap(g => g.contributions).find(c => c.key === contributionKeys[0])!;
   const status: CombatStatus = { key, kind, source, amount: value, startsAtTick: contribution.appliedAtTick, expiresAtTick: contribution.expiresAtTick!, contributionKeys };
   unit.statuses = [...unit.statuses.filter(s => s.key !== key), status].sort((a, b) => compareText(a.key, b.key));
-  events.push({ type: 'statusChanged', tick, unitId: unit.id, status, reason: 'applied' });
+  events.push({ type: 'statusChanged', tick, reason: 'applied', group: groups.find(g => g.contributions.some(c => c.key === contributionKeys[0]))! });
   void old;
 }

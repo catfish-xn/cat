@@ -3,6 +3,7 @@ import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSIO
 import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from './loot-runtime';
 import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
+import { toLedgerEvents } from './combat-ledger';
 import { deployUnit, getPlayerDeploymentCount, validateDeployment } from './game';
 import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
@@ -265,12 +266,12 @@ export function startMatchCombat(state: MatchState): MatchCommandResult {
   const combatInputBasis=freezeCombatInput(state,draw.word,state.resourceProvenance.entries.length);
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
   const next = withCombat({ ...state, combatInputBasis,battleSeedRngState: draw.state }, started.state);
-  return accept(next.state, [...started.events, ...next.events]);
+  return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);
 }
 export function stepMatch(state: MatchState): MatchStep {
   if (state.phase !== 'combat') return { state, events: [] };
   const next = stepCombat(state.combat), settled = withCombat(state, next.state);
-  const result = accept(settled.state, [...next.events, ...settled.events]);
+  const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
 }
 export function nextRound(state: MatchState, expectedRound: number): MatchCommandResult {

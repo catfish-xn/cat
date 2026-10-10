@@ -1,12 +1,13 @@
 /** M6 F1 public protocol. Persistence identity never participates in domain rules. */
 import type { MatchState } from '../simulation/match-types';
-import type { CombatEvent, CombatState, CombatResult } from '../simulation/combat-types';
+import type { CombatState, CombatResult } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 export interface BattleRecord {
   readonly runId: string;
   readonly combatId: string;
   readonly context: MatchState;
   readonly initial: CombatState;
-  readonly events: readonly CombatEvent[];
+  readonly events: readonly LedgerCombatEvent[];
   readonly endTick: number;
   readonly nextEventSeq: number;
   readonly result: CombatResult | null;
@@ -36,6 +37,6 @@ export type SaveStatus = { readonly kind: 'saving' }
 export interface SessionChange {
   readonly before: MatchState;
   readonly after: MatchState;
-  readonly events: readonly CombatEvent[];
+  readonly events: readonly LedgerCombatEvent[];
   readonly reason: 'command' | 'tick' | 'new-match';
 }

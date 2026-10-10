@@ -6,7 +6,8 @@
  * specs here are shapes and short labels. Nothing feeds back into Match/Combat.
  */
 import Phaser from 'phaser';
-import type { CombatEvent, CombatState } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { HexCell } from '../simulation/board';
 import { THEME, toNumber } from './theme';
 import type { UnitView } from './unit-view';
@@ -47,7 +48,7 @@ export class CombatFx {
     text.setPosition(rect.x, rect.y); this.labels.push({ rect, text }); this.host.fade(text, duration);
   }
 
-  show(events: readonly CombatEvent[], combat: CombatState): void {
+  show(events: readonly LedgerCombatEvent[], combat: CombatState): void {
     const { scene } = this.host, add = scene.add, at = (cell: HexCell) => this.host.center(cell);
     for (const spec of planFx(events, combat, reducedMotion())) {
       if (spec.kind === 'slash') {
