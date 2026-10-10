@@ -165,7 +165,8 @@ describe('B8 live reward upgrade with equipment, anomaly and G12 transfer', () =
     expect(migration.revealed.combat!.tick).toBe(29);
     expect(migration.ended.combat!.tick).toBe(143);
     expect(migration.ended.combat!.neutralReceipts!.deaths[0])
-      .toEqual({ unitId: drops[0].sourceUnitId, tick: 29, eventSeq: 86 });
+      .toEqual({ unitId: drops[0].sourceUnitId, tick: 29, eventSeq: 76 }); // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 86.
+    expect(migration.events.find(event => event.domain === 'combat' && event.eventSeq === 76 && event.tick === 29)).toMatchObject({ type: 'death', unitId: drops[0].sourceUnitId });
   });
 
   it.each(scenarios)('$name: keeps the old Combat basis and commits the candidate/upgrade before current projections', ({ live, returned }) => {

@@ -41,11 +41,11 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
     if(before.combat?.status==='running'&&result.state.combat?.status==='finished'){
      const final=history.completedRecords.at(-1);const record={...final,events:final.events.filter(e=>e.tick<=before.combat.tick),endTick:before.combat.tick,nextEventSeq:before.combat.nextEventSeq,result:null,stateHash:digestContent(before.combat)};record.eventHash=digestContent(record.events);
      const done=history.completedRecords.slice(0,-1),size=Buffer.byteLength(JSON.stringify({match:before,currentBattle:record,battleKeys:done.map(r=>r.combatId)}));
-     if(size>currentBytes){currentBytes=size;currentMax={kind:'hex-autobattler-save',saveFormatVersion:1,replayFormatVersion:1,runId,createdAt:'2026-10-06T00:00:00.000Z',match:before,battles:done,currentBattle:record};}
+     if(size>currentBytes){currentBytes=size;currentMax={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId,createdAt:'2026-10-06T00:00:00.000Z',match:before,battles:done,currentBattle:record};}
     }
    }});
    assert.equal(route.final.phase,'gameOver');assert.equal(route.final.round,ROUND_CATALOG.at(-1).ordinal);assert.equal(history.completedRecords.length,ROUND_CATALOG.filter(round=>round.kind!=='supply').length);
-   const envelope={kind:'hex-autobattler-save',saveFormatVersion:1,replayFormatVersion:1,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
+   const envelope={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
    if(build==='full-load'){
     const loads=history.completedRecords.map(record=>({round:record.context.round,players:record.context.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length,enemies:record.context.preparation.units.filter(u=>u.team==='enemy').length,equipped:record.context.items.filter(i=>i.location.kind==='unit').length}));
     // B8 loot now supplies the real command route's components: the original F1 maximal load runs again.
@@ -182,7 +182,7 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
    EventTarget.prototype.removeEventListener=function(type,listener,options){const key=`${type}/${typeof options==='boolean'?options:Boolean(options?.capture)}`;if(seen.get(this)?.get(key)?.delete(listener))count--;return remove.call(this,type,listener,options);};
    try{for(let i=0;i<cycles;i++){
     const host=document.createElement('div');document.body.append(host);const session=new MatchSession(createMatch(42));session.pause('lifecycle');let notified=0;const unsubscribe=session.subscribe(()=>notified++);
-    const dbName=`m6-lifecycle-${crypto.randomUUID()}`,repository=new SaveRepository(dbName);const envelope={kind:'hex-autobattler-save',saveFormatVersion:1,replayFormatVersion:1,runId:crypto.randomUUID(),createdAt:new Date().toISOString(),match:session.state,battles:[],currentBattle:null};const token=await repository.activate(null,envelope);const coordinator=new SaveCoordinator(repository,token,()=>{});
+    const dbName=`m6-lifecycle-${crypto.randomUUID()}`,repository=new SaveRepository(dbName);const envelope={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId:crypto.randomUUID(),createdAt:new Date().toISOString(),match:session.state,battles:[],currentBattle:null};const token=await repository.activate(null,envelope);const coordinator=new SaveCoordinator(repository,token,()=>{});
     coordinator.enqueue({match:session.state,battleKeys:[],addedBattles:[],currentBattle:null});await coordinator.flush();
     const controls=createSaveControls(host,{onNewRandom(){},onNewFixed(){},onContinue(){},onImport(){},onExport(){}});controls.update({startup:false,canContinue:false,seed:42,runId:envelope.runId,busy:false,status:null,hasActive:true});
     const record=window.__M6_PERF_LIFECYCLE_RECORD,playback=new PlaybackSession(record);playback.play();const snapshot=playback.advance(50);const panel=createStatsPanel(host,()=>{});panel.render({stats:aggregateStats(record.runId,record.combatId,snapshot.events),combat:snapshot.combat,events:snapshot.events,selectedUnitId:null});const feedback=createCombatFeedbackRenderer(host);feedback.push(snapshot.events,0);feedback.render(50,new Map());

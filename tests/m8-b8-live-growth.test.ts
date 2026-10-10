@@ -259,7 +259,8 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
       attackDamageBps:live.ended.combat!.units.find(unit => unit.id === id)!.runtime!.permanentAdBps}));
     expect(originalDeltas).toEqual([{sourceUnitId:'unit-13',attackDamageBps:0},{sourceUnitId:'unit-17',attackDamageBps:125}]);
     expect(live.events.filter(event => event.type === 'growth')).toEqual([
-      {type:'growth',tick:74,unitId:'unit-17',amountBps:125,totalBps:125,domain:'combat',combatId:'round-17',eventSeq:131},
+      // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 131.
+      {type:'growth',tick:74,unitId:'unit-17',amountBps:125,totalBps:125,domain:'combat',combatId:'round-17',eventSeq:110},
     ]);
     // Deliberately sum by original source ID without the production merge/fold helper.
     const stock = sourceIds.reduce((total,id) => total + live.prepared.persistentGrowth.find(value => value.unitId === id)!.attackDamageBps,0);
@@ -380,8 +381,10 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
     const plan = live.ended.m8.loot.frozen.rounds.at(-1)!;
     const evidence = plan.encounterPlan.drops.map(drop => live.ended.m8.loot.earnedEvidence.find(value => value.dropId === drop.dropId)!);
     expect(evidence.map(value => value.death)).toEqual([
-      {combatId:'round-17',tick:166,eventSeq:340}, {combatId:'round-17',tick:166,eventSeq:340},
+      {combatId:'round-17',tick:166,eventSeq:286}, {combatId:'round-17',tick:166,eventSeq:286},
     ]);
+    // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 340. The reference still resolves to that natural death.
+    expect(live.events.find(event => event.domain === 'combat' && event.combatId === 'round-17' && event.eventSeq === 286)).toMatchObject({ type: 'death', tick: 166 });
     expect(live.ended.combat!.neutralReceipts!.deaths.filter(death => death.unitId === plan.encounterPlan.drops[0].sourceUnitId)).toHaveLength(1);
     const relevant = new Set(plan.encounterPlan.drops.map(drop => drop.dropId));
     expect(live.events.filter(event => event.type === 'lootRevealed' && relevant.has(event.dropId))

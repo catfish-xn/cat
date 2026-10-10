@@ -2,7 +2,17 @@
 import type { MatchState } from '../simulation/match-types';
 import type { CombatState, CombatResult } from '../simulation/combat-types';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
+/** M8_RULES §10: each record names the exact version its validator must match. */
+export interface BattleRecordVersion {
+  readonly schemaVersion: MatchState['schemaVersion'];
+  readonly rulesVersion: MatchState['rulesVersion'];
+  readonly contentVersion: MatchState['contentVersion'];
+  readonly contentDigest: string;
+  readonly replayFormatVersion: 2;
+}
 export interface BattleRecord {
+  readonly version: BattleRecordVersion;
+  readonly roundId: string;
   readonly runId: string;
   readonly combatId: string;
   readonly context: MatchState;

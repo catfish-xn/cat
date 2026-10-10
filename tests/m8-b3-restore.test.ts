@@ -3,7 +3,7 @@ import { startMatchCombat, stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { battle, deployed, freeze } from './match-helpers';
 import { BattleHistory, PlaybackSession } from '../src/replay';
-import type { CombatEvent } from '../src/simulation/combat-types';
+import type { LedgerCombatEvent } from '../src/simulation/combat-types';
 import type { MatchState } from '../src/simulation/match-types';
 function active(): MatchState {
   let state = battle();
@@ -33,7 +33,7 @@ describe('B3 second batch restore binds finite programs and accounting facts', (
   it('retained playback snapshots stay frozen and independent across advance, seek and disposal', () => {
     let state = deployed(); const history = new BattleHistory('b3-isolation');
     const observe = (result: ReturnType<typeof stepMatch>, reason: 'command' | 'tick') => {
-      history.observe({ before: state, after: result.state, events: result.events.filter(e => e.domain === 'combat') as CombatEvent[], reason }); state = result.state;
+      history.observe({ before: state, after: result.state, events: result.events.filter(e => e.domain === 'combat') as LedgerCombatEvent[], reason }); state = result.state;
     };
     const start = startMatchCombat(state); if (!start.ok) throw new Error(start.reason);
     observe(start, 'command');

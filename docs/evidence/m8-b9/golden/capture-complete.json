@@ -1,0 +1,16 @@
+{
+  "oldCommit": "c109d4ebc24bb5de60c1adfa4cad2e5ca5e816fd",
+  "newHead": "edc4b20a960c7ecff353ce49eec0ed1db57e1f0d",
+  "newDirty": true,
+  "node": "v22.22.0",
+  "files": {
+    "old-cannon.json.gz": "83084ff9e516a0a59be2737499bbd1cd14338f0799cd8e8ddcf4b13e6917187c",
+    "old-sniper.json.gz": "8a6480b94e5e701249ec4216542b45f1a232c1d506f0b62848aeda19126188ad",
+    "old-mage.json.gz": "a78d3cea0c9fdcec66d4f96c56704299e1f98693f4c9ca68760a2b3370cf8f33",
+    "old-sniper-caitlyn.json.gz": "b28b9e4ff326f67b73a9b885e33a32978a315c141b5ffeaab9e37a93e88d9799",
+    "new-cannon.json.gz": "295b9633af04c00ade86d637363bda8405dcc7820015e58883d5b188f77dd63e",
+    "new-sniper.json.gz": "148609db655a95e502b0a3064bc3138d9de785ba3605261d03559c1e78705d7c",
+    "new-mage.json.gz": "50f9cfca04c4762d1b6aadbb8d038177e319194d714a2ca6962bba7337c8eedc",
+    "new-sniper-caitlyn.json.gz": "01d437887f2874b7fe08953ca0013cd8e43f99e8e71b595282c8349d85eed839"
+  }
+}

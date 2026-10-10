@@ -44,8 +44,8 @@ const output = process.env.M6_RETENTION_OUTPUT || 'artifacts/m6-retention';
     assert(match && first.before && first.after, 'normal route supplies a completed battle and second preparation');
     const events = first.events;
     const runId = 'native-retention-public-route';
-    const fixture = { kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1, runId, createdAt: '2026-10-08T00:00:00.000Z', match, currentBattle: null, battles: [{
-      runId, combatId: first.after.combat.combatId, context: first.before, initial: api.startMatchCombat(first.before).state.combat,
+    const fixture = { kind: 'hex-autobattler-save', saveFormatVersion: 2, replayFormatVersion: 2, runId, createdAt: '2026-10-08T00:00:00.000Z', match, currentBattle: null, battles: [{
+      version:{schemaVersion:first.before.schemaVersion,rulesVersion:first.before.rulesVersion,contentVersion:first.before.contentVersion,contentDigest:first.before.contentDigest,replayFormatVersion:2},roundId:first.before.m8.round.roundId, runId, combatId: first.after.combat.combatId, context: first.before, initial: api.startMatchCombat(first.before).state.combat,
       events, endTick: first.after.combat.tick, nextEventSeq: first.after.combat.nextEventSeq, result: first.after.combat.result,
       stateHash: digestContent(first.after.combat), eventHash: digestContent(events),
     }] };

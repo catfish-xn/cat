@@ -1,4 +1,5 @@
-import type { BattleRecord, SaveEnvelope, SessionChange } from '../m6/contracts';
+import type { BattleRecord, BattleRecordVersion, SaveEnvelope, SessionChange } from '../m6/contracts';
+import { M8_VERSION } from '../simulation/m8/version';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { startMatchCombat, stepMatch } from '../simulation/match';
 import type { MatchState } from '../simulation/match-types';
@@ -24,7 +25,12 @@ export function deepFreeze<T>(value: T): T {
 }
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`战斗档案无效：${message}`); }
 export function equalContent(a: unknown, b: unknown): boolean { return canonicalContent(a) === canonicalContent(b); }
-const keys = ['runId','combatId','context','initial','events','endTick','nextEventSeq','result','stateHash','eventHash'].sort();
+const keys = ['version','roundId','runId','combatId','context','initial','events','endTick','nextEventSeq','result','stateHash','eventHash'].sort();
+const VERSION_KEYS = ['schemaVersion','rulesVersion','contentVersion','contentDigest','replayFormatVersion'] as const;
+/** The version block a record made from this context must carry. */
+export function recordVersion(context: MatchState): BattleRecordVersion {
+  return { schemaVersion: context.schemaVersion, rulesVersion: context.rulesVersion, contentVersion: context.contentVersion, contentDigest: context.contentDigest, replayFormatVersion: M8_VERSION.replayFormatVersion };
+}
 function checkShape(record: BattleRecord) {
   check(record && typeof record === 'object' && !Array.isArray(record), '记录类型');
   check(equalContent(Object.keys(record).sort(), keys), '记录字段');
@@ -43,10 +49,21 @@ function checkShape(record: BattleRecord) {
   }
 }
 export interface VerifiedReplay { readonly terminal: CombatState; readonly settledMatch: MatchState }
+/** Version routing first (M8_RULES §10): only the exact M8 replay2 record has a validator; anything else is refused. */
+function validatorFor(record: BattleRecord): (record: BattleRecord) => VerifiedReplay {
+  const version = record && typeof record === 'object' ? (record as { version?: unknown }).version : undefined;
+  check(version !== null && typeof version === 'object' && !Array.isArray(version) && equalContent(Object.keys(version).sort(), [...VERSION_KEYS].sort()), '记录版本');
+  const v = version as BattleRecordVersion;
+  check(v.schemaVersion === M8_VERSION.schemaVersion && v.rulesVersion === M8_VERSION.rulesVersion && v.contentVersion === M8_VERSION.contentVersion
+    && v.replayFormatVersion === M8_VERSION.replayFormatVersion && typeof v.contentDigest === 'string', '不支持的战斗档案版本');
+  return validateM8Record;
+}
 /** Full deterministic validation; never reads an active session. */
-export function validateBattleRecord(record: BattleRecord): VerifiedReplay {
+export function validateBattleRecord(record: BattleRecord): VerifiedReplay { return validatorFor(record)(record); }
+function validateM8Record(record: BattleRecord): VerifiedReplay {
   checkShape(record);
   let state = restoreMatch(record.context);
+  check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
   check(state.phase === 'preparation' && record.combatId === `round-${state.round}`, '开战上下文');
   const start = startMatchCombat(state);
   check(start.ok && start.state.combat, '无法开战');
@@ -111,7 +128,7 @@ function capture(runId: string, working: WorkingRecord): BattleRecord {
   const { context, initial, terminal, events } = working;
   // Context, initial state and individual events are already owned and deeply frozen.
   // Only the growing array needs a new snapshot; hashes still cover the complete payload.
-  return markOwned(Object.freeze({ runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
+  return markOwned(Object.freeze({ version: Object.freeze(recordVersion(context)), roundId: context.m8.round.roundId, runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
     endTick: terminal.tick, nextEventSeq: terminal.nextEventSeq!, result: terminal.result,
     stateHash: digestContent(terminal), eventHash: digestContent(events) }));
 }

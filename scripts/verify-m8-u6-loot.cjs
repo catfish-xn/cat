@@ -60,7 +60,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       return { prefix, history };
     }
     async function envelopeFile(name, runId, match, history) {
-      const envelope = { kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1, runId,
+      const envelope = { kind: 'hex-autobattler-save', saveFormatVersion: 2, replayFormatVersion: 2, runId,
         createdAt: '2026-10-10T00:00:00.000Z', match, battles: history.completedRecords, currentBattle: null };
       await validateEnvelope(JSON.parse(JSON.stringify(envelope)), validateBattleCollection);
       const file = path.join(output, `${name}.json`); fs.writeFileSync(file, JSON.stringify(envelope));

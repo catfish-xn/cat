@@ -36,7 +36,7 @@ export interface MatchBase {
 
   readonly equipmentState: import('./m8/equipment').EquipmentState;
   readonly temporaryEquipment: readonly import('./m8/contracts').TemporaryEquipment[];
-  readonly schemaVersion: 5; readonly rulesVersion: 'm5-14.24b-v1'; readonly contentVersion: 's13-14.24b-slice-v1'; readonly contentDigest: string;
+  readonly schemaVersion: import('./m8/contracts').M8Version['schemaVersion']; readonly rulesVersion: import('./m8/contracts').M8Version['rulesVersion']; readonly contentVersion: import('./m8/contracts').M8Version['contentVersion']; readonly contentDigest: string;
   readonly commandProtocolVersion: 2; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
   readonly roundDefinitionId: string; readonly streak: Streak; readonly outcome: 'victory' | 'defeat' | null;
   readonly battleSeedRngState: number; readonly persistentGrowth: readonly PersistentGrowth[];

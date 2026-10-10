@@ -14,7 +14,7 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
   expect(route.summary.outcome).toBe('victory');expect(route.summary.round).toBe(FINAL_ROUND);
   expect(route.summary.caitlynBattles).toBeGreaterThanOrEqual(2);expect(route.summary.caitlynCasts).toBeGreaterThanOrEqual(2);
   expect(route.final.preparation.units.some(u=>u.team==='player'&&u.definitionId==='caitlyn')).toBe(true);
-  expect(route.rounds.filter(r=>r.events.some((e:unknown)=>{const event=e as {type:string;source?:{definitionId:string};hpDamage?:number};return event.type==='packetDamage'&&event.source?.definitionId==='caitlyn-ability'&&(event.hpDamage??0)>0;})).length).toBeGreaterThanOrEqual(2);
+  expect(route.rounds.filter(r=>r.events.some((e:unknown)=>{const event=e as {type:string;outcome?:{context:{source:{definitionId:string}};hpDamage:number}};return event.type==='packetDamage'&&event.outcome?.context.source.definitionId==='caitlyn-ability'&&(event.outcome?.hpDamage??0)>0;})).length).toBeGreaterThanOrEqual(2);
  },120000);
  for(const build of ['cannon','sniper','mage'])it(`${build}: ordinary purchases/rewards to 6-7 with a complete build`,async()=>{
   const route=await run(api,{build,seed:42});routes.set(build,route);assertGolden(route);

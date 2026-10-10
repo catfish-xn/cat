@@ -29,6 +29,7 @@ import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
+import { M8_VERSION } from './m8/version';
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
 const inputValidation = createInputValidation(requireValue);
@@ -55,7 +56,7 @@ export function restoreMatch(input: unknown): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
   canonicalContent(raw); // Reject functions, undefined, nonfinite values and non-plain containers.
   record(raw);
-  requireValue(raw.schemaVersion === 5 && raw.rulesVersion === 'm5-14.24b-v1' && raw.contentVersion === 's13-14.24b-slice-v1' && raw.commandProtocolVersion === 2 && raw.rngAlgorithm === 'lcg32-v1' && raw.tickMs === 50, 'unsupported-version');
+  requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
   for (const name of ['gold', 'xp', 'playerHp', 'nextMatchEventSeq']) integer(raw[name]);

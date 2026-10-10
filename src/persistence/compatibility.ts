@@ -50,7 +50,7 @@ export function routeSaveFile(input: unknown): RoutedFile {
   if (input.battles.length > MAX_BATTLE_RECORDS || records.length > MAX_BATTLE_RECORDS) return reject('capacity-exceeded', fileRules);
   for (const record of records) {
     if (!plain(record) || !Array.isArray(record.events)) return reject('invalid-data', fileRules);
-    if (record.events.length > MAX_EVENTS_PER_BATTLE) return reject('capacity-exceeded', fileRules);
+    if (record.events.length > MAX_EVENTS_PER_BATTLE) return reject('capacity-exceeded', fileRules, '战斗事件边界超限');
   }
   try {
     // Only a validated Match is handed on to the isolated historical validator.
