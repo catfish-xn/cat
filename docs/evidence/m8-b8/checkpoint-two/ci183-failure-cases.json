@@ -25,64 +25,64 @@
       "file": "tests/m5-route.test.ts",
       "originalCase": "M5 ordinary three-build routes and independent resource ledger > normally buys five-cost Caitlyn and fields her for at least two real battles",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-004",
       "file": "tests/m5-route.test.ts",
       "originalCase": "M5 ordinary three-build routes and independent resource ledger > cannon: ordinary purchases/rewards to 6-7 with a complete build",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-005",
       "file": "tests/m5-route.test.ts",
       "originalCase": "M5 ordinary three-build routes and independent resource ledger > sniper: ordinary purchases/rewards to 6-7 with a complete build",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-006",
       "file": "tests/m5-route.test.ts",
       "originalCase": "M5 ordinary three-build routes and independent resource ledger > mage: ordinary purchases/rewards to 6-7 with a complete build",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-007",
       "file": "tests/m6-integration.test.ts",
       "originalCase": "M6 independent route/history/playback/session integration > cannon: every completed battle has exact original state/events and isolated playback",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-008",
       "file": "tests/m6-integration.test.ts",
       "originalCase": "M6 independent route/history/playback/session integration > sniper: every completed battle has exact original state/events and isolated playback",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-009",
       "file": "tests/m6-integration.test.ts",
       "originalCase": "M6 independent route/history/playback/session integration > mage: every completed battle has exact original state/events and isolated playback",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-010",
       "file": "tests/m6-integration.test.ts",
       "originalCase": "M6 independent route/history/playback/session integration > sniper-caitlyn: every completed battle has exact original state/events and isolated playback",
       "firstFailureClass": "old-golden",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": "golden/targeted-tests.log: unchanged m5-route + m6-integration, 8 passed / 9 existing skipped; 239.84s; exact reviewed candidate 8d129f70 and original archive 007b6b41"
     },
     {
       "id": "CI183-011",

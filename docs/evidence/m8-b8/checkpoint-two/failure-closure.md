@@ -42,3 +42,11 @@
 - 原120tick每tick完整restore与nextstep state/events全等、同action同source双正伤害至少+2层及25封顶断言全保持。同例真实三装准备可恢复后，伪造Titan消费输入为未拥有item-999999（格式和排序合法），对象/JSON两入口均精确拒绝`Invalid resource provenance: combination recipe/ownership`；原state不变。
 - 完整B4文件14/14通过；一次并发未完成golden guard的Node类型错误阻断全局typecheck，guard迁至既有支持的mjs后本批最终全局typecheck通过。没有更改全局配置、类型依赖或timeout/skip。
 - 至此原92的84项已各有专项闭环，剩003–010八项golden；仍待最终同树全量及②真实组合恢复验证。
+
+## 批次F：有独立规则依据的完整golden迁移（003–010）
+
+- 原ff60a79/4554f5a字节SHA007b6b41…完整保留；旧四构筑132轮state/events全部精确复现。新候选来自相同锁定Node22/依赖、固定已批准B8生产输入，内容digest314b4c1f；schema5/save1/replay1/protocol2边界不变。
+- 四条新路线逐事务由独立ledger及独立birth/消费/growth审计；公开策略每条完整command复核，XP/HP/streak另有手算式提交检查，10loot+5supply组件、15G及两opening hero总量保留。相同完整战斗输入的1-2事件一致。逐轮完整叶子diff以已审核具体hash锁定，不能按顶层字段泛放行。
+- 19项反例实际通过：错原字节/版本/源输入、未知嵌套/熟悉命令类型乱入、候选漂移等拒绝。完整候选SHA8d129f70…再顺序确定性复跑四构筑后一次原子写入；原完整state/events hash断言、skip、threshold未改。内部只读技术复核不代表Codex外部签收。
+- 原样`npm test -- tests/m5-route.test.ts tests/m6-integration.test.ts`：2文件通过，8pass/9原skip，239.84s。至此CI183原92均有逐根因专项闭环；仍须同最终代码全量及CI，不能将专项相加当全绿。
+- 原工具记录本地2814，远端等价50786a；src树和183文件hash已固定，正常远端clone缺本地对象的限制明确记于golden README。原审计/工具字节不事后覆盖，便携改动如需另提交。
