@@ -1,0 +1,12 @@
+{"sequence":0,"event":"stage","at":"2026-10-10T08:15:02.244Z","elapsedMs":55.509567000000004,"stage":"setup","cleanupStarted":false,"details":{}}
+{"sequence":1,"event":"stage","at":"2026-10-10T08:16:32.797Z","elapsedMs":90608.59704000001,"stage":"browser-launch","cleanupStarted":false,"details":{}}
+{"sequence":2,"event":"stage","at":"2026-10-10T08:16:32.857Z","elapsedMs":90668.926844,"stage":"page-create","cleanupStarted":false,"details":{}}
+{"sequence":3,"event":"stage","at":"2026-10-10T08:16:32.900Z","elapsedMs":90711.307356,"stage":"page-goto","cleanupStarted":false,"details":{}}
+{"sequence":4,"event":"stage","at":"2026-10-10T08:16:32.917Z","elapsedMs":90728.82988800001,"stage":"measurements-requested","cleanupStarted":false,"details":{}}
+{"sequence":5,"event":"page-close","at":"2026-10-10T08:16:47.797Z","elapsedMs":105609.045509,"stage":"measurements-requested","cleanupStarted":false,"details":{"closed":true,"browserConnected":true}}
+{"sequence":6,"event":"script-catch","at":"2026-10-10T08:16:47.799Z","elapsedMs":105610.71355700001,"stage":"measurements-requested","cleanupStarted":false,"details":{"pageClosed":true,"browserConnected":true,"message":"Error: page.evaluate: Target page, context or browser has been closed"}}
+{"sequence":7,"event":"stage","at":"2026-10-10T08:16:47.846Z","elapsedMs":105657.760528,"stage":"script-cleanup-start","cleanupStarted":true,"details":{"failureRecorded":true}}
+{"sequence":8,"event":"browser-close-call","at":"2026-10-10T08:16:47.846Z","elapsedMs":105658.044059,"stage":"script-cleanup-start","cleanupStarted":true,"details":{"location":"script-finally","connected":true,"pageClosed":true}}
+{"sequence":9,"event":"context-close","at":"2026-10-10T08:16:47.849Z","elapsedMs":105660.167703,"stage":"script-cleanup-start","cleanupStarted":true,"details":{"pageClosed":true,"browserConnected":true}}
+{"sequence":10,"event":"browser-disconnected","at":"2026-10-10T08:16:47.849Z","elapsedMs":105660.480891,"stage":"script-cleanup-start","cleanupStarted":true,"details":{"connected":false}}
+{"sequence":11,"event":"browser-close-return","at":"2026-10-10T08:16:47.849Z","elapsedMs":105660.963115,"stage":"script-cleanup-start","cleanupStarted":true,"details":{"location":"script-finally"}}
