@@ -77,6 +77,7 @@ describe('B7 audit: Elder Dragon cone (ENCOUNTERS §4.4) against independent geo
     }
 
   it(`selects at most two 29-damage children from the four-cell cone on ${layouts.length} odd/even/edge layouts`, () => {
+    expect(layouts).toHaveLength(88);
     let attacked = 0;
     for (const { dragon, primary } of layouts) {
       const [dq, dr] = toAxial(dragon);
@@ -134,7 +135,9 @@ const mechanismTick = (events: readonly api.MatchEvent[]) => events.some(e => ['
 
 describe('B7 audit: Match save/restore of real encounters', () => {
   it.each(['2-7', '3-7', '4-7', '5-7', '6-7'])('%s: restoring at every opening and mechanism tick reproduces the continuous run', roundId => {
-    let continuous = accepted(api.startMatchCombat(withGaren(prepared(roundId)))), resumed = restored(continuous), restores = 1, afterMechanism = false;
+    let continuous = accepted(api.startMatchCombat(withGaren(prepared(roundId)))), resumed = restored(continuous), mechanismRestores = 0, afterMechanism = false;
+    expect(continuous.combat!.tick).toBe(0);
+    expect(resumed).toEqual(continuous);
     const continuousEvents: unknown[] = [], resumedEvents: unknown[] = [];
     while (continuous.phase === 'combat') {
       const a = api.stepMatch(continuous), b = api.stepMatch(resumed);
@@ -142,14 +145,15 @@ describe('B7 audit: Match save/restore of real encounters', () => {
       // Opening/stun window, every mechanism tick AND its next-tick consumer, and periodic checkpoints.
       const tick = continuous.combat!.tick;
       if (tick <= 13 || mechanismTick(a.events) || afterMechanism || tick % 50 === 0) {
-        resumed = restored(b.state); restores++;
+        resumed = restored(b.state);
+        if (mechanismTick(a.events)) mechanismRestores++;
         expect(resumed).toEqual(continuous);
       } else resumed = b.state;
       afterMechanism = mechanismTick(a.events);
     }
     expect(resumedEvents).toEqual(continuousEvents);
     expect(serializeMatch(resumed)).toBe(serializeMatch(continuous));
-    expect(restores).toBeGreaterThan(14);
+    expect(mechanismRestores).toBeGreaterThan(0);
   });
 
   it('6-7 rejects retimed stun, forged death, un-expired receipt and forged removal reasons', () => {
