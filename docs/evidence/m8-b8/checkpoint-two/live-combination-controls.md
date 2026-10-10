@@ -44,3 +44,15 @@
 - 同一合法低HP前缀单Loris仅杀r00败：direct照赚、choice forfeit；单Ezreal仅杀r01败：direct全forfeit、tear fallback恰一次。终局不留可操作choice，重复step/恢复/错误命令不再发资源。
 - 所有关键命令与恢复分支完整结果state/events相等；pending、release、terminal均完整strictrestore；重复step持原引用、零事件、调用前后序列化相等。容量状态、销售顺序/价格/经济、伪fallback及guarantee counter负控全部精确锚定错误，不以任意throw替代目标边界。
 - 最终原样6/6（5.79s）、统一typecheck通过，`live-capacity-final.log.gz`与类型日志同批保留。无生产修复、无timeout/worker/skip变动。
+
+## 真实奖励合并同时迁移装备／异常／G12
+
+`tests/m8-b8-live-transfer.test.ts`以seed230/cannon真命令到3-4选择，再公开分叉。3-5卖旧二星Ezreal及两Maddie返装；真实generation20/24各购一星Ezreal unit21/22，2-7实际gloves与3-4实际gloves合TG item9给unit22，4-6真实mage-armor绑定unit22。4-7实际奖励unit24被消费，unit21升星、unit22消失于当前准备阵容。
+
+- 同一个真实准备输入的迁移分支：TG及archangel/deathcap两临时子件、异常迁至unit21；冲突分支只公开equip已拥有belt到unit21，TG按既有独占规则返库存、临时子件移除，异常仍迁移。不是重新分配或重掷TG。
+- 旧Combat/basis保原unit22一星、TG/source/anomaly/10条roll前缀，finished当前投影则按真实升级事件迁移或返还；所有准备/开战/揭示/最后tick前/待选/选后完整strictrestore与完整state/events续算全等。
+- 开战LootReceipt10/ScheduleReceipt7/provenance64/roll10-draw20；完成待选分别12/7/68、unit serial25/item serial14；选择后13/7/69、item serial15。Continue至5-1迁移分支按既有规则新增唯一roll11/draw22，返库存分支仍10/draw20。重复命令不新增资源、ID或RNG，原引用及调用前后序列化保持。
+- 12项精确篡改拒绝，最终19例与相关growth/basis/B5五文件共122/122、typecheck/diff检查通过；只认`live-transfer-target-reviewed.log.gz`、`live-transfer-typecheck-reviewed.log.gz`。内部预检不是外部签收。
+- 初稿两项预期修正有独立依据：二星三费售价为既有表3×3−1=8G，不是9G；basis异常目标损坏实际先命中既有resolved strategy边界。另两处TypeScript测试字段误写按现有itemCombined/itemId及FrozenDirectDrop类型修正。初失败日志原样保留，不算生产缺陷或规则变更。
+
+这些②已启用路径的直接组合至此均有真实公开来源/恢复控制。③readLootView、隐藏信息完整样例、其余跨轮组合及既有后续延期仍按检查点边界保留；两层奖励级联没有新增live案例，分层证据见上节。最终固定源码全量/CI尚待执行，不据专项宣称②签收。
