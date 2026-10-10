@@ -1,0 +1,3 @@
+// Diagnostic reachability probe only; no user interface.
+import { readEncounterPreview } from './simulation/encounter-selectors';
+Object.assign(globalThis, { __BUDGET_PROBE__: { readEncounterPreview } });

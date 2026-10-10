@@ -1,0 +1,15 @@
+{
+  "label": "names89-additive",
+  "node": "v22.23.3",
+  "zlib": "1.3.1-e00f703",
+  "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+  "files": [
+    {
+      "file": "index-BlcCHyWc.js",
+      "rawBytes": 1699439,
+      "gzip9Bytes": 487427,
+      "sha256": "a24eefa7b75f0b1d03805902d7d74b964b3aee9f27e05b824d85f4c16a62a9a2"
+    }
+  ],
+  "totalGzip9Bytes": 487427
+}
