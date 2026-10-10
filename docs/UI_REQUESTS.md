@@ -59,13 +59,13 @@
 
 ### U6 接线状态（2026-10-10，Claude 接手 B8＋U6 后）
 
-`readLootView` 已在 B8 分支实现（`src/simulation/loot-view.ts`，经 `match.ts` 导出），策略面板已接线。以下记录每项请求的实际处理结果；**没有修改冻结的 `LootView` 形状**，需要改合同的部分仍列为待决定。
+`readLootView` 已在 B8 分支实现（`src/simulation/loot-view.ts`，经 `match.ts` 导出），策略面板已接线。以下记录每项请求的实际处理结果；**没有修改冻结的 `LootView` 形状**，需要改合同的部分已按 2026-10-10 批准的最小增补实施（见 [U6 LootView 增补](M8_U6_LOOT_CONTRACT_PROPOSAL.md)）。
 
 | 项 | 处理结果 | 证据 |
 | --- | --- | --- |
 | UR-U6-01 | 已解决的组件选择只在其 LootReceipt 存在后以 `status:'granted'` 行出现（dropId 为选择的 dropId，payload 取自收据）；未解决的选择和未用到的终局备用组件不出现。冻结形状无法区分 `player-choice`／`terminal-fallback`，界面不区分；如需区分须另行增补合同 | `tests/m8-b8-loot-view.test.ts` 选择后与终局三场景 |
-| UR-U6-02 | `phase==='choice'` 时 `canContinue=false, reason='unsettled-round'`，不伪装成 `pending-capacity`；选择与满席并存时，选择完成后才转为 `pending-capacity`。原因顺序与 `nextRound` 守卫一致，测试逐例比对命令结果 | 同上 `agreesWithContinue` |
-| UR-U6-03 | 未改合同；`PendingChoice` 仍无来源字段。界面以 `m8.round.kind==='pve'` 加 `choice.kind==='component'` 判断为野怪组件选择（不解析 `choiceId`），选择框不写具体怪物名 | `strategy-panel.ts` `renderChoice` |
+| UR-U6-02 | **按 2026-10-10 批准的增补已改为 `reason='pending-choice'`**（补给/强化/异常选择仍为 `unsettled-round`），不伪装成 `pending-capacity`；选择与满席并存时，选择完成后才转为 `pending-capacity`。原因顺序与 `nextRound` 守卫一致，测试逐例比对命令结果 | 同上 `agreesWithContinue` |
+| UR-U6-03 | **按批准的增补已解决**：`LootView.pendingChoice` 给出待选项身份（含 sourceUnitId）；界面据此判断野怪选择并显示来源名，不再按回合类型推断、不解析 `choiceId` | `strategy-panel.ts` `renderChoice` |
 | UR-U6-04 | 已确认：`roundId` 恒为当前回合；`sourceUnitId` 与同回合 `readEncounterPreview().units[].unitId` 同一编码，测试断言每条已揭示掉落恰好匹配一个预览单位 | 测试“mid-combat”用例 |
 | UR-U6-05 | 已确认：战斗进行中返回 `revealed` 行，界面显示“已揭示 · 战斗结束后自动入库” | 同上；浏览器实测 1-3 战中截图 |
 

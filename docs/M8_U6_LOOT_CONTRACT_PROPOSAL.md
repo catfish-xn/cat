@@ -1,6 +1,6 @@
-# U6 LootView 最小合同增补提案（待用户决定，未实施）
+# U6 LootView 最小合同增补（2026-10-10 用户批准，已实施）
 
-状态：**提案**。冻结的 `LootView`（`src/simulation/m8/ui-contracts.ts`、M8_UI_CONTRACT §5）未修改；`readLootView` 按现形状实现。本文只列出验收要求与现合同之间的缺口，以及最小的补法。
+状态：**已批准并实施**（用户 2026-10-10 批准“增加 pending-choice 阻塞原因以及待选项的来源身份”，不扩展其他展示需求）。下文第 1、2 节保留提案时的核对与形状；实施记录见第 4 节。第一轮送审 SHA `db808e5` 不含本增补。
 
 ## 1. 核对结论
 
@@ -34,4 +34,10 @@ export interface LootView {
 3. 界面改读 `pendingChoice` 判断野怪选择并显示来源，去掉按回合类型推断；`verify-m8-u6-loot.cjs` 同步断言。
 4. 预计包体增量约 0.2–0.4 KB（B8/U6 各半），在 B8 余量内。
 
-不批准时：维持现状（`unsettled-round`＋按回合类型推断），并在节点1送审中把该项列为未关闭的合同缺口。
+## 4. 实施记录
+
+- 合同：`ui-contracts.ts` 的 `LootView.reason` 增加 `'pending-choice'`，新增 `pendingChoice`；`M8_UI_CONTRACT.md` §5 同步增补段。
+- 投影：`readLootView` 在 `phase==='choice'` 且 `PendingChoice.choiceId` 等于某个已赚得、未解决描述符的 `lootChoiceId(dropId)` 时给出身份；`reason` 顺序为 game-over → pending-choice → unsettled-round → pending-capacity → unsettled-round。
+- 界面：面板显示“待选：<来源> 的组件奖励”及 pending-choice 阻塞文案；选择框以 `pendingChoice.choiceId` 判断野怪选择并显示来源，**不再按回合类型推断**。
+- 测试：`m8-b8-loot-view`（2-7 待选身份、只含身份字段、不含备用组件、来源对应预览单位、负控不变）；`m8-b8-live-cross-round`（1-3/1-4 为 pending-choice，2-1 强化与 2-4 补给组件选择不是）；`m8-contracts`；`verify-m8-u6-loot.cjs`（DOM 待选行、选择框 dropId 与来源名）。
+- 未做：区分玩家自选与终局自动处理（非必需，未提议）。

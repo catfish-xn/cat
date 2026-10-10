@@ -58,5 +58,25 @@
       }
     ],
     "total": 505000
+  },
+  {
+    "label": "B8 probe with LootView addendum, no U6",
+    "files": [
+      {
+        "file": "index-JHeX46hH.js",
+        "gzip9": 503883
+      }
+    ],
+    "total": 503883
+  },
+  {
+    "label": "integrated candidate with LootView addendum (B8+U6)",
+    "files": [
+      {
+        "file": "index-pvGv_5eC.js",
+        "gzip9": 505225
+      }
+    ],
+    "total": 505225
   }
 ]
