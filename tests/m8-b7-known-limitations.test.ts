@@ -13,12 +13,14 @@ describe('B7 accepts the fixed B3 charge-control ordering without changing the g
       cooldownTicks: 1000, moveCooldownTicks: 1000, mana: 0, maxMana: 0,
       ability: { id: 'boundary-dummy', amount: 0, kind: 's13', championId: 'neutral', variables: {} } });
     const result = stepCombat(battle([herald, victim], { combatId: 'b7-stun-order', rngDraws: 0, openingDefinitions: compiled.openingDefinitions }));
-    const appliedIndex = result.events.findIndex(e => e.type === 'statusChanged' && e.unitId === 'p' && e.reason === 'applied' && e.status.kind === 'stun');
-    const damageIndex = result.events.findIndex(e => e.type === 'packetDamage' && e.unitId === 'p');
-    expect(result.events[damageIndex]).toMatchObject({ raw: 150, hpDamage: 100 });
+    const appliedIndex = result.events.findIndex(e => e.type === 'statusChanged' && e.group.targetId === 'p' && e.reason === 'applied' && e.group.kind === 'stun');
+    const damageIndex = result.events.findIndex(e => e.type === 'packetDamage' && e.outcome.context.targetId === 'p');
+    expect(result.events[damageIndex]).toMatchObject({ outcome: { raw: 150, hpDamage: 100 } });
     expect(damageIndex).toBeGreaterThanOrEqual(0);
     expect(appliedIndex).toBe(-1);
-    expect(result.events.some(e => e.type === 'statusChanged' && e.unitId === 'p' && e.reason === 'death-cleanup')).toBe(false);
+    // B9: channel/redirect cleanup now travels as activityChanged, so both families are checked.
+    expect(result.events.some(e => (e.type === 'statusChanged' ? e.group.targetId : e.type === 'activityChanged' ? e.activity.targetId : null) === 'p'
+      && 'reason' in e && e.reason === 'death-cleanup')).toBe(false);
     expect(result.state.units.find(u => u.id === 'p')).toMatchObject({ hp: 0, alive: false, statuses: [] });
     expect(result.state.rngDraws).toBe(0);
   });
@@ -29,12 +31,13 @@ describe('B7 accepts the fixed B3 charge-control ordering without changing the g
       cooldownTicks: 1000, moveCooldownTicks: 1000, mana: 0, maxMana: 0,
       ability: { id: 'boundary-dummy', amount: 0, kind: 's13', championId: 'neutral', variables: {} } });
     const result = stepCombat(battle([herald, victim], { combatId: 'b7-surviving-stun-order', rngDraws: 0, openingDefinitions: compiled.openingDefinitions }));
-    const damageIndex = result.events.findIndex(e => e.type === 'packetDamage' && e.unitId === 'p');
-    const appliedIndex = result.events.findIndex(e => e.type === 'statusChanged' && e.unitId === 'p' && e.reason === 'applied' && e.status.kind === 'stun');
+    const damageIndex = result.events.findIndex(e => e.type === 'packetDamage' && e.outcome.context.targetId === 'p');
+    const appliedIndex = result.events.findIndex(e => e.type === 'statusChanged' && e.group.targetId === 'p' && e.reason === 'applied' && e.group.kind === 'stun');
     expect(damageIndex).toBeGreaterThanOrEqual(0);
-    expect(result.events[damageIndex]).toMatchObject({ raw: 150, hpDamage: 150 });
+    expect(result.events[damageIndex]).toMatchObject({ outcome: { raw: 150, hpDamage: 150 } });
     expect(appliedIndex).toBeGreaterThan(damageIndex);
-    expect(result.events[appliedIndex]).toMatchObject({ status: { kind: 'stun', startsAtTick: 2, expiresAtTick: 12 } });
+    // B9: the effective start tick is the frozen contribution's appliedAtTick (was status.startsAtTick).
+    expect(result.events[appliedIndex]).toMatchObject({ group: { kind: 'stun', contributions: [{ appliedAtTick: 2, expiresAtTick: 12 }] } });
     expect(result.state.units.find(u => u.id === 'p')).toMatchObject({ hp: 850, alive: true });
     expect(result.state.rngDraws).toBe(0);
   });

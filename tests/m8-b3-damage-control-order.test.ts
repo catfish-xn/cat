@@ -8,6 +8,7 @@ import { EMPTY_MECHANISMS } from '../src/simulation/m8/runtime-types';
 import { battle, freeze, unit } from './combat-helpers';
 import { amount, source, trigger } from './fixtures/m8-contract-cases';
 import captured from './fixtures/m8-b3/damage-control-opening.json';
+import { activityEvents, packetView, statusEvents } from './helpers/replay2-views';
 
 // Captured by calling the real B7 compiler at the recorded commit, outside this
 // branch. B3 owns this frozen regression input; no B7 implementation is imported.
@@ -27,8 +28,12 @@ const status = (kind: StatusApplication['kind'], activation: StatusApplication['
 const withStatus = (kind: StatusApplication['kind']): Partial<CombatUnit> => ({ mechanismState: {
   ...EMPTY_MECHANISMS, combatId: 'b3-damage-control', statuses: applyStatusContribution([], effectIdentity('b3-damage-control', source('protection', 'p', 'p'), 'p'), status(kind), 0).groups,
 } });
-const damage = (events: ReturnType<typeof stepCombat>['events'], id = 'p') => events.filter(e => e.type === 'packetDamage' && e.unitId === id);
-const applied = (events: ReturnType<typeof stepCombat>['events'], id = 'p') => events.filter(e => e.type === 'statusChanged' && e.unitId === id && e.reason === 'applied' && e.status.kind === 'stun');
+type Events = ReturnType<typeof stepCombat>['events'];
+// replay2 views; `index` is the event's position in the step ledger (replaces events.indexOf on the raw event).
+const damage = (events: Events, id = 'p') => events.flatMap((e, index) => e.type === 'packetDamage' && packetView(e).unitId === id ? [{ ...packetView(e), index }] : []);
+// Applied stun: the post-change group's contribution, with appliedAtTick as the effective start tick.
+const applied = (events: Events, id = 'p') => events.flatMap((e, index) => statusEvents([e]).filter(v => v.unitId === id && v.reason === 'applied' && v.kind === 'stun')
+  .map(v => { const c = v.group.contributions.at(-1)!; return { ...v, index, status: { kind: v.kind, startsAtTick: c.appliedAtTick, expiresAtTick: c.expiresAtTick } }; }));
 
 describe('B3 packet-bound opening damage then surviving-target control', () => {
   it('recorded 100/1000 lethal case emits damage and death, never applied control or its cleanup', () => {
@@ -41,7 +46,8 @@ describe('B3 packet-bound opening damage then surviving-target control', () => {
     expect(result.events.filter(e => e.type === 'movement')).toMatchObject([{ tick: 0, unitId: heraldId, to: { col: 2, row: 5 } }]);
     expect(damage(result.events)).toMatchObject([{ tick: 1, raw: 150, hpDamage: 100, critical: false }]);
     expect(applied(result.events)).toEqual([]);
-    expect(result.events.filter(e => e.type === 'statusChanged' && e.unitId === 'p')).toEqual([]);
+    // Channel/redirect moved to activityChanged; both stay empty for p.
+    expect([...statusEvents(result.events), ...activityEvents(result.events)].filter(e => e.unitId === 'p')).toEqual([]);
     expect(result.events.filter(e => e.type === 'death').map(e => e.unitId)).toEqual(['p']);
     expect(result.state.units.find(u => u.id === 'p')).toMatchObject({ hp: 0, alive: false, statuses: [], mechanismState: { statuses: [] } });
     expect(result.events.filter(e => e.type === 'attack' || e.type === 'cast')).toEqual([]);
@@ -53,7 +59,7 @@ describe('B3 packet-bound opening damage then surviving-target control', () => {
     const result = stepCombat(start({ hp: maxHp, maxHp }));
     expect(damage(result.events)).toMatchObject([{ raw, hpDamage: raw }]);
     expect(applied(result.events)).toMatchObject([{ tick: 1, status: { startsAtTick: 2, expiresAtTick: 12 } }]);
-    expect(result.events.indexOf(applied(result.events)[0])).toBeGreaterThan(result.events.indexOf(damage(result.events)[0]));
+    expect(applied(result.events)[0].index).toBeGreaterThan(damage(result.events)[0].index);
     const target = result.state.units.find(u => u.id === 'p')!;
     expect(target.hp).toBe(maxHp - raw);
     expect(effectiveStatuses(target.mechanismState!.statuses, 1)).toEqual([]);
@@ -78,7 +84,7 @@ describe('B3 packet-bound opening damage then surviving-target control', () => {
     }));
     expect(damage(result.events)).toMatchObject([{ raw: 150, hpDamage: 0, absorbed: protection === 'shield' ? 150 : 0 }]);
     expect(applied(result.events)).toHaveLength(1);
-    expect(result.events.indexOf(applied(result.events)[0])).toBeGreaterThan(result.events.indexOf(damage(result.events)[0]));
+    expect(applied(result.events)[0].index).toBeGreaterThan(damage(result.events)[0].index);
     expect(result.state.units.find(u => u.id === 'p')!.hp).toBe(1000);
   });
 
@@ -87,10 +93,10 @@ describe('B3 packet-bound opening damage then surviving-target control', () => {
     const packets = damage(result.events);
     expect(packets).toMatchObject([{ raw: 150, hpDamage: 150 }, { hpDamage: 50 }]);
     expect(applied(result.events)).toHaveLength(1);
-    const index = result.events.indexOf(applied(result.events)[0]);
-    expect(index).toBeGreaterThan(result.events.indexOf(packets[0]));
-    expect(index).toBeLessThan(result.events.indexOf(packets[1]));
-    expect(result.events.some(e => e.type === 'statusChanged' && e.unitId === 'p' && e.reason === 'death-cleanup')).toBe(true);
+    const index = applied(result.events)[0].index;
+    expect(index).toBeGreaterThan(packets[0].index);
+    expect(index).toBeLessThan(packets[1].index);
+    expect(statusEvents(result.events).some(e => e.unitId === 'p' && e.reason === 'death-cleanup')).toBe(true);
     expect(result.state.units.find(u => u.id === 'p')).toMatchObject({ hp: 0, alive: false, statuses: [] });
   });
 
@@ -112,7 +118,7 @@ describe('B3 packet-bound opening damage then surviving-target control', () => {
     expect(applied(result.events, 'a')).toEqual([]);
     expect(applied(result.events, 'p')).toEqual([]);
     expect(applied(result.events, 'q')).toHaveLength(1);
-    expect(result.events.indexOf(applied(result.events, 'q')[0])).toBeGreaterThan(result.events.indexOf(damage(result.events, 'q')[0]));
+    expect(applied(result.events, 'q')[0].index).toBeGreaterThan(damage(result.events, 'q')[0].index);
     expect(result.state.rngDraws).toBe(0);
   });
 
@@ -131,8 +137,11 @@ describe('B3 packet-bound opening damage then surviving-target control', () => {
     const input = start();
     const planned = planOpening(input.combatId!, input.board, input.units, definitions);
     const committed = commitOpening(planned, input.units);
+    // B9: the same stun (opening source, value0, [1,3)) as a frozen contribution; legacy-only statuses are rejected by S13.
+    const stun = applyStatusContribution([], effectIdentity('b3-damage-control', definitions[0].source, heraldId), { ...status('stun'), duration: { kind: 'ticks', ticks: 2 } }, 1).groups;
+    if (stun[0]?.contributions[0]?.appliedAtTick !== 1 || stun[0].contributions[0].expiresAtTick !== 3) throw new Error('fixture status mismatch');
     const units = committed.units.map(u => u.id !== heraldId ? u : reason === 'dead' ? { ...u, hp: 0, alive: false } : {
-      ...u, statuses: [{ key: 'cancel', source: definitions[0].source, kind: 'stun' as const, amount: 0, startsAtTick: 1, expiresAtTick: 3 }],
+      ...u, mechanismState: { ...u.mechanismState ?? EMPTY_MECHANISMS, statuses: stun },
     });
     // An ally keeps the battle running after a pre-task source death.
     const pending = { ...input, units: [...units, dummy('ally', { team: 'enemy', cell: { col: 0, row: 0 } })], openingState: committed.state };
@@ -179,7 +188,7 @@ describe('B3 packet-bound opening damage then surviving-target control', () => {
     const packets = damage(result.events);
     expect(packets).toMatchObject([{ raw: 50, hpDamage: 50 }, { raw: 200, hpDamage: 150 }]);
     expect(applied(result.events)).toHaveLength(1);
-    expect(result.events.indexOf(applied(result.events)[0])).toBeGreaterThan(result.events.indexOf(packets[0]));
-    expect(result.events.indexOf(applied(result.events)[0])).toBeLessThan(result.events.indexOf(packets[1]));
+    expect(applied(result.events)[0].index).toBeGreaterThan(packets[0].index);
+    expect(applied(result.events)[0].index).toBeLessThan(packets[1].index);
   });
 });

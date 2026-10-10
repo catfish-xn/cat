@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stepCombat, type CombatState, type CombatUnit, type CombatEvent } from '../src/simulation/combat';
+import { stepCombat, type CombatState, type CombatUnit, type CombatEvent, type LedgerCombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { executeTask, type AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { maintainMechanisms } from '../src/simulation/m8/s13-mechanisms';
@@ -11,6 +11,7 @@ import { effectIdentity } from '../src/simulation/m8/identity';
 import { aggregateStats } from '../src/stats/aggregate';
 import { amount, source, trigger, modifier } from './fixtures/m8-contract-cases';
 import { battle, unit } from './combat-helpers';
+import { activityEvents, healView, heals as healViews, packets, statusEvents } from './helpers/replay2-views';
 const s = (id: string, owner = 'p') => source(id, id, owner);
 function dummy(id: string, team: 'player' | 'enemy', col: number, patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit(id, team, col, 3, { definitionId: 'neutral-stage-2', ability: resolveAbility('neutral-attack', 1), hp: 10000, maxHp: 10000, armor: 0, magicResist: 0,
@@ -58,10 +59,10 @@ describe('B3 second batch on the actual S13 step pipeline', () => {
     const vamp = [s('bloodthirster'), s('gunblade')].map((source, i) => ({ source, modifier: modifier('omnivamp', i === 0 ? 2000 : 1500, { unit: 'bps' }), allyBps: 0, allyCondition: { kind: 'always' as const } }));
     const p = dummy('p', 'player', 1, { hp: 980, maxHp: 1000, attackDamage: 100, cooldownTicks: 0, mechanismDefinitions: { ...definitions([]), vamp }, mechanismState: { ...EMPTY_MECHANISMS, statuses: status('wound', 3300) } });
     const first = stepCombat(battle([p, dummy('e', 'enemy', 2)]));
-    const heals = first.events.filter((e): e is Extract<CombatEvent, { type: 'heal' }> => e.type === 'heal');
+    const heals = first.events.filter((e): e is Extract<CombatEvent, { type: 'heal'; outcome: unknown }> => e.type === 'heal').map(e => ({ ...healView(e), outcome: e.outcome }));
     expect(heals).toHaveLength(1); expect(heals[0]).toMatchObject({ requested: 35, actual: 20, overheal: 3, outcome: { afterWound: 23, preventedByWound: 12 } });
     expect(heals[0].outcome!.shares.map(s => [s.requested, s.afterWound, s.actual, s.overheal])).toEqual([[20, 13, 11, 2], [15, 10, 9, 1]]);
-    expect(aggregateStats('r', 'c', first.events.map((e, eventSeq) => ({ ...e, combatId: 'c', eventSeq }))).units.find(u => u.unitId === 'p')).toMatchObject({ effectiveHealing: 20, overhealing: 3 });
+    expect(aggregateStats('r', 'c', first.events.map((e, eventSeq) => ({ ...e, domain: 'combat', combatId: 'c', eventSeq }) as LedgerCombatEvent)).units.find(u => u.unitId === 'p')).toMatchObject({ effectiveHealing: 20, overhealing: 3 });
     expect(first.state.units.find(u => u.id === 'p')!.hp).toBe(1000);
   });
   it('immunity prevents Zyra control without cleansing preexisting states; prevention handles existing packets', () => {
@@ -69,15 +70,16 @@ describe('B3 second batch on the actual S13 step pipeline', () => {
     const e = { ...hero('zyra'), id: 'e', team: 'enemy' as const, cell: { col: 2, row: 3 } };
     const first = stepCombat(battle([p, e]));
     expect(first.state.units.find(u => u.id === 'p')!.statuses).toEqual([]);
-    expect(first.events.filter(e => e.type === 'statusChanged' && e.unitId === 'p')).toEqual([]);
+    // Channel/redirect moved to activityChanged; both stay empty for p.
+    expect([...statusEvents(first.events), ...activityEvents(first.events)].filter(e => e.unitId === 'p')).toEqual([]);
     const prevented = stepCombat(battle([{ ...p, mechanismState: { ...EMPTY_MECHANISMS, statuses: status('damage-prevention', 10000, 'p') } }, dummy('e', 'enemy', 2, { cooldownTicks: 0, attackDamage: 300 })]));
     expect(prevented.state.units.find(u => u.id === 'p')!.hp).toBe(10000);
-    expect(prevented.events.find(e => e.type === 'packetDamage')).toMatchObject({ hpDamage: 0, absorbed: 0, mitigated: 0 });
+    expect(packets(prevented.events)[0]).toMatchObject({ hpDamage: 0, absorbed: 0, mitigated: 0 });
   });
   it('actual dragon claw preserves25/1000 per40tick instead of discarding fractional maxHP each pulse', () => {
     const p = dummy('p', 'player', 1, { hp: 600, maxHp: 1001, mechanics: [{ source: s('dragonClaw'), mechanic: 'dragonClaw', values: { periodTicks: 40, healMaxHpBps: 250 } }] });
     const result = advance(battle([p, dummy('e', 'enemy', 2)]), 120);
-    expect(result.events.filter(e => e.type === 'heal').map(e => [e.tick, e.requested])).toEqual([[40, 25], [80, 25], [120, 25]]);
+    expect(healViews(result.events).map(e => [e.tick, e.requested])).toEqual([[40, 25], [80, 25], [120, 25]]);
     expect(result.state.units.find(u => u.id === 'p')!.mechanismState!.periodicTasks[0].remainders[0]).toMatchObject({ targetId: 'p', numerator: 750, denominator: 10000 });
   });
   it('Irelia actual layer preserves600=370+120+110 through save and end damage reads actual absorbed only', () => {
@@ -96,7 +98,7 @@ describe('B3 second batch on the actual S13 step pipeline', () => {
   it('Garen existing passive also heals once on a positive basic attack, not only a cast', () => {
     const p = hero('garen', { mana: 0, cooldownTicks: 0, hp: 900 });
     const result = stepCombat(battle([p, dummy('e','enemy',2)]));
-    expect(result.events.filter(e => e.type === 'heal')).toEqual([expect.objectContaining({ requested: 15, actual: 15, source: expect.objectContaining({ sourceKind: 'ability', definitionId: 'garen-ability' }) })]);
+    expect(healViews(result.events)).toEqual([expect.objectContaining({ requested: 15, actual: 15, source: expect.objectContaining({ sourceKind: 'ability', definitionId: 'garen-ability' }) })]);
     expect(result.state.units.find(u => u.id === 'p')!.hp).toBe(915);
   });
   it('Darius recast10→20 replaces next30 with40 as explicitly confirmed; originalfour integer total stays conserved', () => {
@@ -128,7 +130,7 @@ describe('B3 second batch on the actual S13 step pipeline', () => {
     expect(first.state.units.find(u => u.id === 'p')!.alive).toBe(false);
     expect(first.state.units.find(u => u.id === 'p')!.tasks!.filter(t => t.attachedDot).map(t => t.executeAtTick)).toEqual([21,41,61,81]);
     const after = advance({ ...first.state, units: first.state.units.map(u => u.id === 'e' ? { ...u, cooldownTicks: 1000, attackDamage: 0 } : u) }, 80);
-    expect(after.events.filter((e): e is Extract<CombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage' && e.source.ownerId === 'p' && e.tick > 1).map(e => [e.tick,e.raw])).toEqual([[21,50],[41,50],[61,50],[81,50]]);
+    expect(packets(after.events).filter(e => e.source.ownerId === 'p' && e.tick > 1).map(e => [e.tick,e.raw])).toEqual([[21,50],[41,50],[61,50],[81,50]]);
     expect(after.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
     expect(after.state.rngDraws).toBe(first.state.rngDraws);
   });

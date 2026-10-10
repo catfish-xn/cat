@@ -9,6 +9,7 @@ import {selectAbilityTargets} from '../src/simulation/m8/targeting';
 import {DEFAULT_BOARD} from '../src/simulation/board';
 import {trigger,source,selector} from './fixtures/m8-contract-cases';
 import {battle,unit} from './combat-helpers';
+import {packets} from './helpers/replay2-views';
 const dummy=(id:string,team:'player'|'enemy',col:number,patch:Partial<CombatUnit>={}):CombatUnit=>unit(id,team,col,3,{ability:resolveAbility('neutral-attack',1),hp:1000,maxHp:1000,armor:0,magicResist:0,attackDamage:100,cooldownTicks:1000,moveCooldownTicks:1000,attackRange:6,mana:0,maxMana:0,runtime:{...EMPTY_RUNTIME},...patch});
 const status=(kind:'untargetable'|'damage-prevention',until=3)=>applyStatusContribution([],effectIdentity('standalone',{...source('phase','i','e'),effectIndex:kind==='damage-prevention'?1:0},'e'),{kind,magnitudeBps:10000,duration:{kind:'ticks',ticks:until},activation:'immediate',stackPolicy:{kind:'refresh-same-instance',magnitude:'replace',phase:'preserve'},removable:false,polarity:'beneficial',damageFilter:null,onEnd:null},0).groups;
 describe('G11 current eligibility independent from already-bound damage and prevention',()=>{
@@ -20,9 +21,9 @@ describe('G11 current eligibility independent from already-bound damage and prev
  it('already attached DOT ignores untargetability; independent prevention absorbs neitherHP nor shield',()=>{
   const task={key:'dot',kind:'bleed' as const,source:{...source('dot','p','p'),sourceKind:'ability' as const},executeAtTick:1,targetId:'e',amount:100,ordinal:0,total:1,cancellable:false,actionSeq:0,attachedDot:true};
   const p=dummy('p','player',1,{tasks:[task]});const e=dummy('e','enemy',2,{mechanismState:{...EMPTY_MECHANISMS,statuses:status('untargetable')}});
-  const hit=stepCombat(battle([p,e]));expect(hit.events.find(e=>e.type==='packetDamage')).toMatchObject({hpDamage:100});
+  const hit=stepCombat(battle([p,e]));expect(packets(hit.events)[0]).toMatchObject({hpDamage:100});
   const blocked=stepCombat(battle([p,{...e,mechanismState:{...EMPTY_MECHANISMS,statuses:[...status('untargetable'),...status('damage-prevention')]}}]));
-  expect(blocked.events.find(e=>e.type==='packetDamage')).toMatchObject({hpDamage:0,absorbed:0});
+  expect(packets(blocked.events)[0]).toMatchObject({hpDamage:0,absorbed:0});
  });
  it('area members can be untargetable while new chain/single centers exclude them',()=>{
   const units=[{id:'h',team:'player' as const,cell:{col:3,row:4},hp:100,maxHp:100,alive:true},{id:'p',team:'enemy' as const,cell:{col:3,row:3},hp:100,maxHp:100,alive:true},{id:'a',team:'enemy' as const,cell:{col:3,row:2},hp:100,maxHp:100,alive:true,untargetable:true}];
@@ -36,7 +37,7 @@ describe('G11 current eligibility independent from already-bound damage and prev
   const task={key:'area',kind:'caitlyn' as const,source:{...source('area','p','p'),sourceKind:'ability' as const},executeAtTick:1,targetId:null,amount:100,ordinal:0,total:1,cancellable:false,actionSeq:0};
   const p=dummy('p','player',1,{tasks:[task]}),visible=dummy('v','enemy',3),hidden=dummy('e','enemy',3,{cell:{col:3,row:4},mechanismState:{...EMPTY_MECHANISMS,statuses:status('untargetable')}});
   const result=stepCombat(battle([p,visible,hidden]));
-  expect(result.events.find(e=>e.type==='packetDamage'&&e.unitId==='e')).toMatchObject({raw:100,hpDamage:100});
+  expect(packets(result.events).find(e=>e.unitId==='e')).toMatchObject({raw:100,hpDamage:100});
   expect(result.state.rngDraws).toBe(1);
  });
  it('finite shield-end area keeps its generic selector and hits an untargetable neighbor for20',()=>{
@@ -44,7 +45,7 @@ describe('G11 current eligibility independent from already-bound damage and prev
   const v=dummy('v','enemy',2,{cell:{col:2,row:4}}),e=dummy('e','enemy',2,{mechanismState:{...EMPTY_MECHANISMS,statuses:status('untargetable')}});
   const first=stepCombat(battle([p,v,e]));
   const end=stepCombat(first.state);
-  expect(end.events.find(e=>e.type==='packetDamage'&&e.unitId==='e')).toMatchObject({raw:20,hpDamage:20});
+  expect(packets(end.events).find(e=>e.unitId==='e')).toMatchObject({raw:20,hpDamage:20});
  });
  it('night-like cleanse removes hostile attachedDOT, keeps benign buff/lock, and clears enemies targeting holder',()=>{
   const d=trigger({source:source('cleanse','i','p'),event:'post-damage-survival',listener:{subject:'target',relationToHolder:'self',withinHexes:null},maxPerCombat:1,effects:[{kind:'cleanse',remove:'removable-hostile-control-dot-debuff',retarget:true},{kind:'apply-status',status:{kind:'untargetable',magnitudeBps:10000,duration:{kind:'ticks',ticks:20},activation:'immediate',stackPolicy:{kind:'refresh-same-instance',magnitude:'replace',phase:'preserve'},removable:false,polarity:'beneficial',damageFilter:null,onEnd:null}}]});

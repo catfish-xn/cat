@@ -8,6 +8,7 @@ import { effectIdentity } from '../src/simulation/m8/identity';
 import type { Effect, PeriodicTask, StatusApplication } from '../src/simulation/m8/contracts';
 import { amount, source, selector, modifier, trigger } from './fixtures/m8-contract-cases';
 import { battle, unit } from './combat-helpers';
+import { heals, packets } from './helpers/replay2-views';
 function dummy(id: string, team: 'player' | 'enemy', col: number, hp = 1000): CombatUnit {
   return unit(id, team, col, 3, { definitionId: 'neutral-stage-2', ability: resolveAbility('neutral-attack', 1), hp, maxHp: 1000, armor: 0, magicResist: 0,
     mana: 0, maxMana: 1, cooldownTicks: 1000, moveCooldownTicks: 1000, attackRange: 6, attackDamage: 0, statuses: [], shieldLayers: [], tasks: [], runtime: { ...EMPTY_RUNTIME } });
@@ -23,11 +24,11 @@ describe('B2 A06/A07/R1 programs on the production tick pipeline', () => {
   it('Redemption100 selects one set, A0/B1 carry1500/3500; B leaves with state retained, A returns with3000', () => {
     const p = { ...dummy('p','player',1,600), mechanismDefinitions: definitions([redemption()]) };
     const first = advance(battle([p,dummy('A','player',2,999),{ ...dummy('B','player',1,991), cell: { col: 1, row: 2 } },dummy('e','enemy',6)]),100);
-    expect(first.events.filter(e => e.type === 'heal').map(e => [e.unitId,e.requested])).toEqual([['A',0],['B',1],['p',60]]);
+    expect(heals(first.events).map(e => [e.unitId,e.requested])).toEqual([['A',0],['B',1],['p',60]]);
     expect(first.state.units.find(u => u.id === 'p')!.mechanismState!.periodicTasks[0].remainders.map(r => [r.targetId,r.numerator])).toEqual([['A',1500],['B',3500]]);
     const departed = { ...first.state, units: first.state.units.map(u => u.id === 'B' || u.id === 'A' ? { ...u, cell: { col: 6, row: u.id === 'A' ? 0 : 1 } } : u) };
     const middle = advance(departed,100);
-    expect(middle.events.filter(e => e.type === 'heal').map(e => e.unitId)).toEqual(['p']);
+    expect(heals(middle.events).map(e => e.unitId)).toEqual(['p']);
     expect(middle.state.units.find(u => u.id === 'B')!.mechanismState!.statuses[0].contributions[0].expiresAtTick).toBe(201);
     const returned = { ...middle.state, units: middle.state.units.map(u => u.id === 'A' ? { ...u, cell: { col: 2, row: 3 } } : u) };
     const third = advance(JSON.parse(JSON.stringify(returned)),100);
@@ -49,7 +50,7 @@ describe('B2 A06/A07/R1 programs on the production tick pipeline', () => {
     groups = applyStatusContribution(groups,effectIdentity('standalone',strong,'e'),app('burn',200,40),0).groups;
     const e = { ...dummy('e','enemy',2), mechanismState: { ...EMPTY_MECHANISMS, statuses: groups } };
     const result = advance(battle([dummy('p','player',1),e]),80);
-    expect(result.events.filter((e): e is Extract<CombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage' && e.damageType === 'true').map(e => [e.tick,e.raw,e.source.instanceId])).toEqual([[20,20,'s'],[40,20,'s'],[60,10,'w'],[80,10,'w']]);
+    expect(packets(result.events).filter(e => e.damageType === 'true').map(e => [e.tick,e.raw,e.source.instanceId])).toEqual([[20,20,'s'],[40,20,'s'],[60,10,'w'],[80,10,'w']]);
     expect(result.state.units.find(u => u.id === 'e')!.hp).toBe(940);
     expect(result.state.units.find(u => u.id === 'e')!.mechanismState!.periodicTasks).toEqual([]);
   });

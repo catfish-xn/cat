@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { deepFreeze, isOwnedBattleRecord } from '../src/replay/history';
 import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattleRecord } from '../src/replay';
 import { startMatchCombat, stepMatch, nextRound, sellUnit } from '../src/simulation/match';
-import type { CombatEvent } from '../src/simulation/combat';
+import type { LedgerCombatEvent as CombatEvent } from '../src/simulation/combat-types';
 import type { MatchState } from '../src/simulation/match-types';
 import type { SaveEnvelope } from '../src/m6/contracts';
 import { readyMatch, accepted, resolveM5Choices } from './match-helpers';

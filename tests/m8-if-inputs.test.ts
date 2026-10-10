@@ -6,6 +6,7 @@ import {interval,EMPTY_RUNTIME,type S13Unit} from '../src/simulation/combat-s13-
 import {stepCombat} from '../src/simulation/combat';
 import {resolveAbility} from '../src/simulation/combat-abilities';
 import {battle,unit} from './combat-helpers';
+import {packets} from './helpers/replay2-views';
 const definition={...UNIT_DEFINITIONS['neutral-stage-2'],unitKind:'neutral' as const,monsterFamily:'future',initialMana:0,maxMana:0,baseAttackSpeedBps:8000,baseCritChanceBps:2500,baseCritMultiplierBps:14000};
 const actor=()=>({...unit('a','player',2,2),...compileUnitInputs(resolveUnitStats(definition,1)),ability:resolveAbility('neutral-attack',1),attackDamage:85,attackDamageBase:85,attackRange:1,armor:0,magicResist:0,mana:0,maxMana:0,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],attackCone:{secondaryDamageBps:3500}});
 describe('IF-AS/IF-CRIT actual neutral input consumers (no new monster content)',()=>{
@@ -19,7 +20,9 @@ describe('IF-AS/IF-CRIT actual neutral input consumers (no new monster content)'
   const enemy=(id:string,col:number,row:number)=>({...unit(id,'enemy',col,row,{hp:10000,maxHp:10000,armor:0,magicResist:0,cooldownTicks:100,moveCooldownTicks:100}),ability:resolveAbility('neutral-attack',1)});
   const initial={...battle([p,enemy('p',3,2),enemy('b',4,2),enemy('c',4,1)]),rngState:634785765};
   const r=stepCombat(initial);
-  expect(r.events.flatMap(e=>e.type==='packetDamage'?[[e.unitId,e.raw,e.critical]]:[])).toEqual([['b',29,false],['c',29,false],['p',119,true]]);
+  // B9 replay2: a critical packet's raw is the frozen pre-crit DamageOutcome.raw: 85 (the post-crit 119 = 85*14000/10000).
+  expect(packets(r.events).map(e=>[e.unitId,e.raw,e.critical])).toEqual([['b',29,false],['c',29,false],['p',85,true]]);
+  expect(packets(r.events).find(e=>e.unitId==='p')?.mitigated).toBe(119); // the 85→119 crit result survives as the post-crit amount (armor 0)
   expect(r.state.rngDraws).toBe(1);expect(r.events.filter(e=>e.type==='attack')).toHaveLength(1);
   expect(stepCombat(JSON.parse(JSON.stringify(initial)))).toEqual(r);expect(stepCombat(JSON.parse(JSON.stringify(r.state)))).toEqual(stepCombat(r.state));
  });

@@ -9,7 +9,7 @@ import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattl
 import { MatchSession } from '../src/rendering/match-session';
 import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
-import type { CombatEvent } from '../src/simulation/combat-types';
+import type { LedgerCombatEvent as CombatEvent } from '../src/simulation/combat-types';
 import { digestContent } from '../src/simulation/content';
 
 const combatEvents = (events: readonly unknown[]) => events.filter(event => (event as { domain?: string }).domain === 'combat') as CombatEvent[];

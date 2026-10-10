@@ -34,8 +34,10 @@ function heraldBattle(players: readonly CombatUnit[], allies: readonly CombatUni
   return battle([...compiled.units.map(u => ({ ...u, cooldownTicks: 1000, moveCooldownTicks: 1000 })), ...allies, ...players],
     { combatId: 'b7-audit', rngDraws: 0, openingDefinitions: compiled.openingDefinitions });
 }
-const chargeTrace = (events: readonly CombatEvent[]) => events.flatMap(e => e.type === 'packetDamage' ? [`damage:${e.unitId}:${e.raw}`]
-  : e.type === 'statusChanged' && e.status.kind === 'stun' ? [`stun:${e.unitId}:${e.reason}:${e.status.startsAtTick}-${e.status.expiresAtTick}`] : []);
+// B9 replay2: packets carry their outcome; a stun statusChanged carries its frozen group, whose contribution
+// appliedAtTick/expiresAtTick are the effective window (formerly status.startsAtTick/expiresAtTick).
+const chargeTrace = (events: readonly CombatEvent[]) => events.flatMap(e => e.type === 'packetDamage' ? [`damage:${e.outcome.context.targetId}:${e.outcome.raw}`]
+  : e.type === 'statusChanged' && e.group.kind === 'stun' ? [`stun:${e.group.targetId}:${e.reason}:${e.group.contributions.map(c => `${c.appliedAtTick}-${c.expiresAtTick}`).join(',')}`] : []);
 
 describe('B7 audit: Rift Herald charge (ENCOUNTERS §4.5)', () => {
   it('hits every path enemy in path order, each damage packet before its own next-tick stun', () => {
@@ -57,7 +59,7 @@ describe('B7 audit: Rift Herald charge (ENCOUNTERS §4.5)', () => {
 
   it.each([[1999, 299], [2000, 300], [2001, 300]])('target maxHp %i samples %i raw magic damage at the 300 cap boundary', (hp, raw) => {
     const result = stepCombat(heraldBattle([dummy('p', 'player', 3, 4, hp)]));
-    expect(result.events.find(e => e.type === 'packetDamage')).toMatchObject({ raw, damageType: 'magic', critical: false });
+    expect(result.events.find(e => e.type === 'packetDamage')).toMatchObject({ outcome: { raw, critical: false, context: { damageType: 'magic' } } });
   });
 
   it('no-landing vector: friendly and enemy occupants fill the whole path, so nothing moves, hits or stuns', () => {
@@ -101,8 +103,8 @@ describe('B7 audit: Elder Dragon cone (ENCOUNTERS §4.4) against independent geo
       expect(attack).toMatchObject({ targetId: 'p00' });
       const expected = players.filter(u => u.id !== 'p00' && cone.some(c => c.col === u.cell.col && c.row === u.cell.row))
         .sort((a, b) => distance(a.cell, primary) - distance(b.cell, primary) || (a.id < b.id ? -1 : 1)).slice(0, 2);
-      const children = step.events.filter(e => e.type === 'packetDamage' && e.source.sourceKind === 'ability');
-      expect({ dragon, primary, children: children.map(e => e.type === 'packetDamage' ? [e.unitId, e.raw, e.critical] : []).sort() })
+      const children = step.events.filter(e => e.type === 'packetDamage' && e.outcome.context.source.sourceKind === 'ability');
+      expect({ dragon, primary, children: children.map(e => e.type === 'packetDamage' ? [e.outcome.context.targetId, e.outcome.raw, e.outcome.critical] : []).sort() })
         .toEqual({ dragon, primary, children: expected.map(u => [u.id, 29, false]).sort() });
       expect(step.state.rngDraws).toBe(1);
     }

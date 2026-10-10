@@ -69,8 +69,8 @@ export function validateBattleRecord(record: BattleRecord): VerifiedReplay {
   check(digestContent(terminal) === record.stateHash && digestContent(record.events) === record.eventHash, '内容校验');
   return { terminal, settledMatch: state };
 }
-/** Strict archive topology and historical context validation. Yields between battles. */
-export async function validateBattleCollection(envelope: SaveEnvelope): Promise<void> {
+/** Strict archive topology and historical context validation; yields once after each battle. */
+function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, void> {
   const match = restoreMatch(envelope.match);
   check(Array.isArray(envelope.battles) && envelope.battles.length <= MAX_BATTLE_RECORDS, '战斗数量');
   const results = match.roundResults.filter(result => result.result !== 'supply');
@@ -87,7 +87,7 @@ export async function validateBattleCollection(envelope: SaveEnvelope): Promise<
     check(record.context.round === result.round && record.result !== null && verified.terminal.status === 'finished', '历史身份或完成状态');
     check(equalContent(verified.settledMatch.roundResults.at(-1), result), '历史结算结果');
     if (match.combat?.status === 'finished' && match.combat.combatId === record.combatId) check(equalContent(verified.terminal, match.combat), '当前终战状态');
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    yield;
   }
   if (match.combat?.status === 'running') {
     check(envelope.currentBattle !== null, '缺少当前事件前缀');
@@ -96,6 +96,14 @@ export async function validateBattleCollection(envelope: SaveEnvelope): Promise<
     check(equalContent(verified.terminal, match.combat), '当前战斗与事件前缀不一致');
     check(equalContent(verified.settledMatch, match), '当前会话与开战上下文不一致');
   } else check(envelope.currentBattle === null, '已结束战斗重复前缀');
+}
+/** Same checks, yielding to the event loop between battles (import/continue paths). */
+export async function validateBattleCollection(envelope: SaveEnvelope): Promise<void> {
+  for (const _ of battleCollectionChecks(envelope)) await new Promise<void>(resolve => setTimeout(resolve, 0));
+}
+/** Same checks without yielding, for the synchronous readCompatibility query. */
+export function validateBattleCollectionSync(envelope: SaveEnvelope): void {
+  for (const _ of battleCollectionChecks(envelope)) { /* drain */ }
 }
 
 interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[] }

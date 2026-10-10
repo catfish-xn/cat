@@ -5,7 +5,12 @@ import { AUTOSAVE_TICKS, MAX_BATTLE_RECORDS } from './limits';
 import { SaveRepository, saveError } from '../persistence/repository';
 import { SaveCoordinator } from '../persistence/coordinator';
 import { createSeed, createRunId } from '../persistence/seed';
-import { exportFile, validateEnvelope, validateFile } from '../persistence/format';
+import { CompatibilityError, exportFile, validateEnvelope, validateFile } from '../persistence/format';
+import { currentView } from '../persistence/compatibility';
+import { M8_VERSION } from '../simulation/m8/version';
+import { legacyRecords } from '../persistence/legacy-records';
+import { readRoundInfo } from '../simulation/round-selectors';
+import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { createSaveControls, type SaveControls } from '../persistence/save-controls';
 import { BattleHistory, PlaybackSession, ReplayPanel, validateBattleCollection, type ReplaySnapshot } from '../replay';
 import { ReplayView } from '../rendering/replay-view';
@@ -18,6 +23,8 @@ interface ApplicationHooks {
   playback?(snapshot: ReplaySnapshot | null, record: BattleRecord | null): void;
 }
 type Mode = 'startup' | 'active' | 'import' | 'replay';
+/** A not-yet-validated slot may carry a bad round; the impact line then names no round. */
+function roundName(match: SaveEnvelope['match']): string { try { return readRoundInfo(match).displayName; } catch { return '轮次未知'; } }
 /** Owns product lifecycle. Domain rules remain exclusively in Match/Combat. */
 export class MatchApplication {
   private static instances = 0;
@@ -32,6 +39,7 @@ export class MatchApplication {
   private mode: Mode = 'startup';
   private status: SaveStatus | null = null;
   private existing: { token: SlotToken; envelope: SaveEnvelope } | null = null;
+  private compatibility: CompatibilityView | null = null;
   private archives: readonly BattleRecord[] = [];
   private unsubscribe: () => void;
   private playbackSession: PlaybackSession | null = null;
@@ -51,6 +59,8 @@ export class MatchApplication {
     this.controls = createSaveControls(document.getElementById('save-root')!, {
       onNewRandom: () => this.newRun(null), onNewFixed: seed => this.newRun(seed),
       onContinue: () => this.continueSaved(), onImport: file => this.import(file), onExport: () => this.export(),
+      onExportCurrent: async () => this.export(), onListLegacy: () => legacyRecords.listLegacyRecords(),
+      onExportLegacy: request => legacyRecords.exportLegacy(request),
     });
     this.replayPanel = new ReplayPanel(document.getElementById('replay-root')!, {
       select: record => { void this.openReplay(record); }, play: () => this.playbackSession?.play(), pause: () => this.playbackSession?.pause(),
@@ -104,7 +114,7 @@ export class MatchApplication {
     if (completed.length > MAX_BATTLE_RECORDS) throw new Error('战斗历史超过冻结边界');
   }
   private envelope(): SaveEnvelope {
-    return { kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1,
+    return { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
       runId: this.runId, createdAt: this.createdAt, match: structuredClone(this.session.state),
       battles: this.history.completedRecords, currentBattle: this.history.capturePrefix() };
   }
@@ -157,7 +167,10 @@ export class MatchApplication {
     let prepared: MatchSession | null = null;
     this.busy = true; this.mode = 'import'; this.session.pause('import'); this.hooks.clearInput(); this.syncMode();
     try {
-      const candidate = await make();
+      let candidate: SaveEnvelope;
+      try { candidate = await make(); }
+      catch (error) { if (error instanceof CompatibilityError && !this.disposed && id === this.operation) this.compatibility = error.view; throw error; }
+      this.compatibility = currentView();
       // Build and validate the candidate before touching persisted or active state.
       const ledger = candidate.currentBattle?.events ?? candidate.battles.find(record => record.combatId === candidate.match.combat?.combatId)?.events ?? [];
       prepared = new MatchSession(candidate.match, ledger);
@@ -193,7 +206,7 @@ export class MatchApplication {
   }
   private async newRun(seed: number | null) {
     if (!this.confirmReplacement()) return;
-    await this.replaceCandidate(async () => ({ kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1,
+    await this.replaceCandidate(async () => ({ kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
       runId: createRunId(), createdAt: new Date().toISOString(), match: createMatch(seed ?? createSeed()), battles: [], currentBattle: null }), true);
   }
   private async continueSaved() {
@@ -270,8 +283,12 @@ export class MatchApplication {
     } else this.session.resume('hidden');
   };
   private syncControls() {
+    const replaced = this.runId ? { match: this.session.state, battles: this.history.completedRecords.length }
+      : this.existing ? { match: this.existing.envelope.match, battles: this.existing.envelope.battles.length } : null;
     this.controls?.update({ startup: !this.runId, canContinue: this.existing !== null, seed: this.session.state.seed,
-      runId: this.runId, busy: this.busy || this.mode === 'replay', status: this.status, hasActive: Boolean(this.runId) });
+      runId: this.runId, busy: this.busy || this.mode === 'replay', status: this.status, hasActive: Boolean(this.runId),
+      compatibility: this.compatibility,
+      replacement: replaced ? { roundName: roundName(replaced.match), completedBattles: replaced.battles, gameOver: replaced.match.phase === 'gameOver' } : null });
   }
   private syncMode() {
     document.body.dataset.m6Mode = this.mode;

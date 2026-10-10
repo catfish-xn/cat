@@ -61,7 +61,7 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     expect(deathTick.state.companionState?.reactions.map(r => [r.executeAtTick, r.status])).toEqual([[2, 'pending'], [2, 'pending']]);
     const healed = stepCombat(deathTick.state);
     // floor(200*.67)=134, then floor(66*.67)=44. No early aggregation.
-    expect(healed.events.flatMap(e => e.type === 'heal' ? [[e.requested, e.actual]] : [])).toEqual(wound ? [[200, 134], [66, 44]] : [[200, 200], [0, 0]]);
+    expect(healed.events.flatMap(e => e.type === 'heal' ? [[e.outcome.requested, e.outcome.actual]] : [])).toEqual(wound ? [[200, 134], [66, 44]] : [[200, 200], [0, 0]]);
     expect(get(healed.state, survivor.id).hp).toBe(wound ? 378 : 400);
     expect(stepCombat(JSON.parse(JSON.stringify(deathTick.state)))).toEqual(healed);
     expect(stepCombat(healed.state).events.filter(e => e.type === 'heal')).toEqual([]);
@@ -138,8 +138,9 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     const players = [target('primary', 4, 2), target('a', 5, 2), target('b', 5, 1), target('c', 5, 3), target('d', 6, 2)];
     const initial = start('5-7', players), first = stepCombat(initial);
     // 0*10000 < 2500*2^32; floor(85*1.4)=119, floor(85*.35)=29.
-    expect(first.events.flatMap(e => e.type === 'packetDamage' ? [[e.unitId, e.raw, e.hpDamage, e.critical, e.source.sourceKind]] : [])).toEqual([
-      ['a', 29, 29, false, 'ability'], ['b', 29, 29, false, 'ability'], ['primary', 119, 119, true, 'attack'],
+    // B9 replay2: a critical packet's raw is the frozen pre-crit DamageOutcome.raw (85); its post-crit 119 remains in hpDamage.
+    expect(first.events.flatMap(e => e.type === 'packetDamage' ? [[e.outcome.context.targetId, e.outcome.raw, e.outcome.hpDamage, e.outcome.critical, e.outcome.context.source.sourceKind]] : [])).toEqual([
+      ['a', 29, 29, false, 'ability'], ['b', 29, 29, false, 'ability'], ['primary', 85, 119, true, 'attack'],
     ]);
     expect(players.map(u => [u.id, get(first.state, u.id).hp])).toEqual([['primary', 381], ['a', 471], ['b', 471], ['c', 500], ['d', 500]]);
     expect(first.events.filter(e => e.type === 'attack')).toHaveLength(1);
@@ -157,7 +158,7 @@ describe('B7 compiled neutral programs through the existing B3 executor', () => 
     const first = stepCombat(initial);
     expect(first.state.openingState?.plans[0]).toMatchObject({ path: [{ col: 4, row: 2 }, { col: 3, row: 3 }, { col: 3, row: 4 }, { col: 2, row: 5 }],
       targetIds: ['p'], to: { col: 2, row: 5 }, task: { executeAtTick: 1, status: 'executed' } });
-    expect(first.events.find(e => e.type === 'packetDamage')).toMatchObject({ unitId: 'p', damageType: 'magic', raw: hp === 1000 ? 150 : 300, critical: false });
+    expect(first.events.find(e => e.type === 'packetDamage')).toMatchObject({ outcome: { context: { targetId: 'p', damageType: 'magic' }, raw: hp === 1000 ? 150 : 300, critical: false } });
     expect(get(first.state, 'p').statuses?.find(s => s.kind === 'stun')).toMatchObject({ startsAtTick: 2, expiresAtTick: 12 });
     expect(first.events.filter(e => e.type === 'cast' || e.type === 'attack')).toEqual([]); expect(first.state.rngDraws).toBe(0);
     const second = stepCombat(JSON.parse(JSON.stringify(first.state)));

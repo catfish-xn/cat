@@ -2,6 +2,7 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { wearing, enemy, run, packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
+import { packets as packetViews } from './helpers/replay2-views';
 import { accepted, emptyBoard, resolveM5Choices } from './match-helpers';
 import { publicNeutralEquipmentChoice } from './fixtures/m8-neutral-public-route';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -122,8 +123,8 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
     for (let tick = 0; tick < 120 && s.phase === 'combat'; tick++) {
       const before = s.combat.units.find(u => u.id === 'unit-1')!;
       const result = stepMatch(s); s = result.state;
-      const hits = result.events.filter(e => e.type === 'packetDamage' && e.unitId === 'unit-1' && e.absorbed + e.hpDamage > 0);
-      if (hits.some((a, i) => hits.some((b, j) => i !== j && a.type === 'packetDamage' && b.type === 'packetDamage' && a.actionSeq === b.actionSeq && a.source.ownerId === b.source.ownerId))) {
+      const hits = packetViews(result.events).filter(e => e.unitId === 'unit-1' && e.absorbed + e.hpDamage > 0);
+      if (hits.some((a, i) => hits.some((b, j) => i !== j && a.actionSeq === b.actionSeq && a.source.ownerId === b.source.ownerId))) {
         witnessed = true; expect(stacks(s.combat!.units.find(u => u.id === 'unit-1')!)).toBeGreaterThanOrEqual(Math.min(25, stacks(before) + 2));
       }
       const restored = restoreMatch(serializeMatch(s)); expect(restored).toEqual(s); expect(stepMatch(restored)).toEqual(stepMatch(s));

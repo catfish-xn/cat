@@ -7,6 +7,7 @@ import { stepMatch } from '../src/simulation/match';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { readItemCatalog } from '../src/simulation/item-catalog';
 import { statusMagnitude } from '../src/simulation/m8/status';
+import { packets as packetViews } from './helpers/replay2-views';
 
 describe('B4 composed consumers and restore rejection',()=>{
  it('IE+JG:25+35+35=95% chance,one redundant source makes multiplier1.5;135→202',()=>{
@@ -54,7 +55,7 @@ describe('B4 composed consumers and restore rejection',()=>{
   const low=s.combat!.units.find(u=>u.id==='unit-3')!;expect(low.hp*2).toBeLessThan(low.maxHp);expect(readCombatStats(low,s.combat!).abilityPower).toBe(115);expect(low.runtime!.nextAttackMagic).toBe(468);
   const restored=restoreMatch(serializeMatch(s));expect(restored).toEqual(s);
   const attack=(state:typeof s)=>{if(state.phase!=='combat')throw new Error('combat required');return stepMatch({...state,combat:{...state.combat,units:state.combat.units.map(u=>u.id==='unit-3'?{...u,cooldownTicks:0}:u)}});};
-  const result=attack(s);expect(attack(restored)).toEqual(result);expect(result.events.filter(e=>e.type==='packetDamage'&&e.source.ownerId==='unit-3'&&e.source.sourceKind==='ability').map(e=>e.type==='packetDamage'?e.raw:0)).toEqual([468]);expect(result.state.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBe(0);
+  const result=attack(s);expect(attack(restored)).toEqual(result);expect(packetViews(result.events).filter(e=>e.source.ownerId==='unit-3'&&e.source.sourceKind==='ability').map(e=>e.raw)).toEqual([468]);expect(result.state.combat!.units.find(u=>u.id==='unit-3')!.runtime!.nextAttackMagic).toBe(0);
  });
  it('string restore uses its parsed independent graph;object restore still detaches the input',()=>{
   const source=itemMatch('hand-of-justice'),json=serializeMatch(source),a=restoreMatch(json),b=restoreMatch(json),c=restoreMatch(source);

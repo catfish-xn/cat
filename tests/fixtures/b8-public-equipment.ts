@@ -2,7 +2,7 @@ import {
   createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch,
 } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simulation/match-types';
-import type { CombatEvent } from '../../src/simulation/combat';
+import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
 import type { BattleHistory } from '../../src/replay';
 
 function accepted(result: MatchCommandResult): MatchState {

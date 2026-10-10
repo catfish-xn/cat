@@ -182,7 +182,7 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
       }
       const next = stepMatch(state); allEvents.push(...next.events); state = next.state;
     }
-    expect(allEvents.some(e => e.type === 'packetDamage' && e.source.instanceId === childId && e.source.parentItemInstanceId === 'item-3')).toBe(true);
+    expect(allEvents.some(e => e.type === 'packetDamage' && e.outcome.context.source.instanceId === childId && e.outcome.context.source.parentItemInstanceId === 'item-3')).toBe(true);
   });
   /* User-approved test structure (2026-10-10, TG P2-1 plan A): the original single
    * 43-definition test could not finish its 35 required public routes inside one

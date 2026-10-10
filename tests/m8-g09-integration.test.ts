@@ -7,6 +7,7 @@ import {applyStatusContribution} from '../src/simulation/m8/status';
 import {effectIdentity} from '../src/simulation/m8/identity';
 import {source,trigger,selector,amount} from './fixtures/m8-contract-cases';
 import {battle,unit} from './combat-helpers';
+import {packets,heals} from './helpers/replay2-views';
 const dummy=(id:string,team:'player'|'enemy',col:number,patch:Partial<CombatUnit>={}):CombatUnit=>unit(id,team,col,3,{ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,armor:0,magicResist:0,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,attackRange:6,mana:0,maxMana:1000,runtime:{...EMPTY_RUNTIME},...patch});
 const defs=(eventTriggers:readonly ReturnType<typeof trigger>[])=>({periodicTasks:[],survivalTriggers:[],vamp:[],eventTriggers});
 describe('G09 S13 event consumers',()=>{
@@ -21,7 +22,7 @@ describe('G09 S13 event consumers',()=>{
  it('enemy completed receipt spends80; two independent ion-like listeners request128 each, no extra attacks',()=>{
   const one=trigger({source:source('penalty','i1','p'),event:'cast-completed',listener:{subject:'actor',relationToHolder:'enemy',withinHexes:2},selector:selector({candidates:'event-actor',relation:'enemy'}),effects:[{kind:'damage',damageType:'magic',delivery:'equipment-proc',critEligibility:'never',amount:amount(0,{actualManaSpentBps:16000})}]});
   const r=stepCombat(battle([dummy('p','player',1,{mechanismDefinitions:defs([one,{...one,source:{...one.source,instanceId:'i2'}}])}),dummy('e','enemy',2,{ability:resolveAbility('zyra-ability',1),mana:80,maxMana:80})]));
-  expect(r.events.flatMap(e=>e.type==='packetDamage'&&e.source.sourceKind==='item'?[[e.unitId,e.raw]]:[])).toEqual([['e',128],['e',128]]);
+  expect(packets(r.events).flatMap(e=>e.source.sourceKind==='item'?[[e.unitId,e.raw]]:[])).toEqual([['e',128],['e',128]]);
   expect(r.events.filter(e=>e.type==='attack')).toHaveLength(0);
  });
  it('shield-hit grants immediate damage amplification only to later packets; counters still count occurrences',()=>{
@@ -30,7 +31,7 @@ describe('G09 S13 event consumers',()=>{
   const p=dummy('p','player',1,{ability:{...ability,variables:{...ability.variables,DamageOnAttack:1000000}},cooldownTicks:0,attackDamage:100,mechanismDefinitions:defs([d])});
   const e=dummy('e','enemy',2,{shield:50,shieldExpiresAtTick:100,shieldLayers:[{key:'shield',source:source('shield','e','e'),granted:50,remaining:50,absorbed:0,expiresAtTick:100}]});
   const r=stepCombat({...battle([p,e]),rngState:42});
-  expect(r.events.flatMap(e=>e.type==='packetDamage'?[[e.absorbed,e.hpDamage]]:[])).toEqual([[50,50],[0,120]]);
+  expect(packets(r.events).map(e=>[e.absorbed,e.hpDamage])).toEqual([[50,50],[0,120]]);
  });
  it('IF-DEATH two same-family deaths pay134 then44 at t+1 after wound, with per-request current missingHP',()=>{
   const s={...source('reaction','a','a'),sourceKind:'ability' as const};
@@ -42,9 +43,9 @@ describe('G09 S13 event consumers',()=>{
   const first=stepCombat({...battle([p,a,member('b',2,100),member('c',3,100)]),tick:9});
   expect(first.events.filter(e=>e.type==='death').map(e=>e.unitId)).toEqual(['b','c']);
   expect(first.state.companionState?.reactions.map(r=>r.status)).toEqual(['pending','pending']);
-  const next=stepCombat(first.state);expect(next.events.flatMap(e=>e.type==='heal'&&e.unitId==='a'?[[e.requested,e.actual]]:[])).toEqual([[200,134],[66,44]]);
+  const next=stepCombat(first.state);expect(heals(next.events).flatMap(e=>e.unitId==='a'?[[e.requested,e.actual]]:[])).toEqual([[200,134],[66,44]]);
   expect(stepCombat(JSON.parse(JSON.stringify(first.state)))).toEqual(next);
   const killed=stepCombat({...first.state,units:first.state.units.map(u=>u.id==='p'?{...u,cooldownTicks:0,attackDamage:1000}:u)});
-  expect(killed.events.filter(e=>e.type==='heal'&&e.unitId==='a')).toEqual([]);
+  expect(heals(killed.events).filter(e=>e.unitId==='a')).toEqual([]);
  });
 });

@@ -16,8 +16,8 @@ export interface BattleRecord {
 }
 export interface SaveEnvelope {
   readonly kind: 'hex-autobattler-save';
-  readonly saveFormatVersion: 1;
-  readonly replayFormatVersion: 1;
+  readonly saveFormatVersion: 2;
+  readonly replayFormatVersion: 2;
   readonly runId: string;
   readonly createdAt: string;
   readonly match: MatchState;

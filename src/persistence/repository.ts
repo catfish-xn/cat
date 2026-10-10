@@ -2,6 +2,8 @@ import type { BattleRecord, CapturedSave, SaveEnvelope, SlotToken } from '../m6/
 import { MAX_COMPLETED_RUNS } from '../m6/limits';
 import { fixedCapture } from './capture-ownership';
 import { canonicalContent } from '../simulation/content';
+import { M8_VERSION } from '../simulation/m8/version';
+import { M8_NAMESPACE } from './legacy-records';
 
 export type SaveFailureReason = 'quota' | 'abort' | 'conflict' | 'unavailable' | 'validation';
 export class SaveError extends Error {
@@ -27,10 +29,12 @@ export class SaveRepository {
   private dbPromise: Promise<IDBDatabase> | null = null;
   private closed = false;
   private committedHeader: CommittedHeader | null = null;
-  constructor(private readonly name = 'hex-autobattler-m6') {}
+  /** D2-A: M8 writes only its own namespace (physical schema 1); the M7 library is never opened here. */
+  constructor(private readonly name: string = M8_NAMESPACE) {}
   private db(): Promise<IDBDatabase> {
     if (this.closed) return Promise.reject(new SaveError('unavailable', '存储已关闭'));
-    return this.dbPromise ??= new Promise((resolve, reject) => {
+    // A failed open is not cached: the next call retries instead of replaying an old rejection.
+    const opening = this.dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
       try {
         const open = indexedDB.open(this.name, 1);
         open.onupgradeneeded = () => { for (const store of STORES) open.result.createObjectStore(store); };
@@ -44,12 +48,14 @@ export class SaveRepository {
         };
       } catch (error) { reject(saveError(error)); }
     });
+    opening.catch(() => { if (this.dbPromise === opening) this.dbPromise = null; });
+    return opening;
   }
   private materialize(tx: IDBTransaction, run: StoredRun): Promise<SaveEnvelope> {
     const reads = run.battleKeys.map(key => request(tx.objectStore('battles').get([run.runId, key])) as Promise<BattleRecord | undefined>);
     return Promise.all(reads).then(battles => {
       if (battles.some(b => !b)) throw new SaveError('validation', '存档缺少战斗档案');
-      return { kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1, runId: run.runId, createdAt: run.createdAt, match: run.match, currentBattle: run.currentBattle, battles: battles as BattleRecord[] };
+      return { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion, runId: run.runId, createdAt: run.createdAt, match: run.match, currentBattle: run.currentBattle, battles: battles as BattleRecord[] };
     });
   }
   async readCurrent(): Promise<{ token: SlotToken; envelope: SaveEnvelope } | null> {
