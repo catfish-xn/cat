@@ -81,14 +81,18 @@ export function validateNeutralCombat(combat: CombatState, preparation: GameStat
     const tuple=JSON.parse(receipt.key),task=combat.openingState?.plans.find(p=>p.source.ownerId===tuple[1])?.task;
     check(tick>=1 && task?.status==='executed' && task.targetIds.includes(receipt.targetId)
       && receipt.key===effectIdentity(combatId,{...task.source,effectIndex:1},receipt.targetId,JSON.stringify([openingSeq,1])).key,'control binding');
+    const status=task.effects[1];
+    check(status?.kind==='apply-status' && status.status.kind==='stun' && status.status.duration.kind==='ticks', 'control duration');
+    const startsAtTick=task.executeAtTick+(status.status.activation==='next-tick'?1:0);
+    const endsAtTick=startsAtTick+status.status.duration.ticks;
     const target=combat.units.find(u=>u.id===receipt.targetId)!;
     const active=target.mechanismState?.statuses.some(g=>g.contributions.some(c=>c.key===receipt.key));
-    if(receipt.removedAtTick===null) check(receipt.removedEventSeq===null && receipt.removedReason===null && active && target.alive && combat.status==='running' && tick<12,'lost control');
+    if(receipt.removedAtTick===null) check(receipt.removedEventSeq===null && receipt.removedReason===null && active && target.alive && combat.status==='running' && tick<endsAtTick,'lost control');
     else {
       check(Number.isSafeInteger(receipt.removedAtTick) && receipt.removedAtTick>=1 && receipt.removedAtTick<=tick && !active
         && receipt.removedEventSeq!>receipt.appliedEventSeq,'control removal time');event(receipt.removedEventSeq!);
       const reason=receipt.removedReason;
-      check(reason==='expired' ? receipt.removedAtTick===12
+      check(reason==='expired' ? receipt.removedAtTick===endsAtTick
         : reason==='death-cleanup' ? !target.alive
         : reason==='combat-end' ? combat.status==='finished' && receipt.removedAtTick===tick
         : reason==='cleansed' && declaredEffects(target,combatId).some(d=>d.effect.kind==='cleanse' && d.survivalSource
@@ -119,7 +123,7 @@ export function validateNeutralCombat(combat: CombatState, preparation: GameStat
       const status=definition?.kind==='path-charge'?definition.effects[1]:undefined;
       check(task?.status==='executed' && task.targetIds.includes(u.id) && status?.kind==='apply-status'
         && same(c.source,{...definition!.source,effectIndex:1}), 'control binding');
-      app=status.status;at=2;check(controlIds.has(c.key),'missing control receipt');
+      app=status.status;at=task.executeAtTick+(app.activation==='next-tick'?1:0);check(controlIds.has(c.key),'missing control receipt');
       const tuple=JSON.parse(c.key),action=JSON.parse(tuple[8]);
       check(Array.isArray(action) && action.length===2 && action[0]===openingSeq && action[1]===1, 'control action identity');
       applicationId=tuple[8];

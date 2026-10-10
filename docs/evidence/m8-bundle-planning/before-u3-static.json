@@ -1,0 +1,15 @@
+{
+  "label": "10a8367bead882c91e28769b400ad1b819b79980",
+  "node": "v22.23.3",
+  "zlib": "1.3.1-e00f703",
+  "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+  "files": [
+    {
+      "file": "index-Bz7j2LlX.js",
+      "rawBytes": 1645911,
+      "gzip9Bytes": 470088,
+      "sha256": "50278c14232663d3f1a5287b1a68821e4f28620ba70b93521031296d4123525e"
+    }
+  ],
+  "totalGzip9Bytes": 470088
+}

@@ -1,0 +1,3 @@
+Node v22.23.3 method: every dist/assets/*.js gzipSync(level:9), summed
+index-D4Seod_F.js raw 1696667 gzip9 485816
+Total 485816 vs merged B7 485743 delta 73 signed M7 base 424763 factor1.30 cap 552191 remaining 66375
