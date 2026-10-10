@@ -330,19 +330,6 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     // proves that New Match releases a nonempty combat ledger and visual work.
     // The separate headless run below predicts consistency; it never changes
     // the browser state or clock.
-    // Normal opening components produce Rageblade on Lux, so dynamic AS is
-    // exercised by actual attacks rather than a synthetic stat fixture.
-    skipB6Dependency(report, 'B8', 'normal-opening-rageblade-recipe-and-equipment', 'Original first-combat Lux/two-component grant chain awaits B8', async () => {
-    let buildBefore = await state(), buildStart = await offset();
-    await click('panel:items'); await click('item:item-1'); await click('item:item-2'); await click('combine-items');
-    let buildExpected = accepted(api.combineItems(buildBefore, 'item-1', 'item-2'));
-    await record('normal-opening-rageblade-recipe', buildBefore, buildExpected, buildStart);
-    const rageblade = buildExpected.items.find(item => item.definitionId === 'rageblade'); assert(rageblade);
-    buildBefore = buildExpected; buildStart = await offset(); await click(`item:${rageblade.id}`); await click('equipment:unit-3:0');
-    buildExpected = accepted(api.equipItem(buildBefore, rageblade.id, 'unit-3', 0));
-    await record('normal-opening-rageblade-equipped', buildBefore, buildExpected, buildStart);
-    await click('panel:units'); await click('mobile:unit:unit-3');
-    });
     await click('panel:units'); await click('mobile:unit:unit-1');
     const combatBefore = await state();
     assert.equal(combatBefore.m8.round.roundId, '1-2', 'wall-time observation still measures the original first combat');
@@ -362,21 +349,13 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await page.evaluate(() => { window.__M5_FRAME_LABEL__ = 'post-combat'; });
     const combatRecord = await record('normal-wall-time-combat-for-observation', combatBefore, expectedCombat, combatInputStart);
     assert.deepEqual(combatRecord.snap.combatEvents, expectedEvents); assert(expectedEvents.length > 0);
-    skipB6Dependency(report, 'B8', 'normal-opening-rageblade-stat-event', 'First-combat Rageblade requires the B8 opening components', () => {
-      assert(expectedEvents.some(event => event.type === 'statChanged' && event.source.definitionId === 'rageblade'));
-    });
     const selected = expectedCombat.combat.units.find(unit => unit.id === 'unit-1');
     const stats = readCombatStats(selected, expectedCombat.combat);
     const currentDisplayed = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-debug^="combat-stat:"]')].map(node => [node.dataset.debug, Number(node.dataset.current)])));
     assert.deepEqual(currentDisplayed, { 'combat-stat:ad': stats.attackDamage, 'combat-stat:ap': stats.abilityPower,
       'combat-stat:attack-interval': stats.attackIntervalTicks * initial.tickMs, 'combat-stat:armor': stats.armor,
       'combat-stat:magic-resist': stats.magicResist, 'combat-stat:range': stats.attackRange });
-    skipB6Dependency(report, 'B8', 'normal-opening-rageblade-dynamic-as', 'Dynamic Rageblade AS requires the B8 Lux/component chain', () => {
-      const lux = expectedCombat.combat.units.find(unit => unit.id === 'unit-3');
-      const stats = readCombatStats(lux, expectedCombat.combat);
-      assert(stats.attackIntervalTicks < lux.attackIntervalTicks, 'normal Rageblade attacks change current AS beyond frozen stat');
-    });
-    fs.writeFileSync(path.join(output, 'current-stats.json'), JSON.stringify({ unit: selected, expectedProjection: stats, currentDisplayed, evidenceKind: 'first-combat current selector to UI consistency; Rageblade dynamic AS explicitly skipped under B8' }));
+    fs.writeFileSync(path.join(output, 'current-stats.json'), JSON.stringify({ unit: selected, expectedProjection: stats, currentDisplayed, evidenceKind: 'first-combat current selector to UI consistency; Rageblade dynamic AS is checked in the B8 2-1 combat below' }));
     await page.screenshot({ path: path.join(output, 'current-stats.png') });
     const afterCombatMetrics = await sampleObserver('after-normal-combat');
     const resetStart = await offset(); await click('mobile:new-match'); await startFixed42();
@@ -391,6 +370,68 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       heapNote: 'Heap measurements are observations without forced GC; zero ledger/effects/tweens is asserted, heap reduction is not inferred.' };
     fs.writeFileSync(path.join(output, 'performance.json'), JSON.stringify(report.performance, null, 2));
     fs.writeFileSync(path.join(output, 'frame-intervals.json'), JSON.stringify(frameSamples));
+    // B8: the frozen opening grants Lux (1-3) and the component picks (1-3, 1-4)
+    // only for real kills, so the original Rageblade-on-Lux chain runs in the
+    // first combat that can have it (2-1) instead of 1-2. Every step is a native
+    // input whose full resulting state equals the public command's result.
+    {
+      await click('mobile:new-match'); await startFixed42();
+      const components = ['bow', 'rod'];
+      for (let guard = 0; guard < 40; guard++) {
+        const current = await state();
+        if (current.m8.round.roundId === '2-1' && current.phase === 'preparation') break;
+        if (current.phase === 'choice') {
+          const choice = current.pendingChoice, start = await offset();
+          const pick = choice.kind === 'component' ? components.shift() : choice.offers.find(id => id !== 'placebo');
+          assert(pick && choice.offers.includes(pick), `B8 opening offers ${pick}`);
+          await click(`choice:${pick}`);
+          await record(`b8-opening-${choice.kind}-${pick}`, current, accepted(api.selectChoice(current, choice.choiceId, choice.generation, pick)), start);
+        } else if (current.phase === 'preparation') { await delay(450); await click('start-combat'); }
+        else if (current.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
+        else if (current.phase === 'settlement') await click('continue');
+        else throw new Error(`B8 opening ended at ${current.phase}`);
+      }
+      assert.deepEqual(components, [], 'both real loot component choices were made');
+      let buildBefore = await state();
+      assert.equal(buildBefore.m8.round.roundId, '2-1'); assert.equal(buildBefore.phase, 'preparation');
+      const [bow, rod] = ['bow', 'rod'].map(id => buildBefore.items.find(item => item.definitionId === id && item.location.kind === 'inventory'));
+      const lux = buildBefore.preparation.units.find(unit => unit.team === 'player' && unit.definitionId === 'lux');
+      assert(bow && rod && lux, 'real 1-3/1-4 loot granted Lux, bow and rod');
+      let buildStart = await offset();
+      await click('panel:items'); await click(`item:${bow.id}`); await click(`item:${rod.id}`); await click('combine-items');
+      let buildExpected = accepted(api.combineItems(buildBefore, bow.id, rod.id));
+      await record('normal-opening-rageblade-recipe', buildBefore, buildExpected, buildStart);
+      const rageblade = buildExpected.items.find(item => item.definitionId === 'rageblade'); assert(rageblade);
+      buildBefore = buildExpected; buildStart = await offset(); await click(`item:${rageblade.id}`); await click(`equipment:${lux.id}:0`);
+      buildExpected = accepted(api.equipItem(buildBefore, rageblade.id, lux.id, 0));
+      await record('normal-opening-rageblade-equipped', buildBefore, buildExpected, buildStart);
+      if (lux.location.kind !== 'board') {
+        const zone = buildExpected.preparation.board.deploymentZones.player, used = new Set(buildExpected.preparation.units
+          .flatMap(unit => unit.location.kind === 'board' ? [`${unit.location.cell.col},${unit.location.cell.row}`] : []));
+        const cell = Array.from({ length: (zone.lastRow - zone.firstRow + 1) * buildExpected.preparation.board.columns }, (_, n) =>
+          ({ col: n % buildExpected.preparation.board.columns, row: zone.firstRow + Math.floor(n / buildExpected.preparation.board.columns) }))
+          .find(cell => !used.has(`${cell.col},${cell.row}`));
+        buildBefore = buildExpected; buildStart = await offset();
+        await click('panel:units'); await click(`mobile:unit:${lux.id}`); await click(`deploy:${cell.col},${cell.row}`);
+        buildExpected = accepted(api.deployMatchUnit(buildBefore, lux.id, { kind: 'board', cell }));
+        await record('b8-rageblade-lux-deployed', buildBefore, buildExpected, buildStart);
+      }
+      const b8Before = buildExpected, b8Result = api.startMatchCombat(b8Before);
+      let b8Combat = accepted(b8Result); const b8Events = b8Result.events.filter(event => 'tick' in event);
+      while (b8Combat.phase === 'combat') { const next = api.stepMatch(b8Combat); b8Combat = structuredClone(next.state); b8Events.push(...next.events.filter(event => 'tick' in event)); }
+      await delay(450); const b8Start = await offset(); await click('start-combat');
+      const b8Deadline = Date.now() + 120000;
+      while ((await state()).phase === 'combat') { assert(Date.now() < b8Deadline, 'B8 Rageblade combat timeout'); await delay(250); }
+      const b8Record = await record('b8-rageblade-2-1-combat', b8Before, b8Combat, b8Start);
+      assert.deepEqual(b8Record.snap.combatEvents, b8Events);
+      // Original assertion bodies (previously deferred to B8), unit ID now read from the real drop.
+      assert(b8Events.some(event => event.type === 'statChanged' && event.source.definitionId === 'rageblade'));
+      const luxCombat = b8Combat.combat.units.find(unit => unit.id === lux.id);
+      const luxStats = readCombatStats(luxCombat, b8Combat.combat);
+      assert(luxStats.attackIntervalTicks < luxCombat.attackIntervalTicks, 'normal Rageblade attacks change current AS beyond frozen stat');
+      report.b8RagebladeChain = { roundId: '2-1', luxId: lux.id, ragebladeId: rageblade.id, combatTicks: b8Combat.combat.tick,
+        frozenAttackIntervalTicks: luxCombat.attackIntervalTicks, currentAttackIntervalTicks: luxStats.attackIntervalTicks };
+    }
     const inputs = await page.evaluate(() => window.__M5_INPUTS__); fs.writeFileSync(path.join(output, 'native-inputs.json'), JSON.stringify(inputs));
     assert.deepEqual(report.errors, []); assert.equal(sourceFingerprint(), report.sourceFingerprint, 'production source changed during gate');
     report.passed = true; await cdp.detach();
