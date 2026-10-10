@@ -138,8 +138,8 @@ describe('M6 isolated battle records and replay',()=>{
     const playback=new PlaybackSession(first),snapshot=playback.read();
     expect(playback.advance(50)).toBe(snapshot);expect(Object.isFrozen(snapshot.combat.units)).toBe(true);
   });
-  // B8 must restore an actual post-combat reward choice before this scenario can execute.
-  it.skip('[B8] keeps completed records through after-choice and exposes frozen history/snapshot references',async()=>{
+  // B8 restored the actual post-combat PvE component choice (1-3 loot) this scenario needs.
+  it('[B8] keeps completed records through after-choice and exposes frozen history/snapshot references',async()=>{
     const history=new BattleHistory('choice-run');let match=readyMatch(42);let sawChoice=false;
     while(match.round<=getCatalogRoundById('2-7').ordinal&&!sawChoice) {
       const before=match,start=startMatchCombat(match);if(!start.ok)throw Error(start.reason);match=start.state;

@@ -113,7 +113,7 @@ describe('M6 independent route/history/playback/session integration', () => {
     }
     active.dispose();
   }, 120000);
-  it.skip('[B8] cannon: completed history retains sold opening transition units',()=>{
+  it('[B8] cannon: completed history retains sold opening transition units',()=>{
     const {route,history}=cannonTransition!;
       expect(route.actions.some(action => action.command?.type === 'sell')).toBe(true);
       expect(history.completedRecords.some(record => record.context.preparation.units.some(unit => unit.team === 'player' && !route.final.preparation.units.some(final => final.id === unit.id)))).toBe(true);
