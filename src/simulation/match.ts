@@ -36,6 +36,7 @@ export * from './match-types';
 export { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 export { getXpToNextLevel, getShopOdds } from './progression';
 export { readEncounterPreview } from './encounter-selectors';
+export { readLootView } from './loot-view';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
