@@ -31,7 +31,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(state.preparation.units.filter(u=>u.team==='player')).toEqual([{id:'unit-1',definitionId:'irelia',team:'player',starLevel:1,location:{kind:'board',cell:{col:1,row:4}}}]);
     expect(state.shop.generation).toBe(1); expect(state.shop.slots).toHaveLength(5);
     expect(readRoundInfo(state)).toBe(state.m8.round);
-    expect(state.m8.preparation).toMatchObject({roundId:'1-2',encounterId:'minions-a-v1',contentStatus:'ready-b7-pending-b8'});
+    expect(state.m8.preparation).toMatchObject({roundId:'1-2',encounterId:'minions-a-v1',contentStatus:'ready-b8-loot'});
     expect(state.m8.encounterPlan).toBeNull();
     roundTrip(state);
   });

@@ -37,3 +37,11 @@ export const LOOT_CATEGORIES = freezeContent({
   3: [{id:'gold_3',weight:75,payload:{kind:'gold',quantity:3}},{id:'unit_3',weight:25,payload:{kind:'hero-pool',cost:3}}],
   4: [{id:'gold_4',weight:70,payload:{kind:'gold',quantity:4}},{id:'gold_5_substitute',weight:10,payload:{kind:'gold',quantity:5}},{id:'unit_4',weight:20,payload:{kind:'hero-pool',cost:4}}],
 } satisfies Record<LootHeroCost, readonly LootCategory[]>);
+
+/** Changing executable draw order/identity/rejection semantics requires this revision to change. */
+export const LOOT_FREEZE_ALGORITHM = freezeContent({
+  revision:'m8b-loot-freeze-v1', rng:'lcg32-v1', multiplier:1664525, increment:1013904223,
+  seedXor:0xdeadbeef, sampling:'uint32-rejection-modulo', order:'sourceUnitId-codepoint/slotOrdinal-numeric',
+  choiceOrder:'dropId-codepoint', choices:'full-pool/one-fallback-word',
+});
+export const LOOT_RUNTIME_REVISION = 'm8-b8-live-loot-basis-provenance-v1';

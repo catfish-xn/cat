@@ -33,3 +33,27 @@ export interface FrozenLootLedger {
  */
 export interface LootChoiceEligibility { readonly dropId:string; readonly status:'planned'|'revealed'|'forfeited' }
 export interface LootChoiceResolution { readonly dropId:string; readonly receiptId:string; readonly method:'player-choice'|'terminal-fallback' }
+
+/** Runtime progress references the sole immutable plan; payloads are never copied here. */
+export type DirectLootProgress = { readonly dropId: string } & (
+  | { readonly status: 'planned' | 'revealed' | 'pending-capacity' | 'retained-terminal' | 'forfeited'; readonly receiptId: null }
+  | { readonly status: 'granted'; readonly receiptId: string }
+);
+export interface LootEarnedEvidence {
+  readonly dropId: string;
+  readonly death: { readonly combatId: string; readonly tick: number; readonly eventSeq: number };
+}
+export interface MatchLootState {
+  readonly frozen: FrozenLootLedger;
+  readonly direct: readonly DirectLootProgress[];
+  readonly choiceEligibility: readonly LootChoiceEligibility[];
+  readonly choiceResolutions: readonly LootChoiceResolution[];
+  readonly earnedEvidence: readonly LootEarnedEvidence[];
+  readonly receipts: readonly import('./m8/contracts').LootReceipt[];
+  readonly guaranteeCounters: Readonly<Record<string, number>>;
+}
+export type LootMatchEvent =
+  | { readonly type: 'lootRevealed'; readonly dropId: string; readonly death: LootEarnedEvidence['death'] }
+  | { readonly type: 'lootForfeited'; readonly dropId: string }
+  | { readonly type: 'lootGranted'; readonly receipt: import('./m8/contracts').LootReceipt }
+  | { readonly type: 'lootChoiceResolved'; readonly dropId: string; readonly receiptId: string; readonly method: LootChoiceResolution['method'] };

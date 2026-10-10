@@ -1,6 +1,6 @@
 import { canonicalContent, digestContent } from './content';
 import { freezeContent } from './content/freeze';
-import { LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_HERO_POOL_VERSION, LOOT_POLICY_VERSION, LOOT_SLOTS } from './content/loot';
+import { LOOT_FREEZE_ALGORITHM, LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_HERO_POOL_VERSION, LOOT_POLICY_VERSION, LOOT_SLOTS } from './content/loot';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { COMPONENT_POOL, COMPONENT_POOL_VERSION, validateComponentPool } from './component-pool';
@@ -12,12 +12,7 @@ import { nextRandom, validateSeed } from './rng';
 import { M5_UNIT_DEFINITIONS } from './units';
 
 export const LOOT_FREEZE_VERSION = 'm8-b8-loot-freeze-v1';
-/** Changing executable draw order/identity/rejection semantics requires this revision to change. */
-export const LOOT_FREEZE_ALGORITHM = freezeContent({
-  revision:'m8b-loot-freeze-v1', rng:'lcg32-v1', multiplier:1664525, increment:1013904223,
-  seedXor:0xdeadbeef, sampling:'uint32-rejection-modulo', order:'sourceUnitId-codepoint/slotOrdinal-numeric',
-  choiceOrder:'dropId-codepoint', choices:'full-pool/one-fallback-word',
-});
+export { LOOT_FREEZE_ALGORITHM } from './content/loot';
 export const LOOT_REPLAY_DIGEST = digestContent({
   version:LOOT_FREEZE_VERSION, algorithm:LOOT_FREEZE_ALGORITHM,
   policy:NEUTRAL_ENCOUNTER_POLICY_VERSION, openingPolicy:'m8b-opening-project-v1', lootPolicy:LOOT_POLICY_VERSION,

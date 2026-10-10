@@ -6,7 +6,8 @@
 
 - 检查点①的实现范围仅为掉落目录、完整计划的纯冻结及其自身的严格恢复验证。`FrozenLootLedger` 是独立冻结产物，不是已启用的 Match 奖励账本；类型存在不等于实际授予、资格揭示或恢复接线完成。
 - ①的 `restoreFrozenLootLedger(value, { seed, throughRoundOrdinal })` 从调用方的权威输入独立重演；②接入时参数必须取已验证的 Match seed／round，不得取候选 ledger 自报值。①未修改 Match 或 live `CONTENT_DIGEST`。`makeLootPendingChoice`／`validateLootPendingChoice` 也只是精确检查 generation=0、step=offer、returnPhase=settlement 的纯构造／验证 helper，没有真正打开选择或发奖。
-- **检查点②必须实施 combat input basis、成长迁移、消费来源，以及当批启用状态的 own restore。** 这三个恢复前提不能拖到检查点③或 B9 才补；目前均未实现、未通过功能验收。
+- **检查点②必须实施 combat input basis、成长迁移、消费来源，以及当批启用状态的 own restore。** 这三个恢复前提不能拖到检查点③或 B9 才补。当前纯前提已实施并有局部验证，默认运行接线正在进行，未完成②功能验收。详见 [②逐次证据](evidence/m8-b8/checkpoint-two/README.md)。
+- **用户已批准顺序调整：最小真实自选与必要终局处理前移②。** ②直接接默认 Match 入口，不新增临时开发模式、模式状态或 digest 分支。前移项包括 loot PendingChoice、protocol 2 selectChoice 的实际组件授予／唯一 LootReceipt／resolution、earned terminal fallback、满席终局 retained-terminal 及这些状态的 strict restore。③保留 readLootView 接线、隐藏信息完整样例和剩余组合验证，不重复同一奖励逻辑；冻结玩法、公开合同及 B9 正式版本边界不变。
 - 第 3～9 节也列出完整 B8 运行设计和实现门禁，供真实 pipeline 在②／③分批接入。选择、容量、终局等其余路径的②／③排期以用户审计批准为准；本文不把它们全部强制归②，也不把③缩成仅做集成。每条路径一旦启用，须同期交付其自身状态的严格恢复，不能留给后批补洞。
 - 本文不改冻结 B2／G12，不调整伤害或成长数值，不发布正式 Match6/save2/replay2。检查点①的实际提交、预算与验证状态以 [checkpoint① evidence](evidence/m8-b8/checkpoint-one/README.md) 为准；本文不复制易过期的测试进度，也不把拟议测试写成已通过。
 
@@ -273,6 +274,16 @@ fixture 可用于精确 helper 边界，但至少一组 Match 向量必须经真
 
 检查点③可以承担经批准的其余真实 pipeline 与验证，不限于集成。B9 继续完整应用包装、历史回放、正式版本与旧 M7 保全等原有职责；后批不能代替前批对已启用 Match 状态的严格恢复，也不能把②三个恢复前提记成“等 B9 就自然解决”。UI 只读 selectors 并调用公共命令，不另存隐藏计划或执行奖励／成长。
 
+### 8.1 调整后的②测试对应表（通过状态见②证据，不以本表签收）
+
+| 实施范围 | ②必须交付的对应向量 | ③仍保留 |
+| --- | --- | --- |
+| 默认真实死亡／直接授予 | 部分击杀、同 tick 多来源、立即升星、stock/delta、满席与实际唯一收据；连续与恢复 state/events 全等 | 剩余跨轮组合 |
+| 前移最小自选 | dropId 固定顺序、完整八候选、protocol 2 真实选择、仅 LootReceipt、重复／过期拒绝、未解 Continue 拒绝 | readLootView、隐藏信息完整展示样例 |
+| 前移必要终局 | earned fallback 恰一次、未赚 forfeited、满席 retained-terminal 无收据／折金、无可操作终局 choice | 剩余终局组合验证 |
+| 当批严格恢复 | 原 basis／source／neutral 校验、出生消费链、待选／选后／容量／终局、篡改拒绝与只读无 RNG | 不得延后已启用态恢复 |
+| 经济与成长 | 9/49/50G＋1→16/60/61；H80→88/120/120；英雄未售及后续 capacity 出售不重算；370 与合法1000 | 不重定义已验证算法 |
+
 ## 9. 本文交付说明
 
-本文件是文档交接，不修改代码。已核对现行 Match、serialization、strategy-snapshot、upgrades、temporary-equipment、neutral-restore、inventory 及 M8B 权威文档；未运行上述 B8 功能门禁，也未把①纯 freeze 的自恢复等同于 live Match 恢复。后续交付须逐项列出实际代码、独立向量、验证结果和剩余范围。
+最初检查点①交接只记录设计；本次按用户批准更新②／③实施顺序。已核对现行 Match、serialization、strategy-snapshot、upgrades、temporary-equipment、neutral-restore、inventory 及 M8B 权威文档；未运行上述 B8 功能门禁，也未把①纯 freeze 的自恢复等同于 live Match 恢复。后续交付须逐项列出实际代码、独立向量、验证结果和剩余范围。
