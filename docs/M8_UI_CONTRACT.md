@@ -56,6 +56,16 @@ readRoundInfo返回RoundDefinition全部字段。stage/subround/displayName由�
 
 B1阶段1/野怪未核准时，不可把候选1-2/1-3/1-4或9条中立原记录当运行遭遇。当前版本继续显示现有规则；最终新目录由B6/B7一次提供。
 
+### 4.1 U5 遭遇预览有限增补（2026-10-10）
+
+用户于 **2026-10-10 00:31 UTC** 批准按 [UR-U5-01/02 提案](M8_U5_PREVIEW_CONTRACT_CHANGE.md) 实施一次有限、加法式扩展。此处是对 B2 冻结合同的已批准范围例外；正文中的 B2 交付时点说明保留为历史记录。本次实施、测试、Claude 独立审计与合并批准的状态不能由该授权推定。
+
+`EncounterPreview.units[]` 仅新增必填只读的 `unitKind: 'champion' | 'neutral'` 与 `monsterFamily: MonsterFamily | null`；英雄明确为 `champion/null`，中立取同版本冻结定义的正式分类与 family，`MonsterFamily` 使用已有内容类型的 `import type`。`stats` 仅新增必填数值 `attackRange / attackIntervalTicks / critChanceBps / critMultiplierBps / abilityPower / mana / maxMana`。全部精确语义、取值、权威来源及验收门槛见 [U5 合同增补](M8_U5_PREVIEW_CONTRACT_ADDENDUM.md)。
+
+原字段、查询签名、补给轮 `null`、当前轮范围和隐藏信息边界均不变。每次查询只构建一次 strategy snapshot；新属性与真实开战共用领域初始化，其中 `mana` 指成功 `startMatchCombat` 返回的 tick 0 初始化结束值，不是裸 `initialMana`。准备、战斗、结算均显示当前轮开战输入，不读取当前战中属性代替。`pvp:<roundId>` 保留为不透明遭遇身份，不作素材键或掉落键。
+
+本次不含 UR-U5-03/04、图片、UI 改动或英雄说明删减，也不改规则、内容 digest、存档 schema 或 [M8B 冻结增补](M8B_CONTRACT_ADDENDUM.md)。必须提供真实开战对照和普通／相同查询可达条件下的实际 gzip 差量；经 Claude 对合同与实现独立审计后，仍须用户另行批准合并。
+
 ## 5. 掉落视图与操作
 
 readLootView只含roundId/revealedDrops/pendingClaims/canContinue/reason。每条含dropId/encounterId/sourceUnitId/roundId/payload与下表状态。隐藏planned以及未取得forfeited条目不进入revealedDrops；类型联合明确不能表达planned，避免直接把领域DropState数组传给UI。

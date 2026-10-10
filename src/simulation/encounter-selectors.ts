@@ -1,7 +1,10 @@
 import type { MatchState } from './match-types';
 import type { EncounterPreview } from './m8/ui-contracts';
 import { buildStrategySnapshot } from './strategy-snapshot';
-import { UNIT_DEFINITIONS } from './units';
+import { M5_UNIT_DEFINITIONS, UNIT_DEFINITIONS } from './units';
+import { compileCombatInitialInputs, projectCombatStartMana } from './combat-initialization';
+import { spellCrit } from './combat-s13-state';
+import { initializeEffectRuntime } from './effects';
 import { NEUTRAL_DEFINITIONS, type NeutralMechanism } from './content/neutrals';
 import { freezeContent } from './content/freeze';
 
@@ -33,10 +36,18 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
     // B6 has no PvP encounter ID: this read-only namespace identifies its fixed public opponent.
     encounterId:state.m8.round.encounterId ?? `pvp:${state.m8.round.roundId}`,
     units:state.m8.preparation.enemies.map(u=>{
-      const stats=snapshot.units.find(s=>s.unitId===u.id)!.stats, d=UNIT_DEFINITIONS[u.definitionId];
+      const resolved=snapshot.units.find(s=>s.unitId===u.id)!, stats=resolved.stats, d=UNIT_DEFINITIONS[u.definitionId];
+      const neutral=NEUTRAL_DEFINITIONS[u.definitionId];
+      if(d.unitKind==='neutral' ? !neutral || stats.monsterFamily!==neutral.monsterFamily : !Object.hasOwn(M5_UNIT_DEFINITIONS,u.definitionId) || neutral) throw new RangeError('Invalid preview content classification');
+      const initial=compileCombatInitialInputs(u.id,stats,resolved.ability,resolved);
+      const crit=spellCrit({...initial,id:u.id,ability:resolved.ability});
+      const mana=projectCombatStartMana({...initial,id:u.id,triggers:resolved.triggers,effectRuntime:initializeEffectRuntime(resolved.triggers)}).after;
       if(u.location.kind!=='board') throw new RangeError('Enemy preview requires board deployment');
       return {unitId:u.id,definitionId:u.definitionId,name:d.name,starLevel:u.starLevel,cell:{...u.location.cell},
-        stats:{maxHp:stats.health,attackDamage:stats.attack,armor:stats.armor,magicResist:stats.magicResist},
+        unitKind:neutral?'neutral':'champion',monsterFamily:neutral?.monsterFamily ?? null,
+        stats:{maxHp:stats.health,attackDamage:stats.attack,armor:stats.armor,magicResist:stats.magicResist,
+          attackRange:stats.attackRange,attackIntervalTicks:stats.attackIntervalTicks,critChanceBps:crit.chanceBps,critMultiplierBps:crit.multiplierBps,
+          abilityPower:initial.abilityPower!,mana,maxMana:stats.maxMana},
         abilityDescription:d.unitKind==='neutral'?neutralDescription(NEUTRAL_DEFINITIONS[u.definitionId].mechanism):HERO_RULES[u.definitionId]};
     }),
     rulesNote:state.m8.round.kind==='pve'?'固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。特殊奇遇池未启用。'

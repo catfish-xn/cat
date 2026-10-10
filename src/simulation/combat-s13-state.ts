@@ -51,7 +51,7 @@ export const EMPTY_RUNTIME: CombatRuntime = { attackCount: 0, castCount: 0, atta
 export const hpSample = (unit: CombatUnit): HpSample => ({ id: unit.id, hp: unit.hp, maxHp: unit.maxHp });
 export const constantModifier = (stat: StatModifier['stat'], amount: number, unit: StatModifier['unit'] = 'flat'): StatModifier =>
   ({ stat, unit, value: { kind: 'constant', amount }, condition: { kind: 'always' }, damageFilter: null });
-export function spellCrit(unit: CombatUnit): SpellCritAuthorization {
+export function spellCrit(unit: Pick<CombatUnit, 'id' | 'ability' | 'spellCrit' | 'baseCritChanceBps' | 'baseCritMultiplierBps'>): SpellCritAuthorization {
   if (unit.spellCrit) {
     const auth = validateSpellCrit(unit.spellCrit);
     if ([...auth.itemSources, ...auth.nonItemSources].some(s => s.ownerId !== unit.id)) throw new RangeError('Wrong authorization holder');
@@ -72,7 +72,7 @@ export function origin(unit: CombatUnit, effectIndex = 0): CombatOrigin {
 export function variable(unit: CombatUnit, name: string, fallback = 0): number {
   return unit.ability.kind === 's13' && Object.hasOwn(unit.ability.variables, name) ? unit.ability.variables[name] / 10000 : fallback;
 }
-export function champion(unit: CombatUnit): string { return unit.ability.kind === 's13' ? unit.ability.championId : ''; }
+export function champion(unit: Pick<CombatUnit, 'ability'>): string { return unit.ability.kind === 's13' ? unit.ability.championId : ''; }
 export function mechanic(unit: CombatUnit, name: string, key: string, fallback = 0): number {
   return (unit.mechanics ?? []).filter(m => m.mechanic === name).reduce((sum, m) => sum + (m.values[key] ?? fallback), 0);
 }
