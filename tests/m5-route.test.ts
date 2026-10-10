@@ -3,6 +3,7 @@ const FINAL_ROUND=ROUND_CATALOG.at(-1)!.ordinal;
 const BATTLE_COUNT=ROUND_CATALOG.filter(r=>r.kind!=='supply').length;
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import assertGolden from './fixtures/m5/assert-golden.cjs';
 import { run } from '../scripts/generate-m5-route.cjs';
 
@@ -38,6 +39,14 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
  for(const build of ['sniper-caitlyn','cannon','sniper','mage'])it(`[B8] ${build}: complete-build battles and full component grant chain`,()=>{
   const route=routes.get(build)!;
   expect(route.summary.formedBattles).toBeGreaterThanOrEqual(3);
+  // Terminal victory: the final 6-7 drop is already granted in the same gameOver state (no later award),
+  // read-only, and identical after strict restore.
+  const end=route.final,view=api.readLootView(end),final=end.m8.loot.frozen.rounds.find(r=>r.encounterPlan.roundId==='6-7')!;
+  expect(end.phase).toBe('gameOver');
+  expect(view).toMatchObject({roundId:'6-7',pendingClaims:[],canContinue:false,reason:'game-over'});
+  expect(view.revealedDrops.map(d=>[d.dropId,d.status])).toEqual(final.encounterPlan.drops.map(d=>[d.dropId,'granted']));
+  expect(view.revealedDrops.every(d=>end.m8.loot.receipts.some(r=>r.receiptId===d.receiptId&&r.dropId===d.dropId))).toBe(true);
+  expect(api.readLootView(restoreMatch(serializeMatch(end)))).toEqual(view);
   if(build!=='sniper-caitlyn'){
    expect(route.summary.transitioned).toBe(true);
    expect(route.actions.some(a=>a.command.type==='sell'&&a.events.some((e:unknown)=>{const event=e as {type:string;itemIds?:string[]};return event.type==='itemsReturned'&&(event.itemIds?.length??0)>0;}))).toBe(true);
