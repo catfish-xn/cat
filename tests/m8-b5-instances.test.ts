@@ -5,10 +5,13 @@ import type { ItemInstance } from '../src/simulation/strategy-types';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { transferUpgradeResources } from '../src/simulation/upgrades';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
+import { publicInventory } from './fixtures/b8-public-acquisition';
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },
 });
+// Synthetic placement/capacity vectors exercise the local mechanism only. They
+// deliberately have no resource births and must never pass whole-Match restore.
 function stateWith(items: readonly ItemInstance[]): MatchState {
   const state = purchasedThreeHeroMatch();
   return { ...state, items: [...state.items, ...items], nextItemSerial: 100 };
@@ -26,13 +29,26 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     const state = stateWith([item(20, definitionId, 'unit-1'), item(21, definitionId)]);
     rejected(state, s => equipItem(s, 'item-21', 'unit-1', 1), 'unique-conflict');
     const next = accepted(equipItem(state, 'item-21', 'unit-2', 2));
-    expect(restoreMatch(serializeMatch(next))).toEqual(next);
+    expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid B8 Match: current resource fold');
+    const legal = publicInventory([definitionId, definitionId]);
+    const equipped = accepted(equipItem(legal.state, legal.itemIds[0], 'unit-1', 0));
+    rejected(equipped, s => equipItem(s, legal.itemIds[1], 'unit-1', 1), 'unique-conflict');
+    const control = accepted(equipItem(equipped, legal.itemIds[1], 'unit-2', 2));
+    expect(restoreMatch(serializeMatch(control))).toEqual(control);
   });
   it('allows three nonunique copies but refuses a fourth without spending resources or event IDs', () => {
     let state = stateWith([20, 21, 22, 23].map(n => item(n, 'deathblade')));
     for (let slot = 0; slot < 3; slot++) state = accepted(equipItem(state, `item-${20 + slot}`, 'unit-1', slot));
     for (let slot = 0; slot < 3; slot++) rejected(state, s => equipItem(s, 'item-23', 'unit-1', slot), 'item-slot-occupied');
-    expect(restoreMatch(serializeMatch(state))).toEqual(state);
+    expect(() => restoreMatch(serializeMatch(state))).toThrow('Invalid B8 Match: current resource fold');
+    // Four Deathblades require eight identical components, beyond this bounded
+    // choice fixture. Keep that matrix above and prove identical nonunique slot
+    // capacity using four genuinely acquired Swords (one permanent slot each).
+    const legal = publicInventory(['sword', 'sword', 'sword', 'sword']);
+    let control = legal.state;
+    for (let slot = 0; slot < 3; slot++) control = accepted(equipItem(control, legal.itemIds[slot], 'unit-1', slot));
+    for (let slot = 0; slot < 3; slot++) rejected(control, s => equipItem(s, legal.itemIds[3], 'unit-1', slot), 'item-slot-occupied');
+    expect(restoreMatch(serializeMatch(control))).toEqual(control);
   });
   it.each([0, 1, 2])('three-slot item requested at %s uses canonical parent slot 0 and reserves all slots', slot => {
     const state = stateWith([item(20, 'thiefs-gloves'), item(21, 'sword'), item(22, 'thiefs-gloves')]);
@@ -42,7 +58,16 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
       rejected(next, s => equipItem(s, 'item-21', 'unit-1', targetSlot), 'exclusive-slots');
       rejected(next, s => equipItem(s, 'item-22', 'unit-1', targetSlot), 'exclusive-slots');
     }
-    expect(restoreMatch(serializeMatch(next))).toEqual(next);
+    expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid B8 Match: current resource fold');
+    // Split the five-component synthetic matrix into two real acquisitions,
+    // preserving rejection of both an ordinary item and another TG parent.
+    for (const incoming of ['sword', 'thiefs-gloves']) {
+      const legal = publicInventory(['thiefs-gloves', incoming]);
+      const control = accepted(equipItem(legal.state, legal.itemIds[0], 'unit-1', slot));
+      expect(control.items.find(item => item.id === legal.itemIds[0])?.location).toEqual({ kind: 'unit', unitId: 'unit-1', slot: 0 });
+      for (const targetSlot of [0, 1, 2]) rejected(control, s => equipItem(s, legal.itemIds[1], 'unit-1', targetSlot), 'exclusive-slots');
+      expect(restoreMatch(serializeMatch(control))).toEqual(control);
+    }
   });
   it.each([0, 1, 2])('cannot equip an exclusive parent over an ordinary item in slot %s', occupied => {
     const state = stateWith([item(20, 'sword', 'unit-1', occupied), item(21, 'thiefs-gloves')]);
@@ -65,15 +90,32 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     expect(next.items.find(i => i.id === 'item-100')).toEqual(item(100, 'thiefs-gloves'));
     expect(next.nextItemSerial).toBe(101);
     expect(next.nextMatchEventSeq).toBe(state.nextMatchEventSeq + 1);
-    expect(restoreMatch(serializeMatch(next))).toEqual(next);
+    expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid resource provenance: combination recipe/ownership');
     rejected(next, s => combineItems(s, 'item-20', 'item-21'), 'unknown-item');
+    const legal = publicInventory(['gloves', 'gloves']), [a, b] = legal.itemIds;
+    const id = `item-${legal.state.nextItemSerial}`;
+    const control = accepted(combineItems(legal.state, b, a));
+    expect(control.items.find(item => item.id === id)).toEqual({ id, definitionId: 'thiefs-gloves', location: { kind: 'inventory' } });
+    expect(control.items.some(item => item.id === a || item.id === b)).toBe(false);
+    expect(control.nextItemSerial).toBe(legal.state.nextItemSerial + 1);
+    expect(control.nextMatchEventSeq).toBe(legal.state.nextMatchEventSeq + 1);
+    expect(restoreMatch(serializeMatch(control))).toEqual(control);
+    rejected(control, s => combineItems(s, a, b), 'unknown-item');
   });
   it.each([
     [item(20, 'blue-buff', 'unit-1'), item(21, 'blue-buff', 'unit-1', 1)],
     [item(20, 'thiefs-gloves', 'unit-1'), item(21, 'sword', 'unit-1', 2)],
     [item(20, 'thiefs-gloves', 'unit-1', 1)],
   ])('restore rejects invalid unique, exclusive or parent-slot placements', (...items) => {
-    expect(() => restoreMatch(JSON.stringify(stateWith(items)))).toThrow();
+    const reason = items.length === 1 ? 'Invalid Match save: exclusive parent slot' : 'Invalid Match save: equipment constraints';
+    expect(() => restoreMatch(JSON.stringify(stateWith(items)))).toThrow(reason);
+    const legal = publicInventory(items.map(item => item.definitionId));
+    expect(restoreMatch(serializeMatch(legal.state))).toEqual(legal.state);
+    const invalid = { ...legal.state, items: legal.state.items.map(item => {
+      const index = legal.itemIds.indexOf(item.id);
+      return index < 0 ? item : { ...item, location: items[index].location };
+    }) };
+    expect(() => restoreMatch(serializeMatch(invalid))).toThrow(reason);
   });
   it.each([
     ['blue-buff', 'blue-buff'], ['thiefs-gloves', 'sword'], ['sword', 'thiefs-gloves'],
