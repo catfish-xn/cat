@@ -152,3 +152,20 @@ U6 约为 505,225 − 503,883 = 1,342 B（下限；增补前 1,299）。B8 距 2
 | P2-7 比较作业时限 | `67b772c` 把 compare-evidence 的 `timeout-minutes` 由 6 改为 8，未经批准；现恢复为 6（原注释逐字恢复）。U6 依赖、`u6-evidence/` 独立目录与验证逻辑保留，其他时限和门槛不变 | `.github/workflows/ci.yml` 与 `67b772c` 之前相比，现有作业的时限无差异；#222 compare-evidence 实际用时约 20 s |
 
 本轮只改脚本、测试、CI 与文档；`src/`、`index.html`、`public/` 与 `823f11f` 一致，生产包不变（504,905 B）。
+
+## 12. 第三轮复审：P2-2 输入事件序列（`cd53d39` 之后）
+
+只改 `scripts/b8-input-evidence.cjs` 的 `checkInputs` 及其测试；领域重放、生产源码、时限和已关闭项目不变。
+
+合法序列规则：悬停事件（pointerout、mouseout、mouseleave）可出现在任何位置，不计入序列；其余事件对该命令的每个控件 T 依次必须恰为
+`pointerdown T → mousedown T → pointerup T → mouseup（T，或 DOM 重绘后的普通元素，如 SECTION）→ 可选 click T`；
+最后一个控件的 click 是提交点击，必须出现，且位于其按下、释放之后。整段记录不得剩余任何事件；不属于当前操作控件的 click（如 `mobile:reroll`）一律按额外提交拒绝。非提交控件（如合成前选择物品）没有 click、mouseup 目标为 SECTION，均属合法差异。
+
+| 验证 | 结果 |
+| --- | --- |
+| `tests/m8-b8-input-evidence.test.mjs` | 32 例全部通过：真实形状证据接受；含悬停事件、重绘后 mouseup 为 SECTION、非提交控件无 click 的合法差异接受；30 种篡改拒绝（前轮 23 项保留，新增 7 项） |
+| 本轮两个精确负控 | click 提前到 pointerup 之前且时间戳递增 → `expected pointerup, got click`；合法操作后追加 `mobile:reroll` click → `extra committing click on mobile:reroll` |
+| 相邻负控 | 两操作之间插入 reroll click、缺 mousedown、重复 pointerup、重复提交 click、mouseup 落在其他控件，全部拒绝 |
+| 对 `cd53d39` 验证器运行同一测试 | 新增 7 项中有 6 项被旧验证器接受（含本轮两个精确负控），1 项（缺 mousedown）被旧验证器以其他原因拒绝 |
+| 本机真实 input-dev 证据 | 新验证器接受（约 0.8 s）；把本轮两个精确负控施加在真实证据上，`cd53d39` 验证器接受，新验证器拒绝 |
+| 真实 input-preview 证据 | 由本轮 CI compare-evidence（dev、preview 两份）验证；本机 preview 运行结果见 PR 补充 |

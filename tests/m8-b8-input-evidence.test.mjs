@@ -75,6 +75,15 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
     expect(() => validateB8RagebladeEvidence(base.manifest, base.dir, { api, readCombatStats })).not.toThrow();
     expect(base.manifest.b8RagebladeChain.currentAttackIntervalTicks).toBeLessThan(base.manifest.b8RagebladeChain.frozenAttackIntervalTicks);
   });
+  it('accepts the legal differences of real DOM input: hover events, redraw release target, no click on a non-committing control', () => {
+    const run = variant((m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-recipe'), a => {
+      // The real gate's recipe record: item presses end with mouseup on SECTION after the inventory redraw and no click.
+      a.inputs = a.inputs.flatMap(input => input.target.startsWith('item:') && input.type === 'click' ? []
+        : input.target.startsWith('item:') && input.type === 'mouseup' ? [{ ...input, target: 'SECTION' }]
+          : input.type === 'pointerdown' ? [{ ...input, type: 'pointerout', target: 'CANVAS' }, { ...input, type: 'mouseout', pointerType: null, target: 'CANVAS' }, input] : [input]);
+    }));
+    expect(run).not.toThrow();
+  });
   it.each([
     ['deleted combat artifact', (m, dir) => fs.rmSync(path.join(dir, combatArtifact(m))), /missing artifact/],
     ['deleted recipe interaction', (m) => { m.interactions = m.interactions.filter((e) => e.name !== 'normal-opening-rageblade-recipe'); }, /route order \(expected normal-opening-rageblade-recipe\)/],
@@ -97,6 +106,25 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
       /input type touchstart is not a native mouse event/],
     ['committing click removed', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-recipe'), a => { a.inputs = a.inputs.filter(input => input.type !== 'click' || input.target !== 'combine-items'); }),
       /committing click on combine-items/],
+    // Round-three originals: a click moved ahead of its release with timestamps still increasing, and an
+    // extra reroll click appended after the legal operation.
+    ['committing click before its release with increasing timestamps', (m, dir) => edit(dir, combatArtifact(m), a => {
+      const [down, mouseDown, up, mouseUp, click] = a.inputs;
+      a.inputs = [down, mouseDown, click, up, mouseUp].map((input, index) => ({ ...input, time: 1000 + index })); }),
+      /operation 1 on mobile:start-combat: expected pointerup, got click on mobile:start-combat/],
+    ['reroll click appended after the legal operation', (m, dir) => edit(dir, combatArtifact(m), a => {
+      a.inputs.push({ type: 'click', time: a.inputs.at(-1).time + 1, trusted: true, pointerType: 'mouse', target: 'mobile:reroll' }); }),
+      /extra committing click on mobile:reroll/],
+    ['reroll click between two operations', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => {
+      a.inputs.splice(5, 0, { ...a.inputs[4], target: 'mobile:reroll' }); }), /extra committing click on mobile:reroll/],
+    ['missing mousedown', (m, dir) => edit(dir, artifactOf(m, 'b8-opening-component-bow'), a => { a.inputs = a.inputs.filter(input => input.type !== 'mousedown'); }),
+      /operation 1 on choice:bow: expected mousedown, got pointerup/],
+    ['duplicated release', (m, dir) => edit(dir, artifactOf(m, 'b8-opening-component-bow'), a => { a.inputs.splice(3, 0, { ...a.inputs[2] }); }),
+      /operation 1 on choice:bow: expected mouseup, got pointerup/],
+    ['duplicated committing click', (m, dir) => edit(dir, combatArtifact(m), a => { a.inputs.push({ ...a.inputs.at(-1) }); }),
+      /extra committing click on mobile:start-combat/],
+    ['release on another control', (m, dir) => edit(dir, artifactOf(m, 'b8-opening-component-bow'), a => { a.inputs[3].target = 'mobile:reroll'; }),
+      /operation 1 on choice:bow: expected mouseup, got mouseup on mobile:reroll/],
     ['inputs out of time order', (m, dir) => edit(dir, combatArtifact(m), a => { a.inputs[1].time = a.inputs[0].time - 1; }), /native time order/],
     ['re-hashed forged before state', (m, dir) => rehashed(m, dir, 'normal-opening-rageblade-recipe', a => { a.before.gold += 5; }),
       /recorded before state equals the trusted replay/],

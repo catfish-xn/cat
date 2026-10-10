@@ -3,9 +3,9 @@
  * domain's own public commands from createMatch(42), using the same pick policy as the gate, and
  * requires every recorded interaction (before, expected and actual state) to equal the replay; the
  * complete 2-1 combat ledger must equal the replayed ledger event by event. Each interaction's
- * inputs must be trusted native mouse events of known types, in time order, whose pointer
- * operations hit exactly the controls that issue that command (and end in a click on the
- * committing control). Hashes, artifact files and the summary identities are still checked, and
+ * inputs must be trusted native mouse events of known types, in time order, forming exactly one
+ * legal press/release sequence per control of that command and ending in the committing click
+ * (see checkInputs). Hashes, artifact files and the summary identities are still checked, and
  * both attack intervals are recomputed from the replayed combat, not read from the evidence.
  */
 const assert = require('node:assert/strict');
@@ -36,7 +36,17 @@ function load(dir, interaction) {
   return artifact;
 }
 
-/** The recorded inputs must be the native mouse operations on exactly `targets`, in order. */
+const HOVER_TYPES = new Set(['pointerout', 'mouseout', 'mouseleave']);
+// Targets are recorded as the closest [data-debug] control, else the element's tag name.
+const NON_CONTROL = /^[A-Z][A-Z0-9]*$/;
+
+/* Legal sequence, per command, with hover events (pointerout/mouseout/mouseleave) allowed anywhere:
+ * for each control T of the command, in order, exactly
+ *   pointerdown T, mousedown T, pointerup T, mouseup (T, or a plain element when a DOM redraw moved
+ *   the release target, e.g. SECTION), then an optional click T;
+ * the last control's click is the committing click and is required. Nothing else may remain: a
+ * missing, duplicated or reordered event, or any extra click (such as mobile:reroll) anywhere in
+ * the record, rejects the evidence. */
 function checkInputs(name, inputs, targets) {
   let time = -Infinity;
   for (const input of inputs) {
@@ -48,14 +58,25 @@ function checkInputs(name, inputs, targets) {
   }
   const downs = inputs.filter(input => input.type === 'pointerdown');
   assert.deepEqual(downs.map(input => input.target), targets, `${name}: pointer operations hit the command's controls`);
-  downs.forEach((down, index) => {
-    const from = inputs.indexOf(down), to = index + 1 < downs.length ? inputs.indexOf(downs[index + 1]) : inputs.length;
-    const operation = inputs.slice(from, to);
-    assert(operation.some(input => input.type === 'mousedown' && input.target === down.target), `${name}: mousedown on ${down.target}`);
-    assert(operation.some(input => input.type === 'pointerup' && input.target === down.target), `${name}: pointerup on ${down.target}`);
-    if (index === downs.length - 1)
-      assert(operation.some(input => input.type === 'click' && input.target === down.target), `${name}: committing click on ${down.target}`);
+  const presses = inputs.filter(input => !HOVER_TYPES.has(input.type));
+  const describe = event => (event ? `${event.type} on ${event.target}` : 'nothing');
+  let at = 0;
+  targets.forEach((target, index) => {
+    const label = `${name}: operation ${index + 1} on ${target}`;
+    for (const [type, matches] of [['pointerdown', t => t === target], ['mousedown', t => t === target], ['pointerup', t => t === target],
+      ['mouseup', t => t === target || NON_CONTROL.test(t)]]) {
+      const event = presses[at++];
+      assert(event?.type !== 'click' || event.target === target, `${name}: extra committing click on ${event?.target}`);
+      assert(event?.type === type && matches(event.target), `${label}: expected ${type}, got ${describe(event)}`);
+    }
+    const next = presses[at];
+    if (next?.type === 'click') {
+      assert.equal(next.target, target, `${name}: extra committing click on ${next.target}`);
+      at++;
+    } else assert(index < targets.length - 1, `${name}: committing click on ${target} after its press and release`);
   });
+  const extra = presses[at];
+  assert(!extra, extra?.type === 'click' ? `${name}: extra committing click on ${extra.target}` : `${name}: extra ${describe(extra)} outside the command's operations`);
 }
 
 /** api: the public Match module (src/simulation/match.ts); readCombatStats: src/simulation/combat-s13.ts. */
