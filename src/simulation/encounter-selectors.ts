@@ -40,6 +40,7 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
       const neutral=NEUTRAL_DEFINITIONS[u.definitionId];
       if(d.unitKind==='neutral' ? !neutral || stats.monsterFamily!==neutral.monsterFamily : !Object.hasOwn(M5_UNIT_DEFINITIONS,u.definitionId) || neutral) throw new RangeError('Invalid preview content classification');
       const initial=compileCombatInitialInputs(u.id,stats,resolved.ability,resolved);
+      if(initial.abilityPower===undefined) throw new RangeError('Missing preview ability power');
       const crit=spellCrit({...initial,id:u.id,ability:resolved.ability});
       const mana=projectCombatStartMana({...initial,id:u.id,triggers:resolved.triggers,effectRuntime:initializeEffectRuntime(resolved.triggers)}).after;
       if(u.location.kind!=='board') throw new RangeError('Enemy preview requires board deployment');
@@ -47,7 +48,7 @@ export function readEncounterPreview(state: Readonly<MatchState>): EncounterPrev
         unitKind:neutral?'neutral':'champion',monsterFamily:neutral?.monsterFamily ?? null,
         stats:{maxHp:stats.health,attackDamage:stats.attack,armor:stats.armor,magicResist:stats.magicResist,
           attackRange:stats.attackRange,attackIntervalTicks:stats.attackIntervalTicks,critChanceBps:crit.chanceBps,critMultiplierBps:crit.multiplierBps,
-          abilityPower:initial.abilityPower!,mana,maxMana:stats.maxMana},
+          abilityPower:initial.abilityPower,mana,maxMana:stats.maxMana},
         abilityDescription:d.unitKind==='neutral'?neutralDescription(NEUTRAL_DEFINITIONS[u.definitionId].mechanism):HERO_RULES[u.definitionId]};
     }),
     rulesNote:state.m8.round.kind==='pve'?'固定普通PvE；项目首版参数，25%基础普攻暴击、1.4倍伤害；无装备、无羁绊、不可购买或出售。特殊奇遇池未启用。'

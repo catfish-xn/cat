@@ -4,7 +4,7 @@
 
 ## U5 第一阶段与 `.7` 野怪遭遇预览（开工前接口盘点）
 
-基线：`feat/m8-b0-baseline` 的 `8778269`（B7 PR #21 已合入）。以下为该基线开工前的数据盘点。2026-10-10 更新：用户已批准 M8 专用 JS 新上限及 U5 先沿已有适配路径开工；UR-U5-01/02 仍须先批准 [冻结合同变更提案](M8_U5_PREVIEW_CONTRACT_CHANGE.md)，本节不代表新字段已实现。
+基线：`feat/m8-b0-baseline` 的 `8778269`（B7 PR #21 已合入）。以下为该基线开工前的数据盘点。2026-10-10 更新：用户已批准 M8 专用 JS 新上限及 U5 先沿已有适配路径开工；UR-U5-01/02 已按获批范围实施、待审计，见 [U5 合同增补](M8_U5_PREVIEW_CONTRACT_ADDENDUM.md)。下述两项的“现状/当前替代”保留为开工前历史，不再表示新字段缺失。
 
 优先级：P1 = U5 第一版必须有，否则显示不准确或只能混用两个数据源；P2 = 第一版可以先用占位，补上后显示更完整；P3 = 可选。
 
@@ -21,6 +21,7 @@
 
 ### UR-U5-01 预览单位的分类字段 `unitKind` / `monsterFamily`（P1，B7 后续，修改冻结类型）
 
+- 状态：**已实施、待审计**；字段与同源初始化语义见 [U5 合同增补](M8_U5_PREVIEW_CONTRACT_ADDENDUM.md)，实施状态不代表审计签收或合并批准。
 - 现状：`EncounterPreview.units[]` 不能区分英雄和野怪。界面只能回退到 `UNIT_DEFINITIONS[id]`，但其中的野怪条目是 ENCOUNTERS §3 允许的旧类型适配（`cost:1`、`symbol:'兽'`、`color`）。`getHeroIdentity()` 会因此把野怪显示成“1费”，职业行显示为空或“中立”。
 - 需要：`units[].unitKind: 'champion' | 'neutral'`，`units[].monsterFamily: MonsterFamily | null`（英雄为 null）。值取自冻结内容，与恢复校验同源，不按 ID 前缀推断。
 - 用途：野怪不显示费用、职业行和英雄头像框；按 `monsterFamily` 分组显示（例如“石甲虫 ×3”）。
@@ -29,6 +30,7 @@
 
 ### UR-U5-02 预览单位的完整开战属性（P1，B7 后续，修改冻结类型）
 
+- 状态：**已实施、待审计**；字段与同源初始化语义见 [U5 合同增补](M8_U5_PREVIEW_CONTRACT_ADDENDUM.md)，实施状态不代表审计签收或合并批准。
 - 现状：`stats` 只有生命、攻击力、护甲、魔抗。射程（远程小兵 3、远古龙和先锋 2）、攻击间隔、基础暴击（野怪 25%/1.4 倍）、法力都没有，只有 `rulesNote` 里的一句文字。
 - 需要：在 `stats` 中增加 `attackRange`、`attackIntervalTicks`（开战时的值；野怪由 `baseAttackSpeedBps` 按 G01 算出）、`critChanceBps`、`critMultiplierBps`、`abilityPower`、`mana`、`maxMana`。来源与现有四项相同（strategy snapshot），不能另算。
 - 用途：遭遇预览卡和敌方单位详情。
