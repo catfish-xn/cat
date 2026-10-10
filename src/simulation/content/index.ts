@@ -26,19 +26,12 @@ export { COMPONENT_IDS } from './items';
 export function canonicalContent(value: unknown): string {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
   if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
-  // Same checks, order and text as the map/join form; concatenation only avoids temporary arrays.
   if (Array.isArray(value)) {
-    const length = value.length;
-    for (let i = 0; i < length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
-    let text = '[';
-    for (let i = 0; i < length; i++) text += (i ? ',' : '') + canonicalContent(value[i]);
-    return text + ']';
+    for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
+    return `[${value.map(canonicalContent).join(',')}]`;
   }
   if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
-    const keys = Object.keys(value).sort();
-    let text = '{';
-    for (let i = 0; i < keys.length; i++) text += (i ? ',' : '') + JSON.stringify(keys[i]) + ':' + canonicalContent((value as Record<string, unknown>)[keys[i]]);
-    return text + '}';
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`).join(',')}}`;
   }
   throw new TypeError('Content must be finite plain JSON data');
 }

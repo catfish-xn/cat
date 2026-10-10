@@ -14,7 +14,6 @@ import { invocationEvent, stampCombatStep } from './combat-effects';
 import { collectTriggers } from './effects';
 import type { Hook } from './strategy-types';
 import { nextRandom } from './rng';
-import { copyPlainRecord } from './plain-clone';
 import { executeTask, planS13Attack, planS13Cast, type AbilityContext, type S13Packet } from './combat-s13-abilities';
 import { active, ad, ap, byDistance, champion, compareText, EMPTY_RUNTIME, enemies, grantShield, hasMechanic, interval,
   mechanic, range, syncShield, variable, origin, hpSample, statusModifiers, frozenShield, shieldProjection, constantModifier, spellCrit, type S13Unit } from './combat-s13-state';
@@ -31,7 +30,6 @@ import { evaluateAmount } from './m8/stats';
 import { canonicalSource } from './m8/identity';
 import { asSource } from './m8/s13-definitions';
 
-const SHARED_UNIT_FIELDS: ReadonlySet<string> = new Set(['mechanismDefinitions', 'mechanismState', 'triggerLedger']);
 function key(cell: HexCell): string { return `${cell.col}:${cell.row}`; }
 function move(state: CombatState, unit: S13Unit, target: S13Unit, occupied: ReadonlySet<string>): HexCell | undefined {
   const seen = new Set([key(unit.cell)]), queue: { cell: HexCell; first?: HexCell }[] = [{ cell: unit.cell }];
@@ -99,21 +97,19 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const units: S13Unit[] = state.units.map(unit => {
     // Legacy mutable fields are detached once. Frozen mechanism declarations and
     // ledgers use copy-on-write updates; sharing them preserves historical inputs.
-    // The single plain-data pass is equivalent to the structuredClone path below,
-    // which still handles any value that is not plain data.
-    const copy = (copyPlainRecord(unit, SHARED_UNIT_FIELDS) ?? { ...structuredClone({ ...unit,
+    const copy = structuredClone({ ...unit,
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: undefined } : {}),
       ...(unit.mechanismState ? { mechanismState: undefined } : {}),
-      ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) }),
+      ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) });
+    return { ...copy,
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: unit.mechanismDefinitions } : {}),
       ...(unit.mechanismState ? { mechanismState: unit.mechanismState } : {}),
-      ...(unit.triggerLedger ? { triggerLedger: unit.triggerLedger } : {}) }) as unknown as S13Unit;
-    return Object.assign(copy, {
+      ...(unit.triggerLedger ? { triggerLedger: unit.triggerLedger } : {}),
       startingCell: unit.startingCell ?? { ...unit.cell },
       runtime: { ...EMPTY_RUNTIME, ...copy.runtime }, statuses: (copy.statuses ?? []) as S13Unit['statuses'],
       shieldLayers: (copy.shieldLayers ?? []) as S13Unit['shieldLayers'], tasks: (copy.tasks ?? []) as S13Unit['tasks'],
       cooldownTicks: unit.alive ? Math.max(0, unit.cooldownTicks - 1) : 0,
-      moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 });
+      moveCooldownTicks: unit.alive ? Math.max(0, unit.moveCooldownTicks - 1) : 0 };
   }).sort(compareIds);
   let rngState = state.rngState ?? 0, rngDraws = state.rngDraws ?? 0, actionSeq = state.nextActionSeq ?? 0;
   const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
