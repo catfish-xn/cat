@@ -136,3 +136,11 @@
 这将正控战斗移到2-1或3-5，**敌人不再是旧1-2**。非目标英雄上板凳且目标站前排，使Bulky/Manaflow无加成，原单BT175/双BT350/tick101过期和Lux HoJ468等独立数值保持。原B4 catalog/integration/R3b/audit四文件所有原断言、数值、指定错误原因和完整restore未修改：117/118通过，61个共享入口失败消除。唯一未过为另有自己fixture的5-1三星Garen+三成装注入，仍报current resource fold，未假装修好。
 
 新增4项真实来源、Lux身份、四组件来源与缓存隔离通过，typecheck通过。原日志 `equipment-fixture-targeted.log.gz`、`equipment-fixture-provenance-final.log.gz`、`equipment-fixture-typecheck-final.log.gz`；仍不等于全量或CI通过。
+
+### 固定修复结果与预算重评（仍暂停新功能）
+
+[固定6484/远端75c8完整验证及92项剩余](post-fixes-verification.md)：原样全量110文件通过/15失败，1674项通过/92失败/10既有skip；build/typecheck通过。生产502900 B、可达503457 B，B8累计13936/14493 B，仍超原暂停线936/1493 B。
+
+[完整B8预算重评建议](budget-reassessment.md)按修复后实测重新估②余项、③查询组合、④runtime收尾，保留B9中9000/暂停11700及U6/U7待估非零，不修改现有门禁。[golden静态分析](golden-static-review.md)保留原字节SHA256与条件，不刷新golden，也不把首个digest短路后的检查记通过。
+
+CI183同75c8的input dev/preview各31case真实验证通过，原undefined.input未重现；但后续touch-route因golden失败，两个job整体仍失败。M7整job通过；六构筑browser仍未跨golden前置。具体job链接与原日志见验证报告。②仍未完成且未外部签收，不解除剩余延期，不合PR、不进入③/B9。
