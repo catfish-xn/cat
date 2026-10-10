@@ -15,7 +15,7 @@ function validateManifest(manifest){
  for(const key of requiredVersions){const value=manifest.versions?.[key];assert(value!==undefined&&value!==null&&value!=='',`missing version ${key}`);}
  if(finalGate)assert.equal(manifest.sha,currentSha,'evidence HEAD must equal current HEAD');
 }
-const comparisons=[],deferredComparisons={};
+const comparisons=[],deferredComparisons={},b8InputEvidence=[];
 function compareBrowserRound(folderA,folderB,round,label){
  const snapshots=[folderA,folderB].map(folder=>read(path.join(folder,`round-${round}.json`)));
  assert.deepEqual(snapshots[0].state,snapshots[1].state,`${label} complete state`);
@@ -63,8 +63,8 @@ if(finalGate){
    assert.deepEqual(manifest.skipped??[],[],'input gate may no longer defer any B8 case');
    assert.deepEqual((manifest.archived??[]).map(entry=>[entry.status,entry.id,entry.verifiedConsecutiveDialogs]),
     ['mouse','touch'].map(method=>['archived-not-applicable',`${method}-back-to-back-opening-components`,false]),'only the two approved archives');
-   assert.equal(manifest.b8RagebladeChain?.roundId,'2-1','B8 Rageblade chain executed');
-   assert(manifest.b8RagebladeChain.currentAttackIntervalTicks<manifest.b8RagebladeChain.frozenAttackIntervalTicks,'dynamic AS observed');
+   // Audit P2-2: the Rageblade summary must be bound to its recorded artifacts (validated below).
+   b8InputEvidence.push({name,manifest});
   }
  }
  const touchRoutes=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/route.json`));
@@ -77,5 +77,31 @@ if(finalGate){
  }
 
 }
-fs.writeFileSync('artifacts/m5-cross-mode-deferred-assertions.json',JSON.stringify(deferredComparisons,null,2));
-fs.writeFileSync('artifacts/m5-cross-mode-comparison.json',JSON.stringify(comparisons,null,2));console.log(JSON.stringify(comparisons));
+// The U6 job is part of the final evidence: its report must exist, match this commit and contain
+// every expected checkpoint, so a green comparison cannot silently omit U6.
+const U6_CHECKS=['1-2 preparation','1-2: mid-combat reveal','1-2 settlement','1-3: mid-combat reveal','1-3 loot choice pending','1-3 after real choice',
+ '2-7 capacity: mid-combat reveal','2-7 choice with full bench','2-7 capacity blocks Continue','2-7 after real sale','3-1 preparation after Continue',
+ '4-7 terminal: mid-combat reveal','4-7 game over'];
+function validateU6Report(report){
+ assert.equal(report.passed,true,'U6 loot gate failed');
+ if(finalGate)assert.equal(report.sha,currentSha,'U6 evidence HEAD must equal current HEAD');
+ assert.deepEqual(report.errors,[],'U6 gate errors');
+ assert.deepEqual(report.checks.map(check=>check.label),U6_CHECKS,'U6 gate checkpoints');
+ for(const check of report.checks)assert.equal(typeof check.continueDisabled,'boolean',`U6 ${check.label}: Continue state recorded`);
+ assert.deepEqual(report.checks.map(check=>check.continueDisabled),[true,true,false,true,true,false,true,true,true,false,true,true,true],'U6 Continue availability');
+ assert(report.fixtures?.capacity?.battles>0&&report.fixtures?.terminal?.battles>0,'U6 imported public-route fixtures');
+}
+(async()=>{
+ if(finalGate){
+  validateU6Report(read('artifacts/m8-u6-loot/report.json'));
+  const {validateB8RagebladeEvidence}=require('./b8-input-evidence.cjs');
+  const {createServer}=await import('vite');
+  const server=await createServer({root:path.resolve(__dirname,'..'),server:{middlewareMode:true,ws:false},optimizeDeps:{noDiscovery:true,include:[]},appType:'custom',logLevel:'error'});
+  try{const {readCombatStats}=await server.ssrLoadModule('/src/simulation/combat-s13.ts');
+   assert.equal(b8InputEvidence.length,2,'both input modes carry B8 Rageblade evidence');
+   for(const {name,manifest} of b8InputEvidence)validateB8RagebladeEvidence(manifest,`artifacts/${name}`,{readCombatStats});
+  }finally{await server.close();}
+ }
+ fs.writeFileSync('artifacts/m5-cross-mode-deferred-assertions.json',JSON.stringify(deferredComparisons,null,2));
+ fs.writeFileSync('artifacts/m5-cross-mode-comparison.json',JSON.stringify(comparisons,null,2));console.log(JSON.stringify(comparisons));
+})().catch(error=>{console.error(error);process.exit(1);});

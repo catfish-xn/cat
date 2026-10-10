@@ -262,9 +262,9 @@ jobs:
   compare-evidence:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: compare-evidence-sample${{ matrix.sample }}
-    needs: [test-and-build, chromium-match, chromium-input, m6-retention]
+    needs: [test-and-build, chromium-match, chromium-input, m6-retention, m8-u6-loot]
     runs-on: ubuntu-24.04
-    timeout-minutes: 6 # Three measured comparison jobs, including artifact transfer.
+    timeout-minutes: 8 # Three measured comparison jobs, including artifact transfer and npm ci.
     strategy:
       matrix:
         sample: ${{ fromJSON(inputs.profile && '[1,2,3]' || '[1]') }}
@@ -275,10 +275,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+      # The final comparator recomputes the B8 Rageblade attack interval with the domain's readCombatStats.
+      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           pattern: m5-*-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           merge-multiple: true
+          path: artifacts/
+      - uses: actions/download-artifact@v4
+        with:
+          name: m8-u6-loot-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
       - run: node scripts/compare-m5-evidence.cjs --final
       - run: node scripts/compare-m6-evidence.cjs
