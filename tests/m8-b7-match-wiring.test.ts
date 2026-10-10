@@ -61,6 +61,11 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       if(steps<=2 || steps%25===0 || s.phase!=='combat') roundTrip(s);
     }
     expect(steps).toBeLessThanOrEqual(1200);
+    if(s.phase==='choice') {
+      const blocked=api.nextRound(s,s.round);
+      expect(blocked).toEqual({ok:false,state:s,reason:'wrong-phase'});expect(blocked.state).toBe(s);
+      s=resolveM5Choices(s);roundTrip(s);
+    }
     expect(['settlement','gameOver']).toContain(s.phase);
     expect(s.combat!.units.filter(u=>u.team==='enemy').every(u=>u.mana===0 && u.maxMana===0)).toBe(true);
   });
@@ -188,23 +193,29 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     for(let i=0;i<11;i++) s=api.stepMatch(s).state;
     roundTrip(s);expect(s.combat!.neutralReceipts!.controls[0]).toMatchObject({removedAtTick:12,removedReason:'expired'});
   });
-  it.each([0,1,42,0xffffffff])('stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed %i (B8 grant boundaries supplied by fixture)',seed=>{
+  it.each([0,1,42,0xffffffff])('stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed %i through actual B8 grants',seed=>{
     let s=api.createMatch(seed);
     for(let i=0;i<3;i++) {
       s=accepted(api.startMatchCombat(s));
       while(s.phase==='combat') s=api.stepMatch(s).state;
       expect(s.combat!.result).toBe('playerWin');expect(s.playerHp).toBe(100);roundTrip(s);
+      s=resolveM5Choices(s);roundTrip(s);
       s=accepted(api.nextRound(s,s.round));
       if(i<2) {
-        // Only the design-specified post-drop hero boundary is supplied; no reward/receipt implementation is claimed.
         const id=`unit-${i+2}`,definitionId=i===0?'maddie':'lux';
-        s={...s,nextUnitSerial:i+3,preparation:{...s.preparation,units:[...s.preparation.units,{id,definitionId,team:'player',starLevel:1,location:{kind:'bench',slot:0}}]}};
+        expect(s.preparation.units.find(u=>u.id===id)).toMatchObject({definitionId,starLevel:1});
+        expect(s.m8.loot.receipts.find(receipt=>receipt.grantedUnitIds.includes(id))).toMatchObject({
+          payload:{kind:'unit',definitionId,quantity:1},grantedUnitIds:[id],
+        });
         s=accepted(api.deployMatchUnit(s,id,{kind:'board',cell:{col:3+i*2,row:7}}));
         roundTrip(s);
       }
     }
     expect(s).toMatchObject({roundDefinitionId:'2-1',gold:10,level:3,xp:0,playerHp:100});
-    expect(s.items).toEqual([]); // B8 two component choices remain unimplemented.
+    expect(s.items.map(item=>item.definitionId)).toEqual(['sword','sword']);
+    expect(s.m8.loot.receipts.filter(receipt=>receipt.payload.kind==='item').map(receipt=>receipt.payload))
+      .toEqual([{kind:'item',definitionId:'sword',quantity:1},{kind:'item',definitionId:'sword',quantity:1}]);
+    expect(s.scheduleReceipts).toEqual([]);
   });
   it('restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption',()=>{
     let s=battleFixture('4-7');
