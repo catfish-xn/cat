@@ -1,5 +1,6 @@
 /** B2 v3 audit revision, pending re-review; query signatures, not available runtime exports until B3–B9. */
 import type { HexCell } from '../board';
+import type { MonsterFamily } from '../content/neutrals';
 import type { CombatActivity, DamageType, DropIdentity, LootPayload, M8Version, RoundDefinition, Source, StatusGroup, TemporaryEquipment } from './contracts';
 export type EquipmentFailure = 'wrong-phase' | 'unknown-item' | 'unknown-unit' | 'same-item'
   | 'item-not-inventory' | 'invalid-recipe' | 'invalid-slot' | 'item-slot-occupied'
@@ -32,7 +33,7 @@ export interface UnitEquipmentView {
 }
 export interface EncounterPreview {
   readonly encounterId: string;
-  readonly units: readonly { readonly unitId: string; readonly definitionId: string; readonly name: string; readonly starLevel: 1 | 2 | 3; readonly cell: HexCell; readonly stats: Readonly<Record<'maxHp' | 'attackDamage' | 'armor' | 'magicResist', number>>; readonly abilityDescription: string }[];
+  readonly units: readonly { readonly unitId: string; readonly definitionId: string; readonly name: string; readonly starLevel: 1 | 2 | 3; readonly cell: HexCell; readonly unitKind: 'champion' | 'neutral'; readonly monsterFamily: MonsterFamily | null; readonly stats: Readonly<Record<'maxHp' | 'attackDamage' | 'armor' | 'magicResist' | 'attackRange' | 'attackIntervalTicks' | 'critChanceBps' | 'critMultiplierBps' | 'abilityPower' | 'mana' | 'maxMana', number>>; readonly abilityDescription: string }[];
   readonly rulesNote: string;
 }
 export type RevealedDropView = DropIdentity & { readonly payload: LootPayload } & (
