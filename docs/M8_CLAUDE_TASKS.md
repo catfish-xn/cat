@@ -161,6 +161,8 @@ M7 已通过 [PR #8 合并提交 `15313a7`](https://github.com/catfish-xn/cat/co
 
 ### U5【依赖后端任务 B7】第一阶段与 `.7` 野怪遭遇预览
 
+**状态：已独立审查并合入**（PR #26，合并提交 `d64c381260c4c862d813da7e8c7c983813ce89e0`）。详细记录、B9 补验项与 P3 跟进（[#27](https://github.com/catfish-xn/cat/issues/27)）见 [UI_REQUESTS.md](UI_REQUESTS.md) U5 节。
+
 **实现功能：** 准确显示当前阶段、小回合、回合类别、是否终局，以及当前允许预览的野怪阵容、星级、位置、属性和能力说明。第一阶段进入后，HUD、帮助、开战/继续条件及回放中的回合名称与权威日程一致。保留既有`.4`补给、强化和异常的已确认日程，不把所有`.7`硬编码成同一套敌人。
 
 **读取字段：** B6的 `readRoundInfo(state).roundId/ordinal/stage/subround/kind/isFinal/encounterId/displayName`；B7的 `readEncounterPreview(state).encounterId/units[].unitId/definitionId/name/starLevel/cell/stats/abilityDescription/rulesNote`；公共命令返回的阶段失败原因。第一阶段金币、等级、经验与单位直接读 `MatchState` 和B6合同，不在UI根据“第一回合”填固定资源。
