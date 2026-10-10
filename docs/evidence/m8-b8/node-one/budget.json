@@ -1,0 +1,52 @@
+[
+  {
+    "label": "baseline",
+    "files": [
+      {
+        "file": "index-DNk6IFSw.js",
+        "gzip9": 488964
+      }
+    ],
+    "total": 488964
+  },
+  {
+    "label": "handoff-c0109",
+    "files": [
+      {
+        "file": "index-DwERYZ_b.js",
+        "gzip9": 502898
+      }
+    ],
+    "total": 502898
+  },
+  {
+    "label": "cand-tg-lootview",
+    "files": [
+      {
+        "file": "index-n8aQNwGY.js",
+        "gzip9": 503332
+      }
+    ],
+    "total": 503332
+  },
+  {
+    "label": "probe-b8-lootview-reachable",
+    "files": [
+      {
+        "file": "index-lAe31dw-.js",
+        "gzip9": 503701
+      }
+    ],
+    "total": 503701
+  },
+  {
+    "label": "cand-bbb3368",
+    "files": [
+      {
+        "file": "index-W5HKOESq.js",
+        "gzip9": 505000
+      }
+    ],
+    "total": 505000
+  }
+]
