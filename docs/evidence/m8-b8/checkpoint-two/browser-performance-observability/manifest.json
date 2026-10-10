@@ -1,0 +1,121 @@
+[
+  {
+    "file": "SHA256SUMS",
+    "rawBytes": 369,
+    "rawSha256": "b1cf324b397a24ed479c46399a3c8b9a3d752801b5dd81e4edb024f94519479b",
+    "gzipBytes": 220,
+    "gzipSha256": "f2a44cfe31c495384ae8683fa1d153c0782e231ec6129bddcf1580a1d8602483"
+  },
+  {
+    "file": "comparison.json",
+    "rawBytes": 2277,
+    "rawSha256": "9189bb5d6f954963fe85e5cd40350cd35fafc9e32e3931a216cb7abede911039",
+    "gzipBytes": 968,
+    "gzipSha256": "583ebbc2f61a3582714701bfb3a148e89440afd4f16cc028e372b8fd181504fc"
+  },
+  {
+    "file": "diagnosis.md",
+    "rawBytes": 11811,
+    "rawSha256": "1043be22a3d589e02e63f09a4f22dc610dcdc8f8cc1304ca5fe7b221e1c5eb65",
+    "gzipBytes": 6568,
+    "gzipSha256": "310fad42095b0dd42831a9b804572258e200f4e25794c75f72d71f65ed8af4f5"
+  },
+  {
+    "file": "m6-performance-wrapper.json",
+    "rawBytes": 606,
+    "rawSha256": "096a5023cf6c1d3469a5043a2a7e9991ae9b53588da4d29d51c6422b9666c96f",
+    "gzipBytes": 381,
+    "gzipSha256": "b0ed13569b89ac4e6b80f86f4950da8ffe8b8949de9dac4b9b2c6b1575a41bf2"
+  },
+  {
+    "file": "observability/README.md",
+    "rawBytes": 4478,
+    "rawSha256": "0cd8707a60ee7c2f2d02d3d5475035fccbce1067bca034e4362a09082e514d2c",
+    "gzipBytes": 2646,
+    "gzipSha256": "0c539da119891e71571f2e8c590ed2cce32757666d062fd9e299a0a856922d8e"
+  },
+  {
+    "file": "observability/SHA256SUMS",
+    "rawBytes": 1688,
+    "rawSha256": "de6b0a15aadc9e992c4aeb5f09f6e2a963f9c151e9d6025b7e55290793d53987",
+    "gzipBytes": 704,
+    "gzipSha256": "3108a2d8a13d7102fb82d80934609762d51846f27cbe027ae46cb9dfcfbcd1df"
+  },
+  {
+    "file": "observability/applied.diff",
+    "rawBytes": 17273,
+    "rawSha256": "38af46e1e195fde1fb8c6921c0b69bef4fa7624b9a79f4e6ea9a6d8f0824ca87",
+    "gzipBytes": 5563,
+    "gzipSha256": "bddc1ee08b6f8f774ce3410e50d4ccbc237c42b38fc8073f757f720821bc723c"
+  },
+  {
+    "file": "observability/ci200-first-failure.original.json",
+    "rawBytes": 9018,
+    "rawSha256": "f53173f24648e54fc9dcd8e5626de676599ecba38048f834530157d764568d04",
+    "gzipBytes": 2001,
+    "gzipSha256": "cba67d9ff58e14b375f7e4c3dc1fa83a05efa6fb50cd3c45920ff52c5d41e37f"
+  },
+  {
+    "file": "observability/manifest.json",
+    "rawBytes": 2397,
+    "rawSha256": "24c36f81c8a194e680e397721c293000537e1fe355408a631a49eb182b64d51c",
+    "gzipBytes": 1091,
+    "gzipSha256": "0afd3eef36261ced656d363a8efb163e30ee4905c5f2ac3622b7795545227ebe"
+  },
+  {
+    "file": "observability/observability.patch",
+    "rawBytes": 16674,
+    "rawSha256": "4afa39298e417b3c0ca2dd35894e9d3624e0a4a95b3150e6d886dfec6da28e1d",
+    "gzipBytes": 5486,
+    "gzipSha256": "bb47c7851e7ecc550eaf85969186535f86cb45eb5bd433e9ee9f9b049356c0cd"
+  },
+  {
+    "file": "observability/prepare_patch.py",
+    "rawBytes": 7492,
+    "rawSha256": "c251436eef2806f002b70a7932ac6e301264f1321ce1b9035134ec07c6a933f7",
+    "gzipBytes": 2316,
+    "gzipSha256": "54c7a526e7edac8205bb1f7a096302c22a5d8ad24842e32305f0925f4fed9a71"
+  },
+  {
+    "file": "observability/static-validation.log",
+    "rawBytes": 2366,
+    "rawSha256": "7ff4b8320668d1ab0b2ffe74e8eadcd5dab58ed5bf90eccbe1873e1083128ce9",
+    "gzipBytes": 977,
+    "gzipSha256": "2d1dffa8502c96daec9ba1a00af5277aba3680e3d4cf0b3e8d5295f3d8c285cf"
+  },
+  {
+    "file": "observability/structure-applied.json",
+    "rawBytes": 2040,
+    "rawSha256": "e9702d1b2a6029b33c9665cb9ec316cadf19357eeaff48f644e3df6232e8d5dd",
+    "gzipBytes": 843,
+    "gzipSha256": "65c2cd44a91bf6c1dd33844344cfcbd436d4396868222c6665dc294dd2480b7d"
+  },
+  {
+    "file": "observability/structure-candidate.json",
+    "rawBytes": 1843,
+    "rawSha256": "677276b3a7811ad36db88600cef062f81cc474aee646df22a283471eca5e363a",
+    "gzipBytes": 721,
+    "gzipSha256": "ce8c70fdcf434c35b42abaa5f68bae46bd5f4f5dde61c981c13fbd2db50f67d5"
+  },
+  {
+    "file": "observability/validate-structure.cjs",
+    "rawBytes": 5422,
+    "rawSha256": "1644e73343bc2b023cb2a2de80802919d0a6120718958eaa7ca99ee015f84cf2",
+    "gzipBytes": 2017,
+    "gzipSha256": "c854d18c9163a2f5055e6af891551c76d2250408943d21c699166c1ede706ea2"
+  },
+  {
+    "file": "observability/verify-m6-performance.candidate.cjs",
+    "rawBytes": 29558,
+    "rawSha256": "7e7213a5f9e49d38ea262db68e7b8131f296e3fd0ca7a696f13e46778cc0ba80",
+    "gzipBytes": 8832,
+    "gzipSha256": "385ecdabcf4e832028af5bf8accb4be1856454341b1f07adc9f3ce62a01f234a"
+  },
+  {
+    "file": "observability/verify-m6-performance.original.cjs",
+    "rawBytes": 26403,
+    "rawSha256": "bc2df81af33fd6bcdc2c202ce0ca0b5605c8756f5ccd9ad405f257bee4a860a2",
+    "gzipBytes": 7989,
+    "gzipSha256": "f2db14e942e83a58377b8555c1c34c4b5b62185359c03421b59cd84e47be0f85"
+  }
+]
