@@ -19,3 +19,12 @@
 - 035–057（temporary）：一般实际TG生命周期用真实2-1等级3低池；原2-1等级3/6/7/9机制数值保留，同例增加真实公开buyXp的2-1/2-5/2-7/4-2等级正控及精确负控。6→7为真实2-7 XP32/gold4后F，不注入经济。909HP/105护甲、首词3254118809/3773810212、所有43 child定义及其旧key拒绝保持。43覆盖只用纯roll预选还未覆盖的seed，再执行每个真实路线，不减覆盖。
 - 正式专项：采购三文件37/37，TG/history两文件33/33，均全局typecheck通过。原5s超时保留，最终diff没有timeout/worker/skip变动；一次临时30s诊断已撤销，其日志不能当正式通过，正式日志为`b5-tg-original-timeout-tests.log.gz`。
 - cfeec5e采购提交先于共享helper封存，是分批树，不把缺helper的单提交称作可验收；本批追加helper与TG/history后依赖闭合。最终仍须新代码全量/CI，不能将70项专项当全量通过。
+
+## 批次C：中立与预览的真实公共阵容（058–092，共35项含A先修7项）
+
+- 新helper实际执行seed42 sniper完整38轮33战，独立ledger逐事务验证，只缓存真实准备prefix，每个消费者先完整restore再用独立副本。未改英雄定义、星级、资源或出生事实。
+- B6末三轮保原9次恢复、36–38轮身份、仅6-7终局及33战，不再手造三星Caitlyn/9成装。
+- B7所有PvE开场/同tick控制/死亡/krug/bird/Herald原正负恢复向量保持；原仅作耐久靶的假Garen替换为实际原Irelia二星，用公共部署孤立，不变任何中立属性/控制时序断言。Herald aura/QSS/EoN所需组件由真实4-4选择分叉、后续正常战斗及选择/合成到6-7；不是把未赚奖励加进state。
+- U5原opening-vs-live mana/HP/AS、只读查询、终局当前敌人预览原断言保持，输入改同一真实前缀。
+- 每个负控先证明未篡改版本可恢复，再检查原指定错误；未用不相关resource fold提前拒绝冒充原机制拒绝。
+- 原四文件完整120/120通过、0skip，39.83s，最终全局typecheck通过；日志`neutral-fixtures-four-files-final.log.gz`与类型日志。未变timeout/worker或生产实现。

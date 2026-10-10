@@ -602,9 +602,8 @@
       "firstFailureClass": "old-phase-assumption",
       "status": "targeted-passed",
       "coverage": {
-        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
-        "log": "phase-opening-seven.log.gz",
-        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
       }
     },
     {
@@ -614,9 +613,8 @@
       "firstFailureClass": "old-phase-assumption",
       "status": "targeted-passed",
       "coverage": {
-        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
-        "log": "phase-opening-seven.log.gz",
-        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
       }
     },
     {
@@ -624,64 +622,88 @@
       "file": "tests/m8-b6-match-wiring.test.ts",
       "originalCase": "B6 installed round, opening and restore transactions > restores 36-38 preparation/combat/settlement and ends only at 6-7 with no regeneration",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-061",
       "file": "tests/m8-b7-audit-vectors.test.ts",
       "originalCase": "B7 audit: Match save/restore of real encounters > 2-7: restoring at every opening and mechanism tick reproduces the continuous run",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-062",
       "file": "tests/m8-b7-audit-vectors.test.ts",
       "originalCase": "B7 audit: Match save/restore of real encounters > 3-7: restoring at every opening and mechanism tick reproduces the continuous run",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-063",
       "file": "tests/m8-b7-audit-vectors.test.ts",
       "originalCase": "B7 audit: Match save/restore of real encounters > 4-7: restoring at every opening and mechanism tick reproduces the continuous run",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-064",
       "file": "tests/m8-b7-audit-vectors.test.ts",
       "originalCase": "B7 audit: Match save/restore of real encounters > 5-7: restoring at every opening and mechanism tick reproduces the continuous run",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-065",
       "file": "tests/m8-b7-audit-vectors.test.ts",
       "originalCase": "B7 audit: Match save/restore of real encounters > 6-7: restoring at every opening and mechanism tick reproduces the continuous run",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-066",
       "file": "tests/m8-b7-audit-vectors.test.ts",
       "originalCase": "B7 audit: Match save/restore of real encounters > 6-7 rejects retimed stun, forged death, un-expired receipt and forged removal reasons",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-067",
       "file": "tests/m8-b7-audit-vectors.test.ts",
       "originalCase": "B7 audit: Match save/restore of real encounters > 2-7 rejects deleting an executed krug reaction whose holder is still alive",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-068",
@@ -690,9 +712,8 @@
       "firstFailureClass": "old-phase-assumption",
       "status": "targeted-passed",
       "coverage": {
-        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
-        "log": "phase-opening-seven.log.gz",
-        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
       }
     },
     {
@@ -700,128 +721,176 @@
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > 1-4 freezes, starts, runs to settlement and resumes canonical saves",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-070",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > 2-7 freezes, starts, runs to settlement and resumes canonical saves",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-071",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > 3-7 freezes, starts, runs to settlement and resumes canonical saves",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-072",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > 4-7 freezes, starts, runs to settlement and resumes canonical saves",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-073",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > 5-7 freezes, starts, runs to settlement and resumes canonical saves",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-074",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > 6-7 freezes, starts, runs to settlement and resumes canonical saves",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-075",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > rejects replayed, removed, cancelled and geometry-mutated opening consumption for 3-7",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-076",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > rejects replayed, removed, cancelled and geometry-mutated opening consumption for 6-7",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-077",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: undefined",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-078",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-079",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: \"evenshroud\"",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-080",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > restores Herald action identity after earlier tick-one aura maintenance: \"ionic-spark\"",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-081",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with quicksilver",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-082",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > round-trips legal Herald item immunity/cleanup boundaries with edge-of-night",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-083",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > rejects re-dating an executed krug heal into a new pending reaction and validates independent death facts",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-084",
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > rejects deletion of active Herald control, its receipt, or both, and forged cleanup",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-085",
@@ -830,9 +899,8 @@
       "firstFailureClass": "duplicate-manual-grant",
       "status": "targeted-passed",
       "coverage": {
-        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
-        "log": "phase-opening-seven.log.gz",
-        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
       }
     },
     {
@@ -842,9 +910,8 @@
       "firstFailureClass": "duplicate-manual-grant",
       "status": "targeted-passed",
       "coverage": {
-        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
-        "log": "phase-opening-seven.log.gz",
-        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
       }
     },
     {
@@ -854,9 +921,8 @@
       "firstFailureClass": "duplicate-manual-grant",
       "status": "targeted-passed",
       "coverage": {
-        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
-        "log": "phase-opening-seven.log.gz",
-        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
       }
     },
     {
@@ -866,9 +932,8 @@
       "firstFailureClass": "duplicate-manual-grant",
       "status": "targeted-passed",
       "coverage": {
-        "commit": "7a84b648eed7515a05d0ce07c83f24883473e1d7",
-        "log": "phase-opening-seven.log.gz",
-        "note": "Same original invariants plus earned receipts / unresolved-choice rejection; no full-suite claim."
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
       }
     },
     {
@@ -876,32 +941,44 @@
       "file": "tests/m8-b7-match-wiring.test.ts",
       "originalCase": "B7 installed encounters and trusted Match restore > restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-090",
       "file": "tests/m8-u5-preview.test.ts",
       "originalCase": "U5 EncounterPreview additive opening-state contract > does not replace opening mana/health with live PvP values after enemy casts and damage",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-091",
       "file": "tests/m8-u5-preview.test.ts",
       "originalCase": "U5 EncounterPreview additive opening-state contract > retains opening range/cells/intervals after real bird deaths and next-tick speed stacks",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     },
     {
       "id": "CI183-092",
       "file": "tests/m8-u5-preview.test.ts",
       "originalCase": "U5 EncounterPreview additive opening-state contract > keeps the final current encounter available at gameOver without inventing a next encounter",
       "firstFailureClass": "old-resource-fixture",
-      "status": "pending",
-      "coverage": null
+      "status": "targeted-passed",
+      "coverage": {
+        "log": "neutral-fixtures-four-files-final.log.gz",
+        "note": "All original four files: 120 passed, 0 skipped; public route prefixes and exact original restore/tamper controls."
+      }
     }
   ]
 }

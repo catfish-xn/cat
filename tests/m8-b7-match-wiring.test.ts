@@ -11,33 +11,12 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 import { planPurchase } from '../src/simulation/upgrades';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { accepted, resolveM5Choices } from './match-helpers';
+import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment } from './fixtures/m8-neutral-public-route';
 
-/** Synthetic earlier combat outcomes only to obtain a valid late-round economic/history boundary.
- * The tested encounter itself uses unmodified production Start/step/serialize/restore.
- * This is not a public no-cheat route or balance/loot acceptance. */
-function prepared(roundId:string): api.MatchState {
-  let s=api.createMatch(42);
-  while(s.roundDefinitionId!==roundId) {
-    s=resolveM5Choices(s);
-    if(s.phase==='preparation') {
-      s=accepted(api.startMatchCombat(s));
-      if(s.phase==='combat') s=api.stepMatch(s).state;
-      if(s.phase==='combat') {
-        s={...s,combat:{...s.combat,units:s.combat.units.map(u=>u.team==='enemy'?{...u,hp:0,alive:false}:u)}};
-        s=api.stepMatch(s).state;
-      }
-    }
-    s=resolveM5Choices(s);
-    s=accepted(api.nextRound(s,s.round));
-  }
-  return resolveM5Choices(s);
-}
+// Every prefix comes from the complete public command-only acquisition route.
+const prepared=publicNeutralPreparation;
 function battleFixture(roundId:string):api.MatchState {
-  let s=prepared(roundId);
-  if(s.level>=3) s={...s,nextUnitSerial:4,preparation:{...s.preparation,units:[...s.preparation.units.filter(u=>u.team==='enemy'),
-    ...['garen','caitlyn','lux'].map((definitionId,i)=>({id:`unit-${i+1}`,definitionId,team:'player' as const,starLevel:3 as const,
-      location:{kind:'board' as const,cell:{col:1+i*2,row:i===0?4:7}}}))]}};
-  return accepted(api.startMatchCombat(s));
+  return accepted(api.startMatchCombat(prepared(roundId)));
 }
 function roundTrip(s:api.MatchState):api.MatchState {
   const saved=serializeMatch(s), restored=restoreMatch(saved);
@@ -45,7 +24,7 @@ function roundTrip(s:api.MatchState):api.MatchState {
   expect(api.stepMatch(restored)).toEqual(api.stepMatch(s));
   return restored;
 }
-const corrupt=(s:api.MatchState,mutate:(x:any)=>void)=>{ const x=JSON.parse(serializeMatch(s));mutate(x);expect(()=>restoreMatch(x)).toThrow(); };
+const corrupt=(s:api.MatchState,mutate:(x:any)=>void)=>{ const saved=serializeMatch(s);expect(restoreMatch(saved)).toEqual(s);const x=JSON.parse(saved);mutate(x);expect(()=>restoreMatch(x)).toThrow(); };
 
 describe('B7 installed encounters and trusted Match restore',()=>{
   it.each(COMPILED_NEUTRAL_ENCOUNTERS.map(e=>e.roundId))('%s freezes, starts, runs to settlement and resumes canonical saves',roundId=>{
@@ -53,7 +32,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     const compiled=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.roundId===roundId)!;
     expect(s.m8.preparation.enemies).toEqual(compiled.deployment);
     expect(s.combat!.units.filter(u=>u.team==='enemy').map(u=>[u.id,u.maxMana,u.baseCritChanceBps])).toEqual(compiled.units.map(u=>[u.id,0,2500]));
-    expect(s.m8.encounterPlan).toBeNull(); // B8 has not installed loot; never pretend an empty plan is complete.
+    expect(s.m8.encounterPlan).toBeNull(); // The authoritative B8 plan lives in the independently frozen loot ledger.
     roundTrip(s);
     while(s.phase==='combat') {
       const step=api.stepMatch(s);s=step.state;steps++;
@@ -141,9 +120,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
 
   it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud']])('restores Herald action identity after earlier tick-one aura maintenance: %j',(...ids)=>{
     const items=ids as string[];
-    let s=prepared('6-7');
-    s={...s,items:items.map((definitionId,slot)=>({id:`item-${s.nextItemSerial+slot}`,definitionId,location:{kind:'unit' as const,unitId:'unit-1',slot}})),
-      nextItemSerial:s.nextItemSerial+items.length,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?{...u,definitionId:'garen',starLevel:3,location:{kind:'board',cell:{col:3,row:4}}}:u)}};
+    let s=publicHeraldEquipment(items);
     s=accepted(api.startMatchCombat(s));roundTrip(s);s=api.stepMatch(s).state;roundTrip(s);
     const c=s.combat!.units.find(u=>u.id==='unit-1')!.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.source.definitionId==='void-charge-project-v1')!;
     expect(c).toBeDefined();expect(JSON.parse(JSON.parse(c.key)[8])).toEqual([items.length,1]);
@@ -151,9 +128,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');const status=target.mechanismState.statuses.flatMap((g:any)=>g.contributions).find((c:any)=>c.source.definitionId==='void-charge-project-v1');status.source.effectIndex=2;});
   });
   it.each(['quicksilver','edge-of-night'])('round-trips legal Herald item immunity/cleanup boundaries with %s',definitionId=>{
-    let s=prepared('6-7');
-    s={...s,items:[{id:`item-${s.nextItemSerial}`,definitionId,location:{kind:'unit' as const,unitId:'unit-1',slot:0}}],
-      nextItemSerial:s.nextItemSerial+1,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?{...u,definitionId:'garen',starLevel:3,location:{kind:'board',cell:{col:3,row:4}}}:u)}};
+    let s=publicHeraldEquipment([definitionId]);
     s=accepted(api.startMatchCombat(s));roundTrip(s);
     for(let tick=0;tick<15;tick++) {s=api.stepMatch(s).state;roundTrip(s);}
     if(definitionId==='quicksilver') expect(s.combat!.neutralReceipts!.controls).toEqual([]);
@@ -181,8 +156,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     corrupt(s,x=>{x.combat.neutralReceipts.deaths[0].eventSeq++;});
   });
   it('rejects deletion of active Herald control, its receipt, or both, and forged cleanup',()=>{
-    let s=prepared('6-7');
-    s={...s,preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?{...u,definitionId:'garen',starLevel:3,location:{kind:'board',cell:{col:3,row:4}}}:u)}};
+    let s=publicHeraldTarget();
     s=api.stepMatch(accepted(api.startMatchCombat(s))).state;roundTrip(s);
     expect(s.combat!.neutralReceipts!.controls).toHaveLength(1);
     const erase=(x:any)=>{const u=x.combat.units.find((u:any)=>u.id==='unit-1');u.mechanismState.statuses=[];u.statuses=[];};

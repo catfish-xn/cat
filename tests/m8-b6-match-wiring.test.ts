@@ -8,6 +8,7 @@ import { planCatalogRoundEconomy, OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES }
 import { CONTENT_DIGEST, digestContent } from '../src/simulation/content';
 import * as enemies from '../src/simulation/round-enemies';
 import { accepted, resolveM5Choices } from './match-helpers';
+import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
 
 const roundTrip = (state:MatchState) => {
   const restored=restoreMatch(serializeMatch(state));
@@ -122,20 +123,9 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(digestContent(OPENING_ECONOMY_RULES)).not.toBe(digestContent({...OPENING_ECONOMY_RULES,rounds:{...OPENING_ECONOMY_RULES.rounds,'1-4':{baseGold:5,naturalXp:2}}}));
   });
   it('restores 36-38 preparation/combat/settlement and ends only at 6-7 with no regeneration',()=>{
-    // Strong explicit domain fixture exercises every round and strict local restore.
-    // It is not an acquisition route, maximum-unit-load benchmark or B9 application/history capacity acceptance.
-    let state=createMatch();
-    state={...state,level:9,nextUnitSerial:4,nextItemSerial:10,
-      // Three equipped holders preserve the full 33-battle route and all late
-      // restore boundaries, with fewer irrelevant per-holder item runtimes.
-      // No synthetic combat result, precomputed checkpoint or timeout change.
-      items:Array.from({length:9},(_,i)=>({id:`item-${i+1}`,definitionId:'deathblade',
-        location:{kind:'unit' as const,unitId:`unit-${Math.floor(i/3)+1}`,slot:i%3}})),
-      preparation:{...state.preparation,units:[
-      ...state.preparation.units.filter(u=>u.team==='enemy'),
-      ...Array.from({length:3},(_,i)=>({id:`unit-${i+1}`,definitionId:'caitlyn',team:'player' as const,starLevel:3 as const,
-        location:{kind:'board' as const,cell:{col:i%7,row:4+Math.floor(i/7)}}})),
-    ]}};
+    // The full public driver has already fought the preceding battles, bought
+    // and upgraded the army, and earned/combined every item in this prefix.
+    let state=publicNeutralPreparation('6-5');
     const seen:string[]=[];let lateRestoreCount=0;
     while(state.phase!=='gameOver') {
       while(state.phase==='choice') {
