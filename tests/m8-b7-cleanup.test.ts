@@ -13,7 +13,7 @@ import { accepted } from './match-helpers';
 
 // Isolated hypothetical trusted definitions, never changes the production catalog.
 // Delayed execution additionally proves restore derives activation from the task.
-const timing = vi.hoisted(() => ({ duration: 10, executeAtTick: 1 }));
+const timing = vi.hoisted(() => ({ duration: 10, executeAtTick: 1, heroManaZero: false }));
 vi.mock('../src/simulation/neutral-encounter-compiler', async importOriginal => {
   const actual = await importOriginal<typeof import('../src/simulation/neutral-encounter-compiler')>();
   return { ...actual, get COMPILED_NEUTRAL_ENCOUNTERS() {
@@ -31,6 +31,16 @@ vi.mock('../src/simulation/m8/opening', async importOriginal => {
     return { ...state, plans: state.plans.map(p => ({ ...p, task: p.task ? {
       ...p.task, executeAtTick: timing.executeAtTick as 1,
     } : null })) };
+  } };
+});
+
+vi.mock('../src/simulation/strategy-snapshot', async importOriginal => {
+  const actual = await importOriginal<typeof import('../src/simulation/strategy-snapshot')>();
+  return { ...actual, buildStrategySnapshot: (...args: Parameters<typeof actual.buildStrategySnapshot>) => {
+    const snapshot = actual.buildStrategySnapshot(...args);
+    return timing.heroManaZero ? { ...snapshot, units: snapshot.units.map(u => u.unitId !== 'unit-1' ? u : {
+      ...u, stats: { ...u.stats, maxMana: 0 },
+    }) } : snapshot;
   } };
 });
 
@@ -87,4 +97,20 @@ describe('B7 cleanup independent restore boundaries', () => {
       expect(() => restoreMatch(forged)).toThrow();
     }
   });
+  it('retains the hero minimum even if a future trusted strategy resolves zero maximum mana', () => {
+    timing.executeAtTick = 1; timing.duration = 10;
+    const saved = serializeMatch(accepted(startMatchCombat(createMatch(42))));
+    expect(restoreMatch(saved).combat!.units.find(u => u.id === 'unit-1')!.maxMana).toBeGreaterThanOrEqual(1);
+    const forged = JSON.parse(saved);
+    const hero = forged.combat.units.find((u: { id: string }) => u.id === 'unit-1');
+    hero.maxMana = 0; hero.mana = 0;
+    forged.combat.strategy.units.find((u: { unitId: string }) => u.unitId === 'unit-1').stats.maxMana = 0;
+    // Keep trusted resolved-strategy equality satisfied: exercise the defensive minimum itself,
+    // rather than allowing a preceding catalog mismatch to make this regression vacuously pass.
+    timing.heroManaZero = true;
+    try { expect(() => restoreMatch(forged)).toThrow('Invalid Match save: combat stats'); }
+    finally { timing.heroManaZero = false; }
+    expect(restoreMatch(saved)).toEqual(JSON.parse(saved));
+  });
+
 });
