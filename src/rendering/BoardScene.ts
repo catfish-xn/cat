@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
-import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
+import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
@@ -477,7 +477,10 @@ export class BoardScene extends Phaser.Scene {
     this.count.setText(`我方人口 ${getPlayerDeploymentCount(this.state)} / ${getDeploymentCap(match)}`);
     this.startButton.setText(round.kind === 'supply' ? '领取补给' : '开始战斗');
     this.startButton.setAlpha(this.session.startFailure ? 0.4 : 1).setBackgroundColor('#38695f');
-    this.continueButton.setData('round', match.round).setAlpha(match.phase === 'settlement' ? 1 : 0.4);
+    // Same authoritative verdict as the panel button: interactive only when LootView allows Continue.
+    const canContinue = readLootView(match).canContinue;
+    this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
+    if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
     this.rerollButton.setAlpha(ready ? 1 : 0.4);
     this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(ready && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {

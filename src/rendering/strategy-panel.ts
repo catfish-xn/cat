@@ -27,7 +27,7 @@ import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/i
 import { equipmentFailureText, slotList, slotViews, temporaryItemText } from '../presentation/equipment-feedback';
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
-import { lootPanelSection, lootTerminalSummary } from '../presentation/loot-view';
+import { continueBlockText, lootPanelSection, lootTerminalSummary } from '../presentation/loot-view';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -273,6 +273,7 @@ export class StrategyPanel {
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.eventList = null;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
+    const lootView = readLootView(state);
     const head = element('header', '', 'hud-bar'); head.dataset.phase = state.phase;
     const title = element('div', '', 'hud-title');
     title.append(element('span', PHASE_LABEL[state.phase], `phase-badge phase-${state.phase}`), element('h2', `${round.displayName} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[round.kind]}${round.isFinal ? ' · 终局' : ''}`));
@@ -308,6 +309,11 @@ export class StrategyPanel {
       });
       button.classList.add(className);
       if (name === primary && state.phase !== 'preparation' && name === 'start-combat') button.classList.add('waiting');
+      // Continue is usable exactly when the domain's LootView says so; the command still re-checks.
+      if (name === 'continue' && !lootView.canContinue) {
+        button.disabled = true; button.dataset.blockedReason = lootView.reason ?? 'unsettled-round';
+        button.title = continueBlockText(lootView.reason ?? 'unsettled-round'); button.setAttribute('aria-disabled', 'true');
+      }
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));

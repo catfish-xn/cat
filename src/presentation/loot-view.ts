@@ -39,6 +39,9 @@ const CONTINUE_BLOCK: Readonly<Record<NonNullable<LootView['reason']>, string>> 
   'game-over': '对局已结束，不能继续',
 };
 
+/** Shared wording for any Continue control blocked by the domain's LootView verdict. */
+export function continueBlockText(reason: NonNullable<LootView['reason']>): string { return CONTINUE_BLOCK[reason]; }
+
 function payloadLabel(payload: Payload): { icon: string; text: string } {
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';

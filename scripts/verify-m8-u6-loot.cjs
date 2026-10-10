@@ -102,7 +102,8 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     async function domPanel() {
       return page.evaluate(() => {
         const panel = document.querySelector('[data-debug="loot-panel"],[data-debug="loot-terminal"]');
-        if (!panel) return null;
+        const button = document.querySelector('[data-debug="mobile:continue"]');
+        if (!panel) return { kind: null, continueDisabled: button?.disabled ?? null, continueReason: button?.dataset.blockedReason ?? null };
         return { kind: panel.dataset.debug, canContinue: panel.dataset.canContinue ?? null,
           block: panel.querySelector('.loot-blocked')?.dataset.reason ?? null,
           buttons: panel.querySelectorAll('button').length,
@@ -110,6 +111,8 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
           dialogDrop: document.querySelector('.choice-dialog')?.dataset.dropId ?? null,
           dialogSource: document.querySelector('.choice-dialog')?.dataset.choiceSource ?? null,
           dialogText: document.querySelector('.choice-dialog')?.textContent ?? '',
+          continueDisabled: document.querySelector('[data-debug="mobile:continue"]')?.disabled ?? null,
+          continueReason: document.querySelector('[data-debug="mobile:continue"]')?.dataset.blockedReason ?? null,
           rows: [...panel.querySelectorAll('[data-debug^="loot-drop:"]')].map(row => ({ dropId: row.dataset.debug.slice('loot-drop:'.length), status: row.dataset.status, receipt: row.dataset.receipt ?? null })) };
       });
     }
@@ -120,10 +123,14 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
         const current = await state(), dom = await domPanel();
         const expectedVisible = current.m8.round.kind === 'pve' && current.phase !== 'preparation';
         try {
-          if (!expectedVisible) assert.equal(dom, null, `${label}: no loot panel outside PvE combat/settlement`);
+          // P2-4: the Continue control follows the authoritative verdict in every phase.
+          const verdict = api.readLootView(current);
+          assert.equal(dom.continueDisabled, !verdict.canContinue, `${label}: Continue disabled iff canContinue=false`);
+          assert.equal(dom.continueReason, verdict.canContinue ? null : verdict.reason, `${label}: Continue carries the blocking reason`);
+          if (!expectedVisible) assert.equal(dom.kind, null, `${label}: no loot panel outside PvE combat/settlement`);
           else {
             const view = api.readLootView(current);
-            assert(dom, `${label}: loot panel present`);
+            assert(dom.kind, `${label}: loot panel present`);
             assert.equal(dom.kind, current.phase === 'gameOver' ? 'loot-terminal' : 'loot-panel');
             const rows = view.revealedDrops.map(drop => ({ dropId: drop.dropId, status: drop.status, receipt: drop.receiptId }));
             const sort = list => [...list].sort((a, b) => a.dropId < b.dropId ? -1 : 1);
@@ -143,7 +150,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
             } else if (current.phase === 'choice') assert.notEqual(dom.dialogSource, 'loot', `${label}: non-loot pick is not labelled loot`);
             extra(view, dom, current);
           }
-          report.checks.push({ label, phase: current.phase, roundId: current.roundDefinitionId, rows: dom?.rows ?? [] });
+          report.checks.push({ label, phase: current.phase, roundId: current.roundDefinitionId, rows: dom?.rows ?? [], continueDisabled: dom.continueDisabled });
           return { view: expectedVisible ? api.readLootView(current) : null, state: current };
         } catch (error) { last = error; await delay(150); }
       }
@@ -189,16 +196,21 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     const blocked = await checkPanel('2-7 capacity blocks Continue', view => {
       assert.equal(view.reason, 'pending-capacity'); assert.equal(view.canContinue, false); assert.equal(view.pendingClaims.length, 1);
     });
-    const blockedBefore = blocked.state; await click('mobile:continue'); await delay(300);
-    assert.deepEqual(await state(), blockedBefore, 'Continue refused while the hero waits');
+    // The button is not operable: a native click on it is a no-op (the domain refusal is tested separately).
+    const blockedBefore = blocked.state, continueBox = await page.locator('[data-debug="mobile:continue"]').boundingBox();
+    assert(await page.locator('[data-debug="mobile:continue"]').isDisabled(), 'Continue disabled while the hero waits');
+    await page.mouse.click(continueBox.x + continueBox.width / 2, continueBox.y + continueBox.height / 2); await delay(300);
+    assert.deepEqual(await state(), blockedBefore, 'native click on the disabled Continue changes nothing');
     const zoe = bench(blockedBefore).find(unit => unit.definitionId === 'zoe');
     await click('panel:units'); await click(`mobile:unit:${zoe.id}`); await click('mobile:sell');
     await checkPanel('2-7 after real sale', view => {
       assert.equal(view.canContinue, true); assert.equal(view.pendingClaims.length, 0);
       assert(view.revealedDrops.every(drop => drop.status === 'granted'));
     });
+    assert(await page.locator('[data-debug="mobile:continue"]').isEnabled(), 'Continue usable again after the real sale');
     await click('mobile:continue');
     await checkPanel('3-1 preparation after Continue');
+    assert.equal((await state()).roundDefinitionId, '3-1', 'the re-enabled Continue really advanced');
 
     // 3. Terminal: import 4-7, lethal combat, read-only terminal record with retained hero and fallback receipt.
     await page.locator('[data-debug="m6-import"]').setInputFiles(terminalFile.file); await waitActive('u6-terminal');
