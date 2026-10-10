@@ -18,7 +18,8 @@ import { getRoundEnemyItems } from '../src/simulation/round-enemies';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { accepted, freeze, resolveM5Choices } from './match-helpers';
+import { accepted, freeze } from './match-helpers';
+import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
 
 // Independent transcription of M8B_ENCOUNTERS §2–3, not derived from the
 // production content/compiler or from readEncounterPreview's own output.
@@ -47,45 +48,10 @@ const ENCOUNTERS = [
   ['6-7', 'rift-herald-v1', [['h01', 'pve-rift-herald', 3, 1]]],
 ] as const;
 
-/** Earlier rounds use synthetic wins only to obtain valid late-round history
- * and resources, as in the B7 wiring fixtures. Each round under test is started
- * by the public command and otherwise runs the real combat/restore pipeline.
- * This is not a public no-cheat route, a loot test, or a balance acceptance. */
-const preparedStates = new Map<string, match.MatchState>();
-function prepared(roundId: string): match.MatchState {
-  if (!preparedStates.size) {
-    let state = match.createMatch(42);
-    while (true) {
-      state = resolveM5Choices(state);
-      preparedStates.set(state.roundDefinitionId, state);
-      if (state.m8.round.isFinal) break;
-      if (state.phase === 'preparation') {
-        state = accepted(match.startMatchCombat(state));
-        if (state.phase === 'combat') state = match.stepMatch(state).state;
-        if (state.phase === 'combat') {
-          state = { ...state, combat: { ...state.combat, units: state.combat.units.map(unit =>
-            unit.team === 'enemy' ? { ...unit, hp: 0, alive: false } : unit) } };
-          state = match.stepMatch(state).state;
-        }
-      }
-      state = resolveM5Choices(state);
-      state = accepted(match.nextRound(state, state.round));
-    }
-  }
-  const state = preparedStates.get(roundId);
-  if (!state) throw new Error(`Missing prepared fixture: ${roundId}`);
-  return state;
-}
-function sturdyArmy(roundId: string): match.MatchState {
-  const state = prepared(roundId);
-  return { ...state, nextUnitSerial: 4, preparation: { ...state.preparation,
-    units: [...state.preparation.units.filter(unit => unit.team === 'enemy'),
-      ...['garen', 'caitlyn', 'lux'].map((definitionId, index) => ({
-        id: `unit-${index + 1}`, definitionId, team: 'player' as const, starLevel: 3 as const,
-        location: { kind: 'board' as const, cell: { col: 1 + index * 2, row: index === 0 ? 4 : 7 } },
-      }))],
-  } };
-}
+// Original opening/live-value assertions now use complete public acquisition
+// prefixes, including real combat outcomes, loot, purchases and upgrades.
+const prepared = publicNeutralPreparation;
+const sturdyArmy = publicNeutralPreparation;
 function preview(state: match.MatchState): EncounterPreview {
   const result = match.readEncounterPreview(state);
   if (!result) throw new Error(`Expected a preview for ${state.roundDefinitionId}`);

@@ -1,3 +1,4 @@
+import { LOOT_RUNTIME_REVISION, LOOT_FREEZE_ALGORITHM, LOOT_POLICY_VERSION, LOOT_HERO_POOL_VERSION, LOOT_HERO_POOLS, LOOT_SLOTS, LOOT_CATEGORIES } from './loot';
 import { NEUTRAL_RUNTIME_VERSION } from '../neutral-receipts';
 import { NEUTRAL_DEFINITIONS } from './neutrals';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './neutral-encounters';
@@ -42,6 +43,7 @@ export function digestContent(value: unknown): string {
   return `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
 }
 export const CONTENT_DIGEST = digestContent({
+  loot:{runtime:LOOT_RUNTIME_REVISION,freeze:LOOT_FREEZE_ALGORITHM,policy:LOOT_POLICY_VERSION,heroPoolVersion:LOOT_HERO_POOL_VERSION,heroPools:LOOT_HERO_POOLS,slots:LOOT_SLOTS,categories:LOOT_CATEGORIES},
   neutralEncounters:{runtime:NEUTRAL_RUNTIME_VERSION,version:NEUTRAL_ENCOUNTER_CATALOG_VERSION,policy:NEUTRAL_ENCOUNTER_POLICY_VERSION,definitions:NEUTRAL_DEFINITIONS,encounters:NEUTRAL_ENCOUNTERS},
   roundRulesVersion:ROUND_RULES_VERSION, roundCatalog:ROUND_CATALOG, roundSemanticNodes:ROUND_SEMANTIC_NODES,
   roundPreparation:ROUND_PREPARATION_RULES, opening:{initial:OPENING_INITIAL_STATE,economy:OPENING_ECONOMY_RULES}, finalRound:FINAL_ROUND,

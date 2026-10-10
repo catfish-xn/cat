@@ -6,10 +6,13 @@ import type { ItemInstance } from '../src/simulation/strategy-types';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
+import { publicInventory } from './fixtures/b8-public-acquisition';
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },
 });
+// The full independent query/conflict matrix is a mechanism fixture; its fake
+// inventory is explicitly rejected below, alongside provenance-complete controls.
 function fixture(): MatchState {
   const state = purchasedThreeHeroMatch();
   return freeze(planTemporaryEquipment({ ...state, nextItemSerial: 40, items: [...state.items,
@@ -82,8 +85,34 @@ describe('B5 shared command previews and read-only equipment', () => {
     expect(view.slots.map(s => s.itemInstanceId)).toEqual(['item-23', null, 'item-26']);
     Object.assign(view.slots[0], { itemInstanceId: 'tampered' });
     expect(readUnitEquipment(state, 'unit-1')!.slots[0].itemInstanceId).toBe('item-23');
-    const restored = restoreMatch(serializeMatch(state));
-    expect(readUnitEquipment(restored, 'unit-2')).toEqual(readUnitEquipment(state, 'unit-2'));
+    expect(() => restoreMatch(serializeMatch(state))).toThrow('Invalid B8 Match: current resource fold');
+    // Recreate the exact TG reserved-slot view with real choices and combine.
+    // Keep the full seven-item matrix above; split its independent ordinary and
+    // exclusive holder views so no artificial component supply is introduced.
+    const tg = publicInventory(['thiefs-gloves', 'sword']);
+    const tgState = freeze(accepted(equipItem(tg.state, tg.itemIds[0], 'unit-2', 2))), tgBefore = JSON.stringify(tgState);
+    expect(readUnitEquipment(tgState, 'missing')).toBeNull();
+    expect(readUnitEquipment(tgState, 'unit-2')).toEqual({ unitId: 'unit-2', slots: [
+      { slot: 0, itemInstanceId: tg.itemIds[0], reservedByItemInstanceId: null },
+      { slot: 1, itemInstanceId: null, reservedByItemInstanceId: tg.itemIds[0] },
+      { slot: 2, itemInstanceId: null, reservedByItemInstanceId: tg.itemIds[0] },
+    ], temporaryItems: tgState.temporaryEquipment.filter(item => item.holderId === 'unit-2') });
+    const restored = restoreMatch(serializeMatch(tgState));
+    expect(readUnitEquipment(restored, 'unit-2')).toEqual(readUnitEquipment(tgState, 'unit-2'));
+    const temporaryView = readUnitEquipment(tgState, 'unit-2')!;
+    Object.assign(temporaryView.slots[1], { reservedByItemInstanceId: 'tampered' });
+    Object.assign(temporaryView.temporaryItems[0], { definitionId: 'tampered' });
+    for (let i = 0; i < 10; i++) { readItemCatalog(); readUnitEquipment(tgState, 'unit-2'); previewEquip(tgState, tg.itemIds[1], 'unit-3', 0); }
+    expect(JSON.stringify(tgState)).toBe(tgBefore);
+    const ordinary = publicInventory(['blue-buff', 'vest']);
+    let ordinaryState = accepted(equipItem(ordinary.state, ordinary.itemIds[0], 'unit-1', 0));
+    ordinaryState = freeze(accepted(equipItem(ordinaryState, ordinary.itemIds[1], 'unit-1', 2)));
+    const ordinaryBefore = JSON.stringify(ordinaryState), ordinaryView = readUnitEquipment(ordinaryState, 'unit-1')!;
+    expect(ordinaryView.slots.map(slot => slot.itemInstanceId)).toEqual([ordinary.itemIds[0], null, ordinary.itemIds[1]]);
+    Object.assign(ordinaryView.slots[0], { itemInstanceId: 'tampered' });
+    expect(readUnitEquipment(ordinaryState, 'unit-1')!.slots[0].itemInstanceId).toBe(ordinary.itemIds[0]);
+    expect(readUnitEquipment(restoreMatch(serializeMatch(ordinaryState)), 'unit-1')).toEqual(readUnitEquipment(ordinaryState, 'unit-1'));
+    expect(JSON.stringify(ordinaryState)).toBe(ordinaryBefore);
     for (let i = 0; i < 10; i++) { readItemCatalog(); readUnitEquipment(state, 'unit-2'); previewEquip(state, 'item-24', 'unit-3', 0); }
     expect(JSON.stringify(state)).toBe(before);
   });

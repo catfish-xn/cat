@@ -16,12 +16,22 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     expect(first.preparation.units.every(unit=>unit.starLevel===1)).toBe(true);
   });
   it('concedes an empty deployment at tick zero once, with stage-one base income and fixed PvE failure damage', () => {
-    const state=freeze(emptyBoard()),result=startMatchCombat(state);
+    const state=freeze(emptyBoard()),before=structuredClone(state),result=startMatchCombat(state);
     expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
-    expect(result.events.map(e=>e.type)).toEqual(['combatFinished','roundSettled']);
+    // B8: an unearned 1-2 slot is explicitly forfeited between finish and settlement.
+    const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']);
+    const dropId=JSON.stringify(['1-2','minions-a-v1',sourceUnitId,0]);
+    expect(result.events).toEqual([
+      {type:'combatFinished',tick:0,result:'enemyWin',reason:'elimination',combatId:'round-1',domain:'combat',eventSeq:0},
+      {type:'lootForfeited',dropId,domain:'match',eventSeq:state.nextMatchEventSeq},
+      {type:'roundSettled',round:1,domain:'match',eventSeq:state.nextMatchEventSeq+1},
+    ]);
+    expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:[{dropId,status:'forfeited',receiptId:null}]});
+    expect(result.state.preparation).toEqual(state.preparation);
+    expect(result.state.nextUnitSerial).toBe(2);expect(result.state.nextItemSerial).toBe(1);expect(result.state.items).toEqual([]);
     expect(result.state).toMatchObject({phase:'settlement',playerHp:97,gold:2,level:2,xp:0});
-    expect(result.state.roundResults).toHaveLength(1);expect(result.state.roundResults[0]).toMatchObject({result:'enemyWin',combatTicks:0,playerDamage:3});
-    expect(stepMatch(result.state)).toEqual({state:result.state,events:[]});expect(stepMatch(result.state).state).toBe(result.state);expect(state.playerHp).toBe(100);
+    expect(result.state.roundResults).toHaveLength(1);expect(result.state.roundResults[0]).toMatchObject({result:'enemyWin',combatTicks:0,combatEventCount:1,playerDamage:3});
+    expect(stepMatch(result.state)).toEqual({state:result.state,events:[]});expect(stepMatch(result.state).state).toBe(result.state);expect(state.playerHp).toBe(100);expect(state).toEqual(before);
   });
   it('rejects stale shop and missing enemies atomically', () => {
     const state=readyMatch();expect(buyUnit(state,0,0)).toEqual({ok:false,state,reason:'stale-shop'});expect(buyUnit(state,0,0).state).toBe(state);

@@ -4,7 +4,8 @@ import { stepCombat, type CombatEvent, type CombatState, type CombatUnit } from 
 import { compileNeutralEncounter } from '../src/simulation/neutral-encounter-compiler';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { battle, unit } from './combat-helpers';
-import { accepted, resolveM5Choices } from './match-helpers';
+import { accepted } from './match-helpers';
+import { publicNeutralPreparation, publicHeraldTarget } from './fixtures/m8-neutral-public-route';
 
 /**
  * Independent B7 audit vectors (signed-off audit of 889a2a5). Expected values come from
@@ -109,33 +110,16 @@ describe('B7 audit: Elder Dragon cone (ENCOUNTERS §4.4) against independent geo
   });
 });
 
-/** Synthetic earlier wins only to reach the target round; the tested round uses production Start/step/serialize/restore. */
-function prepared(roundId: string): api.MatchState {
-  let s = api.createMatch(42);
-  while (s.roundDefinitionId !== roundId) {
-    s = resolveM5Choices(s);
-    if (s.phase === 'preparation') {
-      s = accepted(api.startMatchCombat(s));
-      if (s.phase === 'combat') s = api.stepMatch(s).state;
-      if (s.phase === 'combat') {
-        s = { ...s, combat: { ...s.combat, units: s.combat.units.map(u => u.team === 'enemy' ? { ...u, hp: 0, alive: false } : u) } };
-        s = api.stepMatch(s).state;
-      }
-    }
-    s = resolveM5Choices(s);
-    s = accepted(api.nextRound(s, s.round));
-  }
-  return resolveM5Choices(s);
-}
-const withGaren = (s: api.MatchState): api.MatchState => ({ ...s, preparation: { ...s.preparation,
-  units: s.preparation.units.map(u => u.team === 'player' ? { ...u, definitionId: 'garen', starLevel: 3 as const, location: { kind: 'board' as const, cell: { col: 3, row: 4 } } } : u) } });
+// Real acquisition prefixes preserve the full Match restoration boundary.
+const prepared = publicNeutralPreparation;
+const encounterArmy = (s: api.MatchState) => s.roundDefinitionId === '6-7' ? publicHeraldTarget(s) : s;
 const restored = (s: api.MatchState) => restoreMatch(JSON.parse(serializeMatch(s)));
-const rejects = (s: api.MatchState, mutate: (x: any) => void) => { const x = JSON.parse(serializeMatch(s)); mutate(x); expect(() => restoreMatch(x)).toThrow(); };
+const rejects = (s: api.MatchState, mutate: (x: any) => void) => { expect(restored(s)).toEqual(s); const x = JSON.parse(serializeMatch(s)); mutate(x); expect(() => restoreMatch(x)).toThrow(); };
 const mechanismTick = (events: readonly api.MatchEvent[]) => events.some(e => ['death', 'heal', 'movement', 'statusChanged'].includes(e.type));
 
 describe('B7 audit: Match save/restore of real encounters', () => {
   it.each(['2-7', '3-7', '4-7', '5-7', '6-7'])('%s: restoring at every opening and mechanism tick reproduces the continuous run', roundId => {
-    let continuous = accepted(api.startMatchCombat(withGaren(prepared(roundId)))), resumed = restored(continuous), mechanismRestores = 0, afterMechanism = false;
+    let continuous = accepted(api.startMatchCombat(encounterArmy(prepared(roundId)))), resumed = restored(continuous), mechanismRestores = 0, afterMechanism = false;
     expect(continuous.combat!.tick).toBe(0);
     expect(resumed).toEqual(continuous);
     const continuousEvents: unknown[] = [], resumedEvents: unknown[] = [];
@@ -157,7 +141,7 @@ describe('B7 audit: Match save/restore of real encounters', () => {
   });
 
   it('6-7 rejects retimed stun, forged death, un-expired receipt and forged removal reasons', () => {
-    let s = api.stepMatch(accepted(api.startMatchCombat(withGaren(prepared('6-7'))))).state;
+    let s = api.stepMatch(accepted(api.startMatchCombat(encounterArmy(prepared('6-7'))))).state;
     rejects(s, x => {
       const target = x.combat.units.find((u: any) => u.id === 'unit-1');
       for (const group of target.mechanismState.statuses) for (const c of group.contributions)
@@ -173,7 +157,7 @@ describe('B7 audit: Match save/restore of real encounters', () => {
   });
 
   it('2-7 rejects deleting an executed krug reaction whose holder is still alive', () => {
-    let s = accepted(api.startMatchCombat(withGaren(prepared('2-7'))));
+    let s = accepted(api.startMatchCombat(encounterArmy(prepared('2-7'))));
     const executedForLiving = (m: api.MatchState) => m.combat?.companionState?.reactions.find(r => r.status === 'executed' && m.combat!.units.find(u => u.id === r.targetId)!.alive);
     while (s.phase === 'combat' && !executedForLiving(s)) s = api.stepMatch(s).state;
     expect(s.phase).toBe('combat');

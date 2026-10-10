@@ -15,7 +15,7 @@ function validateManifest(manifest){
  for(const key of requiredVersions){const value=manifest.versions?.[key];assert(value!==undefined&&value!==null&&value!=='',`missing version ${key}`);}
  if(finalGate)assert.equal(manifest.sha,currentSha,'evidence HEAD must equal current HEAD');
 }
-const comparisons=[],deferredComparisons={};
+const comparisons=[],deferredComparisons={},b8InputEvidence=[];
 function compareBrowserRound(folderA,folderB,round,label){
  const snapshots=[folderA,folderB].map(folder=>read(path.join(folder,`round-${round}.json`)));
  assert.deepEqual(snapshots[0].state,snapshots[1].state,`${label} complete state`);
@@ -58,10 +58,13 @@ if(finalGate){
   if(name.startsWith('m5-input-')){
    assert.equal(manifest.coverage,'full-input-gate','observation-only is not the required input gate');
    assert.equal(manifest.fullOpeningItemScenarioPassed,false);
-   assert.deepEqual(manifest.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
-    'mouse-back-to-back-opening-components','touch-back-to-back-opening-components',
-    'normal-opening-rageblade-recipe-and-equipment','normal-opening-rageblade-stat-event','normal-opening-rageblade-dynamic-as',
-   ].map(id=>['skipped','B8',id]),'input may defer only the five explicitly listed B8 cases');
+   // B8 restored the three Rageblade checks on the real 2-1 chain; the two back-to-back opening
+   // checks are user-approved archives (not applicable under the frozen schedule, not verified).
+   assert.deepEqual(manifest.skipped??[],[],'input gate may no longer defer any B8 case');
+   assert.deepEqual((manifest.archived??[]).map(entry=>[entry.status,entry.id,entry.verifiedConsecutiveDialogs]),
+    ['mouse','touch'].map(method=>['archived-not-applicable',`${method}-back-to-back-opening-components`,false]),'only the two approved archives');
+   // Audit P2-2: the Rageblade summary must be bound to its recorded artifacts (validated below).
+   b8InputEvidence.push({name,manifest});
   }
  }
  const touchRoutes=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/route.json`));
@@ -74,5 +77,40 @@ if(finalGate){
  }
 
 }
-fs.writeFileSync('artifacts/m5-cross-mode-deferred-assertions.json',JSON.stringify(deferredComparisons,null,2));
-fs.writeFileSync('artifacts/m5-cross-mode-comparison.json',JSON.stringify(comparisons,null,2));console.log(JSON.stringify(comparisons));
+// The U6 job is part of the final evidence: its report must exist, match this commit and contain
+// every expected checkpoint, so a green comparison cannot silently omit U6.
+const U6_CHECKS=['1-2 preparation','1-2: mid-combat reveal','1-2 settlement','1-3: mid-combat reveal','1-3 loot choice pending','1-3 after real choice',
+ '2-7 capacity: mid-combat reveal','2-7 choice with full bench','2-7 capacity blocks Continue','2-7 after real sale','3-1 preparation after Continue',
+ '4-7 terminal: mid-combat reveal','4-7 game over'];
+function validateU6Report(report){
+ assert.equal(report.passed,true,'U6 loot gate failed');
+ if(finalGate)assert.equal(report.sha,currentSha,'U6 evidence HEAD must equal current HEAD');
+ assert.deepEqual(report.errors,[],'U6 gate errors');
+ assert.deepEqual(report.checks.map(check=>check.label),U6_CHECKS,'U6 gate checkpoints');
+ for(const check of report.checks)assert.equal(typeof check.continueDisabled,'boolean',`U6 ${check.label}: Continue state recorded`);
+ assert.deepEqual(report.checks.map(check=>check.continueDisabled),[true,true,false,true,true,false,true,true,true,false,true,true,true],'U6 Continue availability');
+ assert(report.fixtures?.capacity?.battles>0&&report.fixtures?.terminal?.battles>0,'U6 imported public-route fixtures');
+}
+(async()=>{
+ if(finalGate){
+  // CI downloads the U6 artifact outside artifacts/ so its timing folder is not counted as a tenth M6 execution job.
+  const u6Dir=process.env.M8_U6_EVIDENCE_DIR||'artifacts';
+  validateU6Report(read(path.join(u6Dir,'m8-u6-loot/report.json')));
+  if(process.env.M8_U6_EVIDENCE_DIR){
+   const timing=path.join(u6Dir,'m5-ci-timing-m8-u6-loot');
+   const steps=fs.readdirSync(timing).filter(name=>name.endsWith('.json')).map(name=>read(path.join(timing,name)));
+   assert(steps.some(step=>step.step==='m8-u6-loot'),'U6 gate timing recorded');
+   for(const step of steps){assert.equal(step.sha,currentSha,'U6 timing commit');assert.equal(step.exitCode,0,`U6 ${step.step} failed`);assert.equal(step.signal,null,`U6 ${step.step} interrupted`);}
+  }
+  const {validateB8RagebladeEvidence}=require('./b8-input-evidence.cjs');
+  const {createServer}=await import('vite');
+  const server=await createServer({root:path.resolve(__dirname,'..'),server:{middlewareMode:true,ws:false},optimizeDeps:{noDiscovery:true,include:[]},appType:'custom',logLevel:'error'});
+  try{const {readCombatStats}=await server.ssrLoadModule('/src/simulation/combat-s13.ts');
+   const api=await server.ssrLoadModule('/src/simulation/match.ts');
+   assert.equal(b8InputEvidence.length,2,'both input modes carry B8 Rageblade evidence');
+   for(const {name,manifest} of b8InputEvidence)validateB8RagebladeEvidence(manifest,`artifacts/${name}`,{api,readCombatStats});
+  }finally{await server.close();}
+ }
+ fs.writeFileSync('artifacts/m5-cross-mode-deferred-assertions.json',JSON.stringify(deferredComparisons,null,2));
+ fs.writeFileSync('artifacts/m5-cross-mode-comparison.json',JSON.stringify(comparisons,null,2));console.log(JSON.stringify(comparisons));
+})().catch(error=>{console.error(error);process.exit(1);});

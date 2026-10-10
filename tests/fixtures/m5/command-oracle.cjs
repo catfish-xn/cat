@@ -14,6 +14,13 @@ function compareSurvivor(a, b) {
   for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i];
   return compareId(a, b);
 }
+// Facts describe this independent command model's births, merges and sales.
+// Resource sequence numbers are separate from the stamped match-event cursor.
+function appendFacts(state, facts) {
+  const entries = state.resourceProvenance.entries;
+  state.resourceProvenance = { ...state.resourceProvenance, entries: [...entries,
+    ...facts.map((fact, index) => ({ ...clone(fact), sequence: entries.length + index, roundId: state.roundDefinitionId }))] };
+}
 function purchased(preparation, definitionId, candidateId) {
   let units = [...clone(preparation.units), { id: candidateId, team: 'player', definitionId, starLevel: 1, location: null }];
   const events = [];
@@ -58,8 +65,14 @@ function expectedCommand(before, command) {
     if (offer.status !== 'available') return reject('purchased-slot');
     const cost = COST[offer.definitionId]; assert(cost);
     if (state.gold < cost) return reject('insufficient-gold');
-    const purchase = purchased(state.preparation, offer.definitionId, `unit-${state.nextUnitSerial}`);
+    const unitId = `unit-${state.nextUnitSerial}`;
+    const purchase = purchased(state.preparation, offer.definitionId, unitId);
     if (!purchase.ok) return reject(purchase.reason);
+    const acquisitionSequence = state.resourceProvenance.entries.length;
+    appendFacts(state, [
+      { kind: 'unit-acquired', unitId, source: { kind: 'shop', generation: command.generation, slotIndex: command.slot, definitionId: offer.definitionId } },
+      ...purchase.events.map(event => ({ kind: 'unit-upgraded', acquisitionSequence, event })),
+    ]);
     state.gold -= cost; state.nextUnitSerial++;
     state.preparation = purchase.preparation; events.push(...purchase.events);
     state.shop.slots[command.slot] = { status: 'purchased' };
@@ -67,7 +80,9 @@ function expectedCommand(before, command) {
     const unit = state.preparation.units.find(u => u.id === command.id);
     if (!unit) return reject('unknown-unit');
     if (unit.team !== 'player') return reject('enemy-unit');
-    state.gold += SELL[COST[unit.definitionId]][unit.starLevel - 1];
+    const goldGranted = SELL[COST[unit.definitionId]][unit.starLevel - 1];
+    state.gold += goldGranted;
+    appendFacts(state, [{ kind: 'unit-sold', unitId: unit.id, context: 'preparation', goldGranted }]);
     state.preparation.units = state.preparation.units.filter(u => u.id !== command.id);
   } else if (command.type === 'deploy') {
     const unit = state.preparation.units.find(u => u.id === command.id), target = command.target;

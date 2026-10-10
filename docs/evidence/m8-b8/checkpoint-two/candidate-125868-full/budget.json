@@ -1,0 +1,32 @@
+[
+  {
+    "label": "baseline",
+    "files": [
+      {
+        "file": "index-DNk6IFSw.js",
+        "gzip9": 488964
+      }
+    ],
+    "total": 488964
+  },
+  {
+    "label": "candidate",
+    "files": [
+      {
+        "file": "index-DwERYZ_b.js",
+        "gzip9": 502898
+      }
+    ],
+    "total": 502898
+  },
+  {
+    "label": "candidate-reachable",
+    "files": [
+      {
+        "file": "index-DTWjf8j6.js",
+        "gzip9": 503479
+      }
+    ],
+    "total": 503479
+  }
+]

@@ -1,0 +1,38 @@
+{
+  "testedLocalCommit": "d2011ae3fff2744cb56a63a8c5c7176eb4a7f7d0",
+  "testedTree": "4badc332e835a3d5e5511a89e4c4a489a108aaea",
+  "sourceTree": "5f9b62228b236074efd78b50a571cc26d23858e5",
+  "sourceChangesSince6484": [],
+  "frozenChangesSinceCheckpointOne": [],
+  "uiChangesSinceCheckpointOne": [
+    "src/rendering/BoardScene.ts"
+  ],
+  "frozenSha256": {
+    "src/simulation/m8/contracts.ts": "34c29e727416f9fcbe9f7144d5222e5418a2d89f554ff506024af6c7cc2ca9d3",
+    "src/simulation/m8/equipment.ts": "df61f7e318ef0e1ddaba0d93c4e4690e486ea2fddd4ea135d1ec3dfd80651616",
+    "docs/M8_RULES.md": "3ab4c35efbbd573fc34f64eaada944668afc322555ce05acd36b7631ce68b6d3"
+  },
+  "basisDevelopmentBoundary": {
+    "schema": 5,
+    "save": 1,
+    "replay": 1,
+    "commandProtocol": 2
+  },
+  "budget": {
+    "baseline": 488964,
+    "midB8Cumulative": 18000,
+    "strictPauseB8Cumulative": 23400,
+    "strictPauseCandidate": 512364,
+    "strictPauseTotal": 552191
+  },
+  "ci183Closure": {
+    "originalCount": 92,
+    "status": "all targeted-passed; final full validation pending"
+  },
+  "unchangedDeferrals": {
+    "unitTests": 10,
+    "inputNativeB8": 5,
+    "full33BattleApplication": "B9 reserved"
+  },
+  "reviewStatus": "internal technical prechecks only; external checkpoint-two Codex signoff not started"
+}

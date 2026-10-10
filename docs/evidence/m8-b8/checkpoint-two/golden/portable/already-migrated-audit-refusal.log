@@ -1,0 +1,21 @@
+(node:79) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+fatal: Not a valid object name 50786a196cdff0762867e2918813a090df4fcac6^{commit}
+fatal: Not a valid object name 50786a196cdff0762867e2918813a090df4fcac6^{commit}
+AssertionError [ERR_ASSERTION]: refuse unknown or already-migrated golden
++ actual - expected
+
++ '8d129f70c093a63b339543f65814232f3cfb6daa13d95168aac3b06bdc39ac28'
+- '007b6b4136d6959b227cbd9567948f83dca75db4ad788fd43d03c4e3cf069cc5'
+
+    at guardBaseline (/workspace/scratch/2d61d723fa5a/cat-b8-phase2/scripts/update-m8-b8-golden.cjs:42:40)
+    at audit (/workspace/scratch/2d61d723fa5a/cat-b8-phase2/scripts/update-m8-b8-golden.cjs:228:39)
+    at /workspace/scratch/2d61d723fa5a/cat-b8-phase2/scripts/update-m8-b8-golden.cjs:239:314
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '8d129f70c093a63b339543f65814232f3cfb6daa13d95168aac3b06bdc39ac28',
+  expected: '007b6b4136d6959b227cbd9567948f83dca75db4ad788fd43d03c4e3cf069cc5',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

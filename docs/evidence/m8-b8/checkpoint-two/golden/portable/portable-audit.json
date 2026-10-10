@@ -1,0 +1,119 @@
+{
+  "kind": "m8-b8-portable-tool-review-v1",
+  "node": "v22.23.3",
+  "scope": "Only fixed source-ref resolution changed. Original captures are revalidated read-only; no simulation rerun and no golden apply.",
+  "originalAuditSha256": "f574c9ed982abd75668134921431efbe77c4d63c46bb1f45e583e709e32fe863",
+  "originalUpdaterSha256": "ca53ebd5f6c9f0f23478aca8db5ecd6659fbfe6b7a8239bd9e4a7ff8b371dcc9",
+  "portableUpdaterSha256": "8b57da72d26c33115b1b29eaaea5209770dd72a67c151d537fad7c29b02f3e34",
+  "originalGuardTestSha256": "57d55f7711274adcb71e26292171f76c26136197fc68c6f5b0606683defe7daa",
+  "portableGuardTestSha256": "e6210b791dc1cfc1ff32311a1ef15fbcb7a90e66ad2fd443d7e3b34cbf860c55",
+  "approvedSourceRefs": [
+    "50786a196cdff0762867e2918813a090df4fcac6",
+    "2814d0146a3a109d8cef920034ba67d0cc571bf0"
+  ],
+  "actualLocalResolvedSource": {
+    "ref": "2814d0146a3a109d8cef920034ba67d0cc571bf0",
+    "wholeTree": "4f982ed61cd6247c0d6a0033a156799e6c6d026f",
+    "srcTree": "5f9b62228b236074efd78b50a571cc26d23858e5"
+  },
+  "publishedRefPriority": "Covered by pure selection unit test; this workspace actually resolves the captured local object. A remote clone must have/fetch the exact published object.",
+  "original183InputFingerprint": "4506f5918cc3c9b8b5065f4332316a1c07bfb23ccd4d8fbbc5e70141ed90f44d",
+  "protectedValidationInputsUnchanged": true,
+  "oldGoldenSha256": "007b6b4136d6959b227cbd9567948f83dca75db4ad788fd43d03c4e3cf069cc5",
+  "candidateSha256": "8d129f70c093a63b339543f65814232f3cfb6daa13d95168aac3b06bdc39ac28",
+  "alreadyMigratedLiveGoldenStillRejected": true,
+  "routes": [
+    {
+      "build": "cannon",
+      "oldCompleteFrozenRouteHash": "593c49ef3dc2ab1f42a9fb3ea926a2c103aca0066a5c93d5b4331f6e0a23442d",
+      "newCompleteFrozenRouteHash": "5671f606acaca2bacba514c7deef40920a8a9a74a4a168bf2695e949b8da2e4a",
+      "oldCommands": 158,
+      "newCommands": 194,
+      "originalCompleteHashesRevalidated": true,
+      "originalReviewedDiffUnchanged": true,
+      "resources": {
+        "transactions": 227,
+        "provenanceFacts": 90,
+        "lootComponents": 10,
+        "supplyComponents": 5,
+        "lootGold": 15,
+        "lootHeroes": 2,
+        "lootRng": {
+          "state": 1259077867,
+          "draws": 14
+        },
+        "ungranted": 0,
+        "terminalFallbacks": 0
+      }
+    },
+    {
+      "build": "sniper",
+      "oldCompleteFrozenRouteHash": "01c8fa6835303f0a33514cabb2d4e55d4160b7d18c4a8ad3f59051c2dd3cd1b2",
+      "newCompleteFrozenRouteHash": "a97fff9c115f497b44d6de3005e1e468e635b5156ce40ad8607224ad4429239c",
+      "oldCommands": 160,
+      "newCommands": 182,
+      "originalCompleteHashesRevalidated": true,
+      "originalReviewedDiffUnchanged": true,
+      "resources": {
+        "transactions": 215,
+        "provenanceFacts": 88,
+        "lootComponents": 10,
+        "supplyComponents": 5,
+        "lootGold": 15,
+        "lootHeroes": 2,
+        "lootRng": {
+          "state": 1259077867,
+          "draws": 14
+        },
+        "ungranted": 0,
+        "terminalFallbacks": 0
+      }
+    },
+    {
+      "build": "mage",
+      "oldCompleteFrozenRouteHash": "a7bf698caa9f225568646de119db5e4230f602556e8a588dd2d8694ab2ddca40",
+      "newCompleteFrozenRouteHash": "0112e9cc0b0f6822b6a78d8b15f1347a120a9d927085c56120c7eba2f7cd4102",
+      "oldCommands": 157,
+      "newCommands": 176,
+      "originalCompleteHashesRevalidated": true,
+      "originalReviewedDiffUnchanged": true,
+      "resources": {
+        "transactions": 209,
+        "provenanceFacts": 88,
+        "lootComponents": 10,
+        "supplyComponents": 5,
+        "lootGold": 15,
+        "lootHeroes": 2,
+        "lootRng": {
+          "state": 1259077867,
+          "draws": 14
+        },
+        "ungranted": 0,
+        "terminalFallbacks": 0
+      }
+    },
+    {
+      "build": "sniper-caitlyn",
+      "oldCompleteFrozenRouteHash": "912db39f692d219b945641e89cb876411e78b0e57c88b2190ba1aa410013c7f0",
+      "newCompleteFrozenRouteHash": "a0f7969190ecc7de355bc49f9a8c4769aa89baa4e4d5925e7d005de059349bd8",
+      "oldCommands": 163,
+      "newCommands": 185,
+      "originalCompleteHashesRevalidated": true,
+      "originalReviewedDiffUnchanged": true,
+      "resources": {
+        "transactions": 218,
+        "provenanceFacts": 89,
+        "lootComponents": 10,
+        "supplyComponents": 5,
+        "lootGold": 15,
+        "lootHeroes": 2,
+        "lootRng": {
+          "state": 1259077867,
+          "draws": 14
+        },
+        "ungranted": 0,
+        "terminalFallbacks": 0
+      }
+    }
+  ]
+}

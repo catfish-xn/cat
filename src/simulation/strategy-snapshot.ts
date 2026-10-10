@@ -1,5 +1,5 @@
 import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
-import type { MatchState } from './match-types';
+import type { CombatStrategyInputs } from './combat-input';
 import type {
   Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition,
 } from './strategy-types';
@@ -32,7 +32,7 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
 /** The only strategy compilation boundary. Combat receives JSON numbers and provenance,
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
-export function buildStrategySnapshot(state: MatchState, catalog: StrategyCatalog = DEFAULT_CATALOG): StrategySnapshot {
+export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG): StrategySnapshot {
   const traits = [...deriveTraits(state.preparation, 'player', catalog.traits), ...deriveTraits(state.preparation, 'enemy', catalog.traits)];
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);

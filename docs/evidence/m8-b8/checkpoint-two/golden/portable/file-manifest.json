@@ -1,0 +1,83 @@
+{
+  "kind": "portable-repair-files-v1",
+  "modified": [
+    {
+      "path": "scripts/update-m8-b8-golden.cjs",
+      "bytes": 47581,
+      "sha256": "8b57da72d26c33115b1b29eaaea5209770dd72a67c151d537fad7c29b02f3e34"
+    },
+    {
+      "path": "tests/m8-b8-golden-guard.test.mjs",
+      "bytes": 7290,
+      "sha256": "e6210b791dc1cfc1ff32311a1ef15fbcb7a90e66ad2fd443d7e3b34cbf860c55"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/README.md",
+      "bytes": 5362,
+      "sha256": "5d7c8dc4b6e9f5fa1b3d33d2b163f16a8a46762bdf3b0a6f7c65407e95f161b9"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/already-migrated-audit-refusal.log",
+      "bytes": 1212,
+      "sha256": "eff089940e54f97ceaec23208efc679099a422715c8ebbfe40e987142aadacbd"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/capture-candidate-verification.log",
+      "bytes": 2114,
+      "sha256": "e5fa694cde89d4d8de0867795f40f67848a985cdec03373772707fc5bf31d931"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/golden-guard.original.mjs",
+      "bytes": 5473,
+      "sha256": "57d55f7711274adcb71e26292171f76c26136197fc68c6f5b0606683defe7daa"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/guard-tests.log",
+      "bytes": 896,
+      "sha256": "c236c6fc4a15368ebe0232dc3e6bb97a7930611a4c554ab7696a7655519019c2"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/portable-audit.json",
+      "bytes": 4533,
+      "sha256": "67ad76e0a36d3d9ee38dc544d4b0d524e3807c2d0272029c0ca9e3200c177096"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/typecheck.log",
+      "bytes": 533,
+      "sha256": "5a042fe3bee3034f9b8a4907328385e2dbcd2785ba2d9c6369c8083559451f93"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/update-m8-b8-golden.original.cjs",
+      "bytes": 46267,
+      "sha256": "ca53ebd5f6c9f0f23478aca8db5ecd6659fbfe6b7a8239bd9e4a7ff8b371dcc9"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/portable/verify-portable-review.cjs",
+      "bytes": 5401,
+      "sha256": "e47693210aedc9e4c5e90f86120ce057a6b28605697cda5b061ef7e7be0be606"
+    }
+  ],
+  "excludesSelf": "docs/evidence/m8-b8/checkpoint-two/golden/portable/file-manifest.json",
+  "totalNewEvidenceBytesExcludingSelf": 71791,
+  "baseline": {
+    "audit": {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/audit.json",
+      "sha256": "f574c9ed982abd75668134921431efbe77c4d63c46bb1f45e583e709e32fe863"
+    },
+    "firstSealManifest": {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/file-manifest.json",
+      "sha256": "d69dbc41f7eddcf60315971a627e15e2c2e02bf5dee060d8ff7c241a7ca54b5c"
+    },
+    "golden": {
+      "path": "tests/fixtures/m5/full-match-golden.json",
+      "sha256": "8d129f70c093a63b339543f65814232f3cfb6daa13d95168aac3b06bdc39ac28"
+    },
+    "archive": {
+      "path": "tests/fixtures/m5/full-match-golden.pre-m8-b8.json",
+      "sha256": "007b6b4136d6959b227cbd9567948f83dca75db4ad788fd43d03c4e3cf069cc5"
+    }
+  },
+  "allFirstSealedEvidenceFilesUnchanged": true
+}

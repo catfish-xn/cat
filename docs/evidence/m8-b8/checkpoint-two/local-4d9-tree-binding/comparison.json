@@ -1,0 +1,16 @@
+{
+  "claim": "Author-side exact local Git objects vs retrieved GitHub API, not independent certification of historical working tree",
+  "localCommit": "4d9e5e00269c0ae6d916b58ac92373de2c00b513",
+  "remoteCommit": "eecca768f8ee3e88a433e992ef8458e3ce70459e",
+  "tree": "a0d09f8705588aa96e9fb9741504fbb33075c41e",
+  "srcTree": "16568c527580d74caca79e988bb5e8a1d43a290b",
+  "totalEntries": 1284,
+  "blobs": 1205,
+  "remoteTruncated": false,
+  "entryDifferences": [],
+  "commitMetadataDiffer": true,
+  "localCommitObjectSha1Verified": true,
+  "remoteCommitTreeSha": "a0d09f8705588aa96e9fb9741504fbb33075c41e",
+  "localHeaders": "tree a0d09f8705588aa96e9fb9741504fbb33075c41e\nparent 5373ca6ef729419cfa5bed64e790b680a1b6e792\nauthor dot <dot@users.noreply.github.com> 1791617059 +0200\ncommitter dot <dot@users.noreply.github.com> 1791617059 +0200",
+  "localManifestRawSha256": "6593c38ea347e95bce3e739a1baaa760bedd96eb32748d8b07f9212e72cbf1f8"
+}

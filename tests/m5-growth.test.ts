@@ -1,7 +1,8 @@
 import {describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch} from '../src/simulation/serialization';
-import {accepted,readyMatch, purchasedThreeHeroMatch} from './match-helpers';
+import {accepted,readyMatch} from './match-helpers';
+import {publicEquipmentPreparation} from './fixtures/m8-b4-match';
 import type {MatchState} from '../src/simulation/match-types';
 
 // Explicit unit-level boundary fixtures, not ordinary acquisition evidence.
@@ -26,20 +27,40 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   expect(state.persistentGrowth).toEqual([{unitId:'unit-4',attackDamageBps:250},{unitId:'unit-5',attackDamageBps:375}]);
  });
  it('commits actual battle growth once and never regrants it on restore, duplicate step or Continue',()=>{
-  const initial=purchasedThreeHeroMatch();
-  const state:MatchState={...initial,preparation:{...initial.preparation,units:initial.preparation.units.map(u=>u.id==='unit-1'?{...u,definitionId:'tristana',starLevel:3}:u.team==='player'?{...u,location:{kind:'bench',slot:Number(u.id.slice(5))-2}}:u)}};
+  // Real public income reaches 3-5. Nine paid Tristana cards create the same
+  // three-star kill/growth control without relabelling the opening Irelia.
+  let state=publicEquipmentPreparation(['sword','rod','sword','sword']);
+  state=accepted(api.deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
+  const unitId=`unit-${state.nextUnitSerial}`;
+  for(let bought=0,rolls=0;bought<9;) {
+   const slot=state.shop.slots.findIndex(offer=>offer.status==='available'&&offer.definitionId==='tristana');
+   if(slot<0){expect(rolls++).toBeLessThan(100);state=accepted(api.rerollShop(state));continue;}
+   state=accepted(api.buyUnit(state,slot,state.shop.generation));
+   if(bought++===0)state=accepted(api.deployMatchUnit(state,unitId,{kind:'board',cell:{col:3,row:7}}));
+  }
+  for(const [slot,pair] of [['sword','rod'],['sword','sword']].entries()) {
+   const a=state.items.find(item=>item.definitionId===pair[0])!;
+   const b=state.items.find(item=>item.definitionId===pair[1]&&item.id!==a.id)!;
+   const id=`item-${state.nextItemSerial}`;
+   state=accepted(api.combineItems(state,a.id,b.id));state=accepted(api.equipItem(state,id,unitId,slot));
+  }
+  expect(state.preparation.units.find(unit=>unit.id===unitId)).toMatchObject({definitionId:'tristana',starLevel:3});
+  expect(restoreMatch(JSON.stringify(state))).toEqual(state);
+  const initial=state;
   let live=accepted(api.startMatchCombat(state)),growthEvents=0;
   while(live.phase==='combat'){
    const result=api.stepMatch(live);
    for(const event of result.events)if(event.type==='growth'){
-    expect(event.unitId).toBe('unit-1');expect(event.amountBps).toBe(125);growthEvents++;
+    expect(event.unitId).toBe(unitId);expect(event.amountBps).toBe(125);growthEvents++;
    }
    live=result.state;
   }
   expect(growthEvents).toBeGreaterThan(0);
-  expect(live.persistentGrowth).toEqual([{unitId:'unit-1',attackDamageBps:125*growthEvents}]);
+  expect(live.persistentGrowth).toEqual([{unitId,attackDamageBps:125*growthEvents}]);
   expect(live.roundResults).toHaveLength(initial.roundResults.length+1);
   const restored=restoreMatch(JSON.stringify(live));expect(restored).toEqual(live);
+  const forged=JSON.parse(JSON.stringify(live));forged.persistentGrowth[0].attackDamageBps+=125;
+  expect(()=>restoreMatch(forged)).toThrow(/current resource fold/);
   const duplicate=api.stepMatch(restored);expect(duplicate.state).toBe(restored);expect(duplicate.events).toEqual([]);
   const next=accepted(api.nextRound(restored,restored.round));expect(next.persistentGrowth).toEqual(live.persistentGrowth);
   const stale=api.nextRound(next,restored.round);expect(stale.ok).toBe(false);expect(stale.state).toBe(next);

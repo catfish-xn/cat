@@ -3,7 +3,7 @@ import {describe,expect,it} from 'vitest';
 import {createCombatWithEvents} from '../src/simulation/combat';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 import {nextRandom} from '../src/simulation/rng';
-import {buyUnit,buyXp,deployMatchUnit,nextRound,rerollShop,sellUnit,startMatchCombat,stepMatch,type MatchState} from '../src/simulation/match';
+import {buyUnit,buyXp,deployMatchUnit,nextRound,rerollShop,sellUnit,startMatchCombat,stepMatch,type MatchState,type MatchEvent} from '../src/simulation/match';
 import {accepted,battle,deployed,finish,freeze,readyMatch,emptyBoard,resolveM5Choices,reachRound} from './match-helpers';
 import {settlement,shop} from './fixtures/m5/oracle.cjs';
 const players=(s:MatchState)=>s.preparation.units.filter(u=>u.team==='player');
@@ -31,9 +31,15 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   for(const[level,xp,applied]of[[8,75,1],[9,0,0]]){const end=accepted(startMatchCombat({...emptyBoard(),level,xp}));expect(end).toMatchObject({level:9,xp:0});expect(end.roundResults[0]).toMatchObject({xpRequested:2,xpAwarded:applied});}
  });
  it('rejects stale or unsettled Continue with the original complete state',()=>{
-  const first=finish(battle()),second=finish(accepted(startMatchCombat(accepted(nextRound(first,1)))));
-  expect(nextRound(freeze(second),1)).toEqual({ok:false,state:second,reason:'stale-round'});
-  const invalid={...second,roundResults:[]};expect(nextRound(invalid,2)).toEqual({ok:false,state:invalid,reason:'unsettled-round'});expect(nextRound(invalid,2).state).toBe(invalid);
+  const first=finish(battle()),pending=freeze(finish(accepted(startMatchCombat(accepted(nextRound(first,1))))));
+  const pendingBefore=structuredClone(pending);expect(pending.phase).toBe('choice');
+  // B8: 1-3 must resolve its earned component choice before stale/receipt guards are reachable.
+  for(const round of [1,2]){const rejected=nextRound(pending,round);expect(rejected).toEqual({ok:false,state:pending,reason:'wrong-phase'});expect(rejected.state).toBe(pending);}
+  const second=freeze(resolveM5Choices(pending)),before=structuredClone(second);expect(second.phase).toBe('settlement');
+  expect(pending).toEqual(pendingBefore);
+  const stale=nextRound(second,1);expect(stale).toEqual({ok:false,state:second,reason:'stale-round'});expect(stale.state).toBe(second);expect(second).toEqual(before);
+  const invalid=freeze({...second,roundResults:[]}),invalidBefore=structuredClone(invalid);
+  expect(nextRound(invalid,2)).toEqual({ok:false,state:invalid,reason:'unsettled-round'});expect(nextRound(invalid,2).state).toBe(invalid);expect(invalid).toEqual(invalidBefore);
  });
  it('does not tick preparation, rejects missing teams, and permits an empty-board concession',()=>{
   const empty=freeze(emptyBoard());expect(stepMatch(empty)).toEqual({state:empty,events:[]});expect(stepMatch(empty).state).toBe(empty);
@@ -63,8 +69,48 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   const next=accepted(nextRound(end,1));expect(buyUnit(next,0,next.shop.generation).ok).toBe(true);
  });
  it('preserves every frozen preparation/economic snapshot until terminal commit',()=>{
-  const prep=freeze(deployed()),copy=structuredClone(prep);let state=accepted(startMatchCombat(prep));
-  while(state.phase==='combat'){const prior=freeze(state),saved=structuredClone(prior);state=stepMatch(prior).state;expect(prior).toEqual(saved);expect(state.preparation).toEqual(prep.preparation);expect(state.shop).toBe(prep.shop);if(state.phase==='combat')expect([state.gold,state.level,state.xp,state.playerHp]).toEqual([prep.gold,prep.level,prep.xp,prep.playerHp]);}
+  const prep=freeze(deployed()),copy=structuredClone(prep),started=startMatchCombat(prep);let state=accepted(started);
+  if(!started.ok)throw Error(started.reason);
+  const basis=state.combatInputBasis,basisBefore=structuredClone(basis),events:MatchEvent[]=[...started.events];
+  const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),dropId=JSON.stringify(['1-2','minions-a-v1',sourceUnitId,0]);
+  const receiptId=JSON.stringify([dropId,'grant']),receipt={receiptId,dropId,payload:{kind:'unit',definitionId:'maddie',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
+  const maddie={id:'unit-2',definitionId:'maddie',team:'player',starLevel:1,location:{kind:'bench',slot:0}};
+  while(state.phase==='combat'){
+   const prior=freeze(state),saved=structuredClone(prior),step=stepMatch(prior);state=step.state;events.push(...step.events);
+   expect(prior).toEqual(saved);expect(state.shop).toBe(prep.shop);
+   expect(state.combatInputBasis).toBe(basis);expect(state.combatInputBasis).toEqual(basisBefore);
+   expect(state.combat?.units.map(u=>u.id)).toEqual(started.state.combat!.units.map(u=>u.id));
+   if(state.phase==='combat'){
+    expect(state.preparation).toEqual(prep.preparation);
+    expect([state.gold,state.level,state.xp,state.playerHp]).toEqual([prep.gold,prep.level,prep.xp,prep.playerHp]);
+    expect(state.nextUnitSerial).toBe(2);expect(state.m8.loot.receipts).toEqual([]);
+   }else{
+    // B8: terminal preparation admits only the unique approved Maddie birth, never live combat changes.
+    expect(state.preparation).toEqual({...prep.preparation,units:[...prep.preparation.units.filter(u=>u.team==='enemy'),...players(prep),maddie]});
+    expect(state.nextUnitSerial).toBe(3);expect(state.items).toEqual(prep.items);expect(state.nextItemSerial).toBe(prep.nextItemSerial);
+    expect(state.m8.loot.receipts).toEqual([receipt]);expect(step.events.filter(e=>e.domain==='match')).toEqual([
+     {type:'lootGranted',receipt,domain:'match',eventSeq:prior.nextMatchEventSeq},
+     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
+    ]);
+    expect(state.resourceProvenance).toEqual({...prep.resourceProvenance,entries:[...prep.resourceProvenance.entries,
+     {sequence:1,roundId:'1-2',kind:'unit-acquired',unitId:'unit-2',source:{kind:'loot',receiptId}},
+     {sequence:2,roundId:'1-2',kind:'combat-growth-committed',combatId:'round-1',settlementId:'round-1-settled',combatStartProvenancePrefixLength:1,sourceDeltas:[]},
+    ]});
+   }
+  }
+  const deaths=events.filter((e):e is Extract<MatchEvent,{type:'death'}>=>e.type==='death'&&e.unitId===sourceUnitId);expect(deaths).toHaveLength(1);
+  expect(state.m8.loot.earnedEvidence).toEqual([{dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq}}]);
+  expect(events.filter(e=>e.domain==='match')).toEqual([
+   {type:'lootRevealed',dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq},domain:'match',eventSeq:prep.nextMatchEventSeq},
+   {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+1},
+   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
+  ]);
+  expect(state.m8.loot.frozen).toBe(prep.m8.loot.frozen);
+  expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId}]);
+  expect(state.m8.loot.choiceResolutions).toEqual([]);expect(state.m8.loot.choiceEligibility).toEqual([]);
+  expect(state.m8.loot.guaranteeCounters).toEqual(prep.m8.loot.guaranteeCounters);
+  const combatEvents=events.filter(e=>e.domain==='combat');expect(combatEvents.map(e=>e.eventSeq)).toEqual(combatEvents.map((_,i)=>i));
+  expect(state.roundResults).toEqual([settlement(prep,state.combat)]);expect(state.roundResults[0].combatEventCount).toBe(combatEvents.length);
   expect(prep).toEqual(copy);
  });
  it('creates fresh independent Combat with exactly one battle-seed word',()=>{

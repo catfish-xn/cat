@@ -1,0 +1,72 @@
+[
+  {
+    "file": "README.md",
+    "rawBytes": 5345,
+    "rawSha256": "c14ad82af1c2621b25ec7c361fc2be668bd0c11cf8e5a846e406196d1d6f9e01",
+    "gzipBytes": 2487,
+    "gzipSha256": "2352896e13661687475dc44777356d7524d2495262d47e2151493f7559b9382c"
+  },
+  {
+    "file": "actual-output.log",
+    "rawBytes": 1315,
+    "rawSha256": "bf7714b8996d67e681e370227c5c83310926bc5edfbb048977b747efd1bacf31",
+    "gzipBytes": 358,
+    "gzipSha256": "6f262391bd74f11687993f6ddba440f18eca3c96083ffecfdc880e897f03025c"
+  },
+  {
+    "file": "b8-restore.baseline.ts",
+    "rawBytes": 18087,
+    "rawSha256": "f1e1f4276f7ba4b5074f1a75116910ac26b248f9f0e1114cc87ccafc58dc8302",
+    "gzipBytes": 5128,
+    "gzipSha256": "eead800253d8b94ab1c1835b971f12afefcb86361d63d95f7fecb93c00cdf3d1"
+  },
+  {
+    "file": "b8-restore.current.ts",
+    "rawBytes": 18335,
+    "rawSha256": "5ca38841837fbfd093d91eab1775f273777d3a15d7e0091fc395caca9de010a5",
+    "gzipBytes": 5241,
+    "gzipSha256": "8f6910a791c231e335eeebb4c596f6bdd4dd102cade7dabd42006a95d8e05ee9"
+  },
+  {
+    "file": "b8-restore.unsafe.ts",
+    "rawBytes": 18291,
+    "rawSha256": "9bfc8652a2c86abe4a214c3209c37eca82cd98cf9bcd9b3fdb235f5490b26077",
+    "gzipBytes": 5202,
+    "gzipSha256": "627092686cc3484a2d160fe015a8aabd4a5ec505f1ffdd9b2e2342cf60e00a16"
+  },
+  {
+    "file": "manifest.json",
+    "rawBytes": 1443,
+    "rawSha256": "1e219bb00c026d74a6498fd8a97114fcca76b843da4966673159f1194875369c",
+    "gzipBytes": 757,
+    "gzipSha256": "c20639e957427ec53490fd0ffb044d8d33e5498b592c9c10e3f5500a8a123106"
+  },
+  {
+    "file": "review.mjs",
+    "rawBytes": 3172,
+    "rawSha256": "f9b67d5f99be2dba8bb03e8a05fc95d0ab5dec28ab45d6a2f27c2e77bce86056",
+    "gzipBytes": 1188,
+    "gzipSha256": "c5bd7470dffac84d95bbcfa61fdb2abcfe1e7f008b38c86332910e3ff1e33c04"
+  },
+  {
+    "file": "serialization.baseline.ts",
+    "rawBytes": 38204,
+    "rawSha256": "db014a9f97905305d51afceb08e43138dd15ae1e7d5f660aaf0f6938f5945917",
+    "gzipBytes": 10162,
+    "gzipSha256": "9ec08060c378726c76684d0d53a5bbcdea69dfe746b5641dd0452ee98a97c1f3"
+  },
+  {
+    "file": "serialization.current.ts",
+    "rawBytes": 38231,
+    "rawSha256": "af5fd2e21f2b4fb0ec3b32b1542d6e92ab09d58cf57376c1fe4f1e7afbf06cdc",
+    "gzipBytes": 10170,
+    "gzipSha256": "97fa2d0ca86f3477fc1bca724b74b2b93f8d30ce1cf779d88a3b50f8e1923fd9"
+  },
+  {
+    "file": "tests.current.ts",
+    "rawBytes": 4216,
+    "rawSha256": "6797fbebc6c994a4d09d3c624eeef460a4163af678cae7f149627ffffe4b138a",
+    "gzipBytes": 1263,
+    "gzipSha256": "7f6089fa90e6131cb5287a2ffcd35c369d1b03535fcd3b9a74d90e7053b78658"
+  }
+]

@@ -1,10 +1,10 @@
-import { planPermanentItemGrant } from '../src/simulation/item-grants';
+import { publicEquipmentPreparation } from './fixtures/m8-b4-match';
 import { describe, expect, it } from 'vitest';
 import { combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { BattleHistory, validateBattleRecord } from '../src/replay';
 import type { CombatEvent } from '../src/simulation/combat';
-import { accepted, battle, purchasedThreeHeroMatch } from './match-helpers';
+import { accepted, battle } from './match-helpers';
 import { validateShield, grantShieldState, endShield } from '../src/simulation/m8/shield';
 import { type S13Unit } from '../src/simulation/combat-s13-state';
 import { type AbilityContext } from '../src/simulation/combat-s13-abilities';
@@ -26,9 +26,12 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     for (const [value, expected] of vectors) expect(digestContent(value)).toBe(expected);
   });
   it('R1 real dragon claw: tick39 canonical save→restore→tick40 complete events equal and continued archive validates', () => {
-    let state=purchasedThreeHeroMatch();
-    // Explicit item-mechanism input through IF-GRANT; not B8 acquisition evidence.
-    for(let i=0;i<2;i++) {const grant=planPermanentItemGrant(state,{definitionId:'cloak',receiptId:`claw-fixture-${i}`},[]);if(!grant.ok)throw new Error(grant.reason);state=grant.state;}
+    // Two genuine opening loot choices, then the unchanged combine/equip/start path.
+    let state=publicEquipmentPreparation(['cloak', 'cloak']);
+    expect(restoreMatch(serializeMatch(state))).toEqual(state);
+    const forgedBirth = JSON.parse(serializeMatch(state));
+    forgedBirth.resourceProvenance.entries.find((entry: {kind: string}) => entry.kind === 'item-acquired').source.receiptId = 'unearned-cloak';
+    expect(() => restoreMatch(forgedBirth)).toThrow(/receipt birth binding/);
     const cloaks = state.items.filter(i => i.definitionId === 'cloak');
     state = accepted(combineItems(state, cloaks[0].id, cloaks[1].id));
     state = accepted(equipItem(state, state.items.find(i => i.definitionId === 'dragons-claw')!.id, 'unit-1', 0));

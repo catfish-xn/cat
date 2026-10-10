@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
-import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
+import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
@@ -414,7 +414,14 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private reconcileTokens() {
-    const ids = new Set(this.state.units.map(unit => unit.id));
+    const units = [...this.state.units], ids = new Set(units.map(unit => unit.id));
+    // Rewards can consume an old unit while its finished combat is still displayed.
+    // Keep that combat view until Continue clears it, including restored settlements.
+    for (const unit of this.session.combat?.units ?? []) if (!ids.has(unit.id)) {
+      units.push({ id: unit.id, definitionId: unit.definitionId, team: unit.team,
+        starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell } });
+      ids.add(unit.id);
+    }
     for (const [id, token] of this.tokens) {
       if (ids.has(id)) continue;
       this.views.get(id)?.destroy(); if (token.active) token.destroy();
@@ -423,7 +430,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.selectedId === id) this.selectedId = null;
     }
     const items = this.session.state.items;
-    for (const unit of this.state.units) {
+    for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
       const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
         .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
@@ -470,7 +477,10 @@ export class BoardScene extends Phaser.Scene {
     this.count.setText(`我方人口 ${getPlayerDeploymentCount(this.state)} / ${getDeploymentCap(match)}`);
     this.startButton.setText(round.kind === 'supply' ? '领取补给' : '开始战斗');
     this.startButton.setAlpha(this.session.startFailure ? 0.4 : 1).setBackgroundColor('#38695f');
-    this.continueButton.setData('round', match.round).setAlpha(match.phase === 'settlement' ? 1 : 0.4);
+    // Same authoritative verdict as the panel button: interactive only when LootView allows Continue.
+    const canContinue = readLootView(match).canContinue;
+    this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
+    if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
     this.rerollButton.setAlpha(ready ? 1 : 0.4);
     this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(ready && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
@@ -554,6 +564,8 @@ export class BoardScene extends Phaser.Scene {
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
     const events = this.session.advance(delta);
+    // A settlement can grant new units before the frame renders its final combat.
+    if (this.session.phase !== 'combat') this.reconcileTokens();
     this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
     // Rewards may leave combat directly for a component choice (for example 2-7).
     // Render every phase exit, including choices, before waiting for more input.

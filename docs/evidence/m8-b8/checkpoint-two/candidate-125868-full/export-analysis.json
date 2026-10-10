@@ -1,0 +1,2803 @@
+[
+  {
+    "reachable": false,
+    "fileName": "assets/index-DwERYZ_b.js",
+    "modules": {
+      "src/simulation/board.ts": {
+        "renderedLength": 1169,
+        "renderedExports": [
+          "DEFAULT_BOARD",
+          "contains",
+          "sameCell",
+          "isDeploymentCell",
+          "getNeighbors",
+          "hexDistance"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/freeze.ts": {
+        "renderedLength": 200,
+        "renderedExports": [
+          "freezeContent"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/neutrals.ts": {
+        "renderedLength": 2732,
+        "renderedExports": [
+          "neutralAbilityId",
+          "NEUTRAL_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/stats.ts": {
+        "renderedLength": 7195,
+        "renderedExports": [
+          "integer",
+          "safeNumber",
+          "conditionHolds",
+          "modifierValues",
+          "resolveStat",
+          "attackInterval",
+          "changeMaxHp",
+          "amountNumerator",
+          "evaluateAmount"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/crit.ts": {
+        "renderedLength": 3203,
+        "renderedExports": [
+          "sourceTuple",
+          "authorizeSpellCrit",
+          "validateSpellCrit",
+          "rollCrit"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/mana.ts": {
+        "renderedLength": 2512,
+        "renderedExports": [
+          "validateManaDefinition",
+          "validateManaState",
+          "resolveMana",
+          "damageMana",
+          "planManaCost",
+          "completeCast",
+          "refundCast"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/unit-inputs.ts": {
+        "renderedLength": 1144,
+        "renderedExports": [
+          "validateNeutralInputs",
+          "compileUnitInputs"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/match-rules.ts": {
+        "renderedLength": 2047,
+        "renderedExports": [
+          "OPENING_INITIAL_STATE",
+          "MATCH_RULES",
+          "DEFAULT_MATCH_SEED",
+          "XP_TO_NEXT_LEVEL",
+          "SHOP_ODDS",
+          "SHOP_CATALOG_BY_COST",
+          "SHOP_CATALOG",
+          "STAGE_PLAYER_DAMAGE",
+          "ECONOMY_RULES",
+          "OPENING_ECONOMY_RULES"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/units.ts": {
+        "renderedLength": 19030,
+        "renderedExports": [
+          "LEGACY_UNIT_DEFINITIONS",
+          "M5_UNIT_DEFINITIONS",
+          "NEUTRAL_UNIT_DEFINITIONS",
+          "M8_NEUTRAL_UNIT_DEFINITIONS",
+          "UNIT_DEFINITIONS",
+          "validateUnitDefinitions"
+        ],
+        "removedExports": [
+          "M5_UNIT_IDS"
+        ]
+      },
+      "src/simulation/game.ts": {
+        "renderedLength": 1728,
+        "renderedExports": [
+          "validateDeployment",
+          "deployUnit",
+          "getPlayerDeploymentCount",
+          "getDefinition"
+        ],
+        "removedExports": [
+          "createGame"
+        ]
+      },
+      "src/simulation/content/loot.ts": {
+        "renderedLength": 2939,
+        "renderedExports": [
+          "LOOT_POLICY_VERSION",
+          "LOOT_HERO_POOL_VERSION",
+          "LOOT_HERO_POOLS",
+          "LOOT_SLOTS",
+          "LOOT_CATEGORIES",
+          "LOOT_FREEZE_ALGORITHM",
+          "LOOT_RUNTIME_REVISION"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/neutral-receipts.ts": {
+        "renderedLength": 1232,
+        "renderedExports": [
+          "NEUTRAL_RUNTIME_VERSION",
+          "recordNeutralReceipts"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/neutral-encounters.ts": {
+        "renderedLength": 1850,
+        "renderedExports": [
+          "NEUTRAL_ENCOUNTER_CATALOG_VERSION",
+          "NEUTRAL_ENCOUNTER_POLICY_VERSION",
+          "NEUTRAL_ENCOUNTERS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/item-programs.ts": {
+        "renderedLength": 3759,
+        "renderedExports": [
+          "always",
+          "refresh",
+          "combat",
+          "duration",
+          "hp",
+          "rows",
+          "filter",
+          "amount",
+          "modifier",
+          "selector",
+          "enemies",
+          "stat",
+          "status",
+          "burn",
+          "shield",
+          "trigger",
+          "survival",
+          "damage",
+          "mana",
+          "periodic",
+          "vamp"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-components.ts": {
+        "renderedLength": 3066,
+        "renderedExports": [
+          "COMPONENTS_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-sword.ts": {
+        "renderedLength": 3926,
+        "renderedExports": [
+          "SWORD_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-bow.ts": {
+        "renderedLength": 6186,
+        "renderedExports": [
+          "BOW_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-rod.ts": {
+        "renderedLength": 3239,
+        "renderedExports": [
+          "ROD_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-tear.ts": {
+        "renderedLength": 4498,
+        "renderedExports": [
+          "TEAR_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-vest.ts": {
+        "renderedLength": 2508,
+        "renderedExports": [
+          "VEST_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-cloak.ts": {
+        "renderedLength": 1794,
+        "renderedExports": [
+          "CLOAK_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-belt.ts": {
+        "renderedLength": 879,
+        "renderedExports": [
+          "BELT_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-gloves.ts": {
+        "renderedLength": 654,
+        "renderedExports": [
+          "GLOVES_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items.ts": {
+        "renderedLength": 7251,
+        "renderedExports": [
+          "ITEM_DEFINITIONS",
+          "COMPONENT_IDS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/component-pool.ts": {
+        "renderedLength": 1241,
+        "renderedExports": [
+          "COMPONENT_POOL_VERSION",
+          "COMPONENT_POOL",
+          "validateComponentPool",
+          "validateComponentCandidates"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/rng.ts": {
+        "renderedLength": 274,
+        "renderedExports": [
+          "validateSeed",
+          "nextRandom"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/identity.ts": {
+        "renderedLength": 2251,
+        "renderedExports": [
+          "compareCodePoints",
+          "sourceTuple",
+          "canonicalSource",
+          "effectIdentity",
+          "validateIdentity",
+          "gcd",
+          "fraction",
+          "addFractions",
+          "savedFraction"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/equipment.ts": {
+        "renderedLength": 7995,
+        "renderedExports": [
+          "initializeStreams",
+          "uniformIndex",
+          "selectTemporaryPair",
+          "generateRoundRolls",
+          "projectTemporaryEquipment",
+          "reconcileTemporaryEquipment",
+          "validateEquipmentState",
+          "createEquipmentPool",
+          "validateTemporaryEquipment"
+        ],
+        "removedExports": [
+          "compileTemporaryModifiers",
+          "reconcileTemporaryModifiers",
+          "compileTemporaryEffects",
+          "reconcileTemporaryEffects",
+          "compileTemporaryPrograms",
+          "reconcileTemporaryPrograms"
+        ]
+      },
+      "src/simulation/content/round-catalog.ts": {
+        "renderedLength": 5153,
+        "renderedExports": [
+          "ROUND_CATALOG",
+          "ROUND_SEMANTIC_NODES"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/round-selectors.ts": {
+        "renderedLength": 702,
+        "renderedExports": [
+          "getCatalogRoundByOrdinal",
+          "getCatalogRoundById",
+          "getNextCatalogRound",
+          "readRoundInfo"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/round-schedule.ts": {
+        "renderedLength": 1219,
+        "renderedExports": [
+          "ROUND_RULES_VERSION",
+          "FINAL_ROUND",
+          "ROUND_PREPARATION_RULES",
+          "ROUND_SCHEDULE",
+          "getStageRound",
+          "getRoundKind",
+          "getRoundSchedule"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/temporary-equipment.ts": {
+        "renderedLength": 4200,
+        "renderedExports": [
+          "grantsTemporaryEquipment",
+          "TEMPORARY_EQUIPMENT_POOL",
+          "planTemporaryEquipment",
+          "isTemporaryItemId",
+          "validateMatchEquipment"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/equipment-policy.ts": {
+        "renderedLength": 1548,
+        "renderedExports": [
+          "EQUIPMENT_RULES_VERSION",
+          "checkEquipmentPlacement"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/s13-rules.ts": {
+        "renderedLength": 1789,
+        "renderedExports": [
+          "S13_COMBAT_RULES"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-types.ts": {
+        "renderedLength": 445,
+        "renderedExports": [
+          "COMBAT_TICK_MS",
+          "MAX_COMBAT_TICKS",
+          "MOVE_INTERVAL_TICKS",
+          "compareIds",
+          "eliminationResult"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/abilities.ts": {
+        "renderedLength": 16005,
+        "renderedExports": [
+          "S13_ABILITY_DATA"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-abilities.ts": {
+        "renderedLength": 4703,
+        "renderedExports": [
+          "ABILITY_DEFINITIONS",
+          "validateAbilityDefinitions",
+          "resolveAbility",
+          "planAbility"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/status.ts": {
+        "renderedLength": 9223,
+        "renderedExports": [
+          "isEffective",
+          "summarizeGroup",
+          "effectiveStatuses",
+          "statusMagnitude",
+          "validateStatusApplication",
+          "applyStatusContribution",
+          "removeStatusContributions",
+          "endStatuses",
+          "cleanseStatuses",
+          "advanceBurnClock",
+          "validateStatusGroups"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/item-program.ts": {
+        "renderedLength": 3871,
+        "renderedExports": [
+          "itemPrograms",
+          "programEntries",
+          "compileItemCrit",
+          "validateItemProgram"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/targeting.ts": {
+        "renderedLength": 9468,
+        "renderedExports": [
+          "startingRows",
+          "isSelectable",
+          "selectTargets",
+          "shortestPath",
+          "chooseRandomCenter",
+          "selectAbilityTargets",
+          "AXIAL_DIRECTIONS",
+          "axial",
+          "offset",
+          "coneCells",
+          "selectConeTargets"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-definitions.ts": {
+        "renderedLength": 5661,
+        "renderedExports": [
+          "asSource",
+          "flatAmount",
+          "selfSelector",
+          "compileMechanismDefinitions"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/neutral-encounter-compiler.ts": {
+        "renderedLength": 5710,
+        "renderedExports": [
+          "compileNeutralEncounter",
+          "COMPILED_NEUTRAL_ENCOUNTERS",
+          "readNeutralCombatUnit"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/round-enemies.ts": {
+        "renderedLength": 3204,
+        "renderedExports": [
+          "ENEMY_TEMPLATES",
+          "ENEMY_POSITIONS",
+          "ENEMY_GROWTH",
+          "createRoundEnemies",
+          "getRoundEnemyItems",
+          "ROUND_ENEMY_PROJECTIONS",
+          "readRoundEnemyProjection"
+        ],
+        "removedExports": [
+          "getEnemyGrowthBps"
+        ]
+      },
+      "src/simulation/progression.ts": {
+        "renderedLength": 1148,
+        "renderedExports": [
+          "getXpToNextLevel",
+          "getShopOdds",
+          "grantXp"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/economy.ts": {
+        "renderedLength": 2827,
+        "renderedExports": [
+          "planRoundEconomy",
+          "getInterestGold"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/opening-economy.ts": {
+        "renderedLength": 2392,
+        "renderedExports": [
+          "planOpeningEconomy",
+          "planCatalogRoundEconomy"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/source-manifest.ts": {
+        "renderedLength": 5270,
+        "renderedExports": [
+          "SOURCE_MANIFEST"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/traits.ts": {
+        "renderedLength": 4065,
+        "renderedExports": [
+          "TRAIT_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/augments.ts": {
+        "renderedLength": 2060,
+        "renderedExports": [
+          "AUGMENT_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/anomalies.ts": {
+        "renderedLength": 874,
+        "renderedExports": [
+          "ANOMALY_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/index.ts": {
+        "renderedLength": 2617,
+        "renderedExports": [
+          "TRAIT_DEFINITIONS",
+          "ITEM_DEFINITIONS",
+          "AUGMENT_DEFINITIONS",
+          "ANOMALY_DEFINITIONS",
+          "canonicalContent",
+          "digestContent",
+          "CONTENT_DIGEST"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/input-assets.ts": {
+        "renderedLength": 5065,
+        "renderedExports": [
+          "createInputValidation",
+          "validateInputAssets"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-input.ts": {
+        "renderedLength": 6133,
+        "renderedExports": [
+          "COMBAT_INPUT_VERSION",
+          "readCombatStrategyInputs",
+          "freezeCombatInput",
+          "restoreCombatInput"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/loot-identity.ts": {
+        "renderedLength": 717,
+        "renderedExports": [
+          "lootDropId",
+          "lootReceiptId",
+          "lootChoiceId",
+          "compareLootFreezeSlots",
+          "compareLootChoices"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/unit-stats.ts": {
+        "renderedLength": 2066,
+        "renderedExports": [
+          "getUnitStats",
+          "resolveUnitStats",
+          "getUnitSellPrice"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/resource-provenance.ts": {
+        "renderedLength": 20812,
+        "renderedExports": [
+          "RESOURCE_PROVENANCE_VERSION",
+          "appendResourceProvenance",
+          "mergeGrowthLedger",
+          "validateResourceReceipts",
+          "foldResourceProvenance"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/item-grants.ts": {
+        "renderedLength": 942,
+        "renderedExports": [
+          "planPermanentItemGrant"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/loot-choice.ts": {
+        "renderedLength": 718,
+        "renderedExports": [
+          "orderedUnresolvedLootChoices",
+          "makeLootPendingChoice"
+        ],
+        "removedExports": [
+          "validateLootPendingChoice"
+        ]
+      },
+      "src/simulation/loot-freeze.ts": {
+        "renderedLength": 6356,
+        "renderedExports": [
+          "LOOT_FREEZE_VERSION",
+          "LOOT_REPLAY_DIGEST",
+          "drawLootIndex",
+          "validateLootContent",
+          "freezeLootThroughRound",
+          "restoreFrozenLootLedger",
+          "advanceFrozenLootLedger"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/upgrades.ts": {
+        "renderedLength": 5457,
+        "renderedExports": [
+          "planPurchase",
+          "transferUpgradeResources"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/unit-acquisition.ts": {
+        "renderedLength": 933,
+        "renderedExports": [
+          "planUnitAcquisition"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/loot-runtime.ts": {
+        "renderedLength": 9351,
+        "renderedExports": [
+          "prepareMatchLoot",
+          "revealMatchLoot",
+          "grantDirectLoot",
+          "unresolvedLootChoices",
+          "hasPendingLootCapacity",
+          "grantLootChoice"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/effects.ts": {
+        "renderedLength": 11550,
+        "renderedExports": [
+          "sourceRank",
+          "compareEffectSources",
+          "compareSourcedEffects",
+          "effectKey",
+          "cloneAction",
+          "cloneEffect",
+          "makeSourcedEffects",
+          "resolveEffects",
+          "initializeEffectRuntime",
+          "collectTriggers"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-initialization.ts": {
+        "renderedLength": 1088,
+        "renderedExports": [
+          "compileCombatInitialInputs",
+          "projectCombatStartMana"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/runtime-types.ts": {
+        "renderedLength": 181,
+        "renderedExports": [
+          "EMPTY_MECHANISMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/triggers.ts": {
+        "renderedLength": 8781,
+        "renderedExports": [
+          "EMPTY_TRIGGER_LEDGER",
+          "EMPTY_FACTS",
+          "counterIdentity",
+          "listenerMatches",
+          "dispatchTriggers",
+          "validateTriggerLedger"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-triggers.ts": {
+        "renderedLength": 3156,
+        "renderedExports": [
+          "hasMechanismSubscriber",
+          "emitMechanismSignal"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-targeting.ts": {
+        "renderedLength": 674,
+        "renderedExports": [
+          "targetUnit",
+          "targetingEnvironment"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/shield.ts": {
+        "renderedLength": 6981,
+        "renderedExports": [
+          "grantShieldState",
+          "maintainShield",
+          "recordShieldAbsorption",
+          "endShield",
+          "validateShield",
+          "survivalSamples",
+          "survivalConsumptionKeys",
+          "remainingSurvivalKeys",
+          "consumeSurvivalTriggers"
+        ],
+        "removedExports": [
+          "absorbShields"
+        ]
+      },
+      "src/simulation/combat-s13-state.ts": {
+        "renderedLength": 14467,
+        "renderedExports": [
+          "ensureMechanisms",
+          "statusModifiers",
+          "shieldProjection",
+          "frozenShield",
+          "EMPTY_RUNTIME",
+          "hpSample",
+          "constantModifier",
+          "spellCrit",
+          "compareText",
+          "sourceKey",
+          "compareOrigins",
+          "origin",
+          "variable",
+          "champion",
+          "mechanic",
+          "hasMechanic",
+          "active",
+          "ap",
+          "ad",
+          "range",
+          "amount",
+          "interval",
+          "byDistance",
+          "areaEnemies",
+          "enemies",
+          "neighborsOf",
+          "lowestAlly",
+          "path",
+          "syncShield",
+          "grantShield",
+          "applyStatus"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/periodic.ts": {
+        "renderedLength": 4251,
+        "renderedExports": [
+          "clearRemainder",
+          "periodicAmount",
+          "splitTotal",
+          "advancePeriodicTask",
+          "cleanPeriodicTasks",
+          "validatePeriodicTask"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/damage.ts": {
+        "renderedLength": 5406,
+        "renderedExports": [
+          "permissionsFor",
+          "validateDamageContext",
+          "prepareDamage",
+          "allocateDamage",
+          "resolveDamage"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/heal.ts": {
+        "renderedLength": 5178,
+        "renderedExports": [
+          "makeHealRequest",
+          "resolveHeal",
+          "selectVampAlly",
+          "vampRequests"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-mechanisms.ts": {
+        "renderedLength": 31398,
+        "renderedExports": [
+          "selectMechanismTargets",
+          "executeDamageControlSequence",
+          "executeMechanismEffect",
+          "initializeMechanisms",
+          "maintainMechanisms",
+          "refreshMechanismAuras",
+          "clearPeriodicAccount",
+          "executeShieldEnd",
+          "settleShieldEnds",
+          "settleSurvival",
+          "vampRates",
+          "commitMechanismHeal",
+          "cleanupMechanisms",
+          "maintainActivities"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-effects.ts": {
+        "renderedLength": 4498,
+        "renderedExports": [
+          "stampCombatStep",
+          "invocationEvent",
+          "applyCombatStart"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-damage.ts": {
+        "renderedLength": 1842,
+        "renderedExports": [
+          "mitigateDamage",
+          "aggregateDamagePackets"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/opening.ts": {
+        "renderedLength": 5218,
+        "renderedExports": [
+          "planOpening",
+          "commitOpening",
+          "advanceOpeningTasks"
+        ],
+        "removedExports": [
+          "validateOpeningState"
+        ]
+      },
+      "src/simulation/m8/planning.ts": {
+        "renderedLength": 78,
+        "renderedExports": [
+          "damageTypeForTarget"
+        ],
+        "removedExports": [
+          "samplePlanBindings",
+          "planEffectApplications"
+        ]
+      },
+      "src/simulation/m8/companions.ts": {
+        "renderedLength": 3015,
+        "renderedExports": [
+          "freezeCompanions",
+          "registerDeaths",
+          "advanceReactions"
+        ],
+        "removedExports": [
+          "validateCompanionState"
+        ]
+      },
+      "src/simulation/combat-s13-abilities.ts": {
+        "renderedLength": 16340,
+        "renderedExports": [
+          "planS13Cast",
+          "executeTask",
+          "planS13Attack"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-s13.ts": {
+        "renderedLength": 35269,
+        "renderedExports": [
+          "readCombatStats",
+          "advanceS13Tick"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-tick.ts": {
+        "renderedLength": 8642,
+        "renderedExports": [
+          "advanceCombatTick"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat.ts": {
+        "renderedLength": 4739,
+        "renderedExports": [
+          "validateCombatStart",
+          "createCombatWithEvents",
+          "stepCombat"
+        ],
+        "removedExports": [
+          "createCombat"
+        ]
+      },
+      "src/simulation/shop.ts": {
+        "renderedLength": 786,
+        "renderedExports": [
+          "generateShop"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/validate-content.ts": {
+        "renderedLength": 11180,
+        "renderedExports": [
+          "MECHANIC_FIELDS",
+          "validateEffect",
+          "validateStatBounds",
+          "validateContent"
+        ],
+        "removedExports": [
+          "validateAcquisitionIsolation"
+        ]
+      },
+      "src/simulation/inventory.ts": {
+        "renderedLength": 3757,
+        "renderedExports": [
+          "validateCombine",
+          "planCombine",
+          "validateEquip",
+          "planEquip",
+          "returnUnitItems"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/item-catalog.ts": {
+        "renderedLength": 1025,
+        "renderedExports": [
+          "readItemCatalog"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/item-selectors.ts": {
+        "renderedLength": 1687,
+        "renderedExports": [
+          "previewCombine",
+          "previewEquip",
+          "readUnitEquipment"
+        ],
+        "removedExports": [
+          "readItemInventory"
+        ]
+      },
+      "src/simulation/trait-snapshot.ts": {
+        "renderedLength": 1347,
+        "renderedExports": [
+          "deriveTraits"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/strategy-snapshot.ts": {
+        "renderedLength": 5953,
+        "renderedExports": [
+          "buildStrategySnapshot"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/rewards.ts": {
+        "renderedLength": 2512,
+        "renderedExports": [
+          "planReward"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/choices.ts": {
+        "renderedLength": 468,
+        "renderedExports": [
+          "generateChoices"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/encounter-selectors.ts": {
+        "renderedLength": 3696,
+        "renderedExports": [
+          "readEncounterPreview"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/match.ts": {
+        "renderedLength": 26131,
+        "renderedExports": [
+          "needsAnomalyRecruitment",
+          "createMatch",
+          "getDeploymentCap",
+          "validateMatchDeployment",
+          "deployMatchUnit",
+          "buyUnit",
+          "sellUnit",
+          "setShopLock",
+          "rerollShop",
+          "buyXp",
+          "matchStartFailure",
+          "startMatchCombat",
+          "stepMatch",
+          "nextRound",
+          "combineItems",
+          "equipItem",
+          "selectAnomalyTarget",
+          "rerollAnomaly",
+          "selectChoice"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/hex-layout.ts": {
+        "renderedLength": 1045,
+        "renderedExports": [
+          "HexLayout"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/layout-config.ts": {
+        "renderedLength": 202,
+        "renderedExports": [
+          "BOARD_LAYOUT"
+        ],
+        "removedExports": [
+          "PIECE_EXTENT",
+          "boardLayoutMetrics"
+        ]
+      },
+      "src/rendering/match-session.ts": {
+        "renderedLength": 5029,
+        "renderedExports": [
+          "MatchSession"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/input-router.ts": {
+        "renderedLength": 683,
+        "renderedExports": [
+          "InputRouter"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/display-names.ts": {
+        "renderedLength": 491,
+        "renderedExports": [
+          "displayUnitName"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/theme.ts": {
+        "renderedLength": 1893,
+        "renderedExports": [
+          "THEME",
+          "toNumber",
+          "costColor",
+          "applyThemeVariables"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/hero-identity.ts": {
+        "renderedLength": 5792,
+        "renderedExports": [
+          "TRAIT_SHAPES",
+          "HERO_STYLE",
+          "getHeroIdentity",
+          "HERO_S13_TRAITS",
+          "S13_TRAIT_ZH",
+          "heroTraitLabels",
+          "EMBLEM_POINTS",
+          "heroEmblemSvg"
+        ],
+        "removedExports": [
+          "heroTraitNames"
+        ]
+      },
+      "src/presentation/encounter-preview.ts": {
+        "renderedLength": 2683,
+        "renderedExports": [
+          "encounterPreviewSection"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/combat-status.ts": {
+        "renderedLength": 12979,
+        "renderedExports": [
+          "DAMAGE_TYPE_NAMES",
+          "STATUS_KIND_NAMES",
+          "STATUS_REASON_NAMES",
+          "SHIELD_REASON_NAMES",
+          "ticksToSeconds",
+          "damageFilterText",
+          "readUnitStatusRows",
+          "statusRowText",
+          "statusBadges",
+          "shieldSource",
+          "eventSource",
+          "eventStatusName",
+          "appliedStatusFloat",
+          "m8EventText"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/combat-feedback.ts": {
+        "renderedLength": 1678,
+        "renderedExports": [
+          "originLabel",
+          "combatEventText"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/s13-asset-manifest.ts": {
+        "renderedLength": 13061,
+        "renderedExports": [
+          "S13_ASSETS"
+        ],
+        "removedExports": [
+          "S13_ASSET_PATCH"
+        ]
+      },
+      "src/presentation/s13-assets.ts": {
+        "renderedLength": 3148,
+        "renderedExports": [
+          "s13AssetUrl",
+          "championTextureKey",
+          "championPortraitKey",
+          "loadS13Portraits",
+          "buildPortraitTextures",
+          "heroPortraitHtml",
+          "TRAIT_API_NAMES",
+          "s13IconHtml",
+          "installImageFallback"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/item-codex.ts": {
+        "renderedLength": 14291,
+        "renderedExports": [
+          "catalogEntry",
+          "itemDescriptions",
+          "itemMarkHtml",
+          "itemTags",
+          "attachItemPopover",
+          "createItemCodex"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/equipment-feedback.ts": {
+        "renderedLength": 1443,
+        "renderedExports": [
+          "EQUIPMENT_FAILURE_TEXT",
+          "EQUIPMENT_COMMAND_FAILURES",
+          "equipmentFailureText",
+          "slotList",
+          "temporaryLifetime",
+          "temporaryItemText",
+          "slotViews"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/strategy-panel.ts": {
+        "renderedLength": 45282,
+        "renderedExports": [
+          "describeEffect",
+          "describeTraitTier",
+          "StrategyPanel"
+        ],
+        "removedExports": []
+      },
+      "src/m6/limits.ts": {
+        "renderedLength": 202,
+        "renderedExports": [
+          "MAX_SAVE_BYTES",
+          "MAX_BATTLE_RECORDS",
+          "MAX_EVENTS_PER_BATTLE",
+          "AUTOSAVE_TICKS",
+          "MAX_COMPLETED_RUNS",
+          "CHECKPOINT_INTERVAL_TICKS"
+        ],
+        "removedExports": [
+          "MIN_PIECE_DIAMETER_CSS",
+          "MIN_DOM_TARGET_CSS",
+          "MAX_HORIZONTAL_OVERFLOW_CSS",
+          "PERFORMANCE_BUDGET_MS",
+          "LIFECYCLE_CYCLES",
+          "MAX_POST_GC_HEAP_GROWTH_BYTES"
+        ]
+      },
+      "src/simulation/m8/item-restore.ts": {
+        "renderedLength": 9641,
+        "renderedExports": [
+          "declaredEffects",
+          "statusDeclaration",
+          "isDeclaredStatus",
+          "validateItemEffectConsumption",
+          "validateItemRuntime",
+          "maxHpCandidates",
+          "abilityPowerCandidates",
+          "attackDamageCandidates"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/neutral-restore.ts": {
+        "renderedLength": 11024,
+        "renderedExports": [
+          "validateNeutralCombat"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/b8-restore.ts": {
+        "renderedLength": 16957,
+        "renderedExports": [
+          "validateB8Loot",
+          "validateB8Resources"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/restore.ts": {
+        "renderedLength": 15061,
+        "renderedExports": [
+          "validateMechanisms"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/serialization.ts": {
+        "renderedLength": 35501,
+        "renderedExports": [
+          "restoreMatch"
+        ],
+        "removedExports": [
+          "serializeMatch"
+        ]
+      },
+      "src/replay/history.ts": {
+        "renderedLength": 6812,
+        "renderedExports": [
+          "isOwnedBattleRecord",
+          "deepFreeze",
+          "equalContent",
+          "validateBattleRecord",
+          "validateBattleCollection",
+          "BattleHistory"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/capture-ownership.ts": {
+        "renderedLength": 1368,
+        "renderedExports": [
+          "fixedCapture",
+          "mergeCaptures"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/repository.ts": {
+        "renderedLength": 9420,
+        "renderedExports": [
+          "SaveError",
+          "saveError",
+          "SaveRepository"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/coordinator.ts": {
+        "renderedLength": 2256,
+        "renderedExports": [
+          "SaveCoordinator"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/seed.ts": {
+        "renderedLength": 459,
+        "renderedExports": [
+          "parseSeed",
+          "createSeed",
+          "createRunId"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/format.ts": {
+        "renderedLength": 2219,
+        "renderedExports": [
+          "validateEnvelope",
+          "validateFile",
+          "exportFile"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/save-controls.ts": {
+        "renderedLength": 5005,
+        "renderedExports": [
+          "createSaveControls"
+        ],
+        "removedExports": []
+      },
+      "src/replay/playback-session.ts": {
+        "renderedLength": 3036,
+        "renderedExports": [
+          "PlaybackSession"
+        ],
+        "removedExports": []
+      },
+      "src/replay/replay-panel.ts": {
+        "renderedLength": 3328,
+        "renderedExports": [
+          "ReplayPanel"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/fx-plan.ts": {
+        "renderedLength": 3611,
+        "renderedExports": [
+          "planFx"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/preferences.ts": {
+        "renderedLength": 622,
+        "renderedExports": [
+          "reducedMotion",
+          "setReducedMotion"
+        ],
+        "removedExports": [
+          "resetPreferenceCache"
+        ]
+      },
+      "src/presentation/label-layout.ts": {
+        "renderedLength": 697,
+        "renderedExports": [
+          "placeLabel",
+          "canvasLabelRects"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/replay-view.ts": {
+        "renderedLength": 12083,
+        "renderedExports": [
+          "ReplayView"
+        ],
+        "removedExports": []
+      },
+      "src/m6/application.ts": {
+        "renderedLength": 15230,
+        "renderedExports": [
+          "MatchApplication"
+        ],
+        "removedExports": []
+      },
+      "src/stats/aggregate.ts": {
+        "renderedLength": 2616,
+        "renderedExports": [
+          "emptyStats",
+          "appendStats",
+          "aggregateStats"
+        ],
+        "removedExports": []
+      },
+      "src/stats/stats-panel.ts": {
+        "renderedLength": 12163,
+        "renderedExports": [
+          "createStatsPanel"
+        ],
+        "removedExports": []
+      },
+      "src/stats/combat-feedback-renderer.ts": {
+        "renderedLength": 4516,
+        "renderedExports": [
+          "createCombatFeedbackRenderer"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/unit-view.ts": {
+        "renderedLength": 8456,
+        "renderedExports": [
+          "PIECE_RADIUS",
+          "UnitView"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/combat-fx.ts": {
+        "renderedLength": 4207,
+        "renderedExports": [
+          "CombatFx"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/help-panel.ts": {
+        "renderedLength": 4898,
+        "renderedExports": [
+          "HelpPanel"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/BoardScene.ts": {
+        "renderedLength": 40095,
+        "renderedExports": [
+          "BoardScene"
+        ],
+        "removedExports": []
+      },
+      "src/style.css": {
+        "renderedLength": 0,
+        "renderedExports": [],
+        "removedExports": []
+      },
+      "src/rendering/app-shell.ts": {
+        "renderedLength": 1446,
+        "renderedExports": [
+          "createAppShell"
+        ],
+        "removedExports": []
+      },
+      "src/main.ts": {
+        "renderedLength": 2201,
+        "renderedExports": [],
+        "removedExports": []
+      }
+    }
+  },
+  {
+    "reachable": true,
+    "fileName": "assets/index-DTWjf8j6.js",
+    "modules": {
+      "src/simulation/board.ts": {
+        "renderedLength": 1169,
+        "renderedExports": [
+          "DEFAULT_BOARD",
+          "contains",
+          "sameCell",
+          "isDeploymentCell",
+          "getNeighbors",
+          "hexDistance"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/freeze.ts": {
+        "renderedLength": 200,
+        "renderedExports": [
+          "freezeContent"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/neutrals.ts": {
+        "renderedLength": 2732,
+        "renderedExports": [
+          "neutralAbilityId",
+          "NEUTRAL_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/stats.ts": {
+        "renderedLength": 7195,
+        "renderedExports": [
+          "integer",
+          "safeNumber",
+          "conditionHolds",
+          "modifierValues",
+          "resolveStat",
+          "attackInterval",
+          "changeMaxHp",
+          "amountNumerator",
+          "evaluateAmount"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/crit.ts": {
+        "renderedLength": 3203,
+        "renderedExports": [
+          "sourceTuple",
+          "authorizeSpellCrit",
+          "validateSpellCrit",
+          "rollCrit"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/mana.ts": {
+        "renderedLength": 2512,
+        "renderedExports": [
+          "validateManaDefinition",
+          "validateManaState",
+          "resolveMana",
+          "damageMana",
+          "planManaCost",
+          "completeCast",
+          "refundCast"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/unit-inputs.ts": {
+        "renderedLength": 1144,
+        "renderedExports": [
+          "validateNeutralInputs",
+          "compileUnitInputs"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/match-rules.ts": {
+        "renderedLength": 2047,
+        "renderedExports": [
+          "OPENING_INITIAL_STATE",
+          "MATCH_RULES",
+          "DEFAULT_MATCH_SEED",
+          "XP_TO_NEXT_LEVEL",
+          "SHOP_ODDS",
+          "SHOP_CATALOG_BY_COST",
+          "SHOP_CATALOG",
+          "STAGE_PLAYER_DAMAGE",
+          "ECONOMY_RULES",
+          "OPENING_ECONOMY_RULES"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/units.ts": {
+        "renderedLength": 19030,
+        "renderedExports": [
+          "LEGACY_UNIT_DEFINITIONS",
+          "M5_UNIT_DEFINITIONS",
+          "NEUTRAL_UNIT_DEFINITIONS",
+          "M8_NEUTRAL_UNIT_DEFINITIONS",
+          "UNIT_DEFINITIONS",
+          "validateUnitDefinitions"
+        ],
+        "removedExports": [
+          "M5_UNIT_IDS"
+        ]
+      },
+      "src/simulation/game.ts": {
+        "renderedLength": 1728,
+        "renderedExports": [
+          "validateDeployment",
+          "deployUnit",
+          "getPlayerDeploymentCount",
+          "getDefinition"
+        ],
+        "removedExports": [
+          "createGame"
+        ]
+      },
+      "src/simulation/content/loot.ts": {
+        "renderedLength": 2939,
+        "renderedExports": [
+          "LOOT_POLICY_VERSION",
+          "LOOT_HERO_POOL_VERSION",
+          "LOOT_HERO_POOLS",
+          "LOOT_SLOTS",
+          "LOOT_CATEGORIES",
+          "LOOT_FREEZE_ALGORITHM",
+          "LOOT_RUNTIME_REVISION"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/neutral-receipts.ts": {
+        "renderedLength": 1232,
+        "renderedExports": [
+          "NEUTRAL_RUNTIME_VERSION",
+          "recordNeutralReceipts"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/neutral-encounters.ts": {
+        "renderedLength": 1850,
+        "renderedExports": [
+          "NEUTRAL_ENCOUNTER_CATALOG_VERSION",
+          "NEUTRAL_ENCOUNTER_POLICY_VERSION",
+          "NEUTRAL_ENCOUNTERS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/item-programs.ts": {
+        "renderedLength": 3759,
+        "renderedExports": [
+          "always",
+          "refresh",
+          "combat",
+          "duration",
+          "hp",
+          "rows",
+          "filter",
+          "amount",
+          "modifier",
+          "selector",
+          "enemies",
+          "stat",
+          "status",
+          "burn",
+          "shield",
+          "trigger",
+          "survival",
+          "damage",
+          "mana",
+          "periodic",
+          "vamp"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-components.ts": {
+        "renderedLength": 3066,
+        "renderedExports": [
+          "COMPONENTS_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-sword.ts": {
+        "renderedLength": 3926,
+        "renderedExports": [
+          "SWORD_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-bow.ts": {
+        "renderedLength": 6186,
+        "renderedExports": [
+          "BOW_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-rod.ts": {
+        "renderedLength": 3239,
+        "renderedExports": [
+          "ROD_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-tear.ts": {
+        "renderedLength": 4498,
+        "renderedExports": [
+          "TEAR_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-vest.ts": {
+        "renderedLength": 2508,
+        "renderedExports": [
+          "VEST_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-cloak.ts": {
+        "renderedLength": 1794,
+        "renderedExports": [
+          "CLOAK_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-belt.ts": {
+        "renderedLength": 879,
+        "renderedExports": [
+          "BELT_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items-gloves.ts": {
+        "renderedLength": 654,
+        "renderedExports": [
+          "GLOVES_ITEMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/items.ts": {
+        "renderedLength": 7251,
+        "renderedExports": [
+          "ITEM_DEFINITIONS",
+          "COMPONENT_IDS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/component-pool.ts": {
+        "renderedLength": 1241,
+        "renderedExports": [
+          "COMPONENT_POOL_VERSION",
+          "COMPONENT_POOL",
+          "validateComponentPool",
+          "validateComponentCandidates"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/rng.ts": {
+        "renderedLength": 274,
+        "renderedExports": [
+          "validateSeed",
+          "nextRandom"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/identity.ts": {
+        "renderedLength": 2251,
+        "renderedExports": [
+          "compareCodePoints",
+          "sourceTuple",
+          "canonicalSource",
+          "effectIdentity",
+          "validateIdentity",
+          "gcd",
+          "fraction",
+          "addFractions",
+          "savedFraction"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/equipment.ts": {
+        "renderedLength": 7995,
+        "renderedExports": [
+          "initializeStreams",
+          "uniformIndex",
+          "selectTemporaryPair",
+          "generateRoundRolls",
+          "projectTemporaryEquipment",
+          "reconcileTemporaryEquipment",
+          "validateEquipmentState",
+          "createEquipmentPool",
+          "validateTemporaryEquipment"
+        ],
+        "removedExports": [
+          "compileTemporaryModifiers",
+          "reconcileTemporaryModifiers",
+          "compileTemporaryEffects",
+          "reconcileTemporaryEffects",
+          "compileTemporaryPrograms",
+          "reconcileTemporaryPrograms"
+        ]
+      },
+      "src/simulation/content/round-catalog.ts": {
+        "renderedLength": 5153,
+        "renderedExports": [
+          "ROUND_CATALOG",
+          "ROUND_SEMANTIC_NODES"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/round-selectors.ts": {
+        "renderedLength": 702,
+        "renderedExports": [
+          "getCatalogRoundByOrdinal",
+          "getCatalogRoundById",
+          "getNextCatalogRound",
+          "readRoundInfo"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/round-schedule.ts": {
+        "renderedLength": 1219,
+        "renderedExports": [
+          "ROUND_RULES_VERSION",
+          "FINAL_ROUND",
+          "ROUND_PREPARATION_RULES",
+          "ROUND_SCHEDULE",
+          "getStageRound",
+          "getRoundKind",
+          "getRoundSchedule"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/temporary-equipment.ts": {
+        "renderedLength": 4200,
+        "renderedExports": [
+          "grantsTemporaryEquipment",
+          "TEMPORARY_EQUIPMENT_POOL",
+          "planTemporaryEquipment",
+          "isTemporaryItemId",
+          "validateMatchEquipment"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/equipment-policy.ts": {
+        "renderedLength": 1548,
+        "renderedExports": [
+          "EQUIPMENT_RULES_VERSION",
+          "checkEquipmentPlacement"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/s13-rules.ts": {
+        "renderedLength": 1789,
+        "renderedExports": [
+          "S13_COMBAT_RULES"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-types.ts": {
+        "renderedLength": 445,
+        "renderedExports": [
+          "COMBAT_TICK_MS",
+          "MAX_COMBAT_TICKS",
+          "MOVE_INTERVAL_TICKS",
+          "compareIds",
+          "eliminationResult"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/abilities.ts": {
+        "renderedLength": 16005,
+        "renderedExports": [
+          "S13_ABILITY_DATA"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-abilities.ts": {
+        "renderedLength": 4703,
+        "renderedExports": [
+          "ABILITY_DEFINITIONS",
+          "validateAbilityDefinitions",
+          "resolveAbility",
+          "planAbility"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/status.ts": {
+        "renderedLength": 9223,
+        "renderedExports": [
+          "isEffective",
+          "summarizeGroup",
+          "effectiveStatuses",
+          "statusMagnitude",
+          "validateStatusApplication",
+          "applyStatusContribution",
+          "removeStatusContributions",
+          "endStatuses",
+          "cleanseStatuses",
+          "advanceBurnClock",
+          "validateStatusGroups"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/item-program.ts": {
+        "renderedLength": 3871,
+        "renderedExports": [
+          "itemPrograms",
+          "programEntries",
+          "compileItemCrit",
+          "validateItemProgram"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/targeting.ts": {
+        "renderedLength": 9468,
+        "renderedExports": [
+          "startingRows",
+          "isSelectable",
+          "selectTargets",
+          "shortestPath",
+          "chooseRandomCenter",
+          "selectAbilityTargets",
+          "AXIAL_DIRECTIONS",
+          "axial",
+          "offset",
+          "coneCells",
+          "selectConeTargets"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-definitions.ts": {
+        "renderedLength": 5661,
+        "renderedExports": [
+          "asSource",
+          "flatAmount",
+          "selfSelector",
+          "compileMechanismDefinitions"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/neutral-encounter-compiler.ts": {
+        "renderedLength": 5710,
+        "renderedExports": [
+          "compileNeutralEncounter",
+          "COMPILED_NEUTRAL_ENCOUNTERS",
+          "readNeutralCombatUnit"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/round-enemies.ts": {
+        "renderedLength": 3204,
+        "renderedExports": [
+          "ENEMY_TEMPLATES",
+          "ENEMY_POSITIONS",
+          "ENEMY_GROWTH",
+          "createRoundEnemies",
+          "getRoundEnemyItems",
+          "ROUND_ENEMY_PROJECTIONS",
+          "readRoundEnemyProjection"
+        ],
+        "removedExports": [
+          "getEnemyGrowthBps"
+        ]
+      },
+      "src/simulation/progression.ts": {
+        "renderedLength": 1148,
+        "renderedExports": [
+          "getXpToNextLevel",
+          "getShopOdds",
+          "grantXp"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/economy.ts": {
+        "renderedLength": 2827,
+        "renderedExports": [
+          "planRoundEconomy",
+          "getInterestGold"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/opening-economy.ts": {
+        "renderedLength": 2392,
+        "renderedExports": [
+          "planOpeningEconomy",
+          "planCatalogRoundEconomy"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/source-manifest.ts": {
+        "renderedLength": 5270,
+        "renderedExports": [
+          "SOURCE_MANIFEST"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/traits.ts": {
+        "renderedLength": 4065,
+        "renderedExports": [
+          "TRAIT_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/augments.ts": {
+        "renderedLength": 2060,
+        "renderedExports": [
+          "AUGMENT_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/anomalies.ts": {
+        "renderedLength": 874,
+        "renderedExports": [
+          "ANOMALY_DEFINITIONS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/content/index.ts": {
+        "renderedLength": 2617,
+        "renderedExports": [
+          "TRAIT_DEFINITIONS",
+          "ITEM_DEFINITIONS",
+          "AUGMENT_DEFINITIONS",
+          "ANOMALY_DEFINITIONS",
+          "canonicalContent",
+          "digestContent",
+          "CONTENT_DIGEST"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/input-assets.ts": {
+        "renderedLength": 5065,
+        "renderedExports": [
+          "createInputValidation",
+          "validateInputAssets"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-input.ts": {
+        "renderedLength": 6133,
+        "renderedExports": [
+          "COMBAT_INPUT_VERSION",
+          "readCombatStrategyInputs",
+          "freezeCombatInput",
+          "restoreCombatInput"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/loot-identity.ts": {
+        "renderedLength": 717,
+        "renderedExports": [
+          "lootDropId",
+          "lootReceiptId",
+          "lootChoiceId",
+          "compareLootFreezeSlots",
+          "compareLootChoices"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/unit-stats.ts": {
+        "renderedLength": 2066,
+        "renderedExports": [
+          "getUnitStats",
+          "resolveUnitStats",
+          "getUnitSellPrice"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/resource-provenance.ts": {
+        "renderedLength": 20812,
+        "renderedExports": [
+          "RESOURCE_PROVENANCE_VERSION",
+          "appendResourceProvenance",
+          "mergeGrowthLedger",
+          "validateResourceReceipts",
+          "foldResourceProvenance"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/item-grants.ts": {
+        "renderedLength": 942,
+        "renderedExports": [
+          "planPermanentItemGrant"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/loot-choice.ts": {
+        "renderedLength": 916,
+        "renderedExports": [
+          "orderedUnresolvedLootChoices",
+          "makeLootPendingChoice",
+          "validateLootPendingChoice"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/loot-freeze.ts": {
+        "renderedLength": 6356,
+        "renderedExports": [
+          "LOOT_FREEZE_VERSION",
+          "LOOT_REPLAY_DIGEST",
+          "drawLootIndex",
+          "validateLootContent",
+          "freezeLootThroughRound",
+          "restoreFrozenLootLedger",
+          "advanceFrozenLootLedger"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/upgrades.ts": {
+        "renderedLength": 5457,
+        "renderedExports": [
+          "planPurchase",
+          "transferUpgradeResources"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/unit-acquisition.ts": {
+        "renderedLength": 933,
+        "renderedExports": [
+          "planUnitAcquisition"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/loot-runtime.ts": {
+        "renderedLength": 9351,
+        "renderedExports": [
+          "prepareMatchLoot",
+          "revealMatchLoot",
+          "grantDirectLoot",
+          "unresolvedLootChoices",
+          "hasPendingLootCapacity",
+          "grantLootChoice"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/effects.ts": {
+        "renderedLength": 11550,
+        "renderedExports": [
+          "sourceRank",
+          "compareEffectSources",
+          "compareSourcedEffects",
+          "effectKey",
+          "cloneAction",
+          "cloneEffect",
+          "makeSourcedEffects",
+          "resolveEffects",
+          "initializeEffectRuntime",
+          "collectTriggers"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-initialization.ts": {
+        "renderedLength": 1088,
+        "renderedExports": [
+          "compileCombatInitialInputs",
+          "projectCombatStartMana"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/runtime-types.ts": {
+        "renderedLength": 181,
+        "renderedExports": [
+          "EMPTY_MECHANISMS"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/triggers.ts": {
+        "renderedLength": 8781,
+        "renderedExports": [
+          "EMPTY_TRIGGER_LEDGER",
+          "EMPTY_FACTS",
+          "counterIdentity",
+          "listenerMatches",
+          "dispatchTriggers",
+          "validateTriggerLedger"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-triggers.ts": {
+        "renderedLength": 3156,
+        "renderedExports": [
+          "hasMechanismSubscriber",
+          "emitMechanismSignal"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-targeting.ts": {
+        "renderedLength": 674,
+        "renderedExports": [
+          "targetUnit",
+          "targetingEnvironment"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/shield.ts": {
+        "renderedLength": 6981,
+        "renderedExports": [
+          "grantShieldState",
+          "maintainShield",
+          "recordShieldAbsorption",
+          "endShield",
+          "validateShield",
+          "survivalSamples",
+          "survivalConsumptionKeys",
+          "remainingSurvivalKeys",
+          "consumeSurvivalTriggers"
+        ],
+        "removedExports": [
+          "absorbShields"
+        ]
+      },
+      "src/simulation/combat-s13-state.ts": {
+        "renderedLength": 14467,
+        "renderedExports": [
+          "ensureMechanisms",
+          "statusModifiers",
+          "shieldProjection",
+          "frozenShield",
+          "EMPTY_RUNTIME",
+          "hpSample",
+          "constantModifier",
+          "spellCrit",
+          "compareText",
+          "sourceKey",
+          "compareOrigins",
+          "origin",
+          "variable",
+          "champion",
+          "mechanic",
+          "hasMechanic",
+          "active",
+          "ap",
+          "ad",
+          "range",
+          "amount",
+          "interval",
+          "byDistance",
+          "areaEnemies",
+          "enemies",
+          "neighborsOf",
+          "lowestAlly",
+          "path",
+          "syncShield",
+          "grantShield",
+          "applyStatus"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/periodic.ts": {
+        "renderedLength": 4251,
+        "renderedExports": [
+          "clearRemainder",
+          "periodicAmount",
+          "splitTotal",
+          "advancePeriodicTask",
+          "cleanPeriodicTasks",
+          "validatePeriodicTask"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/damage.ts": {
+        "renderedLength": 5406,
+        "renderedExports": [
+          "permissionsFor",
+          "validateDamageContext",
+          "prepareDamage",
+          "allocateDamage",
+          "resolveDamage"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/heal.ts": {
+        "renderedLength": 5178,
+        "renderedExports": [
+          "makeHealRequest",
+          "resolveHeal",
+          "selectVampAlly",
+          "vampRequests"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/s13-mechanisms.ts": {
+        "renderedLength": 31398,
+        "renderedExports": [
+          "selectMechanismTargets",
+          "executeDamageControlSequence",
+          "executeMechanismEffect",
+          "initializeMechanisms",
+          "maintainMechanisms",
+          "refreshMechanismAuras",
+          "clearPeriodicAccount",
+          "executeShieldEnd",
+          "settleShieldEnds",
+          "settleSurvival",
+          "vampRates",
+          "commitMechanismHeal",
+          "cleanupMechanisms",
+          "maintainActivities"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-effects.ts": {
+        "renderedLength": 4498,
+        "renderedExports": [
+          "stampCombatStep",
+          "invocationEvent",
+          "applyCombatStart"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-damage.ts": {
+        "renderedLength": 1842,
+        "renderedExports": [
+          "mitigateDamage",
+          "aggregateDamagePackets"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/opening.ts": {
+        "renderedLength": 5218,
+        "renderedExports": [
+          "planOpening",
+          "commitOpening",
+          "advanceOpeningTasks"
+        ],
+        "removedExports": [
+          "validateOpeningState"
+        ]
+      },
+      "src/simulation/m8/planning.ts": {
+        "renderedLength": 78,
+        "renderedExports": [
+          "damageTypeForTarget"
+        ],
+        "removedExports": [
+          "samplePlanBindings",
+          "planEffectApplications"
+        ]
+      },
+      "src/simulation/m8/companions.ts": {
+        "renderedLength": 3015,
+        "renderedExports": [
+          "freezeCompanions",
+          "registerDeaths",
+          "advanceReactions"
+        ],
+        "removedExports": [
+          "validateCompanionState"
+        ]
+      },
+      "src/simulation/combat-s13-abilities.ts": {
+        "renderedLength": 16340,
+        "renderedExports": [
+          "planS13Cast",
+          "executeTask",
+          "planS13Attack"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-s13.ts": {
+        "renderedLength": 35269,
+        "renderedExports": [
+          "readCombatStats",
+          "advanceS13Tick"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat-tick.ts": {
+        "renderedLength": 8642,
+        "renderedExports": [
+          "advanceCombatTick"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/combat.ts": {
+        "renderedLength": 4739,
+        "renderedExports": [
+          "validateCombatStart",
+          "createCombatWithEvents",
+          "stepCombat"
+        ],
+        "removedExports": [
+          "createCombat"
+        ]
+      },
+      "src/simulation/shop.ts": {
+        "renderedLength": 786,
+        "renderedExports": [
+          "generateShop"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/validate-content.ts": {
+        "renderedLength": 11180,
+        "renderedExports": [
+          "MECHANIC_FIELDS",
+          "validateEffect",
+          "validateStatBounds",
+          "validateContent"
+        ],
+        "removedExports": [
+          "validateAcquisitionIsolation"
+        ]
+      },
+      "src/simulation/inventory.ts": {
+        "renderedLength": 3757,
+        "renderedExports": [
+          "validateCombine",
+          "planCombine",
+          "validateEquip",
+          "planEquip",
+          "returnUnitItems"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/item-catalog.ts": {
+        "renderedLength": 1025,
+        "renderedExports": [
+          "readItemCatalog"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/item-selectors.ts": {
+        "renderedLength": 1687,
+        "renderedExports": [
+          "previewCombine",
+          "previewEquip",
+          "readUnitEquipment"
+        ],
+        "removedExports": [
+          "readItemInventory"
+        ]
+      },
+      "src/simulation/trait-snapshot.ts": {
+        "renderedLength": 1347,
+        "renderedExports": [
+          "deriveTraits"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/strategy-snapshot.ts": {
+        "renderedLength": 5953,
+        "renderedExports": [
+          "buildStrategySnapshot"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/rewards.ts": {
+        "renderedLength": 2512,
+        "renderedExports": [
+          "planReward"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/choices.ts": {
+        "renderedLength": 468,
+        "renderedExports": [
+          "generateChoices"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/encounter-selectors.ts": {
+        "renderedLength": 3696,
+        "renderedExports": [
+          "readEncounterPreview"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/match.ts": {
+        "renderedLength": 26131,
+        "renderedExports": [
+          "needsAnomalyRecruitment",
+          "createMatch",
+          "getDeploymentCap",
+          "validateMatchDeployment",
+          "deployMatchUnit",
+          "buyUnit",
+          "sellUnit",
+          "setShopLock",
+          "rerollShop",
+          "buyXp",
+          "matchStartFailure",
+          "startMatchCombat",
+          "stepMatch",
+          "nextRound",
+          "combineItems",
+          "equipItem",
+          "selectAnomalyTarget",
+          "rerollAnomaly",
+          "selectChoice"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/hex-layout.ts": {
+        "renderedLength": 1045,
+        "renderedExports": [
+          "HexLayout"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/layout-config.ts": {
+        "renderedLength": 202,
+        "renderedExports": [
+          "BOARD_LAYOUT"
+        ],
+        "removedExports": [
+          "PIECE_EXTENT",
+          "boardLayoutMetrics"
+        ]
+      },
+      "src/rendering/match-session.ts": {
+        "renderedLength": 5029,
+        "renderedExports": [
+          "MatchSession"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/input-router.ts": {
+        "renderedLength": 683,
+        "renderedExports": [
+          "InputRouter"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/display-names.ts": {
+        "renderedLength": 491,
+        "renderedExports": [
+          "displayUnitName"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/theme.ts": {
+        "renderedLength": 1893,
+        "renderedExports": [
+          "THEME",
+          "toNumber",
+          "costColor",
+          "applyThemeVariables"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/hero-identity.ts": {
+        "renderedLength": 5792,
+        "renderedExports": [
+          "TRAIT_SHAPES",
+          "HERO_STYLE",
+          "getHeroIdentity",
+          "HERO_S13_TRAITS",
+          "S13_TRAIT_ZH",
+          "heroTraitLabels",
+          "EMBLEM_POINTS",
+          "heroEmblemSvg"
+        ],
+        "removedExports": [
+          "heroTraitNames"
+        ]
+      },
+      "src/presentation/encounter-preview.ts": {
+        "renderedLength": 2683,
+        "renderedExports": [
+          "encounterPreviewSection"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/combat-status.ts": {
+        "renderedLength": 12979,
+        "renderedExports": [
+          "DAMAGE_TYPE_NAMES",
+          "STATUS_KIND_NAMES",
+          "STATUS_REASON_NAMES",
+          "SHIELD_REASON_NAMES",
+          "ticksToSeconds",
+          "damageFilterText",
+          "readUnitStatusRows",
+          "statusRowText",
+          "statusBadges",
+          "shieldSource",
+          "eventSource",
+          "eventStatusName",
+          "appliedStatusFloat",
+          "m8EventText"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/combat-feedback.ts": {
+        "renderedLength": 1678,
+        "renderedExports": [
+          "originLabel",
+          "combatEventText"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/s13-asset-manifest.ts": {
+        "renderedLength": 13061,
+        "renderedExports": [
+          "S13_ASSETS"
+        ],
+        "removedExports": [
+          "S13_ASSET_PATCH"
+        ]
+      },
+      "src/presentation/s13-assets.ts": {
+        "renderedLength": 3148,
+        "renderedExports": [
+          "s13AssetUrl",
+          "championTextureKey",
+          "championPortraitKey",
+          "loadS13Portraits",
+          "buildPortraitTextures",
+          "heroPortraitHtml",
+          "TRAIT_API_NAMES",
+          "s13IconHtml",
+          "installImageFallback"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/item-codex.ts": {
+        "renderedLength": 14291,
+        "renderedExports": [
+          "catalogEntry",
+          "itemDescriptions",
+          "itemMarkHtml",
+          "itemTags",
+          "attachItemPopover",
+          "createItemCodex"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/equipment-feedback.ts": {
+        "renderedLength": 1443,
+        "renderedExports": [
+          "EQUIPMENT_FAILURE_TEXT",
+          "EQUIPMENT_COMMAND_FAILURES",
+          "equipmentFailureText",
+          "slotList",
+          "temporaryLifetime",
+          "temporaryItemText",
+          "slotViews"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/strategy-panel.ts": {
+        "renderedLength": 45282,
+        "renderedExports": [
+          "describeEffect",
+          "describeTraitTier",
+          "StrategyPanel"
+        ],
+        "removedExports": []
+      },
+      "src/m6/limits.ts": {
+        "renderedLength": 202,
+        "renderedExports": [
+          "MAX_SAVE_BYTES",
+          "MAX_BATTLE_RECORDS",
+          "MAX_EVENTS_PER_BATTLE",
+          "AUTOSAVE_TICKS",
+          "MAX_COMPLETED_RUNS",
+          "CHECKPOINT_INTERVAL_TICKS"
+        ],
+        "removedExports": [
+          "MIN_PIECE_DIAMETER_CSS",
+          "MIN_DOM_TARGET_CSS",
+          "MAX_HORIZONTAL_OVERFLOW_CSS",
+          "PERFORMANCE_BUDGET_MS",
+          "LIFECYCLE_CYCLES",
+          "MAX_POST_GC_HEAP_GROWTH_BYTES"
+        ]
+      },
+      "src/simulation/m8/item-restore.ts": {
+        "renderedLength": 9641,
+        "renderedExports": [
+          "declaredEffects",
+          "statusDeclaration",
+          "isDeclaredStatus",
+          "validateItemEffectConsumption",
+          "validateItemRuntime",
+          "maxHpCandidates",
+          "abilityPowerCandidates",
+          "attackDamageCandidates"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/neutral-restore.ts": {
+        "renderedLength": 11024,
+        "renderedExports": [
+          "validateNeutralCombat"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/b8-restore.ts": {
+        "renderedLength": 16957,
+        "renderedExports": [
+          "validateB8Loot",
+          "validateB8Resources"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/m8/restore.ts": {
+        "renderedLength": 15061,
+        "renderedExports": [
+          "validateMechanisms"
+        ],
+        "removedExports": []
+      },
+      "src/simulation/serialization.ts": {
+        "renderedLength": 35501,
+        "renderedExports": [
+          "restoreMatch"
+        ],
+        "removedExports": [
+          "serializeMatch"
+        ]
+      },
+      "src/replay/history.ts": {
+        "renderedLength": 6812,
+        "renderedExports": [
+          "isOwnedBattleRecord",
+          "deepFreeze",
+          "equalContent",
+          "validateBattleRecord",
+          "validateBattleCollection",
+          "BattleHistory"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/capture-ownership.ts": {
+        "renderedLength": 1368,
+        "renderedExports": [
+          "fixedCapture",
+          "mergeCaptures"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/repository.ts": {
+        "renderedLength": 9420,
+        "renderedExports": [
+          "SaveError",
+          "saveError",
+          "SaveRepository"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/coordinator.ts": {
+        "renderedLength": 2256,
+        "renderedExports": [
+          "SaveCoordinator"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/seed.ts": {
+        "renderedLength": 459,
+        "renderedExports": [
+          "parseSeed",
+          "createSeed",
+          "createRunId"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/format.ts": {
+        "renderedLength": 2219,
+        "renderedExports": [
+          "validateEnvelope",
+          "validateFile",
+          "exportFile"
+        ],
+        "removedExports": []
+      },
+      "src/persistence/save-controls.ts": {
+        "renderedLength": 5005,
+        "renderedExports": [
+          "createSaveControls"
+        ],
+        "removedExports": []
+      },
+      "src/replay/playback-session.ts": {
+        "renderedLength": 3036,
+        "renderedExports": [
+          "PlaybackSession"
+        ],
+        "removedExports": []
+      },
+      "src/replay/replay-panel.ts": {
+        "renderedLength": 3328,
+        "renderedExports": [
+          "ReplayPanel"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/fx-plan.ts": {
+        "renderedLength": 3611,
+        "renderedExports": [
+          "planFx"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/preferences.ts": {
+        "renderedLength": 622,
+        "renderedExports": [
+          "reducedMotion",
+          "setReducedMotion"
+        ],
+        "removedExports": [
+          "resetPreferenceCache"
+        ]
+      },
+      "src/presentation/label-layout.ts": {
+        "renderedLength": 697,
+        "renderedExports": [
+          "placeLabel",
+          "canvasLabelRects"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/replay-view.ts": {
+        "renderedLength": 12083,
+        "renderedExports": [
+          "ReplayView"
+        ],
+        "removedExports": []
+      },
+      "src/m6/application.ts": {
+        "renderedLength": 15230,
+        "renderedExports": [
+          "MatchApplication"
+        ],
+        "removedExports": []
+      },
+      "src/stats/aggregate.ts": {
+        "renderedLength": 2616,
+        "renderedExports": [
+          "emptyStats",
+          "appendStats",
+          "aggregateStats"
+        ],
+        "removedExports": []
+      },
+      "src/stats/stats-panel.ts": {
+        "renderedLength": 12163,
+        "renderedExports": [
+          "createStatsPanel"
+        ],
+        "removedExports": []
+      },
+      "src/stats/combat-feedback-renderer.ts": {
+        "renderedLength": 4516,
+        "renderedExports": [
+          "createCombatFeedbackRenderer"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/unit-view.ts": {
+        "renderedLength": 8456,
+        "renderedExports": [
+          "PIECE_RADIUS",
+          "UnitView"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/combat-fx.ts": {
+        "renderedLength": 4207,
+        "renderedExports": [
+          "CombatFx"
+        ],
+        "removedExports": []
+      },
+      "src/presentation/help-panel.ts": {
+        "renderedLength": 4898,
+        "renderedExports": [
+          "HelpPanel"
+        ],
+        "removedExports": []
+      },
+      "src/rendering/BoardScene.ts": {
+        "renderedLength": 40095,
+        "renderedExports": [
+          "BoardScene"
+        ],
+        "removedExports": []
+      },
+      "src/style.css": {
+        "renderedLength": 0,
+        "renderedExports": [],
+        "removedExports": []
+      },
+      "src/rendering/app-shell.ts": {
+        "renderedLength": 1446,
+        "renderedExports": [
+          "createAppShell"
+        ],
+        "removedExports": []
+      },
+      "src/main.ts": {
+        "renderedLength": 2328,
+        "renderedExports": [],
+        "removedExports": []
+      }
+    }
+  }
+]

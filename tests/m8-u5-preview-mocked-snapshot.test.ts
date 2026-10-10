@@ -28,7 +28,7 @@ vi.mock('../src/simulation/strategy-snapshot', async importOriginal => {
   }) };
 });
 
-function injectEnemy(unit: StrategyUnitSnapshot, state: match.MatchState): StrategyUnitSnapshot {
+function injectEnemy(unit: StrategyUnitSnapshot, state: Parameters<typeof buildStrategySnapshot>[0]): StrategyUnitSnapshot {
   if (injection.mode === 'legacy-ability') {
     // A supported legacy ability legitimately omits AP from the initial inputs;
     // no unsafe cast or deletion of a required runtime field is needed.
@@ -104,7 +104,7 @@ function readAndStart(mode: 'enhanced' | 'zero-ap') {
   const result = match.startMatchCombat(state);
   const started = accepted(result);
   expect(snapshots).toHaveBeenCalledTimes(2);
-  expect(snapshots).toHaveBeenNthCalledWith(2, state);
+  expect(snapshots).toHaveBeenNthCalledWith(2, started.combatInputBasis!.inputs);
   expect(snapshots.mock.results[1].value).toEqual(projectedSnapshot);
   expect(started.phase).toBe('combat');
   if (!started.combat) throw new Error('Public Start must create real combat');

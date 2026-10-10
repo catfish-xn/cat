@@ -165,6 +165,32 @@ jobs:
           path: |
             artifacts/m8-u3-dynamic/
             artifacts/m5-ci-timing-m8-u3-dynamic/
+  m8-u6-loot:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: m8-u6-loot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      M5_JOB_KEY: m8-u6-loot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - name: Live loot panel, loot pick, capacity wait and terminal record (U6)
+        run: node scripts/ci-m5-step.cjs m8-u6-loot node scripts/verify-m8-u6-loot.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m8-u6-loot-${{ env.M5_COMMIT_SHA }}
+          path: |
+            artifacts/m8-u6-loot/
+            artifacts/m5-ci-timing-m8-u6-loot/
   m6-retention:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: m6-retention
@@ -236,7 +262,7 @@ jobs:
   compare-evidence:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: compare-evidence-sample${{ matrix.sample }}
-    needs: [test-and-build, chromium-match, chromium-input, m6-retention]
+    needs: [test-and-build, chromium-match, chromium-input, m6-retention, m8-u6-loot]
     runs-on: ubuntu-24.04
     timeout-minutes: 6 # Three measured comparison jobs, including artifact transfer.
     strategy:
@@ -249,12 +275,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+      # The final comparator recomputes the B8 Rageblade attack interval with the domain's readCombatStats.
+      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           pattern: m5-*-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           merge-multiple: true
           path: artifacts/
+      - uses: actions/download-artifact@v4
+        with:
+          name: m8-u6-loot-${{ env.M5_COMMIT_SHA }}
+          path: u6-evidence/
       - run: node scripts/compare-m5-evidence.cjs --final
+        env:
+          M8_U6_EVIDENCE_DIR: u6-evidence
       - run: node scripts/compare-m6-evidence.cjs
       - uses: actions/upload-artifact@v4
         if: always()

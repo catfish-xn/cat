@@ -1,4 +1,3 @@
-const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
 /*
  * M7 presentation gate (G01/G04/G06/G08): public seed-42 game through normal controls.
  *  - help opens/closes, traps focus, blocks D/F/E while open, issues no command;
@@ -95,7 +94,7 @@ async function firstBattle(browser, reduced) {
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-  const report = { url, checks: [], acceptanceScope: 'B6 unskipped checks; post-PvE reward modal deferred to B8' };
+  const report = { url, checks: [], acceptanceScope: 'B6 unskipped checks; post-PvE reward modal restored on the real B8 1-3 loot pick' };
   const check = (name, details = {}) => { report.checks.push({ name, ...details }); console.log(`ok ${name}`); };
   try {
     // Help dialog: information only, focus handling, shortcuts blocked while open.
@@ -211,22 +210,24 @@ async function firstBattle(browser, reduced) {
     check('replay-identity', portraitPixels);
     assert.deepEqual([...normal.game.errors, ...replayErrors], [], 'no page or console errors');
 
-    // Audit F02: B8 must install an actual post-PvE reward choice. Other help/replay checks still run.
-    skipB6Dependency(report, 'B8', 'help-over-reward-choice', '2-7 post-combat reward choice is not installed', async () => {
+    // Audit F02, restored after B8: help open over an actual post-PvE reward choice. B8 grants loot
+    // picks only for real kills, so the old preparation (bench everyone, field Irelia alone at 2-7)
+    // forfeits the 2-7 pick (verified headlessly: choiceEligibility 'forfeited', no PendingChoice).
+    // The first real post-PvE reward pick of the unbenched seed-42 opening is 1-3; the assertions
+    // below are the original ones.
+    {
       const { context: ctx, page, errors: helpErrors } = await newGame(browser);
       await chooseAll(page);
-      await benchEveryone(page);
-      await advanceTo(page, '2-7');
-      await page.locator('[data-debug="panel:units"]').click();
-      await page.locator('[data-debug="mobile:unit:unit-1"]').click();
-      await page.locator('[data-debug="deploy:3,5"]').click();
+      await advanceTo(page, '1-3');
       await page.waitForTimeout(LIFECYCLE_QUIET_MS);
       await page.locator('[data-debug="mobile:start-combat"]').click();
       await page.locator('[data-debug="help-open"]').click();
       await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
       await page.waitForTimeout(300);
       const pending = (await read(page)).state;
-      assert.equal(pending.phase, 'choice', '2-7 PvE offers a reward choice');
+      assert.equal(pending.phase, 'choice', '1-3 PvE offers a reward choice');
+      assert.equal(pending.m8.round.kind, 'pve'); assert.equal(pending.pendingChoice.kind, 'component');
+      assert.equal(pending.pendingChoice.choiceId, JSON.stringify(['m8b-loot-choice', pending.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '1-3').choices[0].dropId]), 'the pick is the earned loot choice');
       const focusIn = () => page.evaluate(() => ({ help: Boolean(document.querySelector('[data-debug="help-dialog"]').contains(document.activeElement)),
         choice: Boolean(document.activeElement?.closest('.choice-overlay')), debug: document.activeElement?.dataset.debug ?? null }));
       assert.deepEqual(await focusIn(), { help: true, choice: false, debug: 'help-close' }, 'the new reward does not steal focus from help');
@@ -243,8 +244,8 @@ async function firstBattle(browser, reduced) {
       await chooseAll(page);
       assert.equal((await read(page)).state.items.length, pending.items.length + 1, 'reward chosen after help closes');
       assert.deepEqual(helpErrors, []); await ctx.close();
-      check('help-over-reward-choice', { round: pending.round, offers: pending.pendingChoice.offers });
-    });
+      check('help-over-reward-choice', { round: pending.round, roundId: pending.roundDefinitionId, offers: pending.pendingChoice.offers });
+    }
 
     // Audit F07: a bundled portrait that fails to load falls back to the code-drawn emblem.
     {

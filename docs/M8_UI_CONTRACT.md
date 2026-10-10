@@ -77,7 +77,9 @@ readLootView只含roundId/revealedDrops/pendingClaims/canContinue/reason。每�
 | granted | 非空稳定ID | [] | 实际资源已入库，才可显示已领取 |
 | retained-terminal | null | [] | 终局保留奖励，未入库/未领取，不换金币；只读记录 |
 
-pendingClaims仅列非终局受阻dropId；canContinue=false时reason为pending-capacity/unsettled-round/game-over。终局保留从pendingClaims移除，但gameOver仍不可Continue。按钮不根据金币增加/动画结束猜收据；重复展示/刷新不授奖。
+pendingClaims仅列非终局受阻dropId；canContinue=false时reason为pending-capacity/pending-choice/unsettled-round/game-over。终局保留从pendingClaims移除，但gameOver仍不可Continue。按钮不根据金币增加/动画结束猜收据；重复展示/刷新不授奖。
+
+**增补（用户 2026-10-10 批准，见 [U6 LootView 增补](M8_U6_LOOT_CONTRACT_PROPOSAL.md)）**：LootView 另含 `pendingChoice: (DropIdentity & {choiceId, generation}) | null`。仅当 `phase==='choice'` 且当前 PendingChoice 是已赚得、未解决的野怪组件选择时非空，只给 dropId/encounterId/sourceUnitId/roundId/choiceId/generation；候选仍读 PendingChoice.offers，备用组件与计划不暴露。此时 `reason='pending-choice'`（优先于 unsettled-round，gameOver 仍为 game-over）；补给、强化、异常选择仍为 unsettled-round。不区分玩家自选与终局自动处理，不改存档、digest 或规则。
 
 原子示例：6-7最后怪死亡，揭示金币与一名英雄；金币入库并创建收据，满席英雄成为retained-terminal且receiptId=null，pendingClaims=[]，同一次step进入gameOver。界面必须同时能读到终局结果和保留奖励，不能先进入终局再异步补发。
 

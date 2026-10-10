@@ -1,6 +1,7 @@
 import { validateNeutralCombat } from './neutral-restore';
+import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
-import { checkEquipmentPlacement } from './equipment-policy';
+import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
 import { asSource } from './m8/s13-definitions';
@@ -25,24 +26,19 @@ import { freezeContent } from './content/freeze';
 import { grantXp } from './progression';
 import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
-import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
+import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
-function integer(value: unknown, min = 0): asserts value is number { requireValue(Number.isSafeInteger(value) && (value as number) >= min, 'integer'); }
-function id(value: unknown): asserts value is string { requireValue(typeof value === 'string' && value.length > 0, 'ID'); }
-function definitionId(value: unknown, catalog: object, label: string): asserts value is string {
-  id(value); requireValue(Object.hasOwn(catalog, value), label);
-}
-function list(value: unknown): asserts value is unknown[] { requireValue(Array.isArray(value), 'array'); }
-function record(value: unknown): asserts value is Record<string, unknown> { requireValue(value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype, 'object'); }
+const inputValidation = createInputValidation(requireValue);
+const integer: InputValidation['integer'] = inputValidation.integer;
+const id: InputValidation['id'] = inputValidation.id;
+const definitionId: InputValidation['definitionId'] = inputValidation.definitionId;
+const list: InputValidation['list'] = inputValidation.list;
+const record: InputValidation['record'] = inputValidation.record;
+const checkSerial: InputValidation['checkSerial'] = inputValidation.checkSerial;
 function nullableString(value: unknown): void { if (value !== null) id(value); }
-function checkSerial(instanceId: string, prefix: string, next: number): void {
-  id(instanceId);
-  requireValue(new RegExp(`^${prefix}-[1-9][0-9]*$`).test(instanceId), `${prefix} ID`);
-  requireValue(Number(instanceId.slice(prefix.length + 1)) < next, `${prefix} serial`);
-}
 /** Across preparation, XP can only increase in paid four-XP transactions (or cap). */
 function totalExperience(level:number,xp:number):number {
   grantXp(level,xp,0); // Validate normalized values before using them as indices.
@@ -63,62 +59,26 @@ export function restoreMatch(input: unknown): MatchState {
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
   for (const name of ['gold', 'xp', 'playerHp', 'nextMatchEventSeq']) integer(raw[name]);
-  for (const name of ['round', 'level', 'nextItemSerial', 'nextUnitSerial']) integer(raw[name], 1);
-  requireValue((raw.level as number) >= 1 && (raw.level as number) <= 9 && (raw.playerHp as number) <= 100, 'level/HP bounds');
+  integer(raw.round, 1);
+  requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
-  record(raw.preparation); record(raw.preparation.board); record(raw.preparation.board.deploymentZones);
-  const board = raw.preparation.board; record(board.deploymentZones);
-  integer(board.columns, 1); integer(board.rows, 1);
-  for (const team of ['player','enemy']) { record(board.deploymentZones[team]); integer(board.deploymentZones[team].firstRow); integer(board.deploymentZones[team].lastRow); }
-  integer(raw.preparation.benchSize, 1); list(raw.preparation.units);
   const state = raw as unknown as MatchState;
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
+  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(canonicalContent(state.m8.round) === canonicalContent(roundDefinition), 'm8 round identity');
-  requireValue(state.m8.encounterPlan === null, 'B8 loot encounter plan not installed');
+  requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
   requireValue(canonicalContent(state.m8.preparation) === canonicalContent({
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
   requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
-  requireValue(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9, 'board rules');
-  const units = new Map<string, MatchState['preparation']['units'][number]>(); const locations = new Set<string>();
-  for (const unit of state.preparation.units) {
-    record(unit); id(unit.id); requireValue(!units.has(unit.id), 'duplicate unit'); units.set(unit.id, unit);
-    definitionId(unit.definitionId, unit.team === 'player' ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
-    requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
-    requireValue([1,2,3].includes(unit.starLevel), 'star'); record(unit.location);
-    if (unit.team === 'player') checkSerial(unit.id, 'unit', state.nextUnitSerial);
-    if (unit.location.kind === 'bench') { integer(unit.location.slot); requireValue(unit.team === 'player' && unit.location.slot < state.preparation.benchSize, 'bench location'); }
-    else { requireValue(unit.location.kind === 'board', 'location kind'); record(unit.location.cell); integer(unit.location.cell.col); integer(unit.location.cell.row);
-      requireValue(contains(state.preparation.board, unit.location.cell) && isDeploymentCell(state.preparation.board, unit.team, unit.location.cell), 'board location'); }
-    const key = unit.location.kind === 'bench' ? `bench:${unit.location.slot}` : `board:${unit.location.cell.col}:${unit.location.cell.row}`;
-    requireValue(!locations.has(key), 'occupied location'); locations.add(key);
-  }
-  requireValue(canonicalContent(state.preparation.units.filter(unit=>unit.team==='enemy').sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0))
-    === canonicalContent([...enemyProjection.units].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)), 'enemy roster identity');
-  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board').length <= state.level, 'population cap');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
     if (slot.status === 'available') definitionId(slot.definitionId, M5_UNIT_DEFINITIONS, 'shop definition');
-  }
-  list(raw.items); const itemIds = new Set<string>(), equipment = new Set<string>();
-  for (const item of state.items) {
-    record(item); id(item.id); checkSerial(item.id, 'item', state.nextItemSerial);
-    requireValue(!itemIds.has(item.id), 'duplicate item'); itemIds.add(item.id);
-    definitionId(item.definitionId, ITEM_DEFINITIONS, 'item definition'); record(item.location);
-    if (item.location.kind === 'unit') {
-      requireValue(units.get(item.location.unitId)?.team === 'player', 'item owner'); integer(item.location.slot);
-      requireValue(item.location.slot <= 2, 'equipment slot'); const key = `${item.location.unitId}:${item.location.slot}`;
-      requireValue(!equipment.has(key), 'occupied equipment slot'); equipment.add(key);
-    } else requireValue(item.location.kind === 'inventory', 'item location');
-  }
-  for (const item of state.items) if (item.location.kind === 'unit') {
-    requireValue(ITEM_DEFINITIONS[item.definitionId].slotCost !== 3 || item.location.slot === 0, 'exclusive parent slot');
-    requireValue(checkEquipmentPlacement(state.items, item, item.location.unitId, item.location.slot).allowed, 'equipment constraints');
   }
   record(raw.equipmentState); record(raw.equipmentState.equipment); list(raw.equipmentState.rolls); list(raw.temporaryEquipment);
   list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();
@@ -156,7 +116,8 @@ export function restoreMatch(input: unknown): MatchState {
   }
   for (const augment of state.augments) requireValue(receipts.get(augment.choiceId)?.definitionId === augment.definitionId && receipts.get(augment.choiceId)?.round === augment.acquiredRound, 'augment missing receipt');
   if (state.anomalyBinding) requireValue(receipts.get(state.anomalyBinding.choiceId)?.definitionId === state.anomalyBinding.definitionId && receipts.get(state.anomalyBinding.choiceId)?.round === state.anomalyBinding.boundRound, 'binding missing receipt');
-  if (state.phase === 'choice') {
+  const lootChoice = validateB8Loot(state);
+  if (state.phase === 'choice' && !lootChoice) {
     record(state.pendingChoice); const choice = state.pendingChoice;
     id(choice.choiceId); id(choice.eventId); nullableString(choice.targetId); requireValue(choice.choiceId === choice.eventId, 'choice event ID');
     integer(choice.generation); integer(choice.rerollCount); list(choice.offers);
@@ -173,7 +134,7 @@ export function restoreMatch(input: unknown): MatchState {
       else if (choice.kind === 'augment') requireValue(choice.targetId === null && choice.rerollCount === 0 && choice.generation === 0 && choice.offers.every(def => !augmentIds.has(def)), 'augment offers');
       else requireValue(units.get(choice.targetId!)?.team === 'player' && choice.generation === choice.rerollCount + 1, 'locked target');
     }
-  } else requireValue(state.pendingChoice === null, 'pending outside choice');
+  } else if (!lootChoice) requireValue(state.pendingChoice === null, 'pending outside choice');
   const receiptOrder = state.scheduleReceipts.map(receipt => receipt.eventId);
   const expectedReceiptOrder: string[] = [];
   for (let round=1;round<=state.round;round++) for (const event of getRoundSchedule(round)) if (receipts.has(event.id)) expectedReceiptOrder.push(event.id);
@@ -196,7 +157,7 @@ export function restoreMatch(input: unknown): MatchState {
   let experienceAfter = totalExperience(OPENING_INITIAL_STATE.level,OPENING_INITIAL_STATE.xp);
   for (const [i, result] of state.roundResults.entries()) {
     record(result); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
-    for (const field of ['round','combatTicks','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
+    for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(canonicalContent(result.streakBefore) === canonicalContent(streak), 'history streak before');
     requireValue(validPreparationExperience(experienceAfter,result.levelBefore,result.xpBefore), 'history XP preparation chain');
@@ -208,7 +169,7 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && canonicalContent(result.incomeBreakdown) === canonicalContent(expected.incomeBreakdown), 'history income');
     requireValue(canonicalContent(result.streakAfter) === canonicalContent(expected.streakAfter), 'history streak'); streak = expected.streakAfter;
     experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
-    requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0), 'history ticks');
+    requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
   }
   requireValue(canonicalContent(state.streak) === canonicalContent(streak), 'current streak');
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
@@ -221,10 +182,11 @@ export function restoreMatch(input: unknown): MatchState {
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
     requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (state.roundResults.at(-1)?.hpAfter ?? 100), 'current HP');
-  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   if (!settled) requireValue(validPreparationExperience(experienceAfter,state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   validateMatchEquipment(state);
+  const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
+  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
@@ -236,21 +198,20 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(combat.status !== 'running' || combat.tick < combat.maxTicks, 'running timeout');
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
-    const last = settled ? state.roundResults.at(-1)! : null;
-    const snapshotState = last ? { ...state, persistentGrowth: state.persistentGrowth.map(g => ({ ...g, attackDamageBps: g.attackDamageBps - (combat.units.find(u => u.id === g.unitId)?.runtime?.permanentAdBps ?? 0) })).filter(g => g.attackDamageBps > 0),
-      augmentProgress: { pumpingRounds: state.augmentProgress.pumpingRounds - (pump ? 1 : 0), investmentHp: state.augmentProgress.investmentHp - (investment ? last.incomeBreakdown.interest * 8 : 0) } } : state;
-    const expectedStrategy = buildStrategySnapshot(snapshotState);
+    requireValue(basis, 'missing combat input');
+    const expectedStrategy = buildStrategySnapshot(basis.inputs);
+    const combatPreparation = basis.inputs.preparation, combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     requireValue(canonicalContent(combat.strategy) === canonicalContent(expectedStrategy), 'resolved strategy');
-    requireValue(canonicalContent(combat.board) === canonicalContent(state.preparation.board), 'combat board');
-    const expectedIds = state.preparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
+    requireValue(canonicalContent(combat.board) === canonicalContent(combatPreparation.board), 'combat board');
+    const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
     requireValue(canonicalContent(combat.units.map(unit => unit.id).sort()) === canonicalContent(expectedIds), 'combat roster');
-    if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.survivingEnemyCount === combat.units.filter(unit=>unit.alive&&unit.team==='enemy').length, 'combat settlement result'); }
+    if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>unit.alive&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
-    const neutralStatuses = validateNeutralCombat(combat, state.preparation, expectedStrategy);
+    const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
     for (const unit of combat.units) {
-      record(unit); requireValue(units.get(unit.id)?.location.kind === 'board', 'combat unit origin');
-      const origin = units.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
+      record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
+      const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(canonicalContent(unit.mechanics) === canonicalContent(resolved.mechanics), 'resolved mechanics'); requireValue(canonicalContent(unit.itemPrograms ?? []) === canonicalContent(resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       const { stats } = resolved;
@@ -262,7 +223,7 @@ export function restoreMatch(input: unknown): MatchState {
       requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
-      requireValue(contains(state.preparation.board, unit.cell), 'combat cell');
+      requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
@@ -286,6 +247,8 @@ export function restoreMatch(input: unknown): MatchState {
   // a detached copy; all validation above is identical for both inputs.
   const restored=typeof input === 'string' ? state : structuredClone(state);
   freezeContent(restored.m8);
+  if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
+  freezeContent(restored.resourceProvenance);
   return restored;
 }
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }

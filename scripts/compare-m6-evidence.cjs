@@ -96,17 +96,14 @@ assert.equal(unavailable.wholeMatchAndLedgerEqual, true);
 assert(Number.isSafeInteger(unavailable.nextEventSeq) && unavailable.nextEventSeq > 0);
 const phases = failures.results.G02_all_phase_native_roundtrip_and_exact_next_transition;
 assert.equal(phases?.status, 'passed-with-explicit-skips', 'application phase results must disclose partial coverage');
-const livePhases=['augment','anomaly_target','anomaly_offer','preparation','combat_39','combat_40','combat_41','settlement','supply_settlement','supply_choice'];
+// B8 restored the opening (1-3/1-4) and post-PvE loot picks; they are live phases now, not deferrals.
+const livePhases=['opening_choice_1-3','opening_choice_1-4','post_pve_choice','augment','anomaly_target','anomaly_offer','preparation','combat_39','combat_40','combat_41','settlement','supply_settlement','supply_choice'];
 assert.deepEqual(phases.samples.map(row=>row.phase).sort(),[...livePhases,'game_over'].sort(),'unknown missing or extra phase sample');
 for(const phase of livePhases)assert.equal(phases.samples.find(row=>row.phase===phase)?.passed,true,`${phase}: real application roundtrip`);
 assert.deepEqual(phases.samples.find(row=>row.phase==='game_over'),{phase:'game_over',status:'skipped',owner:'B9'});
 assert.deepEqual(failures.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
- ...['opening_choice_1-3','opening_choice_1-4','post_pve_choice'].map(id=>['skipped','B8',`G02-${id}`]),
  ...['G02-game_over','ROOT_03_same_run_completion_archive_refresh','P2-stale-archive-success','P2-stale-archive-reject','R4_inflight_combat_then_pending_terminal_commit'].map(id=>['skipped','B9',id]),
-],'application may omit only the explicitly approved B8/B9 cases');
-for(const phase of ['opening_choice_1-3','opening_choice_1-4','post_pve_choice'])skipB6Dependency(deferredApplicationComparisons,'B8',`G02-${phase}`,'The corresponding real application phase is explicitly deferred until B8 choice integration',()=>{
- assert.equal(phases.samples.find(row=>row.phase===phase)?.passed,true,`${phase}: full phase roundtrip`);
-});
+],'application may omit only the explicitly approved B9 cases');
 skipB6Dependency(deferredApplicationComparisons,'B9','G02-game_over','The full 33-battle terminal application import is explicitly deferred',()=>{
  assert(phases.samples.every(row=>row.passed),'all-phase application save/continue matrix');
 });
@@ -145,7 +142,7 @@ const deferredPerformanceComparisons={};
 assert.equal(performance.restorationIssue,RESTORATION_ISSUE);
 assert.deepEqual(performance.routes.map(route=>route.build),['cannon','sniper','mage','sniper-caitlyn','full-load'],'all five original workload policies participate');
 assert.deepEqual(performance.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
- ['skipped','B8','full-load-15-equipment'],['skipped','B9','full-load-import-roundtrip'],
+ ['skipped','B9','full-load-import-roundtrip'],
 ],'unknown performance workload deferral');
 assert.deepEqual(performance.measurements.deferredMetrics,DEFERRED_PERFORMANCE_GATES);
 const currentIsOverCapacity=performance.measurements.incrementalBattleCount+1>limits.MAX_BATTLE_RECORDS;
@@ -183,9 +180,8 @@ for (const [name, [metric, budget]] of Object.entries(expectedGates)) {
    skipB6Dependency(deferredPerformanceComparisons,'B9',`performance-${name}`,`Restore the original complete validated-import preparation and genuine samples after B9; ${RESTORATION_ISSUE}`,verifyOriginalGate);
   }else verifyOriginalGate();
 }
-skipB6Dependency(deferredPerformanceComparisons,'B8','full-load-15-equipment',`Restore the original maximal equipment coverage after B8; ${RESTORATION_ISSUE}`,()=>{
- assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enemies === 8 && load.equipped === 15), 'same measured legal full-load scenario');
-});
+// Restored after B8: the measured full-load route really reaches the F1 maximal load.
+assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enemies === 8 && load.equipped === 15), 'same measured legal full-load scenario');
 assert(Array.isArray(performance.fullLoadObserved)&&performance.fullLoadObserved.length>0,'actual fifth-route load observations retained');
 assert.deepEqual(performance.measurements.fullLoadRoundTrip,{status:'skipped',owner:'B9',restorationIssue:RESTORATION_ISSUE});
 skipB6Dependency(deferredPerformanceComparisons,'B9','full-load-import-roundtrip',`Restore complete full-load import after B9; bounded import cannot close ${RESTORATION_ISSUE}`,()=>{

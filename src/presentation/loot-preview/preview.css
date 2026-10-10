@@ -1,0 +1,9 @@
+/* Preview page chrome only; never part of the game bundle. */
+body.u6-preview { margin: 0; padding: 16px; background: var(--c-bg); color: var(--c-text); font-family: system-ui, sans-serif; }
+.u6-preview-banner { margin: 0 0 12px; padding: 8px 12px; border: 1px dashed #78a8b9; border-radius: 8px; color: #c2d7de; font-size: 13px; }
+.u6-preview-tabs { flex-wrap: wrap; max-width: 960px; }
+.u6-preview-stage { max-width: 960px; display: grid; gap: 12px; }
+.u6-preview-head h2 { margin: 8px 0 4px; font-size: 19px; }
+.u6-preview-head p { margin: 0; color: var(--c-text-muted); font-size: 13px; }
+.u6-preview-body { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.u6-preview-echo { min-height: 1.5em; color: var(--c-accent); font-size: 13px; }

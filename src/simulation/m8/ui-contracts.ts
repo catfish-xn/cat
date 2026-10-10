@@ -46,7 +46,11 @@ export interface LootView {
   readonly revealedDrops: readonly RevealedDropView[];
   readonly pendingClaims: readonly string[];
   readonly canContinue: boolean;
-  readonly reason: 'pending-capacity' | 'unsettled-round' | 'game-over' | null;
+  /** 'pending-choice' (approved addendum 2026-10-10): an earned, unresolved loot pick blocks Continue. */
+  readonly reason: 'pending-capacity' | 'pending-choice' | 'unsettled-round' | 'game-over' | null;
+  /** Approved addendum 2026-10-10: identity of the loot pick that is the current PendingChoice, else null.
+   * Identity only; candidates stay in PendingChoice.offers and the fallback is never exposed. */
+  readonly pendingChoice: (DropIdentity & { readonly choiceId: string; readonly generation: number }) | null;
 }
 export type CompatibilityView =
   | { readonly status: 'current'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: M8Version['rulesVersion']; readonly canResume: true; readonly canReplay: true; readonly canExportOriginal: true; readonly reason: null }

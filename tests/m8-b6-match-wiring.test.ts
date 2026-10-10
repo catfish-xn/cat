@@ -7,7 +7,8 @@ import { getRoundKind, getRoundSchedule, getStageRound } from '../src/simulation
 import { planCatalogRoundEconomy, OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../src/simulation/opening-economy';
 import { CONTENT_DIGEST, digestContent } from '../src/simulation/content';
 import * as enemies from '../src/simulation/round-enemies';
-import { accepted } from './match-helpers';
+import { accepted, resolveM5Choices } from './match-helpers';
+import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
 
 const roundTrip = (state:MatchState) => {
   const restored=restoreMatch(serializeMatch(state));
@@ -22,7 +23,7 @@ const concede = (state:MatchState) => {
   return accepted(startMatchCombat(state));
 };
 
-// Handwritten OPENING expectations; B7 now supplies the approved neutral roster, B8 loot remains pending.
+// Handwritten OPENING expectations with B7 encounters and B8 earned/forfeited loot.
 describe('B6 installed round, opening and restore transactions',()=>{
   it('starts directly in 1-2 with one permanent hero, no legacy package and one five-slot shop',()=>{
     const state=createMatch(42);
@@ -31,7 +32,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(state.preparation.units.filter(u=>u.team==='player')).toEqual([{id:'unit-1',definitionId:'irelia',team:'player',starLevel:1,location:{kind:'board',cell:{col:1,row:4}}}]);
     expect(state.shop.generation).toBe(1); expect(state.shop.slots).toHaveLength(5);
     expect(readRoundInfo(state)).toBe(state.m8.round);
-    expect(state.m8.preparation).toMatchObject({roundId:'1-2',encounterId:'minions-a-v1',contentStatus:'ready-b7-pending-b8'});
+    expect(state.m8.preparation).toMatchObject({roundId:'1-2',encounterId:'minions-a-v1',contentStatus:'ready-b8-loot'});
     expect(state.m8.encounterPlan).toBeNull();
     roundTrip(state);
   });
@@ -47,7 +48,10 @@ describe('B6 installed round, opening and restore transactions',()=>{
       const frozen=structuredClone(state.m8);
       state=concede(state);
       expect(state).toMatchObject({phase:'settlement',gold:expected.gold,level:expected.level,xp:0,playerHp:expected.hp,streak:{kind:null,count:0}});
-      expect(state.m8).toEqual(frozen);
+      expect(state.m8).toEqual({...frozen,loot:{...frozen.loot,
+        direct:frozen.loot.direct.map(drop=>({...drop,status:'forfeited'})),
+        choiceEligibility:frozen.loot.choiceEligibility.map(choice=>({...choice,status:'forfeited'})),
+      }});
       expect(state.roundResults.at(-1)).toMatchObject({roundId:expected.id,incomeBreakdown:{base:expected.base,win:0,interest:0,streak:0},xpRequested:expected.xp,playerDamage:3});
       roundTrip(state);
       expect(stepMatch(state)).toEqual({state,events:[]}); expect(stepMatch(state).state).toBe(state);
@@ -60,7 +64,7 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(state).toMatchObject({round:4,roundDefinitionId:'2-1',phase:'choice',gold:10,level:3,xp:0,playerHp:91});
     expect(state.pendingChoice).toMatchObject({kind:'augment',eventId:'round:2-1:augment'});
     expect(state.items).toEqual([]);expect(state.preparation.units.filter(u=>u.team==='player')).toHaveLength(1);
-    expect(state.scheduleReceipts).toEqual([]); // B8 has not granted heroes or components.
+    expect(state.scheduleReceipts).toEqual([]); // Empty-board losses forfeit every hero/component entitlement.
     expect(state.shop.generation).toBe(4);
   });
   it('restores real preparation, running combat and settlement at all three opening identities without generating again',()=>{
@@ -70,7 +74,13 @@ describe('B6 installed round, opening and restore transactions',()=>{
       state=accepted(startMatchCombat(state));expect(state.phase).toBe('combat');
       const restored=roundTrip(state);expect(stepMatch(restored)).toEqual(stepMatch(state));
       while(state.phase==='combat') state=stepMatch(state).state;
-      roundTrip(state);expect(state.phase).toBe('settlement');
+      roundTrip(state);
+      if(state.phase==='choice') {
+        const blocked=nextRound(state,state.round);
+        expect(blocked).toEqual({ok:false,state,reason:'wrong-phase'});expect(blocked.state).toBe(state);
+        state=resolveM5Choices(state);roundTrip(state);
+      }
+      expect(state.phase).toBe('settlement');
       state=accepted(nextRound(state,state.round));
     }
     const spy=vi.spyOn(enemies,'createRoundEnemies');
@@ -113,20 +123,9 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(digestContent(OPENING_ECONOMY_RULES)).not.toBe(digestContent({...OPENING_ECONOMY_RULES,rounds:{...OPENING_ECONOMY_RULES.rounds,'1-4':{baseGold:5,naturalXp:2}}}));
   });
   it('restores 36-38 preparation/combat/settlement and ends only at 6-7 with no regeneration',()=>{
-    // Strong explicit domain fixture exercises every round and strict local restore.
-    // It is not an acquisition route, maximum-unit-load benchmark or B9 application/history capacity acceptance.
-    let state=createMatch();
-    state={...state,level:9,nextUnitSerial:4,nextItemSerial:10,
-      // Three equipped holders preserve the full 33-battle route and all late
-      // restore boundaries, with fewer irrelevant per-holder item runtimes.
-      // No synthetic combat result, precomputed checkpoint or timeout change.
-      items:Array.from({length:9},(_,i)=>({id:`item-${i+1}`,definitionId:'deathblade',
-        location:{kind:'unit' as const,unitId:`unit-${Math.floor(i/3)+1}`,slot:i%3}})),
-      preparation:{...state.preparation,units:[
-      ...state.preparation.units.filter(u=>u.team==='enemy'),
-      ...Array.from({length:3},(_,i)=>({id:`unit-${i+1}`,definitionId:'caitlyn',team:'player' as const,starLevel:3 as const,
-        location:{kind:'board' as const,cell:{col:i%7,row:4+Math.floor(i/7)}}})),
-    ]}};
+    // The full public driver has already fought the preceding battles, bought
+    // and upgraded the army, and earned/combined every item in this prefix.
+    let state=publicNeutralPreparation('6-5');
     const seen:string[]=[];let lateRestoreCount=0;
     while(state.phase!=='gameOver') {
       while(state.phase==='choice') {
