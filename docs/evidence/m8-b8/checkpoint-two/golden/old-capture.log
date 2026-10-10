@@ -1,0 +1,10 @@
+2026-10-10T05:50:37.562Z old cannon start
+(node:6) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+2026-10-10T05:50:44.648Z old cannon {"caitlynBattles":0,"caitlynCasts":0,"tickTimingMs":{"p50":0.4651819999999134,"p95":1.0746110000000044,"p99":1.6791739999998754,"max":17.83060000000023},"build":"cannon","seed":42,"outcome":"victory","round":38,"hp":89,"gold":212,"formedAt":null,"formedBattles":0,"boundBattles":14,"transitioned":false,"ticks":10324,"commands":158,"durationSeconds":6.054} bytes=26838730
+2026-10-10T05:50:44.652Z old sniper start
+2026-10-10T05:50:54.142Z old sniper {"caitlynBattles":0,"caitlynCasts":0,"tickTimingMs":{"p50":0.5805259999997361,"p95":1.0784870000006777,"p99":1.716150000000198,"max":9.300347000000329},"build":"sniper","seed":42,"outcome":"victory","round":38,"hp":60,"gold":222,"formedAt":null,"formedBattles":0,"boundBattles":14,"transitioned":false,"ticks":12973,"commands":160,"durationSeconds":8.503} bytes=34090654
+2026-10-10T05:50:54.146Z old mage start
+2026-10-10T05:51:03.158Z old mage {"caitlynBattles":0,"caitlynCasts":0,"tickTimingMs":{"p50":0.5637500000011642,"p95":1.033980000000156,"p99":1.7670169999983045,"max":11.909584000000905},"build":"mage","seed":42,"outcome":"victory","round":38,"hp":44,"gold":250,"formedAt":null,"formedBattles":0,"boundBattles":14,"transitioned":false,"ticks":12814,"commands":157,"durationSeconds":8.13} bytes=31007885
+2026-10-10T05:51:03.165Z old sniper-caitlyn start
+2026-10-10T05:51:12.270Z old sniper-caitlyn {"caitlynBattles":12,"caitlynCasts":22,"tickTimingMs":{"p50":0.5896499999980733,"p95":1.0594990000026883,"p99":1.6162489999987883,"max":5.596657000001869},"build":"sniper-caitlyn","seed":42,"outcome":"victory","round":38,"hp":61,"gold":217,"formedAt":null,"formedBattles":0,"boundBattles":14,"transitioned":false,"ticks":12583,"commands":163,"durationSeconds":8.116} bytes=34188252
