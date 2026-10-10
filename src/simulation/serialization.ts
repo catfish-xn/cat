@@ -185,7 +185,7 @@ export function restoreMatch(input: unknown): MatchState {
   if (!settled) requireValue(validPreparationExperience(experienceAfter,state.level,state.xp), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   validateMatchEquipment(state);
-  const { basis, saleGold } = validateB8Resources(state);
+  const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
   if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');

@@ -116,7 +116,7 @@ export function validateB8Loot(state: MatchState): boolean {
 }
 
 /** Verify all births/consumption and independently compile the immutable combat prefix. */
-export function validateB8Resources(state: MatchState): { basis: CombatInputBasis | null; saleGold: number } {
+export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
   const context: ResourceProvenanceContext = { scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
@@ -133,7 +133,9 @@ export function validateB8Resources(state: MatchState): { basis: CombatInputBasi
   const prefixLength = commit?.combatStartProvenancePrefixLength ?? entries.length;
   const basis = restoreCombatInput(state.combatInputBasis,{seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
-    resources:foldResourceProvenance(state.resourceProvenance,{...context,prefixLength}),equipmentRolls:state.equipmentState.rolls,
+    // Only locally parsed JSON cannot run accessors between these reads. Keep
+    // the original second validation for every object input and shorter prefix.
+    resources:parsedJsonInput && prefixLength === entries.length ? current : foldResourceProvenance(state.resourceProvenance,{...context,prefixLength}),equipmentRolls:state.equipmentState.rolls,
     equipmentRollPrefixLength:state.equipmentState.rolls.length,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults});
   check(state.battleSeedRngState === basis.battleSeed, 'battle seed cursor');
   if (combat.status === 'running') {
