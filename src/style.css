@@ -63,6 +63,14 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .panel-tabs button { padding: 7px 2px; font-size: 12px; }
 .mode-note { color: #97aebc; font-size: 11px !important; }
 .income-receipt { border: 1px solid #355063; border-radius: 8px; padding: 0 8px; }
+.encounter-preview { border: 1px solid #5a3a46; border-radius: 8px; padding: 0 8px; margin-bottom: 8px; }
+.encounter-preview summary { padding: 6px 0; font-weight: 600; }
+.encounter-unit { padding: 6px 8px; margin-bottom: 6px; background: #0f1a24; border-radius: 6px; border-left: 3px solid var(--c-enemy); }
+.encounter-unit:hover, .encounter-unit:focus-visible { outline: 2px solid var(--c-focus); outline-offset: -2px; }
+.encounter-unit h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 14px; }
+.encounter-unit p, .encounter-note { margin: 2px 0; font-size: 12px; }
+.encounter-cell, .encounter-extra, .encounter-note { color: var(--c-text-muted); }
+.encounter-cell { margin-left: auto; font-weight: 400; font-size: 12px; }
 .battle-record { max-height: 55dvh; overflow-y: auto; overflow-wrap: anywhere; }
 .battle-record p { border-bottom: 1px solid #2c404b; padding-bottom: 6px; }
 .choice-cards:has(button:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }

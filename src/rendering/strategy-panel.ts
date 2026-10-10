@@ -1,6 +1,7 @@
 import { displayUnitName } from './display-names';
 export { displayUnitName } from './display-names';
-import { getRoundKind, getStageRound } from '../simulation/round-schedule';
+import { readRoundInfo } from '../simulation/round-selectors';
+import { encounterPreviewSection } from '../presentation/encounter-preview';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
@@ -50,6 +51,7 @@ interface PanelActions {
   readonly cancelGesture: () => void;
   readonly status: (message: string) => void;
   readonly help: () => void;
+  readonly highlight: (unitIds: readonly string[]) => void;
 }
 
 function traitLine(definitionId: string): HTMLElement {
@@ -135,6 +137,8 @@ export class StrategyPanel {
   private statusText: HTMLElement | null = null;
   /** Static B4 catalogue view; built once so its filter and open state survive re-renders. */
   private codex: HTMLElement | null = null;
+  /** Enemy-preview open state chosen by the player for the current round only. */
+  private previewOpen: { round: number; open: boolean } | null = null;
 
   constructor(private readonly actions: PanelActions, private readonly router: InputRouter) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
@@ -247,7 +251,7 @@ export class StrategyPanel {
       this.itemDrag = null;
     }
   }
-  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.choiceToken = ''; }
+  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.choiceToken = ''; this.previewOpen = null; }
   destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
@@ -264,10 +268,10 @@ export class StrategyPanel {
     const state = this.actions.state(), ready = state.phase === 'preparation';
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.eventList = null;
-    const stage = getStageRound(state.round), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
+    const round = readRoundInfo(state), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
     const head = element('header', '', 'hud-bar'); head.dataset.phase = state.phase;
     const title = element('div', '', 'hud-title');
-    title.append(element('span', PHASE_LABEL[state.phase], `phase-badge phase-${state.phase}`), element('h2', `${stage.stage}-${stage.round} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[getRoundKind(state.round)]}`));
+    title.append(element('span', PHASE_LABEL[state.phase], `phase-badge phase-${state.phase}`), element('h2', `${round.displayName} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[round.kind]}${round.isFinal ? ' · 终局' : ''}`));
     const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
@@ -280,7 +284,7 @@ export class StrategyPanel {
     this.root.append(head);
     // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
     const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';
-    const labels: Record<ControlName, string> = { reroll: 'D · 刷新 2', 'buy-xp': 'F · 经验 4', sell: 'E · 出售', 'start-combat': state.phase === 'combat' ? '战斗进行中…' : state.phase === 'choice' ? '请先完成选择' : getRoundKind(state.round) === 'supply' ? '领取补给' : '开始战斗', continue: '继续', 'new-match': '新局' };
+    const labels: Record<ControlName, string> = { reroll: 'D · 刷新 2', 'buy-xp': 'F · 经验 4', sell: 'E · 出售', 'start-combat': state.phase === 'combat' ? '战斗进行中…' : state.phase === 'choice' ? '请先完成选择' : round.kind === 'supply' ? '领取补给' : '开始战斗', continue: '继续', 'new-match': '新局' };
     const actions = element('div', '', 'action-bar');
     const controlButton = (name: ControlName, className: string) => {
       const button = this.button(`mobile:${name}`, labels[name], () => {
@@ -315,6 +319,13 @@ export class StrategyPanel {
     for (const name of (['start-combat', 'continue', 'new-match'] as const).filter(name => name !== primary)) secondary.append(controlButton(name, 'secondary-action'));
     this.renderShop(state, ready);
     this.root.append(secondary);
+    this.actions.highlight([]);
+    const preview = encounterPreviewSection(state, {
+      open: this.previewOpen?.round === state.round ? this.previewOpen.open : null,
+      onToggle: open => { this.previewOpen = { round: state.round, open }; },
+      onHover: ids => this.actions.highlight(ids),
+    });
+    if (preview) this.root.append(preview);
     const result = state.roundResults.at(-1);
     if (result) {
       const receipt = element('details', '', 'income-receipt'); receipt.dataset.debug = 'income-receipt';
@@ -662,7 +673,7 @@ export class StrategyPanel {
     for (const definition of Object.values(ANOMALY_DEFINITIONS)) section.append(element('p', `${definition.name}：${definition.description}`));
     section.append(element('p', '异常适配：库奇/崔丝塔娜 可选泰坦打击；克格莫/佐伊 可选法师护甲；库奇/佐伊 可选连杀。无需特定异常才能继续。'));
     section.append(element('p', '日程：强化 2-1 / 3-2 / 4-2 · 异常 4-6 · 终局 6-7。S13 14.24b 精选单人模式 · 无限单位池 · 补给代替选秀。', 'mode-note'));
-    section.append(element('p', '目标：八人口、核心二星、输出至少两件成装、前排一件成装。4-6 绑定核心异常；组件来自开局、每阶段 .4 补给及 .7 野怪。副羁绊只保留原生身份，本版本未开放。'));
+    section.append(element('p', '目标：八人口、核心二星、输出至少两件成装、前排一件成装。4-6 绑定核心异常；组件来自每阶段 .4 补给；1-2～1-4 与各阶段 .7 为野怪回合，野怪掉落尚未开放。副羁绊只保留原生身份，本版本未开放。'));
     this.root.append(section);
   }
   snapshot() {

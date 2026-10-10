@@ -1,0 +1,61 @@
+/**
+ * U5 current-round enemy preview. Reads only readEncounterPreview(); never predicts later
+ * rounds, drops or RNG. Interim (until UR-U5-01/02): monster classification and the extra
+ * range/interval/crit line come from the legacy adapter via getUnitStats, and PvP units show
+ * only the four previewed stats so two sources are never mixed.
+ */
+import { getUnitStats, readEncounterPreview } from '../simulation/match';
+import type { MatchState } from '../simulation/match-types';
+import { UNIT_DEFINITIONS } from '../simulation/units';
+import { heroEmblemSvg } from './hero-identity';
+import { displayUnitName } from '../rendering/display-names';
+
+export interface EncounterPreviewOptions {
+  /** null = default (open for monster rounds, closed for PvP). */
+  readonly open: boolean | null;
+  readonly onToggle: (open: boolean) => void;
+  /** Highlights the matching board pieces; empty clears. Presentation only. */
+  readonly onHover: (unitIds: readonly string[]) => void;
+}
+
+const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') => {
+  const element = document.createElement(tag); element.textContent = text; element.className = className; return element;
+};
+const seconds = (ticks: number) => `${+(ticks * 0.05).toFixed(2)}s`;
+
+export function encounterPreviewSection(state: MatchState, options: EncounterPreviewOptions): HTMLElement | null {
+  const preview = readEncounterPreview(state);
+  if (!preview) return null;
+  const monsters = state.m8.round.kind === 'pve';
+  // Identical units (same definition, star, stats and rule text) share one card.
+  const groups = new Map<string, (typeof preview.units)[number][]>();
+  for (const unit of preview.units) {
+    const key = JSON.stringify([unit.definitionId, unit.starLevel, unit.stats, unit.abilityDescription]);
+    groups.set(key, [...groups.get(key) ?? [], unit]);
+  }
+  const label = (unit: (typeof preview.units)[number], count: number) => `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${count > 1 ? ` ×${count}` : ''}`;
+  const section = node('details', '', 'encounter-preview');
+  section.dataset.debug = 'encounter-preview'; section.dataset.encounter = preview.encounterId;
+  section.open = options.open ?? monsters;
+  section.addEventListener('toggle', () => options.onToggle(section.open));
+  section.append(node('summary', `${monsters ? '本轮野怪' : '本轮对手'} · ${[...groups.values()].map(units => label(units[0], units.length)).join('、')}`));
+  for (const units of groups.values()) {
+    const unit = units[0], ids = units.map(entry => entry.unitId);
+    const row = node('article', '', 'encounter-unit'); row.tabIndex = 0;
+    row.dataset.debug = `encounter-unit:${unit.definitionId}`; row.dataset.unitIds = ids.join(' ');
+    const title = node('h4', label(unit, units.length));
+    title.insertAdjacentHTML('afterbegin', heroEmblemSvg(unit.definitionId, 22));
+    title.append(node('span', `位置 ${units.map(entry => `${entry.cell.col},${entry.cell.row}`).join(' / ')}`, 'encounter-cell'));
+    row.append(title, node('p', `生命 ${unit.stats.maxHp} · 攻击力 ${unit.stats.attackDamage} · 护甲 ${unit.stats.armor} · 魔抗 ${unit.stats.magicResist}`));
+    if (UNIT_DEFINITIONS[unit.definitionId]?.unitKind === 'neutral') {
+      const base = getUnitStats(unit.definitionId, 1);
+      row.append(node('p', `射程 ${base.attackRange} 格 · 攻击间隔 ${seconds(base.attackIntervalTicks)} · 暴击 ${(base.baseCritChanceBps ?? 0) / 100}% ×${(base.baseCritMultiplierBps ?? 10000) / 10000} · 无法力`, 'encounter-extra'));
+    }
+    row.append(node('p', unit.abilityDescription, 'encounter-ability'));
+    for (const type of ['mouseenter', 'focus'] as const) row.addEventListener(type, () => options.onHover(ids));
+    for (const type of ['mouseleave', 'blur'] as const) row.addEventListener(type, () => options.onHover([]));
+    section.append(row);
+  }
+  section.append(node('p', preview.rulesNote, 'encounter-note'));
+  return section;
+}
