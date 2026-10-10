@@ -89,6 +89,19 @@ describe('B8 default Match own restore', () => {
       (s:any) => { s.roundResults.at(-1).combatEventCount++; },
     ]) reject(state,change);
   });
+  it('keeps receipt schema rejection through the shared lineage validator', () => {
+    const state = resolveM5Choices(openingChoice());
+    for (const change of [
+      (s:any) => { s.m8.loot.receipts.push(copy(s.m8.loot.receipts[0])); },
+      (s:any) => { s.m8.loot.receipts[0].receiptId = 'forged'; },
+      (s:any) => { s.m8.loot.receipts[0].grantedItemIds = ['item-999']; },
+      (s:any) => { s.m8.loot.receipts[0].grantedUnitIds.push('unit-999'); },
+      (s:any) => { s.m8.loot.receipts.at(-1).payload.quantity = 2; },
+      (s:any) => { s.m8.loot.receipts.at(-1).payload.extra = true; },
+      (s:any) => { s.m8.loot.receipts[0].extra = true; },
+    ]) reject(state,change);
+    roundTrip(state);
+  });
   it('rejects an unearned choice, wrong offered state and forged post-settlement resources', () => {
     const state = openingChoice();
     for (const change of [

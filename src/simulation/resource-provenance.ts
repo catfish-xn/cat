@@ -138,7 +138,7 @@ export function mergeGrowthLedger(
 }
 
 interface BirthReceipt { readonly kind: 'unit' | 'item'; readonly id: string; readonly definitionId: string; readonly roundId: string }
-function receiptBirths(context: ResourceProvenanceContext): Map<string, BirthReceipt> {
+export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal'>): Map<string, BirthReceipt> {
   const births = new Map<string, BirthReceipt>(), receiptIds = new Set<string>(), assetIds = new Set<string>();
   const add = (key: string, birth: BirthReceipt) => {
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
@@ -224,7 +224,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const entries = value.entries as ResourceProvenanceEntry[];
   const prefixLength = context.prefixLength ?? entries.length;
   integer(prefixLength); requireValue(prefixLength <= entries.length, 'prefix bounds');
-  const births = receiptBirths(context), usedBirths = new Set<string>();
+  const births = validateResourceReceipts(context), usedBirths = new Set<string>();
   const units = new Map<string, ProvenanceUnit>(), items = new Map<string, ProvenanceItem>();
   let growth: readonly PersistentGrowth[] = [], nextUnitSerial = 1, nextItemSerial = 1, lastOrdinal = 1;
   let acquisition: { readonly sequence: number; readonly unitId: string; readonly definitionId: string; readonly roundId: string; survivorId: string; star: number } | null = null;

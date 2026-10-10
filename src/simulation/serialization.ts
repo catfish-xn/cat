@@ -1,7 +1,7 @@
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
-import { checkEquipmentPlacement } from './equipment-policy';
+import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { validateMatchEquipment } from './temporary-equipment';
 import { canonicalSource } from './m8/identity';
 import { asSource } from './m8/s13-definitions';
@@ -26,24 +26,19 @@ import { freezeContent } from './content/freeze';
 import { grantXp } from './progression';
 import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
-import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
+import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
-function integer(value: unknown, min = 0): asserts value is number { requireValue(Number.isSafeInteger(value) && (value as number) >= min, 'integer'); }
-function id(value: unknown): asserts value is string { requireValue(typeof value === 'string' && value.length > 0, 'ID'); }
-function definitionId(value: unknown, catalog: object, label: string): asserts value is string {
-  id(value); requireValue(Object.hasOwn(catalog, value), label);
-}
-function list(value: unknown): asserts value is unknown[] { requireValue(Array.isArray(value), 'array'); }
-function record(value: unknown): asserts value is Record<string, unknown> { requireValue(value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype, 'object'); }
+const inputValidation = createInputValidation(requireValue);
+const integer: InputValidation['integer'] = inputValidation.integer;
+const id: InputValidation['id'] = inputValidation.id;
+const definitionId: InputValidation['definitionId'] = inputValidation.definitionId;
+const list: InputValidation['list'] = inputValidation.list;
+const record: InputValidation['record'] = inputValidation.record;
+const checkSerial: InputValidation['checkSerial'] = inputValidation.checkSerial;
 function nullableString(value: unknown): void { if (value !== null) id(value); }
-function checkSerial(instanceId: string, prefix: string, next: number): void {
-  id(instanceId);
-  requireValue(new RegExp(`^${prefix}-[1-9][0-9]*$`).test(instanceId), `${prefix} ID`);
-  requireValue(Number(instanceId.slice(prefix.length + 1)) < next, `${prefix} serial`);
-}
 /** Across preparation, XP can only increase in paid four-XP transactions (or cap). */
 function totalExperience(level:number,xp:number):number {
   grantXp(level,xp,0); // Validate normalized values before using them as indices.
@@ -64,18 +59,14 @@ export function restoreMatch(input: unknown): MatchState {
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
   for (const name of ['gold', 'xp', 'playerHp', 'nextMatchEventSeq']) integer(raw[name]);
-  for (const name of ['round', 'level', 'nextItemSerial', 'nextUnitSerial']) integer(raw[name], 1);
-  requireValue((raw.level as number) >= 1 && (raw.level as number) <= 9 && (raw.playerHp as number) <= 100, 'level/HP bounds');
+  integer(raw.round, 1);
+  requireValue((raw.playerHp as number) <= 100, 'level/HP bounds');
   requireValue(['preparation','choice','combat','settlement','gameOver'].includes(raw.phase as string), 'phase');
-  record(raw.preparation); record(raw.preparation.board); record(raw.preparation.board.deploymentZones);
-  const board = raw.preparation.board; record(board.deploymentZones);
-  integer(board.columns, 1); integer(board.rows, 1);
-  for (const team of ['player','enemy']) { record(board.deploymentZones[team]); integer(board.deploymentZones[team].firstRow); integer(board.deploymentZones[team].lastRow); }
-  integer(raw.preparation.benchSize, 1); list(raw.preparation.units);
   const state = raw as unknown as MatchState;
   requireValue(state.round <= FINAL_ROUND, 'round bounds');
   const roundDefinition = getCatalogRoundByOrdinal(state.round);
   const enemyProjection = readRoundEnemyProjection(state.round);
+  const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
   requireValue(canonicalContent(state.m8.round) === canonicalContent(roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
@@ -84,42 +75,10 @@ export function restoreMatch(input: unknown): MatchState {
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
   requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
-  requireValue(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9, 'board rules');
-  const units = new Map<string, MatchState['preparation']['units'][number]>(); const locations = new Set<string>();
-  for (const unit of state.preparation.units) {
-    record(unit); id(unit.id); requireValue(!units.has(unit.id), 'duplicate unit'); units.set(unit.id, unit);
-    definitionId(unit.definitionId, unit.team === 'player' ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
-    requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
-    requireValue([1,2,3].includes(unit.starLevel), 'star'); record(unit.location);
-    if (unit.team === 'player') checkSerial(unit.id, 'unit', state.nextUnitSerial);
-    if (unit.location.kind === 'bench') { integer(unit.location.slot); requireValue(unit.team === 'player' && unit.location.slot < state.preparation.benchSize, 'bench location'); }
-    else { requireValue(unit.location.kind === 'board', 'location kind'); record(unit.location.cell); integer(unit.location.cell.col); integer(unit.location.cell.row);
-      requireValue(contains(state.preparation.board, unit.location.cell) && isDeploymentCell(state.preparation.board, unit.team, unit.location.cell), 'board location'); }
-    const key = unit.location.kind === 'bench' ? `bench:${unit.location.slot}` : `board:${unit.location.cell.col}:${unit.location.cell.row}`;
-    requireValue(!locations.has(key), 'occupied location'); locations.add(key);
-  }
-  requireValue(canonicalContent(state.preparation.units.filter(unit=>unit.team==='enemy').sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0))
-    === canonicalContent([...enemyProjection.units].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)), 'enemy roster identity');
-  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board').length <= state.level, 'population cap');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
     if (slot.status === 'available') definitionId(slot.definitionId, M5_UNIT_DEFINITIONS, 'shop definition');
-  }
-  list(raw.items); const itemIds = new Set<string>(), equipment = new Set<string>();
-  for (const item of state.items) {
-    record(item); id(item.id); checkSerial(item.id, 'item', state.nextItemSerial);
-    requireValue(!itemIds.has(item.id), 'duplicate item'); itemIds.add(item.id);
-    definitionId(item.definitionId, ITEM_DEFINITIONS, 'item definition'); record(item.location);
-    if (item.location.kind === 'unit') {
-      requireValue(units.get(item.location.unitId)?.team === 'player', 'item owner'); integer(item.location.slot);
-      requireValue(item.location.slot <= 2, 'equipment slot'); const key = `${item.location.unitId}:${item.location.slot}`;
-      requireValue(!equipment.has(key), 'occupied equipment slot'); equipment.add(key);
-    } else requireValue(item.location.kind === 'inventory', 'item location');
-  }
-  for (const item of state.items) if (item.location.kind === 'unit') {
-    requireValue(ITEM_DEFINITIONS[item.definitionId].slotCost !== 3 || item.location.slot === 0, 'exclusive parent slot');
-    requireValue(checkEquipmentPlacement(state.items, item, item.location.unitId, item.location.slot).allowed, 'equipment constraints');
   }
   record(raw.equipmentState); record(raw.equipmentState.equipment); list(raw.equipmentState.rolls); list(raw.temporaryEquipment);
   list(raw.augments); requireValue(state.augments.length <= 3, 'augment count'); const augmentIds = new Set<string>();

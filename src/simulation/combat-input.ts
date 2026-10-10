@@ -4,14 +4,12 @@ import type { ItemInstance, ScheduleReceipt } from './strategy-types';
 import type { EquipmentRoundRoll } from './m8/contracts';
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
-import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
+import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { M5_UNIT_DEFINITIONS } from './units';
 import { ITEM_DEFINITIONS } from './content/items';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { readRoundEnemyProjection } from './round-enemies';
-import { checkEquipmentPlacement } from './equipment-policy';
 import { grantsTemporaryEquipment } from './temporary-equipment';
 import { projectTemporaryEquipment } from './m8/equipment';
 import { nextRandom, validateSeed } from './rng';
@@ -58,10 +56,9 @@ export function freezeCombatInput(state: MatchBase, battleSeed: number, provenan
 }
 const equal = (a: unknown, b: unknown): boolean => canonicalContent(a) === canonicalContent(b);
 function requireBasis(condition: unknown): asserts condition { if (!condition) throw new RangeError('Invalid combat input basis'); }
-function integer(value: unknown, min = 0): asserts value is number { requireBasis(Number.isSafeInteger(value) && (value as number) >= min); }
-function record(value: unknown): void {
-  requireBasis(value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype);
-}
+const inputValidation = createInputValidation(requireBasis);
+const integer: InputValidation['integer'] = inputValidation.integer;
+const record: (value: unknown) => void = inputValidation.record;
 const sorted = <T extends { readonly id: string }>(values: readonly T[]): T[] => [...values].sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 /** Pure own-format validation. Caller first validates history, receipts and the provenance prefix.
  * No combat creation, RNG mutation, inventory grant, or replacement of saved values. */
@@ -79,47 +76,16 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     if (entry.kind !== 'supply') battleSeed = nextRandom(battleSeed).word;
   }
   requireBasis(basis.battleSeed === battleSeed);
-  for (const key of ['nextUnitSerial','nextItemSerial','playerLevel'] as const) integer(basis[key], 1);
   integer(basis.provenancePrefixLength); integer(basis.equipmentRollPrefixLength);
-  requireBasis(basis.playerLevel === authority.playerLevel && basis.playerLevel <= 9
+  requireBasis(basis.playerLevel === authority.playerLevel
     && basis.provenancePrefixLength === authority.provenancePrefixLength
     && basis.equipmentRollPrefixLength === authority.equipmentRollPrefixLength
     && basis.equipmentRollPrefixLength <= authority.equipmentRolls.length
     && basis.nextUnitSerial === authority.resources.nextUnitSerial && basis.nextItemSerial === authority.resources.nextItemSerial);
-  record(input.preparation); requireBasis(equal(input.preparation.board, DEFAULT_BOARD)
-    && input.preparation.benchSize === 9 && Array.isArray(input.preparation.units));
-  const units = new Map<string, Unit>(), places = new Set<string>();
-  for (const unit of input.preparation.units) {
-    record(unit); record(unit.location); requireBasis(typeof unit.id === 'string' && !units.has(unit.id));
-    units.set(unit.id, unit); requireBasis(unit.team === 'player' || unit.team === 'enemy');
-    requireBasis([1,2,3].includes(unit.starLevel));
-    if (unit.team === 'player') requireBasis(Object.hasOwn(M5_UNIT_DEFINITIONS, unit.definitionId));
-    if (unit.location.kind === 'bench') {
-      integer(unit.location.slot); requireBasis(unit.team === 'player' && unit.location.slot < 9);
-    } else {
-      requireBasis(unit.location.kind === 'board'); record(unit.location.cell);
-      integer(unit.location.cell.col); integer(unit.location.cell.row);
-      requireBasis(contains(input.preparation.board, unit.location.cell)
-        && isDeploymentCell(input.preparation.board, unit.team, unit.location.cell));
-    }
-    const place = unit.location.kind === 'bench' ? `bench:${unit.location.slot}` : `board:${unit.location.cell.col}:${unit.location.cell.row}`;
-    requireBasis(!places.has(place)); places.add(place);
-  }
+  const units = validateInputAssets(input, basis, readRoundEnemyProjection(authority.round).units, inputValidation);
   const players = input.preparation.units.filter(unit => unit.team === 'player');
-  requireBasis(players.filter(unit => unit.location.kind === 'board').length <= basis.playerLevel);
   requireBasis(equal(sorted(players.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))), sorted(authority.resources.units.map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})))));
-  requireBasis(equal(sorted(input.preparation.units.filter(unit => unit.team === 'enemy')), sorted(readRoundEnemyProjection(authority.round).units)));
-  requireBasis(Array.isArray(input.items));
   requireBasis(equal(sorted(input.items.map(({id,definitionId}) => ({id,definitionId}))), sorted(authority.resources.items.map(({id,definitionId}) => ({id,definitionId})))));
-  const itemIds = new Set<string>();
-  for (const item of input.items) {
-    record(item); record(item.location); requireBasis(!itemIds.has(item.id) && Object.hasOwn(ITEM_DEFINITIONS, item.definitionId)); itemIds.add(item.id);
-    if (item.location.kind === 'unit') {
-      integer(item.location.slot); requireBasis(item.location.slot <= 2 && units.get(item.location.unitId)?.team === 'player'
-        && (ITEM_DEFINITIONS[item.definitionId].slotCost !== 3 || item.location.slot === 0)
-        && checkEquipmentPlacement(input.items, item, item.location.unitId, item.location.slot).allowed);
-    } else requireBasis(item.location.kind === 'inventory');
-  }
   requireBasis(Array.isArray(input.augments) && input.augments.length <= 3);
   const receipts = authority.scheduleReceipts.filter(receipt => receipt.round <= authority.round);
   const expectedAugments = receipts.filter(receipt => receipt.kind === 'augment').map(receipt => ({definitionId:receipt.definitionId,choiceId:receipt.eventId,acquiredRound:receipt.round}));

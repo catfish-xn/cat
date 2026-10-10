@@ -12,7 +12,7 @@ import type { LootPayload, LootReceipt } from './m8/contracts';
 import type { MatchEvent, MatchState } from './match-types';
 import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
 import type { UnitUpgradedEvent } from './unit-types';
-import { planPurchase, transferUpgradeResources } from './upgrades';
+import { planUnitAcquisition } from './unit-acquisition';
 
 const counterKey = (roundId: string) => JSON.stringify(['m8b-loot-project-v1', roundId, 'components-granted']);
 const currentPlan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId);
@@ -94,24 +94,17 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean): { state
     const payload = drop.payload, receiptId = lootReceiptId(drop.dropId);
     let grantedItemIds: readonly string[] = [], grantedUnitIds: readonly string[] = [];
     if (payload.kind === 'unit') {
-      const serial = state.nextUnitSerial;
-      if (!Number.isSafeInteger(serial) || serial < 1 || !Number.isSafeInteger(serial + 1)) throw new RangeError('Invalid loot unit serial');
-      const unitId = `unit-${serial}`, purchase = planPurchase(state.preparation, payload.definitionId, unitId);
+      const purchase = planUnitAcquisition(state, payload.definitionId, { kind: 'loot', receiptId }, state.resourceProvenance.entries.length);
       if (!purchase.ok) {
         const status = terminal ? 'retained-terminal' : 'pending-capacity';
         if (progress.status !== status) state = withLoot(state, { ...state.m8.loot,
           direct: state.m8.loot.direct.map(value => value.dropId === drop.dropId ? { dropId: value.dropId, status, receiptId: null } : value) });
         continue;
       }
-      const resources = transferUpgradeResources(state.items, state.anomalyBinding, purchase.events);
-      const acquisitionSequence = state.resourceProvenance.entries.length;
-      state = { ...state, preparation: purchase.preparation, nextUnitSerial: serial + 1,
-        items: resources.items, anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, purchase.events),
-        resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, [
-          { kind: 'unit-acquired', unitId, source: { kind: 'loot', receiptId } },
-          ...purchase.events.map(event => ({ kind: 'unit-upgraded' as const, acquisitionSequence, event })),
-        ]) };
-      upgradeEvents.push(...purchase.events); events.push(...purchase.events, ...resources.events); grantedUnitIds = [unitId];
+      state = { ...state, preparation: purchase.preparation, nextUnitSerial: purchase.nextUnitSerial,
+        items: purchase.items, anomalyBinding: purchase.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, purchase.upgradeEvents),
+        resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, purchase.facts) };
+      upgradeEvents.push(...purchase.upgradeEvents); events.push(...purchase.events); grantedUnitIds = [purchase.unitId];
     } else if (payload.kind === 'item') {
       const grant = grantItem(state, payload.definitionId, receiptId); state = grant.state; grantedItemIds = grant.grantedItemIds;
     } else {

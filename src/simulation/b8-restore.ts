@@ -4,9 +4,9 @@ import { restoreFrozenLootLedger } from './loot-freeze';
 import { lootReceiptId, compareLootChoices } from './loot-identity';
 import { makeLootPendingChoice, orderedUnresolvedLootChoices } from './loot-choice';
 import { readCombatStrategyInputs, restoreCombatInput, type CombatInputBasis } from './combat-input';
-import { foldResourceProvenance, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
+import { foldResourceProvenance, validateResourceReceipts, type ResourceFact, type ResourceProvenanceContext } from './resource-provenance';
 import { getCatalogRoundById } from './round-selectors';
-import { planPurchase, transferUpgradeResources } from './upgrades';
+import { planUnitAcquisition } from './unit-acquisition';
 import { getUnitSellPrice } from './unit-stats';
 import type { MatchState } from './match-types';
 import type { LootChoiceDescriptor, FrozenDirectDrop } from './loot-types';
@@ -50,20 +50,17 @@ export function validateB8Loot(state: MatchState): boolean {
     check(!deathSources.has(identity) || deathSources.get(identity) === source, 'duplicate death identity');
     sourceDeaths.set(source,entry.death); deathSources.set(identity,source); evidence.set(entry.dropId,entry);
   }
+  // The same structural receipt validator also supplies the provenance birth proof.
+  // Keep the frozen-slot authentication here; do not maintain a second receipt schema.
+  validateResourceReceipts({scheduleReceipts:state.scheduleReceipts,lootReceipts:loot.receipts,throughRoundOrdinal:state.round});
   const receipts = new Map<string,LootReceipt>();
   let receiptRound = 0;
   for (const receipt of loot.receipts) {
-    keys(receipt,['receiptId','dropId','payload','grantedItemIds','grantedUnitIds']);
-    const slot = slots.get(receipt.dropId); check(slot && !receipts.has(receipt.dropId)
-      && receipt.receiptId === lootReceiptId(receipt.dropId), 'receipt identity');
+    const slot = slots.get(receipt.dropId); check(slot, 'receipt identity');
     const ordinal = getCatalogRoundById(slot.roundId).ordinal;
     check(ordinal >= receiptRound, 'receipt order'); receiptRound = ordinal;
-    check(Array.isArray(receipt.grantedItemIds) && Array.isArray(receipt.grantedUnitIds), 'receipt identities');
     if ('payload' in slot) check(equal(receipt.payload,slot.payload), 'frozen receipt payload');
-    else check(receipt.payload.kind === 'item' && equal(receipt.payload,{kind:'item',definitionId:receipt.payload.definitionId,quantity:1})
-      && makeLootPendingChoice(slot).offers.includes(receipt.payload.definitionId), 'choice receipt payload');
-    check(receipt.grantedItemIds.length === (receipt.payload.kind === 'item' ? 1 : 0)
-      && receipt.grantedUnitIds.length === (receipt.payload.kind === 'unit' ? 1 : 0), 'receipt birth count');
+    else check(receipt.payload.kind === 'item' && makeLootPendingChoice(slot).offers.includes(receipt.payload.definitionId), 'choice receipt payload');
     receipts.set(receipt.dropId,receipt);
   }
   const resolutions = new Map<string, typeof loot.choiceResolutions[number]>();
@@ -165,14 +162,12 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     const receipt = receipts.get(slot.dropId);
     let itemIds: string[] = [], unitIds: string[] = [];
     if (payload.kind === 'unit') {
-      const unitId = `unit-${nextUnit}`, plan = planPurchase(preparation,payload.definitionId,unitId);
+      const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},
+        payload.definitionId,{kind:'loot',receiptId:lootReceiptId(slot.dropId)},cursor);
       if (!plan.ok) return false;
-      const acquisitionSequence = cursor;
-      take({kind:'unit-acquired',unitId,source:{kind:'loot',receiptId:lootReceiptId(slot.dropId)}});
-      for (const event of plan.events) take({kind:'unit-upgraded',acquisitionSequence,event});
-      const transferred = transferUpgradeResources(items,binding,plan.events);
-      preparation = plan.preparation; items = transferred.items; binding = transferred.anomalyBinding;
-      unitIds = [unitId]; nextUnit++;
+      for (const fact of plan.facts) take(fact);
+      preparation = plan.preparation; items = plan.items; binding = plan.anomalyBinding;
+      unitIds = [plan.unitId]; nextUnit = plan.nextUnitSerial;
     } else if (payload.kind === 'item') {
       const itemId = `item-${nextItem}`;
       take({kind:'item-acquired',itemId,source:{kind:'loot',receiptId:lootReceiptId(slot.dropId)}});

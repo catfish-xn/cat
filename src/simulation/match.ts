@@ -15,7 +15,7 @@ import { COMPONENT_IDS } from './content/items';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
 import { getUnitSellPrice } from './unit-stats';
-import { planPurchase, transferUpgradeResources } from './upgrades';
+import { planUnitAcquisition } from './unit-acquisition';
 import { createRoundEnemies } from './round-enemies';
 import { validateContent } from './validate-content';
 import { planCombine, planEquip, returnUnitItems } from './inventory';
@@ -135,19 +135,16 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   if (offer.status !== 'available') return fail(state, 'purchased-slot');
   const cost = UNIT_DEFINITIONS[offer.definitionId].cost;
   if (state.gold < cost) return fail(state, 'insufficient-gold');
-  const plan = planPurchase(state.preparation, offer.definitionId, `unit-${state.nextUnitSerial}`);
+  const plan = planUnitAcquisition(state, offer.definitionId,
+    { kind: 'shop', generation: expectedGeneration, slotIndex, definitionId: offer.definitionId }, state.resourceProvenance.entries.length);
   if (!plan.ok) return fail(state, plan.reason);
-  const resources = transferUpgradeResources(state.items, state.anomalyBinding, plan.events);
-  const purchased: MatchState = { ...state, items: resources.items, anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.events), gold: state.gold - cost, nextUnitSerial: state.nextUnitSerial + 1,
-    resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,[
-      {kind:'unit-acquired',unitId:`unit-${state.nextUnitSerial}`,source:{kind:'shop',generation:expectedGeneration,slotIndex,definitionId:offer.definitionId}},
-      ...plan.events.map(event=>({kind:'unit-upgraded' as const,acquisitionSequence:state.resourceProvenance.entries.length,event})),
-    ]),
+  const purchased: MatchState = { ...state, items: plan.items, anomalyBinding: plan.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.upgradeEvents), gold: state.gold - cost, nextUnitSerial: plan.nextUnitSerial,
+    resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, plan.facts),
     preparation: plan.preparation,
     shop: { ...state.shop, slots: state.shop.slots.map((item, index) => index === slotIndex ? { status: 'purchased' } : item) },
   };
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
-  return acceptEquipment(entered.state, [...plan.events, ...resources.events, ...entered.events]);
+  return acceptEquipment(entered.state, [...plan.events, ...entered.events]);
 }
 export function sellUnit(state: MatchState, unitId: string): MatchCommandResult {
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
