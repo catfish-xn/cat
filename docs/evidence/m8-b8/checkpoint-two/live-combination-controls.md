@@ -34,3 +34,13 @@
 - 重复step、失败Start、旧choice、重复Continue均保原引用、调用前后序列化不变；选择及Continue不再次提交成长。
 - 20项精确篡改拒绝覆盖stock/delta、source身份/步长、唯一commit、receipt候选、消费与basis等。复活已消费成长ID先命中既有persistent growth schema边界，明确保留该实际拒绝层，不假称总会进入后续fold。
 - 最终26/26（六正向＋20负控）、全局typecheck通过，原日志同批封存。该真实奖励案例是一层；两层stock/delta级联仍由既有纯runtime/fold向量覆盖，真实九卡采购的同命令两层升级及restore另在B5正控，不混称真实两层奖励路线。
+
+## 真实满席出售补发与必要终局
+
+`tests/m8-b8-live-capacity.test.ts`使用seed230/cannon真实前缀。2-7前37条命令、8战/2889tick；4-7前driver188条命令及58条公开bench部署，共246命令、20战/2020tick。后者14次合法空板失败自然累计损失97HP，不注入HP、roster、出生或战果。
+
+- 2-7前公开9购+4reroll填九满bench，剩19G。真实k01 tick69揭示gloves/Maddie，k02 tick138揭示choice，tick172胜利：Maddie pending-capacity无receipt/ID/RNG额外消耗，经济19→25仅1利息。待选不能出售或Continue；真实选择后公开卖Zoe得4G、自动Maddie入库恰一次，25→29不回算interest/投资/XP/成长；清完容量不继续开放结算卖出。
+- 4-7前真实HP3，公开仅保Tristana/Rell并购Nami/Urgot填九满：r01 tick206、r00 tick342死，tick849战败HP0，Ezreal retained-terminal无receipt/折金，gloves与冻结tear fallback各发一次。
+- 同一合法低HP前缀单Loris仅杀r00败：direct照赚、choice forfeit；单Ezreal仅杀r01败：direct全forfeit、tear fallback恰一次。终局不留可操作choice，重复step/恢复/错误命令不再发资源。
+- 所有关键命令与恢复分支完整结果state/events相等；pending、release、terminal均完整strictrestore；重复step持原引用、零事件、调用前后序列化相等。容量状态、销售顺序/价格/经济、伪fallback及guarantee counter负控全部精确锚定错误，不以任意throw替代目标边界。
+- 最终原样6/6（5.79s）、统一typecheck通过，`live-capacity-final.log.gz`与类型日志同批保留。无生产修复、无timeout/worker/skip变动。
