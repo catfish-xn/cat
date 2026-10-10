@@ -71,6 +71,26 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .encounter-unit p, .encounter-note { margin: 2px 0; font-size: 12px; }
 .encounter-cell, .encounter-extra, .encounter-note { color: var(--c-text-muted); }
 .encounter-cell { margin-left: auto; font-weight: 400; font-size: 12px; }
+/* U6 rewards: status is carried by text and badge, colour only reinforces it. */
+.loot-panel { border: 1px solid #355063; border-radius: 8px; padding: 0 10px 8px; margin-bottom: 8px; }
+.loot-panel h3 { margin: 10px 0 6px; font-size: 15px; }
+.loot-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.loot-drop { padding: 6px 8px; background: #0f1a24; border-radius: 6px; border-left: 3px solid #527080; }
+.loot-granted { border-left-color: var(--c-accent); }
+.loot-pending-capacity { border-left-color: var(--c-gold); }
+.loot-retained-terminal { border-left-color: #7e95a4; opacity: .85; }
+.loot-drop-head { display: flex; align-items: center; gap: 8px; }
+.loot-drop-head strong { flex: 1; font-size: 14px; }
+.loot-badge { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: #1c2e3b; color: var(--c-text); }
+.loot-granted .loot-badge { background: #1f4a45; } .loot-pending-capacity .loot-badge { background: #5a4520; } .loot-retained-terminal .loot-badge { background: #2c3a45; }
+.loot-gold { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--c-gold); color: #0b151f; font-weight: 700; }
+.loot-note, .loot-empty { margin: 4px 0 0; font-size: 12px; color: var(--c-text-muted); }
+.loot-blocked, .loot-choice-pending { margin: 8px 0 0; padding: 6px 8px; border-radius: 6px; background: #3a2a18; color: #ffe0a8; font-size: 13px; }
+.loot-choice-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0 4px; }
+.loot-choice-card { display: grid; justify-items: center; gap: 4px; min-height: 132px; padding: 10px 8px; text-align: center; }
+.loot-choice-card strong { font-size: 15px; }
+.loot-choice-effect { font-size: 12px; color: var(--c-text-muted); line-height: 1.45; }
+.loot-choice-card:focus-visible { outline: 3px solid var(--c-focus); outline-offset: 2px; }
 .battle-record { max-height: 55dvh; overflow-y: auto; overflow-wrap: anywhere; }
 .battle-record p { border-bottom: 1px solid #2c404b; padding-bottom: 6px; }
 .choice-cards:has(button:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }

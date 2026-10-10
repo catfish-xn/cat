@@ -2,6 +2,61 @@
 
 按 AGENTS 约定记录界面缺少的数据、命令或接线。每条写明关联任务、优先级、交付阶段、缺少的字段与含义、界面当前替代路径、交付后需要复核的内容和验收条件。界面不自行计算规则；后端交付前，界面只读已有权威字段，并在无法确定含义时使用中性文案。
 
+## U6 已揭示掉落、领取与结算（静态阶段盘点）
+
+基线：`feat/m8-b0-baseline` 的 `f18985131c08c729f5bcf8cc8de8bbd3eec59a3d`；分支 `feat/m8-u6-static`。B8（PR #28）尚未签收，`readLootView` 接线排在 B8③。本阶段只做静态界面：渲染函数直接以冻结的 `LootView`／`RevealedDropView`（M8_UI_CONTRACT §5）和 `PendingChoice`（M8B_CONTRACT_ADDENDUM §3.3）为输入类型，样例只在开发服务器的 `/u6-preview.html` 上展示，不进入游戏入口和生产构建。
+
+优先级：P1 = 正式接线前必须明确，否则界面只能猜测或混淆状态；P2 = 影响显示完整度；P3 = 需要确认。
+
+### 已有、可直接使用的形状
+
+| U6 需要 | 权威来源 | 备注 |
+| --- | --- | --- |
+| 已入库／处理中／等待空位／终局保留 | `RevealedDropView.status/receiptId/reason` | 只有 `granted` 显示“已入库”；不按金币变化或动画猜收据 |
+| 奖励内容 | `payload.kind/definitionId/quantity` | 名称、图标沿用 UI 名表和装备图鉴 |
+| 继续是否可用及原因 | `LootView.canContinue/reason/pendingClaims` | 界面不另算阻塞 |
+| 八组件选择与命令 | `PendingChoice.offers/choiceId/generation` + `selectChoice(choiceId, generation, definitionId)` | 固定 8 项、不可刷新；结果以命令返回为准 |
+
+### UR-U6-01 已解决组件选择的只读投影（P1，B8③，合同增补）
+
+- 现状：ADDENDUM §5.1 要求“新增选择奖励的只读投影……现有 UI 合同缺少的只读形状需作为增补提交”，目前仓库和 PR #28 中都没有这份增补。冻结 `LootView` 只有具体 payload 的 `revealedDrops`，没有说明已解决的选择是否出现在其中、以哪个 `dropId` 出现。
+- 需要：明确已解决选择的展示形状。例如作为 `revealedDrops` 中 `status:'granted'` 的 item 行（`dropId` 为选择的 dropId、`receiptId` 为其 LootReceipt），并区分 `player-choice`／`terminal-fallback` 两种解决方式。
+- 用途：“已揭示奖励与已解决选择的结果”和“提前终局时自动选定的组件”。
+- 当前替代：静态样例按 granted item 行展示，不区分解决方式。
+- 验收：玩家选择和终局 fallback 都以唯一收据的已入库行出现；未解决的选择从不显示为已拥有物品；未用到的 fallback 从不出现。
+
+### UR-U6-02 选择期间的继续阻塞原因（P1，B8③，合同增补）
+
+- 现状：`LootView.reason` 只有 `pending-capacity | unsettled-round | game-over | null`。ADDENDUM §5.1 要求未解决自选“须有明确的待选投影与阻塞原因，不能……伪装成英雄容量问题”。
+- 需要：在 `phase==='choice'` 时，明确 `readLootView` 返回的 `canContinue/reason`。可以增加例如 `pending-choice` 的原因值，也可以由合同写明 `reason=null` 时以 `PendingChoice` 为准。
+- 当前替代：样例为 `canContinue:false, reason:null`，阻塞文案取自 `PendingChoice` 是否存在。
+- 验收：选择与满席同时存在时，按 ADDENDUM 的顺序先显示选择、后显示容量，两种原因不相互覆盖。
+
+### UR-U6-03 待选项的来源（P2，B8③）
+
+- 现状：`PendingChoice` 没有 dropId／sourceUnitId 等来源字段；`choiceId` 是编码后的标识，界面按约定不解析它。
+- 需要：在 UR-U6-01 的只读投影中给出当前待选项的来源（sourceUnitId 或已解析的怪物定义）。
+- 当前替代：选择框只写“本回合野怪奖励”，不写具体怪物。
+
+### UR-U6-04 掉落来源名称的读取路径（P3，确认）
+
+- 计划：用同一回合 `readEncounterPreview(state).units[].unitId` 匹配 `RevealedDropView.sourceUnitId`，再取 `definitionId` 并通过 UI 名表显示怪物名。
+- 需要确认：`LootView.roundId` 是否总是当前回合（包括选择期和提前终局），以及 `sourceUnitId` 是否与预览中的 `unitId` 为同一编码。如果不能保证，请在视图中直接给出来源的 `definitionId`。
+
+### UR-U6-05 战中揭示的可见性（P3，确认）
+
+- 现状：冻结表把 `revealed` 写为“领域正在同事务自动处理”；ADDENDUM §3.1 则规定战中只揭示、战后统一授予。
+- 需要确认：战斗进行中 `readLootView` 是否返回 `revealed` 行（界面计划在战斗中显示“已揭示 · 战后处理”），还是只在战斗结束后才有数据。
+
+### 正式接线待办（B8③签收后）
+
+1. 在结算、选择、终局三个阶段，策略面板读取 `readLootView(state)` 渲染奖励列表；来源名称按 UR-U6-04 处理。
+2. 选择框：根据 UR-U6-01／03 的来源信号（不解析 `choiceId` 前缀）判断是野怪组件选择，改用八组件布局；点击调用现有的 `session.choose(choiceId, generation, definitionId)`，沿用现有的防重复点击和关闭遮罩。
+3. Continue 按钮的可用状态与提示改读 `canContinue/reason`；命令失败时显示领域返回的原因。
+4. 终局页面显示保留奖励的只读记录，不提供任何领取或折算操作。
+5. 奖励英雄出现在棋盘或备战席时，依赖 DOT 在 B8 分支修复的 BoardScene 生命周期提交（`07f269c`），U6 不重复修改该处。
+6. 接线后重新实测包体（静态阶段探针：引入三个渲染函数约 +1,416 B），并请 Codex 补充 U6 界面自动回归。
+
 ## U5 第一阶段与 `.7` 野怪遭遇预览（开工前接口盘点）
 
 **交付状态（2026-10-10）：U5 已独立审查并合入。** PR #26 已审查 SHA `855430157b6947d4b9710db3b08f6842f1c9347d`（[CI #168](https://github.com/catfish-xn/cat/actions/runs/38019557635) 成功，无 P0–P2），合并提交 `d64c381260c4c862d813da7e8c7c983813ce89e0`，合并后的 tree 与已审查 HEAD 完全一致。预览已改读 UR-U5-01/02 正式字段，不再依赖旧适配层。包体实测 488,964 B，距总上限 552,191 B 余 63,227 B。仍未完成：6-7 先锋的实机导入和完整应用验证由 B9 补验；非阻塞 P3「U5 界面自动回归」登记为 [#27](https://github.com/catfish-xn/cat/issues/27)。独立审查证据：Codex 原审查记录已补记为 [PR #26 评论 6093541375](https://github.com/catfish-xn/cat/pull/26#issuecomment-6093541375)，内含原始 `u5-review-evidence.json` 的完整副本（35,015 B，SHA-256 `12b86d324d5b9d5abaa6a0fff71c1f063a4470d89d33d927bf13ff3b1440662a`）。时间顺序：审查结论先由用户在会话中转达；随后 PR 于 03:50:57Z 合并，本记录首版（`2acb9ac`）于 03:52:24Z 写入，当时 PR 上尚无审查记录；原审查记录于 03:59:55Z 补记（均为 2026-10-10 UTC）。该评论是对原审查（针对 `8554301`、CI #168）的补记，不是重新审查，也不构成对合并提交的新签收。H1 维持 [H1_WARN_ONLY.md](H1_WARN_ONLY.md) 原记录，不因本次 CI 全绿而关闭。
