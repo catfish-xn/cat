@@ -5,6 +5,7 @@
  */
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
+import { NEUTRAL_DEFINITIONS } from '../simulation/content/neutrals';
 import { displayUnitName } from '../rendering/display-names';
 import { toNumber } from './theme';
 
@@ -47,12 +48,12 @@ const cache = new Map<string, HeroIdentity>();
 export function getHeroIdentity(definitionId: string): HeroIdentity {
   const cached = cache.get(definitionId);
   if (cached) return cached;
-  const definition = UNIT_DEFINITIONS[definitionId];
+  // Monsters classify from the authoritative neutral catalog (same source as the preview), never the cost-1 adapter.
+  const monster = Object.hasOwn(NEUTRAL_DEFINITIONS, definitionId) ? NEUTRAL_DEFINITIONS[definitionId] : undefined, neutral = Boolean(monster);
+  const definition = neutral ? undefined : UNIT_DEFINITIONS[definitionId];
   const style = HERO_STYLE[definitionId];
-  // Interim: classification read from the legacy adapter until UR-U5-01 lands in the preview.
-  const neutral = definition?.unitKind === 'neutral';
   const traitId = definition?.traits.find(id => TRAIT_SHAPES[id]) ?? definition?.traits[0];
-  const color = style?.color ?? (neutral ? FAMILY_COLOR[definition.monsterFamily ?? ''] : undefined) ?? hexColor(definition?.color ?? 0x8899aa);
+  const color = style?.color ?? (monster ? FAMILY_COLOR[monster.monsterFamily] : undefined) ?? hexColor(definition?.color ?? 0x8899aa);
   const name = displayUnitName(definitionId);
   // Pick whichever ink has the higher WCAG contrast against the hero color.
   const ink = (luminance(color) + 0.05) / (luminance('#0b151f') + 0.05) >= 1.05 / (luminance(color) + 0.05) ? '#0b151f' : '#ffffff';

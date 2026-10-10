@@ -1,12 +1,10 @@
 /**
- * U5 current-round enemy preview. Reads only readEncounterPreview(); never predicts later
- * rounds, drops or RNG. Interim (until UR-U5-01/02): monster classification and the extra
- * range/interval/crit line come from the legacy adapter via getUnitStats, and PvP units show
- * only the four previewed stats so two sources are never mixed.
+ * U5 current-round enemy preview. Every value comes from readEncounterPreview() (UR-U5-01/02:
+ * classification and start-of-combat stats share the real combat initialization); the UI only
+ * formats units. Never predicts later rounds, drops or RNG. Names use the UI's own name table.
  */
-import { getUnitStats, readEncounterPreview } from '../simulation/match';
+import { readEncounterPreview } from '../simulation/match';
 import type { MatchState } from '../simulation/match-types';
-import { UNIT_DEFINITIONS } from '../simulation/units';
 import { heroEmblemSvg } from './hero-identity';
 import { displayUnitName } from '../rendering/display-names';
 
@@ -47,10 +45,9 @@ export function encounterPreviewSection(state: MatchState, options: EncounterPre
     title.insertAdjacentHTML('afterbegin', heroEmblemSvg(unit.definitionId, 22));
     title.append(node('span', `位置 ${units.map(entry => `${entry.cell.col},${entry.cell.row}`).join(' / ')}`, 'encounter-cell'));
     row.append(title, node('p', `生命 ${unit.stats.maxHp} · 攻击力 ${unit.stats.attackDamage} · 护甲 ${unit.stats.armor} · 魔抗 ${unit.stats.magicResist}`));
-    if (UNIT_DEFINITIONS[unit.definitionId]?.unitKind === 'neutral') {
-      const base = getUnitStats(unit.definitionId, 1);
-      row.append(node('p', `射程 ${base.attackRange} 格 · 攻击间隔 ${seconds(base.attackIntervalTicks)} · 暴击 ${(base.baseCritChanceBps ?? 0) / 100}% ×${(base.baseCritMultiplierBps ?? 10000) / 10000} · 无法力`, 'encounter-extra'));
-    }
+    const stats = unit.stats;
+    row.append(node('p', `射程 ${stats.attackRange} 格 · 攻击间隔 ${seconds(stats.attackIntervalTicks)} · 暴击 ${stats.critChanceBps / 100}% ×${stats.critMultiplierBps / 10000}`
+      + (unit.unitKind === 'neutral' ? ' · 无法力' : ` · 法强 ${stats.abilityPower} · 法力 ${stats.mana}/${stats.maxMana}`), 'encounter-extra'));
     row.append(node('p', unit.abilityDescription, 'encounter-ability'));
     for (const type of ['mouseenter', 'focus'] as const) row.addEventListener(type, () => options.onHover(ids));
     for (const type of ['mouseleave', 'blur'] as const) row.addEventListener(type, () => options.onHover([]));
