@@ -230,6 +230,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   let acquisition: { readonly sequence: number; readonly unitId: string; readonly definitionId: string; readonly roundId: string; survivorId: string; star: number } | null = null;
   let lastShopGeneration = 0;
   const shopSlots = new Set<string>(), commits = new Map<string, ProvenanceCombatSettlement>();
+  const firstLootBirth = new Map<string, number>();
   const starts = new Set(entries.filter(entry => entry?.kind === 'combat-growth-committed')
     .map(entry => (entry as Extract<ResourceProvenanceEntry, { kind: 'combat-growth-committed' }>).combatStartProvenancePrefixLength));
   const unitPrefixes = new Map<number, ReadonlyMap<string, ProvenanceUnit>>();
@@ -255,6 +256,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
     if (starts.has(index)) unitPrefixes.set(index, new Map(units));
     if (entry.kind !== 'unit-upgraded') finishAcquisition();
     const common = ['kind', 'sequence', 'roundId'];
+    if ((entry.kind === 'unit-acquired' || entry.kind === 'item-acquired') && entry.source?.kind === 'loot'
+      && !firstLootBirth.has(entry.roundId)) firstLootBirth.set(entry.roundId, index);
     if (entry.kind === 'unit-acquired') {
       keys(entry, [...common, 'unitId', 'source']); record(entry.source);
       requireValue(round.kind !== 'supply', 'unit birth in supply');
@@ -333,6 +336,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       integer(entry.combatStartProvenancePrefixLength, 1);
       const start = entry.combatStartProvenancePrefixLength;
       requireValue(start <= index && Array.isArray(entry.sourceDeltas), 'combat start prefix');
+      requireValue(start <= (firstLootBirth.get(entry.roundId) ?? index), 'loot before combat start');
       const suffix = entries.slice(start, index);
       requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind === 'unit-upgraded'
         || (fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'loot')), 'combat resource suffix');

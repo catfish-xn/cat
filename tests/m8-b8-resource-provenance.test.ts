@@ -411,3 +411,48 @@ describe('B8 provenance known historical operation boundaries', () => {
     }), ctx)).toThrow();
   });
 });
+
+
+describe('B8 provenance loot cannot become a same-round combat input', () => {
+  it('rejects a forged start prefix that grants current-combat growth to its loot candidate', () => {
+    const receipt = loot('unit', 'tristana', 'unit-2');
+    const provenance = appendResourceProvenance(opening(), '3-7', [
+      { kind: 'unit-acquired', unitId: 'unit-2', source: { kind: 'loot', receiptId: receipt.receiptId } },
+      commit(17, 2, [delta('unit-2', 125)]),
+    ]);
+    expect(() => foldResourceProvenance(provenance, context({
+      lootReceipts: [receipt], combatSettlements: [settlement('3-7', 17)],
+    }))).toThrow('loot before combat start');
+  });
+
+  it('rejects a same-round item receipt hidden inside the start prefix, even with empty delta', () => {
+    const receipt = loot('item', 'rod', 'item-1', '1-3', 'minions-b-v1', 'r01', 0);
+    const provenance = appendResourceProvenance(opening(), '1-3', [
+      { kind: 'item-acquired', itemId: 'item-1', source: { kind: 'loot', receiptId: receipt.receiptId } },
+      commit(2, 2, []),
+    ]);
+    expect(() => foldResourceProvenance(provenance, context({
+      lootReceipts: [receipt], combatSettlements: [settlement('1-3', 2)],
+    }))).toThrow('loot before combat start');
+  });
+
+  it('still accepts same-round shop Tristana in the real pre-combat prefix', () => {
+    const provenance = appendResourceProvenance(opening(), '3-7', [shop(2), commit(17, 2, [delta('unit-2', 125)])]);
+    expect(foldResourceProvenance(provenance, context({
+      combatSettlements: [settlement('3-7', 17)],
+    })).persistentGrowth).toEqual([growth('unit-2', 125)]);
+  });
+
+  it('still accepts a capacity candidate after commitment, eligible for the next round only', () => {
+    const receipt = loot('unit', 'tristana', 'unit-2');
+    let provenance = appendResourceProvenance(opening(), '3-7', [commit(17, 1, []),
+      { kind: 'unit-sold', unitId: 'unit-1', context: 'settlement-capacity', goldGranted: 1 },
+      { kind: 'unit-acquired', unitId: 'unit-2', source: { kind: 'loot', receiptId: receipt.receiptId } },
+    ]);
+    const ctx = context({ lootReceipts: [receipt], combatSettlements: [settlement('3-7', 17)] });
+    expect(foldResourceProvenance(provenance, ctx).persistentGrowth).toEqual([]);
+    provenance = appendResourceProvenance(provenance, '4-1', commit(18, 4, [delta('unit-2', 125)]));
+    expect(foldResourceProvenance(provenance, { ...ctx, combatSettlements: [settlement('3-7', 17), settlement('4-1', 18)] })
+      .persistentGrowth).toEqual([growth('unit-2', 125)]);
+  });
+});

@@ -28,3 +28,11 @@
 - 收据仍需外围对真实冻结计划／资格核验；当前 Combat 的源 delta、survivor 选择和原装备迁移须由后续 basis 后缀精确重演交叉核对，不把纯折叠称为已完成 Match restore。
 
 验证：原样 `npm run typecheck` 通过；四文件专项 `m8-b8-combat-input`、`m8-b8-resource-provenance`、`m8-b8-loot-freeze`、`m8-u5-preview-mocked-snapshot` 共 **162 测试通过**（原始输出见 `targeted.log.gz` 与 `typecheck.log.gz`）。第一次原样全量 npm test 在早期源码上仍运行，不能当最终本批全量证据。build／生产与完全 reachable 累计预算待完成。
+
+## 纯模块复核修正（尚未启用运行态）
+
+独立只读复核发现原增长 start-prefix 可以越过本轮 loot 出生，将新掉落英雄伪造成原战斗单位。已限制 start-prefix 不晚于本轮首次 loot 出生，并新增 unit／item 拒绝、合法战前 shop 成长及结算后 capacity 出生的 4 项向量。provenance 专测现为 64 项通过，typecheck 通过；之前的全量和预算不冒称覆盖本次修正。
+
+## 用户批准的②／③顺序调整
+
+用户已明确批准把最小真实自选与必要终局处理前移②，不采用临时开发模式，不增加模式状态或 digest 分支。②须实现 loot PendingChoice、protocol 2 selectChoice 的实际授予／唯一 receipt／resolution、earned terminal fallback、满席终局保留，以及这些当批状态的严格恢复。③保留 readLootView 接线、隐藏信息完整样例和剩余组合验证。默认真实入口将直接接线；冻结玩法与公开合同不变。本节是实施授权范围，尚不是已完成证据。
