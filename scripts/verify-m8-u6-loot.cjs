@@ -106,6 +106,10 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
         return { kind: panel.dataset.debug, canContinue: panel.dataset.canContinue ?? null,
           block: panel.querySelector('.loot-blocked')?.dataset.reason ?? null,
           buttons: panel.querySelectorAll('button').length,
+          pendingDrop: panel.querySelector('[data-debug="loot-pending-choice"]')?.dataset.dropId ?? null,
+          dialogDrop: document.querySelector('.choice-dialog')?.dataset.dropId ?? null,
+          dialogSource: document.querySelector('.choice-dialog')?.dataset.choiceSource ?? null,
+          dialogText: document.querySelector('.choice-dialog')?.textContent ?? '',
           rows: [...panel.querySelectorAll('[data-debug^="loot-drop:"]')].map(row => ({ dropId: row.dataset.debug.slice('loot-drop:'.length), status: row.dataset.status, receipt: row.dataset.receipt ?? null })) };
       });
     }
@@ -130,6 +134,13 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
             assert.equal(dom.buttons, 0, `${label}: loot panel offers no claim action`);
             if (dom.kind === 'loot-panel') assert.equal(dom.canContinue, String(view.canContinue));
             assert.equal(dom.block, view.canContinue ? null : view.reason);
+            // Approved addendum: the pending loot pick is named by the domain, never inferred by the UI.
+            assert.equal(dom.pendingDrop, view.pendingChoice?.dropId ?? null, `${label}: pending pick row`);
+            if (view.pendingChoice) {
+              assert.equal(dom.dialogSource, 'loot'); assert.equal(dom.dialogDrop, view.pendingChoice.dropId);
+              const name = api.readEncounterPreview(current).units.find(unit => unit.unitId === view.pendingChoice.sourceUnitId).name;
+              assert(dom.dialogText.includes(`来源：${name}`), `${label}: dialog names the source ${name}`);
+            } else if (current.phase === 'choice') assert.notEqual(dom.dialogSource, 'loot', `${label}: non-loot pick is not labelled loot`);
             extra(view, dom, current);
           }
           report.checks.push({ label, phase: current.phase, roundId: current.roundDefinitionId, rows: dom?.rows ?? [] });
@@ -160,7 +171,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     await checkPanel('1-2 settlement', view => assert(view.revealedDrops.some(drop => drop.status === 'granted' && drop.payload.definitionId === 'maddie')));
     await click('mobile:continue'); await delay(450); await click('mobile:start-combat');
     await finishCombat('1-3');
-    const loot13 = await checkPanel('1-3 loot choice pending', view => assert.equal(view.reason, 'unsettled-round'));
+    const loot13 = await checkPanel('1-3 loot choice pending', view => assert.equal(view.reason, 'pending-choice'));
     assert.equal(loot13.state.phase, 'choice');
     assert.equal(await page.locator('.choice-dialog').getAttribute('data-choice-source'), 'loot');
     assert.equal(await page.locator('.choice-dialog [data-debug^="choice:"]').count(), 8);
@@ -172,7 +183,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     await page.locator('[data-debug="m6-import"]').setInputFiles(capacityFile.file); await waitActive('u6-capacity');
     assert.equal((await state()).roundDefinitionId, '2-7');
     await delay(450); await click('mobile:start-combat'); await finishCombat('2-7 capacity');
-    const waitingChoice = await checkPanel('2-7 choice with full bench', view => assert.equal(view.reason, 'unsettled-round'));
+    const waitingChoice = await checkPanel('2-7 choice with full bench', view => assert.equal(view.reason, 'pending-choice'));
     assert(waitingChoice.view.revealedDrops.some(drop => drop.status === 'pending-capacity'), 'hero waits for capacity');
     await click(`choice:${waitingChoice.state.pendingChoice.offers[0]}`); await quiet();
     const blocked = await checkPanel('2-7 capacity blocks Continue', view => {

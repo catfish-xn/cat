@@ -369,7 +369,7 @@ export class StrategyPanel {
     // Drop sources are the round's public neutral units (same unit IDs as the encounter preview).
     const names = new Map(readEncounterPreview(state)?.units.map(unit => [unit.unitId, unit.name]) ?? []);
     const labels = { sourceName: (id: string | null) => (id && names.get(id)) || '本回合野怪' };
-    return state.phase === 'gameOver' ? lootTerminalSummary(view, labels) : lootPanelSection(view, labels, state.pendingChoice);
+    return state.phase === 'gameOver' ? lootTerminalSummary(view, labels) : lootPanelSection(view, labels);
   }
   private renderTraits(state: MatchState): void {
     const list = element('section', '', 'trait-list'); list.dataset.debug = 'trait-panel';
@@ -549,11 +549,13 @@ export class StrategyPanel {
     this.choiceToken = token; this.modal.hidden = false; this.modal.replaceChildren();
     this.modal.inert = document.body.dataset.helpOpen === 'true';
     const card = element('div', '', 'choice-dialog');
-    // A component pick in a PvE round is the monster reward (8 fixed candidates); supply rounds keep their own wording.
-    const loot = choice.kind === 'component' && state.m8.round.kind === 'pve';
+    // The domain names the loot pick (LootView.pendingChoice, approved addendum); supply/augment/anomaly keep their wording.
+    const pendingLoot = readLootView(state).pendingChoice, loot = pendingLoot?.choiceId === choice.choiceId ? pendingLoot : null;
     card.dataset.choiceSource = loot ? 'loot' : choice.kind;
+    if (loot) card.dataset.dropId = loot.dropId;
+    const sourceName = loot ? readEncounterPreview(state)?.units.find(unit => unit.unitId === loot.sourceUnitId)?.name ?? '本回合野怪' : '';
     card.append(element('h2', loot ? '野怪奖励 · 选择一件组件' : choice.kind === 'component' ? '补给 · 选择一件组件' : choice.kind === 'augment' ? '选择强化 · 本局永久生效' : '异常 · 单位永久进化'));
-    card.append(element('p', loot ? `固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。完成选择前不能继续。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
+    card.append(element('p', loot ? `来源：${sourceName} · 固定 ${choice.offers.length} 选 1，不可刷新；确认后立即入库。完成选择前不能继续。` : '必须完成本次选择，才可继续搜牌、购买经验、装备与战斗。'));
     if (choice.step === 'target') {
       card.append(element('p', '先选择一个单位。锁定后不能换目标；升级时随单位保留。'));
       const targets = element('div', '', 'choice-targets');

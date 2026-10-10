@@ -28,10 +28,10 @@ function show(id: string): void {
   head.append(title, description);
   const echo = document.createElement('p'); echo.className = 'u6-preview-echo'; echo.dataset.debug = 'u6-preview-echo'; echo.setAttribute('role', 'status');
   const body = document.createElement('div'); body.className = 'u6-preview-body';
-  body.append(sample.phase === 'gameOver' ? lootTerminalSummary(sample.view, labels) : lootPanelSection(sample.view, labels, sample.pendingChoice));
+  body.append(sample.phase === 'gameOver' ? lootTerminalSummary(sample.view, labels) : lootPanelSection(sample.view, labels));
   if (sample.pendingChoice) {
-    // PendingChoice carries no source (UR-U6 gap), so the dialog names only the reward kind.
-    body.append(lootChoiceDialog(sample.pendingChoice, '本回合野怪奖励', (choiceId, generation, definitionId) => {
+    const sourceId = sample.view.pendingChoice?.sourceUnitId ?? null;
+    body.append(lootChoiceDialog(sample.pendingChoice, labels.sourceName(sourceId), (choiceId, generation, definitionId) => {
       echo.textContent = `预览不发送命令。正式接线将调用 selectChoice(${choiceId}, ${generation}, ${definitionId})，结果以领域返回为准。`;
     }));
   }

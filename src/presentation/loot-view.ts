@@ -3,7 +3,8 @@
  * (M8_UI_CONTRACT §5) and the PendingChoice that M8B_CONTRACT_ADDENDUM §3.3 uses for the
  * component pick. They only format what the domain already decided: no grants, no
  * settlement, no fallback, no capacity or continue logic of their own. Commands are passed
- * in by the caller; the formal Match wiring waits for B8③ readLootView.
+ * in by the caller. The pending loot pick and its source come from LootView.pendingChoice
+ * (approved addendum 2026-10-10); the candidates still come from PendingChoice.offers.
  */
 import type { LootView, RevealedDropView } from '../simulation/m8/ui-contracts';
 import type { PendingChoice } from '../simulation/strategy-types';
@@ -32,6 +33,7 @@ const STATUS: Readonly<Record<RevealedDropView['status'], { label: string; note:
   'retained-terminal': { label: '终局保留', note: '对局已结束，此奖励只作记录保留：未入库、不折算金币、不可领取' },
 };
 const CONTINUE_BLOCK: Readonly<Record<NonNullable<LootView['reason']>, string>> = {
+  'pending-choice': '有野怪组件奖励等待选择，完成选择前不能继续',
   'pending-capacity': '有奖励英雄等待备战席空位，释放空位前不能继续',
   'unsettled-round': '本回合尚未结算完成，暂不能继续',
   'game-over': '对局已结束，不能继续',
@@ -58,23 +60,23 @@ export function lootDropRow(drop: RevealedDropView, labels: LootLabels): HTMLEle
   return row;
 }
 
-/** Settlement block: revealed rewards plus the domain's own Continue verdict. */
-export function lootPanelSection(view: LootView, labels: LootLabels, pendingChoice: PendingChoice | null = null): HTMLElement {
+/** Settlement block: revealed rewards, the pending loot pick (identity only) and the domain's own Continue verdict. */
+export function lootPanelSection(view: LootView, labels: LootLabels): HTMLElement {
   const section = node('section', '', 'loot-panel'); section.dataset.debug = 'loot-panel';
   section.dataset.canContinue = String(view.canContinue);
   section.append(node('h3', `${view.roundId} 奖励`));
   const list = node('ul', '', 'loot-list');
   for (const drop of view.revealedDrops) list.append(lootDropRow(drop, labels));
-  if (!view.revealedDrops.length) list.append(node('li', '本回合没有已揭示的奖励', 'loot-empty'));
+  if (!view.revealedDrops.length && !view.pendingChoice) list.append(node('li', '本回合没有已揭示的奖励', 'loot-empty'));
   section.append(list);
-  // The open component pick is shown from PendingChoice (ADDENDUM §5.1); it is never displayed as an owned item.
-  // Shown separately only when the domain also reports another blocker; otherwise the verdict below says it.
-  if (pendingChoice?.kind === 'component' && view.reason) section.append(node('p', '有组件奖励等待选择', 'loot-choice-pending'));
-  const verdict = view.canContinue ? null : view.reason ? CONTINUE_BLOCK[view.reason] : pendingChoice ? '请先完成组件选择' : '暂不能继续';
-  if (verdict) {
-    const block = node('p', verdict, 'loot-blocked'); block.dataset.debug = 'loot-continue-block';
-    if (view.reason) block.dataset.reason = view.reason;
-    block.setAttribute('role', 'status'); section.append(block);
+  // The open pick is never displayed as an owned item: only its source, until a receipt exists.
+  if (view.pendingChoice) {
+    const pending = node('p', `待选：${labels.sourceName(view.pendingChoice.sourceUnitId)} 的组件奖励（固定 8 选 1）`, 'loot-choice-pending');
+    pending.dataset.debug = 'loot-pending-choice'; pending.dataset.dropId = view.pendingChoice.dropId; section.append(pending);
+  }
+  if (!view.canContinue && view.reason) {
+    const block = node('p', CONTINUE_BLOCK[view.reason], 'loot-blocked'); block.dataset.debug = 'loot-continue-block';
+    block.dataset.reason = view.reason; block.setAttribute('role', 'status'); section.append(block);
   }
   if (view.pendingClaims.length) section.append(node('p', `等待入库：${view.pendingClaims.length} 项`, 'loot-note'));
   return section;
