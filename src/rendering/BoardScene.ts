@@ -8,7 +8,7 @@ import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
 import { InputRouter } from './input-router';
-import { getStageRound, getRoundKind } from '../simulation/round-schedule';
+import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
 import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
@@ -16,6 +16,7 @@ import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
 import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../stats/combat-feedback-renderer';
 import type { SessionChange } from '../m6/contracts';
 import { UnitView, type RingState } from '../presentation/unit-view';
+import { getHeroIdentity } from '../presentation/hero-identity';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
@@ -51,6 +52,8 @@ export class BoardScene extends Phaser.Scene {
   private namedObjects = new Map<string, Phaser.GameObjects.Text | Phaser.GameObjects.Container>();
   private draggingId: string | null = null;
   private selectedId: string | null = null;
+  /** Enemy hovered in the encounter preview; presentation-only ring highlight. */
+  private previewHighlight: ReadonlySet<string> = new Set();
   private mouseClient: Point | null = null;
   private shopButtons: Phaser.GameObjects.Text[] = [];
   private shopFrames: Phaser.GameObjects.Graphics[] = [];
@@ -148,6 +151,8 @@ export class BoardScene extends Phaser.Scene {
     this.help = new HelpPanel();
     this.strategyPanel = new StrategyPanel({
       help: () => this.help?.show(),
+      // Stored only: the next frame's ring sync applies it. Never force layout during a panel rebuild.
+      highlight: ids => { this.previewHighlight = new Set(ids); },
       state: () => this.session.state, shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
@@ -211,7 +216,7 @@ export class BoardScene extends Phaser.Scene {
   private resetViewReferences() {
     this.views.clear(); this.tokens.clear(); this.renderedCells.clear(); this.effects.clear(); this.namedObjects.clear();
     this.shopButtons.length = 0; this.shopFrames.length = 0;
-    this.draggingId = null; this.selectedId = null; this.recentCombatEvents = [];
+    this.draggingId = null; this.selectedId = null; this.previewHighlight = new Set(); this.recentCombatEvents = [];
     this.inputRouter.cancel();
   }
 
@@ -455,14 +460,15 @@ export class BoardScene extends Phaser.Scene {
   }
   private syncHud() {
     const match = this.session.state, ready = match.phase === 'preparation';
-    this.roundLabel.setText(`${getStageRound(match.round).stage}-${getStageRound(match.round).round}`); this.goldLabel.setText(`金币 ${match.gold}`);
+    const round = readRoundInfo(match);
+    this.roundLabel.setText(round.displayName); this.goldLabel.setText(`金币 ${match.gold}`);
     this.hpLabel.setText(`生命 ${match.playerHp}`);
     this.levelLabel.setText(`等级 ${match.level}`);
     const threshold = getXpToNextLevel(match.level);
     this.xpLabel.setText(threshold === null ? '经验 已满' : `经验 ${match.xp} / ${threshold}`);
     this.oddsLabel.setText(`${match.level} 级搜牌概率 · ${getShopOdds(match.level).map((chance, index) => `${index + 1}费 ${chance}%`).join(' / ')}`);
     this.count.setText(`我方人口 ${getPlayerDeploymentCount(this.state)} / ${getDeploymentCap(match)}`);
-    this.startButton.setText(getRoundKind(match.round) === 'supply' ? '领取补给' : '开始战斗');
+    this.startButton.setText(round.kind === 'supply' ? '领取补给' : '开始战斗');
     this.startButton.setAlpha(this.session.startFailure ? 0.4 : 1).setBackgroundColor('#38695f');
     this.continueButton.setData('round', match.round).setAlpha(match.phase === 'settlement' ? 1 : 0.4);
     this.rerollButton.setAlpha(ready ? 1 : 0.4);
@@ -502,11 +508,11 @@ export class BoardScene extends Phaser.Scene {
     const displayed = this.session.phase === 'preparation' ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
       const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
-      this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${definition.cost}费\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
+      this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
     this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
-    for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : 'normal', unit.team);
+    for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : this.previewHighlight.has(unit.id) ? 'target' : 'normal', unit.team);
   }
   private observeStats(change: SessionChange) {
     const combat = change.after.combat;
@@ -582,7 +588,7 @@ export class BoardScene extends Phaser.Scene {
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
-      const ring: RingState = unit.id === selectedTarget ? 'target' : unit.id === this.selectedId ? 'selected' : 'normal';
+      const ring: RingState = unit.id === selectedTarget || this.previewHighlight.has(unit.id) ? 'target' : unit.id === this.selectedId ? 'selected' : 'normal';
       this.views.get(unit.id)?.setRing(ring, unit.team);
       const token = this.tokens.get(unit.id)!;
       token.setVisible(unit.alive);

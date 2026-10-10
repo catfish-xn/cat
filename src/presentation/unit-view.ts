@@ -91,8 +91,9 @@ export class UnitView {
     this.emblem.clear().lineStyle(3, this.identity.inkNumber, 0.28).strokePoints(points, true, true);
     this.emblem.setVisible(!hasPortrait);
     this.star.setText('★'.repeat(unit.starLevel)).setColor(STAR_COLORS[unit.starLevel - 1]);
-    this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost)));
-    this.costText.setText(String(this.identity.cost));
+    // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
+    this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
+    this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
     this.items.clear();
     equipped.forEach((definitionId, index) => {
       const completed = Boolean(ITEM_DEFINITIONS[definitionId]?.recipe);

@@ -1,5 +1,6 @@
 import type { BattleRecord } from '../m6/contracts';
 import type { ReplaySnapshot } from './playback-session';
+import { readRoundInfo } from '../simulation/round-selectors';
 export interface ReplayCallbacks {
   select(record: BattleRecord): void; play(): void; pause(): void;
   speed(speed: 1 | 2 | 4): void; seek(tick: number): void; close(): void;
@@ -32,7 +33,7 @@ export class ReplayPanel {
   setRecords(records: readonly BattleRecord[]): void {
     this.records = records; this.choices.replaceChildren();
     const placeholder = document.createElement('option'); placeholder.textContent = records.length ? '请选择战斗' : '暂无已完成战斗'; placeholder.value = ''; this.choices.append(placeholder);
-    records.forEach((record,index)=>{const option=document.createElement('option'); option.value=String(index); option.textContent=`第 ${record.context.round} 轮 · ${record.result === 'playerWin' ? '胜利' : record.result === 'enemyWin' ? '失败' : '平局'} · 对局 ${record.runId.slice(-8)}`; this.choices.append(option);});
+    records.forEach((record,index)=>{const option=document.createElement('option'); option.value=String(index); option.textContent=`${readRoundInfo(record.context).displayName} · ${record.result === 'playerWin' ? '胜利' : record.result === 'enemyWin' ? '失败' : '平局'} · 对局 ${record.runId.slice(-8)}`; this.choices.append(option);});
   }
   setEnabled(enabled: boolean): void { this.choices.disabled = !enabled; }
   render(snapshot: ReplaySnapshot | null): void {

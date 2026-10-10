@@ -97,9 +97,11 @@ export class ReplayView {
       const stars = '★'.repeat(unit.starLevel), width = ctx.measureText(stars).width + 6;
       ctx.fillRect(p.x - width / 2, p.y - radius - 6, width, 13);
       ctx.fillStyle = STAR_COLORS[unit.starLevel - 1]; ctx.fillText(stars, p.x, p.y - radius + 1);
-      ctx.beginPath(); ctx.arc(p.x - 20, p.y + 18, 8, 0, Math.PI * 2); ctx.fillStyle = costColor(identity.cost); ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = '#0b151f'; ctx.stroke();
-      ctx.fillStyle = '#0b151f'; ctx.font = 'bold 11px system-ui, sans-serif'; ctx.fillText(String(identity.cost), p.x - 20, p.y + 18);
+      ctx.lineWidth = 2; ctx.strokeStyle = '#0b151f'; ctx.font = 'bold 11px system-ui, sans-serif';
+      if (!identity.neutral) {
+        ctx.beginPath(); ctx.arc(p.x - 20, p.y + 18, 8, 0, Math.PI * 2); ctx.fillStyle = costColor(identity.cost); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#0b151f'; ctx.fillText(String(identity.cost), p.x - 20, p.y + 18);
+      }
       if (unit.team === 'enemy') {
         ctx.beginPath(); ctx.arc(p.x + 20, p.y - 19, 9, 0, Math.PI * 2); ctx.fillStyle = C.enemy; ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#ffffff'; ctx.fillText('敌', p.x + 20, p.y - 19);

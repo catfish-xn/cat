@@ -5,6 +5,7 @@
  */
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
+import { NEUTRAL_DEFINITIONS } from '../simulation/content/neutrals';
 import { displayUnitName } from '../rendering/display-names';
 import { toNumber } from './theme';
 
@@ -12,7 +13,14 @@ export type EmblemShape = 'shield' | 'burst' | 'reticle' | 'lens' | 'hexstar' | 
 export interface HeroIdentity {
   readonly id: string; readonly name: string; readonly short: string; readonly color: string; readonly colorNumber: number;
   readonly ink: string; readonly inkNumber: number; readonly shape: EmblemShape; readonly traitName: string; readonly cost: number;
+  /** Neutral monsters have no shop cost or profession; their adapter cost=1 is a type placeholder only. */
+  readonly neutral: boolean;
 }
+
+/** One muted color per monster family (presentation only). */
+const FAMILY_COLOR: Readonly<Record<string, string>> = Object.freeze({
+  minion: '#7d8a96', krug: '#8a6a4f', wolf: '#56708f', razorbeak: '#a85a48', 'elder-dragon': '#6a4fae', 'rift-herald': '#8a3f9e',
+});
 
 /** Profession → emblem shape. Unopened/neutral units use the plain hexagon. */
 export const TRAIT_SHAPES: Readonly<Record<string, EmblemShape>> = Object.freeze({
@@ -40,16 +48,19 @@ const cache = new Map<string, HeroIdentity>();
 export function getHeroIdentity(definitionId: string): HeroIdentity {
   const cached = cache.get(definitionId);
   if (cached) return cached;
-  const definition = UNIT_DEFINITIONS[definitionId];
+  // Monsters classify from the authoritative neutral catalog (same source as the preview), never the cost-1 adapter.
+  const monster = Object.hasOwn(NEUTRAL_DEFINITIONS, definitionId) ? NEUTRAL_DEFINITIONS[definitionId] : undefined, neutral = Boolean(monster);
+  const definition = neutral ? undefined : UNIT_DEFINITIONS[definitionId];
   const style = HERO_STYLE[definitionId];
   const traitId = definition?.traits.find(id => TRAIT_SHAPES[id]) ?? definition?.traits[0];
-  const color = style?.color ?? hexColor(definition?.color ?? 0x8899aa);
+  const color = style?.color ?? (monster ? FAMILY_COLOR[monster.monsterFamily] : undefined) ?? hexColor(definition?.color ?? 0x8899aa);
   const name = displayUnitName(definitionId);
   // Pick whichever ink has the higher WCAG contrast against the hero color.
   const ink = (luminance(color) + 0.05) / (luminance('#0b151f') + 0.05) >= 1.05 / (luminance(color) + 0.05) ? '#0b151f' : '#ffffff';
   const identity: HeroIdentity = Object.freeze({
-    id: definitionId, name, short: style?.short ?? (definition?.symbol ?? name.slice(0, 2)), color, colorNumber: toNumber(color), ink, inkNumber: toNumber(ink),
-    shape: (traitId && TRAIT_SHAPES[traitId]) || 'hexagon', traitName: traitId ? TRAIT_DEFINITIONS[traitId]?.name ?? '本版本未开放' : '中立', cost: definition?.cost ?? 1,
+    id: definitionId, name, short: style?.short ?? (neutral ? name.replace('峡谷', '').slice(0, 2) : definition?.symbol ?? name.slice(0, 2)), color, colorNumber: toNumber(color), ink, inkNumber: toNumber(ink),
+    shape: (traitId && TRAIT_SHAPES[traitId]) || 'hexagon', traitName: neutral ? '野怪' : traitId ? TRAIT_DEFINITIONS[traitId]?.name ?? '本版本未开放' : '中立',
+    cost: neutral ? 0 : definition?.cost ?? 1, neutral,
   });
   cache.set(definitionId, identity);
   return identity;
