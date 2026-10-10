@@ -1,0 +1,36 @@
+{
+  "scope": "Read-only codec sizing and roundtrip simulation; no repository or browser changes",
+  "groups": [
+    {
+      "fields": [
+        "complete",
+        "fullLoad"
+      ],
+      "plainBytes": 46697164,
+      "encodedBytes": 75143636,
+      "encodedSha256": "bd1dcbfe9ae7f460d84ae3c1c45a03e06163e159b3aa0aff82bc9b3601b20d6f"
+    },
+    {
+      "fields": [
+        "current",
+        "record"
+      ],
+      "plainBytes": 22002052,
+      "encodedBytes": 32212896,
+      "encodedSha256": "231f01969bf46d207bc51f650fa7d0eda79d73ca35da28ed907ddc3847566157"
+    }
+  ],
+  "rebuiltJsonSha256": "091351986d70ca5f08a9aec5881e35d3ddace5946fcff9eb5d2b08681ab20ec4",
+  "originalJsonSha256": "091351986d70ca5f08a9aec5881e35d3ddace5946fcff9eb5d2b08681ab20ec4",
+  "deepStrictEqual": true,
+  "aliasGraphIdentical": true,
+  "uniqueObjects": 518938,
+  "aliasCount": 19685,
+  "ci209ExactMatches": {
+    "sourceFingerprint": true,
+    "scriptHash": true,
+    "allRouteBytes": true,
+    "allDeterministicRouteSummaryFields": true,
+    "selectedPayloadMetadata": true
+  }
+}

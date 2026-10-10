@@ -9,6 +9,7 @@ const {RESTORATION_ISSUE,assertBoundedImportGate}=require('./b6-performance-gate
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process'),{chromium}=require('playwright');
 const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evidence.cjs');
+const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-fixture-transport.cjs');
 (async()=>{
  const output=process.env.M6_EVIDENCE_DIR??'artifacts/m6-performance';fs.mkdirSync(output,{recursive:true});
  const started=performance.now();const report={sha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirty:execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),sourceFingerprint:sourceFingerprint(),scriptHash:hash(fs.readFileSync(__filename,'utf8')),node:process.version,cpu:os.cpus()[0]?.model,cpuCount:os.cpus().length,memoryBytes:os.totalmem(),loadAtStart:os.loadavg(),startedAt:new Date().toISOString(),passed:false,acceptanceScope:'B6 explicit B8/B9 dependencies deferred; bounded import is a separate real-path gate',restorationIssue:RESTORATION_ISSUE,method:'Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 command policy; its missing 15-equipment coverage is explicitly B8-deferred. Module lifecycle is separate from E full application/Phaser lifecycle.'};
@@ -82,8 +83,18 @@ const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evid
    catch(error){diagnostic('invalid-browser-marker',{message:String(error)});}
   });
   diagnosticPhase('page-goto');await page.goto(`${server.resolvedUrls.local[0]}__m6_perf`);
+  diagnosticPhase('fixture-transport-start');
+  const transportStarted=performance.now();
+  assert.equal(require('playwright/package.json').version,'1.63.0','Re-audit fixture transport sizing after Playwright changes');
+  const fixtures={complete:largestComplete.envelope,current:largestIncremental.envelope,record:largestRecord.record,fullLoad:fullLoadEnvelope,expectedBattleCount:ROUND_CATALOG.filter(round=>round.kind!=='supply').length,restorationIssue:RESTORATION_ISSUE};
+  const transport=inspectFixtureGroups(fixtures),expectedFixtureSignature=await fixtureSignature(fixtures);
+  await stageFixtureGroups(page,fixtures,transport.groups);
+  report.fixtureTransport={method:'two native Playwright groups; delete staging and release handles before original callback',helperHash:hash(fs.readFileSync(require.resolve('./m6-fixture-transport.cjs'),'utf8')),groups:transport.summaries,capacityBytes:transport.capacityBytes,commandReserveBytes:transport.commandReserveBytes,expected:expectedFixtureSignature,setupMs:performance.now()-transportStarted};
+  diagnosticPhase('fixture-transport-complete',report.fixtureTransport);
   diagnosticPhase('measurements-requested');
-  report.measurements=await page.evaluate(async fixtures=>{
+  report.measurements=await page.evaluate(()=>{
+   const fixtures=globalThis.__M6_PERF_FIXTURES;delete globalThis.__M6_PERF_FIXTURES;
+   return (async fixtures=>{
    const mark=(stage,details={})=>console.log('__M6_PERF_DIAGNOSTIC__'+JSON.stringify({stage,browserPerformanceMs:performance.now(),...details}));
    mark('measurements-entered');
    const {SaveRepository}=await import('/src/persistence/repository.ts'),{SaveCoordinator}=await import('/src/persistence/coordinator.ts'),{validateFile,exportFile}=await import('/src/persistence/format.ts');
@@ -173,7 +184,8 @@ const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evid
     window.__M6_PERF_LIFECYCLE_RECORD=complete.battles[0];
     return{summary,gates,skipped,fullLoadRoundTrip,limits:budget,completeBattleCount:complete.battles.length,incrementalBattleCount:current.battles.length,completedHistoryWrittenOnIncrementalSave:null,deferredMetrics:pendingMetrics,method:'Original fullCapture, firstSeek, cachedSeek and statsBatch callbacks run on the original selected payloads. The original capture/write/activation/completeImport pipeline is preserved but explicitly skipped, with no replacement setup or synthetic samples.'};
    }finally{mark('measurements-cleanup-start');coordinator?.dispose();repository.close();await new Promise(resolve=>{const r=indexedDB.deleteDatabase(dbName);r.onsuccess=r.onerror=r.onblocked=resolve;});mark('measurements-cleanup-complete');}
-  },{complete:largestComplete.envelope,current:largestIncremental.envelope,record:largestRecord.record,fullLoad:fullLoadEnvelope,expectedBattleCount:ROUND_CATALOG.filter(round=>round.kind!=='supply').length,restorationIssue:RESTORATION_ISSUE});
+  })(fixtures);
+  });
   diagnosticPhase('measurements-returned');
   for(const entry of report.measurements.skipped)console.log(`SKIPPED [${entry.owner}] ${entry.id}: ${entry.reason}; ${entry.restorationIssue}`);
   skipB6Dependency(report,'B9','full-load-import-roundtrip',`Restore the original full-load import/activation path after B9 capacity integration; ${RESTORATION_ISSUE}`,()=>{
@@ -234,6 +246,22 @@ const {sourceFingerprint}=require('./m5-evidence.cjs'),{hash}=require('./m4-evid
    }finally{repository.close();await new Promise(resolve=>{const request=indexedDB.deleteDatabase(dbName);request.onsuccess=request.onerror=request.onblocked=resolve;});}
   },{...largestBoundedComplete,restorationIssue:RESTORATION_ISSUE});
   diagnosticPhase('bounded-import-returned');
+  // Separate verification page only after every original timed callback ended.
+  // Do not prewarm JSON/string traversal or pin fixture handles on the measured page.
+  diagnosticPhase('fixture-transport-verification-start');
+  const verificationStarted=performance.now(),verificationPage=await browser.newPage();
+  try{
+   await verificationPage.goto(`${server.resolvedUrls.local[0]}__m6_perf`);
+   await stageFixtureGroups(verificationPage,fixtures,transport.groups);
+   const verificationHandle=await verificationPage.evaluateHandle(()=>{const value=globalThis.__M6_PERF_FIXTURES;delete globalThis.__M6_PERF_FIXTURES;return value;});
+   try{
+    const received=await verificationHandle.evaluate(fixtureSignature);
+    assert.deepEqual(received,expectedFixtureSignature,'M6 fixture transport complete value/alias graph');
+    report.fixtureTransport.verification={received,passed:true,scope:'independent page after all original timed callbacks'};
+   }finally{await verificationHandle.dispose();}
+  }finally{await verificationPage.close();}
+  report.fixtureTransport.verificationMs=performance.now()-verificationStarted;
+  diagnosticPhase('fixture-transport-verification-complete',report.fixtureTransport.verification);
   assertBoundedImportGate(report.boundedImport,report.payload.boundedComplete,MAX_BATTLE_RECORDS,report.measurements.limits.completeImport);
   assert.equal(report.errors.length,0,'browser errors');assert.equal(sourceFingerprint(),report.sourceFingerprint,'source changed during measurement');
   const failures=report.measurements.gates.filter(g=>g.status!=='skipped'&&!g.passed);assert.equal(failures.length,0,`Frozen performance budget exceeded: ${JSON.stringify(failures)}`);report.passed=true;

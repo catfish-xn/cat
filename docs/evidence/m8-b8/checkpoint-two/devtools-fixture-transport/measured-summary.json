@@ -1,0 +1,276 @@
+{
+  "graph": {
+    "uniqueObjects": 518938,
+    "undefinedCount": 0,
+    "aliasCount": 19685,
+    "crossFieldAliasCount": 3619,
+    "crossFieldAliasSamples": [
+      {
+        "first": "fixtures.current.currentBattle.context",
+        "again": "fixtures.record.context"
+      },
+      {
+        "first": "fixtures.current.currentBattle.initial",
+        "again": "fixtures.record.initial"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.0",
+        "again": "fixtures.record.events.0"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.1",
+        "again": "fixtures.record.events.1"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.2",
+        "again": "fixtures.record.events.2"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.3",
+        "again": "fixtures.record.events.3"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.4",
+        "again": "fixtures.record.events.4"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.5",
+        "again": "fixtures.record.events.5"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.6",
+        "again": "fixtures.record.events.6"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.7",
+        "again": "fixtures.record.events.7"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.8",
+        "again": "fixtures.record.events.8"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.9",
+        "again": "fixtures.record.events.9"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.10",
+        "again": "fixtures.record.events.10"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.11",
+        "again": "fixtures.record.events.11"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.12",
+        "again": "fixtures.record.events.12"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.13",
+        "again": "fixtures.record.events.13"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.14",
+        "again": "fixtures.record.events.14"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.15",
+        "again": "fixtures.record.events.15"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.16",
+        "again": "fixtures.record.events.16"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.17",
+        "again": "fixtures.record.events.17"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.18",
+        "again": "fixtures.record.events.18"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.19",
+        "again": "fixtures.record.events.19"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.20",
+        "again": "fixtures.record.events.20"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.21",
+        "again": "fixtures.record.events.21"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.22",
+        "again": "fixtures.record.events.22"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.23",
+        "again": "fixtures.record.events.23"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.24",
+        "again": "fixtures.record.events.24"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.25",
+        "again": "fixtures.record.events.25"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.26",
+        "again": "fixtures.record.events.26"
+      },
+      {
+        "first": "fixtures.current.currentBattle.events.27",
+        "again": "fixtures.record.events.27"
+      }
+    ],
+    "plainRoundTripDeepStrictEqual": true,
+    "plainRoundTripError": null
+  },
+  "node": "v22.23.3",
+  "playwright": "1.63.0",
+  "bundleSha256": "549070af3acabb3efcc4f55bfe6210f9f7c2fcf633cf7eaa59bfe60719969171",
+  "pipeCapacityBytes": 104857600,
+  "raw": {
+    "bytes": 68699305,
+    "sha256": "091351986d70ca5f08a9aec5881e35d3ddace5946fcff9eb5d2b08681ab20ec4"
+  },
+  "expression": {
+    "bytes": 10158,
+    "sha256": "5e4caf507f93214904f231c4e93dd6c5458a38a91af411eaeaf6dc22fdee5442"
+  },
+  "fields": {
+    "complete": {
+      "raw": {
+        "bytes": 25153739,
+        "sha256": "cba941d401794051a52db0d361774eb5ee2fa0bb1b7029997524c55edf5bf5ea"
+      },
+      "standaloneUtilityEncoded": {
+        "bytes": 40153386,
+        "sha256": "5f9ea5f53d0aac67ee77202caf474a6c32ce735eba65631912b020b7fd7cd0e6"
+      }
+    },
+    "current": {
+      "raw": {
+        "bytes": 20019632,
+        "sha256": "683eb25047d8a679e2b62f32df654e55a9910023d645919805c2f1597e2f9166"
+      },
+      "standaloneUtilityEncoded": {
+        "bytes": 32139520,
+        "sha256": "a58e5c690718d71502587ad7a19f90972dff7d89fe51ab8450451c620b6c4b4f"
+      }
+    },
+    "record": {
+      "raw": {
+        "bytes": 1982398,
+        "sha256": "0a706bf6c0e9088b84a137addae3024efbf2c858a3f862135eba62580df1d94f"
+      },
+      "standaloneUtilityEncoded": {
+        "bytes": 3012316,
+        "sha256": "c545671ffc0d777be01b3d01723af638bf83d32aa3ad603231b9a363511de2d7"
+      }
+    },
+    "fullLoad": {
+      "raw": {
+        "bytes": 21543400,
+        "sha256": "b2f35cc491a91e516a3a35ebb5a461e33745072fc7b9124ae7c1b4815a4f1700"
+      },
+      "standaloneUtilityEncoded": {
+        "bytes": 34878166,
+        "sha256": "96e5a924e608f2f78ed36275f1c307cebd6f1c901b18adf7ff1fa0ca3bc42d01"
+      }
+    },
+    "expectedBattleCount": {
+      "raw": {
+        "bytes": 2,
+        "sha256": "c6f3ac57944a531490cd39902d0f777715fd005efac9a30622d5f5205e7f6894"
+      },
+      "standaloneUtilityEncoded": {
+        "bytes": 2,
+        "sha256": "c6f3ac57944a531490cd39902d0f777715fd005efac9a30622d5f5205e7f6894"
+      }
+    },
+    "restorationIssue": {
+      "raw": {
+        "bytes": 45,
+        "sha256": "d7194dcb56051d7b0e53dbffc980cdf2361f6e78f854da998395a4f289d721a9"
+      },
+      "standaloneUtilityEncoded": {
+        "bytes": 45,
+        "sha256": "d7194dcb56051d7b0e53dbffc980cdf2361f6e78f854da998395a4f289d721a9"
+      }
+    }
+  },
+  "comparisons": {
+    "utilityRoundTripFullFieldHashesMatch": true,
+    "restoredFixtureHash": {
+      "bytes": 68699305,
+      "sha256": "091351986d70ca5f08a9aec5881e35d3ddace5946fcff9eb5d2b08681ab20ec4"
+    },
+    "sumStandaloneUtilityBytes": 110183435,
+    "protocolRoundTripFullFieldHashesMatch": true,
+    "protocolRoundTripIdentity": {
+      "completeIsFullLoad": false,
+      "recordInComplete": -1,
+      "recordInCurrent": -1,
+      "recordInFullLoad": -1
+    },
+    "cdpHashIdenticalAfterClientDriverRoundTrip": true
+  },
+  "messages": {
+    "identity-preserved": {
+      "encodedArgument": {
+        "bytes": 107470221,
+        "sha256": "5468d1a14b9ff87b08683774bbcaeb1fe19edf24e04327bce6ca393ba74c7ffb"
+      },
+      "cdpParametersEmptyObjectId": {
+        "bytes": 107480632,
+        "sha256": "d5086faef882bd62862f0ebc86d35359e0e9b8c69198b317378ed23e9585b8f7"
+      },
+      "cdpMessageEmptyDynamicIds": {
+        "bytes": 107480699,
+        "sha256": "0262c68be2791f28fb3cffa4b322edb8d38b30af1fa904ac2f98b83ec2ca476c"
+      },
+      "nulTerminatedPipeBytes": 107480700,
+      "overCapacityAtLeast": 2623100
+    },
+    "json-cloned-identities-lost": {
+      "encodedArgument": {
+        "bytes": 113818566,
+        "sha256": "80abc78ba248fb3f1fb57830b6c35d17f6cc8bb17b9c07cfde96e42b4b79e04b"
+      },
+      "cdpParametersEmptyObjectId": {
+        "bytes": 113828977,
+        "sha256": "27c2a633e1b14b620d0fbfb201a0b0f46971ff28004eb1b3c116f906878717c3"
+      },
+      "cdpMessageEmptyDynamicIds": {
+        "bytes": 113829044,
+        "sha256": "ac57b6f9007dededd41e95d7a325828c93dbd4bdb050b9e0f2edd1eaf55e4c3e"
+      },
+      "nulTerminatedPipeBytes": 113829045,
+      "overCapacityAtLeast": 8971445
+    },
+    "after-client-driver-roundtrip": {
+      "encodedArgument": {
+        "bytes": 107470221,
+        "sha256": "5468d1a14b9ff87b08683774bbcaeb1fe19edf24e04327bce6ca393ba74c7ffb"
+      },
+      "cdpParametersEmptyObjectId": {
+        "bytes": 107480632,
+        "sha256": "d5086faef882bd62862f0ebc86d35359e0e9b8c69198b317378ed23e9585b8f7"
+      },
+      "cdpMessageEmptyDynamicIds": {
+        "bytes": 107480699,
+        "sha256": "0262c68be2791f28fb3cffa4b322edb8d38b30af1fa904ac2f98b83ec2ca476c"
+      },
+      "nulTerminatedPipeBytes": 107480700,
+      "overCapacityAtLeast": 2623100
+    }
+  },
+  "protocolArgument": {
+    "bytes": 124775324,
+    "sha256": "d8d1943d998561c6d039ace606e792cd0a49828906b8e7d3b5567570f04ab083"
+  }
+}
