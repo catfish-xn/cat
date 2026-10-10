@@ -114,5 +114,7 @@ export function advanceFrozenLootLedger(ledger:FrozenLootLedger, throughRoundOrd
   restoreFrozenLootLedger(ledger,{seed:ledger.seed,throughRoundOrdinal:ledger.throughRoundOrdinal});
   validateOrdinal(throughRoundOrdinal);
   if(throughRoundOrdinal<ledger.throughRoundOrdinal) throw new RangeError('Cannot rewind loot preparation');
-  return throughRoundOrdinal===ledger.throughRoundOrdinal?ledger:freezeLootThroughRound(ledger.seed,throughRoundOrdinal);
+  if(throughRoundOrdinal===ledger.throughRoundOrdinal) return ledger;
+  const replay=freezeLootThroughRound(ledger.seed,throughRoundOrdinal);
+  return freezeContent({...replay,rounds:[...ledger.rounds,...replay.rounds.slice(ledger.rounds.length)]});
 }

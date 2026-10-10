@@ -5,7 +5,8 @@ import type { LootChoiceDescriptor, LootChoiceEligibility, LootChoiceResolution 
 import type { PendingChoice } from './strategy-types';
 import { freezeContent } from './content/freeze';
 
-/** Pure domain order primitive. No exposure of fallback, award, phase or live Match mutation. */
+/** Pure domain order primitive over already-validated ledger records, not an authorization gate.
+ * No exposure to UI, award, phase or live Match mutation. Full runtime invariants belong to checkpoint②. */
 export function orderedUnresolvedLootChoices(descriptors:readonly LootChoiceDescriptor[], eligibility:readonly LootChoiceEligibility[], resolutions:readonly LootChoiceResolution[]):readonly LootChoiceDescriptor[] {
   return descriptors.filter(d=>eligibility.some(e=>e.dropId===d.dropId && e.status==='revealed') && !resolutions.some(r=>r.dropId===d.dropId)).sort(compareLootChoices);
 }
