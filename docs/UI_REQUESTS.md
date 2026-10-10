@@ -4,7 +4,7 @@
 
 ## U5 第一阶段与 `.7` 野怪遭遇预览（开工前接口盘点）
 
-**交付状态（2026-10-10）：U5 已独立审查并合入。** PR #26 已审查 SHA `855430157b6947d4b9710db3b08f6842f1c9347d`（[CI #168](https://github.com/catfish-xn/cat/actions/runs/38019557635) 成功，无 P0–P2），合并提交 `d64c381260c4c862d813da7e8c7c983813ce89e0`，合并后的 tree 与已审查 HEAD 完全一致。预览已改读 UR-U5-01/02 正式字段，不再依赖旧适配层。包体实测 488,964 B，距总上限 552,191 B 余 63,227 B。仍未完成：6-7 先锋的实机导入和完整应用验证由 B9 补验；非阻塞 P3「U5 界面自动回归」登记为 [#27](https://github.com/catfish-xn/cat/issues/27)。独立审查结论由用户在会话中转达，PR #26 上没有 GitHub review 记录。H1 维持 [H1_WARN_ONLY.md](H1_WARN_ONLY.md) 原记录，不因本次 CI 全绿而关闭。
+**交付状态（2026-10-10）：U5 已独立审查并合入。** PR #26 已审查 SHA `855430157b6947d4b9710db3b08f6842f1c9347d`（[CI #168](https://github.com/catfish-xn/cat/actions/runs/38019557635) 成功，无 P0–P2），合并提交 `d64c381260c4c862d813da7e8c7c983813ce89e0`，合并后的 tree 与已审查 HEAD 完全一致。预览已改读 UR-U5-01/02 正式字段，不再依赖旧适配层。包体实测 488,964 B，距总上限 552,191 B 余 63,227 B。仍未完成：6-7 先锋的实机导入和完整应用验证由 B9 补验；非阻塞 P3「U5 界面自动回归」登记为 [#27](https://github.com/catfish-xn/cat/issues/27)。独立审查证据：Codex 原审查记录已补记为 [PR #26 评论 6093541375](https://github.com/catfish-xn/cat/pull/26#issuecomment-6093541375)，内含原始 `u5-review-evidence.json` 的完整副本（35,015 B，SHA-256 `12b86d324d5b9d5abaa6a0fff71c1f063a4470d89d33d927bf13ff3b1440662a`）。时间顺序：审查结论先由用户在会话中转达；随后 PR 于 03:50:57Z 合并，本记录首版（`2acb9ac`）于 03:52:24Z 写入，当时 PR 上尚无审查记录；原审查记录于 03:59:55Z 补记（均为 2026-10-10 UTC）。该评论是对原审查（针对 `8554301`、CI #168）的补记，不是重新审查，也不构成对合并提交的新签收。H1 维持 [H1_WARN_ONLY.md](H1_WARN_ONLY.md) 原记录，不因本次 CI 全绿而关闭。
 
 基线：`feat/m8-b0-baseline` 的 `8778269`（B7 PR #21 已合入）。以下为该基线开工前的数据盘点。2026-10-10 更新：用户已批准 M8 专用 JS 新上限及 U5 先沿已有适配路径开工；UR-U5-01/02 已签收、已合并（PR #25，`4acea21818dc8ff2ef1e266d3aed51c78b81d74f`），见 [U5 合同增补](M8_U5_PREVIEW_CONTRACT_ADDENDUM.md)。下述两项的“现状/当前替代”保留为开工前历史，不再表示新字段缺失。
 
