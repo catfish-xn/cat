@@ -1,6 +1,6 @@
-# B7 cleanup verification
+# B7 cleanup verification — pre-integration checkpoint
 
-Scope: N1 restores control start/end from the trusted opening task and status declaration; N5 preserves hero maximum mana >=1 while neutrals may use zero; N6/N7 supplement receipt contracts and the accepted/merged handoff. No frozen contracts, G12, UI, catalogs, content digest, CI settings, thresholds or measurement methods changed. B8 and the user's separate Claude audit-vector branch remain pending.
+Scope: N1 restores control start/end from the trusted opening task and status declaration; N5 preserves hero maximum mana >=1 while neutrals may use zero; N6/N7 supplement receipt contracts and the accepted/merged handoff. No frozen contracts, G12, UI, catalogs, content digest, CI settings, thresholds or measurement methods changed. At this checkpoint B8 and delivery of the user's separate Claude audit-vector branch remained pending. The audit branch was supplied and merged afterward; this evidence is retained as the earlier cleanup-only check, not final integration acceptance.
 
 ## Regression strength
 

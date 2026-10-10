@@ -104,7 +104,7 @@ describe('B7 audit: Elder Dragon cone (ENCOUNTERS §4.4) against independent geo
         .toEqual({ dragon, primary, children: expected.map(u => [u.id, 29, false]).sort() });
       expect(step.state.rngDraws).toBe(1);
     }
-    expect(attacked).toBeGreaterThan(20);
+    expect(attacked).toBe(layouts.length); // Every independently enumerated layout must actually attack.
   });
 });
 
@@ -134,14 +134,18 @@ const mechanismTick = (events: readonly api.MatchEvent[]) => events.some(e => ['
 
 describe('B7 audit: Match save/restore of real encounters', () => {
   it.each(['2-7', '3-7', '4-7', '5-7', '6-7'])('%s: restoring at every opening and mechanism tick reproduces the continuous run', roundId => {
-    let continuous = accepted(api.startMatchCombat(withGaren(prepared(roundId)))), resumed = restored(continuous), restores = 1;
+    let continuous = accepted(api.startMatchCombat(withGaren(prepared(roundId)))), resumed = restored(continuous), restores = 1, afterMechanism = false;
     const continuousEvents: unknown[] = [], resumedEvents: unknown[] = [];
     while (continuous.phase === 'combat') {
       const a = api.stepMatch(continuous), b = api.stepMatch(resumed);
       continuous = a.state; continuousEvents.push(...a.events); resumedEvents.push(...b.events);
-      // Opening/stun window, every death/heal/move/status tick, and periodic checkpoints.
+      // Opening/stun window, every mechanism tick AND its next-tick consumer, and periodic checkpoints.
       const tick = continuous.combat!.tick;
-      if (tick <= 13 || mechanismTick(a.events) || tick % 50 === 0) { resumed = restored(b.state); restores++; } else resumed = b.state;
+      if (tick <= 13 || mechanismTick(a.events) || afterMechanism || tick % 50 === 0) {
+        resumed = restored(b.state); restores++;
+        expect(resumed).toEqual(continuous);
+      } else resumed = b.state;
+      afterMechanism = mechanismTick(a.events);
     }
     expect(resumedEvents).toEqual(continuousEvents);
     expect(serializeMatch(resumed)).toBe(serializeMatch(continuous));
