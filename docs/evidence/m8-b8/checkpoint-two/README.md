@@ -94,3 +94,11 @@
 ### CI174 修复：独立命令参考补资源事实
 
 `command-oracle.cjs` 的旧参考只构造买卖后资源和事件，未构造②新增的出生／升级／出售来源，导致原 `match-economy` 30失败/12通过。现按该参考自己的 purchase 和价格模型，独立追加事实和 acquisitionSequence；保留原命令失败零变化、选择优先级、价格和完整 result 深相等。没有从实际 result 复制来源，也没有生产 imports。旧42项原样全通过，新6项手算回归通过，typecheck通过。前后原始日志为 `command-oracle-before.log.gz` / `command-oracle-targeted.log.gz`。这些 command-unit 输入是明确的局部机制 fixture，不作为完整真实资源路线证明。本提交不改变生产行为，亦不代表全CI通过。
+
+### CI174 修复：独立掉落／经济参考
+
+旧 `oracle.cjs` 将单位 serial/cards 仅归于 buy、物品奖励仅归于 ScheduleReceipt；合法1-2掉落Maddie使actual serial3、旧expected2。按冻结LOOT §2–8与OPENING/ADDENDUM新增独立固定表、BigInt LCG拒绝抽样、来源/载荷/资格/唯一receipt/八候选/fallback核验；不import生产planner。真实新单位即使立即被合并也计一次候选出生，组件仍分LootReceipt和ScheduleReceipt，揭示/冻结/满席保留不计实际授予。完整原金币、卡数、物品、serial与收据守恒未删除。
+
+独立结算补 combatEventCount，真实入账gold先于interest；公开settlement参考从独立计划+正式死亡求未授gold，不以actual roundResult反推。手算9/49/50+1→16/60/61、投资向量、英雄非金币对照及重复事件/错误payload/source/receipt反向拒绝通过。新增24例+原audit-boundaries20例共44/44通过，原beforeAll失败后未执行的7例已执行；typecheck通过。seed42金币路径和seed230四档英雄路径均由真实公开命令完成38轮/33战；未改路线脚本或门禁。原日志为 `loot-oracle-targeted.log.gz`、`loot-oracle-typecheck.log.gz`、`loot-oracle-seed230.log.gz`。
+
+这是独立参考适配的单独提交，不把参考缺项归为领域缺陷，也不掩盖另行发现的真实BoardScene异常、未修完的fixture和生命周期旧前提。全CI及②验收仍未完成。
