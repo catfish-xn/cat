@@ -67,30 +67,4 @@ describe('B8 exact reviewed golden migration guards', () => {
       expect(() => guards.verifyReviewed(directory, sha(bytes))).toThrow('candidate changed after review');
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
-  it('prefers the exact published ref when both approved objects exist', () => {
-    const visited = [];
-    const selected = guards.selectSourceRef((ref) => { visited.push(ref); return { wholeTree: guards.SOURCE_WHOLE_TREE, srcTree: guards.SOURCE_TREE }; });
-    expect(selected.ref).toBe('50786a196cdff0762867e2918813a090df4fcac6');
-    expect(visited).toEqual(['50786a196cdff0762867e2918813a090df4fcac6']);
-  });
-  it('falls back only to the exact local capture ref when the published object is absent', () => {
-    const visited = [];
-    const selected = guards.selectSourceRef((ref) => { visited.push(ref); return ref === guards.SOURCE_REFS[0] ? null : { wholeTree: guards.SOURCE_WHOLE_TREE, srcTree: guards.SOURCE_TREE }; });
-    expect(selected.ref).toBe('2814d0146a3a109d8cef920034ba67d0cc571bf0');
-    expect(visited).toEqual(guards.SOURCE_REFS);
-  });
-  it('rejects a different whole tree even if the source subtree matches', () => {
-    expect(() => guards.selectSourceRef(() => ({ wholeTree: 'unreviewed', srcTree: guards.SOURCE_TREE }))).toThrow('unapproved whole tree');
-  });
-  it('rejects a different source tree and never tries to accept a later ref', () => {
-    const visited = [];
-    expect(() => guards.selectSourceRef((ref) => { visited.push(ref); return { wholeTree: guards.SOURCE_WHOLE_TREE, srcTree: 'unreviewed' }; })).toThrow('unapproved src tree');
-    expect(visited).toHaveLength(1);
-  });
-  it('fails when neither approved object exists instead of accepting HEAD or an arbitrary ref', () => {
-    const visited = [];
-    expect(() => guards.selectSourceRef((ref) => { visited.push(ref); return null; })).toThrow('Neither exact published nor local capture');
-    expect(visited).toEqual(['50786a196cdff0762867e2918813a090df4fcac6', '2814d0146a3a109d8cef920034ba67d0cc571bf0']);
-  });
-
 });

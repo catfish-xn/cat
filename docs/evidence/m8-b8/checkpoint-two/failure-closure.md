@@ -50,3 +50,7 @@
 - 19项反例实际通过：错原字节/版本/源输入、未知嵌套/熟悉命令类型乱入、候选漂移等拒绝。完整候选SHA8d129f70…再顺序确定性复跑四构筑后一次原子写入；原完整state/events hash断言、skip、threshold未改。内部只读技术复核不代表Codex外部签收。
 - 原样`npm test -- tests/m5-route.test.ts tests/m6-integration.test.ts`：2文件通过，8pass/9原skip，239.84s。至此CI183原92均有逐根因专项闭环；仍须同最终代码全量及CI，不能将专项相加当全绿。
 - 原工具记录本地2814，远端等价50786a；src树和183文件hash已固定，正常远端clone缺本地对象的限制明确记于golden README。原审计/工具字节不事后覆盖，便携改动如需另提交。
+
+### F后续：工具可移植性与原样guard收口
+
+原受审工具/guard和f574审计字节另保留，当前工具只在固定远端50786a与本地2814中优先选择实际存在且whole/src树均精确相等的对象；183源指纹不变。新增5项ref拒绝控制，原19正文不变；**原样24/24通过**及typecheck通过，新portable审计67ad只读重新核八条capture/独立资源与旧新候选，candidate仍8d129，没有重新apply。旧19的单worker执行仅诊断证据，不当成原样门禁；原日志未覆盖。具体限制与两代hash见`golden/portable/README.md`，这仍是内部技术预检。
