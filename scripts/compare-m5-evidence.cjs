@@ -58,10 +58,13 @@ if(finalGate){
   if(name.startsWith('m5-input-')){
    assert.equal(manifest.coverage,'full-input-gate','observation-only is not the required input gate');
    assert.equal(manifest.fullOpeningItemScenarioPassed,false);
-   assert.deepEqual(manifest.skipped.map(entry=>[entry.status,entry.owner,entry.id]),[
-    'mouse-back-to-back-opening-components','touch-back-to-back-opening-components',
-    'normal-opening-rageblade-recipe-and-equipment','normal-opening-rageblade-stat-event','normal-opening-rageblade-dynamic-as',
-   ].map(id=>['skipped','B8',id]),'input may defer only the five explicitly listed B8 cases');
+   // B8 restored the three Rageblade checks on the real 2-1 chain; the two back-to-back opening
+   // checks are user-approved archives (not applicable under the frozen schedule, not verified).
+   assert.deepEqual(manifest.skipped??[],[],'input gate may no longer defer any B8 case');
+   assert.deepEqual((manifest.archived??[]).map(entry=>[entry.status,entry.id,entry.verifiedConsecutiveDialogs]),
+    ['mouse','touch'].map(method=>['archived-not-applicable',`${method}-back-to-back-opening-components`,false]),'only the two approved archives');
+   assert.equal(manifest.b8RagebladeChain?.roundId,'2-1','B8 Rageblade chain executed');
+   assert(manifest.b8RagebladeChain.currentAttackIntervalTicks<manifest.b8RagebladeChain.frozenAttackIntervalTicks,'dynamic AS observed');
   }
  }
  const touchRoutes=['dev','preview'].map(mode=>read(`artifacts/m5-${mode}-cannon-touch/route.json`));
