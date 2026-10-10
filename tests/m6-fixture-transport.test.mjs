@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import transport from '../scripts/m6-fixture-transport.cjs';
 const { inspectFixtureGroups, fixtureSignature } = transport;
-const fixture = () => ({ complete: { x: 1 }, current: { y: 2 }, record: { z: 3 }, fullLoad: { w: 4 }, expectedBattleCount: 33, restorationIssue: 'issue-23' });
+const fixture = () => ({ complete: { x: 1 }, current: { y: 2 }, record: { z: 3 }, fullLoad: { w: 4 }, expectedBattleCount: 33 });
 describe('M6 native handle fixture transport', () => {
   it('keeps the two graph-connected groups and original scalar metadata', () => {
     const input = fixture(), result = inspectFixtureGroups(input);
@@ -47,7 +47,7 @@ describe('M6 native handle fixture transport', () => {
   it('rejects field omissions or reordered fixture root', () => {
     const input = fixture(); delete input.record;
     expect(() => inspectFixtureGroups(input)).toThrow();
-    expect(() => inspectFixtureGroups({ current: {}, complete: {}, record: {}, fullLoad: {}, expectedBattleCount: 33, restorationIssue: 'issue-23' })).toThrow();
+    expect(() => inspectFixtureGroups({ current: {}, complete: {}, record: {}, fullLoad: {}, expectedBattleCount: 33 })).toThrow();
   });
   it.each(['function', 'accessor', 'hidden getter', 'sparse', 'symbol', 'date'])('rejects unsupported %s data explicitly', kind => {
     const input = fixture();

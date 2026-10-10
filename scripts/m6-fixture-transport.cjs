@@ -6,9 +6,8 @@ const COMMAND_RESERVE = 1024 * 1024;
 // Byte-count the locked Playwright 1.63 utility argument format; never encode or
 // decode the fixture here. Native Playwright transport retains the actual graph.
 function inspectFixtureGroups(fixtures) {
-  assert.deepEqual(Object.keys(fixtures), ['complete', 'current', 'record', 'fullLoad', 'expectedBattleCount', 'restorationIssue']);
+  assert.deepEqual(Object.keys(fixtures), ['complete', 'current', 'record', 'fullLoad', 'expectedBattleCount']);
   assert.equal(typeof fixtures.expectedBattleCount, 'number');
-  assert.equal(typeof fixtures.restorationIssue, 'string');
   const groups = [{ complete: fixtures.complete, fullLoad: fixtures.fullLoad }, { current: fixtures.current, record: fixtures.record }];
   const ownership = new WeakMap();
   const summaries = groups.map((group, groupIndex) => {
@@ -78,11 +77,11 @@ async function stageFixtureGroups(page, fixtures, groups) {
   const handles = [];
   try {
     for (const group of groups) handles.push(await page.evaluateHandle(value => value, group));
-    await page.evaluate(({ first, second, expectedBattleCount, restorationIssue }) => {
+    await page.evaluate(({ first, second, expectedBattleCount }) => {
       if (Object.hasOwn(globalThis, '__M6_PERF_FIXTURES')) throw new Error('M6 fixture staging already occupied');
       globalThis.__M6_PERF_FIXTURES = { complete: first.complete, current: second.current, record: second.record,
-        fullLoad: first.fullLoad, expectedBattleCount, restorationIssue };
-    }, { first: handles[0], second: handles[1], expectedBattleCount: fixtures.expectedBattleCount, restorationIssue: fixtures.restorationIssue });
+        fullLoad: first.fullLoad, expectedBattleCount };
+    }, { first: handles[0], second: handles[1], expectedBattleCount: fixtures.expectedBattleCount });
   } catch (error) {
     throw new Error(`M6 fixture transport failed: ${error.message}`, { cause: error });
   } finally {
