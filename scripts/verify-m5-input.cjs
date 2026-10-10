@@ -1,4 +1,3 @@
-const { skipB6Dependency } = require('./b6-deferred-assertions.cjs');
 const { prepareB6Opening } = require('./b6-public-preparation.cjs');
 /* Native Chromium input gate. Browser state is read-only. Production Match is a
  * consistency model, never an independent mathematical oracle. No combat clock
@@ -180,9 +179,54 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         }
       }
       assert(modalChecks > 0, `${method}: real modal burst assertions executed`);
-      skipB6Dependency(report, 'B8', `${method}-back-to-back-opening-components`, 'The removed legacy starting component pair has no B8 replacement yet', () => {
-        assert(modalChecks >= 2, 'back-to-back opening component confirmations both executed');
-      });
+      // User-approved archive (2026-10-10): the old "two opening component choices back to back"
+      // case cannot occur under the frozen M8 rules, so it is retired, NOT verified. No round
+      // schedules more than one choice (round-schedule.ts fixed events) and each PvE round freezes at
+      // most one loot choice (M8B_LOOT §1 table: 1-3/1-4 one each, the old opening pair removed).
+      // Consecutive dialogs are therefore not tested; the generic burst above and the real
+      // 1-3/1-4 loot-choice bursts below remain.
+      (report.archived ??= []).push({ id: `${method}-back-to-back-opening-components`, status: 'archived-not-applicable',
+        originalAssertion: "assert(modalChecks >= 2, 'back-to-back opening component confirmations both executed')",
+        basis: 'frozen M8 schedule has at most one choice per round (src/simulation/round-schedule.ts); M8B_LOOT §1 freezes one loot choice per PvE round and removes the legacy opening pair',
+        verifiedConsecutiveDialogs: false });
+      console.log(`ARCHIVED [B8] ${method}-back-to-back-opening-components: not applicable under the frozen M8 schedule`);
+      // Real B8 loot component choices (1-3, then 1-4): one confirming burst grants exactly once,
+      // the rest of the burst lands on the dismissal shield, and the next round's pick still works.
+      {
+        await reset();
+        const playToLootChoice = async roundId => {
+          for (let guard = 0; guard < 20; guard++) {
+            const current = await state();
+            if (current.phase === 'choice') { assert.equal(current.m8.round.roundId, roundId); return current; }
+            if (current.phase === 'preparation') { await delay(450); await click('start-combat'); }
+            else if (current.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
+            else if (current.phase === 'settlement') await click('continue');
+            else throw new Error(`Loot burst route ended at ${current.phase}`);
+          }
+          throw new Error(`No loot choice reached at ${roundId}`);
+        };
+        const first = await playToLootChoice('1-3'), choice = first.pendingChoice;
+        assert.equal(choice.kind, 'component'); assert.equal(choice.offers.length, 8, 'loot pick offers the fixed eight components');
+        await quiet();
+        const node = page.locator(`[data-debug="choice:${choice.offers[0]}"]`); await node.scrollIntoViewIfNeeded();
+        assert.equal(await page.locator('.choice-dialog').getAttribute('data-choice-source'), 'loot');
+        const box = await node.boundingBox(), point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }, start = await offset();
+        const expected = accepted(api.selectChoice(first, choice.choiceId, choice.generation, choice.offers[0]));
+        if (method === 'mouse') await page.mouse.dblclick(point.x, point.y, { delay: 40 });
+        else for (let tap = 0; tap < 2; tap++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 22, x: point.x, y: point.y }] });
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        }
+        const result = await record(`${method}-real-loot-choice-1-3-burst-single-grant`, first, expected, start);
+        const downs = result.inputs.filter(input => input.type === 'pointerdown');
+        assert.equal(downs.length, 2); assert.equal(downs[1].target, 'choice-dismissal-shield');
+        assert.equal(expected.m8.loot.receipts.length, first.m8.loot.receipts.length + 1, 'one confirming burst, one loot receipt');
+        assert.equal(expected.items.length, first.items.length + 1, 'one confirming burst, one granted component');
+        await quiet();
+        const second = await playToLootChoice('1-4'), next = second.pendingChoice, nextStart = await offset();
+        await click(`choice:${next.offers[1]}`);
+        await record(`${method}-real-loot-choice-1-4-after-burst`, second, accepted(api.selectChoice(second, next.choiceId, next.generation, next.offers[1])), nextStart);
+      }
     }
     await quiet();
     // Explicitly exercise the Chromium compatibility-mouse stream on a hybrid
