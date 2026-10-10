@@ -11,7 +11,7 @@ import { getUnitStats } from '../src/simulation/unit-stats';
 import { planPurchase } from '../src/simulation/upgrades';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { accepted, resolveM5Choices } from './match-helpers';
-import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment } from './fixtures/m8-neutral-public-route';
+import { publicNeutralPreparation, publicHeraldTarget, publicHeraldEquipment, publicHeraldRawInput } from './fixtures/m8-neutral-public-route';
 
 // Every prefix comes from the complete public command-only acquisition route.
 const prepared=publicNeutralPreparation;
@@ -120,7 +120,8 @@ describe('B7 installed encounters and trusted Match restore',()=>{
 
   it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud']])('restores Herald action identity after earlier tick-one aura maintenance: %j',(...ids)=>{
     const items=ids as string[];
-    let s=publicHeraldEquipment(items);
+    // Only the five approved nonempty saves use generated raw input. Independent parsing and the full production restore stay inside this case.
+    let s=items.length ? restoreMatch(publicHeraldRawInput(items)) : publicHeraldEquipment(items);
     s=accepted(api.startMatchCombat(s));roundTrip(s);s=api.stepMatch(s).state;roundTrip(s);
     const c=s.combat!.units.find(u=>u.id==='unit-1')!.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.source.definitionId==='void-charge-project-v1')!;
     expect(c).toBeDefined();expect(JSON.parse(JSON.parse(c.key)[8])).toEqual([items.length,1]);
@@ -128,7 +129,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');const status=target.mechanismState.statuses.flatMap((g:any)=>g.contributions).find((c:any)=>c.source.definitionId==='void-charge-project-v1');status.source.effectIndex=2;});
   });
   it.each(['quicksilver','edge-of-night'])('round-trips legal Herald item immunity/cleanup boundaries with %s',definitionId=>{
-    let s=publicHeraldEquipment([definitionId]);
+    let s=restoreMatch(publicHeraldRawInput([definitionId]));
     s=accepted(api.startMatchCombat(s));roundTrip(s);
     for(let tick=0;tick<15;tick++) {s=api.stepMatch(s).state;roundTrip(s);}
     if(definitionId==='quicksilver') expect(s.combat!.neutralReceipts!.controls).toEqual([]);

@@ -1,12 +1,13 @@
+import ionicRaw from './m8-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './m8-herald-raw/evenshroud.json?raw';
+import dualRaw from './m8-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './m8-herald-raw/quicksilver.json?raw';
+import edgeRaw from './m8-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
-import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
+import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './m8-herald-raw/generate';
 import { run } from '../../scripts/generate-m5-route.cjs';
 
-function accepted(result: api.MatchCommandResult): api.MatchState {
-  if (!result.ok) throw new Error(`Public neutral fixture: ${result.reason}`);
-  return result.state;
-}
 const preparations = new Map<string, api.MatchState>();
 let equipmentFork: api.MatchState | undefined;
 // Execute the command-only driver once, retaining only the actual preparation
@@ -34,78 +35,30 @@ export function publicNeutralEquipmentChoice(): api.MatchState {
   return restoreMatch(serializeMatch(equipmentFork));
 }
 
-/** Keep the legitimately acquired original Irelia as the single charge target.
- * The original synthetic Garen was only a durable target, not a Garen-stat oracle.
- * Public bench commands preserve all acquired heroes and permanent equipment. */
+/** The unmodified live public target route remains in use outside five raw-save cases. */
 export function publicHeraldTarget(initial = publicNeutralPreparation('6-7')): api.MatchState {
-  let state = initial;
-  for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.id !== 'unit-1' && unit.location.kind === 'board')) {
-    const occupied = new Set(state.preparation.units.flatMap(unit => unit.location.kind === 'bench' ? [unit.location.slot] : []));
-    const slot = Array.from({ length: state.preparation.benchSize }, (_, index) => index).find(index => !occupied.has(index));
-    if (slot === undefined) throw new Error('No public bench slot for Herald fixture');
-    state = accepted(api.deployMatchUnit(state, unit.id, { kind: 'bench', slot }));
-  }
-  return accepted(api.deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 3, row: 4 } }));
+  return fieldHeraldTarget(initial);
 }
 
 const equipmentPreparations = new Map<string, api.MatchState>();
-/** Fork the genuine 4-4 component choice and reserve subsequent real choices for
- * the requested items. Fight every intervening round normally with the acquired
- * army, then combine/equip the actual component instances before 6-7. */
+/** Retain the live command-only builder. The independent source verifier uses
+ * its raw counterpart before importing the production serialization module. */
 export function publicHeraldEquipment(definitions: readonly string[]): api.MatchState {
   if (!definitions.length) return publicHeraldTarget();
   const key = JSON.stringify(definitions);
-  if (!equipmentPreparations.has(key)) {
-    let state = publicNeutralEquipmentChoice();
-    const required = definitions.flatMap(id => [...ITEM_DEFINITIONS[id].recipe!]);
-    const inventory = () => state.items.filter(item => item.location.kind === 'inventory');
-    function missingComponent(): string {
-      const available = inventory().map(item => item.definitionId);
-      for (const component of required) {
-        const index = available.indexOf(component);
-        if (index < 0) return component;
-        available.splice(index, 1);
-      }
-      return 'sword';
-    }
-    while (state.roundDefinitionId !== '6-7') {
-      while (state.phase === 'choice') {
-        const choice = state.pendingChoice!;
-        state = accepted(choice.step === 'target'
-          ? api.selectAnomalyTarget(state, choice.choiceId, choice.generation, state.preparation.units.find(u => u.definitionId === 'kogmaw')!.id)
-          : api.selectChoice(state, choice.choiceId, choice.generation, choice.kind === 'component' ? missingComponent() : choice.offers[0]));
-      }
-      if (state.phase === 'preparation') {
-        while (state.level < 8 && state.gold >= 4) state = accepted(api.buyXp(state));
-        for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench')) {
-          if (state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length >= state.level) break;
-          const free = [{ col: 3, row: 4 }, { col: 5, row: 4 }, { col: 0, row: 4 }, { col: 6, row: 4 }, { col: 3, row: 7 }]
-            .find(cell => !state.preparation.units.some(u => u.location.kind === 'board' && u.location.cell.col === cell.col && u.location.cell.row === cell.row));
-          if (!free) throw new Error('No public deployment cell');
-          state = accepted(api.deployMatchUnit(state, unit.id, { kind: 'board', cell: free }));
-        }
-        state = accepted(api.startMatchCombat(state));
-        while (state.phase === 'combat') state = api.stepMatch(state).state;
-      }
-      if (state.phase === 'choice') continue;
-      if (state.phase !== 'settlement') throw new Error(`Equipment route stopped at ${state.roundDefinitionId}/${state.phase}`);
-      state = accepted(api.nextRound(state, state.round));
-    }
-    for (const [slot, definitionId] of definitions.entries()) {
-      const available = [...inventory()];
-      const inputs = ITEM_DEFINITIONS[definitionId].recipe!.map(component => {
-        const index = available.findIndex(item => item.definitionId === component);
-        if (index < 0) throw new Error(`Public route did not acquire ${component} for ${definitionId}`);
-        return available.splice(index, 1)[0].id;
-      });
-      const combined = api.combineItems(state, inputs[0], inputs[1]);
-      state = accepted(combined);
-      if (!combined.ok) throw new Error(combined.reason);
-      const event = combined.events.find(event => event.type === 'itemCombined');
-      if (!event || event.type !== 'itemCombined') throw new Error('Missing public item combination');
-      state = accepted(api.equipItem(state, event.itemId, 'unit-1', slot));
-    }
-    equipmentPreparations.set(key, publicHeraldTarget(state));
-  }
+  if (!equipmentPreparations.has(key))
+    equipmentPreparations.set(key, buildRawHeraldEquipment(publicNeutralEquipmentChoice(), definitions));
   return restoreMatch(serializeMatch(equipmentPreparations.get(key)!));
+}
+
+const heraldRawText: Readonly<Record<string, string>> = {
+  'ionic-spark': ionicRaw, evenshroud: evenshroudRaw, 'ionic-spark--evenshroud': dualRaw,
+  quicksilver: quicksilverRaw, 'edge-of-night': edgeRaw,
+};
+/** Parse afresh inside the calling test's timer. This returns untrusted
+ * raw input, never a cached restored graph. Only the five approved cases exist. */
+export function publicHeraldRawInput(definitions: readonly string[]): unknown {
+  const entry = HERALD_RAW_CASES.find(entry => JSON.stringify(entry.definitions) === JSON.stringify(definitions));
+  if (!entry) throw new Error('No approved raw Herald fixture for requested equipment');
+  return JSON.parse(heraldRawText[entry.name]);
 }
