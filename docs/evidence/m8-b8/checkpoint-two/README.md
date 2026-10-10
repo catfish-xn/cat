@@ -146,3 +146,7 @@
 CI183同75c8的input dev/preview各31case真实验证通过，原undefined.input未重现；但后续touch-route因golden失败，两个job整体仍失败。M7整job通过；六构筑browser仍未跨golden前置。具体job链接与原日志见验证报告。②仍未完成且未外部签收，不解除剩余延期，不合PR、不进入③/B9。
 
 CI183已于05:36:49Z结束failure（attempt1、75c8）：3成功M7/U3/retention、9失败test/六browser/两input、3skip compare/两optional。CI单测15文件失败/110通过、92项失败/1674通过/10skip，563.50s，与本机一致；test job后续build/headless/performance未执行。精确job与原始元数据见固定验证报告，不把retention成功或input局部成功扩大为全CI通过。
+
+### 用户批准完整B8预算并继续②
+
+2026-10-10批准整批中值18000/严格超过23400 B暂停，基线488964对应512364 B，总552191 B不变。旧线触发、优化和重评历史保留，当前以[正式账本§10](../../../M8_REMAINING_JS_BUDGET_PLAN.md)为准。先按92失败共同根因修复②，不把前次CI183作为后续代码验收。75c8→d4f6精确差异为3文档提交、21个docs文件，702增/1删，无src/tests/scripts/config/package变化。首层81缺来源/重复注入、3旧阶段前提、8golden；尚未确认新生产缺陷/合法误拒/环境问题，不据此免除后续正确性检查。
