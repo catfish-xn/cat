@@ -36,3 +36,11 @@
 双口径每JS gzip9：固定基线488964，生产**502898（+13934）**；全导出可达**503479（+14515）**。均低于B8整批512364与总552191。581B探针差包含包装/导出保留/压缩布局；Rollup新增198未压缩字节不能换算精确gzip成本。生产pendingChoice权威校验完整。旧13k触线、优化、用户重评为中18k/暂停23.4k的历史保留于正式预算账本。
 
 尚待：最终含本包HEAD的完整CI（含原关闭点的真实M6、全浏览器/输入/compare门禁）、如有新失败的精确闭环、用户外部Codex正式②签收。10unit/5native-input既有延期按检查点边界保留，未扩大，不把②全绿等同整批B8完成。
+
+## 送审后定向诊断更新：P2仍开放
+
+外部定向只读评论6095230143（不是②签收）独立复现TG5503/5775ms超原5s；CI207同源码首次TG7910ms、1851pass/1fail/10skip。随后CI208 test-and-build132files/1852pass/10skip通过不能抹除这些失败或单独证明稳定余量。详见 [TG分段及范围阻塞](tg43-p2-segmented/README.md)：35真实路线/43定义/705断言、105战15969ticks不变，本机一次诊断77%在公开准备；无已证足够的范围内去重，额外生产优化须新授权。
+
+input-dev P2仍未关闭。后续独立诊断提交a50d6e8（远端e77dd38da5c525b1915698a0663472724ff1fdcb）补DEBUG pw:browser及page/context close、catch状态/close调用位置；三个原evaluate正文不变。低成本本机Chrome启动受socket权限阻断，不能冒称真实page/context分类已验证，证据见[browser-close-process-diagnostic](browser-close-process-diagnostic/README.md)。最终应以带新诊断的实际SHA CI为准。
+
+作者本地4d9到公开eecca的完整1284树项/1205blob及原commit对象补证见[local-4d9-tree-binding](local-4d9-tree-binding/README.md)，可由正常clone仅用公开eecca复核。它是作者核对材料，不冒充独立认证历史未提交工作区。②继续未签收。
