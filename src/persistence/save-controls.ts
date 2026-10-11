@@ -123,6 +123,8 @@ function createLegacySection(root: HTMLElement, list: () => Promise<LegacyListRe
   const feedback = document.createElement('p'); feedback.setAttribute('role', 'status'); feedback.dataset.debug = 'm8-legacy-status';
   const refresh = document.createElement('button'); refresh.type = 'button'; refresh.textContent = '刷新旧版记录'; refresh.dataset.debug = 'm8-legacy-refresh';
   refresh.style.minHeight = '44px'; refresh.style.minWidth = '44px'; refresh.style.margin = '4px';
+  // Shown only when there is something to say: records to export, or a listing failure (never an empty block).
+  section.hidden = true;
   section.append(heading, note, refresh, items, feedback); root.append(section);
   let listRequest = 0, exportRequest = 0, selected: string | null = null;
   const load = async () => {
@@ -131,7 +133,8 @@ function createLegacySection(root: HTMLElement, list: () => Promise<LegacyListRe
     try { result = await list(); } catch { result = { ok: false, namespace: 'hex-autobattler-m6', reason: 'read-failed' }; }
     if (disposed() || id !== listRequest) return;
     items.replaceChildren();
-    if (!result.ok) { feedback.textContent = `无法列出旧版记录：${LEGACY_FAILURE[result.reason]}。这不表示没有旧记录。`; return; }
+    if (!result.ok) { feedback.textContent = `无法列出旧版记录：${LEGACY_FAILURE[result.reason]}。这不表示没有旧记录。`; section.hidden = false; return; }
+    section.hidden = result.records.length === 0;
     feedback.textContent = result.records.length ? `共 ${result.records.length} 条旧版记录。` : '没有旧版记录。';
     for (const record of result.records) items.append(row(record));
   };

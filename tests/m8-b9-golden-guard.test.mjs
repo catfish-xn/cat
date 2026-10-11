@@ -18,11 +18,25 @@ describe('B9 reviewed golden migration', () => {
     expect(sha('tests/fixtures/m5/full-match-golden.json')).toBe(audit.candidateSha256);
     expect(sha('tests/fixtures/m5/full-match-golden.pre-m8-b9.json')).toBe(audit.previousGoldenSha256);
     expect(sha('scripts/update-m8-b9-golden.cjs')).toBe(audit.updaterSha256);
+    // The committed evidence is a clean-tree reproduction whose raw trajectories are committed beside it.
+    const capture = JSON.parse(readFileSync(join(root, 'docs/evidence/m8-b9/golden/capture-complete.json'), 'utf8'));
+    expect(audit.reproducedCommittedGolden).toBe(true);
+    expect(capture.newDirty).toBe(false);
+    expect(Object.keys(capture.files).sort()).toEqual(['cannon', 'mage', 'sniper', 'sniper-caitlyn'].flatMap(b => [`new-${b}.json.gz`, `old-${b}.json.gz`]).sort());
+    for (const [file, digest] of Object.entries(capture.files)) expect(sha(`docs/evidence/m8-b9/golden/${file}`)).toBe(digest);
     for (const build of ['cannon', 'sniper', 'mage', 'sniper-caitlyn']) {
       const report = audit.report.builds[build];
       expect(report.battles).toBe(33); expect(report.outcome).toBe('victory');
       expect(report.resolvedReferences).toBeGreaterThan(0);
       expect(Object.keys(report.stateDifferences).sort()).toEqual(['ledgerLength', 'sequence', 'version']);
+    }
+  });
+  it('binds the regenerated Herald fixtures to their classified migration evidence', () => {
+    const herald = JSON.parse(readFileSync(join(root, 'docs/evidence/m8-b9/herald-diff.json'), 'utf8'));
+    expect(Object.keys(herald.files).sort()).toEqual(['edge-of-night.json', 'evenshroud.json', 'ionic-spark--evenshroud.json', 'ionic-spark.json', 'quicksilver.json', 'trajectory.json']);
+    for (const [file, entry] of Object.entries(herald.files)) {
+      expect(sha(`tests/fixtures/m8-herald-raw/${file}`)).toBe(entry.newSha256);
+      expect(entry.oldSha256).not.toBe(entry.newSha256);
     }
   });
   it('classifies only the frozen version/digest/sequence/ledger-length paths', () => {

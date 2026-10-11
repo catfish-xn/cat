@@ -1,0 +1,113 @@
+{
+  "base": "52413d0dbb931bbeae2b988c7fedc0f6427e4a12",
+  "generator": "scripts/verify-m8-herald-fixtures.cjs --write",
+  "files": {
+    "ionic-spark.json": {
+      "oldSha256": "257f983de36cf90febbd1c2132a61ec6b8a59244c03f08403fe24389e421c693",
+      "newSha256": "a530483bdbaeb7c2f218c4dc24cef09c53f67b66c16a181ab938e25442b95fc5",
+      "classes": {
+        "version": 4,
+        "sequence": 16,
+        "ledgerLength": 32
+      },
+      "paths": [
+        "/contentDigest",
+        "/contentVersion",
+        "/m8/loot/earnedEvidence/N/death/eventSeq",
+        "/roundResults/N/combatEventCount",
+        "/rulesVersion",
+        "/schemaVersion"
+      ]
+    },
+    "evenshroud.json": {
+      "oldSha256": "5950dff489cbe400d013df1d70c983292ea7926973ad0ae6e6dc39af88b6cc90",
+      "newSha256": "8660e4aabab4221bd7f73f98d1fdb3a424ed977ed275025ba585f70b26a20663",
+      "classes": {
+        "version": 4,
+        "sequence": 16,
+        "ledgerLength": 32
+      },
+      "paths": [
+        "/contentDigest",
+        "/contentVersion",
+        "/m8/loot/earnedEvidence/N/death/eventSeq",
+        "/roundResults/N/combatEventCount",
+        "/rulesVersion",
+        "/schemaVersion"
+      ]
+    },
+    "ionic-spark--evenshroud.json": {
+      "oldSha256": "91902672812477d1f91678d2e523ee25acaefe726d29b5ce71d7fa8f8b336700",
+      "newSha256": "0c7d0971c5a9518b5a233032c8534ac64f37230794335232c57a8b921d34366a",
+      "classes": {
+        "version": 4,
+        "sequence": 16,
+        "ledgerLength": 32
+      },
+      "paths": [
+        "/contentDigest",
+        "/contentVersion",
+        "/m8/loot/earnedEvidence/N/death/eventSeq",
+        "/roundResults/N/combatEventCount",
+        "/rulesVersion",
+        "/schemaVersion"
+      ]
+    },
+    "quicksilver.json": {
+      "oldSha256": "0af7a5a84d66bef419ed5054b027c3721da42194bd1583a2f93b9399a14308c7",
+      "newSha256": "ecc7518f17dce209a5559a5a1fe56830e55a98b7d3bf7dc16530f5e5fb4c45a6",
+      "classes": {
+        "version": 4,
+        "sequence": 16,
+        "ledgerLength": 32
+      },
+      "paths": [
+        "/contentDigest",
+        "/contentVersion",
+        "/m8/loot/earnedEvidence/N/death/eventSeq",
+        "/roundResults/N/combatEventCount",
+        "/rulesVersion",
+        "/schemaVersion"
+      ]
+    },
+    "edge-of-night.json": {
+      "oldSha256": "b21c3e0b40cd619ecc148cdaf40cba242153c175a05baf6c3a5b25ab0060e089",
+      "newSha256": "a687cbf430964ff56d24e65442bfa6ed294ddb24d4c455c2e3a9cd0419f69898",
+      "classes": {
+        "version": 4,
+        "sequence": 16,
+        "ledgerLength": 32
+      },
+      "paths": [
+        "/contentDigest",
+        "/contentVersion",
+        "/m8/loot/earnedEvidence/N/death/eventSeq",
+        "/roundResults/N/combatEventCount",
+        "/rulesVersion",
+        "/schemaVersion"
+      ]
+    },
+    "trajectory.json": {
+      "oldSha256": "8213c3de87c41bdeb6f71c9543ce0bece18cc776780b57505276edad48421b6a",
+      "newSha256": "e5bfb8e719ccf6e1ad5fa72add5ba91ad3eceb29897ce1d3f6cf36a4fc7d2776",
+      "classes": {
+        "hashOrLedgerLength": 1188
+      },
+      "paths": [
+        "/branches/N/battles/N/eventsSha256",
+        "/branches/N/battles/N/result/combatEventCount",
+        "/branches/N/battles/N/resultSha256",
+        "/branches/N/battles/N/startSha256",
+        "/branches/N/commands/N/afterSha256",
+        "/branches/N/commands/N/beforeSha256",
+        "/branches/N/rawStateSha256",
+        "/prefix/battles/N/eventsHash",
+        "/prefix/battles/N/result/combatEventCount",
+        "/prefix/battles/N/stateHash",
+        "/prefix/commands/N/afterHash",
+        "/prefix/commands/N/beforeHash",
+        "/prefix/rawPrefixSha256"
+      ]
+    }
+  }
+}

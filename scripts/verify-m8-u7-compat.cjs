@@ -30,6 +30,9 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
 
     // Seed a real M7 v1 library at this origin, then load the application against it.
     await page.goto(url); await page.waitForFunction(() => window.__CAT_DEBUG__);
+    await page.waitForFunction(() => !document.querySelector('[data-debug="m8-legacy-status"]')?.textContent.includes('正在读取'), null, { timeout: 30000 });
+    check(await page.locator('[data-debug="m8-legacy-records"]').isHidden(), 'without an M7 library the legacy section stays hidden');
+    check(!(await page.evaluate(() => indexedDB.databases())).some(db => db.name === 'hex-autobattler-m6'), 'listing at startup never creates the M7 library');
     await page.evaluate(async ([a, h]) => {
       const db = await new Promise((resolve, reject) => { const open = indexedDB.open('hex-autobattler-m6', 1); open.onupgradeneeded = () => { for (const s of ['metadata', 'runs', 'battles']) open.result.createObjectStore(s); }; open.onsuccess = () => resolve(open.result); open.onerror = () => reject(open.error); });
       await new Promise((resolve, reject) => { const tx = db.transaction(['metadata', 'runs', 'battles'], 'readwrite'); tx.oncomplete = resolve; tx.onabort = () => reject(tx.error);

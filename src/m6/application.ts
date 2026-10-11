@@ -170,7 +170,8 @@ export class MatchApplication {
       let candidate: SaveEnvelope;
       try { candidate = await make(); }
       catch (error) { if (error instanceof CompatibilityError && !this.disposed && id === this.operation) this.compatibility = error.view; throw error; }
-      this.compatibility = currentView();
+      // A notice describes a file or saved slot; a brand-new match (allowUnsavedInitial) has none.
+      this.compatibility = allowUnsavedInitial ? null : currentView();
       // Build and validate the candidate before touching persisted or active state.
       const ledger = candidate.currentBattle?.events ?? candidate.battles.find(record => record.combatId === candidate.match.combat?.combatId)?.events ?? [];
       prepared = new MatchSession(candidate.match, ledger);

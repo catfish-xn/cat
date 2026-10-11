@@ -2,6 +2,7 @@
  *   node scripts/update-m8-b9-golden.cjs --capture <tmp-dir>          old = c109d4e tree, new = working tree
  *   node scripts/update-m8-b9-golden.cjs --audit <tmp-dir>            writes only into <tmp-dir>
  *   node scripts/update-m8-b9-golden.cjs --apply <tmp-dir> <audit-sha256>
+ *   node scripts/update-m8-b9-golden.cjs --record <tmp-dir>           after apply: clean-tree reproduction -> docs/evidence
  * The audit proves, per build, that the four normal-input command transcripts are identical, every committed
  * Match state is identical after removing only the version tuple / content digest / event-sequence fields,
  * and every replay2 ledger fact equals the corresponding pre-switch fact (M8_RULES §10). Golden hashes are
@@ -219,7 +220,9 @@ function audit(folder) {
   const done = read(path.join(folder, 'capture-complete.json'));
   for (const [file, digest] of Object.entries(done.files)) assert.equal(sha(fs.readFileSync(path.join(folder, file))), digest, `${file} unchanged since capture`);
   assert.equal(done.oldCommit, OLD_COMMIT);
-  const goldenBytes = fs.readFileSync(GOLDEN), golden = JSON.parse(goldenBytes), candidate = structuredClone(golden), report = { builds: {} };
+  // Reproduce mode: once applied, the archived pre-switch golden is the baseline and the candidate must equal the committed golden.
+  const reproducing = fs.existsSync(ARCHIVE);
+  const goldenBytes = fs.readFileSync(reproducing ? ARCHIVE : GOLDEN), golden = JSON.parse(goldenBytes), candidate = structuredClone(golden), report = { builds: {} };
   for (const build of BUILDS) {
     const previous = loadRoute(folder, 'old', build), current = loadRoute(folder, 'new', build);
     assert.deepEqual(frozen(previous), golden.routes[build], `${build}: old capture reproduces the exact current golden`);
@@ -267,7 +270,8 @@ function audit(folder) {
   }
   candidate.note = `${golden.note ?? ''} B9 version switch (schema6/m8-14.24b-v1/s13-14.24b-m8-v1, save2/replay2) re-records hashes only: commands, settlements, resources and every ledger fact are unchanged (docs/evidence/m8-b9/golden/audit.json); the previous golden is archived as pre-m8-b9.`.trim();
   write(path.join(folder, 'candidate.json'), candidate);
-  const result = { kind: 'm8-b9-version-switch-golden-v1', oldCommit: OLD_COMMIT, capture: done, previousGoldenSha256: sha(goldenBytes),
+  if (reproducing) assert.equal(sha(fs.readFileSync(path.join(folder, 'candidate.json'))), sha(fs.readFileSync(GOLDEN)), 'recapture reproduces the committed golden byte for byte');
+  const result = { reproducedCommittedGolden: reproducing, kind: 'm8-b9-version-switch-golden-v1', oldCommit: OLD_COMMIT, capture: done, previousGoldenSha256: sha(goldenBytes),
     candidateSha256: sha(fs.readFileSync(path.join(folder, 'candidate.json'))), updaterSha256: sha(fs.readFileSync(__filename)), report };
   write(path.join(folder, 'audit.json'), result);
   console.log(JSON.stringify({ audit: sha(fs.readFileSync(path.join(folder, 'audit.json'))), builds: Object.fromEntries(Object.entries(report.builds).map(([b, r]) => [b, r.stateDifferences])) }));
@@ -287,12 +291,22 @@ function apply(folder, reviewed) {
   fs.writeFileSync(GOLDEN, candidateBytes);
   console.log(JSON.stringify({ applied: true, archive: path.relative(ROOT, ARCHIVE) }));
 }
+/** Copies a clean-tree reproduction into the committed evidence directory (audit, capture metadata, raw trajectories). */
+function record(folder) {
+  const result = read(path.join(folder, 'audit.json')), done = read(path.join(folder, 'capture-complete.json'));
+  assert.equal(result.reproducedCommittedGolden, true, 'record only a reproduction of the committed golden');
+  assert.equal(done.newDirty, false, 'record only a capture of a clean committed tree');
+  assert.equal(result.updaterSha256, sha(fs.readFileSync(__filename)), 'updater changed after audit');
+  fs.mkdirSync(EVIDENCE, { recursive: true });
+  for (const file of ['audit.json', 'capture-complete.json', ...Object.keys(done.files)]) fs.copyFileSync(path.join(folder, file), path.join(EVIDENCE, file));
+  console.log(JSON.stringify({ recorded: Object.keys(done.files).length + 2, newHead: done.newHead }));
+}
 module.exports = { leafDifferences, classify, oldFacts, newFacts, ledgerAudit, OLD_COMMIT };
 if (require.main === module) {
   const [mode, a, b, c] = process.argv.slice(2);
   const run = mode === '--route' ? () => routeChild(a, b, c)
     : mode === '--capture' ? () => capture(path.resolve(a)) : mode === '--audit' ? () => audit(path.resolve(a)) : mode === '--apply' ? () => apply(path.resolve(a), b)
-    : () => assert.fail('Use --capture, --audit or --apply');
+    : mode === '--record' ? () => record(path.resolve(a)) : () => assert.fail('Use --capture, --audit, --apply or --record');
   if (mode !== '--route') assert(path.resolve(a ?? '.').startsWith(os.tmpdir() + path.sep), 'staging must be under the system tmp directory');
   Promise.resolve().then(run).catch(error => { console.error(error); process.exitCode = 1; });
 }
