@@ -20,7 +20,7 @@
  *         settlement and loot) is included in the budget sample and also reported separately.
  *     (b) 9v9 engine pressure: tests/fixtures/m8/pressure-9v9.cjs, variants "distinct" and "mirror"; 18 units,
  *         three-star, three M8 completed items each. One discarded warm-up combat per variant (rng 0), then
- *         rng seeds 1..N (default 20) per variant; hrtime brackets stepCombat(state) only.
+ *         rng seeds 1..N (default 30) per variant; hrtime brackets stepCombat(state) only.
  *   browser - Vite dev server on port 0 (`--target=preview` serves the existing dist/ instead; run
  *         `npm run build` first). The densest pre-battle preparation of the full-load seed-42 route (most
  *         units on board, then most equipment, then most events) is exported as an ordinary save envelope
@@ -32,7 +32,7 @@
  *         hidden are counted and reported separately (expected 0) and excluded from the budget statistic.
  *
  * Usage:
- *   node scripts/verify-m8-performance.cjs              # formal: all parts, 30 seeds, 20 reps, whole combat
+ *   node scripts/verify-m8-performance.cjs              # full sample: all parts, 30 seeds, 30 reps, whole combat
  *   node scripts/verify-m8-performance.cjs --strict     # same, exit 1 when any budget fails
  *   node scripts/verify-m8-performance.cjs --part=domain --seeds=3 --pressure-reps=3        # smoke
  *   node scripts/verify-m8-performance.cjs --part=browser --browser-window-ms=5000          # smoke
@@ -55,7 +55,7 @@ const FULL_RUNS = Object.freeze([
 const PRESSURE_VARIANTS = ['distinct', 'mirror'];
 const BROWSER_ROUTE = Object.freeze({ build: 'full-load', seed: 42 });
 const BUDGETS = Object.freeze({ domainTickMs: Object.freeze({ p95: 5, p99: 10 }), frameIntervalMs: Object.freeze({ p95: 33.3, p99: 50 }) });
-const FORMAL = Object.freeze({ seeds: 30, pressureReps: 20, browserWindowMs: 0 });
+const FORMAL = Object.freeze({ seeds: 30, pressureReps: 30, browserWindowMs: 0 });
 const VIEWPORT = Object.freeze({ width: 1440, height: 1000 });
 const BROWSER_COMBAT_CAP_MS = 120000;
 
@@ -123,7 +123,7 @@ function activeEntries(combat) {
   for (const unit of combat?.units ?? []) {
     if (!unit.alive) continue;
     statuses += (unit.statuses?.length ?? 0) + (unit.mechanismState?.statuses?.length ?? 0);
-    tasks += unit.tasks?.length ?? 0; shields += unit.shieldLayers?.length ?? 0;
+    tasks += (unit.tasks?.length ?? 0) + (unit.mechanismState?.periodicTasks?.length ?? 0); shields += unit.shieldLayers?.length ?? 0;
   }
   return { statuses, tasks, shields };
 }
@@ -358,6 +358,12 @@ async function browserPart() {
     browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--enable-unsafe-swiftshader', '--enable-precise-memory-info'],
       ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
     result.browser = { version: browser.version(), executable: process.env.CHROMIUM_PATH ?? 'playwright default', headless: true };
+    const browserCDP = await browser.newBrowserCDPSession();
+    const system = await browserCDP.send('SystemInfo.getInfo');
+    result.browser.gpu = { devices: system.gpu.devices, renderer: system.gpu.auxAttributes?.glRenderer ?? null,
+      featureStatus: system.gpu.featureStatus };
+    result.browser.hardwareAccelerated = !/swiftshader|llvmpipe|software/i.test(JSON.stringify(result.browser.gpu));
+    await browserCDP.detach();
     for (const mode of ['normal', 'reduced']) {
       const context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: mode === 'reduced' ? 'reduce' : 'no-preference' });
       const page = await context.newPage(), errors = [];
@@ -453,6 +459,10 @@ async function main() {
       const browser = await browserPart();
       fs.writeFileSync(path.join(OUTPUT, 'browser.json'), JSON.stringify(browser, null, 2));
       manifest.environment.chromium = browser.browser;
+      manifest.frameAcceptanceEligible = browser.browser.hardwareAccelerated;
+      manifest.frameAcceptanceNote = browser.browser.hardwareAccelerated
+        ? 'Foreground visibility and complete-segment requirements must also hold.'
+        : 'Software graphics: report all measured values, but do not use these frame intervals to sign off desktop GPU performance.';
       manifest.browser = { target: browser.target, segment: browser.segment, durationMs: browser.durationMs, evidence: 'browser.json' };
       for (const mode of ['normal', 'reduced']) {
         const m = browser.modes[mode];
@@ -468,7 +478,8 @@ async function main() {
   manifest.environment.loadAverageAtEnd = os.loadavg();
   manifest.endedAt = new Date().toISOString();
   manifest.durationMs = Date.now() - started.getTime();
-  manifest.allBudgetsPass = manifest.metrics.length > 0 && manifest.metrics.every(metric => metric.pass);
+  const expectedMetrics = OPTIONS.part === 'all' ? 5 : OPTIONS.part === 'domain' ? 3 : 2;
+  manifest.allBudgetsPass = manifest.errors.length === 0 && manifest.metrics.length === expectedMetrics && manifest.metrics.every(metric => metric.pass);
   write();
   for (const metric of manifest.metrics) console.log(`${metric.pass ? 'PASS' : 'FAIL'} ${metric.id}: n=${metric.count} p50=${metric.p50?.toFixed(3)} p95=${metric.p95?.toFixed(3)} p99=${metric.p99?.toFixed(3)} max=${metric.max?.toFixed(3)} (budget p95<=${metric.threshold.p95}, p99<=${metric.threshold.p99})`);
   console.log(`manifest: ${path.join(OUTPUT, 'manifest.json')}${formal ? '' : ' (non-formal options: smoke evidence only)'}`);

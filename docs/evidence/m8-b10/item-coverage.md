@@ -1,6 +1,6 @@
 # M8 B10 装备覆盖矩阵（自动生成）
 
-由 `node scripts/m8-b10-item-coverage.cjs` 生成；按测试源码统计，不运行测试；测试是否通过以同 SHA 的 `npm test` 为准。共 44 件，143 个测试文件。
+由 `node scripts/m8-b10-item-coverage.cjs` 生成；按测试源码统计，不运行测试；测试是否通过以同 SHA 的 `npm test` 为准。共 44 件，144 个测试文件。
 带 * 的文件遍历整个冻结目录（脚本校验其仍遍历 44 件）；其余文件按名提到该装备。前三列是 M8_PLAN §7.1 要求的 independentTest → combatTest → save/replayTest，“缺”即缺口；获取/经济列仅供参考（获取由通用组件池/掉落规则覆盖，不按件要求）。
 
 | contentId | 类型 | 来源约定 | 独立数值 | 实战触发 | 存档/回放 | 获取/经济（参考） | 按名文件数 |
