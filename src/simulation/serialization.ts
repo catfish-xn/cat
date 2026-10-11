@@ -8,7 +8,7 @@ import { asSource } from './m8/s13-definitions';
 import { validateComponentCandidates } from './component-pool';
 import { compileItemCrit } from './m8/item-program';
 import type { MatchState } from './match-types';
-import { CONTENT_DIGEST, canonicalContent } from './content';
+import { CONTENT_DIGEST, assertParsedContent, canonicalContent } from './content';
 import { UNIT_DEFINITIONS } from './units';
 import { ITEM_DEFINITIONS } from './content/items';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -54,7 +54,9 @@ function validPreparationExperience(before:number,level:number,xp:number):boolea
  */
 export function restoreMatch(input: unknown): MatchState {
   const raw: unknown = typeof input === 'string' ? JSON.parse(input) : input;
-  canonicalContent(raw); // Reject functions, undefined, nonfinite values and non-plain containers.
+  // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
+  // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
+  if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
   record(raw);
   requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
