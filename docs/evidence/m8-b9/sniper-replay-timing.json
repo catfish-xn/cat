@@ -1,0 +1,26 @@
+{
+  "kind": "m8-b9-sniper-replay-timing-v1",
+  "question": "CI #226 tests/m5-replay.test.ts sniper exceeded its 180000 ms test timeout; is this a node-2 regression?",
+  "method": "Read-only extraction of the npm test step of test-and-build-sample1 from GitHub Actions logs (full logs, no reruns). No timeout or threshold changed.",
+  "workload": "Identical in every row from c109d4e on: cannon 194/8467, sniper 182/11930, mage 176/12380, sniper-caitlyn 185/11571 (commands/ticks).",
+  "runs": [
+    { "run": 224, "attempt": 1, "job": 114253554173, "sha": "c109d4ebc24bb5de60c1adfa4cad2e5ca5e816fd", "role": "node-2 base (node 1 signed off)", "result": "failed: sniper timed out",
+      "replaySeconds": { "cannon": 131.41, "sniper": 184.45, "mage": 179.15, "sniperCaitlyn": 169.63 }, "m6IntegrationMs": 369531, "m6IntegrationSkipped": 4 },
+    { "run": 224, "attempt": 2, "job": 114260595021, "sha": "c109d4ebc24bb5de60c1adfa4cad2e5ca5e816fd", "role": "node-2 base", "result": "passed",
+      "replaySeconds": { "cannon": 132.93, "sniper": 178.12, "mage": 170.41, "sniperCaitlyn": 162.93 }, "m6IntegrationMs": 361287, "m6IntegrationSkipped": 4 },
+    { "run": 225, "job": 114348613694, "sha": "abd2ed8f2739fc56496877b58ad472845625f9b6", "result": "passed",
+      "replaySeconds": { "cannon": 96.48, "sniper": 138.37, "mage": 130.18, "sniperCaitlyn": 125.37 }, "m6IntegrationMs": 312091, "m6IntegrationSkipped": 0 },
+    { "run": 226, "job": 114351172128, "sha": "abd2ed8f2739fc56496877b58ad472845625f9b6", "result": "failed: sniper timed out",
+      "replaySeconds": { "cannon": 131.28, "sniper": 186.64, "mage": 179.86, "sniperCaitlyn": 167.80 }, "m6IntegrationMs": 410931, "m6IntegrationSkipped": 0 },
+    { "run": 227, "job": 114358638514, "sha": "eb6e761259d97266fe31b77f2f19697cee8b7789", "result": "passed",
+      "replaySeconds": { "cannon": 123.84, "sniper": 175.63, "mage": 169.85, "sniperCaitlyn": 165.04 }, "m6IntegrationMs": 406615, "m6IntegrationSkipped": 0 }
+  ],
+  "findings": [
+    "The node-2 base c109d4e fails the same way on identical work (run 224 attempt 1: sniper 184.45 s, timed out); its passing attempt left 1.9 s.",
+    "The same commit abd2ed8 measured 138.37 s (run 225) and 186.64 s (run 226): runner-to-runner spread of about 35% with no code difference.",
+    "Node-2 samples (138.37, 186.64, 175.63 s) lie within the base distribution (184.45, 178.12 s); no node-2 regression is shown, and none is excluded.",
+    "Vitest runs files in parallel (forks pool, no config); m6-integration overlaps the sniper replay in every sample, so the replay shares the runner CPU.",
+    "Sniper is the longest replay (182 commands, 11930 ticks, every command and tick restored), so it sits closest to the fixed 180 s timeout."
+  ],
+  "disposition": "Kept as an independent, pre-existing performance issue: no CI rerun to get green, the 180 s timeout is not raised, and no test is skipped. A fix (making the replay check cheaper without weakening it, or isolating it from parallel files) needs its own decision."
+}
