@@ -84,6 +84,8 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
     const epoch = after.m6.token.activationEpoch;
     await page.locator('[data-debug="m6-import"]').setInputFiles(currentFile);
     await page.waitForFunction(epoch => { const s = window.__CAT_DEBUG__.read(); return s.m6.mode === 'active' && s.m6.token?.activationEpoch !== epoch; }, epoch, { timeout: 60000 });
+    // Activation installs the session before the controls re-sync after archive loading; wait for the notice itself.
+    await page.waitForFunction(() => document.querySelector('[data-debug="m8-compatibility"]')?.textContent.includes('可继续对局与回放'), null, { timeout: 30000 });
     check((await page.locator('[data-debug="m8-compatibility"]').textContent()).includes('可继续对局与回放'), 'current import shows the current notice');
     check((await page.locator('.m6-save-controls p').allTextContents()).some(text => text.includes('将替换当前自动存档（') && text.includes('旧版（M7）记录不受影响')), 'replacement impact names the round and battles');
     check((await rows.count()) === 2, 'legacy library still lists both records after M8 activity');
