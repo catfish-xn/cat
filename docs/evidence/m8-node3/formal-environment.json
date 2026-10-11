@@ -1,0 +1,29 @@
+{
+  "sampledAt": "2026-10-11T14:24:27.425941+00:00",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "baseline": "f58c9fe1e55de9ca6b5c8be618d49aa02d789f45",
+  "candidate": "cf76af02ccc70e9b7adb94c718bbb2e0365b8acd",
+  "candidateSrcTree": "370b3bf4da2b0c86f2782f79b5acc7f1e4b46963",
+  "cpuQuota": "400000 100000",
+  "memoryLimit": "17179869184",
+  "cpuStatDuringBaselineStart": "usage_usec 14900678863\nuser_usec 13346852593\nsystem_usec 1553826269\nnice_usec 0\nnr_periods 76816\nnr_throttled 8460\nthrottled_usec 304652429\nnr_bursts 0\nburst_usec 0\n",
+  "memoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+  "notes": "Both runs use original unmodified script --part=domain --target=preview, same Node22.23.3/dependencies/container; no local concurrent test/build/browser. Environment sampled after start, not a continuous peak measurement.",
+  "dependencySymlinkNote": {
+    "observedAt": "2026-10-11T14:32:37.114006+00:00",
+    "baselineAndCandidateTarget": "/workspace/cat/node_modules",
+    "baselineOriginalUntrackedStatus": "?? node_modules",
+    "explanation": "Directory ignore node_modules/ did not ignore a symlink; original baseline report retains that value. Only dependency symlink is untracked, tracked diff is empty. Local git info/exclude now excludes this symlink for future identity snapshots; no original report rewritten."
+  },
+  "baselineTrackedDiff": "",
+  "betweenRuns": {
+    "sampledAt": "2026-10-11T14:47:46.538619+00:00",
+    "cpuStat": "usage_usec 16614831251\nuser_usec 15007386032\nsystem_usec 1607445219\nnice_usec 0\nnr_periods 90644\nnr_throttled 8484\nthrottled_usec 305632207\nnr_bursts 0\nburst_usec 0\n",
+    "memoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  },
+  "afterCandidate": {
+    "sampledAt": "2026-10-11T15:12:59.829236+00:00",
+    "cpuStat": "usage_usec 18527929390\nuser_usec 16851410829\nsystem_usec 1676518561\nnice_usec 0\nnr_periods 105731\nnr_throttled 8538\nthrottled_usec 309139625\nnr_bursts 0\nburst_usec 0\n",
+    "memoryEvents": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n"
+  }
+}

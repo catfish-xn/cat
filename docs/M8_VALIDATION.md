@@ -98,6 +98,6 @@ BR4 补充脚本和证据归档后的最终 HEAD 重新执行原完整 CI；最�
 
 ## 外部签收与交付
 
-9v9 CPU 压力预算未达；独立审查、硬件桌面性能和用户试玩不能由实现作者自我签收。PR 保持 draft，main 与 Pages 未改。issue #23 仅依据节点二同 SHA CI #229、PR #29 合并签收说明关闭，不能作为 B10 独立签收。
+9v9 CPU 压力预算未达；固定 f58 的只读[功能源码/证据独立审查](M8_NODE3_FUNCTIONAL_REVIEW.md)范围内无新 P1/P2，未独立重跑 CI 或浏览器，不签收性能分支、硬件桌面性能或用户试玩。独立性能分支、新的配对测量及提案见 [M8_NODE3_PERFORMANCE.md](M8_NODE3_PERFORMANCE.md)；本页原报告不改标签。PR 保持 draft，main 与 Pages 未改。issue #23 仅依据节点二同 SHA CI #229、PR #29 合并签收说明关闭，不能作为 B10 独立签收。
 
 固定代码报告在 [results-d901b3f](evidence/m8-b10/results-d901b3f/)，BR4 干净复验及源码等价绑定在 [results-b4ca11c](evidence/m8-b10/results-b4ca11c/)。两者 src tree 均为 `49fb300c5ca6f014201f289a87f8d5a54649c551`，tests tree 均为 `3509408ef4fee47d6ca76deaeb9cc146fe8ab7fa`；压力测量后只新增 BR4 脚本，没有把旧测量重贴成新 SHA。完整日志、截图、公开存档及原始生成物保留于 `artifacts/`，不纳入运行包或 Git；可复查的预览包和 SHA256 清单见交付说明。H1 保持告警模式；issue #27、#11 与未定位 H3 不写成已解决。

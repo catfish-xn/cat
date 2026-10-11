@@ -1,0 +1,411 @@
+{
+  "kind": "m8-performance",
+  "plan": "M8_PLAN.md §7.6",
+  "blocking": false,
+  "strict": false,
+  "formal": false,
+  "options": {
+    "part": "domain",
+    "seeds": 30,
+    "pressureReps": 30,
+    "browserWindowMs": 0,
+    "target": "preview",
+    "strict": false
+  },
+  "environment": {
+    "gitSha": "f58c9fe1e55de9ca6b5c8be618d49aa02d789f45",
+    "gitDirty": "?? node_modules",
+    "node": "v22.23.3",
+    "platform": "linux-x64",
+    "cpuCount": 5,
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "memoryBytes": 18932244480,
+    "loadAverageAtStart": [
+      1.06,
+      0.99,
+      0.79
+    ],
+    "playwright": "1.63.0",
+    "vite": "7.3.6",
+    "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+    "loadAverageAtEnd": [
+      1.15,
+      1.32,
+      1.24
+    ]
+  },
+  "startedAt": "2026-10-11T14:23:55.365Z",
+  "budgets": {
+    "domainTickMs": {
+      "p95": 5,
+      "p99": 10
+    },
+    "frameIntervalMs": {
+      "p95": 33.3,
+      "p99": 50
+    }
+  },
+  "fullRunSeeds": [
+    {
+      "build": "cannon",
+      "seed": 0
+    },
+    {
+      "build": "sniper",
+      "seed": 1
+    },
+    {
+      "build": "mage",
+      "seed": 42
+    },
+    {
+      "build": "cannon",
+      "seed": 4294967295
+    },
+    {
+      "build": "sniper",
+      "seed": 7
+    },
+    {
+      "build": "mage",
+      "seed": 13
+    },
+    {
+      "build": "cannon",
+      "seed": 23
+    },
+    {
+      "build": "sniper",
+      "seed": 31
+    },
+    {
+      "build": "mage",
+      "seed": 64
+    },
+    {
+      "build": "cannon",
+      "seed": 99
+    },
+    {
+      "build": "sniper",
+      "seed": 123
+    },
+    {
+      "build": "mage",
+      "seed": 256
+    },
+    {
+      "build": "cannon",
+      "seed": 777
+    },
+    {
+      "build": "sniper",
+      "seed": 1024
+    },
+    {
+      "build": "mage",
+      "seed": 2048
+    },
+    {
+      "build": "cannon",
+      "seed": 4096
+    },
+    {
+      "build": "sniper",
+      "seed": 8192
+    },
+    {
+      "build": "mage",
+      "seed": 12345
+    },
+    {
+      "build": "cannon",
+      "seed": 32768
+    },
+    {
+      "build": "sniper",
+      "seed": 65535
+    },
+    {
+      "build": "mage",
+      "seed": 424242
+    },
+    {
+      "build": "cannon",
+      "seed": 3735928559
+    },
+    {
+      "build": "sniper",
+      "seed": 2147483648
+    },
+    {
+      "build": "mage",
+      "seed": 2654435769
+    },
+    {
+      "build": "full-load",
+      "seed": 42
+    },
+    {
+      "build": "full-load",
+      "seed": 2
+    },
+    {
+      "build": "full-load",
+      "seed": 3
+    },
+    {
+      "build": "full-load",
+      "seed": 5
+    },
+    {
+      "build": "full-load",
+      "seed": 8
+    },
+    {
+      "build": "full-load",
+      "seed": 11
+    }
+  ],
+  "pressureVariants": [
+    "distinct",
+    "mirror"
+  ],
+  "metrics": [
+    {
+      "id": "domain.fullRuns.tickMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 5,
+        "p99": 10
+      },
+      "count": 326641,
+      "mean": 1.7438437329575922,
+      "p50": 1.26468,
+      "p95": 3.986471,
+      "p99": 7.623596,
+      "max": 3935.078806,
+      "checks": {
+        "p95": true,
+        "p99": true
+      },
+      "pass": true,
+      "routes": 30,
+      "battles": 990,
+      "terminalTickMs": {
+        "count": 990,
+        "mean": 2.824721728282828,
+        "p50": 2.209938,
+        "p95": 6.152426,
+        "p99": 11.411224,
+        "max": 123.350288
+      },
+      "worstTicks": [
+        {
+          "route": "m8-performance-full-load-8",
+          "ms": 3935.078806,
+          "round": "5-1",
+          "tick": 174,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-sniper-1024",
+          "ms": 2210.671824,
+          "round": "4-1",
+          "tick": 304,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-full-load-3",
+          "ms": 1262.675608,
+          "round": "6-2",
+          "tick": 92,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-full-load-3",
+          "ms": 926.598172,
+          "round": "6-2",
+          "tick": 107,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-full-load-3",
+          "ms": 912.781347,
+          "round": "6-2",
+          "tick": 93,
+          "terminal": false
+        }
+      ]
+    },
+    {
+      "id": "domain.pressure9v9.distinct.tickMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 5,
+        "p99": 10
+      },
+      "count": 3394,
+      "mean": 18.20257779522687,
+      "p50": 11.560589,
+      "p95": 49.267503,
+      "p99": 108.598768,
+      "max": 1801.88565,
+      "checks": {
+        "p95": false,
+        "p99": false
+      },
+      "pass": false,
+      "combats": 30,
+      "fixture": {
+        "id": "m8-pressure-9v9-v1",
+        "variant": "distinct",
+        "rngSeed": 1,
+        "units": 18,
+        "items": 54,
+        "itemPrograms": 54,
+        "traits": [
+          "player:sentinel:4",
+          "player:sniper:2",
+          "enemy:artillerist:2",
+          "enemy:sorcerer:2",
+          "enemy:watcher:2"
+        ]
+      }
+    },
+    {
+      "id": "domain.pressure9v9.mirror.tickMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 5,
+        "p99": 10
+      },
+      "count": 4005,
+      "mean": 18.48408551810238,
+      "p50": 11.68921,
+      "p95": 54.987229,
+      "p99": 105.515669,
+      "max": 342.033645,
+      "checks": {
+        "p95": false,
+        "p99": false
+      },
+      "pass": false,
+      "combats": 30,
+      "fixture": {
+        "id": "m8-pressure-9v9-v1",
+        "variant": "mirror",
+        "rngSeed": 1,
+        "units": 18,
+        "items": 54,
+        "itemPrograms": 54,
+        "traits": [
+          "player:sentinel:4",
+          "player:sniper:2",
+          "enemy:sentinel:4",
+          "enemy:sniper:2"
+        ]
+      }
+    }
+  ],
+  "recorded": {
+    "domain": {
+      "eventsPerBattle": {
+        "count": 990,
+        "mean": 884.0474747474748,
+        "p50": 837,
+        "p95": 2054,
+        "p99": 2817,
+        "max": 3079,
+        "min": 55
+      },
+      "activePeak": {
+        "statuses": 80,
+        "tasks": 43,
+        "shields": 8
+      },
+      "saveEnvelopeBytes": {
+        "count": 30,
+        "mean": 20298460.733333334,
+        "p50": 20351931,
+        "p95": 22755004,
+        "p99": 22848531,
+        "max": 22848531,
+        "min": 17320648
+      },
+      "largestBattleRecordBytes": 2156322,
+      "nodeHeapUsedPeakBytes": 140812632,
+      "nodeRssPeakBytes": 449593344,
+      "pressure": {
+        "distinct": {
+          "eventsPerCombat": {
+            "count": 30,
+            "mean": 2521,
+            "p50": 2486,
+            "p95": 2683,
+            "p99": 2721,
+            "max": 2721,
+            "min": 2365
+          },
+          "ticksPerCombat": {
+            "count": 30,
+            "mean": 113.13333333333334,
+            "p50": 112,
+            "p95": 118,
+            "p99": 121,
+            "max": 121,
+            "min": 111
+          },
+          "activePeak": {
+            "statuses": 156,
+            "tasks": 78,
+            "shields": 5
+          }
+        },
+        "mirror": {
+          "eventsPerCombat": {
+            "count": 30,
+            "mean": 4187.2,
+            "p50": 4177,
+            "p95": 4378,
+            "p99": 4421,
+            "max": 4421,
+            "min": 3833
+          },
+          "ticksPerCombat": {
+            "count": 30,
+            "mean": 133.5,
+            "p50": 126,
+            "p95": 189,
+            "p99": 218,
+            "max": 218,
+            "min": 116
+          },
+          "activePeak": {
+            "statuses": 187,
+            "tasks": 97,
+            "shields": 6
+          }
+        }
+      }
+    }
+  },
+  "errors": [],
+  "domain": {
+    "durationMs": 1407248,
+    "gcExposed": true,
+    "warmUp": {
+      "route": "cannon-0",
+      "ms": 8437
+    },
+    "timedRegion": "process.hrtime.bigint() around api.stepMatch(state) / stepCombat(state) only",
+    "pressureSpecSha256": "e27075f0279c368a3ca2d71e8cc7d81aeab976569eccd0bbeedcd9cf3fb321ad",
+    "evidence": "domain.json"
+  },
+  "endedAt": "2026-10-11T14:47:23.045Z",
+  "durationMs": 1407681,
+  "allBudgetsPass": false
+}

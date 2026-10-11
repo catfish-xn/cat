@@ -1,7 +1,7 @@
 import { startingRows } from './targeting';
 import type { AbilityContext, S13Packet } from '../combat-s13-abilities';
 import type { Trigger, TriggerContext } from './contracts';
-import { EMPTY_FACTS, EMPTY_TRIGGER_LEDGER, dispatchTriggers, type ResolutionFacts, type TriggerSignal } from './triggers';
+import { EMPTY_FACTS, EMPTY_TRIGGER_LEDGER, dispatchTriggers, type ResolutionFacts, type TriggerSignal, type TriggerUnit } from './triggers';
 import { executeMechanismEffect, selectMechanismTargets } from './s13-mechanisms';
 import { canonicalSource, compareCodePoints } from './identity';
 /** One call represents one completed occurrence, never one packet masquerading as an attack. */
@@ -14,9 +14,15 @@ export function emitMechanismSignal(ctx: AbilityContext, context: TriggerInput, 
   const signal: TriggerSignal = {context:{...context,eventSeq:ctx.nextTriggerEventSeq ?? 0},facts,aggregation};
   ctx.nextTriggerEventSeq=(ctx.nextTriggerEventSeq ?? 0)+1;
   const invocations=[];
+  // Dispatch only replaces trigger ledgers; effects run after every holder has
+  // selected. Sample the small listener/condition view once per signal, including
+  // virtual HP, instead of spreading the whole combat graph for each holder.
+  const samples: TriggerUnit[] = ctx.units.map(u => ({ id: u.id, team: u.team, cell: u.cell,
+    hp: ctx.virtualHp?.get(u.id) ?? u.hp, maxHp: u.maxHp, alive: u.alive,
+    startingRows: startingRows(u.team, u.startingCell?.row ?? u.cell.row) ?? undefined }));
   for(const holder of ctx.units) {
     const definitions=holder.mechanismDefinitions?.eventTriggers ?? [];if(!definitions.length) continue;
-    const result=dispatchTriggers(ctx.combatId ?? 'standalone',definitions,holder.triggerLedger ?? EMPTY_TRIGGER_LEDGER,signal,ctx.units.map(u => ({ ...u, hp: ctx.virtualHp?.get(u.id) ?? u.hp, startingRows: startingRows(u.team, u.startingCell?.row ?? u.cell.row) ?? undefined })),(d,s)=>{
+    const result=dispatchTriggers(ctx.combatId ?? 'standalone',definitions,holder.triggerLedger ?? EMPTY_TRIGGER_LEDGER,signal,samples,(d,s)=>{
       return selectMechanismTargets(holder, ctx.units, d.selector, undefined, d.source, {
         board: ctx.board, tick: ctx.tick, eventActorId: s.context.actorId, eventTargetId: s.context.targetId,
         eventActorCell: s.context.cast?.completionCell, eligibility: 'new-selection',

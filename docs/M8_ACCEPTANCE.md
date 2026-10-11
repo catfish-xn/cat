@@ -1,6 +1,6 @@
 # M8 总验收（B10）
 
-> 2026-10-11 收尾状态：功能补测与固定代码 CI #231 已通过；9v9 CPU 压力超预算，硬件桌面帧率、独立审查和用户试玩仍未签收。**节点三未完成，不满足 main 合并条件。** 送审 [PR #30](https://github.com/catfish-xn/cat/pull/30) 保持 draft。实测代码 `d901b3f`、BR4 干净补验 `b4ca11c`；源码等价与最终文档 HEAD CI 边界见 VALIDATION。
+> 2026-10-11 收尾状态：功能补测与固定代码 CI #231 已通过，最终功能文档 f58 的 CI #232 通过；固定 f58 的[功能源码/证据独立审查](M8_NODE3_FUNCTIONAL_REVIEW.md)范围内无新 P1/P2。9v9 CPU 压力超预算，硬件桌面帧率和用户试玩仍未签收。**节点三未完成，不满足 main 合并条件。** 送审 [PR #30](https://github.com/catfish-xn/cat/pull/30) 保持 draft。实测代码 `d901b3f`、BR4 干净补验 `b4ca11c`；源码等价与最终文档 HEAD CI 边界见 VALIDATION。后续独立性能分支与新测量见 [M8_NODE3_PERFORMANCE.md](M8_NODE3_PERFORMANCE.md)，不覆盖下列原测量。
 
 依据：`M8_PLAN.md` §7（7.1–7.7）与 §9、B10 行（`M8_PLAN.md:228`）、`docs/M8_CLAUDE_HANDOFF.md` §7.3–7.4、`docs/M8_DEPENDENCY_MAP.md` B10 行。
 集成分支 `feat/m8-b0-baseline`；B10 分支 `feat/m8-b10`（起点：节点2合并提交 `468817a93607ca195fc2d9c119a45c70b662bd9b`）。
@@ -26,17 +26,17 @@ B3–B7、U1–U5 已在各自批次签收（`docs/M8_B4_STATUS.md`、`docs/evid
 | A1 | 44 装备独立数值依据（§7.1、C01–C03） | 引用 | `tests/m8-b4-{sword,bow,belt,rod,cloak,vest,gloves,tear}` 逐件手算与实战触发（`docs/M8_B4_STATUS.md` 逐件表）；`tests/m8-b4-catalog`（44 件基础系数）；B1 来源账本 |
 | A2 | 覆盖矩阵 contentId→来源→机制→独立测试→战斗→存档/回放（§7.1） | 通过（B10） | [item-coverage.md](evidence/m8-b10/item-coverage.md)，由 `scripts/m8-b10-item-coverage.cjs` 从测试源码生成，三列缺格 0；存档/回放列由 `tests/m8-b10-item-save-replay.test.ts` 补齐（44 件逐件真实战斗：回放重建、tick 0/39/40/41/末段保存恢复续算、换定义拒绝） |
 | A3 | 7.2 重点交叉、C04–C06、窃贼手套临时子件 | 引用＋B10 新增 | m8-b3-*、m8-g01..g12、m8-b4-integration、m8-b5-temporary、m8-b8-live-transfer；临时子件回放重建与伪造拒绝：`tests/m8-b10-temporary-replay.test.ts` |
-| A4 | 8 场遭遇 × 7.3 结果 | 通过（B10；待独立签收） | [encounter-outcomes.md](evidence/m8-b10/encounter-outcomes.md)，`tests/m8-b10-encounter-outcomes.test.ts` |
+| A4 | 8 场遭遇 × 7.3 结果 | 通过（B10；固定 f58 功能证据已审） | [encounter-outcomes.md](evidence/m8-b10/encounter-outcomes.md)，`tests/m8-b10-encounter-outcomes.test.ts` |
 | A5 | 38 轮 / 33 战完整路线、三构筑 | 引用 | golden 与 Herald manifest（33 战、11930 tick、victory）；`test:headless` 24 seed；chromium-match dev/preview × cannon/sniper/mage；`compare-m5-evidence --final` 不允许尾 3 战 skip |
 | A6 | 开场经济账本 | 引用 | `tests/m8-b6-opening-economy.test.ts`（0G/1级→2G/2级→5G/3级→10G/3级）；m8-b8-live-economy |
 | A7 | 唯一收据、重复 step／Continue／恢复不重发 | 引用 | m8-b8-{oracle,command-oracle,token-lifecycle,restore,loot-runtime,resource-provenance}；`verify-m8-u6-loot` 浏览器双击 |
 | A8 | 失败／终局，含“6-7 最后击杀且满席” | 引用（替代口径） | 4-7 致死终局满席 retained-terminal（m8-b8-live-capacity、`verify-m8-u6-loot` seed230）；6-7 只发确定的 5G（M8B_LOOT），结构上不存在“英雄掉落且满席”，以 4-7 场景替代，见 §3 |
 | A9 | 最大合法保存／回放／统计 | 引用 | `verify-m6-performance`（33 战完整导入、12/12/12/3 样本、15 装备满负载）＋ compare-m6；仅 input-dev（dev 模式） |
 | A10 | 7.4 存档／回放清单 | 引用＋B10 新增 | tick 0/39/40/41：m6-replay、m8-b10-item-save-replay；周期／阈值盾／掉落前后：m8-b3-restore、m8-b8-restore；M7 旧档：`verify-m8-b9-legacy`、`verify-m8-u7-compat`；坏 digest／版本／容量：m8-b9-*、`verify-m8-b9-archives`（61 项）；IDB Quota/abort/双连接：`verify-m6-storage`、m6-persistence-retry；1×/2×/4× 与 seek：m6-replay、m6-integration、m8-b10-temporary-replay；临时装备回放重建：m8-b10-temporary-replay；统计增量一次性：m6-stats-oracle、m6-stats-browser |
-| A11 | BR1–BR7 桌面路线 1440×1000 / 1440×600 / 1920×1080，dev＋preview | 通过（B10；待独立签收） | `scripts/verify-m8-desktop.cjs` 27 项、`verify-m8-br4-public.cjs` 10 组公开存档装备检查；既有 BR1–BR3 三构筑 dev＋preview（1440×1000）、BR6 `verify-m5-input` |
-| A12 | 根路径与 /cat/ 资源、受控 404 回退、子路径刷新 | 引用＋通过（B10；待独立签收） | `verify-m7-subpath`（40 图标）；装备／野怪占位与 404：`verify-m8-desktop`、`verify-m8-u3-static` |
-| A13 | UR-U3-07 图鉴静态部分 | 通过（B10；待独立签收） | `scripts/verify-m8-u3-static.cjs` |
-| A14 | UR-U4-07 状态／护盾／治疗显示 | 通过（B10；待独立签收） | `scripts/verify-m8-u4-status.cjs`；既有 m6-stats-browser 18 项 |
+| A11 | BR1–BR7 桌面路线 1440×1000 / 1440×600 / 1920×1080，dev＋preview | 通过（B10；固定 f58 功能证据已审） | `scripts/verify-m8-desktop.cjs` 27 项、`verify-m8-br4-public.cjs` 10 组公开存档装备检查；既有 BR1–BR3 三构筑 dev＋preview（1440×1000）、BR6 `verify-m5-input` |
+| A12 | 根路径与 /cat/ 资源、受控 404 回退、子路径刷新 | 引用＋通过（B10；固定 f58 功能证据已审） | `verify-m7-subpath`（40 图标）；装备／野怪占位与 404：`verify-m8-desktop`、`verify-m8-u3-static` |
+| A13 | UR-U3-07 图鉴静态部分 | 通过（B10；固定 f58 功能证据已审） | `scripts/verify-m8-u3-static.cjs` |
+| A14 | UR-U4-07 状态／护盾／治疗显示 | 通过（B10；固定 f58 功能证据已审） | `scripts/verify-m8-u4-status.cjs`；既有 m6-stats-browser 18 项 |
 | A15 | 原有输入覆盖 | 引用 | input-dev／input-preview（`verify-m5-input`、布局）、compare --final |
 | A16 | 7.6 表（增量/完整捕获、激活、导入、seek、40 tick、256MiB/100000 事件/3 局、30 次生命周期） | 引用 | `verify-m6-performance` ＋ compare-m6；生命周期在 cannon journey |
 | A17 | 生产 JS gzip ≤ 签收 M7 × 1.30（停止线 552,191 B） | 通过：508,990 B | CI m7-budget `--js-base=15313a7`；M7 424,763 B，1.1982918×，余 43,201 B；B10 已重新构建配对 |
@@ -44,7 +44,7 @@ B3–B7、U1–U5 已在各自批次签收（`docs/M8_B4_STATUS.md`、`docs/evid
 | A19 | 新压力负载 tick p95≤5 / p99≤10 ms；帧间隔 p95≤33.3 / p99≤50 ms | **未达标，阻塞** | 30 路线 tick p95/p99 3.928/6.734 ms 通过；9v9 distinct 40.772/111.611、mirror 46.131/135.567 ms 失败；软件图形帧率不作硬件签收。`scripts/verify-m8-performance.cjs`（30 seed ＋ 9v9 满装夹具 `tests/fixtures/m8/`；普通／减少动效） |
 | A20 | 正式版本统一切换、skip 清零、首失败可追溯 | 引用 | 节点2 签收；`docs/evidence/m8-b6/deferred-assertions.md` 处置表；比较器断言 skip 为空 |
 | A21 | 生命周期 H1 | 告警模式（不变） | `docs/H1_WARN_ONLY.md`；报告实测值，不写“已解决” |
-| A22 | 验收／验证／审查文档 | 已交付，待独立审查 | 本文件、M8_VALIDATION.md、M8_REVIEW.md |
+| A22 | 验收／验证／审查文档 | 已交付；固定 f58 功能范围已独立审查 | 本文件、M8_VALIDATION.md、M8_REVIEW.md、M8_NODE3_FUNCTIONAL_REVIEW.md；性能分支另审 |
 | A23 | 用户试玩确认（7.7） | 未完成 | 需最终 SHA 预览后由用户操作 |
 
 ## 3. 替代口径与声明
