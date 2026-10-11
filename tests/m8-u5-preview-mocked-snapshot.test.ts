@@ -10,7 +10,7 @@ import type { StrategyUnitSnapshot } from '../src/simulation/strategy-types';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { accepted, freeze, reachRound } from './match-helpers';
 
-type InjectionMode = 'disabled' | 'enhanced' | 'legacy-ability' | 'zero-ap';
+type InjectionMode = 'disabled' | 'enhanced' | 'enhanced-start-mana' | 'legacy-ability' | 'zero-ap';
 const injection = vi.hoisted((): { mode: InjectionMode; unitId: string } => ({
   mode: 'disabled', unitId: '',
 }));
@@ -42,9 +42,11 @@ function injectEnemy(unit: StrategyUnitSnapshot, state: Parameters<typeof buildS
     ...unit.sources,
     ...items.flatMap((id, index) => makeSourcedEffects(unit.unitId, 'item', id,
       `u5-preview-item-${index}`, ITEM_DEFINITIONS[id].effects)),
-    ...makeSourcedEffects(unit.unitId, 'augment', 'u5-preview-start-mana', 'u5-preview-start-source', [
+    // B9: a legacy combatStart gainMana trigger has no frozen ManaOutcome reason (M8_B9_U7_PLAN §2); it is injected only
+    // to prove the replay2 Match refuses it.
+    ...(injection.mode === 'enhanced-start-mana' ? makeSourcedEffects(unit.unitId, 'augment', 'u5-preview-start-mana', 'u5-preview-start-source', [
       { kind: 'trigger', hook: 'combatStart', everyN: 1, action: { kind: 'gainMana', amount: 9 } },
-    ]),
+    ]) : []),
   ];
   const itemPrograms: BoundItemProgram[] = items.map((id, index) => {
     const item = ITEM_DEFINITIONS[id];
@@ -163,15 +165,23 @@ describe('U5 public preview consumes the same mocked strategy as real tick-zero 
     expect(previewUnit.stats.critMultiplierBps).toBe(crit.multiplierBps);
   });
 
-  it('projects combatStart mana 14 rather than resolved initial mana 5 through the public preview selector', () => {
+  it('projects tick-zero mana and AP through the public preview selector exactly as real Combat', () => {
     const { previewUnit, combatUnit, started } = readAndStart('enhanced');
-    // Independent rule arithmetic: min(40, 5 initial + 9 combatStart) = 14.
+    // Independent rule arithmetic: no combat-start mana source, so tick-zero mana is the initial 5.
     expect(started.combat!.strategy!.units.find(unit => unit.unitId === combatUnit.id)!.stats)
       .toMatchObject({ initialMana: 5, maxMana: 40 });
-    expect(combatUnit).toMatchObject({ mana: 14, maxMana: 40, abilityPower: 135 });
-    expect(previewUnit.stats).toMatchObject({ mana: 14, maxMana: 40, abilityPower: 135 });
+    expect(combatUnit).toMatchObject({ mana: 5, maxMana: 40, abilityPower: 135 });
+    expect(previewUnit.stats).toMatchObject({ mana: 5, maxMana: 40, abilityPower: 135 });
     expect(previewUnit.stats.mana).toBe(combatUnit.mana);
     expect(previewUnit.stats.abilityPower).toBe(combatUnit.abilityPower);
+  });
+
+  it('the replay2 Match refuses a legacy combatStart mana trigger instead of renaming it, without changing state', () => {
+    const state = prepared(), before = structuredClone(state);
+    injection.unitId = state.m8.preparation.enemies[0].id;
+    injection.mode = 'enhanced-start-mana';
+    expect(() => match.startMatchCombat(state)).toThrow(/cannot enter the replay2 ledger/);
+    expect(state).toEqual(before);
   });
 
   it('rejects missing initialized AP from a supported legacy ability with an explicit RangeError', () => {

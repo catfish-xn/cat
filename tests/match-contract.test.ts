@@ -9,7 +9,8 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     const first=createMatch(); let rng=42n;
     for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
     expect(first).toEqual(createMatch(42));
-    expect(first).toMatchObject({schemaVersion:5,rulesVersion:'m5-14.24b-v1',contentVersion:'s13-14.24b-slice-v1',commandProtocolVersion:2,
+    // B9 formal version switch (M8_RULES §10).
+    expect(first).toMatchObject({schemaVersion:6,rulesVersion:'m8-14.24b-v1',contentVersion:'s13-14.24b-m8-v1',commandProtocolVersion:2,
       phase:'preparation',round:1,gold:0,level:1,xp:0,playerHp:100,rngState:Number(rng),nextUnitSerial:2,combat:null,roundResults:[],pendingChoice:null});
     expect(first.shop.slots).toHaveLength(5);expect(first.preparation.benchSize).toBe(9);
     expect(first.preparation).not.toBe(createMatch().preparation);

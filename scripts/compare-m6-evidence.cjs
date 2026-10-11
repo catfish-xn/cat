@@ -85,7 +85,20 @@ for (const name of [
   'retained completed archive and full events unchanged',
   'immutable completed record cannot be overwritten (validation)', 'immutable-record rejection fully rolls back',
 ]) assert(storage.results.includes(name), `missing native IndexedDB case: ${name}`);
-assert.equal(storage.results.filter(name => name === 'format/schema/digest/runtime rejected').length, 5);
+// B9 flip: format 1 and format 3 wrappers (save and replay) plus schema/digest/runtime corruption.
+assert.equal(storage.results.filter(name => name === 'format/schema/digest/runtime rejected').length, 7);
+// B9 D2-A: read-only M7 library reader on native IndexedDB.
+const legacy = read('m8-b9-legacy');
+for (const name of ['missing legacy library lists as empty success', 'reading never creates the legacy library', 'active and history runs each listed exactly once',
+  'history records never invent a revision', 'changed fingerprint is a stale reference, not another record', 'reader only opens readonly transactions',
+  'reading leaves the legacy library byte-identical', 'M8 activation leaves the legacy library unchanged', 'active to history move keeps the reference',
+  'missing history is never exported as a partial file', 'unavailable storage is not reported as empty']) assert(legacy.results.includes(name), `missing legacy reader case: ${name}`);
+assert.equal(legacy.results.filter(name => name.endsWith(': bytes are the original v1 envelope with its history')).length, 3, 'three original-format exports');
+// U7: the real page shows version-routed notices and exports legacy records without replacing the active match.
+const u7 = read('m8-u7-compat');
+for (const name of ['legacy list shows the active and the history record once each', 'legacy export 0 is the original format1 envelope', 'legacy export 1 is the original format1 envelope',
+  'legacy export leaves the active slot token unchanged', 'M7 import shows legacy-preserved notice', 'M7 import does not replace the active match', 'digest mismatch notice',
+  'rejected import does not replace the active match', 'current import shows the current notice', 'replacement impact names the round and battles']) assert(u7.results.includes(name), `missing U7 case: ${name}`);
 const failures = read('m6-application-failures');
 const unavailable = failures.results.G04_unavailable_open_public_play_and_same_tick_export;
 assert.equal(unavailable?.passed, true, 'initial storage unavailability');
@@ -193,7 +206,7 @@ requireSteps(`test-and-build-${sample}`, ['install', 'tests', 'build', 'headless
 for (const mode of ['dev', 'preview']) {
   for (const build of ['cannon', 'sniper', 'mage']) requireSteps(`browser-${mode}-${build}-${sample}`, ['install', 'browser-install', 'build', 'route']);
   requireSteps(`input-${mode}-${sample}`, ['install', 'browser-install', 'build', 'input', 'touch-route', 'm6-layout',
-    ...(mode === 'dev' ? ['m6-storage', 'm6-components', 'm6-performance', 'm6-retry', 'm6-application-failures'] : [])]);
+    ...(mode === 'dev' ? ['m6-storage', 'm8-b9-legacy', 'm8-u7-compat', 'm6-components', 'm6-performance', 'm6-retry', 'm6-application-failures'] : [])]);
 }
 const normalRoutes = ['dev', 'preview'].flatMap(mode => ['cannon', 'sniper', 'mage', 'cannon-touch'].map(build => {
   const report = JSON.parse(fs.readFileSync(`artifacts/m5-${mode}-${build}/manifest.json`, 'utf8'));

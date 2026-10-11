@@ -3,12 +3,19 @@ import {stepCombat,type CombatUnit} from '../src/simulation/combat';
 import {resolveAbility} from '../src/simulation/combat-abilities';
 import {source,amount,trigger} from './fixtures/m8-contract-cases';
 import {battle,unit} from './combat-helpers';
+import {applyStatusContribution} from '../src/simulation/m8/status';
+import {effectIdentity} from '../src/simulation/m8/identity';
+import {EMPTY_MECHANISMS} from '../src/simulation/m8/runtime-types';
+import {packetView} from './helpers/replay2-views';
 const dummy=(id:string,team:'player'|'enemy',col:number,row:number,patch:Partial<CombatUnit>={}):CombatUnit=>({...unit(id,team,col,row,{hp:1000,maxHp:1000,armor:0,magicResist:0,attackDamage:0,attackRange:6,cooldownTicks:1000,moveCooldownTicks:1000}),ability:resolveAbility('neutral-attack',1),...patch});
 const def={kind:'path-charge' as const,source:{...source('finite-charge','h','h'),sourceKind:'ability' as const},effects:[{kind:'damage' as const,damageType:'magic' as const,delivery:'ability-direct' as const,critEligibility:'never' as const,amount:amount(0,{maxHpBps:1500,hpBasis:'target',cap:300,sample:'packet'})}]};
 describe('G10 actual opening hook and finite delayed execution',()=>{
  it('tick1 control cancels delayed opening damage but cannot retroactively block the tick0 movement',()=>{
   const from={...source('finite-open','h','h'),sourceKind:'ability' as const};
-  const h=dummy('h','enemy',3,1,{cell:{col:3,row:1},statuses:[{key:'future-control',source:from,kind:'stun',amount:1,startsAtTick:1,expiresAtTick:3}]});
+  // B9: the same stun (source finite-open, ticks [1,3)) as a frozen contribution; legacy-only statuses are rejected by S13.
+  const stun=applyStatusContribution([],effectIdentity('g10-control',from,'h'),{kind:'stun',magnitudeBps:0,activation:'immediate',duration:{kind:'ticks',ticks:2},stackPolicy:{kind:'independent-instances'},removable:true,polarity:'harmful',damageFilter:null,onEnd:null},1).groups;
+  if(stun[0]?.contributions[0]?.appliedAtTick!==1||stun[0].contributions[0].expiresAtTick!==3)throw new Error('fixture status mismatch');
+  const h=dummy('h','enemy',3,1,{cell:{col:3,row:1},mechanismState:{...EMPTY_MECHANISMS,combatId:'g10-control',statuses:stun}});
   const p=dummy('p','player',3,4,{cell:{col:3,row:4}});
   const start={...battle([h,p]),openingDefinitions:[{kind:'path-charge' as const,source:from,effects:[{kind:'damage' as const,damageType:'magic' as const,delivery:'ability-direct' as const,critEligibility:'never' as const,amount:amount(150)}]}]};
   const step=stepCombat(start);
@@ -28,7 +35,7 @@ describe('G10 actual opening hook and finite delayed execution',()=>{
   const start={...battle([dummy('h','enemy',3,1),dummy('p','player',3,4)]),openingDefinitions:[def]};
   const first=stepCombat(start);
   expect(first.events.find(e=>e.type==='movement')).toMatchObject({tick:0,unitId:'h',from:{col:3,row:1},to:{col:2,row:5}});
-  expect(first.events.find(e=>e.type==='packetDamage')).toMatchObject({tick:1,unitId:'p',raw:150,hpDamage:150});
+  expect(packetView(first.events.find(e=>e.type==='packetDamage')!)).toMatchObject({tick:1,unitId:'p',raw:150,hpDamage:150});
   expect(first.state.openingState?.plans[0].task?.status).toBe('executed');
   const next=stepCombat(JSON.parse(JSON.stringify(first.state)));expect(next.events.filter(e=>e.type==='movement'||e.type==='packetDamage')).toEqual([]);
  });

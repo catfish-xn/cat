@@ -1,5 +1,25 @@
 # B6 已授权的 B8/B9 显式跳过清单
 
+## B9 处置（节点2，2026-10-10，`feat/m8-b9-u7`）
+
+全仓按 `skipB6Dependency`、`[B9]`、`SKIPPED [B9]`、`restorationIssue`、`deferredBrowserRounds`、`applicationBoundary` 检索：辅助函数 `skipB6Dependency` 与 B6 边界辅助已删除，下列原 B9 项全部恢复为原断言直接执行，剩余 skip 为 0。容量由目录推导为 33（`MAX_BATTLE_RECORDS`，测试钉住与目录非补给轮数相等）；阈值、样本数、256 MiB、每战 100000 事件均未改。以下“已恢复”以同 SHA 完整 CI 为准，本表不替代 CI。
+
+| 原位置 | 项 | 处置 | 依据／说明 |
+| --- | --- | --- | --- |
+| `tests/m6-integration.test.ts` | `[B9]` ×4 完整 33 战 envelope 接受 | 已恢复（原断言，120 s 时限） | 四构筑完整 envelope 经 format2 接受；删整战仍拒绝 |
+| `tests/m6-application-failures.cjs` | `G02-game_over` | 已恢复 | 真实 33 战终态导入/重启/下一命令 |
+| 同上 | `ROOT_03_same_run_completion_archive_refresh` | 已恢复 | 显示期望按目录 33/99 |
+| 同上 | `P2-stale-archive-success`、`P2-stale-archive-reject` | 已恢复 | 完整 33 战归档竞争两分支 |
+| 同上 | `R4_inflight_combat_then_pending_terminal_commit` | 已恢复 | 终战 tick 取 fixture 实际 `finalEndTick` 并要求 80<tick<120；归档计数按目录 |
+| `scripts/verify-m5-browser.cjs` | `browser-round-6-5/6-6/6-7`、`browser-complete-application-route` | 已恢复 | 浏览器完成战数必须等于路线战数；`fullApplicationRoutePassed=true` 只由真实结果设置 |
+| `scripts/compare-m5-evidence.cjs` | 三构筑与触摸尾 3 战快照 | 已恢复 | `validateFullBrowserRoute`：无 skip、无边界字段、全部检查点；逐轮快照比较 |
+| `scripts/verify-m6-performance.cjs` | 完整导入管线（completeImport×3、activation×12、capture/write×12、fullCapture）、`current-prefix-validation`、`full-load-import-roundtrip` | 已恢复原管线与阈值；有界 30 战门禁删除 | 关联 [issue #23](https://github.com/catfish-xn/cat/issues/23)；关闭须同 SHA 完整 CI＋独立审查 |
+| `scripts/compare-m6-evidence.cjs` | 应用/性能 B9 镜像、90/30 文案 | 已更新 | 要求无 skip、目录计数 99/33、各记录 skip 为空 |
+| `scripts/b6-performance-fixtures.cjs`、`scripts/b6-performance-gates.cjs`、`tests/m8-b6-performance-fixtures.test.js` | B6 临时适配 | 删除 | 只服务有界门禁；完整门禁恢复后无调用者 |
+| `scripts/b6-deferred-assertions.cjs`、`tests/m8-b6-gate-preparation.test.js` | 延期辅助与其单测 | 收缩为 `validateFullBrowserRoute` 及其变异向量 | 不再存在 skip 辅助 |
+
+版本切换随之翻转的旧断言（预期变更，不是放宽）：`m6-persistence.test.ts`／`verify-m6-storage.cjs` 由“拒绝 save2/replay2”改为拒绝 1/1 与 3/3；`m7-m6-save-compat.test.ts` 由 content-digest 拒绝改为 legacy-preserved 识别（仍不能恢复/回放）；`compare-m6-evidence.cjs` 版本拒绝样本 5→7。golden 重录见 `docs/evidence/m8-b9/golden/audit.json`。
+
 ## B8 处置（节点1，2026-10-10，审计 P2-3 后全仓核查）
 
 全仓按 `skipB6Dependency(…'B8'…)`、`[B8]`、`awaits/requires B8` 检索，原清单所有 B8 项及审计补列的 headless、G02、最大装备负载、帮助弹窗与 M6 比较器均已处置。下表为处置结果；B9 项范围不变，见下文原表。

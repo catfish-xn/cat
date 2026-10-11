@@ -29,7 +29,7 @@
 | damage（旧汇总） | M8 账本不再发（`combat-s13.ts:364`）。 |
 | cast | `{receipt: CastReceipt}`；同 tick 返蓝结算后写入最终 receipt（`mana.ts` 已要求同 tick 返蓝），事件位置不变。 |
 | manaChanged | 每笔回蓝请求一条 `{outcome: ManaOutcome}`（攻击/受伤/击杀等已在 `combat-s13.ts:405-408` 计算）；删除每 tick 聚合；施法扣蓝只在 cast.receipt。 |
-| statusChanged | 一律 `{group: StatusGroup, reason}`，group 为变化后的权威状态组（UI 合同 §5 表：显示有效状态与来源/期限）；修复 `combat-s13-state.ts:183`、`s13-mechanisms.ts:216,247,310` 无 group 路径（含 UR-U4-05“眩晕 0 阵亡清除”）。 |
+| statusChanged | 一律 `{group: StatusGroup, reason}`：applied/refreshed 的 group 为变化后的权威状态组；结束事件按种类各一条，group.contributions 恰为本次结束的贡献（UI 合同 §5 表：显示有效状态与来源/期限）；修复 `combat-s13-state.ts:183`、`s13-mechanisms.ts:216,247,310` 无 group 路径（含 UR-U4-05“眩晕 0 阵亡清除”）。 |
 | activityChanged | 新增；引导/分担的应用、到期、控制取消、替换、死亡与战斗清理改发本事件（UR-U4-04）。 |
 | heal / shieldLayerChanged | heal 只保留 outcome；护盾为 `{layer: ShieldState, reason}`，`endReason` 并入 reason。 |
 | statChanged / maxHpChanged | `source: Source`（含 parentItemInstanceId）；`attackSpeedBps` 映射 `attackSpeed`（值仍 Bps，合同 §3）。 |
@@ -37,7 +37,7 @@
 
 - 状态影响：`neutral-receipts.ts:17-27` 改读 group；删 damage 事件使 eventSeq 位移，进入 `neutralReceipts`/击杀证据，属新版本状态，由 golden 审计核对语义投影不变。
 - 非 S13 旧路径（`combat-tick.ts`，仅 M3/M4 遗留单位）保持旧事件类型，不进入 M8 Match。
-- 实现解释（不改冻结合同，提请复审确认）：statusChanged 的 group 为变化后快照；combat-start 回蓝在已交付内容中不可达（仅测试注入），M8 账本不新增该 reason，S13 路径遇到即拒绝而非静默丢弃；castReceipts 只在 tick 内存在，不进入持久状态。
+- 实现解释（不改冻结合同，提请复审确认）：statusChanged 的 applied/refreshed group 为变化后快照，结束事件只列结束的贡献；combat-start 回蓝在已交付内容中不可达（仅测试注入），M8 账本不新增该 reason，S13 路径遇到即拒绝而非静默丢弃；castReceipts 只在 tick 内存在，不进入持久状态。
 - 消费端（U4 收口，Claude 界面范围）：`combat-status.ts`、`combat-feedback-renderer.ts`、`stats-panel.ts`、`fx-plan.ts`（命中闪光改由 packetDamage 驱动）、`strategy-panel.ts`、`combat-feedback.ts`；`stats/aggregate.ts` 已优先读 outcome。冻结来源名称：回放用记录对应的冻结内容名称（UR-U4-06）。
 
 ## 3. 33 战容量
