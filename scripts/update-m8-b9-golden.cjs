@@ -91,9 +91,8 @@ function oldFacts(events) {
   const c = events.filter(e => e.domain === 'combat');
   return {
     unchanged: c.filter(e => UNCHANGED.has(e.type)).map(bare),
-    packets: c.filter(e => e.type === 'packetDamage').map(e => [e.tick, e.unitId, who(e.source), e.damageType, e.mitigated, e.absorbed, e.hpDamage, e.critical, e.redirected]),
-    heals: c.filter(e => e.type === 'heal').map(e => [e.tick, e.unitId, who(e.source), e.amount ?? e.actual, e.overheal ?? 0]),
-    casts: c.filter(e => e.type === 'cast').map(e => [e.tick, e.sourceId, e.targetIds, e.manaSpent]),
+    heals: c.filter(e => e.type === 'heal'),
+    casts: c.filter(e => e.type === 'cast'),
     mana: c.filter(e => e.type === 'manaChanged'),
     aggregates: c.filter(e => e.type === 'damage').map(e => [e.tick, e.unitId, e.amount, e.absorbed, e.hpDamage]),
     counts: Object.fromEntries([...new Set(c.map(e => e.type))].sort().map(t => [t, c.filter(e => e.type === t).length])),
@@ -113,9 +112,8 @@ function newFacts(events) {
   }
   return {
     unchanged: c.filter(e => UNCHANGED.has(e.type)).map(bare),
-    packets: c.filter(e => e.type === 'packetDamage').map(e => { const o = e.outcome; return [e.tick, o.context.targetId, who(o.context.source), o.context.damageType, o.mitigated, o.absorbed, o.hpDamage, o.critical, o.context.redirected]; }),
-    heals: c.filter(e => e.type === 'heal').map(e => [e.tick, e.outcome.targetId, who(e.outcome.shares[0].source), e.outcome.actual, e.outcome.overheal]),
-    casts: c.filter(e => e.type === 'cast').map(e => [e.tick, e.receipt.source.ownerId, e.receipt.targetIds, e.receipt.actualManaSpent]),
+    heals: c.filter(e => e.type === 'heal'),
+    casts: c.filter(e => e.type === 'cast'),
     mana: byUnitTick, castAt,
     totals: Object.fromEntries(totals),
     counts: Object.fromEntries([...new Set(c.map(e => e.type))].sort().map(t => [t, c.filter(e => e.type === t).length])),
@@ -123,23 +121,34 @@ function newFacts(events) {
 }
 const ENDS = new Set(['expired', 'cleansed', 'source-lost', 'death-cleanup', 'replaced', 'combat-end']), ACTIVITIES = new Set(['channel', 'redirect']);
 const multiset = rows => rows.map(r => JSON.stringify(r)).sort();
+/** The pre-switch projection wrote a combat-long status as expiring at MAX_COMBAT_TICKS + 1 (1201); the frozen
+ * contribution writes expiresAtTick null with duration kind 'combat'. Any other null is unmapped. */
+const frozenExpiry = x => x.expiresAtTick !== null ? x.expiresAtTick : x.application.duration.kind === 'combat' ? 1201 : 'unmapped-null-expiry';
 /** Per-contribution status lifecycle. Old events carried one contribution (or its contributionKeys) each; replay2
  * groups by target and kind, with end events listing exactly the ended contributions. */
 function statusFacts(events, replay2) {
   const c = events.filter(e => e.domain === 'combat' && e.type === 'statusChanged'), rows = [], active = new Map();
   for (const e of c) {
     const end = ENDS.has(e.reason);
-    if (!replay2) { if (ACTIVITIES.has(e.status.kind)) continue; for (const key of e.status.contributionKeys ?? [e.status.key]) rows.push([e.tick, e.unitId, key, end ? e.reason : 'start']); continue; }
+    if (!replay2) { if (ACTIVITIES.has(e.status.kind)) continue; for (const key of e.status.contributionKeys ?? [e.status.key]) rows.push(end ? [e.tick, e.unitId, key, e.reason] : [e.tick, e.unitId, key, 'start', e.status.startsAtTick, e.status.expiresAtTick]); continue; }
     const slot = JSON.stringify([e.group.targetId, e.group.kind]), keys = e.group.contributions.map(x => x.key), current = active.get(slot) ?? new Set();
     if (end) { for (const key of keys) { assert(current.delete(key), `ended contribution ${key} was active`); rows.push([e.tick, e.group.targetId, key, e.reason]); } }
-    else { for (const key of keys) if (!current.has(key)) rows.push([e.tick, e.group.targetId, key, 'start']); }
+    else { for (const x of e.group.contributions) if (!current.has(x.key)) rows.push([e.tick, e.group.targetId, x.key, 'start', x.appliedAtTick, frozenExpiry(x)]); }
     active.set(slot, end ? current : new Set(keys));
   }
   return multiset(rows);
 }
+/** Old channel/redirect statusChanged events embedded the frozen CombatActivity record; replay2 publishes it directly. */
 function activityFacts(events, replay2) {
-  return multiset(events.filter(e => e.domain === 'combat' && (replay2 ? e.type === 'activityChanged' : e.type === 'statusChanged' && ACTIVITIES.has(e.status.kind)))
-    .map(e => replay2 ? [e.tick, e.activity.targetId, e.activity.kind, e.reason] : [e.tick, e.unitId, e.status.kind, e.reason ?? 'applied']));
+  return events.filter(e => e.domain === 'combat' && (replay2 ? e.type === 'activityChanged' : e.type === 'statusChanged' && ACTIVITIES.has(e.status.kind)))
+    .map(e => {
+      if (replay2) return { tick: e.tick, reason: e.reason, activity: e.activity };
+      const reason = e.reason ?? 'applied', activity = e.status.activity;
+      // Some pre-switch end events (death/combat cleanup) embedded the still-active snapshot; the frozen record is that
+      // activity ended at this tick with this reason. Nothing else may differ.
+      const ended = ENDS.has(reason) && activity.lifecycle === 'active' ? { ...activity, lifecycle: 'ended', endedAtTick: e.tick, endReason: reason } : activity;
+      return { tick: e.tick, reason, activity: ended };
+    });
 }
 /** Old shield events already embedded the frozen ShieldState (layer.m8State); replay2 publishes it as `layer`. */
 function shieldFacts(events, replay2) {
@@ -152,21 +161,70 @@ const AUDITED_NEW = new Set([...UNCHANGED, 'packetDamage', 'heal', 'cast', 'mana
  * and attackSpeedBps is published as attackSpeed (still Bps). */
 const statFacts = (events, replay2) => events.filter(e => e.domain === 'combat' && ['statChanged', 'maxHpChanged'].includes(e.type)).map(({ eventSeq, domain, combatId, ...e }) =>
   replay2 ? e : { ...e, source: { ...e.source, parentItemInstanceId: e.source.parentItemInstanceId ?? null }, ...(e.stat === 'attackSpeedBps' ? { stat: 'attackSpeed' } : {}) });
-function ledgerAudit(oldEvents, newEvents, where) {
+const sourceOf = s => ({ ...s, parentItemInstanceId: s.parentItemInstanceId ?? null });
+/** N2-P2-1: every pre-switch packet fact is bound to its replay2 DamageOutcome, including the full source (instance and
+ * parent item), actionSeq, ordinal, a packetId derived from those facts, parent links, and raw under its legal mapping:
+ * the old raw was rawAfterCritical (a redirect child carried its parent's), the frozen outcome.raw is the entry amount. */
+function packetAudit(oldEvents, newEvents, where, combatId, multiplierOf) {
+  const op = oldEvents.filter(e => e.domain === 'combat' && e.type === 'packetDamage'), np = newEvents.filter(e => e.domain === 'combat' && e.type === 'packetDamage');
+  assert.equal(np.length, op.length, `${where}: packet count`);
+  const byId = new Map();
+  np.forEach((e, i) => { assert(!byId.has(e.outcome.context.packetId), `${where} packet ${i}: unique packetId`); byId.set(e.outcome.context.packetId, { e, old: op[i] }); });
+  np.forEach((e, i) => {
+    const old = op[i], o = e.outcome, c = o.context, at = `${where} packet ${i}`;
+    assert.equal(e.tick, old.tick, `${at}: tick`);
+    assert.deepEqual(c.source, sourceOf(old.source), `${at}: full source (instance, effect index, parent item)`);
+    assert.deepEqual([c.targetId, c.damageType, c.actionSeq, c.packetOrdinal, c.redirected, o.mitigated, o.absorbed, o.hpDamage, o.critical],
+      [old.unitId, old.damageType, old.actionSeq, old.packetOrdinal, old.redirected, old.mitigated, old.absorbed, old.hpDamage, old.critical], `${at}: target/type/actionSeq/ordinal/redirect/amounts/critical`);
+    const parent = c.parentPacketId === null ? null : byId.get(c.parentPacketId);
+    assert(c.parentPacketId === null || parent, `${at}: parent packet exists in this ledger`);
+    const rawStage = () => assert.equal(old.raw, o.critical ? Number(BigInt(o.raw) * BigInt(multiplierOf(c.source.ownerId)) / 10000n) : o.raw, `${at}: old raw = rawAfterCritical of the frozen entry amount`);
+    if (c.redirected) {
+      // Loris share: same tick as its parent, packetId derived from the parent; old raw repeated the parent's rawAfterCritical.
+      assert(parent.e.tick === e.tick && !parent.e.outcome.context.redirected && parent.e.outcome.context.source.ownerId === c.source.ownerId && parent.e.outcome.context.actionSeq === c.actionSeq, `${at}: redirect parent`);
+      assert.equal(c.packetId, JSON.stringify([c.parentPacketId, 'redirect', c.targetId]), `${at}: redirect packetId`);
+      assert.equal(old.raw, parent.old.raw, `${at}: old redirect raw was the parent's rawAfterCritical`);
+      assert.equal(o.raw, o.mitigated + o.prevented, `${at}: inherited share enters after mitigation`);
+      return;
+    }
+    assert.equal(c.packetId, JSON.stringify([combatId, e.tick, c.source.ownerId, c.actionSeq, c.targetId, c.packetOrdinal]), `${at}: packetId from its facts`);
+    if (parent && parent.e.tick < e.tick && parent.e.outcome.killingPacket && parent.e.outcome.overkill === o.raw && parent.e.outcome.context.source.ownerId === c.source.ownerId && parent.e.outcome.context.actionSeq === c.actionSeq) {
+      // Overkill bounce: the inherited amount is exactly the parent's overkill; old raw was that same inherited amount.
+      assert.equal(old.raw, o.raw, `${at}: inherited raw unchanged`);
+      assert.equal(o.raw, o.mitigated + o.prevented, `${at}: inherited amount enters after mitigation`);
+      return;
+    }
+    // Raw-stage packets, including cone secondaries and mechanism-triggered damage whose parent is the triggering packet.
+    if (parent) assert(parent.e.tick <= e.tick, `${at}: parent not in the future`);
+    rawStage();
+  });
+  return np.length;
+}
+function ledgerAudit(oldEvents, newEvents, where, { combatId, multiplierOf }) {
   for (const e of oldEvents) if (e.domain === 'combat') assert(AUDITED_OLD.has(e.type), `${where}: unaudited pre-switch event ${e.type}`);
   for (const e of newEvents) if (e.domain === 'combat') assert(AUDITED_NEW.has(e.type), `${where}: unaudited replay2 event ${e.type}`);
   assert.deepEqual(statFacts(newEvents, true), statFacts(oldEvents, false), `${where}: every stat/maxHp change identical (attackSpeedBps -> attackSpeed)`);
   const a = oldFacts(oldEvents), b = newFacts(newEvents);
   assert.deepEqual(statusFacts(newEvents, true), statusFacts(oldEvents, false), `${where}: every status contribution starts and ends at the same tick with the same reason`);
-  assert.deepEqual(activityFacts(newEvents, true), activityFacts(oldEvents, false), `${where}: every channel/redirect lifecycle event identical`);
+  assert.deepEqual(activityFacts(newEvents, true), activityFacts(oldEvents, false), `${where}: every channel/redirect record (key, source, actionSeq, ticks, lifecycle) identical`);
   const os = shieldFacts(oldEvents, false), ns = shieldFacts(newEvents, true);
   assert.deepEqual(ns.map(r => [r.tick, r.layer]), os.map(r => [r.tick, r.layer]), `${where}: every shield layer state identical`);
   // Plan §2: the pre-switch endReason is merged into reason; every shield reason equals old endReason ?? reason.
   assert.deepEqual(ns.map(r => r.reason), os.map(r => r.reason), `${where}: shield reasons (endReason merged)`);
   assert.deepEqual(b.unchanged, a.unchanged, `${where}: eight unchanged event types identical apart from eventSeq`);
-  assert.deepEqual(b.packets, a.packets, `${where}: every packet target/source/type/mitigated/absorbed/hpDamage/critical/redirect identical`);
-  assert.deepEqual(b.heals, a.heals, `${where}: every heal target/source/actual/overheal identical`);
-  assert.deepEqual(b.casts, a.casts, `${where}: every cast caster/targets/mana identical`);
+  packetAudit(oldEvents, newEvents, where, combatId, multiplierOf);
+  // Old heal events already embedded the frozen HealOutcome; it must be identical and agree with the old summary fields.
+  assert.equal(b.heals.length, a.heals.length, `${where}: heal count`);
+  a.heals.forEach((old, i) => {
+    const e = b.heals[i];
+    assert.equal(e.tick, old.tick); assert.deepEqual(e.outcome, old.outcome, `${where} heal ${i}: HealOutcome identical`);
+    assert.deepEqual([old.unitId, sourceOf(old.source), old.requested, old.actual, old.overheal], [e.outcome.targetId, e.outcome.shares[0].source, e.outcome.requested, e.outcome.actual, e.outcome.overheal], `${where} heal ${i}: summary`);
+  });
+  assert.equal(b.casts.length, a.casts.length, `${where}: cast count`);
+  a.casts.forEach((old, i) => {
+    const r = b.casts[i].receipt;
+    assert.deepEqual([b.casts[i].tick, r.source.ownerId, r.source.definitionId, r.targetIds, r.actualManaSpent], [old.tick, old.sourceId, old.abilityId, old.targetIds, old.manaSpent], `${where} cast ${i}: caster/ability/targets/mana`);
+  });
   // Old manaChanged was one aggregate per unit and tick; replay2 publishes the cast spend in cast.receipt and one
   // outcome per gain request. Every aggregate field must be reproduced exactly, and replay2 adds no unit/tick.
   const keys = new Set(a.mana.map(e => JSON.stringify([e.tick, e.unitId])));
@@ -216,7 +274,12 @@ function references(route) {
 
 // ---------- audit ----------
 function frozen(route) { return { versions: pick(route.initial, Object.keys(read(GOLDEN).routes.cannon.versions)), seed: route.initial.seed, commands: route.actions.map(a => a.command), rounds: route.rounds.map(r => pick(r, ['round', 'stateHash', 'eventsHash'])) }; }
-function audit(folder) {
+async function audit(folder) {
+  const { createServer } = await import('vite');
+  const server = await createServer({ root: ROOT, configFile: false, server: { middlewareMode: true, ws: false }, optimizeDeps: { noDiscovery: true, include: [] }, appType: 'custom', logLevel: 'error' });
+  try { return auditWith(folder, (await server.ssrLoadModule('/src/simulation/combat-s13-state.ts')).spellCrit); } finally { await server.close(); }
+}
+function auditWith(folder, spellCrit) {
   const done = read(path.join(folder, 'capture-complete.json'));
   for (const [file, digest] of Object.entries(done.files)) assert.equal(sha(fs.readFileSync(path.join(folder, file))), digest, `${file} unchanged since capture`);
   assert.equal(done.oldCommit, OLD_COMMIT);
@@ -260,7 +323,10 @@ function audit(folder) {
       add(classify(leafDifferences(old.after, round.after), `${build} round ${round.round} terminal`));
       const settled = ({ combatEventCount, ...rest }) => rest; // ledger length checked against the actual ledger above
       assert.deepEqual(settled(round.result), settled(old.result), `${build} round ${round.round}: settlement`);
-      ledgers.push({ round: round.round, ...ledgerAudit(old.events, round.events, `${build} round ${round.round}`) });
+      const combatId = round.after.combat.combatId, units = round.after.combat.units;
+      // The crit multiplier is the owner's spellCrit multiplier (combat-s13.ts damageSample); items do not change in combat.
+      const multiplierOf = ownerId => spellCrit(units.find(u => u.id === ownerId)).multiplierBps;
+      ledgers.push({ round: round.round, ...ledgerAudit(old.events, round.events, `${build} round ${round.round}`, { combatId, multiplierOf }) });
     }
     const oldRefs = references(previous), newRefs = references(current);
     assert.deepEqual(newRefs, oldRefs, `${build}: every stored event reference resolves to the same death/control fact`);
@@ -301,7 +367,7 @@ function record(folder) {
   for (const file of ['audit.json', 'capture-complete.json', ...Object.keys(done.files)]) fs.copyFileSync(path.join(folder, file), path.join(EVIDENCE, file));
   console.log(JSON.stringify({ recorded: Object.keys(done.files).length + 2, newHead: done.newHead }));
 }
-module.exports = { leafDifferences, classify, oldFacts, newFacts, ledgerAudit, OLD_COMMIT };
+module.exports = { leafDifferences, classify, oldFacts, newFacts, ledgerAudit, packetAudit, OLD_COMMIT };
 if (require.main === module) {
   const [mode, a, b, c] = process.argv.slice(2);
   const run = mode === '--route' ? () => routeChild(a, b, c)

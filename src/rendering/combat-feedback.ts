@@ -29,7 +29,7 @@ export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup =
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
     case 'kill': return `${prefix} ${source(event.source)} 击败 ${name(event.unitId)}`;
     case 'growth': return `${prefix} ${name(event.unitId)} 永久攻击力 +${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
-    case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'statChanged': case 'maxHpChanged': case 'cast': {
+    case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'activityChanged': case 'statChanged': case 'maxHpChanged': case 'cast': {
       const text = m8EventText(event, name, source); return text && `${prefix} ${text}`;
     }
     default: return null;

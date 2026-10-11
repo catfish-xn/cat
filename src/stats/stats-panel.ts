@@ -36,7 +36,7 @@ function eventText(event: LedgerCombatEvent, combat: CombatState): string | null
   const name = (id: string | null) => unitName(combat, id);
   const prefix = `第 ${event.tick} tick：`;
   switch (event.type) {
-    case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'statChanged': case 'maxHpChanged': case 'manaChanged': case 'cast': {
+    case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'activityChanged': case 'statChanged': case 'maxHpChanged': case 'manaChanged': case 'cast': {
       const text = m8EventText(event, name, origin => sourceName(combat, origin)); return text && `${prefix}${text}`;
     }
     case 'targetChanged': return `${prefix}${name(event.unitId)} 目标由 ${name(event.before)} 变为 ${name(event.after)}`;
@@ -77,7 +77,7 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
   function renderEvents(): void {
     if (!view) return;
     const selected = selection.value; const visible: string[] = []; let count = 0;
-    const shown = new Set(['packetDamage', 'heal', 'targetChanged', 'cast', 'shieldLayerChanged', 'statusChanged', 'statChanged', 'maxHpChanged', 'manaChanged', 'growth', 'kill', 'death', 'combatFinished', 'effectTriggered']);
+    const shown = new Set(['packetDamage', 'heal', 'targetChanged', 'cast', 'shieldLayerChanged', 'statusChanged', 'activityChanged', 'statChanged', 'maxHpChanged', 'manaChanged', 'growth', 'kill', 'death', 'combatFinished', 'effectTriggered']);
     for (let i = view.events.length - 1; i >= 0; i--) {
       const event = view.events[i];
       if (shown.has(event.type) && (!selected || includesUnit(event, selected)) && matches(event, filter.value as EventFilter)) {
