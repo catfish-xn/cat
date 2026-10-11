@@ -86,19 +86,28 @@ export class MatchApplication {
     const current = () => !this.disposed && request === this.archiveRequest && session === this.session
       && run === this.runId && epoch === (this.coordinator?.token.activationEpoch ?? this.existing?.token.activationEpoch ?? null);
     try {
-      const envelopes: SaveEnvelope[] = [];
+      const envelopes: SaveEnvelope[] = [], unreadable: { runId: string; reason: string }[] = [];
       const completed = await this.repository.listCompleted();
       if (!current()) return;
       for (const info of completed) {
         if (info.runId === run) continue;
-        const envelope = await this.repository.readCompleted(info.runId);
+        let envelope: SaveEnvelope;
+        try { envelope = await this.repository.readCompleted(info.runId); }
+        catch (error) {
+          if (!current()) return;
+          // N2-P2-5: a missing run or battle belongs to this runId and is quarantined; storage-wide
+          // failures (unavailable, abort, quota) still fail the whole load instead of reading as empty.
+          const failure = saveError(error);
+          if (failure.reason !== 'validation') throw failure;
+          unreadable.push({ runId: info.runId, reason: failure.message }); continue;
+        }
         if (!current()) return;
-        if (envelope) envelopes.push(envelope);
+        envelopes.push(envelope);
       }
       // N2-P2-5: archives enter the replay list only after version/content admission; bad ones are quarantined.
-      const admission = admitArchives(envelopes, routeSaveFile);
-      if (current()) { this.archives = admission.records; this.quarantinedArchives = admission.quarantined; this.refreshRecords();
-        if (admission.quarantined.length) this.hooks.status(`已隔离 ${admission.quarantined.length} 个版本或内容不兼容的归档，不进入回放列表。`); }
+      const admission = admitArchives(envelopes, routeSaveFile), quarantined = [...unreadable, ...admission.quarantined];
+      if (current()) { this.archives = admission.records; this.quarantinedArchives = quarantined; this.refreshRecords();
+        if (quarantined.length) this.hooks.status(`已隔离 ${quarantined.length} 个无法读取或版本、内容不兼容的归档，不进入回放列表。`); }
     } catch (error) {
       // Handle failures in the same continuation as the identity check: a late
       // rejection must not report failure against a newly activated session.

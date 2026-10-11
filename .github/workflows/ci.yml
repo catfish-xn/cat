@@ -131,6 +131,7 @@ jobs:
             node scripts/ci-m5-step.cjs m6-storage node scripts/verify-m6-storage.cjs
             node scripts/ci-m5-step.cjs m8-b9-legacy node scripts/verify-m8-b9-legacy.cjs
             node scripts/ci-m5-step.cjs m8-u7-compat node scripts/verify-m8-u7-compat.cjs
+            node scripts/ci-m5-step.cjs m8-b9-archives node scripts/verify-m8-b9-archives.cjs
             node scripts/ci-m5-step.cjs m6-components node tests/m6-stats-browser.cjs
             node scripts/ci-m5-step.cjs m6-performance node scripts/verify-m6-performance.cjs
             node scripts/ci-m5-step.cjs m6-retry node tests/m6-persistence-retry.cjs
