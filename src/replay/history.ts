@@ -58,6 +58,34 @@ function validatorFor(record: BattleRecord): (record: BattleRecord) => VerifiedR
     && v.replayFormatVersion === M8_VERSION.replayFormatVersion && typeof v.contentDigest === 'string', '不支持的战斗档案版本');
   return validateM8Record;
 }
+/** N2-P2-5: version and content compatibility of a stored record, without replay: version routing, shape, a
+ * restorable M8 context whose version block and round match the record, and the event hash. Replay validation
+ * still runs when a record is opened (PlaybackSession). */
+export function checkRecordCompatibility(record: BattleRecord): void {
+  validatorFor(record);
+  checkShape(record);
+  const context = restoreMatch(record.context);
+  check(equalContent(record.version, recordVersion(context)) && record.roundId === context.m8.round.roundId, '记录版本与开战上下文');
+  check(digestContent(record.events) === record.eventHash, '事件校验值');
+}
+export interface ArchiveAdmission { readonly records: readonly BattleRecord[]; readonly quarantined: readonly { readonly runId: string; readonly reason: string }[] }
+/** Only archives that route as current M8 files and whose every record is compatible enter the replay list;
+ * anything else is quarantined whole (never partially listed). */
+export function admitArchives(envelopes: readonly unknown[], route: (file: unknown) => { readonly view: unknown; readonly envelope: SaveEnvelope | null }): ArchiveAdmission {
+  const records: BattleRecord[] = [], quarantined: { runId: string; reason: string }[] = [];
+  for (const file of envelopes) {
+    const runId = file && typeof file === 'object' && typeof (file as { runId?: unknown }).runId === 'string' ? (file as { runId: string }).runId : '';
+    try {
+      const routed = route(file);
+      check(routed.view === null && routed.envelope, '归档版本或内容不兼容');
+      const envelope = routed.envelope!;
+      check(Array.isArray(envelope.battles) && envelope.battles.every(record => record.runId === envelope.runId), '归档局身份');
+      for (const record of envelope.battles) checkRecordCompatibility(record);
+      records.push(...envelope.battles);
+    } catch (error) { quarantined.push({ runId, reason: error instanceof Error ? error.message : String(error) }); }
+  }
+  return { records, quarantined };
+}
 /** Full deterministic validation; never reads an active session. */
 export function validateBattleRecord(record: BattleRecord): VerifiedReplay { return validatorFor(record)(record); }
 function validateM8Record(record: BattleRecord): VerifiedReplay {

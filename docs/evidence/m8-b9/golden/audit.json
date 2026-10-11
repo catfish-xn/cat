@@ -4,23 +4,23 @@
   "oldCommit": "c109d4ebc24bb5de60c1adfa4cad2e5ca5e816fd",
   "capture": {
     "oldCommit": "c109d4ebc24bb5de60c1adfa4cad2e5ca5e816fd",
-    "newHead": "cbc75890b24b656ccc3ee4a6b4f16decc98bc741",
+    "newHead": "510ea7f4d47370f303030f0a3eb8ca0fcfa5c19a",
     "newDirty": false,
     "node": "v22.22.0",
     "files": {
-      "old-cannon.json.gz": "e2268675baea526ec711164094fa1c97a2b807f3c57c72ce45a2f8947fe88ac1",
-      "old-sniper.json.gz": "da83173ecb2421cd51534483c12c008d8df0f373071ec651492094b29ea9297c",
-      "old-mage.json.gz": "fb95d2d77846fc0cff68ed36731e322fd827b1d265d4945b10759972c1b4c36f",
-      "old-sniper-caitlyn.json.gz": "ea82ffb35f61da482dad86121e9f635d73e04283be5686880fe2a901510aac91",
-      "new-cannon.json.gz": "a8460f8a4e8ee730cacd8e836e2405a0b9c5d320fa5f5b44ff8f65fed4def8cf",
-      "new-sniper.json.gz": "7713e6bf8a89ebd21c1cb2803bef9fe51d9a0681e3661a1e78635bfee3801516",
-      "new-mage.json.gz": "9dfdbf66ca469e34661880c0ef99521873bf92edbba3fd1186fa5be608264adb",
-      "new-sniper-caitlyn.json.gz": "d32c53e9341de668d234050ecf903c7d192ddb32656f2fea5b05f9568ecfab89"
+      "old-cannon.json.gz": "27bcb10c8aca1527d4ce755bb6e4895b73d77ef52aaa669faefe2be676d8f0c4",
+      "old-sniper.json.gz": "a1b54a9774cd2be6ad46a40b5fcda6b31fc014e2f3ad20b36b5d76148e8bf561",
+      "old-mage.json.gz": "0c7928d4c8ab8b16f3dcecbb00014aeedf4222247339d01bf6460dad66f04227",
+      "old-sniper-caitlyn.json.gz": "7fe546a9ffe506dc0a19dc0b87b629f0501096805af4e91188412696405f0719",
+      "new-cannon.json.gz": "99eda92544ae7ee3e09032829552ffdf270b6b29fa1d11537bc525c52195f5b7",
+      "new-sniper.json.gz": "4427618c28bb8eee54ef560fbcebe0fded05f75ac9af9780c1614cd82732727b",
+      "new-mage.json.gz": "dc72bd7ea97798dae87b8ed671837fa5173eef76ef6731dc61ab0d4638f87fe5",
+      "new-sniper-caitlyn.json.gz": "1b6263afe6e0a148b9dab359ff50dbd03f991f8f3d9e58f938accfbc57169321"
     }
   },
   "previousGoldenSha256": "8d129f70c093a63b339543f65814232f3cfb6daa13d95168aac3b06bdc39ac28",
-  "candidateSha256": "a7308e0d717ac5b8a19261bfac0bbf13d827e99a2f33c828ae52fd9ca370b75c",
-  "updaterSha256": "109ab8819c436f9f257dd9fd56dc69a639fbd5140827df688dcdf167223a28fa",
+  "candidateSha256": "ae227f505d9cdb31fbdd16e37263040e34d100aee40ab5a380ed81aba2176b9b",
+  "updaterSha256": "9137e12a084427368f1a0d95a62390186a50717062809acc2cddb59fbe6822f3",
   "report": {
     "builds": {
       "cannon": {

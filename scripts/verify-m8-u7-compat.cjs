@@ -82,6 +82,13 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
     after = await read();
     check(after.m6.runId === before.m6.runId && JSON.stringify(after.state) === JSON.stringify(before.state), 'rejected import does not replace the active match');
 
+    // P3: a bad-JSON file replaces the previous notice instead of leaving it stale.
+    const brokenFile = path.join(output, 'broken.json'); fs.writeFileSync(brokenFile, '{not json');
+    await page.locator('[data-debug="m6-import"]').setInputFiles(brokenFile);
+    await page.waitForFunction(() => document.querySelector('[data-debug="m8-compatibility"]')?.textContent.includes('文件数据损坏'), null, { timeout: 30000 });
+    check(!(await page.locator('[data-debug="m8-compatibility"]').textContent()).includes('内容摘要'), 'bad JSON replaces the previous notice');
+    check(JSON.stringify((await read()).state) === JSON.stringify(before.state), 'bad JSON does not replace the active match');
+
     // The unmodified export imports as current.
     const currentFile = path.join(output, 'm8-current.json'); fs.writeFileSync(currentFile, JSON.stringify(exported));
     const epoch = after.m6.token.activationEpoch;

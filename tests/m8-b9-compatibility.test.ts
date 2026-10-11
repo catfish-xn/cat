@@ -79,3 +79,28 @@ describe('B9 readCompatibility routing', () => {
     expect(routeSaveFile(fresh()).view).toBeNull();
   });
 });
+
+import { admitArchives } from '../src/replay';
+describe('N2-P2-5 archive admission before the replay list', () => {
+  it('admits a compatible archive whole and quarantines wrong schema/content/digest/event records', () => {
+    const good = finishedEnvelope();
+    expect(admitArchives([good], routeSaveFile)).toEqual({ records: good.battles, quarantined: [] });
+    const bad = (change: (file: Record<string, any>) => void) => mutated(good, change);
+    const cases = [
+      bad(f => { f.battles[0].context.schemaVersion = 5; }),
+      bad(f => { f.battles[0].context.contentVersion = 's13-14.24b-slice-v1'; }),
+      bad(f => { f.battles[0].context.contentDigest = 'fnv1a32-utf16:00000000'; }),
+      bad(f => { f.battles[0].version.contentDigest = 'fnv1a32-utf16:00000000'; }),
+      bad(f => { f.battles[0].version.rulesVersion = 'm5-14.24b-v1'; }),
+      bad(f => { f.match.contentDigest = 'fnv1a32-utf16:00000000'; }),
+      bad(f => { f.battles[0].eventHash = 'fnv1a32-utf16:00000000'; }),
+      bad(f => { f.battles[0].roundId = 'x-x'; }),
+    ];
+    for (const file of cases) {
+      const result = admitArchives([file, good], routeSaveFile);
+      expect(result.records).toEqual(good.battles);
+      expect(result.quarantined).toHaveLength(1);
+      expect(result.quarantined[0].runId).toBe('compat-run');
+    }
+  });
+});

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import transport from '../scripts/m6-fixture-transport.cjs';
-const { inspectFixtureGroups, fixtureSignature } = transport;
+const { inspectFixtureGroups, fixtureSignature, resolveSharedReferences, SHARED_REF } = transport;
 const fixture = () => ({ complete: { x: 1 }, current: { y: 2 }, record: { z: 3 }, fullLoad: { w: 4 }, expectedBattleCount: 33 });
 describe('M6 native handle fixture transport', () => {
   it('keeps the two graph-connected groups and original scalar metadata', () => {
@@ -26,9 +26,28 @@ describe('M6 native handle fixture transport', () => {
     const x = await fixtureSignature(a), y = await fixtureSignature(b);
     expect(x.valueSha256).toBe(y.valueSha256); expect(x.aliasSha256).not.toBe(y.aliasSha256);
   });
-  it('refuses future cross-group aliases instead of copying them', () => {
-    const input = fixture(); input.current.shared = input.complete;
-    expect(() => inspectFixtureGroups(input)).toThrow('cross-group alias');
+  // N2-P2-6: the 33-battle complete/incremental envelopes share subtrees; they cross by reference, never as copies.
+  it('transports cross-group aliases by reference and restores the identical value graph', async () => {
+    const input = fixture(); input.complete.loot = { frozen: { rng: 1 } }; input.current.loot = input.complete.loot; input.record.inner = input.complete.loot.frozen;
+    input.record.own = { k: 1 }; input.record.again = input.record.own;
+    const result = inspectFixtureGroups(input);
+    expect(result.sharedReferences).toBe(2);
+    expect(result.groups[1].current.loot).not.toBe(input.complete.loot);
+    // Each group crosses separately (independent clones), as the native handle transport does.
+    const page = groups => { const first = structuredClone(groups[0]), second = structuredClone(groups[1]);
+      return { first, second }; };
+    const assemble = ({ first, second }) => ({ complete: first.complete, current: second.current, record: second.record, fullLoad: first.fullLoad, expectedBattleCount: 33 });
+    const restored = page(result.groups); resolveSharedReferences(restored.first, restored.second, SHARED_REF);
+    const unresolved = page(result.groups);
+    expect(await fixtureSignature(assemble(restored))).toEqual(await fixtureSignature(input));
+    expect(assemble(restored).current.loot).toBe(assemble(restored).complete.loot);
+    expect((await fixtureSignature(assemble(unresolved))).valueSha256).not.toBe((await fixtureSignature(input)).valueSha256);
+    // The transported groups never alias across groups, and the measured payload is unchanged.
+    expect(result.summaries.every(g => g.encodedArgumentBytes > 0)).toBe(true);
+  });
+  it('refuses fixture data that already uses the reserved reference key', () => {
+    const input = fixture(); input.complete.x = { __m6FixtureSharedRef__: ['complete'] };
+    expect(() => inspectFixtureGroups(input)).toThrow('reserved key');
   });
   it('counts native null/reference wrappers and refuses undefined rather than losing keys', () => {
     const input = fixture(); input.complete = { b: null }; input.fullLoad = input.complete;

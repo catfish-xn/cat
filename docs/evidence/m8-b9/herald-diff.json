@@ -89,7 +89,7 @@
     },
     "trajectory.json": {
       "oldSha256": "8213c3de87c41bdeb6f71c9543ce0bece18cc776780b57505276edad48421b6a",
-      "newSha256": "e5bfb8e719ccf6e1ad5fa72add5ba91ad3eceb29897ce1d3f6cf36a4fc7d2776",
+      "newSha256": "e6492ce303768262ae81a45b16c93d296914640fc6587484609ca892a493e137",
       "classes": {
         "hashOrLedgerLength": 1188
       },

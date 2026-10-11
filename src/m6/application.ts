@@ -6,13 +6,13 @@ import { SaveRepository, saveError } from '../persistence/repository';
 import { SaveCoordinator } from '../persistence/coordinator';
 import { createSeed, createRunId } from '../persistence/seed';
 import { CompatibilityError, exportFile, validateEnvelope, validateFile } from '../persistence/format';
-import { currentView } from '../persistence/compatibility';
+import { currentView, rejectedView, routeSaveFile } from '../persistence/compatibility';
 import { M8_VERSION } from '../simulation/m8/version';
 import { legacyRecords } from '../persistence/legacy-records';
 import { readRoundInfo } from '../simulation/round-selectors';
 import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { createSaveControls, type SaveControls } from '../persistence/save-controls';
-import { BattleHistory, PlaybackSession, ReplayPanel, validateBattleCollection, type ReplaySnapshot } from '../replay';
+import { BattleHistory, PlaybackSession, ReplayPanel, admitArchives, validateBattleCollection, type ReplaySnapshot } from '../replay';
 import { ReplayView } from '../rendering/replay-view';
 
 interface ApplicationHooks {
@@ -41,6 +41,7 @@ export class MatchApplication {
   private existing: { token: SlotToken; envelope: SaveEnvelope } | null = null;
   private compatibility: CompatibilityView | null = null;
   private archives: readonly BattleRecord[] = [];
+  private quarantinedArchives: readonly { readonly runId: string; readonly reason: string }[] = [];
   private unsubscribe: () => void;
   private playbackSession: PlaybackSession | null = null;
   replaySelectedUnit: string | null = null;
@@ -85,16 +86,19 @@ export class MatchApplication {
     const current = () => !this.disposed && request === this.archiveRequest && session === this.session
       && run === this.runId && epoch === (this.coordinator?.token.activationEpoch ?? this.existing?.token.activationEpoch ?? null);
     try {
-      const records: BattleRecord[] = [];
+      const envelopes: SaveEnvelope[] = [];
       const completed = await this.repository.listCompleted();
       if (!current()) return;
       for (const info of completed) {
         if (info.runId === run) continue;
         const envelope = await this.repository.readCompleted(info.runId);
         if (!current()) return;
-        if (envelope) records.push(...envelope.battles);
+        if (envelope) envelopes.push(envelope);
       }
-      if (current()) { this.archives = records; this.refreshRecords(); }
+      // N2-P2-5: archives enter the replay list only after version/content admission; bad ones are quarantined.
+      const admission = admitArchives(envelopes, routeSaveFile);
+      if (current()) { this.archives = admission.records; this.quarantinedArchives = admission.quarantined; this.refreshRecords();
+        if (admission.quarantined.length) this.hooks.status(`已隔离 ${admission.quarantined.length} 个版本或内容不兼容的归档，不进入回放列表。`); }
     } catch (error) {
       // Handle failures in the same continuation as the identity check: a late
       // rejection must not report failure against a newly activated session.
@@ -216,7 +220,11 @@ export class MatchApplication {
   }
   private async import(file: File) {
     if (!this.confirmReplacement()) return;
-    await this.replaceCandidate(() => validateFile(file, validateBattleCollection));
+    // P3: a file rejected before version routing (bad JSON, size) still replaces the previous file's notice.
+    await this.replaceCandidate(() => validateFile(file, validateBattleCollection).catch(error => {
+      if (error instanceof CompatibilityError) throw error;
+      throw new CompatibilityError(rejectedView('invalid-data', null), error instanceof Error ? error.message.replace(/^存档无效：/, '') : String(error));
+    }));
   }
   private export() {
     const envelope = this.runId ? this.envelope() : this.existing?.envelope;
@@ -301,7 +309,7 @@ export class MatchApplication {
     this.replayPanel?.setEnabled(!this.busy && (this.mode === 'replay' || this.mode === 'active' && ['preparation','settlement','gameOver'].includes(this.session.phase)));
     this.syncControls();
   }
-  debug() { return { mode: this.mode, runId: this.runId, token: this.coordinator?.token ?? null, status: this.status,
+  debug() { return { mode: this.mode, runId: this.runId, token: this.coordinator?.token ?? null, status: this.status, quarantinedArchives: this.quarantinedArchives.length,
     completedCount: this.history.completedRecords.length, lifecycle: { applications: MatchApplication.instances, sessions: MatchSession.liveCount, observers: this.session.observerCount }, paused: this.session.paused,
     replay: this.playbackSession ? { tick: this.playbackSession.read().tick, endTick: this.playbackSession.read().endTick, fx: { ...this.replayView?.stats } } : null }; }
   dispose() {
