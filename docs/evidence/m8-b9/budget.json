@@ -1,23 +1,23 @@
 {
   "base": "c109d4ebc24bb5de60c1adfa4cad2e5ca5e816fd",
-  "candidate": "b8438b91be43540f6965bdb4a949e80ae2fc6fa9",
+  "candidate": "90748114729a7ca1d87daed0dac2ad2cf6a5bb3b",
   "node": "v22.22.0",
   "zlib": "1.3.1-470d3a2",
   "method": "vite build, gzip9 per dist/assets/*.js, summed",
   "totals": {
     "base": 504905,
-    "candidate": 508744,
-    "probeUiLeaves": 507310,
-    "probeUiAll": 507387
+    "candidate": 508813,
+    "probeUiLeaves": 507379,
+    "probeUiAll": 507453
   },
-  "net": 3839,
+  "net": 3908,
   "split": {
     "uiLeaves": {
       "revertedFiles": [
         "src/persistence/save-controls.ts",
         "src/replay/replay-panel.ts"
       ],
-      "b9": 2405,
+      "b9": 2474,
       "u7": 1434
     },
     "uiAll": {
@@ -35,8 +35,8 @@
         "src/rendering/replay-view.ts",
         "src/rendering/strategy-panel.ts"
       ],
-      "b9": 2482,
-      "u7": 1357
+      "b9": 2548,
+      "u7": 1360
     }
   },
   "budget": {
@@ -64,20 +64,20 @@
     ],
     "candidate": [
       {
-        "file": "index-x4O1OA_S.js",
-        "gzip9": 508744
+        "file": "index-CidiXnw4.js",
+        "gzip9": 508813
       }
     ],
     "probeUiLeaves": [
       {
-        "file": "index-C7FQG0tj.js",
-        "gzip9": 507310
+        "file": "index-XoGmdpZ9.js",
+        "gzip9": 507379
       }
     ],
     "probeUiAll": [
       {
-        "file": "index-B2cS8IiX.js",
-        "gzip9": 507387
+        "file": "index-DOO9VzM2.js",
+        "gzip9": 507453
       }
     ]
   }
