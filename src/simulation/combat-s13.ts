@@ -97,16 +97,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const units: S13Unit[] = state.units.map(unit => {
     // Legacy mutable fields are detached once. Frozen mechanism declarations and
     // ledgers use copy-on-write updates; sharing them preserves historical inputs.
-    // CopyDataProperties and assignment to a fresh null-prototype target both
-    // read own enumerable keys once in order. Keep the two operations separate:
-    // the exclusions must be read only after all unit accessors were evaluated.
-    // The native clone normalizes this temporary object's prototype as before.
-    const cloneInput = Object.assign(Object.create(null) as typeof unit, unit);
-    Object.assign(cloneInput, {
+    const copy = structuredClone({ ...unit,
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: undefined } : {}),
       ...(unit.mechanismState ? { mechanismState: undefined } : {}),
       ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) });
-    const copy = structuredClone(cloneInput);
     // The native clone is fresh and has not escaped. Assign the overrides to it
     // instead of spreading the entire detached unit into a second large object.
     return Object.assign(copy, {
