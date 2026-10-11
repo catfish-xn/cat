@@ -233,7 +233,9 @@ export function m8EventText(event: LedgerCombatEvent, name: UnitNameLookup, sour
     case 'statusChanged': {
       const contribution = eventContribution(event), reason = STATUS_REASON_NAMES[event.reason] ?? event.reason;
       if (!contribution) return `${name(event.group.targetId)}：${eventStatusName(event)} ${reason}`;
-      const detail = magnitudeText(contribution);
+      // One application may change several contributions (Rell: armor and magic resist); name each one it changed.
+      const changed = event.reason === 'applied' || event.reason === 'refreshed' ? event.group.contributions : [contribution];
+      const detail = changed.map(magnitudeText).filter(Boolean).join(' / ');
       const until = event.reason !== 'applied' && event.reason !== 'refreshed' ? '' : contribution.expiresAtTick === null ? '，持续至战斗结束' : `，至第 ${contribution.expiresAtTick} 刻`;
       const more = event.group.contributions.length > 1 && event.reason !== 'applied' && event.reason !== 'refreshed' ? `（共 ${event.group.contributions.length} 项）` : '';
       return `${source(contribution.source)} → ${name(event.group.targetId)}：${eventStatusName(event)}${detail ? ` ${detail}` : ''} ${reason}${more}${until}`;
