@@ -5,6 +5,7 @@ import { getUnitStats } from '../../src/simulation/unit-stats';
 import { EMPTY_RUNTIME } from '../../src/simulation/combat-s13-state';
 import { compileItemCrit } from '../../src/simulation/m8/item-program';
 import { battle, unit } from '../combat-helpers';
+import { packets as packetViews, heals as healViews } from '../helpers/replay2-views';
 import { stepCombat, type CombatState, type CombatUnit, type CombatEvent } from '../../src/simulation/combat';
 /** Real catalogue + strategy primitives; independent AD100/HP1000/AS1.0 fixture.
  * Never copies a trigger from the test fixtures into the runtime catalogue. */
@@ -21,5 +22,6 @@ export function run(p:CombatUnit,ticks=1,others:readonly CombatUnit[]=[enemy()],
  for(let i=0;i<ticks&&state.status==='running';i++){const r=stepCombat(state);state=r.state;events.push(...r.events);}
  return{state,events,p:state.units.find(u=>u.id==='p')!};
 }
-export const packets=(events:readonly CombatEvent[],owner='p')=>events.filter((e):e is Extract<CombatEvent,{type:'packetDamage'}>=>e.type==='packetDamage'&&e.source.ownerId===owner);
-export const heals=(events:readonly CombatEvent[])=>events.filter((e):e is Extract<CombatEvent,{type:'heal'}>=>e.type==='heal');
+/** B9 replay2: packet/heal events are read through the old-field-name views (packet raw is pre-crit). */
+export const packets=(events:readonly CombatEvent[],owner='p')=>packetViews(events).filter(e=>e.source.ownerId===owner);
+export const heals=(events:readonly CombatEvent[])=>healViews(events);

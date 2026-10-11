@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { BattleHistory, validateBattleRecord } from '../src/replay';
-import type { CombatEvent } from '../src/simulation/combat';
+import type { LedgerCombatEvent } from '../src/simulation/combat';
+import { packets, healView } from './helpers/replay2-views';
 import { accepted, battle } from './match-helpers';
 import { validateShield, grantShieldState, endShield } from '../src/simulation/m8/shield';
 import { type S13Unit } from '../src/simulation/combat-s13-state';
@@ -38,7 +39,7 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     for (const [i, id] of ['unit-1','unit-2','unit-3'].entries()) state = accepted(deployMatchUnit(state, id, { kind: 'board', cell: { col: 1 + 2 * i, row: 4 } }));
     const history = new BattleHistory('audit-r1');
     const observe = (next: ReturnType<typeof stepMatch>, reason: 'command' | 'tick') => {
-      history.observe({ before: state, after: next.state, events: next.events.filter((e): e is CombatEvent => e.domain === 'combat'), reason }); state = next.state;
+      history.observe({ before: state, after: next.state, events: next.events.filter((e): e is LedgerCombatEvent => e.domain === 'combat'), reason }); state = next.state;
     };
     const start = startMatchCombat(state); if (!start.ok) throw Error(start.reason);
     observe(start, 'command');
@@ -49,9 +50,13 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     // floor(763×250/10000)=19. New battle-seed/round trajectory changes pre-heal HP; the fixed arithmetic stays 19.
     expect(continued.events).toEqual(direct.events);
     expect(continued.state).toEqual(direct.state);
-    expect(continued.events.find(e => e.type === 'heal' && e.unitId === 'unit-1')).toMatchObject({ requested: 19, actual: 19, hp: beforeHeal.hp+19 });
+    // replay2 heal{outcome} carries no post-heal hp; derive it from the same ledger (tick-39 hp, earlier tick-40 packets, this heal).
+    const healIndex = continued.events.findIndex(e => e.type === 'heal' && healView(e).unitId === 'unit-1');
+    const heal = healIndex < 0 ? undefined : healView(continued.events[healIndex]);
+    const hpAtHeal = heal && beforeHeal.hp - packets(continued.events.slice(0, healIndex)).filter(p => p.unitId === 'unit-1').reduce((n, p) => n + p.hpDamage, 0) + heal.actual;
+    expect(heal && { ...heal, hp: hpAtHeal }).toMatchObject({ requested: 19, actual: 19, hp: beforeHeal.hp+19 });
     const resumed = new BattleHistory('audit-r1', [], history.capturePrefix());
-    resumed.observe({ before: restored, after: continued.state, events: continued.events.filter((e): e is CombatEvent => e.domain === 'combat'), reason: 'tick' });
+    resumed.observe({ before: restored, after: continued.state, events: continued.events.filter((e): e is LedgerCombatEvent => e.domain === 'combat'), reason: 'tick' });
     expect(validateBattleRecord(resumed.capturePrefix()!).terminal).toEqual(continued.state.combat);
   });
   it('R1 fallback direct heals also ignore Source property insertion order', () => {
@@ -64,7 +69,7 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
       const entry = { source, targetId: target.id, amount: 19 }; ctx.heals.push(entry); commitMechanismHeal(ctx, entry); return ctx.events;
     };
     expect(run(origin)).toEqual(run(reordered));
-    expect(run(origin)[0]).toMatchObject({ requested: 19, actual: 19, overheal: 0 });
+    expect(healView(run(origin)[0])).toMatchObject({ requested: 19, actual: 19, overheal: 0 });
   });
   it('R2 real tick104 active shield rejects a consumed reward with positive remaining', () => {
     let state = battle(); while (state.combat!.tick < 104) state = stepMatch(state).state;
@@ -84,12 +89,12 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     layer.absorbed = layer.m8State.absorbed = 400;
     layer.endedReason = 'depleted'; holder.shield = 0; holder.shieldExpiresAtTick = null;
     expect(() => restoreMatch(pending)).not.toThrow();
-    expect(stepMatch(restoreMatch(pending)).events.filter(e => e.type === 'packetDamage' && e.source.ownerId === holder.id)).toHaveLength(1);
+    expect(packets(stepMatch(restoreMatch(pending)).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
     const consumed = structuredClone(pending), consumedHolder = consumed.combat.units.find((u: any) => u.id === holder.id);
     consumedHolder.shieldLayers.find((l: any) => l.key === layer.key).m8State.endRewardConsumed = true;
     consumedHolder.tasks = consumedHolder.tasks.filter((t: any) => t.shieldEndKey !== layer.key);
     expect(() => restoreMatch(consumed)).not.toThrow();
-    expect(stepMatch(restoreMatch(consumed)).events.filter(e => e.type === 'packetDamage' && e.source.ownerId === holder.id)).toEqual([]);
+    expect(packets(stepMatch(restoreMatch(consumed)).events).filter(e => e.source.ownerId === holder.id)).toEqual([]);
     const missingTask = structuredClone(pending); missingTask.combat.units.find((u: any) => u.id === holder.id).tasks = [];
     expect(() => restoreMatch(missingTask)).toThrow(/shield/i);
     const consumedWithTask = structuredClone(pending); consumedWithTask.combat.units.find((u: any) => u.id === holder.id).shieldLayers[0].m8State.endRewardConsumed = true;
@@ -102,7 +107,7 @@ describe('B3 audit independent lifecycle and identity expectations', () => {
     zeroLayer.granted = zeroLayer.absorbed = zeroLayer.m8State.granted = zeroLayer.m8State.absorbed = zeroLayer.m8Grant.amount.flat = 0;
     zeroLayer.m8State.decay.basisGranted = 0;
     expect(() => restoreMatch(zeroGrant)).not.toThrow();
-    expect(stepMatch(restoreMatch(zeroGrant)).events.filter(e => e.type === 'packetDamage' && e.source.ownerId === holder.id)).toHaveLength(1);
+    expect(packets(stepMatch(restoreMatch(zeroGrant)).events).filter(e => e.source.ownerId === holder.id)).toHaveLength(1);
   });
   it('R2 shield conservation allows active, zero pending and consumed zero but rejects consumed positive', () => {
     const grant: Extract<Effect, { kind: 'grant-shield' }> = { kind: 'grant-shield', amount: amount(400), durationTicks: 60, decay: { kind: 'none' }, onEnd: [], endTiming: 'post-damage', endTargeting: { kind: 'fixed', targetIds: ['u1'], ifMissing: 'skip' }, endEffects: [] };

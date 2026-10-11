@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit, type CombatMechanic, type CombatOrigin, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME, amount, ad, origin, sourceKey, type S13Unit } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, amount, ad, origin, sourceKey, applyStatus, type S13Unit } from '../src/simulation/combat-s13-state';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { applyCombatStart } from '../src/simulation/combat-effects';
 import { makeSourcedEffects, resolveEffects, cloneEffect } from '../src/simulation/effects';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { battle, unit } from './combat-helpers';
+import { packets, heals, casts } from './helpers/replay2-views';
 
 function hero(name: string, id = 'p', overrides: Partial<CombatUnit> = {}): CombatUnit {
   return unit(id, id.startsWith('e') ? 'enemy' : 'player', id.startsWith('e') ? 2 : 1, 3, {
@@ -27,7 +28,15 @@ function advance(initial: CombatState, ticks: number): { state: CombatState; eve
   for (let n = 0; n < ticks && state.status === 'running'; n++) { const step = stepCombat(state); state = step.state; events.push(...step.events); }
   return { state, events };
 }
-const packets = (events: readonly CombatEvent[]) => events.filter(e => e.type === 'packetDamage');
+/** B9 replay2: S13 statuses must be anchored by frozen contributions or an activity, so injected
+ * fixture statuses are built with the engine's own applyStatus (same source, kind, amount and ticks). */
+function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redirect', value: number, appliedAtTick: number, expiresAtTick: number): CombatUnit {
+  const copy = { ...target, statuses: [...target.statuses ?? []], runtime: { ...target.runtime! } } as S13Unit;
+  applyStatus(copy, src, kind, value, expiresAtTick - appliedAtTick - (kind === 'stun' ? 1 : 0), appliedAtTick, []);
+  const status = copy.statuses.find(s => s.key === `${sourceKey(src)}:${kind}:${target.id}:`);
+  if (!status || status.amount !== value || status.startsAtTick !== appliedAtTick + (kind === 'stun' ? 1 : 0) || status.expiresAtTick !== expiresAtTick) throw new Error('fixture status mismatch');
+  return copy;
+}
 
 describe('M5 independent finite combat rules', () => {
   it('resolves all 19 historical abilities as integer-only isolated snapshots', () => {
@@ -49,7 +58,7 @@ describe('M5 independent finite combat rules', () => {
     for (const name of Object.values(S13_ABILITY_DATA).map(a => a.championId)) {
       const state = battle([hero(name), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)], { rngState: 42, rngDraws: 0 });
       const step = stepCombat(state);
-      expect(step.events.some(e => e.type === 'cast' && e.sourceId === 'p'), name).toBe(true);
+      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(true);
       expect(stepCombat(JSON.parse(JSON.stringify(step.state)))).toEqual(stepCombat(step.state));
       expect(step.state.units.every(u => Number.isSafeInteger(u.hp) && Number.isSafeInteger(u.shield)), name).toBe(true);
     }
@@ -85,9 +94,8 @@ describe('M5 independent finite combat rules', () => {
   });
   it('cancels future multishots after control without undoing committed same-tick shots', () => {
     const initial = stepCombat(battle([hero('maddie'), dummy()]));
-    const state = { ...initial.state, units: initial.state.units.map(u => u.id !== 'p' ? u : { ...u, statuses: [...u.statuses!, {
-      key: 'stun', kind: 'stun' as const, source: source('e'), amount: 0, startsAtTick: 2, expiresAtTick: 50,
-    }] }) };
+    // Stun from e applied at tick1, active from tick2 (next-tick) and expiring at tick50.
+    const state = { ...initial.state, units: initial.state.units.map(u => u.id !== 'p' ? u : withStatus(u, source('e'), 'stun', 0, 1, 50)) };
     const result = advance(state, 30);
     expect(packets(initial.events)).toHaveLength(1);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(0);
@@ -107,9 +115,9 @@ describe('M5 independent finite combat rules', () => {
     const nami = stepCombat(battle([hero('nami'), ...roster]));
     expect(packets(nami.events).filter(p => p.source.ownerId === 'p')).toHaveLength(4);
     const zoe = stepCombat(battle([hero('zoe'), ...roster]));
-    const cast = zoe.events.find(e => e.type === 'cast');
+    const cast = casts(zoe.events)[0];
     // On the odd-r grid both far candidates are distance 2; code-point ID selects e3 first.
-    expect(cast?.type === 'cast' ? cast.targetIds : []).toEqual(['e', 'e3', 'e', 'e4', 'e']);
+    expect(cast?.targetIds ?? []).toEqual(['e', 'e3', 'e', 'e4', 'e']);
   });
   it('Corki emits 21 packets one per tick, empowering every seventh and storing per-missile shred', () => {
     const result = advance(battle([hero('corki'), dummy()]), 21);
@@ -167,7 +175,7 @@ describe('M5 independent finite combat rules', () => {
     const result = stepCombat(battle([hero('scar', 'p', { hp: 50 }), hero('zyra', 'e', { hp: 50 })]));
     expect(result.state.result).toBe('draw');
     expect(result.state.units.every(u => !u.alive && u.hp === 0 && u.mana === 0)).toBe(true);
-    expect(result.events.filter(e => e.type === 'heal')).toEqual([]);
+    expect(heals(result.events)).toEqual([]);
   });
   it('damage mana is floor(HP loss×3%) and positive damage rounds each separate packet', () => {
     const result = stepCombat(battle([hero('ezreal'), hero('lux', 'e', { mana: 0, cooldownTicks: 1000, armor: 100 })]));
@@ -178,12 +186,15 @@ describe('M5 independent finite combat rules', () => {
   it('uses an explicit crit word for every planned attack including zero-probability neutrals', () => {
     const result = stepCombat(battle([hero('lux', 'p', { mana: 0 }), dummy('e', 2, 3, { cooldownTicks: 0, attackDamage: 100 })], { rngState: 42, rngDraws: 0 }));
     expect(result.state.rngDraws).toBe(2);
-    expect(packets(result.events).filter(p => p.source.sourceKind === 'attack').map(p => [p.source.ownerId, p.critical, p.raw])).toEqual([['e', false, 100], ['p', true, 140]]);
+    // replay2: outcome.raw is pre-crit, so Lux's critical raw is her 100 AD (was 140 = 100×140% after crit).
+    expect(packets(result.events).filter(p => p.source.sourceKind === 'attack').map(p => [p.source.ownerId, p.critical, p.raw])).toEqual([['e', false, 100], ['p', true, 100]]);
+    // The 140% critical multiplier still lands on the 0-armor target: 100×140/100 = 140.
+    expect(packets(result.events).filter(p => p.source.sourceKind === 'attack').map(p => p.mitigated)).toEqual([100, 140]);
   });
   it('Gunblade consumes actual HP damage, healing cannot recursively cause damage', () => {
     const result = stepCombat(battle([hero('zyra', 'p', { hp: 4000, mechanics: [mechanic('p', 'gunblade', { selfHealBps: 1500, allyHealBps: 2500 })] }),
       dummy('e', 2, 3, { hp: 100 }), dummy('p2', 0, 3, { hp: 100, maxHp: 1000 })]));
-    expect(result.events.filter(e => e.type === 'heal').map(e => [e.unitId, e.requested, e.actual])).toEqual([['p', 15, 15], ['p2', 25, 25]]);
+    expect(heals(result.events).map(e => [e.unitId, e.requested, e.actual])).toEqual([['p', 15, 15], ['p2', 25, 25]]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(1);
   });
   it('roundtrips every tick and stays invariant under unit enumeration, including multishots and RNG', () => {
@@ -219,7 +230,7 @@ describe('M5 independent finite combat rules', () => {
     const owner = result.state.units.find(u => u.id === 'p')!;
     // 5000*.15+200=950 shield, passive5000*.015=75.
     expect(owner.shieldLayers![0]).toMatchObject({ granted: 950, remaining: 950, expiresAtTick: 81 });
-    expect(result.events.filter(e => e.type === 'heal')).toEqual([expect.objectContaining({ unitId: 'p', requested: 75, actual: 75 })]);
+    expect(heals(result.events)).toEqual([expect.objectContaining({ unitId: 'p', requested: 75, actual: 75 })]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([250, 125, 125]);
   });
   it('Irelia integer linear decay conserves exactly 400 shield over 60 ticks', () => {
@@ -277,7 +288,7 @@ describe('M5 independent finite combat rules', () => {
     expect(attack.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'rageblade'), before: 0, after: 500 });
     const periodic = stepCombat(battle([{ ...owner, cooldownTicks: 1000 }, dummy()], { tick: 199 }));
     expect(periodic.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'archangel'), before: 100, after: 130 });
-    expect(periodic.events.find(e => e.type === 'heal')).toMatchObject({ source: source('p', 'dragonClaw'), requested: 125, actual: 125 });
+    expect(heals(periodic.events)[0]).toMatchObject({ source: source('p', 'dragonClaw'), requested: 125, actual: 125 });
   });
   it('Bulky Buddies grants its one-time sourced shield only after the frozen buddy dies', () => {
     const buddy = { ...mechanic('p', 'bulkyBuddies', { shieldMaxHpBps: 1000, durationTicks: 200 }), targetId: 'a' };
@@ -289,7 +300,7 @@ describe('M5 independent finite combat rules', () => {
   it('Scar, Nami, Zoe and Caitlyn have explicit independent one-star damage and healing answers', () => {
     const scar = stepCombat(battle([hero('scar', 'p', { hp: 4900 }), dummy(), dummy('e2', 3, 3), dummy('e3', 4, 3)]));
     expect(packets(scar.events).map(p => p.raw)).toEqual([80, 80, 80]);
-    expect(scar.events.find(e => e.type === 'heal')).toMatchObject({ requested: 220, actual: 100, overheal: 120 });
+    expect(heals(scar.events)[0]).toMatchObject({ requested: 220, actual: 100, overheal: 120 });
     expect(scar.state.units.find(u => u.id === 'e')!.statuses![0]).toMatchObject({ startsAtTick: 2, expiresAtTick: 32 });
     for (const [name, expected] of [['nami', 120], ['zoe', 140]] as const) {
       const result = stepCombat(battle([hero(name), dummy()]));
@@ -304,7 +315,7 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(kog.events).map(p => [p.damageType, p.raw, p.critical])).toEqual([['physical', 100, false], ['magic', 72, false]]);
     const darius = stepCombat(battle([hero('darius', 'p', { hp: 4700 }), dummy(), dummy('e2', 1, 2)]));
     expect(packets(darius.events).map(p => p.raw)).toEqual([240, 240]);
-    expect(darius.events.find(e => e.type === 'heal')).toMatchObject({ requested: 150, actual: 150 });
+    expect(heals(darius.events)[0]).toMatchObject({ requested: 150, actual: 150 });
     expect(darius.state.units.find(u => u.id === 'p')!.tasks!.map(t => t.targetId)).toEqual(['e', 'e', 'e', 'e']);
   });
   it('same-source shields refresh strongest remaining amount without firing an old end task', () => {
@@ -334,24 +345,37 @@ describe('M5 independent finite combat rules', () => {
     expect(expired.state.tick).toBe(22);
     expect(expired.events.filter(e => e.type === 'attack' && e.attackerId === 'e')).toHaveLength(1);
   });
-  it('existing finite hooks also work on S13, retain counters, and never recurse derived damage', () => {
+  // replay2 (M8_B9_U7_PLAN §2): ManaOutcome.reason is frozen to attack/damage/incoming-basic-hit/periodic/
+  // cast-refund/kill. A legacy gainMana trigger has no frozen reason and is unreachable from shipped content,
+  // so the S13 ledger refuses it instead of renaming it; the remaining finite hooks keep their behaviour.
+  const hookState = (withGainMana: boolean) => {
     const sourced = makeSourcedEffects('p', 'item', 'rageblade', 'i1', [
       { kind: 'trigger', hook: 'combatStart', everyN: 1, action: { kind: 'grantShield', amount: 60, durationTicks: 10 } },
       { kind: 'trigger', hook: 'onAttack', everyN: 1, action: { kind: 'dealDamage', damageType: 'magic', amount: 25 } },
-      { kind: 'trigger', hook: 'onHpLoss', everyN: 1, action: { kind: 'gainMana', amount: 3 } },
+      ...(withGainMana ? [{ kind: 'trigger', hook: 'onHpLoss', everyN: 1, action: { kind: 'gainMana', amount: 3 } } as const] : []),
     ]);
     const resolved = resolveEffects(getUnitStats('lux', 1), resolveAbility('lux-ability', 1), sourced);
-    const state = battle([hero('lux', 'p', { mana: 0, sources: resolved.sources, triggers: resolved.triggers,
+    return battle([hero('lux', 'p', { mana: 0, sources: resolved.sources, triggers: resolved.triggers,
       effectRuntime: resolved.triggers.map(t => ({ key: t.key, count: 0 })) }), dummy('e', 2, 3, { cooldownTicks: 0, attackDamage: 100 })],
     { strategy: { traits: [], units: [] }, combatId: 'hooks', nextEventSeq: 0, rngState: 42 });
-    const start = applyCombatStart(state);
+  };
+  it('existing finite hooks also work on S13, retain counters, and never recurse derived damage', () => {
+    const start = applyCombatStart(hookState(false));
     expect(start.state.units.find(u => u.id === 'p')!.shieldLayers).toEqual([expect.objectContaining({ granted: 60, remaining: 60 })]);
     expect(applyCombatStart(start.state).events).toEqual([]);
     const result = stepCombat(start.state);
-    expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([140, 25]);
-    expect(result.state.units.find(u => u.id === 'p')!.mana).toBe(14); //10 attack + floor(40*.03)=1 + hook3.
-    expect(result.state.units.find(u => u.id === 'p')!.effectRuntime!.map(c => c.count)).toEqual([1, 1, 1]);
+    // replay2: the seed-42 Lux attack crits and outcome.raw is pre-crit: 100 AD (was 140 = 100×140% after crit).
+    expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([100, 25]);
+    expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => [p.critical, p.mitigated])).toEqual([[true, 140], [false, 25]]);
+    expect(result.state.units.find(u => u.id === 'p')!.mana).toBe(11); //10 attack + floor(40*.03)=1; the hook3 trigger is not in this input.
+    expect(result.state.units.find(u => u.id === 'p')!.effectRuntime!.map(c => c.count)).toEqual([1, 1]);
     expect(result.events.map(e => e.eventSeq)).toEqual(Array.from({ length: result.events.length }, (_, n) => n + start.events.length));
+  });
+  it('a legacy gainMana trigger is refused by the replay2 S13 ledger without mutating the input', () => {
+    const start = applyCombatStart(hookState(true));
+    const before = JSON.stringify(start.state);
+    expect(() => stepCombat(start.state)).toThrow(/Legacy gainMana hook cannot enter the replay2 ledger/);
+    expect(JSON.stringify(start.state)).toBe(before);
   });
   it('finite mechanic validation rejects unknown fields, missing coefficients, and zero-period schedules', () => {
     expect(() => cloneEffect({ kind: 'mechanic', mechanic: 'eval', values: {} })).toThrow();
@@ -363,8 +387,7 @@ describe('M5 independent finite combat rules', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
     const result = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), {
-      ...protector, statuses: [{ key: `${sourceKey(shieldSource)}:redirect:ep:`, kind: 'redirect', source: shieldSource,
-        amount: 5000, startsAtTick: 0, expiresAtTick: 80 }],
+      ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     // 575 incoming splits288 to primary and287 to protector. Only primary overkill188 may ricochet.
     const owner = result.state.units.find(u => u.id === 'p')!;
@@ -378,8 +401,7 @@ describe('M5 independent finite combat rules', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
     const result = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 1000 }), {
-      ...protector, statuses: [{ key: `${sourceKey(shieldSource)}:redirect:ep:`, kind: 'redirect', source: shieldSource,
-        amount: 5000, startsAtTick: 0, expiresAtTick: 80 }],
+      ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     expect(result.state.units.find(u => u.id === 'ea')!.hp).toBe(712);
     expect(result.state.units.find(u => u.id === 'ep')!.hp).toBe(0);
@@ -391,12 +413,13 @@ describe('M5 independent finite combat rules', () => {
     const protector = hero('loris', 'ep', { mana: 0, cooldownTicks: 1000, cell: { col: 4, row: 3 } });
     const src = origin(protector);
     const first = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), dummy('eb', 3, 3, { armor }), {
-      ...protector, statuses: [{ key: `${sourceKey(src)}:redirect:ep:`, source: src, kind: 'redirect', amount: 5000, startsAtTick: 0, expiresAtTick: 80 }],
+      ...withStatus(protector, src, 'redirect', 5000, 0, 80),
     }]));
     expect(first.state.units.find(u => u.id === 'p')!.tasks![0].amount).toBe(475);
     const second = stepCombat(first.state);
     expect(packets(second.events).filter(p => p.source.ownerId === 'p').map(p => [p.unitId, p.raw, p.mitigated, p.hpDamage, p.redirected]))
-      .toEqual([['eb', 475, 238, 238, false], ['ep', 475, 237, 237, true]]);
+      // M8_RULES:259: outcome.raw is the packet's entry amount; the redirected share inherits its integer 237.
+      .toEqual([['eb', 475, 238, 238, false], ['ep', 237, 237, 237, true]]);
     expect(second.state.units.find(u => u.id === 'p')!.runtime!.permanentAdBps).toBe(125);
     expect(second.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
   });

@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { aggregateDamagePackets, mitigateDamage } from '../src/simulation/combat-damage';
 import type { DamagePacket } from '../src/simulation/ability-types';
 import { stepCombat } from '../src/simulation/combat';
+import type { CombatEvent } from '../src/simulation/combat';
 import { battle, freeze, unit } from './combat-helpers';
+
+/** B9: this pre-S13 path still emits the legacy manaChanged shape; the replay2 shape carries outcome.targetId. */
+const manaUnitId = (event: Extract<CombatEvent, { type: 'manaChanged' }>): string => 'unitId' in event ? event.unitId : event.outcome.targetId;
 
 describe('physical / magic mitigation and aggregate damage', () => {
   it.each([[0, 100, 0], [100, 0, 100], [100, 100, 50], [100, 40, 71], [1, 9999, 1]])(
@@ -40,7 +44,7 @@ describe('physical / magic mitigation and aggregate damage', () => {
         absorbed: 60, hpDamage: 80, hp: 0, shield: 0 },
     ]);
     expect(result.state.units.find(other => other.id === 'e')).toMatchObject({ alive: false, hp: 0, shield: 0, shieldExpiresAtTick: null, mana: 0 });
-    expect(result.events.some(event => event.type === 'manaChanged' && event.unitId === 'e')).toBe(false);
+    expect(result.events.some(event => event.type === 'manaChanged' && manaUnitId(event) === 'e')).toBe(false);
     expect(stepCombat({ ...initial, units: [...initial.units].reverse() })).toEqual(result);
   });
 

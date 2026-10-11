@@ -55,26 +55,38 @@ export interface CombatState {
   readonly board: Board; readonly units: readonly CombatUnit[]; readonly tick: number; readonly maxTicks: number;
   readonly status: 'running' | 'finished'; readonly result: CombatResult | null;
 }
+/** Engine-level event: every combat event carries a tick; Match/strategy combats add the ledger envelope. */
 export type CombatEvent = CombatEventData & { readonly domain?: 'combat'; readonly combatId?: string; readonly eventSeq?: number };
-export type CombatEventData =
-  | { readonly type: 'maxHpChanged'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly beforeMax: number; readonly afterMax: number; readonly beforeHp: number; readonly afterHp: number; readonly countsAsHeal: false }
-  | { readonly type: 'statChanged'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly stat: 'attackSpeedBps' | 'abilityPower' | 'range'; readonly before: number; readonly after: number }
+/** B9 replay2: the frozen M8 ledger event (contracts.ts M8CombatEvent). Match, saves, replay, stats and UI use only this. */
+export type LedgerCombatEvent = import('./m8/contracts').M8CombatEvent;
+/** Events that M8_RULES §10 keeps with their existing fields. */
+export type UnchangedCombatEventData =
   | { readonly type: 'targetChanged'; readonly tick: number; readonly unitId: string; readonly before: string | null; readonly after: string | null }
-  | { readonly type: 'heal'; readonly outcome?: import('./m8/contracts').HealOutcome; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly requested: number; readonly actual: number; readonly overheal: number; readonly hp: number }
-  | { readonly type: 'statusChanged'; readonly tick: number; readonly unitId: string; readonly status: CombatStatus; readonly reason: 'applied' | 'expired' | 'cleansed' | 'death-cleanup' | 'combat-end' | 'control-cancelled' | 'replaced'; readonly group?: import('./m8/contracts').StatusGroup; readonly activity?: import('./m8/contracts').CombatActivity }
-  | { readonly type: 'shieldLayerChanged'; readonly tick: number; readonly unitId: string; readonly layer: ShieldLayer; readonly reason: 'granted' | 'absorbed' | 'expired' | 'decayed'; readonly endReason?: import('./m8/contracts').ShieldEndReason }
-  | { readonly type: 'packetDamage'; readonly tick: number; readonly source: CombatOrigin; readonly unitId: string; readonly damageType: 'physical' | 'magic' | 'true'; readonly outcome?: import('./m8/contracts').DamageOutcome; readonly raw: number; readonly mitigated: number; readonly absorbed: number; readonly hpDamage: number; readonly actionSeq: number; readonly packetOrdinal: number; readonly critical: boolean; readonly redirected: boolean }
   | { readonly type: 'kill'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin }
   | { readonly type: 'growth'; readonly tick: number; readonly unitId: string; readonly amountBps: number; readonly totalBps: number }
   | { readonly type: 'effectTriggered'; readonly tick: number; readonly source: EffectSource; readonly effectKey: string; readonly action: EffectAction; readonly targetId: string }
   | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell }
   | { readonly type: 'attack'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
+  | { readonly type: 'death'; readonly tick: number; readonly unitId: string }
+  | { readonly type: 'combatFinished'; readonly tick: number; readonly result: CombatResult; readonly reason: 'elimination' | 'timeout' };
+/** B9 replay2 payloads, field-for-field the frozen M8CombatEvent members (pinned by tests/m8-b9-replay2-events.test.ts). */
+export type ReplayTwoEventData =
+  | { readonly type: 'activityChanged'; readonly tick: number; readonly activity: import('./m8/contracts').CombatActivity; readonly reason: 'applied' | 'refreshed' | import('./m8/contracts').ActivityEndReason }
+  | { readonly type: 'cast'; readonly tick: number; readonly receipt: import('./m8/contracts').CastReceipt }
+  | { readonly type: 'packetDamage'; readonly tick: number; readonly outcome: import('./m8/contracts').DamageOutcome }
+  | { readonly type: 'heal'; readonly tick: number; readonly outcome: import('./m8/contracts').HealOutcome }
+  | { readonly type: 'manaChanged'; readonly tick: number; readonly outcome: import('./m8/contracts').ManaOutcome }
+  | { readonly type: 'statusChanged'; readonly tick: number; readonly group: import('./m8/contracts').StatusGroup; readonly reason: 'applied' | 'refreshed' | import('./m8/contracts').StatusEndReason }
+  | { readonly type: 'shieldLayerChanged'; readonly tick: number; readonly layer: import('./m8/contracts').ShieldState; readonly reason: 'granted' | 'absorbed' | 'decayed' | import('./m8/contracts').ShieldEndReason }
+  | { readonly type: 'statChanged'; readonly tick: number; readonly unitId: string; readonly source: import('./m8/contracts').Source; readonly stat: import('./m8/contracts').Stat; readonly before: number; readonly after: number }
+  | { readonly type: 'maxHpChanged'; readonly tick: number; readonly unitId: string; readonly source: import('./m8/contracts').Source; readonly beforeMax: number; readonly afterMax: number; readonly beforeHp: number; readonly afterHp: number; readonly countsAsHeal: false };
+/** Pre-S13 combat path only (M3/M4 legacy units and lower-level trigger seams); never part of an M8 ledger. */
+export type LegacyCombatEventData =
   | { readonly type: 'cast'; readonly tick: number; readonly sourceId: string; readonly abilityId: string; readonly targetIds: readonly string[]; readonly manaSpent: number }
   | { readonly type: 'shieldChanged'; readonly tick: number; readonly unitId: string; readonly reason: 'granted' | 'expired'; readonly before: number; readonly after: number; readonly expiresAtTick: number | null }
   | { readonly type: 'damage'; readonly tick: number; readonly unitId: string; readonly amount: number; readonly hp: number; readonly physicalAmount: number; readonly magicAmount: number; readonly absorbed: number; readonly hpDamage: number; readonly shield: number; readonly packets?: readonly (DamagePacket & { readonly mitigated: number })[] }
-  | { readonly type: 'manaChanged'; readonly outcome?: import('./m8/contracts').ManaOutcome; readonly tick: number; readonly unitId: string; readonly before: number; readonly spent: number; readonly attackGain: number; readonly damageGain: number; readonly hookGain?: number; readonly overflow: number; readonly after: number }
-  | { readonly type: 'death'; readonly tick: number; readonly unitId: string }
-  | { readonly type: 'combatFinished'; readonly tick: number; readonly result: CombatResult; readonly reason: 'elimination' | 'timeout' };
+  | { readonly type: 'manaChanged'; readonly tick: number; readonly unitId: string; readonly before: number; readonly spent: number; readonly attackGain: number; readonly damageGain: number; readonly hookGain?: number; readonly overflow: number; readonly after: number };
+export type CombatEventData = UnchangedCombatEventData | ReplayTwoEventData | LegacyCombatEventData;
 export interface CombatStep { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 export function compareIds(a: { readonly id: string }, b: { readonly id: string }): number { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }
 export function eliminationResult(units: readonly CombatUnit[]): CombatResult | null {

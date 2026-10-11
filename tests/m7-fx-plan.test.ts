@@ -1,11 +1,20 @@
 /** Audit F04/F06: one pure event→feedback mapping for live and replay; numbers stay with the DOM renderer. */
-import { describe, expect, it } from 'vitest';
-import { load } from './fixtures/m6-saves/load.cjs';
+import { beforeAll, describe, expect, it } from 'vitest';
+import * as api from '../src/simulation/match';
+import { run } from '../scripts/generate-m5-route.cjs';
 import { planFx } from '../src/presentation/fx-plan';
-import type { SaveEnvelope } from '../src/m6/contracts';
+import type { CombatState, LedgerCombatEvent } from '../src/simulation/combat-types';
 
-const envelope = load('07-game-over.json.gz') as SaveEnvelope;
-const battles = envelope.battles;
+// B9 (D2-A): M7 battle records are never replayed, so this mapping is exercised on the replay2 ledger of the
+// fixed cannon seed-42 route instead of the archived M7 export; the asserted properties are unchanged.
+let battles: { initial: CombatState; events: LedgerCombatEvent[] }[] = [];
+beforeAll(async () => {
+  const route = await run(api, { build: 'cannon', seed: 42, retainStates: true }) as unknown as { rounds: { before: api.MatchState; events: readonly { domain?: string }[] }[] };
+  battles = route.rounds.map(round => {
+    const start = api.startMatchCombat(round.before); if (!start.ok) throw Error(start.reason);
+    return { initial: start.state.combat!, events: round.events.filter(event => event.domain === 'combat') as LedgerCombatEvent[] };
+  });
+}, 120000);
 
 describe('M7 fx plan', () => {
   it('maps every attack and cast exactly once and is deterministic', () => {
@@ -18,7 +27,7 @@ describe('M7 fx plan', () => {
     }
   });
   it('never renders heal/damage/shield amounts as canvas text', () => {
-    const heals = battles.flatMap(record => record.events.filter(event => event.type === 'heal' && event.actual > 0).map(event => ({ record, event })));
+    const heals = battles.flatMap(record => record.events.filter(event => event.type === 'heal' && event.outcome.actual > 0).map(event => ({ record, event })));
     expect(heals.length).toBeGreaterThan(0);
     for (const record of battles) for (const spec of planFx(record.events, record.initial, false)) {
       if (spec.kind === 'label' || spec.kind === 'cast') expect(spec.kind === 'label' ? spec.text : spec.label).not.toMatch(/^[+−-]?\d+$/);

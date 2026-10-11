@@ -1,4 +1,5 @@
-import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
+import { COMBAT_TICK_MS } from '../simulation/combat';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import {
   buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
@@ -16,7 +17,7 @@ export class MatchSession {
   get observerCount(): number { return this.listeners.size; }
   private matchState: MatchState;
   private accumulator = 0;
-  private combatLedger: CombatEvent[] = [];
+  private combatLedger: LedgerCombatEvent[] = [];
   private pauseReasons = new Set<string>();
   private listeners = new Set<(change: SessionChange) => void>();
   get paused(): boolean { return this.pauseReasons.size > 0; }
@@ -25,24 +26,24 @@ export class MatchSession {
   subscribe(listener: (change: SessionChange) => void): () => void {
     this.listeners.add(listener); return () => this.listeners.delete(listener);
   }
-  private notify(before: MatchState, events: readonly CombatEvent[], reason: SessionChange['reason']) {
+  private notify(before: MatchState, events: readonly LedgerCombatEvent[], reason: SessionChange['reason']) {
     if (before === this.matchState) return;
     for (const listener of this.listeners) listener({ before, after: this.matchState, events, reason });
   }
   dispose(): void { if (this.disposed) return; this.disposed = true; MatchSession.instances--; this.listeners.clear(); this.pauseReasons.clear(); this.accumulator = 0; }
   private blocked(): MatchCommandResult { return { ok: false, state: this.matchState, reason: 'wrong-phase' }; }
 
-  constructor(initial = createMatch(), events: readonly CombatEvent[] = []) { MatchSession.instances++; this.matchState = structuredClone(initial); this.combatLedger = structuredClone([...events]); }
+  constructor(initial = createMatch(), events: readonly LedgerCombatEvent[] = []) { MatchSession.instances++; this.matchState = structuredClone(initial); this.combatLedger = structuredClone([...events]); }
   get state(): MatchState { return this.matchState; }
   get phase() { return this.matchState.phase; }
   get preparation() { return this.matchState.preparation; }
   get combat() { return this.matchState.combat; }
   get startFailure() { return matchStartFailure(this.matchState); }
   /** Observer only: a copy of every event, including combatStart/tick-zero hooks. */
-  get combatEvents(): readonly CombatEvent[] { return structuredClone(this.combatLedger); }
+  get combatEvents(): readonly LedgerCombatEvent[] { return structuredClone(this.combatLedger); }
 
-  private record(events: readonly MatchEvent[]): CombatEvent[] {
-    const combat = events.filter((event): event is CombatEvent => 'tick' in event);
+  private record(events: readonly MatchEvent[]): LedgerCombatEvent[] {
+    const combat = events.filter((event): event is LedgerCombatEvent => 'tick' in event);
     this.combatLedger.push(...structuredClone(combat));
     return combat;
   }
@@ -72,10 +73,10 @@ export class MatchSession {
   anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.paused ? this.blocked() : this.commit(selectAnomalyTarget(this.matchState, choiceId, generation, unitId)); }
   anomalyReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAnomaly(this.matchState, choiceId, generation)); }
 
-  advance(delta: number): readonly CombatEvent[] {
+  advance(delta: number): readonly LedgerCombatEvent[] {
     if (this.disposed || this.paused || this.phase !== 'combat' || !Number.isFinite(delta) || delta < 0) return [];
     this.accumulator += delta;
-    const events: CombatEvent[] = [];
+    const events: LedgerCombatEvent[] = [];
     while (this.accumulator >= COMBAT_TICK_MS && this.matchState.phase === 'combat') {
       this.accumulator -= COMBAT_TICK_MS;
       const before = this.matchState;

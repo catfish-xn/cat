@@ -1,9 +1,10 @@
-import type { CombatEvent, CombatResult, CombatStartFailure, CombatState } from './combat';
+import type { CombatResult, CombatStartFailure, CombatState } from './combat';
+import type { LedgerCombatEvent } from './combat-types';
 import type { DeploymentFailure, GameState } from './game';
 import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, ScheduleReceipt, StrategyEvent } from './strategy-types';
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
-export type MatchEvent = CombatEvent | ((UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }) & { readonly domain?: 'match'; readonly eventSeq?: number });
+export type MatchEvent = LedgerCombatEvent | ((UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }) & { readonly domain?: 'match'; readonly eventSeq?: number });
 export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased' };
 export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[]; readonly locked?: boolean }
 export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: number }
@@ -35,7 +36,7 @@ export interface MatchBase {
 
   readonly equipmentState: import('./m8/equipment').EquipmentState;
   readonly temporaryEquipment: readonly import('./m8/contracts').TemporaryEquipment[];
-  readonly schemaVersion: 5; readonly rulesVersion: 'm5-14.24b-v1'; readonly contentVersion: 's13-14.24b-slice-v1'; readonly contentDigest: string;
+  readonly schemaVersion: import('./m8/contracts').M8Version['schemaVersion']; readonly rulesVersion: import('./m8/contracts').M8Version['rulesVersion']; readonly contentVersion: import('./m8/contracts').M8Version['contentVersion']; readonly contentDigest: string;
   readonly commandProtocolVersion: 2; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
   readonly roundDefinitionId: string; readonly streak: Streak; readonly outcome: 'victory' | 'defeat' | null;
   readonly battleSeedRngState: number; readonly persistentGrowth: readonly PersistentGrowth[];

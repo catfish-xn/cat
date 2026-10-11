@@ -1,10 +1,11 @@
 import type { BattleRecord } from '../m6/contracts';
 import { CHECKPOINT_INTERVAL_TICKS } from '../m6/limits';
-import { COMBAT_TICK_MS, stepCombat, type CombatState, type CombatEvent } from '../simulation/combat';
+import { COMBAT_TICK_MS, stepCombat, type CombatState } from '../simulation/combat';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { deepFreeze, equalContent, validateBattleRecord } from './history';
 
 export interface ReplaySnapshot {
-  readonly combat: CombatState; readonly events: readonly CombatEvent[];
+  readonly combat: CombatState; readonly events: readonly LedgerCombatEvent[];
   readonly tick: number; readonly endTick: number; readonly nextEventSeq: number;
   readonly playing: boolean; readonly speed: 1 | 2 | 4;
 }

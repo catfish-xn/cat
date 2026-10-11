@@ -13,6 +13,7 @@ import type { AbilityPlan, Effect } from '../src/simulation/m8/contracts';
 import { source, trigger, amount, cast } from './fixtures/m8-contract-cases';
 import { shiv } from './fixtures/m8-audit-definitions';
 import { battle, unit } from './combat-helpers';
+import { packetView, packets } from './helpers/replay2-views';
 
 const dummy = (id: string, team: 'player'|'enemy', col: number, patch: Partial<CombatUnit> = {}): CombatUnit =>
   unit(id, team, col, 3, { ability: resolveAbility('neutral-attack', 1), hp: 1000, maxHp: 1000, armor: 0, magicResist: 0,
@@ -28,11 +29,11 @@ describe('B3 third audit: independent counterexamples before implementation', ()
     for (let i = 0; i < 2; i++) state = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) }).state;
     const earlier = dummy('a', 'player', 0, { ability: { ...ability, variables: { ...ability.variables, DamageOnAttack: 1000000 } }, cooldownTicks: 0 });
     const result = stepCombat({ ...state, units: [...state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u), ...(otherRoot ? [earlier] : [])] });
-    const magic = result.events.flatMap(e => e.type === 'packetDamage' && e.damageType === 'magic' ? [[e.source.ownerId, e.raw, e.hpDamage]] : []);
+    const magic = packets(result.events).flatMap(e => e.damageType === 'magic' ? [[e.source.ownerId, e.raw, e.hpDamage]] : []);
     expect(magic).toEqual(otherRoot ? [['a', 100, 50], ['p', 100, 50], ['p', 35, 20]] : [['p', 100, 50], ['p', 35, 20]]);
     const applied = result.events.findIndex(e => e.type === 'statusChanged' && e.reason === 'applied' && e.group?.kind === 'shred');
-    const own = result.events.findIndex(e => e.type === 'packetDamage' && e.raw === 35);
-    const prior = result.events.findIndex(e => e.type === 'packetDamage' && e.source.ownerId === 'p' && e.damageType === 'magic' && e.raw === 100);
+    const own = result.events.findIndex(e => e.type === 'packetDamage' && packetView(e).raw === 35);
+    const prior = result.events.findIndex(e => { if (e.type !== 'packetDamage') return false; const v = packetView(e); return v.source.ownerId === 'p' && v.damageType === 'magic' && v.raw === 100; });
     expect(applied).toBeGreaterThan(prior); expect(applied).toBeLessThan(own);
   });
 
@@ -89,7 +90,7 @@ describe('B3 third audit: independent counterexamples before implementation', ()
       { kind: 'damage', damageType: 'magic', delivery: 'ability-direct', critEligibility: 'never', amount: amount(0, { maxHpBps: 1500, hpBasis: 'target', cap: 300, sample: 'packet' }) },
     ] }] }));
     expect(result.state.openingState?.plans[0]).toMatchObject({ aimId: 'v', targetIds: ['p', 'v'], path: [{ col: 4, row: 2 }, { col: 3, row: 3 }, { col: 3, row: 4 }, { col: 2, row: 5 }] });
-    expect(result.events.flatMap(e => e.type === 'packetDamage' ? [[e.unitId, e.hpDamage]] : [])).toEqual([['p', prevention ? 0 : 150], ['v', 150]]);
+    expect(packets(result.events).map(e => [e.unitId, e.hpDamage])).toEqual([['p', prevention ? 0 : 150], ['v', 150]]);
   });
 
   const members = ['a', 'b', 'c'].map(id => ({ id, team: 'enemy' as const, unitKind: 'neutral' as const, encounterId: 'enc', monsterFamily: 'family' }));

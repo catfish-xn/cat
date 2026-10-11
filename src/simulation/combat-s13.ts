@@ -148,7 +148,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       }
     }
   }
-  const startHp = new Map(units.map(u => [u.id, u.hp])), manaBefore = new Map(units.map(u => [u.id, u.mana]));
+  const startHp = new Map(units.map(u => [u.id, u.hp]));
   const spent = new Map<string, number>(), attackMana = new Map<string, number>(), killMana = new Map<string, number>();
   const hookMana = new Map<string, number>();
   const hooks = (unit: S13Unit, hook: Hook, seq: number) => {
@@ -171,7 +171,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   maintainMechanisms(ctx, () => actionSeq++);
   const blocked = new Set<string>();
   for (const unit of units) {
-    for (const status of unit.statuses.filter(s => !s.contributionKeys && !s.activity && s.expiresAtTick <= tick)) events.push({ type: 'statusChanged', tick, unitId: unit.id, status, reason: 'expired' });
+    // B9 replay2: every S13 status is anchored by frozen contributions or an activity.
+    if (unit.statuses.some(s => !s.contributionKeys && !s.activity)) throw new RangeError('S13 status without a frozen contribution or activity');
     unit.statuses = unit.statuses.filter(s => s.activity || s.expiresAtTick > tick);
     const controlled = active(unit, tick, 'stun').length > 0 || effectiveStatuses(unit.mechanismState!.statuses, tick).some(g => g.kind === 'stun');
     maintainActivities(ctx, unit, controlled);
@@ -228,7 +229,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       const targets = planS13Cast(ctx, unit, target, seq);
       const receipt = completeCast({ source: asSource(origin(unit)), actionSeq: seq, completed: true, targetIds: targets, targetsSampledAtTick: tick, actualManaSpent: 0, refundedMana: 0, completionCell: unit.cell }, cost.actualManaSpent);
       (ctx.castReceipts ??= []).push(receipt);
-      events.splice(beforeCount, 0, { type: 'cast', tick, sourceId: unit.id, abilityId: unit.ability.id, targetIds: targets, manaSpent: spent.get(unit.id)! });
+      // replay2: the receipt is finalized at the end of this tick (same-tick refunds, M8_RULES G08).
+      events.splice(beforeCount, 0, { type: 'cast', tick, receipt });
       unit.cooldownTicks = oldInterval;
       const immediate = unit.tasks.filter(t => t.executeAtTick <= tick);
       unit.tasks = unit.tasks.filter(t => t.executeAtTick > tick);
@@ -248,7 +250,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const beforeDamage = units.map(u => ({ id: u.id, hp: u.hp, maxHp: u.maxHp }));
   const positiveDamage = new Set<string>();
   // Virtual health and layered shields give each packet a deterministic actual contribution and killer.
-  const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>(), totals = new Map<string, { physical: number; magic: number; true: number; absorbed: number; incoming: number }>();
+  const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>();
   const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; outcomes: DamageOutcome[]; hpAmount: number; heal?: Amount }>();
   const allOutcomes: DamageOutcome[] = [];
   const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist');
@@ -257,15 +259,15 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   ctx.virtualHp = virtualHp;
   const killed = new Map<string, CombatOrigin>();
   const ricochetActions = new Set<string>(), aggregatedActions = new Set<number>();
-  const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet, legacyRaw: number) => {
+  const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet) => {
     const outcome = result.outcome, { absorbed, hpDamage: actual, context, critical } = outcome;
     target.shieldLayers = result.shields.map(layer => {
       const old = target.shieldLayers.find(s => s.key === layer.key)!;
       const taken = old.remaining - layer.remaining;
       const next = shieldProjection(recordShieldAbsorption(frozenShield(old, target), layer.remaining), old.key, old.m8Grant, taken > 0 && layer.remaining === 0 ? 'depleted' : old.endedReason);
       if (taken > 0) {
-        events.push({ type: 'shieldLayerChanged', tick, unitId: target.id, layer: next, reason: 'absorbed' });
-        if (next.remaining === 0) events.push({ type: 'shieldLayerChanged', tick, unitId: target.id, layer: next, reason: 'absorbed', endReason: 'depleted' });
+        events.push({ type: 'shieldLayerChanged', tick, layer: next.m8State!, reason: 'absorbed' });
+        if (next.remaining === 0) events.push({ type: 'shieldLayerChanged', tick, layer: next.m8State!, reason: 'depleted' });
       }
       return next;
     }); syncShield(target);
@@ -273,15 +275,12 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     allOutcomes.push(outcome);
     ctx.resolutionFacts = { ...ctx.resolutionFacts!, damage: allOutcomes };
     hpLost.set(target.id, (hpLost.get(target.id) ?? 0) + actual);
-    const total = totals.get(target.id) ?? { physical: 0, magic: 0, true: 0, absorbed: 0, incoming: 0 };
-    total[packet.damageType] += outcome.mitigated; total.absorbed += absorbed; total.incoming += outcome.mitigated; totals.set(target.id, total);
     if (absorbed + actual > 0) {
       positiveDamage.add(target.id);
       if (trackAssists) damageContributors[target.id] = [...new Set([...(damageContributors[target.id] ?? []), context.source.ownerId])].sort(compareText);
     }
-    // Development adapter: replay2 will publish the frozen outcome payload in B9.
-    events.push({ type: 'packetDamage', tick, source: packet.source, unitId: target.id, damageType: packet.damageType, raw: legacyRaw,
-      mitigated: outcome.mitigated, absorbed, hpDamage: actual, actionSeq: packet.actionSeq, packetOrdinal: packet.ordinal, critical, redirected: context.redirected });
+    // B9 replay2: the frozen DamageOutcome is the packet event payload.
+    events.push({ type: 'packetDamage', tick, outcome });
     const owner = units.find(u => u.id === packet.source.ownerId);
     if (owner && absorbed + actual > 0 && context.permissions.includes('omnivamp')) {
       const damageKey = JSON.stringify([owner.id, packet.actionSeq]), old = damageByAction.get(damageKey);
@@ -327,14 +326,14 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const protector = units.filter(u => u.alive && u.id !== target.id && u.team === target.team && hexDistance(u.cell, target.cell) <= 1
       && active(u, tick, 'redirect').length > 0).sort(compareIds)[0];
     const transfer = protector ? safeNumber(BigInt(prepared.mitigated) * BigInt(Math.max(...active(protector, tick, 'redirect').map(s => s.amount))) / 10000n) : 0;
-    commitOutcome(target, allocateDamage(request.context, { ...prepared, mitigated: prepared.mitigated - transfer }, sample.target!.hp, sample.shields), packet, prepared.rawAfterCritical);
+    commitOutcome(target, allocateDamage(request.context, { ...prepared, mitigated: prepared.mitigated - transfer }, sample.target!.hp, sample.shields), packet);
     if (protector && transfer > 0) {
       const partial: DamageContext = { ...request.context, targetId: protector.id, redirected: true, critEligibility: 'never',
         parentPacketId: request.context.packetId, packetId: JSON.stringify([request.context.packetId, 'redirect', protector.id]) };
       const redirected: DamageRequest = { context: { ...partial, permissions: permissionsFor(partial) }, input: { stage: 'after-mitigation', amount: transfer,
         inherited: { parentPacketId: request.context.packetId, resolvedAtTick: tick, portion: 'redirect-share', critical: prepared.critical } } };
       const redirectSample = damageSample(packet, protector, owner, tick, units, virtualHp.get(protector.id)!);
-      commitOutcome(protector, resolveDamage(redirected, redirectSample), packet, prepared.rawAfterCritical);
+      commitOutcome(protector, resolveDamage(redirected, redirectSample), packet);
     }
     // The bound target's virtual HP is authoritative here; alive/hp are committed
     // after the batch. Prevention and full shield absorption still allow control.
@@ -360,9 +359,6 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   ctx.virtualHp = undefined;
   for (const unit of units) {
     unit.hp = virtualHp.get(unit.id)!;
-    const total = totals.get(unit.id);
-    if (total) events.push({ type: 'damage', tick, unitId: unit.id, amount: total.incoming, hp: unit.hp, physicalAmount: total.physical,
-      magicAmount: total.magic, absorbed: total.absorbed, hpDamage: hpLost.get(unit.id) ?? 0, shield: unit.shield });
   }
   settleSurvival(ctx, beforeDamage, positiveDamage);
   settleShieldEnds(ctx, () => actionSeq++);
@@ -395,20 +391,21 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const result = request.reason === 'cast-refund' ? refundCast(mana, request, receipt!, tick) : { outcome: resolveMana(mana, request, tick) };
     if ('receipt' in result) ctx.castReceipts = ctx.castReceipts!.map(c => c === receipt ? result.receipt : c);
     const outcome = result.outcome; target.mana = outcome.after;
-    events.push({ type: 'manaChanged', tick, unitId: target.id, before: outcome.before, spent: 0, attackGain: 0, damageGain: 0, hookGain: outcome.applied, overflow: outcome.overflow, after: outcome.after, outcome });
+    events.push({ type: 'manaChanged', tick, outcome });
   }
   for (const unit of units) {
     if (!unit.alive || unit.hp <= 0 || champion(unit) === 'neutral') continue;
     if ((hpLost.get(unit.id) ?? 0) > 0) hooks(unit, 'onHpLoss', actionSeq);
-    const attackGain = attackMana.get(unit.id) ?? 0, damageGain = damageMana(hpLost.get(unit.id) ?? 0), hookGain = (killMana.get(unit.id) ?? 0) + (hookMana.get(unit.id) ?? 0);
-    let overflow = 0;
-    for (const [reason, gain] of [['attack', attackGain], ['damage', damageGain], ['kill', hookGain]] as const) {
+    // Legacy gainMana hooks have no frozen ManaRequest reason; no M8 content declares them.
+    if ((hookMana.get(unit.id) ?? 0) > 0) throw new RangeError('Legacy gainMana hook cannot enter the replay2 ledger');
+    const attackGain = attackMana.get(unit.id) ?? 0, damageGain = damageMana(hpLost.get(unit.id) ?? 0), killGain = killMana.get(unit.id) ?? 0;
+    // replay2: one ManaOutcome event per non-zero request, resolved in the same order as before.
+    for (const [reason, gain] of [['attack', attackGain], ['damage', damageGain], ['kill', killGain]] as const) {
       const outcome = resolveMana({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 },
         { source: asSource(origin(unit)), targetId: unit.id, amount: gain, reason, bypassLock: 'none', castActionSeq: null }, tick);
-      unit.mana = outcome.after; overflow += outcome.overflow;
+      unit.mana = outcome.after;
+      if (gain > 0) events.push({ type: 'manaChanged', tick, outcome });
     }
-    if ((spent.get(unit.id) ?? 0) + attackGain + damageGain + hookGain > 0) events.push({ type: 'manaChanged', tick, unitId: unit.id,
-      before: manaBefore.get(unit.id)!, spent: spent.get(unit.id) ?? 0, attackGain, damageGain, hookGain, overflow, after: unit.mana });
     for (const effect of unit.mechanics ?? []) if (effect.mechanic === 'bulkyBuddies' && !unit.runtime.buddyTriggered) {
       const buddy = units.find(u => u.id === effect.targetId);
       if (buddy && (startHp.get(buddy.id) ?? 0) > 0 && buddy.hp === 0) {
@@ -435,5 +432,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   if (result) { cleanupMechanisms(ctx, true); for (const unit of units) { unit.statuses = []; unit.shieldLayers = []; syncShield(unit); unit.tasks = []; } }
   if (result && companionState) companionState = advanceReactions(companionState, tick, [], true).state;
   if (result) events.push({ type: 'combatFinished', tick, result, reason: eliminated ? 'elimination' : 'timeout' });
+  // Same-tick refunds are now final: publish each cast with its completed receipt.
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i];
+    if (event.type === 'cast' && 'receipt' in event) {
+      const final = ctx.castReceipts!.find(c => c.source.ownerId === event.receipt.source.ownerId && c.actionSeq === event.receipt.actionSeq)!;
+      events[i] = { ...event, receipt: final };
+    }
+  }
   return stampCombatStep({ ...state, ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

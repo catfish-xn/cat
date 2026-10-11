@@ -54,10 +54,12 @@ describe('B8 real simultaneous loot-source deaths', () => {
     ]);
     const deaths = state.combat!.neutralReceipts!.deaths;
     expect(deaths).toEqual([
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 52, eventSeq: 158 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 52, eventSeq: 159 },
+      // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 158/159.
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 52, eventSeq: 132 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 52, eventSeq: 133 },
     ]);
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([158, 158, 159]);
+    expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(deaths.map(death => [death.unitId, death.tick, death.eventSeq]));
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([132, 132, 133]); // was 158/158/159 (replay2 eventSeq shift)
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -68,7 +70,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 158;
+    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 132; // r00's death eventSeq (was 158 before the replay2 shift)
     expect(() => restoreMatch(forged)).toThrow(/duplicate death identity|current death evidence/);
     let resumed = restoredReveal;
     while (state.phase === 'combat') {

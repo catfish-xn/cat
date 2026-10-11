@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat } from '../src/simulation/combat';
+import type { CombatEvent } from '../src/simulation/combat';
 import { battle, freeze, unit } from './combat-helpers';
+
+/** B9: this pre-S13 path still emits the legacy manaChanged shape; the replay2 shape carries outcome.targetId. */
+const manaUnitId = (event: Extract<CombatEvent, { type: 'manaChanged' }>): string => 'unitId' in event ? event.unitId : event.outcome.targetId;
 
 describe('Mana gain, spending and fixed-tick cast priority', () => {
   it('gains attack Mana now and casts only on the next tick, even during attack cooldown', () => {
@@ -15,7 +19,7 @@ describe('Mana gain, spending and fixed-tick cast priority', () => {
     expect(second.events.find(event => event.type === 'cast')).toEqual({ type: 'cast', tick: 2, sourceId: 'p', abilityId: 'test-bolt', targetIds: ['e'], manaSpent: 60 });
     expect(second.events.some(event => event.type === 'attack' && event.attackerId === 'p')).toBe(false);
     expect(second.state.units.find(other => other.id === 'p')).toMatchObject({ mana: 0, cooldownTicks: 20 });
-    expect(second.events.find(event => event.type === 'manaChanged' && event.unitId === 'p')).toEqual({ type: 'manaChanged', tick: 2,
+    expect(second.events.find(event => event.type === 'manaChanged' && manaUnitId(event) === 'p')).toEqual({ type: 'manaChanged', tick: 2,
       unitId: 'p', before: 60, spent: 60, attackGain: 0, damageGain: 0, overflow: 0, after: 0 });
   });
 
@@ -27,7 +31,7 @@ describe('Mana gain, spending and fixed-tick cast priority', () => {
     ]);
     const result = stepCombat(initial);
     expect(result.state.units.find(other => other.id === 'p')).toMatchObject({ hp: 986, mana: 1 });
-    expect(result.events.filter(event => event.type === 'manaChanged' && event.unitId === 'p')).toEqual([
+    expect(result.events.filter(event => event.type === 'manaChanged' && manaUnitId(event) === 'p')).toEqual([
       { type: 'manaChanged', tick: 1, unitId: 'p', before: 0, spent: 0, attackGain: 0, damageGain: 1, overflow: 0, after: 1 },
     ]);
   });
@@ -37,7 +41,7 @@ describe('Mana gain, spending and fixed-tick cast priority', () => {
       unit('p', 'player', 0, 0, { hp: 1000, maxHp: 1000, mana: 45, maxMana: 50, cooldownTicks: 100 }),
       unit('e', 'enemy', 1, 0, { attackDamage: 500 }),
     ]));
-    expect(result.events.find(event => event.type === 'manaChanged' && event.unitId === 'p')).toEqual({ type: 'manaChanged', tick: 1,
+    expect(result.events.find(event => event.type === 'manaChanged' && manaUnitId(event) === 'p')).toEqual({ type: 'manaChanged', tick: 1,
       unitId: 'p', before: 45, spent: 0, attackGain: 0, damageGain: 20, overflow: 15, after: 50 });
   });
 
@@ -48,7 +52,7 @@ describe('Mana gain, spending and fixed-tick cast priority', () => {
     ]));
     expect(result.state.units.find(other => other.id === 'p')?.mana).toBe(10);
     expect(result.state.units.find(other => other.id === 'e')).toMatchObject({ mana: 0, hp: 100, shield: 100 });
-    expect(result.events.filter(event => event.type === 'manaChanged').map(event => event.unitId)).toEqual(['p']);
+    expect(result.events.filter(event => event.type === 'manaChanged').map(manaUnitId)).toEqual(['p']);
   });
 
   it('permits same-tick received Mana after spending, without granting cast attack Mana', () => {
@@ -56,7 +60,7 @@ describe('Mana gain, spending and fixed-tick cast priority', () => {
       unit('p', 'player', 0, 0, { hp: 1000, maxHp: 1000, mana: 50, maxMana: 50 }),
       unit('e', 'enemy', 1, 0, { hp: 1000, maxHp: 1000, attackDamage: 100 }),
     ]));
-    expect(result.events.find(event => event.type === 'manaChanged' && event.unitId === 'p')).toEqual({ type: 'manaChanged', tick: 1,
+    expect(result.events.find(event => event.type === 'manaChanged' && manaUnitId(event) === 'p')).toEqual({ type: 'manaChanged', tick: 1,
       unitId: 'p', before: 50, spent: 50, attackGain: 0, damageGain: 10, overflow: 0, after: 10 });
     expect(result.events.filter(event => event.type === 'cast')).toHaveLength(1);
   });
@@ -67,7 +71,7 @@ describe('Mana gain, spending and fixed-tick cast priority', () => {
       unit('e', 'enemy', 1, 0, { hp: 1000, maxHp: 1000, attackDamage: 500 }),
     ]));
     expect(result.events.some(event => event.type === 'attack' && event.attackerId === 'p')).toBe(true);
-    expect(result.events.some(event => event.type === 'manaChanged' && event.unitId === 'p')).toBe(false);
+    expect(result.events.some(event => event.type === 'manaChanged' && manaUnitId(event) === 'p')).toBe(false);
     expect(result.state.units.find(other => other.id === 'p')).toMatchObject({ alive: false, hp: 0, mana: 0, shield: 0,
       shieldExpiresAtTick: null, cooldownTicks: 0, moveCooldownTicks: 0, targetId: null });
   });

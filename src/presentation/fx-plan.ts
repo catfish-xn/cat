@@ -4,7 +4,8 @@
  * Numeric floats (damage/shield/heal amounts) are owned by the DOM feedback renderer;
  * specs here are shapes and short labels only. Pure: no Phaser, DOM or clock.
  */
-import type { CombatEvent, CombatState } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { HexCell } from '../simulation/board';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
@@ -32,8 +33,9 @@ export type FxSpec =
   | { kind: 'target'; unitId: string; team: 'player' | 'enemy' };
 
 /** Pure: same events + state + preference → same specs, for live and replay alike. */
-export function planFx(events: readonly CombatEvent[], combat: CombatState, reduced: boolean): FxSpec[] {
+export function planFx(events: readonly LedgerCombatEvent[], combat: CombatState, reduced: boolean): FxSpec[] {
   const specs: FxSpec[] = [];
+  const flashed = new Set<string>();
   const unit = (id: string | null | undefined) => (id ? combat.units.find(value => value.id === id) : undefined);
   for (const event of events) {
     if (event.type === 'attack') {
@@ -43,29 +45,31 @@ export function planFx(events: readonly CombatEvent[], combat: CombatState, redu
       if (source.attackRange <= 1) specs.push({ kind: 'slash', at: target.cell, from: source.cell, color, duration: 200 });
       else specs.push({ kind: 'bolt', from: source.cell, to: target.cell, color, duration: reduced ? 160 : 220, travel: !reduced });
     } else if (event.type === 'cast') {
-      const source = unit(event.sourceId);
+      const source = unit(event.receipt.source.ownerId);
       if (!source) continue;
       const ability = source.ability;
       const color = ability.kind === 's13' ? getHeroIdentity(ability.championId).colorNumber : ability.kind === 'selfShield' ? toNumber(C.shield) : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e;
-      const targets = event.targetIds.map(id => unit(id)).filter(target => target && target.id !== source.id).map(target => target!.cell);
+      const targets = event.receipt.targetIds.map(id => unit(id)).filter(target => target && target.id !== source.id).map(target => target!.cell);
       const label = ability.kind === 's13' ? `施法 · ${displayUnitName(ability.championId)}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理';
       specs.push({ kind: 'cast', at: source.cell, targets, color, duration: 700, label });
-    } else if (event.type === 'heal' && event.actual > 0) {
-      const target = unit(event.unitId);
+    } else if (event.type === 'heal' && event.outcome.actual > 0) {
+      const target = unit(event.outcome.targetId);
       if (target) specs.push({ kind: 'ring', at: target.cell, color: 0x7dff9e, radius: 31, duration: 450 });
     } else if (event.type === 'shieldLayerChanged' && event.reason === 'granted') {
-      const target = unit(event.unitId);
+      const target = unit(event.layer.targetId);
       if (target) specs.push({ kind: 'ring', at: target.cell, color: toNumber(C.shield), radius: 33, duration: 450 });
     } else if (event.type === 'growth' || event.type === 'statusChanged') {
-      const target = unit(event.unitId);
+      const target = unit(event.type === 'growth' ? event.unitId : event.group.targetId);
       if (!target) continue;
       const text = event.type === 'growth' ? `成长 +${event.amountBps / 100}%` : `效果${event.reason === 'applied' ? '生效' : '结束'}`;
       specs.push({ kind: 'label', at: target.cell, text, dy: 46, color: C.shield, background: '#14212c', duration: 600 });
     } else if (event.type === 'targetChanged') {
       const target = unit(event.after);
       if (target) specs.push({ kind: 'target', unitId: target.id, team: target.team });
-    } else if (event.type === 'damage') {
-      specs.push({ kind: 'flash', unitId: event.unitId });
+    } else if (event.type === 'packetDamage') {
+      // replay2 has no per-tick aggregate: flash each hit unit once per batch.
+      const id = event.outcome.context.targetId;
+      if (!flashed.has(id)) { flashed.add(id); specs.push({ kind: 'flash', unitId: id }); }
     } else if (event.type === 'death') {
       const target = unit(event.unitId);
       if (target) specs.push({ kind: 'death', at: target.cell, duration: 600 });

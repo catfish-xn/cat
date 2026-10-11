@@ -1,8 +1,10 @@
+import { M8_VERSION } from './m8/version';
 import { freezeCombatInput } from './combat-input';
 import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION } from './resource-provenance';
 import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from './loot-runtime';
 import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
+import { toLedgerEvents } from './combat-ledger';
 import { deployUnit, getPlayerDeploymentCount, validateDeployment } from './game';
 import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
@@ -94,8 +96,8 @@ function prepareRound(seed: number, round: number, previous?: MatchState['m8']['
 export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
   validateSeed(seed); validateContent();
   const m8 = prepareRound(seed,1);
-  const initial: MatchState = { schemaVersion: 5, rulesVersion: 'm5-14.24b-v1', contentVersion: 's13-14.24b-slice-v1',
-    commandProtocolVersion: 2, rngAlgorithm: 'lcg32-v1', tickMs: 50,
+  const initial: MatchState = { schemaVersion: M8_VERSION.schemaVersion, rulesVersion: M8_VERSION.rulesVersion, contentVersion: M8_VERSION.contentVersion,
+    commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
       {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
@@ -265,12 +267,12 @@ export function startMatchCombat(state: MatchState): MatchCommandResult {
   const combatInputBasis=freezeCombatInput(state,draw.word,state.resourceProvenance.entries.length);
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
   const next = withCombat({ ...state, combatInputBasis,battleSeedRngState: draw.state }, started.state);
-  return accept(next.state, [...started.events, ...next.events]);
+  return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);
 }
 export function stepMatch(state: MatchState): MatchStep {
   if (state.phase !== 'combat') return { state, events: [] };
   const next = stepCombat(state.combat), settled = withCombat(state, next.state);
-  const result = accept(settled.state, [...next.events, ...settled.events]);
+  const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
 }
 export function nextRound(state: MatchState, expectedRound: number): MatchCommandResult {

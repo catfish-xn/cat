@@ -9,7 +9,7 @@ import { BattleHistory, PlaybackSession, validateBattleCollection, validateBattl
 import { MatchSession } from '../src/rendering/match-session';
 import { validateEnvelope } from '../src/persistence/format';
 import type { SaveEnvelope } from '../src/m6/contracts';
-import type { CombatEvent } from '../src/simulation/combat-types';
+import type { LedgerCombatEvent as CombatEvent } from '../src/simulation/combat-types';
 import { digestContent } from '../src/simulation/content';
 
 const combatEvents = (events: readonly unknown[]) => events.filter(event => (event as { domain?: string }).domain === 'combat') as CombatEvent[];
@@ -68,8 +68,8 @@ describe('M6 independent route/history/playback/session integration', () => {
       expect({ state: active.state, events: active.combatEvents }).toEqual(immutableActive);
       playback.dispose(); expect(() => playback.read()).toThrow();
     }
-    const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1, runId, createdAt: '2026-10-06T00:00:00.000Z', match: route.final, battles: history.completedRecords, currentBattle: null };
-    fullEnvelopes.set(build,envelope); // Positive full-save acceptance is explicitly deferred to B9 below.
+    const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 2, replayFormatVersion: 2, runId, createdAt: '2026-10-06T00:00:00.000Z', match: route.final, battles: history.completedRecords, currentBattle: null };
+    fullEnvelopes.set(build,envelope); // Positive full-save acceptance at the catalog capacity runs below (B9).
     if (build === 'cannon') {
       const badEvent = structuredClone(envelope.battles[0]);
       (badEvent.events as CombatEvent[]).splice(1, 1);
@@ -118,9 +118,9 @@ describe('M6 independent route/history/playback/session integration', () => {
       expect(route.actions.some(action => action.command?.type === 'sell')).toBe(true);
       expect(history.completedRecords.some(record => record.context.preparation.units.some(unit => unit.team === 'player' && !route.final.preparation.units.some(final => final.id === unit.id)))).toBe(true);
   });
-  for(const build of ['cannon','sniper','mage','sniper-caitlyn'])it.skip(`[B9] ${build}: full 33-battle envelope acceptance`,async()=>{
+  for(const build of ['cannon','sniper','mage','sniper-caitlyn'])it(`${build}: full catalog-capacity envelope acceptance (B9)`,async()=>{
     const envelope=fullEnvelopes.get(build)!;
     await expect(validateEnvelope(envelope, validateBattleCollection)).resolves.toEqual(envelope);
     if(build==='cannon')await expect(validateEnvelope({ ...envelope, battles: envelope.battles.slice(1) }, validateBattleCollection)).rejects.toThrow();
-  });
+  }, 120000);
 });

@@ -262,7 +262,7 @@ describe('U5 EncounterPreview additive opening-state contract', () => {
     while (state.phase === 'combat' && !(sawEnemyCast && sawChangedEnemyMana && sawDamage)) {
       const result = match.stepMatch(state);
       state = result.state;
-      sawEnemyCast ||= result.events.some(event => event.type === 'cast' && enemyIds.has(event.sourceId));
+      sawEnemyCast ||= result.events.some(event => event.type === 'cast' && enemyIds.has(event.receipt.source.ownerId));
       sawChangedEnemyMana ||= state.combat!.units.some(unit => enemyIds.has(unit.id)
         && unit.mana !== opening.units.find(view => view.unitId === unit.id)!.stats.mana);
       sawDamage ||= state.combat!.units.some(unit => enemyIds.has(unit.id) && unit.hp < unit.maxHp);

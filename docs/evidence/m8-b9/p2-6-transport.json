@@ -1,0 +1,244 @@
+{
+  "kind": "m8-b9-n2-p2-6-transport-v1",
+  "question": "N2-P2-6: complete and incremental fixture groups share loot objects; the transport refused the cross-group alias before any timing. Prove the original scenario now enters timing, then run the original gate.",
+  "fix": "scripts/m6-fixture-transport.cjs: objects of group 2 already reachable from group 1 cross as path references and are resolved to the same page objects before the measured callback; the staged graph signature (JSON bytes, value hash, unique objects, every alias edge) is verified unchanged on an independent page after all timed callbacks. No JSON round-trip, no copy that splits aliases, payload unchanged.",
+  "gate": "scripts/verify-m6-performance.cjs unchanged except a report-only sharedReferences field (337d7b6); thresholds, samples and order untouched.",
+  "runs": {
+    "abd2ed8-original-transport": {
+      "sha": "abd2ed8f2739fc56496877b58ad472845625f9b6",
+      "dirty": true,
+      "browser": "141.0.7390.37",
+      "errors": [],
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: M6 fixture transport cross-group alias",
+      "transport": null,
+      "gates": null,
+      "captureSamples": null
+    },
+    "abd2ed8-fixed-transport": {
+      "sha": "abd2ed8f2739fc56496877b58ad472845625f9b6",
+      "dirty": true,
+      "browser": "141.0.7390.37",
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: browser errors",
+      "transport": {
+        "jsonBytes": 79882851,
+        "uniqueObjects": 417346,
+        "aliasCount": 10781,
+        "sharedReferences": null,
+        "verificationPassed": true
+      },
+      "gates": {
+        "capture": [
+          115,
+          50,
+          false
+        ],
+        "write": [
+          34.8,
+          250,
+          true
+        ],
+        "fullCapture": [
+          264.4,
+          500,
+          true
+        ],
+        "activation": [
+          629.4,
+          1000,
+          true
+        ],
+        "completeImport": [
+          12724.7,
+          30000,
+          true
+        ],
+        "firstSeek": [
+          1949.7,
+          2000,
+          true
+        ],
+        "cachedSeek": [
+          82.1,
+          100,
+          true
+        ],
+        "statsBatch": [
+          0.3,
+          5,
+          true
+        ]
+      },
+      "captureSamples": [
+        69.3,
+        109.7,
+        65.3,
+        68.7,
+        65.7,
+        61.7,
+        82.8,
+        63,
+        60.3,
+        115,
+        63.8,
+        62.3
+      ]
+    },
+    "head-full-chromium": {
+      "sha": "e41c63f27a7ce7b17bf9cf30a384f6d5d525595b",
+      "dirty": false,
+      "browser": "141.0.7390.37",
+      "errors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "passed": false,
+      "failure": "AssertionError [ERR_ASSERTION]: browser errors",
+      "transport": {
+        "jsonBytes": 64037243,
+        "uniqueObjects": 487698,
+        "aliasCount": 13674,
+        "sharedReferences": null,
+        "verificationPassed": true
+      },
+      "gates": {
+        "capture": [
+          65.9,
+          50,
+          false
+        ],
+        "write": [
+          47.8,
+          250,
+          true
+        ],
+        "fullCapture": [
+          229,
+          500,
+          true
+        ],
+        "activation": [
+          557.5,
+          1000,
+          true
+        ],
+        "completeImport": [
+          12175.7,
+          30000,
+          true
+        ],
+        "firstSeek": [
+          1743.7,
+          2000,
+          true
+        ],
+        "cachedSeek": [
+          48.7,
+          100,
+          true
+        ],
+        "statsBatch": [
+          0.2,
+          5,
+          true
+        ]
+      },
+      "captureSamples": [
+        48.1,
+        65.9,
+        35.3,
+        37.4,
+        35.5,
+        35.6,
+        37.8,
+        35.8,
+        35.7,
+        35.1,
+        34.6,
+        37.8
+      ]
+    },
+    "head-headless-shell": {
+      "sha": "337d7b651fc32aa8850b578a31f31fbcd74efcf8",
+      "dirty": false,
+      "browser": "141.0.7390.37",
+      "errors": [],
+      "passed": true,
+      "failure": null,
+      "transport": {
+        "jsonBytes": 64037243,
+        "uniqueObjects": 487698,
+        "aliasCount": 13674,
+        "sharedReferences": 0,
+        "verificationPassed": true
+      },
+      "gates": {
+        "capture": [
+          41.1,
+          50,
+          true
+        ],
+        "write": [
+          28.4,
+          250,
+          true
+        ],
+        "fullCapture": [
+          232.3,
+          500,
+          true
+        ],
+        "activation": [
+          495.5,
+          1000,
+          true
+        ],
+        "completeImport": [
+          12566.7,
+          30000,
+          true
+        ],
+        "firstSeek": [
+          1625.8,
+          2000,
+          true
+        ],
+        "cachedSeek": [
+          47.7,
+          100,
+          true
+        ],
+        "statsBatch": [
+          0.2,
+          5,
+          true
+        ]
+      },
+      "captureSamples": [
+        37.1,
+        37.6,
+        41.1,
+        36.6,
+        35.8,
+        36.8,
+        33.7,
+        37.9,
+        35.8,
+        36.2,
+        40.8,
+        35.9
+      ]
+    }
+  },
+  "notes": [
+    "abd2ed8 runs used a worktree with node_modules symlinked (reported dirty); the fixed-transport run replaced only scripts/m6-fixture-transport.cjs with the current file.",
+    "abd2ed8 original transport: fails at fixture-transport-start with the cross-group alias assertion, before any measurement (the audit failure reproduced).",
+    "abd2ed8 fixed transport: reaches every timed gate and the post-timing signature check passes; its capture p95 115 exceeds 50 on that superseded tree (pre-N2-P2-4 status events carried whole groups: 79.9 MB payload vs 64.0 MB at HEAD).",
+    "HEAD has no cross-group shared objects (sharedReferences 0) while abd2ed8 had them; attributing the change to N2-P2-4 (status events now build their own group object) is a likely but unverified cause. The transport keeps handling the shared case either way.",
+    "Local full Chromium (/opt/pw-browsers/chromium, new headless) requests /favicon.ico and logs a 404 console error, failing the browser-errors assertion; CI uses chromium-headless-shell, whose logs contain no 404 (runs 169, 224). With the local headless shell the error is absent.",
+    "HEAD full-Chromium capture p95 65.9 (first 2 of 12 samples above 50, rest 34.6-37.8) failed; the HEAD headless-shell run passed every gate (capture p95 41.1). One sample each: the browser-type effect is not separated from run-to-run noise. The candidate CI on the same SHA is the authoritative sample."
+  ]
+}

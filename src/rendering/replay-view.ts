@@ -1,4 +1,5 @@
-import type { CombatEvent, CombatState } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { planFx, type FxSpec } from '../presentation/fx-plan';
 import { reducedMotion } from '../presentation/preferences';
 import { HexLayout } from './hex-layout';
@@ -54,7 +55,7 @@ export class ReplayView {
    * events only; seek backwards, large jumps and battle switches drop old effects instead of
    * replaying the whole history at once.
    */
-  private consume(state: CombatState, events: readonly CombatEvent[] | undefined, now: number): void {
+  private consume(state: CombatState, events: readonly LedgerCombatEvent[] | undefined, now: number): void {
     if (!events) return;
     if (state.combatId !== this.combatId || events.length < this.consumed || events.length - this.consumed > 400) {
       this.combatId = state.combatId; this.effects = []; this.consumed = events.length; return;
@@ -67,7 +68,7 @@ export class ReplayView {
     }
     if (this.effects.length > 120) this.effects.splice(0, this.effects.length - 120);
   }
-  render(state: CombatState, selected: string | null = null, events?: readonly CombatEvent[]) {
+  render(state: CombatState, selected: string | null = null, events?: readonly LedgerCombatEvent[]) {
     const now = performance.now();
     this.consume(state, events, now);
     this.last = { state, selected };

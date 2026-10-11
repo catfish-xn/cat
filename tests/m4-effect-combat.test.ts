@@ -14,6 +14,8 @@ import { TRAIT_DEFINITIONS } from '../src/simulation/content/legacy-traits';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { AUGMENT_DEFINITIONS } from '../src/simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../src/simulation/content/anomalies';
+/** B9: this pre-S13 path still emits the legacy manaChanged shape; the replay2 shape carries outcome.targetId. */
+const manaUnitId = (event: Extract<CombatEvent, { type: 'manaChanged' }>): string => 'unitId' in event ? event.unitId : event.outcome.targetId;
 
 function frozen<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(frozen); Object.freeze(value); }
@@ -73,7 +75,7 @@ describe('strategy effects at real Combat barriers', () => {
     const tick = stepCombat(frozen(start.state));
     const caster = tick.state.units.find(unit => unit.id === 'p')!;
     expect(caster.ability.amount).toBe(241);
-    expect(tick.events.filter(event => event.type === 'cast' && event.sourceId === 'p')).toHaveLength(1);
+    expect(tick.events.filter(event => event.type === 'cast' && ('sourceId' in event ? event.sourceId : event.receipt.source.ownerId) === 'p')).toHaveLength(1);
     expect(tick.events.filter(event => event.type === 'attack' && event.attackerId === 'p')).toHaveLength(0);
     const damages = tick.events.filter((event): event is Extract<CombatEvent, { type: 'damage' }> => event.type === 'damage' && event.unitId !== 'p');
     expect(damages.map(event => [event.unitId, event.magicAmount])).toEqual([['e1', 311], ['e2', 241]]);
@@ -81,7 +83,7 @@ describe('strategy effects at real Combat barriers', () => {
     expect(damages.flatMap(event => event.packets ?? []).filter(packet => packet.sourceKind === 'item')[0].triggerEligible).toBe(false);
     expect(caster.shield).toBeGreaterThan(0);
     expect(caster.mana).toBe(80);
-    expect(tick.events.find(event => event.type === 'manaChanged' && event.unitId === 'p')).toMatchObject({ spent: 80, hookGain: 90, overflow: 10 });
+    expect(tick.events.find(event => event.type === 'manaChanged' && manaUnitId(event) === 'p')).toMatchObject({ spent: 80, hookGain: 90, overflow: 10 });
     expect(caster.effectRuntime!.every(counter => counter.count === 1)).toBe(true);
     expect(tick.events.map(event => event.eventSeq)).toEqual(tick.events.map((_, index) => start.state.nextEventSeq! + index));
     expect(tick.events.findIndex(event => event.type === 'effectTriggered')).toBeGreaterThan(Math.max(...tick.events.map((event, index) => event.type === 'cast' || event.type === 'attack' ? index : -1)));
@@ -99,7 +101,7 @@ describe('strategy effects at real Combat barriers', () => {
     const effects = tick.events.filter(event => event.type === 'effectTriggered');
     expect(effects.map(event => event.source.ownerId)).toEqual(['p1', 'p2', 'e']);
     expect(tick.events.find(event => event.type === 'damage' && event.unitId === 'e')).toMatchObject({ hpDamage: 190 });
-    expect(tick.events.find(event => event.type === 'manaChanged' && event.unitId === 'e')).toMatchObject({ attackGain: 10, damageGain: 19, hookGain: 3, after: 32 });
+    expect(tick.events.find(event => event.type === 'manaChanged' && manaUnitId(event) === 'e')).toMatchObject({ attackGain: 10, damageGain: 19, hookGain: 3, after: 32 });
     expect(tick.state.units.every(unit => unit.effectRuntime!.every(counter => counter.count === 1))).toBe(true);
   });
 
@@ -154,6 +156,6 @@ describe('strategy effects at real Combat barriers', () => {
     const tick = stepCombat(start.state);
     expect(tick.events.find(event => event.type === 'effectTriggered')).toMatchObject({ source: { sourceDefinitionId: 'new-augment' }, action: { kind: 'gainMana', amount: 9 } });
     expect(tick.events.find(event => event.type === 'damage' && event.unitId === 'e')).toMatchObject({ physicalAmount: 75 });
-    expect(tick.events.find(event => event.type === 'manaChanged' && event.unitId === 'p')).toMatchObject({ attackGain: 10, hookGain: 9 });
+    expect(tick.events.find(event => event.type === 'manaChanged' && manaUnitId(event) === 'p')).toMatchObject({ attackGain: 10, hookGain: 9 });
   });
 });

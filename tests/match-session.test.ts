@@ -156,7 +156,9 @@ describe('match session commands and fixed clock', () => {
     expect(run([60_000])).toEqual(run(Array(1200).fill(50)));
     const completed = run([60_000]);
     expect(completed.state.phase).toBe('settlement');
-    expect(completed.events.map(event => event.type)).toEqual(expect.arrayContaining(['cast', 'manaChanged', 'shieldLayerChanged', 'damage']));
+    // replay2 (M8_RULES §10): the aggregate `damage` event is no longer published; per-packet packetDamage carries the damage.
+    expect(completed.events.map(event => event.type)).toEqual(expect.arrayContaining(['cast', 'manaChanged', 'shieldLayerChanged', 'packetDamage']));
+    expect(completed.events.some(event => (event.type as string) === 'damage')).toBe(false);
   });
 
   it.each(['missing-enemy', 'missing-both'] as const)('rejects %s without creating combat or changing state', reason => {

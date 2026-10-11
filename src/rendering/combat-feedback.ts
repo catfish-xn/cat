@@ -1,4 +1,5 @@
-import type { CombatEvent, CombatOrigin } from '../simulation/combat-types';
+import type { CombatOrigin } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
@@ -22,13 +23,13 @@ export function originLabel(source: CombatOrigin, lookup?: UnitNameLookup): stri
   return `${lookup ? `${lookup(source.ownerId)} · ` : ''}${SOURCES[source.sourceKind]}${label ? ` · ${label}` : ''}${parent ? ' · 临时子件' : ''}`;
 }
 /** Read event facts only: never reconstruct damage or trigger rules from unit HP. */
-export function combatEventText(event: CombatEvent, name: UnitNameLookup = unnamed): string | null {
+export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup = unnamed): string | null {
   const prefix = `第 ${event.tick} 刻`, source = (origin: CombatOrigin) => originLabel(origin, name);
   switch (event.type) {
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
     case 'kill': return `${prefix} ${source(event.source)} 击败 ${name(event.unitId)}`;
     case 'growth': return `${prefix} ${name(event.unitId)} 永久攻击力 +${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
-    case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'statChanged': case 'maxHpChanged': case 'cast': {
+    case 'packetDamage': case 'heal': case 'shieldLayerChanged': case 'statusChanged': case 'activityChanged': case 'statChanged': case 'maxHpChanged': case 'cast': {
       const text = m8EventText(event, name, source); return text && `${prefix} ${text}`;
     }
     default: return null;

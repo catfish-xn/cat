@@ -3,6 +3,7 @@ import { itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import type { CombatUnit } from '../src/simulation/combat';
+import { packets, shieldEvents } from './helpers/replay2-views';
 
 const holder = (s: MatchState) => s.combat!.units.find(u => u.id === 'unit-1')!;
 const receipts = (s: MatchState) => holder(s).mechanismState!.runtimes.filter(r => r.source.definitionId === 'bloodthirster');
@@ -66,9 +67,9 @@ describe('B4 R3b: compiled consumption partition survives the complete shield li
     // Resume real enemy attacks; witness positive damage below the threshold.
     s = { ...s, combat: { ...s.combat, units: s.combat.units.map(u => u.team === 'enemy' ? { ...u, cooldownTicks: 0 } : u) } };
     const resumed = stepMatch(s);
-    expect(resumed.events.some(e => e.type === 'packetDamage' && e.unitId === 'unit-1' && e.hpDamage > 0)).toBe(true);
+    expect(packets(resumed.events).some(e => e.unitId === 'unit-1' && e.hpDamage > 0)).toBe(true);
     expect(holder(resumed.state).shield).toBe(0);
-    expect(resumed.events.filter(e => e.type === 'shieldLayerChanged' && e.unitId === 'unit-1' && e.reason === 'granted')).toEqual([]);
+    expect(shieldEvents(resumed.events).filter(e => e.unitId === 'unit-1' && e.reason === 'granted')).toEqual([]);
     expect(stepMatch(restoreMatch(serializeMatch(s)))).toEqual(resumed);
   });
 

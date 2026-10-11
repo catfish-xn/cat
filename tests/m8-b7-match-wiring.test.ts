@@ -36,7 +36,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     roundTrip(s);
     while(s.phase==='combat') {
       const step=api.stepMatch(s);s=step.state;steps++;
-      expect(step.events.some(e=>e.type==='cast' && compiled.units.some(u=>u.id===e.sourceId))).toBe(false);
+      expect(step.events.some(e=>e.type==='cast' && compiled.units.some(u=>u.id===e.receipt.source.ownerId))).toBe(false);
       if(steps<=2 || steps%25===0 || s.phase!=='combat') roundTrip(s);
     }
     expect(steps).toBeLessThanOrEqual(1200);
