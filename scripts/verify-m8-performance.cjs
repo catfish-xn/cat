@@ -362,7 +362,11 @@ async function browserPart() {
     const system = await browserCDP.send('SystemInfo.getInfo');
     result.browser.gpu = { devices: system.gpu.devices, renderer: system.gpu.auxAttributes?.glRenderer ?? null,
       featureStatus: system.gpu.featureStatus };
-    result.browser.hardwareAccelerated = !/swiftshader|llvmpipe|software/i.test(JSON.stringify(result.browser.gpu));
+    // Video decoding can be software even with hardware WebGL. Judge the actual
+    // renderer and WebGL feature; missing renderer information is not a pass.
+    const renderer = result.browser.gpu.renderer || (system.gpu.devices.length ? JSON.stringify(system.gpu.devices) : null);
+    result.browser.hardwareAccelerated = Boolean(renderer && String(system.gpu.featureStatus?.webgl).startsWith('enabled')
+      && !/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer));
     await browserCDP.detach();
     for (const mode of ['normal', 'reduced']) {
       const context = await browser.newContext({ viewport: VIEWPORT, reducedMotion: mode === 'reduced' ? 'reduce' : 'no-preference' });

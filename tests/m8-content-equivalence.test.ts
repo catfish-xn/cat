@@ -17,7 +17,8 @@ function text(rand: () => number, depth: number): string {
 }
 
 describe('restoreMatch text fast path is exact', () => {
-  const states = [...goldenStates('cannon'), ...goldenStates('sniper')];
+  const byBuild = { cannon: goldenStates('cannon'), sniper: goldenStates('sniper') };
+  const states = [...byBuild.cannon, ...byBuild.sniper];
   it('adversarial JSON texts: same acceptance and same error as canonicalContent', () => {
     const rand = lcg(42); let rejected = 0;
     for (let n = 0; n < 20000; n++) {
@@ -27,9 +28,9 @@ describe('restoreMatch text fast path is exact', () => {
     }
     expect(rejected).toBeGreaterThan(2000); expect(rejected).toBeLessThan(18000);
   });
-  it('recorded states: restore from text equals restore from the parsed object', () => {
+  it.each(['cannon', 'sniper'] as const)('recorded %s states: restore from text equals restore from the parsed object', build => {
     expect(states.length).toBeGreaterThan(100);
-    for (const state of states) {
+    for (const state of byBuild[build]) {
       const source = JSON.stringify(state);
       expect(() => assertParsedContent(JSON.parse(source))).not.toThrow();
       expect(restoreMatch(source)).toEqual(restoreMatch(JSON.parse(source)));
