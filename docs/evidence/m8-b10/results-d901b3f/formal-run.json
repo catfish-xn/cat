@@ -1,0 +1,59 @@
+{
+  "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "dirty": false,
+  "node": "v22.23.3",
+  "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+  "baselineSha": "15313a75c6e74beec739fe52a2875c104c55eae3",
+  "startedAt": "2026-10-11T12:24:15.797631+00:00",
+  "cgroupBefore": {
+    "cpu.max": "400000 100000",
+    "cpu.stat": "usage_usec 8446507284\nuser_usec 7482273783\nsystem_usec 964233501\nnice_usec 0\nnr_periods 30823\nnr_throttled 6945\nthrottled_usec 243506392\nnr_bursts 0\nburst_usec 0",
+    "memory.max": "17179869184",
+    "memory.peak": "2946756608"
+  },
+  "runs": [
+    {
+      "name": "m7-pair",
+      "command": [
+        "node",
+        "scripts/m7-budget.cjs",
+        "--base=/workspace/m8-b10-m7-base/dist",
+        "--js-base=/workspace/m8-b10-m7-base/dist",
+        "--current=dist",
+        "--samples=9",
+        "--out=artifacts/m8-m7-budget-d901b3f"
+      ],
+      "startedAt": "2026-10-11T12:24:15.820480+00:00",
+      "exitCode": 0,
+      "endedAt": "2026-10-11T12:25:02.867902+00:00"
+    },
+    {
+      "name": "pressure",
+      "command": [
+        "node",
+        "scripts/verify-m8-performance.cjs",
+        "--target=preview"
+      ],
+      "startedAt": "2026-10-11T12:25:02.869512+00:00",
+      "exitCode": 0,
+      "endedAt": "2026-10-11T12:53:48.815454+00:00"
+    }
+  ],
+  "currentBuildHashes": {
+    "assets/index-DXsJ5soN.css": "af02e3aaa7a0b38fa8ec59eea8fb89b7f059f3585cef655e01426883f521b597",
+    "assets/index-xe7lMB8H.js": "59150af8f2dfc54a1484cc147e877a5e6de11be83776c349268db9cf4e30599f",
+    "index.html": "72f7681048776de81bb2cf85fee04a6df628a5405f1f634ffb59e352b1e44c4c"
+  },
+  "baseBuildHashes": {
+    "assets/index-CsWIfx1z.js": "87d019691e175cb4d37b4dd3bb2ea96185f807ada29fd8caaaa50e536ddd0269",
+    "assets/index-sYdxdVpK.css": "f555fdace1bf291f597bbb01d241ad86549b9da4f1e3fdf1ac3bac6a44fe9ed8",
+    "index.html": "81e4354d14471cdb91328a6b2e1ee20636c1d70b453d108504ac99de78ea1976"
+  },
+  "cgroupAfter": {
+    "cpu.max": "400000 100000",
+    "cpu.stat": "usage_usec 10882476197\nuser_usec 9754201299\nsystem_usec 1128274897\nnice_usec 0\nnr_periods 48553\nnr_throttled 7173\nthrottled_usec 255168324\nnr_bursts 0\nburst_usec 0",
+    "memory.max": "17179869184",
+    "memory.peak": "2946756608"
+  },
+  "endedAt": "2026-10-11T12:53:48.821132+00:00"
+}

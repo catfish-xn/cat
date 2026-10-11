@@ -1,0 +1,569 @@
+{
+  "kind": "m8-performance",
+  "plan": "M8_PLAN.md §7.6",
+  "blocking": false,
+  "strict": false,
+  "formal": true,
+  "options": {
+    "part": "all",
+    "seeds": 30,
+    "pressureReps": 30,
+    "browserWindowMs": 0,
+    "target": "preview",
+    "strict": false
+  },
+  "environment": {
+    "gitSha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+    "gitDirty": "",
+    "node": "v22.23.3",
+    "platform": "linux-x64",
+    "cpuCount": 5,
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "memoryBytes": 18932244480,
+    "loadAverageAtStart": [
+      4.71,
+      4.16,
+      3.63
+    ],
+    "playwright": "1.63.0",
+    "vite": "7.3.6",
+    "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+    "chromium": {
+      "version": "151.0.7922.173",
+      "executable": "/usr/bin/chromium",
+      "headless": true,
+      "gpu": {
+        "devices": [
+          {
+            "vendorId": 65535,
+            "deviceId": 65535,
+            "vendorString": "Google Inc. (Google)",
+            "deviceString": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver-5.0.0)",
+            "driverVendor": "SwANGLE",
+            "driverVersion": "5.0.0"
+          }
+        ],
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver-5.0.0)",
+        "featureStatus": {
+          "2d_canvas": "unavailable_software",
+          "direct_rendering_display_compositor": "disabled_off_ok",
+          "gpu_compositing": "disabled_software",
+          "multiple_raster_threads": "enabled_on",
+          "opengl": "disabled_off",
+          "rasterization": "disabled_software",
+          "raw_draw": "disabled_off_ok",
+          "skia_graphite": "disabled_off",
+          "trees_in_viz": "disabled_off",
+          "video_decode": "disabled_software",
+          "video_encode": "disabled_software",
+          "vulkan": "disabled_off",
+          "webgl": "unavailable_software",
+          "webgpu": "unavailable_software",
+          "webgpu_on_vk_via_gl_interop": "disabled_off",
+          "webnn": "unavailable_software"
+        }
+      },
+      "hardwareAccelerated": false
+    },
+    "loadAverageAtEnd": [
+      2.33,
+      1.77,
+      1.82
+    ]
+  },
+  "startedAt": "2026-10-11T12:25:02.947Z",
+  "budgets": {
+    "domainTickMs": {
+      "p95": 5,
+      "p99": 10
+    },
+    "frameIntervalMs": {
+      "p95": 33.3,
+      "p99": 50
+    }
+  },
+  "fullRunSeeds": [
+    {
+      "build": "cannon",
+      "seed": 0
+    },
+    {
+      "build": "sniper",
+      "seed": 1
+    },
+    {
+      "build": "mage",
+      "seed": 42
+    },
+    {
+      "build": "cannon",
+      "seed": 4294967295
+    },
+    {
+      "build": "sniper",
+      "seed": 7
+    },
+    {
+      "build": "mage",
+      "seed": 13
+    },
+    {
+      "build": "cannon",
+      "seed": 23
+    },
+    {
+      "build": "sniper",
+      "seed": 31
+    },
+    {
+      "build": "mage",
+      "seed": 64
+    },
+    {
+      "build": "cannon",
+      "seed": 99
+    },
+    {
+      "build": "sniper",
+      "seed": 123
+    },
+    {
+      "build": "mage",
+      "seed": 256
+    },
+    {
+      "build": "cannon",
+      "seed": 777
+    },
+    {
+      "build": "sniper",
+      "seed": 1024
+    },
+    {
+      "build": "mage",
+      "seed": 2048
+    },
+    {
+      "build": "cannon",
+      "seed": 4096
+    },
+    {
+      "build": "sniper",
+      "seed": 8192
+    },
+    {
+      "build": "mage",
+      "seed": 12345
+    },
+    {
+      "build": "cannon",
+      "seed": 32768
+    },
+    {
+      "build": "sniper",
+      "seed": 65535
+    },
+    {
+      "build": "mage",
+      "seed": 424242
+    },
+    {
+      "build": "cannon",
+      "seed": 3735928559
+    },
+    {
+      "build": "sniper",
+      "seed": 2147483648
+    },
+    {
+      "build": "mage",
+      "seed": 2654435769
+    },
+    {
+      "build": "full-load",
+      "seed": 42
+    },
+    {
+      "build": "full-load",
+      "seed": 2
+    },
+    {
+      "build": "full-load",
+      "seed": 3
+    },
+    {
+      "build": "full-load",
+      "seed": 5
+    },
+    {
+      "build": "full-load",
+      "seed": 8
+    },
+    {
+      "build": "full-load",
+      "seed": 11
+    }
+  ],
+  "pressureVariants": [
+    "distinct",
+    "mirror"
+  ],
+  "metrics": [
+    {
+      "id": "domain.fullRuns.tickMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 5,
+        "p99": 10
+      },
+      "count": 326641,
+      "mean": 1.718941429324557,
+      "p50": 1.349205,
+      "p95": 3.928352,
+      "p99": 6.734365,
+      "max": 516.353944,
+      "checks": {
+        "p95": true,
+        "p99": true
+      },
+      "pass": true,
+      "routes": 30,
+      "battles": 990,
+      "terminalTickMs": {
+        "count": 990,
+        "mean": 2.7785003494949505,
+        "p50": 2.420272,
+        "p95": 5.60039,
+        "p99": 10.117917,
+        "max": 42.785371
+      },
+      "worstTicks": [
+        {
+          "route": "m8-performance-mage-64",
+          "ms": 516.353944,
+          "round": "5-2",
+          "tick": 167,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-mage-13",
+          "ms": 496.128988,
+          "round": "6-5",
+          "tick": 64,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-cannon-4096",
+          "ms": 481.983282,
+          "round": "3-2",
+          "tick": 78,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-cannon-4096",
+          "ms": 476.878205,
+          "round": "4-5",
+          "tick": 53,
+          "terminal": false
+        },
+        {
+          "route": "m8-performance-mage-12345",
+          "ms": 450.793144,
+          "round": "6-5",
+          "tick": 394,
+          "terminal": false
+        }
+      ]
+    },
+    {
+      "id": "domain.pressure9v9.distinct.tickMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 5,
+        "p99": 10
+      },
+      "count": 3394,
+      "mean": 15.609471607542718,
+      "p50": 9.877378,
+      "p95": 40.772341,
+      "p99": 111.610722,
+      "max": 663.865049,
+      "checks": {
+        "p95": false,
+        "p99": false
+      },
+      "pass": false,
+      "combats": 30,
+      "fixture": {
+        "id": "m8-pressure-9v9-v1",
+        "variant": "distinct",
+        "rngSeed": 1,
+        "units": 18,
+        "items": 54,
+        "itemPrograms": 54,
+        "traits": [
+          "player:sentinel:4",
+          "player:sniper:2",
+          "enemy:artillerist:2",
+          "enemy:sorcerer:2",
+          "enemy:watcher:2"
+        ]
+      }
+    },
+    {
+      "id": "domain.pressure9v9.mirror.tickMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 5,
+        "p99": 10
+      },
+      "count": 4005,
+      "mean": 20.597289969038698,
+      "p50": 9.504373,
+      "p95": 46.131405,
+      "p99": 135.5672,
+      "max": 5250.918291,
+      "checks": {
+        "p95": false,
+        "p99": false
+      },
+      "pass": false,
+      "combats": 30,
+      "fixture": {
+        "id": "m8-pressure-9v9-v1",
+        "variant": "mirror",
+        "rngSeed": 1,
+        "units": 18,
+        "items": 54,
+        "itemPrograms": 54,
+        "traits": [
+          "player:sentinel:4",
+          "player:sniper:2",
+          "enemy:sentinel:4",
+          "enemy:sniper:2"
+        ]
+      }
+    },
+    {
+      "id": "browser.normal.frameIntervalMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 33.3,
+        "p99": 50
+      },
+      "count": 142,
+      "mean": 154.92253521126761,
+      "p50": 150,
+      "p95": 250,
+      "p99": 383.40000000000146,
+      "max": 533.2999999999956,
+      "checks": {
+        "p95": false,
+        "p99": false
+      },
+      "pass": false,
+      "reducedMotion": false,
+      "wholeCombat": true,
+      "segmentMs": 21616,
+      "hiddenIntervals": 0,
+      "pageErrors": 0
+    },
+    {
+      "id": "browser.reduced.frameIntervalMs",
+      "unit": "ms",
+      "statistic": "nearest-rank percentile over all samples",
+      "threshold": {
+        "p95": 33.3,
+        "p99": 50
+      },
+      "count": 168,
+      "mean": 126.68154761904762,
+      "p50": 116.69999999999709,
+      "p95": 200,
+      "p99": 316.59999999999854,
+      "max": 866.6999999999971,
+      "checks": {
+        "p95": false,
+        "p99": false
+      },
+      "pass": false,
+      "reducedMotion": true,
+      "wholeCombat": true,
+      "segmentMs": 20999,
+      "hiddenIntervals": 0,
+      "pageErrors": 0
+    }
+  ],
+  "recorded": {
+    "domain": {
+      "eventsPerBattle": {
+        "count": 990,
+        "mean": 884.0474747474748,
+        "p50": 837,
+        "p95": 2054,
+        "p99": 2817,
+        "max": 3079,
+        "min": 55
+      },
+      "activePeak": {
+        "statuses": 80,
+        "tasks": 43,
+        "shields": 8
+      },
+      "saveEnvelopeBytes": {
+        "count": 30,
+        "mean": 20298460.733333334,
+        "p50": 20351931,
+        "p95": 22755004,
+        "p99": 22848531,
+        "max": 22848531,
+        "min": 17320648
+      },
+      "largestBattleRecordBytes": 2156322,
+      "nodeHeapUsedPeakBytes": 136289520,
+      "nodeRssPeakBytes": 445603840,
+      "pressure": {
+        "distinct": {
+          "eventsPerCombat": {
+            "count": 30,
+            "mean": 2521,
+            "p50": 2486,
+            "p95": 2683,
+            "p99": 2721,
+            "max": 2721,
+            "min": 2365
+          },
+          "ticksPerCombat": {
+            "count": 30,
+            "mean": 113.13333333333334,
+            "p50": 112,
+            "p95": 118,
+            "p99": 121,
+            "max": 121,
+            "min": 111
+          },
+          "activePeak": {
+            "statuses": 156,
+            "tasks": 78,
+            "shields": 5
+          }
+        },
+        "mirror": {
+          "eventsPerCombat": {
+            "count": 30,
+            "mean": 4187.2,
+            "p50": 4177,
+            "p95": 4378,
+            "p99": 4421,
+            "max": 4421,
+            "min": 3833
+          },
+          "ticksPerCombat": {
+            "count": 30,
+            "mean": 133.5,
+            "p50": 126,
+            "p95": 189,
+            "p99": 218,
+            "max": 218,
+            "min": 116
+          },
+          "activePeak": {
+            "statuses": 187,
+            "tasks": 97,
+            "shields": 6
+          }
+        }
+      }
+    },
+    "browser": {
+      "normal": {
+        "combatEvents": 1738,
+        "endTick": 381,
+        "importMs": 42686,
+        "heap": {
+          "cdpBefore": {
+            "usedSize": 116875992,
+            "totalSize": 178106368,
+            "embedderHeapUsedSize": 19291656,
+            "backingStorageSize": 31168556
+          },
+          "cdpAfter": {
+            "usedSize": 85308740,
+            "totalSize": 150654976,
+            "embedderHeapUsedSize": 41488208,
+            "backingStorageSize": 31165827
+          },
+          "performanceMemoryAfter": {
+            "usedJSHeapSize": 113510059,
+            "totalJSHeapSize": 181820803
+          }
+        }
+      },
+      "reduced": {
+        "combatEvents": 1738,
+        "endTick": 381,
+        "importMs": 30485,
+        "heap": {
+          "cdpBefore": {
+            "usedSize": 119996228,
+            "totalSize": 181321728,
+            "embedderHeapUsedSize": 21644408,
+            "backingStorageSize": 31168556
+          },
+          "cdpAfter": {
+            "usedSize": 72370144,
+            "totalSize": 137048064,
+            "embedderHeapUsedSize": 47710832,
+            "backingStorageSize": 31165857
+          },
+          "performanceMemoryAfter": {
+            "usedJSHeapSize": 98976748,
+            "totalJSHeapSize": 168213904
+          }
+        }
+      },
+      "envelopeBytes": 18540119
+    }
+  },
+  "errors": [],
+  "domain": {
+    "durationMs": 1566750,
+    "gcExposed": true,
+    "warmUp": {
+      "route": "cannon-0",
+      "ms": 11718
+    },
+    "timedRegion": "process.hrtime.bigint() around api.stepMatch(state) / stepCombat(state) only",
+    "pressureSpecSha256": "e27075f0279c368a3ca2d71e8cc7d81aeab976569eccd0bbeedcd9cf3fb321ad",
+    "evidence": "domain.json"
+  },
+  "frameAcceptanceEligible": false,
+  "frameAcceptanceNote": "Software graphics: report all measured values, but do not use these frame intervals to sign off desktop GPU performance.",
+  "browser": {
+    "target": "preview",
+    "segment": {
+      "route": "full-load-42",
+      "round": "6-6",
+      "roundOrdinal": 37,
+      "load": {
+        "players": 9,
+        "enemies": 8,
+        "playerItems": 15,
+        "enemyItems": 5
+      },
+      "expectedCombatEvents": 1738,
+      "completedBattleRecords": 31,
+      "envelopeBytes": 18540119,
+      "preparationMs": 19977
+    },
+    "durationMs": 158637,
+    "evidence": "browser.json"
+  },
+  "endedAt": "2026-10-11T12:53:48.767Z",
+  "durationMs": 1725820,
+  "allBudgetsPass": false
+}

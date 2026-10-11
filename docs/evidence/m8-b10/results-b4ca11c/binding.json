@@ -1,0 +1,13 @@
+{
+  "runtimeSha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "br4ScriptSha": "b4ca11c7bac9f63c82416ded5bde0e013b11263f",
+  "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+  "runtimeTree": "49fb300c5ca6f014201f289a87f8d5a54649c551",
+  "br4RuntimeTree": "49fb300c5ca6f014201f289a87f8d5a54649c551",
+  "testsTree": "3509408ef4fee47d6ca76deaeb9cc146fe8ab7fa",
+  "br4TestsTree": "3509408ef4fee47d6ca76deaeb9cc146fe8ab7fa",
+  "changesAfterRuntimeCandidate": [
+    "scripts/verify-m8-br4-public.cjs"
+  ],
+  "br4ManifestSha256": "e1f84fb66e47fdd98c4846dc2f5b91fb1dcfadf1de521d560ce13106270942c3"
+}

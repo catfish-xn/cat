@@ -1,0 +1,1785 @@
+{
+  "spec": "docs/UI_REQUESTS.md UR-U4-07",
+  "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "browser": "151.0.7922.173",
+  "startedAt": "2026-10-11T12:24:09.683Z",
+  "runtimeMs": 5790,
+  "scenarios": [
+    {
+      "id": "R1",
+      "title": "R1 减伤适用范围（8% 普攻 + 50% 技能直接伤害，100 物理普攻）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "前提：护甲 0、无护盾、无暴击，100 物理普攻",
+          "passed": true,
+          "observed": {
+            "raw": 100,
+            "delivery": "basic-attack",
+            "absorbed": 0,
+            "critical": false
+          }
+        },
+        {
+          "name": "领域 HP 伤害 92",
+          "passed": true,
+          "observed": 92
+        },
+        {
+          "name": "只读：策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "策略面板两行减伤",
+          "passed": true,
+          "observed": [
+            "减伤 50% · 适用：技能直接伤害；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果",
+            "减伤 8% · 适用：普攻；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+          ]
+        },
+        {
+          "name": "两行均无“同类状态由另一来源提供”",
+          "passed": true,
+          "observed": [
+            "减伤 50% · 适用：技能直接伤害；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果",
+            "减伤 8% · 适用：普攻；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+          ]
+        },
+        {
+          "name": "两行均无 inactive 样式",
+          "passed": true,
+          "observed": [
+            "combat-status",
+            "combat-status"
+          ]
+        },
+        {
+          "name": "8% 行显示“适用：普攻…”",
+          "passed": true,
+          "observed": [
+            "减伤 50% · 适用：技能直接伤害；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果",
+            "减伤 8% · 适用：普攻；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+          ]
+        },
+        {
+          "name": "50% 行显示“适用：技能直接伤害…”",
+          "passed": true,
+          "observed": [
+            "减伤 50% · 适用：技能直接伤害；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果",
+            "减伤 8% · 适用：普攻；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+          ]
+        },
+        {
+          "name": "只读：统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "统计面板状态列表同为两行有效、各带适用范围",
+          "passed": true,
+          "observed": [
+            "减伤 50% · 适用：技能直接伤害；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果",
+            "减伤 8% · 适用：普攻；物理/魔法；不含分担（对每次适用伤害取最高减伤） · 剩余 9.9秒（第 200 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+          ]
+        },
+        {
+          "name": "事件日志实际生命伤害 92",
+          "passed": true,
+          "observed": "第 1 刻 中立守卫 2 ★ · 普攻 → 中立守卫 2 ★：物理实际生命伤害 92，护盾吸收 0"
+        }
+      ]
+    },
+    {
+      "id": "strongest",
+      "title": "同类最强（无过滤 shred 30% 至 100、50% 至 60，tick 59/60/61）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "只读：策略面板 tick 59",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 59",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "策略面板 tick 59：50% 行正常、30% 行“同类状态由另一来源提供（本来源保留）”",
+          "passed": true,
+          "observed": {
+            "tick": 59,
+            "domain": [
+              {
+                "bps": 3000,
+                "effective": false,
+                "expiresAtTick": 100
+              },
+              {
+                "bps": 5000,
+                "effective": true,
+                "expiresAtTick": 60
+              }
+            ],
+            "strategy": [
+              "魔抗击碎 30% · 同类状态由另一来源提供（本来源保留） · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果",
+              "魔抗击碎 50% · 剩余 0.1秒（第 60 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+            ],
+            "stats": [
+              "魔抗击碎 30% · 同类状态由另一来源提供（本来源保留） · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果",
+              "魔抗击碎 50% · 剩余 0.1秒（第 60 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+            ],
+            "inactive": [
+              true,
+              false
+            ]
+          }
+        },
+        {
+          "name": "统计面板 tick 59：50% 行正常、30% 行“同类状态由另一来源提供（本来源保留）”",
+          "passed": true,
+          "observed": {
+            "tick": 59,
+            "domain": [
+              {
+                "bps": 3000,
+                "effective": false,
+                "expiresAtTick": 100
+              },
+              {
+                "bps": 5000,
+                "effective": true,
+                "expiresAtTick": 60
+              }
+            ],
+            "strategy": [
+              "魔抗击碎 30% · 同类状态由另一来源提供（本来源保留） · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果",
+              "魔抗击碎 50% · 剩余 0.1秒（第 60 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+            ],
+            "stats": [
+              "魔抗击碎 30% · 同类状态由另一来源提供（本来源保留） · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果",
+              "魔抗击碎 50% · 剩余 0.1秒（第 60 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+            ],
+            "inactive": [
+              true,
+              false
+            ]
+          }
+        },
+        {
+          "name": "tick 59 策略面板仅 30% 行为 inactive 样式",
+          "passed": true,
+          "observed": {
+            "tick": 59,
+            "domain": [
+              {
+                "bps": 3000,
+                "effective": false,
+                "expiresAtTick": 100
+              },
+              {
+                "bps": 5000,
+                "effective": true,
+                "expiresAtTick": 60
+              }
+            ],
+            "strategy": [
+              "魔抗击碎 30% · 同类状态由另一来源提供（本来源保留） · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果",
+              "魔抗击碎 50% · 剩余 0.1秒（第 60 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+            ],
+            "stats": [
+              "魔抗击碎 30% · 同类状态由另一来源提供（本来源保留） · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果",
+              "魔抗击碎 50% · 剩余 0.1秒（第 60 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+            ],
+            "inactive": [
+              true,
+              false
+            ]
+          }
+        },
+        {
+          "name": "tick 59 领域快照与显示一致",
+          "passed": true,
+          "observed": [
+            {
+              "bps": 3000,
+              "effective": false,
+              "expiresAtTick": 100
+            },
+            {
+              "bps": 5000,
+              "effective": true,
+              "expiresAtTick": 60
+            }
+          ]
+        },
+        {
+          "name": "只读：策略面板 tick 60",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 60",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "策略面板 tick 60：仅 30% 行且无该文字",
+          "passed": true,
+          "observed": {
+            "tick": 60,
+            "domain": [
+              {
+                "bps": 3000,
+                "effective": true,
+                "expiresAtTick": 100
+              }
+            ],
+            "strategy": [
+              "魔抗击碎 30% · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+            ],
+            "stats": [
+              "魔抗击碎 30% · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+            ],
+            "inactive": [
+              false
+            ]
+          }
+        },
+        {
+          "name": "统计面板 tick 60：仅 30% 行且无该文字",
+          "passed": true,
+          "observed": {
+            "tick": 60,
+            "domain": [
+              {
+                "bps": 3000,
+                "effective": true,
+                "expiresAtTick": 100
+              }
+            ],
+            "strategy": [
+              "魔抗击碎 30% · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+            ],
+            "stats": [
+              "魔抗击碎 30% · 剩余 2.0秒（第 100 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+            ],
+            "inactive": [
+              false
+            ]
+          }
+        },
+        {
+          "name": "tick 60 领域快照与显示一致",
+          "passed": true,
+          "observed": [
+            {
+              "bps": 3000,
+              "effective": true,
+              "expiresAtTick": 100
+            }
+          ]
+        },
+        {
+          "name": "只读：策略面板 tick 61",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 61",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "策略面板 tick 61：仅 30% 行且无该文字",
+          "passed": true,
+          "observed": {
+            "tick": 61,
+            "domain": [
+              {
+                "bps": 3000,
+                "effective": true,
+                "expiresAtTick": 100
+              }
+            ],
+            "strategy": [
+              "魔抗击碎 30% · 剩余 1.9秒（第 100 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+            ],
+            "stats": [
+              "魔抗击碎 30% · 剩余 1.9秒（第 100 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+            ],
+            "inactive": [
+              false
+            ]
+          }
+        },
+        {
+          "name": "统计面板 tick 61：仅 30% 行且无该文字",
+          "passed": true,
+          "observed": {
+            "tick": 61,
+            "domain": [
+              {
+                "bps": 3000,
+                "effective": true,
+                "expiresAtTick": 100
+              }
+            ],
+            "strategy": [
+              "魔抗击碎 30% · 剩余 1.9秒（第 100 刻结束） · 来源 中立守卫 2 ★ · 装备 · 效果"
+            ],
+            "stats": [
+              "魔抗击碎 30% · 剩余 1.9秒（第 100 刻结束） · 来源 中立守卫 2 1星 · 装备 · 效果"
+            ],
+            "inactive": [
+              false
+            ]
+          }
+        },
+        {
+          "name": "tick 61 领域快照与显示一致",
+          "passed": true,
+          "observed": [
+            {
+              "bps": 3000,
+              "effective": true,
+              "expiresAtTick": 100
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tie",
+      "title": "同类同强度（两名 1 星厄加特对同一目标各施加 20% 护甲击碎）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：两份 20% 击碎，按 key 选定一份",
+          "passed": true,
+          "observed": {
+            "contributions": [
+              [
+                "p1",
+                2000
+              ],
+              [
+                "p2",
+                2000
+              ]
+            ],
+            "effective": "[\"standalone\",\"p1\",\"ability\",\"urgot-ability\",\"p1\",0,null,\"e\",\"source\"]"
+          }
+        },
+        {
+          "name": "只读：策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "策略面板：两行均显示“护甲击碎 20%”",
+          "passed": true,
+          "observed": [
+            "护甲击碎 20% · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 ★ · 技能",
+            "护甲击碎 20% · 同类状态由另一来源提供（本来源保留） · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 ★ · 技能"
+          ]
+        },
+        {
+          "name": "策略面板：仅领域未选中的一行显示“同类状态由另一来源提供（本来源保留）”",
+          "passed": true,
+          "observed": {
+            "unpicked": 1,
+            "lines": [
+              "护甲击碎 20% · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 ★ · 技能",
+              "护甲击碎 20% · 同类状态由另一来源提供（本来源保留） · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 ★ · 技能"
+            ]
+          }
+        },
+        {
+          "name": "策略面板：无“更强”等暗示大小的文字",
+          "passed": true,
+          "observed": [
+            "护甲击碎 20% · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 ★ · 技能",
+            "护甲击碎 20% · 同类状态由另一来源提供（本来源保留） · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 ★ · 技能"
+          ]
+        },
+        {
+          "name": "统计面板：两行均显示“护甲击碎 20%”",
+          "passed": true,
+          "observed": [
+            "护甲击碎 20% · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 1星 · 技能",
+            "护甲击碎 20% · 同类状态由另一来源提供（本来源保留） · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 1星 · 技能"
+          ]
+        },
+        {
+          "name": "统计面板：仅领域未选中的一行显示“同类状态由另一来源提供（本来源保留）”",
+          "passed": true,
+          "observed": {
+            "unpicked": 1,
+            "lines": [
+              "护甲击碎 20% · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 1星 · 技能",
+              "护甲击碎 20% · 同类状态由另一来源提供（本来源保留） · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 1星 · 技能"
+            ]
+          }
+        },
+        {
+          "name": "统计面板：无“更强”等暗示大小的文字",
+          "passed": true,
+          "observed": [
+            "护甲击碎 20% · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 1星 · 技能",
+            "护甲击碎 20% · 同类状态由另一来源提供（本来源保留） · 剩余 6.0秒（第 122 刻结束） · 来源 厄加特 1星 · 技能"
+          ]
+        },
+        {
+          "name": "事件日志两条“护甲击碎 20% 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 刻 厄加特 ★ · 技能 → 中立守卫 2 ★：护甲击碎 20% 生效，至第 122 刻",
+            "第 1 刻 厄加特 ★ · 技能 → 中立守卫 2 ★：护甲击碎 20% 生效，至第 122 刻"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R2",
+      "title": "R2 施加事件：厄加特/蕾欧娜/芮尔/库奇技能施加（按 UR-U4-05 正式 group 预期）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "urgot：施加事件均带正式 group",
+          "passed": true,
+          "observed": [
+            {
+              "kind": "sunder",
+              "contributions": [
+                2000
+              ]
+            }
+          ]
+        },
+        {
+          "name": "只读：urgot 策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：urgot 统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "urgot：事件日志“护甲击碎 20% 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 刻 厄加特 ★ · 技能 → 中立守卫 2 ★：护甲击碎 20% 生效，至第 122 刻"
+          ]
+        },
+        {
+          "name": "urgot：统计面板事件明细“护甲击碎 20% 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 tick：厄加特 1星 · 技能 → 中立守卫 2 1星：护甲击碎 20% 生效，至第 122 刻"
+          ]
+        },
+        {
+          "name": "urgot：不出现“眩晕”/“属性变化”兼容文案",
+          "passed": true,
+          "observed": null
+        },
+        {
+          "name": "leona：施加事件均带正式 group",
+          "passed": true,
+          "observed": [
+            {
+              "kind": "damage-reduction",
+              "contributions": [
+                5000
+              ]
+            }
+          ]
+        },
+        {
+          "name": "只读：leona 策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：leona 统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "leona：事件日志“减伤 50% 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 刻 蕾欧娜 ★ · 技能 → 蕾欧娜 ★：减伤 50% 生效，至第 61 刻"
+          ]
+        },
+        {
+          "name": "leona：统计面板事件明细“减伤 50% 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 tick：蕾欧娜 1星 · 技能 → 蕾欧娜 1星：减伤 50% 生效，至第 61 刻"
+          ]
+        },
+        {
+          "name": "leona：不出现“眩晕”/“属性变化”兼容文案",
+          "passed": true,
+          "observed": null
+        },
+        {
+          "name": "rell：施加事件均带正式 group",
+          "passed": true,
+          "observed": [
+            {
+              "kind": "stat-debuff",
+              "contributions": [
+                [
+                  "armor",
+                  -10
+                ],
+                [
+                  "magicResist",
+                  -10
+                ]
+              ]
+            },
+            {
+              "kind": "stat-buff",
+              "contributions": [
+                [
+                  "armor",
+                  10
+                ],
+                [
+                  "magicResist",
+                  10
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "name": "只读：rell 策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：rell 统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "rell：事件日志“属性削弱 护甲 −10 / 魔抗 −10 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 刻 芮尔 ★ · 技能 → 芮尔 ★：属性提升 护甲 +10 / 魔抗 +10 生效，至第 1202 刻",
+            "第 1 刻 芮尔 ★ · 技能 → 中立守卫 2 ★：属性削弱 护甲 -10 / 魔抗 -10 生效，至第 1202 刻"
+          ]
+        },
+        {
+          "name": "rell：统计面板事件明细“属性削弱 护甲 −10 / 魔抗 −10 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 tick：芮尔 1星 · 技能 → 中立守卫 2 1星：属性削弱 护甲 -10 / 魔抗 -10 生效，至第 1202 刻",
+            "第 1 tick：芮尔 1星 · 技能 → 芮尔 1星：属性提升 护甲 +10 / 魔抗 +10 生效，至第 1202 刻"
+          ]
+        },
+        {
+          "name": "rell：不出现“眩晕”/“属性变化”兼容文案",
+          "passed": true,
+          "observed": null
+        },
+        {
+          "name": "rell：自身“属性提升 护甲 +10 / 魔抗 +10 生效”",
+          "passed": true,
+          "observed": "第 1 刻 芮尔 ★ · 技能 → 芮尔 ★：属性提升 护甲 +10 / 魔抗 +10 生效，至第 1202 刻"
+        },
+        {
+          "name": "corki：施加事件均带正式 group",
+          "passed": true,
+          "observed": [
+            {
+              "kind": "stat-debuff",
+              "contributions": [
+                [
+                  "armor",
+                  -1
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "name": "只读：corki 策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：corki 统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "corki：事件日志“属性削弱 护甲 −1 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 刻 库奇 ★ · 技能 → 中立守卫 2 ★：属性削弱 护甲 -1 生效，至第 1202 刻",
+            "第 1 刻 库奇 ★ · 技能 → 库奇 ★：引导 生效，至第 22 刻"
+          ]
+        },
+        {
+          "name": "corki：统计面板事件明细“属性削弱 护甲 −1 生效”",
+          "passed": true,
+          "observed": [
+            "第 1 tick：库奇 1星 · 技能 → 库奇 1星：引导 生效，至第 22 刻",
+            "第 1 tick：库奇 1星 · 技能 → 中立守卫 2 1星：属性削弱 护甲 -1 生效，至第 1202 刻"
+          ]
+        },
+        {
+          "name": "corki：不出现“眩晕”/“属性变化”兼容文案",
+          "passed": true,
+          "observed": null
+        }
+      ]
+    },
+    {
+      "id": "R2a",
+      "title": "R2a 兼容清理锚点（无 group / 无 contributionKeys / 无 activity）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "固定输入不可再由领域产生：实际阵亡/战斗结束清理事件全部带正式 group",
+          "passed": true,
+          "observed": [
+            [
+              21,
+              "death-cleanup",
+              "burn",
+              1
+            ],
+            [
+              21,
+              "death-cleanup",
+              "stat-buff",
+              1
+            ],
+            [
+              21,
+              "death-cleanup",
+              "wound",
+              1
+            ],
+            [
+              21,
+              "combat-end",
+              "burn",
+              1
+            ],
+            [
+              21,
+              "combat-end",
+              "stat-buff",
+              1
+            ],
+            [
+              21,
+              "combat-end",
+              "wound",
+              1
+            ]
+          ]
+        },
+        {
+          "name": "只读：策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "清理日志不猜种类、不出现“眩晕”",
+          "passed": true,
+          "observed": [
+            "第 21 刻 中立守卫 2 ★ · 装备 · 红霸符 → 婕拉 ★：重伤 33% 战斗结束",
+            "第 21 刻 婕拉 ★ · 装备 · 红霸符 → 婕拉 ★：属性提升 增伤 +3% 战斗结束",
+            "第 21 刻 中立守卫 2 ★ · 装备 · 红霸符 → 婕拉 ★：灼烧 1% 战斗结束",
+            "第 21 刻 婕拉 ★ · 装备 · 红霸符 → 中立守卫 2 ★：重伤 33% 阵亡清除",
+            "第 21 刻 中立守卫 2 ★ · 装备 · 红霸符 → 中立守卫 2 ★：属性提升 增伤 +3% 阵亡清除",
+            "第 21 刻 婕拉 ★ · 装备 · 红霸符 → 中立守卫 2 ★：灼烧 1% 阵亡清除",
+            "第 0 刻 婕拉 ★ · 装备 · 红霸符 → 婕拉 ★：属性提升 增伤 +3% 生效，持续至战斗结束",
+            "第 0 刻 中立守卫 2 ★ · 装备 · 红霸符 → 中立守卫 2 ★：属性提升 增伤 +3% 生效，持续至战斗结束"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "R2b",
+      "title": "R2b 正式 group 清理（灼烧/重伤 × 阵亡清除/战斗结束）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：burn/wound 各有阵亡清除与战斗结束事件且带 group",
+          "passed": true,
+          "observed": [
+            "burn:death-cleanup",
+            "stat-buff:death-cleanup",
+            "wound:death-cleanup",
+            "burn:combat-end",
+            "stat-buff:combat-end",
+            "wound:combat-end"
+          ]
+        },
+        {
+          "name": "只读：策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "事件日志“灼烧 … 阵亡清除”",
+          "passed": true,
+          "observed": "第 21 刻 婕拉 ★ · 装备 · 红霸符 → 中立守卫 2 ★：灼烧 1% 阵亡清除"
+        },
+        {
+          "name": "统计面板“灼烧 … 阵亡清除”",
+          "passed": true,
+          "observed": "第 21 tick：婕拉 1星 · 装备 · 红霸符 → 中立守卫 2 1星：灼烧 1% 阵亡清除"
+        },
+        {
+          "name": "事件日志“重伤 … 阵亡清除”",
+          "passed": true,
+          "observed": "第 21 刻 婕拉 ★ · 装备 · 红霸符 → 中立守卫 2 ★：重伤 33% 阵亡清除"
+        },
+        {
+          "name": "统计面板“重伤 … 阵亡清除”",
+          "passed": true,
+          "observed": "第 21 tick：婕拉 1星 · 装备 · 红霸符 → 中立守卫 2 1星：重伤 33% 阵亡清除"
+        },
+        {
+          "name": "事件日志“灼烧 … 战斗结束”",
+          "passed": true,
+          "observed": "第 21 刻 中立守卫 2 ★ · 装备 · 红霸符 → 婕拉 ★：灼烧 1% 战斗结束"
+        },
+        {
+          "name": "统计面板“灼烧 … 战斗结束”",
+          "passed": true,
+          "observed": "第 21 tick：中立守卫 2 1星 · 装备 · 红霸符 → 婕拉 1星：灼烧 1% 战斗结束"
+        },
+        {
+          "name": "事件日志“重伤 … 战斗结束”",
+          "passed": true,
+          "observed": "第 21 刻 中立守卫 2 ★ · 装备 · 红霸符 → 婕拉 ★：重伤 33% 战斗结束"
+        },
+        {
+          "name": "统计面板“重伤 … 战斗结束”",
+          "passed": true,
+          "observed": "第 21 tick：中立守卫 2 1星 · 装备 · 红霸符 → 婕拉 1星：重伤 33% 战斗结束"
+        },
+        {
+          "name": "不出现“眩晕”",
+          "passed": true,
+          "observed": null
+        }
+      ]
+    },
+    {
+      "id": "R3",
+      "title": "R3 来源（窃贼手套临时子件：饮血剑护盾/吸血、红霸符灼烧/重伤）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：护盾 m8State.source.parentItemInstanceId 非空",
+          "passed": true,
+          "observed": {
+            "ownerId": "p",
+            "sourceKind": "item",
+            "definitionId": "bloodthirster",
+            "instanceId": "[\"item-9\",\"4-7\",1]",
+            "effectIndex": 4096,
+            "parentItemInstanceId": "item-9"
+          }
+        },
+        {
+          "name": "领域：治疗份额与灼烧贡献来源带父实例",
+          "passed": true,
+          "observed": {
+            "heal": [
+              {
+                "ownerId": "p",
+                "sourceKind": "item",
+                "definitionId": "bloodthirster",
+                "instanceId": "[\"item-9\",\"4-7\",1]",
+                "effectIndex": 4128,
+                "parentItemInstanceId": "item-9"
+              }
+            ],
+            "burn": {
+              "ownerId": "p",
+              "sourceKind": "item",
+              "definitionId": "red-buff",
+              "instanceId": "[\"item-9\",\"4-7\",2]",
+              "effectIndex": 2080,
+              "parentItemInstanceId": "item-9"
+            }
+          }
+        },
+        {
+          "name": "只读：策略面板（持有者）",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：策略面板（目标）",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板（目标）",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "策略面板盾行含“临时子件”",
+          "passed": true,
+          "observed": "盾 250 / 250 · 已吸收 0 · 剩余 5.0秒（第 101 刻结束） · 婕拉 ★ · 装备 · 饮血剑 · 临时子件"
+        },
+        {
+          "name": "事件日志护盾含“临时子件”",
+          "passed": true,
+          "observed": "第 1 刻 婕拉 ★ · 装备 · 饮血剑 · 临时子件 → 婕拉 ★：请求 20，有效治疗 20，过量治疗 0，重伤减少 0"
+        },
+        {
+          "name": "统计面板护盾来源含“临时子件”",
+          "passed": true,
+          "observed": [
+            "第 1 tick：婕拉 1星 · 装备 · 饮血剑 · 临时子件 → 婕拉 1星：护盾生成，剩余 250，已吸收 0，到期第 101 刻"
+          ]
+        },
+        {
+          "name": "事件日志状态含“临时子件”",
+          "passed": true,
+          "observed": "第 1 刻 婕拉 ★ · 装备 · 红霸符 · 临时子件 → 中立守卫 2 ★：重伤 33% 生效，至第 101 刻"
+        },
+        {
+          "name": "统计面板状态来源含“临时子件”",
+          "passed": true,
+          "observed": [
+            "第 0 tick：婕拉 1星 · 装备 · 红霸符 · 临时子件 → 婕拉 1星：属性提升 增伤 +3% 生效，持续至战斗结束",
+            "第 1 tick：婕拉 1星 · 装备 · 红霸符 · 临时子件 → 中立守卫 2 1星：灼烧 1% 生效，至第 101 刻",
+            "第 1 tick：婕拉 1星 · 装备 · 红霸符 · 临时子件 → 中立守卫 2 1星：重伤 33% 生效，至第 101 刻"
+          ]
+        },
+        {
+          "name": "事件日志治疗含“临时子件”",
+          "passed": true,
+          "observed": "第 1 刻 婕拉 ★ · 装备 · 饮血剑 · 临时子件 → 婕拉 ★：请求 20，有效治疗 20，过量治疗 0，重伤减少 0"
+        },
+        {
+          "name": "统计面板治疗来源含“临时子件”",
+          "passed": true,
+          "observed": [
+            "第 1 tick：婕拉 1星 · 装备 · 饮血剑 · 临时子件 → 婕拉 1星：请求 20，有效治疗 20，过量治疗 0，重伤减少 0"
+          ]
+        },
+        {
+          "name": "目标状态行（两面板）来源含“临时子件”",
+          "passed": true,
+          "observed": {
+            "strategy": "灼烧 1% · 剩余 5.0秒（第 101 刻结束） · 下一跳第 21 刻 · 来源 婕拉 ★ · 装备 · 红霸符 · 临时子件",
+            "stats": "灼烧 1% · 剩余 5.0秒（第 101 刻结束） · 下一跳第 21 刻 · 来源 婕拉 1星 · 装备 · 红霸符 · 临时子件"
+          }
+        },
+        {
+          "name": "两面板来源格式一致（originLabel 同一串）",
+          "passed": true,
+          "observed": {
+            "strategy": "装备 · 红霸符 · 临时子件",
+            "stats": "装备 · 红霸符 · 临时子件"
+          }
+        }
+      ]
+    },
+    {
+      "id": "R4",
+      "title": "R4 治疗分项（A10：饮血剑请求 20 + 枪刃请求 15，缺血 20；无重伤 / 33% 重伤）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "none：领域一次治疗 35/20/15/0",
+          "passed": true,
+          "observed": {
+            "requested": 35,
+            "afterWound": 35,
+            "actual": 20,
+            "overheal": 15,
+            "preventedByWound": 0,
+            "shares": [
+              [
+                "bloodthirster",
+                20,
+                11,
+                9,
+                0
+              ],
+              [
+                "gunblade",
+                15,
+                9,
+                6,
+                0
+              ]
+            ]
+          }
+        },
+        {
+          "name": "只读：none 策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：none 统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "none：事件日志含总数与两来源各自分项",
+          "passed": true,
+          "observed": "第 1 刻 2 个来源 → 中立守卫 2 ★：请求 35，有效治疗 20，过量治疗 15，重伤减少 0（中立守卫 2 ★ · 装备 · 饮血剑：请求 20，有效 11，过量 9，重伤减少 0；中立守卫 2 ★ · 装备 · 海克斯科技枪刃：请求 15，有效 9，过量 6，重伤减少 0）"
+        },
+        {
+          "name": "none：统计面板治疗明细含两来源各自分项",
+          "passed": true,
+          "observed": [
+            "第 1 tick：2 个来源 → 中立守卫 2 1星：请求 35，有效治疗 20，过量治疗 15，重伤减少 0（中立守卫 2 1星 · 装备 · 饮血剑：请求 20，有效 11，过量 9，重伤减少 0；中立守卫 2 1星 · 装备 · 海克斯科技枪刃：请求 15，有效 9，过量 6，重伤减少 0）"
+          ]
+        },
+        {
+          "name": "none：统计表有效治疗 20",
+          "passed": true,
+          "observed": [
+            "100",
+            "0",
+            "20"
+          ]
+        },
+        {
+          "name": "none：选中详情过量治疗 15",
+          "passed": true,
+          "observed": "中立守卫 2 1星 · 存活；生命 1000/1000；法力 0/1；攻击力 100；法强 100；护甲 0；魔抗 0；物理实际伤害 100；魔法实际伤害 0；真实实际伤害 0；受击护盾吸收 0；有效治疗 20；过量治疗 15；来源：基础属性；目标：中立守卫 2 1星"
+        },
+        {
+          "name": "wound33：领域一次治疗 35/20/3/12",
+          "passed": true,
+          "observed": {
+            "requested": 35,
+            "afterWound": 23,
+            "actual": 20,
+            "overheal": 3,
+            "preventedByWound": 12,
+            "shares": [
+              [
+                "bloodthirster",
+                20,
+                11,
+                2,
+                7
+              ],
+              [
+                "gunblade",
+                15,
+                9,
+                1,
+                5
+              ]
+            ]
+          }
+        },
+        {
+          "name": "只读：wound33 策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：wound33 统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "wound33：事件日志含总数与两来源各自分项",
+          "passed": true,
+          "observed": "第 1 刻 2 个来源 → 中立守卫 2 ★：请求 35，有效治疗 20，过量治疗 3，重伤减少 12（中立守卫 2 ★ · 装备 · 饮血剑：请求 20，有效 11，过量 2，重伤减少 7；中立守卫 2 ★ · 装备 · 海克斯科技枪刃：请求 15，有效 9，过量 1，重伤减少 5）"
+        },
+        {
+          "name": "wound33：统计面板治疗明细含两来源各自分项",
+          "passed": true,
+          "observed": [
+            "第 1 tick：2 个来源 → 中立守卫 2 1星：请求 35，有效治疗 20，过量治疗 3，重伤减少 12（中立守卫 2 1星 · 装备 · 饮血剑：请求 20，有效 11，过量 2，重伤减少 7；中立守卫 2 1星 · 装备 · 海克斯科技枪刃：请求 15，有效 9，过量 1，重伤减少 5）"
+          ]
+        },
+        {
+          "name": "wound33：统计表有效治疗 20",
+          "passed": true,
+          "observed": [
+            "100",
+            "0",
+            "20"
+          ]
+        },
+        {
+          "name": "wound33：选中详情过量治疗 3",
+          "passed": true,
+          "observed": "中立守卫 2 1星 · 存活；生命 1000/1000；法力 0/1；攻击力 100；法强 100；护甲 0；魔抗 0；物理实际伤害 100；魔法实际伤害 0；真实实际伤害 0；受击护盾吸收 0；有效治疗 20；过量治疗 3；来源：基础属性；目标：中立守卫 2 1星"
+        }
+      ]
+    },
+    {
+      "id": "damage-types",
+      "title": "三类伤害（物理 10、魔法 20、真实 30 各一包，同一来源单位）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：三包各一，物理 10 / 魔法 20 / 真实 30",
+          "passed": true,
+          "observed": [
+            [
+              41,
+              "physical",
+              "basic-attack",
+              10
+            ],
+            [
+              41,
+              "magic",
+              "ability-direct",
+              20
+            ],
+            [
+              61,
+              "true",
+              "item-burn",
+              30
+            ]
+          ]
+        },
+        {
+          "name": "只读：策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "事件日志“物理实际生命伤害 10”",
+          "passed": true,
+          "observed": "第 41 刻 拉克丝 ★ · 普攻 → 中立守卫 2 ★：物理实际生命伤害 10，护盾吸收 0"
+        },
+        {
+          "name": "事件日志“魔法实际生命伤害 20”",
+          "passed": true,
+          "observed": "第 41 刻 拉克丝 ★ · 技能 → 中立守卫 2 ★：魔法实际生命伤害 20，护盾吸收 0"
+        },
+        {
+          "name": "事件日志“真实实际生命伤害 30”",
+          "passed": true,
+          "observed": "第 61 刻 拉克丝 ★ · 装备 · 红霸符 → 中立守卫 2 ★：真实实际生命伤害 30，护盾吸收 0"
+        },
+        {
+          "name": "只读：统计面板（点选单位）",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "点选统计表单位触发选择回调",
+          "passed": true,
+          "observed": "p"
+        },
+        {
+          "name": "选中单位详情三类分别 10/20/30",
+          "passed": true,
+          "observed": "拉克丝 1星 · 存活；生命 1000/1000；法力 10/100；攻击力 10；法强 100；护甲 0；魔抗 0；物理实际伤害 10；魔法实际伤害 20；真实实际伤害 30；受击护盾吸收 0；有效治疗 0；过量治疗 0；来源：基础属性；目标：中立守卫 2 1星"
+        },
+        {
+          "name": "统计表实际伤害合计 60",
+          "passed": true,
+          "observed": [
+            "60",
+            "0",
+            "0"
+          ]
+        },
+        {
+          "name": "只读：飘字",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "飘字“−10”",
+          "passed": true,
+          "observed": [
+            [
+              "−10",
+              "−20 魔"
+            ],
+            [
+              "−30 真"
+            ]
+          ]
+        },
+        {
+          "name": "飘字“−20 魔”",
+          "passed": true,
+          "observed": [
+            [
+              "−10",
+              "−20 魔"
+            ],
+            [
+              "−30 真"
+            ]
+          ]
+        },
+        {
+          "name": "飘字“−30 真”",
+          "passed": true,
+          "observed": [
+            [
+              "−10",
+              "−20 魔"
+            ],
+            [
+              "−30 真"
+            ]
+          ]
+        },
+        {
+          "name": "只读：飘字（完整账本）",
+          "passed": true,
+          "observed": true
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "title": "引导被控取消（范德尔引导，婕拉眩晕）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：引导开始、被控制取消、眩晕到期",
+          "passed": true,
+          "observed": {
+            "start": 1,
+            "plannedEnd": 51,
+            "cancelled": 23,
+            "stunApplied": 22,
+            "stunExpired": 43
+          }
+        },
+        {
+          "name": "只读：策略面板日志",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "日志“引导 被控制打断”",
+          "passed": true,
+          "observed": "第 23 刻 范德尔 ★ · 技能 → 范德尔 ★：引导 被控制打断"
+        },
+        {
+          "name": "只读：统计面板日志",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "统计面板事件明细“引导 被控制打断”",
+          "passed": true,
+          "observed": "第 1 tick：范德尔 1星 · 技能 → 范德尔 1星：引导 生效，至第 51 刻"
+        },
+        {
+          "name": "只读：策略面板 tick 22",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 22",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：棋子小标 tick 22",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "tick 22（取消前）：状态列表有引导，棋子小标有“引”",
+          "passed": true,
+          "observed": {
+            "strategy": [
+              "属性提升 护甲 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "属性提升 魔抗 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "眩晕 · 第 23 刻生效 · 剩余 1.1秒（第 43 刻结束） · 来源 婕拉 ★ · 技能",
+              "引导 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能"
+            ],
+            "stats": [
+              "属性提升 护甲 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "属性提升 魔抗 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "眩晕 · 第 23 刻生效 · 剩余 1.1秒（第 43 刻结束） · 来源 婕拉 1星 · 技能",
+              "引导 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能"
+            ],
+            "badges": [
+              "增引",
+              ""
+            ]
+          }
+        },
+        {
+          "name": "只读：策略面板 tick 23",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 23",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：棋子小标 tick 23",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "tick 23（取消后）：状态列表无引导，棋子小标无“引”",
+          "passed": true,
+          "observed": {
+            "strategy": [
+              "属性提升 护甲 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "属性提升 魔抗 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "眩晕 · 剩余 1.0秒（第 43 刻结束） · 来源 婕拉 ★ · 技能"
+            ],
+            "stats": [
+              "属性提升 护甲 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "属性提升 魔抗 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "眩晕 · 剩余 1.0秒（第 43 刻结束） · 来源 婕拉 1星 · 技能"
+            ],
+            "badges": [
+              "增",
+              "晕"
+            ]
+          }
+        },
+        {
+          "name": "只读：策略面板 tick 24",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 24",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：棋子小标 tick 24",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "tick 24（取消后）：状态列表无引导，棋子小标无“引”",
+          "passed": true,
+          "observed": {
+            "strategy": [
+              "属性提升 护甲 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "属性提升 魔抗 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "眩晕 · 剩余 0.9秒（第 43 刻结束） · 来源 婕拉 ★ · 技能"
+            ],
+            "stats": [
+              "属性提升 护甲 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "属性提升 魔抗 +100 · 剩余 1.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "眩晕 · 剩余 0.9秒（第 43 刻结束） · 来源 婕拉 1星 · 技能"
+            ],
+            "badges": [
+              "增",
+              "晕"
+            ]
+          }
+        },
+        {
+          "name": "只读：策略面板 tick 43",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 43",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：棋子小标 tick 43",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "tick 43（眩晕结束后）：状态列表无引导，棋子小标无“引”",
+          "passed": true,
+          "observed": {
+            "strategy": [
+              "属性提升 护甲 +100 · 剩余 0.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "属性提升 魔抗 +100 · 剩余 0.4秒（第 51 刻结束） · 来源 范德尔 ★ · 技能"
+            ],
+            "stats": [
+              "属性提升 护甲 +100 · 剩余 0.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "属性提升 魔抗 +100 · 剩余 0.4秒（第 51 刻结束） · 来源 范德尔 1星 · 技能"
+            ],
+            "badges": [
+              "增",
+              ""
+            ]
+          }
+        },
+        {
+          "name": "只读：策略面板 tick 44",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 44",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：棋子小标 tick 44",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "tick 44（眩晕结束后）：状态列表无引导，棋子小标无“引”",
+          "passed": true,
+          "observed": {
+            "strategy": [
+              "属性提升 护甲 +100 · 剩余 0.3秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "属性提升 魔抗 +100 · 剩余 0.3秒（第 51 刻结束） · 来源 范德尔 ★ · 技能"
+            ],
+            "stats": [
+              "属性提升 护甲 +100 · 剩余 0.3秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "属性提升 魔抗 +100 · 剩余 0.3秒（第 51 刻结束） · 来源 范德尔 1星 · 技能"
+            ],
+            "badges": [
+              "增",
+              ""
+            ]
+          }
+        },
+        {
+          "name": "只读：策略面板 tick 50",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板 tick 50",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：棋子小标 tick 50",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "tick 50（眩晕结束后）：状态列表无引导，棋子小标无“引”",
+          "passed": true,
+          "observed": {
+            "strategy": [
+              "属性提升 护甲 +100 · 剩余 0.1秒（第 51 刻结束） · 来源 范德尔 ★ · 技能",
+              "属性提升 魔抗 +100 · 剩余 0.1秒（第 51 刻结束） · 来源 范德尔 ★ · 技能"
+            ],
+            "stats": [
+              "属性提升 护甲 +100 · 剩余 0.1秒（第 51 刻结束） · 来源 范德尔 1星 · 技能",
+              "属性提升 魔抗 +100 · 剩余 0.1秒（第 51 刻结束） · 来源 范德尔 1星 · 技能"
+            ],
+            "badges": [
+              "增",
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "filters",
+      "title": "状态与法力筛选（统计面板“状态”“法力”“全部事件（法力单列）”）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "只读：统计面板（切换筛选）",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "“状态”只含状态事件（statusChanged，及正式 activityChanged）",
+          "passed": true,
+          "observed": {
+            "total": 6,
+            "expected": {
+              "status": 6,
+              "statusOnly": 4,
+              "mana": 6,
+              "all": 15
+            },
+            "sample": [
+              "第 1 tick：范德尔 1星 · 技能 → 范德尔 1星：引导 生效，至第 51 刻",
+              "第 1 tick：范德尔 1星 · 技能 → 范德尔 1星：属性提升 护甲 +100 / 魔抗 +100 生效，至第 51 刻",
+              "第 22 tick：婕拉 1星 · 技能 → 范德尔 1星：眩晕 生效，至第 43 刻",
+              "第 23 tick：范德尔 1星 · 技能 → 范德尔 1星：引导 被控制打断",
+              "第 43 tick：婕拉 1星 · 技能 → 范德尔 1星：眩晕 到期",
+              "第 51 tick：范德尔 1星 · 技能 → 范德尔 1星：属性提升 护甲 +100 到期（共 2 项）"
+            ]
+          }
+        },
+        {
+          "name": "“法力”只含 manaChanged",
+          "passed": true,
+          "observed": {
+            "total": 6,
+            "expected": 6,
+            "sample": [
+              "第 1 tick：婕拉 1星 · 技能 → 婕拉 1星：普攻回蓝 10，法力 80 → 90",
+              "第 21 tick：婕拉 1星 · 技能 → 婕拉 1星：普攻回蓝 10，法力 90 → 100",
+              "第 22 tick：范德尔 1星 · 技能 → 范德尔 1星：受伤回蓝 3，法力 0 → 3",
+              "第 42 tick：婕拉 1星 · 技能 → 婕拉 1星：普攻回蓝 10，法力 0 → 10"
+            ]
+          }
+        },
+        {
+          "name": "“全部事件（法力单列）”不含 manaChanged",
+          "passed": true,
+          "observed": {
+            "total": 15,
+            "expected": 15
+          }
+        }
+      ]
+    },
+    {
+      "id": "shield-A",
+      "title": "护盾 A：600 线性衰减盾，自然衰减 100 后吸收 120（艾瑞莉娅技能）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：剩余 380、已吸收 120、已衰减 100",
+          "passed": true,
+          "observed": {
+            "granted": 600,
+            "remaining": 380,
+            "absorbed": 120,
+            "decayed": 100,
+            "tick": 11
+          }
+        },
+        {
+          "name": "只读：策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "日志含“自然衰减”",
+          "passed": true,
+          "observed": "第 11 刻 艾瑞莉娅 ★ · 技能 → 艾瑞莉娅 ★：护盾自然衰减，剩余 500，已吸收 0，已衰减 100，到期第 61 刻"
+        },
+        {
+          "name": "日志含“吸收伤害”，剩余 380、已吸收 120、已衰减 100",
+          "passed": true,
+          "observed": "第 11 刻 艾瑞莉娅 ★ · 技能 → 艾瑞莉娅 ★：护盾吸收伤害，剩余 380，已吸收 120，已衰减 100，到期第 61 刻"
+        },
+        {
+          "name": "统计面板护盾明细同上",
+          "passed": true,
+          "observed": "第 11 tick：艾瑞莉娅 1星 · 技能 → 艾瑞莉娅 1星：护盾吸收伤害，剩余 380，已吸收 120，已衰减 100，到期第 61 刻"
+        },
+        {
+          "name": "策略面板盾行 380 / 600 · 已吸收 120 · 已衰减 100",
+          "passed": true,
+          "observed": "盾 380 / 600 · 已吸收 120 · 已衰减 100 · 剩余 2.5秒（第 61 刻结束） · 艾瑞莉娅 ★ · 技能"
+        },
+        {
+          "name": "本子场景统计吸收 120（衰减不计）",
+          "passed": true,
+          "observed": {
+            "table": [
+              "0",
+              "120",
+              "0"
+            ],
+            "detail": "受击护盾吸收 120"
+          }
+        }
+      ]
+    },
+    {
+      "id": "shield-B",
+      "title": "护盾 B：另一盾受伤害至 0（拉克丝技能盾）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：吸收至 0 并耗尽",
+          "passed": true,
+          "observed": {
+            "granted": 160,
+            "absorbed": 160,
+            "remaining": 0
+          }
+        },
+        {
+          "name": "只读：策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "日志含“吸收伤害”至剩余 0（已吸收 160）与“耗尽”",
+          "passed": true,
+          "observed": [
+            "第 3 刻 中立守卫 2 ★ · 普攻 → 拉克丝 ★：物理实际生命伤害 840，护盾吸收 160",
+            "第 3 刻 拉克丝 ★ · 技能 → 拉克丝 ★：护盾耗尽，剩余 0，已吸收 160，到期第 81 刻",
+            "第 3 刻 拉克丝 ★ · 技能 → 拉克丝 ★：护盾吸收伤害，剩余 0，已吸收 160，到期第 81 刻",
+            "第 1 刻 拉克丝 ★ · 技能 → 拉克丝 ★：护盾生成，剩余 160，已吸收 0，到期第 81 刻"
+          ]
+        },
+        {
+          "name": "该盾吸收量单独统计 160，与 A 的 120 分开",
+          "passed": true,
+          "observed": {
+            "table": [
+              "0",
+              "160",
+              "0"
+            ],
+            "A": 120
+          }
+        },
+        {
+          "name": "耗尽后策略面板不再显示该盾行",
+          "passed": true,
+          "observed": []
+        }
+      ]
+    },
+    {
+      "id": "shield-C",
+      "title": "护盾 C：持盾单位阵亡 / 战斗结束",
+      "passed": true,
+      "checks": [
+        {
+          "name": "领域：阵亡清理事件存在",
+          "passed": true,
+          "observed": [
+            [
+              1,
+              "granted",
+              600
+            ],
+            [
+              2,
+              "decayed",
+              590
+            ],
+            [
+              3,
+              "decayed",
+              580
+            ],
+            [
+              3,
+              "absorbed",
+              0
+            ],
+            [
+              3,
+              "depleted",
+              0
+            ],
+            [
+              3,
+              "death-cleanup",
+              0
+            ]
+          ]
+        },
+        {
+          "name": "只读：阵亡前统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：阵亡后统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：阵亡策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "日志“护盾阵亡清除”",
+          "passed": true,
+          "observed": "第 3 刻 艾瑞莉娅 ★ · 技能 → 艾瑞莉娅 ★：护盾阵亡清除，剩余 0，已吸收 580，已衰减 20，到期第 61 刻"
+        },
+        {
+          "name": "阵亡清理不增加统计吸收",
+          "passed": true,
+          "observed": {
+            "before": 580,
+            "after": 580
+          }
+        },
+        {
+          "name": "领域：战斗结束清理事件存在",
+          "passed": true,
+          "observed": [
+            [
+              1,
+              "granted",
+              160
+            ],
+            [
+              21,
+              "combat-end",
+              0
+            ]
+          ]
+        },
+        {
+          "name": "只读：战斗结束前统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：战斗结束后统计面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "只读：战斗结束策略面板",
+          "passed": true,
+          "observed": true
+        },
+        {
+          "name": "日志“护盾战斗结束”",
+          "passed": true,
+          "observed": "第 21 刻 拉克丝 ★ · 技能 → 拉克丝 ★：护盾战斗结束，剩余 0，已吸收 0，到期作废 160，到期第 81 刻"
+        },
+        {
+          "name": "战斗结束清理不增加统计吸收",
+          "passed": true,
+          "observed": {
+            "before": 0,
+            "after": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "read-only",
+      "title": "只读（每个场景渲染、切换筛选、选中单位前后 JSON.stringify 不变）",
+      "passed": true,
+      "checks": [
+        {
+          "name": "每次渲染/筛选/选中前后输入不变",
+          "passed": true,
+          "observed": {
+            "calls": 64,
+            "failed": []
+          }
+        },
+        {
+          "name": "全程交给界面的事件、战斗快照、BattleStats 与 Match 状态均未被改写",
+          "passed": true,
+          "observed": []
+        }
+      ]
+    }
+  ],
+  "deviations": [
+    {
+      "scenario": "R2a",
+      "spec": "输入固定为无 group、无 contributionKeys、无 activity 的清理事件，显示“状态清理（阵亡清除）/（战斗结束）”",
+      "actual": "B9 replay2 起 LedgerCombatEvent 的 statusChanged.group 为必填（contracts.ts M8CombatEvent），cleanupMechanisms 只发 endedStatusEvents（带 group）；该形状不是合法账本事件，界面也已无“状态清理”兼容分支。改为断言真实阵亡/战斗结束清理事件全部带 group、日志按真实种类显示且无“眩晕”。",
+      "why": "UR-U4-05 已交付正式 group，规格写明交付后改按正式 group 预期；手写无 group 事件属于领域不会产生的假数据。"
+    },
+    {
+      "scenario": "R3",
+      "spec": "临时子件护盾 layer.source 无 parentItemInstanceId（只有 m8State.source 有）",
+      "actual": "当前 shieldProjection 的 layer.source 也带 parentItemInstanceId=item-9",
+      "why": "后端后续把父实例写进旧投影；界面仍优先读 m8State.source（shieldSource），断言不依赖旧字段缺失。"
+    },
+    {
+      "scenario": "filters",
+      "spec": "“状态”只有 statusChanged",
+      "actual": "“状态”筛选含 statusChanged 4 条 + activityChanged 2 条",
+      "why": "UR-U4-04 已把引导/分担改为冻结的 activityChanged，并要求筛选同步改读该事件；引导/分担在界面上属于状态类，仍不混入法力或伤害。"
+    },
+    {
+      "scenario": "shield-B",
+      "spec": "日志含“吸收伤害（耗尽）”",
+      "actual": "领域在同一 tick 先发 absorbed（剩余 0）再发 depleted 两条 shieldLayerChanged；日志分别显示“护盾吸收伤害，剩余 0…”与“护盾耗尽，剩余 0…”",
+      "why": "B9 replay2 账本按结束原因单独发事件，界面逐条显示；断言两条均出现，而不是合并文案。"
+    },
+    {
+      "scenario": "shield-C",
+      "spec": "日志“到期（阵亡清除）/（战斗结束）”",
+      "actual": "结束原因 death-cleanup / combat-end 是独立的 ShieldEndReason（不是 expired 的子类），日志显示“护盾阵亡清除”“护盾战斗结束”",
+      "why": "界面按领域结束原因原样映射（SHIELD_REASON_NAMES），不把非到期原因改写成“到期”。断言原因文字出现且统计吸收不变。"
+    }
+  ],
+  "observations": [
+    {
+      "scenario": "R3",
+      "note": "来源中的单位名两面板写法不同（策略面板用 ★，统计面板用“N星”）；来源串本身（originLabel）一致。",
+      "strategy": "婕拉 ★",
+      "stats": "婕拉 1星"
+    },
+    {
+      "scenario": "damage-types",
+      "note": "按完整账本逐 tick 推送时，同 tick 的灼烧/重伤状态飘字与伤害飘字共用每单位 3 个上限，较早的伤害飘字被挤掉（仅表现节流，账本与统计不受影响）。规格断言按伤害包推送核对。",
+      "observed": [
+        [
+          "灼烧",
+          "重伤",
+          "−20 魔"
+        ],
+        [
+          "−30 真"
+        ]
+      ]
+    },
+    {
+      "scenario": "channel",
+      "note": "棋子“引”小标通过 statusBadges(combat, unitId)（UnitView/ReplayView 棋子小标的唯一数据源）核对，未读取 Phaser 画布文字。"
+    }
+  ],
+  "errors": [],
+  "passed": true
+}
