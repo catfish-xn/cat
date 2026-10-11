@@ -1,0 +1,63 @@
+{
+  "kind": "m8-sniper-restore-profile-v1",
+  "question": "Where does the tests/m5-replay.test.ts sniper body spend its time, and what does the exact restore fast path remove?",
+  "method": "docs/evidence/m8-b9/perf/replay-profile.cjs: the same operations in the same order as the test body, timed per segment, one process, no vitest timeout (uncensored). Same machine, sequential runs.",
+  "baseSha": "ded1b79c0f611baea78aea93b0303d3a9fce6442",
+  "cpuProfileAtBase": {
+    "restoreShareOfBody": "61%",
+    "canonicalContentShareOfRestore": "about 56% (inclusive)",
+    "fullStateCanonicalContentOfParsedTextMs": "about 3.4 of 11.8 per restore (JSON.parse 0.8)"
+  },
+  "change": "restoreMatch(text): JSON.parse output can only fail canonicalContent through a non-finite number, so it takes assertParsedContent (validation walk, same acceptance and message) instead of building the canonical text. canonicalContent itself, object input and every comparison are unchanged.",
+  "runs": {
+    "base": {
+      "root": "/home/user/cat",
+      "build": "sniper",
+      "commands": 182,
+      "ticks": 11930,
+      "totalMs": 240807,
+      "routeMs": 20067,
+      "segmentsMs": {
+        "deepBefore": 12827,
+        "stringify2": 13621,
+        "failures": 174,
+        "recompute": 13858,
+        "deepResult": 13081,
+        "serialize": 6837,
+        "restore": 148102,
+        "deepRestored": 12240
+      },
+      "stateBytesAvg": 134459,
+      "stateBytesMax": 276579,
+      "events": 35535
+    },
+    "candidate": {
+      "root": "/tmp/claude-0/wt-perf",
+      "build": "sniper",
+      "commands": 182,
+      "ticks": 11930,
+      "totalMs": 203305,
+      "routeMs": 20208,
+      "segmentsMs": {
+        "deepBefore": 12820,
+        "stringify2": 13915,
+        "failures": 172,
+        "recompute": 14184,
+        "deepResult": 13270,
+        "serialize": 7071,
+        "restore": 109343,
+        "deepRestored": 12322
+      },
+      "stateBytesAvg": 134459,
+      "stateBytesMax": 276579,
+      "events": 35535
+    }
+  },
+  "delta": {
+    "restoreMs": -38759,
+    "totalMs": -37502,
+    "totalPct": -15.6
+  },
+  "ciContext": "CI #229 (ded1b79) sniper 172.41 s against the unchanged 180 s timeout; the same proportional reduction would be about 145 s. Not a CI measurement.",
+  "notInScope": "Replacing canonicalContent string comparisons inside restore with a structural compare would remove more (prototype: restore 13.1 -> 7.5 ms) but is exact only for values without impure accessors; node-one Q1 froze canonicalContent semantics, so it needs a decision and is not included."
+}

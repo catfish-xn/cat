@@ -36,6 +36,16 @@ export function canonicalContent(value: unknown): string {
   }
   throw new TypeError('Content must be finite plain JSON data');
 }
+/** Validation-only walk for JSON.parse output, whose values are data properties in dense arrays and plain objects: there it
+ * accepts and rejects exactly what canonicalContent does (the only possible rejection is a non-finite number), without
+ * building the text. Values from anywhere else keep canonicalContent itself. */
+export function assertParsedContent(value: unknown): void {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
+  if (typeof value === 'number') { if (Number.isFinite(value)) return; throw new TypeError('Content must be finite plain JSON data'); }
+  if (Array.isArray(value)) { for (let i = 0; i < value.length; i++) assertParsedContent(value[i]); return; }
+  if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) { for (const key of Object.keys(value)) assertParsedContent((value as Record<string, unknown>)[key]); return; }
+  throw new TypeError('Content must be finite plain JSON data');
+}
 /** FNV-1a over UTF-16 code units: deterministic in both browsers and Node; no platform API. */
 export function digestContent(value: unknown): string {
   let hash = 0x811c9dc5;
