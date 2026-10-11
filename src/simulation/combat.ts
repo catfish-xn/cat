@@ -1,4 +1,5 @@
 import { recordNeutralReceipts } from './neutral-receipts';
+import { freezeOwnedStatic } from './m8/experimental-static-sharing';
 import { COMPILED_NEUTRAL_ENCOUNTERS, readNeutralCombatUnit } from './neutral-encounter-compiler';
 import { compileCombatInitialInputs } from './combat-initialization';
 import type { StrategySnapshot } from './strategy-types';
@@ -40,7 +41,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
       armor: stats.armor, magicResist: stats.magicResist,
       shield: 0, shieldExpiresAtTick: null, ability,
-      ...(resolved ? { sources: structuredClone(resolved.sources), triggers: structuredClone(resolved.triggers), effectRuntime: initializeEffectRuntime(resolved.triggers) } : {}),
+      ...(resolved ? { sources: ability.kind === 's13' ? freezeOwnedStatic(structuredClone(resolved.sources)) : structuredClone(resolved.sources), triggers: structuredClone(resolved.triggers), effectRuntime: initializeEffectRuntime(resolved.triggers) } : {}),
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,

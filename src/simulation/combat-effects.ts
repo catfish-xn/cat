@@ -1,4 +1,5 @@
 import type { CombatEvent, CombatState, CombatStep, CombatUnit } from './combat-types';
+import { rememberStaticOwner } from './m8/experimental-static-sharing';
 import { compileMechanismDefinitions } from './m8/s13-definitions';
 import { EMPTY_MECHANISMS } from './m8/runtime-types';
 import { initializeMechanisms, refreshMechanismAuras } from './m8/s13-mechanisms';
@@ -6,6 +7,7 @@ import type { EffectInvocation } from './strategy-types';
 import { projectCombatStartMana } from './combat-initialization';
 import { EMPTY_RUNTIME, grantShield, ensureMechanisms, type S13Unit } from './combat-s13-state';
 export function stampCombatStep(state: CombatState, events: readonly CombatEvent[]): CombatStep {
+  for (const unit of state.units) if (unit.ability.kind === 's13') rememberStaticOwner(unit);
   if (!state.strategy) return { state, events };
   const first = state.nextEventSeq ?? 0;
   return { state: { ...state, nextEventSeq: first + events.length },

@@ -1,4 +1,5 @@
 import { validateNeutralCombat } from './neutral-restore';
+import { freezeOwnedStatic, rememberStaticOwner } from './m8/experimental-static-sharing';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
@@ -252,6 +253,11 @@ export function restoreMatch(input: unknown): MatchState {
   freezeContent(restored.m8);
   if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
   freezeContent(restored.resourceProvenance);
+  for (const unit of restored.combat?.units ?? []) if (unit.ability.kind === 's13') {
+    if (unit.itemPrograms) freezeOwnedStatic(unit.itemPrograms);
+    if (unit.sources) freezeOwnedStatic(unit.sources);
+    rememberStaticOwner(unit);
+  }
   return restored;
 }
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }

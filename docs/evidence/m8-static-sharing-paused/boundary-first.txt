@@ -1,0 +1,22 @@
+
+> hex-autobattler@0.1.0 test
+> vitest run tests/m8-static-sharing-experiment.test.ts tests/m8-b8-copy-semantics.test.ts tests/m8-node3-copy-boundary.test.ts
+
+
+ RUN  v5.0.3 /workspace/cat
+
+
+ Test Files  3 passed (3)
+      Tests  19 passed (19)
+   Start at  15:27:06
+   Duration  4.51s (transform 76%, tests 12%, import 12%)
+
+  Transform  transforming modules took 7.83s · 76% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

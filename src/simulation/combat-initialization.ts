@@ -5,6 +5,7 @@ import type { ResolvedUnitStats } from './unit-types';
 import { collectTriggers } from './effects';
 import { compileItemCrit, itemPrograms } from './m8/item-program';
 import { compileUnitInputs } from './m8/unit-inputs';
+import { freezeOwnedStatic } from './m8/experimental-static-sharing';
 
 /** Pure numeric inputs shared by Combat construction and current-round previews.
  * No Combat state, event, mechanism execution, random draw or identity allocation. */
@@ -15,7 +16,7 @@ export function compileCombatInitialInputs(id: string, stats: ResolvedUnitStats,
     hp: Math.floor(stats.health * (resolved?.mechanics?.find(m => m.mechanic === 'glassCannon')?.values.startingHealthBps ?? 10000) / 10000),
     maxHp: stats.health, mana: stats.initialMana, maxMana: stats.maxMana,
     ...(ability.kind === 's13' ? { abilityPower: resolved?.abilityPower ?? 100,
-      ...(resolved?.itemPrograms ? { itemPrograms: structuredClone(resolved.itemPrograms) } : {}) } : {}),
+      ...(resolved?.itemPrograms ? { itemPrograms: freezeOwnedStatic(structuredClone(resolved.itemPrograms)) } : {}) } : {}),
   };
   return itemPrograms(inputs).length
     ? { ...inputs, spellCrit: compileItemCrit({ ...inputs, id, ability }) }
