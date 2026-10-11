@@ -1,0 +1,16 @@
+{
+  "passed": 11,
+  "checks": [
+    "DG misses middle permanent step",
+    "DGT misses middle permanent step",
+    "K detects middle permanent step",
+    "DG misses final permanent step",
+    "T detects final permanent step",
+    "one hit means review not block/pass",
+    "two hits block",
+    "zero hits only passes observation window",
+    "one process never fabricates quorum",
+    "strict greater-than threshold",
+    "slow window growth accumulates in G/T"
+  ]
+}

@@ -1,0 +1,10 @@
+workflow_merge_sha=a86f3cd1edb4d0ed6b84a24992647e299265f6c8
+source_sha=97f38a0e787a4edcb35df4a59823bb1d106def67
+mode=dev
+probe=b4-module
+samples=1
+run_id=37867121590
+attempt=1
+definition_sha=0399167960bdf682d30728891227bcf73b50402f
+pr=15
+trigger_label=h1-run-diagnostics

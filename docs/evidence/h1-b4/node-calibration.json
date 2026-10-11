@@ -1,0 +1,203 @@
+{
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "diagnosticOnly": true,
+  "scope": "controlled engine-module fixtures in a blank page, not full application or legal player-command route",
+  "calibrationOnly": true,
+  "mode": "dev-module",
+  "combatIdPolicy": "unique h1/batch/case/battle per invocation, no shared standalone ID",
+  "seed": 42,
+  "maximumTicks": 1200,
+  "configurations": [
+    {
+      "name": "multi-hit",
+      "items": [
+        "statikk-shiv",
+        "runaans-hurricane",
+        "rageblade"
+      ],
+      "patch": {},
+      "attack": 1,
+      "required": [
+        "packetDamage:statikk-shiv",
+        "packetDamage:runaans-hurricane",
+        "statChanged:rageblade"
+      ]
+    },
+    {
+      "name": "status-refresh",
+      "items": [
+        "red-buff",
+        "morellonomicon",
+        "sunfire-cape"
+      ],
+      "patch": {
+        "mana": 40,
+        "maxMana": 40
+      },
+      "attack": 10,
+      "required": [
+        "statusChanged:red-buff",
+        "statusChanged:morellonomicon",
+        "statusChanged:sunfire-cape"
+      ]
+    },
+    {
+      "name": "periodic",
+      "items": [
+        "archangel",
+        "redemption",
+        "dragons-claw"
+      ],
+      "patch": {
+        "hp": 500
+      },
+      "attack": 1,
+      "required": [
+        "statChanged:archangel",
+        "heal:redemption",
+        "heal:dragons-claw"
+      ]
+    },
+    {
+      "name": "retaliation-cap",
+      "items": [
+        "bramble-vest",
+        "titans-resolve",
+        "gargoyle"
+      ],
+      "patch": {},
+      "attack": 1,
+      "required": [
+        "packetDamage:bramble-vest"
+      ]
+    }
+  ],
+  "windowsRequested": 6,
+  "battlesPerCasePerWindow": 30,
+  "node": "v24.19.0",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "errors": [],
+  "completed": true,
+  "windows": [],
+  "fixtureHashes": {
+    "tests/fixtures/m8-b4-items.ts": "ef7a6d94c4dd85aaf53183d9e563d28341695e1f81778a3c34b534bc6339b83c",
+    "tests/combat-helpers.ts": "90a2fb7cb46311639262f8977f2e8adf5ff37f902e31e85dc64841464378a683"
+  },
+  "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+  "harnessSha256": "aea100f2d25cf6bbfa72b7c15ead1028e9743386de19fae3f7c91de1938a0464",
+  "sourceStatus": "?? node_modules",
+  "calibration": {
+    "multi-hit": {
+      "battles": 1,
+      "finishedBattles": 1,
+      "coveredBattles": 1,
+      "statusReasons": {
+        "statikk-shiv:applied": 213,
+        "statikk-shiv:death-cleanup": 5
+      },
+      "ticks": 995,
+      "events": 2455,
+      "itemEvents": {
+        "statChanged:rageblade": 220,
+        "packetDamage:runaans-hurricane": 179,
+        "statusChanged:statikk-shiv": 218,
+        "packetDamage:statikk-shiv": 213,
+        "kill:statikk-shiv": 1
+      },
+      "maxRuntimeEntries": 3,
+      "maxStatusContributions": 2,
+      "maxPeriodicTasks": 0,
+      "titanCappedBattles": 0,
+      "lastArmor": 0,
+      "lastRngState": 1233968891,
+      "coverageSatisfied": true
+    },
+    "status-refresh": {
+      "battles": 1,
+      "finishedBattles": 1,
+      "coveredBattles": 1,
+      "statusReasons": {
+        "red-buff:applied": 295,
+        "morellonomicon:applied": 294,
+        "sunfire-cape:applied": 42,
+        "sunfire-cape:expired": 4,
+        "morellonomicon:death-cleanup": 6,
+        "red-buff:death-cleanup": 6,
+        "sunfire-cape:death-cleanup": 4,
+        "morellonomicon:combat-end": 4,
+        "red-buff:combat-end": 5
+      },
+      "ticks": 1200,
+      "events": 2108,
+      "itemEvents": {
+        "statusChanged:red-buff": 306,
+        "statusChanged:morellonomicon": 304,
+        "packetDamage:morellonomicon": 166,
+        "statusChanged:sunfire-cape": 50
+      },
+      "maxRuntimeEntries": 2,
+      "maxStatusContributions": 7,
+      "maxPeriodicTasks": 3,
+      "titanCappedBattles": 0,
+      "lastArmor": 20,
+      "lastRngState": 1901377017,
+      "coverageSatisfied": true
+    },
+    "periodic": {
+      "battles": 1,
+      "finishedBattles": 1,
+      "coveredBattles": 1,
+      "statusReasons": {
+        "redemption:applied": 12,
+        "redemption:combat-end": 1
+      },
+      "ticks": 1200,
+      "events": 974,
+      "itemEvents": {
+        "heal:dragons-claw": 30,
+        "statChanged:archangel": 12,
+        "statusChanged:redemption": 13,
+        "heal:redemption": 12
+      },
+      "maxRuntimeEntries": 0,
+      "maxStatusContributions": 1,
+      "maxPeriodicTasks": 3,
+      "titanCappedBattles": 0,
+      "lastArmor": 0,
+      "lastRngState": 2567611122,
+      "coverageSatisfied": true
+    },
+    "retaliation-cap": {
+      "battles": 1,
+      "finishedBattles": 1,
+      "coveredBattles": 1,
+      "statusReasons": {
+        "bramble-vest:applied": 1,
+        "titans-resolve:applied": 52,
+        "bramble-vest:combat-end": 1,
+        "titans-resolve:combat-end": 4
+      },
+      "ticks": 1200,
+      "events": 1000,
+      "itemEvents": {
+        "statusChanged:bramble-vest": 2,
+        "statusChanged:titans-resolve": 56,
+        "packetDamage:bramble-vest": 23
+      },
+      "maxRuntimeEntries": 3,
+      "maxStatusContributions": 5,
+      "maxPeriodicTasks": 0,
+      "titanCappedBattles": 1,
+      "lastArmor": 150,
+      "lastRngState": 157647128,
+      "coverageSatisfied": true
+    }
+  },
+  "finalFixtureHashes": {
+    "tests/fixtures/m8-b4-items.ts": "ef7a6d94c4dd85aaf53183d9e563d28341695e1f81778a3c34b534bc6339b83c",
+    "tests/combat-helpers.ts": "90a2fb7cb46311639262f8977f2e8adf5ff37f902e31e85dc64841464378a683"
+  },
+  "fixturesUnchanged": true,
+  "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+  "sourceUnchanged": true
+}

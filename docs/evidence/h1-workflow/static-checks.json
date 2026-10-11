@@ -1,0 +1,20 @@
+{
+  "yamlSha256": "4b59a583a1329dab3b416587679fd8417638220a119947bfcea3fb197b1b808e",
+  "checks": {
+    "only_pull_request_labeled": true,
+    "head_branch_guard": true,
+    "same_repo_guard": true,
+    "exact_label_guard": true,
+    "read_only": true,
+    "source97": true,
+    "harness_pinned_to_pr_head": true,
+    "upload_always": true,
+    "bash_0": true,
+    "bash_4": true,
+    "bash_5": true,
+    "bash_6": true,
+    "bash_7": true,
+    "b4_mode_separated": true
+  },
+  "limitations": "Static only; extended probe has only prepare-only/offline module resolution validation locally. No browser run claimed."
+}

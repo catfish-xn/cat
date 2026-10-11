@@ -1,0 +1,158 @@
+{
+  "warmupCycles": 2,
+  "cyclesPerWindow": 30,
+  "heapDiagnostics": false,
+  "windows": [
+    {
+      "window": 1,
+      "cycles": 30,
+      "beforeHeap": {
+        "usedSize": 17467036,
+        "totalSize": 21536768,
+        "embedderHeapUsedSize": 7791448,
+        "backingStorageSize": 14053636
+      },
+      "afterHeap": {
+        "usedSize": 18572640,
+        "totalSize": 22323200,
+        "embedderHeapUsedSize": 8502720,
+        "backingStorageSize": 14051635
+      },
+      "heapDelta": 1105604,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      }
+    },
+    {
+      "window": 2,
+      "cycles": 30,
+      "beforeHeap": {
+        "usedSize": 18572640,
+        "totalSize": 22323200,
+        "embedderHeapUsedSize": 8502720,
+        "backingStorageSize": 14051635
+      },
+      "afterHeap": {
+        "usedSize": 18946340,
+        "totalSize": 22847488,
+        "embedderHeapUsedSize": 8627080,
+        "backingStorageSize": 14051605
+      },
+      "heapDelta": 373700,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      }
+    },
+    {
+      "window": 3,
+      "cycles": 30,
+      "beforeHeap": {
+        "usedSize": 18946340,
+        "totalSize": 22847488,
+        "embedderHeapUsedSize": 8627080,
+        "backingStorageSize": 14051605
+      },
+      "afterHeap": {
+        "usedSize": 18002320,
+        "totalSize": 22323200,
+        "embedderHeapUsedSize": 8310440,
+        "backingStorageSize": 14051634
+      },
+      "heapDelta": -944020,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      }
+    },
+    {
+      "window": 4,
+      "cycles": 30,
+      "beforeHeap": {
+        "usedSize": 18002320,
+        "totalSize": 22323200,
+        "embedderHeapUsedSize": 8310440,
+        "backingStorageSize": 14051634
+      },
+      "afterHeap": {
+        "usedSize": 18200100,
+        "totalSize": 22061056,
+        "embedderHeapUsedSize": 8345864,
+        "backingStorageSize": 14051634
+      },
+      "heapDelta": 197780,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      }
+    },
+    {
+      "window": 5,
+      "cycles": 30,
+      "beforeHeap": {
+        "usedSize": 18200100,
+        "totalSize": 22061056,
+        "embedderHeapUsedSize": 8345864,
+        "backingStorageSize": 14051634
+      },
+      "afterHeap": {
+        "usedSize": 18276524,
+        "totalSize": 22323200,
+        "embedderHeapUsedSize": 8237048,
+        "backingStorageSize": 14051634
+      },
+      "heapDelta": 76424,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      }
+    },
+    {
+      "window": 6,
+      "cycles": 30,
+      "beforeHeap": {
+        "usedSize": 18276524,
+        "totalSize": 22323200,
+        "embedderHeapUsedSize": 8237048,
+        "backingStorageSize": 14051634
+      },
+      "afterHeap": {
+        "usedSize": 18418104,
+        "totalSize": 23109632,
+        "embedderHeapUsedSize": 8211056,
+        "backingStorageSize": 14051634
+      },
+      "heapDelta": 141580,
+      "beforeResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 83,
+        "pendingRaf": 1
+      }
+    }
+  ],
+  "persistentGrowth": false
+}

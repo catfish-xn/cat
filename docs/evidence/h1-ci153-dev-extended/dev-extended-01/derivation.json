@@ -1,0 +1,19 @@
+{
+  "kind": "independent extended-window diagnosis, not acceptance",
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "sourceRunnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+  "warmupCycles": 2,
+  "cyclesPerWindow": 30,
+  "windows": 6,
+  "snapshots": false,
+  "changes": [
+    "Enable the existing follow-up window block without the historical twelve-cycle warmup",
+    "Extend that diagnostic block to the requested equal window count",
+    "Optionally take separate perturbing snapshots at later window boundaries and label them accurately",
+    "Preserve every existing assertion and threshold; no source files edited"
+  ],
+  "derivedRunnerHash": "cad6a0e3f587993ddc20bf363832d674c5f1a361289d55992d9c61dde0206e2a",
+  "wrapperSha256": "e72cb3ab6842c7b3faace75fc8486e31e2aacfc536584690524550357d0667b5",
+  "assertionLinesPreserved": 30,
+  "prepareOnly": false
+}

@@ -1,0 +1,81 @@
+{
+  "runId": 37868435305,
+  "definitionSha": "2e4e537526d4448b620ca844100b0ffad3026ebb",
+  "artifactId": 11590605451,
+  "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37868435305/artifacts/11590605451",
+  "archiveBytes": 88444742,
+  "archiveSha256": "a349ae5ec5ecd1081ba4d47a3d8e529c273ce14f3ecb44773cc320829c368f41",
+  "archiveMembers": 252,
+  "allMemberCrcPassed": true,
+  "manifestSha256": "96e448dd9a8dd797f6e92276155822dba6eecfd9388c2e5dc366563699efa4a7",
+  "manifestIdentity": {
+    "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+    "status": "",
+    "node": "v22.23.3",
+    "browser": "153.0.8010.12",
+    "runnerHash": "1f39c5738155b6270fe4db70db723ca6f464dc15325c3155b77893bfb5834b9a",
+    "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+    "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+    "mode": "preview",
+    "build": "cannon",
+    "touch": false,
+    "passed": true,
+    "errors": [],
+    "durationSeconds": 1199.458,
+    "h1ExtendedDiagnostic": {
+      "kind": "independent extended-window diagnosis, not acceptance",
+      "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "sourceRunnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "warmupCycles": 2,
+      "cyclesPerWindow": 30,
+      "windows": 6,
+      "snapshots": true,
+      "changes": [
+        "Enable the existing follow-up window block without the historical twelve-cycle warmup",
+        "Extend that diagnostic block to the requested equal window count",
+        "Optionally take separate perturbing snapshots at later window boundaries and label them accurately",
+        "Preserve every existing assertion and threshold; no source files edited"
+      ]
+    }
+  },
+  "deltas": [
+    346792,
+    178340,
+    156820,
+    225264,
+    195792,
+    -250260
+  ],
+  "netGrowth": 852748,
+  "snapshotFiles": {
+    "after.heapsnapshot": {
+      "bytes": 30486449,
+      "sha256": "0ef782b4ee974aeb706df07d3bcb979abb21c63ba847190239865db9f561c7ed"
+    },
+    "before.heapsnapshot": {
+      "bytes": 30049968,
+      "sha256": "97d74cd10bc75c7afe01e9ee571f2d6f0228627374c907263e0e02e2d2d8c77d"
+    },
+    "window-2.heapsnapshot": {
+      "bytes": 29853523,
+      "sha256": "96610119febe3d7aa903848de61476355287e757be9eb7263591be7fcc0521b8"
+    },
+    "window-3.heapsnapshot": {
+      "bytes": 29958898,
+      "sha256": "1af69d061b0b69f999618468051c36ebd2f447cfdf0630652a3017c1adb4580c"
+    },
+    "window-4.heapsnapshot": {
+      "bytes": 29953315,
+      "sha256": "ee6d483cfac52518988be247f0de571782df5d20133e4cf11107eb74d4c9842f"
+    },
+    "window-5.heapsnapshot": {
+      "bytes": 29997368,
+      "sha256": "1f9e85ba58548bd6f83cabb84c28a276f23306cdca77e86cd8b3a1075a1fa14d"
+    },
+    "window-6.heapsnapshot": {
+      "bytes": 30070867,
+      "sha256": "124ba0f65b06bb7a9f6ba69168577af1ca421222e3d2dcccb3c3ea2f99e16821"
+    }
+  },
+  "limitations": "Perturbing snapshot group, not original normal-frequency evidence; full raw snapshots/manifest remain artifact until 2026-11-08. Recompute analysis with committed script and these exact input hashes."
+}

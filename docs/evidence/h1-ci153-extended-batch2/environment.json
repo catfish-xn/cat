@@ -1,0 +1,23 @@
+{
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "workflowMergeSha": "5a64688807d4ec63e6fa1de4e3c2b4777d662073",
+  "definitionSha": "f30a5e5ea1dd9705d324bfc6ddb9a671748d8369",
+  "browser": "153.0.8010.12",
+  "launchSelection": "Playwright default headless Chromium; CHROMIUM_PATH unset, matching existing CI",
+  "node": "v22.23.3",
+  "platform": "linux",
+  "release": "6.17.0-1022-azure",
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "cpuCount": 4,
+  "memoryBytes": 16766414848,
+  "load": [
+    0.49,
+    0.14,
+    0.04
+  ],
+  "viewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "diagnosticOnly": true
+}

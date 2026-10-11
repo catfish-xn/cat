@@ -1,0 +1,24 @@
+{
+  "runId": 37867121590,
+  "definitionSha": "0399167960bdf682d30728891227bcf73b50402f",
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "artifactId": 11588394030,
+  "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37867121590/artifacts/11588394030",
+  "archiveSha256": "2592b7fb557b74a57311e263f285bff71cfa4af441df6babd0e0fd32156f003d",
+  "archiveBytes": 10017,
+  "allZipCrcPassed": true,
+  "deltas": [
+    171452,
+    32868,
+    16264,
+    13372,
+    8764,
+    -1712
+  ],
+  "measuredBattles": 720,
+  "events": 1176660,
+  "netAfterSixWindows": 241008,
+  "netAfterHarnessRelease": 209600,
+  "sourceFixtureHarnessIdentitiesVerified": true,
+  "limitations": "Controlled mixed engine-module load only; no full application or no-equipment control; completed is not a memory gate verdict."
+}

@@ -1,0 +1,10 @@
+workflow_merge_sha=22a9dcffd832a8df6ad128ec54947e4486b59d0f
+source_sha=97f38a0e787a4edcb35df4a59823bb1d106def67
+mode=dev
+probe=extended
+samples=1
+run_id=37889212118
+attempt=1
+definition_sha=342f52a93fb84546b00872bbf68473142d996431
+pr=15
+trigger_label=h1-run-diagnostics

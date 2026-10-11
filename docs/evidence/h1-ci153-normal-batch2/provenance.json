@@ -1,0 +1,123 @@
+{
+  "runId": 37870725740,
+  "definitionSha": "66b6fdd1a873028d7c749a02a78aa1ed17dc1b77",
+  "sourceSha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+  "artifactId": 11591995389,
+  "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37870725740/artifacts/11591995389",
+  "archiveBytes": 63002449,
+  "archiveSha256": "315f8ff6de119f1c64dbba731375018a4b4f3945c4b89d09710cf354ccc7575b",
+  "archiveMembers": 510,
+  "allMemberCrcPassed": true,
+  "mode": "preview",
+  "ceilingBytes": 1048576,
+  "samples": [
+    {
+      "sample": "preview-normal-01",
+      "beforeBytes": 14100716,
+      "afterBytes": 14601292,
+      "deltaBytes": 500576,
+      "overCeiling": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T01:40:23Z",
+      "endedUtc": "2026-10-09T01:55:31Z",
+      "manifestSha256": "84331fca9feeaa6ea895fdc34117896a925ec9dea120256d4bd7b37e067f94be",
+      "manifestIdentity": {
+        "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+        "status": "",
+        "node": "v22.23.3",
+        "browser": "153.0.8010.12",
+        "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+        "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "passed": true,
+        "errors": [],
+        "durationSeconds": 902.346,
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "cpuCount": 4,
+        "loadAtStart": [
+          1.13,
+          0.32,
+          0.11
+        ]
+      }
+    },
+    {
+      "sample": "preview-normal-02",
+      "beforeBytes": 14437200,
+      "afterBytes": 14627672,
+      "deltaBytes": 190472,
+      "overCeiling": false,
+      "exitCode": 0,
+      "startedUtc": "2026-10-09T01:55:31Z",
+      "endedUtc": "2026-10-09T02:10:39Z",
+      "manifestSha256": "d6655c433f77244a9ce58d0a9ea3ef954b70834e15c0b1b60dbd9c9970ceb32a",
+      "manifestIdentity": {
+        "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+        "status": "",
+        "node": "v22.23.3",
+        "browser": "153.0.8010.12",
+        "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+        "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "passed": true,
+        "errors": [],
+        "durationSeconds": 903.397,
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "cpuCount": 4,
+        "loadAtStart": [
+          4.11,
+          3.9,
+          2.66
+        ]
+      }
+    },
+    {
+      "sample": "preview-normal-03",
+      "beforeBytes": 14120912,
+      "afterBytes": 15544824,
+      "deltaBytes": 1423912,
+      "overCeiling": true,
+      "exitCode": 1,
+      "startedUtc": "2026-10-09T02:10:39Z",
+      "endedUtc": "2026-10-09T02:15:51Z",
+      "manifestSha256": "c19c9d087f7354750595ee2e69cde5336e17a7759f474fba4c1515a53be10eb3",
+      "manifestIdentity": {
+        "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+        "status": "",
+        "node": "v22.23.3",
+        "browser": "153.0.8010.12",
+        "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+        "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+        "mode": "preview",
+        "build": "cannon",
+        "touch": false,
+        "passed": false,
+        "errors": [],
+        "durationSeconds": 309.285,
+        "cpu": "AMD EPYC 7763 64-Core Processor",
+        "cpuCount": 4,
+        "loadAtStart": [
+          4.49,
+          4.33,
+          3.75
+        ]
+      }
+    }
+  ],
+  "statistics": {
+    "n": 3,
+    "exceedances": 1,
+    "medianBytes": 500576,
+    "meanBytes": 704986.6666666666,
+    "minBytes": 190472,
+    "maxBytes": 1423912
+  },
+  "limitations": "Exploratory exceedance observations, not false-positive rate. Same job shares host; stratify CPU/job/mode. Full raw manifests/traces/screenshots remain linked artifact, normally 30-day retention. No failed sample replaced."
+}

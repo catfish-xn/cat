@@ -1,0 +1,1 @@
+[{"name":"chromium","revision":"1243","installByDefault":true,"browserVersion":"153.0.8010.12","title":"Chrome for Testing"},{"name":"chromium-headless-shell","revision":"1243","installByDefault":true,"browserVersion":"153.0.8010.12","title":"Chrome Headless Shell"}]

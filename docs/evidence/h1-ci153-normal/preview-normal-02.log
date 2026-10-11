@@ -1,0 +1,11 @@
+AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)
+    at verifyApplicationLifecycle (/home/runner/work/cat/cat/source/scripts/verify-m5-browser.cjs:54:254)
+    at async /home/runner/work/cat/cat/source/scripts/verify-m5-browser.cjs:106:151 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+{"passed":false,"mode":"preview","build":"cannon","touch":false,"durationSeconds":323.866}

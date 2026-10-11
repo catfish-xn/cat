@@ -1,0 +1,4 @@
+sample	started_utc	ended_utc	exit_code
+dev-normal-01	2026-10-09T04:48:53Z	2026-10-09T05:02:40Z	0
+dev-normal-02	2026-10-09T05:02:40Z	2026-10-09T05:16:35Z	0
+dev-normal-03	2026-10-09T05:16:35Z	2026-10-09T05:30:44Z	0

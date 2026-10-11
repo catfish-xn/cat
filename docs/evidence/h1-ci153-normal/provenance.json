@@ -1,0 +1,152 @@
+{
+  "runId": 37859458842,
+  "definitionSha": "c136ab3b65670cb95e2ccabb30e52683da847aec",
+  "artifactId": 11587156031,
+  "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37859458842/artifacts/11587156031",
+  "archiveBytes": 62920436,
+  "archiveSha256": "c868d9417910c622ba67fb8639e6df13952d4a4f754f1d37af01cb9f7ddb2a0c",
+  "archiveMembers": 510,
+  "allMemberCrcPassed": true,
+  "samples": [
+    {
+      "sample": "preview-normal-01",
+      "manifestSha256": "dbd58ac28dcfceca5dd665aa56b16da7b384e2f9b0cfaa885fb770854470951d",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "passed": true,
+      "errors": [],
+      "durationSeconds": 921.662,
+      "loadAtStart": [
+        1.62,
+        0.48,
+        0.17
+      ],
+      "failure": null,
+      "beforeHeap": {
+        "usedSize": 14828636,
+        "totalSize": 18735104,
+        "embedderHeapUsedSize": 7702496,
+        "backingStorageSize": 6308268
+      },
+      "afterHeap": {
+        "usedSize": 14634800,
+        "totalSize": 18997248,
+        "embedderHeapUsedSize": 8082912,
+        "backingStorageSize": 6306333
+      },
+      "heapDelta": -193836,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      }
+    },
+    {
+      "sample": "preview-normal-02",
+      "manifestSha256": "ecc9fcc773943a9243e7c7d2d30fbf0b56a6acdce9ba0d5704f8ebeb429b7a71",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "passed": false,
+      "errors": [],
+      "durationSeconds": 323.866,
+      "loadAtStart": [
+        4.45,
+        4.12,
+        2.78
+      ],
+      "failure": "AssertionError [ERR_ASSERTION]: full application post-GC heap growth <=1048576 bytes (preview)\n    at verifyApplicationLifecycle (/home/runner/work/cat/cat/source/scripts/verify-m5-browser.cjs:54:254)\n    at async /home/runner/work/cat/cat/source/scripts/verify-m5-browser.cjs:106:151",
+      "beforeHeap": {
+        "usedSize": 14132204,
+        "totalSize": 17948672,
+        "embedderHeapUsedSize": 7596808,
+        "backingStorageSize": 6308268
+      },
+      "afterHeap": {
+        "usedSize": 15946812,
+        "totalSize": 19783680,
+        "embedderHeapUsedSize": 8457760,
+        "backingStorageSize": 6306306
+      },
+      "heapDelta": 1814608,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      }
+    },
+    {
+      "sample": "preview-normal-03",
+      "manifestSha256": "6ae644a42e7d02a536d1ab868e5dd82b6eafd2eda98aa9dce73d553775cd0995",
+      "sha": "97f38a0e787a4edcb35df4a59823bb1d106def67",
+      "status": "",
+      "node": "v22.23.3",
+      "browser": "153.0.8010.12",
+      "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+      "sourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "finalSourceFingerprint": "80fa4a6b963ea9ce0163b12589cf8b6d19466dee5840d252d977702a6d87bf57",
+      "mode": "preview",
+      "build": "cannon",
+      "touch": false,
+      "passed": true,
+      "errors": [],
+      "durationSeconds": 915.608,
+      "loadAtStart": [
+        3.72,
+        4.04,
+        3.15
+      ],
+      "failure": null,
+      "beforeHeap": {
+        "usedSize": 14639716,
+        "totalSize": 18735104,
+        "embedderHeapUsedSize": 7618576,
+        "backingStorageSize": 6308268
+      },
+      "afterHeap": {
+        "usedSize": 14642004,
+        "totalSize": 18735104,
+        "embedderHeapUsedSize": 7953872,
+        "backingStorageSize": 6306273
+      },
+      "heapDelta": 2288,
+      "beforeResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 82,
+        "pendingRaf": 1
+      }
+    }
+  ],
+  "statistics": {
+    "n": 3,
+    "aboveLimit": 1,
+    "median": 2288,
+    "mean": 541020,
+    "range": 2008444
+  },
+  "limits": "Separate Chromium153 CI group; do not pool with141. One observed exceedance is not an established false-positive rate. Full raw archive remains in GitHub artifact; committed lifecycle/log files are unchanged copies."
+}
