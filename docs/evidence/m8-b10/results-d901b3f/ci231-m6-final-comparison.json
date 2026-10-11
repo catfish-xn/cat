@@ -1,0 +1,130 @@
+{
+  "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+  "acceptanceScope": "all M6 application, browser and performance gates at the catalog capacity (B9)",
+  "fullApplicationRoutePassed": true,
+  "skipped": [],
+  "records": [
+    {
+      "folder": "m5-dev-cannon",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "fb6afedf7cea16de9ba6dfe20e1606b85b70cad176c3906e21d28e2427a06655",
+      "acceptanceScope": "full application route at the catalog capacity (B9)",
+      "skipped": [],
+      "fullApplicationRoutePassed": true,
+      "passed": true
+    },
+    {
+      "folder": "m5-input-dev",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "ea4e2f53b136f8860b8837e8903360fd6b0b1e3c497b6312d3a55062f27d3b01",
+      "acceptanceScope": "B6 unskipped checks",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-layout-dev",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "a6c2800d5e90c95f0a8bab36b09bcf8abec1ee1187e17f1070ff651ee6fbbcd5",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m5-preview-cannon",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "eb7343cb75a4f7d9a9d43ca1ecc310bcf21c43badb841b522b5da6c089b68f14",
+      "acceptanceScope": "full application route at the catalog capacity (B9)",
+      "skipped": [],
+      "fullApplicationRoutePassed": true,
+      "passed": true
+    },
+    {
+      "folder": "m5-input-preview",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "860bf982e910bf722b01c717aabb0ebdc981963830ce2b4bccfbb7e258c6766a",
+      "acceptanceScope": "B6 unskipped checks",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-layout-preview",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "6c93d8888019517e40dd00bcf062a27f2cde643eaede990f5c59e963b25611ce",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-storage",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "2300e8d10a63137f4585ac7ebebd1ab09b8abb98d4f9857fd9783c730db3a9b8",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m8-b9-legacy",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "1574269c9fc85f8e42da1652fd82a7c323a33f3a3b43a6c4590bd0c47537dd8e",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m8-u7-compat",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "ae428491271d3b5d012882340a19fd10b2ff479a15b3b5954f8db787b598f033",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m8-b9-archives",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "68fb56b6929d03b2f7e4db14045dd12dd1bd1479fb49b5b2a35c173c1f3114dc",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-application-failures",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "719da9b3bfef8ae25e00255623f18e90eb0f92b44de37bac112e2544ed76ea11",
+      "acceptanceScope": "all application failure gates at the catalog capacity (B9)",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-performance",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "7066d18e185bbd360e5a4df13562c713964f4b32543b41567e9f3010fe154b99",
+      "acceptanceScope": "original F4 performance gates at the catalog capacity (B9, issue #23)",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    }
+  ],
+  "passed": true
+}

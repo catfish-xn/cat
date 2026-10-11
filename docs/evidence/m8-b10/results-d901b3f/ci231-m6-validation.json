@@ -1,0 +1,4228 @@
+{
+  "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "dirty": "",
+  "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+  "generatedAt": "2026-10-11T12:37:02.843Z",
+  "goalHash": "ddf9b1bff4f11d45c2c3d464d15064118d8565eded422310fc43105b0e99c90e",
+  "m5ComparisonHash": "a4e47a2d47e58f49af86211bfff6d3dc6efd100743c3378d89857687ce82ffb6",
+  "runId": "38138447854",
+  "commands": [
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765378560,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:45.430Z",
+      "endedAt": "2026-10-11T12:14:05.848Z",
+      "durationSeconds": 20.418,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765378560,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:05.890Z",
+      "endedAt": "2026-10-11T12:14:16.845Z",
+      "durationSeconds": 10.955,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765378560,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:41.787Z",
+      "endedAt": "2026-10-11T12:13:45.394Z",
+      "durationSeconds": 3.607,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--m6-journey",
+        "--build=cannon"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765378560,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:16.882Z",
+      "endedAt": "2026-10-11T12:26:02.770Z",
+      "durationSeconds": 705.888,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:44.229Z",
+      "endedAt": "2026-10-11T12:14:04.998Z",
+      "durationSeconds": 20.769,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:05.044Z",
+      "endedAt": "2026-10-11T12:14:19.481Z",
+      "durationSeconds": 14.437,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:38.917Z",
+      "endedAt": "2026-10-11T12:13:44.181Z",
+      "durationSeconds": 5.264,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--build=mage"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:19.527Z",
+      "endedAt": "2026-10-11T12:29:10.255Z",
+      "durationSeconds": 890.728,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765370368,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:40.141Z",
+      "endedAt": "2026-10-11T12:13:59.972Z",
+      "durationSeconds": 19.831,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765370368,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:00.004Z",
+      "endedAt": "2026-10-11T12:14:10.125Z",
+      "durationSeconds": 10.121,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765370368,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:37.893Z",
+      "endedAt": "2026-10-11T12:13:40.108Z",
+      "durationSeconds": 2.215,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--build=sniper"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-dev-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "memoryBytes": 16765370368,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:10.158Z",
+      "endedAt": "2026-10-11T12:27:12.496Z",
+      "durationSeconds": 782.338,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766406656,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:42.759Z",
+      "endedAt": "2026-10-11T12:14:08.890Z",
+      "durationSeconds": 26.131,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766406656,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:08.929Z",
+      "endedAt": "2026-10-11T12:14:20.112Z",
+      "durationSeconds": 11.183,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766406656,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:39.922Z",
+      "endedAt": "2026-10-11T12:13:42.721Z",
+      "durationSeconds": 2.799,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--preview",
+        "--m6-journey",
+        "--build=cannon"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-cannon-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766406656,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:20.153Z",
+      "endedAt": "2026-10-11T12:26:07.801Z",
+      "durationSeconds": 707.648,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:41.946Z",
+      "endedAt": "2026-10-11T12:14:00.593Z",
+      "durationSeconds": 18.647,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:00.639Z",
+      "endedAt": "2026-10-11T12:14:15.027Z",
+      "durationSeconds": 14.388,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:37.367Z",
+      "endedAt": "2026-10-11T12:13:41.898Z",
+      "durationSeconds": 4.531,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--preview",
+        "--build=mage"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-mage-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:15.073Z",
+      "endedAt": "2026-10-11T12:29:02.744Z",
+      "durationSeconds": 887.671,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:40.264Z",
+      "endedAt": "2026-10-11T12:13:59.189Z",
+      "durationSeconds": 18.925,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:59.234Z",
+      "endedAt": "2026-10-11T12:14:14.106Z",
+      "durationSeconds": 14.872,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:37.058Z",
+      "endedAt": "2026-10-11T12:13:40.214Z",
+      "durationSeconds": 3.156,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--preview",
+        "--build=sniper"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "browser-preview-sniper-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:14.151Z",
+      "endedAt": "2026-10-11T12:28:42.195Z",
+      "durationSeconds": 868.044,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:41.167Z",
+      "endedAt": "2026-10-11T12:13:59.843Z",
+      "durationSeconds": 18.676,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:59.880Z",
+      "endedAt": "2026-10-11T12:14:08.982Z",
+      "durationSeconds": 9.102,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "input",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-input.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:09.016Z",
+      "endedAt": "2026-10-11T12:19:41.625Z",
+      "durationSeconds": 332.609,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:39.062Z",
+      "endedAt": "2026-10-11T12:13:41.131Z",
+      "durationSeconds": 2.069,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m6-application-failures",
+      "command": "node",
+      "args": [
+        "tests/m6-application-failures.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:34:15.725Z",
+      "endedAt": "2026-10-11T12:36:31.316Z",
+      "durationSeconds": 135.591,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m6-components",
+      "command": "node",
+      "args": [
+        "tests/m6-stats-browser.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:31:49.759Z",
+      "endedAt": "2026-10-11T12:31:50.887Z",
+      "durationSeconds": 1.128,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m6-layout",
+      "command": "node",
+      "args": [
+        "scripts/m6-layout-product-smoke.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:30:30.392Z",
+      "endedAt": "2026-10-11T12:31:10.405Z",
+      "durationSeconds": 40.013,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m6-performance",
+      "command": "node",
+      "args": [
+        "scripts/verify-m6-performance.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:31:50.908Z",
+      "endedAt": "2026-10-11T12:34:09.227Z",
+      "durationSeconds": 138.319,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m6-retry",
+      "command": "node",
+      "args": [
+        "tests/m6-persistence-retry.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:34:09.248Z",
+      "endedAt": "2026-10-11T12:34:15.704Z",
+      "durationSeconds": 6.456,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m6-storage",
+      "command": "node",
+      "args": [
+        "scripts/verify-m6-storage.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:31:10.426Z",
+      "endedAt": "2026-10-11T12:31:23.374Z",
+      "durationSeconds": 12.948,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m8-b9-archives",
+      "command": "node",
+      "args": [
+        "scripts/verify-m8-b9-archives.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:31:30.944Z",
+      "endedAt": "2026-10-11T12:31:49.738Z",
+      "durationSeconds": 18.794,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m8-b9-legacy",
+      "command": "node",
+      "args": [
+        "scripts/verify-m8-b9-legacy.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:31:23.394Z",
+      "endedAt": "2026-10-11T12:31:25.813Z",
+      "durationSeconds": 2.419,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m8-u7-compat",
+      "command": "node",
+      "args": [
+        "scripts/verify-m8-u7-compat.cjs"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:31:25.833Z",
+      "endedAt": "2026-10-11T12:31:30.922Z",
+      "durationSeconds": 5.089,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "touch-route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--build=cannon",
+        "--touch"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-dev-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:19:41.646Z",
+      "endedAt": "2026-10-11T12:30:30.372Z",
+      "durationSeconds": 648.726,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "browser-install",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "install",
+        "--with-deps",
+        "chromium"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-preview-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:42.488Z",
+      "endedAt": "2026-10-11T12:14:10.071Z",
+      "durationSeconds": 27.583,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-preview-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:10.119Z",
+      "endedAt": "2026-10-11T12:14:21.731Z",
+      "durationSeconds": 11.612,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "input",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-input.cjs",
+        "--preview"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-preview-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:14:21.774Z",
+      "endedAt": "2026-10-11T12:20:37.154Z",
+      "durationSeconds": 375.38,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-preview-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:40.165Z",
+      "endedAt": "2026-10-11T12:13:42.449Z",
+      "durationSeconds": 2.284,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "m6-layout",
+      "command": "node",
+      "args": [
+        "scripts/m6-layout-product-smoke.cjs",
+        "--preview"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-preview-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:32:37.308Z",
+      "endedAt": "2026-10-11T12:33:27.187Z",
+      "durationSeconds": 49.879,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "touch-route",
+      "command": "node",
+      "args": [
+        "scripts/verify-m5-browser.cjs",
+        "--preview",
+        "--build=cannon",
+        "--touch"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "input-preview-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:20:37.178Z",
+      "endedAt": "2026-10-11T12:32:37.284Z",
+      "durationSeconds": 720.106,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "build",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "test-and-build-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:26:34.834Z",
+      "endedAt": "2026-10-11T12:26:49.099Z",
+      "durationSeconds": 14.265,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "headless",
+      "command": "npm",
+      "args": [
+        "run",
+        "test:headless"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "test-and-build-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:26:49.145Z",
+      "endedAt": "2026-10-11T12:30:43.466Z",
+      "durationSeconds": 234.321,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "install",
+      "command": "npm",
+      "args": [
+        "ci"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "test-and-build-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:37.805Z",
+      "endedAt": "2026-10-11T12:13:41.021Z",
+      "durationSeconds": 3.216,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "performance",
+      "command": "npm",
+      "args": [
+        "run",
+        "test:performance"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "test-and-build-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:30:43.513Z",
+      "endedAt": "2026-10-11T12:32:46.959Z",
+      "durationSeconds": 123.446,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    },
+    {
+      "step": "tests",
+      "command": "npm",
+      "args": [
+        "test"
+      ],
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "runId": "38138447854",
+      "attempt": "1",
+      "job": "test-and-build-sample1",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "arch": "x64",
+      "cpuCount": 4,
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "runnerOs": "Linux",
+      "runnerImage": "ubuntu24",
+      "startedAt": "2026-10-11T12:13:41.067Z",
+      "endedAt": "2026-10-11T12:26:34.789Z",
+      "durationSeconds": 773.722,
+      "exitCode": 0,
+      "signal": null,
+      "error": null
+    }
+  ],
+  "normalRoutes": [
+    {
+      "mode": "dev",
+      "build": "cannon",
+      "durationSeconds": 700.996,
+      "browser": "153.0.8010.12",
+      "manifestHash": "fb6afedf7cea16de9ba6dfe20e1606b85b70cad176c3906e21d28e2427a06655",
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16765378560,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    },
+    {
+      "mode": "dev",
+      "build": "sniper",
+      "durationSeconds": 778.724,
+      "browser": "153.0.8010.12",
+      "manifestHash": "4d843b1287e28cec41d72a80f80301eceb138be81304098b953b161542ba4a2a",
+      "cpu": "Intel(R) Xeon(R) 6973P-C",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16765370368,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    },
+    {
+      "mode": "dev",
+      "build": "mage",
+      "durationSeconds": 885.831,
+      "browser": "153.0.8010.12",
+      "manifestHash": "64875985c6a2eaed7fecef4c02d29d720a0d98634b45461e5337e9894b805aca",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16766414848,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    },
+    {
+      "mode": "dev",
+      "build": "cannon-touch",
+      "durationSeconds": 645.897,
+      "browser": "153.0.8010.12",
+      "manifestHash": "ebc1865397b0c8b32620bcec896851303bc7a61a7ab5b4726318ce2b33fe1b67",
+      "cpu": "AMD EPYC 9V45 96-Core Processor",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16766414848,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    },
+    {
+      "mode": "preview",
+      "build": "cannon",
+      "durationSeconds": 703.804,
+      "browser": "153.0.8010.12",
+      "manifestHash": "eb7343cb75a4f7d9a9d43ca1ecc310bcf21c43badb841b522b5da6c089b68f14",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16766406656,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    },
+    {
+      "mode": "preview",
+      "build": "sniper",
+      "durationSeconds": 863.576,
+      "browser": "153.0.8010.12",
+      "manifestHash": "5d99dad27d5be1b683cbb75f6927b38fbc3d4d1b4f11b66f29aa73a692f83e8f",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16766414848,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    },
+    {
+      "mode": "preview",
+      "build": "mage",
+      "durationSeconds": 882.963,
+      "browser": "153.0.8010.12",
+      "manifestHash": "ac05832efa57f7fa812841e676b3df9a6b8d3e6860a2dc916cf9dac18fbee5a5",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16766414848,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    },
+    {
+      "mode": "preview",
+      "build": "cannon-touch",
+      "durationSeconds": 716.579,
+      "browser": "153.0.8010.12",
+      "manifestHash": "37d1bc8fa0eb418dd1c22ee0d9a5eaf9ebc2f55dd28785485bd3c001fa1dd0d6",
+      "cpu": "AMD EPYC 9V74 80-Core Processor",
+      "cpuCount": 4,
+      "node": "v22.23.3",
+      "memoryBytes": 16766414848,
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:c7ac9b0c",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "fullApplicationRoutePassed": true,
+      "completedBrowserRounds": [
+        "1-2",
+        "1-3",
+        "1-4",
+        "2-1",
+        "2-2",
+        "2-3",
+        "2-5",
+        "2-6",
+        "2-7",
+        "3-1",
+        "3-2",
+        "3-3",
+        "3-5",
+        "3-6",
+        "3-7",
+        "4-1",
+        "4-2",
+        "4-3",
+        "4-5",
+        "4-6",
+        "4-7",
+        "5-1",
+        "5-2",
+        "5-3",
+        "5-5",
+        "5-6",
+        "5-7",
+        "6-1",
+        "6-2",
+        "6-3",
+        "6-5",
+        "6-6",
+        "6-7"
+      ],
+      "skipped": []
+    }
+  ],
+  "records": [
+    {
+      "folder": "m5-dev-cannon",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "fb6afedf7cea16de9ba6dfe20e1606b85b70cad176c3906e21d28e2427a06655",
+      "acceptanceScope": "full application route at the catalog capacity (B9)",
+      "skipped": [],
+      "fullApplicationRoutePassed": true,
+      "passed": true
+    },
+    {
+      "folder": "m5-input-dev",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "ea4e2f53b136f8860b8837e8903360fd6b0b1e3c497b6312d3a55062f27d3b01",
+      "acceptanceScope": "B6 unskipped checks",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-layout-dev",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "a6c2800d5e90c95f0a8bab36b09bcf8abec1ee1187e17f1070ff651ee6fbbcd5",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m5-preview-cannon",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "eb7343cb75a4f7d9a9d43ca1ecc310bcf21c43badb841b522b5da6c089b68f14",
+      "acceptanceScope": "full application route at the catalog capacity (B9)",
+      "skipped": [],
+      "fullApplicationRoutePassed": true,
+      "passed": true
+    },
+    {
+      "folder": "m5-input-preview",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "860bf982e910bf722b01c717aabb0ebdc981963830ce2b4bccfbb7e258c6766a",
+      "acceptanceScope": "B6 unskipped checks",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-layout-preview",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "6c93d8888019517e40dd00bcf062a27f2cde643eaede990f5c59e963b25611ce",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-storage",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "2300e8d10a63137f4585ac7ebebd1ab09b8abb98d4f9857fd9783c730db3a9b8",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m8-b9-legacy",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "1574269c9fc85f8e42da1652fd82a7c323a33f3a3b43a6c4590bd0c47537dd8e",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m8-u7-compat",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "ae428491271d3b5d012882340a19fd10b2ff479a15b3b5954f8db787b598f033",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m8-b9-archives",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "68fb56b6929d03b2f7e4db14045dd12dd1bd1479fb49b5b2a35c173c1f3114dc",
+      "acceptanceScope": "unchanged original gate",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-application-failures",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "719da9b3bfef8ae25e00255623f18e90eb0f92b44de37bac112e2544ed76ea11",
+      "acceptanceScope": "all application failure gates at the catalog capacity (B9)",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    },
+    {
+      "folder": "m6-performance",
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+      "manifestHash": "7066d18e185bbd360e5a4df13562c713964f4b32543b41567e9f3010fe154b99",
+      "acceptanceScope": "original F4 performance gates at the catalog capacity (B9, issue #23)",
+      "skipped": [],
+      "fullApplicationRoutePassed": null,
+      "passed": true
+    }
+  ],
+  "acceptanceScope": "all M6 application, browser and performance gates at the catalog capacity (B9)",
+  "fullApplicationRoutePassed": true,
+  "skipped": [],
+  "performance": {
+    "summary": {
+      "capture": {
+        "samples": [
+          24.799999999813735,
+          20.699999999953434,
+          15.699999999953434,
+          15.699999999953434,
+          16.199999999953434,
+          15.5,
+          14.599999999860302,
+          14.5,
+          15.899999999906868,
+          14.599999999860302,
+          14.700000000186265,
+          15.600000000093132
+        ],
+        "p95": 24.799999999813735,
+        "max": 24.799999999813735
+      },
+      "write": {
+        "samples": [
+          11.5,
+          10.699999999953434,
+          10.100000000093132,
+          10.300000000046566,
+          14.900000000139698,
+          10.199999999953434,
+          10.700000000186265,
+          10.100000000093132,
+          10.100000000093132,
+          10.699999999953434,
+          10.199999999953434,
+          9.899999999906868
+        ],
+        "p95": 14.900000000139698,
+        "max": 14.900000000139698
+      },
+      "fullCapture": {
+        "samples": [
+          58.699999999953434,
+          64.80000000004657,
+          60.39999999990687,
+          60.300000000046566,
+          60,
+          60.300000000046566,
+          63.699999999953434,
+          63.5,
+          63.60000000009313,
+          63.10000000009313,
+          61.0999999998603,
+          60.5
+        ],
+        "p95": 64.80000000004657,
+        "max": 64.80000000004657
+      },
+      "activation": {
+        "samples": [
+          225.60000000009313,
+          125.60000000009313,
+          235.10000000009313,
+          195.29999999981374,
+          196.69999999995343,
+          191,
+          221.39999999990687,
+          211,
+          271.5,
+          201.89999999990687,
+          208.9000000001397,
+          223.19999999995343
+        ],
+        "p95": 271.5,
+        "max": 271.5
+      },
+      "completeImport": {
+        "samples": [
+          5309.300000000047,
+          5447.700000000186,
+          5277.399999999907
+        ],
+        "p95": 5447.700000000186,
+        "max": 5447.700000000186
+      },
+      "firstSeek": {
+        "samples": [
+          713.0999999998603,
+          715.8000000000466,
+          708.1999999999534
+        ],
+        "p95": 715.8000000000466,
+        "max": 715.8000000000466
+      },
+      "cachedSeek": {
+        "samples": [
+          4.599999999860302,
+          13.699999999953434,
+          13,
+          19.800000000046566,
+          16.300000000046566,
+          18.800000000046566,
+          20.799999999813735,
+          1.2000000001862645,
+          5.5,
+          6.7999999998137355,
+          11.400000000139698,
+          9.899999999906868
+        ],
+        "p95": 20.799999999813735,
+        "max": 20.799999999813735
+      },
+      "statsBatch": {
+        "samples": [
+          0.20000000018626451,
+          0.19999999995343387,
+          0,
+          0,
+          0.09999999986030161,
+          0.10000000009313226,
+          0,
+          0,
+          0.09999999986030161,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.09999999986030161,
+          0
+        ],
+        "p95": 0.20000000018626451,
+        "max": 0.20000000018626451
+      }
+    },
+    "gates": [
+      {
+        "name": "capture",
+        "metric": "p95",
+        "actual": 24.799999999813735,
+        "ceiling": 50,
+        "passed": true
+      },
+      {
+        "name": "write",
+        "metric": "p95",
+        "actual": 14.900000000139698,
+        "ceiling": 250,
+        "passed": true
+      },
+      {
+        "name": "fullCapture",
+        "metric": "p95",
+        "actual": 64.80000000004657,
+        "ceiling": 500,
+        "passed": true
+      },
+      {
+        "name": "activation",
+        "metric": "max",
+        "actual": 271.5,
+        "ceiling": 1000,
+        "passed": true
+      },
+      {
+        "name": "completeImport",
+        "metric": "max",
+        "actual": 5447.700000000186,
+        "ceiling": 30000,
+        "passed": true
+      },
+      {
+        "name": "firstSeek",
+        "metric": "max",
+        "actual": 715.8000000000466,
+        "ceiling": 2000,
+        "passed": true
+      },
+      {
+        "name": "cachedSeek",
+        "metric": "max",
+        "actual": 20.799999999813735,
+        "ceiling": 100,
+        "passed": true
+      },
+      {
+        "name": "statsBatch",
+        "metric": "max",
+        "actual": 0.20000000018626451,
+        "ceiling": 5,
+        "passed": true
+      }
+    ],
+    "skipped": [],
+    "fullLoadRoundTrip": {
+      "milliseconds": 4754.100000000093,
+      "verified": true,
+      "battles": 33
+    },
+    "limits": {
+      "incrementalCaptureP95": 50,
+      "incrementalWriteP95": 250,
+      "fullCaptureP95": 500,
+      "activationWriteP95": 1000,
+      "completeImport": 30000,
+      "firstSeek": 2000,
+      "cachedSeek": 100,
+      "stats40TickBatch": 5
+    },
+    "completeBattleCount": 33,
+    "incrementalBattleCount": 28,
+    "completedHistoryWrittenOnIncrementalSave": null,
+    "deferredMetrics": [],
+    "method": "Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 12 capture/write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats."
+  },
+  "moduleLifecycle": {
+    "cycles": 30,
+    "extraListeners": 0,
+    "remainingComponentRoots": 0,
+    "before": {
+      "usedSize": 7326784,
+      "totalSize": 8650752,
+      "embedderHeapUsedSize": 622872,
+      "backingStorageSize": 2511721
+    },
+    "after": {
+      "usedSize": 7224756,
+      "totalSize": 8388608,
+      "embedderHeapUsedSize": 621008,
+      "backingStorageSize": 2511721
+    },
+    "heapDeltaBytes": -102028,
+    "maxHeapGrowthBytes": 1048576,
+    "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+  },
+  "applicationLifecycle": {
+    "dev": {
+      "heapDiagnostics": false,
+      "warmupExperiment": false,
+      "warmupCycles": 2,
+      "cycles": 30,
+      "heapCeilingBytes": 1572864,
+      "beforeHeap": {
+        "usedSize": 17863784,
+        "totalSize": 21274624,
+        "embedderHeapUsedSize": 9416936,
+        "backingStorageSize": 14818741
+      },
+      "afterHeap": {
+        "usedSize": 18744588,
+        "totalSize": 22323200,
+        "embedderHeapUsedSize": 9419880,
+        "backingStorageSize": 14818741
+      },
+      "heapDelta": 880804,
+      "beforeResources": {
+        "listeners": 85,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 85,
+        "pendingRaf": 1
+      },
+      "rows": [
+        {
+          "cycle": 1,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "9333a270-413f-4e4d-b4ca-bdeb8768bc98",
+              "revision": 29
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:19.626Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "9333a270-413f-4e4d-b4ca-bdeb8768bc98",
+                "revision": 29
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 2,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "44cc0ea9-e1c4-4bfc-a015-f72cf9d950b0",
+              "revision": 31
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:21.547Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "44cc0ea9-e1c4-4bfc-a015-f72cf9d950b0",
+                "revision": 31
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 3,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "ae8a290d-463a-4e67-9d8c-b53455bcd6d4",
+              "revision": 33
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:23.510Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "ae8a290d-463a-4e67-9d8c-b53455bcd6d4",
+                "revision": 33
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 4,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "dd50ac2a-8a8c-4d47-80b4-2c932d29218b",
+              "revision": 35
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:25.515Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "dd50ac2a-8a8c-4d47-80b4-2c932d29218b",
+                "revision": 35
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 5,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "12287fc3-7350-455e-8c12-ee8a2a4a1502",
+              "revision": 37
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:27.497Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "12287fc3-7350-455e-8c12-ee8a2a4a1502",
+                "revision": 37
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 6,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "8dc2034e-44dc-4305-b666-a4bc746c7532",
+              "revision": 39
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:29.641Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "8dc2034e-44dc-4305-b666-a4bc746c7532",
+                "revision": 39
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 7,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "767db9d7-29f6-4728-8b2b-3c6fc312f188",
+              "revision": 41
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:31.582Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "767db9d7-29f6-4728-8b2b-3c6fc312f188",
+                "revision": 41
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 8,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "b04c1046-4bb7-4c52-a35e-5fc9377a1083",
+              "revision": 43
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:33.568Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "b04c1046-4bb7-4c52-a35e-5fc9377a1083",
+                "revision": 43
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 9,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "c8f2e057-c07e-4c04-bdb8-c91833b77de5",
+              "revision": 45
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:35.512Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "c8f2e057-c07e-4c04-bdb8-c91833b77de5",
+                "revision": 45
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 10,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "ccae6e0c-96ba-44b0-baef-e2df80b6ceda",
+              "revision": 47
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:37.437Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "ccae6e0c-96ba-44b0-baef-e2df80b6ceda",
+                "revision": 47
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 11,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "e9a8fc27-eb22-495a-83a0-0b22c2b0d740",
+              "revision": 49
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:39.458Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "e9a8fc27-eb22-495a-83a0-0b22c2b0d740",
+                "revision": 49
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 12,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "717504b7-cd1d-4876-9ddf-60b2eced638d",
+              "revision": 51
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:41.490Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "717504b7-cd1d-4876-9ddf-60b2eced638d",
+                "revision": 51
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 13,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "907aed60-b197-450f-a9dd-971cb2dc9d06",
+              "revision": 53
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:43.402Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "907aed60-b197-450f-a9dd-971cb2dc9d06",
+                "revision": 53
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 14,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "3d16d261-cd22-4660-b31a-41a9e5ca5e04",
+              "revision": 55
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:45.337Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "3d16d261-cd22-4660-b31a-41a9e5ca5e04",
+                "revision": 55
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 15,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "6ef691c9-4001-4f27-8d04-d14a57d42bd3",
+              "revision": 57
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:47.328Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "6ef691c9-4001-4f27-8d04-d14a57d42bd3",
+                "revision": 57
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 16,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "c54b6192-0dea-410b-b396-657ab13418c0",
+              "revision": 59
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:49.439Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "c54b6192-0dea-410b-b396-657ab13418c0",
+                "revision": 59
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 17,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "afc902c7-18da-4dd0-90ab-e237e6181bfc",
+              "revision": 61
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:51.326Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "afc902c7-18da-4dd0-90ab-e237e6181bfc",
+                "revision": 61
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 18,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "f6de00eb-d7e1-41eb-89d0-1d9c5cf0fbaa",
+              "revision": 63
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:53.228Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "f6de00eb-d7e1-41eb-89d0-1d9c5cf0fbaa",
+                "revision": 63
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 19,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "d9e13829-64b9-4ef4-aff8-a1a88193848f",
+              "revision": 65
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:55.207Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "d9e13829-64b9-4ef4-aff8-a1a88193848f",
+                "revision": 65
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 20,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "51d306f1-6301-439b-9dd2-7211012f1fc8",
+              "revision": 67
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:57.199Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "51d306f1-6301-439b-9dd2-7211012f1fc8",
+                "revision": 67
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 21,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "c0044b66-5f6a-4464-9f10-b7d47c97c072",
+              "revision": 69
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:59.207Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "c0044b66-5f6a-4464-9f10-b7d47c97c072",
+                "revision": 69
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 22,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "10feb416-6852-47a1-a1b9-4310e1811e28",
+              "revision": 71
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:01.199Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "10feb416-6852-47a1-a1b9-4310e1811e28",
+                "revision": 71
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 23,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "e3cd9079-275c-4205-ac0d-51701b6805ce",
+              "revision": 73
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:03.139Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "e3cd9079-275c-4205-ac0d-51701b6805ce",
+                "revision": 73
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 24,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "a4b62ee6-a2f6-4986-9039-e28a659895b4",
+              "revision": 75
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:05.224Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "a4b62ee6-a2f6-4986-9039-e28a659895b4",
+                "revision": 75
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 25,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "147ec626-60cd-4b9e-a113-8304c706f3c2",
+              "revision": 77
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:07.181Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "147ec626-60cd-4b9e-a113-8304c706f3c2",
+                "revision": 77
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 26,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "3cfa9b5c-2890-4adf-9089-cda6f9764bb6",
+              "revision": 79
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:09.155Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "3cfa9b5c-2890-4adf-9089-cda6f9764bb6",
+                "revision": 79
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 27,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "1d900fd5-0548-49d1-b8ce-899d9301948c",
+              "revision": 81
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:11.073Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "1d900fd5-0548-49d1-b8ce-899d9301948c",
+                "revision": 81
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 28,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "38526d37-2728-4d62-99dd-114857c38373",
+              "revision": 83
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:13.086Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "38526d37-2728-4d62-99dd-114857c38373",
+                "revision": 83
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 29,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "aa3326db-10a8-4630-a300-da1c39f90923",
+              "revision": 85
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:14.996Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "aa3326db-10a8-4630-a300-da1c39f90923",
+                "revision": 85
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 30,
+          "m6": {
+            "mode": "active",
+            "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+            "token": {
+              "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+              "activationEpoch": "2d77d60e-320f-4e4b-97b8-c49001ac4f51",
+              "revision": 87
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:16.968Z",
+              "token": {
+                "runId": "d0066d82-a2b6-48a9-bfb1-016bc119f4c0",
+                "activationEpoch": "2d77d60e-320f-4e4b-97b8-c49001ac4f51",
+                "revision": 87
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 85,
+            "pendingRaf": 1
+          }
+        }
+      ],
+      "heapGate": {
+        "policy": "warn-only",
+        "deltaBytes": 880804,
+        "ceilingBytes": 1572864,
+        "exceeded": false
+      }
+    },
+    "preview": {
+      "heapDiagnostics": false,
+      "warmupExperiment": false,
+      "warmupCycles": 2,
+      "cycles": 30,
+      "heapCeilingBytes": 1048576,
+      "beforeHeap": {
+        "usedSize": 13288180,
+        "totalSize": 16900096,
+        "embedderHeapUsedSize": 9084568,
+        "backingStorageSize": 6423606
+      },
+      "afterHeap": {
+        "usedSize": 14274680,
+        "totalSize": 18472960,
+        "embedderHeapUsedSize": 9126856,
+        "backingStorageSize": 6423606
+      },
+      "heapDelta": 986500,
+      "beforeResources": {
+        "listeners": 84,
+        "pendingRaf": 1
+      },
+      "afterResources": {
+        "listeners": 84,
+        "pendingRaf": 1
+      },
+      "rows": [
+        {
+          "cycle": 1,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "2e5a30ab-1036-45ce-b639-a465689f217a",
+              "revision": 29
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:21.050Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "2e5a30ab-1036-45ce-b639-a465689f217a",
+                "revision": 29
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 2,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "f551075a-a2d0-403f-a3fd-d5dc1bf9ef65",
+              "revision": 31
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:22.996Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "f551075a-a2d0-403f-a3fd-d5dc1bf9ef65",
+                "revision": 31
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 3,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "b3442784-fc71-41fd-bd90-f36176b31277",
+              "revision": 33
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:24.987Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "b3442784-fc71-41fd-bd90-f36176b31277",
+                "revision": 33
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 4,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "ab646156-549f-4782-ad02-a090c856a99a",
+              "revision": 35
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:27.066Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "ab646156-549f-4782-ad02-a090c856a99a",
+                "revision": 35
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 5,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "a462d297-fd99-4190-af03-72981f5292da",
+              "revision": 37
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:29.158Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "a462d297-fd99-4190-af03-72981f5292da",
+                "revision": 37
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 6,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "01fa067e-5314-4b41-a385-df1d4462cb03",
+              "revision": 39
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:31.182Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "01fa067e-5314-4b41-a385-df1d4462cb03",
+                "revision": 39
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 7,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "d51c014d-dcb5-4ea7-bf71-e13d5a2f3ab5",
+              "revision": 41
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:33.286Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "d51c014d-dcb5-4ea7-bf71-e13d5a2f3ab5",
+                "revision": 41
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 8,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "c5ea03e6-a2e3-413e-a16f-33adc97c6ca5",
+              "revision": 43
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:35.207Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "c5ea03e6-a2e3-413e-a16f-33adc97c6ca5",
+                "revision": 43
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 9,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "7a2f95b3-c457-4d5f-a94e-042c7c0435da",
+              "revision": 45
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:37.176Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "7a2f95b3-c457-4d5f-a94e-042c7c0435da",
+                "revision": 45
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 10,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "7b12e259-29d2-4599-99ef-a747ac0a23e3",
+              "revision": 47
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:39.132Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "7b12e259-29d2-4599-99ef-a747ac0a23e3",
+                "revision": 47
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 11,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "9a026b29-015e-41f9-9f0a-f3bccf734aab",
+              "revision": 49
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:41.211Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "9a026b29-015e-41f9-9f0a-f3bccf734aab",
+                "revision": 49
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 12,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "8bbaf27e-3636-491e-986e-ca4bfdce9503",
+              "revision": 51
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:43.253Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "8bbaf27e-3636-491e-986e-ca4bfdce9503",
+                "revision": 51
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 13,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "04fd9a2f-a67a-4150-9124-e804cd98b08a",
+              "revision": 53
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:45.215Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "04fd9a2f-a67a-4150-9124-e804cd98b08a",
+                "revision": 53
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 14,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "d5b3c881-3a99-461d-8eff-fb11c5bedcf2",
+              "revision": 55
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:47.167Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "d5b3c881-3a99-461d-8eff-fb11c5bedcf2",
+                "revision": 55
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 15,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "2cd5c32d-a9b4-45a7-8ab8-c34ee1dc7139",
+              "revision": 57
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:49.089Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "2cd5c32d-a9b4-45a7-8ab8-c34ee1dc7139",
+                "revision": 57
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 16,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "08d2cdc0-69b8-4f20-899b-f282ea6d23ed",
+              "revision": 59
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:51.171Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "08d2cdc0-69b8-4f20-899b-f282ea6d23ed",
+                "revision": 59
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 17,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "6c2beabd-4ed3-45b3-b911-135798a029a3",
+              "revision": 61
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:53.129Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "6c2beabd-4ed3-45b3-b911-135798a029a3",
+                "revision": 61
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 18,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "8cea7758-664b-485e-877c-32757848bee9",
+              "revision": 63
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:55.053Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "8cea7758-664b-485e-877c-32757848bee9",
+                "revision": 63
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 19,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "650247a7-c3a2-4be4-9729-f7ebe11837f8",
+              "revision": 65
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:57.043Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "650247a7-c3a2-4be4-9729-f7ebe11837f8",
+                "revision": 65
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 20,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "728d451e-2a3f-4db8-8504-268988cf7975",
+              "revision": 67
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:15:59.115Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "728d451e-2a3f-4db8-8504-268988cf7975",
+                "revision": 67
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 21,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "ff950714-a40e-478e-8a43-a304d12a911d",
+              "revision": 69
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:01.029Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "ff950714-a40e-478e-8a43-a304d12a911d",
+                "revision": 69
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 22,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "9c478d9c-de03-44ee-94b6-d27d54fb2f02",
+              "revision": 71
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:03.042Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "9c478d9c-de03-44ee-94b6-d27d54fb2f02",
+                "revision": 71
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 23,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "d6b70b82-4843-47f9-a6e9-035a67e1a105",
+              "revision": 73
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:05.029Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "d6b70b82-4843-47f9-a6e9-035a67e1a105",
+                "revision": 73
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 24,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "677f5dc7-33c0-486c-8f86-38896a735b33",
+              "revision": 75
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:06.983Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "677f5dc7-33c0-486c-8f86-38896a735b33",
+                "revision": 75
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 25,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "899db24b-fa20-4a02-80d1-4263eb73d8f4",
+              "revision": 77
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:08.922Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "899db24b-fa20-4a02-80d1-4263eb73d8f4",
+                "revision": 77
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 26,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "ceca8034-9898-4fd5-a473-ca2478ee485e",
+              "revision": 79
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:10.874Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "ceca8034-9898-4fd5-a473-ca2478ee485e",
+                "revision": 79
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 27,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "47bd98b8-a76f-4042-b464-eb4a6eb223b0",
+              "revision": 81
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:12.849Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "47bd98b8-a76f-4042-b464-eb4a6eb223b0",
+                "revision": 81
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 28,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "c6748b3e-daa5-401d-98f6-daba78a9a5d1",
+              "revision": 83
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:14.898Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "c6748b3e-daa5-401d-98f6-daba78a9a5d1",
+                "revision": 83
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 29,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "9935cc84-094e-4cab-b816-f776c3b38370",
+              "revision": 85
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:16.845Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "9935cc84-094e-4cab-b816-f776c3b38370",
+                "revision": 85
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        },
+        {
+          "cycle": 30,
+          "m6": {
+            "mode": "active",
+            "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+            "token": {
+              "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+              "activationEpoch": "45abf33c-62da-480a-b351-b3fb4893f8db",
+              "revision": 87
+            },
+            "status": {
+              "kind": "saved",
+              "at": "2026-10-11T12:16:18.810Z",
+              "token": {
+                "runId": "6529c7d9-1cce-4bf8-96c9-c81a39993199",
+                "activationEpoch": "45abf33c-62da-480a-b351-b3fb4893f8db",
+                "revision": 87
+              }
+            },
+            "quarantinedArchives": 0,
+            "completedCount": 3,
+            "lifecycle": {
+              "applications": 1,
+              "sessions": 1,
+              "observers": 1
+            },
+            "paused": false,
+            "replay": null
+          },
+          "resources": {
+            "listeners": 84,
+            "pendingRaf": 1
+          }
+        }
+      ],
+      "heapGate": {
+        "policy": "warn-only",
+        "deltaBytes": 986500,
+        "ceilingBytes": 1048576,
+        "exceeded": false
+      }
+    }
+  },
+  "passed": true
+}

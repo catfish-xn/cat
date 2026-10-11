@@ -1,0 +1,44 @@
+[
+  {
+    "build": "cannon",
+    "evidenceClass": "final-clean-commit",
+    "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+    "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+    "checkpoints": 194,
+    "rounds": 33,
+    "finalHash": "05b4ab4140a31a2c7e5ecaa2065ef5ab275165615b0d0850ac714aafb415cb52",
+    "fullApplicationRoutePassed": true,
+    "browserBattlesCompared": 33,
+    "skippedBrowserRoundIds": [],
+    "domainRouteComparedInFull": true,
+    "passed": true
+  },
+  {
+    "build": "sniper",
+    "evidenceClass": "final-clean-commit",
+    "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+    "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+    "checkpoints": 182,
+    "rounds": 33,
+    "finalHash": "903c9be8d9dfcba717f909b58303eefdce5cf66875a1aa84ef1f1dad1641928d",
+    "fullApplicationRoutePassed": true,
+    "browserBattlesCompared": 33,
+    "skippedBrowserRoundIds": [],
+    "domainRouteComparedInFull": true,
+    "passed": true
+  },
+  {
+    "build": "mage",
+    "evidenceClass": "final-clean-commit",
+    "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+    "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+    "checkpoints": 176,
+    "rounds": 33,
+    "finalHash": "6814a267e6697167f71a497c55bdfa3ec8c018ca3e0d3f5a2e497fa71e570179",
+    "fullApplicationRoutePassed": true,
+    "browserBattlesCompared": 33,
+    "skippedBrowserRoundIds": [],
+    "domainRouteComparedInFull": true,
+    "passed": true
+  }
+]

@@ -1,0 +1,513 @@
+{
+  "kind": "diagnostic-only",
+  "note": "10 distinct fixtures, seeds 1..10, profiler enabled only around stepCombat loops; setup/warmup excluded; not a budget rerun",
+  "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "node": "v22.23.3",
+  "results": [
+    {
+      "ticks": 111,
+      "events": 2394,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 116,
+      "events": 2638,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 116,
+      "events": 2472,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 111,
+      "events": 2398,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 111,
+      "events": 2524,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 121,
+      "events": 2465,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 111,
+      "events": 2441,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 113,
+      "events": 2534,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 116,
+      "events": 2636,
+      "result": "playerWin"
+    },
+    {
+      "ticks": 116,
+      "events": 2567,
+      "result": "playerWin"
+    }
+  ],
+  "totalSampledMs": 15774.543,
+  "self": [
+    {
+      "functionName": "structuredClone",
+      "scriptId": "26",
+      "url": "node:internal/worker/js_transferable",
+      "lineNumber": 111,
+      "columnNumber": 24,
+      "milliseconds": 6523.677,
+      "percent": 41.35572738937667
+    },
+    {
+      "functionName": "(garbage collector)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "milliseconds": 884.071,
+      "percent": 5.604415925076244
+    },
+    {
+      "functionName": "advanceS13Tick",
+      "scriptId": "521",
+      "url": "file:///workspace/cat/src/simulation/combat-s13.ts",
+      "lineNumber": 169,
+      "columnNumber": 23,
+      "milliseconds": 751.424,
+      "percent": 4.76352310174691
+    },
+    {
+      "functionName": "dispatchTriggers",
+      "scriptId": "460",
+      "url": "file:///workspace/cat/src/simulation/m8/triggers.ts",
+      "lineNumber": 49,
+      "columnNumber": 25,
+      "milliseconds": 550.461,
+      "percent": 3.4895527559815833
+    },
+    {
+      "functionName": "",
+      "scriptId": "458",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-triggers.ts",
+      "lineNumber": 23,
+      "columnNumber": 195,
+      "milliseconds": 518.375,
+      "percent": 3.286149082100191
+    },
+    {
+      "functionName": "",
+      "scriptId": "521",
+      "url": "file:///workspace/cat/src/simulation/combat-s13.ts",
+      "lineNumber": 171,
+      "columnNumber": 32,
+      "milliseconds": 354.547,
+      "percent": 2.24758967660743
+    },
+    {
+      "functionName": "advanceCombatTick",
+      "scriptId": "496",
+      "url": "file:///workspace/cat/src/simulation/combat-tick.ts",
+      "lineNumber": 37,
+      "columnNumber": 26,
+      "milliseconds": 252.638,
+      "percent": 1.6015551131972572
+    },
+    {
+      "functionName": "dispatchTriggers",
+      "scriptId": "460",
+      "url": "file:///workspace/cat/src/simulation/m8/triggers.ts",
+      "lineNumber": 49,
+      "columnNumber": 25,
+      "milliseconds": 239.387,
+      "percent": 1.517552679656076
+    },
+    {
+      "functionName": "emitMechanismSignal",
+      "scriptId": "458",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-triggers.ts",
+      "lineNumber": 15,
+      "columnNumber": 28,
+      "milliseconds": 214.103,
+      "percent": 1.3572691139134743
+    },
+    {
+      "functionName": "post",
+      "scriptId": "81",
+      "url": "node:inspector",
+      "lineNumber": 117,
+      "columnNumber": 6,
+      "milliseconds": 199.06,
+      "percent": 1.2619066048379342
+    },
+    {
+      "functionName": "canonicalSource",
+      "scriptId": "388",
+      "url": "",
+      "lineNumber": 15,
+      "columnNumber": 24,
+      "milliseconds": 194.676,
+      "percent": 1.2341149914770906
+    },
+    {
+      "functionName": "",
+      "scriptId": "458",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-triggers.ts",
+      "lineNumber": 23,
+      "columnNumber": 195,
+      "milliseconds": 188.613,
+      "percent": 1.1956796466306505
+    },
+    {
+      "functionName": "canonicalSource",
+      "scriptId": "388",
+      "url": "",
+      "lineNumber": 15,
+      "columnNumber": 24,
+      "milliseconds": 182.856,
+      "percent": 1.1591841361109478
+    },
+    {
+      "functionName": "maintainMechanisms",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 264,
+      "columnNumber": 27,
+      "milliseconds": 153.206,
+      "percent": 0.9712230649090754
+    },
+    {
+      "functionName": "refreshMechanismAuras",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 329,
+      "columnNumber": 30,
+      "milliseconds": 146.79,
+      "percent": 0.930549937326235
+    },
+    {
+      "functionName": "refreshMechanismAuras",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 329,
+      "columnNumber": 30,
+      "milliseconds": 117.601,
+      "percent": 0.7455112962701994
+    },
+    {
+      "functionName": "emitMechanismSignal",
+      "scriptId": "458",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-triggers.ts",
+      "lineNumber": 15,
+      "columnNumber": 28,
+      "milliseconds": 107.112,
+      "percent": 0.6790180862925791
+    },
+    {
+      "functionName": "",
+      "scriptId": "448",
+      "url": "",
+      "lineNumber": 336,
+      "columnNumber": 106,
+      "milliseconds": 95.395,
+      "percent": 0.6047401816965474
+    },
+    {
+      "functionName": "enemies",
+      "scriptId": "472",
+      "url": "file:///workspace/cat/src/simulation/combat-s13-state.ts",
+      "lineNumber": 207,
+      "columnNumber": 16,
+      "milliseconds": 94.546,
+      "percent": 0.59935809233903
+    },
+    {
+      "functionName": "",
+      "scriptId": "462",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-targeting.ts",
+      "lineNumber": 19,
+      "columnNumber": 35,
+      "milliseconds": 88.092,
+      "percent": 0.5584440702973138
+    },
+    {
+      "functionName": "canonicalSource",
+      "scriptId": "388",
+      "url": "file:///workspace/cat/src/simulation/m8/identity.ts",
+      "lineNumber": 15,
+      "columnNumber": 24,
+      "milliseconds": 84.838,
+      "percent": 0.5378158974240965
+    },
+    {
+      "functionName": "readCounters",
+      "scriptId": "460",
+      "url": "file:///workspace/cat/src/simulation/m8/triggers.ts",
+      "lineNumber": 78,
+      "columnNumber": 23,
+      "milliseconds": 73.011,
+      "percent": 0.46284066676289765
+    },
+    {
+      "functionName": "structuredClone",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "milliseconds": 70.983,
+      "percent": 0.4499845098523615
+    },
+    {
+      "functionName": "commitOutcome",
+      "scriptId": "521",
+      "url": "file:///workspace/cat/src/simulation/combat-s13.ts",
+      "lineNumber": 369,
+      "columnNumber": 24,
+      "milliseconds": 70.213,
+      "percent": 0.44510322739619146
+    },
+    {
+      "functionName": "cleanupMechanisms",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 413,
+      "columnNumber": 26,
+      "milliseconds": 68.394,
+      "percent": 0.4335719900094729
+    }
+  ],
+  "inclusive": [
+    {
+      "functionName": "(root)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "milliseconds": 15774.543,
+      "percent": 100
+    },
+    {
+      "functionName": "",
+      "scriptId": "79",
+      "url": "file:///tmp/m8-pressure-profile.cjs",
+      "lineNumber": 3,
+      "columnNumber": 1,
+      "milliseconds": 14890.472,
+      "percent": 94.39558407492376
+    },
+    {
+      "functionName": "finish",
+      "scriptId": "79",
+      "url": "file:///tmp/m8-pressure-profile.cjs",
+      "lineNumber": 9,
+      "columnNumber": 15,
+      "milliseconds": 14686.697,
+      "percent": 93.1037875392016
+    },
+    {
+      "functionName": "stepCombat",
+      "scriptId": "292",
+      "url": "file:///workspace/cat/src/simulation/combat.ts",
+      "lineNumber": 121,
+      "columnNumber": 19,
+      "milliseconds": 14675.708,
+      "percent": 93.03412466529142
+    },
+    {
+      "functionName": "advanceCombatTick",
+      "scriptId": "496",
+      "url": "file:///workspace/cat/src/simulation/combat-tick.ts",
+      "lineNumber": 37,
+      "columnNumber": 26,
+      "milliseconds": 14668.884,
+      "percent": 92.99086509193958
+    },
+    {
+      "functionName": "advanceS13Tick",
+      "scriptId": "521",
+      "url": "file:///workspace/cat/src/simulation/combat-s13.ts",
+      "lineNumber": 169,
+      "columnNumber": 23,
+      "milliseconds": 14404.263,
+      "percent": 91.31334581293416
+    },
+    {
+      "functionName": "",
+      "scriptId": "521",
+      "url": "file:///workspace/cat/src/simulation/combat-s13.ts",
+      "lineNumber": 171,
+      "columnNumber": 32,
+      "milliseconds": 6987.338,
+      "percent": 44.29502648666272
+    },
+    {
+      "functionName": "structuredClone",
+      "scriptId": "26",
+      "url": "node:internal/worker/js_transferable",
+      "lineNumber": 111,
+      "columnNumber": 24,
+      "milliseconds": 6595.781,
+      "percent": 41.81281828576587
+    },
+    {
+      "functionName": "commitOutcome",
+      "scriptId": "521",
+      "url": "file:///workspace/cat/src/simulation/combat-s13.ts",
+      "lineNumber": 369,
+      "columnNumber": 24,
+      "milliseconds": 2091.87,
+      "percent": 13.26104978128368
+    },
+    {
+      "functionName": "emitMechanismSignal",
+      "scriptId": "458",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-triggers.ts",
+      "lineNumber": 15,
+      "columnNumber": 28,
+      "milliseconds": 2007.201,
+      "percent": 12.724305230268795
+    },
+    {
+      "functionName": "dispatchTriggers",
+      "scriptId": "460",
+      "url": "file:///workspace/cat/src/simulation/m8/triggers.ts",
+      "lineNumber": 49,
+      "columnNumber": 25,
+      "milliseconds": 1096.107,
+      "percent": 6.948581648292442
+    },
+    {
+      "functionName": "refreshMechanismAuras",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 329,
+      "columnNumber": 30,
+      "milliseconds": 1044.29,
+      "percent": 6.6200966963036585
+    },
+    {
+      "functionName": "(garbage collector)",
+      "scriptId": "0",
+      "url": "",
+      "lineNumber": -1,
+      "columnNumber": -1,
+      "milliseconds": 884.071,
+      "percent": 5.604415925076244
+    },
+    {
+      "functionName": "cleanupMechanisms",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 413,
+      "columnNumber": 26,
+      "milliseconds": 806.876,
+      "percent": 5.115051510525535
+    },
+    {
+      "functionName": "emitMechanismSignal",
+      "scriptId": "458",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-triggers.ts",
+      "lineNumber": 15,
+      "columnNumber": 28,
+      "milliseconds": 760.772,
+      "percent": 4.8227831386303865
+    },
+    {
+      "functionName": "refreshMechanismAuras",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 329,
+      "columnNumber": 30,
+      "milliseconds": 721.011,
+      "percent": 4.570725123383923
+    },
+    {
+      "functionName": "",
+      "scriptId": "458",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-triggers.ts",
+      "lineNumber": 23,
+      "columnNumber": 195,
+      "milliseconds": 527.835,
+      "percent": 3.3461191237045664
+    },
+    {
+      "functionName": "maintainMechanisms",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 264,
+      "columnNumber": 27,
+      "milliseconds": 442.359,
+      "percent": 2.8042587351025
+    },
+    {
+      "functionName": "dispatchTriggers",
+      "scriptId": "460",
+      "url": "file:///workspace/cat/src/simulation/m8/triggers.ts",
+      "lineNumber": 49,
+      "columnNumber": 25,
+      "milliseconds": 432.441,
+      "percent": 2.741385281335884
+    },
+    {
+      "functionName": "removeStatusContributions",
+      "scriptId": "385",
+      "url": "",
+      "lineNumber": 83,
+      "columnNumber": 34,
+      "milliseconds": 366.737,
+      "percent": 2.3248660832836805
+    },
+    {
+      "functionName": "",
+      "scriptId": "521",
+      "url": "file:///workspace/cat/src/simulation/combat-s13.ts",
+      "lineNumber": 280,
+      "columnNumber": 28,
+      "milliseconds": 314.51,
+      "percent": 1.993782006870183
+    },
+    {
+      "functionName": "removeStatusContributions",
+      "scriptId": "385",
+      "url": "file:///workspace/cat/src/simulation/m8/status.ts",
+      "lineNumber": 83,
+      "columnNumber": 34,
+      "milliseconds": 305.262,
+      "percent": 1.9351559027732212
+    },
+    {
+      "functionName": "",
+      "scriptId": "385",
+      "url": "",
+      "lineNumber": 86,
+      "columnNumber": 53,
+      "milliseconds": 299.254,
+      "percent": 1.897069220959365
+    },
+    {
+      "functionName": "",
+      "scriptId": "448",
+      "url": "",
+      "lineNumber": 336,
+      "columnNumber": 106,
+      "milliseconds": 291.138,
+      "percent": 1.8456192360057595
+    },
+    {
+      "functionName": "executeMechanismEffect",
+      "scriptId": "448",
+      "url": "file:///workspace/cat/src/simulation/m8/s13-mechanisms.ts",
+      "lineNumber": 142,
+      "columnNumber": 31,
+      "milliseconds": 255.096,
+      "percent": 1.6171371810898103
+    }
+  ]
+}

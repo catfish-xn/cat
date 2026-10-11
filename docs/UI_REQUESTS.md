@@ -330,3 +330,6 @@
 - **UR-U3-07**：补交 `scripts/verify-m8-u3-static.cjs`，生产 preview 的真实应用、1440×1000，读取权威目录，并通过原生导入加载经生产校验器验证的公开操作存档。最终结果见 `M8_VALIDATION.md`，尚未独立签收。
 - **UR-U4-07**：`8d87e74` 已交付 `scripts/verify-m8-u4-status.cjs`，`9fa8a63` 修正一次施加多项状态的日志遗漏。本轮复核得到 15 场景、181 检查通过；这是实际组件验证，不冒称整局浏览器路线。最终候选绑定见 `M8_VALIDATION.md`。
 - U4 的旧 R2a 无 group 清理输入已被 B9 正式账本排除，改验真实清理事件都有 group；R3 父实例也已进入旧 shield 投影；状态筛选按 UR-U4-04 包含 activityChanged；盾的 absorbed/depleted 与 death-cleanup/combat-end 按各自正式原因显示。脚本 manifest 保留五项差异及依据，不通过手写非法事件恢复过时形状。
+
+
+**B10 固定候选补充（2026-10-11）**：`d901b3f` 的 U3静态8组、U4 15场景/181检查、桌面27项通过。`b4ca11c` 新增 `verify-m8-br4-public.cjs` 并在干净工作区通过 dev/preview 10组公开存档验证，补足总计划BR4；原 `verify-m8-u3-dynamic` 的显式装备夹具仍按原范围保留。数据/显示技术检查通过不等于节点三签收：9v9压力超预算、硬件帧率、独立审查及用户试玩仍待完成。证据见 `M8_VALIDATION.md`。

@@ -1,0 +1,196 @@
+{
+  "sha": "b4ca11c7bac9f63c82416ded5bde0e013b11263f",
+  "dirty": false,
+  "node": "v22.23.3",
+  "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+  "scope": "BR4 public-command save scenarios; dev and production preview, 1440x1000; full native combat and exact state/ledger checks",
+  "checks": [
+    {
+      "name": "dev-thiefs-gloves-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-10",
+        "ticks": 350,
+        "events": 489,
+        "abilityCriticalPackets": 0,
+        "exactStateAndLedger": true,
+        "nextRoundAndSale": true
+      }
+    },
+    {
+      "name": "dev-jeweled-gauntlet-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-2",
+        "ticks": 408,
+        "events": 568,
+        "abilityCriticalPackets": 2,
+        "exactStateAndLedger": true
+      }
+    },
+    {
+      "name": "dev-last-whisper-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-10",
+        "ticks": 354,
+        "events": 516,
+        "abilityCriticalPackets": 0,
+        "exactStateAndLedger": true
+      }
+    },
+    {
+      "name": "dev-sunfire-cape-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-10",
+        "ticks": 379,
+        "events": 584,
+        "abilityCriticalPackets": 0,
+        "exactStateAndLedger": true
+      }
+    },
+    {
+      "name": "dev-native-third-copy-upgrade-keeps-tg",
+      "passed": true,
+      "evidence": {
+        "slot": 2,
+        "generation": 4,
+        "definitionId": "irelia",
+        "holderId": "unit-1",
+        "upgradedId": "unit-1",
+        "exactState": true
+      }
+    },
+    {
+      "name": "preview-thiefs-gloves-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-10",
+        "ticks": 350,
+        "events": 489,
+        "abilityCriticalPackets": 0,
+        "exactStateAndLedger": true,
+        "nextRoundAndSale": true
+      }
+    },
+    {
+      "name": "preview-jeweled-gauntlet-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-2",
+        "ticks": 408,
+        "events": 568,
+        "abilityCriticalPackets": 2,
+        "exactStateAndLedger": true
+      }
+    },
+    {
+      "name": "preview-last-whisper-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-10",
+        "ticks": 354,
+        "events": 516,
+        "abilityCriticalPackets": 0,
+        "exactStateAndLedger": true
+      }
+    },
+    {
+      "name": "preview-sunfire-cape-public-combine-equip-combat",
+      "passed": true,
+      "evidence": {
+        "round": "2-5",
+        "item": "item-4",
+        "holder": "unit-10",
+        "ticks": 379,
+        "events": 584,
+        "abilityCriticalPackets": 0,
+        "exactStateAndLedger": true
+      }
+    },
+    {
+      "name": "preview-native-third-copy-upgrade-keeps-tg",
+      "passed": true,
+      "evidence": {
+        "slot": 2,
+        "generation": 4,
+        "definitionId": "irelia",
+        "holderId": "unit-1",
+        "upgradedId": "unit-1",
+        "exactState": true
+      }
+    }
+  ],
+  "fixtures": [
+    {
+      "runId": "br4-thiefs-gloves",
+      "roundId": "2-5",
+      "completedBattles": 6,
+      "commands": 35,
+      "file": "br4-thiefs-gloves.json",
+      "provenance": "public Match commands and rewards only; validateEnvelope + validateBattleCollection passed"
+    },
+    {
+      "runId": "br4-jeweled-gauntlet",
+      "roundId": "2-5",
+      "completedBattles": 6,
+      "commands": 35,
+      "file": "br4-jeweled-gauntlet.json",
+      "provenance": "public Match commands and rewards only; validateEnvelope + validateBattleCollection passed"
+    },
+    {
+      "runId": "br4-last-whisper",
+      "roundId": "2-5",
+      "completedBattles": 6,
+      "commands": 35,
+      "file": "br4-last-whisper.json",
+      "provenance": "public Match commands and rewards only; validateEnvelope + validateBattleCollection passed"
+    },
+    {
+      "runId": "br4-sunfire-cape",
+      "roundId": "2-5",
+      "completedBattles": 6,
+      "commands": 35,
+      "file": "br4-sunfire-cape.json",
+      "provenance": "public Match commands and rewards only; validateEnvelope + validateBattleCollection passed"
+    },
+    {
+      "runId": "br4-thiefs-gloves-upgrade",
+      "roundId": "2-1",
+      "purchase": {
+        "slot": 2,
+        "generation": 4,
+        "definitionId": "irelia",
+        "holderId": "unit-1"
+      },
+      "completedBattles": 3,
+      "commands": 12,
+      "file": "br4-thiefs-gloves-upgrade.json",
+      "provenance": "public Match commands and rewards only; validateEnvelope + validateBattleCollection passed"
+    }
+  ],
+  "errors": [],
+  "passed": true,
+  "browser": "151.0.7922.173",
+  "finalIdentity": {
+    "sha": "b4ca11c7bac9f63c82416ded5bde0e013b11263f",
+    "dirty": false,
+    "node": "v22.23.3",
+    "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec"
+  }
+}

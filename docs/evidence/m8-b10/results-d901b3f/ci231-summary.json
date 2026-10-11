@@ -1,0 +1,324 @@
+{
+  "codeSha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "runUrl": "https://github.com/catfish-xn/cat/actions/runs/38138447854",
+  "runNumber": 231,
+  "conclusion": "success",
+  "tests": {
+    "files": 145,
+    "passed": 2056,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 773.23,
+    "replayCaseMs": {
+      "cannon": 96501,
+      "sniper": 147284,
+      "mage": 137605,
+      "sniper-caitlyn": 131917
+    }
+  },
+  "testLogExcerpt": [
+    "2026-10-11T12:26:34.7174864Z  ✓ tests/m5-replay.test.ts (4 tests) 513311ms",
+    "2026-10-11T12:26:34.7176795Z    ✓ M5 cannon restores every command and tick; rejected insertion preserves every field 96501ms",
+    "2026-10-11T12:26:34.7178176Z    ✓ M5 sniper restores every command and tick; rejected insertion preserves every field 147284ms",
+    "2026-10-11T12:26:34.7180019Z    ✓ M5 mage restores every command and tick; rejected insertion preserves every field 137605ms",
+    "2026-10-11T12:26:34.7181440Z    ✓ M5 sniper-caitlyn restores every command and tick; rejected insertion preserves every field 131917ms",
+    "2026-10-11T12:26:34.7255300Z "
+  ],
+  "jobs": [
+    {
+      "name": "m8-u3-dynamic",
+      "id": 114467095881,
+      "conclusion": "success"
+    },
+    {
+      "name": "browser-preview-sniper-sample1",
+      "id": 114467095994,
+      "conclusion": "success"
+    },
+    {
+      "name": "browser-dev-cannon-sample1",
+      "id": 114467096003,
+      "conclusion": "success"
+    },
+    {
+      "name": "m7-presentation-sample1",
+      "id": 114467096034,
+      "conclusion": "success"
+    },
+    {
+      "name": "input-dev-sample1",
+      "id": 114467096045,
+      "conclusion": "success"
+    },
+    {
+      "name": "browser-preview-mage-sample1",
+      "id": 114467096058,
+      "conclusion": "success"
+    },
+    {
+      "name": "browser-preview-cannon-sample1",
+      "id": 114467096059,
+      "conclusion": "success"
+    },
+    {
+      "name": "input-preview-sample1",
+      "id": 114467096079,
+      "conclusion": "success"
+    },
+    {
+      "name": "browser-dev-sniper-sample1",
+      "id": 114467096142,
+      "conclusion": "success"
+    },
+    {
+      "name": "test-and-build-sample1",
+      "id": 114467096143,
+      "conclusion": "success"
+    },
+    {
+      "name": "browser-dev-mage-sample1",
+      "id": 114467096153,
+      "conclusion": "success"
+    },
+    {
+      "name": "m6-retention",
+      "id": 114467096200,
+      "conclusion": "success"
+    },
+    {
+      "name": "m8-u6-loot",
+      "id": 114467096251,
+      "conclusion": "success"
+    },
+    {
+      "name": "warmup-experiment",
+      "id": 114467096647,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "heap-diagnostics",
+      "id": 114467096714,
+      "conclusion": "skipped"
+    },
+    {
+      "name": "compare-evidence-sample1",
+      "id": 114471470442,
+      "conclusion": "success"
+    }
+  ],
+  "inputSummary": [
+    {
+      "mode": "dev",
+      "passed": true,
+      "acceptanceScope": "B6 unskipped checks",
+      "skipped": [],
+      "cases": 42,
+      "durationSeconds": 330.374
+    },
+    {
+      "passed": true,
+      "acceptanceScope": "full application route at the catalog capacity (B9)",
+      "fullApplicationRoutePassed": true,
+      "skipped": [],
+      "mode": "dev",
+      "build": "cannon",
+      "touch": true,
+      "durationSeconds": 645.897
+    },
+    {
+      "passed": true,
+      "checks": 35
+    },
+    {
+      "passed": true,
+      "checks": 32
+    },
+    {
+      "passed": true,
+      "checks": 24
+    },
+    {
+      "passed": true,
+      "checks": 61,
+      "durationMs": 18470
+    },
+    {
+      "checks": 18,
+      "viewport": [
+        390,
+        844
+      ],
+      "passed": true
+    },
+    {
+      "passed": true,
+      "durationMs": 137883.88490900001,
+      "acceptanceScope": "original F4 performance gates at the catalog capacity (B9, issue #23)",
+      "skipped": [],
+      "gates": [
+        {
+          "name": "capture",
+          "metric": "p95",
+          "actual": 24.799999999813735,
+          "ceiling": 50,
+          "passed": true
+        },
+        {
+          "name": "write",
+          "metric": "p95",
+          "actual": 14.900000000139698,
+          "ceiling": 250,
+          "passed": true
+        },
+        {
+          "name": "fullCapture",
+          "metric": "p95",
+          "actual": 64.80000000004657,
+          "ceiling": 500,
+          "passed": true
+        },
+        {
+          "name": "activation",
+          "metric": "max",
+          "actual": 271.5,
+          "ceiling": 1000,
+          "passed": true
+        },
+        {
+          "name": "completeImport",
+          "metric": "max",
+          "actual": 5447.700000000186,
+          "ceiling": 30000,
+          "passed": true
+        },
+        {
+          "name": "firstSeek",
+          "metric": "max",
+          "actual": 715.8000000000466,
+          "ceiling": 2000,
+          "passed": true
+        },
+        {
+          "name": "cachedSeek",
+          "metric": "max",
+          "actual": 20.799999999813735,
+          "ceiling": 100,
+          "passed": true
+        },
+        {
+          "name": "statsBatch",
+          "metric": "max",
+          "actual": 0.20000000018626451,
+          "ceiling": 5,
+          "passed": true
+        }
+      ],
+      "lifecycle": -102028
+    },
+    {
+      "passed": true,
+      "results": [
+        {
+          "boundary": "direct_commit_shallow_frozen_source_mutation",
+          "passed": true
+        },
+        {
+          "boundary": "local_header_fast_path_and_external_revision_fallback",
+          "largeReads": 3,
+          "oldEpochRejected": true,
+          "passed": true
+        },
+        {
+          "failure": "quota",
+          "failedTransactions": 2,
+          "pendingAfterRetry": 0,
+          "battles": 3,
+          "passed": true
+        },
+        {
+          "failure": "abort",
+          "failedTransactions": 2,
+          "pendingAfterRetry": 0,
+          "battles": 3,
+          "passed": true
+        }
+      ]
+    },
+    {
+      "passed": true,
+      "acceptanceScope": "B6 unskipped checks",
+      "skipped": [],
+      "results": [
+        "G04_unavailable_open_public_play_and_same_tick_export",
+        "G02_all_phase_native_roundtrip_and_exact_next_transition",
+        "ROOT_03_same_run_completion_archive_refresh",
+        "P2_stale_archive_success_after_new_run",
+        "P2_stale_archive_reject_after_same_run_new_epoch",
+        "R4_inflight_combat_then_pending_terminal_commit",
+        "ROOT_04_initialize_dispose_then_idb_abort",
+        "ROOT_04_import_dispose_then_file_failure",
+        "ROOT_04_candidate_dispose_then_activation_abort"
+      ],
+      "errors": [],
+      "durationMs": 135275.558721
+    }
+  ],
+  "comparison": [
+    [
+      {
+        "build": "cannon",
+        "evidenceClass": "final-clean-commit",
+        "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+        "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+        "checkpoints": 194,
+        "rounds": 33,
+        "finalHash": "05b4ab4140a31a2c7e5ecaa2065ef5ab275165615b0d0850ac714aafb415cb52",
+        "fullApplicationRoutePassed": true,
+        "browserBattlesCompared": 33,
+        "skippedBrowserRoundIds": [],
+        "domainRouteComparedInFull": true,
+        "passed": true
+      },
+      {
+        "build": "sniper",
+        "evidenceClass": "final-clean-commit",
+        "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+        "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+        "checkpoints": 182,
+        "rounds": 33,
+        "finalHash": "903c9be8d9dfcba717f909b58303eefdce5cf66875a1aa84ef1f1dad1641928d",
+        "fullApplicationRoutePassed": true,
+        "browserBattlesCompared": 33,
+        "skippedBrowserRoundIds": [],
+        "domainRouteComparedInFull": true,
+        "passed": true
+      },
+      {
+        "build": "mage",
+        "evidenceClass": "final-clean-commit",
+        "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+        "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+        "checkpoints": 176,
+        "rounds": 33,
+        "finalHash": "6814a267e6697167f71a497c55bdfa3ec8c018ca3e0d3f5a2e497fa71e570179",
+        "fullApplicationRoutePassed": true,
+        "browserBattlesCompared": 33,
+        "skippedBrowserRoundIds": [],
+        "domainRouteComparedInFull": true,
+        "passed": true
+      }
+    ],
+    {
+      "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+      "manifests": 12,
+      "acceptanceScope": "all M6 application, browser and performance gates at the catalog capacity (B9)",
+      "fullApplicationRoutePassed": true,
+      "skipped": [],
+      "passed": true
+    }
+  ],
+  "inputLogBounds": [
+    "﻿2026-10-11T12:13:31.4738512Z Current runner version: '2.337",
+    "2026-10-11T12:36:34.6447383Z ##[warning]Node.js 20 is deprecated. The "
+  ]
+}
