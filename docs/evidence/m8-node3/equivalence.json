@@ -1,0 +1,560 @@
+{
+  "baseline": "f58c9fe1e55de9ca6b5c8be618d49aa02d789f45",
+  "candidate": "cf76af02ccc70e9b7adb94c718bbb2e0365b8acd",
+  "dirty": "",
+  "specSha256": "e27075f0279c368a3ca2d71e8cc7d81aeab976569eccd0bbeedcd9cf3fb321ad",
+  "passed": true,
+  "combats": 60,
+  "ticks": 7399,
+  "frozenInput": true,
+  "fullStateAndLedger": true,
+  "jsonContinuationTicks": [
+    0,
+    39,
+    40,
+    41,
+    "end"
+  ],
+  "results": [
+    {
+      "variant": "distinct",
+      "seed": 1,
+      "ticks": 111,
+      "events": 2439,
+      "stateHash": "dd5b09692daa31b7c2c042e95d1d844239842b84d6b703640b7fc0af2d12ea16",
+      "eventHash": "fb1bca2c2bbc32d2c45beb5d1fc7c2c70b66d233be0dfc255e1a8ccfd4344af0",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 2,
+      "ticks": 116,
+      "events": 2683,
+      "stateHash": "bf21f110bfacee63113645b1403dd32107244cfee99fbeb17cef143be556c814",
+      "eventHash": "214fcd130f22498d7fc8caa13554226000910480bcdb7be312a1ba0eaad6d9c9",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 3,
+      "ticks": 116,
+      "events": 2517,
+      "stateHash": "df89994a5509e841e4f4fa0a9a6e032e4796f79fc837eaad984245b200c7a46f",
+      "eventHash": "64e77307f7d7055970bf2d01b09aa759b72ee88c4a09267180ad00249ba81c03",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 4,
+      "ticks": 111,
+      "events": 2443,
+      "stateHash": "b17bd55ae6d7cc6e328cdab8a4afc77f101be3410db3d6a1980978d06dcc507e",
+      "eventHash": "a9a7f67ba1dba1580d05bbd9fc5ec38940caad7c43e5721c778729723ad03037",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 5,
+      "ticks": 111,
+      "events": 2569,
+      "stateHash": "b535365cbcc1a9d7caacc977b61b067f81ea89011eb0d93fbffeedfbffcfb427",
+      "eventHash": "ade3fd9ab7d04c1314e634a29da71f28e13c4f5e9c06f271ca1af4dc6e5af6d7",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 6,
+      "ticks": 121,
+      "events": 2510,
+      "stateHash": "b7bdade5781a18fccacc1bf0a133546a9ea8d793cb20e4d08774df8f3b01a4ff",
+      "eventHash": "343aec4eb2959238e168908f56447ebb8a6472b23cf5feec8fa772dc1fa51420",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 7,
+      "ticks": 111,
+      "events": 2486,
+      "stateHash": "00aac0533908fa48c3ad7278d3ffa7fe9c35c5c7d15fee81f8351b3fc6796d0e",
+      "eventHash": "0a882e91a778a1ba6d10b2dd5f75357802d2c4b00b0dcdb5bf818b67f587d222",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 8,
+      "ticks": 113,
+      "events": 2579,
+      "stateHash": "926317e998f50f486c0fc46574d88e004433ca3feb770daff2a62c41d1946d13",
+      "eventHash": "e38425cd63858f585d2d58fa975ddc326af62ef07adb13d22b863927fa6d7360",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 9,
+      "ticks": 116,
+      "events": 2681,
+      "stateHash": "5d5e1d96f771ea6013229056295f986a64056f1e58cde43f8cf022be07032562",
+      "eventHash": "09ecf9f2d3e05d510f224c7c2da7ca536d11c3cd0ffb097e2e54bf81e579c2d2",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 10,
+      "ticks": 116,
+      "events": 2612,
+      "stateHash": "8045975887272cc972133b6d41c08e8b5d9a8e12ef5b11dbfca18a565ca3d0ec",
+      "eventHash": "94d4abfeef30e787106b9430899c88c5486091e340468fdbcc33f82437ed3b66",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 11,
+      "ticks": 111,
+      "events": 2565,
+      "stateHash": "4d98ce09820c1fa562fd0d0f2b777c1d35e754aa0cb9b9410a87dbe9bb2819f3",
+      "eventHash": "344f18e33d59cdebb499083e05b3ea5193f03eaff0e58f43795f80fbd605c017",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 12,
+      "ticks": 113,
+      "events": 2451,
+      "stateHash": "26b8ce68742a1ac47875cb00c73fd4ef9288cbeaae1e5385fec23dc098d8c3ab",
+      "eventHash": "f1a6bfe5f6f1e6588d832e7bc2ed556b1644ad6c3faa9fe82f47cd42841f4e73",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 13,
+      "ticks": 111,
+      "events": 2428,
+      "stateHash": "9242673d6deb2660480f2661fb5f6231c42b80932c03e8e8322926fb8a308bcd",
+      "eventHash": "9027e8459005d1721c3b6edc4ed8d5526d1195325ec0c78cdafa18f9d0f520b3",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 14,
+      "ticks": 112,
+      "events": 2441,
+      "stateHash": "78b606e5a8ce8544442d38fe0a47ace37d611f489fa126e0dbb105fa76aabf28",
+      "eventHash": "e3ef3a20dd2f2b8153baa25dd4980aefd424e3d6eee7edd9fc66f9136c124c73",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 15,
+      "ticks": 111,
+      "events": 2586,
+      "stateHash": "35fba759d33c33a2748f09bcb180584a2e0c0db2d8e2d665ecac16b3010e8ef9",
+      "eventHash": "171cc6d4ba433777009e208efabd03c99cffc3b6216639e9ae64ddcc7f1d547d",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 16,
+      "ticks": 111,
+      "events": 2422,
+      "stateHash": "1f41de824d11c953dee5237b3d518394e744d2b7c09dc75179f491f35ba226a0",
+      "eventHash": "1225114c7b8c9e123273f88ed945e805c7ce846b1a7463704d517e55aab1d7a5",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 17,
+      "ticks": 114,
+      "events": 2470,
+      "stateHash": "92236144a1c67c57ec98afd70709ce8d4f00466c812d9e772251ede4ed90e011",
+      "eventHash": "12d6d6a42d111a3f1fa7af9e2502dce5e57258e49378fb1d5465921ec7633ddd",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 18,
+      "ticks": 113,
+      "events": 2396,
+      "stateHash": "fcea40900b477b6655d9735589e2b570d7049580f8f8238f321de9ef7685f16f",
+      "eventHash": "21ded77b68eee834cdffdc8c21d7fd6e9a4294e3249b202eeec9eadc439692dc",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 19,
+      "ticks": 111,
+      "events": 2429,
+      "stateHash": "c213bd462d6806ccaa21a867ff271946844ca82511588fa1219fd44de434cfd9",
+      "eventHash": "f61f343fae035d71754ebae5e5c3248fb635ab882d6f6feb3a4c34561a796a2e",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 20,
+      "ticks": 111,
+      "events": 2581,
+      "stateHash": "1467841029d854a54508c453d61a2313a498d9973749d013f53766dfad0b4ee3",
+      "eventHash": "c8ab021f62eb25c7a2289ed98386c0bc9868542d98196898f78e203cf6dd7a03",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 21,
+      "ticks": 111,
+      "events": 2643,
+      "stateHash": "bed981006d6eed5d3b72e5dafe74148d19a84c176da3585a1d693aa355155bd8",
+      "eventHash": "9de9b630761acaf7e987e5edaf2adcfd544a94b7512ea278d41bace481064d2f",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 22,
+      "ticks": 116,
+      "events": 2466,
+      "stateHash": "e52ee5ffdd773541cc840f27dc927b05f3c0468b7ccfc6be4e89ef3f6d6daf8b",
+      "eventHash": "51797658cd9866700b80f51fa9a072678fa5de8092b196508acdda09f6e02ca1",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 23,
+      "ticks": 116,
+      "events": 2545,
+      "stateHash": "e954057dfde1d5594f366d3f04fc6e9038d2e37c8d2c18e5d1d015ebec0ff4e1",
+      "eventHash": "74d87090464435d933c8397707c88e8e9c8d0ee6a923f6b57aaec913ca482df1",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 24,
+      "ticks": 113,
+      "events": 2478,
+      "stateHash": "aca25013647b0fc4cf777e7065ed989c79bca0ffaa5fac4aa75b2bbf9dcdb033",
+      "eventHash": "a177e4f9ef2dcce4928b7023c06bb91579560e62a8c3631fbeb7fcee487f6653",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 25,
+      "ticks": 111,
+      "events": 2365,
+      "stateHash": "4ac8555de7dfb8b98cbe4494572e9f95cdd4411dcd35482296a54fa2c3776191",
+      "eventHash": "15d6213569c32cdc512747f0b6e8a72f07b62f4afef008d827a3233f55543497",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 26,
+      "ticks": 111,
+      "events": 2439,
+      "stateHash": "d6f3b6938de27779ad924dc72db693dcaabacdb612287b5f885322b080048208",
+      "eventHash": "8025e6dbddf88f8c927f1d3247d801e7badf37ad9ca3c5ac744e90e386c78d1c",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 27,
+      "ticks": 118,
+      "events": 2721,
+      "stateHash": "cd494b532751c88ccae073e9ed2a3b7741fb1588bc32d847490e17ca42c04a50",
+      "eventHash": "b7a22637e3a1a7c92bb057bd71981716e016cbad2bad20abd2357397f88d6ddd",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 28,
+      "ticks": 114,
+      "events": 2481,
+      "stateHash": "627688439f71d472e986d21f8d130df632478349249e3cbda42f58d313ce4256",
+      "eventHash": "e20d3322abbf0bfe59d5680c66a16f86faaef560ec1f8bc8a204f7bd1074c01c",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 29,
+      "ticks": 113,
+      "events": 2630,
+      "stateHash": "e86f7647249406678a37b6e8900d74ee61ae122e7a35737678f3a579db6fcffc",
+      "eventHash": "1669801c5c69c8de53ed634f9d02034806ca425b325e0d8fecfc0ff455167f64",
+      "result": "playerWin"
+    },
+    {
+      "variant": "distinct",
+      "seed": 30,
+      "ticks": 111,
+      "events": 2574,
+      "stateHash": "f8135e111c685364ae29b37f6cad82de5113ceafe58d4ae67d9f6e83bef0cb27",
+      "eventHash": "3a94359bff3516c272f2a82b337dd4ac8c926f10d82c781ab54c2bdd0a03bae1",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 1,
+      "ticks": 126,
+      "events": 4212,
+      "stateHash": "7b3f0f72d60b2f58476ecf320a43533e88d9f04350332a780bb59b6c8a12715f",
+      "eventHash": "01225a55094f97142e2815fadd88046f4c6ff98dc81cf1db8bc3f007896f62d9",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 2,
+      "ticks": 116,
+      "events": 4141,
+      "stateHash": "f3de5c3a535dae7a5ccb5b148d67498226c88c82d8d187bd92cfd5ba771f02b0",
+      "eventHash": "47db9ac4b7ef63d8431dc1957a9fd7dd18db417dc032465048ffaf943e152f76",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 3,
+      "ticks": 121,
+      "events": 4147,
+      "stateHash": "391fc37484f011a14b8e3f7d7176d9a8c4df36e7195496db919a8a0ee8a7bbff",
+      "eventHash": "d39818bab72729ea2c996d64251675bc54bcc815785984e3c0efffcb1ec1977b",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 4,
+      "ticks": 131,
+      "events": 4297,
+      "stateHash": "b2607f57579906e18e42c3a62a8e37089cbc363d30d74492062ce99335a0470a",
+      "eventHash": "8e75d4a4a1653a4a191c67a8de9aefbcfeb90395bf2fac5f1a194b8e28ca95ee",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 5,
+      "ticks": 120,
+      "events": 4236,
+      "stateHash": "5c2430b5aa4f8645db710936186b8bbd43401356cdffc49c80a02205d59c9637",
+      "eventHash": "1d814a4c47d38a2942027dc030121b336e6d98b23f5cdaf963810db0ddf56509",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 6,
+      "ticks": 116,
+      "events": 4189,
+      "stateHash": "856aa35cc78c0517de47b98472b432f3cfaa97dc009d5b87f5a794c7b1445c29",
+      "eventHash": "382aba615b65c376f90f705d0f91c2762dbd878971bed6d2a15ded4c573a8e2c",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 7,
+      "ticks": 116,
+      "events": 4213,
+      "stateHash": "a826aed0b9f12b75fd164cd7642f183ceb634589d79e5312c5c1012a04e4a12a",
+      "eventHash": "03e2aaaf1cf213c0a57f290672ec045357e5e490bdb433524624ee77311ea7af",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 8,
+      "ticks": 116,
+      "events": 4140,
+      "stateHash": "f9cb8af6c3f4adfcc6d6cdb70345c1ff4c0e501b38ca35549d0445db244a6c9f",
+      "eventHash": "a3d43e6f83d52cde313413e5e11f66f97fc366c7ac7fdd94bc45695dde197459",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 9,
+      "ticks": 131,
+      "events": 4119,
+      "stateHash": "ead3822cf2a9ba26013028ef6b11d6010ead72c3494fb84c5dba23c44df5dfdb",
+      "eventHash": "fcc29bb20f46eb4085c04c24b05e9b4d6ffea80ea021809bb8a4b61a836176de",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 10,
+      "ticks": 136,
+      "events": 4244,
+      "stateHash": "bc259646cf99cccbdaf1e4f27b68ff01c9de0df9243c82f5f8d47e008fd784e4",
+      "eventHash": "c93a06c6e561e75725cca02e6ce5d09004e31d29db11bbe63bdc097ec755260e",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 11,
+      "ticks": 158,
+      "events": 4281,
+      "stateHash": "7cbf710ccce0d84b3bf2bbabce0787f71438a6d2a50a79331e61229f245db3ad",
+      "eventHash": "e2759d8d2e5b13dfab6f83f3f584f0ee07534002c90844618b98bb07629997e7",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 12,
+      "ticks": 136,
+      "events": 4183,
+      "stateHash": "a948625587d704f7078cfab92888d87799a9cd260e225c512e157d3b7799836f",
+      "eventHash": "b75295fa784a6cef5df4791b51a66e3ee0fab0b65ccb8d85307901e86050336d",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 13,
+      "ticks": 121,
+      "events": 4133,
+      "stateHash": "5fef089d542e615c3d14177189cb214d46cd964187ee44414723a20414542969",
+      "eventHash": "5e8c95ce3dc2d3e384b6d3eaab53d1871dd4866929a9f10eb100a76d24fba58b",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 14,
+      "ticks": 136,
+      "events": 4289,
+      "stateHash": "2f02ec83329f3d86fc43ea4008283c9d8c77ad184518c90f7c2446eedb7146e0",
+      "eventHash": "4af18f26fdcabb7a6c42aa64498a59126c0d5c54394a4fe31a4edf55bb7d49d7",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 15,
+      "ticks": 116,
+      "events": 4165,
+      "stateHash": "0bcff0f46f31cfd8debc7a6fd9074653b3bedcc2e1fe93dd7c81f0a44870d614",
+      "eventHash": "4d5f028149ff817dba7daa2d96ae53f5c1eb7869c8289710ffa85c032302e713",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 16,
+      "ticks": 131,
+      "events": 4126,
+      "stateHash": "19be8737d299b0514ed47ebb643bd19c0dc20e1ede06eb94167dc50b3ee770ec",
+      "eventHash": "fdf550f9239e24a22da8b700ff5f52b252f9f10e7989f84985c3507b3d7fb7c9",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 17,
+      "ticks": 116,
+      "events": 4129,
+      "stateHash": "5420107bdd1511548f51ffed847ec21e860ff552e656f1c74c44fb3be4dbb3ac",
+      "eventHash": "74c742eb14f27ae2ea4ecf03abf15bbe1b47a68b45c9bea766027d0f153dbe07",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 18,
+      "ticks": 158,
+      "events": 4378,
+      "stateHash": "5771af2012777cf3eb0a9454b8c723fedc62b01207957ce97292efe7cd44a1d6",
+      "eventHash": "fa03ec2e3768e761d8f8e955d6c954758690bae68864db1b8c607df679b614c6",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 19,
+      "ticks": 136,
+      "events": 4150,
+      "stateHash": "fbf7ea9faa36f7123f683b5100be743a319be52fab54bcf1e725bbca2641dec1",
+      "eventHash": "a0d881b03acc375b3e49bbb095ba204e79fef7148eb973a65399790463c46671",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 20,
+      "ticks": 116,
+      "events": 4064,
+      "stateHash": "8406c8fe89ad5059266f20f6a721ec3f079f1dcf539410e1f8eb5ca14a28bd39",
+      "eventHash": "0f02395523cb84387502489628cb1a94484088650b6755514a13593dd7219713",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 21,
+      "ticks": 136,
+      "events": 4098,
+      "stateHash": "be348af3a650551a5c11f26cc2ed99032b04671eb7304d1e85271236381b8e86",
+      "eventHash": "543512a4bcf1c004a2e59045a83eb2c14941096c5a6437ad40f336cb5b499ce2",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 22,
+      "ticks": 136,
+      "events": 4177,
+      "stateHash": "cc551049108e32603b03cec16f713e443f2ba577ef4dc6db2477add6b728f28e",
+      "eventHash": "6830613857496bf59c50ed7f879819c9cc6c5aa9ba9b1a2b9d7c506494073355",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 23,
+      "ticks": 121,
+      "events": 4186,
+      "stateHash": "0f57a42909a8a82ee7f04aba16a6b2a4b60dc1dc438f65aced4ea4fe09bc9db6",
+      "eventHash": "756309e79b349dd6be032f4d4d36196c572f50e64f75ff5e0bcff40115f19dd6",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 24,
+      "ticks": 189,
+      "events": 4367,
+      "stateHash": "a75d3893566af804524df3c4d459a82868e5bd31b490b54b60b3658a8faa24b3",
+      "eventHash": "ae03cda9a9383e37caf369a3e4b04ac29a982e0ea8fd6fa0146dfd01b644d177",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 25,
+      "ticks": 218,
+      "events": 4421,
+      "stateHash": "eca2da23194ddf7036c05c4566cf8ad6b10014582f2da9a971a5fd529f301430",
+      "eventHash": "ead64435e885f2f0209e60c03955af7b62a418cd741dc370affa8e60dee8fada",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 26,
+      "ticks": 116,
+      "events": 4019,
+      "stateHash": "2263b3792bdb1a528fd23b8d57ac45759530082361c38b8b4c23d605b7d16f8a",
+      "eventHash": "5a8ee72ca509c5499a2f48656f271fb3e602ba7725711f0ba3925216cc063843",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 27,
+      "ticks": 153,
+      "events": 4361,
+      "stateHash": "9baf3c54a13f2185d5708f7886863e8c1ac463823ab82f6e71b7639e8eed1c10",
+      "eventHash": "d4b2d9d486affbc9deddc50749f21fcc23d3203126653ae78703b7ac917d195e",
+      "result": "playerWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 28,
+      "ticks": 136,
+      "events": 3833,
+      "stateHash": "cb159d3cb92b49638ba1d7b3434a348c58ccdebdbbb91749091f37e1da6cf61e",
+      "eventHash": "c24a18e21b6c0f125ac6fd6ea8db4e1b11c966e7bd72888bcb2351d66f2f070a",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 29,
+      "ticks": 121,
+      "events": 4077,
+      "stateHash": "f3d044585c02110b7e246e7431d502c53be8a7a70be184bc6b4caa60728b7212",
+      "eventHash": "7acfe4b3926ac781ffa5b47711de05cca3f40199a0bd8c20a67509b0e8ddf004",
+      "result": "enemyWin"
+    },
+    {
+      "variant": "mirror",
+      "seed": 30,
+      "ticks": 126,
+      "events": 4241,
+      "stateHash": "ebe125532497d8b571002f791375b0120f4ec0ca1fe22f82863b1b9b0efc9a61",
+      "eventHash": "dbab98c13800f9591148df9f2a48611cd1778fe8bc12f034fd22a9052830cc46",
+      "result": "enemyWin"
+    }
+  ]
+}
