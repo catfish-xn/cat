@@ -1,0 +1,84 @@
+{
+  "base": "c109d4ebc24bb5de60c1adfa4cad2e5ca5e816fd",
+  "candidate": "b8438b91be43540f6965bdb4a949e80ae2fc6fa9",
+  "node": "v22.22.0",
+  "zlib": "1.3.1-470d3a2",
+  "method": "vite build, gzip9 per dist/assets/*.js, summed",
+  "totals": {
+    "base": 504905,
+    "candidate": 508744,
+    "probeUiLeaves": 507310,
+    "probeUiAll": 507387
+  },
+  "net": 3839,
+  "split": {
+    "uiLeaves": {
+      "revertedFiles": [
+        "src/persistence/save-controls.ts",
+        "src/replay/replay-panel.ts"
+      ],
+      "b9": 2405,
+      "u7": 1434
+    },
+    "uiAll": {
+      "revertedFiles": [
+        "src/persistence/save-controls.ts",
+        "src/replay/replay-panel.ts",
+        "src/stats/stats-panel.ts",
+        "src/stats/combat-feedback-renderer.ts",
+        "src/presentation/combat-status.ts",
+        "src/presentation/combat-fx.ts",
+        "src/presentation/fx-plan.ts",
+        "src/rendering/BoardScene.ts",
+        "src/rendering/combat-feedback.ts",
+        "src/rendering/match-session.ts",
+        "src/rendering/replay-view.ts",
+        "src/rendering/strategy-panel.ts"
+      ],
+      "b9": 2482,
+      "u7": 1357
+    }
+  },
+  "budget": {
+    "b9": {
+      "median": 9000,
+      "stop": 11700
+    },
+    "u7": {
+      "median": 3500,
+      "stop": 4550
+    },
+    "totalStop": 552191
+  },
+  "boundaries": [
+    "Probe trees are non-shipping estimates built without typecheck; reverted files keep the base implementation against new data shapes.",
+    "gzip and tree shaking are not additive: the B9/U7 split is an attribution, not two independent measurements; the net total is exact.",
+    "src/m6/application.ts (D6-A non-visual integration) and all simulation/persistence/replay/stats aggregation stay in B9 in both probes."
+  ],
+  "files": {
+    "base": [
+      {
+        "file": "index-px3kamYK.js",
+        "gzip9": 504905
+      }
+    ],
+    "candidate": [
+      {
+        "file": "index-x4O1OA_S.js",
+        "gzip9": 508744
+      }
+    ],
+    "probeUiLeaves": [
+      {
+        "file": "index-C7FQG0tj.js",
+        "gzip9": 507310
+      }
+    ],
+    "probeUiAll": [
+      {
+        "file": "index-B2cS8IiX.js",
+        "gzip9": 507387
+      }
+    ]
+  }
+}

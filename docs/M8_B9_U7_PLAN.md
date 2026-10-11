@@ -88,3 +88,25 @@
 5. 全部 B9 延期恢复、浏览器/性能/比较器，证据、预算、完整 CI、送审。
 
 每步提交前跑受影响 vitest、typecheck、对应浏览器脚本；不扩大 skip，不改阈值。
+
+## 8. 首轮审计（固定 abd2ed8）处理表
+
+完整审计报告及 `/tmp/n2-independent` 复现材料在实现方环境不可访问（PR #29 也未附）；缺少原篡改向量清单、双轻语原始构造与 P2-6 原失败日志。以下按审计结论文字复建反例，未受影响的证据（180 条单测、旧库 32、U7、Herald）复用。
+
+| 编号 | 处理 | 提交 | 验证 |
+| --- | --- | --- | --- |
+| N2-P2-1 | golden 迁移审计逐包绑定：raw（按旧新映射：暴击首包、重定向子包、溢出弹射、raw 阶段带父包）、完整来源（含实例与父装备）、actionSeq、ordinal、派生 packetId 与父链；治疗整体比对 HealOutcome；施法比对能力；活动完整记录；状态起止刻。不扩大忽略路径。 | 21510af | `tests/m8-b9-golden-tamper.test.mjs` 正控（第1、5轮）＋ raw（非暴击/暴击）、来源实例、父装备、actionSeq、packetId、治疗来源六种篡改均拒绝；现有轨迹重验后逐字节复现 golden。 |
+| N2-P2-2 | `tests/m6-stats-browser.cjs` 夹具改为冻结 DamageOutcome/HealOutcome，原数值（238/238/100/138；100/30/70）不变；新增活动生命周期 DOM 检查。生产读取未放宽。 | 21510af | 18 项通过；旧形状夹具在生产代码下仍报错（负控）。 |
+| N2-P2-3 | 统计面板与 `combatEventText` 接入 `activityChanged`。 | 21510af | `tests/m8-b9-activity-log.test.ts`：真实狙神 seed42 范德尔引导，现场与回放 seek 账本一致，每事件一行、含“引导”、开始行含结束刻、无状态行重复；统计浏览器生命周期检查。 |
+| N2-P2-4 | `statusChanged` 只携带本次实际变更的贡献；已生效的同键改为 `refreshed`；界面直接读该贡献，不排序猜测。 | 510ea7f | 双轻语反例固定：第 16 刻刷新分别报 i0/76、i1/76；强弱灼烧部分结束；弓测试原因更新；golden 经完整绑定审计重录（基线始终为 pre-B9 归档），复现模式逐字节一致。 |
+| N2-P2-5 | `admitArchives`：进入回放列表前整档路由并逐记录核验版本块、可恢复上下文、轮次与事件哈希；坏档整档隔离并提示/计数；打开时验证保留。 | 8556114 | 好档整档进入；错误 schema/contentVersion/contentDigest、版本块 digest/rules、局 digest、eventHash、roundId 八种坏档各自隔离。 |
+| N2-P2-6 | 跨组共享对象按路径引用运输，页面内在计时前还原为同一对象；值图、别名与测量边界不变，不 JSON 化、不复制拆散。 | 8556114、337d7b6（仅报告字段） | `docs/evidence/m8-b9/p2-6-transport.json`：abd2ed8 原运输复现别名拒绝；abd2ed8＋新运输进入全部计时门；HEAD 原门禁：本地 headless shell（CI 同类）全部门通过（capture p95 41.1/50）；本地完整 Chromium 一次 capture p95 65.9 未过（12 样本中前 2 个超 50，其余 34.6–37.8）且有 favicon 404。各仅一次样本，未区分浏览器类型与波动，以同 SHA 候选 CI 为准。HEAD 无跨组共享对象（sharedReferences 0）。运输单测 25 项。 |
+| P3 坏 JSON 提示残留 | 非兼容性错误包装为 invalid-data 视图，替换旧提示。 | 8556114 | U7 脚本坏 JSON 步骤：提示变“文件数据损坏”且对局不变，24 项。 |
+| 拖拽首失败 | 已修，不重复施工：空旧档区默认隐藏，避免面板变长导致原生拖拽准备失败。 | cbc7589 | CI #227（eb6e761）：input 42、触摸完整应用路线、layout、storage 35、legacy 32、U7 22 通过。 |
+| sniper 超时 | 独立性能问题，未重跑求绿、未改 180 秒。 | 06560e1（证据） | `docs/evidence/m8-b9/sniper-replay-timing.json`：节点2基线 c109d4e 同工作量（182/11930）同样超时（184.45 s）；同提交 abd2ed8 两次 138/187 s。不是节点2引入，也未排除。 |
+
+冻结规则三项解释（状态结束分组、gainMana 拒绝、raw 阶段）以审计全文判断为准，不因“无新增批准请求”推定已获认可。
+
+预算（`docs/evidence/m8-b9/budget.json`，`measure-budget.mjs` 可复现）：基线 c109d4e 504,905 B；候选 508,744 B，净增 +3,839 B（审计时 abd2ed8 为 +3,465 B）。探针分账：仅还原两个 U7 界面叶子时 B9 2,405 / U7 1,434；连同全部界面与表现层消费者一起还原时 B9 2,482 / U7 1,357。两种口径均低于中值（9,000/3,500）与停止线（11,700/4,550）。探针边界：探针树不做类型检查、不发布；gzip 与摇树不可加，分账属归因估计，只有净增是精确值；`src/m6/application.ts` 及全部非界面集成在两种口径下都计入 B9。
+
+如实记录：本地完整 Chromium 会请求 /favicon.ico 并得到 404 控制台错误，导致性能脚本 browser-errors 断言失败。CI 使用 headless shell，#169、#224 日志中无 404；本地换用 headless shell 后该错误消失。H1 仅告警，未改。
