@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 'use strict';
-/** B10 coverage matrix for the 44 M8 equipment definitions (M8_PLAN §7.2): contentId → source convention →
+/** B10 coverage matrix for the 44 M8 equipment definitions (M8_PLAN §7.1): contentId → source convention →
  * tests that name it, split by layer. Mechanical: a test is listed only when its source names the quoted id,
- * so a missing cell is a real gap, not a judgement. Writes docs/evidence/m8-b10/item-coverage.md (or --out). */
+ * so this is a retrieval index, not proof that a named test exercises the mechanism. Writes docs/evidence/m8-b10/item-coverage.md (or --out). */
 const fs = require('node:fs'), path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const out = (process.argv.find(arg => arg.startsWith('--out=')) || '').slice(6) || path.join(root, 'docs/evidence/m8-b10/item-coverage.md');
@@ -34,6 +34,14 @@ function testSources() {
   return fs.readdirSync(dir).filter(file => /\.test\.(ts|js|mjs)$/.test(file)).sort()
     .map(file => ({ file, text: fs.readFileSync(path.join(dir, file), 'utf8') }));
 }
+// Use actual runtime tags/entry points as the mechanism index, not invented IDs
+// or numeric evidence derived from the production formulas.
+function mechanismIds(item) {
+  return [...new Set([
+    ...item.effects.map(effect => effect.kind === 'mechanic' ? `mechanic:${effect.mechanic}` : `${effect.kind}${effect.stat ? `:${effect.stat}` : ''}`),
+    ...Object.keys(item.combatProgram || {}).sort().map(key => `combatProgram.${key}`),
+  ])];
+}
 (async () => {
   const items = await definitions(), sources = testSources();
   if (items.length !== 44) throw new Error(`Expected 44 M8 equipment definitions, found ${items.length}`);
@@ -49,14 +57,16 @@ function testSources() {
     const cells = LAYERS.map(([name, match]) => [...files.filter(match),
       ...CATALOG_WIDE.filter(wide => wide.layers.includes(name)).map(wide => `${wide.file}*`)]);
     LAYERS.forEach(([name, , required], index) => { if (required && !cells[index].length) gaps.push(`${item.id}:${name}`); });
-    rows.push(`| \`${item.id}\` | ${item.kind} | ${(item.conventionIds || []).join(', ') || '—'} | ${cells.map(list => list.length ? `${list.length}：${list.slice(0, 3).map(f => f.replace(/\.test\.\w+/, '')).join('、')}${list.length > 3 ? '…' : ''}` : '**缺**').join(' | ')} | ${files.length} |`);
+    const mechanisms = mechanismIds(item);
+    if (!mechanisms.length) gaps.push(`${item.id}:mechanismId`);
+    rows.push(`| \`${item.id}\` | ${item.kind} | ${(item.conventionIds || []).join(', ') || '—'} | ${mechanisms.map(id => `\`${id}\``).join('、')} | ${cells.map(list => list.length ? `${list.length}：${list.slice(0, 3).map(f => f.replace(/\.test\.\w+/, '')).join('、')}${list.length > 3 ? '…' : ''}` : '**缺**').join(' | ')} | ${files.length} |`);
   }
   const lines = [
     '# M8 B10 装备覆盖矩阵（自动生成）', '',
     `由 \`node scripts/m8-b10-item-coverage.cjs\` 生成；按测试源码统计，不运行测试；测试是否通过以同 SHA 的 \`npm test\` 为准。共 ${items.length} 件，${sources.length} 个测试文件。`,
-    '带 * 的文件遍历整个冻结目录（脚本校验其仍遍历 44 件）；其余文件按名提到该装备。前三列是 M8_PLAN §7.1 要求的 independentTest → combatTest → save/replayTest，“缺”即缺口；获取/经济列仅供参考（获取由通用组件池/掉落规则覆盖，不按件要求）。', '',
-    `| contentId | 类型 | 来源约定 | ${LAYERS.map(([name]) => name).join(' | ')} | 按名文件数 |`,
-    `| --- | --- | --- | ${LAYERS.map(() => '---').join(' | ')} | ---: |`, ...rows, '',
+    '带 * 的文件遍历整个冻结目录（脚本校验其仍遍历 44 件）；其余文件按名提到该装备。来源约定对应 ruleId，机制索引列出实际 effects 标签和 combatProgram 入口，不冒称独立数值依据。前三个测试列是 M8_PLAN §7.1 要求的 independentTest → combatTest → save/replayTest；获取/经济列仅供参考。文件名匹配只是检索索引，具体独立预期与触发证明见 docs/M8_B4_STATUS.md 逐件表及实际测试结果。', '',
+    `| contentId | 类型 | 来源约定 | mechanismId（实际标签/入口） | ${LAYERS.map(([name]) => name).join(' | ')} | 按名文件数 |`,
+    `| --- | --- | --- | --- | ${LAYERS.map(() => '---').join(' | ')} | ---: |`, ...rows, '',
     `缺格（${gaps.length}）：${gaps.length ? gaps.join('、') : '无'}`, '',
   ];
   fs.mkdirSync(path.dirname(out), { recursive: true });

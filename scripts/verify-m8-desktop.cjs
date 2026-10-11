@@ -103,7 +103,13 @@ const viewports = [{ width: 1440, height: 1000 }, { width: 1440, height: 600 }, 
         let snapshot = await h.read(page), token = snapshot.tokens.find(t => t.visible && snapshot.state.preparation.units.some(u => u.id === t.id && u.team === 'player' && u.location.kind === 'board'));
         assert(token, 'visible player token');
         await page.mouse.move(token.screenX, token.screenY); await page.mouse.down(); await page.mouse.move(token.screenX + 30, token.screenY + 30, { steps: 5 });
-        await page.keyboard.press('Escape'); await page.mouse.up(); assert.deepEqual((await h.read(page)).state, snapshot.state); assert.equal((await h.read(page)).gesture, null);
+        await page.waitForFunction(id => window.__CAT_DEBUG__.read().gesture?.id === id, token.id);
+        // The product cancels a mouse drag released outside a valid cell. Escape
+        // dismisses dialogs/popovers; it is not a board-drag cancellation key.
+        const canvasBox = await page.locator('canvas').boundingBox(); assert(canvasBox);
+        assert(canvasBox.x > 4, 'visible gutter beside desktop canvas');
+        await page.mouse.move(canvasBox.x - 2, Math.max(2, Math.min(viewport.height - 2, token.screenY)), { steps: 5 });
+        await page.mouse.up(); assert.deepEqual((await h.read(page)).state, snapshot.state); assert.equal((await h.read(page)).gesture, null);
         const expectedSale = d.api.sellUnit(snapshot.state, token.id); assert(expectedSale.ok);
         await page.mouse.move(token.screenX, token.screenY); await page.keyboard.down('e'); await page.keyboard.down('e'); await page.keyboard.up('e');
         assert.deepEqual((await h.read(page)).state, expectedSale.state, 'E repeats do not sell another unit');
