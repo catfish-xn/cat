@@ -44,3 +44,24 @@ describe('B9 partial status end', () => {
     expect(effective[0].contributions.map(c => c.key)).toEqual([weakKey]);
   });
 });
+
+import { wearing, enemy, run } from './fixtures/m8-b4-items';
+import { combatEventText } from '../src/rendering/combat-feedback';
+describe('N2-P2-4 status events name the contribution they changed', () => {
+  it('two Last Whispers: the tick-16 refresh of i0 to 76 is reported as i0/76, never the other instance i1/61', () => {
+    const r = run(wearing(['last-whisper', 'last-whisper']), 20, [enemy('e', 1, 3, { armor: 100 })]);
+    const sunder = r.events.filter(e => e.type === 'statusChanged' && e.group.kind === 'sunder') as Extract<CombatEvent, { type: 'statusChanged' }>[];
+    const view = (e: typeof sunder[number]) => [e.tick, e.reason, e.group.contributions.map(c => [c.source.instanceId, c.appliedAtTick, c.expiresAtTick])];
+    expect(sunder.map(view)).toEqual([
+      [1, 'applied', [['i0', 1, 61]]], [1, 'applied', [['i1', 1, 61]]],
+      [16, 'refreshed', [['i0', 1, 76]]], [16, 'refreshed', [['i1', 1, 76]]],
+    ]);
+    const text = combatEventText(sunder[2] as never, id => id ?? '无')!;
+    expect(text).toContain('至第 76 刻');
+    expect(text).toContain('刷新');
+    // The event's effective summary is the authoritative post-change group; current state still holds both instances.
+    expect(sunder[2].group.effectiveSourceKey).not.toBeNull();
+    const current = r.state.units.find(u => u.id === 'e')!.mechanismState!.statuses.find(g => g.kind === 'sunder')!;
+    expect(current.contributions.map(c => c.source.instanceId).sort()).toEqual(['i0', 'i1']);
+  });
+});

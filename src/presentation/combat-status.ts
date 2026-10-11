@@ -164,12 +164,10 @@ export function statusBadges(combat: CombatState, unitId: string): { harmful: st
 
 /** Full provenance when the domain kept it: m8State/outcome carry parentItemInstanceId, legacy fields do not. */
 export const shieldSource = (layer: ShieldLayer): CombatOrigin => layer.m8State?.source ?? layer.source;
-/** replay2 statusChanged: applied/refreshed carry the post-change group (show its most recently applied
- * contribution); end events list exactly the ended contributions (show the first). */
+/** replay2 statusChanged names exactly the contributions it changed (applied, refreshed or ended); the first is the
+ * one this event is about. No ordering heuristic: the domain binds the event to its contribution. */
 export function eventContribution(event: Extract<LedgerCombatEvent, { type: 'statusChanged' }>): StatusContribution | undefined {
-  const contributions = event.group.contributions;
-  if (event.reason !== 'applied' && event.reason !== 'refreshed') return contributions[0];
-  return [...contributions].sort((a, b) => b.appliedAtTick - a.appliedAtTick || (a.key < b.key ? 1 : a.key > b.key ? -1 : 0))[0];
+  return event.group.contributions[0];
 }
 /** The unit an event is about (target of damage/heal/status/shield/activity/mana, actor of a cast). */
 export function eventUnitId(event: LedgerCombatEvent): string | null {
@@ -207,7 +205,7 @@ export function eventStatusName(event: Extract<LedgerCombatEvent, { type: 'statu
 }
 /** Harmful status kinds worth a short float on the board when applied. */
 export function appliedStatusFloat(event: LedgerCombatEvent): string | null {
-  if (event.type !== 'statusChanged' || event.reason !== 'applied') return null;
+  if (event.type !== 'statusChanged' || (event.reason !== 'applied' && event.reason !== 'refreshed')) return null;
   const kind = event.group.kind;
   return ['burn', 'wound', 'sunder', 'shred', 'stun', 'untargetable', 'damage-prevention'].includes(kind) ? STATUS_KIND_NAMES[kind] : null;
 }

@@ -127,14 +127,24 @@ const frozenExpiry = x => x.expiresAtTick !== null ? x.expiresAtTick : x.applica
 /** Per-contribution status lifecycle. Old events carried one contribution (or its contributionKeys) each; replay2
  * groups by target and kind, with end events listing exactly the ended contributions. */
 function statusFacts(events, replay2) {
-  const c = events.filter(e => e.domain === 'combat' && e.type === 'statusChanged'), rows = [], active = new Map();
+  const c = events.filter(e => e.domain === 'combat' && e.type === 'statusChanged'), rows = [], active = new Set();
   for (const e of c) {
     const end = ENDS.has(e.reason);
-    if (!replay2) { if (ACTIVITIES.has(e.status.kind)) continue; for (const key of e.status.contributionKeys ?? [e.status.key]) rows.push(end ? [e.tick, e.unitId, key, e.reason] : [e.tick, e.unitId, key, 'start', e.status.startsAtTick, e.status.expiresAtTick]); continue; }
-    const slot = JSON.stringify([e.group.targetId, e.group.kind]), keys = e.group.contributions.map(x => x.key), current = active.get(slot) ?? new Set();
-    if (end) { for (const key of keys) { assert(current.delete(key), `ended contribution ${key} was active`); rows.push([e.tick, e.group.targetId, key, e.reason]); } }
-    else { for (const x of e.group.contributions) if (!current.has(x.key)) rows.push([e.tick, e.group.targetId, x.key, 'start', x.appliedAtTick, frozenExpiry(x)]); }
-    active.set(slot, end ? current : new Set(keys));
+    if (!replay2) {
+      if (ACTIVITIES.has(e.status.kind)) continue;
+      // The pre-switch ledger said 'applied' for every application; one for an already-active key was a refresh.
+      for (const key of e.status.contributionKeys ?? [e.status.key]) {
+        if (end) { active.delete(key); rows.push([e.tick, e.unitId, key, e.reason]); continue; }
+        rows.push([e.tick, e.unitId, key, active.has(key) ? 'refresh' : 'start', e.status.startsAtTick, e.status.expiresAtTick]); active.add(key);
+      }
+      continue;
+    }
+    // N2-P2-4: each replay2 event names exactly the contributions it changed.
+    for (const x of e.group.contributions) {
+      if (end) { assert(active.delete(x.key), `ended contribution ${x.key} was active`); rows.push([e.tick, e.group.targetId, x.key, e.reason]); continue; }
+      assert.equal(active.has(x.key), e.reason === 'refreshed', `${x.key}: 'refreshed' exactly when the contribution was already active`);
+      rows.push([e.tick, e.group.targetId, x.key, e.reason === 'refreshed' ? 'refresh' : 'start', x.appliedAtTick, frozenExpiry(x)]); active.add(x.key);
+    }
   }
   return multiset(rows);
 }
@@ -283,9 +293,9 @@ function auditWith(folder, spellCrit) {
   const done = read(path.join(folder, 'capture-complete.json'));
   for (const [file, digest] of Object.entries(done.files)) assert.equal(sha(fs.readFileSync(path.join(folder, file))), digest, `${file} unchanged since capture`);
   assert.equal(done.oldCommit, OLD_COMMIT);
-  // Reproduce mode: once applied, the archived pre-switch golden is the baseline and the candidate must equal the committed golden.
-  const reproducing = fs.existsSync(ARCHIVE);
-  const goldenBytes = fs.readFileSync(reproducing ? ARCHIVE : GOLDEN), golden = JSON.parse(goldenBytes), candidate = structuredClone(golden), report = { builds: {} };
+  // Once applied, the archived pre-switch golden stays the baseline of this one migration (c109d4e -> replay2).
+  const archived = fs.existsSync(ARCHIVE);
+  const goldenBytes = fs.readFileSync(archived ? ARCHIVE : GOLDEN), golden = JSON.parse(goldenBytes), candidate = structuredClone(golden), report = { builds: {} };
   for (const build of BUILDS) {
     const previous = loadRoute(folder, 'old', build), current = loadRoute(folder, 'new', build);
     assert.deepEqual(frozen(previous), golden.routes[build], `${build}: old capture reproduces the exact current golden`);
@@ -336,7 +346,8 @@ function auditWith(folder, spellCrit) {
   }
   candidate.note = `${golden.note ?? ''} B9 version switch (schema6/m8-14.24b-v1/s13-14.24b-m8-v1, save2/replay2) re-records hashes only: commands, settlements, resources and every ledger fact are unchanged (docs/evidence/m8-b9/golden/audit.json); the previous golden is archived as pre-m8-b9.`.trim();
   write(path.join(folder, 'candidate.json'), candidate);
-  if (reproducing) assert.equal(sha(fs.readFileSync(path.join(folder, 'candidate.json'))), sha(fs.readFileSync(GOLDEN)), 'recapture reproduces the committed golden byte for byte');
+  // A reproduction is a candidate byte-identical to the committed golden; only a reproduction may be recorded as evidence.
+  const reproducing = archived && sha(fs.readFileSync(path.join(folder, 'candidate.json'))) === sha(fs.readFileSync(GOLDEN));
   const result = { reproducedCommittedGolden: reproducing, kind: 'm8-b9-version-switch-golden-v1', oldCommit: OLD_COMMIT, capture: done, previousGoldenSha256: sha(goldenBytes),
     candidateSha256: sha(fs.readFileSync(path.join(folder, 'candidate.json'))), updaterSha256: sha(fs.readFileSync(__filename)), report };
   write(path.join(folder, 'audit.json'), result);
@@ -348,9 +359,10 @@ function apply(folder, reviewed) {
   assert.equal(sha(auditBytes), reviewed, 'unreviewed or changed audit');
   const result = JSON.parse(auditBytes), candidateBytes = fs.readFileSync(path.join(folder, 'candidate.json')), goldenBytes = fs.readFileSync(GOLDEN);
   assert.equal(result.updaterSha256, sha(fs.readFileSync(__filename)), 'updater changed after audit');
-  assert.equal(sha(candidateBytes), result.candidateSha256); assert.equal(sha(goldenBytes), result.previousGoldenSha256, 'golden changed after audit');
-  if (fs.existsSync(ARCHIVE)) assert.equal(sha(fs.readFileSync(ARCHIVE)), result.previousGoldenSha256, 'never overwrite archive');
-  else fs.writeFileSync(ARCHIVE, goldenBytes, { flag: 'wx' });
+  assert.equal(sha(candidateBytes), result.candidateSha256);
+  // The baseline is the archive once it exists (never overwritten); before that, the golden being replaced.
+  if (fs.existsSync(ARCHIVE)) assert.equal(sha(fs.readFileSync(ARCHIVE)), result.previousGoldenSha256, 'archive is the audited baseline');
+  else { assert.equal(sha(goldenBytes), result.previousGoldenSha256, 'golden changed after audit'); fs.writeFileSync(ARCHIVE, goldenBytes, { flag: 'wx' }); }
   fs.mkdirSync(EVIDENCE, { recursive: true });
   fs.copyFileSync(path.join(folder, 'audit.json'), path.join(EVIDENCE, 'audit.json'));
   fs.copyFileSync(path.join(folder, 'capture-complete.json'), path.join(EVIDENCE, 'capture-complete.json'));

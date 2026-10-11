@@ -17,9 +17,9 @@ export function recordNeutralReceipts(step: CombatStep): CombatStep {
   for(const e of step.events) {
     if(e.type==='death' && step.state.units.some(u=>u.id===e.unitId && u.unitKind==='neutral'))
       { changed=true;deaths.push({unitId:e.unitId,tick:e.tick,eventSeq:e.eventSeq!}); }
-    // B9 replay2: statusChanged carries the frozen StatusGroup. Applied/refreshed groups are the
-    // post-change state (a new neutral stun contribution opens a receipt); end events list exactly
-    // the contributions that ended (closing the open receipt with the same contribution key).
+    // B9 replay2: statusChanged names exactly the contributions it changed. A new neutral stun
+    // contribution opens a receipt (a refresh of an open one does not); end events close the open
+    // receipt with the same contribution key.
     if(e.type!=='statusChanged' || e.group.kind!=='stun') continue;
     const neutral=(ownerId:string)=>step.state.units.some(u=>u.id===ownerId && u.unitKind==='neutral');
     for(const c of e.group.contributions) {

@@ -5,7 +5,7 @@ import { selectTargets, startingRows, type TargetEnvironment } from './targeting
 import { targetingEnvironment } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
-import { ad, ap, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
+import { ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
 import type { AbilityTargeting, Effect, PeriodicTask, Source, StatusApplication, StatusContribution, SurvivalSample, TargetSelector } from './contracts';
@@ -54,7 +54,7 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
     amount: application.modifier?.value.kind === 'constant' ? application.modifier.value.amount : application.magnitudeBps,
     startsAtTick: group.contributions.find(c => c.key === identity.key)!.appliedAtTick, expiresAtTick: group.contributions.find(c => c.key === identity.key)!.expiresAtTick ?? 1201, contributionKeys: [identity.key] };
   target.statuses=[...target.statuses.filter(s=>s.key!==status.key),status].sort((a,b)=>compareText(a.key,b.key));
-  ctx.events.push({ type: 'statusChanged', tick: ctx.tick, group, reason: 'applied' });
+  ctx.events.push(changedStatusEvent(ctx.tick, result.groups, [identity.key], result.refreshed));
   if (application.kind === 'untargetable' && application.activation === 'immediate') {
     for (const enemy of ctx.units) if (enemy.team !== target.team && enemy.targetId === target.id) {
       clearMechanismTarget(ctx, enemy, actionSeq);
