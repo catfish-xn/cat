@@ -336,7 +336,7 @@
 
 ## 八人联机界面数据需求（2026-10-12，流水线 C → 流水线 A/B）
 
-界面已按 `src/rendering/online/protocol.ts` 的形状先行实现，并用 `fake-server.ts` 代替真服务器开发。T4/T5 的真实服务器与网络层需按同样形状下发；字段如有调整，请改 `protocol.ts` 并同步此表。
+界面已按 `src/rendering/online/protocol.ts` 的形状先行实现（开发期的 `fake-server.ts` 已在 C4 删除，现由浏览器内真房间 `server=local` 或 WebSocket `server=ws` 驱动）。T4/T5 的真实服务器与网络层需按同样形状下发；字段如有调整，请改 `protocol.ts` 并同步此表。
 
 | 对象 | 字段 | 含义 | 用途 | 验收 |
 | --- | --- | --- | --- | --- |
@@ -416,7 +416,7 @@
 | S→C | `lobby` | `view: LobbyView` | 连接建立即发一次，队列变化再发 |
 | S→C | `view` | `roomId`、`roomRevision`、`view: PlayerView` | 房间任何变化都发（白名单公开数据） |
 | S→C | `state` | `roomId`、`round`、`seatRevision`、`state: MatchState` | 只发本席私有状态；`seatRevision` 是下一条 `command` 必须带的值 |
-| S→C | `combat` | `roomId`、`round`、`battleId`、`frames: CombatFrame[]` | 本席本轮战斗帧，每轮一次 |
+| S→C | `combat` | `roomId`、`round`、`battleId`、`frames: CombatFrame[]`，可选 `part`、`total` | 本席本轮战斗帧，每轮一场。整条超过 1 MiB 时按 200 帧一包连续发送，`part` 为 1..`total`，客户端按序拼回（C4） |
 | S→C | `receipt` | `commandId`、`ok`、`result` 或 `reason`+`detail` | 每条客户端消息恰好一条回执 |
 | S→C | `error` | `code`、`message`、`commandId\|null` | 无法对应到回执的连接级错误 |
 
@@ -459,5 +459,6 @@
 ### 需要用户决定 / Codex 配合的事项
 
 - **战斗帧体积（P0，影响 C4 是否可用）**：`CombatFrame.state` 是每 tick 一份完整 `MatchState`。真实测量（`tests/server/net/server.test.ts` 整局用例）：一局空闲对局下发给单席约 105 MB，单条 `combat` 最大 13.5 MB，17 场战斗共 2873 帧。局域网可跑通，公网不可接受。建议：由规则侧（SR-B1-07）提供"战斗回放投影"——首帧完整状态 + 每 tick 只含 `combat` 子状态或事件账本，客户端按 `LedgerCombatEvent` 播放；或至少去掉帧内与战斗无关的字段。决定前 C4 不要按当前帧格式上线。
+- **C4 实测（压缩已开启）**：服务器开启 `permessage-deflate`（阈值 1 KiB，保留上下文）。整局空闲对局下发给单席：未压缩 103.9 MB → 线路上 7.3 MB；最大一场战斗 12.5 MB（拆成 3 包，最大单包 8.8 MB）。压缩后局域网与普通宽带可用，但浏览器仍要解析完整 JSON，SR-B1-07 的回放投影仍有必要。
 - **SR-B1-06 仍未实现**：`state` 消息目前是完整 `MatchState`（含本席随机流）。B2 按工单只发本席自己的状态；去随机流的私有投影仍需规则侧提供。
 - 启动方式：`npm run serve:game`（esbuild 打包到 `dist-server/game/main.mjs`，环境变量 `PORT`、`CAT_HOST`、`CAT_SEED`、`CAT_PREP_SEC`、`CAT_CHOICE_SEC`、`CAT_SETTLE_SEC`、`CAT_QUEUE_TIMEOUT_SEC`）；`npm run client:game -- ws://127.0.0.1:8787 名字` 跑一局空闲对局。TLS 由反向代理终止（T9）。

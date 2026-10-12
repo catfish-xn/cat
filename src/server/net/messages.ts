@@ -18,6 +18,8 @@ export const NET_PROTOCOL_VERSION = 1;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
+/** Outbound combat batching (work order C4 step 5): above maxBytes, frames go out framesPerPart at a time. */
+export const COMBAT_SPLIT = { maxBytes: 1024 * 1024, framesPerPart: 200 } as const;
 
 /* ---------------- client → server ---------------- */
 
@@ -76,7 +78,12 @@ export type ServerMessage =
   | { readonly type: 'lobby'; readonly view: LobbyView }
   | { readonly type: 'view'; readonly roomId: string; readonly roomRevision: number; readonly view: PlayerView }
   | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: MatchState }
-  | { readonly type: 'combat'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly frames: readonly CombatFrame[] }
+  /**
+   * One battle's frames. A battle whose message would exceed COMBAT_SPLIT.maxBytes is sent as `total`
+   * consecutive messages of COMBAT_SPLIT.framesPerPart frames, `part` 1..total; the client joins them in order.
+   * Both fields are absent when the battle fits in one message.
+   */
+  | { readonly type: 'combat'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly frames: readonly CombatFrame[]; readonly part?: number; readonly total?: number }
   | ReceiptMessage
   | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null };
 

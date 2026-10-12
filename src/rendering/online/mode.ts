@@ -1,25 +1,19 @@
 /** Online mode is opt-in via `?mode=online`; the single-player path stays the default. */
-import { FAKE_DEFAULTS, FakeServer, type FakeServerOptions } from './fake-server';
 import { LOCAL_ROOM_DEFAULTS, LocalRoomClient, type LocalRoomOptions } from './local-room-client';
 import type { GameClient } from './protocol';
+import { defaultWsUrl, WsGameClient, type WsClientOptions } from './ws-client';
 
 const currentSearch = () => (typeof window === 'undefined' ? '' : window.location.search);
 export function isOnlineMode(search = currentSearch()): boolean { return new URLSearchParams(search).get('mode') === 'online'; }
 
-/** `?server=fake` keeps the legacy in-memory mock (kept until C4); everything else runs the real room in the tab. */
-export type OnlineServerKind = 'local-room' | 'fake';
-export function readServerKind(search = currentSearch()): OnlineServerKind { return new URLSearchParams(search).get('server') === 'fake' ? 'fake' : 'local-room'; }
+/** `?server=ws` talks to the game server; everything else (`server=local`, the default) runs the real room in the tab. */
+export type OnlineServerKind = 'local-room' | 'websocket';
+export function readServerKind(search = currentSearch()): OnlineServerKind { return new URLSearchParams(search).get('server') === 'ws' ? 'websocket' : 'local-room'; }
 
 function numberParam(params: URLSearchParams, key: string, fallback: number): number {
   const value = Number(params.get(key)); return Number.isFinite(value) && params.has(key) ? value : fallback;
 }
-export function readFakeOptions(search = currentSearch()): FakeServerOptions {
-  const params = new URLSearchParams(search);
-  const num = (key: string, fallback: number) => numberParam(params, key, fallback);
-  return { seed: num('seed', FAKE_DEFAULTS.seed), preparationMs: num('prep', FAKE_DEFAULTS.preparationMs / 1000) * 1000,
-    choiceMs: num('choice', FAKE_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', FAKE_DEFAULTS.settlementMs / 1000) * 1000, myName: params.get('name') ?? FAKE_DEFAULTS.myName, botHp: num('bots', FAKE_DEFAULTS.botHp) };
-}
-/** Same URL parameters as the fake (`prep/choice/settle/seed/name`, seconds) plus the debug-only `faultAt` round. */
+/** URL parameters `prep/choice/settle/seed/name` (seconds) plus the debug-only `faultAt` round. */
 export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions {
   const params = new URLSearchParams(search);
   const num = (key: string, fallback: number) => numberParam(params, key, fallback);
@@ -28,6 +22,14 @@ export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions
     choiceMs: num('choice', LOCAL_ROOM_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', LOCAL_ROOM_DEFAULTS.settlementMs / 1000) * 1000,
     myName: params.get('name') ?? LOCAL_ROOM_DEFAULTS.myName, faultAtRound: Number.isInteger(faultAt) && faultAt > 0 ? faultAt : null };
 }
+/** Server address: `?ws=ws://127.0.0.1:8787` when given, else `ws(s)://<this host>/ws` (the dev server proxies it). */
+export function readWsOptions(search = currentSearch()): WsClientOptions {
+  const params = new URLSearchParams(search);
+  const location = typeof window === 'undefined' ? { protocol: 'http:', host: '127.0.0.1:5173' } : window.location;
+  let storage: Storage | null = null;
+  try { storage = typeof sessionStorage === 'undefined' ? null : sessionStorage; } catch { /* storage blocked */ }
+  return { url: defaultWsUrl(location, params.get('ws')), storage, log: line => console.info(`[online] ${line}`) };
+}
 export function createGameClient(search = currentSearch()): GameClient {
-  return readServerKind(search) === 'fake' ? new FakeServer(readFakeOptions(search)) : new LocalRoomClient(readLocalRoomOptions(search));
+  return readServerKind(search) === 'websocket' ? new WsGameClient(readWsOptions(search)) : new LocalRoomClient(readLocalRoomOptions(search));
 }

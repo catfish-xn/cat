@@ -4,14 +4,15 @@
  * Nothing here decides rules; it only shows what the server sent.
  */
 import type { SessionChange } from '../../m6/contracts';
+import type { ReceiptFailure } from '../../server/net/messages';
+import type { MatchFailure, MatchState } from '../../simulation/match-types';
 import type { ReplaySnapshot } from '../../replay';
 import { Lobby } from './lobby';
 import { PlayersSidebar } from './players-sidebar';
-import type { GameClient, LobbyView, PlayerView } from './protocol';
+import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand } from './protocol';
 import { RankingOverlay } from './ranking';
 import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
-import type { FakeServer } from './fake-server';
 import type { OnlineBoardMounts } from '../app-shell';
 
 export interface OnlineHooks {
@@ -20,7 +21,21 @@ export interface OnlineHooks {
   clearInput(): void;
   status(message: string): void;
   changed?(change: SessionChange): void;
+  /** The server confirmed pending commands of mine; the state already shows them. */
+  confirmed?(commands: readonly ConfirmedCommand[]): void;
+  /** The server refused a pending command; `text` is set for network/room refusals, else `reason` is a rule failure. */
+  refused?(commandId: number, reason: MatchFailure | null, text: string | null): void;
 }
+/** Refusals that are not rule failures (docs/UI_REQUESTS.md B2 错误码表); everything else uses the offline wording. */
+const NON_RULE_REFUSALS: Partial<Record<ReceiptFailure, string>> = {
+  'seat-revision-mismatch': '画面已更新 · 请重新操作', 'stale-round': '回合已变化 · 请重新操作', 'resync-required': '画面已更新 · 请重新操作',
+  'unknown-seat': '席位不存在', 'seat-eliminated': '你已被淘汰，只能观看', 'room-phase': '当前阶段不能操作',
+  'no-room': '对局已不存在', 'wrong-room': '对局已更换，请刷新页面', 'not-authenticated': '连接未绑定席位 · 正在恢复',
+  'rate-limited': '操作过快 · 请稍后再试', 'invalid-message': '客户端发送了无效命令（请刷新页面）', 'commandId-conflict': '命令编号冲突（请刷新页面）',
+  'unsupported-protocol': '客户端版本过旧，请刷新页面',
+};
+const RECONNECTING = '连接中断，重连中…';
+const SUPERSEDED = '已在别处打开此席位 · 本页停止操作';
 type Mode = 'online-lobby' | 'active' | 'online-ended';
 
 export class OnlineApplication implements SceneApplication {
@@ -38,9 +53,7 @@ export class OnlineApplication implements SceneApplication {
   constructor(private readonly session: RemoteSession, private readonly client: GameClient, private readonly hooks: OnlineHooks, private readonly mounts: OnlineBoardMounts | null = null) {
     const app = document.getElementById('app')!;
     document.body.dataset.online = client.transport;
-    const fake = client.transport === 'fake' ? (client as FakeServer) : null;
-    this.lobby = new Lobby(app, { join: name => client.joinQueue(name), leave: () => client.leaveQueue(), start: () => client.startMatch(),
-      ...(fake ? { addFakeFriend: () => fake.addFakeFriend() } : {}) });
+    this.lobby = new Lobby(app, { join: name => client.joinQueue(name), leave: () => client.leaveQueue(), start: () => client.startMatch() });
     app.prepend(this.lobby.root);
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null);
     this.ranking = new RankingOverlay(document.body, () => this.again());
@@ -50,14 +63,48 @@ export class OnlineApplication implements SceneApplication {
     this.unlisten = client.listen({
       lobby: view => this.onLobby(view),
       view: view => this.onView(view),
-      state: state => { this.session.receiveState(state); this.hooks.refresh(); },
+      state: (state, confirmed) => this.onState(state, confirmed ?? []),
       combat: frames => { this.session.receiveCombat(frames); this.hooks.clearInput(); this.hooks.refresh(); },
+      refused: refusal => this.onRefused(refusal),
+      connection: status => this.onConnection(status),
     });
     this.syncMode();
   }
   get replay(): ReplaySnapshot | null { return null; }
   get isActive(): boolean { return this.mode === 'active' && !document.hidden; }
   private onLobby(view: LobbyView) { this.lobby.render(view); }
+  /** A push that only confirms my own commands keeps selection and panels (like a local command); anything else redraws. */
+  private onState(state: MatchState, confirmed: readonly ConfirmedCommand[]) {
+    const before = this.session.state;
+    if (confirmed.length && !this.session.playingBack && before.phase === state.phase && before.round === state.round) {
+      this.session.receiveState(state, confirmed.flatMap(command => command.events));
+      this.hooks.confirmed?.(confirmed);
+      return;
+    }
+    this.session.receiveState(state); this.hooks.refresh();
+  }
+  private onRefused(refusal: RefusedCommand) {
+    const text = NON_RULE_REFUSALS[refusal.reason] ?? null;
+    this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
+  }
+  private connectionText: string | null = null;
+  private onConnection(status: ConnectionStatus) {
+    const before = this.connectionText;
+    switch (status.kind) {
+      case 'online': this.connectionText = null; break;
+      case 'reconnecting': this.connectionText = RECONNECTING; break;
+      case 'superseded': this.connectionText = SUPERSEDED; break;
+      case 'seat-lost':
+        this.connectionText = null;
+        if (this.mode !== 'online-lobby') { this.backToLobby(); this.hooks.status('席位已失效（服务器重启或对局已结束）· 请重新匹配'); }
+        break;
+    }
+    this.session.offline = this.connectionText;
+    this.sidebar.connection(this.connectionText); this.lobby.connection(this.connectionText);
+    if (status.kind === 'reconnecting') this.hooks.status(`${RECONNECTING}（第 ${status.attempt} 次，${Math.round(status.delayMs / 1000)} 秒后）`);
+    else if (status.kind === 'superseded') this.hooks.status(SUPERSEDED);
+    else if (status.kind === 'online' && before !== null) this.hooks.status('已重新连接 · 画面已恢复');
+  }
   private onView(view: PlayerView) {
     this.view = view; this.sidebar.render(view);
     if (view.phase.kind === 'ended') {
@@ -82,9 +129,10 @@ export class OnlineApplication implements SceneApplication {
     else if (view.phase.kind === 'choice') this.hooks.status('请在倒计时内完成选择 · 超时由服务器代选');
     else if (view.phase.kind === 'settlement') this.hooks.status('回合结算 · 稍后自动进入下一回合');
   }
-  private again() {
-    this.ranking.hide(); this.client.reset(); this.mode = 'online-lobby'; this.lastPhase = '';
-    this.session.resume('ended'); this.session.pause('lobby'); this.hooks.clearInput(); this.syncMode();
+  private again() { this.client.reset(); this.backToLobby(); }
+  private backToLobby() {
+    this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.view = null;
+    this.session.skipPlayback(); this.session.resume('ended'); this.session.pause('lobby'); this.hooks.clearInput(); this.syncMode();
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
@@ -110,7 +158,7 @@ export class OnlineApplication implements SceneApplication {
   }
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
-  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, phase: this.view?.phase ?? null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
+  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, phase: this.view?.phase ?? null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   dispose() {
     if (this.disposed) return; this.disposed = true;
     document.removeEventListener('visibilitychange', this.visibility);
