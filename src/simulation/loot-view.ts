@@ -17,7 +17,8 @@ export function readLootView(state: Readonly<MatchState>): LootView {
   const drops: RevealedDropView[] = [];
   for (const drop of [...plan?.encounterPlan.drops ?? []].sort(compareLootFreezeSlots)) {
     const progress = loot.direct.find(value => value.dropId === drop.dropId);
-    const identity = { dropId: drop.dropId, encounterId: drop.encounterId, sourceUnitId: drop.sourceUnitId, roundId: drop.roundId, payload: { ...drop.payload } };
+    const paid = state.sharedPool && loot.receipts.find(receipt => receipt.dropId === drop.dropId);
+    const identity = { dropId: drop.dropId, encounterId: drop.encounterId, sourceUnitId: drop.sourceUnitId, roundId: drop.roundId, payload: { ...(paid ? paid.payload : drop.payload) } };
     if (progress?.status === 'granted') drops.push({ ...identity, status: 'granted', receiptId: progress.receiptId, allowedActions: [] });
     else if (progress?.status === 'revealed') drops.push({ ...identity, status: 'revealed', receiptId: null, allowedActions: [], reason: 'auto-grant-in-domain' });
     else if (progress?.status === 'pending-capacity') drops.push({ ...identity, status: 'pending-capacity', receiptId: null, allowedActions: [], reason: 'bench-full' });

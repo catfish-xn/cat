@@ -1,3 +1,4 @@
+import type { UnitLootPolicy } from './loot-runtime';
 import type { MultiplayerCommandResult, MultiplayerFailure } from './round-settlement';
 import { M8_VERSION } from './m8/version';
 import { freezeCombatInput } from './combat-input';
@@ -152,7 +153,7 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   const entered = needsAnomalyRecruitment(state) ? enterScheduledEvents(purchased) : { state: purchased, events: [] };
   return acceptEquipment(entered.state, [...plan.events, ...entered.events]);
 }
-export function sellUnit(state: MatchState, unitId: string): MatchCommandResult {
+export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
   if (state.phase !== 'preparation' && !capacity) return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
@@ -166,7 +167,7 @@ export function sellUnit(state: MatchState, unitId: string): MatchCommandResult 
       {kind:'unit-sold',unitId,context:capacity?'settlement-capacity':'preparation',goldGranted}),
     preparation:{...state.preparation,units:state.preparation.units.filter(unit=>unit.id!==unitId)} };
   const events: MatchEvent[] = [...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId}]:[])];
-  if (capacity) { const granted = grantDirectLoot(sold,false); sold=granted.state; events.push(...granted.events); }
+  if (capacity) { const granted = grantDirectLoot(sold,false,unitLootPolicy); sold=granted.state; events.push(...granted.events); }
   return acceptEquipment(sold,events);
 }
 export function setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
@@ -246,7 +247,7 @@ function enterLootChoice(state: MatchState): {state:MatchState;events:MatchEvent
   const pendingChoice=makeLootPendingChoice(descriptor);
   return {state:{...state,phase:'choice',combat:state.combat as FinishedCombat,pendingChoice},events:[{type:'choiceOpened',choice:pendingChoice}]};
 }
-function withCombat(initial: MatchState, combat: CombatState): { state: MatchState; events: MatchEvent[] } {
+function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: UnitLootPolicy): { state: MatchState; events: MatchEvent[] } {
   const revealed=revealMatchLoot(initial,combat), events=[...revealed.events];
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
@@ -254,7 +255,7 @@ function withCombat(initial: MatchState, combat: CombatState): { state: MatchSta
   const terminal=(!before.multiplayer && before.m8.round.isFinal) || planCatalogRoundEconomy({roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&unit.alive).length}).hpAfter===0;
-  const granted=grantDirectLoot(before,terminal); let state=granted.state; events.push(...granted.events);
+  const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);
   if (terminal) for (const descriptor of unresolvedLootChoices(state)) {
     const fallback=grantLootChoice(state,descriptor,descriptor.terminalFallbackDefinitionId,'terminal-fallback');
     state=fallback.state;events.push(...fallback.events);
@@ -268,19 +269,19 @@ function withCombat(initial: MatchState, combat: CombatState): { state: MatchSta
   const entered=enterScheduledEvents(settled,'after');
   return {state:entered.state,events:[...events,...entered.events]};
 }
-export function startMatchCombat(state: MatchState): MatchCommandResult {
+export function startMatchCombat(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const reason = matchStartFailure(state); if (reason) return fail(state, reason);
   const draw = nextRandom(state.battleSeedRngState);
   const combatInputBasis=freezeCombatInput(state,draw.word,state.resourceProvenance.entries.length);
   const started = createCombatWithEvents(combatInputBasis.inputs.preparation, buildStrategySnapshot(combatInputBasis.inputs), `round-${state.round}`, draw.word);
-  const next = withCombat({ ...state, combatInputBasis,battleSeedRngState: draw.state }, started.state);
+  const next = withCombat({ ...state, combatInputBasis,battleSeedRngState: draw.state }, started.state, unitLootPolicy);
   return accept(next.state, [...toLedgerEvents(started.events), ...next.events]);
 }
-export function stepMatch(state: MatchState): MatchStep {
+export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): MatchStep {
   if (state.phase !== 'combat') return { state, events: [] };
   // Online PvP is resolved only by the two-sided runner and an external receipt.
   if (state.multiplayer && state.m8.round.kind === 'pvp') return {state,events:[]};
-  const next = stepCombat(state.combat), settled = withCombat(state, next.state);
+  const next = stepCombat(state.combat), settled = withCombat(state, next.state, unitLootPolicy);
   const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
 }
@@ -348,7 +349,7 @@ function generateAnomalyOffer(ids: readonly string[], rngState: number): { offer
 const multiplayerFail = (state: MatchState, reason: MultiplayerFailure): MultiplayerCommandResult => ({ok:false,state,reason});
 /** Historical name retained by T3: choose the first offer, skipping only an empty anomaly target. */
 export function forfeitPendingChoice(state: MatchState, expectedRound: number,
-  expectedChoiceId: string | null, expectedGeneration: number | null): MultiplayerCommandResult {
+  expectedChoiceId: string | null, expectedGeneration: number | null, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {
   if (!state.multiplayer) return multiplayerFail(state,'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state,'seat-eliminated');
   if (expectedRound !== state.round) return multiplayerFail(state,'stale-round');
@@ -378,7 +379,7 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
     }
     const pending=current.pendingChoice!;
     if (!pending.offers.length) return multiplayerFail(state,'invalid-choice');
-    const selected=selectChoice(current,pending.choiceId,pending.generation,pending.offers[0]);
+    const selected=selectChoice(current,pending.choiceId,pending.generation,pending.offers[0],unitLootPolicy);
     if (!selected.ok) return multiplayerFail(state,selected.reason);
     if (!Number.isSafeInteger(selected.state.gold)) return multiplayerFail(state,'invalid-choice');
     // Existing choice commands already stamp their events; append only the new timeout marker.
@@ -388,7 +389,7 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
 }
 
 /** Claim only earned drops through existing grant functions, then discard capacity blockers. */
-export function claimOrDiscardLoot(state: MatchState, expectedRound: number): MultiplayerCommandResult {
+export function claimOrDiscardLoot(state: MatchState, expectedRound: number, unitLootPolicy?: UnitLootPolicy): MultiplayerCommandResult {
   if (!state.multiplayer) return multiplayerFail(state,'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state,'seat-eliminated');
   if (expectedRound !== state.round) return multiplayerFail(state,'stale-round');
@@ -402,7 +403,7 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number): Mu
       const granted=grantLootChoice(current,descriptor,first,'player-choice');
       current=granted.state; events.push(...granted.events);
     }
-    const granted=grantDirectLoot(current,false);
+    const granted=grantDirectLoot(current,false,unitLootPolicy);
     current=granted.state; events.push(...granted.events);
     const discarded=current.m8.loot.direct.filter(d=>d.status==='pending-capacity');
     if (discarded.length) {
@@ -420,7 +421,7 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number): Mu
     return acceptEquipment(current,events);
   } catch { return multiplayerFail(state,'invalid-loot'); }
 }
-export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string): MatchCommandResult {
+export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
   const choice = state.pendingChoice!;
   if (typeof definitionId !== 'string' || choice.step !== 'offer' || !choice.offers.includes(definitionId)) return fail(state, 'invalid-choice');
@@ -432,7 +433,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
     const next=enterLootChoice(selected);
     const events:MatchEvent[]=[...granted.events,{type:'choiceSelected',choiceId,definitionId,unitId:null},...next.events];
     if (next.state.phase==='choice') return accept(next.state,events);
-    const capacity=grantDirectLoot(next.state,false);
+    const capacity=grantDirectLoot(next.state,false,unitLootPolicy);
     const entered=enterScheduledEvents(capacity.state,'after');
     return acceptEquipment(entered.state,[...events,...capacity.events,...entered.events]);
   }
