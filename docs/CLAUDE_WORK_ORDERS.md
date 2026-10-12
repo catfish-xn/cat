@@ -342,6 +342,8 @@
 
 ## 派工单 C6：客户端改用紧凑回放播放战斗（CombatViewState 渲染）
 
+**状态：已交付，PR #52 于 2026-10-12 合入 multiplayer（221effc）。** 服务器只发 replay，旧 combat 帧与分包已删除；B8 提 PR 前先并入 origin/multiplayer。
+
 分支：`claude/c6-replay-client`，基于 `origin/multiplayer`（B7 PR #49 与 SR-B7-01 修复 PR #50 均已合入，可以开工）。
 
 补充（2026-10-12 晚）：PR #50 把当前 PvE 的 `m8.preparation.{roundId,encounterId,enemies}` 和 `roundResults[].interestBasis` 加进了私有白名单；`src/rendering/online/seat-view-adapter.ts` 现在仍把 `m8.preparation` 清空，请一并接入，让 PvE 准备阶段重新显示野怪站位、收入明细显示利息基数（SR-B7-02 客户端侧）。
