@@ -743,8 +743,8 @@ B 席位只对 DTO 做 `row = board.rows - 1 - row`、col 保持，互换 player
 
 ### 12.7 验收证据与范围
 
-同步基线为 `origin/multiplayer@23ec35a`（含 B3 PR #40）。实际 nvm Node **v22.23.3** / npm **10.9.9**：typecheck（build 内执行）、build、test:server-entry、verify-t2-node-entry、verify-t3-node-entry、verify-tp-node-entry 均通过，T1 既有状态/事件/RNG 轨迹哈希不变。
+最终同步基线为 `origin/multiplayer@25f1c29`（含 B3 PR #40、C4 PR #41）。实际 nvm Node **v22.23.3** / npm **10.9.9**：typecheck（build 内执行）、build、test:server-entry、verify-t2-node-entry、verify-t3-node-entry、verify-tp-node-entry 均通过，T1 既有状态/事件/RNG 轨迹哈希不变。
 
-TP 两文件 **23 例**；连同 T2/T3、B3 服务器/网络、商店/升星、单人经济/奖励/来源/跨轮/存档，共 **32 文件 491 个不同用例**完成验证。首次并行构建时新增八席集成例超过默认 5 秒（运行 8.4 秒），只为该新增例设 20 秒预算后，其所在文件 9 例复验通过；其余 31 文件 482 例原批次通过。独立 oracle 校验 404 张总量、8 张开场、40 格预留及按剩余份数加权的明确 RNG 数字；混合八席命令序列每步检查守恒且可重放。
+TP 两文件 **23 例**；连同 T2/T3、B3/C4 服务器/网络、商店/升星、单人经济/奖励/来源/跨轮/存档，最终一次回归 **33 文件 497 例全部通过**。新增八席集成例包含 24 场 PvE 与 4 场双方 PvP，单独设 20 秒预算，不改既有测试限额。独立 oracle 校验 404 张总量、8 张开场、40 格预留及按剩余份数加权的明确 RNG 数字；混合八席命令序列每步检查守恒且可重放。
 
 未改 src/server、界面、golden、单人无限商店行为或既有 m5-replay 超时；既有 Match 发奖路径只增加默认不启用的池策略依赖。未执行完整浏览器/性能验收。B5 服务编排接入、T5 网络 DTO/镜像验收、T4 目录外加时和 T7 机器人不在 TP 范围。
