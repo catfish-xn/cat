@@ -36,7 +36,8 @@ export function readWsOptions(search = currentSearch()): WsClientOptions {
   const params = new URLSearchParams(search);
   const location = typeof window === 'undefined' ? { protocol: 'http:', host: '127.0.0.1:5173' } : window.location;
   let storage: Storage | null = null;
-  try { storage = typeof sessionStorage === 'undefined' ? null : sessionStorage; } catch { /* storage blocked */ }
+  // localStorage (C7): the seat survives closing the tab; the key carries the server address.
+  try { storage = typeof localStorage === 'undefined' ? null : localStorage; } catch { /* storage blocked */ }
   return { url: defaultWsUrl(location, params.get('ws')), storage, log: line => console.info(`[online] ${line}`) };
 }
 export function createGameClient(search = currentSearch()): GameClient {

@@ -87,7 +87,7 @@ async function main() {
     await local.context().close();
 
     /* ---------------- 2. real server: takeover and reclaim ---------------- */
-    const a = await open('A', 'mode=online&server=ws&ws=ws://127.0.0.1:8788');
+    let a = await open('A', 'mode=online&server=ws&ws=ws://127.0.0.1:8788');
     const b = await open('B', 'mode=online&server=ws&ws=ws://127.0.0.1:8788');
     await a.fill('[data-debug="online:name"]', '甲'); await a.click('[data-debug="online:join"]');
     await b.fill('[data-debug="online:name"]', '乙'); await b.click('[data-debug="online:join"]');
@@ -97,7 +97,9 @@ async function main() {
     const seatA = await seatOf(a), seatB = await seatOf(b);
     check(seatA && seatB && seatA !== seatB, `A at ${seatA}, B at ${seatB}`);
     const url = a.url();
-    await a.goto('about:blank');
+    const contextA = a.context();
+    await a.close(); // the tab is closed, not reloaded
+    a = null;
     await waitRead(b, s => s.m6.seats.find(seat => seat.seatId === seatA)?.connected === false, 'A shown disconnected');
     const offline = await seatRow(b, seatA);
     check(offline.tag === '断线' && !offline.takeover, 'B sees A as 断线 before the takeover delay');
@@ -105,7 +107,10 @@ async function main() {
     const taken = await seatRow(b, seatA);
     check(taken.kind === '机' && taken.takeover && taken.tag === '接管中', 'B sees A as 机 (takeover style) + 接管中');
     await b.screenshot({ path: `${OUT}/3-b-sees-takeover.png` });
-    // Back in the same tab: the token in sessionStorage resumes the seat.
+    // A new tab on the same address (same browser profile): the token in localStorage resumes the seat.
+    a = await contextA.newPage();
+    a.on('pageerror', error => errors.push(`A2: ${error.message}`));
+    a.on('console', message => { if (message.type() === 'error') errors.push(`A2 console: ${message.text()}`); });
     await a.goto(url);
     const statusSeen = await a.waitForFunction(() => {
       const badge = document.querySelector('[data-debug="online:connection"]');

@@ -8,8 +8,8 @@ import type { ServerMessage } from '../../src/server/net/messages';
 import type { MatchState } from '../../src/simulation/match-types';
 import type { CombatReplay } from '../../src/server-entry';
 import type { ConfirmedCommand, ConnectionStatus, LobbyView, PlayerView, RefusedCommand } from '../../src/rendering/online/protocol';
-import { TOKEN_STORAGE_KEY, WsGameClient } from '../../src/rendering/online/ws-client';
-import { DamageResolver } from './helpers';
+import { tokenStorageKey, WsGameClient } from '../../src/rendering/online/ws-client';
+import { DamageResolver, TIMINGS } from './helpers';
 import { startServer, type NetHarness } from './net/helpers';
 import { toSeatPrivateView } from '../../src/server/room/projection';
 
@@ -84,7 +84,7 @@ describe('WsGameClient: pending commands', () => {
     harness = await startServer();
     const [a, b] = await seatTwo(harness);
     expect(a.client.transport).toBe('websocket');
-    expect(JSON.parse(a.storage.getItem(TOKEN_STORAGE_KEY)!).token).toEqual(expect.any(String));
+    expect(JSON.parse(a.storage.getItem(tokenStorageKey(harness.url))!).token).toEqual(expect.any(String));
     const before = a.last('state')!.state, statesBefore = a.count('state');
     const sent = a.client.send({ type: 'shopLock', locked: !before.shop.locked, generation: before.shop.generation });
     expect(sent).toEqual({ ok: 'pending', commandId: expect.any(Number) });
@@ -170,7 +170,7 @@ describe('WsGameClient: reconnect and resume', () => {
     harness = await startServer();
     const [a, b] = await seatTwo(harness);
     const seatA = a.last('view')!.view.mySeatId;
-    const reloaded = probe(harness.url, a.storage); // same sessionStorage: a reload, or a second tab of the same page
+    const reloaded = probe(harness.url, a.storage); // same localStorage: a reload, a reopened tab or a second tab of the same page
     await until(() => inMatch(reloaded), 'reloaded page in match');
     expect(reloaded.last('view')!.view.mySeatId).toBe(seatA);
     await until(() => a.client.connection?.kind === 'superseded', 'old tab superseded');
@@ -196,17 +196,55 @@ describe('WsGameClient: reconnect and resume', () => {
     c.sockets[0]!.close();
     await until(() => c.client.connection?.kind === 'online' && c.sockets.length === 2, 'reconnected');
     expect(c.client.hasToken).toBe(false);
-    expect(c.storage.getItem(TOKEN_STORAGE_KEY)).toBeNull();
+    expect(c.storage.getItem(tokenStorageKey(harness.url))).toBeNull();
     expect(c.seen.some(entry => entry.kind === 'connection' && entry.status.kind === 'seat-lost')).toBe(true);
     await until(() => c.last('lobby')!.view.queue.length === 0, 'queue empty');
     expect(c.last('lobby')!.view).toMatchObject({ joined: false, error: expect.stringContaining('退出队列') });
     // A token the server does not know (restart, ended match): back to matchmaking, token cleared.
     const stale = new MemoryStorage();
-    stale.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ url: harness.url, token: 'not-a-token' }));
+    stale.setItem(tokenStorageKey(harness.url), JSON.stringify({ url: harness.url, token: 'not-a-token' }));
     const d = probe(harness.url, stale);
     await until(() => d.seen.some(entry => entry.kind === 'connection' && entry.status.kind === 'seat-lost'), 'seat lost');
-    expect(stale.getItem(TOKEN_STORAGE_KEY)).toBeNull();
+    expect(stale.getItem(tokenStorageKey(harness.url))).toBeNull();
     expect(d.last('lobby')!.view.joined).toBe(false);
+  });
+});
+
+describe('WsGameClient: persistent seat token (C7)', () => {
+  it('keeps one token per server address; a closed tab reopened on the same address resumes its seat', async () => {
+    harness = await startServer();
+    const [a] = await seatTwo(harness);
+    const seatA = a.last('view')!.view.mySeatId;
+    const stored = JSON.parse(a.storage.getItem(tokenStorageKey(harness.url))!) as { url: string; token: string };
+    expect(stored.url).toBe(harness.url);
+    // Another server address never sees this seat.
+    expect(a.storage.getItem(tokenStorageKey('ws://127.0.0.1:1'))).toBeNull();
+    // Close the tab (dispose, socket gone), then open the same address with the same storage.
+    a.client.dispose();
+    await until(() => harness!.server.room!.state.seats.find(seat => seat.seatId === seatA)!.connected === false, 'seat shown disconnected');
+    const reopened = probe(harness.url, a.storage);
+    await until(() => inMatch(reopened), 'reopened page in match');
+    expect(reopened.last('view')!.view.mySeatId).toBe(seatA);
+    expect(harness.server.room!.state.seats.find(seat => seat.seatId === seatA)!.connected).toBe(true);
+  });
+
+  it('clears the token once the match ended, and when a new match revoked the seat', async () => {
+    harness = await startServer({}, new DamageResolver(() => 100, false));
+    const [a, b] = await seatTwo(harness);
+    harness.clock.advance(TIMINGS.preparationMs); // everyone dies at once → ended
+    await until(() => a.last('view')?.view.phase.kind === 'ended' && b.last('view')?.view.phase.kind === 'ended', 'ended');
+    expect(a.storage.getItem(tokenStorageKey(harness.url))).toBeNull();
+    expect(a.client.hasToken).toBe(false);
+    // B still holds a token written before the end in a second storage (an old tab): a new match revokes it.
+    b.storage.setItem(tokenStorageKey(harness.url), JSON.stringify({ url: harness.url, token: 'stale' }));
+    const c = probe(harness.url);
+    await until(() => c.last('lobby') !== null, 'lobby for C');
+    c.client.joinQueue('丙'); await until(() => lobbyJoined(c), 'C queued');
+    c.client.startMatch();
+    await until(() => inMatch(c), 'second match started');
+    await until(() => b.last('lobby') !== null && b.client.currentSeatId === null, 'B told its seat is gone');
+    expect(b.storage.getItem(tokenStorageKey(harness.url))).toBeNull();
+    expect(b.last('lobby')!.view.joined).toBe(false);
   });
 });
 
