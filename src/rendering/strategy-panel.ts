@@ -560,9 +560,13 @@ export class StrategyPanel {
     }
     section.append(grid);
     const bench = element('div', '', 'bench-grid');
-    for (let slot = 0; slot < state.preparation.benchSize; slot++) bench.append(this.button(`mobile:bench:${slot}`, `备 ${slot + 1}`, () => {
-      const selected = this.actions.selectedUnit(); if (selected) this.actions.deploy(selected, { kind: 'bench', slot });
-    }, !ready));
+    // Occupied cells and slots stay clickable: an allied occupant swaps with the selected unit (SR-C7-01).
+    for (let slot = 0; slot < state.preparation.benchSize; slot++) {
+      const occupant = state.preparation.units.find(unit => unit.location.kind === 'bench' && unit.location.slot === slot);
+      bench.append(this.button(`mobile:bench:${slot}`, occupant ? `备 ${slot + 1} ${UNIT_DEFINITIONS[occupant.definitionId].symbol}` : `备 ${slot + 1}`, () => {
+        const selected = this.actions.selectedUnit(); if (selected) this.actions.deploy(selected, { kind: 'bench', slot }); else this.actions.status('请先选择一个我方单位');
+      }, !ready));
+    }
     section.append(bench); this.root.append(section);
   }
   private clearChoiceDismissal(): void {

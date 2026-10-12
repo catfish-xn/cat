@@ -6,11 +6,14 @@
  * Plays 1-2 → 2-1 like a person: buy, deploy through the 部署 tab, take loot picks; records for every round
  * whether the preparation board shows monsters, whether the battle is against them and what the settlement
  * says was obtained; then selects two components in 装备 and presses 合成, logging the server receipt.
+ * C8: in the first 1-x preparation with a full board and two bench units, runs the SR-C7-01 mouse-drag swap
+ * checks of swap-checks.mjs against the server (screenshots swap-*.png).
  * Screenshots go to artifacts/c7/ (not committed). CHROMIUM overrides the browser path.
  */
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
+import { runSwapChecks, swapReady } from './swap-checks.mjs';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 const OUT = `${ROOT}artifacts/c7`;
@@ -47,12 +50,12 @@ const click = (page, name) => page.evaluate(debug => { const node = document.que
 const text = (page, selector) => page.evaluate(sel => document.querySelector(sel)?.textContent ?? null, selector);
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '8', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '200' }, /listening on/);
+  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '15', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '200' }, /listening on/);
   await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
   const browser = await chromium.launch({ executablePath });
   const errors = [];
   const receipts = [];
-  const report = { rounds: [], combine: null };
+  const report = { rounds: [], combine: null, swap: null };
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -89,6 +92,11 @@ async function main() {
         let cell = null;
         for (let row = zone.firstRow; row <= zone.lastRow && !cell; row++) for (let col = 2; col < state.preparation.board.columns && !cell; col++) if (!occupied.has(`${col},${row}`)) cell = `${col},${row}`;
         await click(page, `mobile:unit:${bench[0].id}`); await click(page, `deploy:${cell}`); await page.waitForTimeout(300);
+      }
+      // C8: unit swap on the real server, once, while the board is full at level ≥ 2.
+      if (!report.swap && swapReady((await read(page)).state)) {
+        await runSwapChecks(page, { check, shot: name => page.screenshot({ path: `${OUT}/${name}.png` }) });
+        report.swap = roundId;
       }
       const prep = await read(page);
       const enemiesOnBoard = prep.state.preparation.units.filter(u => u.team === 'enemy').map(u => u.definitionId);
@@ -164,6 +172,7 @@ async function main() {
     // Item 3: two components in inventory combine on the real server.
     check(report.combine.receipts?.some(entry => entry.receipt !== undefined && entry.ok && entry.kind === 'applied') && report.combine.inventoryAfter.length === 1,
       `combine accepted by the server: ${JSON.stringify(report.combine.receipts)} → ${report.combine.inventoryAfter}`);
+    check(report.swap, `swap checks ran online (round ${report.swap})`);
     check(errors.length === 0, `no page errors (${errors.join(' | ')})`);
   } finally { await browser.close(); }
 }
