@@ -12,6 +12,7 @@ import { RankingOverlay } from './ranking';
 import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
 import type { FakeServer } from './fake-server';
+import type { OnlineBoardMounts } from '../app-shell';
 
 export interface OnlineHooks {
   /** The server replaced my state outside a command: redraw everything. */
@@ -33,14 +34,15 @@ export class OnlineApplication implements SceneApplication {
   private disposed = false;
   private ignoreNextDelta = true;
   replaySelectedUnit: string | null = null;
-  constructor(private readonly session: RemoteSession, private readonly client: GameClient, private readonly hooks: OnlineHooks) {
+  /** @param mounts Online-only board-frame mounts (countdown above the board, shop dock below); the sidebar then keeps only the phase badge. */
+  constructor(private readonly session: RemoteSession, private readonly client: GameClient, private readonly hooks: OnlineHooks, private readonly mounts: OnlineBoardMounts | null = null) {
     const app = document.getElementById('app')!;
     document.body.dataset.online = client.transport;
     const fake = client.transport === 'fake' ? (client as FakeServer) : null;
     this.lobby = new Lobby(app, { join: name => client.joinQueue(name), leave: () => client.leaveQueue(), start: () => client.startMatch(),
       ...(fake ? { addFakeFriend: () => fake.addFakeFriend() } : {}) });
     app.prepend(this.lobby.root);
-    this.sidebar = new PlayersSidebar(app);
+    this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null);
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => this.hooks.changed?.(change));
@@ -59,7 +61,8 @@ export class OnlineApplication implements SceneApplication {
   private onView(view: PlayerView) {
     this.view = view; this.sidebar.render(view);
     if (view.phase.kind === 'ended') {
-      if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.hooks.clearInput(); this.hooks.refresh(); this.syncMode(); }
+      // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
+      if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
       if (view.ranking) this.ranking.render(view.ranking, view.mySeatId);
       return;
     }
@@ -100,6 +103,7 @@ export class OnlineApplication implements SceneApplication {
     const inGame = this.mode !== 'online-lobby';
     this.lobby.show(!inGame); this.sidebar.show(inGame);
     const strategy = document.getElementById('strategy-root'); if (strategy) strategy.inert = this.mode !== 'active';
+    if (this.mounts) { this.mounts.shopDock.inert = this.mode !== 'active'; this.mounts.countdown.hidden = !inGame; }
     const stats = document.getElementById('stats-root'); if (stats) stats.inert = !inGame;
     const canvas = document.querySelector<HTMLCanvasElement>('#board-root canvas'); if (canvas) canvas.style.pointerEvents = this.mode === 'active' ? '' : 'none';
   }
