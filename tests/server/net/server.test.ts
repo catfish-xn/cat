@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { PlaceholderBattleResolver, type BattleResolver } from '../../../src/server/room/battle-resolver';
 import { CLOSE_CODES } from '../../../src/server/net/server';
-import type { ServerMessage } from '../../../src/server/net/messages';
+import { COMBAT_SPLIT, type ServerMessage } from '../../../src/server/net/messages';
 import type { Receipt } from '../../../src/server/net/test-client';
 import { DamageResolver, TIMINGS } from '../helpers';
 import { expectOk, flush, hasKey, messagesOfType, seatTwo, startServer, type NetHarness } from './helpers';
@@ -69,7 +69,7 @@ describe('game server: visibility', () => {
     // Every combat message B got is B's own battle (frames carry B's seed, checked above) and only one per round.
     const combatsB = messagesOfType(b.inbox, 'combat');
     expect(combatsB.length).toBeGreaterThan(0);
-    expect(new Set(combatsB.map(combat => combat.round)).size).toBe(combatsB.length);
+    expect(new Set(combatsB.map(combat => combat.round)).size).toBe(combatsB.filter(combat => (combat.part ?? 1) === 1).length); // one battle per round; large ones arrive in parts
   }, 30_000);
 });
 
@@ -277,6 +277,8 @@ describe('game server: connection limits', () => {
   it('closes a connection that sends an oversized frame', async () => {
     harness = await startServer({ limits: { maxMessageBytes: 1024, maxMessagesPerWindow: 10_000 } });
     const client = await harness.connect();
+    // With permessage-deflate on, Node's built-in client reports 1006 if the close races the first (inflating) push; let it land first.
+    await client.waitFor(message => message.type === 'lobby');
     client.sendRaw(JSON.stringify({ protocolVersion: 1, commandId: 1, type: 'join', name: 'x'.repeat(2048) }));
     const closed = await client.closed;
     expect(closed.code).toBe(1009);
@@ -323,7 +325,8 @@ describe('game server: whole match over the wire', () => {
     const combatsA = messagesOfType(a.inbox, 'combat');
     expect(combatsA.length).toBeGreaterThan(0);
     expect(combatsA.every(combat => combat.frames.length > 0 && combat.frames.every(frame => Number.isInteger(frame.state.tick)))).toBe(true);
-    expect(new Set(combatsA.map(combat => combat.round)).size).toBe(combatsA.length); // one combat message per round per seat
+    expect(new Set(combatsA.map(combat => combat.round)).size).toBe(combatsA.filter(combat => (combat.part ?? 1) === 1).length); // one battle per round per seat
+    for (const combat of combatsA) if (combat.total !== undefined) expect(combat.frames.length).toBeLessThanOrEqual(COMBAT_SPLIT.framesPerPart);
     // Evidence for docs/UI_REQUESTS.md (wire size of full-state combat frames); the numbers are reported, not asserted.
     const bytes = (message: ServerMessage) => JSON.stringify(message).length;
     expect(Math.max(...a.inbox.map(bytes))).toBeGreaterThan(0);

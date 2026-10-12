@@ -10,27 +10,35 @@
  */
 import { COMBAT_TICK_MS } from '../../simulation/combat';
 import type { CombatState, LedgerCombatEvent } from '../../simulation/combat-types';
-import type { MatchCommandResult, MatchState } from '../../simulation/match-types';
+import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import type { UnitLocation } from '../../simulation/units';
 import { createMatch } from '../../simulation/match';
 import { MatchSession } from '../match-session';
 import type { ClientCommand, CombatFrame, GameClient } from './protocol';
 
+/** Why the last intent did not change the local state although it was not refused by the rules. */
+export type IntentNotice = { readonly kind: 'pending'; readonly commandId: number } | { readonly kind: 'offline'; readonly text: string };
+
 export class RemoteSession extends MatchSession {
   private frames: CombatFrame[] = [];
   private nextFrame = 0;
+  private notice: IntentNotice | null = null;
+  /** Set while the connection is down or superseded: commands are not sent and the reason is shown instead. */
+  offline: string | null = null;
   /** My authoritative state when playback started; every frame is displayed on top of it. */
   private playbackBase: MatchState | null = null;
   constructor(private readonly client: GameClient, initial: MatchState = createMatch()) { super(initial); }
-  /** Server pushed my authoritative state (outside combat playback). */
-  receiveState(state: MatchState): void {
+  /** Read once by the scene right after a command returned `ok: false`: pending/offline instead of a rule failure. */
+  takeNotice(): IntentNotice | null { const notice = this.notice; this.notice = null; return notice; }
+  /** Server pushed my authoritative state (outside combat playback); `events` are those of my commands it confirms. */
+  receiveState(state: MatchState, events: readonly MatchEvent[] = []): void {
     if (this.playingBack) this.skipPlayback(); // a newer state supersedes the battle still being played
     this.playbackBase = null;
     if (state === this.matchState) return;
     const before = this.matchState;
     if (state.round !== before.round || (!before.combat && state.combat)) this.combatLedger = [];
     this.matchState = state; this.accumulator = 0;
-    this.notify(before, [], 'command');
+    this.notify(before, this.record(events), 'command');
   }
   /** Server finished a battle; play its frames back one tick at a time. */
   receiveCombat(frames: readonly CombatFrame[]): void {
@@ -74,8 +82,12 @@ export class RemoteSession extends MatchSession {
     return events;
   }
   private intent(command: ClientCommand): MatchCommandResult {
+    this.notice = null;
+    if (this.offline !== null) { this.notice = { kind: 'offline', text: this.offline }; return this.blocked(); }
     if (this.paused || this.playingBack) return this.blocked();
     const result = this.client.send(command);
+    // Pending: nothing changes until the receipt and the state push after it (never spend gold ahead of the server).
+    if (result.ok === 'pending') { this.notice = { kind: 'pending', commandId: result.commandId }; return this.blocked(); }
     if (!result.ok) return result;
     const before = this.matchState;
     if (result.state.round !== before.round || (!before.combat && result.state.combat)) this.combatLedger = [];
