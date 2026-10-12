@@ -4,6 +4,7 @@ import { readRoundInfo } from '../simulation/round-selectors';
 import { encounterPreviewSection } from '../presentation/encounter-preview';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import type { RoundGains } from './online/round-gains';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
@@ -71,6 +72,8 @@ interface PanelActions {
   readonly status: (message: string) => void;
   readonly help: () => void;
   readonly highlight: (unitIds: readonly string[]) => void;
+  /** Online only (C7): this round's gains from two server states; the placeholder loot ledger is never shown online. */
+  readonly roundGains?: () => RoundGains | null;
 }
 
 function traitLine(definitionId: string): HTMLElement {
@@ -396,6 +399,7 @@ export class StrategyPanel {
   }
   /** U6: the domain's LootView only; PvE rounds after Start. Nothing here grants, settles or decides Continue. */
   private lootPanel(state: MatchState): HTMLElement | null {
+    if (isOnline()) return this.roundGainsPanel(state);
     if (state.m8.round.kind !== 'pve' || state.phase === 'preparation') { this.lootKey = ''; return null; }
     const view = readLootView(state);
     this.lootKey = JSON.stringify([view, state.pendingChoice?.choiceId ?? null]);
@@ -403,6 +407,22 @@ export class StrategyPanel {
     const names = new Map(readEncounterPreview(state)?.units.map(unit => [unit.unitId, unit.name]) ?? []);
     const labels = { sourceName: (id: string | null) => (id && names.get(id)) || '本回合野怪' };
     return state.phase === 'gameOver' ? lootTerminalSummary(view, labels) : lootPanelSection(view, labels);
+  }
+  /** Online: "本轮获得" after the battle (choice and settlement); a PvE round with nothing new says so. */
+  private roundGainsPanel(state: MatchState): HTMLElement | null {
+    const gains = this.actions.roundGains?.() ?? null;
+    this.lootKey = JSON.stringify([gains, state.pendingChoice?.choiceId ?? null]);
+    if (!gains) return null;
+    const parts = [
+      ...gains.units.map(unit => `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`),
+      ...gains.items.map(item => ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId),
+      ...(gains.gold > 0 ? [`${gains.gold} 金币`] : []),
+    ];
+    if (!parts.length && state.m8.round.kind !== 'pve') return null;
+    const section = element('section', '', 'loot-panel round-gains'); section.dataset.debug = 'online:round-loot';
+    section.append(element('h3', `本轮获得：${parts.join('、') || '无'}`));
+    if (state.phase === 'choice' && state.pendingChoice?.kind === 'component') section.append(element('p', '组件奖励选择后入库，会出现在这里。', 'loot-note'));
+    return section;
   }
   private renderTraits(state: MatchState): void {
     const list = element('section', '', 'trait-list'); list.dataset.debug = 'trait-panel';
