@@ -60,6 +60,7 @@ async function worker() {
     'snapshotForBattle', 'restorePlayerBattleSnapshot', 'compileBattle', 'restoreBattleInput',
     'startTwoSidedCombat', 'startTwoSidedCombatWithEvents', 'resolveTwoSidedBattle', 'proposeSettlement',
     'stepCombat', 'PLAYER_BATTLE_SNAPSHOT_VERSION', 'TWO_SIDED_BATTLE_VERSION', 'BattleValidationError',
+    'applyRoundSettlement', 'enableMultiplayerSettlement', 'ROUND_SETTLEMENT_VERSION', 'forfeitPendingChoice', 'claimOrDiscardLoot',
   ];
   assert.deepStrictEqual(Object.keys(api).sort(), expectedExports.sort());
   const actual = battle(api), expected = battle(reference);

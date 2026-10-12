@@ -542,8 +542,9 @@ export class BoardScene extends Phaser.Scene {
       : match.phase === 'choice' ? '构筑选择 · 完成组件 / 强化 / 异常 后继续'
       : match.phase === 'combat' ? '自动战斗 · 积累法力 并施法，商店与部署已锁定'
       : match.phase === 'gameOver' ? this.endText() : '回合结算 · 收入与经验 已到账，继续进入下一回合');
-    if (match.phase === 'settlement' || match.phase === 'gameOver') {
-      const labels = { playerWin: '胜利', enemyWin: '失败', draw: '平局', supply: '补给' }, result = match.roundResults.at(-1)!;
+    const result = match.roundResults.at(-1);
+    if ((match.phase === 'settlement' || match.phase === 'gameOver') && result) {
+      const labels = { playerWin: '胜利', enemyWin: '失败', draw: '平局', supply: '补给' };
       this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? '胜利' : '失败') : labels[result.result]);
       const reason = result.result === 'supply' ? '补给 · 无战斗' : result.result === 'playerWin' ? '胜利 · 不扣 HP' : result.result === 'draw' ? `平局 · 基础伤害 ${result.baseDamage}` : `败局 · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}`;
       this.incomeLabel.setText(`第 ${result.round} 回合 · ${labels[result.result]}\n收入 +${result.income} 金币 / 经验 +${result.xpAwarded}\n等级 ${result.levelBefore} → ${result.levelAfter}\n生命 ${result.hpBefore} → ${result.hpAfter} (-${result.hpLost})\n${reason}`);

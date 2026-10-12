@@ -8,7 +8,8 @@ import { COMBAT_SPLIT, type ServerMessage } from '../../src/server/net/messages'
 import type { MatchState } from '../../src/simulation/match-types';
 import type { CombatFrame, ConfirmedCommand, ConnectionStatus, LobbyView, PlayerView, RefusedCommand } from '../../src/rendering/online/protocol';
 import { TOKEN_STORAGE_KEY, WsGameClient } from '../../src/rendering/online/ws-client';
-import { DamageResolver } from './helpers';
+import { DamageResolver, emptyCombat } from './helpers';
+import { createMatch } from '../../src/simulation/match';
 import { startServer, type NetHarness } from './net/helpers';
 
 type Seen =
@@ -207,7 +208,9 @@ describe('WsGameClient: reconnect and resume', () => {
 
 describe('WsGameClient: combat parts', () => {
   it('joins a battle sent in parts back into one frame list, played once even after a resume snapshot', async () => {
-    const frames = 450;
+    // B3 frames are CombatState views; size the battle so it exceeds COMBAT_SPLIT.maxBytes whatever an empty frame weighs.
+    const frameBytes = JSON.stringify({ state: emptyCombat(createMatch(1)), events: [] }).length;
+    const frames = Math.ceil(COMBAT_SPLIT.maxBytes / frameBytes) + COMBAT_SPLIT.framesPerPart;
     harness = await startServer({}, new DamageResolver(() => 1, frames));
     const [a] = await seatTwo(harness);
     for (let fired = 0; fired < 200 && a.count('combat') === 0; fired++) { harness.clock.runNext(); await new Promise(resolve => setTimeout(resolve, 5)); }

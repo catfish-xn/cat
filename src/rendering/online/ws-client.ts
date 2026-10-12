@@ -264,7 +264,6 @@ export class WsGameClient implements GameClient {
     // A resume snapshot repeats the battle already played; show it only once.
     if (key === this.lastCombatKey) return;
     this.lastCombatKey = key;
-    if (frames.length) this.lastState = frames[frames.length - 1]!.state;
     this.listeners?.combat(frames);
   }
   private onReceipt(receipt: ReceiptMessage): void {

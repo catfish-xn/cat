@@ -6,7 +6,7 @@
 import type { BattleResolver } from './battle-resolver';
 import type { Clock, ClockHandle } from './clock';
 import { Room, ROOM_TIMING_DEFAULTS, type RoomTimings } from './room';
-import { ROOM_CAPACITY, type LobbyView, type SeatSpec } from './types';
+import { ROOM_CAPACITY, type LobbyView, type PvpMode, type SeatSpec } from './types';
 
 export interface LobbyOptions {
   readonly clock: Clock;
@@ -17,6 +17,8 @@ export interface LobbyOptions {
   /** Starts the match this long after the first join; null waits for an explicit start. */
   readonly queueTimeoutMs?: number | null;
   readonly botNames?: readonly string[];
+  /** Forwarded to every Room this lobby opens; see PvpMode (default `placeholder`). */
+  readonly pvpMode?: PvpMode;
   /** Called once per opened room, after its first round began (explicit start or queue timeout). */
   readonly onStart?: (room: Room) => void;
 }
@@ -60,7 +62,7 @@ export class Lobby {
     const seats = [...this.queue, ...bots];
     this.queue = [];
     this.current?.dispose();
-    this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed: this.options.seed, clock: this.options.clock, resolver: this.options.resolver });
+    this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed: this.options.seed, clock: this.options.clock, resolver: this.options.resolver, ...(this.options.pvpMode ? { pvpMode: this.options.pvpMode } : {}) });
     this.current.start();
     this.options.onStart?.(this.current);
     return { ok: true, room: this.current };

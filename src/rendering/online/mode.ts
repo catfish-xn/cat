@@ -20,7 +20,8 @@ export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions
   const faultAt = params.has('faultAt') ? num('faultAt', 0) : 0;
   return { seed: num('seed', LOCAL_ROOM_DEFAULTS.seed), preparationMs: num('prep', LOCAL_ROOM_DEFAULTS.preparationMs / 1000) * 1000,
     choiceMs: num('choice', LOCAL_ROOM_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', LOCAL_ROOM_DEFAULTS.settlementMs / 1000) * 1000,
-    myName: params.get('name') ?? LOCAL_ROOM_DEFAULTS.myName, faultAtRound: Number.isInteger(faultAt) && faultAt > 0 ? faultAt : null };
+    myName: params.get('name') ?? LOCAL_ROOM_DEFAULTS.myName, faultAtRound: Number.isInteger(faultAt) && faultAt > 0 ? faultAt : null,
+    pvpMode: params.get('pvp') === 'two-sided' ? 'two-sided' : LOCAL_ROOM_DEFAULTS.pvpMode };
 }
 /** Server address: `?ws=ws://127.0.0.1:8787` when given, else `ws(s)://<this host>/ws` (the dev server proxies it). */
 export function readWsOptions(search = currentSearch()): WsClientOptions {

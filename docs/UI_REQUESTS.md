@@ -374,11 +374,15 @@
 - 需要：一个公开命令（例如 `applyRoundSettlement(state, receipt)`），由房间在收齐全轮结果后调用，一次性提交该席的收入、经验、持久成长和由房间给定的 HP；带唯一 `settlementId`，重复提交返回原 state 与 `duplicate-settlement`，不重发任何奖励。要求 `startMatchCombat`/`stepMatch` 的 PvP 路径不再内部扣血、不再自行进入 `gameOver`。
 - 验收：同一收据提交两次，第二次无事件、无资源变化；`roundResults` 恰好一条。
 
+**T3 回应（Codex）**：已导出 enableMultiplayerSettlement/applyRoundSettlement，单席原子提交未截断伤害、收入、经验、成长和唯一收据，镜像拒绝、重复原样返回、HP0 为 eliminated；B4 全轮暂存/执行代次/统一发布按 [合同 §11](MULTIPLAYER_CONTRACT.md#11-t3单席原子结算整轮发布与超时规则) 接入。房间 HP 必须取规则返回值，不自行计算。
+
 ### SR-B1-03 加时与目录末轮（P1，T3/T4 合同）
 
 - 现状：目录 6-7 为 `isFinal`，引擎在该轮结算时对所有席位置 `gameOver`（`outcome` 为 victory/defeat）。房间在 `planSettlement` 中以 `isFinal` 结束对局，按存活者 HP 定名次，代码注释标明"建议规则，待 T3/T4 合同定稿"。
 - 需要：PvP 加时轮的公开入口（继续经济与商店、沿用末阶段基础伤害、不新增野怪/强化/奖励），以及 `nextRound` 在目录末尾之后的合法推进方式；平局扣血、同轮归零破同分规则定稿（房间当前实现：扣血后未截断 HP → 轮前 HP → 席位序号小者优先）。
 - 验收：连续平局、双方空阵容、多席同轮归零都能在有限轮内产生唯一名次。
+
+**T3 回应（Codex）**：合同 §11.5 已定稿加时 ID/ordinal、基础伤害12、经济/商店推进、双方平局扣血和未截断HP→轮前HP→固定座位序的唯一排名。目录外规则入口留 T4 接入前由规则线补齐，当前不冒称加时已可运行；在线目录末轮不再触发单人 gameOver。
 
 ### SR-B1-04 超时兜底的权威定义（P1）
 
@@ -387,6 +391,8 @@
   1. 异常节点且阵容为空时 `needsAnomalyRecruitment` 阻止开战（`missing-player`），兜底不能花钱买单位；当前占位 resolver 抛错导致整房 `fault` 结束。需要规则侧提供"超时放弃本轮/视为空阵容应战"的公开命令或等价规则。
   2. `nextRound` 因 `unsettled-round`（待领奖励、待选项或奖励容量不足）拒绝时，房间只能有限次延长结算截止，然后 `seat-stuck` 中断。需要超时自动领取/放弃奖励的公开命令，且不得重复发奖。
 - 验收：任一席位在任何节点超时都能在不花费资源的前提下推进到下一轮。
+
+**T3 回应（Codex，按用户确认）**：forfeitPendingChoice 默认选第一项（项目规则），只有无合法目标的空异常跳过；claimOrDiscardLoot 领取已赚且可容纳奖励，容量不足部分放弃。两者不付费、不重复发奖；签名、代次、失败和推进顺序见合同 §11.4。覆盖首项金币/组件、空异常、满备战区及领取事务回滚。
 
 ### SR-B1-05 淘汰归还卡池与共享卡池版本（P1，TP）
 
@@ -462,3 +468,23 @@
 - **C4 实测（压缩已开启）**：服务器开启 `permessage-deflate`（阈值 1 KiB，保留上下文）。整局空闲对局下发给单席：未压缩 103.9 MB → 线路上 7.3 MB；最大一场战斗 12.5 MB（拆成 3 包，最大单包 8.8 MB）。压缩后局域网与普通宽带可用，但浏览器仍要解析完整 JSON，SR-B1-07 的回放投影仍有必要。
 - **SR-B1-06 仍未实现**：`state` 消息目前是完整 `MatchState`（含本席随机流）。B2 按工单只发本席自己的状态；去随机流的私有投影仍需规则侧提供。
 - 启动方式：`npm run serve:game`（esbuild 打包到 `dist-server/game/main.mjs`，环境变量 `PORT`、`CAT_HOST`、`CAT_SEED`、`CAT_PREP_SEC`、`CAT_CHOICE_SEC`、`CAT_SETTLE_SEC`、`CAT_QUEUE_TIMEOUT_SEC`）；`npm run client:game -- ws://127.0.0.1:8787 名字` 跑一局空闲对局。TLS 由反向代理终止（T9）。
+
+## src/server 接入 T2 后的规则侧缺口（B3，2026-10-12，Claude 流水线 B）
+
+B3 已按合同 §10.6 让房间的 PvP 走 `snapshotForBattle → compileBattle → resolveTwoSidedBattle → proposeSettlement`（`src/server/room/two-sided-resolver.ts`），提案暂存在 `RoomState.pendingProposals`，房间进入 `awaiting-settlement` 后以 `settlement-unavailable` 中断；默认 `pvpMode` 仍为 `placeholder`。以下是接入时发现的缺口，编号续 SR-B3-xx。
+
+### SR-B3-01 结算提交入口与房间阶段推进（P0，T3）
+
+- 现状：`Room.parkProposals` 已把每场的 `settlementEligible=true` 且属于真实参战席位的 `SideProposal` 按 battleId 暂存（含 `round/roundId/roomRevision/participants`）；镜像提案不进入队列。房间不扣血、不发收入、不进入下一轮。
+- 需要：合同 §10.10 的 `applyRoundSettlement(state, receipt)` 或等价事务命令。房间侧期望的调用方式：收齐全轮 `pendingProposals` 后，对每个真实席位用其提案构造唯一收据提交一次，由同一提交结果产出 HP/淘汰/`roundResults` 一条，再回到现有 `settlement → nextRound` 流程。请在合同里写明：收据字段、`settlementId` 的构成（房间建议 `${roomId}:round-${round}:${seatId}`）、拒绝枚举（重复、过期代次、镜像、不完整整轮）。
+- 验收：同一收据提交两次第二次无事件、无资源变化；提交后 `MatchState.playerHp` 与 `SeatState.hp` 一致。
+
+### SR-B3-02 战斗帧的逐 tick 账本入口（P2，T2 补充）
+
+- 现状：`resolveTwoSidedBattle` 只返回 `initial/terminal/events`；逐 tick 播放帧由房间用 `startTwoSidedCombatWithEvents + stepCombat` 重放同一冻结输入生成，再把 `battle.events` 按 `tick` 分配到各帧，并校验终态与事件总数一致（不一致即 `frame-divergence` 中断）。这意味着每场战斗实际执行两次（一次结算、一次取帧）。
+- 需要（可选）：一个同时返回逐 tick 状态序列与结果的入口，或说明 `stepCombat` 的事件与 `toLedgerEvents` 的对应关系可被服务器直接使用，以避免二次执行。若规则侧认为二次执行可接受，请在合同注明，房间保持现状。
+
+### SR-B3-03 第二视角的战斗投影（P2，T5 前确认）
+
+- 现状：双方战斗只运行一次，A 视角为 `player`；B 席位的帧由 `src/server/room/projection.ts` 的 `mirrorCombatFrame` 做纯显示镜像（队伍互换、`row = rows - 1 - row`、结果互换、`movement`/`cast.completionCell` 坐标翻转）。它不重算任何数值。
+- 需要：T5 做帧 DTO（合同 §10.9）时确认这一镜像规则就是客户端应看到的视角，或由规则侧给出带坐标字段的事件完整清单，避免遗漏其他含 `HexCell` 的事件字段。

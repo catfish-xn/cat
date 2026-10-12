@@ -8,14 +8,14 @@ import type { MatchState } from '../../src/simulation/match-types';
 import { LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/online/local-room-client';
 import type { ClientListeners, CombatFrame, LobbyView, PlayerView } from '../../src/rendering/online/protocol';
 
-const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null };
+const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'placeholder' };
 
 function harness(overrides: Partial<LocalRoomOptions> = {}) {
   const clock = new ManualClock();
   const client = new LocalRoomClient({ ...OPTIONS, clock, ...overrides });
-  const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], combat: [] as (readonly CombatFrame[])[], delivered: [] as MatchState[] };
+  const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], combat: [] as (readonly CombatFrame[])[] };
   const listeners: ClientListeners = { lobby: v => log.lobby.push(v), view: v => log.view.push(v),
-    state: s => { log.state.push(s); log.delivered.push(s); }, combat: f => { log.combat.push(f); log.delivered.push(f[f.length - 1]!.state); } };
+    state: s => log.state.push(s), combat: f => log.combat.push(f) };
   client.listen(listeners);
   const flush = () => new Promise<void>(resolve => queueMicrotask(resolve));
   /** Fires room timers one at a time (flushing the coalesced pushes) until the predicate holds. */
@@ -70,9 +70,10 @@ describe('LocalRoomClient', () => {
     expect(view.ranking!.map(seat => seat.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     const rounds = new Set(log.view.filter(v => v.phase.kind === 'combat').map(v => v.phase.round));
     expect(log.combat.length).toBe(rounds.size);
-    // The last state the UI received (by push or as the final battle frame) is the room's own seat state, never a client copy.
+    // Frames are combat view data (CombatState), never a MatchState; the settled state arrives as the room's own seat state after the commit.
+    expect(log.combat[0]!.every(frame => 'tick' in frame.state && !('shop' in frame.state))).toBe(true);
     const roomMatches = client.currentRoom!.state.seats.map(seat => seat.match);
-    expect(roomMatches).toContain(log.delivered.at(-1)!);
+    expect(roomMatches).toContain(log.state.at(-1)!);
     expect(client.send({ type: 'reroll' })).toMatchObject({ ok: false, reason: 'wrong-phase' });
   }, 20_000);
   it('surfaces a room fault as view.fault with readable text and no ranking', async () => {

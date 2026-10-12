@@ -12,7 +12,7 @@ afterEach(async () => { await harness?.close(); harness = null; });
 /** Real single-player battles for round progression, but every seat loses exactly 10 HP per round. */
 function tenDamage(): BattleResolver {
   const placeholder = new PlaceholderBattleResolver();
-  return { resolveBattle(input) { const result = placeholder.resolveBattle(input); return { ...result, outcomes: result.outcomes.map(outcome => ({ ...outcome, damage: 10 })) }; } };
+  return { resolveBattle(input) { const result = placeholder.resolveBattle(input); if (result.kind !== 'placeholder') return result; return { ...result, outcomes: result.outcomes.map(outcome => ({ ...outcome, damage: 10 })) }; } };
 }
 const appliedRevision = (receipt: Receipt): number => receipt.ok && receipt.result.kind === 'applied' ? receipt.result.seatRevision : -1;
 
@@ -58,7 +58,8 @@ describe('game server: visibility', () => {
     expect(seedA).not.toBe(seedB);
     for (const message of b.inbox) {
       if (message.type === 'state') { expect(message.state.seed).toBe(seedB); continue; }
-      if (message.type === 'combat') { for (const frame of message.frames) expect(frame.state.seed).toBe(seedB); continue; }
+      // B3: combat frames are CombatState views, not MatchState; they carry no shop and belong to B's own battle.
+      if (message.type === 'combat') { for (const frame of message.frames) expect(hasKey(frame.state, 'shop')).toBe(false); continue; }
       expect(hasKey(message, 'shop'), `${message.type} leaked a shop`).toBe(false);
       expect(hasKey(message, 'rngState'), `${message.type} leaked an rng state`).toBe(false);
     }
@@ -323,7 +324,7 @@ describe('game server: whole match over the wire', () => {
     expect(new Set(endedA.ranking!.map(seat => seat.rank)).size).toBe(8);
     const combatsA = messagesOfType(a.inbox, 'combat');
     expect(combatsA.length).toBeGreaterThan(0);
-    expect(combatsA.every(combat => combat.frames.length > 0 && combat.frames.every(frame => frame.state.seed === a.state!.seed))).toBe(true);
+    expect(combatsA.every(combat => combat.frames.length > 0 && combat.frames.every(frame => Number.isInteger(frame.state.tick)))).toBe(true);
     expect(new Set(combatsA.map(combat => combat.round)).size).toBe(combatsA.filter(combat => (combat.part ?? 1) === 1).length); // one battle per round per seat
     for (const combat of combatsA) if (combat.total !== undefined) expect(combat.frames.length).toBeLessThanOrEqual(COMBAT_SPLIT.framesPerPart);
     // Evidence for docs/UI_REQUESTS.md (wire size of full-state combat frames); the numbers are reported, not asserted.
