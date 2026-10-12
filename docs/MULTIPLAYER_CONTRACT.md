@@ -452,6 +452,7 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 当前异常 | `anomalyBinding` 为 null 或 `{definitionId,unitId,choiceId,boundRound}` | 仅当前已绑定结果 |
 | 已提交成长 | `persistentGrowth[].{unitId,attackDamageBps}`、`augmentProgress.{pumpingRounds,investmentHp}` | 仅本席持有单位及实际已提交进度；镜像战斗事件不写入 |
 | 当前待选项 | `pendingChoice` 为 null 或 `{kind,step,choiceId,generation,offers,targetId,rerollCount}` | 仅 phase=choice 且当前已展示的选择；offers 是已揭示定义 ID 列表，不含下一次刷新、未来选择或兜底答案；不下发 eventId/returnPhase |
+| 本轮已揭示掉落（SR-C7-02） | 可选 `revealedLoot.{roundId,revealedDrops}`；条目仅 `dropId,encounterId,sourceUnitId,roundId,payload,status,receiptId,allowedActions,reason?`，payload 仅 `{kind:'gold',quantity}` 或 `{kind:'unit'\|'item',definitionId,quantity}` | 仅本席当前 PvE 轮已揭示内容，具体门槛、状态及排序见 §14.1；不是 m8.loot 账本，不含计划、未来候选或随机流 |
 | 已提交本席轮结果 | `roundResults[].{round,roundId,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
 | 本轮已公开 PvE 遭遇预览（SR-B7-02） | `m8.preparation.{roundId,encounterId,enemies}`；enemies 每项按准备单位白名单复制 | 仅 m8.round.kind=pve、轮 ID 与 roundDefinitionId 相同且 preparation.encounterId 与本轮一致时存在；仅 enemy 棋盘单位。相同单位也进入 preparation.units，供站位和 readEncounterPreview 使用；不公开未来计划、掉落或 PvP 模板 |
 | 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 保留原 `m8.round` 嵌套（T5R 工单覆盖旧独立 roundInfo 建议），仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
@@ -875,7 +876,31 @@ basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyRe
 
 公开 `toPrivateSeatView(state: MatchState): PrivateSeatView`（`src/server-entry` 导出）。输入是服务器可信状态，输出为独立、递归冻结的纯显示对象，不修改输入、不执行命令/抽签/发奖。无正常业务失败枚举；不接收或验证客户端伪造的 Match。字段逐层按 §10.9 构造，新增未知属性不会自动下发；所有 RNG、未来计划、来源账本、combatInputBasis、multiplayer/sharedPool 与整个 combat 均省略。
 
-`PrivateSeatView` 是 MatchState 的**递归结构子集**：相同字段名与嵌套，`m8` 保留 `round` 白名单，并在本轮公开 PvE 时保留 `preparation.{roundId,encounterId,enemies}` 白名单。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史新增 `roundResults[].interestBasis`，直接取已提交轮结果的计息金币基数，不用当前 gold 或 interest 金额反推；仍不含 settlementId 或执行代次。额外的已揭示掉落摘要仍按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
+`PrivateSeatView` 的 MatchState 同名字段保持**递归结构子集**：相同字段名与嵌套，`m8` 保留 `round` 白名单，并在本轮公开 PvE 时保留 `preparation.{roundId,encounterId,enemies}` 白名单；另有下述独立的 `revealedLoot` 显示摘要。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史新增 `roundResults[].interestBasis`，直接取已提交轮结果的计息金币基数，不用当前 gold 或 interest 金额反推；仍不含 settlementId 或执行代次。已揭示掉落摘要按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
+
+**SR-C7-02 本轮掉落摘要。** `toPrivateSeatView` 的签名与失败约定不变，返回值新增可选字段：
+
+```ts
+revealedLoot?: {
+  readonly roundId: string;
+  readonly revealedDrops: readonly RevealedDropView[];
+};
+```
+
+`RevealedDropView` 沿用 `simulation/m8/ui-contracts.ts` 的显示结构：每项仅 `dropId, encounterId, sourceUnitId, roundId, payload, status, receiptId, allowedActions` 及下表的可选 reason。`sourceUnitId` 为 string 或 null；payload 只含 `{kind:'gold',quantity}` 或 `{kind:'unit'|'item',definitionId,quantity}`。`allowedActions` 固定空数组，不能作为领奖命令入口。
+
+| status | receiptId | reason |
+| --- | --- | --- |
+| granted | 实际收据 ID | 省略 |
+| revealed | null | auto-grant-in-domain |
+| pending-capacity | null | bench-full |
+| retained-terminal | null | terminal-bench-full |
+
+只有本席 `m8.round.kind='pve'`、roundId/ordinal 分别与 `roundDefinitionId/round` 相同、且存在同 roundId/encounterId 的掉落账本轮计划时才有此字段；条目还须各自匹配当前 roundId/encounterId。有效 PvE 轮尚无已揭示条目时返回 `{roundId,revealedDrops:[]}`；PvP（含加时）、补给、元数据过期或缺少本轮计划时**省略整个字段**，不传 null、旧轮摘要、占位条目或未揭示数量。“当前”以输入本席 Match 的轮次为准；本函数不接收全局对局轮次，淘汰席保留的最后轮次由 PlayerView 的淘汰状态解释。
+
+对合法当前 PvE 状态，`revealedDrops` 与 `readLootView(state).revealedDrops` 深相等，排序相同：直接掉落先按原槽位顺序，已领取组件选择再按原选择顺序；不暴露排序槽位本身。planned/forfeited 完全省略；组件选择仅在实际 resolution/receipt 存在后出现，未领取时不公开兜底。共享池缺货补偿按实际金币收据显示，不按原棋子计划；满备战区可显示 pending-capacity，超时放弃后条目消失。摘要来自账本，不依赖战前客户端快照、单位 ID 差分或当前金币，重连也能直接显示。
+
+只复制这两个 LootView 字段；不下发其 `canContinue/reason/pendingClaims/pendingChoice` 控制提示，不用单人继续条件判断联机流程。每层对象/数组均逐字段新建并递归冻结，不共享输入引用，不发奖、不改状态/RNG/事件序号。`readLootView` 的 payload 同样按白名单复制，未知嵌套字段不会被传递或连带冻结。客户端直接读 `privateView.revealedLoot?.revealedDrops`，无需伪造 m8.loot 后调用 readLootView；本次不改 UI 或服务器调度。
 
 Claude 可在本地显示适配器给缺失字段填占位，但只允许以下已审查用途；占位不得流回服务器或本地规则命令：
 
@@ -890,7 +915,7 @@ Claude 可在本地显示适配器给缺失字段填占位，但只允许以下�
 | readEncounterPreview（仅本轮 PvE） | m8.round、m8.preparation 的公开 enemies 与 preparation.units 中同一组野怪；必要时仅为缺失 version/contentStatus 填静态显示占位，不回填计划/掉落。PvP 不可用此选择器冒充真实对手 |
 | readRoundInfo 的可见字段 | m8.round；缺失 isFinal 可填 false，绝不可用来判断全局胜负 |
 
-**不能靠占位保真**：needsAnomalyRecruitment 依赖 scheduleReceipts/forfeitedChoices；previewEquip/previewCombine 的过期临时 ID 判断依赖 equipmentState.rolls；readLootView 依赖已揭示掉落账本；PvP 的 readEncounterPreview 仍依赖未下发的固定敌军模板；战斗状态/状态效果选择器依赖 Combat runtime。B7 使用服务器回执处理合法性，奖励另作已揭示摘要，战斗走下节。不要把“类型能强转”当成这些选择器语义仍然成立。
+**不能靠占位保真**：needsAnomalyRecruitment 依赖 scheduleReceipts/forfeitedChoices；previewEquip/previewCombine 的过期临时 ID 判断依赖 equipmentState.rolls；readLootView 依赖已揭示掉落账本，客户端改读上述 revealedLoot；PvP 的 readEncounterPreview 仍依赖未下发的固定敌军模板；战斗状态/状态效果选择器依赖 Combat runtime。B7 使用服务器回执处理合法性，战斗走下节。不要把“类型能强转”当成这些选择器语义仍然成立。
 
 ### 14.2 SR-B1-07：回放接口与显示更新规则
 
