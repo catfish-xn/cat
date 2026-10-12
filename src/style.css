@@ -387,3 +387,42 @@ body[data-online-mode="online-ended"] #strategy-root .income-receipt, body[data-
 body[data-online-mode="online-ended"] #strategy-root .encounter-preview { display: none !important; }
 .ranking-fault { margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: #4a2a2a; color: #f6b3b3; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 @media (max-width: 1100px) { body[data-online] #board-frame { position: relative; top: auto; } }
+/* C5: seat avatars, clickable seats and the read-only opponent board over the top of my board. */
+.online-seat[role="button"] { cursor: pointer; }
+.online-seat[role="button"]:hover { background: #1a2b38; }
+.online-seat[role="button"]:focus-visible { outline: 2px solid #68ddd0; outline-offset: 1px; }
+.online-seat.viewing { box-shadow: inset 0 0 0 2px #e6bc76; }
+.seat-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; background: #203440; display: grid; place-items: center; }
+.seat-avatar img, .seat-avatar svg { width: 30px; height: 30px; display: block; object-fit: cover; }
+.seat-avatar-placeholder { font-size: 13px; font-weight: 700; color: #9aaeb9; }
+.online-spectate { grid-column: 1 / -1; justify-self: start; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #4a2a2a; color: #f6b3b3; }
+.online-countdown[data-spectating] .countdown-round { color: #f6b3b3; }
+.opponent-board { position: absolute; z-index: 30; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
+  width: min(430px, calc(100% - 16px)); max-height: calc(100% - var(--online-countdown-h, 48px) - 2 * var(--online-gap, 8px)); overflow: auto;
+  display: grid; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid #e6bc76; background: rgba(14, 24, 33, .96); color: #e2eef1; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
+.opponent-head { display: flex; align-items: center; gap: 10px; }
+.opponent-name { font-size: 15px; }
+.opponent-meta { flex: 1; font-size: 12px; color: #9aaeb9; }
+.opponent-close { padding: 4px 10px; font-size: 12px; }
+.opponent-grid { --cell: 50px; display: grid; gap: 2px; justify-content: center; }
+.opponent-row { display: grid; grid-template-columns: repeat(var(--cols, 7), var(--cell)); gap: 2px; }
+.opponent-row.odd { transform: translateX(calc(var(--cell) / 2)); }
+.opponent-row:nth-child(-n + 4) .opponent-cell { background: #24202a; }
+.opponent-cell { height: 44px; border-radius: 6px; background: #1a2c33; display: grid; place-items: center; }
+.opponent-unit { position: relative; width: 40px; height: 40px; display: grid; place-items: center; }
+.opponent-portrait { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid #7e95a4; display: grid; place-items: center; background: #203440; }
+.opponent-unit.cost-2 .opponent-portrait { border-color: #68c087; } .opponent-unit.cost-3 .opponent-portrait { border-color: #5aa0e6; }
+.opponent-unit.cost-4 .opponent-portrait { border-color: #b46be6; } .opponent-unit.cost-5 .opponent-portrait { border-color: #e6bc76; }
+.opponent-portrait img, .opponent-portrait svg { width: 36px; height: 36px; display: block; object-fit: cover; }
+.opponent-stars { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 1; color: #c9d4da; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.opponent-stars.star-2 { color: #e6e6e6; } .opponent-stars.star-3 { color: #ffd76a; }
+.opponent-items { position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); display: flex; gap: 1px; }
+.opponent-items .item-glyph { font-size: 7px; }
+.opponent-traits { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.opponent-trait { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #203440; color: #9aaeb9; }
+.opponent-trait.active { background: #1f4a46; color: #68ddd0; }
+.opponent-note { margin: 0; font-size: 11px; color: #7e95a4; }
+/* Eliminated (spectating): the dock and the left panel stay visible but read as disabled. */
+body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
+body[data-online-spectating] .choice-overlay { display: none !important; }
+

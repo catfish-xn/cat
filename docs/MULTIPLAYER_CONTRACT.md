@@ -748,3 +748,81 @@ B 席位只对 DTO 做 `row = board.rows - 1 - row`、col 保持，互换 player
 TP 两文件 **23 例**；连同 T2/T3、B3/C4 服务器/网络、商店/升星、单人经济/奖励/来源/跨轮/存档，最终一次回归 **33 文件 497 例全部通过**。新增八席集成例包含 24 场 PvE 与 4 场双方 PvP，单独设 20 秒预算，不改既有测试限额。独立 oracle 校验 404 张总量、8 张开场、40 格预留及按剩余份数加权的明确 RNG 数字；混合八席命令序列每步检查守恒且可重放。
 
 未改 src/server、界面、golden、单人无限商店行为或既有 m5-replay 超时；既有 Match 发奖路径只增加默认不启用的池策略依赖。未执行完整浏览器/性能验收。B5 服务编排接入、T5 网络 DTO/镜像验收、T4 目录外加时和 T7 机器人不在 TP 范围。
+
+## 13 T7：基础机器人纯策略（basic-bot-v1）
+
+### 13.1 导出、上下文与返回
+
+从 `src/server-entry/index.ts`（Node 为 `dist-server/index.mjs`）导入：
+
+```ts
+const BOT_POLICY_VERSION = 'basic-bot-v1';
+const BOT_MAX_STEPS = 64;
+function decideBotAction(state: MatchState, context: BotContext, rng: number): BotDecision;
+interface BotDecision { readonly action: ClientCommand | 'done'; readonly rng: number }
+interface BotContext {
+  readonly difficulty: 'basic';
+  readonly stepsTaken: number;
+  readonly maxSteps: number;
+  readonly self: { readonly seatId: string; readonly hp: number; readonly round: number };
+  readonly opponents?: readonly {
+    readonly seatId: string; readonly hp: number; readonly level: number;
+    readonly units: readonly {
+      readonly definitionId: string; readonly starLevel: number;
+      readonly cell: {readonly col:number; readonly row:number};
+    }[];
+  }[];
+  readonly lastFailure?: { readonly action: ClientCommand; readonly reason: string };
+}
+```
+
+ClientCommand 是 `src/server/protocol.ts` 的既有联合类型，策略只做 `import type`，没有 server 运行时依赖。BotContext/Decision 在 server-entry 导出类型，ClientCommand 沿用协议文件。`state` 为服务器拥有的本席最新合法 MatchState，不接受客户端上传状态。context.self 使用同一已提交版本的公开 HP/轮次/seatId；单人验证可任意固定 seatId。opponents 仅允许公开的已上场阵容；basic 首版不使用侦察信息。不得把其他席位商店、备战区、装备库存、RNG、未来计划、全池计数放进 context。
+
+返回只有**一个意图或 done**及下一份机器人 RNG，不带修改后的 MatchState、池、事件或收据。输入不变，候选排序不读未来商店/奖励/选择结果，不根据敌人私有资产决策。内部复用规则预检：站位用 validateMatchDeployment，装备用 previewCombine/previewEquip，其余用既有纯公开命令的成功/失败结果；所有试算 state/events/RNG 均丢弃，不得由 B6 提交这些试算结果。实际动作必须由 B6 再执行一次权威入口。
+
+`rng` 为房间持有的独立 uint32 lcg32-v1 流，不是任何 Match RNG。只有“最高购买优先分数完全相同的多个**合法**槽位”消耗一个 word，按稳定槽号排序后取 `floor(word * 候选数 / 2^32)`。唯一候选、其他动作、done 消耗零 word；无随机站位、无隐式时钟、无 Math.random。例：输入 RNG0，两个并列合法槽 → word1013904223，选择首槽。游戏抽店/装备/选择的 RNG 仍仅在实际规则命令成功时提交。
+
+### 13.2 basic 的动作优先级
+
+1. **先停止检查**：stepsTaken 达到 `min(maxSteps,64)`、带 lastFailure、self 与 state 轮次/HP 不符、多人 seatId 不符、HP0/已淘汰，或 phase 非 preparation/choice，返回 done。stepsTaken 每次尝试都计数，不以成功次数代替。预算0直接 done。
+2. **所有选择节点**：choice 阶段按 offers 原顺序选第一个合法项，覆盖强化、补给组件、已赚野怪组件和异常 offer；异常 target 按本席单位 ID 代码点序选第一个合法目标。使用当前 choiceId/generation，不付费刷新异常，不选择未来候选。无合法目标返回 done，由截止兜底处理。
+3. **阵容与站位**：按 `starLevel*100 + cost*10` 排序、同分按 ID，选前 level 个棋子。弱上场单位先移备战区；满备战区无法腾位时，只出售未入选单位中售价最低者（同价按 ID），不超过人口。射程≤1放本方部署区前排，其他放后排，先中列再两侧。固定目标映射，目标格互占时借空余非目标格中转，避免反复横跳；每一步均由部署校验放行，敌方单位不移动。
+4. **装备**：稳定库存 ID 顺序，先合成第一个合法配方；再给已上场的强单位找合法装备槽。复用装备规则，遵守 unique、exclusive、已占槽及临时子件限制，不移动已经穿戴的装备。单个未配对组件在常态留库存等配方；低血/后期允许直接穿戴。装备数值与规则不变。
+5. **经济与购买**：常态保留当前整十金币利息档，上限50，即 `reserve=min(50,floor(gold/10)*10)`；HP≤30、stage≥5，或空异常正在招募时 reserve=0。只从当前已显示且可负担的槽位买卡；已有三星不再买同英雄。满人口时，新英雄须强于当前入选末位才值得买，已有英雄可继续追星。购买优先分为“已有至少两张一星10000 / 其他已有同英雄1000 / 新英雄0”加 `cost*10`，先凑三张，再追对子/已有英雄，再比较费用；升星完全由原购买命令处理。
+6. **容量、经验与刷新**：想买但 bench-full 时，先卖备战区里非该目标英雄、且弱于目标一星的最低售价棋子；没有合适替换就保留资产。不靠预测售价购买当前买不起的卡。无可买目标则在保留金额内买 XP，至现有等级上限9；再考虑付费刷新。空异常招募期间不买 XP、不刷新，避免耗尽必要资金。
+7. **共享池刷新**：不读全池；只有本席当前店里存在可归还且本级赔率大于0的卡，才提议 reroll，保证释放后至少能抽到一张。全部已买/空格时即使隐藏池可能有货也停止刷新，等下一次自然刷新。非共享单人路径允许原无限商店刷新。仍受金币与步数预算约束。最终停止购物时解锁遗留锁店一次，避免断线接管永久停在旧店。
+
+上述分数、经济阈值和装备偏好是 **机器人策略**，不是经济/战斗数值修改；不承诺最佳羁绊、胜率或最优装备分配。决定只保证当前可信快照下的规则合法性；快照到执行间状态变化、并发版本、淘汰及网络授权仍由 B6 验证。共享池返还库存的保证以 §12 的单写者和正常登记状态为前提。
+
+### 13.3 有限步、错误与 B6 编排
+
+输入 rng 非 uint32，或 difficulty 非 basic、stepsTaken/maxSteps 非非负安全整数，抛 RangeError；不把异常文本作为网络 reason。合法输入无新失败枚举：策略无可用动作或预算耗尽就 done。原动作失败枚举仍见 §9/§11/§12。本策略不是不可信存档校验器，非法 MatchState 导致的规则异常由调用方按内部错误处理，不能通过篡改状态修复。
+
+B6 推荐每席每轮 maxSteps=64，且遵守以下顺序：
+
+1. 创建/接管机器人时，在服务器为该席建立并保存显式 botRng；独立于 shop/battle/choice/reward 流。断线接管复用原 MatchState、共享池、资产与收据，不 createMatch 重开。重连后撤销机器人执行权限和任何旧排程。
+2. 在单写队列里读取当前 state，构造同版 context，调用一次策略；先核对本次仍处于该席可操作阶段和有效控制代次。机器人不能拿 frozen/battle 的状态发准备操作。
+3. 返回 action 时保存返回的 botRng、增加 stepsTaken（包括执行失败），再按下表执行该意图；同一次意图重试不得再次抽 botRng。即便规则拒绝，规则池/资产/RNG 都不变；已消耗的独立策略 word 仍保留，不伪装为一次成功游戏命令。
+4. 成功一次性提交规则返回的 state（有池时连 pool 一起），发布合法事件；下一次决策重新读取已提交版本。失败回传 `{action,reason}` 为 lastFailure；basic 收到任何失败都返回 done，B6 本轮停止重试并保留反馈到换轮。每轮计数不可在准备/选择/断线重连之间清零；只在真正进入新轮时清零并清除 lastFailure。
+5. done 不代表可以调用旧单人开战，不代表奖励已处理完，也不推进时间。B6 仍负责准备截止、T2/T3 战斗/结算、非 PvP 包装、超时及下一轮。准备结束用规则校验核对人口等前提；在线 PvP 的旧 matchStartFailure/startMatchCombat 正常返回 wrong-phase，须走 T2，不能为了开战关闭 multiplayer。
+6. 预算不足、满备战区待领、空异常或无合法选择时，由既有截止流程调用 T3/TP timeoutChoice 与 claimLoot，按项目规则默认选第一项/可领则领、不可领则放弃，不能无限延长或由机器人造资源。选择可能在战后同一轮出现；仍沿用该轮预算，截止兜底负责最终进度。
+
+| 意图 | B6 共享池执行入口 |
+| --- | --- |
+| buy | buySharedUnit(pool,state,slot,generation) |
+| sell | sellSharedUnit(pool,state,unitId) |
+| reroll | rerollSharedShop(pool,state,本次读取的 state.shop.generation)；协议原意图不新增字段 |
+| shopLock | setSharedShopLock(pool,state,locked,generation) |
+| choose | runSharedMatchCommand(pool,state,{type:'choose',choiceId,generation,definitionId}) |
+| deploy / buyXp / combine / equip / anomalyTarget | 原公开命令 deployMatchUnit / buyXp / combineItems / equipItem / selectAnomalyTarget；保留 sharedPool 绑定 |
+| done | 停止本轮策略尝试，调度器照常处理截止和阶段推进 |
+
+basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyReroll。上表不允许服务器自己计算购买、升星、售价或装备结果。B6 的控制代次、定时器、连接切换、配对、网络消息、超时和全轮提交不在 T7 实现范围。
+
+### 13.4 验证方式
+
+`t7-bot-policy` 覆盖确定性、输入冻结、独立 RNG 手算、隐藏流不影响同一公开决策、步骤上限/失败反馈、经济/升级/容量/人口/站位/装备冲突，以及全部选择节点。`t7-integration` 从 seed42 真实开局连走20轮，所有动作通过原公开命令；另用八席真实 TP 包装跨三个开场轮次，逐命令检查守恒，微型库存覆盖空店不猜隐藏池与自有预留可保证刷新。
+
+`verify-t7-node-entry.cjs` 用生产 ESM、Node22、封锁浏览器全局/隐式随机/时钟，从 seed42 的 createMatch 自动打至 gameOver，不替换金币、HP、奖励或战斗结果。脚本检查至少20轮、全程每条意图均被实际命令接受、每轮≤64步；构建脚本另外检查 server-entry 运行时依赖图不含 src/server、UI 或 Phaser。现有单人数值、golden 和既有超时测试不修改。
+
+交付验证基线 `origin/multiplayer@96d9ccb`：实际 nvm **Node v22.23.3 / npm 10.9.9**，typecheck（build 内）、build、test:server-entry、verify-t7-node-entry、verify-tp-node-entry 通过。T7 **25 例**，连同 T2/T3/TP、单人商店/升星/经验/经济/奖励/装备和纯依赖检查，共 **17 文件 357 例通过**。完整 Node 冒烟 seed42：38 轮、239 条合法意图、10698 个真实战斗 tick，单轮最多27步，最终 gameOver/victory；这是一条固定种子证据，不是胜率保证。未运行完整浏览器/性能套件，B6 调度与网络接管尚待 Claude 接入。

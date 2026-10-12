@@ -35,3 +35,6 @@ export { createSharedPool, initializeSharedSeat, generateSharedShop, buySharedUn
   runSharedMatchCommand, assertSharedPoolConservation, SHARED_POOL_VERSION, POOL_CAPACITY_BY_COST } from '../simulation/shared-pool';
 export type { SharedPoolState, SharedPoolBinding, SharedPoolResult, SharedPoolBatchResult, SharedPoolFailure,
   SharedPoolEvent, SharedMatchCommand, PoolHolding, ShopReservation, RewardReservation, PoolRewardReceipt } from '../simulation/shared-pool-types';
+
+export { decideBotAction, BOT_POLICY_VERSION, BOT_MAX_STEPS } from '../simulation/bot';
+export type { BotContext, BotDecision } from '../simulation/bot';

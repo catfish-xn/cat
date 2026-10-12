@@ -25,6 +25,8 @@ export class RemoteSession extends MatchSession {
   private notice: IntentNotice | null = null;
   /** Set while the connection is down or superseded: commands are not sent and the reason is shown instead. */
   offline: string | null = null;
+  /** My seat is eliminated: the match goes on, but nothing of mine can be commanded (C5). */
+  spectating = false;
   /** My authoritative state when playback started; every frame is displayed on top of it. */
   private playbackBase: MatchState | null = null;
   constructor(private readonly client: GameClient, initial: MatchState = createMatch()) { super(initial); }
@@ -84,6 +86,7 @@ export class RemoteSession extends MatchSession {
   private intent(command: ClientCommand): MatchCommandResult {
     this.notice = null;
     if (this.offline !== null) { this.notice = { kind: 'offline', text: this.offline }; return this.blocked(); }
+    if (this.spectating) { this.notice = { kind: 'offline', text: '已淘汰 · 观战中，不能操作' }; return this.blocked(); }
     if (this.paused || this.playingBack) return this.blocked();
     const result = this.client.send(command);
     // Pending: nothing changes until the receipt and the state push after it (never spend gold ahead of the server).

@@ -31,7 +31,22 @@ export interface SeatPublic {
   /** Final rank once decided (1 = winner); null while the match runs. */
   readonly rank: number | null;
   readonly connected: boolean;
+  /**
+   * What everyone may see of this seat's build (TFT: click a player to look at their board), work order C5.
+   * Only units deployed on the board, with the items they hold. Never the bench, shop, gold, XP or RNG.
+   * Optional so older views and tests stay valid; the room always fills it.
+   */
+  readonly publicBoard?: PublicBoard;
 }
+export interface PublicBoardUnit {
+  readonly definitionId: string;
+  readonly starLevel: number;
+  /** Cell on the owner's own board, in the owner's orientation (their deployment rows at the bottom). */
+  readonly cell: { readonly col: number; readonly row: number };
+  /** Item definition ids held by the unit, in slot order. */
+  readonly items: readonly string[];
+}
+export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
 /** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. */
 export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'combat' | 'settlement' | 'ended';
 export interface PlayerViewPhase {
