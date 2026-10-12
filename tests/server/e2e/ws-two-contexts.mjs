@@ -2,12 +2,16 @@
  * Work order C4 acceptance in a real browser: two browser contexts play one match against one
  * real game server (`dist-server/game/main.mjs`, CAT_PREP_SEC=3) through the vite dev proxy (/ws).
  *
- *   npm run build:game && node tests/server/e2e/ws-two-contexts.mjs
+ *   npm run build:game && node tests/server/e2e/ws-two-contexts.mjs [--rounds=N] [--ranking-minutes=M]
  *
  * Checks: pending purchase leaves gold untouched until the receipt; the other seat's sidebar shows
  * my level change while its own state never holds my shop; reloading one page returns it to its
  * seat without disturbing the other; both pages end with the same ranking. Screenshots go to
  * artifacts/c4/ (not committed). CHROMIUM overrides the browser path.
+ *
+ * A whole match with real two-sided PvP takes about 25 minutes at these phase lengths, so the final
+ * ranking wait defaults to 40 minutes (`--ranking-minutes=M` changes it). `--rounds=N` stops earlier:
+ * once both pages have reached round N together the run passes without waiting for the ranking.
  */
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -18,6 +22,16 @@ const OUT = `${ROOT}artifacts/c4`;
 const VITE_PORT = 5199;
 const PAGE_URL = `http://127.0.0.1:${VITE_PORT}/?mode=online&server=ws`;
 const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const argument = name => process.argv.slice(2).find(arg => arg.startsWith(`--${name}=`))?.split('=')[1];
+const positive = (name, fallback) => {
+  const raw = argument(name);
+  if (raw === undefined) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) throw new Error(`--${name} must be a positive integer, got ${raw}`);
+  return value;
+};
+const STOP_AT_ROUND = positive('rounds', null);
+const RANKING_TIMEOUT_MS = positive('ranking-minutes', 40) * 60_000;
 mkdirSync(OUT, { recursive: true });
 
 const children = [];
@@ -134,8 +148,16 @@ async function main() {
     const hpOnA = (await read(a)).state.playerHp;
     check(Number(hpOnB) === hpOnA && hpOnA < 100, `B's sidebar shows A's HP ${hpOnB} (A's own state: ${hpOnA})`);
 
+    if (STOP_AT_ROUND !== null) {
+      // Shortened run: both pages reach round N of the same match, then the run passes without the ranking.
+      const reached = await Promise.all([a, b].map(page => waitRead(page, s => (s.m6.phase?.round ?? 0) >= STOP_AT_ROUND || s.m6.phase?.kind === 'ended', `round ${STOP_AT_ROUND}`, RANKING_TIMEOUT_MS)));
+      check(reached.every(snapshot => snapshot.m6.phase.kind === 'ended' || snapshot.m6.phase.round >= STOP_AT_ROUND), `both pages reached round ${STOP_AT_ROUND} (A at ${reached[0].m6.phase.round}, B at ${reached[1].m6.phase.round})`);
+      await a.screenshot({ path: `${OUT}/5-a-round-${STOP_AT_ROUND}.png` });
+      check(errors.length === 0, `no page errors${errors.length ? `: ${errors.join(' | ')}` : ''}`);
+      return;
+    }
     // Play to the end: choices are answered by the server on timeout; both pages must agree on the ranking.
-    const ended = await Promise.all([a, b].map(page => waitRead(page, s => s.m6.phase?.kind === 'ended' && s.m6.ranking !== null, 'ranking', 900_000)));
+    const ended = await Promise.all([a, b].map(page => waitRead(page, s => s.m6.phase?.kind === 'ended' && s.m6.ranking !== null, 'ranking', RANKING_TIMEOUT_MS)));
     const ranking = snapshot => snapshot.m6.ranking.map(seat => `${seat.rank}:${seat.seatId}`).join(',');
     check(ranking(ended[0]) === ranking(ended[1]), `both pages show the same ranking ${ranking(ended[0])}`);
     await a.screenshot({ path: `${OUT}/5-a-ranking.png` }); await b.screenshot({ path: `${OUT}/5-b-ranking.png` });

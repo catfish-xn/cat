@@ -518,6 +518,16 @@ B4 已按合同 §11.3 让房间收齐全轮后在临时 map 上逐席 `applyRou
 - **SR-B1-06（P0）**：已导出 `toPrivateSeatView`，逐层白名单，保持 MatchState 原字段名/嵌套，去全部随机流、未来计划、来源账本及战斗输入。合同 §14.1 列出安全复用的显示选择器和无法用占位保真的选择器。B7 尚须替换所有网络 state 发布路径。
 - **SR-B1-07（P1）**：已导出 `toCombatReplay` / `toCombatViewState` / `applyCombatReplayTick`，每20 tick关键帧＋精简动画事件＋权威单位显示差分，逐 tick/终态均与权威视图相同；白名单、B视角坐标、失败与体积测量见 §14.2–14.3。仍保留完整服务器账本与一次纯重执行，不重复结算；B7 替换旧逐 tick 完整帧输出。
 
+## src/server 接入共享卡池后的规则侧缺口（B5，2026-10-12，Claude 流水线 B）
+
+B5 已按合同 §12 让房间开局建池（`createSharedPool` → 八席按 seatIndex `initializeSharedSeat` → `refreshSharedShops(…, 1)` → 一次发布），买/卖/刷/锁走池事务，选择、超时代选、领奖与 PvE 战斗（startCombat/step）走 `runSharedMatchCommand`，跨轮用 `nextSharedRound`，淘汰在排名后、下一轮自然刷新前调用 `releaseSeatOnElimination`。编号续 SR-B5-xx。
+
+### SR-B5-01 加时推进的共享池批量入口（P1，与 SR-B4-01 同批）
+
+- 现状：`nextSharedRound` 内部委托 `nextRound`，目录末轮后返回失败；房间在 6-7 后仍有 ≥2 席存活时照旧以 `overtime-unavailable` 明确中断（B4 行为不变）。
+- 需要：交付 SR-B4-01 的 `advanceMultiplayerRound` 时，同时给接入共享池的席位一个批量入口（例如 `nextSharedRound` 接受加时，或新增 `advanceSharedMultiplayerRound(pool, states, expectedRound): SharedPoolBatchResult`），保证加时轮同样先归还未锁店、再按轮换顺序生成共享店（§11.5 第二条"TP 后仍受共享池约束"）。房间侧接入点仍只有 `Room.advanceRound` 一处。
+- 验收：加时轮的商店来自共享池，`assertSharedPoolConservation` 在加时前后成立。
+
 ## src/server 接入 T5R 后的规则侧缺口（B7，2026-10-12，Claude 流水线 B）
 
 B7 已把 `Room.advanceRound` 换成 `advanceMultiplayerRound` 并删除 `overtime-unavailable` 中断；网络与本地所有 `state` 改送 `toPrivateSeatView`（客户端经 `src/rendering/online/seat-view-adapter.ts` 填占位后显示）；每场战斗按结果对象缓存一份 `toCombatReplay`，B 视角镜像后以 `replay` 消息下发，旧 `combat` 帧默认保留（`combatTransport: 'both'`）。编号续 SR-B7-xx。

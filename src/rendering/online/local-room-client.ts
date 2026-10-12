@@ -10,10 +10,10 @@
  * here decides a rule, a deadline or an outcome. It imports only the room's public surface.
  */
 import { createMatch } from '../../simulation/match';
-import type { MatchCommandResult, MatchState } from '../../simulation/match-types';
+import type { MatchCommandResult, MatchFailure, MatchState } from '../../simulation/match-types';
 import {
   Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView,
-  type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings,
+  type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
 import type { ClientCommand, ClientListeners, GameClient, LobbyView, PlayerView } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
@@ -28,10 +28,12 @@ export interface LocalRoomOptions {
   readonly faultAtRound: number | null;
   /** `two-sided` (default): real PvP through T2/T3. `placeholder` is the B1 test path (`?pvp=placeholder`). */
   readonly pvpMode: PvpMode;
+  /** Debug only (`?poolCaps=irelia:8,darius:1`): a scarce shared pool so empty shop slots and pool-empty rerolls can be seen; null = official sizes. */
+  readonly poolCapacities?: Readonly<Record<string, number>> | null;
   /** Injectable for tests; the browser uses the real clock. */
   readonly clock?: Clock;
 }
-export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided' };
+export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided', poolCapacities: null };
 
 const JOIN_ERRORS: Record<Exclude<JoinResult, { ok: true }>['reason'], string> = {
   full: '对局已满（8 人），请等待本局结束',
@@ -43,9 +45,9 @@ const LOBBY_PHASE_VIEW: PlayerView = { mySeatId: '', seats: [], phase: { kind: '
 /** Debug wrapper: identical to the inner resolver except that it throws on one chosen round. */
 class FaultInjectingResolver implements BattleResolver {
   constructor(private readonly inner: BattleResolver, private readonly round: number) {}
-  resolveBattle(input: BattleInput): BattleResult {
+  resolveBattle(input: BattleInput, pool: SharedPoolState): BattleResult {
     if (input.round === this.round) throw new Error(`调试参数 faultAt=${this.round} 注入的战斗异常`);
-    return this.inner.resolveBattle(input);
+    return this.inner.resolveBattle(input, pool);
   }
 }
 
@@ -76,7 +78,8 @@ export class LocalRoomClient implements GameClient {
     const placeholder = new PlaceholderBattleResolver();
     const base: BattleResolver = options.pvpMode === 'two-sided' ? new TwoSidedBattleResolver(placeholder) : placeholder;
     const resolver = options.faultAtRound === null ? base : new FaultInjectingResolver(base, options.faultAtRound);
-    this.lobby = new Lobby({ clock: this.clock, resolver, seed: options.seed, timings, roomId: 'local-room', pvpMode: options.pvpMode });
+    this.lobby = new Lobby({ clock: this.clock, resolver, seed: options.seed, timings, roomId: 'local-room', pvpMode: options.pvpMode,
+      ...(options.poolCapacities ? { poolCapacities: options.poolCapacities } : {}) });
   }
 
   /** Test/debug access to the room the client is driving. */
@@ -127,8 +130,9 @@ export class LocalRoomClient implements GameClient {
     try {
       const result = room.handle(seatId, command);
       if (!result.ok) {
-        // Room-level refusals (seat/phase) are not MatchFailures; the UI shows them as a phase refusal.
-        const reason = result.reason === 'unknown-seat' || result.reason === 'seat-eliminated' || result.reason === 'room-phase' ? 'wrong-phase' : result.reason;
+        // Room-level refusals (seat/phase) are not MatchFailures; the UI shows them as a phase refusal. Shared-pool reasons
+        // (pool-empty, empty-slot, ...) pass through unchanged; the scene has its own text for them (POOL_REFUSAL_TEXT).
+        const reason = result.reason === 'unknown-seat' || result.reason === 'seat-eliminated' || result.reason === 'room-phase' ? 'wrong-phase' : result.reason as MatchFailure;
         const state = result.state ? this.display(result.state) : this.emittedDisplay ?? createMatch(this.options.seed);
         return { ok: false, state, reason };
       }

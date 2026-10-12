@@ -10,14 +10,20 @@ import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpe
 
 const twoSided = (battle: BattleResult): battle is Extract<BattleResult, { kind: 'two-sided' }> => battle.kind === 'two-sided';
 
-/** Round 1 (PvE) through the real rules for everyone except `victim`, who takes a fabricated lethal outcome: seven survivors from round 2 on. */
+/**
+ * Round 1 (PvE) through the real rules for everyone except `victim`, who takes a fabricated lethal outcome: seven survivors
+ * from round 2 on. The fabricated state is marked eliminated like the rules would (B5): the room then releases the seat's
+ * pool share, and the next natural refresh runs with the seven survivors only.
+ */
 function killAtRoundOne(victim: string): BattleResolver {
   const inner = new TwoSidedBattleResolver();
-  return { resolveBattle(input) {
+  return { resolveBattle(input, pool) {
     if (input.round === 1 && input.seats[0]!.seatId === victim) {
-      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: [{ seatId: victim, state: input.seats[0]!.state, result: null, damage: 100, frames: [] }] };
+      const state = input.seats[0]!.state;
+      const eliminated = { ...state, playerHp: 0, multiplayer: { ...state.multiplayer!, status: 'eliminated' as const } };
+      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: [{ seatId: victim, state: eliminated, result: null, damage: 100, frames: [] }] };
     }
-    return inner.resolveBattle(input);
+    return inner.resolveBattle(input, pool);
   } };
 }
 const atFirstPvp = (state: RoomState) => state.round === 4 && state.phase === 'preparation';
@@ -76,8 +82,8 @@ describe('Room: whole-round commit through T3 receipts', () => {
   it('discards the whole round when one receipt fails: no HP, no receipt, no state change for anyone', () => {
     const inner = new TwoSidedBattleResolver();
     let tampered = 0;
-    const resolver: BattleResolver = { resolveBattle(input) {
-      const result = inner.resolveBattle(input);
+    const resolver: BattleResolver = { resolveBattle(input, pool) {
+      const result = inner.resolveBattle(input, pool);
       if (result.kind === 'two-sided' && tampered++ === 2) return { ...result, proposals: { ...result.proposals, a: { ...result.proposals.a, damage: result.proposals.a.damage + 1 } } };
       return result;
     } };

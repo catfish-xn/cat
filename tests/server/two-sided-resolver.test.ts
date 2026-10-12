@@ -95,8 +95,9 @@ describe('resolveTwoSidedPvp', () => {
     const calls: string[] = [];
     const inner: BattleResolver = { resolveBattle(input) { calls.push(input.roundKind); return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: [] }; } };
     const resolver = new TwoSidedBattleResolver(inner);
-    resolver.resolveBattle(envelope(seats, 0, 1, { roundKind: 'pve', roundId: '1-2' }));
-    resolver.resolveBattle(envelope(seats, 0, 1, { roundKind: 'supply', roundId: '2-4' }));
+    const pool = makeRoom().room.state.pool;
+    resolver.resolveBattle(envelope(seats, 0, 1, { roundKind: 'pve', roundId: '1-2' }), pool);
+    resolver.resolveBattle(envelope(seats, 0, 1, { roundKind: 'supply', roundId: '2-4' }), pool);
     expect(calls).toEqual(['pve', 'supply']);
   });
 });
@@ -105,7 +106,7 @@ describe('Room in pvpMode=two-sided', () => {
   it('drops the whole round when the rules refuse one battle: nothing is staged and no HP moves', () => {
     const inner = new TwoSidedBattleResolver();
     let calls = 0;
-    const resolver: BattleResolver = { resolveBattle(input) { return inner.resolveBattle(input.roundKind === 'pvp' && ++calls === 3 ? { ...input, maxSteps: 1 } : input); } };
+    const resolver: BattleResolver = { resolveBattle(input, pool) { return inner.resolveBattle(input.roundKind === 'pvp' && ++calls === 3 ? { ...input, maxSteps: 1 } : input, pool); } };
     const { room, clock } = makeRoom(resolver);
     room.start();
     runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');

@@ -31,6 +31,7 @@ import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-ass
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 import { EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT } from '../presentation/equipment-feedback';
+import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -416,7 +417,8 @@ export class BoardScene extends Phaser.Scene {
       ...Object.fromEntries(EQUIPMENT_COMMAND_FAILURES.map(code => [code, EQUIPMENT_FAILURE_TEXT[code]])) as Record<typeof EQUIPMENT_COMMAND_FAILURES[number], string>,
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
-    return messages[reason];
+    // Online shared-pool refusals (pool-empty, empty-slot, ...) arrive through the same path but are not MatchFailures.
+    return messages[reason] ?? POOL_REFUSAL_TEXT[reason] ?? `操作被拒绝（${reason}）`;
   }
   /** Success text of each command still waiting for its server receipt (online WebSocket only). */
   private pendingSuccess = new Map<number, string>();
@@ -529,7 +531,7 @@ export class BoardScene extends Phaser.Scene {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];
       const frame = this.shopFrames[slot].clear().setVisible(false);
       button.setData('generation', match.shop.generation);
-      if (offer.status === 'purchased') button.setText('已购买').setBackgroundColor('#1c2934').setAlpha(0.45);
+      if (offer.status === 'purchased') button.setText(isEmptyShopSlot(offer) ? '缺货' : '已购买').setBackgroundColor('#1c2934').setAlpha(0.45);
       else {
         const definition = UNIT_DEFINITIONS[offer.definitionId];
         const colors = ['#304653', '#245841', '#28517d', '#634786', '#846230'];

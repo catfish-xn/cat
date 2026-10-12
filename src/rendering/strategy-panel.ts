@@ -29,6 +29,7 @@ import { equipmentFailureText, slotList, slotViews, temporaryItemText } from '..
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { continueBlockText, lootPanelSection, lootTerminalSummary } from '../presentation/loot-view';
+import { isEmptyShopSlot } from './online/pool-feedback';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -713,7 +714,12 @@ export class StrategyPanel {
         const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroPortraitHtml(definition.id, 34, heroEmblemSvg(definition.id, 34));
         button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
         button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}`);
-      } else button.append(element('span', '已购买', 'shop-name'));
+      } else {
+        // A shared-pool empty slot (online, §12.3) is out of stock, not a purchase; neither shows a hero.
+        const empty = isEmptyShopSlot(offer);
+        button.classList.toggle('shop-empty', empty);
+        button.append(element('span', empty ? '缺货' : '已购买', 'shop-name'));
+      }
       shop.append(button);
     });
     section.append(shop, element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds')); (this.shopDock ?? this.root).append(section);
