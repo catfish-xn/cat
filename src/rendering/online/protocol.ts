@@ -22,7 +22,8 @@ export interface RefusedCommand { readonly commandId: number; readonly reason: R
 
 /** Connection health of a network client; in-memory clients never report it. */
 export type ConnectionStatus =
-  | { readonly kind: 'online' }
+  /** `reclaimed`: this resume took my seat back from the bot that played it while I was away (B6). */
+  | { readonly kind: 'online'; readonly reclaimed?: true }
   | { readonly kind: 'reconnecting'; readonly attempt: number; readonly delayMs: number }
   /** Another tab or device resumed this seat; this client stops sending. */
   | { readonly kind: 'superseded' }

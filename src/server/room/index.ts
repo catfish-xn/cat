@@ -14,3 +14,4 @@ export {
   type SeatReplay,
 } from './projection';
 export { Lobby, type LobbyOptions, type JoinResult, type StartResult } from './lobby';
+export { BotDriver, BOT_DRIVER_DEFAULTS, deriveBotRng, type BotDriverOptions, type BotStepRecord } from './bot-driver';

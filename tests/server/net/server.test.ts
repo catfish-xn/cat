@@ -349,5 +349,6 @@ describe('game server: whole match over the wire', () => {
     for (const message of a.inbox) byType[message.type] = (byType[message.type] ?? 0) + bytes(message);
     console.log(`[c6-wire] seat A whole match bytes by type ${JSON.stringify(byType)}`);
     expect(Math.max(...a.inbox.map(bytes))).toBeGreaterThan(0);
-  }, 60_000);
+    // B6: the six fill-in bots now play (full boards, longer battles and frames), so the match takes longer on the wire.
+  }, 150_000);
 });

@@ -291,6 +291,8 @@
 
 ## 派工单 B6：机器人调度与断线接管（按合同 §13.3）
 
+**状态：已交付，PR #51 于 2026-10-12 合入 multiplayer（db4aa40）。** B8、C6 若在此之前开分支，提 PR 前先把 origin/multiplayer 合进来；`room.ts`、`net/server.ts`、`players-sidebar.ts` 以 B6 为准。
+
 分支：`claude/b6-bot-driver`，基于 `origin/multiplayer`。**在 B5 合入之后开工**（机器人的买/卖/刷新/选择必须走 B5 接好的共享池入口）。
 
 ### 依据

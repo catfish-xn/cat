@@ -19,7 +19,7 @@ const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
 };
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
-  return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected,
+  return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
     publicBoard: toPublicBoard(seat.match) };
 }
 

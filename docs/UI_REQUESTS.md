@@ -568,3 +568,13 @@ C6 已让离线与联机共用一条战斗渲染路径：棋盘、单位条、�
 
 - 现状：§14.2 不承诺状态图标/持续时间；联机棋子不显示状态条，策略面板与统计面板隐藏护盾层、状态行、效果来源与按来源治疗（离线仍完整显示）。
 - 需要（可选）：若要联机也显示，给 `CombatViewUnit` 增加只读白名单字段，例如 `statuses: {kind, harmful, expiresAtTick}[]` 与 `shieldLayers: {remaining, expiresAtTick}[]`；客户端只显示，不回填 runtime。
+## src/server 接入 B6 后的合同缺口（B6，2026-10-12，Claude 流水线 B）
+
+### SR-B6-01 合同 §13 补写机器人接管字段与拒绝原因（P1，只改文档）
+
+B6（PR #51）已实现，合同文档尚未记载，请 Codex 在 `docs/MULTIPLAYER_CONTRACT.md` §13 补一节，不改代码：
+- `SeatPublic.controller: 'human' | 'bot' | 'takeover'`：补位机器人恒为 `bot`；真人席断线超过 `CAT_TAKEOVER_SEC`（默认 60 s）后为 `takeover`，重连即刻回到 `human`。
+- `resumed` 回执可选字段 `reclaimed?: true`：本次重连从机器人手里接回了席位；其余情况不出现该字段。
+- `RoomFailure` 新增 `seat-controlled`（接管期间玩家命令被拒）与 `control-revoked`（旧控制代次的机器人步骤被拒，席位不变）。
+- 策略调用约定：每席每轮预算 `BOT_MAX_STEPS`；`done` 只结束本次阶段进入，同一轮战后再出现选择窗口会再问一次；失败或预算用尽则整轮关闭，下一轮清零。
+- 验收：合同描述与 `src/server/room/bot-driver.ts`、`src/server/net/messages.ts` 一致即可，不需要新测试。

@@ -7,10 +7,13 @@
  *   CAT_SEED                 room seed, lcg32-v1 (default 20261012)
  *   CAT_PREP_SEC / CAT_CHOICE_SEC / CAT_SETTLE_SEC   phase lengths in seconds
  *   CAT_QUEUE_TIMEOUT_SEC    auto-start this long after the first join (unset: wait for "start")
+ *   CAT_BOT_STEP_MS          delay between two bot steps of one seat (default 300)
+ *   CAT_TAKEOVER_SEC         a disconnected player's seat is played by a bot after this long (default 60)
  *
  * TLS termination is the reverse proxy's job (T9); this process speaks plain ws://.
  */
 import { createGameServer } from './net/server';
+import { BOT_DRIVER_DEFAULTS } from './room/bot-driver';
 import { RealClock } from './room/real-clock';
 import { ROOM_TIMING_DEFAULTS } from './room/room';
 
@@ -39,6 +42,7 @@ createGameServer({
     settlementMs: seconds('CAT_SETTLE_SEC', ROOM_TIMING_DEFAULTS.settlementMs),
   },
   queueTimeoutMs: queueTimeout,
+  bots: { stepMs: integer('CAT_BOT_STEP_MS', BOT_DRIVER_DEFAULTS.stepMs) || BOT_DRIVER_DEFAULTS.stepMs, takeoverMs: seconds('CAT_TAKEOVER_SEC', BOT_DRIVER_DEFAULTS.takeoverMs) },
   log: line => console.log(`[game] ${line}`),
 }).then(server => {
   console.log(`[game] listening on ws://${host}:${server.port} (prep ${seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs) / 1000}s)`);

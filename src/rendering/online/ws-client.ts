@@ -275,7 +275,7 @@ export class WsGameClient implements GameClient {
         case 'resumed':
           this.seatId = result.seatId; this.roomId = result.roomId;
           this.nextCommandId = Math.max(this.nextCommandId, result.lastCommandId + 1);
-          this.setStatus({ kind: 'online' });
+          this.setStatus(result.reclaimed ? { kind: 'online', reclaimed: true } : { kind: 'online' });
           break;
         case 'applied':
           this.appliedRevision = Math.max(this.appliedRevision, result.seatRevision);
@@ -330,7 +330,7 @@ export class WsGameClient implements GameClient {
   /* ---------------- helpers ---------------- */
 
   private setStatus(status: ConnectionStatus): void {
-    if (this.status?.kind === status.kind && status.kind !== 'reconnecting') return;
+    if (this.status?.kind === status.kind && status.kind !== 'reconnecting' && !(status.kind === 'online' && status.reclaimed)) return;
     this.status = status;
     this.listeners?.connection?.(status);
   }
