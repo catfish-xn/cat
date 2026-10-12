@@ -12,21 +12,13 @@
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
 import type { CombatReplay, PrivateSeatView } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ClientCommand, CombatFrame, LobbyView, PlayerView } from '../protocol';
+import type { ClientCommand, LobbyView, PlayerView } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 
 export const NET_PROTOCOL_VERSION = 1;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
-/** Outbound combat batching (work order C4 step 5): above maxBytes, frames go out framesPerPart at a time. */
-export const COMBAT_SPLIT = { maxBytes: 1024 * 1024, framesPerPart: 200 } as const;
-/**
- * How a seat's battle is sent (work order B7): the legacy per-tick `combat` frames, the compact `replay`
- * (contract §14.2), or both. `both` stays the default until the client plays replays (C6); then `replay`.
- */
-export type CombatTransport = 'frames' | 'replay' | 'both';
-export const DEFAULT_COMBAT_TRANSPORT: CombatTransport = 'both';
 
 /* ---------------- client → server ---------------- */
 
@@ -61,7 +53,11 @@ export type ReceiptResult =
   | { readonly kind: 'left' }
   | { readonly kind: 'started'; readonly roomId: string }
   /** `lastCommandId` is the highest id this seat has used; a client that lost its counter continues above it. */
-  | { readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null; readonly connectionEpoch: number; readonly lastCommandId: number }
+  /**
+   * `reclaimed` (B6): a bot had taken this seat over while the player was away and this resume handed it back; absent
+   * otherwise. The client shows "已接回席位" from it.
+   */
+  | { readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null; readonly connectionEpoch: number; readonly lastCommandId: number; readonly reclaimed?: true }
   | { readonly kind: 'applied'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly MatchEvent[] };
 
 /** Failures decided by the network layer before the room or the rules see the message. */
@@ -91,12 +87,9 @@ export type ServerMessage =
    */
   | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: PrivateSeatView }
   /**
-   * One battle's frames. A battle whose message would exceed COMBAT_SPLIT.maxBytes is sent as `total`
-   * consecutive messages of COMBAT_SPLIT.framesPerPart frames, `part` 1..total; the client joins them in order.
-   * Both fields are absent when the battle fits in one message.
+   * My battle of this round as a compact replay from my point of view (contract §14.2): initial view, one record
+   * per tick with keyframes, terminal view. The only battle message (C6); a whole match stays far below the frame cap.
    */
-  | { readonly type: 'combat'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly frames: readonly CombatFrame[]; readonly part?: number; readonly total?: number }
-  /** One battle as a compact replay from my point of view (contract §14.2): initial view, one record per tick with keyframes, terminal view. */
   | { readonly type: 'replay'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly replay: CombatReplay }
   | ReceiptMessage
   | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null };
@@ -205,26 +198,6 @@ export function parseClientMessage(raw: string): ParseResult {
 }
 
 /** Deterministic JSON with sorted keys: the content identity a commandId is compared against. */
-/**
- * Wire texts of one battle's frames (B8): the whole message, or COMBAT_SPLIT parts of `framesPerPart` frames when the
- * whole would exceed `maxBytes`. Each frame is serialised once and the texts are spliced from those pieces; every
- * text is exactly `JSON.stringify` of the message it stands for (`{ ...message, frames, part, total }` for a part).
- */
-export function encodeCombat(message: Extract<ServerMessage, { type: 'combat' }>, byteLength: (text: string) => number): string[] {
-  const head = `{"type":"combat","roomId":${JSON.stringify(message.roomId)},"round":${JSON.stringify(message.round)},"battleId":${JSON.stringify(message.battleId)},"frames":[`;
-  const frames = message.frames.map(frame => JSON.stringify(frame));
-  const whole = `${head}${frames.join(',')}]}`;
-  // A UTF-16 unit is 1–3 UTF-8 bytes: only lengths between the two bounds need the exact count.
-  const fits = whole.length * 3 <= COMBAT_SPLIT.maxBytes || (whole.length <= COMBAT_SPLIT.maxBytes && byteLength(whole) <= COMBAT_SPLIT.maxBytes);
-  if (fits) return [whole];
-  const total = Math.ceil(frames.length / COMBAT_SPLIT.framesPerPart);
-  const parts: string[] = [];
-  for (let part = 1; part <= total; part++) {
-    const slice = frames.slice((part - 1) * COMBAT_SPLIT.framesPerPart, part * COMBAT_SPLIT.framesPerPart);
-    parts.push(`${head}${slice.join(',')}],"part":${part},"total":${total}}`);
-  }
-  return parts;
-}
 
 export function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;

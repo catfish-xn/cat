@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
 import { toSeatPrivateView } from '../../../src/server/room/projection';
 import { CLOSE_CODES } from '../../../src/server/net/server';
-import { COMBAT_SPLIT, type ServerMessage } from '../../../src/server/net/messages';
+import type { ServerMessage } from '../../../src/server/net/messages';
 import type { Receipt } from '../../../src/server/net/test-client';
 import { DamageResolver, TIMINGS } from '../helpers';
 import { expectOk, flush, hasKey, messagesOfType, seatTwo, startServer, type NetHarness } from './helpers';
@@ -62,8 +62,8 @@ describe('game server: visibility', () => {
         if (message.seatRevision === seat.seatRevision) expect(message.state).toEqual(JSON.parse(JSON.stringify(toSeatPrivateView(seat.match))));
         continue;
       }
-      // B3: combat frames are CombatState views, not MatchState; they carry no shop and belong to B's own battle.
-      if (message.type === 'combat') { for (const frame of message.frames) expect(hasKey(frame.state, 'shop')).toBe(false); continue; }
+      // C6: battles arrive only as compact replays (CombatViewState), never as per-tick combat frames.
+      expect((message as { type: string }).type).not.toBe('combat');
       expect(hasKey(message, 'shop'), `${message.type} leaked a shop`).toBe(false);
       if (message.type === 'view') for (const seat of message.view.seats) {
         // C5: every seat's public board travels in the view, and only deployed units with item definitions.
@@ -75,10 +75,10 @@ describe('game server: visibility', () => {
     expect(messagesOfType(b.inbox, 'state').length).toBeGreaterThan(0);
     expect(b.inbox.some(message => message.type === 'view' && message.view.mySeatId === seatB)).toBe(true);
     expect(b.inbox.some(message => message.type === 'view' && message.view.mySeatId !== seatB)).toBe(false);
-    // Every combat message B got is B's own battle (frames carry B's seed, checked above) and only one per round.
-    const combatsB = messagesOfType(b.inbox, 'combat');
-    expect(combatsB.length).toBeGreaterThan(0);
-    expect(new Set(combatsB.map(combat => combat.round)).size).toBe(combatsB.filter(combat => (combat.part ?? 1) === 1).length); // one battle per round; large ones arrive in parts
+    // Every replay B got is one battle of its own, one per round.
+    const replaysB = messagesOfType(b.inbox, 'replay');
+    expect(replaysB.length).toBeGreaterThan(0);
+    expect(new Set(replaysB.map(replay => replay.round)).size).toBe(replaysB.length);
   }, 30_000);
 });
 
@@ -243,7 +243,7 @@ describe('game server: queue', () => {
     expect(await clients[1]!.join('again')).toMatchObject({ ok: false, reason: 'already-joined' });
   });
   it('refuses a join while a match runs and lets a new queue form after it ends', async () => {
-    harness = await startServer({}, new DamageResolver(() => 100, 0));
+    harness = await startServer({}, new DamageResolver(() => 100, false));
     const [a] = await seatTwo(harness);
     const late = await harness.connect();
     expect(await late.join('迟到')).toMatchObject({ ok: false, reason: 'in-progress' });
@@ -308,7 +308,7 @@ describe('game server: connection limits', () => {
 });
 
 describe('game server: whole match over the wire', () => {
-  it('drives two clients from the queue to a full ranking with combat frames on the manual clock', async () => {
+  it('drives two clients from the queue to a full ranking with replays on the manual clock', async () => {
     harness = await startServer({}, new TwoSidedBattleResolver());
     const [a, b] = await seatTwo(harness);
     const room = harness.server.room!;
@@ -339,13 +339,16 @@ describe('game server: whole match over the wire', () => {
       expect(replays.length).toBeGreaterThan(0);
       expect(new Set(replays.map(message => message.battleId)).size).toBe(replays.length);
     }
-    const combatsA = messagesOfType(a.inbox, 'combat');
-    expect(combatsA.length).toBeGreaterThan(0);
-    expect(combatsA.every(combat => combat.frames.length > 0 && combat.frames.every(frame => Number.isInteger(frame.state.tick)))).toBe(true);
-    expect(new Set(combatsA.map(combat => combat.round)).size).toBe(combatsA.filter(combat => (combat.part ?? 1) === 1).length); // one battle per round per seat
-    for (const combat of combatsA) if (combat.total !== undefined) expect(combat.frames.length).toBeLessThanOrEqual(COMBAT_SPLIT.framesPerPart);
-    // Evidence for docs/UI_REQUESTS.md (wire size of full-state combat frames); the numbers are reported, not asserted.
-    const bytes = (message: ServerMessage) => JSON.stringify(message).length;
+    const replaysA = messagesOfType(a.inbox, 'replay');
+    expect(replaysA.every(message => message.replay.ticks.length === message.replay.terminal.tick + 1)).toBe(true);
+    expect(new Set(replaysA.map(message => message.round)).size).toBe(replaysA.length); // one battle per round per seat
+    expect(a.inbox.some(message => (message as { type: string }).type === 'combat')).toBe(false);
+    // Evidence for the C6 PR (whole-match application bytes per message type); reported, not asserted.
+    const bytes = (message: ServerMessage) => Buffer.byteLength(JSON.stringify(message));
+    const byType: Record<string, number> = {};
+    for (const message of a.inbox) byType[message.type] = (byType[message.type] ?? 0) + bytes(message);
+    console.log(`[c6-wire] seat A whole match bytes by type ${JSON.stringify(byType)}`);
     expect(Math.max(...a.inbox.map(bytes))).toBeGreaterThan(0);
-  }, 60_000);
+    // B6: the six fill-in bots now play (full boards, longer battles and frames), so the match takes longer on the wire.
+  }, 150_000);
 });

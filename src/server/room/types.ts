@@ -12,12 +12,12 @@
 import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
-import type { BattleResult as RulesBattleResult, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
-import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type CombatFrame, type RoomPhase, type SeatKind } from '../protocol';
+import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
 export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
-export type { RoomPhase, SeatKind, PlayerView, PlayerViewPhase, PlayerViewPhaseKind, PlayerViewFault, PlayerViewFaultKind, SeatPublic, QueueEntry, LobbyView, CombatFrame, ClientCommand } from '../protocol';
+export type { RoomPhase, SeatKind, SeatController, PlayerView, PlayerViewPhase, PlayerViewPhaseKind, PlayerViewFault, PlayerViewFaultKind, SeatPublic, QueueEntry, LobbyView, ClientCommand } from '../protocol';
 export type { RulesBattleResult, RoundSettlementReceipt, SideProposal, SharedPoolFailure, SharedPoolState };
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 /**
@@ -38,6 +38,13 @@ export interface SeatState {
   readonly name: string;
   readonly kind: SeatKind;
   readonly connected: boolean;
+  /** Current controller (B6); a fill-in bot seat is always `bot`, a human seat is `human` or temporarily `takeover`. */
+  readonly controller: SeatController;
+  /**
+   * Control generation: bumps on every controller change of this seat. A bot step carries the generation it was
+   * decided under and the room refuses it once the generation moved on (a takeover revoked by a resume).
+   */
+  readonly controlEpoch: number;
   /** Authoritative HP (truncated at 0). */
   readonly hp: number;
   readonly alive: boolean;
@@ -81,8 +88,11 @@ export interface BattleInput {
   /** Set when `seats[0]` fights the frozen copy of another survivor; the source is not a participant. */
   readonly mirrorOf: BattleSeatInput | null;
 }
-/** Battle view data for playback: one CombatState per tick with that tick's ledger events (§10.6 item 3). */
-export type BattleFrame = CombatFrame;
+/**
+ * One seat's own rules combat as the replay projection needs it (contract §14.2, PvE): the CombatState right
+ * after start, the finished CombatState and the complete ledger including tick 0. No per-tick states are kept.
+ */
+export type SeatCombat = CombatReplayInput;
 export interface BattleSeatOutcome {
   readonly seatId: string;
   /** Seat state after its battle, as produced by the rules; the room stores it verbatim. */
@@ -90,7 +100,8 @@ export interface BattleSeatOutcome {
   readonly result: CombatResult | 'supply' | null;
   /** Untruncated HP damage decided by the rules (>= 0); the room subtracts it. */
   readonly damage: number;
-  readonly frames: readonly BattleFrame[];
+  /** The combat this seat fought, or null when the round had none (supply, already settled). */
+  readonly combat: SeatCombat | null;
 }
 /** B1 shape: each seat's own single-player combat, already settled by the rules (placeholder PvP, PvE, supply). */
 export interface PlaceholderBattleResult {
@@ -118,8 +129,6 @@ export interface TwoSidedBattleResult {
   readonly participants: readonly string[];
   readonly battle: RulesBattleResult;
   readonly proposals: { readonly a: SideProposal; readonly b: SideProposal };
-  /** Playback frames from side A's point of view; side B's view is a projection (projection.ts). */
-  readonly frames: readonly BattleFrame[];
 }
 export type BattleResult = PlaceholderBattleResult | TwoSidedBattleResult;
 
@@ -200,7 +209,11 @@ export interface RoomState {
 /** A seat command is exactly the shared ClientCommand; the room dispatches it to src/simulation/match.ts. */
 export type SeatCommand = ClientCommand;
 
-export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase';
+/**
+ * `seat-controlled`: a player command reached a human seat a bot took over (B6); `control-revoked`: a bot step
+ * decided under an older control generation (the player resumed in between, or the seat is not bot-controlled).
+ */
+export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 'seat-controlled' | 'control-revoked';
 export type RoomCommandResult =
   | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[]; readonly seatRevision: number; readonly roomRevision: number }
   /** `SharedPoolFailure` includes every MatchFailure plus the pool's own reasons (pool-empty, empty-slot, ...). */

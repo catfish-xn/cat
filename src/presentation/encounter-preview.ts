@@ -23,7 +23,8 @@ const seconds = (ticks: number) => `${+(ticks * 0.05).toFixed(2)}s`;
 
 export function encounterPreviewSection(state: MatchState, options: EncounterPreviewOptions): HTMLElement | null {
   const preview = readEncounterPreview(state);
-  if (!preview) return null;
+  // Online PvP rounds carry no enemy preparation (contract §14.1): nothing to preview, never a fake opponent.
+  if (!preview || !preview.units.length) return null;
   const monsters = state.m8.round.kind === 'pve';
   // Identical units (same definition, star, stats and rule text) share one card.
   const groups = new Map<string, (typeof preview.units)[number][]>();

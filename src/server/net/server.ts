@@ -3,7 +3,7 @@
  * WriteQueue: every inbound message is parsed, authenticated, deduped, version-checked and only
  * then handed to Room.handle, strictly in arrival order. Each connection receives its own
  * PlayerView, its own private seat view (the rules' `toPrivateSeatView`, never the MatchState) and
- * its own battle (frames and/or compact replay); nobody receives another seat's shop. This is the
+ * its own battle (one compact replay per round); nobody receives another seat's shop. This is the
  * only server file that imports ws.
  *
  * Processing order per message (V2 §5.1): parse & field validation → identity and seat →
@@ -14,12 +14,12 @@ import { startBattleJob, type BattleJob, type BattleResolver } from '../room/bat
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
-import { toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
+import { toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
-  DEFAULT_COMBAT_TRANSPORT, commandContent, encodeCombat, parseClientMessage, type ClientMessage, type CombatTransport, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
+  commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
   type ReceiptResult, type ServerMessage,
 } from './messages';
 import { SessionRegistry, digestOf, type SeatSession } from './session';
@@ -48,8 +48,9 @@ export interface GameServerOptions {
   readonly timings?: Partial<RoomTimings>;
   readonly queueTimeoutMs?: number | null;
   readonly limits?: Partial<ConnectionLimits>;
+  /** Bot steps spacing and takeover delay (B6); steps always run as tasks of the server's write queue. */
+  readonly bots?: { readonly stepMs?: number; readonly takeoverMs?: number };
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
-  readonly combatTransport?: CombatTransport;
   /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
   readonly sliceTicks?: number;
   readonly log?: (line: string) => void;
@@ -122,7 +123,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const limits: ConnectionLimits = { ...LIMIT_DEFAULTS, ...options.limits };
   const log = options.log ?? (() => {});
   const clock = options.clock;
-  const combatTransport = options.combatTransport ?? DEFAULT_COMBAT_TRANSPORT;
   const queue = new WriteQueue(error => log(`task failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`));
   const sessions = new SessionRegistry(limits.dedupeWindow);
   const connections = new Map<number, Connection>();
@@ -141,8 +141,10 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const resolver = options.resolver ?? new TwoSidedBattleResolver();
   const lobby = new Lobby({
     clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS, seed: options.seed,
-    resolver: combatTransport === 'frames' ? resolver : withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
+    resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened),
+    // Bot steps and takeovers fire on the clock; each one becomes a task of the single write queue (§13.3 item 2).
+    bots: { ...options.bots, enqueue: task => queue.push(task) },
   });
 
   /** Seats a connection currently holds; only they are pushed a replay. */
@@ -157,11 +159,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   function send(conn: Connection, message: ServerMessage): void {
     if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
     conn.socket.send(JSON.stringify(message));
-  }
-  /** A battle above COMBAT_SPLIT.maxBytes leaves as consecutive parts of framesPerPart frames (part 1..total); each frame is serialised once. */
-  function sendCombat(conn: Connection, message: Extract<ServerMessage, { type: 'combat' }>): void {
-    if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
-    for (const text of encodeCombat(message, text => Buffer.byteLength(text))) conn.socket.send(text);
   }
   function sendError(conn: Connection, code: ErrorCode, message: string, commandId: number | null = null): void {
     send(conn, { type: 'error', code, message, commandId });
@@ -196,17 +193,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const key = `${state.round}:${battle.battleId}`;
       if (conn.sentCombatKey !== key) {
         conn.sentCombatKey = key;
-        if (combatTransport !== 'replay') {
-          const frames = toCombatFrames(state, seat.seatId);
-          if (frames.length > 0) sendCombat(conn, { type: 'combat', roomId: state.roomId, round: state.round, battleId: battle.battleId, frames });
-        }
-        if (combatTransport !== 'frames') {
-          // A replay failure is a server fault (§14.2): logged, never turned into a result; the frames above still play.
-          let replay: ReturnType<typeof toCombatReplayFor> = null;
-          try { replay = toCombatReplayFor(state, seat.seatId); }
-          catch (error) { log(`replay of ${battle.battleId} failed: ${error instanceof Error ? error.message : String(error)}`); }
-          if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay });
-        }
+        // A replay failure is a server fault (§14.2): logged, never turned into a result; settlement still follows.
+        let replay: ReturnType<typeof toCombatReplayFor> = null;
+        try { replay = toCombatReplayFor(state, seat.seatId); }
+        catch (error) { log(`replay of ${battle.battleId} failed: ${error instanceof Error ? error.message : String(error)}`); }
+        if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay });
       }
     }
   }
@@ -309,8 +300,10 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     bind(conn, session);
     const current = room;
     const inRoom = current !== null && session.roomId === current.state.roomId;
+    // A resume revokes a bot takeover at once (B6); the receipt tells the player their seat was handed back.
+    const reclaimed = inRoom && current.state.seats.some(seat => seat.seatId === session.seatId && seat.controller === 'takeover');
     if (inRoom) current.setConnected(session.seatId, true);
-    send(conn, done(message.commandId, { kind: 'resumed', seatId: session.seatId, roomId: session.roomId, connectionEpoch: session.connectionEpoch, lastCommandId: session.dedupe.highestSeen }));
+    send(conn, done(message.commandId, { kind: 'resumed', seatId: session.seatId, roomId: session.roomId, connectionEpoch: session.connectionEpoch, lastCommandId: session.dedupe.highestSeen, ...(reclaimed ? { reclaimed: true as const } : {}) }));
     // Snapshot first (view → state → combat), increments follow through the room listener.
     if (inRoom) pushRoom(conn, current.state); else send(conn, { type: 'lobby', view: lobbyViewFor(conn) });
     log(`seat ${session.seatId} resumed on connection ${conn.id} (epoch ${session.connectionEpoch})`);
@@ -417,7 +410,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   /* ---------------- listen ---------------- */
 
   return new Promise<GameServer>((resolve, reject) => {
-    // permessage-deflate (C4): MatchState frames repeat almost entirely, so they compress by an order of magnitude.
+    // permessage-deflate (C4): seat views and replay keyframes repeat almost entirely, so they compress well.
     // Context takeover stays on (the default) so consecutive states compress against each other.
     const wss = new WebSocketServer({ port: options.port, host: options.host, maxPayload: limits.maxMessageBytes, perMessageDeflate: { threshold: 1024 } });
     wss.once('error', reject);

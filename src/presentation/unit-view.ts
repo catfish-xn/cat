@@ -5,7 +5,8 @@
  */
 import Phaser from 'phaser';
 import type { Unit } from '../simulation/units';
-import type { CombatState, CombatUnit } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import type { DisplayUnit } from './combat-display';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
@@ -118,8 +119,11 @@ export class UnitView {
     this.disc.setAlpha(1);
   }
 
-  /** Combat meters: HP (team colored) with shield segment, mana below. */
-  drawCombat(unit: CombatUnit, combat: CombatState): void {
+  /**
+   * Combat meters: HP (team colored) with shield segment, mana below, from the displayed values only. The status
+   * strip needs the local engine state (`runtime`, offline); the online view carries no statuses and shows none.
+   */
+  drawCombat(unit: DisplayUnit, runtime: CombatState | null): void {
     const alive = unit.alive, width = 52, left = -26;
     const hpRatio = unit.hp / unit.maxHp;
     this.hp.clear().setVisible(alive);
@@ -140,7 +144,7 @@ export class UnitView {
     this.shield.fillStyle(toNumber(C.shield)).fillRect(left + start, -44, Math.max(segment, unit.shield > 0 ? 2 : 0), 6);
     this.shield.setData({ value: unit.shield, maxValue: unit.maxHp, ratio: shieldRatio, width: width * shieldRatio });
     this.shieldLabel.setText(`盾 ${unit.shield}`).setVisible(alive && unit.shield > 0);
-    const badges = alive ? statusBadges(combat, unit.id) : { harmful: '', beneficial: '' };
+    const badges = alive && runtime ? statusBadges(runtime, unit.id) : { harmful: '', beneficial: '' };
     this.harmfulBadges.setText(badges.harmful).setVisible(badges.harmful.length > 0);
     this.beneficialBadges.setText(badges.beneficial).setVisible(badges.beneficial.length > 0);
   }

@@ -4,7 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from '../../src/server/room/battle-resolver';
-import { mirrorCombatFrame, toCombatFrames, toPlayerView } from '../../src/server/room/projection';
+import { toCombatReplayFor, toPlayerView } from '../../src/server/room/projection';
+import { toCombatReplay, toCombatViewState } from '../../src/server-entry';
 import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
 import { DEFAULT_BATTLE_MAX_STEPS, type BattleInput, type BattleResult, type SeatState } from '../../src/server/room/types';
 import { makeRoom, runUntil } from './helpers';
@@ -68,15 +69,12 @@ describe('resolveTwoSidedPvp', () => {
     expect(resolveTwoSidedPvp(envelope(seats, 5, 6))).toEqual(own);
   });
 
-  it('builds exactly one frame sequence per battle: opening first, terminal last, one frame per tick, same ledger', () => {
+  it('keeps the one battle the rules ran, no per-tick frames: the replay is built from it (C6)', () => {
     const result = resolveTwoSidedPvp(envelope(seats, 0, 1));
-    const { frames, battle } = result;
-    expect(frames[0]!.state).toEqual(battle.initial);
-    expect(frames.at(-1)!.state).toEqual(battle.terminal);
-    expect(frames).toHaveLength(battle.terminal.tick + 1);
-    expect(frames.every((frame, index) => frame.state.tick === index && frame.events.every(event => event.tick === index))).toBe(true);
-    expect(frames.flatMap(frame => frame.events)).toEqual(battle.events);
-    expect(frames.at(-1)!.state.status).toBe('finished');
+    expect(result).not.toHaveProperty('frames');
+    const replay = toCombatReplay(result.battle);
+    expect(replay.ticks).toHaveLength(result.battle.terminal.tick + 1);
+    expect(replay.terminal).toEqual(toCombatViewState(result.battle.terminal));
   });
 
   it('rejects an envelope whose round differs from the seats\' preparation round before touching the rules', () => {
@@ -131,7 +129,7 @@ describe('Room in pvpMode=two-sided', () => {
     expect(room.state.seats.map(seat => seat.hp)).toEqual(hpBefore);
   }, 20_000);
 
-  it('frames: side A plays as-is, side B mirrored, and a mirror source gets only its own battle', () => {
+  it('replay: side A plays as-is, side B mirrored, and a mirror source gets only its own battle', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
@@ -141,34 +139,11 @@ describe('Room in pvpMode=two-sided', () => {
     expect(battles).toHaveLength(4);
     const real = battles[0]!;
     const [aId, bId] = [real.battle.a.seatId, real.battle.b.seatId];
-    expect(toCombatFrames(room.state, aId)).toBe(real.frames);
-    const mirrored = toCombatFrames(room.state, bId);
-    expect(mirrored).toHaveLength(real.frames.length);
-    expect(mirrored[0]!.state.units.find(unit => unit.id.includes(`"${bId}"`))!.team).toBe('player');
+    const a = toCombatReplayFor(room.state, aId)!, b = toCombatReplayFor(room.state, bId)!;
+    expect(toCombatReplayFor(room.state, aId)!.replay).toBe(a.replay); // built once per battle
+    expect(a.replay.ticks).toHaveLength(real.battle.terminal.tick + 1);
+    expect(b.replay.ticks).toHaveLength(a.replay.ticks.length);
+    expect(b.replay.initial.units.find(unit => unit.id.includes(`"${bId}"`))!.team).toBe('player');
     expect(toPlayerView(room.state, aId, clock.now()).opponentSeatId).toBe(bId);
   }, 20_000);
-});
-
-describe('mirrorCombatFrame', () => {
-  it('swaps teams, flips rows against the board height and swaps the result; everything else is untouched', () => {
-    const seats = pvpSeats();
-    const result = resolveTwoSidedPvp(envelope(seats, 0, 1));
-    const last = result.frames.at(-1)!;
-    const mirrored = mirrorCombatFrame(last);
-    const rows = last.state.board.rows;
-    expect(mirrored.state.units).toHaveLength(last.state.units.length);
-    for (const [index, unit] of last.state.units.entries()) {
-      const twin = mirrored.state.units[index]!;
-      expect(twin.id).toBe(unit.id); expect(twin.hp).toBe(unit.hp);
-      expect(twin.team).toBe(unit.team === 'player' ? 'enemy' : 'player');
-      expect(twin.cell).toEqual({ col: unit.cell.col, row: rows - 1 - unit.cell.row });
-    }
-    expect(mirrored.state.result).toBe(last.state.result === 'playerWin' ? 'enemyWin' : last.state.result === 'enemyWin' ? 'playerWin' : last.state.result);
-    expect(mirrored.state.tick).toBe(last.state.tick);
-    expect(mirrored.state.board.deploymentZones.player).toEqual(last.state.board.deploymentZones.enemy);
-    const moves = result.frames.flatMap(frame => frame.events).filter(event => event.type === 'movement');
-    const mirroredMoves = result.frames.map(mirrorCombatFrame).flatMap(frame => frame.events).filter(event => event.type === 'movement');
-    expect(mirroredMoves.map(event => event.to.row)).toEqual(moves.map(event => rows - 1 - event.to.row));
-    expect(mirrorCombatFrame(mirrorCombatFrame(last))).toEqual(last);
-  });
 });

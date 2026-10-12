@@ -4,8 +4,10 @@ import { toPrivateSeatView, createMatch, advanceMultiplayerRound, equipItem, get
 import { getPlayerDeploymentCount } from '../src/simulation/game';
 import { deriveTraits } from '../src/simulation/trait-snapshot';
 import { readItemInventory, readUnitEquipment } from '../src/simulation/item-selectors';
-import { accepted, finalSettlement } from './t5r-helpers';
+import { accepted, finalSettlement, catalogPreparation } from './t5r-helpers';
 import { freeze } from './combat-helpers';
+import { readEncounterPreview } from '../src/simulation/encounter-selectors';
+import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 
 type Subset<T> = T extends readonly (infer V)[] ? readonly Subset<V>[] : T extends object ? {[K in keyof T]?:Subset<T[K]>} : T;
 // Compile-time proof: recursive structural subset, including phase and nested choices/history.
@@ -34,6 +36,41 @@ function richSeat():MatchState {
 }
 
 describe('T5R private own-seat whitelist',()=>{
+  it.each(ROUND_CATALOG.filter(r=>r.kind==='pve').map(r=>r.roundId))('SR-B7-02 %s: current public preview survives display adaptation without hidden fields',roundId=>{
+    const state=catalogPreparation(roundId),before=JSON.stringify(state),view=toPrivateSeatView(freeze(state));
+    expect(asSubset(view)).toBe(view);
+    const shown=state.m8.preparation.enemies.map(({encounterId:_,...unit})=>unit);
+    expect(view.m8.preparation?.enemies).toEqual(shown);
+    expect(view.preparation.units.filter(u=>u.team==='enemy')).toEqual(shown);
+    // Only displayed fields and harmless required metadata are restored, never hidden enemy plans.
+    const base=createMatch(777);
+    const display:MatchState={...base,preparation:view.preparation,
+      round:view.round,roundDefinitionId:view.roundDefinitionId,
+      m8:{...base.m8,round:{...view.m8.round,isFinal:false},
+        preparation:{version:'m8-b8-preparation-v1',contentStatus:'ready-b8-loot',...view.m8.preparation!}}};
+    expect(readEncounterPreview(display)).toEqual(readEncounterPreview(state));
+    const injected=structuredClone(state);sentinels(injected);
+    expect(toPrivateSeatView(injected)).toEqual(view);expect(JSON.stringify(view)).not.toMatch(/rng|futurePlan|loot|encounterPlan/);
+    expect(JSON.stringify(state)).toBe(before);noReferences(view,state);
+  });
+  it('SR-B7-02 omits stale/future previews and all PvP/supply enemy templates',()=>{
+    const state=catalogPreparation('3-7');
+    for(const changed of [
+      {...state,m8:{...state.m8,preparation:{...state.m8.preparation,roundId:'4-7'}}},
+      {...state,m8:{...state.m8,preparation:{...state.m8.preparation,encounterId:'razorbeaks-v1'}}},
+      catalogPreparation('2-1'),catalogPreparation('2-4'),
+    ]) {
+      const view=toPrivateSeatView(changed);
+      expect(view.m8).not.toHaveProperty('preparation');expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
+    }
+  });
+  it('SR-B7-02 preserves committed interest basis separately from current gold and interest income',()=>{
+    const state=richSeat(),record=state.roundResults[0];
+    const view=toPrivateSeatView({...state,gold:99,roundResults:[{...record,interestBasis:37,
+      incomeBreakdown:{...record.incomeBreakdown,interest:3}}]});
+    expect(view.roundResults[0].interestBasis).toBe(37);expect(view.roundResults[0].incomeBreakdown.interest).toBe(3);
+    expect(view.roundResults[0]).not.toHaveProperty('settlementId');
+  });
   it('keeps exact Match names/nesting, shown choices, empty slots, own inventory and history',()=>{
     const state=richSeat(),view=toPrivateSeatView(freeze(state));expect(asSubset(view)).toBe(view);
     expect(view.shop).toEqual(state.shop);expect(view.pendingChoice).toEqual({kind:'augment',step:'offer',choiceId:'shown',
@@ -67,7 +104,7 @@ describe('T5R private own-seat whitelist',()=>{
     const state=richSeat(),view=toPrivateSeatView(state);
     const display:MatchState={...createMatch(777),...view,phase:'choice',combat:null,
       pendingChoice:view.pendingChoice?{...view.pendingChoice,eventId:'display-only'}:null,
-      roundResults:view.roundResults.map(r=>({...r,settlementId:'display-only',roundKind:'pvp',interestBasis:0,
+      roundResults:view.roundResults.map(r=>({...r,settlementId:'display-only',roundKind:'pvp',
         streakBefore:{kind:null,count:0},streakAfter:{kind:null,count:0},xpRequested:0})),
       m8:{...createMatch(777).m8,round:{...view.m8.round,isFinal:false}}};
     expect(getDeploymentCap(display)).toBe(getDeploymentCap(state));

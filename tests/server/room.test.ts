@@ -58,7 +58,7 @@ describe('Room: settlement', () => {
     let calls = 0;
     const resolver = { resolveBattle(input: BattleInput): BattleResult {
       if (++calls === 2) throw new Error('boom');
-      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 50, frames: [] })) };
+      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 50, combat: null })) };
     } };
     const { room, clock } = makeRoom(resolver);
     room.start();
@@ -72,7 +72,7 @@ describe('Room: settlement', () => {
   });
   it('faults instead of committing a round whose results miss a seat', () => {
     const resolver = { resolveBattle(input: BattleInput): BattleResult {
-      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.slice(0, 0).map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 0, frames: [] })) };
+      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.slice(0, 0).map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 0, combat: null })) };
     } };
     const { room, clock } = makeRoom(resolver);
     room.start(); clock.advance(1_000);
@@ -121,14 +121,14 @@ describe('Room: settlement', () => {
     expect(room.state.ranking).toBeNull();
   });
   it('gives every seat a unique final rank when all eight reach zero together', () => {
-    const { room, clock } = makeRoom(new DamageResolver(() => 100, 0));
+    const { room, clock } = makeRoom(new DamageResolver(() => 100, false));
     room.start(); clock.advance(1_000);
     expect(room.state.phase).toBe('ended'); expect(room.state.fault).toBeNull();
     expectUniqueRanking(room.state);
     expect(room.state.ranking!.map(entry => entry.seatId)).toEqual(['s0', 's1', 's2', 's3', 's4', 's5', 's6', 's7']);
   });
   it('uses the raw HP before the seat order when zero is reached from different heights', () => {
-    const { room, clock } = makeRoom(new DamageResolver(seatId => seatId === 's7' ? 100 : seatId === 's6' ? 101 : 1, 0));
+    const { room, clock } = makeRoom(new DamageResolver(seatId => seatId === 's7' ? 100 : seatId === 's6' ? 101 : 1, false));
     room.start(); clock.advance(1_000);
     const eliminated = room.state.seats.filter(seat => !seat.alive).map(seat => [seat.seatId, seat.rank]);
     expect(eliminated).toEqual([['s6', 8], ['s7', 7]]);

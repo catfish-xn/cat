@@ -31,12 +31,16 @@ export interface OnlineHooks {
 const NON_RULE_REFUSALS: Partial<Record<ReceiptFailure, string>> = {
   'seat-revision-mismatch': '画面已更新 · 请重新操作', 'stale-round': '回合已变化 · 请重新操作', 'resync-required': '画面已更新 · 请重新操作',
   'unknown-seat': '席位不存在', 'seat-eliminated': '你已被淘汰，只能观看', 'room-phase': '当前阶段不能操作',
+  'seat-controlled': '机器人接管中 · 正在接回席位', 'control-revoked': '席位控制已变更 · 请重新操作',
   'no-room': '对局已不存在', 'wrong-room': '对局已更换，请刷新页面', 'not-authenticated': '连接未绑定席位 · 正在恢复',
   'rate-limited': '操作过快 · 请稍后再试', 'invalid-message': '客户端发送了无效命令（请刷新页面）', 'commandId-conflict': '命令编号冲突（请刷新页面）',
   'unsupported-protocol': '客户端版本过旧，请刷新页面',
 };
 const RECONNECTING = '连接中断，重连中…';
 const SUPERSEDED = '已在别处打开此席位 · 本页停止操作';
+/** Shown in the top status badge for a while after a resume took my seat back from a bot (B6). */
+const RECLAIMED = '已接回席位 · 机器人代打已结束';
+const RECLAIMED_NOTICE_MS = 8_000;
 type Mode = 'online-lobby' | 'active' | 'online-ended';
 
 export class OnlineApplication implements SceneApplication {
@@ -70,7 +74,7 @@ export class OnlineApplication implements SceneApplication {
       lobby: view => this.onLobby(view),
       view: view => this.onView(view),
       state: (state, confirmed) => this.onState(state, confirmed ?? []),
-      combat: frames => { this.session.receiveCombat(frames); this.hooks.clearInput(); this.hooks.refresh(); },
+      replay: replay => { this.session.receiveReplay(replay); this.hooks.clearInput(); this.hooks.refresh(); },
       refused: refusal => this.onRefused(refusal),
       connection: status => this.onConnection(status),
     });
@@ -94,6 +98,7 @@ export class OnlineApplication implements SceneApplication {
     this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
   }
   private connectionText: string | null = null;
+  private reclaimedTimer: number | null = null;
   private onConnection(status: ConnectionStatus) {
     const before = this.connectionText;
     switch (status.kind) {
@@ -106,9 +111,16 @@ export class OnlineApplication implements SceneApplication {
         break;
     }
     this.session.offline = this.connectionText;
+    this.clearReclaimed();
     this.sidebar.connection(this.connectionText); this.lobby.connection(this.connectionText);
     if (status.kind === 'reconnecting') this.hooks.status(`${RECONNECTING}（第 ${status.attempt} 次，${Math.round(status.delayMs / 1000)} 秒后）`);
     else if (status.kind === 'superseded') this.hooks.status(SUPERSEDED);
+    else if (status.kind === 'online' && status.reclaimed) {
+      // The status line is redrawn by the snapshot that follows the resume; the badge keeps the notice for a while.
+      this.hooks.status(RECLAIMED);
+      this.sidebar.connection(RECLAIMED, 'ok');
+      this.reclaimedTimer = window.setTimeout(() => { this.reclaimedTimer = null; this.sidebar.connection(this.connectionText); }, RECLAIMED_NOTICE_MS);
+    }
     else if (status.kind === 'online' && before !== null) this.hooks.status('已重新连接 · 画面已恢复');
   }
   private onView(view: PlayerView) {
@@ -185,8 +197,10 @@ export class OnlineApplication implements SceneApplication {
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
   debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
+  private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
     if (this.disposed) return; this.disposed = true;
+    this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
     this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.ranking.dispose(); this.session.dispose();

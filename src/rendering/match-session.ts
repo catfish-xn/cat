@@ -1,5 +1,6 @@
 import { COMBAT_TICK_MS } from '../simulation/combat';
-import type { LedgerCombatEvent } from '../simulation/combat-types';
+import type { CombatState, LedgerCombatEvent } from '../simulation/combat-types';
+import { toCombatViewState, toDisplayEvents, type CombatViewState, type DisplayCombatEvent, type SceneCombatEvent } from '../presentation/combat-display';
 import {
   buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
@@ -38,6 +39,23 @@ export class MatchSession {
   get phase() { return this.matchState.phase; }
   get preparation() { return this.matchState.preparation; }
   get combat() { return this.matchState.combat; }
+  private viewCache: { readonly combat: CombatState; readonly view: CombatViewState } | null = null;
+  /**
+   * C6: the battle every renderer draws. Offline it is the engine state through the same whitelist the server
+   * sends (`toCombatViewState`, once per state); online (RemoteSession) it is the replay's current view.
+   */
+  get combatView(): CombatViewState | null {
+    const combat = this.matchState.combat;
+    if (!combat) return null;
+    if (this.viewCache?.combat !== combat) this.viewCache = { combat, view: toCombatViewState(combat) };
+    return this.viewCache.view;
+  }
+  /** Offline only: the full engine state, for detail panels the view cannot carry (statuses, shield layers, sources). */
+  get combatRuntime(): CombatState | null { return this.matchState.combat; }
+  /** Display events of the current battle so far, as the board and the online stats read them. */
+  get displayLog(): readonly DisplayCombatEvent[] { return toDisplayEvents(this.combatLedger); }
+  /** One frame of combat for the scene: offline the rules' ledger events of the ticks run, online replay events. */
+  advanceDisplay(delta: number): readonly SceneCombatEvent[] { return this.advance(delta); }
   get startFailure() { return matchStartFailure(this.matchState); }
   /** Observer only: a copy of every event, including combatStart/tick-zero hooks. */
   get combatEvents(): readonly LedgerCombatEvent[] { return structuredClone(this.combatLedger); }

@@ -6,7 +6,8 @@ import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { displayUnitName } from './display-names';
-import { m8EventText } from '../presentation/combat-status';
+import { m8EventText, STATUS_KIND_NAMES } from '../presentation/combat-status';
+import type { DisplayCombatEvent } from '../presentation/combat-display';
 
 export type UnitNameLookup = (id: string | null) => string;
 const unnamed: UnitNameLookup = id => id ? '单位' : '无';
@@ -35,3 +36,21 @@ export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup =
     default: return null;
   }
 }
+/** Online (C6) log line for a §14.2 wire event: the facts it carries, without provenance it does not carry. */
+export function viewEventLine(event: DisplayCombatEvent, name: UnitNameLookup = unnamed): string | null {
+  if (event.type === 'unitUpdated') return null;
+  const prefix = `第 ${event.tick} 刻`;
+  switch (event.type) {
+    case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
+    case 'kill': return `${prefix} ${name(event.sourceId)} 击败 ${name(event.unitId)}`;
+    case 'growth': return `${prefix} ${name(event.unitId)} 永久攻击力 +${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
+    case 'packetDamage': return `${prefix} ${name(event.sourceId)} → ${name(event.targetId)}：${DAMAGE[event.damageType]}实际生命伤害 ${event.hpDamage}，护盾吸收 ${event.absorbed}${event.critical ? ' · 暴击' : ''}`;
+    case 'heal': return `${prefix} ${name(event.targetId)} 恢复生命 ${event.actual}`;
+    case 'cast': return `${prefix} ${name(event.sourceId)} 施放技能`;
+    case 'shieldLayerChanged': return event.reason === 'granted' ? `${prefix} ${name(event.targetId)} 获得护盾 ${event.remaining}` : null;
+    case 'statusChanged': return `${prefix} ${name(event.targetId)} ${STATUS_KIND_NAMES[event.kind]}${event.reason === 'applied' ? '生效' : event.reason === 'refreshed' ? '刷新' : '结束'}`;
+    case 'maxHpChanged': return `${prefix} ${name(event.unitId)} 最大生命 ${event.beforeMax} → ${event.afterMax}`;
+    default: return null;
+  }
+}
+const DAMAGE = { physical: '物理', magic: '魔法', true: '真实' } as const;

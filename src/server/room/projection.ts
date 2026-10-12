@@ -5,21 +5,21 @@
  * as the rules' `toPrivateSeatView` (B7, contract §14.1), its battle as a compact replay (§14.2).
  */
 import type { HexCell } from '../../simulation/board';
-import type { CombatResult, CombatState, CombatUnit, LedgerCombatEvent } from '../../simulation/combat-types';
+import type { CombatResult, CombatUnit } from '../../simulation/combat-types';
 import type { MatchState } from '../../simulation/match-types';
 import {
-  toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
+  toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
 } from '../../server-entry';
 import type { PublicBoard, PublicBoardUnit } from '../protocol';
 import { findPairing } from './pairing';
-import type { BattleResult, CombatFrame, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
+import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
 const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
   waiting: 'lobby', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
 };
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
-  return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected,
+  return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected, controller: seat.controller,
     publicBoard: toPublicBoard(seat.match) };
 }
 
@@ -68,58 +68,9 @@ export function toPlayerFault(fault: RoomFault): PlayerViewFault {
   }
 }
 
-/** Kept for B1 callers; the shared shape is CombatFrame of src/server/protocol.ts. */
-export type CombatFrameView = CombatFrame;
-
-/**
- * This seat's battle frames of the current round, in playback order; empty outside a resolved round.
- * A two-sided battle was run once from side A's point of view; a real side-B participant gets the
- * same frames mirrored (B3, §10.6 item 3). A mirror source is not a participant and gets nothing.
- */
-export function toCombatFrames(room: RoomState, seatId: string): readonly CombatFrameView[] {
-  for (const battle of room.battles) {
-    const frames = framesFor(battle, seatId);
-    if (frames) return frames;
-  }
-  return [];
-}
-function framesFor(battle: BattleResult, seatId: string): readonly CombatFrameView[] | null {
-  if (battle.kind === 'placeholder') return battle.outcomes.find(candidate => candidate.seatId === seatId)?.frames ?? null;
-  if (!battle.participants.includes(seatId)) return null;
-  if (battle.battle.a.seatId === seatId) return battle.frames;
-  if (battle.battle.b.seatId === seatId) return battle.frames.map(mirrorCombatFrame);
-  return null;
-}
-
-/**
- * Side B's view of a two-sided frame: teams swap and rows flip (`row = rows - 1 - row`, the inverse of
- * the compile-time mirror in §10.3), so B sees its own units as `player` at the bottom. Pure display
- * projection of server data; no unit, number or outcome is recomputed.
- */
-export function mirrorCombatFrame(frame: CombatFrame): CombatFrame {
-  const rows = frame.state.board.rows;
-  return { state: mirrorCombatState(frame.state, rows), events: frame.events.map(event => mirrorEvent(event, rows)) };
-}
 const flipCell = (cell: HexCell, rows: number): HexCell => ({ col: cell.col, row: rows - 1 - cell.row });
 const swapTeam = (team: CombatUnit['team']): CombatUnit['team'] => team === 'player' ? 'enemy' : 'player';
 const swapResult = (result: CombatResult | null): CombatResult | null => result === 'playerWin' ? 'enemyWin' : result === 'enemyWin' ? 'playerWin' : result;
-function mirrorCombatState(state: CombatState, rows: number): CombatState {
-  const { player, enemy } = state.board.deploymentZones;
-  return {
-    ...state,
-    board: { ...state.board, deploymentZones: { player: enemy, enemy: player } },
-    units: state.units.map(unit => ({ ...unit, team: swapTeam(unit.team), cell: flipCell(unit.cell, rows), ...(unit.startingCell ? { startingCell: flipCell(unit.startingCell, rows) } : {}) })),
-    result: swapResult(state.result),
-  };
-}
-function mirrorEvent(event: LedgerCombatEvent, rows: number): LedgerCombatEvent {
-  switch (event.type) {
-    case 'movement': return { ...event, from: flipCell(event.from, rows), to: flipCell(event.to, rows) };
-    case 'combatFinished': return { ...event, result: swapResult(event.result) ?? event.result };
-    case 'cast': return { ...event, receipt: { ...event.receipt, completionCell: flipCell(event.receipt.completionCell, rows) } };
-    default: return event;
-  }
-}
 
 /* ---------------- B7: private seat state and compact replay (contract §14) ---------------- */
 
@@ -146,7 +97,7 @@ function cached(cache: WeakMap<object, CombatReplay>, key: object, build: () => 
 /**
  * This seat's battle of the current round as a CombatReplay from its own point of view; null outside a
  * resolved round or for a seat without a battle (supply round, mirror source, eliminated). A two-sided battle
- * is replayed from the rules' BattleResult; a PvE battle from its first and last frame and the full ledger.
+ * is replayed from the rules' BattleResult; a PvE battle from its start and finished combat and the full ledger.
  */
 export function toCombatReplayFor(room: RoomState, seatId: string): SeatReplay | null {
   for (const battle of room.battles) {
@@ -160,8 +111,9 @@ function replayOf(battle: BattleResult, seatId: string): SeatReplay | null | und
   if (battle.kind === 'placeholder') {
     const outcome = battle.outcomes.find(candidate => candidate.seatId === seatId);
     if (!outcome) return undefined;
-    if (outcome.frames.length === 0) return null;
-    return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(replayInputOfFrames(outcome.frames))) };
+    const combat = outcome.combat;
+    if (combat === null) return null;
+    return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(combat)) };
   }
   if (!battle.participants.includes(seatId)) return undefined;
   const replay = cached(replays, battle, () => toCombatReplay(battle.battle));
@@ -178,9 +130,6 @@ export function warmCombatReplays(battle: BattleResult, seatIds: Iterable<string
   for (const seatId of seatIds) {
     try { replayOf(battle, seatId); } catch { /* reported by the push */ }
   }
-}
-function replayInputOfFrames(frames: readonly CombatFrame[]): CombatReplayInput {
-  return { initial: frames[0]!.state, terminal: frames.at(-1)!.state, events: frames.flatMap(frame => frame.events) };
 }
 
 /**

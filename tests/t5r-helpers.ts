@@ -3,6 +3,17 @@ import { createMatch, startMatchCombat, stepMatch, claimOrDiscardLoot, enableMul
   type BattleResult, type SideProposal } from '../src/server-entry';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { prepareMatchLoot } from '../src/simulation/loot-runtime';
+import { createRoundEnemies } from '../src/simulation/round-enemies';
+/** Isolated projection fixture, not a restore-valid save: real catalog enemies/loot,
+ * with the opening army carried to the requested round without simulating progression. */
+export function catalogPreparation(roundId: string, seed = 42): MatchState {
+  const base = createMatch(seed), round = getCatalogRoundById(roundId), enemies = createRoundEnemies(round.ordinal);
+  return { ...base, round: round.ordinal, roundDefinitionId: roundId,
+    preparation: { ...base.preparation, units: [...base.preparation.units.filter(u => u.team === 'player'), ...enemies] },
+    m8: { ...base.m8, round, loot: prepareMatchLoot(seed, round.ordinal),
+      preparation: { ...base.m8.preparation, roundId, encounterId: round.encounterId,
+        contentStatus: round.kind === 'pve' ? 'ready-b8-loot' : 'not-pve', enemies } } };
+}
 export const accepted = (result: MultiplayerCommandResult) => {
   if (!result.ok) throw new Error(result.reason); return result.state;
 };

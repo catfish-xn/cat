@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch } from '../../../src/simulation/match';
-import { emptyCombat } from '../helpers';
-import { COMBAT_SPLIT, canonicalJson, commandContent, encodeCombat, parseClientMessage, validateClientCommand, NET_PROTOCOL_VERSION, type ClientMessage } from '../../../src/server/net/messages';
+import { canonicalJson, commandContent, parseClientMessage, validateClientCommand, NET_PROTOCOL_VERSION, type ClientMessage } from '../../../src/server/net/messages';
 
 const envelope = (body: Record<string, unknown>, extra: Record<string, unknown> = {}) => JSON.stringify({ protocolVersion: NET_PROTOCOL_VERSION, commandId: 7, ...body, ...extra });
 const command = (command: unknown, extra: Record<string, unknown> = {}) => envelope({ type: 'command', roomId: 'r', round: 1, seatRevision: 0, command }, extra);
@@ -63,24 +61,3 @@ describe('net/messages: content identity', () => {
   });
 });
 
-describe('net/messages: combat encoding (B8)', () => {
-  const byteLength = (text: string) => Buffer.byteLength(text);
-  const combat = (count: number) => ({ type: 'combat' as const, roomId: '房间"1', round: 7, battleId: 'room:r7:seat-1', frames: Array.from({ length: count }, (_, index) => ({
-    state: { ...emptyCombat(createMatch(1)), tick: index }, events: [],
-  })) });
-  it('sends a small battle as exactly JSON.stringify of the whole message', () => {
-    const message = combat(3);
-    expect(encodeCombat(message, byteLength)).toEqual([JSON.stringify(message)]);
-  });
-  it('splits a large battle into parts that are exactly JSON.stringify of each part message', () => {
-    const frameBytes = byteLength(JSON.stringify(combat(1).frames[0]));
-    const message = combat(Math.ceil(COMBAT_SPLIT.maxBytes / frameBytes) + COMBAT_SPLIT.framesPerPart + 3);
-    const texts = encodeCombat(message, byteLength);
-    const total = Math.ceil(message.frames.length / COMBAT_SPLIT.framesPerPart);
-    expect(texts).toHaveLength(total);
-    texts.forEach((text, index) => {
-      const frames = message.frames.slice(index * COMBAT_SPLIT.framesPerPart, (index + 1) * COMBAT_SPLIT.framesPerPart);
-      expect(text).toBe(JSON.stringify({ ...message, frames, part: index + 1, total }));
-    });
-  }, 30_000);
-});

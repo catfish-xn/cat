@@ -1,6 +1,6 @@
 /**
  * Work order B8: what a server holds from one match to the next. Matches run back to back on a ManualClock; after
- * every end the pending timers, the room's own leftovers (frozen envelopes, staged settlement, per-tick frames,
+ * every end the pending timers, the room's own leftovers (frozen envelopes, staged settlement,
  * listeners) and the credentials return to the same baseline, and a replaced room is disposed and silent. The frozen
  * round is resolved in clock slices: the sliced and the one-shot resolution publish the same rounds.
  */
@@ -14,12 +14,11 @@ import { DamageResolver, TIMINGS, makeRoom, runUntil } from './helpers';
 import { expectOk, flush, startServer, type NetHarness } from './net/helpers';
 
 const MATCHES = 5;
-const FRAMES = 40;
-const RELEASED: RoomRetained = { timers: 0, listeners: 0, frozenInputs: 0, pendingSettlement: false, resolving: false, frames: 0 };
+const RELEASED: RoomRetained = { timers: 0, listeners: 0, frozenInputs: 0, pendingSettlement: false, resolving: false };
 
 /** Every seat but `survivor` takes 100 damage in round 1, so a match ends after one PvE round with a full ranking. */
 function oneRoundResolver(survivor: () => string): DamageResolver {
-  return new DamageResolver(seatId => seatId === survivor() ? 0 : 100, FRAMES);
+  return new DamageResolver(seatId => seatId === survivor() ? 0 : 100);
 }
 function runToEnd(room: Room, clock: ManualClock): RoomState {
   const state = runUntil(room, clock, current => current.phase === 'ended');
@@ -50,16 +49,15 @@ describe('B8 lifecycle: a lobby running matches back to back', () => {
         clock.advance(TIMINGS.preparationMs * 3);
         expect(previous.state.roomRevision).toBe(revision);
       }
-      // While a round is played the room does hold its frames: the baseline below is a release, not an empty run.
+      // While a round is played the room does hold the round's envelopes and staged settlement: the baseline below is a release, not an empty run.
       runUntil(room, clock, current => current.phase === 'battle');
-      expect(room.retained.frames).toBeGreaterThan(0);
       expect(room.retained.frozenInputs).toBe(8);
       expect(room.retained.pendingSettlement).toBe(true);
       const ended = runToEnd(room, clock);
       expect(ended.ranking![0]!.seatId).toBe(survivor);
       expect(clock.pending).toBe(0);
       expect(room.retained).toEqual({ ...RELEASED, listeners: 1 });
-      // The ended view still carries the final round's results, only without their per-tick frames.
+      // The ended view still carries the final round's results.
       expect(ended.battles).toHaveLength(8);
       publications.push(published);
       previous = room;

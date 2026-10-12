@@ -8,16 +8,17 @@ import type { MatchState } from '../../src/simulation/match-types';
 import { LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/online/local-room-client';
 import { toDisplayMatch } from '../../src/rendering/online/seat-view-adapter';
 import { toSeatPrivateView } from '../../src/server/room/projection';
-import type { ClientListeners, CombatFrame, LobbyView, PlayerView } from '../../src/rendering/online/protocol';
+import type { ClientListeners, LobbyView, PlayerView } from '../../src/rendering/online/protocol';
+import type { CombatReplay } from '../../src/server-entry';
 
 const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'two-sided' };
 
 function harness(overrides: Partial<LocalRoomOptions> = {}) {
   const clock = new ManualClock();
   const client = new LocalRoomClient({ ...OPTIONS, clock, ...overrides });
-  const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], combat: [] as (readonly CombatFrame[])[] };
+  const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], replay: [] as CombatReplay[] };
   const listeners: ClientListeners = { lobby: v => log.lobby.push(v), view: v => log.view.push(v),
-    state: s => log.state.push(s), combat: f => log.combat.push(f) };
+    state: s => log.state.push(s), replay: r => log.replay.push(r) };
   client.listen(listeners);
   const flush = () => new Promise<void>(resolve => queueMicrotask(resolve));
   /** Fires room timers one at a time (flushing the coalesced pushes) until the predicate holds. */
@@ -61,12 +62,12 @@ describe('LocalRoomClient', () => {
     expect(log.state).toHaveLength(1);
     expect(client.currentRoom!.state.seats[0]!.seatRevision).toBe(1);
   });
-  it('plays the room from the first preparation to the final ranking, pushing frames once per battle round', async () => {
+  it('plays the room from the first preparation to the final ranking, pushing one replay per battle round', async () => {
     const { client, log, runUntil, last } = harness();
     client.joinQueue('a'); client.startMatch();
     await runUntil(() => last().phase.kind === 'combat');
-    expect(log.combat).toHaveLength(1);
-    expect(log.combat[0]!.every(frame => frame.events.every(event => 'tick' in event))).toBe(true);
+    expect(log.replay).toHaveLength(1);
+    expect(log.replay[0]!.ticks).toHaveLength(log.replay[0]!.terminal.tick + 1);
     await runUntil(() => last().phase.kind === 'ended', 6_000);
     const view = last();
     // B7: overtime runs until one seat is left, so the match always ends with a unique ranking.
@@ -74,11 +75,11 @@ describe('LocalRoomClient', () => {
     expect(view.ranking!.map(seat => seat.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     // The HP shown for my seat is the rules' HP of my last pushed state.
     expect(view.seats.find(seat => seat.seatId === view.mySeatId)!.hp).toBe(log.state.at(-1)!.playerHp);
-    // One combat push per round in which my seat still fought; an eliminated seat gets views, not frames.
+    // One replay per round in which my seat still fought; an eliminated seat gets views, not battles.
     const rounds = new Set(log.view.filter(v => v.phase.kind === 'combat' && v.seats.find(seat => seat.seatId === v.mySeatId)!.alive).map(v => v.phase.round));
-    expect(log.combat.length).toBe(rounds.size);
-    // Frames are combat view data (CombatState), never a MatchState; the settled state arrives as the room's own seat state after the commit.
-    expect(log.combat[0]!.every(frame => 'tick' in frame.state && !('shop' in frame.state))).toBe(true);
+    expect(log.replay.length).toBe(rounds.size);
+    // A replay is combat view data (CombatViewState), never a MatchState; the settled state arrives as the room's own seat state after the commit.
+    expect(log.replay.every(replay => 'tick' in replay.initial && !('shop' in replay.initial) && !('rngState' in replay.initial))).toBe(true);
     // My last pushed state is the display copy of my seat's private view, the same as the network sends.
     const mine = client.currentRoom!.state.seats.find(seat => seat.seatId === view.mySeatId)!;
     expect(log.state.at(-1)!).toEqual(toDisplayMatch(toSeatPrivateView(mine.match)));

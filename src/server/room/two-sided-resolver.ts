@@ -13,11 +13,11 @@
  * PvE and supply rounds never reach this entry (§10.6 item 5); they go to the inner resolver.
  */
 import {
-  BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle, startTwoSidedCombatWithEvents, stepCombat,
-  type BattleIdentity, type BattleInput as RulesBattleInput, type CombatState, type LedgerCombatEvent, type PlayerBattleSnapshot, type SharedPoolState,
+  BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle,
+  type BattleIdentity, type PlayerBattleSnapshot, type SharedPoolState,
 } from '../../server-entry';
 import { BattleResolveError, PlaceholderBattleResolver, jobOf, runSteps, startBattleJob, type BattleJob, type BattleResolver, type BattleSteps } from './battle-resolver';
-import type { BattleFrame, BattleInput, BattleResult, BattleSeatInput, RulesBattleResult, TwoSidedBattleResult } from './types';
+import type { BattleInput, BattleResult, BattleSeatInput, TwoSidedBattleResult } from './types';
 
 export class TwoSidedBattleResolver implements BattleResolver {
   /** @param nonPvp resolves PvE and supply rounds (each seat on its own); the placeholder by default. */
@@ -27,7 +27,7 @@ export class TwoSidedBattleResolver implements BattleResolver {
     if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input, pool);
     return resolveTwoSidedPvp(input);
   }
-  /** Sliced form (B8): the rules' battle runs in one slice, the playback frames are replayed a slice at a time. */
+  /** Sliced form (B8): the rules' battle and its proposals run in one slice each. */
   startBattle(input: BattleInput, pool: SharedPoolState): BattleJob {
     if (input.roundKind !== 'pvp') return startBattleJob(this.nonPvp, input, pool);
     return jobOf(twoSidedSteps(input));
@@ -39,10 +39,6 @@ function guarded<T>(subject: string, run: () => T): T {
   try { return run(); }
   catch (error) { throw asResolveError(subject, error); }
 }
-function* guardedSteps<T>(subject: string, steps: Generator<void, T, void>): Generator<void, T, void> {
-  try { return yield* steps; }
-  catch (error) { throw asResolveError(subject, error); }
-}
 function asResolveError(subject: string, error: unknown): unknown {
   return error instanceof BattleValidationError ? new BattleResolveError(subject, `battle-validation:${error.reason}`) : error;
 }
@@ -50,7 +46,7 @@ function asResolveError(subject: string, error: unknown): unknown {
 /** §10.6 pseudo-code, verbatim in structure: snapshot both sides, compile with the explicit seed and identity, resolve once, propose. */
 export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult { return runSteps(twoSidedSteps(envelope)); }
 
-/** resolveTwoSidedPvp as a step sequence: one `yield` after the rules' battle, then one per replayed playback frame. */
+/** resolveTwoSidedPvp as a step sequence: one `yield` after the rules' battle, before the proposals. */
 function* twoSidedSteps(envelope: BattleInput): BattleSteps<TwoSidedBattleResult> {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
@@ -71,32 +67,9 @@ function* twoSidedSteps(envelope: BattleInput): BattleSteps<TwoSidedBattleResult
   const battle = guarded(envelope.battleId, () => resolveTwoSidedBattle(frozen, envelope.maxSteps));
   yield;
   const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-  const frames = yield* guardedSteps(envelope.battleId, frameSteps(frozen, battle, envelope.maxSteps));
   return {
     kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
-    participants: envelope.seats.map(seat => seat.seatId), battle, proposals, frames,
+    participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
   };
 }
 
-/**
- * Per-tick playback frames of this one battle (§10.6 item 3): the frozen input replayed through the
- * events-bearing start entry and `stepCombat`. The ledger events come from the authoritative result,
- * grouped by tick, so playback and settlement share one account; a divergence is a fault, not a guess.
- */
-function* frameSteps(frozen: RulesBattleInput, battle: RulesBattleResult, maxSteps: number): Generator<void, readonly BattleFrame[], void> {
-  const byTick = new Map<number, LedgerCombatEvent[]>();
-  for (const event of battle.events) { const bucket = byTick.get(event.tick); if (bucket) bucket.push(event); else byTick.set(event.tick, [event]); }
-  const start = startTwoSidedCombatWithEvents(frozen);
-  const frames: BattleFrame[] = [{ state: start.state, events: byTick.get(start.state.tick) ?? [] }];
-  let current: CombatState = start.state, steps = 0;
-  while (current.status === 'running' && steps < maxSteps) {
-    yield;
-    current = stepCombat(current).state; steps++;
-    frames.push({ state: current, events: byTick.get(current.tick) ?? [] });
-  }
-  const terminal = battle.terminal;
-  const consistent = current.status === 'finished' && current.tick === terminal.tick && current.result === terminal.result
-    && frames.reduce((count, frame) => count + frame.events.length, 0) === battle.events.length;
-  if (!consistent) throw new BattleResolveError(battle.battleId, 'frame-divergence');
-  return frames;
-}

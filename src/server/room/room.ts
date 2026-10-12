@@ -1,5 +1,5 @@
 /**
- * Eight-seat room state machine (pipeline B, work orders B1–B5, B7). Pure TypeScript: no network,
+ * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
  * the one-shot round publication and the ranking; every rule (gold, shop, combat, damage,
  * income, growth, the shared card pool) comes from src/simulation through its public commands,
@@ -29,7 +29,7 @@ export interface RoomTimings {
   readonly preparationMs: number;
   readonly choiceMs: number;
   readonly settlementMs: number;
-  /** Playback allowance added after the longest battle's frames. */
+  /** Playback allowance added after the longest battle's replay (also covers the client's opening transition). */
   readonly battleTailMs: number;
   /** Settlement deadlines re-armed for a seat the rules refuse to advance before the room faults. */
   readonly maxSettlementExtensions: number;
@@ -66,8 +66,6 @@ export interface RoomRetained {
   readonly frozenInputs: number;
   readonly pendingSettlement: boolean;
   readonly resolving: boolean;
-  /** Per-tick playback frames still referenced by `state.battles`. */
-  readonly frames: number;
 }
 
 /** The frozen round being resolved slice by slice: battles run in envelope order, each on the pool the previous one left (§12.4). */
@@ -188,7 +186,7 @@ export class Room {
     if (!opened.ok) throw new RangeError(`shared pool opening: ${opened.reason}`);
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
-      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', hp: match.playerHp,
+      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
         alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
@@ -213,7 +211,7 @@ export class Room {
   }
   get retained(): RoomRetained {
     return { timers: this.timer === null ? 0 : 1, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
-      resolving: this.resolution !== null, frames: countFrames(this.current.battles) };
+      resolving: this.resolution !== null };
   }
 
   /** waiting → first round. */
@@ -222,10 +220,32 @@ export class Room {
     this.enterRound();
   }
 
-  /** Phase and seat gate only; the rules decide everything else and a refusal changes nothing. */
+  /**
+   * Phase and seat gate only; the rules decide everything else and a refusal changes nothing. A human seat a bot took
+   * over refuses its player's commands until the player resumes (one controller at a time, B6). Fill-in bot seats have
+   * no session, so no player command reaches them; server-side callers may still drive them here directly.
+   */
   handle(seatId: string, command: SeatCommand): RoomCommandResult {
     const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
     if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
+    if (seat.controller === 'takeover') return { ok: false, reason: 'seat-controlled', state: seat.match };
+    return this.apply(seat, command);
+  }
+
+  /**
+   * Bot entry (B6, contract §13.3): the same gate and the same rules dispatch as a player command, accepted only while
+   * the seat is bot-controlled under exactly `controlEpoch`. A takeover revoked by a resume (or any controller change)
+   * makes every step decided before it fail with `control-revoked`, without touching the seat.
+   */
+  handleBot(seatId: string, controlEpoch: number, command: SeatCommand): RoomCommandResult {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
+    if (seat.controller === 'human' || seat.controlEpoch !== controlEpoch) return { ok: false, reason: 'control-revoked', state: seat.match };
+    return this.apply(seat, command);
+  }
+
+  private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {
+    const seatId = seat.seatId;
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
     const allowed = !this.disposed && (phase === 'preparation' || (phase === 'choice' && CHOICE_COMMANDS.has(command.type)));
@@ -242,13 +262,29 @@ export class Room {
   /**
    * Connection bookkeeping for the network layer (B2): a dropped or resumed socket changes only the
    * public `connected` flag. Assets, pairings and ranks stay (V2 D8); seatRevision does not move
-   * because no command or settlement touched the seat.
+   * because no command or settlement touched the seat. A resume also revokes a bot takeover at once
+   * (B6): the controller goes back to `human` under a new control generation.
    */
   setConnected(seatId: string, connected: boolean): boolean {
     const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
     if (!seat || seat.kind !== 'human') return false;
-    if (seat.connected === connected) return true;
-    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, connected } : candidate));
+    const reclaim = connected && seat.controller === 'takeover';
+    if (seat.connected === connected && !reclaim) return true;
+    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId !== seatId ? candidate
+      : reclaim ? { ...candidate, connected, controller: 'human', controlEpoch: candidate.controlEpoch + 1 } : { ...candidate, connected }));
+    return true;
+  }
+
+  /**
+   * Hands a disconnected human seat to a bot (B6 takeover). The seat keeps its MatchState, pool holdings, assets and
+   * receipts; nothing is recreated. Refused (false) unless the seat is a human seat that is alive, disconnected and
+   * still under human control in a running room. When to call it is the bot driver's decision (its takeover delay).
+   */
+  takeOver(seatId: string): boolean {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat || seat.kind !== 'human' || seat.connected || !seat.alive || seat.controller !== 'human') return false;
+    if (this.current.phase === 'waiting' || this.current.phase === 'ended') return false;
+    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, controller: 'takeover', controlEpoch: candidate.controlEpoch + 1 } : candidate));
     return true;
   }
 
@@ -462,7 +498,9 @@ export class Room {
     if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
     this.pendingSettlement = plan.settlement;
     this.replace({ ...this.current, battles: results });
-    const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => outcome.frames.length) : [result.frames.length]));
+    // Playback runs one tick record per tick, 0..terminal (contract §14.2): terminal.tick + 1 records per battle.
+    const ticks = (combat: { readonly terminal: { readonly tick: number } } | null) => combat === null ? 0 : combat.terminal.tick + 1;
+    const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => ticks(outcome.combat)) : [ticks(result.battle)]));
     if (longest === 0) return this.commitPending();
     const tickMs = this.aliveSeats()[0]!.match.tickMs;
     this.setPhase('battle', longest * tickMs + this.options.battleTailMs);
@@ -554,10 +592,10 @@ export class Room {
     this.clearTimer();
     const deadlineAt = durationMs === null ? null : this.options.clock.now() + durationMs;
     if (phase === 'ended') {
-      // An ended room keeps only what its last view and replay need: the per-tick frames go (the rules' battle result,
-      // terminal and ledger stay), and so do the frozen envelopes and staged results of the round.
+      // An ended room keeps only what its last view and replay need (the rules' battle results, terminals and ledgers);
+      // the frozen envelopes and staged results of the round go.
       this.releaseRound();
-      return this.replace({ ...this.current, phase, deadlineAt, battles: this.current.battles.map(withoutFrames) });
+      return this.replace({ ...this.current, phase, deadlineAt });
     }
     this.replace({ ...this.current, phase, deadlineAt });
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
@@ -585,15 +623,6 @@ export class Room {
     if (state.poolRevision !== state.pool.revision) throw new Error(`poolRevision ${state.poolRevision} is not pool.revision ${state.pool.revision}`);
     assertSharedPoolConservation(state.pool, state.seats.map(seat => seat.match));
   }
-}
-
-/** A battle result without its per-tick playback frames (an ended room); kept frames would only feed a combat resend. */
-function withoutFrames(result: BattleResult): BattleResult {
-  if (result.kind === 'two-sided') return result.frames.length === 0 ? result : { ...result, frames: [] };
-  return result.outcomes.every(outcome => outcome.frames.length === 0) ? result : { ...result, outcomes: result.outcomes.map(outcome => ({ ...outcome, frames: [] })) };
-}
-function countFrames(battles: readonly BattleResult[]): number {
-  return battles.reduce((total, battle) => total + (battle.kind === 'two-sided' ? battle.frames.length : battle.outcomes.reduce((sum, outcome) => sum + outcome.frames.length, 0)), 0);
 }
 
 /** The rules' conservation check as a value: null when balanced, else its reason (never used as protocol text). */

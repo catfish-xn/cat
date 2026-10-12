@@ -28,7 +28,7 @@ function killAtRoundOne(victim: string): BattleResolver {
     if (input.round === 1 && input.seats[0]!.seatId === victim) {
       const state = input.seats[0]!.state;
       const eliminated = { ...state, playerHp: 0, multiplayer: { ...state.multiplayer!, status: 'eliminated' as const } };
-      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: [{ seatId: victim, state: eliminated, result: null, damage: 100, frames: [] }] };
+      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: [{ seatId: victim, state: eliminated, result: null, damage: 100, combat: null }] };
     }
     return inner.resolveBattle(input, pool);
   } };
@@ -53,7 +53,7 @@ const placeholderPvp: BattleResolver = (() => {
       };
       const applied = applyRoundSettlement(seat.state, receipt);
       if (!applied.ok) throw new Error(`seat ${seat.seatId}: ${applied.reason}`);
-      return { seatId: seat.seatId, state: applied.state, result: null, damage: proposal.damage, frames: fought.frames };
+      return { seatId: seat.seatId, state: applied.state, result: null, damage: proposal.damage, combat: fought.battle };
     });
     return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes };
   } };

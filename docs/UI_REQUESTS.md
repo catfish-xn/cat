@@ -564,3 +564,37 @@ B8 已让房间在新局开始时 `dispose()` 上一局（定时器、监听、�
 
 - 现状：PvE 战斗按 §12.4 走 `runSharedMatchCommand(pool, state, { type: 'step' })`，每 tick 都做 `assertSharedPoolConservation` 与 `canonicalContent`；seed 42 空闲整局约 11 s PvE 计算里 4.6 s 在守恒检查。另 `advanceS13Tick` 内的 `structuredClone` 约占整局 14 s。
 - 需要（可选）：战斗进行中（无奖励发放的 tick）不需要逐 tick 校验池的路径，或更便宜的增量守恒检查；`structuredClone` 是否可以换成结构共享。不影响规则结果。
+## B7 接入反馈：T5R 规则侧修正（Codex）
+
+- **SR-B7-01（P0）**：`toCombatReplay` 以 `initial.nextEventSeq` 区分已经发出的开局事件与 step 事件，不再用 `tick > 0`。3-7 狼群第一次 step 发出的5条 tick0 跳跃放入 tick1 回放记录，保留原 tick/eventSeq，避免遗漏和重复；显示差分仍对应每步权威状态。严格比较后续动画序列，缺失/篡改/重复均继续报 `replay-divergence`。没有改战斗引擎或账本归属，详见合同 §14.2。
+- **SR-B7-02（P2）**：白名单新增本轮公开 PvE 的 `m8.preparation.{roundId,encounterId,enemies}`，enemies 的 id/definitionId/team/starLevel/location 逐层复制，同一组野怪进入 `preparation.units` 供棋盘和 `readEncounterPreview` 显示。须当前 PvE 轮 ID/遭遇 ID 匹配；PvP、补给、过期预览均不下发此子树。新增 `roundResults[].interestBasis`，直接使用历史已提交计息金币基数。保持 MatchState 递归结构子集，不公开 RNG、未来遭遇/掉落、PvP 固定模板或结算收据；字段与适配说明见合同 §10.9、§14.1。
+- **验证覆盖**：目录全部33个战斗回合（38轮减5个补给轮）的逐 tick/终态回放；狼群8个种子的事件恰好一次及缺失/篡改/重复拒绝；全部8种 PvE 预览的站位/属性保真、递归哨兵与无引用共享、旧/未来预览屏蔽、利息基数。仅修改规则投影、测试和合同文档，未修改 src/server、界面或 golden。
+
+验证环境：Node v22.23.3 / npm 10.9.9；75个 T5R/B7 用例（含 seed42 八席整局、全部战斗回放折叠与狼群八席检查）、全仓类型检查、五个 Node 入口校验（T1/T2/T3/TP/T5R）通过，T1 固定 state/event/RNG trace 哈希保持不变。
+
+B7 显示接线提示：`toDisplayMatch` 当前把 m8.preparation 固定填为空敌军；应消费上述已公开 preparation 字段才能显示完整预览。此处只补规则投影，界面适配仍由 Claude 修改；xpRequested 与掉落摘要不在本次用户指定增补范围。
+
+## C6 客户端改用紧凑回放后的需求（2026-10-12，Claude 流水线 C）
+
+C6 已让离线与联机共用一条战斗渲染路径：棋盘、单位条、特效、飘字都读 `CombatViewState` 与 §14.2 白名单事件；服务器只发 `replay`，旧 `combat` 帧、分包与 `combatTransport`/`CAT_COMBAT_TRANSPORT` 已删除；PvE 结果只保留开战态、末态与完整账本（不再逐 tick 保存 MatchState）。SR-B7-02 的野怪预览与利息基数已在 `seat-view-adapter.ts` 接入。
+
+### SR-C6-01 导出单条事件的显示投影（P2，去重）
+
+- 现状：`combat-replay-view.ts` 的 `animationEvent` 未导出。离线模式需要把本地账本转成同一白名单事件，客户端在 `src/presentation/combat-display.ts` 的 `toDisplayEvent` 里逐字段复写了一份；`tests/server/replay-client.test.ts` 用真实 PvP/PvE 战斗断言两者完全相等，防止漂移。
+- 需要：从 `src/server-entry`（或 `combat-replay-view.ts`）导出 `toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatViewEvent[]`（不含 unitUpdated，语义与回放中的动画事件逐条相同）。导出后客户端删除复写，只保留离线专用的 `effectTriggered` 标签。
+- 验收：对任一可信战斗，`toCombatViewEvents(battle.events)` 等于 `toCombatReplay(battle).ticks` 展平后去掉 unitUpdated 的事件序列。
+
+### SR-C6-02 联机状态图标与护盾层（P3，可选）
+
+- 现状：§14.2 不承诺状态图标/持续时间；联机棋子不显示状态条，策略面板与统计面板隐藏护盾层、状态行、效果来源与按来源治疗（离线仍完整显示）。
+- 需要（可选）：若要联机也显示，给 `CombatViewUnit` 增加只读白名单字段，例如 `statuses: {kind, harmful, expiresAtTick}[]` 与 `shieldLayers: {remaining, expiresAtTick}[]`；客户端只显示，不回填 runtime。
+## src/server 接入 B6 后的合同缺口（B6，2026-10-12，Claude 流水线 B）
+
+### SR-B6-01 合同 §13 补写机器人接管字段与拒绝原因（P1，只改文档）
+
+B6（PR #51）已实现，合同文档尚未记载，请 Codex 在 `docs/MULTIPLAYER_CONTRACT.md` §13 补一节，不改代码：
+- `SeatPublic.controller: 'human' | 'bot' | 'takeover'`：补位机器人恒为 `bot`；真人席断线超过 `CAT_TAKEOVER_SEC`（默认 60 s）后为 `takeover`，重连即刻回到 `human`。
+- `resumed` 回执可选字段 `reclaimed?: true`：本次重连从机器人手里接回了席位；其余情况不出现该字段。
+- `RoomFailure` 新增 `seat-controlled`（接管期间玩家命令被拒）与 `control-revoked`（旧控制代次的机器人步骤被拒，席位不变）。
+- 策略调用约定：每席每轮预算 `BOT_MAX_STEPS`；`done` 只结束本次阶段进入，同一轮战后再出现选择窗口会再问一次；失败或预算用尽则整轮关闭，下一轮清零。
+- 验收：合同描述与 `src/server/room/bot-driver.ts`、`src/server/net/messages.ts` 一致即可，不需要新测试。
