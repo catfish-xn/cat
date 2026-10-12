@@ -115,7 +115,7 @@ describe('TP actual round integration',()=>{
     expect(JSON.stringify(pool)).toBe(poolBefore);conserved(pool,states);
     const next=batch(nextSharedRound(pool,states,4));expect(next.states.every(s=>s.roundDefinitionId==='2-2')).toBe(true);conserved(next.pool,next.states);
     expect(next.pool.naturalRound).toBe(5);
-  });
+  },20_000); // 24 real PvE battles plus four two-sided PvP battles across all eight seats.
   it('a late nextRound failure publishes no earlier seat, free shop, loot plan or RNG update',()=>{
     const initial=room(undefined,2),first=batch(refreshSharedShops(initial.pool,initial.states,1));
     const a=fight(first.pool,first.states[0]);const states=[a.state,first.states[1]],before=JSON.stringify([a.pool,states]);
