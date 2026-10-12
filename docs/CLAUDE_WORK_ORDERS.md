@@ -232,3 +232,28 @@
 - [ ] `npx vitest run tests/server tests/t2-* tests/t3-*` 全绿；purity 零命中；`choice-fallback.ts` 已删。
 - [ ] 默认模式浏览器整局到排名，无报错；typecheck、build 通过。
 - [ ] PR 描述把 §11.3 五条逐条对应到代码位置；规则侧缺口列为 SR-B4-xx。
+
+---
+
+## 派工单 C5：查看对手阵容、淘汰后观战、联机文案收口（纯界面）
+
+分支：`claude/c5-spectate`，基于 `origin/multiplayer`（已含 C4 PR #41、B3）。与 B4 并行，不碰 `src/server/room` 流程；若需要服务器下发新字段，写进 `docs/UI_REQUESTS.md`（SR-C5-xx），先用现有 `PlayerView` 能做的部分。
+
+### 依据
+`docs/MULTIPLAYER_RENOVATION_V2.md` N6 第 3、8 条（公开阵容查看、淘汰玩家观战）；`src/server/protocol.ts` 的 `PlayerView`/`SeatPublic`。TFT 原版：点右侧玩家头像可看对方棋盘和装备，自己被淘汰后仍能看排名并观战。
+
+### 要做
+1. **公开阵容数据**：`SeatPublic` 目前只有 HP/等级。在 `src/server/protocol.ts` 增加可选的 `publicBoard?: { units: { definitionId, starLevel, cell, items: string[] }[] ; traits?: ... }`，由 `src/server/room/projection.ts` 的 `toPlayerView` 从各席位 `MatchState.preparation` 白名单构造（只取上场单位，不含备战区、商店、金币、随机流）。这是 `src/server/room` 里唯一允许的改动，且只是投影，不碰流程。本地房间和 WebSocket 都自动带上。
+2. **查看对手**：点击右栏任一席位，中间棋盘上方弹出一个只读的"对方阵容"面板（不替换我的棋盘，不触发任何命令）：七列八行缩略棋盘、每个单位的头像/星级/装备图标、羁绊列表（用现有 `deriveTraits` 读公开单位即可）。再点一次或 Esc 关闭。当前对手席位默认高亮。
+3. **淘汰后观战**：我方 `alive=false` 后：商店坞置灰且所有命令按钮禁用（`RemoteSession` 已拒绝，界面也要明确不可点），右栏保留，顶部显示"已淘汰 · 第 N 名 · 观战中"，可继续看对手阵容和倒计时；终局时排名层正常弹出。
+4. **文案收口**：联机模式下所有残留的单人文案（"点击开始战斗"、"点击 继续"、"新局"、"存档"等）统一替换或隐藏；状态栏在准备阶段显示"对手：xxx"，战斗阶段显示"对战 xxx"。
+5. 右栏席位增加小头像位（用现有 `s13-assets` 的英雄头像里该席位人口最高/费用最高的单位作头像，没有单位则用默认占位），更接近 TFT。
+
+### 不做
+- 不做聊天、历史战绩、回放导出。不改规则，不改房间流程、配对、结算。
+
+### 验收
+- [ ] 本地房间（`?mode=online`）与真服务器（`?server=ws`）下都能点开对手面板，内容与对方 `__CAT_DEBUG__.read().state.preparation` 上场单位一致（用两个浏览器上下文脚本断言）。
+- [ ] 对方面板不含商店、金币、备战区；抓取 `view` 消息断言 `publicBoard` 无这些字段。
+- [ ] 淘汰后不能发出任何命令，终局排名仍弹出。
+- [ ] `npx vitest run tests/server` 全绿（投影新增测试）；typecheck、build、离线冒烟通过。
