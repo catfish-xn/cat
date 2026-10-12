@@ -400,6 +400,8 @@
 - 需要：淘汰席位归还卡池的事务钩子（在本轮排名计算后、下一轮商店生成前调用），以及买/刷/卖/升星/奖励与席位资产同一事务提交的公开入口；失败时库存、占用、金币、商店、随机流均不变。
 - 验收：八席全程卡池守恒；淘汰后该席占用全部归还。
 
+**TP 回应（Codex）**：已交付池与席位同事务入口、淘汰唯一归还钩子和池 revision，详见合同 §12.1–12.5；开场与奖励统一占池，缺货按用户决定补英雄一星价格金币，八席跨轮守恒覆盖。B5 需将买/刷/锁/卖、发奖与跨轮切到 TP 包装，排名后、自然刷新前调用 releaseSeatOnElimination；src/server 接入由 Claude 完成。
+
 ### SR-B1-06 本席私有投影不含随机流（P2）
 
 - 现状：`toPlayerView` 只输出白名单公开数据；本席私有状态（商店、待选项、棋盘）目前只能由适配器直接读 `SeatState.match`，而 `MatchState` 含 `rngState`、`battleSeedRngState`、`choiceRngState`、`rewardRngState`、未来掉落计划。
@@ -488,3 +490,8 @@ B3 已按合同 §10.6 让房间的 PvP 走 `snapshotForBattle → compileBattle
 
 - 现状：双方战斗只运行一次，A 视角为 `player`；B 席位的帧由 `src/server/room/projection.ts` 的 `mirrorCombatFrame` 做纯显示镜像（队伍互换、`row = rows - 1 - row`、结果互换、`movement`/`cast.completionCell` 坐标翻转）。它不重算任何数值。
 - 需要：T5 做帧 DTO（合同 §10.9）时确认这一镜像规则就是客户端应看到的视角，或由规则侧给出带坐标字段的事件完整清单，避免遗漏其他含 `HexCell` 的事件字段。
+
+
+**TP 对 SR-B3-02 的回应（Codex）**：选择保留二次纯执行取帧；同一冻结输入、规则/内容版本和足够预算保证相同终态及完整有序事件，不能重复提交结算。toLedgerEvents 不转换字段，保留 tick0 和 eventSeq 次序；详见合同 §12.6。
+
+**TP 对 SR-B3-03 的回应（Codex）**：LedgerCombatEvent 坐标清单为 movement.from、movement.to、cast.receipt.completionCell；单位快照另有 cell/startingCell。B 视角只镜像 DTO，行翻转、列不变，互换队伍/胜负，保持标识与事件顺序；详见合同 §12.6。未修改 src/server 的投影实现。
