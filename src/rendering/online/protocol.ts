@@ -7,6 +7,7 @@
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReceiptFailure } from '../../server/net/messages';
 import type { ClientCommand, CombatFrame, LobbyView, PlayerView } from '../../server/protocol';
+import type { CombatReplay } from '../../server-entry';
 
 export * from '../../server/protocol';
 
@@ -31,10 +32,15 @@ export type ConnectionStatus =
 export interface ClientListeners {
   lobby(view: LobbyView): void;
   view(view: PlayerView): void;
-  /** Authoritative private state for my seat outside combat; `confirmed` lists my commands this push confirms. */
+  /**
+   * My seat outside combat, as a display MatchState built from the server's private seat view (B7): server-only
+   * fields are placeholders (see seat-view-adapter.ts); `confirmed` lists my commands this push confirms.
+   */
   state(state: MatchState, confirmed?: readonly ConfirmedCommand[]): void;
   /** One finished battle's frames, to be played back at tick pace. */
   combat(frames: readonly CombatFrame[]): void;
+  /** The same battle as a compact replay (B7, contract §14.2); optional until the client plays replays (C6). */
+  replay?(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;
   connection?(status: ConnectionStatus): void;
 }

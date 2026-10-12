@@ -123,7 +123,7 @@ describe('Room: whole-round commit through T3 receipts', () => {
     expect(seatOf('s7')).toMatchObject({ alive: false, hp: 0, rank: 8, eliminatedRound: 1 });
   }, 20_000);
 
-  it('eliminates seats round by round down to a unique ranking or the explicit overtime stop, and ranks later eliminations better', () => {
+  it('eliminates seats round by round down to a unique ranking (overtime after 6-7, B7), and ranks later eliminations better', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     const started = Date.now();
@@ -133,10 +133,10 @@ describe('Room: whole-round commit through T3 receipts', () => {
     expect(state.settlements.length).toBe(state.round);
     for (const seat of state.seats) expect(seat.match.playerHp).toBe(seat.hp);
     const eliminated = state.seats.filter(seat => !seat.alive);
-    expect(eliminated.length).toBeGreaterThanOrEqual(6);
+    expect(eliminated.length).toBe(7);
     for (const a of eliminated) for (const b of eliminated) if (a.eliminatedRound! < b.eliminatedRound!) expect(a.rank!).toBeGreaterThan(b.rank!);
-    if (state.fault) { expect(state.fault).toMatchObject({ kind: 'overtime-unavailable', round: 38 }); expect(state.ranking).toBeNull(); }
-    else expectUniqueRanking(state);
+    expect(state.fault).toBeNull();
+    expectUniqueRanking(state);
   }, 60_000);
 
   it('ranks three seats that reach zero in one round by raw HP, then HP before, then seat index, in any arrival order', () => {

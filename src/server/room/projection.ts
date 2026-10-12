@@ -1,11 +1,15 @@
 /**
  * Whitelisted client views (V2 §5.3). Built field by field; the room's MatchState, rng
  * states, pairings of other seats and other seats' shops are never serialized. Other seats'
- * deployed units and their items are public (C5, `publicBoard`).
+ * deployed units and their items are public (C5, `publicBoard`). A seat's own state leaves only
+ * as the rules' `toPrivateSeatView` (B7, contract §14.1), its battle as a compact replay (§14.2).
  */
 import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatState, CombatUnit, LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchState } from '../../simulation/match-types';
+import {
+  toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
+} from '../../server-entry';
 import type { PublicBoard, PublicBoardUnit } from '../protocol';
 import { findPairing } from './pairing';
 import type { BattleResult, CombatFrame, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
@@ -61,7 +65,6 @@ export function toPlayerFault(fault: RoomFault): PlayerViewFault {
     case 'invalid-results': return { kind: fault.kind, detail: `结算结果无效：${fault.detail}` };
     case 'seat-stuck': return { kind: fault.kind, detail: `席位 ${fault.seatId} 无法推进：${fault.reason}` };
     case 'phase-mismatch': return { kind: fault.kind, detail: `阶段不一致：${fault.detail}` };
-    case 'overtime-unavailable': return { kind: fault.kind, detail: `第 ${fault.round} 轮（目录末轮）后仍有 ${fault.survivors.length} 席存活，需要加时；规则侧的加时推进入口尚未交付，房间明确中断而不自造名次` };
   }
 }
 
@@ -114,6 +117,89 @@ function mirrorEvent(event: LedgerCombatEvent, rows: number): LedgerCombatEvent 
     case 'movement': return { ...event, from: flipCell(event.from, rows), to: flipCell(event.to, rows) };
     case 'combatFinished': return { ...event, result: swapResult(event.result) ?? event.result };
     case 'cast': return { ...event, receipt: { ...event.receipt, completionCell: flipCell(event.receipt.completionCell, rows) } };
+    default: return event;
+  }
+}
+
+/* ---------------- B7: private seat state and compact replay (contract §14) ---------------- */
+
+/** The only shape in which a seat's own MatchState leaves the room (initial, increment, resume, fault, refusal). */
+export function toSeatPrivateView(match: MatchState): PrivateSeatView { return toPrivateSeatView(match); }
+
+export interface SeatReplay { readonly battleId: string; readonly replay: CombatReplay }
+
+/**
+ * One replay per battle, built on first request and kept with the (immutable) battle result it came from:
+ * every later push, resume or second participant reuses it, so the pure re-execution runs once per battle
+ * (§14.3). Keys are the room's own result objects, so a finished room's replays go with it.
+ */
+const replays = new WeakMap<object, CombatReplay>();
+const mirroredReplays = new WeakMap<object, CombatReplay>();
+function cached(cache: WeakMap<object, CombatReplay>, key: object, build: () => CombatReplay): CombatReplay {
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const replay = build();
+  cache.set(key, replay);
+  return replay;
+}
+
+/**
+ * This seat's battle of the current round as a CombatReplay from its own point of view; null outside a
+ * resolved round or for a seat without a battle (supply round, mirror source, eliminated). A two-sided battle
+ * is replayed from the rules' BattleResult; a PvE battle from its first and last frame and the full ledger.
+ */
+export function toCombatReplayFor(room: RoomState, seatId: string): SeatReplay | null {
+  for (const battle of room.battles) {
+    if (battle.kind === 'placeholder') {
+      const outcome = battle.outcomes.find(candidate => candidate.seatId === seatId);
+      if (!outcome) continue;
+      if (outcome.frames.length === 0) return null;
+      return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(replayInputOfFrames(outcome.frames))) };
+    }
+    if (!battle.participants.includes(seatId)) continue;
+    const replay = cached(replays, battle, () => toCombatReplay(battle.battle));
+    if (battle.battle.a.seatId === seatId) return { battleId: battle.battleId, replay };
+    if (battle.battle.b.seatId === seatId) return { battleId: battle.battleId, replay: cached(mirroredReplays, battle, () => mirrorCombatReplay(replay)) };
+    return null;
+  }
+  return null;
+}
+function replayInputOfFrames(frames: readonly CombatFrame[]): CombatReplayInput {
+  return { initial: frames[0]!.state, terminal: frames.at(-1)!.state, events: frames.flatMap(frame => frame.events) };
+}
+
+/**
+ * Side B's view of a replay (§12.6/§14.2): every unit cell/startingCell of the initial, terminal and key
+ * frames, movement from/to, cast completionCell and unitUpdated cell/startingCell flip their row; teams,
+ * deployment zones and results swap. Ids, sequence numbers and values stay; nothing is re-run.
+ */
+export function mirrorCombatReplay(replay: CombatReplay): CombatReplay {
+  const rows = replay.initial.board.rows;
+  return {
+    initial: mirrorViewState(replay.initial, rows),
+    ticks: replay.ticks.map(frame => ({ tick: frame.tick, events: frame.events.map(event => mirrorViewEvent(event, rows)),
+      ...(frame.keyframe ? { keyframe: mirrorViewState(frame.keyframe, rows) } : {}) })),
+    terminal: mirrorViewState(replay.terminal, rows),
+  };
+}
+function mirrorViewState(view: CombatViewState, rows: number): CombatViewState {
+  const { player, enemy } = view.board.deploymentZones;
+  return {
+    ...view,
+    board: { ...view.board, deploymentZones: { player: enemy, enemy: player } },
+    units: view.units.map(unit => ({ ...unit, team: swapTeam(unit.team), cell: flipCell(unit.cell, rows), ...(unit.startingCell ? { startingCell: flipCell(unit.startingCell, rows) } : {}) })),
+    result: swapResult(view.result),
+  };
+}
+function mirrorViewEvent(event: CombatViewEvent, rows: number): CombatViewEvent {
+  switch (event.type) {
+    case 'movement': return { ...event, from: flipCell(event.from, rows), to: flipCell(event.to, rows) };
+    case 'cast': return { ...event, completionCell: flipCell(event.completionCell, rows) };
+    case 'combatFinished': return { ...event, result: swapResult(event.result) ?? event.result };
+    case 'unitUpdated': {
+      const { cell, startingCell, team } = event.changes;
+      return { ...event, changes: { ...event.changes, ...(cell ? { cell: flipCell(cell, rows) } : {}), ...(startingCell ? { startingCell: flipCell(startingCell, rows) } : {}), ...(team ? { team: swapTeam(team) } : {}) } };
+    }
     default: return event;
   }
 }

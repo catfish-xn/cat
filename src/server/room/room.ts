@@ -1,19 +1,19 @@
 /**
- * Eight-seat room state machine (pipeline B, work orders B1–B4). Pure TypeScript: no network,
+ * Eight-seat room state machine (pipeline B, work orders B1–B4, B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
  * the one-shot round publication and the ranking; every rule (gold, shop, combat, damage,
  * income, growth) comes from src/simulation through its public commands, the injected
  * BattleResolver and the T3 receipt entry `applyRoundSettlement` (contract §11.3).
  */
 import {
-  buyUnit, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, rerollShop,
+  buyUnit, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, rerollAnomaly, rerollShop,
   selectAnomalyTarget, selectChoice, sellUnit, setShopLock,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  applyRoundSettlement, claimOrDiscardLoot, enableMultiplayerSettlement, forfeitPendingChoice, needsAnomalyRecruitment, ROUND_SETTLEMENT_VERSION,
+  advanceMultiplayerRound, applyRoundSettlement, claimOrDiscardLoot, enableMultiplayerSettlement, forfeitPendingChoice, needsAnomalyRecruitment, ROUND_SETTLEMENT_VERSION,
   type RoundSettlementReceipt, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, type BattleResolver } from './battle-resolver';
@@ -249,15 +249,15 @@ export class Room {
       .sort((a, b) => b.hpAfter - a.hpAfter || b.hpBefore - a.hpBefore || index(a) - index(b));
     let rank = alive.length;
     const eliminated: RankEntry[] = dying.map(seat => ({ seatId: seat.seatId, rank: rank-- }));
-    // The match ends only when at most one seat survives; survivors of the catalog's final round go to overtime (§11.5).
+    // The match ends only when at most one seat survives; survivors of the catalog's final round go to overtime (§11.5),
+    // which `advanceMultiplayerRound` generates as `overtime-N` until at most one seat is left.
     const ends = survivors.length <= 1;
-    const overtimeRequired = !ends && seats.some(seat => readRoundInfo(seat.match).isFinal);
     const finalRanking = ends ? [
       ...survivors.map((seat, position) => ({ seatId: seat.seatId, rank: position + 1 })),
       ...eliminated,
       ...state.seats.filter(seat => !seat.alive).map(seat => ({ seatId: seat.seatId, rank: seat.rank! })),
     ].sort((a, b) => a.rank - b.rank) : null;
-    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking, overtimeRequired } };
+    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking } };
   }
 
   /** Publishes the staged round once: HP from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
@@ -387,24 +387,22 @@ export class Room {
     if (settlement) {
       const commit = this.commitSettlement(settlement);
       if (!commit.ok && commit.reason !== 'duplicate-settlement') return this.fail({ kind: 'invalid-results', detail: commit.reason });
-      if (commit.ok && settlement.overtimeRequired) {
-        // §11.5: the catalog ended with two or more survivors. Overtime needs the rules' `advanceMultiplayerRound`
-        // (SR-B4-01, not delivered); the room stops explicitly instead of inventing rounds or a ranking.
-        return this.fail({ kind: 'overtime-unavailable', round: settlement.round, survivors: this.aliveSeats().map(seat => seat.seatId) });
-      }
     }
     if (this.current.ranking) return this.setPhase('ended', null);
     if (this.aliveSeats().some(seat => seat.match.phase === 'choice')) return this.setPhase('choice', this.options.choiceMs);
     this.setPhase('settlement', this.options.settlementMs);
   }
 
-  /** Settlement deadline: loot timeouts, then advance every alive seat with the public nextRound command. */
+  /**
+   * Settlement deadline: loot timeouts, then advance every alive seat with the rules' multiplayer entry (§11.5):
+   * catalog rounds as nextRound, and after the catalog's final round `overtime-N` PvP rounds while two or more survive.
+   */
   private advanceRound(): void {
     if (!this.applyTimeouts('settlement')) return;
     const advanced: SeatState[] = [];
     for (const seat of this.current.seats) {
       if (!seat.alive) { advanced.push(seat); continue; }
-      const next = nextRound(seat.match, seat.match.round);
+      const next = advanceMultiplayerRound(seat.match, seat.match.round);
       if (!next.ok) {
         if (this.extensions < this.options.maxSettlementExtensions) { this.extensions++; return this.setPhase('settlement', this.options.settlementMs); }
         return this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: next.reason });

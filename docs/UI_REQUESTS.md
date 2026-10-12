@@ -517,3 +517,19 @@ B4 已按合同 §11.3 让房间收齐全轮后在临时 map 上逐席 `applyRou
 - **SR-B4-01（P0）**：已导出 `advanceMultiplayerRound`，贯通 T2/T3 加时 ID、伤害12和既有经济，`nextSharedRound` 支持全席加时释放/轮换刷新；合同 §11.5 给出签名、失败枚举及 B4/B5 接入。B4 除替换 Room.advanceRound 调用外，还须解除 Room.commitPending 的 overtime-unavailable 依赖中断（bc35bac 当前仍存在）。规则不替调度器判断剩余席位或排全局名次。
 - **SR-B1-06（P0）**：已导出 `toPrivateSeatView`，逐层白名单，保持 MatchState 原字段名/嵌套，去全部随机流、未来计划、来源账本及战斗输入。合同 §14.1 列出安全复用的显示选择器和无法用占位保真的选择器。B7 尚须替换所有网络 state 发布路径。
 - **SR-B1-07（P1）**：已导出 `toCombatReplay` / `toCombatViewState` / `applyCombatReplayTick`，每20 tick关键帧＋精简动画事件＋权威单位显示差分，逐 tick/终态均与权威视图相同；白名单、B视角坐标、失败与体积测量见 §14.2–14.3。仍保留完整服务器账本与一次纯重执行，不重复结算；B7 替换旧逐 tick 完整帧输出。
+
+## src/server 接入 T5R 后的规则侧缺口（B7，2026-10-12，Claude 流水线 B）
+
+B7 已把 `Room.advanceRound` 换成 `advanceMultiplayerRound` 并删除 `overtime-unavailable` 中断；网络与本地所有 `state` 改送 `toPrivateSeatView`（客户端经 `src/rendering/online/seat-view-adapter.ts` 填占位后显示）；每场战斗按结果对象缓存一份 `toCombatReplay`，B 视角镜像后以 `replay` 消息下发，旧 `combat` 帧默认保留（`combatTransport: 'both'`）。编号续 SR-B7-xx。
+
+### SR-B7-01 PvE 回放输入：首步补发的 tick0 事件导致 `replay-divergence`（P0，C6 切换 `replay` 前必须修）
+
+- 现状：按 §14.2 对 PvE 传 `startMatchCombat` 后的 CombatState、`stepMatch` 末帧和逐帧完整 Ledger 事件。seed 42 空闲八席整局中，除 **3-7（wolves-v1）** 外所有 PvE/PvP 回放都生成成功；3-7 八席全部抛 `RangeError('replay-divergence')`。原因：该遭遇的 5 条 tick0 事件（`movement`，eventSeq 0–4）不是 `startMatchCombat` 返回的，而是第一次 `stepMatch`/`stepCombat` 从 tick0 状态推进时才发出（tick 仍记为 0）。`toCombatReplay` 内部重执行的 `generated` 包含这 5 条，却与 `battle.events.filter(tick > 0)` 比较，必然不等。逐帧 `stepCombat` 与房间帧逐 tick 完全一致，终态视图也一致，只是这条比较的分界不对。
+- 需要：规则侧修正 `toCombatReplay` 的 tick0 处理（例如重执行时把首步产生的 tick0 事件并入 `ticks[0]`，或比较时用全部事件），或在合同里给出 PvE 的正确输入构造方式。两边路径（`startTwoSidedCombatWithEvents` 是否也可能把 tick0 事件留到首步）请一并确认。
+- 房间侧现状：生成失败只记日志（服务器故障，不伪造结果），该席仍收旧 `combat` 帧；若默认改为 `replay`，3-7 将没有战斗播放。
+- 验收：seed 42 空闲整局所有回合 `toCombatReplay` 成功，且回放折叠结果等于 terminal。
+
+### SR-B7-02 私有投影下的显示缺口（P2，界面体验）
+
+- 现状：`toPrivateSeatView` 去掉了敌方单位与 `m8.encounterPlan`、`m8.loot`，`roundResults` 也去掉了 `interestBasis`、`xpRequested`、`streakBefore/After`、`roundKind`。联机界面因此：PvE 准备阶段看不到野怪站位与预览；掉落只能靠事件；收入明细省略"利息基数"和"经验请求"。
+- 需要（可选）：按 §10.9/§14.1 另给已揭示的遭遇预览摘要（敌方定义、星级、站位）与已揭示掉落摘要的白名单字段；`roundResults` 是否可加回 `interestBasis`/`xpRequested`。界面只显示，不用于规则。

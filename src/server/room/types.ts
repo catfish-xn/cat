@@ -144,8 +144,6 @@ export interface RoundSettlement {
   readonly eliminated: readonly RankEntry[];
   /** Full final ranking when this settlement ends the match. */
   readonly finalRanking: readonly RankEntry[] | null;
-  /** Two or more seats survive the catalog's final round: §11.5 overtime must follow (the rules' entry is pending, see RoomFault). */
-  readonly overtimeRequired: boolean;
 }
 
 export type RoomFault =
@@ -153,9 +151,7 @@ export type RoomFault =
   | { readonly kind: 'resolver-error'; readonly battleId: string; readonly message: string; readonly reason?: string }
   | { readonly kind: 'invalid-results'; readonly detail: string }
   | { readonly kind: 'seat-stuck'; readonly seatId: string; readonly reason: string }
-  | { readonly kind: 'phase-mismatch'; readonly detail: string }
-  /** §11.5 overtime after the catalog's final round needs the rules' `advanceMultiplayerRound` (not delivered yet, SR-B4-01); the room stops here explicitly. */
-  | { readonly kind: 'overtime-unavailable'; readonly round: number; readonly survivors: readonly string[] };
+  | { readonly kind: 'phase-mismatch'; readonly detail: string };
 
 export interface RoomState {
   readonly roomId: string;

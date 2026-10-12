@@ -4,17 +4,19 @@
  * network layer (B2/C4) exists: the same Lobby/Room/projection code the server will run,
  * with my seat as the only human and seven idle bot seats (B1 `Lobby.start()`).
  *
- * The client is a thin adapter: commands go to `room.handle()` unchanged and come back
- * unchanged; everything the UI sees is the room's own whitelisted projection. Nothing here
- * decides a rule, a deadline or an outcome. It imports only the room's public surface.
+ * The client is a thin adapter: commands go to `room.handle()` unchanged; everything the UI sees
+ * is the room's own whitelisted projection, exactly what the network server sends (B7): my seat as
+ * `toSeatPrivateView` (shown through the display adapter), my battle as frames and replay. Nothing
+ * here decides a rule, a deadline or an outcome. It imports only the room's public surface.
  */
 import { createMatch } from '../../simulation/match';
 import type { MatchCommandResult, MatchState } from '../../simulation/match-types';
 import {
-  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatFrames, toPlayerView,
+  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView,
   type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings,
 } from '../../server/room';
 import type { ClientCommand, ClientListeners, GameClient, LobbyView, PlayerView } from './protocol';
+import { toDisplayMatch } from './seat-view-adapter';
 
 export interface LocalRoomOptions {
   readonly seed: number;
@@ -57,8 +59,10 @@ export class LocalRoomClient implements GameClient {
   private room: Room | null = null;
   private unsubscribeRoom: (() => void) | null = null;
   private error: string | null = null;
-  /** Last MatchState handed to the UI (by push or as a command result), to push each state once. */
+  /** Room state of my seat last handed to the UI (by push or as a command result), to push each state once. */
   private emittedMatch: MatchState | null = null;
+  /** Display copy of `emittedMatch` built from its private seat view: the only state the UI ever sees. */
+  private emittedDisplay: MatchState | null = null;
   /** Round whose battle frames were already pushed. */
   private emittedBattleRound = 0;
   private flushQueued = false;
@@ -80,7 +84,7 @@ export class LocalRoomClient implements GameClient {
 
   listen(listeners: ClientListeners): () => void {
     this.listeners = listeners; this.emitLobby();
-    if (this.room) { const match = this.myMatch(); if (match) { this.emittedMatch = match; listeners.state(match); } listeners.view(this.view(this.room.state)); }
+    if (this.room) { const match = this.myMatch(); if (match) listeners.state(this.display(match)); listeners.view(this.view(this.room.state)); }
     return () => { if (this.listeners === listeners) this.listeners = null; };
   }
 
@@ -107,7 +111,7 @@ export class LocalRoomClient implements GameClient {
   }
   reset(): void {
     this.detach();
-    this.mySeatId = null; this.error = null; this.emittedMatch = null; this.emittedBattleRound = 0;
+    this.mySeatId = null; this.error = null; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0;
     this.emitLobby(); this.listeners?.view({ ...LOBBY_PHASE_VIEW, phase: { ...LOBBY_PHASE_VIEW.phase, serverNow: this.clock.now() } });
   }
   dispose(): void {
@@ -115,28 +119,33 @@ export class LocalRoomClient implements GameClient {
     this.detach(); this.lobby.dispose(); this.ownsClock?.dispose(); this.listeners = null;
   }
 
-  /** Forwarded to the room unchanged; a refusal comes back unchanged and changes nothing. */
+  /** Forwarded to the room unchanged; a refusal changes nothing. The state handed back is the projected display copy, as over the network. */
   send(command: ClientCommand): MatchCommandResult {
     const room = this.room, seatId = this.mySeatId;
-    if (!room || seatId === null) return { ok: false, state: this.emittedMatch ?? createMatch(this.options.seed), reason: 'wrong-phase' };
+    if (!room || seatId === null) return { ok: false, state: this.emittedDisplay ?? createMatch(this.options.seed), reason: 'wrong-phase' };
     this.inCommand = true;
     try {
       const result = room.handle(seatId, command);
       if (!result.ok) {
         // Room-level refusals (seat/phase) are not MatchFailures; the UI shows them as a phase refusal.
         const reason = result.reason === 'unknown-seat' || result.reason === 'seat-eliminated' || result.reason === 'room-phase' ? 'wrong-phase' : result.reason;
-        return { ok: false, state: result.state ?? this.emittedMatch ?? createMatch(this.options.seed), reason };
+        const state = result.state ? this.display(result.state) : this.emittedDisplay ?? createMatch(this.options.seed);
+        return { ok: false, state, reason };
       }
-      this.emittedMatch = result.state;
-      return { ok: true, state: result.state, events: result.events };
+      return { ok: true, state: this.display(result.state), events: result.events };
     } finally { this.inCommand = false; }
+  }
+  /** My room state as the UI sees it: the rules' private seat view through the display adapter, built once per state. */
+  private display(match: MatchState): MatchState {
+    if (match !== this.emittedMatch || !this.emittedDisplay) { this.emittedMatch = match; this.emittedDisplay = toDisplayMatch(toSeatPrivateView(match)); }
+    return this.emittedDisplay;
   }
 
   /* ---------------- room → listeners ---------------- */
 
   private attach(room: Room): void {
     this.detach();
-    this.room = room; this.emittedMatch = null; this.emittedBattleRound = 0;
+    this.room = room; this.emittedMatch = null; this.emittedDisplay = null; this.emittedBattleRound = 0;
     this.unsubscribeRoom = room.subscribe(() => this.queueFlush());
   }
   private detach(): void {
@@ -158,13 +167,16 @@ export class LocalRoomClient implements GameClient {
     const room = this.room, listeners = this.listeners;
     if (!room || !listeners || this.mySeatId === null) return;
     const state = room.state;
-    const match = this.myMatch();
-    if (match && match !== this.emittedMatch && !this.inCommand) { this.emittedMatch = match; listeners.state(match); }
+    const seat = state.seats.find(candidate => candidate.seatId === this.mySeatId);
+    // Same rule as the network server: an eliminated seat's last state is the one of the round that eliminated it.
+    const receivesState = seat !== undefined && (seat.alive || seat.eliminatedRound === state.round);
+    if (seat && receivesState && seat.match !== this.emittedMatch && !this.inCommand) listeners.state(this.display(seat.match));
     if ((state.phase === 'battle' || state.phase === 'frozen') && state.battles.length > 0 && state.round !== this.emittedBattleRound) {
-      // Frames are combat view data; the settled MatchState follows as a state push once the room commits.
+      // Frames are combat view data; the settled state follows as a state push once the room commits.
       const frames = toCombatFrames(state, this.mySeatId);
       this.emittedBattleRound = state.round;
       if (frames.length > 0) listeners.combat(frames);
+      if (listeners.replay) { const replay = toCombatReplayFor(state, this.mySeatId); if (replay) listeners.replay(replay.replay); }
     }
     listeners.view(this.view(state));
   }

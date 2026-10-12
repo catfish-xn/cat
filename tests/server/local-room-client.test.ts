@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
 import type { MatchState } from '../../src/simulation/match-types';
 import { LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/online/local-room-client';
+import { toDisplayMatch } from '../../src/rendering/online/seat-view-adapter';
+import { toSeatPrivateView } from '../../src/server/room/projection';
 import type { ClientListeners, CombatFrame, LobbyView, PlayerView } from '../../src/rendering/online/protocol';
 
 const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'two-sided' };
@@ -45,14 +47,15 @@ describe('LocalRoomClient', () => {
   it('forwards commands to the room unchanged and keeps a refusal free of side effects', async () => {
     const { client, log, flush } = harness();
     client.joinQueue('a'); client.startMatch();
-    const before = log.state.at(-1)!;
+    const before = log.state.at(-1)!, roomBefore = client.currentRoom!.state.seats[0]!.match;
     const refused = client.send({ type: 'buy', slot: 0, generation: before.shop.generation + 1 });
     expect(refused.ok).toBe(false); if (!refused.ok) { expect(refused.reason).toBe('stale-shop'); expect(refused.state).toBe(before); }
-    expect(client.currentRoom!.state.seats[0]!.match).toBe(before);
+    expect(client.currentRoom!.state.seats[0]!.match).toBe(roomBefore);
     // Round 1 starts with 0 gold, so the accepted command is the free shop lock.
     const accepted = client.send({ type: 'shopLock', locked: true, generation: before.shop.generation });
     expect(accepted.ok).toBe(true);
-    if (accepted.ok) { expect(accepted.state.shop.locked).toBe(true); expect(client.currentRoom!.state.seats[0]!.match).toBe(accepted.state); }
+    // B7: the result carries the display copy of the room's private seat view, as the network client would show it.
+    if (accepted.ok) { expect(accepted.state.shop.locked).toBe(true); expect(accepted.state).toEqual(toDisplayMatch(toSeatPrivateView(client.currentRoom!.state.seats[0]!.match))); }
     await flush();
     // The command result already carried the state; the room push does not repeat it.
     expect(log.state).toHaveLength(1);
@@ -66,9 +69,9 @@ describe('LocalRoomClient', () => {
     expect(log.combat[0]!.every(frame => frame.events.every(event => 'tick' in event))).toBe(true);
     await runUntil(() => last().phase.kind === 'ended', 6_000);
     const view = last();
-    // Either the rules decided a unique ranking or the room stopped explicitly at the overtime gap (SR-B4-01).
-    if (view.fault) expect(view.fault.kind).toBe('overtime-unavailable');
-    else expect(view.ranking!.map(seat => seat.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    // B7: overtime runs until one seat is left, so the match always ends with a unique ranking.
+    expect(view.fault).toBeNull();
+    expect(view.ranking!.map(seat => seat.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     // The HP shown for my seat is the rules' HP of my last pushed state.
     expect(view.seats.find(seat => seat.seatId === view.mySeatId)!.hp).toBe(log.state.at(-1)!.playerHp);
     // One combat push per round in which my seat still fought; an eliminated seat gets views, not frames.
@@ -76,8 +79,9 @@ describe('LocalRoomClient', () => {
     expect(log.combat.length).toBe(rounds.size);
     // Frames are combat view data (CombatState), never a MatchState; the settled state arrives as the room's own seat state after the commit.
     expect(log.combat[0]!.every(frame => 'tick' in frame.state && !('shop' in frame.state))).toBe(true);
-    const roomMatches = client.currentRoom!.state.seats.map(seat => seat.match);
-    expect(roomMatches).toContain(log.state.at(-1)!);
+    // My last pushed state is the display copy of my seat's private view, the same as the network sends.
+    const mine = client.currentRoom!.state.seats.find(seat => seat.seatId === view.mySeatId)!;
+    expect(log.state.at(-1)!).toEqual(toDisplayMatch(toSeatPrivateView(mine.match)));
     expect(client.send({ type: 'reroll' })).toMatchObject({ ok: false, reason: 'wrong-phase' });
   }, 60_000);
   it('surfaces a room fault as view.fault with readable text and no ranking', async () => {
