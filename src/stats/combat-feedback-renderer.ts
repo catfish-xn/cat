@@ -1,9 +1,9 @@
-import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { appliedStatusFloat } from '../presentation/combat-status';
+import { asDisplayEvents, type SceneCombatEvent } from '../presentation/combat-display';
 export interface FeedbackAnchor { readonly x: number; readonly y: number; readonly radius: number }
 /** A centred rect in the same CSS coordinates as anchors (e.g. a canvas text label) that floats must not cover. */
 export interface FeedbackObstacle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
-export interface CombatFeedbackRenderer { push(events: readonly LedgerCombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[]): void; reset(): void; dispose(): void }
+export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[]): void; reset(): void; dispose(): void }
 type FloatKind = 'physical' | 'magic' | 'true' | 'shield' | 'heal' | 'status';
 interface Float { key: string; unitId: string; kind: FloatKind; amount: number; text: string; at: number; label: HTMLSpanElement }
 /** Damage type is told apart by color and by a suffix, so color is never the only cue. */
@@ -15,9 +15,10 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
   let floats: Float[] = [], disposed = false;
   function reset(): void { for (const item of floats) item.label.remove(); floats = []; }
-  function add(event: LedgerCombatEvent, unitId: string, kind: FloatKind, amount: number, at: number, text = ''): void {
+  /** Floats of one tick and unit merge; reset() runs on every new battle, so the tick identifies the batch. */
+  function add(tick: number, unitId: string, kind: FloatKind, amount: number, at: number, text = ''): void {
     if (amount <= 0) return;
-    const key = `${event.combatId}/${event.tick}/${unitId}/${kind}${text}`;
+    const key = `${tick}/${unitId}/${kind}${text}`;
     const old = floats.find(item => item.key === key);
     if (old) { if (kind !== 'status') old.amount += amount; return; }
     const perUnit = floats.filter(item => item.unitId === unitId);
@@ -29,10 +30,11 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   return {
     push(events, at) {
       if (disposed) return;
-      for (const event of events) {
-        if (event.type === 'packetDamage') { const o = event.outcome; add(event, o.context.targetId, o.context.damageType, o.hpDamage, at); add(event, o.context.targetId, 'shield', o.absorbed, at); }
-        else if (event.type === 'heal') add(event, event.outcome.targetId, 'heal', event.outcome.actual, at);
-        else { const status = appliedStatusFloat(event); if (status && event.type === 'statusChanged') add(event, event.group.targetId, 'status', 1, at, status); }
+      // Local ledger and §14.2 wire events read through the same display whitelist (event-carried numbers only).
+      for (const event of asDisplayEvents(events)) {
+        if (event.type === 'packetDamage') { add(event.tick, event.targetId, event.damageType, event.hpDamage, at); add(event.tick, event.targetId, 'shield', event.absorbed, at); }
+        else if (event.type === 'heal') add(event.tick, event.targetId, 'heal', event.actual, at);
+        else { const status = appliedStatusFloat(event); if (status && event.type === 'statusChanged') add(event.tick, event.targetId, 'status', 1, at, status); }
       }
     },
     render(now, anchors, obstacles = []) {

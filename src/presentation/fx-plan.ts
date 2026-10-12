@@ -4,9 +4,9 @@
  * Numeric floats (damage/shield/heal amounts) are owned by the DOM feedback renderer;
  * specs here are shapes and short labels only. Pure: no Phaser, DOM or clock.
  */
-import type { CombatState } from '../simulation/combat-types';
-import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { HexCell } from '../simulation/board';
+import type { ResolvedAbility } from '../simulation/ability-types';
+import { asDisplayEvents, type DisplayCombat, type DisplayUnit, type SceneCombatEvent } from './combat-display';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
@@ -32,12 +32,26 @@ export type FxSpec =
   | { kind: 'flash'; unitId: string }
   | { kind: 'target'; unitId: string; team: 'player' | 'enemy' };
 
-/** Pure: same events + state + preference → same specs, for live and replay alike. */
-export function planFx(events: readonly LedgerCombatEvent[], combat: CombatState, reduced: boolean): FxSpec[] {
+/** Cast color and label: the engine ability when the local runtime is drawn, else the champion's identity (online view). */
+function castLook(source: DisplayUnit): { color: number; label: string } {
+  const ability = (source as DisplayUnit & { readonly ability?: ResolvedAbility }).ability;
+  if (!ability) return { color: getHeroIdentity(source.definitionId).colorNumber, label: `施法 · ${displayUnitName(source.definitionId)}` };
+  return {
+    color: ability.kind === 's13' ? getHeroIdentity(ability.championId).colorNumber : ability.kind === 'selfShield' ? toNumber(C.shield) : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e,
+    label: ability.kind === 's13' ? `施法 · ${displayUnitName(ability.championId)}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理',
+  };
+}
+
+/**
+ * Pure: same events + state + preference → same specs, for live, online replay and saved replay alike.
+ * Accepts the local ledger or the §14.2 wire events (both read through the same display whitelist) and a
+ * CombatViewState or engine CombatState; `unitUpdated` carries values, not animations, and draws nothing.
+ */
+export function planFx(events: readonly SceneCombatEvent[], combat: DisplayCombat, reduced: boolean): FxSpec[] {
   const specs: FxSpec[] = [];
   const flashed = new Set<string>();
   const unit = (id: string | null | undefined) => (id ? combat.units.find(value => value.id === id) : undefined);
-  for (const event of events) {
+  for (const event of asDisplayEvents(events)) {
     if (event.type === 'attack') {
       const source = unit(event.attackerId), target = unit(event.targetId);
       if (!source || !target) continue;
@@ -45,21 +59,19 @@ export function planFx(events: readonly LedgerCombatEvent[], combat: CombatState
       if (source.attackRange <= 1) specs.push({ kind: 'slash', at: target.cell, from: source.cell, color, duration: 200 });
       else specs.push({ kind: 'bolt', from: source.cell, to: target.cell, color, duration: reduced ? 160 : 220, travel: !reduced });
     } else if (event.type === 'cast') {
-      const source = unit(event.receipt.source.ownerId);
+      const source = unit(event.sourceId);
       if (!source) continue;
-      const ability = source.ability;
-      const color = ability.kind === 's13' ? getHeroIdentity(ability.championId).colorNumber : ability.kind === 'selfShield' ? toNumber(C.shield) : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e;
-      const targets = event.receipt.targetIds.map(id => unit(id)).filter(target => target && target.id !== source.id).map(target => target!.cell);
-      const label = ability.kind === 's13' ? `施法 · ${displayUnitName(ability.championId)}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理';
+      const { color, label } = castLook(source);
+      const targets = event.targetIds.map(id => unit(id)).filter(target => target && target.id !== source.id).map(target => target!.cell);
       specs.push({ kind: 'cast', at: source.cell, targets, color, duration: 700, label });
-    } else if (event.type === 'heal' && event.outcome.actual > 0) {
-      const target = unit(event.outcome.targetId);
+    } else if (event.type === 'heal' && event.actual > 0) {
+      const target = unit(event.targetId);
       if (target) specs.push({ kind: 'ring', at: target.cell, color: 0x7dff9e, radius: 31, duration: 450 });
     } else if (event.type === 'shieldLayerChanged' && event.reason === 'granted') {
-      const target = unit(event.layer.targetId);
+      const target = unit(event.targetId);
       if (target) specs.push({ kind: 'ring', at: target.cell, color: toNumber(C.shield), radius: 33, duration: 450 });
     } else if (event.type === 'growth' || event.type === 'statusChanged') {
-      const target = unit(event.type === 'growth' ? event.unitId : event.group.targetId);
+      const target = unit(event.type === 'growth' ? event.unitId : event.targetId);
       if (!target) continue;
       const text = event.type === 'growth' ? `成长 +${event.amountBps / 100}%` : `效果${event.reason === 'applied' ? '生效' : '结束'}`;
       specs.push({ kind: 'label', at: target.cell, text, dy: 46, color: C.shield, background: '#14212c', duration: 600 });
@@ -68,14 +80,14 @@ export function planFx(events: readonly LedgerCombatEvent[], combat: CombatState
       if (target) specs.push({ kind: 'target', unitId: target.id, team: target.team });
     } else if (event.type === 'packetDamage') {
       // replay2 has no per-tick aggregate: flash each hit unit once per batch.
-      const id = event.outcome.context.targetId;
+      const id = event.targetId;
       if (!flashed.has(id)) { flashed.add(id); specs.push({ kind: 'flash', unitId: id }); }
     } else if (event.type === 'death') {
       const target = unit(event.unitId);
       if (target) specs.push({ kind: 'death', at: target.cell, duration: 600 });
     } else if (event.type === 'effectTriggered') {
-      const owner = unit(event.source.ownerId);
-      if (owner) specs.push({ kind: 'label', at: owner.cell, text: `${SOURCE_KIND[event.source.sourceKind] ?? '效果'} · ${sourceName(event.source.sourceKind, event.source.sourceDefinitionId)}`,
+      const owner = unit(event.ownerId);
+      if (owner) specs.push({ kind: 'label', at: owner.cell, text: `${SOURCE_KIND[event.sourceKind] ?? '效果'} · ${sourceName(event.sourceKind, event.sourceDefinitionId)}`,
         dy: 46, color: '#ffe39b', background: '#1b2634', duration: 700 });
     }
   }

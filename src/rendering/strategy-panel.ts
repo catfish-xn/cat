@@ -13,10 +13,11 @@ import type { MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 import type { Effect } from '../simulation/strategy-types';
 import type { CombatOrigin } from '../simulation/combat-types';
-import type { LedgerCombatEvent } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import { isLedgerEvent, type CombatViewState, type SceneCombatEvent } from '../presentation/combat-display';
 import { readCombatStats } from '../simulation/combat-s13';
 import { getInterestGold } from '../simulation/economy';
-import { combatEventText, originLabel } from './combat-feedback';
+import { combatEventText, originLabel, viewEventLine } from './combat-feedback';
 import { readUnitStatusRows, shieldSource, statusRowText, ticksToSeconds } from '../presentation/combat-status';
 import { InputRouter, type Gesture } from './input-router';
 import { getDeploymentCap } from '../simulation/match';
@@ -52,6 +53,8 @@ const ONLINE_SPECTATE_TEXT = '已淘汰 · 观战中 · 点击右侧玩家查看
 
 interface PanelActions {
   readonly state: () => MatchState;
+  /** C6: the battle on the board (offline and online) and, offline only, the engine state behind it. */
+  readonly combat: () => { readonly view: CombatViewState | null; readonly runtime: CombatState | null };
   readonly shopLock: (locked: boolean, generation: number) => void;
   readonly selectedUnit: () => string | null;
   readonly selectUnit: (id: string) => void;
@@ -363,7 +366,7 @@ export class StrategyPanel {
       const receipt = element('details', '', 'income-receipt'); receipt.dataset.debug = 'income-receipt';
       receipt.append(element('summary', `上轮收入 +${result.income} 金币 · 生命 ${result.hpBefore} → ${result.hpAfter}`));
       const income = result.incomeBreakdown;
-      // Online round records come from the private seat view, which leaves out the interest basis and XP requested (B7).
+      // Online round records come from the private seat view: interestBasis is whitelisted (PR #50), XP requested is not (B7).
       const basis = result.interestBasis === undefined ? '' : `（基数 ${result.interestBasis}）`, requested = result.xpRequested === undefined ? '' : `/${result.xpRequested}`;
       receipt.append(element('p', `基础 ${income.base} + 胜利 ${income.win} + 利息 ${income.interest}${basis}+ 连胜败 ${income.streak} = ${result.income} 金币；余额 ${result.goldBefore} → ${result.goldAfter}；经验 +${result.xpAwarded}${requested}`));
       this.root.append(receipt);
@@ -621,7 +624,7 @@ export class StrategyPanel {
     (this.modal.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? this.modal).focus({ preventScroll: true });
   }
   updateCombat(): void {
-    const state = this.actions.state(), combat = state.combat, node = this.combatText;
+    const state = this.actions.state(), { view: combat, runtime } = this.actions.combat(), node = this.combatText;
     if (!node) return;
     if (combat && this.lastCombatId === combat.combatId && this.lastCombatTick === combat.tick) return;
     if (combat && this.lastCombatId === combat.combatId && combat.status === 'running' && combat.tick - this.lastCombatTick < 2) return;
@@ -649,49 +652,71 @@ export class StrategyPanel {
     const unit = combat.units.find(unit => unit.id === preferred) ?? combat.units.find(unit => unit.team === 'player');
     if (!unit) return;
     const base = getUnitStats(unit.definitionId, unit.starLevel);
-    const current = readCombatStats(unit, combat);
     this.appendEquipmentDetail(node, state, unit.id);
     node.append(element('h3', `战斗 · ${displayUnitName(unit.definitionId)}`));
     node.append(element('p', `生命 ${unit.hp}/${unit.maxHp} · 法力 ${unit.mana}/${unit.maxMana} · 盾 ${unit.shield}`));
     node.append(element('p', `基础最大生命 ${base.health} → 本场最大生命 ${unit.maxHp}`));
+    const engine = runtime?.units.find(value => value.id === unit.id);
+    if (!runtime || !engine) {
+      // Online (C6): the view's stats are already the current effective values (§14.2); the frozen column,
+      // ability, shield layers, statuses and sources are not sent, so they are not shown.
+      node.append(element('p', '基础 → 当前（含技能与状态）', 'stat-columns'));
+      const viewRows: readonly [string, string, number | string, number][] = [
+        ['ad', '攻击力', base.attack, unit.attackDamage], ['ap', '法强', '—', unit.abilityPower],
+        ['attack-interval', '攻速 / 普攻间隔(ms)', base.attackIntervalTicks * 50, unit.attackIntervalTicks * 50],
+        ['armor', '护甲', base.armor, unit.armor], ['magic-resist', '魔抗', base.magicResist, unit.magicResist], ['range', '射程(格)', base.attackRange, unit.attackRange],
+      ];
+      for (const [id, label, original, value] of viewRows) {
+        const row = element('p', `${label} ${original} → ${value}`);
+        row.dataset.debug = `combat-stat:${id}`; row.dataset.current = String(value); node.append(row);
+      }
+      node.append(element('p', `当前目标 ${combat.units.find(target => target.id === unit.targetId) ? definitionName(combat.units.find(target => target.id === unit.targetId)!.definitionId) : '无'}`));
+      return;
+    }
+    const current = readCombatStats(engine, runtime);
     node.append(element('p', '基础 → 开战冻结 → 当前（含技能与状态）', 'stat-columns'));
     const statRows: readonly [string, string, number | string, number | string, number][] = [
-      ['ad', '攻击力', base.attack, unit.attackDamage, current.attackDamage],
-      ['ap', '法强', '—', unit.abilityPower ?? '—', current.abilityPower],
-      ['attack-interval', '攻速 / 普攻间隔(ms)', base.attackIntervalTicks * 50, unit.attackIntervalTicks * 50, current.attackIntervalTicks * 50],
-      ['armor', '护甲', base.armor, unit.armor, current.armor],
-      ['magic-resist', '魔抗', base.magicResist, unit.magicResist, current.magicResist],
-      ['range', '射程(格)', base.attackRange, unit.attackRange, current.attackRange],
+      ['ad', '攻击力', base.attack, engine.attackDamage, current.attackDamage],
+      ['ap', '法强', '—', engine.abilityPower ?? '—', current.abilityPower],
+      ['attack-interval', '攻速 / 普攻间隔(ms)', base.attackIntervalTicks * 50, engine.attackIntervalTicks * 50, current.attackIntervalTicks * 50],
+      ['armor', '护甲', base.armor, engine.armor, current.armor],
+      ['magic-resist', '魔抗', base.magicResist, engine.magicResist, current.magicResist],
+      ['range', '射程(格)', base.attackRange, engine.attackRange, current.attackRange],
     ];
     for (const [id, label, original, frozen, value] of statRows) {
       const row = element('p', `${label} ${original} → ${frozen} → ${value}`);
       row.dataset.debug = `combat-stat:${id}`; row.dataset.current = String(value); node.append(row);
     }
-    const ability = unit.ability;
+    const ability = engine.ability;
     node.append(element('p', `技能 · ${ability.kind === 's13' ? `${displayUnitName(ability.championId)} 技能` : `${ability.kind === 'selfShield' ? '护盾' : ability.damageType === 'magic' ? '魔法伤害' : '物理伤害'} ${ability.amount}`} · 普攻间隔 ${current.attackIntervalTicks * 50}ms`));
     node.append(element('p', `当前目标 ${combat.units.find(target => target.id === unit.targetId) ? definitionName(combat.units.find(target => target.id === unit.targetId)!.definitionId) : '无'}`));
     const label = (origin: CombatOrigin) => originLabel(origin, id => this.combatUnitName(id));
-    for (const layer of unit.shieldLayers ?? []) {
+    for (const layer of engine.shieldLayers ?? []) {
       if (layer.remaining <= 0) continue;
       const m8 = layer.m8State;
-      node.append(element('p', `盾 ${layer.remaining} / ${layer.granted}${m8 ? ` · 已吸收 ${m8.absorbed}${m8.decayed ? ` · 已衰减 ${m8.decayed}` : ''}` : ''} · 剩余 ${ticksToSeconds(layer.expiresAtTick - combat.tick)}（第 ${layer.expiresAtTick} 刻结束） · ${label(shieldSource(layer))}`, 'combat-shield'));
+      node.append(element('p', `盾 ${layer.remaining} / ${layer.granted}${m8 ? ` · 已吸收 ${m8.absorbed}${m8.decayed ? ` · 已衰减 ${m8.decayed}` : ''}` : ''} · 剩余 ${ticksToSeconds(layer.expiresAtTick - runtime.tick)}（第 ${layer.expiresAtTick} 刻结束） · ${label(shieldSource(layer))}`, 'combat-shield'));
     }
-    for (const row of readUnitStatusRows(combat, unit.id)) {
-      const line = element('p', statusRowText(row, combat.tick, label), `combat-status${row.harmful ? ' harmful' : ''}${row.state === 'suppressed' || row.state === 'pending' ? ' inactive' : ''}`);
+    for (const row of readUnitStatusRows(runtime, unit.id)) {
+      const line = element('p', statusRowText(row, runtime.tick, label), `combat-status${row.harmful ? ' harmful' : ''}${row.state === 'suppressed' || row.state === 'pending' ? ' inactive' : ''}`);
       line.dataset.debug = `combat-status:${row.kind}`; node.append(line);
     }
-    for (const source of unit.sources ?? []) node.append(element('p', `${term(source.source.sourceKind)} · ${definitionName(source.source.sourceDefinitionId)}：${describeEffect(source.effect)}`));
+    for (const source of engine.sources ?? []) node.append(element('p', `${term(source.source.sourceKind)} · ${definitionName(source.source.sourceDefinitionId)}：${describeEffect(source.effect)}`));
   }
   private combatUnitName(id: string | null): string {
     if (!id) return '无';
     const state = this.actions.state();
-    const unit = state.combat?.units.find(value => value.id === id) ?? state.preparation.units.find(value => value.id === id);
+    const unit = this.actions.combat().view?.units.find(value => value.id === id) ?? state.preparation.units.find(value => value.id === id);
     return unit ? `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}` : '历史单位';
   }
-  observeEvents(events: readonly LedgerCombatEvent[]): void {
+  /** Offline: the local ledger with full provenance text. Online: §14.2 wire events (reset() runs per battle). */
+  observeEvents(events: readonly SceneCombatEvent[]): void {
     if (!events.length) return;
-    if (events.length && events[0].combatId !== this.eventCombatId) { this.eventTexts = []; this.eventCombatId = events[0].combatId; }
-    for (const event of events) { const text = combatEventText(event, id => this.combatUnitName(id)); if (text) this.eventTexts.push(text); }
+    const first = events[0]!;
+    if (isLedgerEvent(first) && first.combatId !== this.eventCombatId) { this.eventTexts = []; this.eventCombatId = first.combatId; }
+    for (const event of events) {
+      const text = isLedgerEvent(event) ? combatEventText(event, id => this.combatUnitName(id)) : viewEventLine(event, id => this.combatUnitName(id));
+      if (text) this.eventTexts.push(text);
+    }
     if (this.eventTexts.length > 200) this.eventTexts.splice(0, this.eventTexts.length - 200);
     this.renderEventList();
   }

@@ -6,9 +6,11 @@
  * visible round info) keep working. Nothing here flows back: commands carry only ids and generations,
  * and the server decides every result on its own state.
  *
- * Placeholders that cannot be faithful (contract §14.1 "不能靠占位保真"): no RNG, no encounter plan or
- * enemy preview, no loot ledger, no schedule receipts, no combat runtime. `isFinal` is always false and
- * must never decide the match; the room's ranking does.
+ * Placeholders that cannot be faithful (contract §14.1 "不能靠占位保真"): no RNG, no encounter plan, no loot
+ * ledger, no schedule receipts, no combat runtime. `isFinal` is always false and must never decide the match;
+ * the room's ranking does. The current PvE enemy preview is real (PR #50 whitelist `m8.preparation`): only its
+ * static `version`/`contentStatus` are filled in, so readEncounterPreview shows this round's monsters. PvP rounds
+ * carry no preparation and keep an empty enemy list (the preview then shows nothing, never a fake opponent).
  */
 import { createMatch } from '../../simulation/match';
 import type { MatchState, RoundResult } from '../../simulation/match-types';
@@ -31,12 +33,14 @@ function placeholderShell(): MatchState {
 
 /**
  * MatchState-shaped display copy of my seat view. Fields of the view win; anything else is a placeholder.
- * Round records miss the server-only bookkeeping (settlementId, roundKind, interest basis, streaks, XP
- * requested); they stay absent and the panels print only what is there.
+ * Round records miss the server-only bookkeeping (settlementId, roundKind, streaks, XP requested); they stay
+ * absent and the panels print only what is there. `interestBasis` is whitelisted (PR #50) and shown as is.
  */
 export function toDisplayMatch(view: PrivateSeatView): MatchState {
   const base = placeholderShell();
   const round = { ...view.m8.round, isFinal: false };
+  // Present only for this round's public PvE encounter (contract §14.1).
+  const preview = 'preparation' in view.m8 ? view.m8.preparation : undefined;
   return {
     ...base,
     ...view,
@@ -45,7 +49,9 @@ export function toDisplayMatch(view: PrivateSeatView): MatchState {
     m8: {
       ...base.m8,
       round,
-      preparation: { ...base.m8.preparation, roundId: view.roundDefinitionId, encounterId: null, contentStatus: 'not-pve', enemies: [] },
+      preparation: preview
+        ? { ...base.m8.preparation, roundId: preview.roundId, encounterId: preview.encounterId, contentStatus: 'ready-b8-loot', enemies: preview.enemies.map(unit => ({ ...unit })) }
+        : { ...base.m8.preparation, roundId: view.roundDefinitionId, encounterId: null, contentStatus: 'not-pve', enemies: [] },
     },
     combat: null,
   } as unknown as MatchState;

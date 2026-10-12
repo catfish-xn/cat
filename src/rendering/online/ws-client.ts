@@ -10,7 +10,7 @@
  *   view (`seat-revision-mismatch`, `stale-round`, `resync-required`) is reported once the next state has
  *   arrived (or nothing else is in flight); nothing is resent automatically.
  * - The seat token lives in sessionStorage only. After a dropped connection the client reconnects with
- *   1s/2s/4s/8s/10s backoff and `resume{token}`; the server's snapshot (view → state → combat) restores
+ *   1s/2s/4s/8s/10s backoff and `resume{token}`; the server's snapshot (view → state → replay) restores
  *   the screen. A queued seat is lost with its connection (B2 rule), so it returns to matchmaking.
  *
  * No DOM dependency besides the injectable WebSocket/storage/timers, so tests drive it under Node.
@@ -22,14 +22,13 @@ import {
   NET_PROTOCOL_VERSION, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
 } from '../../server/net/messages';
 import type {
-  ClientCommand, ClientListeners, ClientSendResult, CombatFrame, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView,
+  ClientCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView,
 } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Timers = { set(callback: () => void, ms: number): unknown; clear(handle: unknown): void };
 type Raw = ClientMessage extends infer M ? M extends ClientMessage ? Omit<M, 'protocolVersion' | 'commandId'> : never : never;
-type CombatMessage = Extract<ServerMessage, { type: 'combat' }>;
 type ReplayMessage = Extract<ServerMessage, { type: 'replay' }>;
 
 export interface WsClientOptions {
@@ -96,8 +95,6 @@ export class WsGameClient implements GameClient {
   private readonly inflight = new Map<number, Inflight>();
   private confirmed: (ConfirmedCommand & { seatRevision: number })[] = [];
   private deferredRetries: { commandId: number; reason: ReceiptFailure }[] = [];
-  private combatParts: { key: string; frames: CombatFrame[]; next: number } | null = null;
-  private lastCombatKey = '';
   private lastReplayKey = '';
 
   private lobbyView: LobbyView | null = null;
@@ -145,7 +142,7 @@ export class WsGameClient implements GameClient {
   /** After a finished match: forget the seat and reconnect fresh so the server sends the lobby again. */
   reset(): void {
     this.forgetSeat();
-    this.lastView = null; this.lastState = null; this.lastCombatKey = ''; this.lastReplayKey = ''; this.lobbyError = null;
+    this.lastView = null; this.lastState = null; this.lastReplayKey = ''; this.lobbyError = null;
     this.listeners?.view({ ...LOBBY_PHASE_VIEW, phase: { ...LOBBY_PHASE_VIEW.phase } });
     this.restart();
   }
@@ -224,7 +221,7 @@ export class WsGameClient implements GameClient {
     this.reconnectTimer = this.timers.set(() => { this.reconnectTimer = null; this.connect(); }, delayMs);
   }
   private cancelReconnect(): void { if (this.reconnectTimer !== null) { this.timers.clear(this.reconnectTimer); this.reconnectTimer = null; } }
-  private clearInflight(): void { this.inflight.clear(); this.confirmed = []; this.deferredRetries = []; this.combatParts = null; }
+  private clearInflight(): void { this.inflight.clear(); this.confirmed = []; this.deferredRetries = []; }
 
   /* ---------------- inbound ---------------- */
 
@@ -236,7 +233,6 @@ export class WsGameClient implements GameClient {
       case 'lobby': this.lobbyView = message.view; this.emitLobby(); return;
       case 'view': return this.onView(message.roomId, message.view);
       case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state);
-      case 'combat': return this.onCombat(message);
       case 'replay': return this.onReplay(message);
       case 'receipt': return this.onReceipt(message);
       case 'error': return this.onError(message.code, message.message);
@@ -257,28 +253,12 @@ export class WsGameClient implements GameClient {
     this.listeners?.state(state, confirmed.map(({ commandId, events }) => ({ commandId, events })));
     this.flushRetries();
   }
-  private onCombat(message: CombatMessage): void {
-    const key = `${message.roomId}:${message.round}:${message.battleId}`;
-    let frames: readonly CombatFrame[] = message.frames;
-    if (message.total !== undefined && message.part !== undefined) {
-      if (message.part === 1) this.combatParts = { key, frames: [], next: 1 };
-      const parts = this.combatParts;
-      if (!parts || parts.key !== key || parts.next !== message.part) { this.log(`combat part ${message.part}/${message.total} out of order`); this.combatParts = null; return; }
-      parts.frames.push(...message.frames); parts.next += 1;
-      if (message.part < message.total) return;
-      frames = parts.frames; this.combatParts = null;
-    }
-    // A resume snapshot repeats the battle already played; show it only once.
-    if (key === this.lastCombatKey) return;
-    this.lastCombatKey = key;
-    this.listeners?.combat(frames);
-  }
-  /** Compact replay of my battle (B7); forwarded once per battle to a listener that plays replays (C6). */
+  /** My battle as a compact replay (B7/C6). A resume snapshot repeats the battle already played; show it only once. */
   private onReplay(message: ReplayMessage): void {
     const key = `${message.roomId}:${message.round}:${message.battleId}`;
     if (key === this.lastReplayKey) return;
     this.lastReplayKey = key;
-    this.listeners?.replay?.(message.replay);
+    this.listeners?.replay(message.replay);
   }
   private onReceipt(receipt: ReceiptMessage): void {
     const entry = this.inflight.get(receipt.commandId);
@@ -308,7 +288,7 @@ export class WsGameClient implements GameClient {
     const type = entry?.type ?? null;
     if (type === 'resume' || receipt.reason === 'invalid-token') {
       this.forgetSeat();
-      this.lastView = null; this.lastState = null; this.lastCombatKey = ''; this.lastReplayKey = '';
+      this.lastView = null; this.lastState = null; this.lastReplayKey = '';
       this.lobbyError = '上一局已结束或凭证失效，请重新匹配';
       this.setStatus({ kind: 'seat-lost' });
       this.setStatus({ kind: 'online' });

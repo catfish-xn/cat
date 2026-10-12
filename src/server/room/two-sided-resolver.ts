@@ -13,11 +13,11 @@
  * PvE and supply rounds never reach this entry (§10.6 item 5); they go to the inner resolver.
  */
 import {
-  BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle, startTwoSidedCombatWithEvents, stepCombat,
-  type BattleIdentity, type BattleInput as RulesBattleInput, type CombatState, type LedgerCombatEvent, type PlayerBattleSnapshot, type SharedPoolState,
+  BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle,
+  type BattleIdentity, type PlayerBattleSnapshot, type SharedPoolState,
 } from '../../server-entry';
 import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from './battle-resolver';
-import type { BattleFrame, BattleInput, BattleResult, BattleSeatInput, RulesBattleResult, TwoSidedBattleResult } from './types';
+import type { BattleInput, BattleResult, BattleSeatInput, TwoSidedBattleResult } from './types';
 
 export class TwoSidedBattleResolver implements BattleResolver {
   /** @param nonPvp resolves PvE and supply rounds (each seat on its own); the placeholder by default. */
@@ -58,31 +58,9 @@ export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult 
   const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
   const battle = guarded(envelope.battleId, () => resolveTwoSidedBattle(frozen, envelope.maxSteps));
   const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-  const frames = guarded(envelope.battleId, () => toFrames(frozen, battle, envelope.maxSteps));
   return {
     kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
-    participants: envelope.seats.map(seat => seat.seatId), battle, proposals, frames,
+    participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
   };
 }
 
-/**
- * Per-tick playback frames of this one battle (§10.6 item 3): the frozen input replayed through the
- * events-bearing start entry and `stepCombat`. The ledger events come from the authoritative result,
- * grouped by tick, so playback and settlement share one account; a divergence is a fault, not a guess.
- */
-function toFrames(frozen: RulesBattleInput, battle: RulesBattleResult, maxSteps: number): readonly BattleFrame[] {
-  const byTick = new Map<number, LedgerCombatEvent[]>();
-  for (const event of battle.events) { const bucket = byTick.get(event.tick); if (bucket) bucket.push(event); else byTick.set(event.tick, [event]); }
-  const start = startTwoSidedCombatWithEvents(frozen);
-  const frames: BattleFrame[] = [{ state: start.state, events: byTick.get(start.state.tick) ?? [] }];
-  let current: CombatState = start.state, steps = 0;
-  while (current.status === 'running' && steps < maxSteps) {
-    current = stepCombat(current).state; steps++;
-    frames.push({ state: current, events: byTick.get(current.tick) ?? [] });
-  }
-  const terminal = battle.terminal;
-  const consistent = current.status === 'finished' && current.tick === terminal.tick && current.result === terminal.result
-    && frames.reduce((count, frame) => count + frame.events.length, 0) === battle.events.length;
-  if (!consistent) throw new BattleResolveError(battle.battleId, 'frame-divergence');
-  return frames;
-}

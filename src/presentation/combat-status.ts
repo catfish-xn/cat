@@ -8,6 +8,7 @@
  */
 import { COMBAT_TICK_MS, type CombatOrigin, type CombatState, type CombatStatus, type ShieldLayer } from '../simulation/combat-types';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
+import type { SceneCombatEvent } from './combat-display';
 import type { CombatActivity, DamageDelivery, DamageFilter, DamageType, Stat, StatusContribution, StatusGroup, StatusKind } from '../simulation/m8/contracts';
 
 export const DAMAGE_TYPE_NAMES: Readonly<Record<DamageType, string>> = { physical: '物理', magic: '魔法', true: '真实' };
@@ -204,9 +205,10 @@ export function eventStatusName(event: Extract<LedgerCombatEvent, { type: 'statu
   return STATUS_KIND_NAMES[event.group.kind];
 }
 /** Harmful status kinds worth a short float on the board when applied. */
-export function appliedStatusFloat(event: LedgerCombatEvent): string | null {
+export function appliedStatusFloat(event: SceneCombatEvent): string | null {
   if (event.type !== 'statusChanged' || (event.reason !== 'applied' && event.reason !== 'refreshed')) return null;
-  const kind = event.group.kind;
+  // Local ledger events carry the whole group; the §14.2 wire event only its kind.
+  const kind = 'group' in event ? event.group.kind : event.kind;
   return ['burn', 'wound', 'sunder', 'shred', 'stun', 'untargetable', 'damage-prevention'].includes(kind) ? STATUS_KIND_NAMES[kind] : null;
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
-import { toCombatFrames, toPlayerView, toPublicBoard } from '../../src/server/room/projection';
+import { toCombatReplayFor, toPlayerView, toPublicBoard } from '../../src/server/room/projection';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import type { MatchState } from '../../src/simulation/match-types';
 import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
@@ -33,13 +33,14 @@ describe('toPlayerView', () => {
     expect(back.opponentSeatId).toBe('s0');
     clock.runNext();
     expect(toPlayerView(room.state, 's0', clock.now()).phase.kind).toBe('combat');
-    const frames = toCombatFrames(room.state, 's0');
-    expect(frames.length).toBeGreaterThan(0);
-    expect(frames.every(frame => frame.events.every(event => 'tick' in event))).toBe(true);
-    expect(toCombatFrames(room.state, 'ghost')).toEqual([]);
+    const replay = toCombatReplayFor(room.state, 's0');
+    expect(replay).not.toBeNull();
+    expect(replay!.replay.ticks.length).toBe(replay!.replay.terminal.tick + 1);
+    expect(replay!.replay.ticks.every((frame, index) => frame.tick === index)).toBe(true);
+    expect(toCombatReplayFor(room.state, 'ghost')).toBeNull();
   }, 20_000); // three PvE rounds tick by tick through the shared-pool wrapper (B5) before the first PvP, like its siblings
   it('publishes the final standings once the match ends', () => {
-    const { room, clock } = makeRoom(new DamageResolver(seatId => seatId === 's5' ? 0 : 100, 0));
+    const { room, clock } = makeRoom(new DamageResolver(seatId => seatId === 's5' ? 0 : 100, false));
     room.start(); clock.advance(1_000);
     expectUniqueRanking(room.state);
     const view = toPlayerView(room.state, 's5', clock.now());

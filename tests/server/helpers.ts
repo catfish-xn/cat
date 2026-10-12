@@ -8,19 +8,19 @@ import type { BattleInput, BattleResult, RoomState, SeatSpec } from '../../src/s
 export const SEATS: readonly SeatSpec[] = Array.from({ length: 8 }, (_, index) => ({ seatId: `s${index}`, name: `玩家 ${index}`, kind: index < 4 ? 'human' : 'bot' }));
 export const TIMINGS = { preparationMs: 1_000, choiceMs: 500, settlementMs: 200, battleTailMs: 100, maxSettlementExtensions: 2 } as const;
 
-/** A finished, unit-less combat view: frames only need to exist for the room to open a battle phase. */
+/** A finished, unit-less combat: a battle only needs to exist for the room to open a battle phase (one replay tick). */
 export function emptyCombat(state: { readonly preparation: { readonly board: CombatState['board'] } }): CombatState {
   return { board: state.preparation.board, units: [], tick: 0, maxTicks: 1200, status: 'finished', result: 'draw' };
 }
-/** Reports the given damage per seat and leaves the rule state untouched (one empty frame keeps a battle phase). */
+/** Reports the given damage per seat and leaves the rule state untouched (an empty combat keeps a battle phase; `fights=false` skips it). */
 export class DamageResolver implements BattleResolver {
   readonly inputs: BattleInput[] = [];
-  constructor(private readonly damage: (seatId: string, input: BattleInput) => number, private readonly frames = 1) {}
+  constructor(private readonly damage: (seatId: string, input: BattleInput) => number, private readonly fights = true) {}
   resolveBattle(input: BattleInput): BattleResult {
     this.inputs.push(input);
     return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.map(seat => ({
       seatId: seat.seatId, state: seat.state, result: null, damage: this.damage(seat.seatId, input),
-      frames: Array.from({ length: this.frames }, () => ({ state: emptyCombat(seat.state), events: [] })),
+      combat: this.fights ? { initial: emptyCombat(seat.state), terminal: emptyCombat(seat.state), events: [] } : null,
     })) };
   }
 }

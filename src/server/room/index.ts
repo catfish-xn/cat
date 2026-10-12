@@ -10,7 +10,7 @@ export { TwoSidedBattleResolver, resolveTwoSidedPvp } from './two-sided-resolver
 export { planPairings, findPairing, type PairingPlan } from './pairing';
 export { Room, ROOM_TIMING_DEFAULTS, applySeatCommand, type RoomOptions, type RoomTimings, type CommitResult, type CommitFailure, type PlanResult } from './room';
 export {
-  toPlayerView, toSeatPublic, toCombatFrames, toPlayerFault, mirrorCombatFrame, toSeatPrivateView, toCombatReplayFor, mirrorCombatReplay,
-  type CombatFrameView, type SeatReplay,
+  toPlayerView, toSeatPublic, toPlayerFault, toSeatPrivateView, toCombatReplayFor, mirrorCombatReplay,
+  type SeatReplay,
 } from './projection';
 export { Lobby, type LobbyOptions, type JoinResult, type StartResult } from './lobby';

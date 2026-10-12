@@ -4,9 +4,9 @@
  * unique ranking in a bounded number of rounds.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { applyCombatReplayTick, type CombatReplay, type CombatViewState } from '../../src/server-entry';
+import { applyCombatReplayTick, stepCombat, type CombatReplay, type CombatReplayInput, type CombatState, type CombatViewState } from '../../src/server-entry';
 import type { ServerMessage } from '../../src/server/net/messages';
-import { toCombatFrames, toCombatReplayFor, mirrorCombatReplay, toSeatPrivateView } from '../../src/server/room/projection';
+import { toCombatReplayFor, mirrorCombatReplay, toSeatPrivateView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { Room } from '../../src/server/room/room';
 import type { BattleInput, BattleResult, RoomState, TwoSidedBattleResult } from '../../src/server/room/types';
@@ -34,6 +34,15 @@ function privateKeysIn(value: unknown, path = '$', found: string[] = []): string
 }
 const stateMessages = (inbox: readonly ServerMessage[]) => inbox.filter((message): message is Extract<ServerMessage, { type: 'state' }> => message.type === 'state');
 const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value));
+/**
+ * Size baseline of the per-tick frame transport that C6 removed: one CombatState per tick plus the ledger.
+ * Rebuilt here from the battle itself (test only) so the replay can still be compared with what it replaced.
+ */
+function legacyFrameBytes(battle: CombatReplayInput): number {
+  let state: CombatState = battle.initial, total = bytes(state) + bytes(battle.events);
+  while (state.status === 'running' && state.tick < battle.terminal.tick) { state = stepCombat(state).state; total += bytes(state); }
+  return total;
+}
 const flip = (cell: { col: number; row: number }, rows: number) => ({ col: cell.col, row: rows - 1 - cell.row });
 /** Plays a replay with the rules' display reducer; the result must be the terminal view (§14.2). */
 function play(replay: CombatReplay): CombatViewState {
@@ -100,7 +109,7 @@ describe('B7 private seat view on every state path', () => {
     const clock = new ManualClock();
     const client = new LocalRoomClient({ seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '本地', faultAtRound: null, pvpMode: 'two-sided', clock });
     const pushed: unknown[] = [];
-    client.listen({ lobby: () => {}, view: () => {}, state: state => pushed.push(state), combat: () => {} });
+    client.listen({ lobby: () => {}, view: () => {}, state: state => pushed.push(state), replay: () => {} });
     client.joinQueue('本地'); client.startMatch();
     const room = client.currentRoom!;
     const mine = () => room.state.seats[0]!.match;
@@ -162,8 +171,9 @@ describe('B7 compact replay', () => {
     expect(JSON.stringify(play(a.replay))).toBe(JSON.stringify(a.replay.terminal));
     expect(JSON.stringify(play(b.replay))).toBe(JSON.stringify(b.replay.terminal));
     expect(b.replay).toEqual(mirrorCombatReplay(a.replay));
-    // Size: the replay is a small fraction of the per-tick frames it replaces (B7 item 5: < 5%).
-    const replayBytes = bytes(a.replay), framesBytes = bytes(toCombatFrames(state, seatA));
+    // Size: the replay is a small fraction of the per-tick frames it replaced (B7 item 5: < 5%; C6 acceptance: ≥ 90% less).
+    const replayBytes = bytes(a.replay), framesBytes = legacyFrameBytes(battle.battle);
+    console.log(`[c6-wire] first PvP battle: replay ${replayBytes} B, legacy frames ${framesBytes} B (${(replayBytes / framesBytes * 100).toFixed(2)}%)`);
     expect(replayBytes / framesBytes).toBeLessThan(0.05);
   }, 60_000);
 
@@ -196,43 +206,35 @@ describe('B7 compact replay', () => {
     expect(mirrorCombatReplay(mirrorCombatReplay(replay))).toEqual(replay);
   });
 
-  it('builds PvE replays from the frames of the rules own combat', () => {
+  it('builds PvE replays from the rules own combat (start, finish and ledger; no per-tick frames kept)', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     const state = runUntil(room, clock, current => current.phase === 'battle' && current.roundKind === 'pve');
     for (const seat of state.seats) {
       const replay = toCombatReplayFor(state, seat.seatId)!;
       expect(replay).not.toBeNull();
-      const frames = toCombatFrames(state, seat.seatId);
-      expect(replay.replay.ticks.length).toBe(frames.length);
+      const outcome = state.battles.flatMap(battle => battle.kind === 'placeholder' ? battle.outcomes : []).find(candidate => candidate.seatId === seat.seatId)!;
+      expect(outcome).not.toHaveProperty('frames');
+      expect(replay.replay.ticks.length).toBe(outcome.combat!.terminal.tick + 1);
       expect(JSON.stringify(play(replay.replay))).toBe(JSON.stringify(replay.replay.terminal));
-      expect(replay.replay.terminal.tick).toBe(frames.at(-1)!.state.tick);
+      expect(replay.replay.terminal.tick).toBe(outcome.combat!.terminal.tick);
     }
   }, 30_000);
 
-  it('sends replay messages next to the frames by default, only one of them with combatTransport frames/replay', async () => {
-    const received: Record<string, { combat: number; replay: number }> = {};
-    for (const transport of ['both', 'frames', 'replay'] as const) {
-      harness = await startServer({ combatTransport: transport }, new TwoSidedBattleResolver());
-      const [a] = await seatTwo(harness);
-      const room = harness.server.room!;
-      for (let fired = 0; fired < 400 && room.state.phase !== 'battle'; fired++) harness.clock.runNext();
-      expect(room.state.phase).toBe('battle');
-      const expected = toCombatReplayFor(room.state, a.seatId!)!;
-      // The first battle of this seat: wait for what the transport sends, then a little more for anything extra.
-      if (transport !== 'frames') {
-        const message = await a.waitFor<Extract<ServerMessage, { type: 'replay' }>>(candidate => candidate.type === 'replay');
-        expect(message.battleId).toBe(expected.battleId);
-        // The replay on the wire is the room's own replay for this seat.
-        expect(message.replay).toEqual(JSON.parse(JSON.stringify(expected.replay)));
-      }
-      if (transport !== 'replay') await a.waitFor(candidate => candidate.type === 'combat' && (candidate.part === undefined || candidate.part === candidate.total));
-      await flush();
-      const ofBattle = (type: 'combat' | 'replay') => a.inbox.filter(message => message.type === type && message.battleId === expected.battleId).length;
-      received[transport] = { combat: ofBattle('combat') > 0 ? 1 : 0, replay: ofBattle('replay') };
-      await harness.close(); harness = null;
-    }
-    expect(received).toEqual({ both: { combat: 1, replay: 1 }, frames: { combat: 1, replay: 0 }, replay: { combat: 0, replay: 1 } });
+  it('sends each battle once as the room\'s own replay and never as combat frames (C6)', async () => {
+    harness = await startServer({}, new TwoSidedBattleResolver());
+    const [a] = await seatTwo(harness);
+    const room = harness.server.room!;
+    for (let fired = 0; fired < 400 && room.state.phase !== 'battle'; fired++) harness.clock.runNext();
+    expect(room.state.phase).toBe('battle');
+    const expected = toCombatReplayFor(room.state, a.seatId!)!;
+    const message = await a.waitFor<Extract<ServerMessage, { type: 'replay' }>>(candidate => candidate.type === 'replay');
+    expect(message.battleId).toBe(expected.battleId);
+    // The replay on the wire is the room's own replay for this seat.
+    expect(message.replay).toEqual(JSON.parse(JSON.stringify(expected.replay)));
+    await flush();
+    expect(a.inbox.filter(candidate => candidate.type === 'replay' && candidate.battleId === expected.battleId)).toHaveLength(1);
+    expect(a.inbox.some(candidate => (candidate as { type: string }).type === 'combat')).toBe(false);
   }, 60_000);
 });
 
