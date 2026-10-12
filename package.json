@@ -8,6 +8,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",
+    "build:server": "node scripts/build-server.cjs",
+    "test:server-entry": "npm run build:server && node scripts/verify-t1-node-entry.cjs",
     "preview": "vite preview",
     "test:browser": "node scripts/verify-m5-browser.cjs",
     "test:preview": "node scripts/verify-m5-browser.cjs --preview",
@@ -22,6 +24,7 @@
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "playwright": "1.63.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.0",
