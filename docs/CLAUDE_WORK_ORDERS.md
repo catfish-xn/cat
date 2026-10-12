@@ -277,6 +277,8 @@
 7. **投影**：`PlayerView` 不含池精确库存；本席商店的空格 `{status:'purchased', empty:true}` 原样下发，界面画为空格（`strategy-panel.ts` 已有已购格渲染，确认不会画出虚构英雄）。
 8. 测试 `tests/server/shared-pool-room.test.ts`：八席开局守恒；两席争最后一份不超卖；付费刷新 `pool-empty` 免费失败且 generation 不变；淘汰归还一次；整局（placeholder 与 two-sided 各一）跑完后守恒成立；失败命令后 `poolRevision` 不变。
 
+9. 顺手：`tests/server/e2e/ws-two-contexts.mjs` 等排名的时限按真实 PvP 整局（约 25 分钟）放宽，或给脚本加 `--rounds=N` 只验证到第 N 轮后退出。
+
 ### 不做
 - 不碰 `src/simulation/`、`src/server-entry/`；规则缺口写 SR-B5-xx。不改网络协议形状（空格标记是现有 `ShopSlot` 兼容形状）。
 
