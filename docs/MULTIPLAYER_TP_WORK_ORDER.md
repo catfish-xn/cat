@@ -28,3 +28,7 @@
 - [ ] 单人路径与 golden 零改动。
 - [ ] 合同第 12 节能让 Claude 只看文档在 `src/server/room` 接入（B5）。
 - [ ] PR 描述对 SR-B1-05 逐条回应。
+
+## 4 补充：B3 提出的两条小需求（顺手在 TP 的 PR 里回应）
+- **SR-B3-02**（P2）：房间为了取逐 tick 播放帧要把同一冻结输入再跑一次。请在合同注明"二次执行可接受且结果必然一致"，或提供一个同时返回逐 tick 状态序列与结果的入口；二选一，不阻塞 TP。
+- **SR-B3-03**（P2）：第二视角镜像翻转了 `units.cell/startingCell`、`movement`、`cast.completionCell`；请列出 `LedgerCombatEvent` 里所有含坐标的字段，供 T5 核对。

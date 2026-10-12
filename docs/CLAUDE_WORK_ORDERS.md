@@ -205,3 +205,30 @@
 - [ ] 待确认状态可见，回执失败后本地状态不变（`gold` 不先扣）。
 - [ ] `npx vitest run tests/server` 全绿；typecheck、build 通过；`fake-server.ts` 已删且无引用。
 - [ ] PR 写明实测单条 `combat` 最大体积与开启压缩后的体积。
+
+---
+
+## 派工单 B4：房间提交整轮结算（T3 收据接入，真实 PvP 跑通整局）
+
+分支：`claude/b4-round-commit`，基于 `origin/multiplayer`（已含 B3 PR #40、T3 PR #39）。若 C4 PR 先合入，合并后以 C4 的网络代码为准。
+
+### 依据
+`docs/MULTIPLAYER_CONTRACT.md` **§11.3（B4 全轮编排）、§11.4（超时命令）、§11.5（加时与同轮归零排名）**；`docs/UI_REQUESTS.md` SR-B3-01。T3 导出（经 `src/server-entry`）：`enableMultiplayerSettlement`、`applyRoundSettlement`、`RoundSettlementReceipt`、`ROUND_SETTLEMENT_VERSION`、`forfeitPendingChoice`、`claimOrDiscardLoot`。
+
+### 要做
+1. 开局时对每席 `MatchState` 调 `enableMultiplayerSettlement`（服务器模式），PvP 不再走单人内部结算。
+2. 把 B3 的 `parkProposals` 末尾的 `settlement-unavailable` 中断换成 §11.3 的提交流程：收齐全轮 → 校验每个真实席恰一份、battleId/round/代次与冻结信封一致 → 临时 map 逐席 `applyRoundSettlement`（收据按 §11.3 示意构造，`settlementId` 用合同建议格式）→ 任一失败整轮丢弃临时 map，不发布已成功的席 → 全部成功后一次替换，`SeatState.hp` 取返回 `state.playerHp` → 发布事件与版本。整轮提交用 round commit ID 去重；房间自身失败用同信封同 map 重试，不换种子。
+3. PvE/补给回合的已结算状态也走同一次原子发布（§11.3 第 4 条）。
+4. 超时：准备截止前先按 §11.4 对每席调用 `forfeitPendingChoice` / `claimOrDiscardLoot`，替换 B1 的 `choice-fallback.ts` 占位策略（删除它）。
+5. 加时与排名：按 §11.5 实现目录末轮后的 PvP 加时（只 PvP，末阶段基础伤害），以及同轮归零排名（未截断 HP → 轮前 HP → 席位序号）；若 §11.5 要求的目录外 `nextRound` 入口规则侧尚未提供，用合同写明的方式，缺口写 SR-B4-xx，不自造。
+6. `pvpMode` 默认改为 `two-sided`；`placeholder` 保留给测试。
+7. 测试 `tests/server/round-commit.test.ts`：整轮提交后每席 `MatchState.playerHp === SeatState.hp`；重复 round commit 第二次无效果；一席收据失败时无人扣血、无事件发布；镜像不提交、原主由真实配对提交；8 → 2 席位逐轮淘汰到唯一名次；三席同轮归零名次与到达顺序无关；全 8 机器人（空阵容）整局在 `ManualClock` 下 30 秒内跑完。
+8. 浏览器：`?mode=online&prep=2&choice=2&settle=1` 默认（two-sided）从匹配跑到终局排名；`__CAT_DEBUG__.read().state.playerHp` 与右栏我的 HP 一致；离线冒烟。
+
+### 不做
+- 不碰 `src/simulation/`、`src/server-entry/`；不做共享卡池（B5 等 TP）；不改网络协议（与 C4 并行，冲突时以 C4 为准，我来协调）。
+
+### 验收
+- [ ] `npx vitest run tests/server tests/t2-* tests/t3-*` 全绿；purity 零命中；`choice-fallback.ts` 已删。
+- [ ] 默认模式浏览器整局到排名，无报错；typecheck、build 通过。
+- [ ] PR 描述把 §11.3 五条逐条对应到代码位置；规则侧缺口列为 SR-B4-xx。
