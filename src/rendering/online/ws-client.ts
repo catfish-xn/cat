@@ -17,17 +17,20 @@
  */
 import { createMatch } from '../../simulation/match';
 import type { MatchState } from '../../simulation/match-types';
+import type { PrivateSeatView } from '../../server-entry';
 import {
   NET_PROTOCOL_VERSION, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
 } from '../../server/net/messages';
 import type {
   ClientCommand, ClientListeners, ClientSendResult, CombatFrame, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView,
 } from './protocol';
+import { toDisplayMatch } from './seat-view-adapter';
 
 type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 type Timers = { set(callback: () => void, ms: number): unknown; clear(handle: unknown): void };
 type Raw = ClientMessage extends infer M ? M extends ClientMessage ? Omit<M, 'protocolVersion' | 'commandId'> : never : never;
 type CombatMessage = Extract<ServerMessage, { type: 'combat' }>;
+type ReplayMessage = Extract<ServerMessage, { type: 'replay' }>;
 
 export interface WsClientOptions {
   readonly url: string;
@@ -95,6 +98,7 @@ export class WsGameClient implements GameClient {
   private deferredRetries: { commandId: number; reason: ReceiptFailure }[] = [];
   private combatParts: { key: string; frames: CombatFrame[]; next: number } | null = null;
   private lastCombatKey = '';
+  private lastReplayKey = '';
 
   private lobbyView: LobbyView | null = null;
   private lobbyError: string | null = null;
@@ -141,7 +145,7 @@ export class WsGameClient implements GameClient {
   /** After a finished match: forget the seat and reconnect fresh so the server sends the lobby again. */
   reset(): void {
     this.forgetSeat();
-    this.lastView = null; this.lastState = null; this.lastCombatKey = ''; this.lobbyError = null;
+    this.lastView = null; this.lastState = null; this.lastCombatKey = ''; this.lastReplayKey = ''; this.lobbyError = null;
     this.listeners?.view({ ...LOBBY_PHASE_VIEW, phase: { ...LOBBY_PHASE_VIEW.phase } });
     this.restart();
   }
@@ -233,6 +237,7 @@ export class WsGameClient implements GameClient {
       case 'view': return this.onView(message.roomId, message.view);
       case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state);
       case 'combat': return this.onCombat(message);
+      case 'replay': return this.onReplay(message);
       case 'receipt': return this.onReceipt(message);
       case 'error': return this.onError(message.code, message.message);
     }
@@ -243,7 +248,9 @@ export class WsGameClient implements GameClient {
     this.lastView = view;
     this.listeners?.view(view);
   }
-  private onState(roomId: string, round: number, seatRevision: number, state: MatchState): void {
+  /** The server sends my seat as the rules' private view (B7); the UI gets a display-only MatchState of it. */
+  private onState(roomId: string, round: number, seatRevision: number, view: PrivateSeatView): void {
+    const state = toDisplayMatch(view);
     this.roomId = roomId; this.round = round; this.stateRevision = seatRevision; this.lastState = state;
     const confirmed = this.confirmed.filter(entry => entry.seatRevision <= seatRevision);
     this.confirmed = this.confirmed.filter(entry => entry.seatRevision > seatRevision);
@@ -265,6 +272,13 @@ export class WsGameClient implements GameClient {
     if (key === this.lastCombatKey) return;
     this.lastCombatKey = key;
     this.listeners?.combat(frames);
+  }
+  /** Compact replay of my battle (B7); forwarded once per battle to a listener that plays replays (C6). */
+  private onReplay(message: ReplayMessage): void {
+    const key = `${message.roomId}:${message.round}:${message.battleId}`;
+    if (key === this.lastReplayKey) return;
+    this.lastReplayKey = key;
+    this.listeners?.replay?.(message.replay);
   }
   private onReceipt(receipt: ReceiptMessage): void {
     const entry = this.inflight.get(receipt.commandId);
@@ -294,7 +308,7 @@ export class WsGameClient implements GameClient {
     const type = entry?.type ?? null;
     if (type === 'resume' || receipt.reason === 'invalid-token') {
       this.forgetSeat();
-      this.lastView = null; this.lastState = null; this.lastCombatKey = '';
+      this.lastView = null; this.lastState = null; this.lastCombatKey = ''; this.lastReplayKey = '';
       this.lobbyError = '上一局已结束或凭证失效，请重新匹配';
       this.setStatus({ kind: 'seat-lost' });
       this.setStatus({ kind: 'online' });

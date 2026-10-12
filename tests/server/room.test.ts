@@ -143,8 +143,9 @@ describe('Room: real resolver end to end', () => {
     const unsubscribe = room.subscribe(state => seen.add(state.phase));
     const state = runUntil(room, clock, current => current.phase === 'ended');
     unsubscribe();
-    // Either a unique ranking, or the explicit overtime stop after the catalog's final round (§11.5, SR-B4-01).
-    if (state.fault) expect(state.fault.kind).toBe('overtime-unavailable'); else expectUniqueRanking(state);
+    // Overtime follows the catalog's final round until one seat is left (§11.5, B7): always a unique ranking.
+    expect(state.fault).toBeNull();
+    expectUniqueRanking(state);
     expect(state.round).toBeGreaterThan(4);
     expect([...seen]).toEqual(expect.arrayContaining(['preparation', 'choice', 'frozen', 'battle', 'settlement', 'ended']));
     // The rules' HP is the room's authoritative HP after every published round.

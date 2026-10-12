@@ -11,6 +11,7 @@ import { TOKEN_STORAGE_KEY, WsGameClient } from '../../src/rendering/online/ws-c
 import { DamageResolver, emptyCombat } from './helpers';
 import { createMatch } from '../../src/simulation/match';
 import { startServer, type NetHarness } from './net/helpers';
+import { toSeatPrivateView } from '../../src/server/room/projection';
 
 type Seen =
   | { kind: 'lobby'; view: LobbyView } | { kind: 'view'; view: PlayerView } | { kind: 'state'; state: MatchState; confirmed: readonly ConfirmedCommand[] }
@@ -107,7 +108,10 @@ describe('WsGameClient: pending commands', () => {
     expect(a.last('state')!.state.gold).toBe(goldBefore);
     // B never saw A's shop: its own state only, and its view lists A's public data.
     expect(b.last('view')!.view.seats.some(seat => seat.name === '甲')).toBe(true);
-    expect(b.last('state')!.state.seed).not.toBe(a.last('state')!.state.seed);
+    // B7: the wire carries only the private seat view (no seed/RNG); B's display state is built from B's own seat.
+    for (const message of b.wire) if (message.type === 'state') { expect('seed' in message.state).toBe(false); expect('rngState' in message.state).toBe(false); }
+    const seatB = harness.server.room!.state.seats.find(seat => seat.seatId === b.last('view')!.view.mySeatId)!;
+    expect(b.last('state')!.state.shop).toEqual(JSON.parse(JSON.stringify(toSeatPrivateView(seatB.match).shop)));
   });
 
   it('pipelines consecutive commands with increasing seatRevision and reports a stale one once nothing is in flight', async () => {

@@ -2,8 +2,9 @@
  * Single-room WebSocket game server (work order B2). One Lobby, at most one running Room, one
  * WriteQueue: every inbound message is parsed, authenticated, deduped, version-checked and only
  * then handed to Room.handle, strictly in arrival order. Each connection receives its own
- * PlayerView, its own private MatchState and its own combat frames; nobody receives another
- * seat's shop. This is the only server file that imports ws.
+ * PlayerView, its own private seat view (the rules' `toPrivateSeatView`, never the MatchState) and
+ * its own battle (frames and/or compact replay); nobody receives another seat's shop. This is the
+ * only server file that imports ws.
  *
  * Processing order per message (V2 §5.1): parse & field validation → identity and seat →
  * commandId dedupe → room / round / seatRevision → rules (Room.handle) → record receipt → push.
@@ -13,12 +14,12 @@ import type { BattleResolver } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
-import { toCombatFrames, toPlayerView } from '../room/projection';
+import { toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView } from '../room/projection';
 import type { Room, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
-  COMBAT_SPLIT, commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
+  COMBAT_SPLIT, DEFAULT_COMBAT_TRANSPORT, commandContent, parseClientMessage, type ClientMessage, type CombatTransport, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
   type ReceiptResult, type ServerMessage,
 } from './messages';
 import { SessionRegistry, digestOf, type SeatSession } from './session';
@@ -47,6 +48,8 @@ export interface GameServerOptions {
   readonly timings?: Partial<RoomTimings>;
   readonly queueTimeoutMs?: number | null;
   readonly limits?: Partial<ConnectionLimits>;
+  /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
+  readonly combatTransport?: CombatTransport;
   readonly log?: (line: string) => void;
 }
 
@@ -85,6 +88,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const limits: ConnectionLimits = { ...LIMIT_DEFAULTS, ...options.limits };
   const log = options.log ?? (() => {});
   const clock = options.clock;
+  const combatTransport = options.combatTransport ?? DEFAULT_COMBAT_TRANSPORT;
   const queue = new WriteQueue(error => log(`task failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`));
   const sessions = new SessionRegistry(limits.dedupeWindow);
   const connections = new Map<number, Connection>();
@@ -123,7 +127,12 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     for (const conn of connections.values()) if (conn.session === null || conn.session.roomId === null) send(conn, { type: 'lobby', view: lobbyViewFor(conn) });
   }
 
-  /** Sends this connection whatever of its room it has not seen yet: view, then private state, then its combat frames. */
+  /**
+   * Sends this connection whatever of its room it has not seen yet: view, then private seat view, then its battle.
+   * Every path (first snapshot, increments, resume, the fault snapshot) goes through here, so the seat's state
+   * only ever leaves as `toPrivateSeatView`. An eliminated seat keeps view and replay; its last state is the one
+   * of the round that eliminated it.
+   */
   function pushRoom(conn: Connection, state: RoomState): void {
     const session = conn.session;
     if (!session || session.roomId !== state.roomId) return;
@@ -133,17 +142,27 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       conn.sentRoomRevision = state.roomRevision;
       send(conn, { type: 'view', roomId: state.roomId, roomRevision: state.roomRevision, view: toPlayerView(state, seat.seatId, clock.now()) });
     }
-    if (conn.sentSeatRevision !== seat.seatRevision) {
+    const receivesState = seat.alive || seat.eliminatedRound === state.round;
+    if (receivesState && conn.sentSeatRevision !== seat.seatRevision) {
       conn.sentSeatRevision = seat.seatRevision;
-      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: seat.match });
+      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: toSeatPrivateView(seat.match) });
     }
     const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(seat.seatId) : candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));
     if (battle) {
       const key = `${state.round}:${battle.battleId}`;
       if (conn.sentCombatKey !== key) {
         conn.sentCombatKey = key;
-        const frames = toCombatFrames(state, seat.seatId);
-        if (frames.length > 0) sendCombat(conn, { type: 'combat', roomId: state.roomId, round: state.round, battleId: battle.battleId, frames });
+        if (combatTransport !== 'replay') {
+          const frames = toCombatFrames(state, seat.seatId);
+          if (frames.length > 0) sendCombat(conn, { type: 'combat', roomId: state.roomId, round: state.round, battleId: battle.battleId, frames });
+        }
+        if (combatTransport !== 'frames') {
+          // A replay failure is a server fault (§14.2): logged, never turned into a result; the frames above still play.
+          let replay: ReturnType<typeof toCombatReplayFor> = null;
+          try { replay = toCombatReplayFor(state, seat.seatId); }
+          catch (error) { log(`replay of ${battle.battleId} failed: ${error instanceof Error ? error.message : String(error)}`); }
+          if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay });
+        }
       }
     }
   }
