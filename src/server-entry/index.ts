@@ -4,7 +4,7 @@ export {
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem,
   selectAnomalyTarget, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
-  forfeitPendingChoice, claimOrDiscardLoot,
+  forfeitPendingChoice, claimOrDiscardLoot, advanceMultiplayerRound,
 } from '../simulation/match';
 export { serializeMatch, restoreMatch } from '../simulation/serialization';
 export type {
@@ -38,3 +38,8 @@ export type { SharedPoolState, SharedPoolBinding, SharedPoolResult, SharedPoolBa
 
 export { decideBotAction, BOT_POLICY_VERSION, BOT_MAX_STEPS } from '../simulation/bot';
 export type { BotContext, BotDecision } from '../simulation/bot';
+
+export { toPrivateSeatView } from '../simulation/private-seat-view';
+export type { PrivateSeatView } from '../simulation/private-seat-view';
+export { toCombatViewState, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
+export type { CombatViewState, CombatViewUnit, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayInput } from '../simulation/combat-replay-view';

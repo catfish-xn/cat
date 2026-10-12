@@ -6,6 +6,7 @@ import { MATCH_RULES, OPENING_INITIAL_STATE, SHOP_CATALOG } from './match-rules'
 import type { PersistentGrowth } from './match-types';
 import type { LootReceipt } from './m8/contracts';
 import { compareCodePoints } from './m8/identity';
+import { getMultiplayerRoundById } from './multiplayer-round';
 import { getCatalogRoundById, getCatalogRoundByOrdinal } from './round-selectors';
 import { getRoundSchedule } from './round-schedule';
 import type { ScheduleReceipt, StrategyEvent } from './strategy-types';
@@ -102,8 +103,8 @@ export function appendResourceProvenance(
   provenance: ResourceProvenance, roundId: string, facts: ResourceFact | readonly ResourceFact[],
 ): ResourceProvenance {
   requireValue(provenance.version === RESOURCE_PROVENANCE_VERSION, 'version');
-  const round = getCatalogRoundById(roundId);
-  requireValue(!provenance.entries.length || getCatalogRoundById(provenance.entries.at(-1)!.roundId).ordinal <= round.ordinal, 'round order');
+  const round = getMultiplayerRoundById(roundId);
+  requireValue(!provenance.entries.length || getMultiplayerRoundById(provenance.entries.at(-1)!.roundId).ordinal <= round.ordinal, 'round order');
   const added = Array.isArray(facts) ? facts : [facts];
   plainJson(added);
   return freezeContent({ version: RESOURCE_PROVENANCE_VERSION,

@@ -453,7 +453,7 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 已提交成长 | `persistentGrowth[].{unitId,attackDamageBps}`、`augmentProgress.{pumpingRounds,investmentHp}` | 仅本席持有单位及实际已提交进度；镜像战斗事件不写入 |
 | 当前待选项 | `pendingChoice` 为 null 或 `{kind,step,choiceId,generation,offers,targetId,rerollCount}` | 仅 phase=choice 且当前已展示的选择；offers 是已揭示定义 ID 列表，不含下一次刷新、未来选择或兜底答案；不下发 eventId/returnPhase |
 | 已提交本席轮结果 | `roundResults[].{round,roundId,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
-| 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 拷贝到独立 roundInfo DTO，仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
+| 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 保留原 `m8.round` 嵌套（T5R 工单覆盖旧独立 roundInfo 建议），仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
 
 奖励只允许**另外构造已揭示摘要**，沿用 `loot-view.ts` 的现有可见性规则：本轮直接掉落状态为 revealed/pending-capacity/retained-terminal/granted 时，可投影 `dropId, encounterId, sourceUnitId, roundId, status` 与 `payload.{kind,quantity,definitionId?}`；组件选择只有实际领取收据存在后才能投影所获 payload。当前已触发但未选择的奖励仅公开当前 `pendingChoice` 的身份与已展示 offers，绝不公开 `terminalFallbackDefinitionId`。planned/forfeited 条目、未来轮掉落与未揭示候选完全省略，不保留占位数量或数组索引。共享池补偿已到账时 payload 取实际奖励收据（readLootView 已处理），不取被冻结的原棋子计划。不得为投影重新抽卡、推进 RNG 或发奖。
 
@@ -461,7 +461,7 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 
 `combat` **不能作为本席字段整体下发**。T2 的 BattleInput/BattleResult、initial/terminal 也是服务器私有对象，内含 battleSeed、rngState、策略和内部执行计划。T5 的战斗帧只能新建显示 DTO：场景基础字段 `combatId,tick,maxTicks,status,result,board`（board 按上表），每单位 `id,definitionId,team,starLevel,cell.{col,row},startingCell?.{col,row},hp,maxHp,mana,maxMana,shield,alive,targetId,attackDamage,attackRange,attackIntervalTicks,armor,magicResist,abilityPower,baseAttackSpeedBps,attackSpeedBonusBps`（可选字段仅在存在时投影）。状态/护盾详情与可见战斗事件另外使用经字段审查的展示投影，不能透传整个 unit/runtime、abilityPlan、tasks、strategy 或带随机输入的 CombatState。完整权威账本继续留在服务器，不因客户端显示抽样而丢弃；本节不把帧 DTO 伪装成能本地 step/restore 的 CombatState。
 
-T5 验收：两个席位分别投影时不能看到对方 shop/pendingChoice/库存；向任意层塞入随机状态或未来计划哨兵值，初始快照、增量、重连和失败回执均不能出现；改变私有 RNG、未来掉落/兜底而保持已揭示字段相同，输出必须 deepEqual；已揭示商店、选择、临时装备可见，未揭示奖励不可见；投影前后服务器状态、RNG、事件序号均不变。**T2 本次交付清单，没有实现或宣称通过 T5 网络投影测试。**
+T5 验收：两个席位分别投影时不能看到对方 shop/pendingChoice/库存；向任意层塞入随机状态或未来计划哨兵值，初始快照、增量、重连和失败回执均不能出现；改变私有 RNG、未来掉落/兜底而保持已揭示字段相同，输出必须 deepEqual；已揭示商店、选择、临时装备可见，未揭示奖励不可见；投影前后服务器状态、RNG、事件序号均不变。T2 最初交付的是清单；T5R 的纯投影与验证见 §14，实际网络发布接线仍由 B7 验证。
 
 ### 10.10 其余 SR-B1 请求的后续最小范围
 
@@ -528,7 +528,7 @@ interface RoundSettlementReceipt {
 }
 ```
 
-字段必须齐全且无额外字段，ID 非空；非负安全整数，survivors ≤9、ticks ≤1200、eventCount ≥1。提交准备态不能还有 pendingChoice 或未处理的空阵容异常节点；历史须连续到上一轮。仅接收目录 PvP。收据是**可信服务器从 T2 结果构建的交接对象，不是客户端命令或战斗真实性证明**。规则验证 seat、轮次、资格、数值和重复，但无法从裸 battleId 证明执行代次；B4 负责将其绑定冻结快照、battleId、roomRevision、实际参战席位与本次执行。客户端不能指定 eligibility/growth/结果。
+字段必须齐全且无额外字段，ID 非空；非负安全整数，survivors ≤9、ticks ≤1200、eventCount ≥1。提交准备态不能还有 pendingChoice 或未处理的空阵容异常节点；历史须连续到上一轮。接收目录 PvP 及 §11.5 的加时 PvP。收据是**可信服务器从 T2 结果构建的交接对象，不是客户端命令或战斗真实性证明**。规则验证 seat、轮次、资格、数值和重复，但无法从裸 battleId 证明执行代次；B4 负责将其绑定冻结快照、battleId、roomRevision、实际参战席位与本次执行。客户端不能指定 eligibility/growth/结果。
 
 沿用 `planCatalogRoundEconomy` → `planRoundEconomy` → `grantXp`，不接收外部 goldAfter/HP 或第二套收入。PvP 基础收入5、胜利1、利息采样 gold+胜利金币（每10得1，上限5）、连胜败2/4/6得1/2/3、经验2；平局按连败。例：轮前19金币、已有1连胜，本轮胜 → 利息2、连胜1、总收入9、轮后28。9级经验截停。复核 damage 必须等于现有阶段伤害规则（胜0，否则基础+对方存活数）；不允许截断输入。HP1承受9 → HP0、hpLost1，但 roundResults.playerDamage 和收据仍保存9。
 
@@ -554,7 +554,7 @@ interface RoundSettlementReceipt {
 2. 收齐本轮所有真实席结果，每个真实席恰一份，普通配对两份、镜像配对仅 a；镜像 b 不进入队列，镜像原主由它的真实配对提交。校验 battleId/round/执行代次与冻结信封完全一致，漏席/重复席/旧代次整轮拒绝。
 3. 用原席位 map 建一个临时 map，逐席 apply。任何失败（包括 unexpected duplicate）丢弃整张临时 map 及其事件，不发布已经成功的一席。整轮已提交重试由调度层 round commit ID 去重，不能凭单席 duplicate 推断整轮完成。
 4. 全部成功后，一次替换 map、更新 SeatState.hp **取返回 state.playerHp**，再发布事件和版本；不在房间重算伤害/收入/成长。PvE/补给已结算的暂存状态也随本次原子发布采纳。房间自身提交失败，仍用同信封和原始 map 重试，不换随机种子。
-5. 使用 §11.5 排名，TP 卡池归还在排名后、下一轮自然商店刷新前。存活席在接入 TP 后通过 §12 的 nextSharedRound 批量推进目录轮次；未接共享池的 T3 席位仍用 nextRound；全局仅剩0/1席时结局由调度层生成。
+5. 使用 §11.5 排名，TP 卡池归还在排名后、下一轮自然商店刷新前。存活席在接入 TP 后通过 §12 的 nextSharedRound 批量推进目录及加时轮次；未接共享池的席位用 §11.5 advanceMultiplayerRound；全局仅剩0/1席时结局由调度层生成。
 
 构建单席收据示意（p、battle 必须来自校验通过的同一冻结信封）：
 
@@ -582,11 +582,13 @@ const result = applyRoundSettlement(originalSeat.match, r);
 
 额外失败：两命令未启用/已淘汰为 multiplayer-required/seat-eliminated；轮次不符 stale-round；choice 身份/代次不符 stale-choice；没有选择且非待处理空异常 no-pending-choice；非法阶段 wrong-phase；选择无合法首项或原选择命令失败为 invalid-choice/invalid-target 等既有 MatchFailure；奖励处理异常 invalid-loot。失败均原样返回。顺序为：处理当前选择 → 本轮战斗与结算 → 领取或放弃已赚奖励 → 处理后续选择 → nextRound。已淘汰席不再推进。不能用无限重试或清 pendingChoice 字段代替规则命令。
 
-### 11.5 SR-B1-03 加时、平局与排名（规则定稿，目录外实现留 T4）
+### 11.5 SR-B1-03 / SR-B4-01 加时、平局与排名（T5R 规则入口已交付）
 
 - 6-7 后若≥2席存活，进入 `overtime-1`，ordinal=`FINAL_ROUND+1`；之后 `overtime-N` 对应 `FINAL_ROUND+N`，严格递增，不重用6-1/6-7 ID。均为 PvP、沿用第6阶段基础伤害12。不开新野怪、补给、强化、异常或掉落计划；既有强化/异常/装备/成长继续生效。
 - 每轮仍按既有 PvP 收入、利息、连胜败、经验、强化成长提交；进入下一轮沿用自然刷新/锁店及临时装备生命周期，商店必须通过规则入口生成，TP 后仍受共享池约束。每个加时有独立 settlementId/battleId/roundResults，不能再执行末轮奖励。
-- **推进入口约定**：T4 接入前规则线补 `advanceMultiplayerRound(state, expectedRound): MultiplayerCommandResult`，目录内委托 nextRound，目录末轮及加时生成上述加时准备态；失败不变，淘汰拒绝。T2 snapshot/compile 和 apply 也须支持相同加时标识/基础伤害/经济。此 PR 未导出这个未来接口，当前 nextRound 在目录末尾返回 wrong-phase。Claude 的 T4 只负责调度接入，由 Codex 补规则入口；不能自行改 MatchState.round/m8 或将虚构加时强转目录轮次。依赖就绪前必须明确中断加时，不能宣称全局加时已实现。
+- **已导出的推进入口**：`advanceMultiplayerRound(state: MatchState, expectedRound: number): MultiplayerCommandResult`。要求已 enableMultiplayerSettlement、active、settlement、无 pendingChoice/待领取奖励且 roundResults 连续覆盖当前轮；目录内委托 nextRound，6-7 及之后生成加时准备态（`kind='pvp', isFinal=false, stage=6, subround=7+N, encounterId=null`）。返回 state/events 的既有成功形状；失败原 state 引用、无 events、无资源或 RNG 变化。失败枚举：`multiplayer-required`（未启用）、`seat-eliminated`（已淘汰）、`shared-pool-required`（已绑定共享池，应走下一段的批量入口）、`stale-round`（expectedRound 或当前轮 ID 不符）、`wrong-phase`（非 settlement）、`unsettled-round`（待选/待领或历史不连续）、`invalid-round`（非法序号、溢出或无法生成该轮），目录内亦透传 nextRound 的失败原因。
+- **B4/B5 接入**：无共享池时用上述入口替换 Room.advanceRound 中 nextRound；同时解除当前 Room.commitPending 在 overtimeRequired 时返回 overtime-unavailable 的依赖中断分支（B4 合入基线 bc35bac 仍存在），正常进入 settlement 再推进；有共享池时必须传全部未释放席给 `nextSharedRound(pool, states, expectedRound)`，它已支持加时：先暂存全部推进，再统一释放未锁商店占用、按原固定顺序轮换抽卡，原子提交池与席位，任一失败整批不变。锁店保留原占用，淘汰归还仍在下一轮前。不要逐席解除 sharedPool 后发布无限商店；解除仅是池事务内部的未发布暂存步骤。不能直接改 round/m8，不能调用旧 nextRound 推进加时；全局0/1席结束及≥2席继续仍由调度器决定。
+- T2 snapshot/restore/compile/resolve/propose 与 T3 apply 均识别规范 `overtime-N`（N 正安全整数，且 FINAL_ROUND+N 安全）；临时装备跨轮刷新，买/卖/合成来源账本可追加加时 ID，离线 restore/目录查询仍拒绝加时。加时经济直接调用既有 planRoundEconomy，第6阶段基础伤害12；不生成新掉落计划、选择或奖励。
 - 平局（含双方空阵容、1200 tick 超时）：**每个真实席**扣12+对方存活数；普通配对双方各算自己的提案。胜方0、败方12+对方存活数；镜像 b 不扣、不提交，镜像来源真身在其实际配对独立结算。目录内平局用相应阶段基础伤害，规则相同。
 - 同轮归零排序沿用 B1 项目规则：比较 **未截断 HP=`hpBefore-damage` 降序 → hpBefore 降序 → 固定 seatIndex 升序**，先者名次更好。不能用截到0的 playerHp 破同分。seatIndex 从开局固定0–7，与断线/重连、数组重排无关。同轮淘汰者排在剩余存活者后，较晚淘汰优于早轮淘汰；如果最后所有席同轮归零，也按此键产生唯一冠军，不能继续等待无人存活的下一轮。
 - 有限终局：≥2席每完整加时至少有一场普通配对，该配对至少一个真实席被扣正伤害；总存活 HP 严格下降。无任何恢复玩家 HP 的规则，初始最多8×100 HP，因此加时最多800个已提交轮次即可结束（保守上界，空阵容连续平局通常远少于此）。T4 必测连续平局、双方空阵容、镜像及同轮多人归零的唯一排名；不能以单人 isFinal 或客户端倒计时直接定胜负。
@@ -615,7 +617,7 @@ SR-B1-02 的规则提交与 SR-B1-04 的超时入口已交付；全轮冻结/执
 | holdings | `{seatId,unitId,definitionId,sources:string[]}`；实际获取来源键，升星合并后长度为 1/3/9 |
 | pending | `{seatId,dropId,receiptId,definitionId}`；已赚而尚未入库的棋子预留 |
 | rewards | pending 的身份字段加 `{resolution:'held'|'gold'|'forfeited',gold}`；历史唯一收据，不重复计入守恒。held 表示当时入库成功，出售后仍保留历史 |
-| naturalRound/order | 最后完成全局自然刷新的目录轮号（初始 0）与固定种子洗牌顺序 |
+| naturalRound/order | 最后完成全局自然刷新的 ordinal（含加时，初始 0）与固定种子洗牌顺序 |
 
 `MatchState.sharedPool = {poolId,seatId,revision}` 绑定该席池版本；两席本地相同 unitId 不冲突。逐英雄校验 **available + shops 张数 + holdings.sources 张数 + pending 张数 = initial**。商店、持有、待领取的活动来源键不能重复；镜像、召唤物、回放与表现副本不进入 holdings。
 
@@ -826,3 +828,84 @@ basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyRe
 `verify-t7-node-entry.cjs` 用生产 ESM、Node22、封锁浏览器全局/隐式随机/时钟，从 seed42 的 createMatch 自动打至 gameOver，不替换金币、HP、奖励或战斗结果。脚本检查至少20轮、全程每条意图均被实际命令接受、每轮≤64步；构建脚本另外检查 server-entry 运行时依赖图不含 src/server、UI 或 Phaser。现有单人数值、golden 和既有超时测试不修改。
 
 交付验证基线 `origin/multiplayer@96d9ccb`：实际 nvm **Node v22.23.3 / npm 10.9.9**，typecheck（build 内）、build、test:server-entry、verify-t7-node-entry、verify-tp-node-entry 通过。T7 **25 例**，连同 T2/T3/TP、单人商店/升星/经验/经济/奖励/装备和纯依赖检查，共 **17 文件 357 例通过**。完整 Node 冒烟 seed42：38 轮、239 条合法意图、10698 个真实战斗 tick，单轮最多27步，最终 gameOver/victory；这是一条固定种子证据，不是胜率保证。未运行完整浏览器/性能套件，B6 调度与网络接管尚待 Claude 接入。
+
+## 14 T5R：本席白名单与紧凑战斗回放
+
+### 14.1 SR-B1-06：本席私有投影
+
+公开 `toPrivateSeatView(state: MatchState): PrivateSeatView`（`src/server-entry` 导出）。输入是服务器可信状态，输出为独立、递归冻结的纯显示对象，不修改输入、不执行命令/抽签/发奖。无正常业务失败枚举；不接收或验证客户端伪造的 Match。字段逐层按 §10.9 构造，新增未知属性不会自动下发；所有 RNG、未来计划、来源账本、combatInputBasis、multiplayer/sharedPool 与整个 combat 均省略。
+
+`PrivateSeatView` 是 MatchState 的**递归结构子集**：相同字段名与嵌套，`m8` 仅保留 `round` 白名单。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史不含 settlementId 或执行代次。额外的已揭示掉落摘要仍按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
+
+Claude 可在本地显示适配器给缺失字段填占位，但只允许以下已审查用途；占位不得流回服务器或本地规则命令：
+
+| 可复用选择器 | 真正依赖的数据 |
+| --- | --- |
+| getDeploymentCap | level |
+| getPlayerDeploymentCount | preparation（只计 player 上场单位） |
+| deriveTraits(preparation, 'player') | 己方 preparation 与静态内容 |
+| readItemInventory | items 中库存部分 |
+| readUnitEquipment(state, ownUnitId) | 己方 preparation/items/temporaryEquipment；不能用 enemy 分支 |
+| getUnitStats、getUnitSellPrice、getXpToNextLevel、getShopOdds、getInterestGold | 已显示定义/星级/等级/金币与静态内容 |
+| readRoundInfo 的可见字段 | m8.round；缺失 isFinal 可填 false，绝不可用来判断全局胜负 |
+
+**不能靠占位保真**：needsAnomalyRecruitment 依赖 scheduleReceipts/forfeitedChoices；previewEquip/previewCombine 的过期临时 ID 判断依赖 equipmentState.rolls；readLootView 依赖已揭示掉落账本；readEncounterPreview 依赖敌军冻结计划；战斗状态/状态效果选择器依赖 Combat runtime。B7 使用服务器回执处理合法性，奖励另作已揭示摘要，战斗走下节。不要把“类型能强转”当成这些选择器语义仍然成立。
+
+### 14.2 SR-B1-07：回放接口与显示更新规则
+
+以下均为纯函数，由 `src/server-entry` 导出：
+
+```ts
+const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
+toCombatViewState(state: CombatState): CombatViewState;
+type CombatReplayInput = Pick<BattleResult, 'initial' | 'terminal' | 'events'>;
+toCombatReplay(battle: CombatReplayInput): CombatReplay;
+// CombatReplay = { initial, ticks: CombatReplayTick[], terminal }
+// CombatReplayTick = { tick, events: CombatViewEvent[], keyframe?: CombatViewState }
+applyCombatReplayTick(view: CombatViewState, frame: CombatReplayTick): CombatViewState;
+```
+
+输入为同一场完整可信战斗的首帧、已结束末帧和完整有序账本。PvP 直接传 BattleResult；PvE 传 start 后的 CombatState、最终 CombatState、含 tick0 的完整 LedgerCombatEvent[]。**不传 MatchState，不把 Match 奖励事件混入 events**。投影只读，不结算、不分配 ID、不消耗 Match 的任何随机流；内部对冻结初态做一次最多1200 tick 的纯重执行，生成权威显示差分。B7 替换原 B3 的逐 tick 重执行取帧，避免再多跑第三遍。
+
+CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime/strategy/ability/机制定义/RNG/中立奖励收据。attackDamage、abilityPower、attackIntervalTicks、attackRange、armor、magicResist 是 readCombatStats 的**当前有效值**；客户端直接显示，不再套用静态装备/状态计算。
+
+原始事件没有完整的战后数值，且状态到期/动态防御等不能单靠伤害事件推回。因此协议采用 **每20 tick（1秒）一个权威关键帧 + 帧间精简动画事件 + unitUpdated 显示差分**。末 tick 必有关键帧（tick0结束时 initial=terminal，无需重复帧）。每 tick 都有一条 ticks 记录，包括无动作的 tick；首记录 tick0 动画对应已经应用过开局效果的 initial。
+
+客户端从 initial 开始按 tick 顺序：先读动画事实播放表现；再把该 tick 末尾 `unitUpdated {unitId, changes}` 的字段按值覆盖到单位；有 keyframe 则整体替换当前视图。提供的 applyCombatReplayTick 实现状态部分，可不解析动画。差分字段仅来自 CombatViewUnit 白名单，包括绝对 hp/maxHp/mana/maxMana/shield/alive/targetId/cell 及当前有效属性；不是增减指令。**不要再根据 packetDamage、heal、manaChanged、cast、shieldLayerChanged 重复加减数值**。每 tick 的状态均与权威显示视图一致，最终与 terminal 完全一致。跳转到最新关键帧后只需应用其后的帧。
+
+所有原始投影动画事件保留 tick/eventSeq（原顺序，省略内部事件会留下序号间隔）；unitUpdated 是显示事件，没有权威 eventSeq、不能计入结算事件总数。完整领域账本继续留在服务器，未截断、未替换。事件白名单：
+
+| type | 展示字段（另含 tick/eventSeq）与用途 |
+| --- | --- |
+| movement | unitId, from, to；移动动画 |
+| attack | attackerId, targetId；普攻动画 |
+| targetChanged | unitId, before, after；目标标记 |
+| death / kill / growth | unitId；kill 另有 sourceId，growth 另有 amountBps/totalBps；表现事实 |
+| packetDamage | sourceId, targetId, damageType, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字，不执行规则 |
+| heal / manaChanged | targetId, actual / targetId, before, after；表现事实 |
+| cast | sourceId, actionSeq, completed, actualManaSpent, refundedMana, targetIds, completionCell |
+| shieldLayerChanged | reason, key, targetId, remaining；单层提示，不累加为总盾 |
+| statusChanged | reason, targetId, kind, effectiveMagnitudeBps；无内部贡献/定时执行程序 |
+| statChanged / maxHpChanged | unitId, stat, before, after / unitId, beforeMax, afterMax, beforeHp, afterHp |
+| combatFinished | result, reason；全局胜负仍由对局调度决定 |
+
+activityChanged/effectTriggered 的执行程序不下发，可见数值后果在 unitUpdated。当前视图不承诺完整的状态图标/持续时间选择器；若 C 需要这些，应另提具体白名单字段，不能回填 runtime。B 视角沿用 §12.6 的纯显示镜像：所有首末/关键帧 unit.cell/startingCell、movement.from/to、cast.completionCell，以及新增 unitUpdated.changes.cell/startingCell 都要翻转 row；队伍/胜负互换、ID/seq/数值不变。对 changes.team（若存在）与 combatFinished.result 同样转换，不镜像 RNG 或重跑战斗。
+
+toCombatReplay 失败以 RangeError 抛出：`invalid-replay-input`（非 tick0 初态、末态未结束或 tick 超界）；`replay-divergence`（重执行未逐 tick 推进、单位集合变化、末视图或投影动画序列不符）。底层非法引擎输入异常原样传播；这些都是服务器故障，不能据此伪造平局/结算。该函数不是不可信战斗验证器，不能用其接受动画序列来证明战斗真实性。toCombatViewState/显示 reducer 无业务失败枚举；只用于可信状态/本协议 DTO。
+
+### 14.3 体积、验证与交接
+
+Node v22.23.3 / npm 10.9.9，seed42，同一场真实战斗；比较**逐 tick CombatState 数组**与完整 CombatReplay 的 UTF-8 JSON（未含 WebSocket 包装）：
+
+| 固定样例 | ticks | 原始 JSON | 回放 JSON | 比例 | 原始 / 回放 gzip |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1v1 Maddie | 262 | 1,390,764 B | 38,624 B | 2.78% | 14,897 / 2,678 B |
+| 6v6（含装备、护盾、治疗与技能） | 585 | 40,593,642 B | 403,090 B | 0.99% | 1,663,402 / 19,443 B |
+
+由 `node scripts/verify-t5r-node-entry.cjs` 可复现（先 build:server），报告输出 artifacts/t5r-projections/report.json；gzip 是样例字节测量，不等于 WebSocket permessage-deflate 线路实测，不承诺所有对局固定比例。仍需一次纯重执行的 CPU，B7 不应在每次广播/重连重复生成，应按 battleId 缓存不可变回放。
+
+B4：接 §11.5 推进/失败处理；B5：用 nextSharedRound 全席批量推进。B7：所有初次 state、增量全态、重连、失败快照统一调用 toPrivateSeatView；战斗改送 CombatReplay，并按上述事件和坐标清单接入显示。规则投影通过不等于网络已经去除所有旧完整状态，B7 必须检查所有实际发布路径。T5R 不修改 src/server、界面、单人 golden，也不实施全局排名。
+
+交付验证：实际 nvm Node **v22.23.3** / npm **10.9.9**；T5R 3文件14例，连同 T2/T3/TP/T7、单人经济/命令/序列化/跨轮/来源账本与纯依赖回归共 **21文件336例通过**。typecheck、build、test:server-entry、verify-t2/t3/tp/t7/t5r-node-entry 均通过；T1 的既有状态/事件/RNG 轨迹哈希不变。未运行完整浏览器/公网性能套件，网络发布和客户端播放尚待 B7 接入验证。
+
+同步最新 `origin/multiplayer@bc35bac`（B4）后，重新 build/typecheck 与 T5R Node 测量通过，并追加 `tests/server/{room,round-commit,projection,two-sided-resolver,local-room-client}.test.ts` **5文件42例通过**；合计已验证26文件378例。同步只处理 docs/UI_REQUESTS.md 末尾追加冲突，完整保留 B4 新需求；PR 相对该集成基线无服务器/界面改动。

@@ -511,3 +511,9 @@ B4 已按合同 §11.3 让房间收齐全轮后在临时 map 上逐席 `applyRou
 
 - 现状：PvE/补给回合仍由各席单人公共命令结算（`startMatchCombat`/`stepMatch`），房间只做 §11.3 第 4 条的原子发布，并校验规则返回的 `playerHp === max(0, hpBefore - roundResults.playerDamage)`，不一致即 `invalid-results` 整轮丢弃。测试用的占位结果（`state` 未结算）才由房间自行扣血（`pvpMode: 'placeholder'`）。
 - 需要（可选）：若规则侧希望 PvE 也走收据提交（统一入口），请在合同注明；否则维持现状。
+
+## T5R 规则侧交付（Codex，2026-10-12）
+
+- **SR-B4-01（P0）**：已导出 `advanceMultiplayerRound`，贯通 T2/T3 加时 ID、伤害12和既有经济，`nextSharedRound` 支持全席加时释放/轮换刷新；合同 §11.5 给出签名、失败枚举及 B4/B5 接入。B4 除替换 Room.advanceRound 调用外，还须解除 Room.commitPending 的 overtime-unavailable 依赖中断（bc35bac 当前仍存在）。规则不替调度器判断剩余席位或排全局名次。
+- **SR-B1-06（P0）**：已导出 `toPrivateSeatView`，逐层白名单，保持 MatchState 原字段名/嵌套，去全部随机流、未来计划、来源账本及战斗输入。合同 §14.1 列出安全复用的显示选择器和无法用占位保真的选择器。B7 尚须替换所有网络 state 发布路径。
+- **SR-B1-07（P1）**：已导出 `toCombatReplay` / `toCombatViewState` / `applyCombatReplayTick`，每20 tick关键帧＋精简动画事件＋权威单位显示差分，逐 tick/终态均与权威视图相同；白名单、B视角坐标、失败与体积测量见 §14.2–14.3。仍保留完整服务器账本与一次纯重执行，不重复结算；B7 替换旧逐 tick 完整帧输出。
