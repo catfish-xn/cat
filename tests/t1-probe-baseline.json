@@ -1,0 +1,16 @@
+{
+  "sourceCommit": "4d51ec95c0aafad5bf3e9974f9b828cc1a847b69",
+  "node": "v24.21.0",
+  "npm": "11.19.0",
+  "seed": 42,
+  "ticks": 164,
+  "events": 106,
+  "result": "playerWin",
+  "stateHash": "fnv1a32-utf16:acf238a8",
+  "eventHash": "fnv1a32-utf16:966105d6",
+  "traceHashes": {
+    "state": "2750307d4dea28641853737163d3621a6b3cce3901cfd184a0dc8c4178689167",
+    "events": "2a19081d29a4a070f35a0a8b0ee4fab3324d9939963759f6fc01b5c1b286bfbe",
+    "rng": "0663a319578257493a68c0f86632d94040e7f27fe534ade7d40911774154ae6d"
+  }
+}
