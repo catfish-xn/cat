@@ -150,19 +150,34 @@ function cached(cache: WeakMap<object, CombatReplay>, key: object, build: () => 
  */
 export function toCombatReplayFor(room: RoomState, seatId: string): SeatReplay | null {
   for (const battle of room.battles) {
-    if (battle.kind === 'placeholder') {
-      const outcome = battle.outcomes.find(candidate => candidate.seatId === seatId);
-      if (!outcome) continue;
-      if (outcome.frames.length === 0) return null;
-      return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(replayInputOfFrames(outcome.frames))) };
-    }
-    if (!battle.participants.includes(seatId)) continue;
-    const replay = cached(replays, battle, () => toCombatReplay(battle.battle));
-    if (battle.battle.a.seatId === seatId) return { battleId: battle.battleId, replay };
-    if (battle.battle.b.seatId === seatId) return { battleId: battle.battleId, replay: cached(mirroredReplays, battle, () => mirrorCombatReplay(replay)) };
-    return null;
+    const replay = replayOf(battle, seatId);
+    if (replay !== undefined) return replay;
   }
   return null;
+}
+/** This seat's replay of one battle; undefined when the seat is not in it, null when it is but has nothing to replay. */
+function replayOf(battle: BattleResult, seatId: string): SeatReplay | null | undefined {
+  if (battle.kind === 'placeholder') {
+    const outcome = battle.outcomes.find(candidate => candidate.seatId === seatId);
+    if (!outcome) return undefined;
+    if (outcome.frames.length === 0) return null;
+    return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(replayInputOfFrames(outcome.frames))) };
+  }
+  if (!battle.participants.includes(seatId)) return undefined;
+  const replay = cached(replays, battle, () => toCombatReplay(battle.battle));
+  if (battle.battle.a.seatId === seatId) return { battleId: battle.battleId, replay };
+  if (battle.battle.b.seatId === seatId) return { battleId: battle.battleId, replay: cached(mirroredReplays, battle, () => mirrorCombatReplay(replay)) };
+  return null;
+}
+/**
+ * Builds and caches the replays of one freshly resolved battle for the given seats ahead of the push (B8), so the
+ * re-execution runs in its own slice instead of inside the push of the whole round. A failure is not reported here:
+ * nothing is cached and the push reports it as before.
+ */
+export function warmCombatReplays(battle: BattleResult, seatIds: Iterable<string>): void {
+  for (const seatId of seatIds) {
+    try { replayOf(battle, seatId); } catch { /* reported by the push */ }
+  }
 }
 function replayInputOfFrames(frames: readonly CombatFrame[]): CombatReplayInput {
   return { initial: frames[0]!.state, terminal: frames.at(-1)!.state, events: frames.flatMap(frame => frame.events) };

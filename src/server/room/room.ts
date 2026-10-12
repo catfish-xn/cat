@@ -17,7 +17,7 @@ import {
   refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellSharedUnit, setSharedShopLock,
   type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
-import { BattleResolveError, type BattleResolver } from './battle-resolver';
+import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import type { Clock, ClockHandle } from './clock';
 import { findPairing, planPairings } from './pairing';
 import {
@@ -48,12 +48,34 @@ export interface RoomOptions extends RoomTimings {
   readonly assertPoolConservation?: boolean;
   /** Test fixtures only (§12.2): partial per-hero capacities, unspecified heroes have 0. Production omits it (official sizes). */
   readonly poolCapacities?: Readonly<Record<string, number>>;
+  /**
+   * Combat ticks resolved per clock slice after the preparation deadline (B8). The frozen round is resolved in slices
+   * scheduled on the room clock, so a server can serve other messages in between; default: one slice per battle.
+   */
+  readonly sliceTicks?: number;
 }
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
 export type CommitFailure = 'duplicate-settlement' | 'stale-round' | 'wrong-phase' | 'invalid-settlement';
 export type CommitResult = { readonly ok: true; readonly state: RoomState } | { readonly ok: false; readonly reason: CommitFailure; readonly state: RoomState };
 export type PlanResult = { readonly ok: true; readonly settlement: RoundSettlement } | { readonly ok: false; readonly detail: string };
+/** What a room still holds besides its published state; every count is 0 once it ended or was disposed (B8). */
+export interface RoomRetained {
+  readonly timers: number;
+  readonly listeners: number;
+  readonly frozenInputs: number;
+  readonly pendingSettlement: boolean;
+  readonly resolving: boolean;
+  /** Per-tick playback frames still referenced by `state.battles`. */
+  readonly frames: number;
+}
+
+/** The frozen round being resolved slice by slice: battles run in envelope order, each on the pool the previous one left (§12.4). */
+interface Resolution {
+  readonly results: BattleResult[];
+  pool: SharedPoolState;
+  job: BattleJob | null;
+}
 
 const CHOICE_COMMANDS: ReadonlySet<SeatCommand['type']> = new Set(['choose', 'anomalyTarget', 'anomalyReroll']);
 
@@ -137,6 +159,8 @@ export class Room {
   private frozenInputs: readonly BattleInput[] = [];
   /** Unpublished pool the current round's battles chained through (§12.4); published only with the round. */
   private resolvedPool: SharedPoolState | null = null;
+  private resolution: Resolution | null = null;
+  private disposed = false;
   private extensions = 0;
   private readonly listeners = new Set<(state: RoomState) => void>();
   private readonly pvpMode: PvpMode;
@@ -177,7 +201,20 @@ export class Room {
   get state(): RoomState { return this.current; }
   get clock(): Clock { return this.options.clock; }
   subscribe(listener: (state: RoomState) => void): () => void { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
-  dispose(): void { this.clearTimer(); this.listeners.clear(); }
+  /**
+   * Releases everything the room holds besides its last published state: the deadline or resolution timer, listeners,
+   * the frozen envelopes and staged results. A disposed room never publishes again. Idempotent.
+   */
+  dispose(): void {
+    this.disposed = true;
+    this.clearTimer();
+    this.listeners.clear();
+    this.releaseRound();
+  }
+  get retained(): RoomRetained {
+    return { timers: this.timer === null ? 0 : 1, listeners: this.listeners.size, frozenInputs: this.frozenInputs.length, pendingSettlement: this.pendingSettlement !== null,
+      resolving: this.resolution !== null, frames: countFrames(this.current.battles) };
+  }
 
   /** waiting → first round. */
   start(): void {
@@ -191,7 +228,7 @@ export class Room {
     if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
-    const allowed = phase === 'preparation' || (phase === 'choice' && CHOICE_COMMANDS.has(command.type));
+    const allowed = !this.disposed && (phase === 'preparation' || (phase === 'choice' && CHOICE_COMMANDS.has(command.type)));
     if (!allowed) return { ok: false, reason: 'wrong-phase', state: seat.match };
     const result = applySeatCommand(this.current.pool, seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
@@ -350,7 +387,7 @@ export class Room {
     let rngState = plan.rngState;
     const battleSeeds: Record<string, number> = {};
     for (const battleId of battleIds) { const draw = nextRandom(rngState); rngState = draw.state; battleSeeds[battleId] = draw.word >>> 0; }
-    this.extensions = 0; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null;
+    this.extensions = 0; this.releaseRound();
     this.replace({ ...state, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind, pairings: plan.pairings, rngState, battleSeeds, battles: [] });
     if (alive.some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
     else this.afterChoiceWindow();
@@ -377,26 +414,49 @@ export class Room {
     return true;
   }
 
-  /** Preparation deadline: timeouts, then freeze every seat, resolve every battle and stage the settlement for the battle deadline. */
+  /**
+   * Preparation deadline: timeouts, then freeze every seat and resolve every battle. Resolution runs in clock slices
+   * (B8): the inputs are frozen here and nothing else of the room changes until the last battle finished, when the
+   * settlement is staged for the battle deadline. Commands meanwhile meet the `frozen` phase and are refused.
+   */
   private freezeAndResolve(): void {
     this.setPhase('frozen', null);
     if (!this.applyTimeouts('preparation')) return;
     this.frozenInputs = this.buildInputs();
-    const results: BattleResult[] = [];
     // §12.4: one unpublished proposal for the whole round; a battle that awards a unit hands its pool to the next battle.
-    let pool = this.current.pool;
-    for (const input of this.frozenInputs) {
-      try {
-        const result = this.options.resolver.resolveBattle(input, pool);
-        results.push(result);
-        if (result.kind === 'placeholder' && result.pool) pool = result.pool;
-      }
-      catch (error) {
-        // Any rules refusal or resolver error drops the whole round: no partial proposal or outcome is adopted.
-        const message = error instanceof Error ? error.message : String(error);
-        return this.fail(error instanceof BattleResolveError ? { kind: 'resolver-error', battleId: input.battleId, message, reason: error.reason } : { kind: 'resolver-error', battleId: input.battleId, message });
+    this.resolution = { results: [], pool: this.current.pool, job: null };
+    this.scheduleSlice();
+  }
+
+  private scheduleSlice(): void {
+    const clock = this.options.clock;
+    this.timer = clock.schedule(clock.now(), () => { this.timer = null; this.resolveSlice(); });
+  }
+
+  /** One slice: advance the current battle by at most `sliceTicks`; the next slice is scheduled until every battle finished. */
+  private resolveSlice(): void {
+    const resolution = this.resolution;
+    if (this.disposed || !resolution || this.current.phase !== 'frozen') return;
+    const input = this.frozenInputs[resolution.results.length]!;
+    try {
+      resolution.job ??= startBattleJob(this.options.resolver, input, resolution.pool);
+      const result = resolution.job.advance(this.options.sliceTicks ?? Number.POSITIVE_INFINITY);
+      if (result) {
+        resolution.results.push(result); resolution.job = null;
+        if (result.kind === 'placeholder' && result.pool) resolution.pool = result.pool;
       }
     }
+    catch (error) {
+      // Any rules refusal or resolver error drops the whole round: no partial proposal or outcome is adopted.
+      const message = error instanceof Error ? error.message : String(error);
+      return this.fail(error instanceof BattleResolveError ? { kind: 'resolver-error', battleId: input.battleId, message, reason: error.reason } : { kind: 'resolver-error', battleId: input.battleId, message });
+    }
+    if (resolution.results.length < this.frozenInputs.length) return this.scheduleSlice();
+    this.resolution = null;
+    this.stageResolved(resolution.results, resolution.pool);
+  }
+
+  private stageResolved(results: readonly BattleResult[], pool: SharedPoolState): void {
     this.resolvedPool = pool;
     const plan = this.planSettlement(results, pool);
     if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
@@ -485,7 +545,7 @@ export class Room {
   }
 
   private fail(fault: RoomFault): void {
-    this.pendingSettlement = null; this.resolvedPool = null;
+    this.releaseRound();
     this.replace({ ...this.current, fault });
     this.setPhase('ended', null);
   }
@@ -493,9 +553,17 @@ export class Room {
   private setPhase(phase: RoomPhase, durationMs: number | null): void {
     this.clearTimer();
     const deadlineAt = durationMs === null ? null : this.options.clock.now() + durationMs;
+    if (phase === 'ended') {
+      // An ended room keeps only what its last view and replay need: the per-tick frames go (the rules' battle result,
+      // terminal and ledger stay), and so do the frozen envelopes and staged results of the round.
+      this.releaseRound();
+      return this.replace({ ...this.current, phase, deadlineAt, battles: this.current.battles.map(withoutFrames) });
+    }
     this.replace({ ...this.current, phase, deadlineAt });
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
+  /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
+  private releaseRound(): void { this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */
@@ -504,6 +572,7 @@ export class Room {
       seats: this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match, seatRevision: candidate.seatRevision + 1 } : candidate) });
   }
   private replace(next: RoomState): void {
+    if (this.disposed) return;
     const published = { ...next, roomRevision: this.current.roomRevision + 1 };
     // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
     if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
@@ -516,6 +585,15 @@ export class Room {
     if (state.poolRevision !== state.pool.revision) throw new Error(`poolRevision ${state.poolRevision} is not pool.revision ${state.pool.revision}`);
     assertSharedPoolConservation(state.pool, state.seats.map(seat => seat.match));
   }
+}
+
+/** A battle result without its per-tick playback frames (an ended room); kept frames would only feed a combat resend. */
+function withoutFrames(result: BattleResult): BattleResult {
+  if (result.kind === 'two-sided') return result.frames.length === 0 ? result : { ...result, frames: [] };
+  return result.outcomes.every(outcome => outcome.frames.length === 0) ? result : { ...result, outcomes: result.outcomes.map(outcome => ({ ...outcome, frames: [] })) };
+}
+function countFrames(battles: readonly BattleResult[]): number {
+  return battles.reduce((total, battle) => total + (battle.kind === 'two-sided' ? battle.frames.length : battle.outcomes.reduce((sum, outcome) => sum + outcome.frames.length, 0)), 0);
 }
 
 /** The rules' conservation check as a value: null when balanced, else its reason (never used as protocol text). */

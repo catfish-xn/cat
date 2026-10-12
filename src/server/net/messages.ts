@@ -205,6 +205,27 @@ export function parseClientMessage(raw: string): ParseResult {
 }
 
 /** Deterministic JSON with sorted keys: the content identity a commandId is compared against. */
+/**
+ * Wire texts of one battle's frames (B8): the whole message, or COMBAT_SPLIT parts of `framesPerPart` frames when the
+ * whole would exceed `maxBytes`. Each frame is serialised once and the texts are spliced from those pieces; every
+ * text is exactly `JSON.stringify` of the message it stands for (`{ ...message, frames, part, total }` for a part).
+ */
+export function encodeCombat(message: Extract<ServerMessage, { type: 'combat' }>, byteLength: (text: string) => number): string[] {
+  const head = `{"type":"combat","roomId":${JSON.stringify(message.roomId)},"round":${JSON.stringify(message.round)},"battleId":${JSON.stringify(message.battleId)},"frames":[`;
+  const frames = message.frames.map(frame => JSON.stringify(frame));
+  const whole = `${head}${frames.join(',')}]}`;
+  // A UTF-16 unit is 1–3 UTF-8 bytes: only lengths between the two bounds need the exact count.
+  const fits = whole.length * 3 <= COMBAT_SPLIT.maxBytes || (whole.length <= COMBAT_SPLIT.maxBytes && byteLength(whole) <= COMBAT_SPLIT.maxBytes);
+  if (fits) return [whole];
+  const total = Math.ceil(frames.length / COMBAT_SPLIT.framesPerPart);
+  const parts: string[] = [];
+  for (let part = 1; part <= total; part++) {
+    const slice = frames.slice((part - 1) * COMBAT_SPLIT.framesPerPart, part * COMBAT_SPLIT.framesPerPart);
+    parts.push(`${head}${slice.join(',')}],"part":${part},"total":${total}}`);
+  }
+  return parts;
+}
+
 export function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (isRecord(value)) return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;

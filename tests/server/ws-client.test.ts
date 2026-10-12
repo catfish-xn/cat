@@ -217,7 +217,9 @@ describe('WsGameClient: combat parts', () => {
     const frames = Math.ceil(COMBAT_SPLIT.maxBytes / frameBytes) + COMBAT_SPLIT.framesPerPart;
     harness = await startServer({}, new DamageResolver(() => 1, frames));
     const [a] = await seatTwo(harness);
-    for (let fired = 0; fired < 200 && a.count('combat') === 0; fired++) { harness.clock.runNext(); await new Promise(resolve => setTimeout(resolve, 5)); }
+    // Stop on the battle phase itself: an ended room no longer holds per-tick frames (B8), so the resume below must happen first.
+    for (let fired = 0; fired < 200 && harness.server.room?.state.phase !== 'battle'; fired++) harness.clock.runNext();
+    expect(harness.server.room?.state.phase).toBe('battle');
     await until(() => a.count('combat') === 1, 'combat');
     const parts = a.wire.filter((message): message is Extract<ServerMessage, { type: 'combat' }> => message.type === 'combat');
     expect(parts.length).toBe(Math.ceil(frames / COMBAT_SPLIT.framesPerPart));

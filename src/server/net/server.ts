@@ -10,16 +10,16 @@
  * commandId dedupe → room / round / seatRevision → rules (Room.handle) → record receipt → push.
  */
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
-import type { BattleResolver } from '../room/battle-resolver';
+import { startBattleJob, type BattleJob, type BattleResolver } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
-import { toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView } from '../room/projection';
-import type { Room, RoomTimings } from '../room/room';
+import { toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
+import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
-  COMBAT_SPLIT, DEFAULT_COMBAT_TRANSPORT, commandContent, parseClientMessage, type ClientMessage, type CombatTransport, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
+  DEFAULT_COMBAT_TRANSPORT, commandContent, encodeCombat, parseClientMessage, type ClientMessage, type CombatTransport, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
   type ReceiptResult, type ServerMessage,
 } from './messages';
 import { SessionRegistry, digestOf, type SeatSession } from './session';
@@ -50,6 +50,8 @@ export interface GameServerOptions {
   readonly limits?: Partial<ConnectionLimits>;
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   readonly combatTransport?: CombatTransport;
+  /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
+  readonly sliceTicks?: number;
   readonly log?: (line: string) => void;
 }
 
@@ -60,7 +62,39 @@ export interface GameServer {
   readonly connectionCount: number;
   /** Messages the write queue has run (inbound messages + pushes); tests use it to prove serial processing. */
   readonly processed: number;
+  /** What the server holds across matches (B8): credentials, their dedupe windows and the current room's own leftovers. */
+  readonly retained: ServerRetained;
   close(): Promise<void>;
+}
+
+export interface ServerRetained {
+  readonly sessions: number;
+  readonly dedupeEntries: number;
+  readonly connections: number;
+  readonly room: RoomRetained | null;
+}
+/** Default combat ticks per resolution slice: a few tens of milliseconds of rules work between two queue turns. */
+export const DEFAULT_SLICE_TICKS = 100;
+
+/**
+ * Resolver wrapper (B8): once a battle's job finished, one more slice builds the replays its attended seats will be
+ * pushed, so the re-execution behind a replay does not run inside the push of the whole round. The result is unchanged.
+ */
+function withReplayWarmup(inner: BattleResolver, seats: () => Iterable<string>): BattleResolver {
+  return {
+    resolveBattle: (input, pool) => inner.resolveBattle(input, pool),
+    startBattle(input, pool): BattleJob {
+      const job = startBattleJob(inner, input, pool);
+      let finished: ReturnType<BattleJob['advance']> = null;
+      return {
+        advance(maxTicks) {
+          if (finished) { warmCombatReplays(finished, seats()); return finished; }
+          finished = job.advance(maxTicks);
+          return null;
+        },
+      };
+    },
+  };
 }
 
 /** Close codes the server uses; 4xxx is the application range of RFC 6455. */
@@ -97,10 +131,26 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   let nextConnectionId = 1;
   let closing = false;
 
+  // Every room deadline and resolution slice runs as a write-queue task, like an inbound message: the single writer
+  // is explicit, and messages that arrived during a slice run before the next slice (B8).
+  const roomClock: Clock = {
+    now: () => clock.now(),
+    schedule: (at, fn) => clock.schedule(at, () => queue.push(fn)),
+    cancel: handle => clock.cancel(handle),
+  };
+  const resolver = options.resolver ?? new TwoSidedBattleResolver();
   const lobby = new Lobby({
-    clock, seed: options.seed, resolver: options.resolver ?? new TwoSidedBattleResolver(), roomId: options.roomId, timings: options.timings,
+    clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS, seed: options.seed,
+    resolver: combatTransport === 'frames' ? resolver : withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened),
   });
+
+  /** Seats a connection currently holds; only they are pushed a replay. */
+  function attendedSeats(): Set<string> {
+    const seats = new Set<string>();
+    for (const conn of connections.values()) if (conn.session) seats.add(conn.session.seatId);
+    return seats;
+  }
 
   /* ---------------- outbound ---------------- */
 
@@ -108,16 +158,10 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
     conn.socket.send(JSON.stringify(message));
   }
-  /** A battle above COMBAT_SPLIT.maxBytes leaves as consecutive parts of framesPerPart frames (part 1..total). */
+  /** A battle above COMBAT_SPLIT.maxBytes leaves as consecutive parts of framesPerPart frames (part 1..total); each frame is serialised once. */
   function sendCombat(conn: Connection, message: Extract<ServerMessage, { type: 'combat' }>): void {
     if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
-    const whole = JSON.stringify(message);
-    if (Buffer.byteLength(whole) <= COMBAT_SPLIT.maxBytes) { conn.socket.send(whole); return; }
-    const total = Math.ceil(message.frames.length / COMBAT_SPLIT.framesPerPart);
-    for (let part = 1; part <= total; part++) {
-      const frames = message.frames.slice((part - 1) * COMBAT_SPLIT.framesPerPart, part * COMBAT_SPLIT.framesPerPart);
-      send(conn, { ...message, frames, part, total });
-    }
+    for (const text of encodeCombat(message, text => Buffer.byteLength(text))) conn.socket.send(text);
   }
   function sendError(conn: Connection, code: ErrorCode, message: string, commandId: number | null = null): void {
     send(conn, { type: 'error', code, message, commandId });
@@ -389,6 +433,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         get room() { return room; },
         get connectionCount() { return connections.size; },
         get processed() { return queue.completed; },
+        get retained(): ServerRetained {
+          let dedupeEntries = 0;
+          for (const session of sessions) dedupeEntries += session.dedupe.size;
+          return { sessions: sessions.size, dedupeEntries, connections: connections.size, room: room?.retained ?? null };
+        },
         close: () => new Promise<void>(resolveClose => {
           closing = true;
           for (const conn of connections.values()) { conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing'); }

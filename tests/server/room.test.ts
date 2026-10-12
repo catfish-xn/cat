@@ -166,7 +166,7 @@ describe('Room: real resolver end to end', () => {
     expect(inputs).toHaveLength(4);
     expect(inputs.every(input => input.seats.length === 2 && input.mirrorOf === null && input.roundKind === 'pvp')).toBe(true);
     expect(new Set(inputs.flatMap(input => input.seats.map(seat => seat.seatId))).size).toBe(8);
-  });
+  }, 30_000);
 });
 
 describe('Room: choice window and stuck seats', () => {

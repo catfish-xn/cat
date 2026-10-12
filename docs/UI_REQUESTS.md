@@ -543,3 +543,24 @@ B7 已把 `Room.advanceRound` 换成 `advanceMultiplayerRound` 并删除 `overti
 
 - 现状：`toPrivateSeatView` 去掉了敌方单位与 `m8.encounterPlan`、`m8.loot`，`roundResults` 也去掉了 `interestBasis`、`xpRequested`、`streakBefore/After`、`roundKind`。联机界面因此：PvE 准备阶段看不到野怪站位与预览；掉落只能靠事件；收入明细省略"利息基数"和"经验请求"。
 - 需要（可选）：按 §10.9/§14.1 另给已揭示的遭遇预览摘要（敌方定义、星级、站位）与已揭示掉落摘要的白名单字段；`roundResults` 是否可加回 `interestBasis`/`xpRequested`。界面只显示，不用于规则。
+
+## src/server 连局资源释放与准备 RTT（B8，2026-10-12，Claude 流水线 B）
+
+B8 已让房间在新局开始时 `dispose()` 上一局（定时器、监听、冻结输入、在算的战斗、暂存结算），结束时只留战斗结果去掉逐 tick 帧；准备截止后的战斗改成按时钟切片计算（`RoomOptions.sliceTicks`，服务器默认 100 tick 一片，每片是一个写队列任务），回放在单独一片预先生成，战斗帧每帧只序列化一次。堆快照（强制 GC 后、每局结束时）显示：B8 前已结束的房间多留约 12 MiB 逐 tick 帧（约 9.5 万字符串、5.9 万对象），B8 后释放；两版连续两局之间都没有对象增长（只有 JIT 代码），即旧房间在下一局开始时已被释放，RSS 的上升主要来自 GC 时机与 V8 堆预留。编号续 SR-B8-xx。
+
+### SR-B8-01 压测脚本与 B5/B8 的接口对齐（P1，scripts/loadtest-room.cjs）
+
+- 现状：worker 里的 `TwoSidedBattleResolver.prototype.resolveBattle=function(input){…resolve.call(this,input)…}` 丢掉了 B5 加的第二个参数 `pool`，当前 `multiplayer` 上运行即在第 1 回合 `resolver-error … invalid-pool` 退出 1。B8 后房间走 `startBattle(input, pool)` 返回的分片任务（`advance(maxTicks)`），`resolveBattle` 不再被房间调用，`freezeAndResolve` 只剩冻结部分。
+- 需要：包装器转发全部参数；战斗计算样本改为包 `startBattle` 返回任务的每次 `advance`（累计 wall/CPU，记最大单片耗时）；结束 RSS 取样前可选 `--expose-gc` 下先 `gc()`（不 GC 时同一服务器的 heapUsed 在 24–488 MiB 间摆动，RSS 曲线主要反映 GC 时机）。B8 的前后数据用的是只改这三处的临时副本，见 PR 说明。
+- 验收：`node scripts/loadtest-room.cjs --seats 2 --rounds 3` 在 `multiplayer` 上退出 0，battles 样本非空。
+
+### SR-B8-02 一场战斗被完整执行三次，单次规则调用决定准备 RTT 下限（P1，T2/T5R 性能）
+
+- 现状：每场 PvP 依次跑 `resolveTwoSidedBattle`（权威结果）、服务器为旧 `combat` 帧用 `startTwoSidedCombatWithEvents`+`stepCombat` 重放、`toCombatReplay` 内部再重执行一次；PvE 同样由 `toCombatReplay` 重跑。服务器已把后两者切片或单独成片，但 `resolveTwoSidedBattle` 与 `toCombatReplay` 各自是不可分的单次调用，后期回合单次 300–650 ms，是 B8 后 p99 的主要来源。C6 切到 `replay` 后服务器的帧重放会去掉。
+- 需要（二选一或都要）：`resolveTwoSidedBattle` 可选直接产出 `CombatReplay`（权威执行时顺带记录，免第三次执行）；或给出可分步的入口，例如 `startTwoSidedBattle(input) → { advance(maxTicks): BattleResult | null }`、`toCombatReplay` 同理，结果与一次性调用逐字节相同。
+- 验收：同一输入下分步与一次性结果相等；单次调用不超过约 50 ms。
+
+### SR-B8-03 PvE 每 tick 的共享池守恒检查开销（P2，TP 性能）
+
+- 现状：PvE 战斗按 §12.4 走 `runSharedMatchCommand(pool, state, { type: 'step' })`，每 tick 都做 `assertSharedPoolConservation` 与 `canonicalContent`；seed 42 空闲整局约 11 s PvE 计算里 4.6 s 在守恒检查。另 `advanceS13Tick` 内的 `structuredClone` 约占整局 14 s。
+- 需要（可选）：战斗进行中（无奖励发放的 tick）不需要逐 tick 校验池的路径，或更便宜的增量守恒检查；`structuredClone` 是否可以换成结构共享。不影响规则结果。

@@ -36,7 +36,16 @@ export class ManualClock implements Clock {
     }
     this.current = target;
   }
-  /** Fires the next timer regardless of how far away it is; returns false when none is pending. */
+  /** Fires exactly one timer, the earliest (callbacks it schedules wait for later calls); returns false when none is pending. */
+  fireNext(): boolean {
+    const next = [...this.timers].sort((a, b) => a.at - b.at || a.handle - b.handle)[0];
+    if (!next) return false;
+    this.timers = this.timers.filter(timer => timer.handle !== next.handle);
+    this.current = Math.max(this.current, next.at);
+    next.fn();
+    return true;
+  }
+  /** Fires the next timer regardless of how far away it is, and every timer due by then; returns false when none is pending. */
   runNext(): boolean {
     const next = [...this.timers].sort((a, b) => a.at - b.at || a.handle - b.handle)[0];
     if (!next) return false;
