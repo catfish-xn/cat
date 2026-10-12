@@ -56,6 +56,10 @@ describe('T2 true two-sided combat', () => {
       expect(proposal.a.damage).toBe(baseDamage + 1);
       expect(proposal.b.damage).toBe(0);
       expect(proposal.a.baseDamage).toBe(baseDamage);
+      for (const side of [proposal.a,proposal.b]) {
+        expect(Number.isSafeInteger(side.damage) && side.damage >= 0).toBe(true);
+        expect(side.settlementEligible).toBe(true);
+      }
     });
 
   it('descriptor permutations are canonical and only the explicit seed initializes combat RNG', () => {
@@ -155,6 +159,10 @@ describe('T2 true two-sided combat', () => {
     expect(result.a.survivors).toHaveLength(1); expect(result.b.survivors).toHaveLength(1);
     expect(result.events.at(-1)).toMatchObject({type:'combatFinished',reason:'timeout'});
     expect(proposeSettlement(result).a.damage).toBe(3); expect(proposeSettlement(result).b.damage).toBe(3);
+    const mirrored = resolveTwoSidedBattle(compileBattle(battle.a,battle.b,42,{battleId:battle.battleId,mirrorOfSeatId:'B'}),1200);
+    expect(mirrored.terminal).toEqual(result.terminal);
+    expect(proposeSettlement(mirrored).a.damage).toBe(3);
+    expect(proposeSettlement(mirrored).b).toMatchObject({settlementEligible:false,damage:0,growth:[]});
   });
 
   it('growth deltas belong to the correct original seat and survive swapping a/b', () => {
@@ -174,6 +182,37 @@ describe('T2 true two-sided combat', () => {
       expect(strong.persistentGrowth).toEqual([{unitId:'unit-1',attackDamageBps:500}]);
       const proposals = proposeSettlement(result);
       expect((proposals.a.seatId === 'grow' ? proposals.a : proposals.b).growth).toEqual(grow.growth);
+    }
+    const mirrorInput = compileBattle(victims,strong,42,{battleId:'mirror-growth',mirrorOfSeatId:'grow'});
+    const mirrored = resolveTwoSidedBattle(mirrorInput,1200);
+    expect(mirrored.events.some(e=>e.type === 'growth')).toBe(true); // Still simulates the full opponent.
+    expect(mirrored.b.growth).toEqual([]); // No persistent writeback for the copied seat.
+    expect(proposeSettlement(mirrored).b).toMatchObject({settlementEligible:false,damage:0,growth:[]});
+    expect(resolveTwoSidedBattle(restoreBattleInput(JSON.stringify(mirrorInput)),1200)).toEqual(mirrored);
+  });
+
+  it('SR-B1-01: mirrors never settle, even on loss/draw, while real damage is an unclamped integer', () => {
+    const cases = [
+      [[hero('maddie','unit-1',3)],[hero('maddie')]], // Mirror loses.
+      [[hero('maddie')],[hero('maddie','unit-1',3)]], // Real seat loses.
+      [[],[]], // Both draw.
+    ];
+    for (const [aUnits,bUnits] of cases) {
+      const aState = freeze(seat(aUnits,{playerHp:1,gold:7})), bState = freeze(seat(bUnits,{playerHp:1,gold:9}));
+      const before = JSON.stringify([aState,bState]);
+      const a = snapshotForBattle(aState,'real'), b = snapshotForBattle(bState,'source');
+      const normal = run(a,b);
+      const battle = compileBattle(a,b,42,{battleId:normal.battleId,mirrorOfSeatId:'source'});
+      const result = resolveTwoSidedBattle(battle,1200), proposals = proposeSettlement(result);
+      expect(result.terminal).toEqual(normal.terminal);
+      expect(result.events).toEqual(normal.events);
+      expect(proposals.a).toEqual(proposeSettlement(normal).a);
+      expect(proposals.a.settlementEligible).toBe(true);
+      if (proposals.a.result !== 'win') expect(proposals.a.damage).toBeGreaterThan(aState.playerHp);
+      expect(proposals.b).toMatchObject({seatId:'source',settlementEligible:false,damage:0,growth:[]});
+      expect(Number.isSafeInteger(proposals.a.damage) && proposals.a.damage >= 0).toBe(true);
+      expect(proposeSettlement(result)).toEqual(proposals);
+      expect(JSON.stringify([aState,bState])).toBe(before);
     }
   });
 
@@ -213,6 +252,8 @@ describe('T2 true two-sided combat', () => {
     const a = snap([hero('maddie')],'A'), b = snap([hero('maddie')],'B'), battle = input(a,b);
     expect(()=>input(a,a)).toThrow('seat-collision');
     expect(()=>input(a,b,-1)).toThrow('invalid-seed');
+    expect(()=>compileBattle(a,b,42,{battleId:'bad-mirror',mirrorOfSeatId:'A'})).toThrow('invalid-mirror');
+    expect(()=>compileBattle(a,b,42,{battleId:'bad-mirror',mirrorOfSeatId:'absent'})).toThrow('invalid-mirror');
     expect(()=>input(a,{...b,version:'future'} as never)).toThrow('snapshot-version');
     expect(()=>input(a,{...b,roundId:'2-2'})).toThrow('round-mismatch');
     expect(()=>input({...a,roundId:'1-2'},{...b,roundId:'1-2'})).toThrow('round-kind');

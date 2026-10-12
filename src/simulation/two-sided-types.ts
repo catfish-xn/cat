@@ -22,7 +22,11 @@ export interface PlayerBattleSnapshot {
   readonly persistentGrowth: readonly PersistentGrowth[];
   readonly augmentProgress: MatchBase['augmentProgress'];
 }
-export interface BattleIdentity { readonly battleId: string }
+export interface BattleIdentity {
+  readonly battleId: string;
+  /** When present, B is a frozen copy of this seat, not a settlement participant. */
+  readonly mirrorOfSeatId?: string;
+}
 export interface BattleIdMapping {
   readonly seatId: string;
   readonly kind: 'unit' | 'item' | 'temporary-item' | 'augment' | 'anomaly';
@@ -34,6 +38,7 @@ export interface BattleInput {
   readonly version: typeof TWO_SIDED_BATTLE_VERSION;
   readonly battleId: string;
   readonly battleSeed: number;
+  readonly mirrorOfSeatId: string | null;
   readonly a: PlayerBattleSnapshot;
   readonly b: PlayerBattleSnapshot;
   readonly mapping: readonly BattleIdMapping[];
@@ -49,7 +54,7 @@ export interface BattleSurvivor {
 export interface BattleSideResult {
   readonly seatId: string;
   readonly survivors: readonly BattleSurvivor[];
-  /** New delta from this combat, not the accumulated pre-battle growth. */
+  /** New delta from this combat, not accumulated growth. Always empty for a mirror. */
   readonly growth: readonly PersistentGrowth[];
 }
 export interface BattleResult {
@@ -57,6 +62,7 @@ export interface BattleResult {
   readonly battleId: string;
   readonly roundId: string;
   readonly battleSeed: number;
+  readonly mirrorOfSeatId: string | null;
   readonly winnerSeatId: string | null;
   readonly a: BattleSideResult;
   readonly b: BattleSideResult;
@@ -69,6 +75,8 @@ export interface SideProposal {
   readonly battleId: string;
   readonly roundId: string;
   readonly seatId: string;
+  /** False for a mirror: no HP, income, XP, growth, reward or receipt may be committed. */
+  readonly settlementEligible: boolean;
   readonly result: 'win' | 'loss' | 'draw';
   readonly baseDamage: number;
   readonly opposingSurvivors: number;
@@ -80,7 +88,7 @@ export interface SideProposal {
 }
 export type BattleFailure = 'snapshot-version' | 'content-digest' | 'invalid-snapshot' | 'wrong-phase'
   | 'seat-collision' | 'round-mismatch' | 'round-kind' | 'invalid-seed' | 'invalid-battle-id'
-  | 'battle-input' | 'invalid-budget' | 'step-limit-exceeded' | 'invalid-result';
+  | 'invalid-mirror' | 'battle-input' | 'invalid-budget' | 'step-limit-exceeded' | 'invalid-result';
 export class BattleValidationError extends RangeError {
   constructor(readonly reason: BattleFailure) { super(reason); this.name = 'BattleValidationError'; }
 }

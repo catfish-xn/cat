@@ -74,8 +74,10 @@ export function compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, 
   try { validateSeed(battleSeed); } catch { throw new BattleValidationError('invalid-seed'); }
   const battleId = identity === undefined ? `diagnostic:${digestContent({a:left,b:right,battleSeed})}` : identity?.battleId;
   if (typeof battleId !== 'string' || battleId.length === 0) throw new BattleValidationError('invalid-battle-id');
+  const mirrorOfSeatId = identity?.mirrorOfSeatId ?? null;
+  if (mirrorOfSeatId !== null && mirrorOfSeatId !== right.seatId) throw new BattleValidationError('invalid-mirror');
   const x = compileSide(left,'player'), y = compileSide(right,'enemy');
-  return freezeContent(structuredClone({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,a:left,b:right,
+  return freezeContent(structuredClone({ version:TWO_SIDED_BATTLE_VERSION,battleId,battleSeed,mirrorOfSeatId,a:left,b:right,
     mapping:[...x.mapping,...y.mapping].sort((a,b)=>order(a.combatId,b.combatId)),
     preparation:{board:DEFAULT_BOARD,benchSize:9,units:[...x.units,...y.units]},
     strategy:{traits:[...x.strategy.traits,...y.strategy.traits],units:[...x.strategy.units,...y.strategy.units]},
@@ -88,7 +90,7 @@ export function restoreBattleInput(input: unknown): BattleInput {
     const value = (typeof input === 'string' ? JSON.parse(input) : input) as BattleInput;
     canonicalContent(value);
     if (value?.version !== TWO_SIDED_BATTLE_VERSION) throw new BattleValidationError('battle-input');
-    const expected = compileBattle(value.a,value.b,value.battleSeed,{battleId:value.battleId});
+    const expected = compileBattle(value.a,value.b,value.battleSeed,{battleId:value.battleId,mirrorOfSeatId:value.mirrorOfSeatId ?? undefined});
     if (canonicalContent(value) !== canonicalContent(expected)) throw new BattleValidationError('battle-input');
     return expected;
   } catch (error) {
@@ -105,14 +107,14 @@ export function startTwoSidedCombatWithEvents(input: BattleInput): CombatStep {
 export function startTwoSidedCombat(input: BattleInput): CombatState {
   return startTwoSidedCombatWithEvents(input).state;
 }
-function sideResult(seatId: string, mapping: readonly BattleIdMapping[], terminal: CombatState): BattleSideResult {
+function sideResult(seatId: string, mapping: readonly BattleIdMapping[], terminal: CombatState, isMirror = false): BattleSideResult {
   const units = mapping.filter(entry=>entry.kind === 'unit' && entry.seatId === seatId).map(entry=>{
     const unit=terminal.units.find(unit=>unit.id === entry.combatId);
     if (!unit) throw new BattleValidationError('invalid-result');
     return {originalId:entry.originalId,unit};
   }).sort((a,b)=>order(a.originalId,b.originalId));
   return { seatId, survivors:units.filter(({unit})=>unit.alive).map(({originalId,unit})=>({unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp})),
-    growth:units.filter(({unit})=>(unit.runtime?.permanentAdBps ?? 0)>0).map(({originalId,unit})=>({unitId:originalId,attackDamageBps:unit.runtime!.permanentAdBps})),
+    growth:isMirror ? [] : units.filter(({unit})=>(unit.runtime?.permanentAdBps ?? 0)>0).map(({originalId,unit})=>({unitId:originalId,attackDamageBps:unit.runtime!.permanentAdBps})),
   };
 }
 
@@ -127,9 +129,9 @@ export function resolveTwoSidedBattle(input: BattleInput, maxSteps: number): Bat
     const next = stepCombat(terminal); terminal = next.state; events.push(...toLedgerEvents(next.events)); steps++;
   }
   if (terminal.status !== 'finished') throw new BattleValidationError('step-limit-exceeded');
-  return freezeContent({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,
+  return freezeContent({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
     winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
-    a:sideResult(checked.a.seatId,checked.mapping,terminal), b:sideResult(checked.b.seatId,checked.mapping,terminal),
+    a:sideResult(checked.a.seatId,checked.mapping,terminal), b:sideResult(checked.b.seatId,checked.mapping,terminal,checked.mirrorOfSeatId !== null),
     mapping:checked.mapping,initial:start.state,terminal,events});
 }
 
@@ -140,19 +142,21 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
     const stage = getCatalogRoundById(result.roundId);
     const expectedWinner = result.terminal.result === 'draw' ? null : result.terminal.result === 'playerWin' ? result.a.seatId : result.b.seatId;
     if (result.version !== TWO_SIDED_BATTLE_VERSION || stage.kind !== 'pvp' || result.a.seatId === result.b.seatId
+      || (result.mirrorOfSeatId !== null && result.mirrorOfSeatId !== result.b.seatId)
       || result.terminal.status !== 'finished' || !result.terminal.result || result.terminal.combatId !== result.battleId
       || result.winnerSeatId !== expectedWinner || result.events.length !== result.terminal.nextEventSeq
       || result.events.some((event,index)=>event.combatId !== result.battleId || event.eventSeq !== index)
       || canonicalContent(result.a) !== canonicalContent(sideResult(result.a.seatId,result.mapping,result.terminal))
-      || canonicalContent(result.b) !== canonicalContent(sideResult(result.b.seatId,result.mapping,result.terminal))) throw new BattleValidationError('invalid-result');
+      || canonicalContent(result.b) !== canonicalContent(sideResult(result.b.seatId,result.mapping,result.terminal,result.mirrorOfSeatId !== null))) throw new BattleValidationError('invalid-result');
     const baseDamage = STAGE_PLAYER_DAMAGE[stage.stage];
     if (baseDamage === undefined) throw new BattleValidationError('invalid-result');
     const side = (own: BattleSideResult, opponent: BattleSideResult): SideProposal => ({
       battleId:result.battleId,roundId:result.roundId,seatId:own.seatId,
+      settlementEligible:own.seatId !== result.mirrorOfSeatId,
       result:result.winnerSeatId === null ? 'draw' : result.winnerSeatId === own.seatId ? 'win' : 'loss',
       baseDamage,opposingSurvivors:opponent.survivors.length,
       // Same frozen PvP rule as economy.ts: winner 0; otherwise stage base + opposing survivors.
-      damage:result.winnerSeatId === own.seatId ? 0 : baseDamage + opponent.survivors.length,
+      damage:own.seatId === result.mirrorOfSeatId || result.winnerSeatId === own.seatId ? 0 : baseDamage + opponent.survivors.length,
       growth:own.growth,events:result.events,
     });
     return freezeContent({a:side(result.a,result.b),b:side(result.b,result.a)});
