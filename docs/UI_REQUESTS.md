@@ -543,3 +543,13 @@ B7 已把 `Room.advanceRound` 换成 `advanceMultiplayerRound` 并删除 `overti
 
 - 现状：`toPrivateSeatView` 去掉了敌方单位与 `m8.encounterPlan`、`m8.loot`，`roundResults` 也去掉了 `interestBasis`、`xpRequested`、`streakBefore/After`、`roundKind`。联机界面因此：PvE 准备阶段看不到野怪站位与预览；掉落只能靠事件；收入明细省略"利息基数"和"经验请求"。
 - 需要（可选）：按 §10.9/§14.1 另给已揭示的遭遇预览摘要（敌方定义、星级、站位）与已揭示掉落摘要的白名单字段；`roundResults` 是否可加回 `interestBasis`/`xpRequested`。界面只显示，不用于规则。
+
+## B7 接入反馈：T5R 规则侧修正（Codex）
+
+- **SR-B7-01（P0）**：`toCombatReplay` 以 `initial.nextEventSeq` 区分已经发出的开局事件与 step 事件，不再用 `tick > 0`。3-7 狼群第一次 step 发出的5条 tick0 跳跃放入 tick1 回放记录，保留原 tick/eventSeq，避免遗漏和重复；显示差分仍对应每步权威状态。严格比较后续动画序列，缺失/篡改/重复均继续报 `replay-divergence`。没有改战斗引擎或账本归属，详见合同 §14.2。
+- **SR-B7-02（P2）**：白名单新增本轮公开 PvE 的 `m8.preparation.{roundId,encounterId,enemies}`，enemies 的 id/definitionId/team/starLevel/location 逐层复制，同一组野怪进入 `preparation.units` 供棋盘和 `readEncounterPreview` 显示。须当前 PvE 轮 ID/遭遇 ID 匹配；PvP、补给、过期预览均不下发此子树。新增 `roundResults[].interestBasis`，直接使用历史已提交计息金币基数。保持 MatchState 递归结构子集，不公开 RNG、未来遭遇/掉落、PvP 固定模板或结算收据；字段与适配说明见合同 §10.9、§14.1。
+- **验证覆盖**：目录全部33个战斗回合（38轮减5个补给轮）的逐 tick/终态回放；狼群8个种子的事件恰好一次及缺失/篡改/重复拒绝；全部8种 PvE 预览的站位/属性保真、递归哨兵与无引用共享、旧/未来预览屏蔽、利息基数。仅修改规则投影、测试和合同文档，未修改 src/server、界面或 golden。
+
+验证环境：Node v22.23.3 / npm 10.9.9；75个 T5R/B7 用例（含 seed42 八席整局、全部战斗回放折叠与狼群八席检查）、全仓类型检查、五个 Node 入口校验（T1/T2/T3/TP/T5R）通过，T1 固定 state/event/RNG trace 哈希保持不变。
+
+B7 显示接线提示：`toDisplayMatch` 当前把 m8.preparation 固定填为空敌军；应消费上述已公开 preparation 字段才能显示完整预览。此处只补规则投影，界面适配仍由 Claude 修改；xpRequested 与掉落摘要不在本次用户指定增补范围。

@@ -72,7 +72,10 @@ export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
     || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
   const initial = toCombatViewState(battle.initial), terminal = toCombatViewState(battle.terminal);
-  const ticks: CombatReplayTick[] = [{ tick: 0, events: animations(battle.events.filter(event => event.tick === 0)) }];
+  // A tick0 event can be emitted by the first step (e.g. wolves' opening jump).
+  // The initial state's ledger cursor, not the event tick, marks applied start effects.
+  const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
+  const ticks: CombatReplayTick[] = [{ tick: 0, events: animations(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) }];
   let state = battle.initial, previous = initial;
   const generated: LedgerCombatEvent[] = [];
   while (state.status === 'running' && state.tick < battle.terminal.tick) {
@@ -93,7 +96,7 @@ export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
     previous = view;
   }
   if (canonicalContent(previous) !== canonicalContent(terminal)
-    || canonicalContent(animations(generated)) !== canonicalContent(animations(battle.events.filter(event => event.tick > 0)))) {
+    || canonicalContent(animations(generated)) !== canonicalContent(animations(battle.events.filter(event => event.eventSeq >= firstStepEventSeq)))) {
     throw new RangeError('replay-divergence');
   }
   return freezeContent({ initial, ticks, terminal });

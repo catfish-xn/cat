@@ -2,10 +2,20 @@ import type { MatchState } from './match-types';
 import { freezeContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
 
+function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
+  return { ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']),
+    location: unit.location.kind === 'bench' ? pick(unit.location, ['kind', 'slot'])
+      : { kind: 'board' as const, cell: cellView(unit.location.cell) } };
+}
+
 /** A detached recursive subset of MatchState, never a serializable authority/save. */
 export function toPrivateSeatView(state: MatchState) {
   const units = state.preparation.units.filter(unit => unit.team === 'player');
   const ids = new Set(units.map(unit => unit.id));
+  const preview = state.m8.round.kind === 'pve' && state.m8.round.roundId === state.roundDefinitionId
+    && state.m8.preparation.roundId === state.roundDefinitionId
+    && state.m8.preparation.encounterId === state.m8.round.encounterId ? state.m8.preparation : null;
+  const enemies = preview ? preview.enemies.filter(unit => unit.team === 'enemy' && unit.location.kind === 'board') : [];
   const items = state.items.filter(item => item.location.kind === 'inventory' || ids.has(item.location.unitId));
   return freezeContent({
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
@@ -14,9 +24,7 @@ export function toPrivateSeatView(state: MatchState) {
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId']) : pick(slot, ['status', 'empty'])) },
     preparation: { board: boardView(state.preparation.board), benchSize: state.preparation.benchSize,
-      units: units.map(unit => ({ ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']),
-        location: unit.location.kind === 'bench' ? pick(unit.location, ['kind', 'slot'])
-          : { kind: 'board' as const, cell: cellView(unit.location.cell) } })) },
+      units: [...units, ...enemies].map(preparationUnitView) },
     items: items.map(item => ({ ...pick(item, ['id', 'definitionId']), location: item.location.kind === 'inventory'
       ? { kind: 'inventory' as const } : pick(item.location, ['kind', 'unitId', 'slot']) })),
     temporaryEquipment: state.temporaryEquipment.filter(item => item.roundId === state.roundDefinitionId
@@ -35,10 +43,12 @@ export function toPrivateSeatView(state: MatchState) {
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,
       ['round', 'roundId', 'result', 'combatTicks', 'combatEventCount', 'baseDamage', 'survivingEnemyCount',
-        'playerDamage', 'hpLost', 'hpBefore', 'hpAfter', 'goldBefore', 'goldAfter', 'income', 'xpAwarded',
+        'playerDamage', 'hpLost', 'hpBefore', 'hpAfter', 'goldBefore', 'goldAfter', 'income', 'interestBasis', 'xpAwarded',
         'levelBefore', 'levelAfter', 'xpBefore', 'xpAfter']),
       incomeBreakdown: pick(result.incomeBreakdown, ['base', 'win', 'interest', 'streak']) })),
-    m8: { round: pick(state.m8.round, ['roundId', 'ordinal', 'stage', 'subround', 'kind', 'encounterId', 'displayName']) },
+    m8: { round: pick(state.m8.round, ['roundId', 'ordinal', 'stage', 'subround', 'kind', 'encounterId', 'displayName']),
+      ...(preview ? { preparation: { ...pick(preview, ['roundId', 'encounterId']),
+        enemies: enemies.map(preparationUnitView) } } : {}) },
   });
 }
 export type PrivateSeatView = ReturnType<typeof toPrivateSeatView>;
