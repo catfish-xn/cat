@@ -64,6 +64,7 @@ export class OnlineApplication implements SceneApplication {
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
       if (view.ranking) this.ranking.render(view.ranking, view.mySeatId);
+      else if (view.fault) { this.ranking.renderFault(view.fault.detail); this.hooks.status(`对局异常结束：${view.fault.detail}`); }
       return;
     }
     if (view.phase.kind !== 'lobby' && this.mode === 'online-lobby') {

@@ -12,8 +12,7 @@ import { InputRouter } from './input-router';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
-import { FakeServer } from './online/fake-server';
-import { isOnlineMode, readFakeOptions } from './online/mode';
+import { createGameClient, isOnlineMode } from './online/mode';
 import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
 import { OnlineApplication } from './online/online-application';
 import { RemoteSession } from './online/remote-session';
@@ -92,7 +91,7 @@ export class BoardScene extends Phaser.Scene {
 
   constructor() { super('Board'); }
   create() {
-    const client = this.online ? new FakeServer(readFakeOptions()) : null;
+    const client = this.online ? createGameClient() : null;
     // Online keeps the TFT layout: countdown above the board, shop dock below it. Offline leaves the shell untouched.
     const mounts: OnlineBoardMounts | null = client ? mountOnlineBoardFrame() : null;
     if (client && !(this.session instanceof RemoteSession)) { this.session.dispose(); this.session = new RemoteSession(client); }
