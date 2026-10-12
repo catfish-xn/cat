@@ -8,6 +8,8 @@ export const OPENING_INITIAL_STATE = freezeContent({
 } as const);
 export const MATCH_RULES = Object.freeze({ initialGold: OPENING_INITIAL_STATE.gold, rerollCost: 2, roundIncome: 5, shopSize: 5,
   initialLevel: OPENING_INITIAL_STATE.level, maxLevel: 9, initialHp: OPENING_INITIAL_STATE.hp, xpPurchaseCost: 4, xpPurchaseAmount: 4, roundXp: 2 });
+/** SR-C7-01: occupied allied preparation locations swap; cap checks the final formation. */
+export const DEPLOYMENT_RULES_VERSION = 'preparation-swap-v1';
 export const DEFAULT_MATCH_SEED = 42;
 export const XP_TO_NEXT_LEVEL: Readonly<Record<number, number>> = Object.freeze({ 1:2, 2:2, 3:6, 4:10, 5:20, 6:36, 7:48, 8:76 });
 export const SHOP_ODDS: Readonly<Record<number, readonly [number, number, number, number, number]>> = Object.freeze({

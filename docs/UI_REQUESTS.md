@@ -616,6 +616,9 @@ B6（PR #51）已实现，合同文档尚未记载，请 Codex 在 `docs/MULTIPL
 - 联机：`ClientCommand` 若新增命令需同步 `src/server/protocol.ts`（Claude 接线），`applySeatCommand` 走原公开命令即可，不涉及共享池。
 - 验收：新增用例覆盖三种互换与人口上限拒绝；T1 固定哈希若因命令集变化而变动，在合同里说明；不改 golden 以外的数值。
 
+**SR-C7-01 规则侧回应（Codex）**：扩展现有 `deploy`，无需新增命令：`{type:'deploy',unitId,target:{kind:'board',cell:{col,row}}}` 或 `{type:'deploy',unitId,target:{kind:'bench',slot}}`。目标被另一己方单位占用时原子交换位置，三种区域组合均支持；按最终场上总人数校验，满人口换人可成功，超人口报现有 `population-cap`（本需求原文 `deployment-cap` 为描述用语，不新增别名）。战斗/选择/结算/终局仍拒绝，失败原 state 无事件/资源/RNG变更；ID、装备/成长绑定、共享池资产不变。完整签名、拒绝优先级、旧存档 digest 兼容和 T1 指纹差异见 `MATCH_CONTRACT.md` 的 SR-C7-01 一节。Claude 可按旧 deploy 形状接 UI 占位拖放与预览，无需 protocol 新增成员，勿拆成两次移动。本 PR 不改 src/server、界面或数值 golden。
+
+SR-C7-01 验证：实际 Node v22.23.3 / npm 10.9.9；11文件182个部署/经济/序列化/共享池/机器人用例通过，再补1个互换后保存恢复与开战续算用例（最新互换文件15个用例全部通过，合计183个不同用例）。typecheck、T1 Node/browser 入口与指纹归一化校验通过。额外四构筑完整单人逐 tick 恢复套件运行约10分钟仍未结束，已中止，不计为通过；本次无完整单人回放套件通过声明。UI真机拖放待Claude接线后验收。
 ## C7 真机试玩修复后的需求（2026-10-12，Claude 流水线 C）
 
 C7 已让联机结算阶段显示「本轮获得」：客户端对比本席本回合最后一个战前状态与当前状态，列出新增单位、新增库存物品和收入前到账的金币（`src/rendering/online/round-gains.ts`）。这只是两份服务器状态的差，不判断来源；有三处不能保真：重连到战后无基线时不显示；掉落英雄若当场触发升星合并，新单位 ID 不出现，会漏列；4-6 异常刷新等战后扣金币会把金币掉落抵掉。

@@ -40,3 +40,28 @@ B5 第3阶段新增开发期必需字段 `equipmentState` 和 `temporaryEquipmen
 - `serializeMatch`／`restoreMatch` 执行上述同版本结构和一次消费一致性检查，不重放战斗启动、伤害、控制、奖励或随机流。这些观察收据不是 B8 `LootReceipt`、资产／掉落键，也不是对联合伪造整段历史的密码学认证；不替代 B9 完整恢复／回放验收。
 
 详见 [M8B_CONTRACT_ADDENDUM §5.1](M8B_CONTRACT_ADDENDUM.md#51-b7-已接入的中立观察收据) 与 [B7 交接](M8_B7_HANDOFF.md)。
+
+## SR-C7-01 准备阶段单位互换（2026-10-12）
+
+用户已确认采用 TFT 的己方位置互换规则。本节覆盖上文 Deployment 的占位行为，单人与联机共用；不改棋盘尺寸、部署区、人口/经济/战斗数值。
+
+沿用公开函数与现有命令，**不新增 swap 命令或目标单位 ID**：
+
+```ts
+validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined
+deployMatchUnit(state: MatchState, unitId: string, target: UnitLocation): MatchCommandResult
+// 现有联机 ClientCommand 形状：
+{ type: 'deploy', unitId: string, target: { kind: 'board', cell: { col: number, row: number } } }
+{ type: 'deploy', unitId: string, target: { kind: 'bench', slot: number } }
+```
+
+- 空目标仍是移动；目标仅被另一个己方单位占用时，一次事务交换两者 location，支持棋盘↔备战席（两个方向）、备战席↔备战席、棋盘↔棋盘。目标单位按提交时的当前状态决定，联机仍走原有回合/席位版本校验。拖回自己的位置成功但布局不变，再发相同目标也不会把互换反转。
+- 双方 ID、定义、星级、装备持有者、成长、异常绑定均跟随单位保留，只变位置；不买卖、不升星、不生成奖励或账本事件，不消耗金币、RNG、ID/事件序号。满备战席可以交换。输入与目标坐标不被修改，两端位置分别复制，没有中途重叠的可见状态。
+- `validateDeployment(GameState,...)` 是几何/所属校验，允许己方占位交换，不承担人口或阶段判断。界面人口预览应调用 `validateMatchDeployment`；提交与预览共享校验。
+- `validateMatchDeployment` / `deployMatchUnit` 首先要求 preparation，再检查部署区、合法坐标及己方所属；交换的反向目标（原位置）也必须合法。最后检查**完成移动/交换后的玩家棋盘单位总数 ≤ getDeploymentCap(state)**。例如 level3、场上3人、备战席1人，备战席换场上人仍为3人，允许；去空棋盘格会变4人，拒绝。若输入已超人口，交换不降低人数，仍拒绝；移到空备战席且恢复到上限内可以成功。
+- 失败名沿用现有枚举：`wrong-phase`、`unknown-unit`、`enemy-unit`（拖动敌方）、`invalid-location`、`outside-deployment-zone`、`occupied`（目标有非己方单位或多个占用者）、`population-cap`。SR-C7-01 原文的 `deployment-cap` 指人口拒绝，**实际线上错误仍为 population-cap**，不新增同义错误。敌军合法部署区外优先报 outside-deployment-zone。失败返回 `{ok:false,state:原对象,reason}`，无 events，无部分位置/资源/RNG写入。
+- Claude 接线：发送上述一个 deploy 到目标位置即可，不能先把另一人移走再移动两次。现有 `ClientCommand` / `applySeatCommand` 已覆盖，无需新增协议成员；不涉及共享池持有数、池版本或占用调整。UI 的己方占位阻挡逻辑及鼠标预览由 Claude 按此合同接入。本 PR 不改服务器和界面。
+
+规则身份：新增子规则版本 `DEPLOYMENT_RULES_VERSION = 'preparation-swap-v1'` 纳入 CONTENT_DIGEST；digest 从 `fnv1a32-utf16:c7ac9b0c` 变为 `fnv1a32-utf16:20b58a63`。M8 schema、命令 protocol2 与内容数值不变，旧 digest 的存档/回放按现有规则明确拒绝，不做静默迁移。
+
+T1 首战没有互换命令。完整状态 trace SHA-256 因 Match 及 combatInputs 的 contentDigest 改为 `05d9283c62258433146e564bb0d7a78b22d9d51baf49fa652f59094d7ef4cb1f`；把这些指纹恢复为旧值后，逐状态字节仍匹配原 trace `2750307d4dea28641853737163d3621a6b3cce3901cfd184a0dc8c4178689167`。原 `tests/t1-probe-baseline.json` 保留，新增 `tests/t1-deployment-baseline.json`，校验器同时断言新 trace 与仅指纹归一化的原 trace；事件/RNG trace、164 tick、106条战斗事件以及首战 Combat 终态 hash 均保持原固定值，不改任何数值 golden。

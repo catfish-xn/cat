@@ -9,7 +9,7 @@ import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, un
 import { makeLootPendingChoice } from './loot-choice';
 import { createCombatWithEvents, stepCombat, validateCombatStart, type CombatState } from './combat';
 import { toLedgerEvents } from './combat-ledger';
-import { deployUnit, getPlayerDeploymentCount, validateDeployment } from './game';
+import { deployUnit, getPlayerDeploymentCount } from './game';
 import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
@@ -124,11 +124,10 @@ export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
 export function getDeploymentCap(state: MatchState): number { return state.level; }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
   if (state.phase !== 'preparation') return 'wrong-phase';
-  const reason = validateDeployment(state.preparation, unitId, target);
-  if (reason) return reason;
-  const unit = state.preparation.units.find(unit => unit.id === unitId)!;
-  return target.kind === 'board' && unit.location.kind === 'bench'
-    && getPlayerDeploymentCount(state.preparation) >= getDeploymentCap(state) ? 'population-cap' : undefined;
+  const planned = deployUnit(state.preparation, unitId, target);
+  if (!planned.ok) return planned.reason;
+  // Check the final formation: swapping at the cap does not add a deployed unit.
+  return getPlayerDeploymentCount(planned.state) > getDeploymentCap(state) ? 'population-cap' : undefined;
 }
 export function deployMatchUnit(state: MatchState, unitId: string, target: UnitLocation): MatchCommandResult {
   const reason = validateMatchDeployment(state, unitId, target);
