@@ -17,6 +17,7 @@ import { createMatch } from '../../simulation/match';
 import { applyCombatReplayTick, type CombatReplay, type CombatViewState, type DisplayCombatEvent } from '../../presentation/combat-display';
 import { MatchSession } from '../match-session';
 import type { ClientCommand, GameClient } from './protocol';
+import { nextBaseline, readRoundGains, type RoundBaseline, type RoundGains } from './round-gains';
 
 /** Why the last intent did not change the local state although it was not refused by the rules. */
 export type IntentNotice = { readonly kind: 'pending'; readonly commandId: number } | { readonly kind: 'offline'; readonly text: string };
@@ -50,8 +51,13 @@ export class RemoteSession extends MatchSession {
   override get combatView(): CombatViewState | null { return this.view; }
   override get combatRuntime(): null { return null; }
   override get displayLog(): readonly DisplayCombatEvent[] { return this.played; }
+  /** Last pre-battle state of the current round, for "本轮获得" (C7). */
+  private baseline: RoundBaseline | null = null;
+  /** What my seat gained this round (new units, inventory items, gold before income); null before the battle or when unknown. */
+  roundGains(): RoundGains | null { return this.playingBack ? null : readRoundGains(this.baseline, this.matchState); }
   /** Server pushed my authoritative state; `events` are those of my commands it confirms. */
   receiveState(state: MatchState, events: readonly MatchEvent[] = []): void {
+    this.baseline = nextBaseline(this.baseline, state);
     const base = this.playbackBase;
     // A pre-battle state of the same round (resume snapshot order) only refreshes what the battle is shown on.
     if (base && this.replay && state.round === base.round && state.phase === 'preparation') {
@@ -120,6 +126,7 @@ export class RemoteSession extends MatchSession {
     // Pending: nothing changes until the receipt and the state push after it (never spend gold ahead of the server).
     if (result.ok === 'pending') { this.notice = { kind: 'pending', commandId: result.commandId }; return this.blocked(); }
     if (!result.ok) return result;
+    this.baseline = nextBaseline(this.baseline, result.state);
     const before = this.matchState;
     if (result.state.round !== before.round) this.combatLedger = [];
     this.matchState = result.state;

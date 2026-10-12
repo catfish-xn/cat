@@ -179,6 +179,7 @@ export class BoardScene extends Phaser.Scene {
       control: name => this.panelControl(name),
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
+      roundGains: () => this.session instanceof RemoteSession ? this.session.roundGains() : null,
     }, this.inputRouter, mounts?.shopDock ?? null);
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();

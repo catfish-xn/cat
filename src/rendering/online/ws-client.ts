@@ -9,9 +9,12 @@
  * - Consecutive commands are pipelined: the n-th in flight carries seatRevision = base + n - 1. A stale
  *   view (`seat-revision-mismatch`, `stale-round`, `resync-required`) is reported once the next state has
  *   arrived (or nothing else is in flight); nothing is resent automatically.
- * - The seat token lives in sessionStorage only. After a dropped connection the client reconnects with
- *   1s/2s/4s/8s/10s backoff and `resume{token}`; the server's snapshot (view → state → replay) restores
- *   the screen. A queued seat is lost with its connection (B2 rule), so it returns to matchmaking.
+ * - The seat token lives in localStorage under a key per server address (C7), so closing the tab and opening
+ *   the same address again, or a second tab of it, resumes the seat (the server then supersedes the older tab).
+ *   It is cleared once the match ended or the server revoked the seat (a lobby push while seated in a room).
+ *   After a dropped connection the client reconnects with 1s/2s/4s/8s/10s backoff and `resume{token}`; the
+ *   server's snapshot (view → state → replay) restores the screen. A queued seat is lost with its connection
+ *   (B2 rule), so it returns to matchmaking.
  *
  * No DOM dependency besides the injectable WebSocket/storage/timers, so tests drive it under Node.
  */
@@ -33,7 +36,7 @@ type ReplayMessage = Extract<ServerMessage, { type: 'replay' }>;
 
 export interface WsClientOptions {
   readonly url: string;
-  /** Where the seat token is kept; the browser passes sessionStorage. null keeps it in memory only. */
+  /** Where the seat token is kept; the browser passes localStorage. null keeps it in memory only. */
   readonly storage?: StorageLike | null;
   readonly createSocket?: (url: string) => WebSocket;
   readonly timers?: Timers;
@@ -43,6 +46,8 @@ export interface WsClientOptions {
 }
 export const RECONNECT_BACKOFF_MS: readonly number[] = [1_000, 2_000, 4_000, 8_000, 10_000];
 export const TOKEN_STORAGE_KEY = 'hex-online-seat';
+/** One stored seat per game server: `hex-online-seat:<ws url>`. */
+export function tokenStorageKey(url: string): string { return `${TOKEN_STORAGE_KEY}:${url}`; }
 /** Refusals that only mean "your view was stale": the player retries after the next state. */
 const RETRY_REASONS: ReadonlySet<ReceiptFailure> = new Set(['seat-revision-mismatch', 'stale-round', 'resync-required']);
 
@@ -83,6 +88,8 @@ export class WsGameClient implements GameClient {
   private disposed = false;
   private superseded = false;
   private status: ConnectionStatus | null = null;
+  /** This socket carries my seat (joined or resumed on it); the greeting lobby of a fresh socket comes before that. */
+  private bound = false;
 
   private token: string | null;
   private seatId: string | null = null;
@@ -179,7 +186,7 @@ export class WsGameClient implements GameClient {
     let socket: WebSocket;
     try { socket = this.createSocket(this.options.url); }
     catch (error) { this.log(`connect failed: ${String(error)}`); this.scheduleReconnect(); return; }
-    this.socket = socket;
+    this.socket = socket; this.bound = false;
     socket.onopen = () => {
       if (this.socket !== socket) return;
       this.attempt = 0;
@@ -230,7 +237,10 @@ export class WsGameClient implements GameClient {
     try { message = JSON.parse(text) as ServerMessage; }
     catch { this.log('server sent invalid JSON'); return; }
     switch (message.type) {
-      case 'lobby': this.lobbyView = message.view; this.emitLobby(); return;
+      case 'lobby':
+        // On a socket bound to my seat in a room, a lobby push means the server revoked it (a new match started).
+        if (this.bound && this.roomId !== null) { this.forgetSeat(); this.lastView = null; this.lastState = null; this.lastReplayKey = ''; }
+        this.lobbyView = message.view; this.emitLobby(); return;
       case 'view': return this.onView(message.roomId, message.view);
       case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state);
       case 'replay': return this.onReplay(message);
@@ -240,6 +250,8 @@ export class WsGameClient implements GameClient {
   }
   private onView(roomId: string, view: PlayerView): void {
     this.roomId = roomId;
+    // The match is over: the token resumes nothing worth coming back to; the ranking stays on screen.
+    if (view.phase.kind === 'ended' && this.token !== null) this.writeToken(null);
     this.round = Math.max(this.round, view.phase.round);
     this.lastView = view;
     this.listeners?.view(view);
@@ -267,13 +279,13 @@ export class WsGameClient implements GameClient {
       const result = receipt.result;
       switch (result.kind) {
         case 'joined':
-          this.seatId = result.seatId; this.roomId = null; this.writeToken(result.token);
+          this.seatId = result.seatId; this.roomId = null; this.bound = true; this.writeToken(result.token);
           this.lobbyError = null; this.emitLobby();
           break;
         case 'left': this.forgetSeat(); this.emitLobby(); break;
         case 'started': break; // the room's first view/state follow
         case 'resumed':
-          this.seatId = result.seatId; this.roomId = result.roomId;
+          this.seatId = result.seatId; this.roomId = result.roomId; this.bound = true;
           this.nextCommandId = Math.max(this.nextCommandId, result.lastCommandId + 1);
           this.setStatus(result.reclaimed ? { kind: 'online', reclaimed: true } : { kind: 'online' });
           break;
@@ -346,7 +358,7 @@ export class WsGameClient implements GameClient {
   }
   private readToken(): string | null {
     try {
-      const raw = this.storage?.getItem(TOKEN_STORAGE_KEY);
+      const raw = this.storage?.getItem(tokenStorageKey(this.options.url));
       if (!raw) return null;
       const stored = JSON.parse(raw) as StoredSeat;
       return stored.url === this.options.url && typeof stored.token === 'string' ? stored.token : null;
@@ -355,8 +367,8 @@ export class WsGameClient implements GameClient {
   private writeToken(token: string | null): void {
     this.token = token;
     try {
-      if (token === null) this.storage?.removeItem(TOKEN_STORAGE_KEY);
-      else this.storage?.setItem(TOKEN_STORAGE_KEY, JSON.stringify({ url: this.options.url, token } satisfies StoredSeat));
+      if (token === null) this.storage?.removeItem(tokenStorageKey(this.options.url));
+      else this.storage?.setItem(tokenStorageKey(this.options.url), JSON.stringify({ url: this.options.url, token } satisfies StoredSeat));
     } catch { /* storage unavailable: the seat lives as long as this page */ }
   }
 }

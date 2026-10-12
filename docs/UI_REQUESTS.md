@@ -619,3 +619,13 @@ B6（PR #51）已实现，合同文档尚未记载，请 Codex 在 `docs/MULTIPL
 **SR-C7-01 规则侧回应（Codex）**：扩展现有 `deploy`，无需新增命令：`{type:'deploy',unitId,target:{kind:'board',cell:{col,row}}}` 或 `{type:'deploy',unitId,target:{kind:'bench',slot}}`。目标被另一己方单位占用时原子交换位置，三种区域组合均支持；按最终场上总人数校验，满人口换人可成功，超人口报现有 `population-cap`（本需求原文 `deployment-cap` 为描述用语，不新增别名）。战斗/选择/结算/终局仍拒绝，失败原 state 无事件/资源/RNG变更；ID、装备/成长绑定、共享池资产不变。完整签名、拒绝优先级、旧存档 digest 兼容和 T1 指纹差异见 `MATCH_CONTRACT.md` 的 SR-C7-01 一节。Claude 可按旧 deploy 形状接 UI 占位拖放与预览，无需 protocol 新增成员，勿拆成两次移动。本 PR 不改 src/server、界面或数值 golden。
 
 SR-C7-01 验证：实际 Node v22.23.3 / npm 10.9.9；11文件182个部署/经济/序列化/共享池/机器人用例通过，再补1个互换后保存恢复与开战续算用例（最新互换文件15个用例全部通过，合计183个不同用例）。typecheck、T1 Node/browser 入口与指纹归一化校验通过。额外四构筑完整单人逐 tick 恢复套件运行约10分钟仍未结束，已中止，不计为通过；本次无完整单人回放套件通过声明。UI真机拖放待Claude接线后验收。
+## C7 真机试玩修复后的需求（2026-10-12，Claude 流水线 C）
+
+C7 已让联机结算阶段显示「本轮获得」：客户端对比本席本回合最后一个战前状态与当前状态，列出新增单位、新增库存物品和收入前到账的金币（`src/rendering/online/round-gains.ts`）。这只是两份服务器状态的差，不判断来源；有三处不能保真：重连到战后无基线时不显示；掉落英雄若当场触发升星合并，新单位 ID 不出现，会漏列；4-6 异常刷新等战后扣金币会把金币掉落抵掉。
+
+### SR-C7-02 私有投影公开本轮已揭示掉落（P2，界面体验）
+
+- 现状：`toPrivateSeatView` 不含 `m8.loot`，`readLootView` 在联机只能得到空账本；客户端不能区分「野怪掉落」和「补给/选择所得」，也无法显示「等待空位」（`pending-capacity`）这类状态。
+- 需要：白名单增加**当前回合**已揭示掉落的摘要，例如 `m8.loot.revealed: { dropId, sourceUnitId, payload: { kind: 'unit'|'item'|'gold', definitionId?, quantity }, status: 'revealed'|'granted'|'pending-capacity', receiptId|null }[]`，只含已揭示条目，不含未来计划或随机流；或直接导出 `readLootView(state)` 的可序列化结果。字段名由 Codex 定并写入合同 §14.1。
+- 用途：联机结算面板改用权威掉落收据（与单机 `lootPanelSection` 同一渲染），删除 `round-gains.ts` 的差分。
+- 验收：seed 42 八席整局，每个 PvE 回合的摘要与该席 `readLootView` 的 `revealedDrops` 相同；PvP、补给和过期回合不下发。
