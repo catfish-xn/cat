@@ -1,6 +1,6 @@
 import { canonicalContent } from './content';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST, OPENING_INITIAL_STATE } from './match-rules';
-import { buyUnit, sellUnit, setShopLock, nextRound, startMatchCombat, stepMatch, selectChoice,
+import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot } from './match';
 import { enableMultiplayerSettlement } from './round-settlement';
 import type { MultiplayerCommandResult } from './round-settlement';
@@ -193,12 +193,13 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
     requirePool(targetRound===pool.naturalRound+1,'stale-refresh');
     if(!advance&&targetRound===1) requirePool(states.every(s=>s.shop.generation===0),'already-generated');
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[],events:{seatId:string;events:readonly MatchEvent[]}[]=[];
-    const prepared=states.map(state=>{
+    const prepared=states.map((state):MatchState=>{
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
-      const result=nextRound(state,round);if(!result.ok)throw new PoolError(result.reason);
+      const {sharedPool, ...unbound}=state;
+      const result=advanceMultiplayerRound(unbound,round);if(!result.ok)throw new PoolError(result.reason);
       events.push({seatId:state.sharedPool!.seatId,events:result.events});
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.
-      return {...result.state,shop:state.shop,rngState:state.rngState};
+      return {...result.state,sharedPool,shop:state.shop,rngState:state.rngState};
     });
     if(!draft.order.length) {
       const order=[...draft.seats].sort((a,b)=>a.seatIndex-b.seatIndex).map(s=>s.seatId);let rng=pool.seed;
@@ -226,7 +227,7 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
 export function refreshSharedShops(pool:SharedPoolState,states:readonly MatchState[],expectedRound:number):SharedPoolBatchResult {
   return refreshBatch(pool,states,expectedRound,false);
 }
-/** Atomic catalog advance + free refresh; neither an infinite shop nor its RNG is published. */
+/** Atomic catalog/overtime advance + free refresh; neither an infinite shop nor its RNG is published. */
 export function nextSharedRound(pool:SharedPoolState,states:readonly MatchState[],expectedRound:number):SharedPoolBatchResult {
   return refreshBatch(pool,states,expectedRound,true);
 }

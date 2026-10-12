@@ -311,3 +311,72 @@
 - [ ] `npx vitest run tests/server` 全绿，整局机器人用例 < 60 s；purity 零命中。
 - [ ] 浏览器 `?mode=online` 默认：七个机器人会买卡、上场、升星，右栏头像随之变化；整局到排名。
 - [ ] 真服务器两浏览器：一方断线 60 s 后显示接管，重连后恢复控制。
+
+---
+
+## 派工单 B7：接入 T5R（加时入口、私有投影、紧凑回放的服务器侧）
+
+分支：`claude/b7-projections`，基于 `origin/multiplayer`（已含 T5R PR #46、B4）。可与 B5 并行；两者都改 `src/server/room/room.ts`，先合入的为准。
+
+### 依据
+`docs/MULTIPLAYER_CONTRACT.md` **§11.5 + T5R 补充的入口签名（加时）、§14.1（私有投影）、§14.2/14.3（回放）**。T5R 导出（经 `src/server-entry`）：`advanceMultiplayerRound`、`toPrivateSeatView`、`toCombatViewState`、`toCombatReplay`、`applyCombatReplayTick`、`COMBAT_REPLAY_KEYFRAME_INTERVAL`。
+
+### 要做
+1. **加时**：`Room.advanceRound` 的 `nextRound` 换成 `advanceMultiplayerRound`（B5 合入后对已绑池席位走 `nextSharedRound`，以合同为准）；删除 `commitPending` 的 `overtime-unavailable` 中断；6-7 后 ≥2 席存活进入 `overtime-N`，直到 ≤1 席。`roundName` 显示"加时 N"。测试：8 席全空阵容的整局必须在有限轮内结束（连续平局各自扣血）。
+2. **私有投影**：网络 `state` 消息（首发、增量、重连快照、失败回执附带的）全部改送 `toPrivateSeatView(state)`；`LocalRoomClient` 同样走投影，保证本地与网络一致。`messages.ts` 的 `state` 载荷类型改为 `PrivateSeatView`。抓包测试断言 `rngState`、`battleSeedRngState`、`choiceRngState`、`rewardRngState`、`resourceProvenance`、`combatInputBasis`、`m8.loot.frozen` 等不出现。
+3. **紧凑回放**：服务器对每场战斗生成一次 `toCombatReplay`（按 battleId 缓存），新增 `replay` 消息下发；B 视角按 §12.6/§14.2 镜像（首末/关键帧的 `cell/startingCell`、`movement.from/to`、`cast.completionCell`、`unitUpdated` 差分里的坐标）。**旧 `combat` 帧消息保留并默认继续发送**，加服务器选项 `combatTransport: 'frames' | 'replay' | 'both'`（默认 `both`），C6 切换客户端后再改默认为 `replay` 并删帧。
+4. 投影也应用到 `fault` 快照和观战视图（淘汰后仍收 `view` 与 `replay`，不再收 `state`）。
+5. 测试 `tests/server/projection-wire.test.ts`：三种 `state` 路径都无私有字段；`replay` 消息 B 视角镜像正确（取一场 PvP 对比 A/B 的 `initial` 坐标）；`replay` 体积 < 对应 `combat` 帧体积的 5%；加时整局测试。
+
+### 不做
+- 不改客户端的战斗渲染（C6）；不碰 `src/simulation/`、`src/server-entry/`。
+
+### 验收
+- [ ] `npx vitest run tests/server tests/t5r-*` 全绿；purity 零命中。
+- [ ] 浏览器 `?mode=online` 与 `?server=ws` 仍能用旧帧播放整局（默认 `both`）；离线冒烟通过。
+- [ ] PR 描述给出 `replay` 与 `combat` 实测体积对比，以及 C6 需要的客户端接入点。
+
+---
+
+## 派工单 C6：客户端改用紧凑回放播放战斗（CombatViewState 渲染）
+
+分支：`claude/c6-replay-client`，基于 `origin/multiplayer`，**在 B7 合入之后开工**。
+
+### 依据
+合同 §14.2 的播放规则：从 `initial` 开始按 tick 顺序，先播放动画事件，再按 `unitUpdated` 差分覆盖，有 `keyframe` 整体替换；`applyCombatReplayTick` 已实现状态部分。
+
+### 要做
+1. `RemoteSession.receiveReplay(replay)`：以 `initial` 为当前战斗视图，`advance(delta)` 每 50 ms 推进一个 tick（调 `applyCombatReplayTick`），把该 tick 的动画事件作为"事件"交给 BoardScene 现有的 `showEvents`/反馈渲染（事件形状是白名单子集，缺失字段按可选处理）。
+2. BoardScene / `unit-view` / `combat-feedback` / `stats-panel` 从 `CombatState` 改为读 `CombatViewState`（字段名一致、只少了内部字段）；统计面板只用白名单字段能算的部分，算不出的隐藏。`session.combat` 的类型相应改为视图类型（离线模式把 `CombatState` 经 `toCombatViewState` 转一次即可，保证两条路径同一渲染代码）。
+3. `WsGameClient` 与 `LocalRoomClient` 改为消费 `replay`，不再消费 `combat` 帧；服务器 `combatTransport` 默认改为 `replay`，删除帧生成与分包代码及其测试。
+4. 回放速度：保留 1x；战斗开始前有一次"开战"过渡，结束后停在 `terminal` 直到服务器推送结算状态。页面隐藏后返回：跳到 `terminal`。
+5. 测试：`tests/server/replay-client.test.ts`（无 DOM）：逐 tick 应用后末视图与 `terminal` deepEqual；关键帧覆盖；B 视角坐标镜像。Playwright：本地房间与真服务器各跑到第 3 回合，战斗期间单位血条随回放变化、无报错；离线整场战斗渲染与之前一致（截图对比可选）。
+
+### 不做
+- 不碰 `src/simulation/`、`src/server-entry/`、房间流程。
+
+### 验收
+- [ ] 整局下发体积相比帧方案下降 ≥90%（PR 写实测数）；`combat` 帧代码已删。
+- [ ] 离线与联机两条路径共用同一渲染代码；typecheck、build、`tests/server`、会话/B8 测试通过。
+
+---
+
+## 派工单 B8：服务器连局后的资源释放（T9 压测发现）
+
+分支：`claude/b8-room-lifecycle`，基于 `origin/multiplayer`（含 T9 PR #47 的压测脚本）。可在 B7 之后、C6 之前做，也可与 C6 并行。
+
+### 现象
+`node scripts/loadtest-room.cjs --seats 2 --rounds 3`：三局结束后进程 RSS 569 → 610 → 670 MiB 严格递增；第三局准备命令 RTT p99 约 1 s。见 `docs/MULTIPLAYER_RELEASE_NOTES.md` 第 9 节。
+
+### 要做
+1. 用 `--inspect` 或 `v8.writeHeapSnapshot` 对比两局结束后的堆，找出上一局残留的引用。重点怀疑：`Lobby.current` 旧 `Room` 未置空、`Room` 的定时器/监听未取消、`net/session` 旧凭证与 `dedupe` 窗口未随新局清理、战斗帧或回放缓存按 battleId 累积、`RealClock.timers` 泄漏、每局的 `RoomState.battles`/`settlements` 整段保留。
+2. 新局开始时明确 `dispose()` 上一局（取消定时器、清空缓存、吊销旧凭证），并在 `Room` 结束后释放逐 tick 帧（只保留结算所需的 `terminal` 与事件计数）。
+3. RTT p99 1 s：确认是不是战斗计算占满单线程导致准备命令排队（T2 真实战斗在准备截止时同步算 4 场）。若是，把"算战斗"移出单写队列的关键路径：先冻结输入，异步算完再入队提交（仍保持单写）；不引入 worker 线程池（T9 后再评估）。
+4. 测试：`tests/server/lifecycle.test.ts` 用 `ManualClock` 连跑 5 局，断言活动定时器数、缓存条目数、凭证数在每局结束后回到基线；`loadtest-room.cjs --seats 2 --rounds 3` 重跑，PR 写出前后 RSS 曲线与 p99。
+
+### 不做
+- 不改规则、不改协议形状。
+
+### 验收
+- [ ] 连跑 3 局 RSS 不再单向增长（允许 ±10%）；准备命令 p99 明显下降并写明数值。
+- [ ] `npx vitest run tests/server` 全绿。

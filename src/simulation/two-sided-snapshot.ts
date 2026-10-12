@@ -5,7 +5,8 @@ import { createInputValidation, validateInputAssets } from './input-assets';
 import { ITEM_DEFINITIONS } from './content/items';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
-import { getCatalogRoundById, getCatalogRoundByOrdinal } from './round-selectors';
+import { getCatalogRoundByOrdinal } from './round-selectors';
+import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { M8_VERSION } from './m8/version';
 import type { MatchState } from './match-types';
 import { BattleValidationError, PLAYER_BATTLE_SNAPSHOT_VERSION, type PlayerBattleSnapshot } from './two-sided-types';
@@ -30,7 +31,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
     if (value.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
     const s = value as unknown as PlayerBattleSnapshot;
     id(s.seatId); id(s.roundId); integer(s.level, 1);
-    const round = getCatalogRoundById(s.roundId);
+    const round = getMultiplayerRoundById(s.roundId);
     list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
     for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId); }
     for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
@@ -101,7 +102,7 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   if (state.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
   if ((['schemaVersion','rulesVersion','contentVersion','commandProtocolVersion','rngAlgorithm','tickMs'] as const)
     .some(key => state[key] !== M8_VERSION[key])) throw new BattleValidationError('snapshot-version');
-  if (getCatalogRoundByOrdinal(state.round).roundId !== state.roundDefinitionId) throw new BattleValidationError('round-mismatch');
+  if ((state.multiplayer ? getMultiplayerRoundByOrdinal(state.round) : getCatalogRoundByOrdinal(state.round)).roundId !== state.roundDefinitionId) throw new BattleValidationError('round-mismatch');
   requireSnapshot(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9);
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
