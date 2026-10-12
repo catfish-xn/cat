@@ -15,9 +15,9 @@ export class MatchSession {
   private disposed = false;
   static get liveCount(): number { return MatchSession.instances; }
   get observerCount(): number { return this.listeners.size; }
-  private matchState: MatchState;
-  private accumulator = 0;
-  private combatLedger: LedgerCombatEvent[] = [];
+  protected matchState: MatchState;
+  protected accumulator = 0;
+  protected combatLedger: LedgerCombatEvent[] = [];
   private pauseReasons = new Set<string>();
   private listeners = new Set<(change: SessionChange) => void>();
   get paused(): boolean { return this.pauseReasons.size > 0; }
@@ -26,12 +26,12 @@ export class MatchSession {
   subscribe(listener: (change: SessionChange) => void): () => void {
     this.listeners.add(listener); return () => this.listeners.delete(listener);
   }
-  private notify(before: MatchState, events: readonly LedgerCombatEvent[], reason: SessionChange['reason']) {
+  protected notify(before: MatchState, events: readonly LedgerCombatEvent[], reason: SessionChange['reason']) {
     if (before === this.matchState) return;
     for (const listener of this.listeners) listener({ before, after: this.matchState, events, reason });
   }
   dispose(): void { if (this.disposed) return; this.disposed = true; MatchSession.instances--; this.listeners.clear(); this.pauseReasons.clear(); this.accumulator = 0; }
-  private blocked(): MatchCommandResult { return { ok: false, state: this.matchState, reason: 'wrong-phase' }; }
+  protected blocked(): MatchCommandResult { return { ok: false, state: this.matchState, reason: 'wrong-phase' }; }
 
   constructor(initial = createMatch(), events: readonly LedgerCombatEvent[] = []) { MatchSession.instances++; this.matchState = structuredClone(initial); this.combatLedger = structuredClone([...events]); }
   get state(): MatchState { return this.matchState; }
@@ -42,13 +42,13 @@ export class MatchSession {
   /** Observer only: a copy of every event, including combatStart/tick-zero hooks. */
   get combatEvents(): readonly LedgerCombatEvent[] { return structuredClone(this.combatLedger); }
 
-  private record(events: readonly MatchEvent[]): LedgerCombatEvent[] {
+  protected record(events: readonly MatchEvent[]): LedgerCombatEvent[] {
     const combat = events.filter((event): event is LedgerCombatEvent => 'tick' in event);
     this.combatLedger.push(...structuredClone(combat));
     return combat;
   }
 
-  private commit(result: MatchCommandResult): MatchCommandResult {
+  protected commit(result: MatchCommandResult): MatchCommandResult {
     if (this.paused) return this.blocked();
     if (!result.ok) return result;
     const before = this.matchState;

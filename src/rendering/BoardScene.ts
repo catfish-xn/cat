@@ -12,6 +12,11 @@ import { InputRouter } from './input-router';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
+import { FakeServer } from './online/fake-server';
+import { isOnlineMode, readFakeOptions } from './online/mode';
+import { OnlineApplication } from './online/online-application';
+import { RemoteSession } from './online/remote-session';
+import type { SceneApplication } from './online/scene-application';
 import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
 import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
 import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../stats/combat-feedback-renderer';
@@ -31,8 +36,9 @@ declare global {
 }
 
 export class BoardScene extends Phaser.Scene {
-  private session = new MatchSession();
-  private application: MatchApplication | null = null;
+  private session: MatchSession = new MatchSession();
+  private application: SceneApplication | null = null;
+  private online = isOnlineMode();
   private statsPanel: StatsPanel | null = null;
   private feedback: CombatFeedbackRenderer | null = null;
   private activeStats: BattleStats | null = null;
@@ -85,6 +91,8 @@ export class BoardScene extends Phaser.Scene {
 
   constructor() { super('Board'); }
   create() {
+    const client = this.online ? new FakeServer(readFakeOptions()) : null;
+    if (client && !(this.session instanceof RemoteSession)) { this.session.dispose(); this.session = new RemoteSession(client); }
     buildPortraitTextures(this);
     // Phaser reuses the Scene instance on restart but destroys its display list.
     // Keep the authoritative MatchSession; all cached display references must be new.
@@ -176,7 +184,14 @@ export class BoardScene extends Phaser.Scene {
       this.selectedId = id; this.syncSelection(); this.renderActiveStats();
     });
     this.feedback = createCombatFeedbackRenderer(document.getElementById('feedback-root')!);
-    this.application = new MatchApplication(this.session, {
+    const refresh = () => {
+      this.clearCombatEffects(); this.selectedId = null; this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
+      this.activeStats = this.session.combat ? aggregateStats('online', this.session.combat.combatId!, this.session.combatEvents) : null;
+      this.feedback?.reset(); this.sync(); this.renderActiveStats();
+    };
+    this.application = client ? new OnlineApplication(this.session as RemoteSession, client, {
+      refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
+    }) : new MatchApplication(this.session, {
       replace: session => {
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
         this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
