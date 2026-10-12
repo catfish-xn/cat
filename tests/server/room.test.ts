@@ -56,7 +56,7 @@ describe('Room: settlement', () => {
     let calls = 0;
     const resolver = { resolveBattle(input: BattleInput): BattleResult {
       if (++calls === 2) throw new Error('boom');
-      return { battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 50, frames: [] })) };
+      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 50, frames: [] })) };
     } };
     const { room, clock } = makeRoom(resolver);
     room.start();
@@ -70,7 +70,7 @@ describe('Room: settlement', () => {
   });
   it('faults instead of committing a round whose results miss a seat', () => {
     const resolver = { resolveBattle(input: BattleInput): BattleResult {
-      return { battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.slice(0, 0).map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 0, frames: [] })) };
+      return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: input.seats.slice(0, 0).map(seat => ({ seatId: seat.seatId, state: seat.state, result: null, damage: 0, frames: [] })) };
     } };
     const { room, clock } = makeRoom(resolver);
     room.start(); clock.advance(1_000);

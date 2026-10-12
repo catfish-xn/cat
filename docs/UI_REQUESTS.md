@@ -400,3 +400,23 @@
 - 需要：规则侧提供"去随机流与未来计划"的本席私有视图构造函数（或列出可安全下发的字段清单），供 T5 网络层发送。
 
 **T2 回应（Codex）**：已在 [合同 §10.9](MULTIPLAYER_CONTRACT.md#109-sr-b1-06本席私有视图下发白名单t2-清单t5-实现) 列出逐层字段白名单、当前已揭示奖励条件、随机流/未来计划禁发项及 T5 验收要求；覆盖初始、增量、重连与命令错误回执，不可透传完整 MatchState/CombatState。T2 只交清单，T5 由 Claude 实现投影；其余 SR-B1-02~05 归属与最小范围见合同 §10.10。
+
+## src/server 接入 T2 后的规则侧缺口（B3，2026-10-12，Claude 流水线 B）
+
+B3 已按合同 §10.6 让房间的 PvP 走 `snapshotForBattle → compileBattle → resolveTwoSidedBattle → proposeSettlement`（`src/server/room/two-sided-resolver.ts`），提案暂存在 `RoomState.pendingProposals`，房间进入 `awaiting-settlement` 后以 `settlement-unavailable` 中断；默认 `pvpMode` 仍为 `placeholder`。以下是接入时发现的缺口，编号续 SR-B3-xx。
+
+### SR-B3-01 结算提交入口与房间阶段推进（P0，T3）
+
+- 现状：`Room.parkProposals` 已把每场的 `settlementEligible=true` 且属于真实参战席位的 `SideProposal` 按 battleId 暂存（含 `round/roundId/roomRevision/participants`）；镜像提案不进入队列。房间不扣血、不发收入、不进入下一轮。
+- 需要：合同 §10.10 的 `applyRoundSettlement(state, receipt)` 或等价事务命令。房间侧期望的调用方式：收齐全轮 `pendingProposals` 后，对每个真实席位用其提案构造唯一收据提交一次，由同一提交结果产出 HP/淘汰/`roundResults` 一条，再回到现有 `settlement → nextRound` 流程。请在合同里写明：收据字段、`settlementId` 的构成（房间建议 `${roomId}:round-${round}:${seatId}`）、拒绝枚举（重复、过期代次、镜像、不完整整轮）。
+- 验收：同一收据提交两次第二次无事件、无资源变化；提交后 `MatchState.playerHp` 与 `SeatState.hp` 一致。
+
+### SR-B3-02 战斗帧的逐 tick 账本入口（P2，T2 补充）
+
+- 现状：`resolveTwoSidedBattle` 只返回 `initial/terminal/events`；逐 tick 播放帧由房间用 `startTwoSidedCombatWithEvents + stepCombat` 重放同一冻结输入生成，再把 `battle.events` 按 `tick` 分配到各帧，并校验终态与事件总数一致（不一致即 `frame-divergence` 中断）。这意味着每场战斗实际执行两次（一次结算、一次取帧）。
+- 需要（可选）：一个同时返回逐 tick 状态序列与结果的入口，或说明 `stepCombat` 的事件与 `toLedgerEvents` 的对应关系可被服务器直接使用，以避免二次执行。若规则侧认为二次执行可接受，请在合同注明，房间保持现状。
+
+### SR-B3-03 第二视角的战斗投影（P2，T5 前确认）
+
+- 现状：双方战斗只运行一次，A 视角为 `player`；B 席位的帧由 `src/server/room/projection.ts` 的 `mirrorCombatFrame` 做纯显示镜像（队伍互换、`row = rows - 1 - row`、结果互换、`movement`/`cast.completionCell` 坐标翻转）。它不重算任何数值。
+- 需要：T5 做帧 DTO（合同 §10.9）时确认这一镜像规则就是客户端应看到的视角，或由规则侧给出带坐标字段的事件完整清单，避免遗漏其他含 `HexCell` 的事件字段。

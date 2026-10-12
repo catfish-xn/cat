@@ -1,0 +1,237 @@
+/**
+ * B3: the room's PvP goes through the rules' two-sided entry (contract §10.6). Only proposals come
+ * out; nothing is committed until T3. Lineups are the real idle seats of a room at round 2-1.
+ */
+import { describe, expect, it } from 'vitest';
+import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from '../../src/server/room/battle-resolver';
+import { mirrorCombatFrame, toCombatFrames, toPlayerView } from '../../src/server/room/projection';
+import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
+import { DEFAULT_BATTLE_MAX_STEPS, type BattleInput, type BattleResult, type SeatState } from '../../src/server/room/types';
+import { makeRoom, runUntil } from './helpers';
+
+/** Real seats frozen at the first PvP round (2-1) of an idle placeholder room. */
+function pvpSeats(): readonly SeatState[] {
+  const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+  room.start();
+  runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+  return room.state.seats;
+}
+function envelope(seats: readonly SeatState[], a: number, b: number, overrides: Partial<BattleInput> = {}): BattleInput {
+  const seat = (index: number) => ({ seatId: seats[index]!.seatId, state: seats[index]!.match });
+  return { battleId: `test-room:r4:b${a}${b}`, roomId: 'test-room', round: 4, roundId: '2-1', roundKind: 'pvp', roomRevision: 10, battleSeed: 0x1234_5678,
+    maxSteps: DEFAULT_BATTLE_MAX_STEPS, seats: [seat(a), seat(b)], mirrorOf: null, ...overrides };
+}
+const unitsOf = (result: Extract<BattleResult, { kind: 'two-sided' }>, seatId: string) => new Set(result.battle.mapping.filter(m => m.seatId === seatId && m.kind === 'unit').map(m => m.combatId));
+
+describe('resolveTwoSidedPvp', () => {
+  const seats = pvpSeats();
+
+  it('puts both real lineups into ONE battle: the mapping names both seats and the ledger shows both sides acting', () => {
+    const result = resolveTwoSidedPvp(envelope(seats, 0, 1));
+    expect(result.kind).toBe('two-sided');
+    expect(result).toMatchObject({ battleId: 'test-room:r4:b01', round: 4, roomRevision: 10, participants: ['s0', 's1'] });
+    expect(new Set(result.battle.mapping.map(m => m.seatId))).toEqual(new Set(['s0', 's1']));
+    const a = unitsOf(result, 's0'), b = unitsOf(result, 's1');
+    expect(a.size).toBeGreaterThan(0); expect(b.size).toBeGreaterThan(0);
+    const actors = new Set(result.battle.events.flatMap(event => 'unitId' in event ? [event.unitId] : 'attackerId' in event ? [event.attackerId] : []));
+    expect([...a].some(id => actors.has(id))).toBe(true);
+    expect([...b].some(id => actors.has(id))).toBe(true);
+    expect(result.battle.initial.units.map(unit => unit.team).sort()).toEqual(['enemy', 'player']);
+    expect(result.battle.mirrorOfSeatId).toBeNull();
+    for (const proposal of [result.proposals.a, result.proposals.b]) {
+      expect(proposal.settlementEligible).toBe(true);
+      expect(Number.isSafeInteger(proposal.damage) && proposal.damage >= 0).toBe(true);
+    }
+    expect(result.proposals.a.seatId).toBe('s0'); expect(result.proposals.b.seatId).toBe('s1');
+  });
+
+  it('is a pure function of the envelope: a rerun is deepEqual and keeps the frozen battleSeed', () => {
+    const input = envelope(seats, 2, 3);
+    const first = resolveTwoSidedPvp(input), second = resolveTwoSidedPvp(input);
+    expect(second).toEqual(first);
+    expect(first.battle.battleSeed).toBe(input.battleSeed);
+    const otherSeed = resolveTwoSidedPvp({ ...input, battleSeed: input.battleSeed + 1 });
+    expect(otherSeed.battle.battleSeed).toBe(input.battleSeed + 1);
+    expect(otherSeed.battle.initial.rngState).not.toBe(first.battle.initial.rngState);
+  });
+
+  it('mirror pairing: the real seat is A, the frozen source is B, and B\'s proposal can never settle', () => {
+    const mirror = resolveTwoSidedPvp(envelope(seats, 4, 5, { battleId: 'test-room:r4:m', seats: [{ seatId: 's4', state: seats[4]!.match }], mirrorOf: { seatId: 's5', state: seats[5]!.match } }));
+    expect(mirror.participants).toEqual(['s4']);
+    expect(mirror.battle.mirrorOfSeatId).toBe('s5');
+    expect(mirror.proposals.a.seatId).toBe('s4'); expect(mirror.proposals.a.settlementEligible).toBe(true);
+    expect(mirror.proposals.b).toMatchObject({ seatId: 's5', settlementEligible: false, damage: 0, growth: [] });
+    // The source seat's own pairing is independent of having been mirrored.
+    const own = resolveTwoSidedPvp(envelope(seats, 5, 6));
+    expect(own.proposals.a).toMatchObject({ seatId: 's5', settlementEligible: true });
+    expect(own.proposals.b).toMatchObject({ seatId: 's6', settlementEligible: true });
+    expect(resolveTwoSidedPvp(envelope(seats, 5, 6))).toEqual(own);
+  });
+
+  it('builds exactly one frame sequence per battle: opening first, terminal last, one frame per tick, same ledger', () => {
+    const result = resolveTwoSidedPvp(envelope(seats, 0, 1));
+    const { frames, battle } = result;
+    expect(frames[0]!.state).toEqual(battle.initial);
+    expect(frames.at(-1)!.state).toEqual(battle.terminal);
+    expect(frames).toHaveLength(battle.terminal.tick + 1);
+    expect(frames.every((frame, index) => frame.state.tick === index && frame.events.every(event => event.tick === index))).toBe(true);
+    expect(frames.flatMap(frame => frame.events)).toEqual(battle.events);
+    expect(frames.at(-1)!.state.status).toBe('finished');
+  });
+
+  it('rejects an envelope whose round differs from the seats\' preparation round before touching the rules', () => {
+    expect(() => resolveTwoSidedPvp(envelope(seats, 0, 1, { roundId: '2-2' }))).toThrow(BattleResolveError);
+    try { resolveTwoSidedPvp(envelope(seats, 0, 1, { roundId: '2-2' })); } catch (error) { expect((error as BattleResolveError).reason).toBe('round-mismatch:2-1'); }
+  });
+
+  it('turns a rules refusal (BattleValidationError) into a resolver fault with the stable reason', () => {
+    try { resolveTwoSidedPvp(envelope(seats, 0, 1, { maxSteps: 1 })); expect.unreachable(); }
+    catch (error) { expect(error).toBeInstanceOf(BattleResolveError); expect((error as BattleResolveError).reason).toBe('battle-validation:step-limit-exceeded'); }
+    try { resolveTwoSidedPvp(envelope(seats, 0, 0)); expect.unreachable(); }
+    catch (error) { expect((error as BattleResolveError).reason).toBe('battle-validation:seat-collision'); }
+  });
+
+  it('never sends PvE or supply rounds to the PvP entry', () => {
+    const calls: string[] = [];
+    const inner: BattleResolver = { resolveBattle(input) { calls.push(input.roundKind); return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes: [] }; } };
+    const resolver = new TwoSidedBattleResolver(inner);
+    resolver.resolveBattle(envelope(seats, 0, 1, { roundKind: 'pve', roundId: '1-2' }));
+    resolver.resolveBattle(envelope(seats, 0, 1, { roundKind: 'supply', roundId: '2-4' }));
+    expect(calls).toEqual(['pve', 'supply']);
+  });
+});
+
+describe('Room in pvpMode=two-sided', () => {
+  it('parks the eligible proposals of the first PvP round and stops with settlement-unavailable: nobody loses HP', () => {
+    const inputs: BattleInput[] = [];
+    const inner = new TwoSidedBattleResolver();
+    const resolver: BattleResolver = { resolveBattle(input) { inputs.push(input); return inner.resolveBattle(input); } };
+    const { room, clock } = makeRoom(resolver, { pvpMode: 'two-sided' });
+    room.start();
+    runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+    const hpBefore = room.state.seats.map(seat => seat.hp), matchesBefore = room.state.seats.map(seat => seat.match);
+    const seeds = room.state.battleSeeds;
+    expect(Object.keys(seeds)).toHaveLength(4);
+    const phases: string[] = [];
+    room.subscribe(state => phases.push(state.phase));
+    clock.runNext(); // preparation deadline
+    expect(phases).toEqual(expect.arrayContaining(['frozen', 'awaiting-settlement', 'ended']));
+    expect(room.state.phase).toBe('ended');
+    expect(room.state.fault).toEqual({ kind: 'settlement-unavailable', round: 4, battleIds: inputs.filter(input => input.round === 4).map(input => input.battleId) });
+    // The envelopes carry the frozen seeds and budget; every battle of the round is two-sided and nothing was committed.
+    const pvp = inputs.filter(input => input.round === 4);
+    expect(pvp).toHaveLength(4);
+    for (const input of pvp) { expect(input.battleSeed).toBe(seeds[input.battleId]); expect(input.maxSteps).toBe(DEFAULT_BATTLE_MAX_STEPS); expect(input.seats).toHaveLength(2); }
+    expect(room.state.battles.every(battle => battle.kind === 'two-sided')).toBe(true);
+    expect(room.state.pendingProposals).toHaveLength(4);
+    expect(room.state.pendingProposals.flatMap(pending => pending.proposals)).toHaveLength(8);
+    expect(room.state.pendingProposals.every(pending => pending.proposals.every(proposal => proposal.settlementEligible && pending.participants.includes(proposal.seatId)))).toBe(true);
+    expect(room.state.seats.map(seat => seat.hp)).toEqual(hpBefore);
+    expect(room.state.seats.map(seat => seat.match)).toEqual(matchesBefore);
+    expect(room.state.seats.every(seat => seat.alive && seat.rank === null)).toBe(true);
+    expect(room.state.settlements).toHaveLength(3); // rounds 1-3 (PvE) settled through the placeholder as before
+    expect(room.state.ranking).toBeNull();
+    const view = toPlayerView(room.state, 's0', clock.now());
+    expect(view.fault).toMatchObject({ kind: 'settlement-unavailable' });
+    expect(view.fault!.detail).toContain('T3');
+    expect(view.ranking).toBeNull();
+  }, 20_000);
+
+  it('with seven survivors the mirror proposal never enters the pending queue while the source keeps its own pairing', () => {
+    // Round 1 (PvE): s7 takes lethal damage through the placeholder so round 2-1 pairs seven survivors.
+    const inner = new TwoSidedBattleResolver();
+    const resolver: BattleResolver = { resolveBattle(input) {
+      const result = inner.resolveBattle(input);
+      if (input.round === 1 && result.kind === 'placeholder') return { ...result, outcomes: result.outcomes.map(outcome => outcome.seatId === 's7' ? { ...outcome, damage: 100 } : outcome) };
+      return result;
+    } };
+    const { room, clock } = makeRoom(resolver, { pvpMode: 'two-sided' });
+    room.start();
+    runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+    expect(room.state.seats.filter(seat => seat.alive)).toHaveLength(7);
+    const mirrorRow = room.state.pairings.find(pairing => pairing.opponent.kind === 'mirror')!;
+    expect(mirrorRow).toBeDefined();
+    const sourceSeatId = (mirrorRow.opponent as { sourceSeatId: string }).sourceSeatId;
+    clock.runNext();
+    expect(room.state.fault?.kind).toBe('settlement-unavailable');
+    const battles = room.state.battles.filter((battle): battle is Extract<BattleResult, { kind: 'two-sided' }> => battle.kind === 'two-sided');
+    expect(battles).toHaveLength(4);
+    const mirrorBattle = battles.find(battle => battle.battleId === mirrorRow.battleId)!;
+    expect(mirrorBattle.participants).toEqual([mirrorRow.seatId]);
+    expect(mirrorBattle.battle.mirrorOfSeatId).toBe(sourceSeatId);
+    expect(mirrorBattle.proposals.b).toMatchObject({ seatId: sourceSeatId, settlementEligible: false, damage: 0 });
+    const pending = room.state.pendingProposals.find(entry => entry.battleId === mirrorRow.battleId)!;
+    expect(pending.participants).toEqual([mirrorRow.seatId]);
+    expect(pending.proposals.map(proposal => proposal.seatId)).toEqual([mirrorRow.seatId]);
+    // The source is a real participant of exactly one other battle, with an eligible proposal there.
+    const sourcePending = room.state.pendingProposals.filter(entry => entry.proposals.some(proposal => proposal.seatId === sourceSeatId));
+    expect(sourcePending).toHaveLength(1);
+    expect(sourcePending[0]!.battleId).not.toBe(mirrorRow.battleId);
+    expect(room.state.pendingProposals.flatMap(entry => entry.proposals)).toHaveLength(7);
+    expect(room.state.seats.find(seat => seat.seatId === 's7')).toMatchObject({ alive: false, hp: 0 });
+    // Frames: side A plays as-is, side B mirrored, the mirror source gets nothing for that battle.
+    const real = battles.find(battle => battle.participants.length === 2)!;
+    const [aId, bId] = [real.battle.a.seatId, real.battle.b.seatId];
+    expect(toCombatFrames(room.state, aId)).toBe(real.frames);
+    const mirrored = toCombatFrames(room.state, bId);
+    expect(mirrored).toHaveLength(real.frames.length);
+    expect(mirrored[0]!.state.units.find(unit => unit.id.includes(`"${bId}"`))!.team).toBe('player');
+    const sourceBattle = battles.find(battle => battle.participants.includes(sourceSeatId))!;
+    expect(sourceBattle.battleId).not.toBe(mirrorRow.battleId);
+    expect(toCombatFrames(room.state, sourceSeatId)).toHaveLength(sourceBattle.frames.length);
+    expect(toCombatFrames(room.state, sourceSeatId)).not.toBe(mirrorBattle.frames);
+  }, 20_000);
+
+  it('drops the whole round when the rules refuse one battle: no proposal is parked and no HP moves', () => {
+    const inner = new TwoSidedBattleResolver();
+    let calls = 0;
+    const resolver: BattleResolver = { resolveBattle(input) { return inner.resolveBattle(input.roundKind === 'pvp' && ++calls === 3 ? { ...input, maxSteps: 1 } : input); } };
+    const { room, clock } = makeRoom(resolver, { pvpMode: 'two-sided' });
+    room.start();
+    runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+    const hpBefore = room.state.seats.map(seat => seat.hp);
+    clock.runNext();
+    expect(room.state.phase).toBe('ended');
+    expect(room.state.fault).toMatchObject({ kind: 'resolver-error', reason: 'battle-validation:step-limit-exceeded' });
+    expect(room.state.battles).toEqual([]);
+    expect(room.state.pendingProposals).toEqual([]);
+    expect(room.state.seats.map(seat => seat.hp)).toEqual(hpBefore);
+    expect(room.state.settlements).toHaveLength(3);
+  }, 20_000);
+
+  it('in the default placeholder mode a two-sided result is refused instead of being settled by the room', () => {
+    const resolver = new TwoSidedBattleResolver();
+    const { room, clock } = makeRoom(resolver); // pvpMode defaults to placeholder
+    room.start();
+    runUntil(room, clock, state => state.round === 4 && state.phase === 'preparation');
+    const hpBefore = room.state.seats.map(seat => seat.hp);
+    clock.runNext();
+    expect(room.state.fault?.kind).toBe('invalid-results');
+    expect(room.state.pendingProposals).toEqual([]);
+    expect(room.state.seats.map(seat => seat.hp)).toEqual(hpBefore);
+  }, 20_000);
+});
+
+describe('mirrorCombatFrame', () => {
+  it('swaps teams, flips rows against the board height and swaps the result; everything else is untouched', () => {
+    const seats = pvpSeats();
+    const result = resolveTwoSidedPvp(envelope(seats, 0, 1));
+    const last = result.frames.at(-1)!;
+    const mirrored = mirrorCombatFrame(last);
+    const rows = last.state.board.rows;
+    expect(mirrored.state.units).toHaveLength(last.state.units.length);
+    for (const [index, unit] of last.state.units.entries()) {
+      const twin = mirrored.state.units[index]!;
+      expect(twin.id).toBe(unit.id); expect(twin.hp).toBe(unit.hp);
+      expect(twin.team).toBe(unit.team === 'player' ? 'enemy' : 'player');
+      expect(twin.cell).toEqual({ col: unit.cell.col, row: rows - 1 - unit.cell.row });
+    }
+    expect(mirrored.state.result).toBe(last.state.result === 'playerWin' ? 'enemyWin' : last.state.result === 'enemyWin' ? 'playerWin' : last.state.result);
+    expect(mirrored.state.tick).toBe(last.state.tick);
+    expect(mirrored.state.board.deploymentZones.player).toEqual(last.state.board.deploymentZones.enemy);
+    const moves = result.frames.flatMap(frame => frame.events).filter(event => event.type === 'movement');
+    const mirroredMoves = result.frames.map(mirrorCombatFrame).flatMap(frame => frame.events).filter(event => event.type === 'movement');
+    expect(mirroredMoves.map(event => event.to.row)).toEqual(moves.map(event => rows - 1 - event.to.row));
+    expect(mirrorCombatFrame(mirrorCombatFrame(last))).toEqual(last);
+  });
+});

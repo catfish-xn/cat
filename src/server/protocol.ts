@@ -5,15 +5,18 @@
  * See docs/UI_REQUESTS.md "八人联机界面数据需求" and docs/MULTIPLAYER_RENOVATION_V2.md §5.
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
-import type { LedgerCombatEvent } from '../simulation/combat-types';
-import type { MatchState } from '../simulation/match-types';
+import type { CombatState, LedgerCombatEvent } from '../simulation/combat-types';
 import type { UnitLocation } from '../simulation/units';
 
 export const ROOM_CAPACITY = 8;
 export const ROOM_PROTOCOL_VERSION = 1;
 
-/** Server-side room phases (V2 §3.2). */
-export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'settlement' | 'ended';
+/**
+ * Server-side room phases (V2 §3.2). `awaiting-settlement` (B3): a two-sided PvP round has produced
+ * its settlement proposals and waits for the rules' commit entry (T3); until T3 lands the room
+ * faults there with `settlement-unavailable`.
+ */
+export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'awaiting-settlement' | 'settlement' | 'ended';
 export type SeatKind = 'human' | 'bot';
 
 /* ---------------- views the server publishes to one seat ---------------- */
@@ -41,7 +44,7 @@ export interface PlayerViewPhase {
   readonly serverNow: number;
 }
 /** Why a room ended abnormally; `detail` is already human-readable text chosen by the server. */
-export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch';
+export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable';
 export interface PlayerViewFault { readonly kind: PlayerViewFaultKind; readonly detail: string }
 export interface PlayerView {
   readonly mySeatId: string;
@@ -62,8 +65,13 @@ export interface LobbyView {
   readonly canStart: boolean;
   readonly error: string | null;
 }
-/** Combat is computed on the server; the client only plays these frames back at tick pace. */
-export interface CombatFrame { readonly state: MatchState; readonly events: readonly LedgerCombatEvent[] }
+/**
+ * Combat is computed on the server; the client only plays these frames back at tick pace.
+ * A frame is battle view data (B3, contract §10.6 item 3): the CombatState after one tick and the
+ * ledger events of that tick, from my seat's point of view (my units are `player`, bottom half).
+ * It is not a MatchState: economy, shop and settlement arrive separately as my authoritative state.
+ */
+export interface CombatFrame { readonly state: CombatState; readonly events: readonly LedgerCombatEvent[] }
 
 /* ---------------- commands a seat may send ---------------- */
 

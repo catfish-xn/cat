@@ -12,13 +12,14 @@ import {
 import type { MatchCommandResult, MatchState } from '../../simulation/match-types';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
-import type { BattleResolver } from './battle-resolver';
+import { BattleResolveError, type BattleResolver } from './battle-resolver';
 import { firstOfferFallback, resolvePendingChoices, type ChoiceFallback } from './choice-fallback';
 import type { Clock, ClockHandle } from './clock';
 import { findPairing, planPairings } from './pairing';
 import {
-  ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleInput, type BattleResult, type RankEntry, type RoomCommandResult, type RoomFault,
-  type RoomPhase, type RoomState, type RoundSettlement, type SeatCommand, type SeatSpec, type SeatState, type SettledSeat,
+  DEFAULT_BATTLE_MAX_STEPS, ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleInput, type BattleResult, type PendingProposal, type PvpMode, type RankEntry,
+  type RoomCommandResult, type RoomFault, type RoomPhase, type RoomState, type RoundSettlement, type SeatCommand, type SeatSpec, type SeatState, type SettledSeat,
+  type TwoSidedBattleResult,
 } from './types';
 
 export interface RoomTimings {
@@ -36,6 +37,8 @@ export interface RoomOptions extends RoomTimings {
   readonly clock: Clock;
   readonly resolver: BattleResolver;
   readonly choiceFallback?: ChoiceFallback;
+  /** B3: how PvP results are accepted; `placeholder` until the settlement entry (T3) exists. See PvpMode. */
+  readonly pvpMode?: PvpMode;
 }
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
@@ -69,12 +72,14 @@ export class Room {
   private extensions = 0;
   private readonly listeners = new Set<(state: RoomState) => void>();
   private readonly fallback: ChoiceFallback;
+  private readonly pvpMode: PvpMode;
 
   constructor(seats: readonly SeatSpec[], private readonly options: RoomOptions) {
     if (seats.length !== ROOM_CAPACITY) throw new RangeError(`a room has exactly ${ROOM_CAPACITY} seats`);
     if (new Set(seats.map(seat => seat.seatId)).size !== seats.length) throw new RangeError('duplicate seat id');
     validateSeed(options.seed);
     this.fallback = options.choiceFallback ?? firstOfferFallback;
+    this.pvpMode = options.pvpMode ?? 'placeholder';
     let rngState = options.seed >>> 0;
     const seatStates = seats.map((spec, index): SeatState => {
       const draw = nextRandom(rngState); rngState = draw.state;
@@ -83,7 +88,7 @@ export class Room {
         alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed: draw.word };
     });
     this.current = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
-      deadlineAt: null, seats: seatStates, pairings: [], battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState, poolRevision: 0 };
+      deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, battles: [], pendingProposals: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState, poolRevision: 0 };
   }
 
   get state(): RoomState { return this.current; }
@@ -122,6 +127,8 @@ export class Room {
     const outcomes = new Map<string, { readonly damage: number; readonly match: MatchState }>();
     for (const result of results) {
       if (result.round !== state.round) return { ok: false, detail: `result ${result.battleId} is for round ${result.round}, room is at ${state.round}` };
+      // A two-sided result carries uncommitted proposals; only the rules' commit entry (T3) may turn them into HP (§10.6 item 2).
+      if (result.kind !== 'placeholder') return { ok: false, detail: `battle ${result.battleId} is two-sided; its proposals need the settlement entry (T3)` };
       for (const outcome of result.outcomes) {
         if (outcomes.has(outcome.seatId)) return { ok: false, detail: `seat ${outcome.seatId} reported twice` };
         if (!Number.isInteger(outcome.damage) || outcome.damage < 0) return { ok: false, detail: `seat ${outcome.seatId} damage ${outcome.damage} is not a non-negative integer` };
@@ -189,8 +196,13 @@ export class Room {
     const state = this.current;
     const pvp = info.kind === 'pvp';
     const plan = pvp ? planPairings(alive.map(seat => seat.seatId), state.rngState, `${state.roomId}:r${info.ordinal}`) : { pairings: [], rngState: state.rngState };
+    // One explicit combat seed per battle, frozen with the pairings: a resolver retry reuses it (§10.6 item 1).
+    const battleIds = plan.pairings.length > 0 ? [...new Set(plan.pairings.map(pairing => pairing.battleId))] : alive.map(seat => `${state.roomId}:r${info.ordinal}:${seat.seatId}`);
+    let rngState = plan.rngState;
+    const battleSeeds: Record<string, number> = {};
+    for (const battleId of battleIds) { const draw = nextRandom(rngState); rngState = draw.state; battleSeeds[battleId] = draw.word >>> 0; }
     this.extensions = 0; this.pendingSettlement = null;
-    this.replace({ ...state, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind, pairings: plan.pairings, rngState: plan.rngState, battles: [] });
+    this.replace({ ...state, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind, pairings: plan.pairings, rngState, battleSeeds, battles: [], pendingProposals: [] });
     if (alive.some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
     else this.afterChoiceWindow();
   }
@@ -224,25 +236,64 @@ export class Room {
     const results: BattleResult[] = [];
     for (const input of inputs) {
       try { results.push(this.options.resolver.resolveBattle(input)); }
-      catch (error) { return this.fail({ kind: 'resolver-error', battleId: input.battleId, message: error instanceof Error ? error.message : String(error) }); }
+      catch (error) {
+        // Any rules refusal or resolver error drops the whole round: no partial proposal or outcome is adopted.
+        const message = error instanceof Error ? error.message : String(error);
+        return this.fail(error instanceof BattleResolveError ? { kind: 'resolver-error', battleId: input.battleId, message, reason: error.reason } : { kind: 'resolver-error', battleId: input.battleId, message });
+      }
     }
+    if (this.current.roundKind === 'pvp' && this.pvpMode === 'two-sided') return this.parkProposals(results);
+    const foreign = results.find(result => result.kind !== 'placeholder');
+    if (foreign) return this.fail({ kind: 'invalid-results', detail: `battle ${foreign.battleId} is two-sided but the room runs pvpMode=${this.pvpMode} on a ${this.current.roundKind} round` });
     const plan = this.planSettlement(results);
     if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
     this.pendingSettlement = plan.settlement;
     this.replace({ ...this.current, battles: results });
-    const longest = Math.max(0, ...results.flatMap(result => result.outcomes.map(outcome => outcome.frames.length)));
+    const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => outcome.frames.length) : [result.frames.length]));
     if (longest === 0) return this.commitPending();
     const tickMs = this.aliveSeats()[0]!.match.tickMs;
     this.setPhase('battle', longest * tickMs + this.options.battleTailMs);
+  }
+
+  /**
+   * B3 (two-sided PvP, §10.6 item 2): every result of the round must be a two-sided battle. The eligible
+   * proposals of real participants are parked in `pendingProposals`; mirror proposals never enter. The
+   * room then stops in `awaiting-settlement`: committing needs the rules' entry (T3), and the room must
+   * not subtract HP or pay income on its own, so until T3 lands this is a declared fault.
+   */
+  private parkProposals(results: readonly BattleResult[]): void {
+    const state = this.current;
+    const twoSided: TwoSidedBattleResult[] = [];
+    for (const result of results) {
+      if (result.kind !== 'two-sided') return this.fail({ kind: 'invalid-results', detail: `battle ${result.battleId} is not two-sided in pvpMode=two-sided` });
+      if (result.round !== state.round || result.roomRevision > state.roomRevision) return this.fail({ kind: 'invalid-results', detail: `battle ${result.battleId} is stale` });
+      twoSided.push(result);
+    }
+    const alive = this.aliveSeats();
+    const covered = new Set(twoSided.flatMap(result => result.participants));
+    for (const seat of alive) if (!covered.has(seat.seatId)) return this.fail({ kind: 'invalid-results', detail: `seat ${seat.seatId} has no two-sided result` });
+    if (covered.size !== twoSided.reduce((count, result) => count + result.participants.length, 0)) return this.fail({ kind: 'invalid-results', detail: 'a seat is a participant of two battles' });
+    const pendingProposals: PendingProposal[] = twoSided.map(result => ({
+      battleId: result.battleId, round: result.round, roundId: state.roundId, roomRevision: result.roomRevision, participants: result.participants,
+      proposals: [result.proposals.a, result.proposals.b].filter(proposal => proposal.settlementEligible && result.participants.includes(proposal.seatId)),
+    }));
+    this.replace({ ...this.current, battles: results, pendingProposals });
+    this.setPhase('awaiting-settlement', null);
+    this.fail({ kind: 'settlement-unavailable', round: state.round, battleIds: twoSided.map(result => result.battleId) });
   }
 
   private buildInputs(): readonly BattleInput[] {
     const state = this.current;
     const alive = this.aliveSeats();
     const seatInput = (seat: SeatState) => ({ seatId: seat.seatId, state: seat.match });
-    const base = { roomId: state.roomId, round: state.round, roundId: state.roundId, roundKind: state.roundKind ?? 'pve', roomRevision: state.roomRevision };
+    const seed = (battleId: string): number => {
+      const value = state.battleSeeds[battleId];
+      if (value === undefined) throw new Error(`battle ${battleId} has no frozen seed`);
+      return value;
+    };
+    const base = { roomId: state.roomId, round: state.round, roundId: state.roundId, roundKind: state.roundKind ?? 'pve', roomRevision: state.roomRevision, maxSteps: DEFAULT_BATTLE_MAX_STEPS };
     if (state.roundKind !== 'pvp' || state.pairings.length === 0) {
-      return alive.map(seat => ({ ...base, battleId: `${state.roomId}:r${state.round}:${seat.seatId}`, seats: [seatInput(seat)], mirrorOf: null }));
+      return alive.map(seat => { const battleId = `${state.roomId}:r${state.round}:${seat.seatId}`; return { ...base, battleId, battleSeed: seed(battleId), seats: [seatInput(seat)], mirrorOf: null }; });
     }
     const inputs: BattleInput[] = [];
     const seen = new Set<string>();
@@ -253,11 +304,11 @@ export class Room {
       seen.add(seat.seatId);
       if (pairing.opponent.kind === 'mirror') {
         const source = alive.find(candidate => candidate.seatId === (pairing.opponent as { sourceSeatId: string }).sourceSeatId)!;
-        inputs.push({ ...base, battleId: pairing.battleId, seats: [seatInput(seat)], mirrorOf: seatInput(source) });
+        inputs.push({ ...base, battleId: pairing.battleId, battleSeed: seed(pairing.battleId), seats: [seatInput(seat)], mirrorOf: seatInput(source) });
       } else {
         const other = alive.find(candidate => candidate.seatId === (pairing.opponent as { seatId: string }).seatId)!;
         seen.add(other.seatId);
-        inputs.push({ ...base, battleId: pairing.battleId, seats: [seatInput(seat), seatInput(other)], mirrorOf: null });
+        inputs.push({ ...base, battleId: pairing.battleId, battleSeed: seed(pairing.battleId), seats: [seatInput(seat), seatInput(other)], mirrorOf: null });
       }
     }
     return inputs;
