@@ -71,10 +71,15 @@ export class PlayersSidebar {
     if (unit) { avatar.dataset.definition = unit.definitionId; avatar.innerHTML = heroPortraitHtml(unit.definitionId, 30, heroEmblemSvg(unit.definitionId, 30)); }
     else avatar.append(element('span', [...seat.name][0] ?? '?', 'seat-avatar-placeholder'));
     const head = element('div', '', 'seat-head');
-    head.append(avatar, element('span', seat.name, 'seat-name'), element('span', seat.kind === 'bot' ? '机' : me ? '我' : '人', `seat-kind seat-${seat.kind}`));
+    // 机: a fill-in bot for the whole match; a human seat a bot is playing while its player is away shows 机 in the
+    // takeover style plus 接管中 (B6). Only one of them controls a seat at a time.
+    const kind = seat.controller === 'takeover' ? element('span', '机', 'seat-kind seat-takeover') : element('span', seat.kind === 'bot' ? '机' : me ? '我' : '人', `seat-kind seat-${seat.kind}`);
+    kind.title = seat.controller === 'takeover' ? '真人断线，机器人临时接管' : seat.kind === 'bot' ? '补位机器人' : me ? '你' : '真人玩家';
+    head.append(avatar, element('span', seat.name, 'seat-name'), kind);
     if (opponent) head.append(element('span', '对手', 'seat-opponent'));
-    // Bots never hold a connection (B1 seats them as idle placeholders); only a dropped human shows 断线.
-    if (seat.kind === 'human' && !seat.connected) head.append(element('span', '断线', 'seat-offline'));
+    // Bots never hold a connection; a dropped human shows 断线, and 接管中 once a bot plays the seat.
+    if (seat.controller === 'takeover') head.append(element('span', '接管中', 'seat-offline seat-takeover-tag'));
+    else if (seat.kind === 'human' && !seat.connected) head.append(element('span', '断线', 'seat-offline'));
     const bar = element('div', '', 'seat-bar'); const fill = element('div', '', 'seat-fill'); fill.style.width = `${Math.max(0, Math.min(100, seat.hp))}%`; bar.append(fill);
     const foot = element('div', '', 'seat-foot');
     foot.append(element('span', seat.alive ? `${seat.hp}` : `第 ${seat.rank ?? '?'} 名`, 'seat-hp'), element('span', `Lv ${seat.level}`, 'seat-level'));
@@ -98,8 +103,10 @@ export class PlayersSidebar {
       const on = row.dataset.debug === `online:seat:${seatId}`; row.classList.toggle('viewing', on); if (row.hasAttribute('aria-pressed')) row.setAttribute('aria-pressed', String(on));
     }
   }
-  /** Connection badge next to the phase (断线重连中 / 已在别处打开); null hides it. */
-  connection(text: string | null): void { this.connectionBadge.textContent = text ?? ''; this.connectionBadge.hidden = !text; }
+  /** Connection badge next to the phase (断线重连中 / 已在别处打开 as warnings, 已接回席位 as `ok`); null hides it. */
+  connection(text: string | null, tone: 'warn' | 'ok' = 'warn'): void {
+    this.connectionBadge.textContent = text ?? ''; this.connectionBadge.hidden = !text; this.connectionBadge.dataset.tone = tone;
+  }
   show(visible: boolean) { this.root.hidden = !visible; }
   dispose() { this.root.remove(); this.countdownHost?.replaceChildren(); }
 }

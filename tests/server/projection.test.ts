@@ -14,7 +14,7 @@ describe('toPlayerView', () => {
     expect(view.fault).toBeNull();
     expect(view.phase).toEqual({ kind: 'preparation', round: 1, roundName: '1-2', endsAt: 1_000, serverNow: 0 });
     expect(view.seats).toHaveLength(8);
-    expect(Object.keys(view.seats[0]!).sort()).toEqual(['alive', 'connected', 'hp', 'kind', 'level', 'name', 'publicBoard', 'rank', 'seatId']);
+    expect(Object.keys(view.seats[0]!).sort()).toEqual(['alive', 'connected', 'controller', 'hp', 'kind', 'level', 'name', 'publicBoard', 'rank', 'seatId']);
     // `publicBoard.units` is the one public build list (C5); everything else stays private.
     const serialized = JSON.stringify({ ...view, seats: view.seats.map(({ publicBoard: _board, ...seat }) => seat) });
     for (const forbidden of ['rngState', 'seed', 'shop', 'units', 'gold', 'pendingChoice']) expect(serialized).not.toContain(forbidden);

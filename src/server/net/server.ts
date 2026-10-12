@@ -48,6 +48,8 @@ export interface GameServerOptions {
   readonly timings?: Partial<RoomTimings>;
   readonly queueTimeoutMs?: number | null;
   readonly limits?: Partial<ConnectionLimits>;
+  /** Bot steps spacing and takeover delay (B6); steps always run as tasks of the server's write queue. */
+  readonly bots?: { readonly stepMs?: number; readonly takeoverMs?: number };
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   readonly combatTransport?: CombatTransport;
   readonly log?: (line: string) => void;
@@ -100,6 +102,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const lobby = new Lobby({
     clock, seed: options.seed, resolver: options.resolver ?? new TwoSidedBattleResolver(), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened),
+    // Bot steps and takeovers fire on the clock; each one becomes a task of the single write queue (§13.3 item 2).
+    bots: { ...options.bots, enqueue: task => queue.push(task) },
   });
 
   /* ---------------- outbound ---------------- */
@@ -265,8 +269,10 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     bind(conn, session);
     const current = room;
     const inRoom = current !== null && session.roomId === current.state.roomId;
+    // A resume revokes a bot takeover at once (B6); the receipt tells the player their seat was handed back.
+    const reclaimed = inRoom && current.state.seats.some(seat => seat.seatId === session.seatId && seat.controller === 'takeover');
     if (inRoom) current.setConnected(session.seatId, true);
-    send(conn, done(message.commandId, { kind: 'resumed', seatId: session.seatId, roomId: session.roomId, connectionEpoch: session.connectionEpoch, lastCommandId: session.dedupe.highestSeen }));
+    send(conn, done(message.commandId, { kind: 'resumed', seatId: session.seatId, roomId: session.roomId, connectionEpoch: session.connectionEpoch, lastCommandId: session.dedupe.highestSeen, ...(reclaimed ? { reclaimed: true as const } : {}) }));
     // Snapshot first (view → state → combat), increments follow through the room listener.
     if (inRoom) pushRoom(conn, current.state); else send(conn, { type: 'lobby', view: lobbyViewFor(conn) });
     log(`seat ${session.seatId} resumed on connection ${conn.id} (epoch ${session.connectionEpoch})`);

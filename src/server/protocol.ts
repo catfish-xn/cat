@@ -18,6 +18,12 @@ export const ROOM_PROTOCOL_VERSION = 1;
  */
 export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'awaiting-settlement' | 'settlement' | 'ended';
 export type SeatKind = 'human' | 'bot';
+/**
+ * Who issues this seat's commands right now (B6): its human player, a fill-in bot (`kind: 'bot'`, for the whole
+ * match), or a bot that took over a human seat whose player has been disconnected too long (`takeover`, revoked
+ * the moment the player resumes). Exactly one controller at any time.
+ */
+export type SeatController = 'human' | 'bot' | 'takeover';
 
 /* ---------------- views the server publishes to one seat ---------------- */
 
@@ -31,6 +37,7 @@ export interface SeatPublic {
   /** Final rank once decided (1 = winner); null while the match runs. */
   readonly rank: number | null;
   readonly connected: boolean;
+  readonly controller: SeatController;
   /**
    * What everyone may see of this seat's build (TFT: click a player to look at their board), work order C5.
    * Only units deployed on the board, with the items they hold. Never the bench, shop, gold, XP or RNG.
