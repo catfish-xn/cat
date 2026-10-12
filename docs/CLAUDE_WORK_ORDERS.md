@@ -369,6 +369,8 @@
 
 ## 派工单 B8：服务器连局后的资源释放（T9 压测发现）
 
+**状态：已交付，PR #55 于 2026-10-12 合入 multiplayer（428de9c）。** 合并时与 C6 对齐：所有逐 tick 帧相关代码删除，切片计算、dispose 释放、retained 诊断保留。压测脚本对齐见 UI_REQUESTS.md SR-B8-01（Codex）。
+
 分支：`claude/b8-room-lifecycle`，基于 `origin/multiplayer`（含 T9 PR #47 的压测脚本）。可在 B7 之后、C6 之前做，也可与 C6 并行。
 
 ### 现象
