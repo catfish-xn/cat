@@ -6,13 +6,13 @@
  *
  * The client is a thin adapter: commands go to `room.handle()` unchanged; everything the UI sees
  * is the room's own whitelisted projection, exactly what the network server sends (B7): my seat as
- * `toSeatPrivateView` (shown through the display adapter), my battle as frames and replay. Nothing
+ * `toSeatPrivateView` (shown through the display adapter), my battle as a compact replay. Nothing
  * here decides a rule, a deadline or an outcome. It imports only the room's public surface.
  */
 import { createMatch } from '../../simulation/match';
 import type { MatchCommandResult, MatchFailure, MatchState } from '../../simulation/match-types';
 import {
-  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView,
+  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView,
   type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
 import type { ClientCommand, ClientListeners, GameClient, LobbyView, PlayerView } from './protocol';
@@ -65,7 +65,7 @@ export class LocalRoomClient implements GameClient {
   private emittedMatch: MatchState | null = null;
   /** Display copy of `emittedMatch` built from its private seat view: the only state the UI ever sees. */
   private emittedDisplay: MatchState | null = null;
-  /** Round whose battle frames were already pushed. */
+  /** Round whose battle replay was already pushed. */
   private emittedBattleRound = 0;
   private flushQueued = false;
   private inCommand = false;
@@ -176,11 +176,13 @@ export class LocalRoomClient implements GameClient {
     const receivesState = seat !== undefined && (seat.alive || seat.eliminatedRound === state.round);
     if (seat && receivesState && seat.match !== this.emittedMatch && !this.inCommand) listeners.state(this.display(seat.match));
     if ((state.phase === 'battle' || state.phase === 'frozen') && state.battles.length > 0 && state.round !== this.emittedBattleRound) {
-      // Frames are combat view data; the settled state follows as a state push once the room commits.
-      const frames = toCombatFrames(state, this.mySeatId);
+      // The replay is combat view data; the settled state follows as a state push once the room commits.
       this.emittedBattleRound = state.round;
-      if (frames.length > 0) listeners.combat(frames);
-      if (listeners.replay) { const replay = toCombatReplayFor(state, this.mySeatId); if (replay) listeners.replay(replay.replay); }
+      // A replay failure is a server fault (§14.2): reported, never turned into a result; the settlement still follows.
+      let replay: ReturnType<typeof toCombatReplayFor> = null;
+      try { replay = toCombatReplayFor(state, this.mySeatId); }
+      catch (error) { console.error('[local-room] replay failed', error); }
+      if (replay) listeners.replay(replay.replay);
     }
     listeners.view(this.view(state));
   }

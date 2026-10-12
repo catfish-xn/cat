@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { ManualClock } from '../../src/server/room/clock';
-import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { Room, ROOM_TIMING_DEFAULTS, type RoomOptions } from '../../src/server/room/room';
 import { Lobby } from '../../src/server/room/lobby';
@@ -11,7 +10,7 @@ import type { RoomCommandResult, SeatCommand, SeatSpec } from '../../src/server/
 import { expectUniqueRanking, runUntil, SEATS } from './helpers';
 
 /** The rules battle runs in full; only the second playback pass is skipped (nobody watches these matches). */
-const headlessResolver = () => new TwoSidedBattleResolver(new PlaceholderBattleResolver(), { frames: false });
+const headlessResolver = () => new TwoSidedBattleResolver();
 const BOTS: readonly SeatSpec[] = Array.from({ length: 8 }, (_, index) => ({ seatId: `b${index}`, name: `机器人 ${index}`, kind: 'bot' }));
 
 type Logged = BotStepRecord;

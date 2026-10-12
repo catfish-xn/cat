@@ -74,7 +74,7 @@ export class OnlineApplication implements SceneApplication {
       lobby: view => this.onLobby(view),
       view: view => this.onView(view),
       state: (state, confirmed) => this.onState(state, confirmed ?? []),
-      combat: frames => { this.session.receiveCombat(frames); this.hooks.clearInput(); this.hooks.refresh(); },
+      replay: replay => { this.session.receiveReplay(replay); this.hooks.clearInput(); this.hooks.refresh(); },
       refused: refusal => this.onRefused(refusal),
       connection: status => this.onConnection(status),
     });

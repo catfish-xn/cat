@@ -13,28 +13,19 @@
  * PvE and supply rounds never reach this entry (§10.6 item 5); they go to the inner resolver.
  */
 import {
-  BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle, startTwoSidedCombatWithEvents, stepCombat,
-  type BattleIdentity, type BattleInput as RulesBattleInput, type CombatState, type LedgerCombatEvent, type PlayerBattleSnapshot, type SharedPoolState,
+  BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle,
+  type BattleIdentity, type PlayerBattleSnapshot, type SharedPoolState,
 } from '../../server-entry';
 import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from './battle-resolver';
-import type { BattleFrame, BattleInput, BattleResult, BattleSeatInput, RulesBattleResult, TwoSidedBattleResult } from './types';
-
-export interface TwoSidedResolverOptions {
-  /**
-   * Builds the per-tick playback frames (default true). Headless runs nobody watches (all-bot test matches, stress
-   * scripts) may turn it off: the rules battle, its proposals and the settlement are identical, only the second
-   * playback pass is skipped, so the room's battle phase has no frames to wait for.
-   */
-  readonly frames?: boolean;
-}
+import type { BattleInput, BattleResult, BattleSeatInput, TwoSidedBattleResult } from './types';
 
 export class TwoSidedBattleResolver implements BattleResolver {
   /** @param nonPvp resolves PvE and supply rounds (each seat on its own); the placeholder by default. */
-  constructor(private readonly nonPvp: BattleResolver = new PlaceholderBattleResolver(), private readonly options: TwoSidedResolverOptions = {}) {}
+  constructor(private readonly nonPvp: BattleResolver = new PlaceholderBattleResolver()) {}
   /** PvP proposals award nothing and leave the pool alone; PvE/supply may award units, so the pool goes to the inner resolver. */
   resolveBattle(input: BattleInput, pool: SharedPoolState): BattleResult {
     if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input, pool);
-    return resolveTwoSidedPvp(input, this.options);
+    return resolveTwoSidedPvp(input);
   }
 }
 
@@ -48,7 +39,7 @@ function guarded<T>(subject: string, run: () => T): T {
 }
 
 /** §10.6 pseudo-code, verbatim in structure: snapshot both sides, compile with the explicit seed and identity, resolve once, propose. */
-export function resolveTwoSidedPvp(envelope: BattleInput, options: TwoSidedResolverOptions = {}): TwoSidedBattleResult {
+export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -67,31 +58,9 @@ export function resolveTwoSidedPvp(envelope: BattleInput, options: TwoSidedResol
   const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
   const battle = guarded(envelope.battleId, () => resolveTwoSidedBattle(frozen, envelope.maxSteps));
   const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-  const frames = options.frames === false ? [] : guarded(envelope.battleId, () => toFrames(frozen, battle, envelope.maxSteps));
   return {
     kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
-    participants: envelope.seats.map(seat => seat.seatId), battle, proposals, frames,
+    participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
   };
 }
 
-/**
- * Per-tick playback frames of this one battle (§10.6 item 3): the frozen input replayed through the
- * events-bearing start entry and `stepCombat`. The ledger events come from the authoritative result,
- * grouped by tick, so playback and settlement share one account; a divergence is a fault, not a guess.
- */
-function toFrames(frozen: RulesBattleInput, battle: RulesBattleResult, maxSteps: number): readonly BattleFrame[] {
-  const byTick = new Map<number, LedgerCombatEvent[]>();
-  for (const event of battle.events) { const bucket = byTick.get(event.tick); if (bucket) bucket.push(event); else byTick.set(event.tick, [event]); }
-  const start = startTwoSidedCombatWithEvents(frozen);
-  const frames: BattleFrame[] = [{ state: start.state, events: byTick.get(start.state.tick) ?? [] }];
-  let current: CombatState = start.state, steps = 0;
-  while (current.status === 'running' && steps < maxSteps) {
-    current = stepCombat(current).state; steps++;
-    frames.push({ state: current, events: byTick.get(current.tick) ?? [] });
-  }
-  const terminal = battle.terminal;
-  const consistent = current.status === 'finished' && current.tick === terminal.tick && current.result === terminal.result
-    && frames.reduce((count, frame) => count + frame.events.length, 0) === battle.events.length;
-  if (!consistent) throw new BattleResolveError(battle.battleId, 'frame-divergence');
-  return frames;
-}

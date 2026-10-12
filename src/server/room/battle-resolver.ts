@@ -11,7 +11,7 @@
 import type { LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import { runSharedMatchCommand, type SharedPoolState } from '../../server-entry';
-import type { BattleFrame, BattleInput, BattleResult, BattleSeatOutcome } from './types';
+import type { BattleInput, BattleResult, BattleSeatOutcome } from './types';
 
 /**
  * `pool` is the room's unpublished shared pool as left by the battles resolved before this one in the
@@ -28,26 +28,29 @@ export class BattleResolveError extends Error {
 function runOwnCombat(seatId: string, state: MatchState, pool: SharedPoolState): { readonly outcome: BattleSeatOutcome; readonly pool: SharedPoolState } {
   // A supply round (or any state the rules already settled) has no combat to run.
   if (state.phase !== 'preparation') {
-    if (state.phase === 'settlement' || state.phase === 'gameOver') return { outcome: { seatId, state, result: lastResult(state), damage: lastDamage(state), frames: [] }, pool };
+    if (state.phase === 'settlement' || state.phase === 'gameOver') return { outcome: { seatId, state, result: lastResult(state), damage: lastDamage(state), combat: null }, pool };
     throw new BattleResolveError(seatId, `wrong-phase:${state.phase}`);
   }
   const started = runSharedMatchCommand(pool, state, { type: 'startCombat' });
   if (!started.ok) throw new BattleResolveError(seatId, started.reason);
-  const frames: BattleFrame[] = [toFrame(started.state, started.events)];
+  const initial = combatOf(seatId, started.state);
+  const events: LedgerCombatEvent[] = ledger(started.events);
   let current = started.state, latest = started.pool;
   while (current.phase === 'combat') {
     const step = runSharedMatchCommand(latest, current, { type: 'step' });
     if (!step.ok) throw new BattleResolveError(seatId, step.reason);
     current = step.state; latest = step.pool;
-    frames.push(toFrame(current, step.events));
+    events.push(...ledger(step.events));
   }
-  return { outcome: { seatId, state: current, result: lastResult(current), damage: lastDamage(current), frames }, pool: latest };
+  const combat = { initial, terminal: combatOf(seatId, current), events };
+  return { outcome: { seatId, state: current, result: lastResult(current), damage: lastDamage(current), combat }, pool: latest };
 }
-/** Battle view data only: the combat the rules ran plus that tick's ledger events; the MatchState itself stays in the outcome. */
-function toFrame(state: MatchState, events: readonly MatchEvent[]): BattleFrame {
-  if (!state.combat) throw new BattleResolveError('frame', 'no-combat');
-  return { state: state.combat, events: events.filter((event): event is LedgerCombatEvent => 'tick' in event) };
+/** Battle view data only: the combat the rules ran; the MatchState itself stays in the outcome. */
+function combatOf(seatId: string, state: MatchState) {
+  if (!state.combat) throw new BattleResolveError(seatId, 'no-combat');
+  return state.combat;
 }
+const ledger = (events: readonly MatchEvent[]): LedgerCombatEvent[] => events.filter((event): event is LedgerCombatEvent => 'tick' in event);
 function lastResult(state: MatchState): BattleSeatOutcome['result'] {
   const record = state.roundResults.at(-1);
   return record && record.round === state.round ? record.result : null;

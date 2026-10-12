@@ -29,7 +29,7 @@ export interface RoomTimings {
   readonly preparationMs: number;
   readonly choiceMs: number;
   readonly settlementMs: number;
-  /** Playback allowance added after the longest battle's frames. */
+  /** Playback allowance added after the longest battle's replay (also covers the client's opening transition). */
   readonly battleTailMs: number;
   /** Settlement deadlines re-armed for a seat the rules refuse to advance before the room faults. */
   readonly maxSettlementExtensions: number;
@@ -440,7 +440,9 @@ export class Room {
     if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
     this.pendingSettlement = plan.settlement;
     this.replace({ ...this.current, battles: results });
-    const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => outcome.frames.length) : [result.frames.length]));
+    // Playback runs one tick record per tick, 0..terminal (contract §14.2): terminal.tick + 1 records per battle.
+    const ticks = (combat: { readonly terminal: { readonly tick: number } } | null) => combat === null ? 0 : combat.terminal.tick + 1;
+    const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => ticks(outcome.combat)) : [ticks(result.battle)]));
     if (longest === 0) return this.commitPending();
     const tickMs = this.aliveSeats()[0]!.match.tickMs;
     this.setPhase('battle', longest * tickMs + this.options.battleTailMs);

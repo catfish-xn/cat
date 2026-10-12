@@ -7,13 +7,11 @@
  *   CAT_SEED                 room seed, lcg32-v1 (default 20261012)
  *   CAT_PREP_SEC / CAT_CHOICE_SEC / CAT_SETTLE_SEC   phase lengths in seconds
  *   CAT_QUEUE_TIMEOUT_SEC    auto-start this long after the first join (unset: wait for "start")
- *   CAT_COMBAT_TRANSPORT     frames | replay | both (default both until the client plays replays, C6)
  *   CAT_BOT_STEP_MS          delay between two bot steps of one seat (default 300)
  *   CAT_TAKEOVER_SEC         a disconnected player's seat is played by a bot after this long (default 60)
  *
  * TLS termination is the reverse proxy's job (T9); this process speaks plain ws://.
  */
-import { DEFAULT_COMBAT_TRANSPORT, type CombatTransport } from './net/messages';
 import { createGameServer } from './net/server';
 import { BOT_DRIVER_DEFAULTS } from './room/bot-driver';
 import { RealClock } from './room/real-clock';
@@ -32,9 +30,8 @@ const seconds = (name: string, fallbackMs: number): number => integer(name, fall
 const port = integer('PORT', integer('CAT_PORT', 8787));
 const host = env.CAT_HOST || '127.0.0.1';
 const queueTimeout = env.CAT_QUEUE_TIMEOUT_SEC ? seconds('CAT_QUEUE_TIMEOUT_SEC', 0) : null;
-const transport = env.CAT_COMBAT_TRANSPORT || DEFAULT_COMBAT_TRANSPORT;
-if (transport !== 'frames' && transport !== 'replay' && transport !== 'both') throw new RangeError(`CAT_COMBAT_TRANSPORT must be frames, replay or both, got "${transport}"`);
-const combatTransport: CombatTransport = transport;
+// C6: battles leave only as compact replays; the per-tick frame transport and its switch are gone.
+if (env.CAT_COMBAT_TRANSPORT && env.CAT_COMBAT_TRANSPORT !== 'replay') console.warn(`[game] CAT_COMBAT_TRANSPORT=${env.CAT_COMBAT_TRANSPORT} ignored: battles are always sent as replay`);
 const clock = new RealClock();
 
 createGameServer({
@@ -45,7 +42,6 @@ createGameServer({
     settlementMs: seconds('CAT_SETTLE_SEC', ROOM_TIMING_DEFAULTS.settlementMs),
   },
   queueTimeoutMs: queueTimeout,
-  combatTransport,
   bots: { stepMs: integer('CAT_BOT_STEP_MS', BOT_DRIVER_DEFAULTS.stepMs) || BOT_DRIVER_DEFAULTS.stepMs, takeoverMs: seconds('CAT_TAKEOVER_SEC', BOT_DRIVER_DEFAULTS.takeoverMs) },
   log: line => console.log(`[game] ${line}`),
 }).then(server => {

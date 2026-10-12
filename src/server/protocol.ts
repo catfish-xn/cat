@@ -5,7 +5,6 @@
  * See docs/UI_REQUESTS.md "八人联机界面数据需求" and docs/MULTIPLAYER_RENOVATION_V2.md §5.
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
-import type { CombatState, LedgerCombatEvent } from '../simulation/combat-types';
 import type { UnitLocation } from '../simulation/units';
 
 export const ROOM_CAPACITY = 8;
@@ -87,13 +86,11 @@ export interface LobbyView {
   readonly canStart: boolean;
   readonly error: string | null;
 }
-/**
- * Combat is computed on the server; the client only plays these frames back at tick pace.
- * A frame is battle view data (B3, contract §10.6 item 3): the CombatState after one tick and the
- * ledger events of that tick, from my seat's point of view (my units are `player`, bottom half).
- * It is not a MatchState: economy, shop and settlement arrive separately as my authoritative state.
+/*
+ * Combat is computed on the server; a seat receives its battle as one compact `replay` message
+ * (contract §14.2, `CombatReplay` of src/server-entry) and plays it back at tick pace. It is not a
+ * MatchState: economy, shop and settlement arrive separately as my private seat view.
  */
-export interface CombatFrame { readonly state: CombatState; readonly events: readonly LedgerCombatEvent[] }
 
 /* ---------------- commands a seat may send ---------------- */
 

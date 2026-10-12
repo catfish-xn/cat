@@ -6,6 +6,7 @@ import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToN
 import type { MatchEvent } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
+import type { DisplayCombat, SceneCombatEvent } from '../presentation/combat-display';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
@@ -16,7 +17,7 @@ import { MatchApplication } from '../m6/application';
 import { createGameClient, isOnlineMode } from './online/mode';
 import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
 import { OnlineApplication } from './online/online-application';
-import { RemoteSession } from './online/remote-session';
+import { REPLAY_OPENING_MS, RemoteSession } from './online/remote-session';
 import type { SceneApplication } from './online/scene-application';
 import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
 import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
@@ -86,7 +87,7 @@ export class BoardScene extends Phaser.Scene {
   private overlay!: Phaser.GameObjects.Graphics;
   private status!: Phaser.GameObjects.Text;
   private count!: Phaser.GameObjects.Text;
-  private recentCombatEvents: LedgerCombatEvent[] = [];
+  private recentCombatEvents: SceneCombatEvent[] = [];
   private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
   private renderedCastCount = 0;
   private renderedUpgradeCount = 0;
@@ -166,7 +167,7 @@ export class BoardScene extends Phaser.Scene {
       help: () => this.help?.show(),
       // Stored only: the next frame's ring sync applies it. Never force layout during a panel rebuild.
       highlight: ids => { this.previewHighlight = new Set(ids); },
-      state: () => this.session.state, shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
+      state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
       equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效'),
@@ -190,7 +191,8 @@ export class BoardScene extends Phaser.Scene {
     this.feedback = createCombatFeedbackRenderer(document.getElementById('feedback-root')!);
     const refresh = () => {
       this.clearCombatEffects(); this.selectedId = null; this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
-      this.activeStats = this.session.combat ? aggregateStats('online', this.session.combat.combatId!, this.session.combatEvents) : null;
+      // Online stats come from the replay's own events at render time (renderActiveStats); no ledger aggregate.
+      this.activeStats = null;
       this.feedback?.reset(); this.sync(); this.renderActiveStats();
     };
     this.application = client ? new OnlineApplication(this.session as RemoteSession, client, {
@@ -437,7 +439,7 @@ export class BoardScene extends Phaser.Scene {
     }
     this.clearCombatEffects();
     if (this.session.phase !== 'preparation') this.selectedId = null;
-    if (!this.session.combat) this.recentCombatEvents = [];
+    if (!this.session.combatView) this.recentCombatEvents = [];
     this.sync();
     this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
     const upgrades = result.events.filter(event => event.type === 'unitUpgraded');
@@ -461,7 +463,7 @@ export class BoardScene extends Phaser.Scene {
     const units = [...this.state.units], ids = new Set(units.map(unit => unit.id));
     // Rewards can consume an old unit while its finished combat is still displayed.
     // Keep that combat view until Continue clears it, including restored settlements.
-    for (const unit of this.session.combat?.units ?? []) if (!ids.has(unit.id)) {
+    for (const unit of this.session.combatView?.units ?? []) if (!ids.has(unit.id)) {
       units.push({ id: unit.id, definitionId: unit.definitionId, team: unit.team,
         starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell } });
       ids.add(unit.id);
@@ -553,7 +555,7 @@ export class BoardScene extends Phaser.Scene {
       const reason = result.result === 'supply' ? '补给 · 无战斗' : result.result === 'playerWin' ? '胜利 · 不扣 HP' : result.result === 'draw' ? `平局 · 基础伤害 ${result.baseDamage}` : `败局 · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}`;
       this.incomeLabel.setText(`第 ${result.round} 回合 · ${labels[result.result]}\n收入 +${result.income} 金币 / 经验 +${result.xpAwarded}\n等级 ${result.levelBefore} → ${result.levelAfter}\n生命 ${result.hpBefore} → ${result.hpAfter} (-${result.hpLost})\n${reason}`);
     } else { this.resultLabel.setText(''); this.incomeLabel.setText(''); }
-    if (!match.combat) this.timer.setText('');
+    if (!this.session.combatView) this.timer.setText('');
     this.syncSelection();
   }
   private syncSelection() {
@@ -569,20 +571,27 @@ export class BoardScene extends Phaser.Scene {
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
     for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : this.previewHighlight.has(unit.id) ? 'target' : 'normal', unit.team);
   }
+  /** Offline ledger aggregate per session change; floats are fed by showEvents for both paths. */
   private observeStats(change: SessionChange) {
+    if (this.session instanceof RemoteSession) { if (!this.session.combatView) this.feedback?.reset(); return; }
     const combat = change.after.combat;
     if (!combat) { this.activeStats = null; this.feedback?.reset(); return; }
     if (!this.activeStats || this.activeStats.combatId !== combat.combatId) {
       this.activeStats = emptyStats(this.application?.debug().runId ?? '', combat.combatId!); this.feedback?.reset();
     }
     this.activeStats = appendStats(this.activeStats, change.events);
-    this.feedback?.push(change.events, performance.now());
     if (combat.status === 'finished') this.renderActiveStats();
   }
   private renderActiveStats() {
-    document.getElementById('stats-root')!.hidden = !this.activeStats || !this.session.combat;
-    if (!this.activeStats || !this.session.combat) return;
-    this.statsPanel?.render({ stats: this.activeStats, combat: this.session.combat, events: this.session.combatEvents, selectedUnitId: this.selectedId });
+    const root = document.getElementById('stats-root')!, view = this.session.combatView, runtime = this.session.combatRuntime;
+    if (this.session instanceof RemoteSession) {
+      // Online (C6): the replay's view and its own events; the panel hides what the whitelist does not carry.
+      root.hidden = !view;
+      if (view) this.statsPanel?.render({ stats: null, runId: 'online', combat: view, events: this.session.displayLog, selectedUnitId: this.selectedId });
+    } else {
+      root.hidden = !this.activeStats || !runtime;
+      if (this.activeStats && runtime) this.statsPanel?.render({ stats: this.activeStats, combat: runtime, events: this.session.combatEvents, selectedUnitId: this.selectedId });
+    }
     this.lastStatsRender = performance.now();
   }
   /** Replay floats anchor to the replay canvas, which shares the board's 480×520 geometry. */
@@ -608,7 +617,8 @@ export class BoardScene extends Phaser.Scene {
     this.renderFeedback();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
-    const events = this.session.advance(delta);
+    if (this.session instanceof RemoteSession && this.session.takeOpening()) this.showOpening();
+    const events = this.session.advanceDisplay(delta);
     // A settlement can grant new units before the frame renders its final combat.
     if (this.session.phase !== 'combat') this.reconcileTokens();
     this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
@@ -635,9 +645,24 @@ export class BoardScene extends Phaser.Scene {
     for (const effect of this.effects) effect.destroy();
     this.effects.clear(); this.renderedCells.clear(); this.clearDrag();
   }
+  /** The "开战" transition (C6 item 4): shown while an online replay holds its initial view. */
+  private showOpening() {
+    const center = this.layout.center({ col: Math.floor(this.state.board.columns / 2), row: Math.floor(this.state.board.rows / 2) });
+    const banner = this.add.text(center.x, center.y, '开战', { fontSize: '44px', fontStyle: 'bold', color: '#ffe39b', backgroundColor: '#0b151fcc', padding: { x: 18, y: 6 }, resolution: 2 })
+      .setOrigin(0.5).setDepth(30).setName('combat-opening');
+    // An effect like any other: clearCombatEffects() removes it if the battle is cut short.
+    this.effects.add(banner);
+    this.tweens.add({ targets: banner, alpha: 0, delay: REPLAY_OPENING_MS * 0.6, duration: REPLAY_OPENING_MS * 0.6,
+      onComplete: () => { this.effects.delete(banner); banner.destroy(); } });
+  }
+  /**
+   * One drawing path for both modes. Online it draws the replay's CombatViewState; offline the engine units behind
+   * the same view (identical display fields, and the status strip needs the engine state).
+   */
   private syncCombat() {
-    const combat = this.session.combat;
-    if (!combat) return;
+    const view = this.session.combatView, runtime = this.session.combatRuntime;
+    if (!view) return;
+    const combat: DisplayCombat & { readonly tick: number; readonly maxTicks: number } = runtime ?? view;
     for (const unit of this.state.units) {
       const token = this.tokens.get(unit.id)!;
       if (token.input) { this.input.setDraggable(token, false); token.input.enabled = true; }
@@ -657,19 +682,22 @@ export class BoardScene extends Phaser.Scene {
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }
-      this.views.get(unit.id)?.drawCombat(unit, combat);
+      this.views.get(unit.id)?.drawCombat(unit, runtime);
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }
-  private showEvents(events: readonly LedgerCombatEvent[]) {
-    const combat = this.session.combat;
-    if (!combat) return;
+  /** Offline: the local ledger of the ticks just run. Online: the replay events just played. Same consumers. */
+  private showEvents(events: readonly SceneCombatEvent[]) {
+    const combat = this.session.combatView;
+    if (!combat || !events.length) return;
     this.strategyPanel?.observeEvents(events);
     this.recentCombatEvents.push(...structuredClone(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
     const casts = this.fx.casts;
-    this.fx.show(events, combat);
+    // The engine state, when there is one, adds ability colors; positions and teams are the same as the view's.
+    this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
+    this.feedback?.push(events, performance.now());
   }
   private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc, duration: number) {
     this.effects.add(effect);
@@ -701,7 +729,8 @@ export class BoardScene extends Phaser.Scene {
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,
         xp: this.xpLabel.text, population: this.count.text, odds: this.oddsLabel.text, result: this.resultLabel.text,
         settlement: this.incomeLabel.text, selection: this.selectionLabel.text, startHint: this.startHint.text },
-      recentCombatEvents: this.recentCombatEvents, combatEvents: this.session.combatEvents,
+      recentCombatEvents: this.recentCombatEvents, combatEvents: this.session.combatEvents, combatView: this.session.combatView,
+      replay: this.session instanceof RemoteSession ? this.session.playbackDebug() : null,
       gesture: this.inputRouter.current, gestureEpoch: this.inputRouter.gestureEpoch,
       renderedCastCount: this.renderedCastCount, renderedUpgradeCount: this.renderedUpgradeCount,
       effects: this.effects.size, tweens: this.tweens.getTweens().length, selectedId: this.selectedId, draggingId: this.draggingId,

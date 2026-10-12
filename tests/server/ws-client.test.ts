@@ -1,21 +1,21 @@
 /**
  * Browser WebSocket client (work order C4) driven under Node against the real game server on a
  * ManualClock: pending commands, receipts and the state push that confirms them, pipelining,
- * resume after a dropped socket or a page reload, superseded sessions, queue drops and combat parts.
+ * resume after a dropped socket or a page reload, superseded sessions, queue drops and replays played once.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { COMBAT_SPLIT, type ServerMessage } from '../../src/server/net/messages';
+import type { ServerMessage } from '../../src/server/net/messages';
 import type { MatchState } from '../../src/simulation/match-types';
-import type { CombatFrame, ConfirmedCommand, ConnectionStatus, LobbyView, PlayerView, RefusedCommand } from '../../src/rendering/online/protocol';
+import type { CombatReplay } from '../../src/server-entry';
+import type { ConfirmedCommand, ConnectionStatus, LobbyView, PlayerView, RefusedCommand } from '../../src/rendering/online/protocol';
 import { TOKEN_STORAGE_KEY, WsGameClient } from '../../src/rendering/online/ws-client';
-import { DamageResolver, emptyCombat } from './helpers';
-import { createMatch } from '../../src/simulation/match';
+import { DamageResolver } from './helpers';
 import { startServer, type NetHarness } from './net/helpers';
 import { toSeatPrivateView } from '../../src/server/room/projection';
 
 type Seen =
   | { kind: 'lobby'; view: LobbyView } | { kind: 'view'; view: PlayerView } | { kind: 'state'; state: MatchState; confirmed: readonly ConfirmedCommand[] }
-  | { kind: 'combat'; frames: readonly CombatFrame[] } | { kind: 'refused'; refusal: RefusedCommand } | { kind: 'connection'; status: ConnectionStatus };
+  | { kind: 'replay'; replay: CombatReplay } | { kind: 'refused'; refusal: RefusedCommand } | { kind: 'connection'; status: ConnectionStatus };
 
 class MemoryStorage { readonly map = new Map<string, string>(); getItem(key: string) { return this.map.get(key) ?? null; } setItem(key: string, value: string) { this.map.set(key, value); } removeItem(key: string) { this.map.delete(key); } }
 
@@ -46,7 +46,7 @@ function probe(url: string, storage = new MemoryStorage()): Probe {
   });
   client.listen({
     lobby: view => seen.push({ kind: 'lobby', view }), view: view => seen.push({ kind: 'view', view }),
-    state: (state, confirmed) => seen.push({ kind: 'state', state, confirmed: confirmed ?? [] }), combat: frames => seen.push({ kind: 'combat', frames }),
+    state: (state, confirmed) => seen.push({ kind: 'state', state, confirmed: confirmed ?? [] }), replay: replay => seen.push({ kind: 'replay', replay }),
     refused: refusal => seen.push({ kind: 'refused', refusal }), connection: status => seen.push({ kind: 'connection', status }),
   });
   const result: Probe = {
@@ -210,24 +210,21 @@ describe('WsGameClient: reconnect and resume', () => {
   });
 });
 
-describe('WsGameClient: combat parts', () => {
-  it('joins a battle sent in parts back into one frame list, played once even after a resume snapshot', async () => {
-    // B3 frames are CombatState views; size the battle so it exceeds COMBAT_SPLIT.maxBytes whatever an empty frame weighs.
-    const frameBytes = JSON.stringify({ state: emptyCombat(createMatch(1)), events: [] }).length;
-    const frames = Math.ceil(COMBAT_SPLIT.maxBytes / frameBytes) + COMBAT_SPLIT.framesPerPart;
-    harness = await startServer({}, new DamageResolver(() => 1, frames));
+describe('WsGameClient: battle replay', () => {
+  it('hands each battle over once as a replay, even after a resume snapshot repeats it', async () => {
+    harness = await startServer({}, new DamageResolver(() => 1));
     const [a] = await seatTwo(harness);
-    for (let fired = 0; fired < 200 && a.count('combat') === 0; fired++) { harness.clock.runNext(); await new Promise(resolve => setTimeout(resolve, 5)); }
-    await until(() => a.count('combat') === 1, 'combat');
-    const parts = a.wire.filter((message): message is Extract<ServerMessage, { type: 'combat' }> => message.type === 'combat');
-    expect(parts.length).toBe(Math.ceil(frames / COMBAT_SPLIT.framesPerPart));
-    expect(parts.map(part => [part.part, part.total])).toEqual(parts.map((_, index) => [index + 1, parts.length]));
-    expect(a.last('combat')!.frames).toHaveLength(frames);
+    for (let fired = 0; fired < 200 && a.count('replay') === 0; fired++) { harness.clock.runNext(); await new Promise(resolve => setTimeout(resolve, 5)); }
+    await until(() => a.count('replay') === 1, 'replay');
+    const sent = a.wire.filter((message): message is Extract<ServerMessage, { type: 'replay' }> => message.type === 'replay');
+    expect(sent).toHaveLength(1);
+    expect(a.last('replay')!.replay).toEqual(sent[0]!.replay);
+    expect(a.wire.some(message => (message as { type: string }).type === 'combat')).toBe(false);
     // Same battle again in a resume snapshot: not replayed.
     a.sockets[0]!.close();
     await until(() => a.client.connection?.kind === 'online' && a.sockets.length === 2, 'resumed');
-    await until(() => a.wire.filter(message => message.type === 'combat').length === parts.length * 2, 'snapshot combat');
+    await until(() => a.wire.filter(message => message.type === 'replay').length === 2, 'snapshot replay');
     await new Promise(resolve => setTimeout(resolve, 20));
-    expect(a.count('combat')).toBe(1);
+    expect(a.count('replay')).toBe(1);
   });
 });

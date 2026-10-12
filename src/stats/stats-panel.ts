@@ -4,12 +4,20 @@ import { readCombatStats } from '../simulation/combat-s13';
 import type { BattleStats, UnitTotals } from './aggregate';
 import { displayUnitName } from '../rendering/display-names';
 import { originLabel } from '../rendering/combat-feedback';
-import { eventSource, eventUnitId, m8EventText, readUnitStatusRows, statusRowText } from '../presentation/combat-status';
-export interface StatsView { readonly stats: BattleStats; readonly combat: CombatState; readonly events: readonly LedgerCombatEvent[]; readonly selectedUnitId: string | null }
+import { eventSource, eventUnitId, m8EventText, readUnitStatusRows, STATUS_KIND_NAMES, statusRowText } from '../presentation/combat-status';
+import { tallyViewEvents, type CombatViewState, type DisplayCombatEvent, type ViewTotals } from '../presentation/combat-display';
+/** Offline and saved replays: the local engine state and its ledger, aggregated by the stats module. */
+export interface LedgerStatsView { readonly stats: BattleStats; readonly combat: CombatState; readonly events: readonly LedgerCombatEvent[]; readonly selectedUnitId: string | null }
+/**
+ * Online (C6): the replay's CombatViewState and its §14.2 events. Totals come from the events' own numbers;
+ * what the whitelist cannot carry (healing by source, effect sources, status rows) is hidden, not guessed.
+ */
+export interface ReplayStatsView { readonly stats: null; readonly runId: string; readonly combat: CombatViewState; readonly events: readonly DisplayCombatEvent[]; readonly selectedUnitId: string | null }
+export type StatsView = LedgerStatsView | ReplayStatsView;
 export interface StatsPanel { render(view: StatsView): void; dispose(): void }
 type EventFilter = 'all' | 'damage' | 'heal' | 'shield' | 'status' | 'mana' | 'target' | 'skill';
 const SOURCE_NAMES: Record<CombatOrigin['sourceKind'], string> = { attack: '普攻', ability: '技能', item: '装备', trait: '羁绊', augment: '强化', anomaly: '异常', enemyGrowth: '敌方成长' };
-function unitName(combat: CombatState, id: string | null): string {
+function unitName(combat: { readonly units: readonly { readonly id: string; readonly definitionId: string; readonly starLevel: number }[] }, id: string | null): string {
   if (!id) return '无';
   const unit = combat.units.find(value => value.id === id);
   return unit ? `${displayUnitName(unit.definitionId)} ${unit.starLevel}星` : '历史单位';
@@ -48,6 +56,49 @@ function eventText(event: LedgerCombatEvent, combat: CombatState): string | null
     default: return null;
   }
 }
+const DAMAGE_NAMES = { physical: '物理', magic: '魔法', true: '真实' } as const;
+/** Sentences for §14.2 wire events: only the fields the event carries (no source kinds, no shares). */
+function viewEventText(event: DisplayCombatEvent, combat: CombatViewState): string | null {
+  if (event.type === 'unitUpdated') return null; // values, not a fact to list
+  const name = (id: string | null) => unitName(combat, id);
+  const prefix = `第 ${event.tick} tick：`;
+  switch (event.type) {
+    case 'packetDamage': return `${prefix}${name(event.sourceId)} → ${name(event.targetId)}：${DAMAGE_NAMES[event.damageType]}实际生命伤害 ${event.hpDamage}，护盾吸收 ${event.absorbed}${event.critical ? ' · 暴击' : ''}${event.killingPacket ? ' · 致命' : ''}`;
+    case 'heal': return `${prefix}${name(event.targetId)} 恢复生命 ${event.actual}`;
+    case 'shieldLayerChanged': return `${prefix}${name(event.targetId)} 护盾${event.reason === 'granted' ? '获得' : event.reason === 'absorbed' ? '吸收' : '变化'}，剩余 ${event.remaining}`;
+    case 'statusChanged': return `${prefix}${name(event.targetId)} ${STATUS_KIND_NAMES[event.kind]}${event.reason === 'applied' ? '生效' : event.reason === 'refreshed' ? '刷新' : '结束'}`;
+    case 'manaChanged': return `${prefix}${name(event.targetId)} 法力 ${event.before} → ${event.after}`;
+    case 'cast': return `${prefix}${name(event.sourceId)} 施放技能${event.targetIds.length ? `，目标 ${event.targetIds.map(name).join('、')}` : ''}`;
+    case 'statChanged': return `${prefix}${name(event.unitId)} ${event.stat} ${event.before} → ${event.after}`;
+    case 'maxHpChanged': return `${prefix}${name(event.unitId)} 最大生命 ${event.beforeMax} → ${event.afterMax}`;
+    case 'targetChanged': return `${prefix}${name(event.unitId)} 目标由 ${name(event.before)} 变为 ${name(event.after)}`;
+    case 'growth': return `${prefix}${name(event.unitId)} 永久攻击力增加 ${event.amountBps / 100}%（累计 ${event.totalBps / 100}%）`;
+    case 'kill': return `${prefix}${name(event.sourceId)} 击败 ${name(event.unitId)}`;
+    case 'death': return `${prefix}${name(event.unitId)} 阵亡`;
+    case 'combatFinished': return `${prefix}战斗结束：${{ playerWin: '我方获胜', enemyWin: '敌方获胜', draw: '平局' }[event.result]}`;
+    default: return null;
+  }
+}
+function viewIncludesUnit(event: DisplayCombatEvent, id: string): boolean {
+  switch (event.type) {
+    case 'packetDamage': return event.sourceId === id || event.targetId === id;
+    case 'attack': return event.attackerId === id || event.targetId === id;
+    case 'cast': return event.sourceId === id || event.targetIds.includes(id);
+    case 'targetChanged': return event.unitId === id || event.before === id || event.after === id;
+    case 'kill': return event.unitId === id || event.sourceId === id;
+    case 'heal': case 'manaChanged': case 'shieldLayerChanged': case 'statusChanged': return event.targetId === id;
+    case 'combatFinished': return false;
+    case 'effectTriggered': return event.ownerId === id || event.targetId === id;
+    default: return event.unitId === id;
+  }
+}
+function viewMatches(event: DisplayCombatEvent, filter: EventFilter): boolean {
+  return filter === 'all' && event.type !== 'manaChanged' || filter === 'damage' && event.type === 'packetDamage' || filter === 'heal' && event.type === 'heal'
+    || filter === 'shield' && event.type === 'shieldLayerChanged' || filter === 'status' && event.type === 'statusChanged'
+    || filter === 'mana' && event.type === 'manaChanged' || filter === 'target' && event.type === 'targetChanged'
+    || filter === 'skill' && ['cast', 'statChanged', 'maxHpChanged', 'growth'].includes(event.type);
+}
+const zeroView = (unitId: string): ViewTotals => ({ unitId, hpDamage: 0, physicalHpDamage: 0, magicHpDamage: 0, trueHpDamage: 0, shieldAbsorbed: 0, healingReceived: 0 });
 const zero = (unitId: string): UnitTotals => ({ unitId, hpDamage: 0, physicalHpDamage: 0, magicHpDamage: 0, shieldAbsorbed: 0, effectiveHealing: 0, overhealing: 0 });
 /** Read-only DOM component; filtering never modifies authoritative event or stat arrays. */
 export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null) => void): StatsPanel {
@@ -64,7 +115,8 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
   const paged = matchMedia('(overflow-block: paged)');
   const pagination = () => { header.style.breakInside = paged.matches ? 'avoid' : 'auto'; };
   paged.addEventListener('change', pagination); pagination();
-  const head = header.insertRow(); for (const label of ['单位', '实际伤害', '护盾吸收', '有效治疗']) { const th = document.createElement('th'); th.scope = 'col'; th.textContent = label; th.style.overflowWrap = 'anywhere'; head.append(th); }
+  const head = header.insertRow(); const headings: HTMLTableCellElement[] = [];
+  for (const label of ['单位', '实际伤害', '护盾吸收', '有效治疗']) { const th = document.createElement('th'); th.scope = 'col'; th.textContent = label; th.style.overflowWrap = 'anywhere'; head.append(th); headings.push(th); }
   const body = table.createTBody();
   const detail = document.createElement('p'); detail.dataset.debug = 'm6-stats-details';
   const effects = document.createElement('ul'); effects.dataset.debug = 'm8-stats-statuses'; effects.style.overflowWrap = 'anywhere'; effects.style.margin = '0'; effects.style.paddingLeft = '18px';
@@ -78,25 +130,44 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
     if (!view) return;
     const selected = selection.value; const visible: string[] = []; let count = 0;
     const shown = new Set(['packetDamage', 'heal', 'targetChanged', 'cast', 'shieldLayerChanged', 'statusChanged', 'activityChanged', 'statChanged', 'maxHpChanged', 'manaChanged', 'growth', 'kill', 'death', 'combatFinished', 'effectTriggered']);
-    for (let i = view.events.length - 1; i >= 0; i--) {
+    if (view.stats === null) {
+      const online = view;
+      for (let i = online.events.length - 1; i >= 0; i--) {
+        const event = online.events[i];
+        if (shown.has(event.type) && (!selected || viewIncludesUnit(event, selected)) && viewMatches(event, filter.value as EventFilter)) {
+          count++; if (visible.length < 80) { const text = viewEventText(event, online.combat); if (text) visible.push(text); }
+        }
+      }
+    } else for (let i = view.events.length - 1; i >= 0; i--) {
       const event = view.events[i];
       if (shown.has(event.type) && (!selected || includesUnit(event, selected)) && matches(event, filter.value as EventFilter)) {
         count++; if (visible.length < 80) { const text = eventText(event, view.combat); if (text) visible.push(text); }
       }
     }
-    visible.reverse(); range.textContent = count > visible.length ? `显示最近 ${visible.length} 条，共 ${count} 条；完整事件保留在战斗档案中。` : `共 ${count} 条事件`;
+    visible.reverse(); range.textContent = count > visible.length ? `显示最近 ${visible.length} 条，共 ${count} 条；${view.stats === null ? '完整事件账本保留在服务器。' : '完整事件保留在战斗档案中。'}` : `共 ${count} 条事件`;
     list.replaceChildren(...visible.map(text => { const item = document.createElement('li'); item.textContent = text; return item; }));
+  }
+  /** Online detail: the view's current values and the event tally; sources, healing shares and statuses are not sent. */
+  function renderViewDetail(online: ReplayStatsView): void {
+    const unit = online.combat.units.find(value => value.id === selection.value);
+    effects.replaceChildren();
+    if (!unit) { detail.textContent = '选择单位查看生命、法力与伤害明细。'; debugText.textContent = `对局：${online.runId}\n战斗：${online.combat.combatId ?? ''}\n事件数：${online.events.length}`; return; }
+    const totals = tallyViewEvents(online.events).find(value => value.unitId === unit.id) ?? zeroView(unit.id);
+    detail.textContent = `${unitName(online.combat, unit.id)} · ${unit.alive ? '存活' : '阵亡'}；生命 ${unit.hp}/${unit.maxHp}；法力 ${unit.mana}/${unit.maxMana}；攻击力 ${unit.attackDamage}；法强 ${unit.abilityPower}；护甲 ${unit.armor}；魔抗 ${unit.magicResist}；物理实际伤害 ${totals.physicalHpDamage}；魔法实际伤害 ${totals.magicHpDamage}；真实实际伤害 ${totals.trueHpDamage}；受击护盾吸收 ${totals.shieldAbsorbed}；受到治疗 ${totals.healingReceived}；目标：${unitName(online.combat, unit.targetId)}`;
+    debugText.textContent = `对局：${online.runId}\n战斗：${online.combat.combatId ?? ''}\n单位：${unit.id}\n内容：${unit.definitionId}`;
   }
   function renderDetail(): void {
     if (!view) return;
+    if (view.stats === null) { renderViewDetail(view); return; }
     const unit = view.combat.units.find(value => value.id === selection.value);
     if (!unit) { effects.replaceChildren(); detail.textContent = '选择单位查看生命、法力、伤害来源与当前效果。'; debugText.textContent = `对局：${view.stats.runId}\n战斗：${view.stats.combatId}\n下个事件序号：${view.stats.nextEventSeq}`; return; }
     const totals = view.stats.units.find(value => value.unitId === unit.id) ?? zero(unit.id);
     const current = readCombatStats(unit, view.combat);
-    const names = [...new Set((unit.sources ?? []).map(({ source }) => sourceName(view!.combat, { ownerId: source.ownerId, sourceKind: source.sourceKind, definitionId: source.sourceDefinitionId, instanceId: source.sourceInstanceId, effectIndex: source.effectIndex })))];
+    const combatState = view.combat;
+    const names = [...new Set((unit.sources ?? []).map(({ source }) => sourceName(combatState, { ownerId: source.ownerId, sourceKind: source.sourceKind, definitionId: source.sourceDefinitionId, instanceId: source.sourceInstanceId, effectIndex: source.effectIndex })))];
     detail.textContent = `${unitName(view.combat, unit.id)} · ${unit.alive ? '存活' : '阵亡'}；生命 ${unit.hp}/${unit.maxHp}；法力 ${unit.mana}/${unit.maxMana}；攻击力 ${current.attackDamage}；法强 ${current.abilityPower}；护甲 ${current.armor}；魔抗 ${current.magicResist}；物理实际伤害 ${totals.physicalHpDamage}；魔法实际伤害 ${totals.magicHpDamage}；真实实际伤害 ${totals.trueHpDamage ?? 0}；受击护盾吸收 ${totals.shieldAbsorbed}；有效治疗 ${totals.effectiveHealing}；过量治疗 ${totals.overhealing}；来源：${names.join('、') || '基础属性'}；目标：${unitName(view.combat, unit.targetId)}`;
-    const rows = readUnitStatusRows(view.combat, unit.id);
-    effects.replaceChildren(...(rows.length ? rows.map(row => { const item = document.createElement('li'); item.dataset.kind = row.kind; item.textContent = statusRowText(row, view!.combat.tick, origin => sourceName(view!.combat, origin)); return item; })
+    const combat = view.combat, rows = readUnitStatusRows(combat, unit.id);
+    effects.replaceChildren(...(rows.length ? rows.map(row => { const item = document.createElement('li'); item.dataset.kind = row.kind; item.textContent = statusRowText(row, combat.tick, origin => sourceName(combat, origin)); return item; })
       : [Object.assign(document.createElement('li'), { textContent: '当前效果：无' })]));
     debugText.textContent = `对局：${view.stats.runId}\n战斗：${view.stats.combatId}\n单位：${unit.id}\n内容：${unit.definitionId}\n下个事件序号：${view.stats.nextEventSeq}`;
   }
@@ -107,8 +178,12 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
   return {
     render(next) {
       if (disposed) return; view = next;
-      const ids = [...new Set([...next.combat.units.map(unit => unit.id), ...next.stats.units.map(unit => unit.unitId)])];
-      const key = `${next.stats.runId}/${next.stats.combatId}/${ids.join(',')}`;
+      // Online the totals are tallied from the replay's own events and healing by source is not sent: that column hides.
+      const totalsOf: readonly { readonly unitId: string; readonly hpDamage: number; readonly shieldAbsorbed: number; readonly effectiveHealing?: number }[] = next.stats ? next.stats.units : tallyViewEvents(next.events);
+      const online = next.stats === null;
+      headings[3]!.hidden = online;
+      const ids = [...new Set([...next.combat.units.map(unit => unit.id), ...totalsOf.map(unit => unit.unitId)])];
+      const key = `${next.stats ? next.stats.runId : next.runId}/${next.stats ? next.stats.combatId : next.combat.combatId ?? ''}/${online}/${ids.join(',')}`;
       if (key !== rosterKey) {
         rosterKey = key; rows.clear(); body.replaceChildren(); selection.replaceChildren();
         const all = document.createElement('option'); all.value = ''; all.textContent = '全部单位'; selection.append(all);
@@ -119,7 +194,11 @@ export function createStatsPanel(host: HTMLElement, onSelect: (id: string | null
         }
       }
       selection.value = next.selectedUnitId ?? '';
-      for (const [id, row] of rows) { const totals = next.stats.units.find(unit => unit.unitId === id) ?? zero(id); [totals.hpDamage, totals.shieldAbsorbed, totals.effectiveHealing].forEach((value, i) => { row.cells[i].textContent = String(value); }); row.button.setAttribute('aria-pressed', String(selection.value === id)); }
+      for (const [id, row] of rows) {
+        const totals = totalsOf.find(unit => unit.unitId === id) ?? zero(id);
+        [totals.hpDamage, totals.shieldAbsorbed, totals.effectiveHealing ?? 0].forEach((value, i) => { row.cells[i].textContent = String(value); });
+        row.cells[2].hidden = online; row.button.setAttribute('aria-pressed', String(selection.value === id));
+      }
       renderDetail(); renderEvents();
     },
     dispose() { disposed = true; view = null; rows.clear(); paged.removeEventListener('change', pagination); selection.removeEventListener('change', selectChanged); filter.removeEventListener('change', filterChanged); body.removeEventListener('click', rowClicked); root.remove(); },

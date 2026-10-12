@@ -554,6 +554,20 @@ B7 已把 `Room.advanceRound` 换成 `advanceMultiplayerRound` 并删除 `overti
 
 B7 显示接线提示：`toDisplayMatch` 当前把 m8.preparation 固定填为空敌军；应消费上述已公开 preparation 字段才能显示完整预览。此处只补规则投影，界面适配仍由 Claude 修改；xpRequested 与掉落摘要不在本次用户指定增补范围。
 
+## C6 客户端改用紧凑回放后的需求（2026-10-12，Claude 流水线 C）
+
+C6 已让离线与联机共用一条战斗渲染路径：棋盘、单位条、特效、飘字都读 `CombatViewState` 与 §14.2 白名单事件；服务器只发 `replay`，旧 `combat` 帧、分包与 `combatTransport`/`CAT_COMBAT_TRANSPORT` 已删除；PvE 结果只保留开战态、末态与完整账本（不再逐 tick 保存 MatchState）。SR-B7-02 的野怪预览与利息基数已在 `seat-view-adapter.ts` 接入。
+
+### SR-C6-01 导出单条事件的显示投影（P2，去重）
+
+- 现状：`combat-replay-view.ts` 的 `animationEvent` 未导出。离线模式需要把本地账本转成同一白名单事件，客户端在 `src/presentation/combat-display.ts` 的 `toDisplayEvent` 里逐字段复写了一份；`tests/server/replay-client.test.ts` 用真实 PvP/PvE 战斗断言两者完全相等，防止漂移。
+- 需要：从 `src/server-entry`（或 `combat-replay-view.ts`）导出 `toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatViewEvent[]`（不含 unitUpdated，语义与回放中的动画事件逐条相同）。导出后客户端删除复写，只保留离线专用的 `effectTriggered` 标签。
+- 验收：对任一可信战斗，`toCombatViewEvents(battle.events)` 等于 `toCombatReplay(battle).ticks` 展平后去掉 unitUpdated 的事件序列。
+
+### SR-C6-02 联机状态图标与护盾层（P3，可选）
+
+- 现状：§14.2 不承诺状态图标/持续时间；联机棋子不显示状态条，策略面板与统计面板隐藏护盾层、状态行、效果来源与按来源治疗（离线仍完整显示）。
+- 需要（可选）：若要联机也显示，给 `CombatViewUnit` 增加只读白名单字段，例如 `statuses: {kind, harmful, expiresAtTick}[]` 与 `shieldLayers: {remaining, expiresAtTick}[]`；客户端只显示，不回填 runtime。
 ## src/server 接入 B6 后的合同缺口（B6，2026-10-12，Claude 流水线 B）
 
 ### SR-B6-01 合同 §13 补写机器人接管字段与拒绝原因（P1，只改文档）

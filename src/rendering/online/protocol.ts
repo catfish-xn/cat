@@ -6,7 +6,7 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReceiptFailure } from '../../server/net/messages';
-import type { ClientCommand, CombatFrame, LobbyView, PlayerView } from '../../server/protocol';
+import type { ClientCommand, LobbyView, PlayerView } from '../../server/protocol';
 import type { CombatReplay } from '../../server-entry';
 
 export * from '../../server/protocol';
@@ -38,10 +38,8 @@ export interface ClientListeners {
    * fields are placeholders (see seat-view-adapter.ts); `confirmed` lists my commands this push confirms.
    */
   state(state: MatchState, confirmed?: readonly ConfirmedCommand[]): void;
-  /** One finished battle's frames, to be played back at tick pace. */
-  combat(frames: readonly CombatFrame[]): void;
-  /** The same battle as a compact replay (B7, contract §14.2); optional until the client plays replays (C6). */
-  replay?(replay: CombatReplay): void;
+  /** My finished battle of this round as a compact replay (contract §14.2), played back at tick pace (C6). */
+  replay(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;
   connection?(status: ConnectionStatus): void;
 }

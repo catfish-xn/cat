@@ -3,7 +3,7 @@
  * WriteQueue: every inbound message is parsed, authenticated, deduped, version-checked and only
  * then handed to Room.handle, strictly in arrival order. Each connection receives its own
  * PlayerView, its own private seat view (the rules' `toPrivateSeatView`, never the MatchState) and
- * its own battle (frames and/or compact replay); nobody receives another seat's shop. This is the
+ * its own battle (one compact replay per round); nobody receives another seat's shop. This is the
  * only server file that imports ws.
  *
  * Processing order per message (V2 §5.1): parse & field validation → identity and seat →
@@ -14,12 +14,12 @@ import type { BattleResolver } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
-import { toCombatFrames, toCombatReplayFor, toPlayerView, toSeatPrivateView } from '../room/projection';
+import { toCombatReplayFor, toPlayerView, toSeatPrivateView } from '../room/projection';
 import type { Room, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
-  COMBAT_SPLIT, DEFAULT_COMBAT_TRANSPORT, commandContent, parseClientMessage, type ClientMessage, type CombatTransport, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
+  commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
   type ReceiptResult, type ServerMessage,
 } from './messages';
 import { SessionRegistry, digestOf, type SeatSession } from './session';
@@ -51,7 +51,6 @@ export interface GameServerOptions {
   /** Bot steps spacing and takeover delay (B6); steps always run as tasks of the server's write queue. */
   readonly bots?: { readonly stepMs?: number; readonly takeoverMs?: number };
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
-  readonly combatTransport?: CombatTransport;
   readonly log?: (line: string) => void;
 }
 
@@ -90,7 +89,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const limits: ConnectionLimits = { ...LIMIT_DEFAULTS, ...options.limits };
   const log = options.log ?? (() => {});
   const clock = options.clock;
-  const combatTransport = options.combatTransport ?? DEFAULT_COMBAT_TRANSPORT;
   const queue = new WriteQueue(error => log(`task failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`));
   const sessions = new SessionRegistry(limits.dedupeWindow);
   const connections = new Map<number, Connection>();
@@ -111,17 +109,6 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   function send(conn: Connection, message: ServerMessage): void {
     if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
     conn.socket.send(JSON.stringify(message));
-  }
-  /** A battle above COMBAT_SPLIT.maxBytes leaves as consecutive parts of framesPerPart frames (part 1..total). */
-  function sendCombat(conn: Connection, message: Extract<ServerMessage, { type: 'combat' }>): void {
-    if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
-    const whole = JSON.stringify(message);
-    if (Buffer.byteLength(whole) <= COMBAT_SPLIT.maxBytes) { conn.socket.send(whole); return; }
-    const total = Math.ceil(message.frames.length / COMBAT_SPLIT.framesPerPart);
-    for (let part = 1; part <= total; part++) {
-      const frames = message.frames.slice((part - 1) * COMBAT_SPLIT.framesPerPart, part * COMBAT_SPLIT.framesPerPart);
-      send(conn, { ...message, frames, part, total });
-    }
   }
   function sendError(conn: Connection, code: ErrorCode, message: string, commandId: number | null = null): void {
     send(conn, { type: 'error', code, message, commandId });
@@ -156,17 +143,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const key = `${state.round}:${battle.battleId}`;
       if (conn.sentCombatKey !== key) {
         conn.sentCombatKey = key;
-        if (combatTransport !== 'replay') {
-          const frames = toCombatFrames(state, seat.seatId);
-          if (frames.length > 0) sendCombat(conn, { type: 'combat', roomId: state.roomId, round: state.round, battleId: battle.battleId, frames });
-        }
-        if (combatTransport !== 'frames') {
-          // A replay failure is a server fault (§14.2): logged, never turned into a result; the frames above still play.
-          let replay: ReturnType<typeof toCombatReplayFor> = null;
-          try { replay = toCombatReplayFor(state, seat.seatId); }
-          catch (error) { log(`replay of ${battle.battleId} failed: ${error instanceof Error ? error.message : String(error)}`); }
-          if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay });
-        }
+        // A replay failure is a server fault (§14.2): logged, never turned into a result; settlement still follows.
+        let replay: ReturnType<typeof toCombatReplayFor> = null;
+        try { replay = toCombatReplayFor(state, seat.seatId); }
+        catch (error) { log(`replay of ${battle.battleId} failed: ${error instanceof Error ? error.message : String(error)}`); }
+        if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay });
       }
     }
   }
@@ -379,7 +360,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   /* ---------------- listen ---------------- */
 
   return new Promise<GameServer>((resolve, reject) => {
-    // permessage-deflate (C4): MatchState frames repeat almost entirely, so they compress by an order of magnitude.
+    // permessage-deflate (C4): seat views and replay keyframes repeat almost entirely, so they compress well.
     // Context takeover stays on (the default) so consecutive states compress against each other.
     const wss = new WebSocketServer({ port: options.port, host: options.host, maxPayload: limits.maxMessageBytes, perMessageDeflate: { threshold: 1024 } });
     wss.once('error', reject);
