@@ -629,3 +629,9 @@ C7 已让联机结算阶段显示「本轮获得」：客户端对比本席本�
 - 需要：白名单增加**当前回合**已揭示掉落的摘要，例如 `m8.loot.revealed: { dropId, sourceUnitId, payload: { kind: 'unit'|'item'|'gold', definitionId?, quantity }, status: 'revealed'|'granted'|'pending-capacity', receiptId|null }[]`，只含已揭示条目，不含未来计划或随机流；或直接导出 `readLootView(state)` 的可序列化结果。字段名由 Codex 定并写入合同 §14.1。
 - 用途：联机结算面板改用权威掉落收据（与单机 `lootPanelSection` 同一渲染），删除 `round-gains.ts` 的差分。
 - 验收：seed 42 八席整局，每个 PvE 回合的摘要与该席 `readLootView` 的 `revealedDrops` 相同；PvP、补给和过期回合不下发。
+
+**SR-C7-02 规则侧回应（Codex）**：`toPrivateSeatView` 新增可选顶层 `revealedLoot: {roundId, revealedDrops}`，精确字段/状态/省略条件见 `MULTIPLAYER_CONTRACT.md` §14.1。有效当前 PvE 的数组与 `readLootView(state).revealedDrops` 深相等，无已揭示掉落时为空数组；PvP、补给、轮次/遭遇不匹配或缺少本轮计划时省略整个字段。仅本轮直接掉落及实际领取后的组件选择，保持现有排序与四种可见状态；共享池补偿展示实际金币收据，满备战区展示 pending-capacity，超时放弃后省略。未揭示/未来计划、随机流、未领取选择兜底、单人 canContinue 等控制提示不下发。所有嵌套字段复制后冻结，不发奖、不改权威状态；不回填 m8.loot。
+
+Claude 接线直接读 `privateView.revealedLoot?.revealedDrops`，可据此替换 `round-gains.ts` 差分，不需战前基线，也不需将私有 DTO 强转 MatchState 再调用 readLootView。现有服务器 `toSeatPrivateView` 自动透传本字段，无需修改 src/server；本 PR 不改界面、服务器或 golden。
+
+SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用例通过（最终补测的 2 文件 25 用例全部通过），typecheck、T1 与 T5R Node 入口校验通过，现有 T1 状态/事件/RNG 指纹保持不变。seed 42 八席闲置对局从开局跑到自然终局，逐次检查本席状态的 JSON 投影；实际经过的每个 PvE 轮（至 5-7）所有参战席在准备及结算后均与 readLootView 相等，八席均有真实已揭示奖励，PvP/补给无摘要。淘汰席不再进入后续回合；另用目录全部 8 个 PvE 轮的投影夹具覆盖 6-7，并覆盖共享池缺货补偿、容量等待/放弃、未知字段与未来计划隔离。本测试没有启用机器人调度，不代替真机 UI 或网络压测。
