@@ -284,3 +284,28 @@
 - [ ] `npx vitest run tests/server tests/tp-* tests/t3-*` 全绿；purity 零命中。
 - [ ] 浏览器 `?mode=online` 整局：商店能出现空格、刷新缺货免费失败有提示、终局排名正常；离线冒烟通过。
 - [ ] PR 描述把 §12.2 初始化顺序、§12.4 淘汰时点逐条对应到代码位置。
+
+---
+
+## 派工单 B6：机器人调度与断线接管（按合同 §13.3）
+
+分支：`claude/b6-bot-driver`，基于 `origin/multiplayer`。**在 B5 合入之后开工**（机器人的买/卖/刷新/选择必须走 B5 接好的共享池入口）。
+
+### 依据
+`docs/MULTIPLAYER_CONTRACT.md` §13（T7 策略与 B6 编排，重点 13.3 的六条顺序和意图→入口对照表）。T7 导出（经 `src/server-entry`）：`decideBotAction`、`BotContext`、`BotDecision`、策略版本与 64 步上限常量。
+
+### 要做
+1. `src/server/room/bot-driver.ts`：每个机器人席位持有显式 `botRng`（开局由房间种子派生，独立于其他随机流）和 `stepsTaken`。在准备阶段与选择阶段，于单写队列中循环：读当前 state → 构造 context（含 `lastFailure`）→ `decideBotAction` 一次 → 保存返回 rng、`stepsTaken++` → 按 §13.3 表执行（买/卖/刷新/锁店/选择走共享池入口，其余走原公开命令）→ 成功一次性提交 pool+state，失败回传 `lastFailure` 后 basic 会返回 done。每席每轮上限 64 步；`done` 后本轮不再调用。
+2. 节奏：机器人动作不要在截止前一瞬间全部发生；用注入时钟把每席的步骤分散在准备窗口内（例如每 300 ms 一步，可配置），测试用 `ManualClock`。
+3. **断线接管**：真人 `connected=false` 超过 `takeoverMs`（默认 60 s，可配置）后，由机器人临时接管该席（复用原 MatchState、池、资产，不新建）；本人凭证重连后立即撤销机器人执行权限与排程，正在执行的那一步以控制代次拒绝。任何时刻一个席位只有一个控制者。`SeatPublic` 增加 `controller: 'human' | 'bot' | 'takeover'` 供界面显示"机器人接管中"。
+4. 队列超时自动开局、人数不足补位机器人、全 8 机器人整局都走这条驱动。
+5. 测试 `tests/server/bot-driver.test.ts`：全 8 机器人整局在 `ManualClock` 下 60 秒内跑到唯一排名且每步命令都被规则接受；1 真人（空操作）+ 7 机器人整局；每席每轮 ≤64 步；同输入同机器人行为；断线 → 接管 → 重连撤销的控制权顺序；机器人在冻结/战斗阶段不发准备操作；机器人失败后本轮 done 不重试。
+6. 界面：右栏"机"标记区分补位机器人与接管中；状态栏在本人被接管期间重连后显示"已接回席位"。
+
+### 不做
+- 不改策略内容（`src/simulation/bot/` 归 Codex）；不碰网络协议之外的 `messages.ts` 形状（只加 `controller` 字段）。
+
+### 验收
+- [ ] `npx vitest run tests/server` 全绿，整局机器人用例 < 60 s；purity 零命中。
+- [ ] 浏览器 `?mode=online` 默认：七个机器人会买卡、上场、升星，右栏头像随之变化；整局到排名。
+- [ ] 真服务器两浏览器：一方断线 60 s 后显示接管，重连后恢复控制。
