@@ -363,7 +363,9 @@ export class StrategyPanel {
       const receipt = element('details', '', 'income-receipt'); receipt.dataset.debug = 'income-receipt';
       receipt.append(element('summary', `上轮收入 +${result.income} 金币 · 生命 ${result.hpBefore} → ${result.hpAfter}`));
       const income = result.incomeBreakdown;
-      receipt.append(element('p', `基础 ${income.base} + 胜利 ${income.win} + 利息 ${income.interest}（基数 ${result.interestBasis}）+ 连胜败 ${income.streak} = ${result.income} 金币；余额 ${result.goldBefore} → ${result.goldAfter}；经验 +${result.xpAwarded}/${result.xpRequested}`));
+      // Online round records come from the private seat view, which leaves out the interest basis and XP requested (B7).
+      const basis = result.interestBasis === undefined ? '' : `（基数 ${result.interestBasis}）`, requested = result.xpRequested === undefined ? '' : `/${result.xpRequested}`;
+      receipt.append(element('p', `基础 ${income.base} + 胜利 ${income.win} + 利息 ${income.interest}${basis}+ 连胜败 ${income.streak} = ${result.income} 金币；余额 ${result.goldBefore} → ${result.goldAfter}；经验 +${result.xpAwarded}${requested}`));
       this.root.append(receipt);
     }
     this.lootSection = this.lootPanel(state); if (this.lootSection) this.root.append(this.lootSection);

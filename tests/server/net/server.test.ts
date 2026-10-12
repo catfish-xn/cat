@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
+import { toSeatPrivateView } from '../../../src/server/room/projection';
 import { CLOSE_CODES } from '../../../src/server/net/server';
 import { COMBAT_SPLIT, type ServerMessage } from '../../../src/server/net/messages';
 import type { Receipt } from '../../../src/server/net/test-client';
@@ -54,7 +55,13 @@ describe('game server: visibility', () => {
     const seedA = room.state.seats.find(seat => seat.seatId === seatA)!.seed;
     expect(seedA).not.toBe(seedB);
     for (const message of b.inbox) {
-      if (message.type === 'state') { expect(message.state.seed).toBe(seedB); continue; }
+      if (message.type === 'state') {
+        // B7: the private seat view, never the MatchState (no seed, RNG or ledgers); the latest one is exactly B's projection.
+        expect(hasKey(message.state, 'seed')).toBe(false);
+        const seat = seatOf(seatB);
+        if (message.seatRevision === seat.seatRevision) expect(message.state).toEqual(JSON.parse(JSON.stringify(toSeatPrivateView(seat.match))));
+        continue;
+      }
       // B3: combat frames are CombatState views, not MatchState; they carry no shop and belong to B's own battle.
       if (message.type === 'combat') { for (const frame of message.frames) expect(hasKey(frame.state, 'shop')).toBe(false); continue; }
       expect(hasKey(message, 'shop'), `${message.type} leaked a shop`).toBe(false);
@@ -174,7 +181,7 @@ describe('game server: disconnect and resume', () => {
     const kinds = a2.inbox.map(message => message.type);
     expect(kinds.slice(0, 4)).toEqual(['lobby', 'receipt', 'view', 'state']);
     expect(a2.view!.mySeatId).toBe(seatA);
-    expect(a2.state!.seed).toBe(room.state.seats.find(seat => seat.seatId === seatA)!.seed);
+    expect(a2.state).toEqual(JSON.parse(JSON.stringify(toSeatPrivateView(room.state.seats.find(seat => seat.seatId === seatA)!.match))));
     await b.waitForView(view => view.seats.find(seat => seat.seatId === seatA)!.connected === true);
     // Increments after the snapshot: a command works and the state revision follows.
     const snapshotRevision = a2.stateRevision;
@@ -321,8 +328,17 @@ describe('game server: whole match over the wire', () => {
     }
     expect(phase()).toBe('ended');
     const [endedA, endedB] = await Promise.all([a, b].map(client => client.waitForView(view => view.phase.kind === 'ended', 20_000)));
-    if (room.state.fault) expect(room.state.fault.kind).toBe('overtime-unavailable'); // SR-B4-01: explicit stop after the catalog's last round
-    else { expect(endedA.ranking).toHaveLength(8); expect(endedB.ranking).toHaveLength(8); expect(new Set(endedA.ranking!.map(seat => seat.rank)).size).toBe(8); }
+    // B7: overtime runs until one seat is left, so the match ends with a full ranking.
+    expect(room.state.fault).toBeNull();
+    expect(endedA.ranking).toHaveLength(8); expect(endedB.ranking).toHaveLength(8); expect(new Set(endedA.ranking!.map(seat => seat.rank)).size).toBe(8);
+    // B7: state stops after the round that eliminated a seat; view (and replay of a battle it fought) continue.
+    for (const client of [a, b]) {
+      const seat = room.state.seats.find(candidate => candidate.seatId === client.seatId)!;
+      if (seat.eliminatedRound !== null) expect(messagesOfType(client.inbox, 'state').every(message => message.round <= seat.eliminatedRound!)).toBe(true);
+      const replays = messagesOfType(client.inbox, 'replay');
+      expect(replays.length).toBeGreaterThan(0);
+      expect(new Set(replays.map(message => message.battleId)).size).toBe(replays.length);
+    }
     const combatsA = messagesOfType(a.inbox, 'combat');
     expect(combatsA.length).toBeGreaterThan(0);
     expect(combatsA.every(combat => combat.frames.length > 0 && combat.frames.every(frame => Number.isInteger(frame.state.tick)))).toBe(true);

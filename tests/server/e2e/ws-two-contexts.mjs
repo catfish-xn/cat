@@ -83,7 +83,7 @@ async function main() {
     const [startA, startB] = await Promise.all([a, b].map(page => waitRead(page, s => s.m6.mode === 'active' && s.m6.phase?.kind === 'preparation' && s.state.phase === 'preparation', 'match start')));
     const seatA = (await a.evaluate(() => document.querySelector('.online-seat.me')?.dataset.debug))?.replace('online:seat:', '');
     check(Boolean(seatA), `A sits at ${seatA}`);
-    check(startA.state.seed !== startB.state.seed, 'each page holds only its own private state (different seeds)');
+    check(JSON.stringify(startA.state.shop) !== JSON.stringify(startB.state.shop), 'each page holds only its own private state (different shops)');
 
     // Pending purchase: the click returns before any receipt; gold is not spent ahead of the server.
     const clickBuy = page => page.evaluate(() => {
@@ -122,16 +122,19 @@ async function main() {
     await b.waitForFunction(([seat, level]) => document.querySelector(`[data-debug="online:seat:${seat}"] .seat-level`)?.textContent === `Lv ${level}`, [seatA, leveled.state.level], { timeout: 10_000 });
     check(true, `B's sidebar shows A at Lv ${leveled.state.level} (was Lv ${startA.state.level} at the start)`);
     const viewB = await read(b);
-    check(JSON.stringify(viewB.state.shop) !== JSON.stringify(leveled.state.shop) && viewB.state.seed !== leveled.state.seed, "B's __CAT_DEBUG__ state.shop is B's own");
+    // B7: states arrive as private seat views, so seed/RNG are display placeholders on both pages; compare the shops.
+    check(JSON.stringify(viewB.state.shop) !== JSON.stringify(leveled.state.shop), "B's __CAT_DEBUG__ state.shop is B's own");
     await b.screenshot({ path: `${OUT}/3-b-sidebar.png` });
 
     // Reload A: it resumes its seat from sessionStorage; B keeps playing undisturbed.
     const bModeBefore = (await read(b)).m6.mode;
+    const ownUnits = snapshot => JSON.stringify(snapshot.state.preparation.units.filter(unit => unit.team === 'player').map(unit => unit.id).sort());
+    const unitsBeforeReload = ownUnits(await read(a));
     await a.reload();
     const resumed = await waitRead(a, s => s.m6.mode === 'active' && s.m6.phase !== null, 'A back in the match after reload');
     const seatAfter = await a.evaluate(() => document.querySelector('.online-seat.me')?.dataset.debug?.replace('online:seat:', ''));
     check(seatAfter === seatA, `reloaded A is back at ${seatAfter}`);
-    check(resumed.state.seed === startA.state.seed, 'reloaded A shows its own private state again');
+    check(ownUnits(resumed) === unitsBeforeReload, 'reloaded A shows its own private state again (same own units)');
     const afterB = await read(b);
     check(afterB.m6.mode === bModeBefore && afterB.m6.connection === null, 'B unaffected by the reload');
     await b.waitForFunction(seat => !document.querySelector(`[data-debug="online:seat:${seat}"] .seat-offline`), seatA, { timeout: 10_000 });

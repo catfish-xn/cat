@@ -1,5 +1,5 @@
 /**
- * Eight-seat room state machine (pipeline B, work orders B1–B5). Pure TypeScript: no network,
+ * Eight-seat room state machine (pipeline B, work orders B1–B5, B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
  * the one-shot round publication and the ranking; every rule (gold, shop, combat, damage,
  * income, growth, the shared card pool) comes from src/simulation through its public commands,
@@ -305,13 +305,12 @@ export class Room {
     }
     // The match ends only when at most one seat survives; survivors of the catalog's final round go to overtime (§11.5).
     const ends = survivors.length <= 1;
-    const overtimeRequired = !ends && seats.some(seat => readRoundInfo(seat.match).isFinal);
     const finalRanking = ends ? [
       ...survivors.map((seat, position) => ({ seatId: seat.seatId, rank: position + 1 })),
       ...eliminated,
       ...state.seats.filter(seat => !seat.alive).map(seat => ({ seatId: seat.seatId, rank: seat.rank! })),
     ].sort((a, b) => a.rank - b.rank) : null;
-    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking, overtimeRequired, pool: released } };
+    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking, pool: released } };
   }
 
   /** Publishes the staged round once: HP from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
@@ -448,11 +447,6 @@ export class Room {
     if (settlement) {
       const commit = this.commitSettlement(settlement);
       if (!commit.ok && commit.reason !== 'duplicate-settlement') return this.fail({ kind: 'invalid-results', detail: commit.reason });
-      if (commit.ok && settlement.overtimeRequired) {
-        // §11.5: the catalog ended with two or more survivors. Overtime needs the rules' `advanceMultiplayerRound`
-        // (SR-B4-01, not delivered); the room stops explicitly instead of inventing rounds or a ranking.
-        return this.fail({ kind: 'overtime-unavailable', round: settlement.round, survivors: this.aliveSeats().map(seat => seat.seatId) });
-      }
     }
     if (this.current.ranking) return this.setPhase('ended', null);
     if (this.aliveSeats().some(seat => seat.match.phase === 'choice')) return this.setPhase('choice', this.options.choiceMs);

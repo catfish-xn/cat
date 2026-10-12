@@ -9,7 +9,8 @@
  * as the rules expect. Unknown fields are refused: nothing a client adds (gold, seatId, hp)
  * can reach the room.
  */
-import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
+import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
+import type { CombatReplay, PrivateSeatView } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
 import type { ClientCommand, CombatFrame, LobbyView, PlayerView } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
@@ -20,6 +21,12 @@ export const NET_PROTOCOL_VERSION = 1;
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
 /** Outbound combat batching (work order C4 step 5): above maxBytes, frames go out framesPerPart at a time. */
 export const COMBAT_SPLIT = { maxBytes: 1024 * 1024, framesPerPart: 200 } as const;
+/**
+ * How a seat's battle is sent (work order B7): the legacy per-tick `combat` frames, the compact `replay`
+ * (contract §14.2), or both. `both` stays the default until the client plays replays (C6); then `replay`.
+ */
+export type CombatTransport = 'frames' | 'replay' | 'both';
+export const DEFAULT_COMBAT_TRANSPORT: CombatTransport = 'both';
 
 /* ---------------- client → server ---------------- */
 
@@ -78,13 +85,19 @@ export type ErrorCode = 'invalid-json' | 'invalid-message' | 'unsupported-protoc
 export type ServerMessage =
   | { readonly type: 'lobby'; readonly view: LobbyView }
   | { readonly type: 'view'; readonly roomId: string; readonly roomRevision: number; readonly view: PlayerView }
-  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: MatchState }
+  /**
+   * My seat's private state as the rules' whitelist projection (contract §14.1): not a MatchState, never
+   * restorable, no RNG, plans or ledgers. Not sent any more once my seat is eliminated (then only view/replay).
+   */
+  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: PrivateSeatView }
   /**
    * One battle's frames. A battle whose message would exceed COMBAT_SPLIT.maxBytes is sent as `total`
    * consecutive messages of COMBAT_SPLIT.framesPerPart frames, `part` 1..total; the client joins them in order.
    * Both fields are absent when the battle fits in one message.
    */
   | { readonly type: 'combat'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly frames: readonly CombatFrame[]; readonly part?: number; readonly total?: number }
+  /** One battle as a compact replay from my point of view (contract §14.2): initial view, one record per tick with keyframes, terminal view. */
+  | { readonly type: 'replay'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly replay: CombatReplay }
   | ReceiptMessage
   | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null };
 
