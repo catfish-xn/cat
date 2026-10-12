@@ -1,7 +1,7 @@
 # Set13 八人联机合同草案
 
 日期：2026-10-12  
-版本：draft 0.1  
+版本：draft 0.2（T1/T2 入口定稿）
 适用目标：八人联机、共享有限卡池、机器人补位、6-7 后 PvP 加时  
 状态：明确用户决定与实现边界，具体数值及未决玩法按对应任务定稿  
 关联：[任务划分](MULTIPLAYER_N0_BASELINE.md)与[整改方案](MULTIPLAYER_RENOVATION_V2.md)
@@ -12,9 +12,15 @@
 
 以下职责与一致性规则属于实现该目标的技术边界。具体卡池份数、奖励缺货补偿、平局及同轮名次规则标明为建议或待核定，不冒称用户已经逐项批准，也不改写旧 M8 离线合同。
 
+### 1.1 单一匹配队列与隐藏座位凭证（已确认）
+
+网页准入由用户在本仓库外控制；本仓库不实现账号或登录。进入后只有一个“匹配”入口，不提供建房、邀请码、房主或准备键。服务器同一时间只跑一局：点匹配进入唯一队列，任一队列玩家点开始或等待超时即开局，不足八席由机器人补满。队列已有八人时，第九人得到容量错误，不进入候补队列、不新开第二局；对局进行期间也不另开并行队列/对局。
+
+座位凭证由服务器生成，客户端在连接和重连时自动携带，用于防止冒充和恢复原席位；玩家不可见、不需复制或输入。凭证不进入战斗快照、公共 PlayerView 或战斗事件。首版的网络投递与保管由 T5/T6 实现，T2 不实现身份系统。
+
 ## 2 对象和权威
 
-- RoomState 拥有八席、共享库存、全房阶段、轮次、截止、配对与排名。
+- 单局状态拥有八席、共享库存、全局阶段、轮次、截止、配对与排名。B1 的 `RoomState`、`roomId`、`RoomCommandTransaction` 是内部沿用名，分别表示当前唯一对局、对局标识和单局事务，不代表可创建或选择的房间产品。
 - SeatState 拥有本席资产、商店预留、HP、经验、待选项与事件位置。
 - SharedPoolState 按英雄定义记录初始份数、可用份数及合法占用；不把英雄种类数量误当成每种英雄份数。
 - RoomCommandTransaction 是修改卡池和席位资产的唯一提交边界，客户端和机器人都不能直接改字段。
@@ -22,7 +28,7 @@
 - RoundSettlement 汇总结果后提交资源、排名与淘汰；重复提交不重复生效。
 - PlayerView 仅包含可见数据，不下发内部随机流、他人私有商店或全池精确计数。
 
-金币、HP、轮次和卡池占用各有一个权威来源。兼容旧 MatchState 时，其他表现只能派生，不能让房间和单人 Match 分别推进并互相覆盖。
+金币、HP、轮次和卡池占用各有一个权威来源。兼容旧 MatchState 时，其他表现只能派生，不能让对局调度器和单人 Match 分别推进并互相覆盖。
 
 ## 3 共享卡池账本
 
@@ -59,7 +65,7 @@
 
 建议的项目规则为：在原概率大于零且仍有可用卡的费用层之间归一化；若没有任何合法层，留下明确空格。付费刷新在确认完全无法生成有效新商店时，应有清晰失败或收费语义，TP 必须定稿后实现。上述建议尚未当作 Riot 规则事实。
 
-全房自然刷新先统一释放应刷新的旧商店，再用可复现的轮次抽签顺序生成新商店，锁定商店不释放。每轮变化顺序，避免永远让固定座位优先取得稀缺卡；手动操作按服务器收件与队列顺序处理。
+全局自然刷新先统一释放应刷新的旧商店，再用可复现的轮次抽签顺序生成新商店，锁定商店不释放。每轮变化顺序，避免永远让固定座位优先取得稀缺卡；手动操作按服务器收件与队列顺序处理。
 
 抽卡随机流属于服务器。每类操作的消费次数写入新联机合同，不能为兼容旧无限商店的固定两次抽样而掩盖缺货分支。
 
@@ -92,7 +98,7 @@ TP 应核定目标规则版本后把数值放入版本化配置，并记录来�
 
 ## 5 阶段与加时
 
-房间区分等待、准备、选择、冻结、战斗、结算和终局。旧目录中的 PvE、补给及选择节点保留，PvP 节点改为席位之间对战。
+单局区分队列等待、准备、选择、冻结、战斗、结算和终局。旧目录中的 PvE、补给及选择节点保留，PvP 节点改为席位之间对战。
 
 用户已选择 6-7 后继续 PvP 加时。加时不继续调用“6-7 自动胜利或失败”的单人终局路径。建议每轮只做 PvP，保留正常经济与共享商店，沿用最后阶段基础伤害，不额外产生新野怪、强化或奖励。
 
@@ -106,7 +112,7 @@ TP 应核定目标规则版本后把数值放入版本化配置，并记录来�
 
 客户端只提交意图；actor 取自服务器座位凭证。消息有协议版本、roomId、commandId、轮次阶段和动作相关的 generation 或 revision。响应包含明确成功或失败、原因、回执与更新后的可见版本。
 
-同一房间单写者提交事务，所有对共享卡池的更新与席位资产一起生效。其他玩家刷新导致 poolRevision 改变，不应自动使本玩家对自己已预留商店卡的购买失效；校验依据是实际资源依赖。
+同一对局单写者提交事务，所有对共享卡池的更新与席位资产一起生效。其他玩家刷新导致 poolRevision 改变，不应自动使本玩家对自己已预留商店卡的购买失效；校验依据是实际资源依赖。
 
 重复 commandId 同内容返回原回执；同编号不同内容拒绝。窗口外旧请求拒绝并要求同步，不能遗忘后再执行。
 
@@ -116,7 +122,7 @@ PlayerView 以白名单生成。具体哪些公开数据可观战另列表；全
 
 ## 7 机器人合同
 
-机器人通过同一房间命令入口使用共享有限卡池。不能读本应隐藏的其他商店来作弊，也不能直接给自己造卡或越过费用。
+机器人通过同一对局命令入口使用共享有限卡池。不能读本应隐藏的其他商店来作弊，也不能直接给自己造卡或越过费用。
 
 每步读取最新状态、生成一个或一小组具有独立合法性的意图、执行并检查结果，再继续决策。刷新后重读 generation，升星后重读单位 ID，合成装备后重读实例。
 
@@ -139,17 +145,17 @@ PlayerView 以白名单生成。具体哪些公开数据可观战另列表；全
 | 6-7 后仍三席存活 | 进入加时，正确镜像配对，继续至合法终局 |
 | 旧连接或重复命令 | 拒绝或原回执，不破坏资产及有限池 |
 
-T0 技术准备可以完成，合同草案仍有数值与奖励边界待核定。T1 是独立可执行的下一项；TP 的正式规则修改要先把对应待定边界写清楚。
+T1 已集成，T2 的规则入口见第 10 节；T3 的提交语义与 TP 的正式规则修改仍须先把对应待定边界写清楚。
 
 ## 9 服务器规则入口（T1）
 
-本节定稿的是**现有单人规则的 Node 运行边界**，不是八席服务器、双方战斗或共享卡池合同。上文房间、邀请码等旧表述以 `AGENTS.md` 的最新产品决定为准，按派工单在 T2 后、T4 前统一修订；T1 不据此实现房间或账号。
+本节定稿的是**现有单人规则的 Node 运行边界**。双方战斗见第 10 节，产品流程以第 1.1 节为准；T1 不实现匹配服务或账号。
 
 ### 9.1 构建、运行和交付
 
 - TypeScript 公共入口：`src/server-entry/index.ts`。后续 `src/server/` 从此入口导入，不复制 simulation，不导入浏览器适配器。
 - 构建：`npm ci` 后运行 `npm run build:server`，产物是 `dist-server/index.mjs`、`dist-server/run-battle.mjs` 及它们共用的 `dist-server/chunks/*.mjs`；部署时复制整个 `dist-server/`，不能只复制入口文件。
-- 运行环境：Node **22.12+**，使用原生 `structuredClone`、`BigInt` 和 ESM；不为旧 Node 添加替代算法。esbuild 以 `platform=node`、`target=node22.12` 打包省略扩展名的 TS 导入；其默认 JSON loader 会内联 JSON 导入（当前闭包没有 JSON 输入），运行时无需 JSON import assertion、TS loader、Vite、Phaser 或 `node_modules`。
+- 运行环境：Node **22.x，最低 22.12**，使用原生 `structuredClone`、`BigInt` 和 ESM；不为旧 Node 添加替代算法。esbuild 以 `platform=node`、`target=node22.12` 打包省略扩展名的 TS 导入；其默认 JSON loader 会内联 JSON 导入（当前闭包没有 JSON 输入），运行时无需 JSON import assertion、TS loader、Vite、Phaser 或 `node_modules`。
 - `esbuild@0.28.2` 从既有锁文件中的传递依赖提升为直接 devDependency，使生产构建不依赖 Vite 是否继续间接安装它；未升级其版本。
 - `dist-server/metafile.json` 是构建输入/输出清单；构建及验证均拒绝 rendering、presentation、persistence、replay、`src/server/` 和 Phaser 进入规则闭包。运行时仅加载打包的纯规则，构建文件和产物不含网络服务。
 - `node dist-server/run-battle.mjs --seed 42 --max-steps 1201` 在普通 Node 下运行首场战斗并输出 JSON 摘要；加 `--snapshot` 输出完整终态和事件。导入 `index.mjs` 本身不创建对局、不自动运行战斗、不输出日志。
@@ -190,11 +196,11 @@ interface MatchStep { readonly state: MatchState; readonly events: readonly Matc
 | `serializeMatch(s): string` | 先执行现有恢复校验，再输出对象键规范排序的完整 JSON；不是可公开的 PlayerView。 |
 | `restoreMatch(input: unknown): MatchState` | 接受 JSON 文本或普通 JSON 对象，完整验证版本、digest、输入、资产和账本后返回独立状态；不抽 RNG、不发奖励、不重跑 Start。 |
 
-此入口恰有以上 21 个运行时导出。类型导出（编译后擦除）为：
+T1 的运行时导出是以上 21 个；T2 的新增导出见第 10 节。T1 类型导出（编译后擦除）为：
 
 - 状态与命令：`MatchState`、`MatchBase`、`MatchCommandResult`、`MatchFailure`、`MatchStep`、`MatchEvent`、`RunningCombat`、`FinishedCombat`、`RoundResult`、`PersistentGrowth`。
 - 单位与战斗：`Unit`、`UnitLocation`、`CombatState`、`CombatResult`、`LedgerCombatEvent`。
-- 后续 T2 可引用的现有快照类型：`CombatInputBasis`、`CombatStrategyInputs`、`StrategySnapshot`、`StrategyUnitSnapshot`、`ItemInstance`、`OwnedAugment`、`AnomalyBinding`。它们不是尚未实现的 `PlayerBattleSnapshot`；T2 必须另行定义双方身份映射与验证，不能把旧类型强转成真人敌军。
+- 后续 T2 可引用的现有快照类型：`CombatInputBasis`、`CombatStrategyInputs`、`StrategySnapshot`、`StrategyUnitSnapshot`、`ItemInstance`、`OwnedAugment`、`AnomalyBinding`。它们不等同于 T2 的 `PlayerBattleSnapshot`；双方身份映射与验证见第 10 节，不能把旧类型强转成真人敌军。
 
 仓库内 TS 调用使用源入口取得类型；T1 的 `.mjs` 产物是运行文件，不发布 npm 包或独立声明包。
 
@@ -252,3 +258,216 @@ type MatchFailure =
 
 另断言：旧 generation、金币不足的买卡/刷新/买经验、错误阶段命令保持原对象且无 events/RNG 变化；tick 40 文本/对象两种恢复后每次 step 的整个结果 deepEqual，终态存档字节相同；损坏 digest/版本拒绝；禁用浏览器全局、`Math.random` 和 `Date.now` 后仍可导入并运行；复制完整产物到独立临时目录后能运行，164 步成功、163 步明确失败。验收不增加共享池、机器人、网络或新玩法。
 
+## 10 双方战斗接口（T2）
+
+### 10.1 公共入口与可信边界
+
+以下均从 `src/server-entry/index.ts` 导入；生产 Node 使用整个 `dist-server/` 内的 `index.mjs`。验证环境为 nvm Node **v22.23.3** / npm **10.9.9**，不更改既有单人规则版本、数值或 golden。新增运行时版本常量为 `PLAYER_BATTLE_SNAPSHOT_VERSION = 'two-sided-snapshot-v1'`、`TWO_SIDED_BATTLE_VERSION = 'two-sided-battle-v1'`，以及错误类 `BattleValidationError`。
+
+```ts
+snapshotForBattle(state: MatchState, seatId: string): PlayerBattleSnapshot
+restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapshot
+compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, battleSeed: number,
+              identity?: BattleIdentity): BattleInput
+restoreBattleInput(input: unknown): BattleInput
+startTwoSidedCombat(input: BattleInput): CombatState
+startTwoSidedCombatWithEvents(input: BattleInput): CombatStep
+stepCombat(state: CombatState): CombatStep
+resolveTwoSidedBattle(input: BattleInput, maxSteps: number): BattleResult
+proposeSettlement(result: BattleResult): { readonly a: SideProposal; readonly b: SideProposal }
+// BattleIdentity = { readonly battleId: string; readonly mirrorOfSeatId?: string }
+// CombatStep = { readonly state: CombatState; readonly events: readonly CombatEvent[] }
+```
+
+`snapshotForBattle` 只接受服务器拥有的准备阶段 MatchState，校验现有六个规则/协议版本键、内容 digest、目录轮次及标准 7×8 棋盘/9 格备战区，只取本方合法上场单位和关联效果。它不重放整局资产历史、不校验客户端身份，也不重新掷临时装备；准备态必须已通过原有装备事务生成当前轮临时子装备。备战区单位、库存装备、金币、商店、随机流、座位凭证均不进入快照。异常或成长绑定在备战区单位时被省略。输出是独立深拷贝且递归冻结，输入不变。
+
+两个 restore 接受普通 JSON 对象或 JSON 文本，返回独立、冻结的规则数据。快照采用白名单，拒绝额外字段和自报最终属性；检查部署、人口、星级、装备槽/排他约束、临时子装备父项与轮次、强化/异常定义和成长。`restoreBattleInput` 从两份描述重新编译，并逐字段规范比较派生阵容、效果、映射表，拒绝伪造属性。它们是服务器内部数据边界，**不是客户端资产真实性证明**。`proposeSettlement` 接受本引擎生成的可信结果，只检查必要身份、终态及事件序列一致性，不认证任意外部战报；跨信任边界应恢复冻结输入并重跑，不能接受客户端自报胜负。旧 `restoreMatch` 不接收该格式，其固定敌军校验不放宽。
+
+### 10.2 输入和输出形状
+
+以下字段均为只读；具体公开 TS 类型由入口导出。`Unit`、`ItemInstance`、`TemporaryEquipment`、`OwnedAugment`、`AnomalyBinding` 沿用规则描述类型，不含计算后的战斗属性。
+
+```ts
+interface PlayerBattleSnapshot {
+  version: 'two-sided-snapshot-v1'; contentDigest: string;
+  seatId: string; roundId: string; level: number;
+  units: readonly Unit[];                  // team:'player'，仅己方部署区 board
+  items: readonly ItemInstance[];          // 仅 location.kind:'unit' 且属于上场单位
+  temporaryEquipment: readonly TemporaryEquipment[];
+  augments: readonly OwnedAugment[];
+  anomalyBinding: AnomalyBinding | null;
+  persistentGrowth: readonly PersistentGrowth[];
+  augmentProgress: { pumpingRounds: number; investmentHp: number };
+}
+interface BattleIdMapping {
+  seatId: string; kind: 'unit' | 'item' | 'temporary-item' | 'augment' | 'anomaly';
+  originalId: string; combatId: string;
+}
+interface BattleInput {                    // 规则输入，区别于 B1 的调度信封
+  version: 'two-sided-battle-v1'; battleId: string; battleSeed: number;
+  mirrorOfSeatId: string | null;             // null=真实双方；否则必须等于b.seatId
+  a: PlayerBattleSnapshot; b: PlayerBattleSnapshot;
+  mapping: readonly BattleIdMapping[];
+  preparation: GameState; strategy: StrategySnapshot;
+}
+interface BattleSideResult {
+  seatId: string;
+  survivors: readonly { unitId: string; definitionId: string; starLevel: 1|2|3; hp: number }[];
+  growth: readonly PersistentGrowth[];     // {unitId, attackDamageBps}，仅本战新增长量；镜像为空
+}
+interface BattleResult {
+  version: 'two-sided-battle-v1'; battleId: string; roundId: string; battleSeed: number;
+  mirrorOfSeatId: string | null;
+  winnerSeatId: string | null;             // null = 平局
+  a: BattleSideResult; b: BattleSideResult; mapping: readonly BattleIdMapping[];
+  initial: CombatState; terminal: CombatState;
+  events: readonly LedgerCombatEvent[];   // 含 tick 0 的开场/立即结束事件
+}
+interface SideProposal {
+  battleId: string; roundId: string; seatId: string; result: 'win'|'loss'|'draw';
+  settlementEligible: boolean;             // 镜像false，禁止发收入/经验/奖励或提交收据
+  baseDamage: number; opposingSurvivors: number; damage: number;
+  growth: readonly PersistentGrowth[];
+  events: readonly LedgerCombatEvent[];
+}
+```
+
+`BattleIdentity`、`BattleSurvivor`、`BattleSideResult`、`BattleIdMapping`、`BattleFailure`、`CombatStep`、`CombatEvent`、`GameState`、`TemporaryEquipment` 也作为类型导出。双方 survivor/growth 中的 unitId 已映射回各自真实原始 ID；事件与 CombatState 内仍是战斗 ID，查 `mapping` 归属，不按字符串切割推断。双方提案的 events 引用同一完整账本，持久化应以 battleId 保存一份。此账本是服务器私有数据，PlayerView 另做白名单投影。
+
+### 10.3 编译、确定性与推进
+
+- A 与 B 必须不同 seatId、同一 roundId；T2 只接受既有目录中的 PvP。PvE、补给和目录外的 6-7 后加时尚不由此入口处理，不把未知轮次伪装成 6-1。
+- 各自以本方 player 阵容独立调用现有策略编译器，完整应用装备、羁绊、强化、异常、持久成长和临时装备程序；随后 A 为 player，B 为 enemy。A 坐标不动，B 用 `row = 7 - row`、col 不变。后排、相邻搭档等开场选择先在各自原坐标计算。
+- 战斗 ID 编码为 `JSON.stringify(['t2', seatId, kind, originalId])`；同原始 unit/item/choice ID、含标点的席位 ID 均不碰撞。强化和异常是不同 kind；羁绊来源实例另以 kind=`trait` 加席位前缀，来源键重新生成；所有者、搭档、临时装备父项引用随之映射。成长能力来源使用已命名空间化的 unit ID。
+- 阵容、装备、强化等输入列表规范排序，复用原 combat 排序/破同顺序。相同内容、版本、输入、显式 uint32 `battleSeed` 与足够预算产出逐字段相等的结果；不读取任何一方 Match RNG，不调用真实时钟或系统随机。交换 a/b 会改变坐标和 player/enemy 视角，**不承诺镜像后的完全对称胜负**。
+- 正式调度必须传第四参 `{battleId}`，使用该局/轮次/配对/执行代次的唯一标识。只传三参时生成的 `diagnostic:<digest>` 供离线测试，32 位内容摘要不保证生产唯一性，不能用作收据键。
+- `startTwoSidedCombat` 只返回初态；需要完整账本时必须用 `startTwoSidedCombatWithEvents` 并从 start.events 开始收集。每次 `stepCombat` 固定 50 ms；结果事件包含连续 `eventSeq` 和同一 `combatId`，不按动画帧删减。推荐直接用有界的 `resolveTwoSidedBattle`，默认不偷偷提供预算。
+- `maxSteps` 为正安全整数，当前引擎最多 1200 ticks，传 1200 足够；耗尽预算而仍 running 是失败，不返回伪造平局。双方空阵容合法，在 tick 0 平局；一方空则另一方 tick 0 胜利。真实战斗达到原 1200 tick 上限仍未分胜负才是 timeout 平局。
+
+### 10.4 未提交的伤害和成长提案
+
+伤害直接取冻结基线 [match-rules.ts 第 24 行](../src/simulation/match-rules.ts#L24) 的 `STAGE_PLAYER_DAMAGE`：阶段 2/3/4/5/6 分别为 **2/5/8/10/12**。计算沿用 [economy.ts 第 71–74 行](../src/simulation/economy.ts#L71)：真实参战席位胜方 damage=0，败方或平局方 damage=本阶段基础值+对方存活单位数（不是星级之和）。真实双方空阵容各提案基础伤害；超时双方各按对方存活数计算。镜像方一律 damage=0、growth=[]、settlementEligible=false，详见10.8。damage 是未截断非负安全整数请求值，T2 不读取或修改席位 HP，不计算实际损失/淘汰/名次。
+
+growth 只包含本场新获得的永久 AD 增量，包含已阵亡单位的合法增长，按 seatId 和原始 unitId 归属；开战前累计成长只参与属性，不再次发放。重复调用提案得到相同值且不改资产；**这不等于收据幂等提交已实现**。不发金币、经验、奖励，不推进轮次，T3 才将合法提案原子提交。
+
+### 10.5 失败枚举
+
+T2 验证/运行失败抛 `BattleValidationError extends RangeError`，读取稳定的 `.reason: BattleFailure`，不解析 message。失败不修改任一输入或消耗外部 RNG，预算失败不产生可提交结果。`stepCombat` 沿用其可信 CombatState 前提，不是任意 JSON 恢复器。
+
+| reason | 含义 |
+| --- | --- |
+| `snapshot-version` | 快照格式版本或源 Match 规则/协议版本不匹配 |
+| `content-digest` | 源状态或快照内容摘要不匹配 |
+| `invalid-snapshot` | 非法 JSON/描述/额外字段、非法资产、部署、装备、效果或编译失败 |
+| `wrong-phase` | 从非 preparation 的 MatchState 提取快照 |
+| `seat-collision` | a/b 席位相同 |
+| `round-mismatch` | 两方目录轮次不同，或源 Match 轮号与轮次 ID 不符 |
+| `round-kind` | 已知目录节点不是 PvP |
+| `invalid-seed` | battleSeed 不是 0…4294967295 的整数 |
+| `invalid-battle-id` | 显式 battleId 为空或非字符串 |
+| `invalid-mirror` | 指定的镜像来源不是 b.seatId（只允许 B 为镜像） |
+| `battle-input` | 编译输入格式/版本错误或派生内容与重编译不一致 |
+| `invalid-budget` | maxSteps 不是正安全整数 |
+| `step-limit-exceeded` | 预算用尽仍 running，不可提交 |
+| `invalid-result` | 提案输入版本/轮次、终态、归属、赢家或事件序列不一致 |
+
+恢复编译输入时，内层快照/轮次/种子验证也可产生对应 reason。未知目录 ID 在快照恢复时报 `invalid-snapshot`。`empty-both` **不是**失败：按 10.3/10.4 返回合法平局和伤害提案。
+
+### 10.6 Claude 的 B1 resolver 替换合同
+
+已核对已合入 multiplayer 的 PR #35 的 `src/server/room/battle-resolver.ts` 和 `types.ts`。其调度信封有 `battleId/roomId/round/roundId/roundKind/roomRevision/seats/mirrorOf`；保持为服务器私有编排类型，导入规则类型时可用 `RulesBattleInput`/`RulesBattleResult` 别名避免重名。
+
+**接口调整要求（由 Claude 改 `src/server/`）：**
+
+1. 调度输入增加显式 `battleSeed: number` 和 `maxSteps: number`，在冻结配对时固定，重试不得换种子；保留并回传原 `battleId/round/roomRevision`。调用前核对信封 roundId 与两方准备态轮次一致，调用后仍须拒绝过期执行代次。
+2. 普通 PvP 的两席只编译、运行一次。B1 旧返回中的 `outcomes[].state: MatchState` 是已结算状态，要求 T2 填充它会提前做 T3；不得把真实 enemy 的 Combat 强塞入旧单人存档。PvP 输出改为 `{battleId, round, roomRevision, battle: RulesBattleResult, proposals: {a: SideProposal,b: SideProposal}}`，调度层暂存提案，等 T3 的提交入口；不能继续走当前占位的扣血和已结算 MatchState 覆盖路径。
+3. 旧 `frames: {state: MatchState,events: MatchEvent[]}[]` 改为战斗视图数据：整场提供 `battle.initial/terminal/events/mapping`，如确需逐 tick 帧，使用开场含事件入口并逐步保存 `{state: CombatState,events: CombatEvent[]}`。生成帧也只运行这一场，B 视角由映射/投影得到。不要再各跑一次 `startMatchCombat`。
+4. 奇数镜像使用实际参战席位作为 a，`mirrorOf` 的冻结快照作为 b（必须不同 seatId）；第四参明确传 `mirrorOfSeatId: b.seatId`，完整计算双方效果；规则输出镜像 b 的 growth=[]，其提案 settlementEligible=false、damage=0、growth=[]。该提案不得提交，不给镜像原主重复成长/扣血/收入。席位真身在其他配对上的结果仍独立有效。调度信封应保留真实参与席位列表供 T3 识别。
+5. PvE/补给保留原分支，不能调用此 PvP 入口。未来加时轮标识与 T3 的下一轮推进需单独扩展合同，T2 不猜测。
+
+普通 PvP 的替换核心（伪代码中的调度字段由 B1 定义）：
+
+```ts
+import { snapshotForBattle, compileBattle, resolveTwoSidedBattle, proposeSettlement } from '../../server-entry';
+const a = snapshotForBattle(envelope.seats[0].state, envelope.seats[0].seatId);
+const opponent = envelope.mirrorOf ?? envelope.seats[1];
+const b = snapshotForBattle(opponent.state, opponent.seatId);
+const frozen = compileBattle(a, b, envelope.battleSeed, { battleId: envelope.battleId,
+  mirrorOfSeatId: envelope.mirrorOf?.seatId });
+const battle = resolveTwoSidedBattle(frozen, envelope.maxSteps);
+const proposals = proposeSettlement(battle);
+return { battleId: envelope.battleId, round: envelope.round,
+  roomRevision: envelope.roomRevision, battle, proposals };
+```
+
+服务器捕获规则异常后中断该轮的结果采纳，不提交部分提案；不得回退到固定敌军占位结果。本 PR 只提供规则实现与本合同，B1 适配和 T3 资产提交尚需对应流水线完成。
+
+### 10.7 验收映射与 T3 最小范围
+
+`tests/t2-two-sided-battle.test.ts` 的用例按以下表覆盖派工单；`node scripts/verify-t2-node-entry.cjs` 在普通 Node 的生产包上验证同一手算答案、重复运行、恢复和预算失败。
+
+| 测试标题关键词 | 验收项与独立预期 |
+| --- | --- |
+| `hand oracle` | #1：三星 Maddie 对一星，四次普攻至 tick 88，A 剩 1380 HP、B 无存活者；8 次 RNG |
+| `fixed two-star A` | #1：固定二星 A 对一星 B 胜、对三星 B 负 |
+| `all five effect classes` | #2/#3：两方同 ID，同时覆盖装备/羁绊/强化/异常/成长；AP110、护甲87、AD52、攻速加成700Bps |
+| `back-row`、`temporary equipment` | #2/#3：镜像前后排/搭档选择与双方临时装备父项、程序所有权 |
+| `growth deltas` | #3：交换 a/b 后成长仍归原席位，不重复带入旧成长 |
+| `SR-B1-01: mirrors never settle`、`growth deltas`、`real equipped tanks` | SR-B1-01：镜像胜/负/空阵容/超时均无扣血和成长回写，真实方伤害不按HP截断，恢复保留结算资格 |
+| `empty sides`、`real equipped tanks` | #1：空方即时负、双空平局、真实装备 Leona 到1200 tick超时；预算不足拒绝 |
+| `same frozen input`、`descriptor permutations`、`snapshots omit` | #4：完整结果 deepEqual、手动逐步账本一致、排序规范、显式种子、Match 私有随机流隔离 |
+| `round %s uses frozen stage base`（五阶段） | #5：基础伤害2/5/8/10/12，败方加对方存活数、胜方0 |
+| `rejects malformed` | #3/#4：版本、摘要、坐标、同席、伪造派生属性、阶段/预算/结果拒绝；旧恢复边界不放宽 |
+| typecheck/build/test:server-entry、既有回归 | #6/#8：Node22、原 T1 轨迹哈希不变、旧测试与 golden 零修改 |
+| 第10.1–10.6节 | #7：B1接入签名、数据、失败和职责边界 |
+
+T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次与真实参战席位的结算事务入口，验证一轮提案齐全且未过期，使用唯一收据将未截断伤害和成长增量各提交一次，再由同一提交结果产生 HP/淘汰与可恢复状态；覆盖重复结果、迟到结果、部分失败、镜像只提交真身及同轮归零。经济与轮次推进必须明确复用边界，不能让调度层继续自行扣血或拼装旧 MatchState；卡池仍留给 TP。
+
+
+
+### 10.8 SR-B1-01：双方伤害整数与镜像结算资格（T2 已实现）
+
+交付是 `compileBattle` → `resolveTwoSidedBattle` → `proposeSettlement` 的公开组合：BattleResult 保存一场战斗及回映射结果，`{a,b}` 两份 SideProposal 各含自己的 `damage`。damage 保证非负安全整数，不按当前 HP 截断、不把伤害分摊给另一席；具体五阶段数值见10.4。B1 的 `BattleSeatOutcome.damage` 必须直接取相应提案，服务器不能用存活者重算，也不能从 `hpBefore-hpAfter` 反推。旧 `state: MatchState` 字段与 `frames` 的变更仍按10.6执行，最终资产状态由 T3 产出。
+
+普通配对不传 `mirrorOfSeatId`，规则冻结为 null，a/b 的 `settlementEligible` 均为 true。奇数镜像配对固定真实参战席位为 a、镜像来源快照为 b，并传 `{battleId, mirrorOfSeatId: b.seatId}`。只能 B 是镜像；指定 A 或第三席报 `invalid-mirror`。标记进入冻结 BattleInput 和 BattleResult，JSON 恢复/重试保留此标记，不在战斗结束后临时猜测。
+
+镜像仍以原主全部装备、强化、异常和成长参与真实计算；a 的战斗与伤害不变，镜像源状态不变。规则对 b 一律返回 `BattleSideResult.growth=[]` 及 `SideProposal {settlementEligible:false, damage:0, growth:[]}`，包括镜像败北、超时和双方空阵容。为保留完整战斗事实，内部 CombatState/事件可含虚拟单位在本战中的成长，但它们不是持久成长回写来源。原主在其真实配对中的合法提案仍可正常提交。
+
+**禁止把 damage=0 理解为“可发一次获胜收入”。** B1 应只把 `settlementEligible=true` 且在信封真实 seats 列表中的提案交给 T3；镜像提案不能创建收据、发收入/经验/奖励或更新成长。T2 本身对任何席位均不发收入、不写 HP；T3 的事务入口还须按冻结参与席位及镜像标记拒绝误提交，不能仅依赖调度器筛选。这是 SR-B1-02 的提交验收，不冒称 T2 已完成资产结算。
+
+验证：`SR-B1-01: mirrors never settle` 覆盖镜像胜/负/双空平局、真实方伤害大于其1点剩余HP、双方源状态不变、普通与镜像战斗终态/账本一致；`growth deltas` 覆盖有实际成长事件的镜像却无持久回写、镜像输入恢复重跑完全相同；五阶段伤害测试逐方检查非负安全整数和真实席位可结算标志。
+
+### 10.9 SR-B1-06：本席私有视图下发白名单（T2 清单，T5 实现）
+
+以下是当前 MatchState 到**仅本席连接**的字段投影合同，不是完整 MatchState 的删字段版。T5 必须新建 DTO、逐字段拷贝，嵌套对象也不能展开或整体序列化；未列字段默认不下发。字段增量、重连快照、命令回执及错误响应使用同一白名单，不能让 `RoomCommandResult.state` 或调试错误绕过投影。客户端不得将 DTO 强转为 MatchState 调用本地规则，旧 UI_REQUESTS 的“完整 MatchState（本席）”要求由本节替代。
+
+| 来源 | 本席可以下发的具体字段 | 过滤/权威约束 |
+| --- | --- | --- |
+| 版本元数据 | `schemaVersion, rulesVersion, contentVersion, contentDigest, commandProtocolVersion, tickMs` | 仅静态版本；不是种子或随机状态 |
+| 当前席位进度 | `round, roundDefinitionId, phase, gold, level, xp`，`streak.{kind,count}` | 仅本席已提交状态；phase 只代表本席操作阶段，全局阶段/终局由 Room PlayerView 决定 |
+| 玩家血量 | 对外 `playerHp` | 从权威 `SeatState.hp` 投影；T3 保证它与 Match 镜像一致前，不能以占位 MatchState 的 HP 覆盖权威值 |
+| 当前商店 | `shop.{generation,locked,slots}`；每格仅 `{status:'available',definitionId}` 或 `{status:'purchased'}` | 仅本人当前已生成商店；不含下轮店、其他席位商店或全池精确计数 |
+| 准备棋盘 | `preparation.board.{columns,rows,deploymentZones.{player,enemy}.{firstRow,lastRow}}`、`benchSize`；`units[].{id,definitionId,team,starLevel,location}`，location 仅 `{kind:'board',cell:{col,row}}` 或 `{kind:'bench',slot}` | units 只取本席 player，含备战区；不能把旧固定 enemy 模板混作本轮真人对手。敌人展示用已公布配对的单独战斗/观战投影 |
+| 装备 | `items[].{id,definitionId,location}`；location 仅 `{kind:'inventory'}` 或 `{kind:'unit',unitId,slot}` | 仅本席实际已拥有的库存或单位装备；不含预定奖励 |
+| 临时装备 | `temporaryEquipment[].{temporaryId,parentItemInstanceId,roundId,holderId,definitionId,slot,expiresAfterRoundId}` | 仅当前轮已生成且父装备/持有者属于本席的子件；不是整个 equipmentState 或历轮 rolls |
+| 已拥有强化 | `augments[].{definitionId,choiceId,acquiredRound}` | 不含未来候选或掷骰输入 |
+| 当前异常 | `anomalyBinding` 为 null 或 `{definitionId,unitId,choiceId,boundRound}` | 仅当前已绑定结果 |
+| 已提交成长 | `persistentGrowth[].{unitId,attackDamageBps}`、`augmentProgress.{pumpingRounds,investmentHp}` | 仅本席持有单位及实际已提交进度；镜像战斗事件不写入 |
+| 当前待选项 | `pendingChoice` 为 null 或 `{kind,step,choiceId,generation,offers,targetId,rerollCount}` | 仅 phase=choice 且当前已展示的选择；offers 是已揭示定义 ID 列表，不含下一次刷新、未来选择或兜底答案；不下发 eventId/returnPhase |
+| 已提交本席轮结果 | `roundResults[].{round,roundId,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
+| 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 拷贝到独立 roundInfo DTO，仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
+
+奖励只允许**另外构造已揭示摘要**，沿用 `loot-view.ts` 的现有可见性规则：本轮直接掉落状态为 revealed/pending-capacity/retained-terminal/granted 时，可投影 `dropId, encounterId, sourceUnitId, roundId, status` 与 `payload.{kind,quantity,definitionId?}`；组件选择只有实际领取收据存在后才能投影所获 payload。当前已触发但未选择的奖励仅公开当前 `pendingChoice` 的身份与已展示 offers，绝不公开 `terminalFallbackDefinitionId`。planned/forfeited 条目、未来轮掉落与未揭示候选完全省略，不保留占位数量或数组索引。不得为投影重新抽卡、推进 RNG 或发奖。
+
+**明确不下发的根字段/子树：** `seed, rngState, battleSeedRngState, choiceRngState, rewardRngState`；整个 `equipmentState`（包括初始化随机流、历史 rolls 的 rngDrawStart/rngDrawEnd）；`combatInputBasis`、`resourceProvenance`、`scheduleReceipts`、`nextUnitSerial/nextItemSerial/nextMatchEventSeq`；`m8.encounterPlan`、`m8.preparation`、`m8.loot.frozen`（含 seed/rng/rounds/choices）、`m8.loot.guaranteeCounters` 及其余未经上述摘要过滤的 m8 子树；旧单人 `outcome`。服务器座位凭证不得进入视图（仅连接认证层自动持有，不展示）。
+
+`combat` **不能作为本席字段整体下发**。T2 的 BattleInput/BattleResult、initial/terminal 也是服务器私有对象，内含 battleSeed、rngState、策略和内部执行计划。T5 的战斗帧只能新建显示 DTO：场景基础字段 `combatId,tick,maxTicks,status,result,board`（board 按上表），每单位 `id,definitionId,team,starLevel,cell.{col,row},hp,maxHp,mana,maxMana,shield,alive,targetId,attackDamage,attackRange,attackIntervalTicks,armor,magicResist,abilityPower,baseAttackSpeedBps,attackSpeedBonusBps`（可选字段仅在存在时投影）。状态/护盾详情与可见战斗事件另外使用经字段审查的展示投影，不能透传整个 unit/runtime、abilityPlan、tasks、strategy 或带随机输入的 CombatState。完整权威账本继续留在服务器，不因客户端显示抽样而丢弃；本节不把帧 DTO 伪装成能本地 step/restore 的 CombatState。
+
+T5 验收：两个席位分别投影时不能看到对方 shop/pendingChoice/库存；向任意层塞入随机状态或未来计划哨兵值，初始快照、增量、重连和失败回执均不能出现；改变私有 RNG、未来掉落/兜底而保持已揭示字段相同，输出必须 deepEqual；已揭示商店、选择、临时装备可见，未揭示奖励不可见；投影前后服务器状态、RNG、事件序号均不变。**T2 本次交付清单，没有实现或宣称通过 T5 网络投影测试。**
+
+### 10.10 其余 SR-B1 请求的后续最小范围
+
+- **SR-B1-02 → T3**：公开 `applyRoundSettlement(state, receipt)` 或等价事务命令，唯一 settlementId 去重；真实 PvP 不走旧单人自动扣血/gameOver 路径，提交 HP、收入、经验、成长与一条 roundResults；拒绝镜像提案、过期代次和不完整整轮，重复无资源/事件变化。
+- **SR-B1-03 → T3 合同 + T4 实现**：定稿目录外加时入口、末阶段基础伤害、经济/商店推进、平局扣血与同轮归零破同分；Claude 在调度层按合同接入，覆盖连续平局/双方空阵容/多席归零的有限终局。
+- **SR-B1-04 → T3**：提供不花资源的空阵容异常节点放弃/应战，以及 unsettled-round 时已赚奖励自动领取或放弃的权威命令，保证不重复发奖和可推进；不让服务器自己改 pendingChoice/奖励账本。
+- **SR-B1-05 → TP**：在排名后、下一轮商店前唯一归还淘汰席位占用；买/刷/卖/升星/奖励的池与席位同事务提交，失败金币/卡池/商店/随机流不变，覆盖八席守恒。
