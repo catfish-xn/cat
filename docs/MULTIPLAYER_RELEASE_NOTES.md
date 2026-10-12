@@ -2,7 +2,7 @@
 
 本说明的目标是 **Linux、4 核 / 8 GB、Node 22.x、同一时间一局**。它是部署操作手册和验收记录模板；执行发布、域名切换及最终合入 main 由用户决定。本次只交付脚本和文档，不执行部署。
 
-基线：`origin/multiplayer@3785d96`，规则侧 T1/T2/T3/TP/T7/T5R 已合入。此时 B5 有限卡池、B6 机器人调度、B7 私有投影/加时接线与 C6 回放客户端仍待接入验收。**该基线可用于隔离测试，不是已经具备公网发布条件的候选**，尤其现有网络仍可能发送完整 MatchState。压测不会替它接入缺失功能，也不会将占位机器人说成已实现基础策略。
+当前复测基线：`origin/multiplayer@d5df11e`，B5/B6/B7/B8、C6 及 SR-C6-01 已合入：有限卡池、机器人调度、加时、私有投影、切片计算和紧凑回放均使用集成实现。当前协议只下发 `replay`，已无逐 tick 帧或 `combatTransport` 配置。第 9 节保留初版 T9 历史数据，第 10 节记录本次 B8 复测；两者均不替代目标机和公网真人发布验收。
 
 ## 1 先准备什么
 
@@ -244,18 +244,19 @@ nvm use 22                              # 或使用第2节的 /opt/node22/bin
 node scripts/loadtest-room.cjs --help
 node scripts/loadtest-room.cjs --seats 2 --rounds 3 > two-seat.json
 node scripts/loadtest-room.cjs --seats 8 --rounds 3 > eight-seat.json
+node --expose-gc scripts/loadtest-room.cjs --seats 8 --rounds 3 > eight-seat-gc.json
 ```
 
 - `--rounds` 表示**完整对局数**，不是游戏内回合上限。默认先预热1局，再测3局；所有对局使用同一个服务器进程、服务器实例与单队列，前局必须有完整八席名次后才开下一局。正常关闭每局客户端，检查服务器连接数回到0。
 - 始终建立8个 Node `TestClient` WebSocket 连接，由一个独立压测客户端进程驱动；`--seats 8` 全部入队，`--seats 2` 仅2个入队，其余6个连接停在大厅，6个参赛机器人由服务器补位。后者**不是八个真人接收战斗流**，不能冒充八席网络负载。
 - `--ops 4` 默认每真人每游戏回合最多4个准备操作；按独立 lcg32 种子随机选择合法候选类型与目标，覆盖买卡、卖卡、刷新、经验、站位、锁店及有素材时的合成/装备。只读取已显示资源，调用只读规则校验，不读取随机流来预测。选择节点另处理，最多16步。命令进入服务器时可能已过准备截止或版本变更，拒绝数量与原因照实记录；不能因为发出了意图就算成功。
-- 默认 `--prep-sec 0.25 --choice-sec 0.10 --settle-sec 0.05 --playback-ms 20`。本地测量入口可注入毫秒时钟配置；20ms 仅截短**计算完成后的播放等待**，不减少战斗 tick、不跳过结算、不伪造结果。该模式测计算/传输/生命周期，不是正常节奏试玩。`--playback-ms real --prep-sec 30 --choice-sec 30 --settle-sec 6` 恢复普通等待口径，完整三局可能耗时较长。
-- `--seed 42` 默认固定服务种子；行动种子随测量局和席位派生，具体配置写进报告。`--warmup 0` 可做快速诊断，但不用于预热后的内存判断。`--idle-ms 1000` 默认每局断开后等待1秒再读内存。`--timeout-sec 900` 是每局期限，失败输出 status=failed、非零退出码；不重启服务器继续掩盖失败。
+- 默认 `--prep-sec 0.25 --choice-sec 0.10 --settle-sec 0.05 --playback-ms 20`。本地测量入口可注入毫秒时钟配置；20ms 仅截短**计算完成后的播放等待**，不减少战斗 tick、不跳过结算、不伪造结果。该模式测计算/传输/生命周期，不是正常节奏试玩。默认准备时间250ms短于机器人动作间隔300ms，不能声称覆盖完整机器人策略负载；八真人席没有补位机器人。`--playback-ms real --prep-sec 30 --choice-sec 30 --settle-sec 6` 恢复普通等待口径，完整三局可能耗时较长。
+- `--seed 42` 默认固定服务种子；行动种子随测量局和席位派生，具体配置写进报告。`--warmup 0` 可做快速诊断，但不用于预热后的内存判断。`--idle-ms 1000` 默认每局断开后等待1秒再读内存。以 `node --expose-gc` 启动时，子服务器继承该标志，并在每次结束内存取样前先执行 `gc()`；`gcApplied/gcWallMs` 记录实际模式及 GC 耗时，不计入战斗切片。普通命令保持自然 GC，两种 RSS 不混为同组。`--timeout-sec 900` 是每局期限，失败输出 status=failed、非零退出码；不重启服务器继续掩盖失败。
 - 连接已有专用测试服务：`node scripts/loadtest-room.cjs --url wss://测试域名/ws --seats 8 --rounds 3 > remote.json`。该模式不启动/更改服务器，不接受本地阶段时间选项。测试会加入并开始真实对局，应在用户指定的测试入口执行；不要对正在给玩家服务的队列运行。
 
 ### 测量字段与限制（V2 §8.2）
 
-stdout 仅输出一个 JSON；进度在 stderr。每局都有 status、真实整局墙钟 durationMs、finalRound、排名、每回合字节及命令分布。warmups 单独列出，不混入 matches。
+stdout 仅输出一个 `room-loadtest-v2` JSON；进度在 stderr。每局都有 status、真实整局墙钟 durationMs、finalRound、排名、每回合字节及命令分布。warmups 单独列出，不混入 matches。
 
 | 指标 | 本脚本口径 |
 | --- | --- |
@@ -264,15 +265,15 @@ stdout 仅输出一个 JSON；进度在 stderr。每局都有 status、真实整
 | serverProcessingToReceiptMs | 任务开始到 receipt JSON 已构造、交给 ws.send 前；含校验、规则调用、去重与收据序列化，不含后续压缩/发送及广播 |
 | serverQueueAndProcessingMs | 上面两段合计；通过 seatId+commandId 对应到同一个请求，serverMatched 必须覆盖测得的准备命令 |
 | transportAndSchedulingResidualMs | **RTT 减上述服务器段的残差**；包含传输、压缩、收发事件循环等待和客户端调度/解析，不能叫纯网络 RTT；networkOnlyMs 固定为 null。负值保留并计数，不截成0掩盖观测问题 |
-| overlappingBattleCompute | 本机共同时间基准上，请求往返区间与真实 resolver 计算区间相交的数量；辅助解释临近截止时的大 RTT，不是客户端实际发出时的服务器阶段证明 |
-| rounds[].battles | 每个真实 PvP 配对或单席 PvE 的 wallMs、进程 CPU user/system、roundId/battleId、参与席数、镜像标记与成功标记；supply 独立分类，不当作 PvE 战斗 |
-| serialBatchWaitMs | 从整轮 freezeAndResolve 开始到该战斗 resolver 开始；包含冻结及前序串行任务，用于解释批次位置，**不是不存在的 worker 线程池排队时间** |
-| rounds[].batch | 当前同步整轮 freezeAndResolve 的墙钟与进程 CPU；含冻结、计算、结算规划和即时发布，与单战 resolver 的范围不同；CPU 也可能包含同时进行的进程后台工作 |
-| rounds[].applicationBytes | 接收的原始文本 UTF-8 字节，按 state/view/replay/combat/receipt/lobby/error/other 分列；分包按实际收到的每包计数，没有显式 round 的收据按该连接最后观察到的回合归类，回合0为大厅；包括所有8个连接，不含未连接机器人的虚拟下发 |
+| overlappingBattleCompute | 本机共同时间基准上，请求往返区间与真实 Room 切片计算区间相交（包含回放/发布，不包含切片间调度等待）的数量；辅助解释临近截止时的大 RTT，不是客户端实际发出时的服务器阶段证明 |
+| rounds[].battles | 每个 PvP 配对或单席 PvE 的内部 resolver 任务；`startBattle(input,pool)` 全参数透传，每次 `advance` 独立记录 `slices`，wallMs/CPU user/system 为切片累计，maxSliceMs 为最长 advance；complete/ok 分别表示已返回结果/无抛错；supply 独立分类 |
+| rounds[].freeze | freezeAndResolve 仅冻结与创建解析上下文的墙钟/CPU，不再包含整轮战斗 |
+| rounds[].slices / server.sliceWallMs | 完整 Room.resolveSlice 的区间、wall/CPU 与汇总分位数，覆盖内部 advance、额外回放预热片和最后的结算规划/发布；这是报告“最大服务器单片”的口径，包含内部 resolver 时间，二者不能相加。CPU 为进程计数，可能包含后台工作 |
+| rounds[].applicationBytes | 原始文本 UTF-8 字节，按 state/view/replay/receipt/lobby/error/other 分列；当前战斗消息仅 replay，无逐 tick 帧/分包。没有显式 round 的收据按该连接最后观察回合归类，回合0为大厅；包括全部8个连接，不含未连接机器人的虚拟下发 |
 | socketBytesRead | 每局客户端 socket 的 bytesRead 总和，含握手与 WebSocket 封装/压缩流；不是按消息类型分摊的 IP 线路流量，与 JSON 字节不混用 |
 | observedMatchPeakRssBytes | 独立客户端进程每100ms读取 Linux /proc/服务器PID/status，结合端点 RSS 的单局观测峰值，可能漏掉短于采样间隔的尖峰 |
 | memoryEnd.processLifetimeMaxRssBytes | Node resourceUsage 的**整个服务器进程**累计 RSS 高水位；不能拿这个必然不下降的计数器判定内存泄漏 |
-| memoryTrend | 只比较预热后各局同位置的 memoryEnd.rssBytes，记录差值/是否严格递增；保留一份已结束 Room 直到下次开局、没有强制 GC。3个样本是方向观察，不能证明无泄漏；负载/GC也会影响它 |
+| memoryTrend | 只比较预热后各局同位置的 memoryEnd.rssBytes，记录差值/是否严格递增；保留一份已结束 Room 直到下次开局，`gcBeforeSamples` 对应各局实际 GC 模式。3个样本是方向观察，不能证明无泄漏；负载/GC也会影响它 |
 
 服务器本地模式通过压测包装导入真实 createGameServer、默认 TwoSidedBattleResolver、WriteQueue 和 TestClient；不改任何 src 文件，观察代码不进入生产包。包装依赖这些入口，接口变动或命令计时关联不足会明确失败。观测本身有少量耗时，报告不是零开销剖析。远程服务器未提供这些测量接口，server、CPU、RSS、排队处理与计算重叠全部为 null；**不能从回放 tick 数、phase.serverNow 或客户端 RTT 推算服务器 CPU**。
 
@@ -281,7 +282,7 @@ V2 建议预算仍是参考：本机确认 p95≤100ms/p99≤250ms；服务器�
 ## 7 首版边界与记录位置
 
 - 单一匹配队列、同一时间一局、最多8席；不做建房、邀请码、房主、准备键。第9人报满，不排第二局。
-- 不足八席由服务器补位；基础策略、断线接管、共享池、加时以及投影必须以最终 B5/B6/B7/C6 的集成验收为准，不能仅凭规则库已导出函数宣布完成。
+- 不足八席由服务器补位；B5/B6/B7/C6 已接入基础策略、断线接管、共享池、加时及投影，完整真人玩法仍需第8节验收。
 - 服务器内存态；重启/回滚中断旧局，旧凭证失效，没有跨进程恢复、账号登录或跨服匹配。隐藏座位凭证由连接层管理，玩家不需要输入。
 - 容量只验证一房；4核不代表四场战斗天然并行，当前执行方式按报告注明。是否需要 worker 隔离由真实测量决定。
 - 保留发布 SHA、Node/npm 实际版本、主机规格、配置、两种压测 JSON、试玩记录和旧发布目录；报告可由执行者放在仓库外证据目录，避免把逐帧状态或凭证作为日志公开。
@@ -303,7 +304,7 @@ V2 旧稿的“私密房间”按 AGENTS.md 最新产品决定改为单一匹配
 
 发布候选 SHA：________　目标机：________　Node/npm：________　试玩日期/参与者：________
 
-## 9 本次脚本交付的实测记录（不是发布验收）
+## 9 初版 T9 历史记录（3785d96，非当前性能）
 
 2026-10-12，基线 `3785d96be7c9b8df9a2ccd1708ff534fcf86c3fd`，实际 **Node v22.23.3 / npm 10.9.9**，Linux x64、4 个逻辑 CPU、8,322,404,352 字节内存。脚本 SHA-256：`b5d4ced0de2786714a1f96a2de112b63ee7e1bf5d17ae9599527022d6cae16a1`。服务器与独立压测客户端进程共享这台主机的资源；以下是默认加速配置，不能外推为公网正常节奏容量。
 
@@ -319,6 +320,50 @@ V2 旧稿的“私密房间”按 AGENTS.md 最新产品决定改为单一匹配
 
 **尚不能确认内存不单向增长：** 结束 RSS 严格递增，共增加105,574,400字节（100.68 MiB）。不同局负载、GC 和保留最后一份已结束 Room 均会影响观测，不能据这3点直接断言泄漏，也不能宣称稳定。第三局 RTT p99 超过 V2 建议的250ms；临近阶段截止的10个请求与战斗计算区间重叠且收到 wrong-phase，保留在统计中。较小的服务器处理段不代表事件循环没有阻塞，处理前等待仍在 RTT/残差里。`status=complete` 只表示生命周期与测量完整，不表示性能预算或内存验收通过。
 
-八真人席、连续3局在此基线**未跑通**：seed42 的诊断运行与最终脚本的 `--seats 8 --rounds 3 --seed 43` 均在完成预热后，首局测量第38回合剩2席时触发 `overtime-unavailable`，退出1。最终报告 `t9-eight-seat-43.json` 保留169条服务器战斗计算样本及故障；失败局不参与结束 RSS 趋势。T5R 已交付 `advanceMultiplayerRound`，这里缺的是 B7 服务器接线；故障旧文案“规则入口尚未交付”不代表当前规则库现状。脚本没有改服务器、跳过加时或编造终局，需 B7 合入后重跑八席3局。
+八真人席、连续3局在此基线**未跑通**：seed42 的诊断运行与最终脚本的 `--seats 8 --rounds 3 --seed 43` 均在完成预热后，首局测量第38回合剩2席时触发 `overtime-unavailable`，退出1。最终报告 `t9-eight-seat-43.json` 保留169条服务器战斗计算样本及故障；失败局不参与结束 RSS 趋势。T5R 已交付 `advanceMultiplayerRound`，这里缺的是 B7 服务器接线；故障旧文案“规则入口尚未交付”不代表当前规则库现状。脚本没有改服务器、跳过加时或编造终局，此历史阻塞已由后续 B7 接线，本次复测见第10节。
 
 交付验证：6个脚本测量/合法命令用例、`npm run typecheck`、`npm run build:game`、`npm run build` 通过（前端保留现有大 chunk 提示）。检查生产包外部导入为 `ws` 与 `node:crypto`；仅放入 `main.mjs` 和 `node_modules/ws` 的临时目录可启动并通过 `/ws` 加入。systemd 单元经 `systemd-analyze verify` 校验（仅将 Node 路径替为测试环境已安装路径）；不可达外部地址测试按预期退出1、输出失败 JSON，服务器指标为 null。未执行部署、Caddy 公网证书/WSS、浏览器回放或真人试玩，第8节清单保持未勾选。
+
+## 10 B8/C6 集成后的复测（SR-B8-01）
+
+2026-10-12，规则/服务器/界面基线 `d5df11e3943ac9232024784f8e7d7c193fc22a76`（PR #54/#55 已合入）；只使用本 PR 的修正版脚本，无 src/golden 改动。实际 **Node v22.23.3 / npm 10.9.9**（nvm use 22），Linux x64、4 个逻辑 CPU、8,322,404,352 字节内存，服务器与负载客户端共享主机。脚本 SHA-256：`35138c5e7deba812140534b227e760e2916c968157cc5f73bd8c7dc7993f0969`，报告 schema `room-loadtest-v2`。下列运行串行执行，没有两组压测争用主机。
+
+每组均默认 seed42、1局预热 + 3局测量、同一服务器/PID 连局、8个 Node 客户端、每真人每轮最多4次准备操作；准备/选择/结算250/100/50ms，播放等待上限20ms，结束断开后空闲1000ms。服务器使用默认100 tick 切片，未改变战斗、卡池、结算或机器人策略。原始 JSON 按下述文件名随任务证据交付，不提交大报告到仓库。
+
+### 10.1 用户指定八席三局（自然 GC）
+
+`node scripts/loadtest-room.cjs --seats 8 --rounds 3` **退出0**，报告 `b8-eight-seat.json`。预热36回合；三局均完整八席排名、结束连接数0、准备命令全部匹配服务器计时，battle 样本均完成且有 advance 记录，并收到 replay；无客户端错误或命令拒绝。
+
+| 测量局 | 回合 / 秒数 | 准备请求数 | 准备 RTT p95 / p99（ms） | 服务器排队+处理 p99（ms） | 最大服务器单片（ms） | 最大 resolver advance（ms） | 结束 RSS（MiB） | 单局观测 RSS 峰值（MiB） |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 36 / 29.87 | 824 | 24.62 / **29.04** | 2.59 | **437.20** | 284.74 | **225.16** | 242.11 |
+| 2 | 34 / 37.48 | 832 | 23.81 / **28.32** | 2.26 | **598.16** | 485.76 | **229.50** | 246.21 |
+| 3 | 34 / 40.12 | 840 | 25.51 / **33.62** | 2.58 | **727.42** | 577.56 | **237.00** | 254.14 |
+
+“服务器单片”覆盖完整 Room.resolveSlice（包括单独回放预热和最后的规划/发布），不是仅内部 advance；三局最长片都出现在第24回合 PvE，区间内没有内部 advance，因此只包 resolver 会漏掉它们。两列嵌套，不能相加。三局分别403/415/443个服务器切片，战斗/补给记录合计244场 PvP、152场 PvE、90次 supply。准备请求没有与切片计算区间重叠，当前 RTT 不能说明临近准备截止时的延迟；默认少量早期命令负载不等于持续压满服务器。尽管该组 p99 低于 V2 建议250ms，最长同步片仍远高于 SR-B8-02 约50ms的目标。
+
+| 测量局 | 总下发 JSON 字节 | 其中 replay 字节 | 进程累计 RSS 高水位（MiB） |
+| --- | --- | --- | --- |
+| 1 | 46,070,602 | 11,576,353 | 242.52 |
+| 2 | 51,232,620 | 15,443,547 | 247.03 |
+| 3 | 55,227,702 | 19,126,383 | 254.03 |
+
+应用字节含全部8连接的 state/view/replay/receipt/lobby 等，不含逐 tick combat 帧。逐轮类型分布、每片 wall/CPU、socket 字节、收据处理/残差均保留在 JSON。RSS 结束点为236,097,536 / 240,644,096 / 248,512,512字节，严格递增，总增11.84MiB；自然 GC 下仅3点不能判定泄漏或声称内存稳定，需结合下一组及更长时间剖析。
+
+### 10.2 SR-B8-01 两席接口验收
+
+`node scripts/loadtest-room.cjs --seats 2 --rounds 3` **退出0**，报告 `b8-two-seat.json`。预热39回合，测量34/33/40回合；battle 样本170/163/169条且全部有完成的 advance，完整排名/连接清空/计时关联均通过。准备 RTT p99 为11.60 / 11.28 / 22.08ms，最大服务器单片195.58 / 511.27 / 801.71ms，结束 RSS 237.62 / 237.79 / 237.48MiB。6个机器人由真实 B6 调度器补位，但250ms准备期短于300ms动作间隔，本组不能作为完整机器人玩法负载验收；八席组无补位机器人。
+
+### 10.3 强制 GC 取样验证（独立运行，不替换10.1）
+
+`node --expose-gc scripts/loadtest-room.cjs --seats 8 --rounds 3` **退出0**，报告 `b8-eight-seat-gc.json`。子进程预热和三局结束样本均 `gcApplied=true`；gcWallMs 单独记录，不进入战斗计时。三局同样完整排名、连接归零、命令计时关联和回放/战斗样本检查通过。
+
+| 测量局 | 回合 | 准备 RTT p99（ms） | 最大服务器单片（ms） | GC 后 RSS（MiB） | GC 后 heapUsed（MiB） |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 34 | 32.26 | 521.93 | 234.21 | 14.49 |
+| 2 | 33 | 28.43 | 589.25 | 227.60 | 16.05 |
+| 3 | 34 | 30.57 | 752.98 | 233.73 | 16.84 |
+
+GC 后 RSS 为245,587,968 / 238,657,536 / 245,084,160字节，非单向增长，末局较首局少0.48MiB；heapUsed 仍有变化，不能据三局宣布无泄漏。GC 不保证立即归还全部 RSS，两组也不是相同动作轨迹的严格 A/B：真实时钟、命令交错和存活回合可变。两组均保留已结束 Room 与测量记录，观测包装本身也占内存。
+
+本次验证：10个 T9 测量/候选命令测试、脚本语法检查、全仓 typecheck 通过；两席、八席、八席 `--expose-gc` 三组各1预热+3测量均退出0。仅修改 scripts/tests/docs，未改任何 src、golden 或 main；未执行部署/真人验收。SR-B8-02/03 仅评估工作量，详见 `UI_REQUESTS.md` 末节，尚未优化同步规则调用或共享池。

@@ -1,11 +1,11 @@
 import { createRequire } from 'node:module';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createMatch, buyXp, rerollShop, setShopLock, buyUnit, deployMatchUnit, sellUnit, combineItems, equipItem } from '../src/simulation/match';
 import { MATCH_RULES } from '../src/simulation/match-rules';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { validateCombine, validateEquip } from '../src/simulation/inventory';
 import { validateDeployment } from '../src/simulation/game';
-const {options,summary,memoryTrend,countMessage,commandStats,candidates,randomPicker}=createRequire(import.meta.url)('../scripts/loadtest-room.cjs');
+const {options,summary,memoryTrend,countMessage,commandStats,candidates,randomPicker,observeBattleStart,sampleMemory}=createRequire(import.meta.url)('../scripts/loadtest-room.cjs');
 
 describe('T9 measurement semantics',()=>{
   it('uses nearest rank, reports sample count and never invents zero samples',()=>{
@@ -22,12 +22,12 @@ describe('T9 measurement semantics',()=>{
     const rows=new Map();countMessage(rows,{type:'lobby'},90,0);
     countMessage(rows,{type:'view',view:{phase:{round:2}}},70,0);
     countMessage(rows,{type:'state',round:2},80,2);
-    countMessage(rows,{type:'combat',round:1,part:2,total:3},300,2);
+    countMessage(rows,{type:'unknown',round:1},300,2);
     countMessage(rows,{type:'replay',round:2},40,2);
     countMessage(rows,{type:'receipt'},20,2);
     expect(rows.get(0).applicationBytes.lobby).toBe(90);
-    expect(rows.get(1).applicationBytes.combat).toBe(300);
-    expect(rows.get(2)).toMatchObject({messageCount:4,applicationBytes:{view:70,state:80,replay:40,receipt:20,combat:0}});
+    expect(rows.get(1).applicationBytes.other).toBe(300);
+    expect(rows.get(2)).toMatchObject({messageCount:4,applicationBytes:{view:70,state:80,replay:40,receipt:20,other:0}});
   });
   it('correlates by seat AND command ID, keeps negative residual evidence, and separates unavailable metrics',()=>{
     const commands=[{seatId:'a',commandId:1,ok:true,type:'buy',rttMs:10,sentEpochMs:100,receiptEpochMs:110},
@@ -44,6 +44,39 @@ describe('T9 measurement semantics',()=>{
     expect(memoryTrend(samples([100,110,120]),1)).toMatchObject({strictlyIncreasing:true,deltaBytes:20,interpretation:'observation-only-not-a-leak-proof'});
     expect(memoryTrend(samples([100,110]),1).strictlyIncreasing).toBeNull();
     expect(memoryTrend([...samples([100,95]),{status:'failed',server:{memoryEnd:{rssBytes:999}}}],1).postMatchRssBytes).toEqual([100,95]);
+  });
+  it('forwards pool, all arguments and receivers; times each advance without changing results',()=>{
+    const pool={},input={round:2,seats:['a','b']},resolver={},result={pool};
+    const advance=vi.fn().mockReturnValueOnce(null).mockReturnValueOnce(result),job={advance};
+    const start=vi.fn().mockReturnValue(job);
+    const records: {slices:{wallMs:number;cpuUserMs:number;cpuSystemMs:number}[];wallMs:number;cpuUserMs:number;cpuSystemMs:number;maxSliceMs:number}[]=[];
+    const wrapped=observeBattleStart(start,()=>records).call(resolver,input,pool,'extra');
+    expect(start).toHaveBeenCalledWith(input,pool,'extra');expect(start.mock.contexts[0]).toBe(resolver);
+    expect(wrapped.advance(100,'extra')).toBeNull();
+    expect(records[0]).toMatchObject({complete:false,ok:true});
+    expect(wrapped.advance(50)).toBe(result);
+    expect(advance.mock.calls).toEqual([[100,'extra'],[50]]);expect(advance.mock.contexts).toEqual([job,job]);
+    const row=records[0];expect(row).toMatchObject({complete:true,ok:true});expect(row.slices).toHaveLength(2);
+    for(const key of ['wallMs','cpuUserMs','cpuSystemMs'] as const)expect(row[key]).toBe(row.slices.reduce((n,s)=>n+s[key],0));
+    expect(row.maxSliceMs).toBe(Math.max(...row.slices.map(s=>s.wallMs)));
+  });
+  it('records a failed slice and rethrows the identical error without inventing completion',()=>{
+    const error=new Error('failed'),records: unknown[]=[];
+    const wrapped=observeBattleStart(()=>({advance(){throw error;}}),()=>records)({seats:[]},{});
+    expect(()=>wrapped.advance(1)).toThrow(error);
+    expect(records).toEqual([expect.objectContaining({ok:false,complete:false,slices:[expect.objectContaining({ok:false})]})]);
+  });
+  it('does not count the scheduling gap between slices as compute overlap',()=>{
+    const commands=[{seatId:'a',commandId:1,ok:true,type:'buy',rttMs:10,sentEpochMs:120,receiptEpochMs:130}];
+    expect(commandStats(commands,[],[{startEpochMs:100,endEpochMs:110},{startEpochMs:140,endEpochMs:150}]).overlappingBattleCompute).toBe(0);
+  });
+  it('forces optional GC before end memory sampling only and records the actual mode',()=>{
+    const order:string[]=[],gc=()=>{order.push('gc');},runtime={
+      memoryUsage:()=>{order.push('memory');return {rss:100,heapUsed:20};},resourceUsage:()=>({maxRSS:2})};
+    expect(sampleMemory(true,runtime,gc)).toMatchObject({rssBytes:100,heapUsedBytes:20,processLifetimeMaxRssBytes:2048,gcApplied:true});
+    expect(order).toEqual(['gc','memory']);order.length=0;
+    expect(sampleMemory(false,runtime,gc)).toMatchObject({gcApplied:false,gcWallMs:null});expect(order).toEqual(['memory']);
+    expect(sampleMemory(true,runtime,null)).toMatchObject({gcApplied:false,gcWallMs:null});
   });
   it('candidate commands are legal against observed assets, independent of hidden RNG',()=>{
     const base=createMatch(42),state={...base,gold:30,items:[{id:'item-1',definitionId:'sword',location:{kind:'inventory' as const}},

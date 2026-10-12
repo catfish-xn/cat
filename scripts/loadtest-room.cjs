@@ -29,6 +29,7 @@ const HELP = `Usage: node scripts/loadtest-room.cjs [options] > report.json
 stdout: one JSON document, including partial evidence on failure (exit 1).
 stderr: progress. No thresholds, deployments, source edits, or automatic report files.
 Default timing is accelerated LOAD mode, NOT normal-time gameplay acceptance.
+Use node --expose-gc to force GC before each post-match memory sample (reported separately).
 `;
 function options(argv) {
   const result = { seats:8, rounds:3, warmup:1, ops:4, seed:42, prepSec:0.25, choiceSec:0.10,
@@ -66,10 +67,11 @@ function memoryTrend(samples, warmup) {
   return { postMatchRssBytes:ends, deltaBytes:ends.length>1?ends.at(-1)-ends[0]:null,
     strictlyIncreasing:ends.length>=3?ends.every((n,i)=>i===0||n>ends[i-1]):null,
     interpretation:ends.length<3?'insufficient-local-samples':warmup===0?'unwarmed-observation-only':'observation-only-not-a-leak-proof',
-    retainedState:'same server/lobby/process; last ended room remains reachable until next start; no forced GC' };
+    gcBeforeSamples:samples.filter(s=>s.status===undefined||s.status==='complete').map(s=>s.server?.memoryEnd?.gcApplied??null),
+    retainedState:'same server/lobby/process; last ended room remains reachable until next start; GC mode recorded per sample' };
 }
 function roundRow(rows, round) {
-  if (!rows.has(round)) rows.set(round,{round,applicationBytes:{state:0,view:0,replay:0,combat:0,receipt:0,lobby:0,error:0,other:0},
+  if (!rows.has(round)) rows.set(round,{round,applicationBytes:{state:0,view:0,replay:0,receipt:0,lobby:0,error:0,other:0},
     messageCount:0,commands:[]});
   return rows.get(round);
 }
@@ -94,6 +96,37 @@ function commandStats(commands,serverCommands,battles) {
     networkOnlyMs:null,
     overlappingBattleCompute: battles?commands.filter(c=>battles.some(b=>c.sentEpochMs<b.endEpochMs&&c.receiptEpochMs>b.startEpochMs)).length:null };
 }
+/** Observe only synchronous work, preserving receiver, arguments, result and thrown error. */
+function measureCall(call, record) {
+  const started=performance.now(),startEpochMs=epochMs(),cpu=process.cpuUsage();let ok=false;
+  try { const result=call();ok=true;return result; }
+  finally {
+    const wallMs=performance.now()-started,used=process.cpuUsage(cpu);
+    record({wallMs,cpuUserMs:used.user/1000,cpuSystemMs:used.system/1000,startEpochMs,endEpochMs:startEpochMs+wallMs,ok});
+  }
+}
+function observeBattleStart(start, records) {
+  return function(...args) {
+    const input=args[0],job=start.apply(this,args);
+    const row={round:input.round,roundId:input.roundId,battleId:input.battleId,kind:input.roundKind,
+      seats:input.seats.length,mirror:!!input.mirrorOf,wallMs:0,cpuUserMs:0,cpuSystemMs:0,maxSliceMs:0,complete:false,ok:true,slices:[]};
+    records().push(row);
+    return {advance(...advanceArgs) {
+      const result=measureCall(()=>job.advance.apply(job,advanceArgs),slice=>{
+        row.slices.push(slice);row.wallMs+=slice.wallMs;row.cpuUserMs+=slice.cpuUserMs;row.cpuSystemMs+=slice.cpuSystemMs;
+        row.maxSliceMs=Math.max(row.maxSliceMs,slice.wallMs);row.ok&&=slice.ok;
+      });
+      if(result!==null)row.complete=true;
+      return result;
+    }};
+  };
+}
+function sampleMemory(collect=false, runtime=process, gc=globalThis.gc) {
+  const gcApplied=collect&&typeof gc==='function',started=performance.now();
+  if(gcApplied)gc();
+  const gcWallMs=gcApplied?performance.now()-started:null,usage=runtime.memoryUsage();
+  return {rssBytes:usage.rss,heapUsedBytes:usage.heapUsed,processLifetimeMaxRssBytes:runtime.resourceUsage().maxRSS*1024,gcApplied,gcWallMs};
+}
 async function bundle(temp) {
   const esbuild=require('esbuild');
   const source=`
@@ -117,10 +150,8 @@ export { validateDeployment } from './src/simulation/game';
 /** A separate real server process; only observation wrappers + an explicit playback-only clock cap. */
 async function worker(file,config) {
   const api=require(file), {WebSocket,Room,WriteQueue,TwoSidedBattleResolver,RealClock}=api;
-  let server,activeInbound=null,commands=[],battles=[],batches=[],game=0,cappedWaits=0,batchStarted=null;
+  let server,activeInbound=null,commands=[],battles=[],freezes=[],slices=[],game=0,cappedWaits=0;
   const inbound=new WeakMap(), seatIds=new WeakMap();
-  const memory=()=>({rssBytes:process.memoryUsage().rss,heapUsedBytes:process.memoryUsage().heapUsed,
-    processLifetimeMaxRssBytes:process.resourceUsage().maxRSS*1024});
   const sendIpc=value=>{if(process.connected)process.send(value);};
   // Observe ws message delivery -> WriteQueue task start -> receipt serialization/enqueue.
   const emit=WebSocket.prototype.emit,send=WebSocket.prototype.send,push=WriteQueue.prototype.push;
@@ -150,27 +181,19 @@ async function worker(file,config) {
     }
     return send.call(this,data,...args);
   };
-  const resolve=TwoSidedBattleResolver.prototype.resolveBattle;
-  TwoSidedBattleResolver.prototype.resolveBattle=function(input) {
-    const started=performance.now(),startEpochMs=epochMs(),cpu=process.cpuUsage();let ok=false;
-    try{const result=resolve.call(this,input);ok=true;return result;}finally{
-      const elapsed=performance.now()-started,used=process.cpuUsage(cpu);
-      battles.push({round:input.round,roundId:input.roundId,battleId:input.battleId,kind:input.roundKind,
-        seats:input.seats.length,mirror:!!input.mirrorOf,serialBatchWaitMs:batchStarted===null?null:started-batchStarted,wallMs:elapsed,cpuUserMs:used.user/1000,cpuSystemMs:used.system/1000,
-        startEpochMs,endEpochMs:startEpochMs+elapsed,ok});
-    }
-  };
-  // Wrapper observes the whole synchronous round batch, including freezing/planning and publication.
-  const resolveRound=Room.prototype.freezeAndResolve;
-  if(typeof resolveRound!=='function')throw new Error('Room instrumentation API changed: freezeAndResolve missing');
-  Room.prototype.freezeAndResolve=function(...args) {
-    const started=performance.now(),cpu=process.cpuUsage(),round=this.state.round,kind=this.state.roundKind;
-    batchStarted=started;
-    try{return resolveRound.apply(this,args);}finally{
-      batchStarted=null;
-      const used=process.cpuUsage(cpu);batches.push({round,kind,wallMs:performance.now()-started,cpuUserMs:used.user/1000,cpuSystemMs:used.system/1000});
-    }
-  };
+  const start=TwoSidedBattleResolver.prototype.startBattle;
+  if(typeof start!=='function')throw new Error('Resolver instrumentation API changed: startBattle missing');
+  TwoSidedBattleResolver.prototype.startBattle=observeBattleStart(start,()=>battles);
+  // B8 freeze is setup only. Full Room slices also include the separate replay warmup,
+  // settlement planning and publication, outside the inner resolver's advance calls.
+  for(const [name,records] of [['freezeAndResolve',()=>freezes],['resolveSlice',()=>slices]]) {
+    const original=Room.prototype[name];
+    if(typeof original!=='function')throw new Error(`Room instrumentation API changed: ${name} missing`);
+    Room.prototype[name]=function(...args) {
+      const round=this.state.round,kind=this.state.roundKind;
+      return measureCall(()=>original.apply(this,args),sample=>records().push({round,kind,...sample}));
+    };
+  }
   class LoadClock extends RealClock {
     schedule(at,fn) {
       if(config.playbackMs!==null&&server?.room?.state.phase==='battle') {
@@ -183,11 +206,11 @@ async function worker(file,config) {
   server=await api.createGameServer({port:0,host:'127.0.0.1',seed:config.seed,clock,
     timings:{preparationMs:config.prepSec*1000,choiceMs:config.choiceSec*1000,settlementMs:config.settleSec*1000},
     log:line=>{if(/failed|error/i.test(line))process.stderr.write(`[server] ${line}\n`);}});
-  sendIpc({type:'ready',port:server.port,pid:process.pid,memory:memory()});
+  sendIpc({type:'ready',port:server.port,pid:process.pid,memory:sampleMemory()});
   process.on('message',async message=>{
     try {
-      if(message.type==='begin') {game=message.game;commands=[];battles=[];batches=[];cappedWaits=0;sendIpc({type:'begun',game,memory:memory()});}
-      if(message.type==='snapshot')sendIpc({type:'snapshot',game,commands,battles,batches,cappedWaits,memoryEnd:memory(),
+      if(message.type==='begin') {game=message.game;commands=[];battles=[];freezes=[];slices=[];cappedWaits=0;sendIpc({type:'begun',game,memory:sampleMemory()});}
+      if(message.type==='snapshot')sendIpc({type:'snapshot',game,commands,battles,freezes,slices,sliceWallMs:summary(slices.map(s=>s.wallMs)),cappedWaits,memoryEnd:sampleMemory(true),
         roomPhase:server.room?.state.phase,roomFault:server.room?.state.fault,connections:server.connectionCount});
       if(message.type==='stop') {await server.close();clock.dispose();process.exit(0);}
     }catch(error){sendIpc({type:'error',error:error.message});}
@@ -241,13 +264,14 @@ async function main(config) {
   const temp=fs.mkdtempSync(path.join(os.tmpdir(),'cat-room-load-'));
   let child,clients=[],poll,activeReport=null,activeContext=null,workerError=null,shuttingDown=false,snapshotWorker=null;
   const sockets=new Set();
-  const report={schema:'room-loadtest-v1',node:process.version,commit:null,scriptSha256:createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),host:{platform:process.platform,arch:process.arch,
+  const report={schema:'room-loadtest-v2',node:process.version,commit:null,scriptSha256:createHash('sha256').update(fs.readFileSync(__filename)).digest('hex'),host:{platform:process.platform,arch:process.arch,
     logicalCpus:os.cpus().length,totalMemoryBytes:os.totalmem()},config:{...config,url:config.url?new URL(config.url).origin:null},
     mode:config.url?'external':'instrumented-local',status:'running',warmups:[],matches:[],limitations:[
       'RTT includes transport, event-loop stalls, compression and client scheduling; residual is NOT pure network latency.',
       'Server queue starts at decoded ws message delivery; pre-delivery event-loop stalls remain in RTT/residual.',
-      'Resolver timings include authoritative execution plus current replay/frame construction; no worker queue is fabricated.',
+      'Battle timings sum inner resolver advance calls only; full Room slice timings also capture replay warmup and settlement/publication. No per-tick frames exist.',
       'Eight connections do not imply eight active human players when --seats is below eight.',
+      'Default 250ms preparation is shorter than the 300ms bot interval; this is not full bot/normal-time gameplay load.',
       'No thresholds or browser/playback/public-network acceptance; current integration capabilities are not supplied by this script.'
     ]};
   try{report.commit=execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT,encoding:'utf8'}).trim();}catch{}
@@ -354,18 +378,21 @@ async function main(config) {
       m.server=measured?{...measured,observedMatchPeakRssBytes:Math.max(rssPeak??0,measured.memoryEnd.rssBytes)}:null;
       if(measured&&measured.connections!==0)throw new Error('Server connections did not drain');
       const prep=commands.filter(c=>c.phase==='preparation');
-      m.preparationCommands=commandStats(prep,measured?.commands,measured?.battles);
-      m.choiceCommands=commandStats(commands.filter(c=>c.phase==='choice'),measured?.commands,measured?.battles);
+      m.preparationCommands=commandStats(prep,measured?.commands,measured?.slices);
+      m.choiceCommands=commandStats(commands.filter(c=>c.phase==='choice'),measured?.commands,measured?.slices);
       m.rounds=[...rows.values()].sort((a,b)=>a.round-b.round).map(row=>{
         const {commands:_,...bytes}=row;
         const battles=measured?.battles.filter(b=>b.round===row.round)??null;
-        return {...bytes,preparationCommands:commandStats(prep.filter(c=>c.round===row.round),measured?.commands,battles),
-          battles,batch:measured?.batches.find(b=>b.round===row.round)??null};
+        return {...bytes,preparationCommands:commandStats(prep.filter(c=>c.round===row.round),measured?.commands,measured?.slices.filter(s=>s.round===row.round)),
+          battles,freeze:measured?.freezes.find(b=>b.round===row.round)??null,
+          slices:measured?.slices.filter(s=>s.round===row.round)??null};
       });
-      m.clientErrors=errors;m.status='complete';
+      m.clientErrors=errors;
       if(measured&&prep.length&&m.preparationCommands.serverMatched!==prep.length)throw new Error('Instrumentation did not correlate every preparation command');
-      if(measured&&!measured.battles.length)throw new Error('No battle computation samples captured');
+      if(measured&&(!measured.battles.length||measured.battles.some(b=>!b.complete||!b.ok||!b.slices.length)))throw new Error('Missing/unfinished battle computation samples');
+      if(!m.rounds.some(row=>row.applicationBytes.replay>0))throw new Error('No combat replay received');
       if(errors.length)throw new Error(`Client errors: ${[...new Set(errors)].join(',')}`);
+      m.status='complete';
       // Raw timing samples remain in server.commands; no tokens, payloads, or full combat states are retained.
       process.stderr.write(`[load] completed ${m.finalRound} rounds in ${(m.durationMs/1000).toFixed(1)}s; RTT p95=${m.preparationCommands.rttMs.p95?.toFixed(2)??'n/a'}ms\n`);
       activeReport=null;activeContext=null;
@@ -384,8 +411,9 @@ async function main(config) {
         }
         if(measured)activeReport.server={...measured,observedMatchPeakRssBytes:Math.max(peak()??0,measured.memoryEnd.rssBytes)};
         activeReport.rounds=[...rows.values()].map(({commands:_,...row})=>({...row,
-          preparationCommands:commandStats(commands.filter(c=>c.phase==='preparation'&&c.round===row.round),measured?.commands,measured?.battles),
-          battles:measured?.battles.filter(b=>b.round===row.round)??null,batch:measured?.batches.find(b=>b.round===row.round)??null}));
+          preparationCommands:commandStats(commands.filter(c=>c.phase==='preparation'&&c.round===row.round),measured?.commands,measured?.slices),
+          battles:measured?.battles.filter(b=>b.round===row.round)??null,freeze:measured?.freezes.find(b=>b.round===row.round)??null,
+          slices:measured?.slices.filter(s=>s.round===row.round)??null}));
       }
     }
     report.memoryTrend=memoryTrend(report.matches,config.warmup);process.exitCode=1;
@@ -401,11 +429,11 @@ async function main(config) {
   process.stdout.write(JSON.stringify(report,null,2)+'\n');
   return report;
 }
-module.exports={options,summary,memoryTrend,countMessage,commandStats,candidates,randomPicker};
+module.exports={options,summary,memoryTrend,countMessage,commandStats,candidates,randomPicker,observeBattleStart,sampleMemory};
 if(require.main===module) {
   if(process.argv[2]==='--worker')worker(process.argv[3],JSON.parse(process.argv[4])).catch(error=>{console.error(error);process.exit(1);});
   else if(process.argv.includes('--help'))process.stdout.write(HELP);
   else Promise.resolve().then(()=>main(options(process.argv.slice(2)))).catch(error=>{
-    process.stdout.write(JSON.stringify({schema:'room-loadtest-v1',status:'failed',error:error.message})+'\n');process.exitCode=1;
+    process.stdout.write(JSON.stringify({schema:'room-loadtest-v2',status:'failed',error:error.message})+'\n');process.exitCode=1;
   });
 }
