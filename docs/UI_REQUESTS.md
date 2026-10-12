@@ -374,11 +374,15 @@
 - 需要：一个公开命令（例如 `applyRoundSettlement(state, receipt)`），由房间在收齐全轮结果后调用，一次性提交该席的收入、经验、持久成长和由房间给定的 HP；带唯一 `settlementId`，重复提交返回原 state 与 `duplicate-settlement`，不重发任何奖励。要求 `startMatchCombat`/`stepMatch` 的 PvP 路径不再内部扣血、不再自行进入 `gameOver`。
 - 验收：同一收据提交两次，第二次无事件、无资源变化；`roundResults` 恰好一条。
 
+**T3 回应（Codex）**：已导出 enableMultiplayerSettlement/applyRoundSettlement，单席原子提交未截断伤害、收入、经验、成长和唯一收据，镜像拒绝、重复原样返回、HP0 为 eliminated；B4 全轮暂存/执行代次/统一发布按 [合同 §11](MULTIPLAYER_CONTRACT.md#11-t3单席原子结算整轮发布与超时规则) 接入。房间 HP 必须取规则返回值，不自行计算。
+
 ### SR-B1-03 加时与目录末轮（P1，T3/T4 合同）
 
 - 现状：目录 6-7 为 `isFinal`，引擎在该轮结算时对所有席位置 `gameOver`（`outcome` 为 victory/defeat）。房间在 `planSettlement` 中以 `isFinal` 结束对局，按存活者 HP 定名次，代码注释标明"建议规则，待 T3/T4 合同定稿"。
 - 需要：PvP 加时轮的公开入口（继续经济与商店、沿用末阶段基础伤害、不新增野怪/强化/奖励），以及 `nextRound` 在目录末尾之后的合法推进方式；平局扣血、同轮归零破同分规则定稿（房间当前实现：扣血后未截断 HP → 轮前 HP → 席位序号小者优先）。
 - 验收：连续平局、双方空阵容、多席同轮归零都能在有限轮内产生唯一名次。
+
+**T3 回应（Codex）**：合同 §11.5 已定稿加时 ID/ordinal、基础伤害12、经济/商店推进、双方平局扣血和未截断HP→轮前HP→固定座位序的唯一排名。目录外规则入口留 T4 接入前由规则线补齐，当前不冒称加时已可运行；在线目录末轮不再触发单人 gameOver。
 
 ### SR-B1-04 超时兜底的权威定义（P1）
 
@@ -387,6 +391,8 @@
   1. 异常节点且阵容为空时 `needsAnomalyRecruitment` 阻止开战（`missing-player`），兜底不能花钱买单位；当前占位 resolver 抛错导致整房 `fault` 结束。需要规则侧提供"超时放弃本轮/视为空阵容应战"的公开命令或等价规则。
   2. `nextRound` 因 `unsettled-round`（待领奖励、待选项或奖励容量不足）拒绝时，房间只能有限次延长结算截止，然后 `seat-stuck` 中断。需要超时自动领取/放弃奖励的公开命令，且不得重复发奖。
 - 验收：任一席位在任何节点超时都能在不花费资源的前提下推进到下一轮。
+
+**T3 回应（Codex，按用户确认）**：forfeitPendingChoice 默认选第一项（项目规则），只有无合法目标的空异常跳过；claimOrDiscardLoot 领取已赚且可容纳奖励，容量不足部分放弃。两者不付费、不重复发奖；签名、代次、失败和推进顺序见合同 §11.4。覆盖首项金币/组件、空异常、满备战区及领取事务回滚。
 
 ### SR-B1-05 淘汰归还卡池与共享卡池版本（P1，TP）
 
