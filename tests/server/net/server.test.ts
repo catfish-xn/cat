@@ -61,6 +61,11 @@ describe('game server: visibility', () => {
       // B3: combat frames are CombatState views, not MatchState; they carry no shop and belong to B's own battle.
       if (message.type === 'combat') { for (const frame of message.frames) expect(hasKey(frame.state, 'shop')).toBe(false); continue; }
       expect(hasKey(message, 'shop'), `${message.type} leaked a shop`).toBe(false);
+      if (message.type === 'view') for (const seat of message.view.seats) {
+        // C5: every seat's public board travels in the view, and only deployed units with item definitions.
+        expect(seat.publicBoard, `${seat.seatId} has no public board`).toBeDefined();
+        for (const key of ['gold', 'bench', 'slot', 'xp', 'seed', 'id', 'location']) expect(hasKey(seat.publicBoard, key), `publicBoard of ${seat.seatId} has ${key}`).toBe(false);
+      }
       expect(hasKey(message, 'rngState'), `${message.type} leaked an rng state`).toBe(false);
     }
     expect(messagesOfType(b.inbox, 'state').length).toBeGreaterThan(0);

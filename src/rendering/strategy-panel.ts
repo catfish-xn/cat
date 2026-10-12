@@ -45,6 +45,9 @@ const isOnline = () => typeof document !== 'undefined' && document.body.dataset.
 /** The room ended (all other seats out, or I was eliminated) even when my own MatchState is still mid-round. */
 const isOnlineEnded = () => isOnline() && document.body.dataset.onlineMode === 'online-ended';
 const ONLINE_END_TEXT = '对局结束 · 查看排名';
+/** My seat is out but the match goes on (C5): watch only, every command control is disabled. */
+const isOnlineSpectating = () => isOnline() && document.body.dataset.onlineSpectating === 'true';
+const ONLINE_SPECTATE_TEXT = '已淘汰 · 观战中 · 点击右侧玩家查看阵容';
 
 interface PanelActions {
   readonly state: () => MatchState;
@@ -281,7 +284,8 @@ export class StrategyPanel {
     this.render();
   }
   render(): void {
-    const state = this.actions.state(), ready = state.phase === 'preparation';
+    const spectating = isOnlineSpectating();
+    const state = this.actions.state(), ready = state.phase === 'preparation' && !spectating;
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.eventList = null;
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
@@ -289,7 +293,7 @@ export class StrategyPanel {
     const lootView = readLootView(state);
     const head = element('header', '', 'hud-bar'); head.dataset.phase = state.phase;
     const title = element('div', '', 'hud-title');
-    title.append(element('span', ended ? ONLINE_PHASE_LABEL.gameOver! : (online && ONLINE_PHASE_LABEL[state.phase]) || PHASE_LABEL[state.phase], `phase-badge phase-${ended ? 'gameOver' : state.phase}`), element('h2', `${round.displayName} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[round.kind]}${round.isFinal ? ' · 终局' : ''}`));
+    title.append(element('span', ended ? ONLINE_PHASE_LABEL.gameOver! : spectating ? '已淘汰' : (online && ONLINE_PHASE_LABEL[state.phase]) || PHASE_LABEL[state.phase], `phase-badge phase-${ended ? 'gameOver' : state.phase}`), element('h2', `${round.displayName} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[round.kind]}${round.isFinal ? ' · 终局' : ''}`));
     const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
@@ -301,7 +305,7 @@ export class StrategyPanel {
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
     if (dock) chip('生命', String(state.playerHp), 'hp');
     if (dock) dock.append(stats); else head.append(stats);
-    head.append(element('p', `利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
+    head.append(element('p', `利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
     this.root.append(head);
     // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
     const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';
@@ -330,6 +334,7 @@ export class StrategyPanel {
         button.disabled = true; button.dataset.blockedReason = lootView.reason ?? 'unsettled-round';
         button.title = continueBlockText(lootView.reason ?? 'unsettled-round'); button.setAttribute('aria-disabled', 'true');
       }
+      if (spectating) { button.disabled = true; button.setAttribute('aria-disabled', 'true'); }
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));
@@ -361,7 +366,7 @@ export class StrategyPanel {
       this.root.append(receipt);
     }
     this.lootSection = this.lootPanel(state); if (this.lootSection) this.root.append(this.lootSection);
-    this.statusText = element('p', ended ? ONLINE_END_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : '战斗与回合结算期间构筑已锁定', 'panel-status');
+    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : '战斗与回合结算期间构筑已锁定', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     for (const [tab, label] of [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const) {

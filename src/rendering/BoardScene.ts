@@ -389,16 +389,18 @@ export class BoardScene extends Phaser.Scene {
 
   /** Online rooms can end while my own MatchState is still mid-round (every other seat eliminated). */
   private onlineEnded(): boolean { return this.online && document.body.dataset.onlineMode === 'online-ended'; }
+  /** Settled round: single player waits for Continue; online the server moves on by itself. */
+  private settledText(): string { return this.online ? '本轮结果已结算 · 稍后自动进入下一回合' : '本轮结果已结算 · 点击 继续保留阵容并进入下一回合'; }
   /** Game-over status: single player restarts locally; online the server publishes the ranking instead. */
   private endText(): string {
     return this.online ? '对局结束 · 查看排名' : `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`;
   }
   private failureMessage(reason: MatchFailure): string {
     const messages: Record<MatchFailure, string> = {
-      'wrong-phase': this.session.phase === 'preparation' ? '当前为准备阶段 · 请布阵或开始战斗'
+      'wrong-phase': this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
         : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
-        : this.session.phase === 'settlement' ? '本轮已结算 · 点击 继续进入下一回合'
+        : this.session.phase === 'settlement' ? (this.online ? '本轮已结算 · 稍后自动进入下一回合' : '本轮已结算 · 点击 继续进入下一回合')
         : this.online ? '对局结束 · 查看排名' : 'Game Over · 点击 新局 开始新的一局',
       'unknown-unit': '未找到该单位', 'enemy-unit': '敌方单位不可操作或出售',
       'invalid-location': '请放置到棋盘或备战席内', 'outside-deployment-zone': '只能部署在我方区域，不能放入敌方区域',
@@ -408,7 +410,7 @@ export class BoardScene extends Phaser.Scene {
       'missing-both': '无法开始：棋盘上双方都至少需要 1 个单位',
       'invalid-slot': '商店槽位无效', 'stale-shop': '商店已更新，请选择当前商品', 'purchased-slot': '该商店槽位已经购买',
       'insufficient-gold': '金币不足', 'bench-full': '备战席已满 · 请先部署或出售单位',
-      'stale-round': '此回合已结束，请使用当前 Continue', 'unsettled-round': '当前回合尚未结算',
+      'stale-round': this.online ? '此回合已结束 · 请在当前回合重新操作' : '此回合已结束，请使用当前 Continue', 'unsettled-round': '当前回合尚未结算',
       'max-level': '已达最高等级 · 无需继续购买经验', 'population-cap': '人口已满 · 按 F 升级或先移回一个单位',
       // Equipment-only codes share the preview wording (U3 dynamic; replaces the B5 interim copy).
       ...Object.fromEntries(EQUIPMENT_COMMAND_FAILURES.map(code => [code, EQUIPMENT_FAILURE_TEXT[code]])) as Record<typeof EQUIPMENT_COMMAND_FAILURES[number], string>,
@@ -450,7 +452,7 @@ export class BoardScene extends Phaser.Scene {
     this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
     if (this.session.phase === 'gameOver') this.setStatus(this.endText());
     else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
-    else if (this.session.phase === 'settlement') this.setStatus('本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
+    else if (this.session.phase === 'settlement') this.setStatus(this.settledText());
   }
 
   private reconcileTokens() {
@@ -611,7 +613,7 @@ export class BoardScene extends Phaser.Scene {
     // Rewards may leave combat directly for a component choice (for example 2-7).
     // Render every phase exit, including choices, before waiting for more input.
     if (this.session.state.phase !== 'combat') {
-      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? this.endText() : '本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
+      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? this.endText() : this.settledText());
     }
   }
   private clearDrag() {

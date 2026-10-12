@@ -342,6 +342,7 @@
 | --- | --- | --- | --- | --- |
 | `LobbyView` | `queue[{name,kind,me}]`、`capacity=8`、`joined`、`canStart`、`error` | 匹配队列 | 匹配页列表、开始按钮、第 9 人报错 | 第 9 人加入时 `error` 非空且队列不变 |
 | `PlayerView.seats[]` | `seatId,name,kind(human/bot),hp,level,alive,rank,connected` | 八席公开信息 | 右侧血条栏、淘汰置灰、断线标记 | 每次 HP、等级、淘汰变化都推送一次 |
+| `PlayerView.seats[].publicBoard` | `units[{definitionId,starLevel,cell,items[]}]`（C5） | 该席场上单位与所持装备定义（公开信息） | 右栏头像、点击席位弹出的只读"对方阵容"面板、羁绊由界面用 `deriveTraits` 读 | 只含上场的本席单位；不含备战席、商店、金币、经验、实例 id、随机流（`tests/server/projection.test.ts`、`net/server.test.ts`） |
 | `PlayerView.phase` | `kind(preparation/choice/combat/settlement/ended)`、`round`、`roundName`、`endsAt`、`serverNow` | 房间阶段与截止 | 顶部阶段徽章与倒计时 | 倒计时以服务器时钟为准，客户端只做显示 |
 | `PlayerView.opponentSeatId` | 本轮对手席位 | PvP 对手 | 血条栏高亮对手、准备阶段状态栏提示 | PvE/补给回合为 null |
 | `PlayerView.ranking` | 终局后的完整名次 | 排名页 | 终局覆盖层 | 八席名次唯一完整 |
@@ -353,7 +354,7 @@
 
 需要服务器定稿、界面只显示结果的规则：选择节点超时的代选规则；准备截止时阵容非法的处理；断线接管的提示文案来源（`connected=false` 即显示"断线"）。假服务器对这些只做了标注的临时兜底。
 
-真网络接入（T8）时的已知改动点：`GameClient.send` 现为同步返回，接真服务器后改为"待确认"回执再确认，界面将显示待确认状态。
+真网络接入（T8）时的已知改动点：`GameClient.send` 已在 C4 改为"待确认"回执再确认（WebSocket），本地房间仍同步返回。
 
 ## src/server 需要规则侧提供的接口（B1，2026-10-12，Claude 流水线 B）
 
