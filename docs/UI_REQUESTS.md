@@ -527,3 +527,11 @@ B5 已按合同 §12 让房间开局建池（`createSharedPool` → 八席按 se
 - 现状：`nextSharedRound` 内部委托 `nextRound`，目录末轮后返回失败；房间在 6-7 后仍有 ≥2 席存活时照旧以 `overtime-unavailable` 明确中断（B4 行为不变）。
 - 需要：交付 SR-B4-01 的 `advanceMultiplayerRound` 时，同时给接入共享池的席位一个批量入口（例如 `nextSharedRound` 接受加时，或新增 `advanceSharedMultiplayerRound(pool, states, expectedRound): SharedPoolBatchResult`），保证加时轮同样先归还未锁店、再按轮换顺序生成共享店（§11.5 第二条"TP 后仍受共享池约束"）。房间侧接入点仍只有 `Room.advanceRound` 一处。
 - 验收：加时轮的商店来自共享池，`assertSharedPoolConservation` 在加时前后成立。
+
+## B7 接入反馈：T5R 规则侧修正（Codex）
+
+- **SR-B7-01（P0）**：`toCombatReplay` 以 `initial.nextEventSeq` 区分已经发出的开局事件与 step 事件，不再用 `tick > 0`。3-7 狼群第一次 step 发出的5条 tick0 跳跃放入 tick1 回放记录，保留原 tick/eventSeq，避免遗漏和重复；显示差分仍对应每步权威状态。严格比较后续动画序列，缺失/篡改/重复均继续报 `replay-divergence`。没有改战斗引擎或账本归属，详见合同 §14.2。
+- **SR-B7-02（P2）**：白名单新增本轮公开 PvE 的 `m8.preparation.{roundId,encounterId,enemies}`，enemies 的 id/definitionId/team/starLevel/location 逐层复制，同一组野怪进入 `preparation.units` 供棋盘和 `readEncounterPreview` 显示。须当前 PvE 轮 ID/遭遇 ID 匹配；PvP、补给、过期预览均不下发此子树。新增 `roundResults[].interestBasis`，直接使用历史已提交计息金币基数。保持 MatchState 递归结构子集，不公开 RNG、未来遭遇/掉落、PvP 固定模板或结算收据；字段与适配说明见合同 §10.9、§14.1。
+- **验证覆盖**：目录全部33个战斗回合（38轮减5个补给轮）的逐 tick/终态回放；狼群8个种子的事件恰好一次及缺失/篡改/重复拒绝；全部8种 PvE 预览的站位/属性保真、递归哨兵与无引用共享、旧/未来预览屏蔽、利息基数。仅修改规则投影、测试和合同文档，未修改 src/server、界面或 golden。
+
+验证环境：Node v22.23.3 / npm 10.9.9；65个 T5R 用例、全仓类型检查、五个 Node 入口校验（T1/T2/T3/TP/T5R）通过，T1 固定 state/event/RNG trace 哈希保持不变。

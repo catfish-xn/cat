@@ -445,19 +445,20 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 当前席位进度 | `round, roundDefinitionId, phase, gold, level, xp`，`streak.{kind,count}` | 仅本席已提交状态；phase 只代表本席操作阶段，全局阶段/终局由 Room PlayerView 决定 |
 | 玩家血量 | 对外 `playerHp` | 从权威 `SeatState.hp` 投影；T3 保证它与 Match 镜像一致前，不能以占位 MatchState 的 HP 覆盖权威值 |
 | 当前商店 | `shop.{generation,locked,slots}`；每格仅 `{status:'available',definitionId}`、`{status:'purchased'}` 或 TP 缺货格 `{status:'purchased',empty:true}` | 仅本人当前已生成商店；不含下轮店、其他席位商店或全池精确计数 |
-| 准备棋盘 | `preparation.board.{columns,rows,deploymentZones.{player,enemy}.{firstRow,lastRow}}`、`benchSize`；`units[].{id,definitionId,team,starLevel,location}`，location 仅 `{kind:'board',cell:{col,row}}` 或 `{kind:'bench',slot}` | units 只取本席 player，含备战区；不能把旧固定 enemy 模板混作本轮真人对手。敌人展示用已公布配对的单独战斗/观战投影 |
+| 准备棋盘 | `preparation.board.{columns,rows,deploymentZones.{player,enemy}.{firstRow,lastRow}}`、`benchSize`；`units[].{id,definitionId,team,starLevel,location}`，location 仅 `{kind:'board',cell:{col,row}}` 或 `{kind:'bench',slot}` | units 取本席 player（含备战区），另在当前 PvE 轮加入下行公开遭遇预览的 enemy；PvP 不下发旧固定 enemy 模板，真人对手仍用已公布配对的单独战斗/观战投影 |
 | 装备 | `items[].{id,definitionId,location}`；location 仅 `{kind:'inventory'}` 或 `{kind:'unit',unitId,slot}` | 仅本席实际已拥有的库存或单位装备；不含预定奖励 |
 | 临时装备 | `temporaryEquipment[].{temporaryId,parentItemInstanceId,roundId,holderId,definitionId,slot,expiresAfterRoundId}` | 仅当前轮已生成且父装备/持有者属于本席的子件；不是整个 equipmentState 或历轮 rolls |
 | 已拥有强化 | `augments[].{definitionId,choiceId,acquiredRound}` | 不含未来候选或掷骰输入 |
 | 当前异常 | `anomalyBinding` 为 null 或 `{definitionId,unitId,choiceId,boundRound}` | 仅当前已绑定结果 |
 | 已提交成长 | `persistentGrowth[].{unitId,attackDamageBps}`、`augmentProgress.{pumpingRounds,investmentHp}` | 仅本席持有单位及实际已提交进度；镜像战斗事件不写入 |
 | 当前待选项 | `pendingChoice` 为 null 或 `{kind,step,choiceId,generation,offers,targetId,rerollCount}` | 仅 phase=choice 且当前已展示的选择；offers 是已揭示定义 ID 列表，不含下一次刷新、未来选择或兜底答案；不下发 eventId/returnPhase |
-| 已提交本席轮结果 | `roundResults[].{round,roundId,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
+| 已提交本席轮结果 | `roundResults[].{round,roundId,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,interestBasis,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
+| 本轮已公开 PvE 遭遇预览（SR-B7-02） | `m8.preparation.{roundId,encounterId,enemies}`；enemies 每项按准备单位白名单复制 | 仅 m8.round.kind=pve、轮 ID 与 roundDefinitionId 相同且 preparation.encounterId 与本轮一致时存在；仅 enemy 棋盘单位。相同单位也进入 preparation.units，供站位和 readEncounterPreview 使用；不公开未来计划、掉落或 PvP 模板 |
 | 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 保留原 `m8.round` 嵌套（T5R 工单覆盖旧独立 roundInfo 建议），仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
 
 奖励只允许**另外构造已揭示摘要**，沿用 `loot-view.ts` 的现有可见性规则：本轮直接掉落状态为 revealed/pending-capacity/retained-terminal/granted 时，可投影 `dropId, encounterId, sourceUnitId, roundId, status` 与 `payload.{kind,quantity,definitionId?}`；组件选择只有实际领取收据存在后才能投影所获 payload。当前已触发但未选择的奖励仅公开当前 `pendingChoice` 的身份与已展示 offers，绝不公开 `terminalFallbackDefinitionId`。planned/forfeited 条目、未来轮掉落与未揭示候选完全省略，不保留占位数量或数组索引。共享池补偿已到账时 payload 取实际奖励收据（readLootView 已处理），不取被冻结的原棋子计划。不得为投影重新抽卡、推进 RNG 或发奖。
 
-**明确不下发的根字段/子树：** `seed, rngState, battleSeedRngState, choiceRngState, rewardRngState`；整个 `equipmentState`（包括初始化随机流、历史 rolls 的 rngDrawStart/rngDrawEnd）；`combatInputBasis`、`resourceProvenance`、`scheduleReceipts`、`nextUnitSerial/nextItemSerial/nextMatchEventSeq`；`m8.encounterPlan`、`m8.preparation`、`m8.loot.frozen`（含 seed/rng/rounds/choices）、`m8.loot.guaranteeCounters` 及其余未经上述摘要过滤的 m8 子树；旧单人 `outcome`；`sharedPool` 绑定和整个 SharedPoolState（含来源、精确计数和抽签顺序）。服务器座位凭证不得进入视图（仅连接认证层自动持有，不展示）。
+**明确不下发的根字段/子树：** `seed, rngState, battleSeedRngState, choiceRngState, rewardRngState`；整个 `equipmentState`（包括初始化随机流、历史 rolls 的 rngDrawStart/rngDrawEnd）；`combatInputBasis`、`resourceProvenance`、`scheduleReceipts`、`nextUnitSerial/nextItemSerial/nextMatchEventSeq`；`m8.encounterPlan`、`m8.preparation` 中白名单以外的字段、`m8.loot.frozen`（含 seed/rng/rounds/choices）、`m8.loot.guaranteeCounters` 及其余未经上述摘要过滤的 m8 子树；旧单人 `outcome`；`sharedPool` 绑定和整个 SharedPoolState（含来源、精确计数和抽签顺序）。服务器座位凭证不得进入视图（仅连接认证层自动持有，不展示）。
 
 `combat` **不能作为本席字段整体下发**。T2 的 BattleInput/BattleResult、initial/terminal 也是服务器私有对象，内含 battleSeed、rngState、策略和内部执行计划。T5 的战斗帧只能新建显示 DTO：场景基础字段 `combatId,tick,maxTicks,status,result,board`（board 按上表），每单位 `id,definitionId,team,starLevel,cell.{col,row},startingCell?.{col,row},hp,maxHp,mana,maxMana,shield,alive,targetId,attackDamage,attackRange,attackIntervalTicks,armor,magicResist,abilityPower,baseAttackSpeedBps,attackSpeedBonusBps`（可选字段仅在存在时投影）。状态/护盾详情与可见战斗事件另外使用经字段审查的展示投影，不能透传整个 unit/runtime、abilityPlan、tasks、strategy 或带随机输入的 CombatState。完整权威账本继续留在服务器，不因客户端显示抽样而丢弃；本节不把帧 DTO 伪装成能本地 step/restore 的 CombatState。
 
@@ -835,7 +836,7 @@ basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyRe
 
 公开 `toPrivateSeatView(state: MatchState): PrivateSeatView`（`src/server-entry` 导出）。输入是服务器可信状态，输出为独立、递归冻结的纯显示对象，不修改输入、不执行命令/抽签/发奖。无正常业务失败枚举；不接收或验证客户端伪造的 Match。字段逐层按 §10.9 构造，新增未知属性不会自动下发；所有 RNG、未来计划、来源账本、combatInputBasis、multiplayer/sharedPool 与整个 combat 均省略。
 
-`PrivateSeatView` 是 MatchState 的**递归结构子集**：相同字段名与嵌套，`m8` 仅保留 `round` 白名单。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史不含 settlementId 或执行代次。额外的已揭示掉落摘要仍按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
+`PrivateSeatView` 是 MatchState 的**递归结构子集**：相同字段名与嵌套，`m8` 保留 `round` 白名单，并在本轮公开 PvE 时保留 `preparation.{roundId,encounterId,enemies}` 白名单。不是浅层 `Partial<MatchState>`、存档、命令状态或可以 restore/step 的权威状态。`playerHp` 直接读已提交 Match 值；B4 发布时 SeatState.hp 须与之相等。`shop.empty:true` 保留；未选择阶段 pendingChoice=null；装备仅库存及己方单位，临时件须为当前轮且父件仍装备于本席持有者，成长只含现有己方单位。历史新增 `roundResults[].interestBasis`，直接取已提交轮结果的计息金币基数，不用当前 gold 或 interest 金额反推；仍不含 settlementId 或执行代次。额外的已揭示掉落摘要仍按 §10.9 单独构造，不能把 m8.loot 填回网络状态。
 
 Claude 可在本地显示适配器给缺失字段填占位，但只允许以下已审查用途；占位不得流回服务器或本地规则命令：
 
@@ -847,9 +848,10 @@ Claude 可在本地显示适配器给缺失字段填占位，但只允许以下�
 | readItemInventory | items 中库存部分 |
 | readUnitEquipment(state, ownUnitId) | 己方 preparation/items/temporaryEquipment；不能用 enemy 分支 |
 | getUnitStats、getUnitSellPrice、getXpToNextLevel、getShopOdds、getInterestGold | 已显示定义/星级/等级/金币与静态内容 |
+| readEncounterPreview（仅本轮 PvE） | m8.round、m8.preparation 的公开 enemies 与 preparation.units 中同一组野怪；必要时仅为缺失 version/contentStatus 填静态显示占位，不回填计划/掉落。PvP 不可用此选择器冒充真实对手 |
 | readRoundInfo 的可见字段 | m8.round；缺失 isFinal 可填 false，绝不可用来判断全局胜负 |
 
-**不能靠占位保真**：needsAnomalyRecruitment 依赖 scheduleReceipts/forfeitedChoices；previewEquip/previewCombine 的过期临时 ID 判断依赖 equipmentState.rolls；readLootView 依赖已揭示掉落账本；readEncounterPreview 依赖敌军冻结计划；战斗状态/状态效果选择器依赖 Combat runtime。B7 使用服务器回执处理合法性，奖励另作已揭示摘要，战斗走下节。不要把“类型能强转”当成这些选择器语义仍然成立。
+**不能靠占位保真**：needsAnomalyRecruitment 依赖 scheduleReceipts/forfeitedChoices；previewEquip/previewCombine 的过期临时 ID 判断依赖 equipmentState.rolls；readLootView 依赖已揭示掉落账本；PvP 的 readEncounterPreview 仍依赖未下发的固定敌军模板；战斗状态/状态效果选择器依赖 Combat runtime。B7 使用服务器回执处理合法性，奖励另作已揭示摘要，战斗走下节。不要把“类型能强转”当成这些选择器语义仍然成立。
 
 ### 14.2 SR-B1-07：回放接口与显示更新规则
 
@@ -869,7 +871,7 @@ applyCombatReplayTick(view: CombatViewState, frame: CombatReplayTick): CombatVie
 
 CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime/strategy/ability/机制定义/RNG/中立奖励收据。attackDamage、abilityPower、attackIntervalTicks、attackRange、armor、magicResist 是 readCombatStats 的**当前有效值**；客户端直接显示，不再套用静态装备/状态计算。
 
-原始事件没有完整的战后数值，且状态到期/动态防御等不能单靠伤害事件推回。因此协议采用 **每20 tick（1秒）一个权威关键帧 + 帧间精简动画事件 + unitUpdated 显示差分**。末 tick 必有关键帧（tick0结束时 initial=terminal，无需重复帧）。每 tick 都有一条 ticks 记录，包括无动作的 tick；首记录 tick0 动画对应已经应用过开局效果的 initial。
+原始事件没有完整的战后数值，且状态到期/动态防御等不能单靠伤害事件推回。因此协议采用 **每20 tick（1秒）一个权威关键帧 + 帧间精简动画事件 + unitUpdated 显示差分**。末 tick 必有关键帧（tick0结束时 initial=terminal，无需重复帧）。每 tick 都有一条 ticks 记录，包括无动作的 tick；首记录 tick0 只包含 `eventSeq < initial.nextEventSeq`（缺失游标视为0）的已应用开局事件。**事件 tick 不是发出边界**：例如3-7狼群的5条 tick0 跳跃事件由第一次 step 发出，仍保留原 tick/eventSeq，但放在 tick1 记录、其 unitUpdated 之前，与对应权威状态一起消费，不能在 tick0 重复播放。后续重执行按 `eventSeq >= initial.nextEventSeq` 与输入动画账本严格比对；缺失、篡改或重复的可见事件仍报 replay-divergence，不是忽略所有 tick0 差异。
 
 客户端从 initial 开始按 tick 顺序：先读动画事实播放表现；再把该 tick 末尾 `unitUpdated {unitId, changes}` 的字段按值覆盖到单位；有 keyframe 则整体替换当前视图。提供的 applyCombatReplayTick 实现状态部分，可不解析动画。差分字段仅来自 CombatViewUnit 白名单，包括绝对 hp/maxHp/mana/maxMana/shield/alive/targetId/cell 及当前有效属性；不是增减指令。**不要再根据 packetDamage、heal、manaChanged、cast、shieldLayerChanged 重复加减数值**。每 tick 的状态均与权威显示视图一致，最终与 terminal 完全一致。跳转到最新关键帧后只需应用其后的帧。
 
