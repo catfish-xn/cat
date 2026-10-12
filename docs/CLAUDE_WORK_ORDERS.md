@@ -411,6 +411,8 @@
 
 ## 派工单 C8：单位互换接线与验收（SR-C7-01 已由 PR #58 交付）
 
+**状态：已交付，PR #60 于 2026-10-12 合入 multiplayer（0d97c60）。**
+
 分支：`claude/c8-unit-swap-ui`，基于 `origin/multiplayer`（94b7ce6 之后）。
 
 ### 规则现状
@@ -427,3 +429,12 @@ PR #58 让现有 `deploy` 命令在目标被己方单位占用时原子互换两
 
 ### 验收
 typecheck、tests/server 全绿；c7-playtest.mjs 与 b6-bots.mjs 通过；PR 说明附三种互换的截图路径。
+
+## 派工单 C9：联机结算面板改用权威掉落摘要（SR-C7-02 已由 PR #59 交付）
+
+分支：`claude/c9-loot-view`，基于 `origin/multiplayer`（0d97c60 之后）。
+
+- 私有投影新增可选顶层 `revealedLoot: { roundId, revealedDrops }`（形状见 `docs/MULTIPLAYER_CONTRACT.md` §14.1），只在本席当前 PvE 回合存在。
+- 把 `src/rendering/online/round-gains.ts` 的差分删掉，联机结算面板改读 `revealedLoot`，与单机 `lootPanelSection` 同一渲染；没有该字段时不显示掉落行。
+- `tests/server/e2e/c7-playtest.mjs` 的"本轮获得"检查改为核对权威条目（麦迪、拉克丝、暴风大剑等应与之前一致）。
+- 不改 `src/simulation`、`scripts`。验收：typecheck、tests/server、c7-playtest.mjs 通过。
