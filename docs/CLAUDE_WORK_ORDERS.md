@@ -358,3 +358,25 @@
 ### 验收
 - [ ] 整局下发体积相比帧方案下降 ≥90%（PR 写实测数）；`combat` 帧代码已删。
 - [ ] 离线与联机两条路径共用同一渲染代码；typecheck、build、`tests/server`、会话/B8 测试通过。
+
+---
+
+## 派工单 B8：服务器连局后的资源释放（T9 压测发现）
+
+分支：`claude/b8-room-lifecycle`，基于 `origin/multiplayer`（含 T9 PR #47 的压测脚本）。可在 B7 之后、C6 之前做，也可与 C6 并行。
+
+### 现象
+`node scripts/loadtest-room.cjs --seats 2 --rounds 3`：三局结束后进程 RSS 569 → 610 → 670 MiB 严格递增；第三局准备命令 RTT p99 约 1 s。见 `docs/MULTIPLAYER_RELEASE_NOTES.md` 第 9 节。
+
+### 要做
+1. 用 `--inspect` 或 `v8.writeHeapSnapshot` 对比两局结束后的堆，找出上一局残留的引用。重点怀疑：`Lobby.current` 旧 `Room` 未置空、`Room` 的定时器/监听未取消、`net/session` 旧凭证与 `dedupe` 窗口未随新局清理、战斗帧或回放缓存按 battleId 累积、`RealClock.timers` 泄漏、每局的 `RoomState.battles`/`settlements` 整段保留。
+2. 新局开始时明确 `dispose()` 上一局（取消定时器、清空缓存、吊销旧凭证），并在 `Room` 结束后释放逐 tick 帧（只保留结算所需的 `terminal` 与事件计数）。
+3. RTT p99 1 s：确认是不是战斗计算占满单线程导致准备命令排队（T2 真实战斗在准备截止时同步算 4 场）。若是，把"算战斗"移出单写队列的关键路径：先冻结输入，异步算完再入队提交（仍保持单写）；不引入 worker 线程池（T9 后再评估）。
+4. 测试：`tests/server/lifecycle.test.ts` 用 `ManualClock` 连跑 5 局，断言活动定时器数、缓存条目数、凭证数在每局结束后回到基线；`loadtest-room.cjs --seats 2 --rounds 3` 重跑，PR 写出前后 RSS 曲线与 p99。
+
+### 不做
+- 不改规则、不改协议形状。
+
+### 验收
+- [ ] 连跑 3 局 RSS 不再单向增长（允许 ±10%）；准备命令 p99 明显下降并写明数值。
+- [ ] `npx vitest run tests/server` 全绿。
