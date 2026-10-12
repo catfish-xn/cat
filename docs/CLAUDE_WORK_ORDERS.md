@@ -391,6 +391,8 @@
 
 ## 派工单 C7：真机试玩修复（凭证持久化、掉落可见、合成复现、野怪回合核实）
 
+**状态：已交付，PR #57 于 2026-10-12 合入 multiplayer（1da9587）。**
+
 分支：`claude/c7-playtest-fixes`，基于 `origin/multiplayer`（62eb505 之后）。用户 2026-10-12 两台电脑实测反馈。
 
 ### 必做
@@ -406,3 +408,22 @@
 ### 验收
 - `npm run typecheck`、`tests/server` 全绿；b6-bots.mjs 新接回用例通过；c6-replay.mjs 通过。
 - PR 说明附四项逐条结论，带截图路径（artifacts/c7/，不提交）。
+
+## 派工单 C8：单位互换接线与验收（SR-C7-01 已由 PR #58 交付）
+
+分支：`claude/c8-unit-swap-ui`，基于 `origin/multiplayer`（94b7ce6 之后）。
+
+### 规则现状
+PR #58 让现有 `deploy` 命令在目标被己方单位占用时原子互换两者位置（棋盘↔备战席两向、备战席↔备战席、棋盘↔棋盘），命令形状不变，满人口可换人，去空格超人口返回 `population-cap`。`validateMatchDeployment` 预览同步放行。
+
+### 做什么
+1. 单机与联机（`?mode=online&server=ws`）浏览器里验收：拖一个备战席单位到场上已有单位上、场上单位拖到备战席已占槽、场上两单位互拖，三种都应互换；满人口时备战席拖上场也应互换；拖到空格超人口应拒绝并提示。
+2. `src/rendering/BoardScene.ts` 的 `'occupied'` 提示文案已成死分支，清理；拖拽高亮/预览若仍把已占用格子标红，改为可放置。`strategy-panel.ts` 点选部署路径同样放行。
+3. `tests/server/e2e/c7-playtest.mjs` 加一项互换检查（联机）；单机用现有 Playwright 输入测试补一个互换用例（`tests/` 下界面测试归 Claude 可改的范围以 AGENTS.md 为准，若不可改则只在 e2e 脚本里验）。
+4. 若 SR-C7-02 已由 Codex 交付，顺手把联机结算面板换成权威掉落收据并删 `round-gains.ts`；未交付则不等。
+
+### 不做
+不改 `src/simulation`、`scripts`；不做"拖组件到已带组件单位上自动合成"（用户未拍板）。
+
+### 验收
+typecheck、tests/server 全绿；c7-playtest.mjs 与 b6-bots.mjs 通过；PR 说明附三种互换的截图路径。
