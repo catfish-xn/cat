@@ -135,14 +135,21 @@ export async function runSmoke(url: string, name: string, log: (line: string) =>
     if (view?.phase.kind === 'ended') { log(`ended: ${view.ranking?.map(seat => `${seat.rank}.${seat.name}`).join(' ') ?? 'no ranking'}`); await client.close(); return view; }
     if (view && client.state && view.phase.round !== actedRound) {
       const state = client.state;
+      let receipt: Receipt | null = null;
       if (view.phase.kind === 'preparation' && state.phase === 'preparation') {
         actedRound = view.phase.round;
-        const receipt = await client.command({ type: 'buyXp' });
+        receipt = await client.command({ type: 'buyXp' });
         log(`round ${view.phase.round} buyXp → ${receipt.ok ? 'ok' : receipt.reason}`);
       } else if (view.phase.kind === 'choice' && state.pendingChoice && state.pendingChoice.step === 'offer') {
         const pending = state.pendingChoice;
-        const receipt = await client.command({ type: 'choose', choiceId: pending.choiceId, generation: pending.generation, definitionId: pending.offers[0]! });
+        receipt = await client.command({ type: 'choose', choiceId: pending.choiceId, generation: pending.generation, definitionId: pending.offers[0]! });
         log(`round ${view.phase.round} choose → ${receipt.ok ? 'ok' : receipt.reason}`);
+      }
+      // An applied command is followed by the new private state; act on that, not on the stale one.
+      if (receipt?.ok && receipt.result.kind === 'applied') {
+        const revision = receipt.result.seatRevision;
+        await client.waitFor(message => message.type === 'state' && message.seatRevision >= revision, 30_000);
+        continue;
       }
     }
     const before = client.inbox.length;
