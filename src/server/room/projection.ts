@@ -3,9 +3,8 @@
  * states, pairings of other seats and other seats' shops are never serialized.
  */
 import type { LedgerCombatEvent } from '../../simulation/combat-types';
-import type { CombatFrame } from '../protocol';
 import { findPairing } from './pairing';
-import type { BattleFrame, PlayerView, PlayerViewPhaseKind, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
+import type { BattleFrame, CombatFrame, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
 const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
   waiting: 'lobby', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', settlement: 'settlement', ended: 'ended',
@@ -29,10 +28,21 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
     phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.roundName, endsAt: room.deadlineAt, serverNow },
     opponentSeatId,
     ranking,
+    fault: room.fault === null ? null : toPlayerFault(room.fault),
   };
 }
 
-/** The shared CombatFrame of src/server/protocol.ts; the old name stays for existing callers. */
+/** Human-readable fault for the client; the structured RoomFault stays on the server. */
+export function toPlayerFault(fault: RoomFault): PlayerViewFault {
+  switch (fault.kind) {
+    case 'resolver-error': return { kind: fault.kind, detail: `战斗 ${fault.battleId} 结算出错：${fault.message}` };
+    case 'invalid-results': return { kind: fault.kind, detail: `结算结果无效：${fault.detail}` };
+    case 'seat-stuck': return { kind: fault.kind, detail: `席位 ${fault.seatId} 无法推进：${fault.reason}` };
+    case 'phase-mismatch': return { kind: fault.kind, detail: `阶段不一致：${fault.detail}` };
+  }
+}
+
+/** Kept for B1 callers; the shared shape is CombatFrame of src/server/protocol.ts. */
 export type CombatFrameView = CombatFrame;
 
 /** This seat's own battle frames of the current round, in playback order; empty outside a resolved round. */

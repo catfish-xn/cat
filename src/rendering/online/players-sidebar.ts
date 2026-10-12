@@ -44,7 +44,8 @@ export class PlayersSidebar {
     const head = element('div', '', 'seat-head');
     head.append(element('span', seat.name, 'seat-name'), element('span', seat.kind === 'bot' ? '机' : me ? '我' : '人', `seat-kind seat-${seat.kind}`));
     if (opponent) head.append(element('span', '对手', 'seat-opponent'));
-    if (!seat.connected) head.append(element('span', '断线', 'seat-offline'));
+    // Bots never hold a connection (B1 seats them as idle placeholders); only a dropped human shows 断线.
+    if (seat.kind === 'human' && !seat.connected) head.append(element('span', '断线', 'seat-offline'));
     const bar = element('div', '', 'seat-bar'); const fill = element('div', '', 'seat-fill'); fill.style.width = `${Math.max(0, Math.min(100, seat.hp))}%`; bar.append(fill);
     const foot = element('div', '', 'seat-foot');
     foot.append(element('span', seat.alive ? `${seat.hp}` : `第 ${seat.rank ?? '?'} 名`, 'seat-hp'), element('span', `Lv ${seat.level}`, 'seat-level'));

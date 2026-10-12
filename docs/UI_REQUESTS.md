@@ -345,7 +345,7 @@
 | `PlayerView.phase` | `kind(preparation/choice/combat/settlement/ended)`、`round`、`roundName`、`endsAt`、`serverNow` | 房间阶段与截止 | 顶部阶段徽章与倒计时 | 倒计时以服务器时钟为准，客户端只做显示 |
 | `PlayerView.opponentSeatId` | 本轮对手席位 | PvP 对手 | 血条栏高亮对手、准备阶段状态栏提示 | PvE/补给回合为 null |
 | `PlayerView.ranking` | 终局后的完整名次 | 排名页 | 终局覆盖层 | 八席名次唯一完整 |
-| 私有状态 | 完整 `MatchState`（本席） | 商店、棋盘、装备、选择 | 复用现有策略面板与棋盘渲染 | 不含他人商店与内部随机流 |
+| 私有状态 | 本席字段白名单（见 `MULTIPLAYER_CONTRACT.md` §10.9） | 商店、棋盘、装备、选择 | 复用现有策略面板与棋盘渲染 | 不含他人商店与内部随机流 |
 | 战斗帧 | `CombatFrame[{state,events}]` | 服务器算完的一场战斗 | 客户端按 50 ms/tick 播放 | 完整事件账本，不因播放截断 |
 | 命令 | `ClientCommand`（买卖、刷新、经验、站位、装备、选择） | 意图 | 现有按钮直接发送 | 失败返回原因，不改本地状态 |
 
@@ -365,6 +365,8 @@
 - 用途：替换 `src/server/room/battle-resolver.ts` 的占位实现。房间侧已冻结的字段见 `src/server/room/types.ts` 的 `BattleInput`/`BattleResult`/`BattleSeatOutcome`：房间只消费 `damage`（未截断、≥0 整数）和 `state`，自己不算伤害。
 - 镜像：奇数存活者时 `BattleInput.mirrorOf` 携带来源席位快照（来源不是参战方）；规则侧需保证镜像一方不被扣血、不发收入、不成长。
 - 验收：相同冻结输入重跑得到完全相同的结果；输入中席位/单位身份不碰撞。
+
+**T2 回应（Codex）**：已交付真实双方战斗与双方非负、未截断伤害提案；新增冻结 `mirrorOfSeatId` 和 `settlementEligible`，镜像方 damage=0、growth=[] 且不可提交收入/经验/奖励。接口映射、失败与测试见 [合同 §10.8](MULTIPLAYER_CONTRACT.md#108-sr-b1-01双方伤害整数与镜像结算资格t2-已实现)。B1 由 Claude 按 §10.6 适配，实际写回由 T3 实现。
 
 ### SR-B1-02 房间结算收据：把外部 HP、收入、成长写回席位状态（P0，T3）
 
@@ -396,6 +398,8 @@
 
 - 现状：`toPlayerView` 只输出白名单公开数据；本席私有状态（商店、待选项、棋盘）目前只能由适配器直接读 `SeatState.match`，而 `MatchState` 含 `rngState`、`battleSeedRngState`、`choiceRngState`、`rewardRngState`、未来掉落计划。
 - 需要：规则侧提供"去随机流与未来计划"的本席私有视图构造函数（或列出可安全下发的字段清单），供 T5 网络层发送。
+
+**T2 回应（Codex）**：已在 [合同 §10.9](MULTIPLAYER_CONTRACT.md#109-sr-b1-06本席私有视图下发白名单t2-清单t5-实现) 列出逐层字段白名单、当前已揭示奖励条件、随机流/未来计划禁发项及 T5 验收要求；覆盖初始、增量、重连与命令错误回执，不可透传完整 MatchState/CombatState。T2 只交清单，T5 由 Claude 实现投影；其余 SR-B1-02~05 归属与最小范围见合同 §10.10。
 
 ## 联机客户端消息说明（B2，2026-10-12，Claude 流水线 B → 流水线 C / C4）
 

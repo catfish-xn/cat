@@ -56,4 +56,11 @@ describe('src/server stays pure', () => {
       }
     }
   });
+  it('declares the shared protocol once, as pure types', () => {
+    const protocol = readFileSync(join(ROOT, 'protocol.ts'), 'utf8');
+    expect(protocol).not.toMatch(/^(export )?(function|class|const (?!ROOM_))/m);
+    const roomTypes = readFileSync(join(ROOT, 'room', 'types.ts'), 'utf8');
+    for (const name of ['PlayerView', 'LobbyView', 'SeatPublic', 'CombatFrame', 'QueueEntry']) expect(roomTypes, `${name} redeclared in room/types.ts`).not.toMatch(new RegExp(`^export interface ${name}\\b`, 'm'));
+    expect(roomTypes).not.toMatch(/^export type SeatCommand =\s*\|/m);
+  });
 });

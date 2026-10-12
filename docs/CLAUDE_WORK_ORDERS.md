@@ -138,3 +138,36 @@
 - [ ] `npm run serve:game` 能起、能被 `test-client.ts` 连上并完整跑一局（用 `prep=2` 等短配置）。
 - [ ] typecheck、build 通过；`src/server/net` 的 purity 例外只允许 `ws`、`node:crypto`、真实时钟适配器。
 - [ ] `docs/UI_REQUESTS.md` 追加 C4 需要的客户端消息说明（待确认回执、重连流程、错误码表）。
+
+---
+
+## 派工单 B3：房间接入 T2 真实双方战斗（按合同 §10.6，不做资产提交）
+
+分支：`claude/b3-two-sided-resolver`，基于 `origin/multiplayer`（已含 PR #36 T2 与 PR #37 C3）。
+
+### 现状
+- `src/server/room/battle-resolver.ts` 仍是占位：每席各跑一次单人 `startMatchCombat`，PvP 不是真对战。
+- T2 已交付规则侧入口（经 `src/server-entry/index.ts` 导出）：`snapshotForBattle`、`compileBattle`、`resolveTwoSidedBattle`、`proposeSettlement`、`startTwoSidedCombatWithEvents`、`stepCombat`。合同 `docs/MULTIPLAYER_CONTRACT.md` 第 10 节（尤其 **10.6**）写明了房间侧要怎么改，照做即可，不要自创。
+- T3（结算收据提交入口）GPT 还没交付，所以**本单只到"算出提案并暂存"，不扣血、不发收入、不进下一轮**。
+
+### 要做
+1. 调度信封（`src/server/room/types.ts` 的 `BattleInput`）增加显式 `battleSeed: number`（冻结配对时由房间种子派生，重试不换）和 `maxSteps: number`（默认 1201）；保留 `battleId/round/roomRevision`。
+2. 新增 `src/server/room/two-sided-resolver.ts`：普通 PvP 对两席只编译、只运行一次，照 §10.6 的伪代码调用 T2 入口；返回 `{ battleId, round, roomRevision, battle: RulesBattleResult, proposals: { a, b } }`。镜像配对：真实参战席位为 a，`mirrorOf` 快照为 b，第四参传 `mirrorOfSeatId`；镜像提案 `settlementEligible=false` 时不得进入任何提交队列。PvE/补给回合保留原占位分支，不走 PvP 入口。
+3. 战斗帧改为战斗视图数据：用 `startTwoSidedCombatWithEvents` + `stepCombat` 逐 tick 保存 `{ state: CombatState, events }`，只跑这一场；B 视角由映射得到，不再各跑一次。`projection.ts` 的 `toCombatFrames` 相应调整，`src/server/protocol.ts` 的 `CombatFrame` 若需改形状，同步改 `src/rendering/online/remote-session.ts` 的播放（它现在吃 `MatchState` 帧；改成 `CombatState` 帧后 BoardScene 仍能用 `syncCombat` 渲染，注意 `session.combat` 的来源）。
+4. 房间增加 `pvpMode: 'placeholder' | 'two-sided'` 配置，默认仍为 `placeholder`（因为 T3 没到，two-sided 下 PvP 回合无法推进）。`two-sided` 模式下：PvP 回合算出提案后把它们存进 `RoomState.pendingProposals`（带 battleId、参战真实席位），然后房间进入新阶段 `awaiting-settlement` 并以 `fault: { kind: 'settlement-unavailable' }` 明确中断（T3 到了换成提交）。不要为了"能跑通"自己扣血。
+5. 任一席位编译或规则抛 `BattleValidationError` 时，整轮不采纳结果（B1 已有的半轮不提交语义），记录原因。
+6. 测试 `tests/server/two-sided-resolver.test.ts`：
+   - 两席真实阵容进入同一场战斗（断言 `battle.mapping` 含双方席位且事件里出现双方单位）；
+   - 同一信封重跑结果 deepEqual；重试不换 `battleSeed`；
+   - 镜像配对的 b 提案不可结算，且镜像原主在它自己的配对里结果独立；
+   - 帧序列只有一场，首帧为开场、末帧为终态；
+   - `two-sided` 模式下 PvP 回合把提案暂存后以 `settlement-unavailable` 中断，无人扣血；`placeholder` 模式现有 33+ 用例不变。
+
+### 不做
+- 不实现 `applyRoundSettlement`、不扣血、不发收入、不做加时（等 T3）。
+- 不碰 `src/simulation/`、`src/server-entry/`。规则侧缺口写进 `docs/UI_REQUESTS.md`，编号续 SR-B3-xx。
+
+### 验收
+- [ ] `npx vitest run tests/server tests/t2-two-sided-battle.test.ts` 全绿；purity 检查零命中。
+- [ ] `?mode=online` 默认行为不变（placeholder），离线冒烟通过；typecheck、build 通过。
+- [ ] 合同 §10.6 的五条要求逐条在 PR 描述里对应到代码位置。

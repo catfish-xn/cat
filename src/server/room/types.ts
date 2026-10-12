@@ -11,13 +11,11 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import type { CombatResult } from '../../simulation/combat-types';
-import type { ClientCommand, SeatKind } from '../protocol';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type RoomPhase, type SeatKind } from '../protocol';
 
-export { ROOM_CAPACITY } from '../protocol';
-export type { SeatKind, SeatPublic, PlayerViewPhaseKind, PlayerViewPhase, PlayerView, QueueEntry, LobbyView, ClientCommand } from '../protocol';
-export const ROOM_PROTOCOL_VERSION = 1;
-
-export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'settlement' | 'ended';
+// Shared with the client: one copy lives in src/server/protocol.ts (C3).
+export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
+export type { RoomPhase, SeatKind, PlayerView, PlayerViewPhase, PlayerViewPhaseKind, PlayerViewFault, PlayerViewFaultKind, SeatPublic, QueueEntry, LobbyView, CombatFrame, ClientCommand } from '../protocol';
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 
 export interface SeatSpec { readonly seatId: string; readonly name: string; readonly kind: SeatKind }
@@ -135,7 +133,7 @@ export interface RoomState {
   readonly poolRevision: number;
 }
 
-/** The room's command type is the shared ClientCommand of src/server/protocol.ts. */
+/** A seat command is exactly the shared ClientCommand; the room dispatches it to src/simulation/match.ts. */
 export type SeatCommand = ClientCommand;
 
 export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase';

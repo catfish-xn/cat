@@ -1,18 +1,23 @@
 /**
- * Types shared by the server and the browser client (pure types, no implementation).
- *
- * Moved here from src/server/room/types.ts for work order B2 (step 1 of C3). Until C3 lands,
- * src/rendering/online/protocol.ts still carries a structurally identical copy; when the two
- * meet, C3's layout wins and the rendering file becomes `export * from '../../server/protocol'`.
- * The network message envelopes live in src/server/net/messages.ts.
+ * Shared client/server protocol types (work order C3). Pure types and constants, no
+ * implementation: the room (src/server/room), the local in-browser client and the UI
+ * (src/rendering/online) all import these shapes from here, so there is exactly one copy.
+ * See docs/UI_REQUESTS.md "八人联机界面数据需求" and docs/MULTIPLAYER_RENOVATION_V2.md §5.
+ * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 
 export const ROOM_CAPACITY = 8;
+export const ROOM_PROTOCOL_VERSION = 1;
 
+/** Server-side room phases (V2 §3.2). */
+export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'settlement' | 'ended';
 export type SeatKind = 'human' | 'bot';
+
+/* ---------------- views the server publishes to one seat ---------------- */
+
 export interface SeatPublic {
   readonly seatId: string;
   readonly name: string;
@@ -24,6 +29,7 @@ export interface SeatPublic {
   readonly rank: number | null;
   readonly connected: boolean;
 }
+/** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. */
 export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'combat' | 'settlement' | 'ended';
 export interface PlayerViewPhase {
   readonly kind: PlayerViewPhaseKind;
@@ -34,14 +40,19 @@ export interface PlayerViewPhase {
   /** Server clock (ms) when this view was produced; the client derives the countdown from the pair. */
   readonly serverNow: number;
 }
+/** Why a room ended abnormally; `detail` is already human-readable text chosen by the server. */
+export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch';
+export interface PlayerViewFault { readonly kind: PlayerViewFaultKind; readonly detail: string }
 export interface PlayerView {
   readonly mySeatId: string;
   readonly seats: readonly SeatPublic[];
   readonly phase: PlayerViewPhase;
   /** Seat this player fights (or fought) this round; null for PvE/supply rounds. */
   readonly opponentSeatId: string | null;
-  /** Full ranking once the match ended. */
+  /** Full ranking once the match ended normally. */
   readonly ranking: readonly SeatPublic[] | null;
+  /** Set when the room ended abnormally (then `ranking` stays null). */
+  readonly fault: PlayerViewFault | null;
 }
 export interface QueueEntry { readonly name: string; readonly kind: SeatKind; readonly me: boolean }
 export interface LobbyView {
@@ -51,10 +62,12 @@ export interface LobbyView {
   readonly canStart: boolean;
   readonly error: string | null;
 }
-/** Combat is computed on the server; the client only plays these frames back. */
+/** Combat is computed on the server; the client only plays these frames back at tick pace. */
 export interface CombatFrame { readonly state: MatchState; readonly events: readonly LedgerCombatEvent[] }
 
-/** A player's intent. The actor is the seat bound to the connection, never a field of the command. */
+/* ---------------- commands a seat may send ---------------- */
+
+/** Every command maps 1:1 to a public command of src/simulation/match.ts; the room adds nothing. */
 export type ClientCommand =
   | { readonly type: 'deploy'; readonly unitId: string; readonly target: UnitLocation }
   | { readonly type: 'buy'; readonly slot: number; readonly generation: number }
