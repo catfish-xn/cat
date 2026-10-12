@@ -11,14 +11,12 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import type { CombatResult } from '../../simulation/combat-types';
-import type { UnitLocation } from '../../simulation/units';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type RoomPhase, type SeatKind } from '../protocol';
 
-export const ROOM_CAPACITY = 8;
-export const ROOM_PROTOCOL_VERSION = 1;
-
-export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'settlement' | 'ended';
+// Shared with the client: one copy lives in src/server/protocol.ts (C3).
+export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
+export type { RoomPhase, SeatKind, PlayerView, PlayerViewPhase, PlayerViewPhaseKind, PlayerViewFault, PlayerViewFaultKind, SeatPublic, QueueEntry, LobbyView, CombatFrame, ClientCommand } from '../protocol';
 export type RoundKind = 'pvp' | 'pve' | 'supply';
-export type SeatKind = 'human' | 'bot';
 
 export interface SeatSpec { readonly seatId: string; readonly name: string; readonly kind: SeatKind }
 
@@ -135,58 +133,11 @@ export interface RoomState {
   readonly poolRevision: number;
 }
 
-/** Mirrors ClientCommand of src/rendering/online/protocol.ts (PR #33); keep structurally identical. */
-export type SeatCommand =
-  | { readonly type: 'deploy'; readonly unitId: string; readonly target: UnitLocation }
-  | { readonly type: 'buy'; readonly slot: number; readonly generation: number }
-  | { readonly type: 'sell'; readonly unitId: string }
-  | { readonly type: 'shopLock'; readonly locked: boolean; readonly generation: number }
-  | { readonly type: 'reroll' }
-  | { readonly type: 'buyXp' }
-  | { readonly type: 'combine'; readonly a: string; readonly b: string }
-  | { readonly type: 'equip'; readonly itemId: string; readonly unitId: string; readonly slot: number }
-  | { readonly type: 'choose'; readonly choiceId: string; readonly generation: number; readonly definitionId: string }
-  | { readonly type: 'anomalyTarget'; readonly choiceId: string; readonly generation: number; readonly unitId: string }
-  | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
+/** A seat command is exactly the shared ClientCommand; the room dispatches it to src/simulation/match.ts. */
+export type SeatCommand = ClientCommand;
 
 export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase';
 export type RoomCommandResult =
   | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[]; readonly seatRevision: number; readonly roomRevision: number }
   | { readonly ok: false; readonly reason: RoomFailure | MatchFailure; readonly state: MatchState | null };
 export type { MatchCommandResult };
-
-/* ---- Client views. Structurally identical to src/rendering/online/protocol.ts (PR #33); once that
- * file is on this branch the server should import the types from there instead of redeclaring. ---- */
-export interface SeatPublic {
-  readonly seatId: string;
-  readonly name: string;
-  readonly kind: SeatKind;
-  readonly hp: number;
-  readonly level: number;
-  readonly alive: boolean;
-  readonly rank: number | null;
-  readonly connected: boolean;
-}
-export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'combat' | 'settlement' | 'ended';
-export interface PlayerViewPhase {
-  readonly kind: PlayerViewPhaseKind;
-  readonly round: number;
-  readonly roundName: string;
-  readonly endsAt: number | null;
-  readonly serverNow: number;
-}
-export interface PlayerView {
-  readonly mySeatId: string;
-  readonly seats: readonly SeatPublic[];
-  readonly phase: PlayerViewPhase;
-  readonly opponentSeatId: string | null;
-  readonly ranking: readonly SeatPublic[] | null;
-}
-export interface QueueEntry { readonly name: string; readonly kind: SeatKind; readonly me: boolean }
-export interface LobbyView {
-  readonly queue: readonly QueueEntry[];
-  readonly capacity: number;
-  readonly joined: boolean;
-  readonly canStart: boolean;
-  readonly error: string | null;
-}

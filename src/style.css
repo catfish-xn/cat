@@ -354,7 +354,11 @@ body[data-online-mode="online-lobby"] #board-frame, body[data-online-mode="onlin
    left column keeps the phase title, encounter preview and the trait/item/deploy/build/record tabs. */
 body[data-online] { --online-countdown-h: 48px; --online-dock-h: 132px; --online-gap: 8px; }
 body[data-online] #board-frame { display: grid; grid-template-rows: var(--online-countdown-h) minmax(0, 1fr) var(--online-dock-h); gap: var(--online-gap); align-content: start; }
-body[data-online] #board-root { height: min(calc(100dvh - 24px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)), 823px); min-height: 360px; }
+/* C3: the board column is wider than the 480:520 canvas; size #board-root to the canvas ratio so FIT leaves no side bars.
+   Height-bound on tall columns, width-bound (cqw) on narrow ones. */
+body[data-online] { --online-board-h: min(calc(100dvh - 24px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)), 823px); }
+body[data-online] #board-frame { container-type: inline-size; }
+body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), calc(100cqw * 520 / 480)); width: min(100%, calc(max(var(--online-board-h), 360px) * 480 / 520)); justify-self: center; }
 body[data-online] #feedback-root { top: calc(var(--online-countdown-h) + var(--online-gap)); bottom: calc(var(--online-dock-h) + var(--online-gap)); }
 .online-countdown { display: flex; align-items: center; justify-content: center; gap: 14px; height: var(--online-countdown-h); padding: 0 12px; border-radius: 8px; background: var(--c-surface, #14212c); color: #e2eef1; }
 .online-countdown .countdown-round { font-size: 15px; font-weight: 700; color: #9aaeb9; }
@@ -378,4 +382,8 @@ body[data-online] #strategy-root .hud-bar { margin-bottom: var(--space-sm, 8px);
 body[data-online] #strategy-root .action-bar:empty { display: none; }
 /* A room can end during a choice (every other seat eliminated): the ranking, not the stale choice, is what to show. */
 body[data-online-mode="online-ended"] .choice-overlay { display: none !important; }
+/* C3: once the room ended, the left column drops the per-round supply/income leftovers of my own seat (the ranking overlay is the result). */
+body[data-online-mode="online-ended"] #strategy-root .income-receipt, body[data-online-mode="online-ended"] #strategy-root .loot-panel,
+body[data-online-mode="online-ended"] #strategy-root .encounter-preview { display: none !important; }
+.ranking-fault { margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: #4a2a2a; color: #f6b3b3; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 @media (max-width: 1100px) { body[data-online] #board-frame { position: relative; top: auto; } }

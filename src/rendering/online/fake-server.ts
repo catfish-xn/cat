@@ -16,7 +16,7 @@ import { readRoundInfo } from '../../simulation/round-selectors';
 import { nextRandom } from '../../simulation/rng';
 import {
   ROOM_CAPACITY, type ClientCommand, type ClientListeners, type CombatFrame, type GameClient, type LobbyView,
-  type PlayerView, type QueueEntry, type RoomPhase, type SeatPublic,
+  type PlayerView, type PlayerViewPhase, type QueueEntry, type SeatPublic,
 } from './protocol';
 
 export interface FakeServerOptions {
@@ -41,7 +41,7 @@ export class FakeServer implements GameClient {
   private error: string | null = null;
   private seats: Seat[] = [];
   private match: MatchState | null = null;
-  private phase: RoomPhase = { kind: 'lobby', round: 0, roundName: '', endsAt: null, serverNow: 0 };
+  private phase: PlayerViewPhase = { kind: 'lobby', round: 0, roundName: '', endsAt: null, serverNow: 0 };
   private opponent: string | null = null;
   private ranking: SeatPublic[] | null = null;
   private timer: number | null = null;
@@ -107,7 +107,7 @@ export class FakeServer implements GameClient {
     }
   }
 
-  private roomKindFor(state: MatchState): RoomPhase['kind'] {
+  private roomKindFor(state: MatchState): PlayerViewPhase['kind'] {
     return state.phase === 'gameOver' ? 'ended' : state.phase;
   }
   /** Enter the room phase matching the engine phase and arm its deadline. */
@@ -119,7 +119,7 @@ export class FakeServer implements GameClient {
     this.setPhase({ kind, round: state.round, roundName: round.displayName, endsAt: duration === null ? null : this.now() + duration + extendMs, serverNow: this.now() });
     if (kind === 'ended') this.finish();
   }
-  private setPhase(phase: RoomPhase) {
+  private setPhase(phase: PlayerViewPhase) {
     this.phase = phase; this.clearTimer();
     if (phase.endsAt !== null) this.timer = window.setTimeout(() => this.deadline(), Math.max(0, phase.endsAt - this.now()));
     this.emitView();
@@ -198,7 +198,7 @@ export class FakeServer implements GameClient {
     this.listeners?.lobby(view);
   }
   private emitView() {
-    const view: PlayerView = { mySeatId: 'me', seats: this.seats.map(publicSeat), phase: { ...this.phase, serverNow: this.now() }, opponentSeatId: this.opponent, ranking: this.ranking };
+    const view: PlayerView = { mySeatId: 'me', seats: this.seats.map(publicSeat), phase: { ...this.phase, serverNow: this.now() }, opponentSeatId: this.opponent, ranking: this.ranking, fault: null };
     this.listeners?.view(view);
   }
 }

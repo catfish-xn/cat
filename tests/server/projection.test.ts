@@ -8,7 +8,8 @@ describe('toPlayerView', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));
     room.start();
     const view = toPlayerView(room.state, 's1', clock.now());
-    expect(Object.keys(view).sort()).toEqual(['mySeatId', 'opponentSeatId', 'phase', 'ranking', 'seats']);
+    expect(Object.keys(view).sort()).toEqual(['fault', 'mySeatId', 'opponentSeatId', 'phase', 'ranking', 'seats']);
+    expect(view.fault).toBeNull();
     expect(view.phase).toEqual({ kind: 'preparation', round: 1, roundName: '1-2', endsAt: 1_000, serverNow: 0 });
     expect(view.seats).toHaveLength(8);
     expect(Object.keys(view.seats[0]!).sort()).toEqual(['alive', 'connected', 'hp', 'kind', 'level', 'name', 'rank', 'seatId']);
