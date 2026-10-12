@@ -60,3 +60,4 @@ describe('net/messages: content identity', () => {
     expect(commandContent(base)).not.toBe(commandContent({ ...base, seatRevision: 1 }));
   });
 });
+

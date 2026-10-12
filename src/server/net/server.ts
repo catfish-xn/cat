@@ -10,12 +10,12 @@
  * commandId dedupe → room / round / seatRevision → rules (Room.handle) → record receipt → push.
  */
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
-import type { BattleResolver } from '../room/battle-resolver';
+import { startBattleJob, type BattleJob, type BattleResolver } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
-import { toCombatReplayFor, toPlayerView, toSeatPrivateView } from '../room/projection';
-import type { Room, RoomTimings } from '../room/room';
+import { toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
+import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
@@ -51,6 +51,8 @@ export interface GameServerOptions {
   /** Bot steps spacing and takeover delay (B6); steps always run as tasks of the server's write queue. */
   readonly bots?: { readonly stepMs?: number; readonly takeoverMs?: number };
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
+  /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
+  readonly sliceTicks?: number;
   readonly log?: (line: string) => void;
 }
 
@@ -61,7 +63,39 @@ export interface GameServer {
   readonly connectionCount: number;
   /** Messages the write queue has run (inbound messages + pushes); tests use it to prove serial processing. */
   readonly processed: number;
+  /** What the server holds across matches (B8): credentials, their dedupe windows and the current room's own leftovers. */
+  readonly retained: ServerRetained;
   close(): Promise<void>;
+}
+
+export interface ServerRetained {
+  readonly sessions: number;
+  readonly dedupeEntries: number;
+  readonly connections: number;
+  readonly room: RoomRetained | null;
+}
+/** Default combat ticks per resolution slice: a few tens of milliseconds of rules work between two queue turns. */
+export const DEFAULT_SLICE_TICKS = 100;
+
+/**
+ * Resolver wrapper (B8): once a battle's job finished, one more slice builds the replays its attended seats will be
+ * pushed, so the re-execution behind a replay does not run inside the push of the whole round. The result is unchanged.
+ */
+function withReplayWarmup(inner: BattleResolver, seats: () => Iterable<string>): BattleResolver {
+  return {
+    resolveBattle: (input, pool) => inner.resolveBattle(input, pool),
+    startBattle(input, pool): BattleJob {
+      const job = startBattleJob(inner, input, pool);
+      let finished: ReturnType<BattleJob['advance']> = null;
+      return {
+        advance(maxTicks) {
+          if (finished) { warmCombatReplays(finished, seats()); return finished; }
+          finished = job.advance(maxTicks);
+          return null;
+        },
+      };
+    },
+  };
 }
 
 /** Close codes the server uses; 4xxx is the application range of RFC 6455. */
@@ -97,12 +131,28 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   let nextConnectionId = 1;
   let closing = false;
 
+  // Every room deadline and resolution slice runs as a write-queue task, like an inbound message: the single writer
+  // is explicit, and messages that arrived during a slice run before the next slice (B8).
+  const roomClock: Clock = {
+    now: () => clock.now(),
+    schedule: (at, fn) => clock.schedule(at, () => queue.push(fn)),
+    cancel: handle => clock.cancel(handle),
+  };
+  const resolver = options.resolver ?? new TwoSidedBattleResolver();
   const lobby = new Lobby({
-    clock, seed: options.seed, resolver: options.resolver ?? new TwoSidedBattleResolver(), roomId: options.roomId, timings: options.timings,
+    clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS, seed: options.seed,
+    resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened),
     // Bot steps and takeovers fire on the clock; each one becomes a task of the single write queue (§13.3 item 2).
     bots: { ...options.bots, enqueue: task => queue.push(task) },
   });
+
+  /** Seats a connection currently holds; only they are pushed a replay. */
+  function attendedSeats(): Set<string> {
+    const seats = new Set<string>();
+    for (const conn of connections.values()) if (conn.session) seats.add(conn.session.seatId);
+    return seats;
+  }
 
   /* ---------------- outbound ---------------- */
 
@@ -376,6 +426,11 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         get room() { return room; },
         get connectionCount() { return connections.size; },
         get processed() { return queue.completed; },
+        get retained(): ServerRetained {
+          let dedupeEntries = 0;
+          for (const session of sessions) dedupeEntries += session.dedupe.size;
+          return { sessions: sessions.size, dedupeEntries, connections: connections.size, room: room?.retained ?? null };
+        },
         close: () => new Promise<void>(resolveClose => {
           closing = true;
           for (const conn of connections.values()) { conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing'); }

@@ -16,7 +16,7 @@ import {
   BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle,
   type BattleIdentity, type PlayerBattleSnapshot, type SharedPoolState,
 } from '../../server-entry';
-import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from './battle-resolver';
+import { BattleResolveError, PlaceholderBattleResolver, jobOf, runSteps, startBattleJob, type BattleJob, type BattleResolver, type BattleSteps } from './battle-resolver';
 import type { BattleInput, BattleResult, BattleSeatInput, TwoSidedBattleResult } from './types';
 
 export class TwoSidedBattleResolver implements BattleResolver {
@@ -27,19 +27,27 @@ export class TwoSidedBattleResolver implements BattleResolver {
     if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input, pool);
     return resolveTwoSidedPvp(input);
   }
+  /** Sliced form (B8): the rules' battle and its proposals run in one slice each. */
+  startBattle(input: BattleInput, pool: SharedPoolState): BattleJob {
+    if (input.roundKind !== 'pvp') return startBattleJob(this.nonPvp, input, pool);
+    return jobOf(twoSidedSteps(input));
+  }
 }
 
 /** A rules refusal (BattleValidationError) becomes a resolver fault carrying the stable reason; the round never commits. */
 function guarded<T>(subject: string, run: () => T): T {
   try { return run(); }
-  catch (error) {
-    if (error instanceof BattleValidationError) throw new BattleResolveError(subject, `battle-validation:${error.reason}`);
-    throw error;
-  }
+  catch (error) { throw asResolveError(subject, error); }
+}
+function asResolveError(subject: string, error: unknown): unknown {
+  return error instanceof BattleValidationError ? new BattleResolveError(subject, `battle-validation:${error.reason}`) : error;
 }
 
 /** §10.6 pseudo-code, verbatim in structure: snapshot both sides, compile with the explicit seed and identity, resolve once, propose. */
-export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult {
+export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult { return runSteps(twoSidedSteps(envelope)); }
+
+/** resolveTwoSidedPvp as a step sequence: one `yield` after the rules' battle, before the proposals. */
+function* twoSidedSteps(envelope: BattleInput): BattleSteps<TwoSidedBattleResult> {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -57,6 +65,7 @@ export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult 
   const identity: BattleIdentity = envelope.mirrorOf === null ? { battleId: envelope.battleId } : { battleId: envelope.battleId, mirrorOfSeatId: envelope.mirrorOf.seatId };
   const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
   const battle = guarded(envelope.battleId, () => resolveTwoSidedBattle(frozen, envelope.maxSteps));
+  yield;
   const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
   return {
     kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
