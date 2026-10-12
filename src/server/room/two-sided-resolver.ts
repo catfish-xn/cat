@@ -19,13 +19,22 @@ import {
 import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from './battle-resolver';
 import type { BattleFrame, BattleInput, BattleResult, BattleSeatInput, RulesBattleResult, TwoSidedBattleResult } from './types';
 
+export interface TwoSidedResolverOptions {
+  /**
+   * Builds the per-tick playback frames (default true). Headless runs nobody watches (all-bot test matches, stress
+   * scripts) may turn it off: the rules battle, its proposals and the settlement are identical, only the second
+   * playback pass is skipped, so the room's battle phase has no frames to wait for.
+   */
+  readonly frames?: boolean;
+}
+
 export class TwoSidedBattleResolver implements BattleResolver {
   /** @param nonPvp resolves PvE and supply rounds (each seat on its own); the placeholder by default. */
-  constructor(private readonly nonPvp: BattleResolver = new PlaceholderBattleResolver()) {}
+  constructor(private readonly nonPvp: BattleResolver = new PlaceholderBattleResolver(), private readonly options: TwoSidedResolverOptions = {}) {}
   /** PvP proposals award nothing and leave the pool alone; PvE/supply may award units, so the pool goes to the inner resolver. */
   resolveBattle(input: BattleInput, pool: SharedPoolState): BattleResult {
     if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input, pool);
-    return resolveTwoSidedPvp(input);
+    return resolveTwoSidedPvp(input, this.options);
   }
 }
 
@@ -39,7 +48,7 @@ function guarded<T>(subject: string, run: () => T): T {
 }
 
 /** §10.6 pseudo-code, verbatim in structure: snapshot both sides, compile with the explicit seed and identity, resolve once, propose. */
-export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult {
+export function resolveTwoSidedPvp(envelope: BattleInput, options: TwoSidedResolverOptions = {}): TwoSidedBattleResult {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -58,7 +67,7 @@ export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult 
   const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
   const battle = guarded(envelope.battleId, () => resolveTwoSidedBattle(frozen, envelope.maxSteps));
   const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-  const frames = guarded(envelope.battleId, () => toFrames(frozen, battle, envelope.maxSteps));
+  const frames = options.frames === false ? [] : guarded(envelope.battleId, () => toFrames(frozen, battle, envelope.maxSteps));
   return {
     kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
     participants: envelope.seats.map(seat => seat.seatId), battle, proposals, frames,

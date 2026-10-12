@@ -61,7 +61,11 @@ export type ReceiptResult =
   | { readonly kind: 'left' }
   | { readonly kind: 'started'; readonly roomId: string }
   /** `lastCommandId` is the highest id this seat has used; a client that lost its counter continues above it. */
-  | { readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null; readonly connectionEpoch: number; readonly lastCommandId: number }
+  /**
+   * `reclaimed` (B6): a bot had taken this seat over while the player was away and this resume handed it back; absent
+   * otherwise. The client shows "已接回席位" from it.
+   */
+  | { readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null; readonly connectionEpoch: number; readonly lastCommandId: number; readonly reclaimed?: true }
   | { readonly kind: 'applied'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly MatchEvent[] };
 
 /** Failures decided by the network layer before the room or the rules see the message. */

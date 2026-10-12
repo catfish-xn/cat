@@ -1,5 +1,5 @@
 /**
- * Eight-seat room state machine (pipeline B, work orders B1–B5, B7). Pure TypeScript: no network,
+ * Eight-seat room state machine (pipeline B, work orders B1–B7). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
  * the one-shot round publication and the ranking; every rule (gold, shop, combat, damage,
  * income, growth, the shared card pool) comes from src/simulation through its public commands,
@@ -164,7 +164,7 @@ export class Room {
     if (!opened.ok) throw new RangeError(`shared pool opening: ${opened.reason}`);
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
-      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', hp: match.playerHp,
+      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', controller: spec.kind === 'bot' ? 'bot' : 'human', controlEpoch: 0, hp: match.playerHp,
         alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
@@ -185,10 +185,32 @@ export class Room {
     this.enterRound();
   }
 
-  /** Phase and seat gate only; the rules decide everything else and a refusal changes nothing. */
+  /**
+   * Phase and seat gate only; the rules decide everything else and a refusal changes nothing. A human seat a bot took
+   * over refuses its player's commands until the player resumes (one controller at a time, B6). Fill-in bot seats have
+   * no session, so no player command reaches them; server-side callers may still drive them here directly.
+   */
   handle(seatId: string, command: SeatCommand): RoomCommandResult {
     const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
     if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
+    if (seat.controller === 'takeover') return { ok: false, reason: 'seat-controlled', state: seat.match };
+    return this.apply(seat, command);
+  }
+
+  /**
+   * Bot entry (B6, contract §13.3): the same gate and the same rules dispatch as a player command, accepted only while
+   * the seat is bot-controlled under exactly `controlEpoch`. A takeover revoked by a resume (or any controller change)
+   * makes every step decided before it fail with `control-revoked`, without touching the seat.
+   */
+  handleBot(seatId: string, controlEpoch: number, command: SeatCommand): RoomCommandResult {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat) return { ok: false, reason: 'unknown-seat', state: null };
+    if (seat.controller === 'human' || seat.controlEpoch !== controlEpoch) return { ok: false, reason: 'control-revoked', state: seat.match };
+    return this.apply(seat, command);
+  }
+
+  private apply(seat: SeatState, command: SeatCommand): RoomCommandResult {
+    const seatId = seat.seatId;
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
     const allowed = phase === 'preparation' || (phase === 'choice' && CHOICE_COMMANDS.has(command.type));
@@ -205,13 +227,29 @@ export class Room {
   /**
    * Connection bookkeeping for the network layer (B2): a dropped or resumed socket changes only the
    * public `connected` flag. Assets, pairings and ranks stay (V2 D8); seatRevision does not move
-   * because no command or settlement touched the seat.
+   * because no command or settlement touched the seat. A resume also revokes a bot takeover at once
+   * (B6): the controller goes back to `human` under a new control generation.
    */
   setConnected(seatId: string, connected: boolean): boolean {
     const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
     if (!seat || seat.kind !== 'human') return false;
-    if (seat.connected === connected) return true;
-    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, connected } : candidate));
+    const reclaim = connected && seat.controller === 'takeover';
+    if (seat.connected === connected && !reclaim) return true;
+    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId !== seatId ? candidate
+      : reclaim ? { ...candidate, connected, controller: 'human', controlEpoch: candidate.controlEpoch + 1 } : { ...candidate, connected }));
+    return true;
+  }
+
+  /**
+   * Hands a disconnected human seat to a bot (B6 takeover). The seat keeps its MatchState, pool holdings, assets and
+   * receipts; nothing is recreated. Refused (false) unless the seat is a human seat that is alive, disconnected and
+   * still under human control in a running room. When to call it is the bot driver's decision (its takeover delay).
+   */
+  takeOver(seatId: string): boolean {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat || seat.kind !== 'human' || seat.connected || !seat.alive || seat.controller !== 'human') return false;
+    if (this.current.phase === 'waiting' || this.current.phase === 'ended') return false;
+    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, controller: 'takeover', controlEpoch: candidate.controlEpoch + 1 } : candidate));
     return true;
   }
 

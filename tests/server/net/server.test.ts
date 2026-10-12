@@ -347,5 +347,6 @@ describe('game server: whole match over the wire', () => {
     // Evidence for docs/UI_REQUESTS.md (wire size of full-state combat frames); the numbers are reported, not asserted.
     const bytes = (message: ServerMessage) => JSON.stringify(message).length;
     expect(Math.max(...a.inbox.map(bytes))).toBeGreaterThan(0);
-  }, 60_000);
+    // B6: the six fill-in bots now play (full boards, longer battles and frames), so the match takes longer on the wire.
+  }, 150_000);
 });
