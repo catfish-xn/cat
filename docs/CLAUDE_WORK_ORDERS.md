@@ -388,3 +388,21 @@
 ### 验收
 - [ ] 连跑 3 局 RSS 不再单向增长（允许 ±10%）；准备命令 p99 明显下降并写明数值。
 - [ ] `npx vitest run tests/server` 全绿。
+
+## 派工单 C7：真机试玩修复（凭证持久化、掉落可见、合成复现、野怪回合核实）
+
+分支：`claude/c7-playtest-fixes`，基于 `origin/multiplayer`（62eb505 之后）。用户 2026-10-12 两台电脑实测反馈。
+
+### 必做
+1. **凭证改为持久化。** `src/rendering/online/mode.ts` / `ws-client.ts` 当前把座位凭证放在 sessionStorage，关掉标签页再打开同一网址就丢了，机器人接管后接不回来，只能看到"等待本局结束"。改为 localStorage，键里带服务器地址；对局结束（收到 ended 或 lobby 视图且凭证已失效）时清掉；同一浏览器开第二个标签页要能复用。浏览器脚本 `tests/server/e2e/b6-bots.mjs` 的接管用例改成"关闭页面 → 新开页面同一网址 → 接回席位"，不再靠同一标签页刷新。
+2. **掉落可见。** `seat-view-adapter.ts` 把 `m8.loot` 全部置空，联机玩家看不到野怪掉了什么。用现有白名单里的 `items`（库存）和 `roundResults` 在结算阶段显示"本轮获得：xx"；若白名单字段不够（例如需要掉落收据），写 SR-C7-xx 到 `docs/UI_REQUESTS.md` 让 Codex 导出，不自己猜。
+3. **合成复现。** 用户反馈联机里装备不能合成。在 `?mode=online&server=ws` 下真打到有两个组件，按单机同样的操作（物品备战席点选两件 → 合成）复现；若是界面问题（选择状态、按钮、`combine` 回执没显示）修掉；若是规则或投影拒绝（看回执 reason），写 SR 给 Codex，并把 reason 原文写进 PR。
+4. **野怪回合核实。** 用户反馈"没有野怪回合"。在真服务器上打到 1-3，截图准备阶段棋盘是否显示野怪、战斗是否对野怪、结算是否有掉落。若确实没有，查 `src/server/room/room.ts` 建 envelope 的 roundKind 与 `pairing.ts`，把原因写进 PR；修复属于服务器侧（Claude）就修，属于规则就写 SR。
+
+### 不做
+- 不改 `src/simulation`、`tests/`（tests/server 除外）、`scripts/`。
+- 备战席与场上单位互换是规则改动（SR-C7-01，Codex），本单只在规则交付后接 UI；若 Codex 先交付，顺手接上：拖到已占用格子时调用新命令，不自己换位。
+
+### 验收
+- `npm run typecheck`、`tests/server` 全绿；b6-bots.mjs 新接回用例通过；c6-replay.mjs 通过。
+- PR 说明附四项逐条结论，带截图路径（artifacts/c7/，不提交）。
