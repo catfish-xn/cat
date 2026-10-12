@@ -31,7 +31,8 @@ describe('B8 lifecycle: a lobby running matches back to back', () => {
   it('returns timers and room leftovers to the baseline after every match and disposes the replaced room', () => {
     const clock = new ManualClock();
     let survivor = '';
-    const lobby = new Lobby({ clock, resolver: oneRoundResolver(() => survivor), seed: 42, timings: TIMINGS });
+    // Room mechanics only (B6): no bot driver, so the clock holds nothing but the room's own deadlines.
+    const lobby = new Lobby({ clock, resolver: oneRoundResolver(() => survivor), seed: 42, timings: TIMINGS, bots: null });
     expect(clock.pending).toBe(0);
     let previous: Room | null = null;
     const publications: number[] = [];
@@ -46,7 +47,8 @@ describe('B8 lifecycle: a lobby running matches back to back', () => {
       if (previous) {
         expect(previous.retained).toEqual(RELEASED);
         const revision = previous.state.roomRevision;
-        clock.advance(TIMINGS.preparationMs * 3);
+        // Short of the new room's own preparation deadline: only the replaced room's (cancelled) timers could fire here.
+        clock.advance(TIMINGS.preparationMs / 2);
         expect(previous.state.roomRevision).toBe(revision);
       }
       // While a round is played the room does hold the round's envelopes and staged settlement: the baseline below is a release, not an empty run.
@@ -98,8 +100,8 @@ describe('B8 lifecycle: the network server across matches', () => {
       baselines.push(server.retained);
       previousSeats = [a.seatId!, b.seatId!];
     }
-    // Receipts kept per match: A's join and start, B's join.
-    expect(baselines[0]).toEqual({ sessions: 2, dedupeEntries: 3, connections: 0, room: { ...RELEASED, listeners: 1 } });
+    // Receipts kept per match: A's join and start, B's join. Room listeners: the server's push and the lobby's bot driver (B6).
+    expect(baselines[0]).toEqual({ sessions: 2, dedupeEntries: 3, connections: 0, room: { ...RELEASED, listeners: 2 } });
     for (const baseline of baselines) expect(baseline).toEqual(baselines[0]);
   }, 30_000);
 });
@@ -134,7 +136,8 @@ describe('B8 sliced resolution', () => {
     while (room.state.phase === 'frozen') { expect(clock.fireNext()).toBe(true); slices++; }
     expect(room.state.phase).toBe('battle');
     expect(room.state.battles).toHaveLength(4);
-    expect(slices).toBeGreaterThan(4);
+    // One slice per PvP battle: the rules' two-sided entry is indivisible (SR-B8-02); PvE battles step per tick.
+    expect(slices).toBe(4);
   }, 60_000);
 
   it('stops resolving and publishes nothing once disposed in the middle of a frozen round', () => {
