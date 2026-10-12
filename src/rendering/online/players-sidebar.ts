@@ -4,22 +4,28 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
 const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选择', combat: '战斗中', settlement: '结算', ended: '对局结束' } as const;
-/** TFT-style right column: phase + countdown on top, eight seats ordered by HP below. */
+/** TFT-style right column: phase badge on top, eight seats ordered by HP below. The big countdown sits above the
+ *  board when a countdown host is given (TFT top centre); without one it stays in the sidebar's top bar. */
 export class PlayersSidebar {
   readonly root: HTMLElement;
   private phaseBadge: HTMLElement;
   private roundLabel: HTMLElement;
   private timerLabel: HTMLElement;
+  private countdownRound: HTMLElement | null = null;
   private list: HTMLElement;
   private view: PlayerView | null = null;
   /** performance.now() minus the server clock, so the countdown follows the server. */
   private clockOffset = 0;
-  constructor(host: HTMLElement) {
+  constructor(host: HTMLElement, private readonly countdownHost: HTMLElement | null = null) {
     this.root = element('aside', '', 'online-sidebar'); this.root.id = 'online-sidebar'; this.root.setAttribute('aria-label', '玩家列表');
     const top = element('div', '', 'online-topbar');
     this.phaseBadge = element('span', '', 'online-phase'); this.roundLabel = element('strong', '', 'online-round'); this.timerLabel = element('span', '', 'online-timer');
-    this.timerLabel.dataset.debug = 'online:timer';
-    top.append(this.phaseBadge, this.roundLabel, this.timerLabel); this.root.append(top);
+    this.timerLabel.dataset.debug = 'online:timer'; this.timerLabel.setAttribute('role', 'timer'); this.timerLabel.setAttribute('aria-label', '阶段倒计时');
+    if (countdownHost) {
+      countdownHost.classList.add('online-countdown'); this.countdownRound = element('span', '', 'countdown-round');
+      countdownHost.replaceChildren(this.countdownRound, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
+    } else top.append(this.phaseBadge, this.roundLabel, this.timerLabel);
+    this.root.append(top);
     this.list = element('ol', '', 'online-seats'); this.list.dataset.debug = 'online:seats'; this.root.append(this.list);
     host.append(this.root);
   }
@@ -27,6 +33,7 @@ export class PlayersSidebar {
     this.view = view; this.clockOffset = performance.now() - view.phase.serverNow;
     this.phaseBadge.textContent = PHASE_TEXT[view.phase.kind]; this.phaseBadge.dataset.phase = view.phase.kind;
     this.roundLabel.textContent = view.phase.roundName;
+    if (this.countdownRound) { this.countdownRound.textContent = `${view.phase.roundName} · ${PHASE_TEXT[view.phase.kind]}`; this.countdownHost!.dataset.phase = view.phase.kind; }
     const ordered = [...view.seats].sort(compareSeats);
     this.list.replaceChildren(...ordered.map(seat => this.seatRow(seat, seat.seatId === view.mySeatId, seat.seatId === view.opponentSeatId)));
     this.tick();
@@ -47,14 +54,14 @@ export class PlayersSidebar {
   tick(): void {
     const view = this.view; if (!view) return;
     const endsAt = view.phase.endsAt;
-    if (endsAt === null) { this.timerLabel.textContent = ''; return; }
+    if (endsAt === null) { this.timerLabel.textContent = ''; this.timerLabel.classList.remove('urgent'); return; }
     const remaining = Math.max(0, endsAt - (performance.now() - this.clockOffset));
     const seconds = Math.ceil(remaining / 1000); const text = `${seconds}`;
     if (this.timerLabel.textContent !== text) this.timerLabel.textContent = text;
     this.timerLabel.classList.toggle('urgent', seconds <= 5);
   }
   show(visible: boolean) { this.root.hidden = !visible; }
-  dispose() { this.root.remove(); }
+  dispose() { this.root.remove(); this.countdownHost?.replaceChildren(); }
 }
 function compareSeats(a: SeatPublic, b: SeatPublic): number {
   if (a.alive !== b.alive) return a.alive ? -1 : 1;
