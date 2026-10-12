@@ -24,12 +24,12 @@ export interface LocalRoomOptions {
   readonly myName: string;
   /** Debug only (`?faultAt=N`): the resolver throws on round N so the room's fault path can be seen in the UI. */
   readonly faultAtRound: number | null;
-  /** B3: `two-sided` runs the real PvP battle and stops at the settlement gap (T3 pending); default `placeholder`. */
+  /** `two-sided` (default): real PvP through T2/T3. `placeholder` is the B1 test path (`?pvp=placeholder`). */
   readonly pvpMode: PvpMode;
   /** Injectable for tests; the browser uses the real clock. */
   readonly clock?: Clock;
 }
-export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'placeholder' };
+export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'two-sided' };
 
 const JOIN_ERRORS: Record<Exclude<JoinResult, { ok: true }>['reason'], string> = {
   full: '对局已满（8 人），请等待本局结束',

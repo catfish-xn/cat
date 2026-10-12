@@ -10,7 +10,7 @@
  */
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import type { BattleResolver } from '../room/battle-resolver';
-import { PlaceholderBattleResolver } from '../room/battle-resolver';
+import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
 import { toCombatFrames, toPlayerView } from '../room/projection';
@@ -94,7 +94,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   let closing = false;
 
   const lobby = new Lobby({
-    clock, seed: options.seed, resolver: options.resolver ?? new PlaceholderBattleResolver(), roomId: options.roomId, timings: options.timings,
+    clock, seed: options.seed, resolver: options.resolver ?? new TwoSidedBattleResolver(), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened),
   });
 

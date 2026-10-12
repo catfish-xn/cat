@@ -19,7 +19,7 @@ export function readFakeOptions(search = currentSearch()): FakeServerOptions {
   return { seed: num('seed', FAKE_DEFAULTS.seed), preparationMs: num('prep', FAKE_DEFAULTS.preparationMs / 1000) * 1000,
     choiceMs: num('choice', FAKE_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', FAKE_DEFAULTS.settlementMs / 1000) * 1000, myName: params.get('name') ?? FAKE_DEFAULTS.myName, botHp: num('bots', FAKE_DEFAULTS.botHp) };
 }
-/** Same URL parameters as the fake (`prep/choice/settle/seed/name`, seconds) plus the debug-only `faultAt` round and `pvp=two-sided` (B3; stops at the T3 gap). */
+/** Same URL parameters as the fake (`prep/choice/settle/seed/name`, seconds) plus the debug-only `faultAt` round and `pvp=placeholder` (B1 test path; default is the real two-sided PvP). */
 export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions {
   const params = new URLSearchParams(search);
   const num = (key: string, fallback: number) => numberParam(params, key, fallback);
@@ -27,7 +27,7 @@ export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions
   return { seed: num('seed', LOCAL_ROOM_DEFAULTS.seed), preparationMs: num('prep', LOCAL_ROOM_DEFAULTS.preparationMs / 1000) * 1000,
     choiceMs: num('choice', LOCAL_ROOM_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', LOCAL_ROOM_DEFAULTS.settlementMs / 1000) * 1000,
     myName: params.get('name') ?? LOCAL_ROOM_DEFAULTS.myName, faultAtRound: Number.isInteger(faultAt) && faultAt > 0 ? faultAt : null,
-    pvpMode: params.get('pvp') === 'two-sided' ? 'two-sided' : LOCAL_ROOM_DEFAULTS.pvpMode };
+    pvpMode: params.get('pvp') === 'placeholder' ? 'placeholder' : LOCAL_ROOM_DEFAULTS.pvpMode };
 }
 export function createGameClient(search = currentSearch()): GameClient {
   return readServerKind(search) === 'fake' ? new FakeServer(readFakeOptions(search)) : new LocalRoomClient(readLocalRoomOptions(search));

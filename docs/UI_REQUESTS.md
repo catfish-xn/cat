@@ -487,3 +487,18 @@ B3 已按合同 §10.6 让房间的 PvP 走 `snapshotForBattle → compileBattle
 
 - 现状：双方战斗只运行一次，A 视角为 `player`；B 席位的帧由 `src/server/room/projection.ts` 的 `mirrorCombatFrame` 做纯显示镜像（队伍互换、`row = rows - 1 - row`、结果互换、`movement`/`cast.completionCell` 坐标翻转）。它不重算任何数值。
 - 需要：T5 做帧 DTO（合同 §10.9）时确认这一镜像规则就是客户端应看到的视角，或由规则侧给出带坐标字段的事件完整清单，避免遗漏其他含 `HexCell` 的事件字段。
+
+## src/server 接入 T3 后的规则侧缺口（B4，2026-10-12，Claude 流水线 B）
+
+B4 已按合同 §11.3 让房间收齐全轮后在临时 map 上逐席 `applyRoundSettlement`，全部成功才一次发布（`Room.planSettlement` / `commitSettlement`），`SeatState.hp` 取返回 `state.playerHp`；超时按 §11.4 用 `forfeitPendingChoice` / `claimOrDiscardLoot`（`choice-fallback.ts` 已删除）；同轮归零按 §11.5 键排名；`pvpMode` 默认 `two-sided`。编号续 SR-B4-xx。
+
+### SR-B4-01 目录末轮后的加时推进入口（P0，T4 依赖）
+
+- 现状：合同 §11.5 约定由规则线补 `advanceMultiplayerRound(state, expectedRound): MultiplayerCommandResult`（目录内委托 `nextRound`，6-7 后生成 `overtime-N` 准备态，沿用第 6 阶段基础伤害 12），`src/server-entry` 尚未导出；当前 `nextRound` 在目录末尾返回 `wrong-phase`。房间在 6-7 结算发布后若仍有 ≥2 席存活，以 `fault: { kind: 'overtime-unavailable', round, survivors }` 明确中断，不自造名次（`Room.commitPending`）。空闲八席对局在 seed 42 下于 6-5 决出唯一名次，不触发此中断。
+- 需要：导出该入口，并保证 T2 `snapshotForBattle`/`compileBattle` 与 T3 `applyRoundSettlement` 接受 `overtime-N` 轮次标识（`roundId` 不在目录内时 `getCatalogRoundById` 的行为、基础伤害 12、经济与经验照常）。房间侧接入点只有一处：`Room.advanceRound` 把 `nextRound` 换成该入口，`Room.enterRound` 用返回状态的 `m8.round` 读取 `ordinal/roundId/kind`。
+- 验收：连续平局、双方空阵容、镜像与同轮多人归零在有限加时内产生唯一名次（§11.5 "有限终局"）。
+
+### SR-B4-02 PvE 结果的房间侧一致性校验（P2，说明）
+
+- 现状：PvE/补给回合仍由各席单人公共命令结算（`startMatchCombat`/`stepMatch`），房间只做 §11.3 第 4 条的原子发布，并校验规则返回的 `playerHp === max(0, hpBefore - roundResults.playerDamage)`，不一致即 `invalid-results` 整轮丢弃。测试用的占位结果（`state` 未结算）才由房间自行扣血（`pvpMode: 'placeholder'`）。
+- 需要（可选）：若规则侧希望 PvE 也走收据提交（统一入口），请在合同注明；否则维持现状。
