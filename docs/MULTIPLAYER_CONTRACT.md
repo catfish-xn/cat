@@ -801,13 +801,13 @@ ClientCommand 是 `src/server/protocol.ts` 的既有联合类型，策略只做 
 
 输入 rng 非 uint32，或 difficulty 非 basic、stepsTaken/maxSteps 非非负安全整数，抛 RangeError；不把异常文本作为网络 reason。合法输入无新失败枚举：策略无可用动作或预算耗尽就 done。原动作失败枚举仍见 §9/§11/§12。本策略不是不可信存档校验器，非法 MatchState 导致的规则异常由调用方按内部错误处理，不能通过篡改状态修复。
 
-B6 推荐每席每轮 maxSteps=64，且遵守以下顺序：
+B6 每席每轮默认预算为 BOT_MAX_STEPS（64），配置 maxSteps 可降低预算，实际不超过 `min(maxSteps, BOT_MAX_STEPS)`，且遵守以下顺序：
 
 1. 创建/接管机器人时，在服务器为该席建立并保存显式 botRng；独立于 shop/battle/choice/reward 流。断线接管复用原 MatchState、共享池、资产与收据，不 createMatch 重开。重连后撤销机器人执行权限和任何旧排程。
 2. 在单写队列里读取当前 state，构造同版 context，调用一次策略；先核对本次仍处于该席可操作阶段和有效控制代次。机器人不能拿 frozen/battle 的状态发准备操作。
 3. 返回 action 时保存返回的 botRng、增加 stepsTaken（包括执行失败），再按下表执行该意图；同一次意图重试不得再次抽 botRng。即便规则拒绝，规则池/资产/RNG 都不变；已消耗的独立策略 word 仍保留，不伪装为一次成功游戏命令。
-4. 成功一次性提交规则返回的 state（有池时连 pool 一起），发布合法事件；下一次决策重新读取已提交版本。失败回传 `{action,reason}` 为 lastFailure；basic 收到任何失败都返回 done，B6 本轮停止重试并保留反馈到换轮。每轮计数不可在准备/选择/断线重连之间清零；只在真正进入新轮时清零并清除 lastFailure。
-5. done 不代表可以调用旧单人开战，不代表奖励已处理完，也不推进时间。B6 仍负责准备截止、T2/T3 战斗/结算、非 PvP 包装、超时及下一轮。准备结束用规则校验核对人口等前提；在线 PvP 的旧 matchStartFailure/startMatchCombat 正常返回 wrong-phase，须走 T2，不能为了开战关闭 multiplayer。
+4. 成功一次性提交规则返回的 state（有池时连 pool 一起），发布合法事件；下一次决策重新读取已提交版本。非控制权拒绝的动作失败回传 `{action,reason}` 为 lastFailure；basic 收到该反馈后返回 done，B6 本轮停止重试并保留反馈到换轮。`seat-controlled` / `control-revoked` 表示执行权限已失效，不作为规则失败写入 lastFailure（见 §13.5）。每轮计数不可在准备/选择/断线重连之间清零；只在真正进入新轮时清零并清除 lastFailure。
+5. 普通 done 只结束本席的**本次阶段进入**，不关闭整轮；同轮后续重新进入可操作阶段（如战后选择窗口），在无失败且预算未用尽时再次调用策略，继续使用该轮累计步数。失败或预算用尽则关闭整轮，直到下一轮才重置；done 本身不计入动作尝试次数。done 不代表可以调用旧单人开战，不代表奖励已处理完，也不推进时间。B6 仍负责准备截止、T2/T3 战斗/结算、非 PvP 包装、超时及下一轮。准备结束用规则校验核对人口等前提；在线 PvP 的旧 matchStartFailure/startMatchCombat 正常返回 wrong-phase，须走 T2，不能为了开战关闭 multiplayer。
 6. 预算不足、满备战区待领、空异常或无合法选择时，由既有截止流程调用 T3/TP timeoutChoice 与 claimLoot，按项目规则默认选第一项/可领则领、不可领则放弃，不能无限延长或由机器人造资源。选择可能在战后同一轮出现；仍沿用该轮预算，截止兜底负责最终进度。
 
 | 意图 | B6 共享池执行入口 |
@@ -818,7 +818,7 @@ B6 推荐每席每轮 maxSteps=64，且遵守以下顺序：
 | shopLock | setSharedShopLock(pool,state,locked,generation) |
 | choose | runSharedMatchCommand(pool,state,{type:'choose',choiceId,generation,definitionId}) |
 | deploy / buyXp / combine / equip / anomalyTarget | 原公开命令 deployMatchUnit / buyXp / combineItems / equipItem / selectAnomalyTarget；保留 sharedPool 绑定 |
-| done | 停止本轮策略尝试，调度器照常处理截止和阶段推进 |
+| done | 普通 done 停止本次阶段进入；失败反馈或预算耗尽时关闭整轮。调度器照常处理截止和阶段推进 |
 
 basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyReroll。上表不允许服务器自己计算购买、升星、售价或装备结果。B6 的控制代次、定时器、连接切换、配对、网络消息、超时和全轮提交不在 T7 实现范围。
 
@@ -829,6 +829,45 @@ basic 不发 start/nextRound/扣血/发奖/池编辑意图，也不发 anomalyRe
 `verify-t7-node-entry.cjs` 用生产 ESM、Node22、封锁浏览器全局/隐式随机/时钟，从 seed42 的 createMatch 自动打至 gameOver，不替换金币、HP、奖励或战斗结果。脚本检查至少20轮、全程每条意图均被实际命令接受、每轮≤64步；构建脚本另外检查 server-entry 运行时依赖图不含 src/server、UI 或 Phaser。现有单人数值、golden 和既有超时测试不修改。
 
 交付验证基线 `origin/multiplayer@96d9ccb`：实际 nvm **Node v22.23.3 / npm 10.9.9**，typecheck（build 内）、build、test:server-entry、verify-t7-node-entry、verify-tp-node-entry 通过。T7 **25 例**，连同 T2/T3/TP、单人商店/升星/经验/经济/奖励/装备和纯依赖检查，共 **17 文件 357 例通过**。完整 Node 冒烟 seed42：38 轮、239 条合法意图、10698 个真实战斗 tick，单轮最多27步，最终 gameOver/victory；这是一条固定种子证据，不是胜率保证。未运行完整浏览器/性能套件，B6 调度与网络接管尚待 Claude 接入。
+
+### 13.5 SR-B6-01：控制权、重连回执与调度约定（B6 已接入）
+
+本节记录 PR #51 已交付的服务器协议，补充 §13.3；不新增规则侧命令或修改策略数值。字段以 `src/server/protocol.ts`、`src/server/net/messages.ts` 为准，控制权检查与调度分别由 `src/server/room/room.ts`、`src/server/room/bot-driver.ts` 执行。
+
+**公开控制者。** `SeatPublic.controller: 'human' | 'bot' | 'takeover'` 表示当前由谁发出本席操作，与席位的固定 `kind`、当前连接状态 `connected` 分开：
+
+| controller | 含义与切换 |
+| --- | --- |
+| `human` | 真人控制的席位。短暂断线、尚未达到接管时限时仍为 human，connected=false；成功重连后可继续操作 |
+| `bot` | 开局补位机器人，kind=bot，整局保持 bot；不对应玩家重连接回 |
+| `takeover` | 真人席（kind 仍为 human）在进行中的对局存活且持续断线达到 `CAT_TAKEOVER_SEC` 后被机器人接管，默认60秒。成功重连立即回到 human，不等下一轮或准备阶段 |
+
+任一时刻只有一个控制者。接管使用原席位的 MatchState、共享池、资产与收据，不重开角色或重发资源。服务器内部 `controlEpoch` 在控制者切换时递增；重连接回同时撤销旧机器人排程，已经排队的旧代次步骤也不得执行。`controlEpoch` 不是新增的 SeatPublic 字段，也不同于连接回执中的 `connectionEpoch`。
+
+**重连成功回执。** `ReceiptResult` 的 resumed 分支为：
+
+```ts
+{ readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null;
+  readonly connectionEpoch: number; readonly lastCommandId: number;
+  readonly reclaimed?: true }
+```
+
+只有本次成功 resume 确实把本席从 takeover 交还 human，才携带 `reclaimed: true`，供客户端显示“已接回席位”。普通重连、未发生接管等其余情况**省略此字段**，不发送 false。字段是本次回执的事实，不是持续控制状态；当前控制者以 SeatPublic.controller 为准。服务器在发出该回执前已完成接回与控制代次更新，后续快照仍按既有投影下发。
+
+**RoomFailure 新增拒绝原因。** 原有 unknown-seat、seat-eliminated、room-phase 保留：
+
+| reason | 触发与结果 |
+| --- | --- |
+| `seat-controlled` | 玩家命令到达仍由 takeover 控制的真人席，Room.handle 拒绝；成功 resume 接回后才可继续玩家操作 |
+| `control-revoked` | Room.handleBot 收到的控制代次不符，或本席已回到 human；即使带当前代次，human 席也不接受机器人步骤 |
+
+两种拒绝均发生在规则执行前，返回原席位状态，不修改资产、池、规则 RNG 或收据。它们属于房间授权失败，不是策略玩法失败；BotDriver 结束失效步骤，不将其写入 lastFailure，也不借此重试旧控制代次。
+
+**策略调用生命周期。** 每个有效步骤在单写队列中重读最新已提交状态与控制代次，调用一次 `decideBotAction`，最多提交一个意图。每席每轮共享同一份 BOT_MAX_STEPS 预算（默认64，可配置更低）；实际意图尝试包括执行失败都会计数，done 不计数。步数、失败反馈及整轮关闭状态跨准备/选择阶段、断线接管与重连保留，只在真正进入新轮时清零；独立 botRng 跨接管保留，不作为轮计数重置。
+
+普通 done 只标记**本次进入房间 preparation/choice 阶段**已结束尝试，同阶段的重复状态发布不会重新启动。该轮战后再进入选择窗口时，会在预算尚有余额且无失败反馈的前提下重新询问策略。若动作失败已写入 lastFailure 或预算已耗尽，策略返回 done 后关闭整轮，后续选择窗口也不恢复；直到下一轮清除计数与失败反馈。选择超时、战斗、结算及阶段推进仍由房间负责，预算关闭不能阻止既有超时兜底。
+
+本次为文档同步：逐项对照上述协议/实现及 `tests/server/bot-driver.test.ts` 的现有接管、失败与预算用例，不新增代码或测试。§13.4 的“T7 交付时 B6 尚待接入”是历史验证记录，本节覆盖当前 B6 接入状态。
 
 ## 14 T5R：本席白名单与紧凑战斗回放
 
