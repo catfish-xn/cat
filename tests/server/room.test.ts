@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
-import type { BattleInput, BattleResult } from '../../src/server/room/types';
+import type { BattleInput, BattleResult, SharedPoolState } from '../../src/server/room/types';
 import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
 
 describe('Room: start and command gate', () => {
@@ -15,7 +15,8 @@ describe('Room: start and command gate', () => {
     expect(state.deadlineAt).toBe(1_000);
     expect(new Set(state.seats.map(seat => seat.seed)).size).toBe(8);
     for (const seat of state.seats) { expect(seat.hp).toBe(seat.match.playerHp); expect(seat.alive).toBe(true); expect(seat.rank).toBeNull(); }
-    expect(state.poolRevision).toBe(0);
+    // B5 §12.2 opening: eight seat imports and one fair first refresh, each one pool revision; copied, never computed.
+    expect(state.poolRevision).toBe(9); expect(state.poolRevision).toBe(state.pool.revision);
   });
   it('rejects commands from unknown seats and in the wrong phase without touching any reference', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));
@@ -153,7 +154,7 @@ describe('Room: real resolver end to end', () => {
   it('pairs survivors on pvp rounds and freezes two seats per real pairing', () => {
     const twoSided = new TwoSidedBattleResolver();
     const inputs: BattleInput[] = [];
-    const resolver = { resolveBattle(input: BattleInput) { inputs.push(input); return twoSided.resolveBattle(input); } };
+    const resolver = { resolveBattle(input: BattleInput, pool: SharedPoolState) { inputs.push(input); return twoSided.resolveBattle(input, pool); } };
     const { room, clock } = makeRoom(resolver);
     room.start();
     runUntil(room, clock, current => current.round === 4 && current.phase === 'preparation');

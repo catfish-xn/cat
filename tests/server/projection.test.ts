@@ -37,7 +37,7 @@ describe('toPlayerView', () => {
     expect(frames.length).toBeGreaterThan(0);
     expect(frames.every(frame => frame.events.every(event => 'tick' in event))).toBe(true);
     expect(toCombatFrames(room.state, 'ghost')).toEqual([]);
-  });
+  }, 20_000); // three PvE rounds tick by tick through the shared-pool wrapper (B5) before the first PvP, like its siblings
   it('publishes the final standings once the match ends', () => {
     const { room, clock } = makeRoom(new DamageResolver(seatId => seatId === 's5' ? 0 : 100, 0));
     room.start(); clock.advance(1_000);

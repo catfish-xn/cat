@@ -19,6 +19,8 @@ export interface LobbyOptions {
   readonly botNames?: readonly string[];
   /** Forwarded to every Room this lobby opens; see PvpMode (default `placeholder`). */
   readonly pvpMode?: PvpMode;
+  /** Test/debug fixtures only: forwarded to every Room as `poolCapacities` (§12.2); production omits it. */
+  readonly poolCapacities?: Readonly<Record<string, number>>;
   /** Called once per opened room, after its first round began (explicit start or queue timeout). */
   readonly onStart?: (room: Room) => void;
 }
@@ -62,7 +64,8 @@ export class Lobby {
     const seats = [...this.queue, ...bots];
     this.queue = [];
     this.current?.dispose();
-    this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed: this.options.seed, clock: this.options.clock, resolver: this.options.resolver, ...(this.options.pvpMode ? { pvpMode: this.options.pvpMode } : {}) });
+    this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed: this.options.seed, clock: this.options.clock, resolver: this.options.resolver, ...(this.options.pvpMode ? { pvpMode: this.options.pvpMode } : {}),
+      ...(this.options.poolCapacities ? { poolCapacities: this.options.poolCapacities } : {}) });
     this.current.start();
     this.options.onStart?.(this.current);
     return { ok: true, room: this.current };

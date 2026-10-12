@@ -1,20 +1,21 @@
 /**
- * Eight-seat room state machine (pipeline B, work orders B1–B4). Pure TypeScript: no network,
+ * Eight-seat room state machine (pipeline B, work orders B1–B5). Pure TypeScript: no network,
  * no real clock, no ambient randomness. The room owns seat order, phases, deadlines, pairings,
  * the one-shot round publication and the ranking; every rule (gold, shop, combat, damage,
- * income, growth) comes from src/simulation through its public commands, the injected
- * BattleResolver and the T3 receipt entry `applyRoundSettlement` (contract §11.3).
+ * income, growth, the shared card pool) comes from src/simulation through its public commands,
+ * the TP shared-pool transactions (contract §12), the injected BattleResolver and the T3
+ * receipt entry `applyRoundSettlement` (contract §11.3).
  */
 import {
-  buyUnit, buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, rerollShop,
-  selectAnomalyTarget, selectChoice, sellUnit, setShopLock,
+  buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  applyRoundSettlement, claimOrDiscardLoot, enableMultiplayerSettlement, forfeitPendingChoice, needsAnomalyRecruitment, ROUND_SETTLEMENT_VERSION,
-  type RoundSettlementReceipt, type SideProposal,
+  applyRoundSettlement, assertSharedPoolConservation, buySharedUnit, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
+  refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellSharedUnit, setSharedShopLock,
+  type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, type BattleResolver } from './battle-resolver';
 import type { Clock, ClockHandle } from './clock';
@@ -40,6 +41,13 @@ export interface RoomOptions extends RoomTimings {
   readonly resolver: BattleResolver;
   /** How PvP results are accepted; `two-sided` by default (B4). See PvpMode. */
   readonly pvpMode?: PvpMode;
+  /**
+   * Re-checks `assertSharedPoolConservation(pool, every seat state)` before every publication (B5 item 6). On by
+   * default (tests); production may turn it off. The rules' own transactions check their seat either way.
+   */
+  readonly assertPoolConservation?: boolean;
+  /** Test fixtures only (§12.2): partial per-hero capacities, unspecified heroes have 0. Production omits it (official sizes). */
+  readonly poolCapacities?: Readonly<Record<string, number>>;
 }
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
@@ -49,20 +57,31 @@ export type PlanResult = { readonly ok: true; readonly settlement: RoundSettleme
 
 const CHOICE_COMMANDS: ReadonlySet<SeatCommand['type']> = new Set(['choose', 'anomalyTarget', 'anomalyReroll']);
 
-/** Pure dispatch to the public rules commands; the room adds nothing. */
-export function applySeatCommand(state: MatchState, command: SeatCommand): MatchCommandResult {
+/** One seat transaction: on success the pool and the seat state are published together; on failure both are the input references. */
+export type SeatCommandOutcome =
+  | { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
+  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: SharedPoolFailure };
+
+/**
+ * Pure dispatch to the rules; the room adds nothing. Shop commands and choices (which may award a unit) go through the
+ * TP shared-pool transactions (§12.4); commands that move no unit between owners stay on the plain public commands.
+ */
+export function applySeatCommand(pool: SharedPoolState, state: MatchState, command: SeatCommand): SeatCommandOutcome {
+  const plain = (result: MatchCommandResult): SeatCommandOutcome => result.ok
+    ? { ok: true, pool, state: result.state, events: result.events } : { ok: false, pool, state: result.state, reason: result.reason };
   switch (command.type) {
-    case 'deploy': return deployMatchUnit(state, command.unitId, command.target);
-    case 'buy': return buyUnit(state, command.slot, command.generation);
-    case 'sell': return sellUnit(state, command.unitId);
-    case 'shopLock': return setShopLock(state, command.locked, command.generation);
-    case 'reroll': return rerollShop(state);
-    case 'buyXp': return buyXp(state);
-    case 'combine': return combineItems(state, command.a, command.b);
-    case 'equip': return equipItem(state, command.itemId, command.unitId, command.slot);
-    case 'choose': return selectChoice(state, command.choiceId, command.generation, command.definitionId);
-    case 'anomalyTarget': return selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId);
-    case 'anomalyReroll': return rerollAnomaly(state, command.choiceId, command.generation);
+    case 'deploy': return plain(deployMatchUnit(state, command.unitId, command.target));
+    case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
+    case 'sell': return sellSharedUnit(pool, state, command.unitId);
+    case 'shopLock': return setSharedShopLock(pool, state, command.locked, command.generation);
+    // The wire command has no generation (protocol unchanged); under the single-writer queue the seat's current shop is the expected one.
+    case 'reroll': return rerollSharedShop(pool, state, state.shop.generation);
+    case 'buyXp': return plain(buyXp(state));
+    case 'combine': return plain(combineItems(state, command.a, command.b));
+    case 'equip': return plain(equipItem(state, command.itemId, command.unitId, command.slot));
+    case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
+    case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
+    case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
   }
 }
 
@@ -70,42 +89,44 @@ export function applySeatCommand(state: MatchState, command: SeatCommand): Match
 
 /** Which deadline passed; decides which rules timeout commands apply. */
 export type TimeoutStage = 'choice' | 'preparation' | 'settlement';
+/** `pool`/`state` are the last accepted pair, also on failure (earlier steps of the seat stay accepted). */
 export type TimeoutOutcome =
-  | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
-  | { readonly ok: false; readonly state: MatchState; readonly reason: string };
+  | { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
+  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: string };
 const MAX_TIMEOUT_STEPS = 8;
 
 /**
  * Resolves one seat's pending decisions with the rules' timeout commands, in the contract's order:
- * current choice (first offer) → earned loot claimed or discarded → later choices → (nextRound by the
- * caller). Each step is a public command; a refusal is reported, never forced or worked around.
+ * current choice (first offer) → earned loot claimed or discarded → later choices → (the round advance by
+ * the caller). Each step is the shared-pool wrapper of a public command (§12.4: a first offer or a claim may
+ * award a unit); a refusal is reported, never forced or worked around.
  */
-export function resolveSeatTimeouts(match: MatchState, stage: TimeoutStage): TimeoutOutcome {
-  let current = match;
+export function resolveSeatTimeouts(match: MatchState, pool: SharedPoolState, stage: TimeoutStage): TimeoutOutcome {
+  let current = match, latest = pool;
   const events: MatchEvent[] = [];
   let lootClaimed = false;
   for (let step = 0; step < MAX_TIMEOUT_STEPS; step++) {
     if (current.phase === 'choice' && current.pendingChoice) {
       const pending = current.pendingChoice;
-      const result = forfeitPendingChoice(current, current.round, pending.choiceId, pending.generation);
-      if (!result.ok) return { ok: false, state: current, reason: `forfeit:${result.reason}` };
-      current = result.state; events.push(...result.events); continue;
+      const result = runSharedMatchCommand(latest, current, { type: 'timeoutChoice', round: current.round, choiceId: pending.choiceId, generation: pending.generation });
+      if (!result.ok) return { ok: false, pool: latest, state: current, reason: `forfeit:${result.reason}` };
+      current = result.state; latest = result.pool; events.push(...result.events); continue;
     }
     if (stage === 'settlement' && current.phase === 'settlement' && !lootClaimed) {
       lootClaimed = true;
-      const result = claimOrDiscardLoot(current, current.round);
-      if (!result.ok) return { ok: false, state: current, reason: `loot:${result.reason}` };
-      current = result.state; events.push(...result.events); continue;
+      const result = runSharedMatchCommand(latest, current, { type: 'claimLoot', round: current.round });
+      if (!result.ok) return { ok: false, pool: latest, state: current, reason: `loot:${result.reason}` };
+      current = result.state; latest = result.pool; events.push(...result.events); continue;
     }
     if (stage === 'preparation' && current.phase === 'preparation' && needsAnomalyRecruitment(current)) {
       // An anomaly node with no own unit has no legal first target: the rules skip it and the seat fights empty.
-      const result = forfeitPendingChoice(current, current.round, null, null);
-      if (!result.ok) return { ok: false, state: current, reason: `forfeit:${result.reason}` };
-      current = result.state; events.push(...result.events); continue;
+      const result = runSharedMatchCommand(latest, current, { type: 'timeoutChoice', round: current.round, choiceId: null, generation: null });
+      if (!result.ok) return { ok: false, pool: latest, state: current, reason: `forfeit:${result.reason}` };
+      current = result.state; latest = result.pool; events.push(...result.events); continue;
     }
-    return { ok: true, state: current, events };
+    return { ok: true, pool: latest, state: current, events };
   }
-  return current.phase === 'choice' ? { ok: false, state: current, reason: 'timeout-steps-exhausted' } : { ok: true, state: current, events };
+  return current.phase === 'choice' ? { ok: false, pool: latest, state: current, reason: 'timeout-steps-exhausted' } : { ok: true, pool: latest, state: current, events };
 }
 
 export class Room {
@@ -114,27 +135,43 @@ export class Room {
   private pendingSettlement: RoundSettlement | null = null;
   /** Envelopes frozen at the preparation deadline of the current round; results are checked against them (§11.3 item 2). */
   private frozenInputs: readonly BattleInput[] = [];
+  /** Unpublished pool the current round's battles chained through (§12.4); published only with the round. */
+  private resolvedPool: SharedPoolState | null = null;
   private extensions = 0;
   private readonly listeners = new Set<(state: RoomState) => void>();
   private readonly pvpMode: PvpMode;
+  private readonly checkConservation: boolean;
 
   constructor(seats: readonly SeatSpec[], private readonly options: RoomOptions) {
     if (seats.length !== ROOM_CAPACITY) throw new RangeError(`a room has exactly ${ROOM_CAPACITY} seats`);
     if (new Set(seats.map(seat => seat.seatId)).size !== seats.length) throw new RangeError('duplicate seat id');
     validateSeed(options.seed);
     this.pvpMode = options.pvpMode ?? 'two-sided';
+    this.checkConservation = options.assertPoolConservation ?? true;
+    // §12.2 opening, in order: create the pool → import eight unpublished `createMatch(seed)` openings by the fixed seat
+    // index 0–7 (this also enables the server mode of §11.1) → one fair first refresh → publish once. Any refusal
+    // throws before anything is published, so the whole proposal is discarded.
     let rngState = options.seed >>> 0;
-    const seatStates = seats.map((spec, index): SeatState => {
+    let pool = createSharedPool(options.roomId, options.seed >>> 0, options.poolCapacities ? { capacities: options.poolCapacities } : {});
+    const imported = seats.map((spec, index) => {
       const draw = nextRandom(rngState); rngState = draw.state;
-      // Server mode from the first state on (§11.1): PvP never settles through the single-player path.
-      const enabled = enableMultiplayerSettlement(createMatch(draw.word), spec.seatId);
-      if (!enabled.ok) throw new RangeError(`seat ${spec.seatId}: ${enabled.reason}`);
-      const match = enabled.state;
-      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', hp: match.playerHp,
-        alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed: draw.word };
+      const joined = initializeSharedSeat(pool, createMatch(draw.word), spec.seatId, index);
+      if (!joined.ok) throw new RangeError(`seat ${spec.seatId}: ${joined.reason}`);
+      pool = joined.pool;
+      return { spec, index, seed: draw.word, match: joined.state };
     });
-    this.current = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
-      deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState, poolRevision: 0 };
+    const opened = refreshSharedShops(pool, imported.map(seat => seat.match), 1);
+    if (!opened.ok) throw new RangeError(`shared pool opening: ${opened.reason}`);
+    const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
+      const match = opened.states[position]!;
+      return { seatId: spec.seatId, index, name: spec.name, kind: spec.kind, connected: spec.kind === 'human', hp: match.playerHp,
+        alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
+    });
+    const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
+      deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState,
+      pool: opened.pool, poolRevision: opened.pool.revision };
+    this.assertConserved(initial);
+    this.current = initial;
   }
 
   get state(): RoomState { return this.current; }
@@ -156,10 +193,11 @@ export class Room {
     const phase = this.current.phase;
     const allowed = phase === 'preparation' || (phase === 'choice' && CHOICE_COMMANDS.has(command.type));
     if (!allowed) return { ok: false, reason: 'wrong-phase', state: seat.match };
-    const result = applySeatCommand(seat.match, command);
-    if (!result.ok) return result;
+    const result = applySeatCommand(this.current.pool, seat.match, command);
+    // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
+    if (!result.ok) return { ok: false, reason: result.reason, state: result.state };
     const seatRevision = seat.seatRevision + 1;
-    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match: result.state, seatRevision } : candidate));
+    this.commitSeat(seatId, result.state, result.pool);
     if (phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
   }
@@ -186,7 +224,7 @@ export class Room {
    * settled state), and any failure discards the whole stage. Pure: calling it again with the same
    * results and the same room state is the retry the contract asks for, with the same seeds.
    */
-  planSettlement(results: readonly BattleResult[]): PlanResult {
+  planSettlement(results: readonly BattleResult[], pool: SharedPoolState = this.resolvedPool ?? this.current.pool): PlanResult {
     const state = this.current;
     const alive = this.aliveSeats();
     const byId = new Map(state.seats.map(seat => [seat.seatId, seat] as const));
@@ -239,7 +277,10 @@ export class Room {
       }
     }
     for (const seat of alive) if (!staged.has(seat.seatId)) return { ok: false, detail: `seat ${seat.seatId} has no result` };
-    const seats = alive.map(seat => staged.get(seat.seatId)!);
+    let seats = alive.map(seat => staged.get(seat.seatId)!);
+    // The staged states must be exactly the ones the chained pool knows (a resolver that awarded a unit outside the pool fails here).
+    const unbalanced = conservationProblem(pool, seats.map(seat => seat.match));
+    if (unbalanced) return { ok: false, detail: `shared pool: ${unbalanced}` };
     const index = (settled: SettledSeat) => byId.get(settled.seatId)!.index;
     // §11.5 ranking key: untruncated HP after damage (desc) → HP before the round (desc) → fixed seat index (asc);
     // the whole round ranks at once, independent of result arrival order.
@@ -249,6 +290,19 @@ export class Room {
       .sort((a, b) => b.hpAfter - a.hpAfter || b.hpBefore - a.hpBefore || index(a) - index(b));
     let rank = alive.length;
     const eliminated: RankEntry[] = dying.map(seat => ({ seatId: seat.seatId, rank: rank-- }));
+    // §12.4: after this round's ranking and before the next natural refresh, every seat the rules eliminated returns its
+    // shop, holdings and pending rewards to the pool once. A repeated release is refused by the rules and ignored. A
+    // seat only the room zeroed (a test placeholder outcome the rules never settled) is not eliminated by the rules and
+    // keeps its pool seat; the next refresh then refuses the round (incomplete-seats) instead of the room guessing.
+    let released = pool;
+    for (const entry of eliminated) {
+      const seat = seats.find(candidate => candidate.seatId === entry.seatId)!;
+      if (seat.match.multiplayer?.status !== 'eliminated') continue;
+      const release = releaseSeatOnElimination(released, seat.match);
+      if (!release.ok) { if (release.reason === 'duplicate-release') continue; return { ok: false, detail: `seat ${seat.seatId} pool release: ${release.reason}` }; }
+      released = release.pool;
+      seats = seats.map(candidate => candidate === seat ? { ...seat, match: release.state, events: [...seat.events, ...release.events] } : candidate);
+    }
     // The match ends only when at most one seat survives; survivors of the catalog's final round go to overtime (§11.5).
     const ends = survivors.length <= 1;
     const overtimeRequired = !ends && seats.some(seat => readRoundInfo(seat.match).isFinal);
@@ -257,7 +311,7 @@ export class Room {
       ...eliminated,
       ...state.seats.filter(seat => !seat.alive).map(seat => ({ seatId: seat.seatId, rank: seat.rank! })),
     ].sort((a, b) => a.rank - b.rank) : null;
-    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking, overtimeRequired } };
+    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking, overtimeRequired, pool: released } };
   }
 
   /** Publishes the staged round once: HP from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
@@ -278,7 +332,7 @@ export class Room {
       const stillAlive = outcome.hpAfter > 0;
       return { ...seat, hp: outcome.hpAfter, alive: stillAlive, rank, eliminatedRound: stillAlive ? null : settlement.round, match: outcome.match, seatRevision: seat.seatRevision + 1 };
     });
-    this.replace({ ...state, seats, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
+    this.replace({ ...state, seats, pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
     return { ok: true, state: this.current };
   }
 
@@ -297,7 +351,7 @@ export class Room {
     let rngState = plan.rngState;
     const battleSeeds: Record<string, number> = {};
     for (const battleId of battleIds) { const draw = nextRandom(rngState); rngState = draw.state; battleSeeds[battleId] = draw.word >>> 0; }
-    this.extensions = 0; this.pendingSettlement = null; this.frozenInputs = [];
+    this.extensions = 0; this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null;
     this.replace({ ...state, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind, pairings: plan.pairings, rngState, battleSeeds, battles: [] });
     if (alive.some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
     else this.afterChoiceWindow();
@@ -314,11 +368,11 @@ export class Room {
     this.fail({ kind: 'phase-mismatch', detail: alive.map(seat => `${seat.seatId}:${seat.match.phase}`).join(',') });
   }
 
-  /** Runs the rules' timeout commands for every alive seat (§11.4); a refusal is a seat-stuck fault. */
+  /** Runs the rules' timeout commands for every alive seat (§11.4), one seat transaction after the other on the latest pool; a refusal is a seat-stuck fault. */
   private applyTimeouts(stage: TimeoutStage): boolean {
     for (const seat of this.aliveSeats()) {
-      const outcome = resolveSeatTimeouts(seat.match, stage);
-      if (outcome.state !== seat.match) this.replaceSeats(this.current.seats.map(candidate => candidate.seatId === seat.seatId ? { ...candidate, match: outcome.state, seatRevision: candidate.seatRevision + 1 } : candidate));
+      const outcome = resolveSeatTimeouts(seat.match, this.current.pool, stage);
+      if (outcome.state !== seat.match) this.commitSeat(seat.seatId, outcome.state, outcome.pool);
       if (!outcome.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: outcome.reason }); return false; }
     }
     return true;
@@ -330,15 +384,22 @@ export class Room {
     if (!this.applyTimeouts('preparation')) return;
     this.frozenInputs = this.buildInputs();
     const results: BattleResult[] = [];
+    // §12.4: one unpublished proposal for the whole round; a battle that awards a unit hands its pool to the next battle.
+    let pool = this.current.pool;
     for (const input of this.frozenInputs) {
-      try { results.push(this.options.resolver.resolveBattle(input)); }
+      try {
+        const result = this.options.resolver.resolveBattle(input, pool);
+        results.push(result);
+        if (result.kind === 'placeholder' && result.pool) pool = result.pool;
+      }
       catch (error) {
         // Any rules refusal or resolver error drops the whole round: no partial proposal or outcome is adopted.
         const message = error instanceof Error ? error.message : String(error);
         return this.fail(error instanceof BattleResolveError ? { kind: 'resolver-error', battleId: input.battleId, message, reason: error.reason } : { kind: 'resolver-error', battleId: input.battleId, message });
       }
     }
-    const plan = this.planSettlement(results);
+    this.resolvedPool = pool;
+    const plan = this.planSettlement(results, pool);
     if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
     this.pendingSettlement = plan.settlement;
     this.replace({ ...this.current, battles: results });
@@ -398,20 +459,23 @@ export class Room {
     this.setPhase('settlement', this.options.settlementMs);
   }
 
-  /** Settlement deadline: loot timeouts, then advance every alive seat with the public nextRound command. */
+  /**
+   * Settlement deadline: loot timeouts, then advance every alive seat in one `nextSharedRound` batch (§12.3: it returns
+   * every unlocked shop before generating any new one, in the rotating seat order). The batch is all-or-nothing.
+   */
   private advanceRound(): void {
     if (!this.applyTimeouts('settlement')) return;
-    const advanced: SeatState[] = [];
-    for (const seat of this.current.seats) {
-      if (!seat.alive) { advanced.push(seat); continue; }
-      const next = nextRound(seat.match, seat.match.round);
-      if (!next.ok) {
-        if (this.extensions < this.options.maxSettlementExtensions) { this.extensions++; return this.setPhase('settlement', this.options.settlementMs); }
-        return this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: next.reason });
-      }
-      advanced.push({ ...seat, match: next.state, seatRevision: seat.seatRevision + 1 });
+    const alive = this.aliveSeats();
+    const batch = nextSharedRound(this.current.pool, alive.map(seat => seat.match), alive[0]!.match.round);
+    if (!batch.ok) {
+      if (this.extensions < this.options.maxSettlementExtensions) { this.extensions++; return this.setPhase('settlement', this.options.settlementMs); }
+      // Name the seat the rules refuse to advance on its own (a dry run, nothing is published); the batch reason stays the rules' code.
+      const stuck = alive.find(seat => !nextRound(seat.match, seat.match.round).ok) ?? alive[0]!;
+      return this.fail({ kind: 'seat-stuck', seatId: stuck.seatId, reason: batch.reason });
     }
-    this.replaceSeats(advanced);
+    const advanced = new Map(alive.map((seat, position) => [seat.seatId, batch.states[position]!] as const));
+    this.replace({ ...this.current, pool: batch.pool, poolRevision: batch.pool.revision,
+      seats: this.current.seats.map(seat => { const match = advanced.get(seat.seatId); return match ? { ...seat, match, seatRevision: seat.seatRevision + 1 } : seat; }) });
     this.enterRound();
   }
 
@@ -427,7 +491,7 @@ export class Room {
   }
 
   private fail(fault: RoomFault): void {
-    this.pendingSettlement = null;
+    this.pendingSettlement = null; this.resolvedPool = null;
     this.replace({ ...this.current, fault });
     this.setPhase('ended', null);
   }
@@ -440,10 +504,30 @@ export class Room {
   }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
+  /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */
+  private commitSeat(seatId: string, match: MatchState, pool: SharedPoolState): void {
+    this.replace({ ...this.current, pool, poolRevision: pool.revision,
+      seats: this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match, seatRevision: candidate.seatRevision + 1 } : candidate) });
+  }
   private replace(next: RoomState): void {
-    this.current = { ...next, roomRevision: this.current.roomRevision + 1 };
+    const published = { ...next, roomRevision: this.current.roomRevision + 1 };
+    // Phase/deadline/connection-only publications carry the same pool and seats references: nothing to re-check.
+    if (published.pool !== this.current.pool || published.seats !== this.current.seats) this.assertConserved(published);
+    this.current = published;
     for (const listener of this.listeners) listener(this.current);
   }
+  /** B5 item 6: the published pool balances against every seat it binds; throws before anything is published. */
+  private assertConserved(state: RoomState): void {
+    if (!this.checkConservation) return;
+    if (state.poolRevision !== state.pool.revision) throw new Error(`poolRevision ${state.poolRevision} is not pool.revision ${state.pool.revision}`);
+    assertSharedPoolConservation(state.pool, state.seats.map(seat => seat.match));
+  }
+}
+
+/** The rules' conservation check as a value: null when balanced, else its reason (never used as protocol text). */
+function conservationProblem(pool: SharedPoolState, states: readonly MatchState[]): string | null {
+  try { assertSharedPoolConservation(pool, states); return null; }
+  catch (error) { return error instanceof Error ? error.message : String(error); }
 }
 
 /** §11.3 receipt: a trusted hand-over built from the frozen envelope and the rules' own proposal, never from a client. */

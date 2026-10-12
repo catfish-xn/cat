@@ -14,7 +14,7 @@
  */
 import {
   BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle, startTwoSidedCombatWithEvents, stepCombat,
-  type BattleIdentity, type BattleInput as RulesBattleInput, type CombatState, type LedgerCombatEvent, type PlayerBattleSnapshot,
+  type BattleIdentity, type BattleInput as RulesBattleInput, type CombatState, type LedgerCombatEvent, type PlayerBattleSnapshot, type SharedPoolState,
 } from '../../server-entry';
 import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from './battle-resolver';
 import type { BattleFrame, BattleInput, BattleResult, BattleSeatInput, RulesBattleResult, TwoSidedBattleResult } from './types';
@@ -22,8 +22,9 @@ import type { BattleFrame, BattleInput, BattleResult, BattleSeatInput, RulesBatt
 export class TwoSidedBattleResolver implements BattleResolver {
   /** @param nonPvp resolves PvE and supply rounds (each seat on its own); the placeholder by default. */
   constructor(private readonly nonPvp: BattleResolver = new PlaceholderBattleResolver()) {}
-  resolveBattle(input: BattleInput): BattleResult {
-    if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input);
+  /** PvP proposals award nothing and leave the pool alone; PvE/supply may award units, so the pool goes to the inner resolver. */
+  resolveBattle(input: BattleInput, pool: SharedPoolState): BattleResult {
+    if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input, pool);
     return resolveTwoSidedPvp(input);
   }
 }

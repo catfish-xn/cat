@@ -511,3 +511,13 @@ B4 已按合同 §11.3 让房间收齐全轮后在临时 map 上逐席 `applyRou
 
 - 现状：PvE/补给回合仍由各席单人公共命令结算（`startMatchCombat`/`stepMatch`），房间只做 §11.3 第 4 条的原子发布，并校验规则返回的 `playerHp === max(0, hpBefore - roundResults.playerDamage)`，不一致即 `invalid-results` 整轮丢弃。测试用的占位结果（`state` 未结算）才由房间自行扣血（`pvpMode: 'placeholder'`）。
 - 需要（可选）：若规则侧希望 PvE 也走收据提交（统一入口），请在合同注明；否则维持现状。
+
+## src/server 接入共享卡池后的规则侧缺口（B5，2026-10-12，Claude 流水线 B）
+
+B5 已按合同 §12 让房间开局建池（`createSharedPool` → 八席按 seatIndex `initializeSharedSeat` → `refreshSharedShops(…, 1)` → 一次发布），买/卖/刷/锁走池事务，选择、超时代选、领奖与 PvE 战斗（startCombat/step）走 `runSharedMatchCommand`，跨轮用 `nextSharedRound`，淘汰在排名后、下一轮自然刷新前调用 `releaseSeatOnElimination`。编号续 SR-B5-xx。
+
+### SR-B5-01 加时推进的共享池批量入口（P1，与 SR-B4-01 同批）
+
+- 现状：`nextSharedRound` 内部委托 `nextRound`，目录末轮后返回失败；房间在 6-7 后仍有 ≥2 席存活时照旧以 `overtime-unavailable` 明确中断（B4 行为不变）。
+- 需要：交付 SR-B4-01 的 `advanceMultiplayerRound` 时，同时给接入共享池的席位一个批量入口（例如 `nextSharedRound` 接受加时，或新增 `advanceSharedMultiplayerRound(pool, states, expectedRound): SharedPoolBatchResult`），保证加时轮同样先归还未锁店、再按轮换顺序生成共享店（§11.5 第二条"TP 后仍受共享池约束"）。房间侧接入点仍只有 `Room.advanceRound` 一处。
+- 验收：加时轮的商店来自共享池，`assertSharedPoolConservation` 在加时前后成立。
