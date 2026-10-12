@@ -175,7 +175,7 @@ export class BoardScene extends Phaser.Scene {
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
-      deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
+      deploy: (id, location) => { const swap = this.swapsWith(id, location); this.command(this.session.deploy(id, location), swap ? '互换成功' : '部署成功'); },
       control: name => this.panelControl(name),
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
@@ -363,7 +363,7 @@ export class BoardScene extends Phaser.Scene {
       const target = this.target({ x, y });
       if (target) {
         const reason = validateMatchDeployment(this.session.state, token.getData('unitId'), target);
-        this.setStatus(reason ? this.failureMessage(reason) : '可放置 · 释放以确认部署');
+        this.setStatus(reason ? this.failureMessage(reason) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
         this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
         if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
         else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
@@ -377,10 +377,18 @@ export class BoardScene extends Phaser.Scene {
       if (!this.inputRouter.release(gesture)) return;
       // Read release coordinates directly, even if no final drag frame rendered.
       const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
-      if (target) this.command(this.session.deploy(token.getData('unitId'), target), '放置成功 · 可点击选中单位出售');
+      // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
+      const swap = !!target && this.swapsWith(token.getData('unitId'), target);
+      if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
       else this.setStatus(this.failureMessage('invalid-location'));
       this.clearDrag(); this.sync();
     });
+  }
+  /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
+  private swapsWith(unitId: string, target: UnitLocation): boolean {
+    return this.state.units.some(unit => unit.id !== unitId && unit.team === 'player' && (unit.location.kind === 'board' && target.kind === 'board'
+      ? unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row
+      : unit.location.kind === 'bench' && target.kind === 'bench' && unit.location.slot === target.slot));
   }
   private benchCenter(slot: number): Point { return { x: 27 + slot * 53.25, y: 480 }; }
   private position(location: UnitLocation): Point { return location.kind === 'board' ? this.layout.center(location.cell) : this.benchCenter(location.slot); }
@@ -408,7 +416,8 @@ export class BoardScene extends Phaser.Scene {
         : this.online ? '对局结束 · 查看排名' : 'Game Over · 点击 新局 开始新的一局',
       'unknown-unit': '未找到该单位', 'enemy-unit': '敌方单位不可操作或出售',
       'invalid-location': '请放置到棋盘或备战席内', 'outside-deployment-zone': '只能部署在我方区域，不能放入敌方区域',
-      'occupied': '该位置已有单位，请选择空位',
+      // Allied occupants swap since SR-C7-01; the code now only means a non-allied or stacked occupant.
+      'occupied': '该位置被其他单位占用，无法交换',
       'missing-player': '无法开始：请先将至少 1 个我方单位部署到棋盘',
       'missing-enemy': '无法开始：棋盘上至少需要 1 个敌方单位',
       'missing-both': '无法开始：棋盘上双方都至少需要 1 个单位',
