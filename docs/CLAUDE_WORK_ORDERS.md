@@ -257,3 +257,30 @@
 - [ ] 对方面板不含商店、金币、备战区；抓取 `view` 消息断言 `publicBoard` 无这些字段。
 - [ ] 淘汰后不能发出任何命令，终局排名仍弹出。
 - [ ] `npx vitest run tests/server` 全绿（投影新增测试）；typecheck、build、离线冒烟通过。
+
+---
+
+## 派工单 B5：房间接入共享有限卡池（按合同 §12）
+
+分支：`claude/b5-shared-pool`，基于 `origin/multiplayer`（已含 TP PR #42）。**必须在 B4 合入之后开工**（B4 改了房间的结算与超时路径，B5 要在其上接池）。
+
+### 依据
+`docs/MULTIPLAYER_CONTRACT.md` **§12.1–12.5**（签名、初始化顺序、自然刷新、来源与淘汰、失败枚举）。TP 导出（经 `src/server-entry`）：`createSharedPool`、`initializeSharedSeat`、`refreshSharedShops`、`nextSharedRound`、`buySharedUnit`、`rerollSharedShop`、`setSharedShopLock`、`sellSharedUnit`、`runSharedMatchCommand`、`releaseSeatOnElimination`、`assertSharedPoolConservation`。
+
+### 要做
+1. **开局**：`createSharedPool(roomId, seed)` → 对八份未发布的 `createMatch(seed)` 按固定 `seatIndex` 0–7 逐席 `initializeSharedSeat` → `refreshSharedShops(pool, states, 1)` → 一次性发布（中途失败整体丢弃）。`RoomState.pool` 持有池，`poolRevision` 取 `pool.revision`。
+2. **席位命令改走池事务**：`buy/reroll/shopLock/sell` 分别调 `buySharedUnit/rerollSharedShop/setSharedShopLock/sellSharedUnit`；成功同时提交 `pool + state`，失败两者都不变。其他命令（站位、装备、经验、异常目标）仍走原公开命令。
+3. **可能发棋子奖励的路径统一用 `runSharedMatchCommand`**：开战（`startCombat`）、逐 tick（`step`，若房间在 resolver 外还会 step）、三选一（`choose`）、超时代选（`timeoutChoice`）、领奖（`claimLoot`）。B4 接的 `forfeitPendingChoice/claimOrDiscardLoot` 改为经这个包装。
+4. **跨轮**：目录推进用 `nextSharedRound(pool, states, expectedRound)` 替代逐席 `nextRound`（它内部先统一归还未锁店再按轮换顺序生成）；加时轮同样走它（若 §12 对加时有特殊说明按合同）。
+5. **淘汰**：排名计算后、下一轮自然刷新前，对每个本轮淘汰席位调用 `releaseSeatOnElimination`；重复调用拒绝即忽略。
+6. **每次发布后在测试模式断言守恒**：`assertSharedPoolConservation(pool, states)`（生产可关闭，测试默认开）。
+7. **投影**：`PlayerView` 不含池精确库存；本席商店的空格 `{status:'purchased', empty:true}` 原样下发，界面画为空格（`strategy-panel.ts` 已有已购格渲染，确认不会画出虚构英雄）。
+8. 测试 `tests/server/shared-pool-room.test.ts`：八席开局守恒；两席争最后一份不超卖；付费刷新 `pool-empty` 免费失败且 generation 不变；淘汰归还一次；整局（placeholder 与 two-sided 各一）跑完后守恒成立；失败命令后 `poolRevision` 不变。
+
+### 不做
+- 不碰 `src/simulation/`、`src/server-entry/`；规则缺口写 SR-B5-xx。不改网络协议形状（空格标记是现有 `ShopSlot` 兼容形状）。
+
+### 验收
+- [ ] `npx vitest run tests/server tests/tp-* tests/t3-*` 全绿；purity 零命中。
+- [ ] 浏览器 `?mode=online` 整局：商店能出现空格、刷新缺货免费失败有提示、终局排名正常；离线冒烟通过。
+- [ ] PR 描述把 §12.2 初始化顺序、§12.4 淘汰时点逐条对应到代码位置。
