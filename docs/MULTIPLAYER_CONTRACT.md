@@ -471,3 +471,132 @@ T5 验收：两个席位分别投影时不能看到对方 shop/pendingChoice/库
 - **SR-B1-03 → T3 合同 + T4 实现**：定稿目录外加时入口、末阶段基础伤害、经济/商店推进、平局扣血与同轮归零破同分；Claude 在调度层按合同接入，覆盖连续平局/双方空阵容/多席归零的有限终局。
 - **SR-B1-04 → T3**：提供不花资源的空阵容异常节点放弃/应战，以及 unsettled-round 时已赚奖励自动领取或放弃的权威命令，保证不重复发奖和可推进；不让服务器自己改 pendingChoice/奖励账本。
 - **SR-B1-05 → TP**：在排名后、下一轮商店前唯一归还淘汰席位占用；买/刷/卖/升星/奖励的池与席位同事务提交，失败金币/卡池/商店/随机流不变，覆盖八席守恒。
+
+## 11 T3：单席原子结算、整轮发布与超时规则
+
+本节取代 §10.7/10.10 的 T3 建议接口。2026-10-12 用户确认覆盖派工单旧文字：**超时默认选第一项是项目规则**；已赚且容量足够的金币、组件、棋子自动领取一次，容量不足的部分放弃。“不花资源”指不购买、不付费刷新，不是“不发任何奖励”。
+
+### 11.1 公开类型与模式切换（本次已交付）
+
+所有下列符号从 `src/server-entry/index.ts` 导出，Node 22.x：
+
+```ts
+const ROUND_SETTLEMENT_VERSION = 'multiplayer-settlement-v1';
+type MultiplayerFailure = MatchFailure
+  | 'multiplayer-required' | 'invalid-seat' | 'invalid-receipt'
+  | 'duplicate-settlement' | 'mirror-settlement' | 'already-settled'
+  | 'seat-eliminated' | 'no-pending-choice' | 'invalid-loot';
+type MultiplayerCommandResult =
+  | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
+  | { readonly ok: false; readonly state: MatchState; readonly reason: MultiplayerFailure };
+interface MultiplayerProgress {
+  readonly version: typeof ROUND_SETTLEMENT_VERSION;
+  readonly seatId: string;
+  readonly status: 'active' | 'eliminated';
+  readonly receipts: readonly RoundSettlementReceipt[];
+  readonly forfeitedChoices: readonly string[];
+}
+function enableMultiplayerSettlement(state: MatchState, seatId: string): MultiplayerCommandResult;
+function applyRoundSettlement(state: MatchState, receipt: unknown): MultiplayerCommandResult;
+function forfeitPendingChoice(state: MatchState, expectedRound: number,
+  expectedChoiceId: string | null, expectedGeneration: number | null): MultiplayerCommandResult;
+function claimOrDiscardLoot(state: MatchState, expectedRound: number): MultiplayerCommandResult;
+```
+
+`MatchState.multiplayer?: MultiplayerProgress` 是服务器私有扩展。B4 应在 `createMatch` 后立即调用 enable 并保存返回 state；也允许在无战斗的准备/选择/结算态接入，不能在 combat/gameOver/HP0 时首次开启。同 seatId 重复 enable 成功无事件；不同或空 seatId 拒绝 invalid-seat。这个独立结果类型不扩展单人 `MatchFailure`，保留原 UI 的穷举契约。
+
+开启后 PvP 的 `startMatchCombat` 返回旧 API 的 wrong-phase，`stepMatch` 不推进 PvP；只能走 T2 runner → 本节提交。PvE/补给继续既有公共命令，已有 `roundResults` 的唯一收据仍有效；B4 必须暂存整个 PvE 结果，在全轮发布时一起采纳，不再给 PvE 第二次调用 apply。在线 HP0 的等价淘汰状态是 **`multiplayer.status='eliminated', phase='settlement', outcome=null`**；PvE 同样遵守。存活席在 6-7 结算后仍 active；不能读单人 isFinal/outcome 判定多人终局。淘汰席 `nextRound` 返回 wrong-phase，调度层不得再给它派操作/配对。
+
+这些状态不是单人存档格式，旧 `restoreMatch` 明确拒绝带 multiplayer 的输入（multiplayer-state），不得删除该字段绕过验证。服务器可在自身可信存储中原样保存/复制该扩展，收据与超时标记必须一同保留；本 PR **没有提供不可信多人存档的恢复验证器**。战斗仍用 T2 独立快照恢复，不将真人 enemy Combat 塞回旧单人 Match。§10.9 白名单未授权下发 multiplayer、收据及其 ID；继续只投影已提交资源/历史与公开淘汰状态。
+
+### 11.2 收据、经济与失败
+
+```ts
+interface RoundSettlementReceipt {
+  readonly version: typeof ROUND_SETTLEMENT_VERSION;
+  readonly settlementId: string; // 对局/轮次/席位唯一；重试必须相同
+  readonly battleId: string;     // 冻结配对的 T2 battleId
+  readonly seatId: string;
+  readonly round: number;        // 当前目录 ordinal
+  readonly roundId: string;      // 当前目录 ID，例如 2-1
+  readonly settlementEligible: boolean;
+  readonly result: 'win' | 'loss' | 'draw';
+  readonly damage: number;       // T2 未截断伤害，不能改成 hpLost
+  readonly baseDamage: number;
+  readonly opposingSurvivors: number;
+  readonly growth: readonly PersistentGrowth[]; // 本席原始 unitId 的增量
+  readonly combatTicks: number;
+  readonly combatEventCount: number;
+}
+```
+
+字段必须齐全且无额外字段，ID 非空；非负安全整数，survivors ≤9、ticks ≤1200、eventCount ≥1。提交准备态不能还有 pendingChoice 或未处理的空阵容异常节点；历史须连续到上一轮。仅接收目录 PvP。收据是**可信服务器从 T2 结果构建的交接对象，不是客户端命令或战斗真实性证明**。规则验证 seat、轮次、资格、数值和重复，但无法从裸 battleId 证明执行代次；B4 负责将其绑定冻结快照、battleId、roomRevision、实际参战席位与本次执行。客户端不能指定 eligibility/growth/结果。
+
+沿用 `planCatalogRoundEconomy` → `planRoundEconomy` → `grantXp`，不接收外部 goldAfter/HP 或第二套收入。PvP 基础收入5、胜利1、利息采样 gold+胜利金币（每10得1，上限5）、连胜败2/4/6得1/2/3、经验2；平局按连败。例：轮前19金币、已有1连胜，本轮胜 → 利息2、连胜1、总收入9、轮后28。9级经验截停。复核 damage 必须等于现有阶段伤害规则（胜0，否则基础+对方存活数）；不允许截断输入。HP1承受9 → HP0、hpLost1，但 roundResults.playerDamage 和收据仍保存9。
+
+同一不可变事务提交金币、经验、等级、连胜败、HP、Tristana 增量成长、pumpingRounds（有强化时+1）、investmentHp（有强化时+8×利息）、一条 roundResults、一份深复制收据和一条有序 roundSettled 事件。不消费任何 RNG。成长只接受本席上场 Tristana，单 unitId 一次，正125倍数，累加不得溢出。T2 的成长保存在 multiplayer 收据中；不伪造单人 combatInputBasis 的成长证据。
+
+| 失败 reason | 条件 |
+| --- | --- |
+| multiplayer-required | 未开启本模式 |
+| duplicate-settlement | 本席已存同 settlementId；即使已推进/淘汰、重试载荷变化仍拒绝 |
+| stale-round | round/roundId 与当前不符（缺失则 invalid-receipt） |
+| mirror-settlement | settlementEligible=false，零伤害也不能发收入 |
+| invalid-receipt | 缺/多字段、非法整数/结果/资格/seat、伤害与规则不符、非法成长、非 PvP 或计算异常 |
+| already-settled | 同轮已有结果，或本席已用过 battleId（即便换 settlementId） |
+| seat-eliminated | 首次新收据提交给已淘汰席 |
+| wrong-phase | 非干净准备态，或空阵容异常还未超时处理 |
+| unsettled-round | 历史不连续/漏轮 |
+
+所有失败返回**原 state 引用，无 events 字段、无资源/RNG/序号改变**。去重在阶段/轮次检查前；输入首先经过有限 JSON 数据检查，非 JSON 载荷不享受去重。一个合法获胜收据亦必须写入收入和成长一次，不能把 damage=0 当成无操作。
+
+### 11.3 B4 全轮编排（由 Claude 在 src/server 实现）
+
+1. 冻结本轮 active 席位、配对、battleSeed、battleId、roomRevision；准备截止时先处理 §11.4，随后冻结快照。运行中拒绝修改冻结席位。
+2. 收齐本轮所有真实席结果，每个真实席恰一份，普通配对两份、镜像配对仅 a；镜像 b 不进入队列，镜像原主由它的真实配对提交。校验 battleId/round/执行代次与冻结信封完全一致，漏席/重复席/旧代次整轮拒绝。
+3. 用原席位 map 建一个临时 map，逐席 apply。任何失败（包括 unexpected duplicate）丢弃整张临时 map 及其事件，不发布已经成功的一席。整轮已提交重试由调度层 round commit ID 去重，不能凭单席 duplicate 推断整轮完成。
+4. 全部成功后，一次替换 map、更新 SeatState.hp **取返回 state.playerHp**，再发布事件和版本；不在房间重算伤害/收入/成长。PvE/补给已结算的暂存状态也随本次原子发布采纳。房间自身提交失败，仍用同信封和原始 map 重试，不换随机种子。
+5. 使用 §11.5 排名，TP 卡池归还在排名后、下一轮自然商店刷新前。存活席通过公开 nextRound 推进目录轮次；全局仅剩0/1席时结局由调度层生成。
+
+构建单席收据示意（p、battle 必须来自校验通过的同一冻结信封）：
+
+```ts
+const r: RoundSettlementReceipt = {
+  version: ROUND_SETTLEMENT_VERSION,
+  settlementId: JSON.stringify([matchId, envelope.round, p.seatId]),
+  battleId: envelope.battleId, seatId: p.seatId,
+  round: envelope.round, roundId: envelope.roundId,
+  settlementEligible: p.settlementEligible, result: p.result,
+  damage: p.damage, baseDamage: p.baseDamage, opposingSurvivors: p.opposingSurvivors,
+  growth: p.growth, combatTicks: battle.terminal.tick, combatEventCount: battle.events.length,
+};
+const result = applyRoundSettlement(originalSeat.match, r);
+// 只写 staged；其余真实席也成功后才发布 staged。
+```
+
+### 11.4 超时命令与不重复奖励
+
+`forfeitPendingChoice` 名称沿用派工单，但语义是**自动选择第一项**。传入当前 round、choiceId、generation；没有 pendingChoice 的空阵容异常传 null/null。普通强化/组件调用已有 selectChoice；异常 target 步先选按 unitId 字典序最小的己方单位（含备战区），生成正常候选，再选第一项，不 reroll、不买单位。Placebo 等首选自带金币照常只领一次。正常的候选生成/临时装备可能推进其专属 RNG；不承诺成功时所有随机流不变。
+
+唯一例外：异常节点没有任何己方单位时没有合法第一目标，记录该 eventId 的 forfeitedChoices 标记，跳过异常节点，以空阵容参加本轮 PvP，不创造免费单位。后续不能再领取该异常，重复超时不发奖。普通成功会记原有 schedule/loot 收据并追加 choiceTimedOut（resolution='first-offer'）；空异常为 'empty-anomaly'。若返回新 pendingChoice，使用其新身份再次调用，不能复用旧身份把第二个选项误处理。
+
+`claimOrDiscardLoot` 只在 settlement 或 returnPhase=settlement 的 choice 接收：已赚的组件选择按第一项领取，直接奖励调用既有 grantDirectLoot，棋子可升星释放容量时按正常获取规则领取，仍因满备战区无法领的部分标记 forfeited，不分配奖励 ID/收据。金币和组件没有人为新增容量限制。未揭示/未赚奖励绝不发放。若正在显示已领组件选择，清除该选择并正常进入后续节点；无待奖时成功原 state、events=[]。此前已领取奖励不会重发，整笔中后段失败时前段授予也不采纳。
+
+额外失败：两命令未启用/已淘汰为 multiplayer-required/seat-eliminated；轮次不符 stale-round；choice 身份/代次不符 stale-choice；没有选择且非待处理空异常 no-pending-choice；非法阶段 wrong-phase；选择无合法首项或原选择命令失败为 invalid-choice/invalid-target 等既有 MatchFailure；奖励处理异常 invalid-loot。失败均原样返回。顺序为：处理当前选择 → 本轮战斗与结算 → 领取或放弃已赚奖励 → 处理后续选择 → nextRound。已淘汰席不再推进。不能用无限重试或清 pendingChoice 字段代替规则命令。
+
+### 11.5 SR-B1-03 加时、平局与排名（规则定稿，目录外实现留 T4）
+
+- 6-7 后若≥2席存活，进入 `overtime-1`，ordinal=`FINAL_ROUND+1`；之后 `overtime-N` 对应 `FINAL_ROUND+N`，严格递增，不重用6-1/6-7 ID。均为 PvP、沿用第6阶段基础伤害12。不开新野怪、补给、强化、异常或掉落计划；既有强化/异常/装备/成长继续生效。
+- 每轮仍按既有 PvP 收入、利息、连胜败、经验、强化成长提交；进入下一轮沿用自然刷新/锁店及临时装备生命周期，商店必须通过规则入口生成，TP 后仍受共享池约束。每个加时有独立 settlementId/battleId/roundResults，不能再执行末轮奖励。
+- **推进入口约定**：T4 接入前规则线补 `advanceMultiplayerRound(state, expectedRound): MultiplayerCommandResult`，目录内委托 nextRound，目录末轮及加时生成上述加时准备态；失败不变，淘汰拒绝。T2 snapshot/compile 和 apply 也须支持相同加时标识/基础伤害/经济。此 PR 未导出这个未来接口，当前 nextRound 在目录末尾返回 wrong-phase。Claude 的 T4 只负责调度接入，由 Codex 补规则入口；不能自行改 MatchState.round/m8 或将虚构加时强转目录轮次。依赖就绪前必须明确中断加时，不能宣称全局加时已实现。
+- 平局（含双方空阵容、1200 tick 超时）：**每个真实席**扣12+对方存活数；普通配对双方各算自己的提案。胜方0、败方12+对方存活数；镜像 b 不扣、不提交，镜像来源真身在其实际配对独立结算。目录内平局用相应阶段基础伤害，规则相同。
+- 同轮归零排序沿用 B1 项目规则：比较 **未截断 HP=`hpBefore-damage` 降序 → hpBefore 降序 → 固定 seatIndex 升序**，先者名次更好。不能用截到0的 playerHp 破同分。seatIndex 从开局固定0–7，与断线/重连、数组重排无关。同轮淘汰者排在剩余存活者后，较晚淘汰优于早轮淘汰；如果最后所有席同轮归零，也按此键产生唯一冠军，不能继续等待无人存活的下一轮。
+- 有限终局：≥2席每完整加时至少有一场普通配对，该配对至少一个真实席被扣正伤害；总存活 HP 严格下降。无任何恢复玩家 HP 的规则，初始最多8×100 HP，因此加时最多800个已提交轮次即可结束（保守上界，空阵容连续平局通常远少于此）。T4 必测连续平局、双方空阵容、镜像及同轮多人归零的唯一排名；不能以单人 isFinal 或客户端倒计时直接定胜负。
+
+### 11.6 验收边界
+
+`tests/t3-round-settlement.test.ts` 覆盖真实公共开局→T2→T3→下一轮、独立19→28金币算例、XP封顶、成长、HP1承受9、JSON复制后的去重、迟到/镜像/非法字段原样拒绝，以及整轮暂存失败后重试。`tests/t3-timeout-loot.test.ts` 覆盖金币/组件/棋子只领一次、满容量放弃、后段溢出回滚、首项选择/空异常推进（前一个测试文件）、在线 PvE 淘汰和末轮存活。
+
+SR-B1-02 的规则提交与 SR-B1-04 的超时入口已交付；全轮冻结/执行代次/发布、SR-B1-03 目录外实现、多人不可信恢复验证、网络投影、TP 卡池不在本 PR 内。没有修改 src/server、UI、单人数值或 golden，也没有修改既有 m5-replay 超时测试。
+
+交付验证（基于 multiplayer `3cdb7f7`，实际 Node **v22.23.3** / npm **10.9.9**）：typecheck、build、test:server-entry、verify-t2-node-entry、verify-t3-node-entry 均通过；T3 的16例、T2、服务器（含B2网络）、经济/经验/轮目录/奖励/跨轮/Match 集成共 **23文件300例通过**。既有 T1 状态/事件/RNG 轨迹哈希不变。未跑完整测试套件，未改 `m5-replay` 或任何 golden。纯 Node 的子进程校验及 WebSocket 测试在允许这些能力的执行环境验证，不调整断言或超时阈值。
