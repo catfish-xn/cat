@@ -8,6 +8,7 @@ import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchFailure, MatchState } from '../../simulation/match-types';
 import type { ReplaySnapshot } from '../../replay';
 import { Lobby } from './lobby';
+import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
 import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand } from './protocol';
 import { RankingOverlay } from './ranking';
@@ -42,6 +43,9 @@ export class OnlineApplication implements SceneApplication {
   private mode: Mode = 'online-lobby';
   private lobby: Lobby;
   private sidebar: PlayersSidebar;
+  private opponentBoard: OpponentBoardPanel;
+  /** My seat is eliminated while the match goes on: watch only (TFT keeps the screen, the ranking comes at the end). */
+  private spectating = false;
   private ranking: RankingOverlay;
   private view: PlayerView | null = null;
   private unlisten: () => void;
@@ -55,7 +59,9 @@ export class OnlineApplication implements SceneApplication {
     document.body.dataset.online = client.transport;
     this.lobby = new Lobby(app, { join: name => client.joinQueue(name), leave: () => client.leaveQueue(), start: () => client.startMatch() });
     app.prepend(this.lobby.root);
-    this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null);
+    this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
+    const frame = document.getElementById('board-frame') ?? app;
+    this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => this.hooks.changed?.(change));
@@ -106,7 +112,8 @@ export class OnlineApplication implements SceneApplication {
     else if (status.kind === 'online' && before !== null) this.hooks.status('已重新连接 · 画面已恢复');
   }
   private onView(view: PlayerView) {
-    this.view = view; this.sidebar.render(view);
+    this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
+    this.syncSpectating(view);
     if (view.phase.kind === 'ended') {
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
@@ -121,17 +128,34 @@ export class OnlineApplication implements SceneApplication {
     this.syncStatus(view);
   }
   private lastPhase = '';
+  /** Opens (or closes) the read-only public board of a seat; no command is involved. */
+  private toggleBoard(seatId: string) {
+    const view = this.view, seat = view?.seats.find(candidate => candidate.seatId === seatId);
+    if (!view || !seat) return;
+    this.opponentBoard.toggle(seat, seatId === view.mySeatId);
+    this.sidebar.setViewing(this.opponentBoard.openSeatId);
+  }
+  private syncSpectating(view: PlayerView) {
+    const me = view.seats.find(seat => seat.seatId === view.mySeatId);
+    const spectating = me !== undefined && !me.alive && view.phase.kind !== 'ended';
+    if (spectating === this.spectating) return;
+    this.spectating = spectating; this.session.spectating = spectating;
+    this.syncMode(); this.hooks.clearInput(); this.hooks.refresh();
+    if (spectating) this.hooks.status(`已淘汰 · 第 ${me!.rank ?? '?'} 名 · 观战中 · 点击右侧玩家查看阵容`);
+  }
   private syncStatus(view: PlayerView) {
     const key = `${view.phase.kind}/${view.phase.round}`; if (key === this.lastPhase) return; this.lastPhase = key;
+    if (this.spectating) return; // the spectate line stays; phases still show in the countdown and sidebar
     const opponent = view.seats.find(seat => seat.seatId === view.opponentSeatId);
-    if (view.phase.kind === 'preparation') this.hooks.status(opponent ? `${view.phase.roundName} · 本轮对手：${opponent.name} · 倒计时结束自动开战` : `${view.phase.roundName} · 倒计时结束自动开始`);
-    else if (view.phase.kind === 'combat') this.hooks.status('战斗由服务器计算 · 正在播放');
+    if (view.phase.kind === 'preparation') this.hooks.status(opponent ? `对手：${opponent.name} · ${view.phase.roundName} · 倒计时结束自动开战` : `${view.phase.roundName} · 野怪回合 · 倒计时结束自动开战`);
+    else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name} · 战斗由服务器计算` : '战斗由服务器计算 · 正在播放');
     else if (view.phase.kind === 'choice') this.hooks.status('请在倒计时内完成选择 · 超时由服务器代选');
     else if (view.phase.kind === 'settlement') this.hooks.status('回合结算 · 稍后自动进入下一回合');
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
     this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.view = null;
+    this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
     this.session.skipPlayback(); this.session.resume('ended'); this.session.pause('lobby'); this.hooks.clearInput(); this.syncMode();
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
@@ -149,21 +173,23 @@ export class OnlineApplication implements SceneApplication {
   private syncMode() {
     document.body.dataset.m6Mode = this.mode === 'active' ? 'active' : this.mode === 'online-ended' ? 'active' : 'startup';
     document.body.dataset.onlineMode = this.mode;
-    const inGame = this.mode !== 'online-lobby';
+    if (this.spectating) document.body.dataset.onlineSpectating = 'true'; else delete document.body.dataset.onlineSpectating;
+    const inGame = this.mode !== 'online-lobby', playing = this.mode === 'active' && !this.spectating;
     this.lobby.show(!inGame); this.sidebar.show(inGame);
-    const strategy = document.getElementById('strategy-root'); if (strategy) strategy.inert = this.mode !== 'active';
-    if (this.mounts) { this.mounts.shopDock.inert = this.mode !== 'active'; this.mounts.countdown.hidden = !inGame; }
+    if (!inGame) this.opponentBoard.close();
+    const strategy = document.getElementById('strategy-root'); if (strategy) strategy.inert = !playing;
+    if (this.mounts) { this.mounts.shopDock.inert = !playing; this.mounts.countdown.hidden = !inGame; }
     const stats = document.getElementById('stats-root'); if (stats) stats.inert = !inGame;
-    const canvas = document.querySelector<HTMLCanvasElement>('#board-root canvas'); if (canvas) canvas.style.pointerEvents = this.mode === 'active' ? '' : 'none';
+    const canvas = document.querySelector<HTMLCanvasElement>('#board-root canvas'); if (canvas) canvas.style.pointerEvents = playing ? '' : 'none';
   }
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
-  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, phase: this.view?.phase ?? null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
+  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   dispose() {
     if (this.disposed) return; this.disposed = true;
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.ranking.dispose(); this.session.dispose();
-    delete document.body.dataset.online; delete document.body.dataset.onlineMode;
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.ranking.dispose(); this.session.dispose();
+    delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

@@ -18,6 +18,19 @@ const SECTIONS: readonly (readonly [string, readonly string[]])[] = [
   ['战斗与结算', ['点击“开始战斗”后自动进行，期间不能买卖和布阵', '结算后点击“继续”进入下一回合；生命归零或打完 6-7 时对局结束', '棋子中部的小字是当前状态：左侧红底为减益（灼=灼烧、伤=重伤、甲=护甲击碎、抗=魔抗击碎、晕=眩晕），右侧绿底为增益；名称、来源和剩余时间见单位详情与战斗统计', '伤害飘字：物理无后缀、魔法带“魔”、真实带“真”；“盾”为护盾吸收，“+”为有效治疗']],
   ['存档与回放', ['自动保存：显示“最近保存成功”才表示已写入', '可导出 / 导入对局文件；新局或导入会替换当前自动存档', '准备、结算或终局时可在“已完成战斗回放”里回看，回放不影响当前对局', 'M7 旧档独立保留，可原样导出；不能在新版中继续或回放。M8 从新局开始']],
 ];
+/** Online (`?mode=online`, C5): the server starts battles and moves rounds on; there is no save, new match or replay. */
+const ONLINE_OVERRIDES: Readonly<Record<string, readonly string[]>> = {
+  '战斗与结算': ['准备阶段倒计时结束后服务器自动开战，期间不能买卖和布阵', '战斗由服务器计算后播放；结算完成后自动进入下一回合，生命归零即淘汰',
+    ...(SECTIONS.find(([title]) => title === '战斗与结算')?.[1].slice(2) ?? [])],
+  '存档与回放': [],
+};
+const ONLINE_EXTRA: readonly (readonly [string, readonly string[]])[] = [
+  ['八人联机', ['右侧是八名玩家的生命与等级；点击任一玩家可查看其场上阵容与装备（只读），再点一次或按 Esc 关闭', '断线后自动重连并回到原席位；淘汰后可继续观战，终局显示排名']],
+];
+function sections(): readonly (readonly [string, readonly string[]])[] {
+  if (typeof document === 'undefined' || document.body.dataset.online === undefined) return SECTIONS;
+  return [...SECTIONS.map(([title, lines]) => [title, ONLINE_OVERRIDES[title] ?? lines] as const).filter(([, lines]) => lines.length > 0), ...ONLINE_EXTRA];
+}
 
 export class HelpPanel {
   private readonly dialog = document.createElement('section');
@@ -65,7 +78,7 @@ export class HelpPanel {
     const label = () => { motion.textContent = `减少动效：${reducedMotion() ? '开' : '关'}`; motion.setAttribute('aria-pressed', String(reducedMotion())); };
     motion.addEventListener('click', () => { setReducedMotion(!reducedMotion()); label(); this.onMotionChange(); });
     label(); card.append(motion);
-    for (const [heading, lines] of SECTIONS) {
+    for (const [heading, lines] of sections()) {
       const section = document.createElement('section'); const h3 = document.createElement('h3'); h3.textContent = heading;
       const list = document.createElement('ul');
       for (const line of lines) { const item = document.createElement('li'); item.textContent = line; list.append(item); }

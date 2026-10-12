@@ -1,9 +1,12 @@
 /**
  * Whitelisted client views (V2 §5.3). Built field by field; the room's MatchState, rng
- * states, pairings of other seats and other seats' shops are never serialized.
+ * states, pairings of other seats and other seats' shops are never serialized. Other seats'
+ * deployed units and their items are public (C5, `publicBoard`).
  */
 import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatState, CombatUnit, LedgerCombatEvent } from '../../simulation/combat-types';
+import type { MatchState } from '../../simulation/match-types';
+import type { PublicBoard, PublicBoardUnit } from '../protocol';
 import { findPairing } from './pairing';
 import type { BattleResult, CombatFrame, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -12,7 +15,25 @@ const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
 };
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
-  return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected };
+  return { seatId: seat.seatId, name: seat.name, kind: seat.kind, hp: seat.hp, level: seat.match.level, alive: seat.alive, rank: seat.rank, connected: seat.connected,
+    publicBoard: toPublicBoard(seat.match) };
+}
+
+/**
+ * Public build of one seat (C5): its own units deployed on the board, each with the definition ids of the
+ * items it holds. Built field by field from the preparation state; bench, shop, gold, XP, item instance ids
+ * and RNG never leave the room. Sorted by cell so equal boards serialize identically.
+ */
+export function toPublicBoard(match: MatchState): PublicBoard {
+  const units: PublicBoardUnit[] = [];
+  for (const unit of match.preparation.units) {
+    if (unit.team !== 'player' || unit.location.kind !== 'board') continue;
+    const held = match.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
+      .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0));
+    units.push({ definitionId: unit.definitionId, starLevel: unit.starLevel, cell: { col: unit.location.cell.col, row: unit.location.cell.row }, items: held.map(item => item.definitionId) });
+  }
+  units.sort((a, b) => a.cell.row - b.cell.row || a.cell.col - b.cell.col);
+  return { units };
 }
 
 export function toPlayerView(room: RoomState, seatId: string, serverNow: number): PlayerView {
