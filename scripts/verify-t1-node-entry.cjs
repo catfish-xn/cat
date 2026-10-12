@@ -57,6 +57,9 @@ async function worker() {
     'startMatchCombat', 'stepMatch', 'nextRound', 'combineItems', 'equipItem',
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',
     'validateMatchDeployment', 'matchStartFailure', 'needsAnomalyRecruitment', 'serializeMatch', 'restoreMatch',
+    'snapshotForBattle', 'restorePlayerBattleSnapshot', 'compileBattle', 'restoreBattleInput',
+    'startTwoSidedCombat', 'startTwoSidedCombatWithEvents', 'resolveTwoSidedBattle', 'proposeSettlement',
+    'stepCombat', 'PLAYER_BATTLE_SNAPSHOT_VERSION', 'TWO_SIDED_BATTLE_VERSION', 'BattleValidationError',
   ];
   assert.deepStrictEqual(Object.keys(api).sort(), expectedExports.sort());
   const actual = battle(api), expected = battle(reference);
