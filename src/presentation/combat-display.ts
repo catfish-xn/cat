@@ -9,7 +9,7 @@
  *
  * Nothing here computes a rule: the mapping only renames and drops fields.
  */
-import type { HexCell } from '../simulation/board';
+import { toCombatViewEvents } from '../server-entry';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { CombatViewEvent, CombatViewUnit } from '../simulation/combat-replay-view';
 import type { Source } from '../simulation/m8/contracts';
@@ -31,42 +31,12 @@ export type AnimationEvent = Exclude<DisplayCombatEvent, { readonly type: 'unitU
 /** What a scene frame hands its consumers: offline the local ledger (detail logs keep their full text), online wire events. */
 export type SceneCombatEvent = LedgerCombatEvent | DisplayCombatEvent;
 
-const cell = (value: HexCell): HexCell => ({ col: value.col, row: value.row });
-
-/**
- * The §14.2 animation whitelist applied to one local ledger event: the same fields, names and order as the
- * server's replay events (pinned by tests/server/replay-client.test.ts), plus the offline effect label.
- */
+/** Shared §14.2 projection plus the offline-only effect label, preserving ledger order. */
 export function toDisplayEvent(event: LedgerCombatEvent): AnimationEvent | null {
-  const envelope = { tick: event.tick, eventSeq: event.eventSeq };
-  switch (event.type) {
-    case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cell(event.from), to: cell(event.to) };
-    case 'attack': return { ...envelope, type: event.type, attackerId: event.attackerId, targetId: event.targetId };
-    case 'targetChanged': return { ...envelope, type: event.type, unitId: event.unitId, before: event.before, after: event.after };
-    case 'death': return { ...envelope, type: event.type, unitId: event.unitId };
-    case 'kill': return { ...envelope, type: event.type, unitId: event.unitId, sourceId: event.source.ownerId };
-    case 'growth': return { ...envelope, type: event.type, unitId: event.unitId, amountBps: event.amountBps, totalBps: event.totalBps };
-    case 'combatFinished': return { ...envelope, type: event.type, result: event.result, reason: event.reason };
-    case 'packetDamage': {
-      const o = event.outcome;
-      return { ...envelope, type: event.type, sourceId: o.context.source.ownerId, targetId: o.context.targetId, damageType: o.context.damageType,
-        hit: o.hit, hpDamage: o.hpDamage, absorbed: o.absorbed, critical: o.critical, killingPacket: o.killingPacket };
-    }
-    case 'heal': return { ...envelope, type: event.type, targetId: event.outcome.targetId, actual: event.outcome.actual };
-    case 'manaChanged': return { ...envelope, type: event.type, targetId: event.outcome.targetId, before: event.outcome.before, after: event.outcome.after };
-    case 'cast': {
-      const r = event.receipt;
-      return { ...envelope, type: event.type, sourceId: r.source.ownerId, actionSeq: r.actionSeq, completed: r.completed,
-        actualManaSpent: r.actualManaSpent, refundedMana: r.refundedMana, targetIds: [...r.targetIds], completionCell: cell(r.completionCell) };
-    }
-    case 'shieldLayerChanged': return { ...envelope, type: event.type, reason: event.reason, key: event.layer.key, targetId: event.layer.targetId, remaining: event.layer.remaining };
-    case 'statusChanged': return { ...envelope, type: event.type, reason: event.reason, targetId: event.group.targetId, kind: event.group.kind, effectiveMagnitudeBps: event.group.effectiveMagnitudeBps };
-    case 'statChanged': return { ...envelope, type: event.type, unitId: event.unitId, stat: event.stat, before: event.before, after: event.after };
-    case 'maxHpChanged': return { ...envelope, type: event.type, unitId: event.unitId, beforeMax: event.beforeMax, afterMax: event.afterMax, beforeHp: event.beforeHp, afterHp: event.afterHp };
-    case 'effectTriggered': return { ...envelope, type: event.type, ownerId: event.source.ownerId, sourceKind: event.source.sourceKind,
-      sourceDefinitionId: event.source.sourceDefinitionId, targetId: event.targetId };
-    case 'activityChanged': return null;
-  }
+  if (event.type === 'effectTriggered') return { tick: event.tick, eventSeq: event.eventSeq, type: event.type,
+    ownerId: event.source.ownerId, sourceKind: event.source.sourceKind,
+    sourceDefinitionId: event.source.sourceDefinitionId, targetId: event.targetId };
+  return toCombatViewEvents([event])[0] ?? null;
 }
 export function toDisplayEvents(events: readonly LedgerCombatEvent[]): AnimationEvent[] {
   const out: AnimationEvent[] = [];

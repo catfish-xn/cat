@@ -564,6 +564,8 @@ C6 已让离线与联机共用一条战斗渲染路径：棋盘、单位条、�
 - 需要：从 `src/server-entry`（或 `combat-replay-view.ts`）导出 `toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatViewEvent[]`（不含 unitUpdated，语义与回放中的动画事件逐条相同）。导出后客户端删除复写，只保留离线专用的 `effectTriggered` 标签。
 - 验收：对任一可信战斗，`toCombatViewEvents(battle.events)` 等于 `toCombatReplay(battle).ticks` 展平后去掉 unitUpdated 的事件序列。
 
+**SR-C6-01 交付回应（Codex）**：已导出 `toCombatViewEvents`（server-entry 与纯投影模块），返回更精确的 `CombatAnimationEvent[]`，是排除 unitUpdated 的 CombatViewEvent 子集。回放生成与客户端共用同一白名单；客户端仅保留离线 effectTriggered 标签，已删除其余逐字段复写。签名、输入输出、顺序/隐私约束和失败口径见合同 §14.2；目录33场战斗、PvP大小阵容、tick0终局及 C6 播放回归覆盖与回放展平序列相等。实际 Node v22.23.3：55个相关用例、typecheck、前端构建、build:server 与 T5R Node 入口校验通过；两个固定回放样例的 JSON/gzip 字节数保持不变。此项不涉及 SR-C6-02 的可选状态图标或护盾层扩展。
+
 ### SR-C6-02 联机状态图标与护盾层（P3，可选）
 
 - 现状：§14.2 不承诺状态图标/持续时间；联机棋子不显示状态条，策略面板与统计面板隐藏护盾层、状态行、效果来源与按来源治疗（离线仍完整显示）。

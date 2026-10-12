@@ -50,7 +50,8 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'activityChanged': case 'effectTriggered': return null;
   }
 }
-export type CombatViewEvent = NonNullable<ReturnType<typeof animationEvent>>
+export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;
+export type CombatViewEvent = CombatAnimationEvent
   | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> };
 export interface CombatReplayTick {
   readonly tick: number;
@@ -63,9 +64,12 @@ export interface CombatReplay {
   readonly terminal: CombatViewState;
 }
 export type CombatReplayInput = Pick<import('./two-sided-types').BattleResult, 'initial' | 'terminal' | 'events'>;
-const animations = (events: readonly LedgerCombatEvent[]): CombatViewEvent[] => events.flatMap(event => {
-  const view = animationEvent(event); return view ? [view] : [];
-});
+/** Trusted ledger -> detached animation whitelist, in input order; never creates unitUpdated. */
+export function toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatAnimationEvent[] {
+  return events.flatMap(event => {
+    const view = animationEvent(event); return view ? [view] : [];
+  });
+}
 
 /** Trusted complete battle only. One bounded pure re-execution; never commits Match settlement. */
 export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
@@ -75,7 +79,7 @@ export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
   // A tick0 event can be emitted by the first step (e.g. wolves' opening jump).
   // The initial state's ledger cursor, not the event tick, marks applied start effects.
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
-  const ticks: CombatReplayTick[] = [{ tick: 0, events: animations(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) }];
+  const ticks: CombatReplayTick[] = [{ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) }];
   let state = battle.initial, previous = initial;
   const generated: LedgerCombatEvent[] = [];
   while (state.status === 'running' && state.tick < battle.terminal.tick) {
@@ -83,7 +87,7 @@ export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
     if (next.state.tick !== state.tick + 1) throw new RangeError('replay-divergence');
     state = next.state;
     const ledger = toLedgerEvents(next.events); generated.push(...ledger);
-    const view = toCombatViewState(state), events = animations(ledger);
+    const view = toCombatViewState(state), events: CombatViewEvent[] = toCombatViewEvents(ledger);
     if (view.units.length !== previous.units.length || view.units.some((u, i) => u.id !== previous.units[i].id)) throw new RangeError('replay-divergence');
     for (let i = 0; i < view.units.length; i++) {
       const unit = view.units[i], before = previous.units[i];
@@ -96,7 +100,7 @@ export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
     previous = view;
   }
   if (canonicalContent(previous) !== canonicalContent(terminal)
-    || canonicalContent(animations(generated)) !== canonicalContent(animations(battle.events.filter(event => event.eventSeq >= firstStepEventSeq)))) {
+    || canonicalContent(toCombatViewEvents(generated)) !== canonicalContent(toCombatViewEvents(battle.events.filter(event => event.eventSeq >= firstStepEventSeq)))) {
     throw new RangeError('replay-divergence');
   }
   return freezeContent({ initial, ticks, terminal });
