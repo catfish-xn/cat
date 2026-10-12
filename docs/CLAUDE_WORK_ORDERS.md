@@ -72,3 +72,69 @@
 - [ ] `npx vitest run tests/server` 全部通过，运行时间 < 30 秒。
 - [ ] `npm run typecheck`、`npm run build` 通过；`src/server/` 不引入 `phaser`、DOM、`Math.random`、`Date.now`（grep 证明）。
 - [ ] `docs/UI_REQUESTS.md` 末尾追加一节「src/server 需要规则侧提供的接口」，列出你发现的缺口（例如：双方战斗输入类型、结算收据类型、淘汰归还卡池钩子）。
+
+---
+
+## 派工单 C3：界面接到真房间（浏览器内跑 `src/server/room`，替换假服务器）
+
+分支：`claude/c3-local-room-client`，基于 `origin/multiplayer`（已含 PR #33、#34、#35）。
+
+### 现状
+- `src/rendering/online/fake-server.ts` 是临时假服务器，自己管回合、倒计时、其他七席的假数字。
+- `src/server/room/` 已有真房间状态机（`Room`、`Lobby`、`ManualClock`、`toPlayerView`、`toCombatFrames`），但只在测试里跑过，没有接到界面。
+- `src/server/room/types.ts` 里重声明了一份 `PlayerView`/`LobbyView`，与 `src/rendering/online/protocol.ts` 结构相同，注释说"合入后改为引用"。
+
+### 要做
+1. **统一协议文件**：把 `PlayerView`、`LobbyView`、`SeatPublic`、`RoomPhase`、`CombatFrame`、`ClientCommand`、`ROOM_CAPACITY` 搬到 `src/server/protocol.ts`（服务器与界面共用的纯类型文件，不含实现）。`src/rendering/online/protocol.ts` 改为 `export * from '../../server/protocol'` 并保留 `GameClient`/`ClientListeners` 接口；`src/server/room/types.ts` 删除重复声明改为引用。界面只能从 `src/server/protocol.ts` 和 `src/server/room/index.ts`（新增的公开出口）导入，不深入其他服务器文件。
+2. **真实时钟适配器**：`src/server/room/clock.ts` 已有接口；新增 `src/server/room/real-clock.ts`（`performance.now` + `setTimeout`），它是唯一允许碰真实时钟的服务器文件，并把 `tests/server/purity.test.ts` 的白名单加上这一个文件。
+3. **本地房间客户端**：新增 `src/rendering/online/local-room-client.ts` 实现 `GameClient`，内部直接 new `Lobby` + `Room`（真实时钟），把 `Room` 的推送转成 `listeners.state/view/combat/lobby`。`send()` 调用 `room.handle(mySeatId, command)`，原样返回结果。其他七席为机器人空席（B1 的 `start()` 行为），它们不操作。
+4. **切换**：`BoardScene` 默认用 `LocalRoomClient`；`?server=fake` 时才用旧 `FakeServer`。URL 参数 `prep/choice/settle/seed/name` 继续有效（传给 Room 的配置）。假服务器文件保留到 C4 之后再删。
+5. **顺手修两处 C2 遗留**：棋盘在 800 宽列内左右黑边（调 `#board-root` 的高度/宽度约束或 FIT 容器，不改 `BOARD_LAYOUT` 逻辑尺寸）；终局时左栏残留的补给/收入信息隐藏。
+6. 房间 `fault`/`seat-stuck` 中断（B1 已定义）要在界面显示明确文案："对局异常结束：原因"，并提供返回匹配按钮。
+
+### 不做
+- 不改 `src/server/room/` 的流程逻辑和排名规则（只加 `real-clock.ts`、`index.ts`、搬类型）。
+- 不写网络。不动 `src/simulation/`。
+
+### 验收
+- [ ] `?mode=online&prep=3&settle=1` 用真房间从匹配跑到终局排名，Playwright 全流程无报错；`__CAT_DEBUG__.read().m6.transport` 为 `local-room`。
+- [ ] `?mode=online&server=fake` 仍可用（回归）。
+- [ ] 协议类型只有一份；`npx vitest run tests/server` 仍全绿且 purity 白名单只多 `real-clock.ts`。
+- [ ] 房间异常结束有可见文案和返回按钮（可用 `?faultAt=2` 之类的调试参数触发，参数只在非生产构建生效或明确标注为调试）。
+- [ ] typecheck、build、离线冒烟通过。
+
+---
+
+## 派工单 B2：网络层（WebSocket 服务器 + Node 测试客户端，无浏览器）
+
+分支：`claude/b2-net`，基于 `origin/multiplayer`（建议在 C3 合入后开工，以便复用 `src/server/protocol.ts`；若 C3 未合，自己先做第 1 步的类型统一，合并时以 C3 为准）。
+
+### 目标
+让两个独立进程能连上同一个房间、各控自己的席位、互不越权，断线后凭凭证回到原席。只验证网络正确性，不做正式界面（那是 C4）。
+
+### 要做
+1. 依赖：允许新增 `ws` 为运行依赖（Node 22 自带 WebSocket 客户端但没有服务器）。只加这一个包，写明版本。
+2. `src/server/net/`：
+   - `messages.ts`：客户端→服务器消息（`join`、`leaveQueue`、`start`、`command`、`resume`）与服务器→客户端消息（`lobby`、`view`、`state`、`combat`、`receipt`、`error`）的类型与**运行时校验函数**（手写校验，不引第三方 schema 库）。每条客户端消息带 `protocolVersion`、`commandId`；`command` 另带 `seatRevision`/`shopGeneration` 等所需版本字段，照 `docs/MULTIPLAYER_RENOVATION_V2.md` 5.1 节。
+   - `session.ts`：座位凭证（服务器生成的不可猜测随机串，用 `node:crypto`，这是服务器网络层，不受 simulation 的 RNG 限制）、`connectionEpoch`、凭证→席位绑定；旧连接在新连接接入后失效。
+   - `dedupe.ts`：每席 `commandId` 去重；相同编号相同内容返回原回执，相同编号不同内容拒绝；保留窗口（例如最近 256 条），窗口外要求重同步。
+   - `server.ts`：`createGameServer({ port, room options, clock })`，单房间单写队列（所有消息按到达顺序串行进 `Room.handle`），每连接消息频率与大小上限，向各连接只发它自己的 `toPlayerView` 和自己的 `state`/`combat`，其他人收不到你的商店。
+   - `src/server/main.ts`：Node 入口，读端口环境变量，启动服务器；`npm run serve:game` 启动（允许加 `tsx` 开发依赖或复用 esbuild 构建，二选一写明）。
+3. `src/server/net/test-client.ts`：Node 测试客户端，能加入、开始、发命令、断开、用凭证重连。
+4. 测试 `tests/server/net/`（真实端口随机、真实 ws，但房间用 `ManualClock`）：
+   - 两个客户端连同一房间，各自购买后，对方的 `view` 看到 HP/等级变化但看不到自己的商店（抓取下发消息断言无 `shop` 字段）。
+   - 伪造 `seatId`、客户端上传金币、`protocolVersion` 错误、字段类型错误、过期 `shopGeneration` 全部被拒且房间状态引用不变。
+   - 重复 `commandId` 只执行一次；同编号不同内容被拒。
+   - 断开后凭证重连回到原席，旧 socket 再发命令被拒；重连先收快照再收增量。
+   - 第 9 个连接加入队列收到 `full` 错误。
+   - 每房单写：并发 50 条命令按到达顺序串行处理，无交错。
+
+### 不做
+- 不写浏览器客户端（C4）。不做 HTTPS/WSS 终止（部署时由反向代理做，T9）。不做多房间。
+- 不碰 `src/simulation/`、`src/rendering/`。
+
+### 验收
+- [ ] `npx vitest run tests/server` 全绿，网络测试总时长 < 60 秒。
+- [ ] `npm run serve:game` 能起、能被 `test-client.ts` 连上并完整跑一局（用 `prep=2` 等短配置）。
+- [ ] typecheck、build 通过；`src/server/net` 的 purity 例外只允许 `ws`、`node:crypto`、真实时钟适配器。
+- [ ] `docs/UI_REQUESTS.md` 追加 C4 需要的客户端消息说明（待确认回执、重连流程、错误码表）。
