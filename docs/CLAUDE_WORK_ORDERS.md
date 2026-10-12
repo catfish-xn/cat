@@ -171,3 +171,37 @@
 - [ ] `npx vitest run tests/server tests/t2-two-sided-battle.test.ts` 全绿；purity 检查零命中。
 - [ ] `?mode=online` 默认行为不变（placeholder），离线冒烟通过；typecheck、build 通过。
 - [ ] 合同 §10.6 的五条要求逐条在 PR 描述里对应到代码位置。
+
+---
+
+## 派工单 C4：浏览器 WebSocket 客户端（两台电脑真的连上同一局）
+
+分支：`claude/c4-ws-client`，基于 `origin/multiplayer`（已含 B2 网络层 PR #38、C3）。若 B3 已合入则一并包含；若未合入，帧仍是 `MatchState`，按下面第 6 条处理。
+
+### 依据
+`docs/UI_REQUESTS.md` 的「联机客户端消息说明（B2）」：消息表、待确认回执、重连流程、错误码表。类型与校验在 `src/server/net/messages.ts`（可直接在浏览器 import），共享视图在 `src/server/protocol.ts`。
+
+### 要做
+1. `src/rendering/online/ws-client.ts`：`WsGameClient implements GameClient`，`transport: 'websocket'`。
+   - `joinQueue(name)` → `join`；回执里的 `token` 存 `sessionStorage`，不显示。`startMatch()` → `start`；`leaveQueue()` → `leaveQueue`。
+   - `send(command)` 现在必须变成**待确认**：`GameClient.send` 的返回类型改为 `MatchCommandResult | { ok: 'pending'; commandId: number }`（改 `protocol.ts` 的接口，同步改 `RemoteSession.intent`：pending 时不改本地状态、返回 `blocked()` 给 BoardScene 但不显示"失败"，而是状态栏显示"待确认…"；收到 `receipt` 后由随后的 `state` 推送驱动刷新）。本地房间与假服务器仍同步返回，行为不变。
+   - `commandId` 递增计数器；每条 `command` 带最新 `roomId/round/seatRevision`（来自最近一次 `state`/`view`）；`seat-revision-mismatch`/`stale-round` 时等下一条 `state` 再提示玩家重试，不自动重发。
+   - 收到 `view/state/combat/lobby` 转给 `ClientListeners`；`error{session-superseded}` 时停止发送并显示"已在别处打开"。
+2. 重连：`onclose` 后显示"连接中断，重连中…"（状态栏 + 右栏徽章），指数退避 1s/2s/4s 到 10s 上限，用 `resume{token}`；成功后按快照顺序恢复，把 `commandId` 计数器调到 `lastCommandId + 1`。`invalid-token` 回到匹配页。排队阶段断线视为离队。
+3. 入口选择：`?mode=online&server=ws` 用 WebSocket，地址默认 `ws(s)://<当前主机>/ws`，可用 `?ws=ws://127.0.0.1:8787` 覆盖；`server=local`（默认）仍是浏览器内真房间；`server=fake` 删除，连同 `fake-server.ts` 一起删（C3 已替代）。
+4. 开发联调：`vite.config.ts` 加 `/ws` 到 `ws://127.0.0.1:8787` 的代理（只影响 dev server）；`package.json` 加 `dev:online`：同时起 `serve:game` 和 `vite`（用 `npm-run-all` 或 `concurrently` 二选一，写明）。
+5. 服务器端两处小改（`src/server/net/server.ts`，Claude 自己的目录）：开启 `permessage-deflate`；`combat` 消息若超过 1 MiB 则按 200 帧一包分批发送（消息体加 `part/total`），客户端拼回后再交给 `receiveCombat`。
+6. 帧体积：若 B3 已合入，帧是 `CombatState`，直接用；若未合入，先按现状跑通，PR 里写明实测单条 `combat` 大小。
+7. 测试：
+   - `tests/server/ws-client.test.ts`：用 `createGameServer`（`ManualClock`）+ 真实 ws，在 Node 里跑 `WsGameClient`（无 DOM 依赖部分），覆盖：join/start/command 待确认→回执→state 刷新；重复 commandId；断线 resume 恢复顺序；`session-superseded`。
+   - Playwright：**两个浏览器上下文**连同一个 `serve:game`（`CAT_PREP_SEC=3`），各自买卡，对方右栏看到等级/HP 变化但 `__CAT_DEBUG__.read().state.shop` 只有自己的；一方刷新页面后回到原席（`sessionStorage` token），另一方画面不受影响；跑到终局两边排名一致。
+   - 离线冒烟、`?server=local` 回归。
+
+### 不做
+- 不做 HTTPS/WSS 终止、不做部署（T9）。不做机器人行为。不碰 `src/simulation/`、`src/server-entry/`、`src/server/room/` 流程。
+
+### 验收
+- [ ] 两个浏览器上下文 + 一个真服务器完成一局，排名一致，刷新页面可回原席。
+- [ ] 待确认状态可见，回执失败后本地状态不变（`gold` 不先扣）。
+- [ ] `npx vitest run tests/server` 全绿；typecheck、build 通过；`fake-server.ts` 已删且无引用。
+- [ ] PR 写明实测单条 `combat` 最大体积与开启压缩后的体积。

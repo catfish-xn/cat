@@ -374,11 +374,15 @@
 - 需要：一个公开命令（例如 `applyRoundSettlement(state, receipt)`），由房间在收齐全轮结果后调用，一次性提交该席的收入、经验、持久成长和由房间给定的 HP；带唯一 `settlementId`，重复提交返回原 state 与 `duplicate-settlement`，不重发任何奖励。要求 `startMatchCombat`/`stepMatch` 的 PvP 路径不再内部扣血、不再自行进入 `gameOver`。
 - 验收：同一收据提交两次，第二次无事件、无资源变化；`roundResults` 恰好一条。
 
+**T3 回应（Codex）**：已导出 enableMultiplayerSettlement/applyRoundSettlement，单席原子提交未截断伤害、收入、经验、成长和唯一收据，镜像拒绝、重复原样返回、HP0 为 eliminated；B4 全轮暂存/执行代次/统一发布按 [合同 §11](MULTIPLAYER_CONTRACT.md#11-t3单席原子结算整轮发布与超时规则) 接入。房间 HP 必须取规则返回值，不自行计算。
+
 ### SR-B1-03 加时与目录末轮（P1，T3/T4 合同）
 
 - 现状：目录 6-7 为 `isFinal`，引擎在该轮结算时对所有席位置 `gameOver`（`outcome` 为 victory/defeat）。房间在 `planSettlement` 中以 `isFinal` 结束对局，按存活者 HP 定名次，代码注释标明"建议规则，待 T3/T4 合同定稿"。
 - 需要：PvP 加时轮的公开入口（继续经济与商店、沿用末阶段基础伤害、不新增野怪/强化/奖励），以及 `nextRound` 在目录末尾之后的合法推进方式；平局扣血、同轮归零破同分规则定稿（房间当前实现：扣血后未截断 HP → 轮前 HP → 席位序号小者优先）。
 - 验收：连续平局、双方空阵容、多席同轮归零都能在有限轮内产生唯一名次。
+
+**T3 回应（Codex）**：合同 §11.5 已定稿加时 ID/ordinal、基础伤害12、经济/商店推进、双方平局扣血和未截断HP→轮前HP→固定座位序的唯一排名。目录外规则入口留 T4 接入前由规则线补齐，当前不冒称加时已可运行；在线目录末轮不再触发单人 gameOver。
 
 ### SR-B1-04 超时兜底的权威定义（P1）
 
@@ -387,6 +391,8 @@
   1. 异常节点且阵容为空时 `needsAnomalyRecruitment` 阻止开战（`missing-player`），兜底不能花钱买单位；当前占位 resolver 抛错导致整房 `fault` 结束。需要规则侧提供"超时放弃本轮/视为空阵容应战"的公开命令或等价规则。
   2. `nextRound` 因 `unsettled-round`（待领奖励、待选项或奖励容量不足）拒绝时，房间只能有限次延长结算截止，然后 `seat-stuck` 中断。需要超时自动领取/放弃奖励的公开命令，且不得重复发奖。
 - 验收：任一席位在任何节点超时都能在不花费资源的前提下推进到下一轮。
+
+**T3 回应（Codex，按用户确认）**：forfeitPendingChoice 默认选第一项（项目规则），只有无合法目标的空异常跳过；claimOrDiscardLoot 领取已赚且可容纳奖励，容量不足部分放弃。两者不付费、不重复发奖；签名、代次、失败和推进顺序见合同 §11.4。覆盖首项金币/组件、空异常、满备战区及领取事务回滚。
 
 ### SR-B1-05 淘汰归还卡池与共享卡池版本（P1，TP）
 
@@ -400,6 +406,67 @@
 - 需要：规则侧提供"去随机流与未来计划"的本席私有视图构造函数（或列出可安全下发的字段清单），供 T5 网络层发送。
 
 **T2 回应（Codex）**：已在 [合同 §10.9](MULTIPLAYER_CONTRACT.md#109-sr-b1-06本席私有视图下发白名单t2-清单t5-实现) 列出逐层字段白名单、当前已揭示奖励条件、随机流/未来计划禁发项及 T5 验收要求；覆盖初始、增量、重连与命令错误回执，不可透传完整 MatchState/CombatState。T2 只交清单，T5 由 Claude 实现投影；其余 SR-B1-02~05 归属与最小范围见合同 §10.10。
+
+## 联机客户端消息说明（B2，2026-10-12，Claude 流水线 B → 流水线 C / C4）
+
+`src/server/net/` 已交付单房间 WebSocket 服务器（`createGameServer`）、座位凭证、commandId 去重、单写队列与 Node 测试客户端（`src/server/net/test-client.ts`）。C4 的浏览器客户端只需实现下面的消息流；类型与校验函数在 `src/server/net/messages.ts`（无 ws / node 依赖，可直接在浏览器 import），共享视图类型在 `src/server/protocol.ts`。协议版本 `NET_PROTOCOL_VERSION = 1`。
+
+### 消息一览
+
+| 方向 | 消息 | 关键字段 | 说明 |
+| --- | --- | --- | --- |
+| C→S | `join` | `name` | 进队列。回执 `joined{seatId, token, connectionEpoch}`；`token` 只保存在本地（例如 `sessionStorage`），不显示、不上传到别处 |
+| C→S | `leaveQueue` / `start` | — | 需已入队。`start` 由任一入队玩家发，机器人补满 8 席 |
+| C→S | `resume` | `token` | 新连接凭 token 回到原席；回执 `resumed{seatId, roomId, connectionEpoch, lastCommandId}` |
+| C→S | `command` | `roomId`、`round`、`seatRevision`、`command: ClientCommand` | `command` 内 buy/shopLock 带 `generation`，choose/anomaly 带 `choiceId+generation`，与规则一致 |
+| S→C | `lobby` | `view: LobbyView` | 连接建立即发一次，队列变化再发 |
+| S→C | `view` | `roomId`、`roomRevision`、`view: PlayerView` | 房间任何变化都发（白名单公开数据） |
+| S→C | `state` | `roomId`、`round`、`seatRevision`、`state: MatchState` | 只发本席私有状态；`seatRevision` 是下一条 `command` 必须带的值 |
+| S→C | `combat` | `roomId`、`round`、`battleId`、`frames: CombatFrame[]` | 本席本轮战斗帧，每轮一次 |
+| S→C | `receipt` | `commandId`、`ok`、`result` 或 `reason`+`detail` | 每条客户端消息恰好一条回执 |
+| S→C | `error` | `code`、`message`、`commandId\|null` | 无法对应到回执的连接级错误 |
+
+每条客户端消息带 `protocolVersion` 与 `commandId`（正整数，本席本局内唯一，建议递增计数器）。服务器严格拒绝未知字段（`seatId`、`gold`、`hp` 之类一律 `invalid-message`），操作者只取自连接绑定的席位。
+
+### 待确认回执（界面要显示"待确认"）
+
+1. 发出 `command` 后该操作处于"待确认"，界面不得先改本地金币或商店；收到同 `commandId` 的 `receipt` 才结束。
+2. `ok:true` 的 `applied` 回执带 `seatRevision`、`roomRevision`、`events`；紧接着服务器推送新的 `state`（同 `seatRevision`）和 `view`。
+3. `ok:false` 时本地状态不变，`reason` 为下表错误码或规则失败原因（`insufficient-gold`、`stale-shop`、`wrong-phase` 等，见 `MatchFailure`）。
+4. 丢回执重试：用**相同 `commandId` 和完全相同内容**（含同一个 `seatRevision`）重发，得到原回执；内容不同会被 `commandId-conflict` 拒绝。
+5. 顺序发送可以流水线化：第 n 条命令带 `seatRevision = 基准 + n - 1`（假设前面全部成功）；任何一条失败后，后续会收到 `seat-revision-mismatch`，客户端等最新 `state` 后重发。
+
+### 重连流程
+
+1. 连接断开时界面显示"连接中断"，保留最后一份 `view`/`state`；房间侧只把该席 `connected=false`，资产、配对、名次不动。
+2. 新建 WebSocket，发 `resume{token}`。成功后依次收到：`receipt(resumed)` → `view` → `state` →（若本轮已有战斗）`combat`，这是快照；之后才是增量推送。客户端把本地 `commandId` 计数器调到 `lastCommandId + 1` 以上。
+3. 旧连接若还活着会收到 `error{code:'session-superseded'}`，随后被服务器关闭（关闭码 4001）；旧连接再发命令只会得到 `not-authenticated`。
+4. 排队阶段断线视为离队（token 失效，需重新 `join`）；开局后断线可随时重连直到对局结束。服务器进程重启后旧 token 一律 `invalid-token`（首版不做跨进程恢复）。
+
+### 错误码表
+
+| 码 | 出现于 | 含义 / 界面处理 |
+| --- | --- | --- |
+| `invalid-json`、`invalid-message` | error / receipt | 消息格式或字段非法（含多余字段）；属客户端 bug，记日志 |
+| `unsupported-protocol` | receipt | `protocolVersion` 不是 1；提示刷新页面 |
+| `message-too-large`（关闭码 1009） | 连接关闭 | 单条消息超 16 KiB |
+| `rate-limited` | error | 每连接每秒超过 60 条；丢弃本条，稍后重试 |
+| `not-authenticated` | receipt | 连接未绑定席位（未 join / 已被取代）；回到匹配页或重连 |
+| `already-joined`、`not-queued` | receipt | 重复入队 / 未入队就 leave、start |
+| `full`、`in-progress`、`empty` | receipt | 队列满 8 人 / 对局进行中 / 空队列开始 |
+| `invalid-token` | receipt | 凭证无效或已失效；回到匹配页 |
+| `session-superseded` | error | 本连接被新连接取代；停止发送 |
+| `commandId-conflict` | receipt | 同 id 不同内容；客户端 bug |
+| `resync-required` | receipt | id 早于最近 256 条保留窗口；等最新 `state` 后用新 id 重发 |
+| `no-room`、`wrong-room` | receipt | 本席不在进行中的房间 / `roomId` 不符 |
+| `stale-round`、`seat-revision-mismatch` | receipt | 命令针对旧轮次 / 旧席位版本；等最新 `view`/`state` 后重发 |
+| `unknown-seat`、`seat-eliminated`、`wrong-phase` 及其余 `MatchFailure` | receipt | 房间或规则拒绝，文案沿用现有离线映射 |
+
+### 需要用户决定 / Codex 配合的事项
+
+- **战斗帧体积（P0，影响 C4 是否可用）**：`CombatFrame.state` 是每 tick 一份完整 `MatchState`。真实测量（`tests/server/net/server.test.ts` 整局用例）：一局空闲对局下发给单席约 105 MB，单条 `combat` 最大 13.5 MB，17 场战斗共 2873 帧。局域网可跑通，公网不可接受。建议：由规则侧（SR-B1-07）提供"战斗回放投影"——首帧完整状态 + 每 tick 只含 `combat` 子状态或事件账本，客户端按 `LedgerCombatEvent` 播放；或至少去掉帧内与战斗无关的字段。决定前 C4 不要按当前帧格式上线。
+- **SR-B1-06 仍未实现**：`state` 消息目前是完整 `MatchState`（含本席随机流）。B2 按工单只发本席自己的状态；去随机流的私有投影仍需规则侧提供。
+- 启动方式：`npm run serve:game`（esbuild 打包到 `dist-server/game/main.mjs`，环境变量 `PORT`、`CAT_HOST`、`CAT_SEED`、`CAT_PREP_SEC`、`CAT_CHOICE_SEC`、`CAT_SETTLE_SEC`、`CAT_QUEUE_TIMEOUT_SEC`）；`npm run client:game -- ws://127.0.0.1:8787 名字` 跑一局空闲对局。TLS 由反向代理终止（T9）。
 
 ## src/server 接入 T2 后的规则侧缺口（B3，2026-10-12，Claude 流水线 B）
 

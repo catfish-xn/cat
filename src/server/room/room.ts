@@ -118,6 +118,19 @@ export class Room {
     return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
   }
 
+  /**
+   * Connection bookkeeping for the network layer (B2): a dropped or resumed socket changes only the
+   * public `connected` flag. Assets, pairings and ranks stay (V2 D8); seatRevision does not move
+   * because no command or settlement touched the seat.
+   */
+  setConnected(seatId: string, connected: boolean): boolean {
+    const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
+    if (!seat || seat.kind !== 'human') return false;
+    if (seat.connected === connected) return true;
+    this.replaceSeats(this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, connected } : candidate));
+    return true;
+  }
+
   /* ---------------- settlement ---------------- */
 
   /** Builds this round's settlement from a full set of results without touching the room. */

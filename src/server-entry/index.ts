@@ -4,6 +4,7 @@ export {
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem,
   selectAnomalyTarget, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
+  forfeitPendingChoice, claimOrDiscardLoot,
 } from '../simulation/match';
 export { serializeMatch, restoreMatch } from '../simulation/serialization';
 export type {
@@ -26,3 +27,5 @@ export type { CombatStep } from '../simulation/combat';
 export { PLAYER_BATTLE_SNAPSHOT_VERSION, TWO_SIDED_BATTLE_VERSION, BattleValidationError } from '../simulation/two-sided-types';
 export type { PlayerBattleSnapshot, BattleIdentity, BattleIdMapping, BattleInput, BattleResult,
   BattleSideResult, BattleSurvivor, SideProposal, BattleFailure } from '../simulation/two-sided-types';
+export { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VERSION } from '../simulation/round-settlement';
+export type { RoundSettlementReceipt, MultiplayerProgress, MultiplayerCommandResult, MultiplayerFailure } from '../simulation/round-settlement';
