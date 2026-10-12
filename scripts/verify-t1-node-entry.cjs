@@ -53,6 +53,7 @@ async function worker() {
   const api = await load(path.join(root, 'dist-server/index.mjs'));
   const reference = await load(path.join(out, 'browser-reference.mjs'));
   const expectedExports = [
+    'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',
     'createMatch', 'deployMatchUnit', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
     'startMatchCombat', 'stepMatch', 'nextRound', 'combineItems', 'equipItem',
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',
