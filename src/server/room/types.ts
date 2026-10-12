@@ -12,13 +12,13 @@
 import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
-import type { BattleResult as RulesBattleResult, RoundSettlementReceipt, SideProposal } from '../../server-entry';
+import type { BattleResult as RulesBattleResult, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type CombatFrame, type RoomPhase, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
 export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
 export type { RoomPhase, SeatKind, PlayerView, PlayerViewPhase, PlayerViewPhaseKind, PlayerViewFault, PlayerViewFaultKind, SeatPublic, QueueEntry, LobbyView, CombatFrame, ClientCommand } from '../protocol';
-export type { RulesBattleResult, RoundSettlementReceipt, SideProposal };
+export type { RulesBattleResult, RoundSettlementReceipt, SideProposal, SharedPoolFailure, SharedPoolState };
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 /**
  * How PvP results are accepted. `two-sided` (default, B4): the real two-sided battle (T2) runs once per
@@ -99,6 +99,11 @@ export interface PlaceholderBattleResult {
   readonly round: number;
   readonly roomRevision: number;
   readonly outcomes: readonly BattleSeatOutcome[];
+  /**
+   * Shared pool after this battle's seats ran through the rules' pool wrapper (§12.4); absent when the
+   * resolver did not touch the pool (its outcomes then must not have awarded or moved any unit).
+   */
+  readonly pool?: SharedPoolState;
 }
 /**
  * B3 shape (contract §10.6 item 2): one real two-sided battle and its two uncommitted proposals.
@@ -146,6 +151,11 @@ export interface RoundSettlement {
   readonly finalRanking: readonly RankEntry[] | null;
   /** Two or more seats survive the catalog's final round: §11.5 overtime must follow (the rules' entry is pending, see RoomFault). */
   readonly overtimeRequired: boolean;
+  /**
+   * Shared pool published with this round (§12.4): the round's battles chained through it, then every seat the
+   * rules eliminated this round released with `releaseSeatOnElimination` (after the ranking, before the next refresh).
+   */
+  readonly pool: SharedPoolState;
 }
 
 export type RoomFault =
@@ -182,7 +192,12 @@ export interface RoomState {
   readonly roomRevision: number;
   /** Room-owned lcg32-v1 state: seat seeds and pairings draw from here. */
   readonly rngState: number;
-  /** Shared card pool version. Reserved for TP; stays 0 until the shared pool lands. */
+  /**
+   * Server-only shared card pool (contract §12, B5). Every seat's MatchState is bound to it; the room replaces it only
+   * together with the seat state(s) of the same rules transaction. Never projected to a client.
+   */
+  readonly pool: SharedPoolState;
+  /** `pool.revision` of the published pool, copied, never computed (§12.4 SR-B1-05). */
   readonly poolRevision: number;
 }
 
@@ -192,5 +207,6 @@ export type SeatCommand = ClientCommand;
 export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase';
 export type RoomCommandResult =
   | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[]; readonly seatRevision: number; readonly roomRevision: number }
-  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure; readonly state: MatchState | null };
+  /** `SharedPoolFailure` includes every MatchFailure plus the pool's own reasons (pool-empty, empty-slot, ...). */
+  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure; readonly state: MatchState | null };
 export type { MatchCommandResult };

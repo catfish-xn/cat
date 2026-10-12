@@ -12,7 +12,7 @@
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import type { UnitLocation } from '../../simulation/units';
 import type { ClientCommand, CombatFrame, LobbyView, PlayerView } from '../protocol';
-import type { RoomFailure } from '../room/types';
+import type { RoomFailure, SharedPoolFailure } from '../room/types';
 
 export const NET_PROTOCOL_VERSION = 1;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
@@ -65,7 +65,8 @@ export type NetFailure =
   | 'no-room' | 'wrong-room' | 'stale-round' | 'seat-revision-mismatch'
   | 'rate-limited';
 export type LobbyFailure = 'full' | 'in-progress' | 'empty' | 'not-queued';
-export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure;
+/** SharedPoolFailure (B5) already contains every MatchFailure; MatchFailure stays listed for readers. */
+export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure | SharedPoolFailure;
 
 export type ReceiptMessage =
   | { readonly type: 'receipt'; readonly commandId: number; readonly ok: true; readonly result: ReceiptResult }
