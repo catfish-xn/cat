@@ -18,7 +18,7 @@ import type { Room, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
-  commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
+  COMBAT_SPLIT, commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
   type ReceiptResult, type ServerMessage,
 } from './messages';
 import { SessionRegistry, digestOf, type SeatSession } from './session';
@@ -104,6 +104,17 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
     conn.socket.send(JSON.stringify(message));
   }
+  /** A battle above COMBAT_SPLIT.maxBytes leaves as consecutive parts of framesPerPart frames (part 1..total). */
+  function sendCombat(conn: Connection, message: Extract<ServerMessage, { type: 'combat' }>): void {
+    if (!conn.open || conn.socket.readyState !== conn.socket.OPEN) return;
+    const whole = JSON.stringify(message);
+    if (Buffer.byteLength(whole) <= COMBAT_SPLIT.maxBytes) { conn.socket.send(whole); return; }
+    const total = Math.ceil(message.frames.length / COMBAT_SPLIT.framesPerPart);
+    for (let part = 1; part <= total; part++) {
+      const frames = message.frames.slice((part - 1) * COMBAT_SPLIT.framesPerPart, part * COMBAT_SPLIT.framesPerPart);
+      send(conn, { ...message, frames, part, total });
+    }
+  }
   function sendError(conn: Connection, code: ErrorCode, message: string, commandId: number | null = null): void {
     send(conn, { type: 'error', code, message, commandId });
   }
@@ -132,7 +143,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       if (conn.sentCombatKey !== key) {
         conn.sentCombatKey = key;
         const frames = toCombatFrames(state, seat.seatId);
-        if (frames.length > 0) send(conn, { type: 'combat', roomId: state.roomId, round: state.round, battleId: battle.battleId, frames });
+        if (frames.length > 0) sendCombat(conn, { type: 'combat', roomId: state.roomId, round: state.round, battleId: battle.battleId, frames });
       }
     }
   }
@@ -343,7 +354,9 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   /* ---------------- listen ---------------- */
 
   return new Promise<GameServer>((resolve, reject) => {
-    const wss = new WebSocketServer({ port: options.port, host: options.host, maxPayload: limits.maxMessageBytes });
+    // permessage-deflate (C4): MatchState frames repeat almost entirely, so they compress by an order of magnitude.
+    // Context takeover stays on (the default) so consecutive states compress against each other.
+    const wss = new WebSocketServer({ port: options.port, host: options.host, maxPayload: limits.maxMessageBytes, perMessageDeflate: { threshold: 1024 } });
     wss.once('error', reject);
     wss.on('connection', onConnection);
     wss.once('listening', () => {

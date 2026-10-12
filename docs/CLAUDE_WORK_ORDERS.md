@@ -232,3 +232,55 @@
 - [ ] `npx vitest run tests/server tests/t2-* tests/t3-*` 全绿；purity 零命中；`choice-fallback.ts` 已删。
 - [ ] 默认模式浏览器整局到排名，无报错；typecheck、build 通过。
 - [ ] PR 描述把 §11.3 五条逐条对应到代码位置；规则侧缺口列为 SR-B4-xx。
+
+---
+
+## 派工单 C5：查看对手阵容、淘汰后观战、联机文案收口（纯界面）
+
+分支：`claude/c5-spectate`，基于 `origin/multiplayer`（已含 C4 PR #41、B3）。与 B4 并行，不碰 `src/server/room` 流程；若需要服务器下发新字段，写进 `docs/UI_REQUESTS.md`（SR-C5-xx），先用现有 `PlayerView` 能做的部分。
+
+### 依据
+`docs/MULTIPLAYER_RENOVATION_V2.md` N6 第 3、8 条（公开阵容查看、淘汰玩家观战）；`src/server/protocol.ts` 的 `PlayerView`/`SeatPublic`。TFT 原版：点右侧玩家头像可看对方棋盘和装备，自己被淘汰后仍能看排名并观战。
+
+### 要做
+1. **公开阵容数据**：`SeatPublic` 目前只有 HP/等级。在 `src/server/protocol.ts` 增加可选的 `publicBoard?: { units: { definitionId, starLevel, cell, items: string[] }[] ; traits?: ... }`，由 `src/server/room/projection.ts` 的 `toPlayerView` 从各席位 `MatchState.preparation` 白名单构造（只取上场单位，不含备战区、商店、金币、随机流）。这是 `src/server/room` 里唯一允许的改动，且只是投影，不碰流程。本地房间和 WebSocket 都自动带上。
+2. **查看对手**：点击右栏任一席位，中间棋盘上方弹出一个只读的"对方阵容"面板（不替换我的棋盘，不触发任何命令）：七列八行缩略棋盘、每个单位的头像/星级/装备图标、羁绊列表（用现有 `deriveTraits` 读公开单位即可）。再点一次或 Esc 关闭。当前对手席位默认高亮。
+3. **淘汰后观战**：我方 `alive=false` 后：商店坞置灰且所有命令按钮禁用（`RemoteSession` 已拒绝，界面也要明确不可点），右栏保留，顶部显示"已淘汰 · 第 N 名 · 观战中"，可继续看对手阵容和倒计时；终局时排名层正常弹出。
+4. **文案收口**：联机模式下所有残留的单人文案（"点击开始战斗"、"点击 继续"、"新局"、"存档"等）统一替换或隐藏；状态栏在准备阶段显示"对手：xxx"，战斗阶段显示"对战 xxx"。
+5. 右栏席位增加小头像位（用现有 `s13-assets` 的英雄头像里该席位人口最高/费用最高的单位作头像，没有单位则用默认占位），更接近 TFT。
+
+### 不做
+- 不做聊天、历史战绩、回放导出。不改规则，不改房间流程、配对、结算。
+
+### 验收
+- [ ] 本地房间（`?mode=online`）与真服务器（`?server=ws`）下都能点开对手面板，内容与对方 `__CAT_DEBUG__.read().state.preparation` 上场单位一致（用两个浏览器上下文脚本断言）。
+- [ ] 对方面板不含商店、金币、备战区；抓取 `view` 消息断言 `publicBoard` 无这些字段。
+- [ ] 淘汰后不能发出任何命令，终局排名仍弹出。
+- [ ] `npx vitest run tests/server` 全绿（投影新增测试）；typecheck、build、离线冒烟通过。
+
+---
+
+## 派工单 B5：房间接入共享有限卡池（按合同 §12）
+
+分支：`claude/b5-shared-pool`，基于 `origin/multiplayer`（已含 TP PR #42）。**必须在 B4 合入之后开工**（B4 改了房间的结算与超时路径，B5 要在其上接池）。
+
+### 依据
+`docs/MULTIPLAYER_CONTRACT.md` **§12.1–12.5**（签名、初始化顺序、自然刷新、来源与淘汰、失败枚举）。TP 导出（经 `src/server-entry`）：`createSharedPool`、`initializeSharedSeat`、`refreshSharedShops`、`nextSharedRound`、`buySharedUnit`、`rerollSharedShop`、`setSharedShopLock`、`sellSharedUnit`、`runSharedMatchCommand`、`releaseSeatOnElimination`、`assertSharedPoolConservation`。
+
+### 要做
+1. **开局**：`createSharedPool(roomId, seed)` → 对八份未发布的 `createMatch(seed)` 按固定 `seatIndex` 0–7 逐席 `initializeSharedSeat` → `refreshSharedShops(pool, states, 1)` → 一次性发布（中途失败整体丢弃）。`RoomState.pool` 持有池，`poolRevision` 取 `pool.revision`。
+2. **席位命令改走池事务**：`buy/reroll/shopLock/sell` 分别调 `buySharedUnit/rerollSharedShop/setSharedShopLock/sellSharedUnit`；成功同时提交 `pool + state`，失败两者都不变。其他命令（站位、装备、经验、异常目标）仍走原公开命令。
+3. **可能发棋子奖励的路径统一用 `runSharedMatchCommand`**：开战（`startCombat`）、逐 tick（`step`，若房间在 resolver 外还会 step）、三选一（`choose`）、超时代选（`timeoutChoice`）、领奖（`claimLoot`）。B4 接的 `forfeitPendingChoice/claimOrDiscardLoot` 改为经这个包装。
+4. **跨轮**：目录推进用 `nextSharedRound(pool, states, expectedRound)` 替代逐席 `nextRound`（它内部先统一归还未锁店再按轮换顺序生成）；加时轮同样走它（若 §12 对加时有特殊说明按合同）。
+5. **淘汰**：排名计算后、下一轮自然刷新前，对每个本轮淘汰席位调用 `releaseSeatOnElimination`；重复调用拒绝即忽略。
+6. **每次发布后在测试模式断言守恒**：`assertSharedPoolConservation(pool, states)`（生产可关闭，测试默认开）。
+7. **投影**：`PlayerView` 不含池精确库存；本席商店的空格 `{status:'purchased', empty:true}` 原样下发，界面画为空格（`strategy-panel.ts` 已有已购格渲染，确认不会画出虚构英雄）。
+8. 测试 `tests/server/shared-pool-room.test.ts`：八席开局守恒；两席争最后一份不超卖；付费刷新 `pool-empty` 免费失败且 generation 不变；淘汰归还一次；整局（placeholder 与 two-sided 各一）跑完后守恒成立；失败命令后 `poolRevision` 不变。
+
+### 不做
+- 不碰 `src/simulation/`、`src/server-entry/`；规则缺口写 SR-B5-xx。不改网络协议形状（空格标记是现有 `ShopSlot` 兼容形状）。
+
+### 验收
+- [ ] `npx vitest run tests/server tests/tp-* tests/t3-*` 全绿；purity 零命中。
+- [ ] 浏览器 `?mode=online` 整局：商店能出现空格、刷新缺货免费失败有提示、终局排名正常；离线冒烟通过。
+- [ ] PR 描述把 §12.2 初始化顺序、§12.4 淘汰时点逐条对应到代码位置。

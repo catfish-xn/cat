@@ -11,6 +11,7 @@ export class PlayersSidebar {
   private phaseBadge: HTMLElement;
   private roundLabel: HTMLElement;
   private timerLabel: HTMLElement;
+  private connectionBadge: HTMLElement;
   private countdownRound: HTMLElement | null = null;
   private list: HTMLElement;
   private view: PlayerView | null = null;
@@ -25,6 +26,8 @@ export class PlayersSidebar {
       countdownHost.classList.add('online-countdown'); this.countdownRound = element('span', '', 'countdown-round');
       countdownHost.replaceChildren(this.countdownRound, this.timerLabel); top.append(this.phaseBadge, this.roundLabel);
     } else top.append(this.phaseBadge, this.roundLabel, this.timerLabel);
+    this.connectionBadge = element('span', '', 'online-connection'); this.connectionBadge.dataset.debug = 'online:connection'; this.connectionBadge.hidden = true;
+    this.connectionBadge.setAttribute('role', 'status'); top.append(this.connectionBadge);
     this.root.append(top);
     this.list = element('ol', '', 'online-seats'); this.list.dataset.debug = 'online:seats'; this.root.append(this.list);
     host.append(this.root);
@@ -61,6 +64,8 @@ export class PlayersSidebar {
     if (this.timerLabel.textContent !== text) this.timerLabel.textContent = text;
     this.timerLabel.classList.toggle('urgent', seconds <= 5);
   }
+  /** Connection badge next to the phase (断线重连中 / 已在别处打开); null hides it. */
+  connection(text: string | null): void { this.connectionBadge.textContent = text ?? ''; this.connectionBadge.hidden = !text; }
   show(visible: boolean) { this.root.hidden = !visible; }
   dispose() { this.root.remove(); this.countdownHost?.replaceChildren(); }
 }

@@ -63,7 +63,7 @@
 
 费用概率优先复用现有等级表；同一费用层内按可用份数加权，而非对英雄名等概率抽样。层内和跨层缺货行为必须显式定义，不进行无上限重抽。
 
-建议的项目规则为：在原概率大于零且仍有可用卡的费用层之间归一化；若没有任何合法层，留下明确空格。付费刷新在确认完全无法生成有效新商店时，应有清晰失败或收费语义，TP 必须定稿后实现。上述建议尚未当作 Riot 规则事实。
+TP 定稿：在原概率大于零且仍有可用卡的费用层之间归一化；没有合法层则留下明确空格。付费刷新在释放旧店后仍完全无法生成新卡时免费失败，所有状态不变。这是项目缺货规则，详细算法与随机消费见 §12。
 
 全局自然刷新先统一释放应刷新的旧商店，再用可复现的轮次抽签顺序生成新商店，锁定商店不释放。每轮变化顺序，避免永远让固定座位优先取得稀缺卡；手动操作按服务器收件与队列顺序处理。
 
@@ -73,17 +73,15 @@
 
 Riot 的 [14.15 官方更新说明](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-15-notes/)明确列出各费用英雄池份数为 30、25、18、10、9。这是可追溯的历史参考，尚不能仅凭该页面断言整个 14.24b 版本全部细节相同。
 
-TP 应核定目标规则版本后把数值放入版本化配置，并记录来源或明确标注项目选择。测试可先使用显式的微型库存，不必等正式容量确定才检查原子性。
+用户于 2026-10-12 指定采用上述 30/25/18/10/9，TP 已写入 `shared-pool-v1` 的 `POOL_CAPACITY_BY_COST`，只用于现有 19 位英雄。显式微型库存仅用于测试/配置夹具，不能超出官方每英雄上限。
 
 当前 SHOP_CATALOG_BY_COST 是 19 位英雄，费用种类数量为 5、5、5、3、1。共享池仅覆盖实际支持的英雄；不自动增加目录外单位，不因高费英雄种类少而私自增加份数。
 
-### 3.5 开场与奖励的待定边界
+### 3.5 开场与奖励（TP 已定稿）
 
-当前开场每席获得一张 Irelia，八席开场是否统一占池需要在初始化事务中明确；建议占池并在生成商店之前完成。不能先生成八份默认 Match，再事后扣池而产生已显示商店超额。
+八席开场各一张 Irelia，先统一占池再生成共享商店。`createMatch` 产生的单人初始店不得发布；初始化入口替换为尚未生成的共享店，见 §12.2。
 
-野怪奖励可能在计划、揭示、待领取和真正入库间跨越多个阶段。需选择并统一“何时预留”，以及死亡未获得、放弃、满备战区、终局和淘汰时何时释放。不能把未来奖励已冻结的事实等同于已获得，或允许八席预冻同一份最后卡。
-
-建议优先采用池内预留及来源收据；无货时使用版本化的同费替代或金币补偿方案。具体补偿有玩法影响，TP 应先根据现有奖励合同形成明确规则，必要时请用户决定。此项不阻塞 T1 或不涉及奖励的有限池原子性测试。
+冻结未来奖励不预留；已赚棋子在实际领取事务首次尝试发放时预留，满备战区保留待领取占用。有货但超时仍不可领取则放弃回池，淘汰同样释放。用户确认缺货时按该英雄一星购买价补等额金币，使用唯一奖励收据，不重复发奖。未赚奖励不预留、不补偿。来源、领取与释放时点见 §12.4。
 
 ## 4 多人战斗与结算
 
@@ -145,7 +143,7 @@ PlayerView 以白名单生成。具体哪些公开数据可观战另列表；全
 | 6-7 后仍三席存活 | 进入加时，正确镜像配对，继续至合法终局 |
 | 旧连接或重复命令 | 拒绝或原回执，不破坏资产及有限池 |
 
-T1 已集成，T2 的规则入口见第 10 节；T3 的提交语义与 TP 的正式规则修改仍须先把对应待定边界写清楚。
+T1 已集成；T2 规则入口见第 10 节，T3 提交语义见第 11 节，TP 共享池正式入口与规则见第 12 节。
 
 ## 9 服务器规则入口（T1）
 
@@ -446,7 +444,7 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 版本元数据 | `schemaVersion, rulesVersion, contentVersion, contentDigest, commandProtocolVersion, tickMs` | 仅静态版本；不是种子或随机状态 |
 | 当前席位进度 | `round, roundDefinitionId, phase, gold, level, xp`，`streak.{kind,count}` | 仅本席已提交状态；phase 只代表本席操作阶段，全局阶段/终局由 Room PlayerView 决定 |
 | 玩家血量 | 对外 `playerHp` | 从权威 `SeatState.hp` 投影；T3 保证它与 Match 镜像一致前，不能以占位 MatchState 的 HP 覆盖权威值 |
-| 当前商店 | `shop.{generation,locked,slots}`；每格仅 `{status:'available',definitionId}` 或 `{status:'purchased'}` | 仅本人当前已生成商店；不含下轮店、其他席位商店或全池精确计数 |
+| 当前商店 | `shop.{generation,locked,slots}`；每格仅 `{status:'available',definitionId}`、`{status:'purchased'}` 或 TP 缺货格 `{status:'purchased',empty:true}` | 仅本人当前已生成商店；不含下轮店、其他席位商店或全池精确计数 |
 | 准备棋盘 | `preparation.board.{columns,rows,deploymentZones.{player,enemy}.{firstRow,lastRow}}`、`benchSize`；`units[].{id,definitionId,team,starLevel,location}`，location 仅 `{kind:'board',cell:{col,row}}` 或 `{kind:'bench',slot}` | units 只取本席 player，含备战区；不能把旧固定 enemy 模板混作本轮真人对手。敌人展示用已公布配对的单独战斗/观战投影 |
 | 装备 | `items[].{id,definitionId,location}`；location 仅 `{kind:'inventory'}` 或 `{kind:'unit',unitId,slot}` | 仅本席实际已拥有的库存或单位装备；不含预定奖励 |
 | 临时装备 | `temporaryEquipment[].{temporaryId,parentItemInstanceId,roundId,holderId,definitionId,slot,expiresAfterRoundId}` | 仅当前轮已生成且父装备/持有者属于本席的子件；不是整个 equipmentState 或历轮 rolls |
@@ -457,11 +455,11 @@ T3 最小范围建议：先提供接收全轮冻结 battleId/轮次/执行代次
 | 已提交本席轮结果 | `roundResults[].{round,roundId,result,combatTicks,combatEventCount,baseDamage,survivingEnemyCount,playerDamage,hpLost,hpBefore,hpAfter,goldBefore,goldAfter,income,xpAwarded,levelBefore,levelAfter,xpBefore,xpAfter}`、`incomeBreakdown.{base,win,interest,streak}` | 仅已经实际提交的历史记录；不下发执行中提案或内部 settlementId，不能用单人 outcome 决定全局排名 |
 | 当前公开轮次说明（若 UI 需要） | `m8.round.{roundId,ordinal,stage,subround,kind,encounterId,displayName}` | 拷贝到独立 roundInfo DTO，仅当前已公布轮；不带 isFinal（单人末轮不等于多人终局），不下发整个 m8 |
 
-奖励只允许**另外构造已揭示摘要**，沿用 `loot-view.ts` 的现有可见性规则：本轮直接掉落状态为 revealed/pending-capacity/retained-terminal/granted 时，可投影 `dropId, encounterId, sourceUnitId, roundId, status` 与 `payload.{kind,quantity,definitionId?}`；组件选择只有实际领取收据存在后才能投影所获 payload。当前已触发但未选择的奖励仅公开当前 `pendingChoice` 的身份与已展示 offers，绝不公开 `terminalFallbackDefinitionId`。planned/forfeited 条目、未来轮掉落与未揭示候选完全省略，不保留占位数量或数组索引。不得为投影重新抽卡、推进 RNG 或发奖。
+奖励只允许**另外构造已揭示摘要**，沿用 `loot-view.ts` 的现有可见性规则：本轮直接掉落状态为 revealed/pending-capacity/retained-terminal/granted 时，可投影 `dropId, encounterId, sourceUnitId, roundId, status` 与 `payload.{kind,quantity,definitionId?}`；组件选择只有实际领取收据存在后才能投影所获 payload。当前已触发但未选择的奖励仅公开当前 `pendingChoice` 的身份与已展示 offers，绝不公开 `terminalFallbackDefinitionId`。planned/forfeited 条目、未来轮掉落与未揭示候选完全省略，不保留占位数量或数组索引。共享池补偿已到账时 payload 取实际奖励收据（readLootView 已处理），不取被冻结的原棋子计划。不得为投影重新抽卡、推进 RNG 或发奖。
 
-**明确不下发的根字段/子树：** `seed, rngState, battleSeedRngState, choiceRngState, rewardRngState`；整个 `equipmentState`（包括初始化随机流、历史 rolls 的 rngDrawStart/rngDrawEnd）；`combatInputBasis`、`resourceProvenance`、`scheduleReceipts`、`nextUnitSerial/nextItemSerial/nextMatchEventSeq`；`m8.encounterPlan`、`m8.preparation`、`m8.loot.frozen`（含 seed/rng/rounds/choices）、`m8.loot.guaranteeCounters` 及其余未经上述摘要过滤的 m8 子树；旧单人 `outcome`。服务器座位凭证不得进入视图（仅连接认证层自动持有，不展示）。
+**明确不下发的根字段/子树：** `seed, rngState, battleSeedRngState, choiceRngState, rewardRngState`；整个 `equipmentState`（包括初始化随机流、历史 rolls 的 rngDrawStart/rngDrawEnd）；`combatInputBasis`、`resourceProvenance`、`scheduleReceipts`、`nextUnitSerial/nextItemSerial/nextMatchEventSeq`；`m8.encounterPlan`、`m8.preparation`、`m8.loot.frozen`（含 seed/rng/rounds/choices）、`m8.loot.guaranteeCounters` 及其余未经上述摘要过滤的 m8 子树；旧单人 `outcome`；`sharedPool` 绑定和整个 SharedPoolState（含来源、精确计数和抽签顺序）。服务器座位凭证不得进入视图（仅连接认证层自动持有，不展示）。
 
-`combat` **不能作为本席字段整体下发**。T2 的 BattleInput/BattleResult、initial/terminal 也是服务器私有对象，内含 battleSeed、rngState、策略和内部执行计划。T5 的战斗帧只能新建显示 DTO：场景基础字段 `combatId,tick,maxTicks,status,result,board`（board 按上表），每单位 `id,definitionId,team,starLevel,cell.{col,row},hp,maxHp,mana,maxMana,shield,alive,targetId,attackDamage,attackRange,attackIntervalTicks,armor,magicResist,abilityPower,baseAttackSpeedBps,attackSpeedBonusBps`（可选字段仅在存在时投影）。状态/护盾详情与可见战斗事件另外使用经字段审查的展示投影，不能透传整个 unit/runtime、abilityPlan、tasks、strategy 或带随机输入的 CombatState。完整权威账本继续留在服务器，不因客户端显示抽样而丢弃；本节不把帧 DTO 伪装成能本地 step/restore 的 CombatState。
+`combat` **不能作为本席字段整体下发**。T2 的 BattleInput/BattleResult、initial/terminal 也是服务器私有对象，内含 battleSeed、rngState、策略和内部执行计划。T5 的战斗帧只能新建显示 DTO：场景基础字段 `combatId,tick,maxTicks,status,result,board`（board 按上表），每单位 `id,definitionId,team,starLevel,cell.{col,row},startingCell?.{col,row},hp,maxHp,mana,maxMana,shield,alive,targetId,attackDamage,attackRange,attackIntervalTicks,armor,magicResist,abilityPower,baseAttackSpeedBps,attackSpeedBonusBps`（可选字段仅在存在时投影）。状态/护盾详情与可见战斗事件另外使用经字段审查的展示投影，不能透传整个 unit/runtime、abilityPlan、tasks、strategy 或带随机输入的 CombatState。完整权威账本继续留在服务器，不因客户端显示抽样而丢弃；本节不把帧 DTO 伪装成能本地 step/restore 的 CombatState。
 
 T5 验收：两个席位分别投影时不能看到对方 shop/pendingChoice/库存；向任意层塞入随机状态或未来计划哨兵值，初始快照、增量、重连和失败回执均不能出现；改变私有 RNG、未来掉落/兜底而保持已揭示字段相同，输出必须 deepEqual；已揭示商店、选择、临时装备可见，未揭示奖励不可见；投影前后服务器状态、RNG、事件序号均不变。**T2 本次交付清单，没有实现或宣称通过 T5 网络投影测试。**
 
@@ -556,7 +554,7 @@ interface RoundSettlementReceipt {
 2. 收齐本轮所有真实席结果，每个真实席恰一份，普通配对两份、镜像配对仅 a；镜像 b 不进入队列，镜像原主由它的真实配对提交。校验 battleId/round/执行代次与冻结信封完全一致，漏席/重复席/旧代次整轮拒绝。
 3. 用原席位 map 建一个临时 map，逐席 apply。任何失败（包括 unexpected duplicate）丢弃整张临时 map 及其事件，不发布已经成功的一席。整轮已提交重试由调度层 round commit ID 去重，不能凭单席 duplicate 推断整轮完成。
 4. 全部成功后，一次替换 map、更新 SeatState.hp **取返回 state.playerHp**，再发布事件和版本；不在房间重算伤害/收入/成长。PvE/补给已结算的暂存状态也随本次原子发布采纳。房间自身提交失败，仍用同信封和原始 map 重试，不换随机种子。
-5. 使用 §11.5 排名，TP 卡池归还在排名后、下一轮自然商店刷新前。存活席通过公开 nextRound 推进目录轮次；全局仅剩0/1席时结局由调度层生成。
+5. 使用 §11.5 排名，TP 卡池归还在排名后、下一轮自然商店刷新前。存活席在接入 TP 后通过 §12 的 nextSharedRound 批量推进目录轮次；未接共享池的 T3 席位仍用 nextRound；全局仅剩0/1席时结局由调度层生成。
 
 构建单席收据示意（p、battle 必须来自校验通过的同一冻结信封）：
 
@@ -600,3 +598,153 @@ const result = applyRoundSettlement(originalSeat.match, r);
 SR-B1-02 的规则提交与 SR-B1-04 的超时入口已交付；全轮冻结/执行代次/发布、SR-B1-03 目录外实现、多人不可信恢复验证、网络投影、TP 卡池不在本 PR 内。没有修改 src/server、UI、单人数值或 golden，也没有修改既有 m5-replay 超时测试。
 
 交付验证（基于 multiplayer `3cdb7f7`，实际 Node **v22.23.3** / npm **10.9.9**）：typecheck、build、test:server-entry、verify-t2-node-entry、verify-t3-node-entry 均通过；T3 的16例、T2、服务器（含B2网络）、经济/经验/轮目录/奖励/跨轮/Match 集成共 **23文件300例通过**。既有 T1 状态/事件/RNG 轨迹哈希不变。未跑完整测试套件，未改 `m5-replay` 或任何 golden。纯 Node 的子进程校验及 WebSocket 测试在允许这些能力的执行环境验证，不调整断言或超时阈值。
+
+
+## 12 TP：共享有限卡池（shared-pool-v1）
+
+### 12.1 数值、状态与事务边界
+
+`POOL_CAPACITY_BY_COST = {1:30, 2:25, 3:18, 4:10, 5:9}`，来源为 §3.4 的 Riot 14.15 官方说明，按用户决定应用于当前 S13 内容切片。19 位英雄各费用数量为 5/5/5/3/1，总计 **404** 张；不扩目录、不加容量。新联机版本常量 `SHARED_POOL_VERSION = 'shared-pool-v1'`，不改变单人内容 digest、规则版本、商店算法或 golden。
+
+`SharedPoolState` 包含 `version/poolId/seed/seatCount/revision`、按英雄的 `initial/available`、`seats/shops/holdings/pending/rewards`、`naturalRound/order`。其中：
+
+| 字段 | 记录与含义 |
+| --- | --- |
+| seats | `{seatId,seatIndex,revision,shop,released}`；登记顺序不决定抢卡优先级 |
+| shops | `{seatId,generation,slot,definitionId}`；只记录仍可购买的卡，每格预留一张 |
+| holdings | `{seatId,unitId,definitionId,sources:string[]}`；实际获取来源键，升星合并后长度为 1/3/9 |
+| pending | `{seatId,dropId,receiptId,definitionId}`；已赚而尚未入库的棋子预留 |
+| rewards | pending 的身份字段加 `{resolution:'held'|'gold'|'forfeited',gold}`；历史唯一收据，不重复计入守恒。held 表示当时入库成功，出售后仍保留历史 |
+| naturalRound/order | 最后完成全局自然刷新的目录轮号（初始 0）与固定种子洗牌顺序 |
+
+`MatchState.sharedPool = {poolId,seatId,revision}` 绑定该席池版本；两席本地相同 unitId 不冲突。逐英雄校验 **available + shops 张数 + holdings.sources 张数 + pending 张数 = initial**。商店、持有、待领取的活动来源键不能重复；镜像、召唤物、回放与表现副本不进入 holdings。
+
+所有入口为纯函数，不修改输入。`SharedPoolResult` 成功为 `{ok:true,pool,state,events,poolEvents}`；失败为 `{ok:false,pool,state,reason}`，pool/state 都是输入原引用，且无 events/poolEvents。失败不改变任何金币、库存、商店、RNG、ID、序号、收据或占用。成功有变更时池 revision 与该席 binding revision 各加一；真正无操作（如同值锁店、无待领的重复领取）返回原池/状态及空事件。
+
+批量 `SharedPoolBatchResult` 成功为 `{ok:true,pool,states,events:[{seatId,events}],poolEvents}`；states 保持输入顺序。失败返回原 pool/states 引用及 reason，任何一席失败则整个批次回滚。成功池 revision 只加一，各参与席 binding revision 加一。
+
+`events` 是已盖章 Match 领域事件；`poolEvents` 为独立池账本事件：`sharedShopGenerated{seatId,generation,rngDraws}`、`sharedRefreshOrder{round,seatIds}`、`sharedRewardReserved{seatId,dropId}`、`sharedRewardResolved{receipt}`、`sharedSeatReleased{seatId}`。不要给池事件冒用 Match eventSeq，也不要直接发送给玩家。
+
+这些入口接收服务器拥有的可信池与 MatchState，守恒检查不是不可信存档/身份认证器。B5 仍必须使用单写者、网络 commandId 和席位版本校验，然后一次替换池与席位状态、发布事件。**不要把最新 binding 拼接到旧状态上**。池接口不接 expectedPoolRevision：其他席位改池不会作废本席已经预留的店卡；本席旧快照返回 stale-seat。局部池 revision 不替代网络层 seatRevision。
+
+### 12.2 公开签名与初始化
+
+以下运行时入口及 SharedPool 类型均从 `src/server-entry/index.ts` 导出（Node 使用 `dist-server/index.mjs`）：
+
+```ts
+createSharedPool(poolId: string, seed: number,
+  options?: {seatCount?: number; capacities?: Readonly<Record<string, number>>}): SharedPoolState
+initializeSharedSeat(pool: SharedPoolState, state: MatchState,
+  seatId: string, seatIndex: number): SharedPoolResult
+generateSharedShop(pool: SharedPoolState, state: MatchState,
+  expectedGeneration: number): SharedPoolResult
+buySharedUnit(pool: SharedPoolState, state: MatchState,
+  slot: number, expectedGeneration: number): SharedPoolResult
+rerollSharedShop(pool: SharedPoolState, state: MatchState,
+  expectedGeneration: number): SharedPoolResult
+setSharedShopLock(pool: SharedPoolState, state: MatchState,
+  locked: boolean, expectedGeneration: number): SharedPoolResult
+sellSharedUnit(pool: SharedPoolState, state: MatchState, unitId: string): SharedPoolResult
+releaseSeatOnElimination(pool: SharedPoolState, state: MatchState): SharedPoolResult
+runSharedMatchCommand(pool: SharedPoolState, state: MatchState,
+  command: SharedMatchCommand): SharedPoolResult
+refreshSharedShops(pool: SharedPoolState, states: readonly MatchState[],
+  expectedRound: number): SharedPoolBatchResult
+nextSharedRound(pool: SharedPoolState, states: readonly MatchState[],
+  expectedRound: number): SharedPoolBatchResult
+assertSharedPoolConservation(pool: SharedPoolState, states?: readonly MatchState[]): void
+```
+
+生产创建池省略 options，默认 8 席/官方容量。夹具可指定 1–8 席及部分 capacities（未指定英雄为 0）；每英雄必须是非负安全整数且不超过官方上限，不接受目录外英雄。seed 为 uint32。构造器/只读断言无事务 result，非法配置抛异常（非法 seed 为 RangeError；池校验异常的 reason 为 invalid-pool，提供 states 时可为 invalid-seat-state/stale-seat），不要将异常消息作为网络协议。
+
+B5 初始化流程：先 createSharedPool；对八份未发布的 `createMatch(seed)` 逐席 initializeSharedSeat，全部成功后调用 `refreshSharedShops(pool,states,1)`，最后一次性发布初始化结果。中途失败丢弃整个未发布提案。seatIndex 是固定 0–7，不随注册次序变化。
+
+初始化只导入 round1、preparation、无历史/奖励收据、唯一开场 Irelia/unit-1/一星且只有一条 opening 来源事实的状态，不能拿已购物/奖励/合成的局导入。它启用 multiplayer，预留开场 Irelia，建立 opening 来源；丢弃从未发布的单人商店及其 shop RNG 消费，把 `rngState` 还原为 seed，改为 generation0 五个空格。八席初始化后 Irelia 可用为 22，首次 40 格共享店生成后全池可用总数为 356。
+
+`generateSharedShop` 是首次单席生成的低层入口：仅 round1/generation0，且要求全部席位先注册，不能当自然刷新/免付费刷新使用；全部首次店生成完后 naturalRound=1。生产首次生成推荐批量 refreshSharedShops，保证抽签公平。generate 的逐席调用顺序即优先顺序，不自动代表公平批次。
+
+### 12.3 商店、随机流与自然刷新
+
+购买只是把该格预留转为持有，不再次扣 available；复用既有金币/容量/升星/装备事务。付费刷新成本仍为 2，先暂存归还旧店，再抽新店；若一张也抽不到则 `pool-empty` 免费失败，旧店、锁定、金币、RNG 和 generation 全保留。部分缺货允许成功，保留五格。锁店沿用旧命令语义，同值设置无操作。
+
+**明确空格采用 `{status:'purchased',empty:true}`**（保留现有 ShopSlot 联合的兼容形状）；正常已购买格是 `{status:'purchased'}`，有卡格为 `{status:'available',definitionId}`。空格无 definitionId、无池占用，购买返回 empty-slot。T5 按 §10.9 白名单投影 empty 标记；界面可将两者都画为空格，不能生成虚构英雄。
+
+抽取使用既有 `getShopOdds(level)`：过滤原赔率为零或无剩余卡的费用层，保留其原权重重新归一；层内按 available 份数加权、沿现有 SHOP_CATALOG_BY_COST 顺序扫描。每个非空格恰用两个 lcg32-v1 word：先 `floor(word * 可用费用权重总和 / 2^32)` 选费用，再 `floor(word * 层内剩余张数 / 2^32)` 选英雄。即使只有一个合法候选也用两次；每个空格用零次。没有重抽循环。只有成功提交消费 RNG。
+
+自然刷新要求传入所有未 released 登记席位，每席同 expectedRound、不重复/遗漏，登记总数必须等于 seatCount。`refreshSharedShops` 用于初始或调用方已准备好下一轮的状态：目标轮必须恰好 naturalRound+1，phase 为 preparation/choice。不要先用旧 nextRound 生成无限店再调用它。正常目录推进直接用 `nextSharedRound(pool,states,currentRound)`：内部复用 nextRound 的轮次、装备、奖励生命周期，只丢弃尚未发布的无限店提案及其 shop RNG，再以共享店替换；任一席 unsettled-round 等失败则全批次不变。目录外加时仍是 §11.5 的 T4 接入边界，本 PR 不新增目录外推进。
+
+批量先归还**所有未锁店**的剩余预留，再生成任何一席的新店；锁店保留预留、generation、shop RNG。初次批量按固定 seatIndex 排序，以 pool.seed 做 Fisher–Yates，N 席消耗 N−1 个独立顺序抽签 word；此顺序保存于 pool.order，不改任何席位 RNG。之后过滤已释放席位，按 `(目标轮号−1) % 存活席数` 循环移位，故存活集合固定时每轮优先级轮换；锁店席仍在顺序中但不抽卡。仅首次洗牌消费顺序流，后续轮换不再抽随机数。各席抽店只消费自己的 shop RNG。手动操作按服务器单写队列顺序竞争，不做同时抢卡的第二套规则。
+
+### 12.4 获取来源、奖励与淘汰（SR-B1-05）
+
+来源键分别为 opening(seatId)、shop(seatId,generation,slot)、loot(seatId,receiptId)，使用 JSON 元组编码避免拼接碰撞。持有账本按**实际** resourceProvenance 的 unit-acquired/unit-upgraded/unit-sold 事实折叠；升星合并被消费单位的来源数组，不从当前 UI 数量倒推。二星三份、三星九份；出售只归还该持有记录中的来源份数并沿用既有售价。让位出售时先在私有事务归还被卖单位，再尝试自动领取待领棋子；之后任何校验失败整个事务回滚。
+
+开场占池时点见 §12.2。野怪计划冻结/战斗揭示不占池；完成战斗、既有规则实际尝试发放已赚棋子时预留一份。未杀死来源而未赚到的奖励不预留、不补偿。有货但备战区满仍先预留，pending-capacity/retained-terminal 保留该份；以后领取转持有、不重复扣池。超时仍不可容纳则放弃归还；淘汰释放同样写一次 forfeited 收据。终局保留的奖励仍占池，直到该真实席位释放；断线不释放。
+
+**用户确认的缺货规则**：无可用份数时转为该英雄一星购买价的等额金币，写同 dropId/receiptId 的 Match 奖励收据与池 gold 收据；不占池，不改冻好的原奖励计划，也不替换成其他英雄。补偿进入原奖励事务、在原结算利息计算之前到账。满备战区遇缺货同样按此补金币。重复领取/step/选择不会再预留或补偿。`readLootView` 对共享池已发奖励显示实际收据 payload（金币），不会把原计划棋子误显示为已获得；单人分支保持原显示。
+
+所有可能发棋子奖励的 Match 路径必须使用以下统一包装，不得直接调用旧入口跳过池：
+
+```ts
+type SharedMatchCommand =
+  | {type:'startCombat'} | {type:'step'}
+  | {type:'choose'; choiceId:string; generation:number; definitionId:string}
+  | {type:'timeoutChoice'; round:number; choiceId:string|null; generation:number|null}
+  | {type:'claimLoot'; round:number};
+```
+
+对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 继续按项目规则默认选第一项，claimLoot 领取可容纳已赚奖励、放弃容量不足部分，均不重复发奖。移动/装备/买经验/异常目标等不转移棋子来源的旧公开命令与 `applyRoundSettlement` 仍可调用，须保留 sharedPool 绑定；买/卖/刷/锁、奖励及推进必须用 TP 包装。PvP 继续走 T2→T3；startCombat/step 包装用于原非 PvP 战斗，不提供第二套 PvP 结算。整轮 PvE 必须在同一未发布提案内串接最新 pool 和各席 state：前一席发奖占用的池是后一席的输入，不得从同一旧池独立计算多份奖励后合并。任一席失败丢弃整个全轮提案，全部成功再发布（沿用 §11.3）。
+
+`releaseSeatOnElimination` 只接受 multiplayer.status=eliminated 且 HP=0，在 **本轮排名已计算后、下一轮自然店生成前** 调用。归还所有店卡、持有来源和待领预留，清空店格，将 pending 标记为 forfeited 并产生一次 Match/pool 事件，不发出售金币。released=true 后第二次返回 duplicate-release，其他池命令返回 seat-eliminated。终态 preparation 军队保留为只读展示档案，已无真实所有权；不可再卖/获取/返还，镜像不能以此档案创建新实体。
+
+SR-B1-05 接入结论：RoomState.poolRevision 取本次提交的 pool.revision，不能自行加减模拟；单席事务同时提交 pool+state，全局自然刷新同时提交 pool+states；淘汰钩子按上述排序调用且去重；八席开场、购买、升级、售出、奖励与跨轮的守恒由 tp 测试及 Node smoke 覆盖。src/server 的实际切换留 B5。
+
+### 12.5 失败原因、恢复与投影
+
+`SharedPoolFailure = MultiplayerFailure |` 下表新增枚举；继承 MatchFailure 完整枚举见 §9.4，MultiplayerFailure 完整枚举见 §11.1。命令返回实际失败，不吞错后继续发布半个事务。
+
+| 原因 | 含义 |
+| --- | --- |
+| invalid-pool | 版本/容量/池结构/来源/守恒非法，或内部池校验异常 |
+| invalid-seat-state | Match 与池绑定、商店、持有、待领不匹配，或初始化不是原始开场 |
+| stale-seat | 本席 sharedPool.revision 已过期 |
+| pool-empty | 无开场份数，或付费刷新释放旧店后仍抽不到任何卡 |
+| empty-slot | 购买明确缺货空格 |
+| already-generated | 初始化/首次生成已结束，或首次批量混入已生成店 |
+| duplicate-release | 已归还淘汰席 |
+| incomplete-seats | 注册未满或批量没有提供所有未释放席位 |
+| stale-refresh | 目标自然刷新轮不是 naturalRound+1 |
+| not-eliminated | 尚未被 T3 判为 eliminated/HP0 的席位请求归还 |
+| invalid-command | SharedMatchCommand 的 type 非法 |
+
+常见继承原因：stale-shop（generation）、invalid-slot、purchased-slot、insufficient-gold、bench-full、wrong-phase、stale-round、unsettled-round、invalid-seat、seat-eliminated、invalid-choice、invalid-loot。重复购买不再次消费；重复刷新携原 generation 失败；重复自然批次 stale-refresh；重复超时按 §11.4 无操作或拒绝，不能重发奖励。
+
+`assertSharedPoolConservation` 可只检查全池，传 states 时再校验所给席位的绑定/店/实际持有/待领；它不要求调用方提供全部席位（批量入口另行要求）。released 席位只检查终态，不把展示军队再次算成持有。
+
+整个 SharedPoolState、MatchState.sharedPool、sources、奖励/结算收据、RNG、order、全池精确计数不在 §10.9 下发白名单中；只下发本人已生成店（含 empty）、可见资产和已赚奖励视图。旧单人 restoreMatch 拒绝带 sharedPool 的状态（multiplayer-state）；不得剥离绑定绕过验证。本 PR 不提供跨进程多人存档恢复器。
+
+### 12.6 B3 补充回应：帧与第二视角
+
+**SR-B3-02：接受当前二次执行取帧方案。** 同一冻结 BattleInput（含显式 seed、battleId、版本/content digest）、同一引擎版本及足够且相同的执行预算下，resolveTwoSidedBattle 与 startTwoSidedCombatWithEvents→逐 tick stepCombat 的初态、终态和完整有序事件必然一致。第二次执行只是纯计算，不能二次提交结算或派发奖励；成本是两次 CPU 执行。无须在 TP 增加新帧运行器，B3 的 frame-divergence 防线应保留。
+
+`toLedgerEvents` 对已盖 domain/combatId/eventSeq 的 M8 事件做边界校验，返回相同事件对象，不改名、不排序、不丢弃事件；legacy damage/shieldChanged/cast/mana 形状会被拒绝。当前 T2 编译的 M8 战斗满足该边界。B3 从权威 battle.events 按 tick 分桶并配上第二次执行的状态是可接受做法；必须保留 tick0 开场事件以及每 tick 内原 eventSeq 顺序，不能因帧节流删除账本。此内部转换器不是新增 server-entry 导出。
+
+**SR-B3-03：当前 LedgerCombatEvent（M8CombatEvent）的全部坐标字段如下。**
+
+| 事件判别 type | 含 HexCell 的完整字段路径 | 含义 |
+| --- | --- | --- |
+| movement | event.from、event.to | 移动前后格 |
+| cast | event.receipt.completionCell | 施法完成格；不是 event.completionCell |
+
+targetChanged/kill/growth/effectTriggered/attack/death/combatFinished/activityChanged/packetDamage/heal/manaChanged/statusChanged/shieldLayerChanged/statChanged/maxHpChanged 均无坐标字段；其嵌套 source、outcome、activity、group、layer 也无 HexCell。unitId/targetId/key 是标识符，before/after 的数值或 ID 不属于坐标。独立于事件，可见单位快照另有 `units[].cell` 和可选 `units[].startingCell`，均需镜像；内部 AbilityPlan 等运行时对象不在帧 DTO 白名单内。
+
+B 席位只对 DTO 做 `row = board.rows - 1 - row`、col 保持，互换 player/enemy 队伍与 playerWin/enemyWin 结果，draw 不变；包括 combatFinished.result。保留原战斗单位 ID（按映射指向同一实体）、combatId、tick、eventSeq 和数值/账本先后；坐标做独立拷贝，不修改规则状态、冻结输入或权威事件。镜像投影不能回灌模拟，也不能给镜像原主生成扣血/成长/卡池归还。未来事件新增坐标必须同步本清单与 T5 镜像验收。
+
+
+### 12.7 验收证据与范围
+
+最终同步基线为 `origin/multiplayer@25f1c29`（含 B3 PR #40、C4 PR #41）。实际 nvm Node **v22.23.3** / npm **10.9.9**：typecheck（build 内执行）、build、test:server-entry、verify-t2-node-entry、verify-t3-node-entry、verify-tp-node-entry 均通过，T1 既有状态/事件/RNG 轨迹哈希不变。
+
+TP 两文件 **23 例**；连同 T2/T3、B3/C4 服务器/网络、商店/升星、单人经济/奖励/来源/跨轮/存档，最终一次回归 **33 文件 497 例全部通过**。新增八席集成例包含 24 场 PvE 与 4 场双方 PvP，单独设 20 秒预算，不改既有测试限额。独立 oracle 校验 404 张总量、8 张开场、40 格预留及按剩余份数加权的明确 RNG 数字；混合八席命令序列每步检查守恒且可重放。
+
+未改 src/server、界面、golden、单人无限商店行为或既有 m5-replay 超时；既有 Match 发奖路径只增加默认不启用的池策略依赖。未执行完整浏览器/性能验收。B5 服务编排接入、T5 网络 DTO/镜像验收、T4 目录外加时和 T7 机器人不在 TP 范围。

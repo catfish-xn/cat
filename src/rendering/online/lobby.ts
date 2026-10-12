@@ -1,6 +1,6 @@
 import { ROOM_CAPACITY, type LobbyView } from './protocol';
 
-export interface LobbyActions { join(name: string): void; leave(): void; start(): void; addFakeFriend?(): void }
+export interface LobbyActions { join(name: string): void; leave(): void; start(): void }
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
@@ -14,6 +14,7 @@ export class Lobby {
   private leaveButton: HTMLButtonElement;
   private startButton: HTMLButtonElement;
   private count: HTMLElement;
+  private connectionLine: HTMLElement;
   constructor(host: HTMLElement, private readonly actions: LobbyActions) {
     this.root = element('section', '', 'online-lobby'); this.root.id = 'lobby-root'; this.root.setAttribute('aria-label', '匹配');
     const card = element('div', '', 'lobby-card');
@@ -30,11 +31,8 @@ export class Lobby {
     this.error = element('p', '', 'lobby-error'); this.error.setAttribute('role', 'alert'); card.append(this.error);
     this.startButton = this.button('online:start', '开始对局', () => this.actions.start()); this.startButton.classList.add('primary-action', 'lobby-start');
     card.append(this.startButton);
-    if (actions.addFakeFriend) {
-      const debug = element('details', '', 'lobby-debug'); debug.append(element('summary', '测试工具（假服务器）'));
-      debug.append(element('p', '真服务器接入前，用这个按钮模拟其他好友点击匹配，看列表填满和第 9 人报错。', 'lobby-hint'));
-      debug.append(this.button('online:fake-friend', '模拟好友加入', () => actions.addFakeFriend!())); card.append(debug);
-    }
+    this.connectionLine = element('p', '', 'lobby-connection'); this.connectionLine.dataset.debug = 'online:lobby-connection'; this.connectionLine.hidden = true;
+    card.append(this.connectionLine);
     this.root.append(card); host.append(this.root);
   }
   private button(name: string, label: string, action: () => void) { const b = element('button', label); b.type = 'button'; b.dataset.debug = name; b.addEventListener('click', action); return b; }
@@ -48,6 +46,8 @@ export class Lobby {
     this.joinButton.hidden = view.joined; this.name.hidden = view.joined; this.leaveButton.hidden = !view.joined;
     this.startButton.hidden = !view.joined; this.startButton.disabled = !view.canStart;
   }
+  /** Connection trouble of a network client (reconnecting, opened elsewhere); null hides the line. */
+  connection(text: string | null): void { this.connectionLine.textContent = text ?? ''; this.connectionLine.hidden = !text; }
   show(visible: boolean) { this.root.hidden = !visible; }
   dispose() { this.root.remove(); }
 }

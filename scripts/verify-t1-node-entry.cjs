@@ -60,6 +60,9 @@ async function worker() {
     'snapshotForBattle', 'restorePlayerBattleSnapshot', 'compileBattle', 'restoreBattleInput',
     'startTwoSidedCombat', 'startTwoSidedCombatWithEvents', 'resolveTwoSidedBattle', 'proposeSettlement',
     'stepCombat', 'PLAYER_BATTLE_SNAPSHOT_VERSION', 'TWO_SIDED_BATTLE_VERSION', 'BattleValidationError',
+    'createSharedPool', 'initializeSharedSeat', 'generateSharedShop', 'buySharedUnit', 'rerollSharedShop',
+    'setSharedShopLock', 'sellSharedUnit', 'releaseSeatOnElimination', 'refreshSharedShops', 'nextSharedRound',
+    'runSharedMatchCommand', 'assertSharedPoolConservation', 'SHARED_POOL_VERSION', 'POOL_CAPACITY_BY_COST',
     'applyRoundSettlement', 'enableMultiplayerSettlement', 'ROUND_SETTLEMENT_VERSION', 'forfeitPendingChoice', 'claimOrDiscardLoot',
   ];
   assert.deepStrictEqual(Object.keys(api).sort(), expectedExports.sort());

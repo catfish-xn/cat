@@ -313,10 +313,10 @@ body[data-online-mode="online-lobby"] #board-frame, body[data-online-mode="onlin
 .queue-kind { color: var(--c-text-muted, #9aaeb9); font-size: 12px; }
 .lobby-error { margin: 0; color: #f08080; font-weight: bold; }
 .lobby-start { width: 100%; font-size: 16px; }
-.lobby-debug { font-size: 13px; color: var(--c-text-muted, #9aaeb9); }
-.lobby-debug button { margin-top: 6px; }
+.lobby-connection { margin: 0; color: #e6bc76; font-size: 13px; }
 .online-sidebar { min-width: 0; color: #e2eef1; position: sticky; top: 12px; display: grid; gap: 10px; align-content: start; }
 .online-topbar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; background: var(--c-surface, #14212c); border-radius: 8px; padding: 10px 12px; }
+.online-connection { grid-column: 1 / -1; justify-self: start; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #4a3a1f; color: #e6bc76; }
 .online-phase { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #203440; color: #9aaeb9; }
 .online-phase[data-phase="preparation"] { background: #1f4a46; color: #68ddd0; }
 .online-phase[data-phase="combat"] { background: #4a2a2a; color: #f08080; }

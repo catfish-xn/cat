@@ -6,7 +6,7 @@ import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
 export type MatchEvent = LedgerCombatEvent | ((UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
   | {readonly type:'choiceTimedOut';readonly choiceId:string;readonly resolution:'first-offer'|'empty-anomaly'}) & { readonly domain?: 'match'; readonly eventSeq?: number });
-export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased' };
+export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased'; readonly empty?: true };
 export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[]; readonly locked?: boolean }
 export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: number }
 export type RoundKind = 'pvp' | 'pve' | 'supply';
@@ -31,6 +31,8 @@ export interface RoundPreparation {
   readonly enemies: readonly import('./unit-types').Unit[];
 }
 export interface MatchBase {
+  /** Server-only shared inventory binding; absent in the single-player path. */
+  readonly sharedPool?: import('./shared-pool-types').SharedPoolBinding;
   /** Server-only opt-in metadata. Absent from every offline state and save. */
   readonly multiplayer?: import('./round-settlement').MultiplayerProgress;
   readonly m8: Pick<import('./m8/contracts').M8MatchExtension, 'round' | 'encounterPlan'> & {readonly preparation: RoundPreparation; readonly loot: import('./loot-types').MatchLootState};

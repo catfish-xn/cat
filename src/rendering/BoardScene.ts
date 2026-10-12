@@ -3,6 +3,7 @@ import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
+import type { MatchEvent } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { HexLayout, type Point } from './hex-layout';
@@ -193,6 +194,8 @@ export class BoardScene extends Phaser.Scene {
     };
     this.application = client ? new OnlineApplication(this.session as RemoteSession, client, {
       refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
+      confirmed: commands => this.confirmed(commands.map(command => command.commandId), commands.flatMap(command => command.events)),
+      refused: (commandId, reason, text) => { this.pendingSuccess.delete(commandId); this.setStatus(text ?? this.failureMessage(reason ?? 'wrong-phase')); },
     }, mounts) : new MatchApplication(this.session, {
       replace: session => {
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
@@ -413,8 +416,21 @@ export class BoardScene extends Phaser.Scene {
     };
     return messages[reason];
   }
+  /** Success text of each command still waiting for its server receipt (online WebSocket only). */
+  private pendingSuccess = new Map<number, string>();
+  private confirmed(commandIds: readonly number[], events: readonly MatchEvent[]) {
+    const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '操作已确认';
+    for (const id of commandIds) this.pendingSuccess.delete(id);
+    if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
+    this.command({ ok: true, state: this.session.state, events }, success);
+  }
   private command(result: MatchCommandResult, success: string) {
-    if (!result.ok) { this.setStatus(this.failureMessage(result.reason)); return; }
+    if (!result.ok) {
+      // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
+      const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
+      if (notice?.kind === 'pending') { this.pendingSuccess.set(notice.commandId, success); this.setStatus('待确认…'); return; }
+      this.setStatus(notice?.kind === 'offline' ? notice.text : this.failureMessage(result.reason)); return;
+    }
     this.clearCombatEffects();
     if (this.session.phase !== 'preparation') this.selectedId = null;
     if (!this.session.combat) this.recentCombatEvents = [];

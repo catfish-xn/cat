@@ -1,0 +1,60 @@
+import type { MatchEvent, MatchState, Shop } from './match-types';
+import type { MultiplayerFailure } from './round-settlement';
+
+export const SHARED_POOL_VERSION = 'shared-pool-v1';
+/** Riot 14.15 official patch notes, champion bag sizes: 30/25/18/10/9.
+ * https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-15-notes/
+ * Explicitly adopted by the project for its 19-hero S13 slice on 2026-10-12.
+ * This does not claim every historical S13 reward rule was specified on that page. */
+export const POOL_CAPACITY_BY_COST = Object.freeze({1:30,2:25,3:18,4:10,5:9} as const);
+export interface SharedPoolBinding { readonly poolId:string; readonly seatId:string; readonly revision:number }
+export interface PoolSeat {
+  readonly seatId:string; readonly seatIndex:number; readonly revision:number;
+  readonly shop:Shop; readonly released:boolean;
+}
+export interface ShopReservation {
+  readonly seatId:string; readonly generation:number; readonly slot:number; readonly definitionId:string;
+}
+export interface PoolHolding {
+  readonly seatId:string; readonly unitId:string; readonly definitionId:string;
+  /** One immutable source key per base copy, merged using actual upgrade events. */
+  readonly sources:readonly string[];
+}
+export interface RewardReservation {
+  readonly seatId:string; readonly dropId:string; readonly receiptId:string; readonly definitionId:string;
+}
+export interface PoolRewardReceipt extends RewardReservation {
+  readonly resolution:'held'|'gold'|'forfeited'; readonly gold:number;
+}
+export interface SharedPoolState {
+  readonly version:typeof SHARED_POOL_VERSION; readonly poolId:string; readonly seed:number;
+  readonly seatCount:number; readonly revision:number;
+  readonly initial:Readonly<Record<string,number>>; readonly available:Readonly<Record<string,number>>;
+  readonly seats:readonly PoolSeat[]; readonly shops:readonly ShopReservation[];
+  readonly holdings:readonly PoolHolding[]; readonly pending:readonly RewardReservation[];
+  readonly rewards:readonly PoolRewardReceipt[];
+  readonly naturalRound:number;
+  /** Fixed seeded permutation, rotated one place per natural round. */
+  readonly order:readonly string[];
+}
+export type SharedPoolFailure = MultiplayerFailure | 'invalid-pool' | 'invalid-seat-state' | 'stale-seat'
+  | 'pool-empty' | 'empty-slot' | 'already-generated' | 'duplicate-release' | 'incomplete-seats'
+  | 'stale-refresh' | 'not-eliminated' | 'invalid-command';
+export type SharedPoolEvent =
+  | { readonly type:'sharedShopGenerated'; readonly seatId:string; readonly generation:number; readonly rngDraws:number }
+  | { readonly type:'sharedRewardReserved'; readonly seatId:string; readonly dropId:string }
+  | { readonly type:'sharedRewardResolved'; readonly receipt:PoolRewardReceipt }
+  | { readonly type:'sharedSeatReleased'; readonly seatId:string }
+  | { readonly type:'sharedRefreshOrder'; readonly round:number; readonly seatIds:readonly string[] };
+export type SharedPoolResult =
+  | { readonly ok:true; readonly pool:SharedPoolState; readonly state:MatchState; readonly events:readonly MatchEvent[]; readonly poolEvents:readonly SharedPoolEvent[] }
+  | { readonly ok:false; readonly pool:SharedPoolState; readonly state:MatchState; readonly reason:SharedPoolFailure };
+export type SharedPoolBatchResult =
+  | { readonly ok:true; readonly pool:SharedPoolState; readonly states:readonly MatchState[];
+      readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[] }
+  | { readonly ok:false; readonly pool:SharedPoolState; readonly states:readonly MatchState[]; readonly reason:SharedPoolFailure };
+export type SharedMatchCommand =
+  | {readonly type:'startCombat'} | {readonly type:'step'}
+  | {readonly type:'choose';readonly choiceId:string;readonly generation:number;readonly definitionId:string}
+  | {readonly type:'timeoutChoice';readonly round:number;readonly choiceId:string|null;readonly generation:number|null}
+  | {readonly type:'claimLoot';readonly round:number};

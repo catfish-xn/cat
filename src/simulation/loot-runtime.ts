@@ -7,7 +7,7 @@ import { planPermanentItemGrant } from './item-grants';
 import { orderedUnresolvedLootChoices } from './loot-choice';
 import { advanceFrozenLootLedger, freezeLootThroughRound } from './loot-freeze';
 import { compareLootFreezeSlots, lootReceiptId } from './loot-identity';
-import type { LootChoiceDescriptor, MatchLootState } from './loot-types';
+import type { FrozenDirectDrop, LootChoiceDescriptor, MatchLootState } from './loot-types';
 import type { LootPayload, LootReceipt } from './m8/contracts';
 import type { MatchEvent, MatchState } from './match-types';
 import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
@@ -83,15 +83,18 @@ function commitReceipt(state: MatchState, receipt: LootReceipt): MatchState {
   return withLoot(state, { ...loot, receipts: [...loot.receipts, receipt], guaranteeCounters });
 }
 
+/** Transaction-local dependency; never stored in MatchState or used by offline callers. */
+export type UnitLootPolicy = (drop: FrozenDirectDrop) => LootPayload;
+
 /** No phase, economy or pending-delta changes. Match commits returned upgrades in its final transaction. */
-export function grantDirectLoot(initial: MatchState, terminal: boolean): { state: MatchState; events: MatchEvent[]; upgradeEvents: UnitUpgradedEvent[] } {
+export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLootPolicy?: UnitLootPolicy): { state: MatchState; events: MatchEvent[]; upgradeEvents: UnitUpgradedEvent[] } {
   let state = initial;
   const events: MatchEvent[] = [], upgradeEvents: UnitUpgradedEvent[] = [];
   for (const drop of [...currentPlan(state)?.encounterPlan.drops ?? []].sort(compareLootFreezeSlots)) {
     const progress = state.m8.loot.direct.find(value => value.dropId === drop.dropId);
     if (progress?.status !== 'revealed' && progress?.status !== 'pending-capacity') continue;
     if (state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');
-    const payload = drop.payload, receiptId = lootReceiptId(drop.dropId);
+    const payload = drop.payload.kind === 'unit' && unitLootPolicy ? unitLootPolicy(drop) : drop.payload, receiptId = lootReceiptId(drop.dropId);
     let grantedItemIds: readonly string[] = [], grantedUnitIds: readonly string[] = [];
     if (payload.kind === 'unit') {
       const purchase = planUnitAcquisition(state, payload.definitionId, { kind: 'loot', receiptId }, state.resourceProvenance.entries.length);
