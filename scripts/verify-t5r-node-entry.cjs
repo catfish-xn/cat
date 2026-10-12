@@ -17,6 +17,7 @@ const root = path.resolve(__dirname, '..');
       items:large?[{id:'item-1',definitionId:'bloodthirster',location:{kind:'unit',unitId:'unit-1',slot:0}}]:[]};
     const battle = api.resolveTwoSidedBattle(api.compileBattle(api.snapshotForBattle(state,'A'),api.snapshotForBattle(state,'B'),42,{battleId:'replay'}),1201);
     const replay = api.toCombatReplay(battle);
+    assert.deepStrictEqual(api.toCombatViewEvents(battle.events), replay.ticks.flatMap(frame => frame.events).filter(event => event.type !== 'unitUpdated'));
     let view = replay.initial;
     for (const frame of replay.ticks) view = api.applyCombatReplayTick(view,frame);
     assert.deepStrictEqual(view,replay.terminal);
