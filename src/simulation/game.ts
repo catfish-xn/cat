@@ -14,26 +14,45 @@ export function createGame(): GameState {
   return { board: DEFAULT_BOARD, benchSize: 7, units: [...playerUnits, ...enemyUnits] };
 }
 
-/** Player preparation placement only. Future combat movement must use separate commands. */
+function sameLocation(a: UnitLocation, b: UnitLocation): boolean {
+  return a.kind === 'board' && b.kind === 'board' ? sameCell(a.cell, b.cell)
+    : a.kind === 'bench' && b.kind === 'bench' && a.slot === b.slot;
+}
+function locationFailure(state: GameState, target: UnitLocation): DeploymentFailure | undefined {
+  if (!target || typeof target !== 'object' || (target.kind !== 'board' && target.kind !== 'bench')
+    || (target.kind === 'board' && (!target.cell || typeof target.cell !== 'object'))) return 'invalid-location';
+  const valid = target.kind === 'board' ? contains(state.board, target.cell) : Number.isInteger(target.slot) && target.slot >= 0 && target.slot < state.benchSize;
+  if (!valid) return 'invalid-location';
+  if (target.kind === 'board' && !isDeploymentCell(state.board, 'player', target.cell)) return 'outside-deployment-zone';
+  return undefined;
+}
+/** Player preparation placement; an allied occupant trades locations atomically. */
 export function validateDeployment(state: GameState, unitId: string, target: UnitLocation): DeploymentFailure | undefined {
+  // Preserve malformed-target precedence over source identity.
   if (!target || typeof target !== 'object' || (target.kind !== 'board' && target.kind !== 'bench')
     || (target.kind === 'board' && (!target.cell || typeof target.cell !== 'object'))) return 'invalid-location';
   const unit = state.units.find(unit => unit.id === unitId);
   if (!unit) return 'unknown-unit';
   if (unit.team !== 'player') return 'enemy-unit';
-  const valid = target.kind === 'board' ? contains(state.board, target.cell) : Number.isInteger(target.slot) && target.slot >= 0 && target.slot < state.benchSize;
-  if (!valid) return 'invalid-location';
-  if (target.kind === 'board' && !isDeploymentCell(state.board, 'player', target.cell)) return 'outside-deployment-zone';
-  const occupied = state.units.some(unit => unit.id !== unitId && unit.location.kind === target.kind && (unit.location.kind === 'board' && target.kind === 'board' ? sameCell(unit.location.cell, target.cell) : unit.location.kind === 'bench' && target.kind === 'bench' && unit.location.slot === target.slot));
-  if (occupied) return 'occupied';
+  const reason = locationFailure(state, target);
+  if (reason) return reason;
+  const occupants = state.units.filter(other => other.id !== unitId && sameLocation(other.location, target));
+  if (occupants.length > 1 || occupants.some(other => other.team !== 'player')) return 'occupied';
+  // Both destinations must be legal; never swap an ally into an invalid/enemy-zone source.
+  if (occupants.length) return locationFailure(state, unit.location);
   return undefined;
 }
-
+function copyLocation(location: UnitLocation): UnitLocation {
+  return location.kind === 'board' ? { kind: 'board', cell: { ...location.cell } } : { ...location };
+}
 export function deployUnit(state: GameState, unitId: string, target: UnitLocation): DeploymentResult {
   const reason = validateDeployment(state, unitId, target);
   if (reason) return { ok: false, reason, state };
-  const location: UnitLocation = target.kind === 'board' ? { kind: 'board', cell: { ...target.cell } } : { ...target };
-  return { ok: true, state: { ...state, units: state.units.map(unit => unit.id === unitId ? { ...unit, location } : unit) } };
+  const source = state.units.find(unit => unit.id === unitId)!;
+  const occupant = state.units.find(unit => unit.id !== unitId && sameLocation(unit.location, target));
+  return { ok: true, state: { ...state, units: state.units.map(unit => unit.id === unitId
+    ? { ...unit, location: copyLocation(target) }
+    : unit === occupant ? { ...unit, location: copyLocation(source.location) } : unit) } };
 }
 export function getPlayerDeploymentCount(state: GameState): number {
   return state.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').length;

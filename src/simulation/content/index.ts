@@ -9,7 +9,7 @@ import { EQUIPMENT_RULES_VERSION } from '../equipment-policy';
 import { S13_COMBAT_RULES } from '../s13-rules';
 import { ABILITY_DEFINITIONS } from '../combat-abilities';
 import { M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS } from '../units';
-import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL, MATCH_RULES, STAGE_PLAYER_DAMAGE, ECONOMY_RULES } from '../match-rules';
+import { DEPLOYMENT_RULES_VERSION, SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL, MATCH_RULES, STAGE_PLAYER_DAMAGE, ECONOMY_RULES } from '../match-rules';
 import { FINAL_ROUND, ROUND_RULES_VERSION, ROUND_PREPARATION_RULES, ROUND_SCHEDULE } from '../round-schedule';
 import { ENEMY_TEMPLATES, ENEMY_POSITIONS, ENEMY_GROWTH, ROUND_ENEMY_PROJECTIONS } from '../round-enemies';
 import { S13_ABILITY_DATA } from './abilities';
@@ -58,6 +58,7 @@ export const CONTENT_DIGEST = digestContent({
   versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},
   loot:{runtime:LOOT_RUNTIME_REVISION,freeze:LOOT_FREEZE_ALGORITHM,policy:LOOT_POLICY_VERSION,heroPoolVersion:LOOT_HERO_POOL_VERSION,heroPools:LOOT_HERO_POOLS,slots:LOOT_SLOTS,categories:LOOT_CATEGORIES},
   neutralEncounters:{runtime:NEUTRAL_RUNTIME_VERSION,version:NEUTRAL_ENCOUNTER_CATALOG_VERSION,policy:NEUTRAL_ENCOUNTER_POLICY_VERSION,definitions:NEUTRAL_DEFINITIONS,encounters:NEUTRAL_ENCOUNTERS},
+  deploymentRulesVersion:DEPLOYMENT_RULES_VERSION,
   roundRulesVersion:ROUND_RULES_VERSION, roundCatalog:ROUND_CATALOG, roundSemanticNodes:ROUND_SEMANTIC_NODES,
   roundPreparation:ROUND_PREPARATION_RULES, opening:{initial:OPENING_INITIAL_STATE,economy:OPENING_ECONOMY_RULES}, finalRound:FINAL_ROUND,
   equipmentRulesVersion: EQUIPMENT_RULES_VERSION, temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
