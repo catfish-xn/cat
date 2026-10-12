@@ -1,5 +1,6 @@
 export * from './types';
 export { ManualClock, type Clock, type ClockHandle } from './clock';
+export { RealClock } from './real-clock';
 export { PlaceholderBattleResolver, BattleResolveError, type BattleResolver } from './battle-resolver';
 export { planPairings, findPairing, type PairingPlan } from './pairing';
 export { firstOfferFallback, resolvePendingChoices, type ChoiceFallback } from './choice-fallback';

@@ -3,7 +3,7 @@
  * states, pairings of other seats and other seats' shops are never serialized.
  */
 import type { LedgerCombatEvent } from '../../simulation/combat-types';
-import type { MatchState } from '../../simulation/match-types';
+import type { CombatFrame } from '../protocol';
 import { findPairing } from './pairing';
 import type { BattleFrame, PlayerView, PlayerViewPhaseKind, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -32,8 +32,8 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
   };
 }
 
-/** Mirrors CombatFrame of src/rendering/online/protocol.ts (PR #33). */
-export interface CombatFrameView { readonly state: MatchState; readonly events: readonly LedgerCombatEvent[] }
+/** The shared CombatFrame of src/server/protocol.ts; the old name stays for existing callers. */
+export type CombatFrameView = CombatFrame;
 
 /** This seat's own battle frames of the current round, in playback order; empty outside a resolved round. */
 export function toCombatFrames(room: RoomState, seatId: string): readonly CombatFrameView[] {
