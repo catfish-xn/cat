@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
+import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { toCombatFrames, toPlayerView, toPublicBoard } from '../../src/server/room/projection';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import type { MatchState } from '../../src/simulation/match-types';
@@ -23,7 +23,7 @@ describe('toPlayerView', () => {
     expect(() => toPlayerView(room.state, 'ghost', 0)).toThrow(RangeError);
   });
   it('maps room phases to client phases and names the pvp opponent', () => {
-    const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     expect(toPlayerView(room.state, 's0', 0).phase.kind).toBe('lobby');
     room.start();
     runUntil(room, clock, current => current.round === 4 && current.phase === 'preparation');

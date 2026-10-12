@@ -8,7 +8,7 @@ import type { MatchState } from '../../src/simulation/match-types';
 import { LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/online/local-room-client';
 import type { ClientListeners, CombatFrame, LobbyView, PlayerView } from '../../src/rendering/online/protocol';
 
-const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'placeholder' };
+const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'two-sided' };
 
 function harness(overrides: Partial<LocalRoomOptions> = {}) {
   const clock = new ManualClock();
@@ -64,18 +64,22 @@ describe('LocalRoomClient', () => {
     await runUntil(() => last().phase.kind === 'combat');
     expect(log.combat).toHaveLength(1);
     expect(log.combat[0]!.every(frame => frame.events.every(event => 'tick' in event))).toBe(true);
-    await runUntil(() => last().phase.kind === 'ended');
+    await runUntil(() => last().phase.kind === 'ended', 6_000);
     const view = last();
-    expect(view.fault).toBeNull(); expect(view.ranking).not.toBeNull();
-    expect(view.ranking!.map(seat => seat.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    const rounds = new Set(log.view.filter(v => v.phase.kind === 'combat').map(v => v.phase.round));
+    // Either the rules decided a unique ranking or the room stopped explicitly at the overtime gap (SR-B4-01).
+    if (view.fault) expect(view.fault.kind).toBe('overtime-unavailable');
+    else expect(view.ranking!.map(seat => seat.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    // The HP shown for my seat is the rules' HP of my last pushed state.
+    expect(view.seats.find(seat => seat.seatId === view.mySeatId)!.hp).toBe(log.state.at(-1)!.playerHp);
+    // One combat push per round in which my seat still fought; an eliminated seat gets views, not frames.
+    const rounds = new Set(log.view.filter(v => v.phase.kind === 'combat' && v.seats.find(seat => seat.seatId === v.mySeatId)!.alive).map(v => v.phase.round));
     expect(log.combat.length).toBe(rounds.size);
     // Frames are combat view data (CombatState), never a MatchState; the settled state arrives as the room's own seat state after the commit.
     expect(log.combat[0]!.every(frame => 'tick' in frame.state && !('shop' in frame.state))).toBe(true);
     const roomMatches = client.currentRoom!.state.seats.map(seat => seat.match);
     expect(roomMatches).toContain(log.state.at(-1)!);
     expect(client.send({ type: 'reroll' })).toMatchObject({ ok: false, reason: 'wrong-phase' });
-  }, 20_000);
+  }, 60_000);
   it('surfaces a room fault as view.fault with readable text and no ranking', async () => {
     const { client, runUntil, last } = harness({ faultAtRound: 2 });
     client.joinQueue('a'); client.startMatch();

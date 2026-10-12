@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PlaceholderBattleResolver } from '../../src/server/room/battle-resolver';
+import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleInput, BattleResult } from '../../src/server/room/types';
 import { DamageResolver, expectUniqueRanking, makeRoom, runUntil } from './helpers';
 
@@ -133,26 +134,26 @@ describe('Room: settlement', () => {
   });
 });
 
-describe('Room: placeholder resolver end to end', () => {
-  it('runs a whole idle match to a unique ranking on the manual clock', () => {
-    const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+describe('Room: real resolver end to end', () => {
+  it('runs a whole idle match on the manual clock until the rules decide it', () => {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     const seen = new Set<string>();
     const unsubscribe = room.subscribe(state => seen.add(state.phase));
     const state = runUntil(room, clock, current => current.phase === 'ended');
     unsubscribe();
-    expect(state.fault).toBeNull();
-    expectUniqueRanking(state);
+    // Either a unique ranking, or the explicit overtime stop after the catalog's final round (§11.5, SR-B4-01).
+    if (state.fault) expect(state.fault.kind).toBe('overtime-unavailable'); else expectUniqueRanking(state);
     expect(state.round).toBeGreaterThan(4);
     expect([...seen]).toEqual(expect.arrayContaining(['preparation', 'choice', 'frozen', 'battle', 'settlement', 'ended']));
-    // The placeholder keeps the rules' own HP mirror equal to the room's authoritative HP.
+    // The rules' HP is the room's authoritative HP after every published round.
     for (const seat of state.seats) expect(seat.match.playerHp).toBe(seat.hp);
     expect(state.settlements.length).toBe(state.round);
-  }, 20_000);
+  }, 60_000);
   it('pairs survivors on pvp rounds and freezes two seats per real pairing', () => {
-    const placeholder = new PlaceholderBattleResolver();
+    const twoSided = new TwoSidedBattleResolver();
     const inputs: BattleInput[] = [];
-    const resolver = { resolveBattle(input: BattleInput) { inputs.push(input); return placeholder.resolveBattle(input); } };
+    const resolver = { resolveBattle(input: BattleInput) { inputs.push(input); return twoSided.resolveBattle(input); } };
     const { room, clock } = makeRoom(resolver);
     room.start();
     runUntil(room, clock, current => current.round === 4 && current.phase === 'preparation');

@@ -13,7 +13,7 @@ export function readServerKind(search = currentSearch()): OnlineServerKind { ret
 function numberParam(params: URLSearchParams, key: string, fallback: number): number {
   const value = Number(params.get(key)); return Number.isFinite(value) && params.has(key) ? value : fallback;
 }
-/** URL parameters `prep/choice/settle/seed/name` (seconds) plus the debug-only `faultAt` round. */
+/** URL parameters `prep/choice/settle/seed/name` (seconds) plus the debug-only `faultAt` round and `pvp=placeholder` (B1 test path; default is the real two-sided PvP). */
 export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions {
   const params = new URLSearchParams(search);
   const num = (key: string, fallback: number) => numberParam(params, key, fallback);
@@ -21,7 +21,7 @@ export function readLocalRoomOptions(search = currentSearch()): LocalRoomOptions
   return { seed: num('seed', LOCAL_ROOM_DEFAULTS.seed), preparationMs: num('prep', LOCAL_ROOM_DEFAULTS.preparationMs / 1000) * 1000,
     choiceMs: num('choice', LOCAL_ROOM_DEFAULTS.choiceMs / 1000) * 1000, settlementMs: num('settle', LOCAL_ROOM_DEFAULTS.settlementMs / 1000) * 1000,
     myName: params.get('name') ?? LOCAL_ROOM_DEFAULTS.myName, faultAtRound: Number.isInteger(faultAt) && faultAt > 0 ? faultAt : null,
-    pvpMode: params.get('pvp') === 'two-sided' ? 'two-sided' : LOCAL_ROOM_DEFAULTS.pvpMode };
+    pvpMode: params.get('pvp') === 'placeholder' ? 'placeholder' : LOCAL_ROOM_DEFAULTS.pvpMode };
 }
 /** Server address: `?ws=ws://127.0.0.1:8787` when given, else `ws(s)://<this host>/ws` (the dev server proxies it). */
 export function readWsOptions(search = currentSearch()): WsClientOptions {

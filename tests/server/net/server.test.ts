@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { PlaceholderBattleResolver, type BattleResolver } from '../../../src/server/room/battle-resolver';
+import { TwoSidedBattleResolver } from '../../../src/server/room/two-sided-resolver';
 import { CLOSE_CODES } from '../../../src/server/net/server';
 import { COMBAT_SPLIT, type ServerMessage } from '../../../src/server/net/messages';
 import type { Receipt } from '../../../src/server/net/test-client';
@@ -9,16 +9,11 @@ import { expectOk, flush, hasKey, messagesOfType, seatTwo, startServer, type Net
 let harness: NetHarness | null = null;
 afterEach(async () => { await harness?.close(); harness = null; });
 
-/** Real single-player battles for round progression, but every seat loses exactly 10 HP per round. */
-function tenDamage(): BattleResolver {
-  const placeholder = new PlaceholderBattleResolver();
-  return { resolveBattle(input) { const result = placeholder.resolveBattle(input); if (result.kind !== 'placeholder') return result; return { ...result, outcomes: result.outcomes.map(outcome => ({ ...outcome, damage: 10 })) }; } };
-}
 const appliedRevision = (receipt: Receipt): number => receipt.ok && receipt.result.kind === 'applied' ? receipt.result.seatRevision : -1;
 
 describe('game server: visibility', () => {
   it('shows the other seat its level and HP changes but never its shop or private state', async () => {
-    harness = await startServer({}, tenDamage());
+    harness = await startServer({}, new TwoSidedBattleResolver());
     const [a, b] = await seatTwo(harness);
     const room = harness.server.room!;
     const seatA = a.seatId!, seatB = b.seatId!;
@@ -31,8 +26,8 @@ describe('game server: visibility', () => {
     expect(roundsPlayed).toBeGreaterThan(0);
     await Promise.all([a, b].map(client => client.waitForView(view => view.phase.round === room.state.round && view.phase.kind === 'preparation')));
     await a.waitFor(message => message.type === 'state' && message.seatRevision === seatOf(seatA).seatRevision);
-    // Both clients already saw everyone's HP drop by 10 per settled round.
-    expect(seatOf(seatA).hp).toBe(100 - 10 * room.state.settlements.length);
+    // Both clients already saw everyone's HP as the rules settled it (B4: SeatState.hp is the rules' playerHp).
+    expect(seatOf(seatA).hp).toBe(seatOf(seatA).match.playerHp);
     expect(b.view!.seats.find(seat => seat.seatId === seatA)!.hp).toBe(seatOf(seatA).hp);
     const levelBefore = b.view!.seats.find(seat => seat.seatId === seatA)!.level;
     let levelAfter = levelBefore;
@@ -45,13 +40,15 @@ describe('game server: visibility', () => {
     expect(levelAfter).toBeGreaterThan(levelBefore);
     const seen = await b.waitForView(view => view.seats.find(seat => seat.seatId === seatA)!.level === levelAfter);
     expect(seen.seats.find(seat => seat.seatId === seatA)!.level).toBe(levelAfter);
-    // One more round: the deadline freezes, resolves and (at the battle deadline) commits 10 damage to everyone.
-    const hpBefore = seatOf(seatA).hp;
+    // One more round: the deadline freezes, resolves and (at the battle deadline) publishes the rules' settlement to everyone.
+    const roundBefore = room.state.round;
     harness.clock.advance(TIMINGS.preparationMs);
     while (room.state.phase === 'battle') harness.clock.runNext();
-    const hpView = await b.waitForView(view => view.seats.find(seat => seat.seatId === seatA)!.hp === hpBefore - 10);
-    expect(hpView.seats.filter(seat => seat.alive).every(seat => seat.hp === hpBefore - 10)).toBe(true);
-    await a.waitForView(view => view.seats.find(seat => seat.seatId === seatB)!.hp === hpBefore - 10);
+    expect(room.state.settlements).toContain(`net-room:round-${roundBefore}`);
+    // The committed view: same round, past the battle, every public HP equal to the room's authoritative HP.
+    const hpView = await b.waitForView(view => view.phase.round === roundBefore && view.phase.kind !== 'combat' && view.phase.kind !== 'preparation' && view.seats.every(seat => seat.hp === seatOf(seat.seatId).hp));
+    for (const seat of hpView.seats) expect(seat.hp).toBe(seatOf(seat.seatId).match.playerHp);
+    await a.waitForView(view => view.seats.find(seat => seat.seatId === seatB)!.hp === seatOf(seatB).hp);
     // Nothing B received carries a shop except B's own private state, and that state is B's seat.
     const seedB = room.state.seats.find(seat => seat.seatId === seatB)!.seed;
     const seedA = room.state.seats.find(seat => seat.seatId === seatA)!.seed;
@@ -305,7 +302,7 @@ describe('game server: connection limits', () => {
 
 describe('game server: whole match over the wire', () => {
   it('drives two clients from the queue to a full ranking with combat frames on the manual clock', async () => {
-    harness = await startServer({}, new PlaceholderBattleResolver());
+    harness = await startServer({}, new TwoSidedBattleResolver());
     const [a, b] = await seatTwo(harness);
     const room = harness.server.room!;
     const phase = () => room.state.phase;
@@ -323,10 +320,9 @@ describe('game server: whole match over the wire', () => {
       if (phase() !== 'ended' && !harness.clock.runNext()) break;
     }
     expect(phase()).toBe('ended');
-    expect(room.state.fault).toBeNull();
     const [endedA, endedB] = await Promise.all([a, b].map(client => client.waitForView(view => view.phase.kind === 'ended', 20_000)));
-    expect(endedA.ranking).toHaveLength(8); expect(endedB.ranking).toHaveLength(8);
-    expect(new Set(endedA.ranking!.map(seat => seat.rank)).size).toBe(8);
+    if (room.state.fault) expect(room.state.fault.kind).toBe('overtime-unavailable'); // SR-B4-01: explicit stop after the catalog's last round
+    else { expect(endedA.ranking).toHaveLength(8); expect(endedB.ranking).toHaveLength(8); expect(new Set(endedA.ranking!.map(seat => seat.rank)).size).toBe(8); }
     const combatsA = messagesOfType(a.inbox, 'combat');
     expect(combatsA.length).toBeGreaterThan(0);
     expect(combatsA.every(combat => combat.frames.length > 0 && combat.frames.every(frame => Number.isInteger(frame.state.tick)))).toBe(true);

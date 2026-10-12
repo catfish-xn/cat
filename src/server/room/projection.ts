@@ -61,7 +61,7 @@ export function toPlayerFault(fault: RoomFault): PlayerViewFault {
     case 'invalid-results': return { kind: fault.kind, detail: `结算结果无效：${fault.detail}` };
     case 'seat-stuck': return { kind: fault.kind, detail: `席位 ${fault.seatId} 无法推进：${fault.reason}` };
     case 'phase-mismatch': return { kind: fault.kind, detail: `阶段不一致：${fault.detail}` };
-    case 'settlement-unavailable': return { kind: fault.kind, detail: `第 ${fault.round} 轮 PvP 已算出 ${fault.battleIds.length} 场结算提案，但结算提交入口（T3）尚未交付，房间不自行扣血或发收入` };
+    case 'overtime-unavailable': return { kind: fault.kind, detail: `第 ${fault.round} 轮（目录末轮）后仍有 ${fault.survivors.length} 席存活，需要加时；规则侧的加时推进入口尚未交付，房间明确中断而不自造名次` };
   }
 }
 
