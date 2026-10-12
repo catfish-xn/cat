@@ -1,12 +1,13 @@
 import { canonicalContent } from './content';
 import { planCatalogRoundEconomy } from './opening-economy';
-import { getRoundSchedule } from './round-schedule';
-import { getCatalogRoundById } from './round-selectors';
+import { planRoundEconomy } from './economy';
+import { getMultiplayerRoundById } from './multiplayer-round';
+import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
 import type { MatchState, MatchEvent, MatchFailure, PersistentGrowth, RoundResult } from './match-types';
 
 export type MultiplayerFailure = MatchFailure | 'multiplayer-required' | 'invalid-seat' | 'invalid-receipt'
   | 'duplicate-settlement' | 'mirror-settlement' | 'already-settled' | 'seat-eliminated'
-  | 'no-pending-choice' | 'invalid-loot';
+  | 'no-pending-choice' | 'invalid-loot' | 'shared-pool-required' | 'invalid-round';
 export type MultiplayerCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly state: MatchState; readonly reason: MultiplayerFailure };
 
@@ -71,17 +72,19 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
       || state.multiplayer.receipts.some(old => old.battleId === r.battleId)) return fail(state,'already-settled');
     if (state.phase !== 'preparation' || state.pendingChoice !== null || state.combat !== null) return fail(state,'wrong-phase');
     if (!state.preparation.units.some(unit => unit.team === 'player')
-      && getRoundSchedule(state.round).some(event => event.kind === 'anomaly'
+      && state.round <= FINAL_ROUND && getRoundSchedule(state.round).some(event => event.kind === 'anomaly'
         && !state.scheduleReceipts.some(old => old.eventId === event.id)
         && !multiplayer.forfeitedChoices.includes(event.id))) return fail(state,'wrong-phase');
-    const round = getCatalogRoundById(r.roundId);
+    const round = getMultiplayerRoundById(r.roundId);
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
     // Require contiguous history, including already-settled PvE/supply nodes.
     if (state.roundResults.length !== state.round - 1
       || state.roundResults.some((record,index) => record.round !== index + 1)) return fail(state,'unsettled-round');
     const result = r.result === 'win' ? 'playerWin' : r.result === 'loss' ? 'enemyWin' : 'draw';
-    const plan = planCatalogRoundEconomy({roundId:r.roundId,result,gold:state.gold,streak:state.streak,
-      level:state.level,xp:state.xp,hp:state.playerHp,enemySurvivors:r.opposingSurvivors});
+    const economyInput = {result,gold:state.gold,streak:state.streak,
+      level:state.level,xp:state.xp,hp:state.playerHp,enemySurvivors:r.opposingSurvivors} as const;
+    const plan = round.ordinal <= FINAL_ROUND ? planCatalogRoundEconomy({roundId:r.roundId,...economyInput})
+      : planRoundEconomy({stage:round.stage,roundKind:'pvp',...economyInput});
     // Damage is forwarded verbatim, but reject mismatched/edited proposals at the rules boundary.
     if (r.baseDamage !== plan.baseDamage || r.damage !== plan.playerDamage) return fail(state,'invalid-receipt');
     const growth = new Map(state.persistentGrowth.map(g => [g.unitId,g.attackDamageBps]));

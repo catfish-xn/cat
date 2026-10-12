@@ -1,5 +1,7 @@
 import type { UnitLootPolicy } from './loot-runtime';
 import type { MultiplayerCommandResult, MultiplayerFailure } from './round-settlement';
+import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
+import { FINAL_ROUND } from './round-schedule';
 import { M8_VERSION } from './m8/version';
 import { freezeCombatInput } from './combat-input';
 import { appendResourceProvenance, mergeGrowthLedger, RESOURCE_PROVENANCE_VERSION } from './resource-provenance';
@@ -54,7 +56,7 @@ function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): Matc
 }
 /** Only the uncompleted anomaly node may defer choice while its roster is empty. */
 export function needsAnomalyRecruitment(state: MatchState): boolean {
-  return state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')
+  return !(state.multiplayer && state.round > FINAL_ROUND) && state.phase === 'preparation' && !state.preparation.units.some(unit => unit.team === 'player')
     && getRoundSchedule(state.round).some(event => event.kind === 'anomaly' && !state.scheduleReceipts.some(receipt => receipt.eventId === event.id)
       && !state.multiplayer?.forfeitedChoices.includes(event.id));
 }
@@ -300,6 +302,32 @@ export function nextRound(state: MatchState, expectedRound: number): MatchComman
   const entered = enterScheduledEvents({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
   return acceptEquipment(entered.state, entered.events);
+}
+
+/** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
+export function advanceMultiplayerRound(state: MatchState, expectedRound: number): MultiplayerCommandResult {
+  if (!state.multiplayer) return multiplayerFail(state, 'multiplayer-required');
+  if (state.multiplayer.status === 'eliminated') return multiplayerFail(state, 'seat-eliminated');
+  if (state.sharedPool) return multiplayerFail(state, 'shared-pool-required');
+  if (expectedRound !== state.round) return multiplayerFail(state, 'stale-round');
+  if (state.phase !== 'settlement') return multiplayerFail(state, 'wrong-phase');
+  if (state.pendingChoice || unresolvedLootChoices(state).length || hasPendingLootCapacity(state)
+    || state.roundResults.length !== state.round
+    || state.roundResults.some((record, index) => record.round !== index + 1)) return multiplayerFail(state, 'unsettled-round');
+  try {
+    const current = getMultiplayerRoundByOrdinal(state.round);
+    if (current.roundId !== state.roundDefinitionId || current.roundId !== state.m8.round.roundId) return multiplayerFail(state, 'stale-round');
+    if (state.round < FINAL_ROUND) return nextRound(state, expectedRound);
+    const definition = getMultiplayerRoundByOrdinal(state.round + 1);
+    const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
+      preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
+        encounterId: null, contentStatus: 'not-pve', enemies: [] } };
+    const refresh = state.shop.locked ? { shop: state.shop, rngState: state.rngState }
+      : generateShop(state.rngState, state.shop.generation + 1, state.level);
+    return acceptEquipment({ ...state, ...refresh, round: definition.ordinal, roundDefinitionId: definition.roundId,
+      m8, phase: 'preparation', combat: null, combatInputBasis: null, pendingChoice: null, outcome: null,
+      preparation: { ...state.preparation, units: state.preparation.units.filter(unit => unit.team === 'player') } }, []);
+  } catch { return multiplayerFail(state, 'invalid-round'); }
 }
 
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {

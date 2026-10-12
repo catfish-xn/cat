@@ -5,7 +5,7 @@ import { buildStrategySnapshot } from './strategy-snapshot';
 import { createCombatWithEvents, stepCombat, type CombatState, type CombatStep } from './combat';
 import { toLedgerEvents } from './combat-ledger';
 import { effectKey } from './effects';
-import { getCatalogRoundById } from './round-selectors';
+import { getMultiplayerRoundById } from './multiplayer-round';
 import { validateSeed } from './rng';
 import { STAGE_PLAYER_DAMAGE } from './match-rules';
 import type { CombatStrategyInputs } from './combat-input';
@@ -35,7 +35,7 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
   // effects use the owner's preparation coordinates before B is mirrored to the upper half.
   const preparation = { board:structuredClone(DEFAULT_BOARD), benchSize:9, units:s.units.map(unit => ({...unit,id:map('unit',unit.id)})) };
   const inputs: CombatStrategyInputs = {
-    round:getCatalogRoundById(s.roundId).ordinal, preparation,
+    round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
     items:s.items.map(item => ({...item,id:map('item',item.id),location:item.location.kind === 'unit'
       ? {...item.location,unitId:map('unit',item.location.unitId)} : item.location})),
     temporaryEquipment:s.temporaryEquipment.map(child => ({...child,temporaryId:map('temporary-item',child.temporaryId),
@@ -70,7 +70,7 @@ export function compileBattle(a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, 
   const left = normalized(a), right = normalized(b);
   if (left.seatId === right.seatId) throw new BattleValidationError('seat-collision');
   if (left.roundId !== right.roundId) throw new BattleValidationError('round-mismatch');
-  if (getCatalogRoundById(left.roundId).kind !== 'pvp') throw new BattleValidationError('round-kind');
+  if (getMultiplayerRoundById(left.roundId).kind !== 'pvp') throw new BattleValidationError('round-kind');
   try { validateSeed(battleSeed); } catch { throw new BattleValidationError('invalid-seed'); }
   const battleId = identity === undefined ? `diagnostic:${digestContent({a:left,b:right,battleSeed})}` : identity?.battleId;
   if (typeof battleId !== 'string' || battleId.length === 0) throw new BattleValidationError('invalid-battle-id');
@@ -139,7 +139,7 @@ export function resolveTwoSidedBattle(input: BattleInput, maxSteps: number): Bat
 export function proposeSettlement(result: BattleResult): { readonly a: SideProposal; readonly b: SideProposal } {
   try {
     canonicalContent(result);
-    const stage = getCatalogRoundById(result.roundId);
+    const stage = getMultiplayerRoundById(result.roundId);
     const expectedWinner = result.terminal.result === 'draw' ? null : result.terminal.result === 'playerWin' ? result.a.seatId : result.b.seatId;
     if (result.version !== TWO_SIDED_BATTLE_VERSION || stage.kind !== 'pvp' || result.a.seatId === result.b.seatId
       || (result.mirrorOfSeatId !== null && result.mirrorOfSeatId !== result.b.seatId)
