@@ -2,12 +2,13 @@
  * Whitelisted client views (V2 §5.3). Built field by field; the room's MatchState, rng
  * states, pairings of other seats and other seats' shops are never serialized.
  */
-import type { LedgerCombatEvent } from '../../simulation/combat-types';
+import type { HexCell } from '../../simulation/board';
+import type { CombatResult, CombatState, CombatUnit, LedgerCombatEvent } from '../../simulation/combat-types';
 import { findPairing } from './pairing';
-import type { BattleFrame, CombatFrame, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
+import type { BattleResult, CombatFrame, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
 const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
-  waiting: 'lobby', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', settlement: 'settlement', ended: 'ended',
+  waiting: 'lobby', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
 };
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
@@ -35,24 +36,63 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
 /** Human-readable fault for the client; the structured RoomFault stays on the server. */
 export function toPlayerFault(fault: RoomFault): PlayerViewFault {
   switch (fault.kind) {
-    case 'resolver-error': return { kind: fault.kind, detail: `战斗 ${fault.battleId} 结算出错：${fault.message}` };
+    case 'resolver-error': return { kind: fault.kind, detail: `战斗 ${fault.battleId} 结算出错：${fault.reason ?? fault.message}` };
     case 'invalid-results': return { kind: fault.kind, detail: `结算结果无效：${fault.detail}` };
     case 'seat-stuck': return { kind: fault.kind, detail: `席位 ${fault.seatId} 无法推进：${fault.reason}` };
     case 'phase-mismatch': return { kind: fault.kind, detail: `阶段不一致：${fault.detail}` };
+    case 'settlement-unavailable': return { kind: fault.kind, detail: `第 ${fault.round} 轮 PvP 已算出 ${fault.battleIds.length} 场结算提案，但结算提交入口（T3）尚未交付，房间不自行扣血或发收入` };
   }
 }
 
 /** Kept for B1 callers; the shared shape is CombatFrame of src/server/protocol.ts. */
 export type CombatFrameView = CombatFrame;
 
-/** This seat's own battle frames of the current round, in playback order; empty outside a resolved round. */
+/**
+ * This seat's battle frames of the current round, in playback order; empty outside a resolved round.
+ * A two-sided battle was run once from side A's point of view; a real side-B participant gets the
+ * same frames mirrored (B3, §10.6 item 3). A mirror source is not a participant and gets nothing.
+ */
 export function toCombatFrames(room: RoomState, seatId: string): readonly CombatFrameView[] {
   for (const battle of room.battles) {
-    const outcome = battle.outcomes.find(candidate => candidate.seatId === seatId);
-    if (outcome) return outcome.frames.map(toCombatFrame);
+    const frames = framesFor(battle, seatId);
+    if (frames) return frames;
   }
   return [];
 }
-function toCombatFrame(frame: BattleFrame): CombatFrameView {
-  return { state: frame.state, events: frame.events.filter((event): event is LedgerCombatEvent => 'tick' in event) };
+function framesFor(battle: BattleResult, seatId: string): readonly CombatFrameView[] | null {
+  if (battle.kind === 'placeholder') return battle.outcomes.find(candidate => candidate.seatId === seatId)?.frames ?? null;
+  if (!battle.participants.includes(seatId)) return null;
+  if (battle.battle.a.seatId === seatId) return battle.frames;
+  if (battle.battle.b.seatId === seatId) return battle.frames.map(mirrorCombatFrame);
+  return null;
+}
+
+/**
+ * Side B's view of a two-sided frame: teams swap and rows flip (`row = rows - 1 - row`, the inverse of
+ * the compile-time mirror in §10.3), so B sees its own units as `player` at the bottom. Pure display
+ * projection of server data; no unit, number or outcome is recomputed.
+ */
+export function mirrorCombatFrame(frame: CombatFrame): CombatFrame {
+  const rows = frame.state.board.rows;
+  return { state: mirrorCombatState(frame.state, rows), events: frame.events.map(event => mirrorEvent(event, rows)) };
+}
+const flipCell = (cell: HexCell, rows: number): HexCell => ({ col: cell.col, row: rows - 1 - cell.row });
+const swapTeam = (team: CombatUnit['team']): CombatUnit['team'] => team === 'player' ? 'enemy' : 'player';
+const swapResult = (result: CombatResult | null): CombatResult | null => result === 'playerWin' ? 'enemyWin' : result === 'enemyWin' ? 'playerWin' : result;
+function mirrorCombatState(state: CombatState, rows: number): CombatState {
+  const { player, enemy } = state.board.deploymentZones;
+  return {
+    ...state,
+    board: { ...state.board, deploymentZones: { player: enemy, enemy: player } },
+    units: state.units.map(unit => ({ ...unit, team: swapTeam(unit.team), cell: flipCell(unit.cell, rows), ...(unit.startingCell ? { startingCell: flipCell(unit.startingCell, rows) } : {}) })),
+    result: swapResult(state.result),
+  };
+}
+function mirrorEvent(event: LedgerCombatEvent, rows: number): LedgerCombatEvent {
+  switch (event.type) {
+    case 'movement': return { ...event, from: flipCell(event.from, rows), to: flipCell(event.to, rows) };
+    case 'combatFinished': return { ...event, result: swapResult(event.result) ?? event.result };
+    case 'cast': return { ...event, receipt: { ...event.receipt, completionCell: flipCell(event.receipt.completionCell, rows) } };
+    default: return event;
+  }
 }

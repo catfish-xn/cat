@@ -11,12 +11,22 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import type { CombatResult } from '../../simulation/combat-types';
-import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type RoomPhase, type SeatKind } from '../protocol';
+// Rules types of the two-sided battle entry (T2); aliased so the room's scheduling envelope keeps its own names.
+import type { BattleResult as RulesBattleResult, SideProposal } from '../../server-entry';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type CombatFrame, type RoomPhase, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
 export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
 export type { RoomPhase, SeatKind, PlayerView, PlayerViewPhase, PlayerViewPhaseKind, PlayerViewFault, PlayerViewFaultKind, SeatPublic, QueueEntry, LobbyView, CombatFrame, ClientCommand } from '../protocol';
+export type { RulesBattleResult, SideProposal };
 export type RoundKind = 'pvp' | 'pve' | 'supply';
+/**
+ * How PvP rounds are resolved (B3). `placeholder` (default): each seat still runs its own single-player
+ * combat and the room commits the rules' own damage, as in B1. `two-sided`: the real two-sided battle
+ * (T2) runs once per pairing and only produces settlement proposals; committing them needs T3, so the
+ * room stops at `awaiting-settlement` with a `settlement-unavailable` fault instead of touching HP.
+ */
+export type PvpMode = 'placeholder' | 'two-sided';
 
 export interface SeatSpec { readonly seatId: string; readonly name: string; readonly kind: SeatKind }
 
@@ -47,7 +57,12 @@ export type Opponent =
 export interface Pairing { readonly battleId: string; readonly seatId: string; readonly opponent: Opponent }
 
 export interface BattleSeatInput { readonly seatId: string; readonly state: MatchState }
-/** Frozen by the room at the preparation deadline; immutable once handed to the resolver. */
+/** Default two-sided step budget (contract §10.3: the engine stops at 1200 ticks; 1201 covers the last step). */
+export const DEFAULT_BATTLE_MAX_STEPS = 1201;
+/**
+ * Scheduling envelope, frozen by the room at the preparation deadline and immutable once handed to the
+ * resolver. Distinct from the rules' BattleInput (T2), which the resolver compiles from it.
+ */
 export interface BattleInput {
   readonly battleId: string;
   readonly roomId: string;
@@ -56,12 +71,17 @@ export interface BattleInput {
   readonly roundKind: RoundKind;
   /** roomRevision at freeze time; results from another revision are stale. */
   readonly roomRevision: number;
-  /** One seat for pve/supply/mirror battles, two for a real pairing. */
+  /** Explicit uint32 combat seed, drawn from the room rng when the pairings are frozen; a retry keeps it (§10.6 item 1). */
+  readonly battleSeed: number;
+  /** Step budget handed to the two-sided entry; exhausting it is a failure, never a fake draw. */
+  readonly maxSteps: number;
+  /** One seat for pve/supply/mirror battles, two for a real pairing. These are the real participants (§10.6 item 4). */
   readonly seats: readonly BattleSeatInput[];
   /** Set when `seats[0]` fights the frozen copy of another survivor; the source is not a participant. */
   readonly mirrorOf: BattleSeatInput | null;
 }
-export interface BattleFrame { readonly state: MatchState; readonly events: readonly MatchEvent[] }
+/** Battle view data for playback: one CombatState per tick with that tick's ledger events (§10.6 item 3). */
+export type BattleFrame = CombatFrame;
 export interface BattleSeatOutcome {
   readonly seatId: string;
   /** Seat state after its battle, as produced by the rules; the room stores it verbatim. */
@@ -71,11 +91,41 @@ export interface BattleSeatOutcome {
   readonly damage: number;
   readonly frames: readonly BattleFrame[];
 }
-export interface BattleResult {
+/** B1 shape: each seat's own single-player combat, already settled by the rules (placeholder PvP, PvE, supply). */
+export interface PlaceholderBattleResult {
+  readonly kind: 'placeholder';
   readonly battleId: string;
   readonly round: number;
   readonly roomRevision: number;
   readonly outcomes: readonly BattleSeatOutcome[];
+}
+/**
+ * B3 shape (contract §10.6 item 2): one real two-sided battle and its two uncommitted proposals.
+ * Nothing in here is settled: no HP, income, growth or round record changes until T3 commits.
+ */
+export interface TwoSidedBattleResult {
+  readonly kind: 'two-sided';
+  readonly battleId: string;
+  readonly round: number;
+  readonly roomRevision: number;
+  /** Real participating seats (one for a mirror battle); the mirror source is never listed. */
+  readonly participants: readonly string[];
+  readonly battle: RulesBattleResult;
+  readonly proposals: { readonly a: SideProposal; readonly b: SideProposal };
+  /** Playback frames from side A's point of view; side B's view is a projection (projection.ts). */
+  readonly frames: readonly BattleFrame[];
+}
+export type BattleResult = PlaceholderBattleResult | TwoSidedBattleResult;
+
+/** Proposals of one two-sided battle parked until the settlement entry (T3) exists; mirror proposals never enter. */
+export interface PendingProposal {
+  readonly battleId: string;
+  readonly round: number;
+  readonly roundId: string;
+  readonly roomRevision: number;
+  readonly participants: readonly string[];
+  /** Only `settlementEligible` proposals of real participants. */
+  readonly proposals: readonly SideProposal[];
 }
 
 export interface SettledSeat {
@@ -101,10 +151,13 @@ export interface RoundSettlement {
 }
 
 export type RoomFault =
-  | { readonly kind: 'resolver-error'; readonly battleId: string; readonly message: string }
+  /** `reason` is the resolver's stable code when it has one (e.g. a BattleValidationError reason); `message` is free text. */
+  | { readonly kind: 'resolver-error'; readonly battleId: string; readonly message: string; readonly reason?: string }
   | { readonly kind: 'invalid-results'; readonly detail: string }
   | { readonly kind: 'seat-stuck'; readonly seatId: string; readonly reason: string }
-  | { readonly kind: 'phase-mismatch'; readonly detail: string };
+  | { readonly kind: 'phase-mismatch'; readonly detail: string }
+  /** B3: proposals are parked in `pendingProposals`; the commit entry (T3) does not exist yet. */
+  | { readonly kind: 'settlement-unavailable'; readonly round: number; readonly battleIds: readonly string[] };
 
 export interface RoomState {
   readonly roomId: string;
@@ -119,8 +172,12 @@ export interface RoomState {
   readonly seats: readonly SeatState[];
   /** PvP pairings of the current round, decided at round entry. */
   readonly pairings: readonly Pairing[];
+  /** Combat seeds of the current round by battleId, drawn with the pairings; a retry reuses them. */
+  readonly battleSeeds: Readonly<Record<string, number>>;
   /** Results of the current round; cleared on round entry. */
   readonly battles: readonly BattleResult[];
+  /** Two-sided proposals awaiting the settlement entry (T3); cleared on round entry. */
+  readonly pendingProposals: readonly PendingProposal[];
   /** settlementIds already committed, in order. */
   readonly settlements: readonly string[];
   /** Final ranking, best first; null until the match ends normally. */

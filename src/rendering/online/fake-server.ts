@@ -148,9 +148,9 @@ export class FakeServer implements GameClient {
     const start = startMatchCombat(state);
     // Mock fallback: an un-startable lineup is given more time instead of a server-side default.
     if (!start.ok) return this.enterPhase(5_000);
-    const frames: CombatFrame[] = [{ state: start.state, events: combatEvents(start.events) }];
+    const frames: CombatFrame[] = start.state.combat ? [{ state: start.state.combat, events: combatEvents(start.events) }] : [];
     let current = start.state;
-    while (current.phase === 'combat') { const step = stepMatch(current); current = step.state; frames.push({ state: current, events: combatEvents(step.events) }); }
+    while (current.phase === 'combat') { const step = stepMatch(current); current = step.state; if (current.combat) frames.push({ state: current.combat, events: combatEvents(step.events) }); }
     this.match = current;
     if (start.state.phase !== 'combat') { this.listeners?.state(current); return this.afterCombat(); }
     this.listeners?.combat(frames);

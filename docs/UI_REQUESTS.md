@@ -467,3 +467,23 @@
 - **战斗帧体积（P0，影响 C4 是否可用）**：`CombatFrame.state` 是每 tick 一份完整 `MatchState`。真实测量（`tests/server/net/server.test.ts` 整局用例）：一局空闲对局下发给单席约 105 MB，单条 `combat` 最大 13.5 MB，17 场战斗共 2873 帧。局域网可跑通，公网不可接受。建议：由规则侧（SR-B1-07）提供"战斗回放投影"——首帧完整状态 + 每 tick 只含 `combat` 子状态或事件账本，客户端按 `LedgerCombatEvent` 播放；或至少去掉帧内与战斗无关的字段。决定前 C4 不要按当前帧格式上线。
 - **SR-B1-06 仍未实现**：`state` 消息目前是完整 `MatchState`（含本席随机流）。B2 按工单只发本席自己的状态；去随机流的私有投影仍需规则侧提供。
 - 启动方式：`npm run serve:game`（esbuild 打包到 `dist-server/game/main.mjs`，环境变量 `PORT`、`CAT_HOST`、`CAT_SEED`、`CAT_PREP_SEC`、`CAT_CHOICE_SEC`、`CAT_SETTLE_SEC`、`CAT_QUEUE_TIMEOUT_SEC`）；`npm run client:game -- ws://127.0.0.1:8787 名字` 跑一局空闲对局。TLS 由反向代理终止（T9）。
+
+## src/server 接入 T2 后的规则侧缺口（B3，2026-10-12，Claude 流水线 B）
+
+B3 已按合同 §10.6 让房间的 PvP 走 `snapshotForBattle → compileBattle → resolveTwoSidedBattle → proposeSettlement`（`src/server/room/two-sided-resolver.ts`），提案暂存在 `RoomState.pendingProposals`，房间进入 `awaiting-settlement` 后以 `settlement-unavailable` 中断；默认 `pvpMode` 仍为 `placeholder`。以下是接入时发现的缺口，编号续 SR-B3-xx。
+
+### SR-B3-01 结算提交入口与房间阶段推进（P0，T3）
+
+- 现状：`Room.parkProposals` 已把每场的 `settlementEligible=true` 且属于真实参战席位的 `SideProposal` 按 battleId 暂存（含 `round/roundId/roomRevision/participants`）；镜像提案不进入队列。房间不扣血、不发收入、不进入下一轮。
+- 需要：合同 §10.10 的 `applyRoundSettlement(state, receipt)` 或等价事务命令。房间侧期望的调用方式：收齐全轮 `pendingProposals` 后，对每个真实席位用其提案构造唯一收据提交一次，由同一提交结果产出 HP/淘汰/`roundResults` 一条，再回到现有 `settlement → nextRound` 流程。请在合同里写明：收据字段、`settlementId` 的构成（房间建议 `${roomId}:round-${round}:${seatId}`）、拒绝枚举（重复、过期代次、镜像、不完整整轮）。
+- 验收：同一收据提交两次第二次无事件、无资源变化；提交后 `MatchState.playerHp` 与 `SeatState.hp` 一致。
+
+### SR-B3-02 战斗帧的逐 tick 账本入口（P2，T2 补充）
+
+- 现状：`resolveTwoSidedBattle` 只返回 `initial/terminal/events`；逐 tick 播放帧由房间用 `startTwoSidedCombatWithEvents + stepCombat` 重放同一冻结输入生成，再把 `battle.events` 按 `tick` 分配到各帧，并校验终态与事件总数一致（不一致即 `frame-divergence` 中断）。这意味着每场战斗实际执行两次（一次结算、一次取帧）。
+- 需要（可选）：一个同时返回逐 tick 状态序列与结果的入口，或说明 `stepCombat` 的事件与 `toLedgerEvents` 的对应关系可被服务器直接使用，以避免二次执行。若规则侧认为二次执行可接受，请在合同注明，房间保持现状。
+
+### SR-B3-03 第二视角的战斗投影（P2，T5 前确认）
+
+- 现状：双方战斗只运行一次，A 视角为 `player`；B 席位的帧由 `src/server/room/projection.ts` 的 `mirrorCombatFrame` 做纯显示镜像（队伍互换、`row = rows - 1 - row`、结果互换、`movement`/`cast.completionCell` 坐标翻转）。它不重算任何数值。
+- 需要：T5 做帧 DTO（合同 §10.9）时确认这一镜像规则就是客户端应看到的视角，或由规则侧给出带坐标字段的事件完整清单，避免遗漏其他含 `HexCell` 的事件字段。

@@ -11,8 +11,8 @@
 import { createMatch } from '../../simulation/match';
 import type { MatchCommandResult, MatchState } from '../../simulation/match-types';
 import {
-  Lobby, PlaceholderBattleResolver, RealClock, toCombatFrames, toPlayerView,
-  type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type Room, type RoomState, type RoomTimings,
+  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatFrames, toPlayerView,
+  type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings,
 } from '../../server/room';
 import type { ClientCommand, ClientListeners, GameClient, LobbyView, PlayerView } from './protocol';
 
@@ -24,10 +24,12 @@ export interface LocalRoomOptions {
   readonly myName: string;
   /** Debug only (`?faultAt=N`): the resolver throws on round N so the room's fault path can be seen in the UI. */
   readonly faultAtRound: number | null;
+  /** B3: `two-sided` runs the real PvP battle and stops at the settlement gap (T3 pending); default `placeholder`. */
+  readonly pvpMode: PvpMode;
   /** Injectable for tests; the browser uses the real clock. */
   readonly clock?: Clock;
 }
-export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null };
+export const LOCAL_ROOM_DEFAULTS: LocalRoomOptions = { seed: 42, preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, myName: '玩家', faultAtRound: null, pvpMode: 'placeholder' };
 
 const JOIN_ERRORS: Record<Exclude<JoinResult, { ok: true }>['reason'], string> = {
   full: '对局已满（8 人），请等待本局结束',
@@ -68,8 +70,9 @@ export class LocalRoomClient implements GameClient {
     this.clock = options.clock ?? this.ownsClock!;
     const timings: Partial<RoomTimings> = { preparationMs: options.preparationMs, choiceMs: options.choiceMs, settlementMs: options.settlementMs };
     const placeholder = new PlaceholderBattleResolver();
-    const resolver = options.faultAtRound === null ? placeholder : new FaultInjectingResolver(placeholder, options.faultAtRound);
-    this.lobby = new Lobby({ clock: this.clock, resolver, seed: options.seed, timings, roomId: 'local-room' });
+    const base: BattleResolver = options.pvpMode === 'two-sided' ? new TwoSidedBattleResolver(placeholder) : placeholder;
+    const resolver = options.faultAtRound === null ? base : new FaultInjectingResolver(base, options.faultAtRound);
+    this.lobby = new Lobby({ clock: this.clock, resolver, seed: options.seed, timings, roomId: 'local-room', pvpMode: options.pvpMode });
   }
 
   /** Test/debug access to the room the client is driving. */
@@ -158,9 +161,10 @@ export class LocalRoomClient implements GameClient {
     const match = this.myMatch();
     if (match && match !== this.emittedMatch && !this.inCommand) { this.emittedMatch = match; listeners.state(match); }
     if ((state.phase === 'battle' || state.phase === 'frozen') && state.battles.length > 0 && state.round !== this.emittedBattleRound) {
+      // Frames are combat view data; the settled MatchState follows as a state push once the room commits.
       const frames = toCombatFrames(state, this.mySeatId);
       this.emittedBattleRound = state.round;
-      if (frames.length > 0) { this.emittedMatch = frames[frames.length - 1]!.state; listeners.combat(frames); }
+      if (frames.length > 0) listeners.combat(frames);
     }
     listeners.view(this.view(state));
   }

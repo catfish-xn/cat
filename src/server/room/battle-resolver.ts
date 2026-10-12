@@ -1,14 +1,15 @@
 /**
- * 占位实现：等 T2/T3 交付真实双方战斗后替换。
+ * 占位实现：PvP 仍是各席位独立的单人战斗；真实双方战斗见 two-sided-resolver.ts（B3），
+ * 等 T3 的结算提交入口交付后，房间默认切到 two-sided。PvE 与补给回合继续走这里。
  *
  * The room hands every battle to a resolver and only orchestrates. This placeholder runs
  * each seat's OWN single-player combat through the public rules API (startMatchCombat +
  * stepMatch, exactly like the fake server) and reports what the rules settled. It never
- * looks at the opponent: a "pvp" pairing is two independent single-player battles until
- * the real two-sided BattleInput exists.
+ * looks at the opponent: a "pvp" pairing is two independent single-player battles.
  */
+import type { LedgerCombatEvent } from '../../simulation/combat-types';
 import { startMatchCombat, stepMatch } from '../../simulation/match';
-import type { MatchState } from '../../simulation/match-types';
+import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { BattleFrame, BattleInput, BattleResult, BattleSeatOutcome } from './types';
 
 export interface BattleResolver { resolveBattle(input: BattleInput): BattleResult }
@@ -26,14 +27,19 @@ function runOwnCombat(seatId: string, state: MatchState): BattleSeatOutcome {
   }
   const started = startMatchCombat(state);
   if (!started.ok) throw new BattleResolveError(seatId, started.reason);
-  const frames: BattleFrame[] = [{ state: started.state, events: started.events }];
+  const frames: BattleFrame[] = [toFrame(started.state, started.events)];
   let current = started.state;
   while (current.phase === 'combat') {
     const step = stepMatch(current);
     current = step.state;
-    frames.push({ state: current, events: step.events });
+    frames.push(toFrame(current, step.events));
   }
   return { seatId, state: current, result: lastResult(current), damage: lastDamage(current), frames };
+}
+/** Battle view data only: the combat the rules ran plus that tick's ledger events; the MatchState itself stays in the outcome. */
+function toFrame(state: MatchState, events: readonly MatchEvent[]): BattleFrame {
+  if (!state.combat) throw new BattleResolveError('frame', 'no-combat');
+  return { state: state.combat, events: events.filter((event): event is LedgerCombatEvent => 'tick' in event) };
 }
 function lastResult(state: MatchState): BattleSeatOutcome['result'] {
   const record = state.roundResults.at(-1);
@@ -48,6 +54,6 @@ function lastDamage(state: MatchState): number {
 export class PlaceholderBattleResolver implements BattleResolver {
   resolveBattle(input: BattleInput): BattleResult {
     const outcomes = input.seats.map(seat => runOwnCombat(seat.seatId, seat.state));
-    return { battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes };
+    return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes };
   }
 }

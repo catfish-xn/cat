@@ -126,7 +126,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       conn.sentSeatRevision = seat.seatRevision;
       send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: seat.match });
     }
-    const battle = state.battles.find(candidate => candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));
+    const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(seat.seatId) : candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));
     if (battle) {
       const key = `${state.round}:${battle.battleId}`;
       if (conn.sentCombatKey !== key) {

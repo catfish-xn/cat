@@ -2,9 +2,14 @@
  * MatchSession replacement for online play: every command is an intent sent to the
  * server; the state shown comes back from it. Combat is not stepped here, the server's
  * frames are played back at tick pace. BoardScene and StrategyPanel keep working unchanged.
+ *
+ * A combat frame is a CombatState (B3): during playback `state`/`combat` show my last
+ * authoritative MatchState with that frame's combat laid over it, so BoardScene's
+ * `syncCombat` and the stats panel read `session.combat` as before. Gold, HP and the
+ * round record are not touched by playback; they arrive as the server's next state push.
  */
 import { COMBAT_TICK_MS } from '../../simulation/combat';
-import type { LedgerCombatEvent } from '../../simulation/combat-types';
+import type { CombatState, LedgerCombatEvent } from '../../simulation/combat-types';
 import type { MatchCommandResult, MatchState } from '../../simulation/match-types';
 import type { UnitLocation } from '../../simulation/units';
 import { createMatch } from '../../simulation/match';
@@ -14,10 +19,13 @@ import type { ClientCommand, CombatFrame, GameClient } from './protocol';
 export class RemoteSession extends MatchSession {
   private frames: CombatFrame[] = [];
   private nextFrame = 0;
+  /** My authoritative state when playback started; every frame is displayed on top of it. */
+  private playbackBase: MatchState | null = null;
   constructor(private readonly client: GameClient, initial: MatchState = createMatch()) { super(initial); }
   /** Server pushed my authoritative state (outside combat playback). */
   receiveState(state: MatchState): void {
     if (this.playingBack) this.skipPlayback(); // a newer state supersedes the battle still being played
+    this.playbackBase = null;
     if (state === this.matchState) return;
     const before = this.matchState;
     if (state.round !== before.round || (!before.combat && state.combat)) this.combatLedger = [];
@@ -28,16 +36,25 @@ export class RemoteSession extends MatchSession {
   receiveCombat(frames: readonly CombatFrame[]): void {
     if (!frames.length) return;
     this.frames = [...frames]; this.nextFrame = 1; this.accumulator = 0; this.combatLedger = [];
-    const before = this.matchState; this.matchState = frames[0]!.state;
+    const before = this.matchState; this.playbackBase = before; this.matchState = this.display(frames[0]!.state);
     const events = this.record(frames[0]!.events);
     this.notify(before, events, 'command');
+  }
+  /**
+   * Display-only overlay: the server's combat on my last authoritative state; nothing is computed.
+   * The phase stays `combat` even on the terminal frame: the settlement (income, HP, round record)
+   * is not known here until the server pushes the settled state.
+   */
+  private display(combat: CombatState): MatchState {
+    const base = this.playbackBase ?? this.matchState;
+    return { ...base, phase: 'combat', combat } as MatchState;
   }
   get playingBack(): boolean { return this.nextFrame < this.frames.length; }
   /** Drop remaining frames and show the battle's end (used after the tab was hidden). */
   skipPlayback(): void {
     if (!this.playingBack) return;
     const before = this.matchState, rest = this.frames.slice(this.nextFrame);
-    this.matchState = rest.at(-1)!.state; this.nextFrame = this.frames.length;
+    this.matchState = this.display(rest.at(-1)!.state); this.nextFrame = this.frames.length;
     const events = this.record(rest.flatMap(frame => frame.events));
     this.notify(before, events, 'tick');
   }
@@ -48,7 +65,7 @@ export class RemoteSession extends MatchSession {
     while (this.accumulator >= COMBAT_TICK_MS && this.playingBack) {
       this.accumulator -= COMBAT_TICK_MS;
       const before = this.matchState, frame = this.frames[this.nextFrame++]!;
-      this.matchState = frame.state;
+      this.matchState = this.display(frame.state);
       const deltaEvents = this.record(frame.events);
       events.push(...deltaEvents);
       this.notify(before, deltaEvents, 'tick');
