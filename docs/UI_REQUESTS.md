@@ -334,6 +334,27 @@
 
 **B10 固定候选补充（2026-10-11）**：`d901b3f` 的 U3静态8组、U4 15场景/181检查、桌面27项通过。`b4ca11c` 新增 `verify-m8-br4-public.cjs` 并在干净工作区通过 dev/preview 10组公开存档验证，补足总计划BR4；原 `verify-m8-u3-dynamic` 的显式装备夹具仍按原范围保留。数据/显示技术检查通过不等于节点三签收：9v9压力超预算、硬件帧率、独立审查及用户试玩仍待完成。证据见 `M8_VALIDATION.md`。
 
+## 八人联机界面数据需求（2026-10-12，流水线 C → 流水线 A/B）
+
+界面已按 `src/rendering/online/protocol.ts` 的形状先行实现，并用 `fake-server.ts` 代替真服务器开发。T4/T5 的真实服务器与网络层需按同样形状下发；字段如有调整，请改 `protocol.ts` 并同步此表。
+
+| 对象 | 字段 | 含义 | 用途 | 验收 |
+| --- | --- | --- | --- | --- |
+| `LobbyView` | `queue[{name,kind,me}]`、`capacity=8`、`joined`、`canStart`、`error` | 匹配队列 | 匹配页列表、开始按钮、第 9 人报错 | 第 9 人加入时 `error` 非空且队列不变 |
+| `PlayerView.seats[]` | `seatId,name,kind(human/bot),hp,level,alive,rank,connected` | 八席公开信息 | 右侧血条栏、淘汰置灰、断线标记 | 每次 HP、等级、淘汰变化都推送一次 |
+| `PlayerView.phase` | `kind(preparation/choice/combat/settlement/ended)`、`round`、`roundName`、`endsAt`、`serverNow` | 房间阶段与截止 | 顶部阶段徽章与倒计时 | 倒计时以服务器时钟为准，客户端只做显示 |
+| `PlayerView.opponentSeatId` | 本轮对手席位 | PvP 对手 | 血条栏高亮对手、准备阶段状态栏提示 | PvE/补给回合为 null |
+| `PlayerView.ranking` | 终局后的完整名次 | 排名页 | 终局覆盖层 | 八席名次唯一完整 |
+| 私有状态 | 完整 `MatchState`（本席） | 商店、棋盘、装备、选择 | 复用现有策略面板与棋盘渲染 | 不含他人商店与内部随机流 |
+| 战斗帧 | `CombatFrame[{state,events}]` | 服务器算完的一场战斗 | 客户端按 50 ms/tick 播放 | 完整事件账本，不因播放截断 |
+| 命令 | `ClientCommand`（买卖、刷新、经验、站位、装备、选择） | 意图 | 现有按钮直接发送 | 失败返回原因，不改本地状态 |
+
+界面侧明确不做的事：不调用 `startMatchCombat`/`nextRound`/`stepMatch`（联机模式下 `RemoteSession.start/continue` 直接拒绝），不本地算金币和胜负。
+
+需要服务器定稿、界面只显示结果的规则：选择节点超时的代选规则；准备截止时阵容非法的处理；断线接管的提示文案来源（`connected=false` 即显示"断线"）。假服务器对这些只做了标注的临时兜底。
+
+真网络接入（T8）时的已知改动点：`GameClient.send` 现为同步返回，接真服务器后改为"待确认"回执再确认，界面将显示待确认状态。
+
 ## src/server 需要规则侧提供的接口（B1，2026-10-12，Claude 流水线 B）
 
 `src/server/room/` 已交付房间状态机骨架（八席、阶段与截止、配对、一次性结算、排名、白名单投影；见 `docs/CLAUDE_WORK_ORDERS.md` 派工单 B1）。房间只编排、不算规则：每席各持一份 `MatchState`，只经 `src/simulation/match.ts` 公开命令变化；战斗经 `BattleResolver` 接口注入，当前为占位实现（每席跑自己的单人 `startMatchCombat` + `stepMatch`）。接真实双方战斗与共享卡池前，需要规则侧提供下列接口。编号 SR-B1-xx。
