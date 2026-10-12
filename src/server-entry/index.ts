@@ -41,5 +41,5 @@ export type { BotContext, BotDecision } from '../simulation/bot';
 
 export { toPrivateSeatView } from '../simulation/private-seat-view';
 export type { PrivateSeatView } from '../simulation/private-seat-view';
-export { toCombatViewState, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
-export type { CombatViewState, CombatViewUnit, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayInput } from '../simulation/combat-replay-view';
+export { toCombatViewState, toCombatViewEvents, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
+export type { CombatViewState, CombatViewUnit, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayInput } from '../simulation/combat-replay-view';

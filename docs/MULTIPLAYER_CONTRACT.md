@@ -899,6 +899,8 @@ Claude 可在本地显示适配器给缺失字段填占位，但只允许以下�
 ```ts
 const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
 toCombatViewState(state: CombatState): CombatViewState;
+// CombatAnimationEvent 是 CombatViewEvent 中不含 unitUpdated 的动画子集。
+toCombatViewEvents(events: readonly LedgerCombatEvent[]): CombatAnimationEvent[];
 type CombatReplayInput = Pick<BattleResult, 'initial' | 'terminal' | 'events'>;
 toCombatReplay(battle: CombatReplayInput): CombatReplay;
 // CombatReplay = { initial, ticks: CombatReplayTick[], terminal }
@@ -907,6 +909,10 @@ applyCombatReplayTick(view: CombatViewState, frame: CombatReplayTick): CombatVie
 ```
 
 输入为同一场完整可信战斗的首帧、已结束末帧和完整有序账本。PvP 直接传 BattleResult；PvE 传 start 后的 CombatState、最终 CombatState、含 tick0 的完整 LedgerCombatEvent[]。**不传 MatchState，不把 Match 奖励事件混入 events**。投影只读，不结算、不分配 ID、不消耗 Match 的任何随机流；内部对冻结初态做一次最多1200 tick 的纯重执行，生成权威显示差分。B7 替换原 B3 的逐 tick 重执行取帧，避免再多跑第三遍。
+
+**SR-C6-01 共用事件投影。** `toCombatViewEvents` 从 `src/server-entry` 与纯模块 `combat-replay-view.ts` 导出，返回类型 `CombatAnimationEvent[]` 可赋给 `CombatViewEvent[]`，但类型与运行时均不包含 unitUpdated。输入为可信的完整账本或局部批次，按输入顺序逐条应用下表白名单，保留原 tick/eventSeq（包括延后发出的 tick0 和过滤后留下的序号间隔），不排序、不重编号；activityChanged/effectTriggered 被省略，空输入返回空数组。嵌套坐标、targetIds 等也复制，不共享输入对象或数组，不修改输入，不执行战斗、推进随机流或结算；返回独立数组，函数本身不冻结它，完整回放仍由 toCombatReplay 递归冻结。无正常业务失败枚举；不校验不可信网络输入，非法结构导致的底层异常原样传播。
+
+回放生成内部直接调用此函数。任一可信完整战斗满足 `toCombatViewEvents(battle.events)` 与 `toCombatReplay(battle).ticks.flatMap(frame => frame.events).filter(event => event.type !== 'unitUpdated')` 完全相等。该函数只给动画事实，不产生单位差分或终态，不能替代 applyCombatReplayTick。客户端 `src/presentation/combat-display.ts` 删除复写白名单，直接调用此导出；离线仅额外保留原位置的 effectTriggered 标签（tick/eventSeq、ownerId/sourceKind/sourceDefinitionId/targetId），不携带执行程序，不把离线标签并入联机回放。
 
 CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime/strategy/ability/机制定义/RNG/中立奖励收据。attackDamage、abilityPower、attackIntervalTicks、attackRange、armor、magicResist 是 readCombatStats 的**当前有效值**；客户端直接显示，不再套用静态装备/状态计算。
 

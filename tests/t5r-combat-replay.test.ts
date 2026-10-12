@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, toCombatReplay, toCombatViewState,
+import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, toCombatReplay, toCombatViewState, toCombatViewEvents,
   applyCombatReplayTick, stepCombat, startMatchCombat, type MatchState, type CombatState, type LedgerCombatEvent } from '../src/server-entry';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { toLedgerEvents } from '../src/simulation/combat-ledger';
@@ -36,6 +36,7 @@ describe('T5R compact combat replay',()=>{
       view=applyCombatReplayTick(view,frame);expect(view).toEqual(toCombatViewState(source.all[frame.tick]));
     }
     expect(view).toEqual(replay.terminal);
+    expect(toCombatViewEvents(source.events)).toEqual(replay.ticks.flatMap(f=>f.events).filter(e=>e.type!=='unitUpdated'));
     const visible=source.events.filter(e=>e.type!=='activityChanged'&&e.type!=='effectTriggered');
     expect(replay.ticks.flatMap(f=>f.events).filter(e=>'eventSeq' in e).map(e=>e.eventSeq)).toEqual(visible.map(e=>e.eventSeq));
   });
@@ -57,6 +58,7 @@ describe('T5R compact combat replay',()=>{
   });
   it.each([false,true])('every tick matches authoritative view (six-per-side=%s), terminal exact, input untouched',large=>{
     const source=freeze(battle(large)),before=JSON.stringify(source),replay=toCombatReplay(source),all=frames(source.initial);
+    expect(toCombatViewEvents(source.events)).toEqual(replay.ticks.flatMap(f=>f.events).filter(e=>e.type!=='unitUpdated'));
     let view=replay.initial;
     for(const frame of replay.ticks) {
       view=applyCombatReplayTick(view,frame);expect(view).toEqual(toCombatViewState(all[frame.tick]));
@@ -73,6 +75,7 @@ describe('T5R compact combat replay',()=>{
   it('tick-zero finish needs no advancing, damage replay or second settlement',()=>{
     const source=battle(false,true),replay=toCombatReplay(source);
     expect(source.terminal.tick).toBe(0);expect(replay.ticks).toHaveLength(1);
+    expect(toCombatViewEvents(source.events)).toEqual(replay.ticks[0].events);
     expect(applyCombatReplayTick(replay.initial,replay.ticks[0])).toEqual(replay.terminal);
   });
   it('PvE accepts the same initial/terminal/ledger shape and rejects inconsistent inputs',()=>{
@@ -95,5 +98,6 @@ describe('T5R compact combat replay',()=>{
     }
     inject(source);const before=JSON.stringify(source),replay=toCombatReplay(source);
     expect(JSON.stringify(replay)).not.toContain('DO_NOT_SEND');expect(JSON.stringify(source)).toBe(before);
+    expect(JSON.stringify(toCombatViewEvents(source.events))).not.toContain('DO_NOT_SEND');
   });
 });
