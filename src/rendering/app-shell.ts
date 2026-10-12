@@ -20,3 +20,16 @@ export function createAppShell(app: HTMLElement): AppShell {
   boardFrame.append(board,feedback);panels.append(strategy,save,replay,stats,legal);app.replaceChildren(boardFrame,panels);
   return {board,strategy,save,replay,stats,feedback,dispose(){boardFrame.remove();panels.remove();}};
 }
+/** Online-only mounts inside #board-frame: a countdown strip above the board and a shop dock below it (TFT layout).
+ *  Offline never calls this, so the single-player DOM order is untouched. Idempotent across scene restarts. */
+export interface OnlineBoardMounts { readonly countdown: HTMLElement; readonly shopDock: HTMLElement }
+export function mountOnlineBoardFrame(): OnlineBoardMounts {
+  const frame = document.getElementById('board-frame') ?? document.getElementById('board-root')?.parentElement ?? document.body;
+  const ensure = (id: string, label: string, place: 'before' | 'after') => {
+    let node = document.getElementById(id);
+    if (!node) { node = document.createElement('section'); node.id = id; node.setAttribute('aria-label', label); const board = document.getElementById('board-root');
+      if (board && board.parentElement === frame) board[place](node); else frame.append(node); }
+    return node;
+  };
+  return { countdown: ensure('online-countdown', '阶段倒计时', 'before'), shopDock: ensure('shop-dock', '商店与操作', 'after') };
+}

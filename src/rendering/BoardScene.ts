@@ -14,6 +14,7 @@ import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
 import { FakeServer } from './online/fake-server';
 import { isOnlineMode, readFakeOptions } from './online/mode';
+import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
 import { OnlineApplication } from './online/online-application';
 import { RemoteSession } from './online/remote-session';
 import type { SceneApplication } from './online/scene-application';
@@ -92,6 +93,8 @@ export class BoardScene extends Phaser.Scene {
   constructor() { super('Board'); }
   create() {
     const client = this.online ? new FakeServer(readFakeOptions()) : null;
+    // Online keeps the TFT layout: countdown above the board, shop dock below it. Offline leaves the shell untouched.
+    const mounts: OnlineBoardMounts | null = client ? mountOnlineBoardFrame() : null;
     if (client && !(this.session instanceof RemoteSession)) { this.session.dispose(); this.session = new RemoteSession(client); }
     buildPortraitTextures(this);
     // Phaser reuses the Scene instance on restart but destroys its display list.
@@ -174,7 +177,7 @@ export class BoardScene extends Phaser.Scene {
       control: name => this.panelControl(name),
       unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
-    }, this.inputRouter);
+    }, this.inputRouter, mounts?.shopDock ?? null);
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
@@ -191,7 +194,7 @@ export class BoardScene extends Phaser.Scene {
     };
     this.application = client ? new OnlineApplication(this.session as RemoteSession, client, {
       refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
-    }) : new MatchApplication(this.session, {
+    }, mounts) : new MatchApplication(this.session, {
       replace: session => {
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
         this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
@@ -382,13 +385,19 @@ export class BoardScene extends Phaser.Scene {
     return undefined;
   }
 
+  /** Online rooms can end while my own MatchState is still mid-round (every other seat eliminated). */
+  private onlineEnded(): boolean { return this.online && document.body.dataset.onlineMode === 'online-ended'; }
+  /** Game-over status: single player restarts locally; online the server publishes the ranking instead. */
+  private endText(): string {
+    return this.online ? '对局结束 · 查看排名' : `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`;
+  }
   private failureMessage(reason: MatchFailure): string {
     const messages: Record<MatchFailure, string> = {
       'wrong-phase': this.session.phase === 'preparation' ? '当前为准备阶段 · 请布阵或开始战斗'
         : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
         : this.session.phase === 'settlement' ? '本轮已结算 · 点击 继续进入下一回合'
-        : 'Game Over · 点击 新局 开始新的一局',
+        : this.online ? '对局结束 · 查看排名' : 'Game Over · 点击 新局 开始新的一局',
       'unknown-unit': '未找到该单位', 'enemy-unit': '敌方单位不可操作或出售',
       'invalid-location': '请放置到棋盘或备战席内', 'outside-deployment-zone': '只能部署在我方区域，不能放入敌方区域',
       'occupied': '该位置已有单位，请选择空位',
@@ -424,7 +433,7 @@ export class BoardScene extends Phaser.Scene {
       this.fadeEffect(label, 1000); this.renderedUpgradeCount++;
     }
     this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
-    if (this.session.phase === 'gameOver') this.setStatus(`${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`);
+    if (this.session.phase === 'gameOver') this.setStatus(this.endText());
     else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
     else if (this.session.phase === 'settlement') this.setStatus('本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
   }
@@ -514,10 +523,10 @@ export class BoardScene extends Phaser.Scene {
     }
     const failure = this.session.startFailure;
     this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与经验，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
-    this.phaseLabel.setText(ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
+    this.phaseLabel.setText(this.onlineEnded() ? this.endText() : ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
       : match.phase === 'choice' ? '构筑选择 · 完成组件 / 强化 / 异常 后继续'
       : match.phase === 'combat' ? '自动战斗 · 积累法力 并施法，商店与部署已锁定'
-      : match.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开` : '回合结算 · 收入与经验 已到账，继续进入下一回合');
+      : match.phase === 'gameOver' ? this.endText() : '回合结算 · 收入与经验 已到账，继续进入下一回合');
     if (match.phase === 'settlement' || match.phase === 'gameOver') {
       const labels = { playerWin: '胜利', enemyWin: '失败', draw: '平局', supply: '补给' }, result = match.roundResults.at(-1)!;
       this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? '胜利' : '失败') : labels[result.result]);
@@ -586,7 +595,7 @@ export class BoardScene extends Phaser.Scene {
     // Rewards may leave combat directly for a component choice (for example 2-7).
     // Render every phase exit, including choices, before waiting for more input.
     if (this.session.state.phase !== 'combat') {
-      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开` : '本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
+      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? this.endText() : '本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
     }
   }
   private clearDrag() {

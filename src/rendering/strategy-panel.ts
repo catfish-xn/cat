@@ -36,6 +36,15 @@ const PHASE_HINT: Readonly<Record<MatchState['phase'], string>> = {
   preparation: '购买、部署、装备后，点击开始战斗', choice: '完成三选一后继续运营', combat: '自动战斗进行中 · 运营已锁定',
   settlement: '收入与经验已到账 · 点击继续进入下一回合', gameOver: '本局结束 · 点击新局重新开始',
 };
+/** Online (`?mode=online`): the server advances phases and there is no local 新局, so the single-player calls to action change. */
+const ONLINE_PHASE_LABEL: Partial<Record<MatchState['phase'], string>> = { gameOver: '对局结束' };
+const ONLINE_PHASE_HINT: Partial<Record<MatchState['phase'], string>> = {
+  preparation: '购买、部署、装备 · 倒计时结束自动开战', settlement: '收入与经验已到账 · 稍后自动进入下一回合', gameOver: '对局结束 · 查看排名',
+};
+const isOnline = () => typeof document !== 'undefined' && document.body.dataset.online !== undefined;
+/** The room ended (all other seats out, or I was eliminated) even when my own MatchState is still mid-round. */
+const isOnlineEnded = () => isOnline() && document.body.dataset.onlineMode === 'online-ended';
+const ONLINE_END_TEXT = '对局结束 · 查看排名';
 
 interface PanelActions {
   readonly state: () => MatchState;
@@ -145,8 +154,10 @@ export class StrategyPanel {
   /** Enemy-preview open state chosen by the player for the current round only. */
   private previewOpen: { round: number; open: boolean } | null = null;
 
-  constructor(private readonly actions: PanelActions, private readonly router: InputRouter) {
+  /** @param shopDock Optional mount for the HUD chips, economy buttons and shop (online TFT layout); null keeps them in the panel. */
+  constructor(private readonly actions: PanelActions, private readonly router: InputRouter, private readonly shopDock: HTMLElement | null = null) {
     this.root = document.getElementById('strategy-root')!; this.root.tabIndex = -1;
+    if (this.shopDock) this.shopDock.classList.add('shop-dock');
     this.modal = element('section', '', 'choice-overlay');
     this.modal.setAttribute('role', 'dialog'); this.modal.setAttribute('aria-modal', 'true');
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
@@ -257,7 +268,7 @@ export class StrategyPanel {
     }
   }
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.choiceToken = ''; this.previewOpen = null; }
-  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.modal.remove(); }
+  destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
     const button = element('button', label); button.type = 'button'; button.dataset.debug = name; button.disabled = disabled;
@@ -272,21 +283,25 @@ export class StrategyPanel {
   render(): void {
     const state = this.actions.state(), ready = state.phase === 'preparation';
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
-    this.root.replaceChildren(); this.eventList = null;
+    this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.eventList = null;
+    const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
     const lootView = readLootView(state);
     const head = element('header', '', 'hud-bar'); head.dataset.phase = state.phase;
     const title = element('div', '', 'hud-title');
-    title.append(element('span', PHASE_LABEL[state.phase], `phase-badge phase-${state.phase}`), element('h2', `${round.displayName} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[round.kind]}${round.isFinal ? ' · 终局' : ''}`));
+    title.append(element('span', ended ? ONLINE_PHASE_LABEL.gameOver! : (online && ONLINE_PHASE_LABEL[state.phase]) || PHASE_LABEL[state.phase], `phase-badge phase-${ended ? 'gameOver' : state.phase}`), element('h2', `${round.displayName} · ${{ pvp: '对战', pve: '野怪', supply: '补给' }[round.kind]}${round.isFinal ? ' · 终局' : ''}`));
     const help = this.button('help-open', '？帮助', () => this.actions.help()); help.classList.add('help-button'); title.append(help);
     head.append(title);
     const stats = element('div', '', 'hud-stats panel-hud');
     const chip = (label: string, value: string, kind: string) => { const node = element('div', '', `hud-chip hud-${kind}`); node.append(element('span', label, 'hud-label'), element('strong', value)); stats.append(node); };
-    chip('生命', String(state.playerHp), 'hp'); chip('金币', `${state.gold}`, 'gold');
+    // Docked (online): gold and level lead, as at the bottom-left of a TFT screen. Offline keeps the original order.
+    if (dock) chip('金币', `${state.gold}`, 'gold'); else chip('生命', String(state.playerHp), 'hp');
+    if (!dock) chip('金币', `${state.gold}`, 'gold');
     chip('等级', `${state.level}${xp === null ? ' · 满' : ` · ${state.xp}/${xp}`}`, 'level');
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
-    head.append(stats);
-    head.append(element('p', `利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${PHASE_HINT[state.phase]}`, 'hud-hint'));
+    if (dock) chip('生命', String(state.playerHp), 'hp');
+    if (dock) dock.append(stats); else head.append(stats);
+    head.append(element('p', `利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
     this.root.append(head);
     // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
     const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';
@@ -322,7 +337,7 @@ export class StrategyPanel {
     for (const name of ['reroll', 'buy-xp', 'sell'] as const) controls.append(controlButton(name, 'economy-action'));
     const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !ready);
     lock.setAttribute('aria-pressed', String(Boolean(state.shop.locked))); lock.classList.add('economy-action'); controls.append(lock);
-    actions.append(controls);
+    if (dock) dock.append(controls); else actions.append(controls);
     this.root.append(actions);
     // Lifecycle buttons that are not the current primary action sit below the shop,
     // keeping the shop within the first screen on small phones.
@@ -346,7 +361,7 @@ export class StrategyPanel {
       this.root.append(receipt);
     }
     this.lootSection = this.lootPanel(state); if (this.lootSection) this.root.append(this.lootSection);
-    this.statusText = element('p', ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局` : '战斗与回合结算期间构筑已锁定', 'panel-status');
+    this.statusText = element('p', ended ? ONLINE_END_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : '战斗与回合结算期间构筑已锁定', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     for (const [tab, label] of [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const) {
@@ -694,7 +709,7 @@ export class StrategyPanel {
       } else button.append(element('span', '已购买', 'shop-name'));
       shop.append(button);
     });
-    section.append(shop, element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds')); this.root.append(section);
+    section.append(shop, element('p', `Lv.${state.level} 概率 ${getShopOdds(state.level).map((odds, index) => `${index + 1}费 ${odds}%`).join(' · ')}`, 'shop-odds')); (this.shopDock ?? this.root).append(section);
   }
   private renderBuilds(): void {
     const section = element('section', '', 'build-guide'); section.dataset.debug = 'build-guide';
@@ -712,7 +727,7 @@ export class StrategyPanel {
   }
   snapshot() {
     const bounds: Record<string, { x: number; y: number; width: number; height: number; centerX: number; centerY: number }> = {};
-    for (const scope of [this.root, this.modal]) for (const node of Array.from(scope.querySelectorAll<HTMLElement>('[data-debug]'))) {
+    for (const scope of [this.root, this.modal, ...(this.shopDock ? [this.shopDock] : [])]) for (const node of Array.from(scope.querySelectorAll<HTMLElement>('[data-debug]'))) {
       const rect = node.getBoundingClientRect(); if (!rect.width || !rect.height || node.closest('[hidden]')) continue;
       bounds[node.dataset.debug!] = { x: rect.x, y: rect.y, width: rect.width, height: rect.height, centerX: rect.x + rect.width / 2, centerY: rect.y + rect.height / 2 };
     }

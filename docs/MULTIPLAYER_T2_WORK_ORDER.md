@@ -69,3 +69,18 @@
 ## 6 交付格式
 
 按 `AGENTS.md` 汇报格式，另附：实际 Node 版本与提交哈希；每条测试对应的验收项；合同第 10 节链接；T3 最小范围建议（一段话）。开 PR 到 `multiplayer`，由 Claude 交叉验货后合入。
+
+## 7 补充（2026-10-12 晚）：B1 已合入，六条接口需求的归属
+
+Claude 的房间状态机（PR #35）已合入 `multiplayer`，`docs/UI_REQUESTS.md` 末节列出了 SR-B1-01 ~ 06。归属如下，请在对应任务里实现并在合同中写明，不要等 Claude 再提醒：
+
+| 编号 | 内容 | 归属 | 说明 |
+| --- | --- | --- | --- |
+| SR-B1-01 | 双方战斗输入与结果，含双方各自未截断伤害整数 | **T2（本单）** | 对接 `src/server/room/types.ts` 的 `BattleInput`/`BattleResult`/`BattleSeatOutcome`；镜像一方不扣血不发收入 |
+| SR-B1-02 | 房间结算收据命令 `applyRoundSettlement(state, receipt)`，PvP 路径不再内部扣血、不自行 gameOver | **T3** | 这是 T3 的核心，`settlementId` 去重 |
+| SR-B1-03 | 加时轮入口、平局与同轮归零破同分定稿 | **T3 合同 + T4 实现** | 你出合同数值与规则，Claude 在 `src/server/room` 实现 |
+| SR-B1-04 | 超时兜底：空阵容异常节点、`unsettled-round` 时的自动领取/放弃命令 | **T3** | 必须不花费资源、不重复发奖 |
+| SR-B1-05 | 淘汰归还卡池钩子、同事务提交入口 | **TP** | 已在 TP 范围内 |
+| SR-B1-06 | 去随机流的本席私有视图字段清单 | **T2 末尾给清单，T5 由 Claude 实现** | 你只需列出哪些 `MatchState` 字段可安全下发 |
+
+T2 的 PR 描述里请对 SR-B1-01 和 SR-B1-06 逐条回应；其余四条写进 T3/TP 的最小范围建议即可。
