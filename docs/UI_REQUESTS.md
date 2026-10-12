@@ -333,3 +333,45 @@
 
 
 **B10 固定候选补充（2026-10-11）**：`d901b3f` 的 U3静态8组、U4 15场景/181检查、桌面27项通过。`b4ca11c` 新增 `verify-m8-br4-public.cjs` 并在干净工作区通过 dev/preview 10组公开存档验证，补足总计划BR4；原 `verify-m8-u3-dynamic` 的显式装备夹具仍按原范围保留。数据/显示技术检查通过不等于节点三签收：9v9压力超预算、硬件帧率、独立审查及用户试玩仍待完成。证据见 `M8_VALIDATION.md`。
+
+## src/server 需要规则侧提供的接口（B1，2026-10-12，Claude 流水线 B）
+
+`src/server/room/` 已交付房间状态机骨架（八席、阶段与截止、配对、一次性结算、排名、白名单投影；见 `docs/CLAUDE_WORK_ORDERS.md` 派工单 B1）。房间只编排、不算规则：每席各持一份 `MatchState`，只经 `src/simulation/match.ts` 公开命令变化；战斗经 `BattleResolver` 接口注入，当前为占位实现（每席跑自己的单人 `startMatchCombat` + `stepMatch`）。接真实双方战斗与共享卡池前，需要规则侧提供下列接口。编号 SR-B1-xx。
+
+### SR-B1-01 双方战斗输入与结果类型（P0，T2/T3）
+
+- 需要：`resolvePvpBattle(input): BattleResult` 或同等公开函数。输入为两席冻结快照（合法上场单位、装备、强化、异常、持久成长）、规则版本、独立战斗随机输入；输出含 `battleId`、胜负/平局、双方存活者、双方成长增量、完整事件账本、以及**双方各自的未截断伤害整数**。
+- 用途：替换 `src/server/room/battle-resolver.ts` 的占位实现。房间侧已冻结的字段见 `src/server/room/types.ts` 的 `BattleInput`/`BattleResult`/`BattleSeatOutcome`：房间只消费 `damage`（未截断、≥0 整数）和 `state`，自己不算伤害。
+- 镜像：奇数存活者时 `BattleInput.mirrorOf` 携带来源席位快照（来源不是参战方）；规则侧需保证镜像一方不被扣血、不发收入、不成长。
+- 验收：相同冻结输入重跑得到完全相同的结果；输入中席位/单位身份不碰撞。
+
+### SR-B1-02 房间结算收据：把外部 HP、收入、成长写回席位状态（P0，T3）
+
+- 现状：单人 `settleRound` 在 `withCombat` 内部自动扣血、发收入并在 HP 归零或 6-7 时置 `gameOver`。房间的权威 HP 是 `SeatState.hp`，`MatchState.playerHp` 只能是派生镜像；占位实现靠"规则自己算的 `RoundResult.playerDamage`"保持两者相等，真实 PvP 后会分叉。
+- 需要：一个公开命令（例如 `applyRoundSettlement(state, receipt)`），由房间在收齐全轮结果后调用，一次性提交该席的收入、经验、持久成长和由房间给定的 HP；带唯一 `settlementId`，重复提交返回原 state 与 `duplicate-settlement`，不重发任何奖励。要求 `startMatchCombat`/`stepMatch` 的 PvP 路径不再内部扣血、不再自行进入 `gameOver`。
+- 验收：同一收据提交两次，第二次无事件、无资源变化；`roundResults` 恰好一条。
+
+### SR-B1-03 加时与目录末轮（P1，T3/T4 合同）
+
+- 现状：目录 6-7 为 `isFinal`，引擎在该轮结算时对所有席位置 `gameOver`（`outcome` 为 victory/defeat）。房间在 `planSettlement` 中以 `isFinal` 结束对局，按存活者 HP 定名次，代码注释标明"建议规则，待 T3/T4 合同定稿"。
+- 需要：PvP 加时轮的公开入口（继续经济与商店、沿用末阶段基础伤害、不新增野怪/强化/奖励），以及 `nextRound` 在目录末尾之后的合法推进方式；平局扣血、同轮归零破同分规则定稿（房间当前实现：扣血后未截断 HP → 轮前 HP → 席位序号小者优先）。
+- 验收：连续平局、双方空阵容、多席同轮归零都能在有限轮内产生唯一名次。
+
+### SR-B1-04 超时兜底的权威定义（P1）
+
+- 现状：准备/选择截止时仍停在 `choice` 的席位，房间用 `src/server/room/choice-fallback.ts` 的占位策略（第一个选项 / 第一个己方单位）经公开命令兜底。
+- 缺口：
+  1. 异常节点且阵容为空时 `needsAnomalyRecruitment` 阻止开战（`missing-player`），兜底不能花钱买单位；当前占位 resolver 抛错导致整房 `fault` 结束。需要规则侧提供"超时放弃本轮/视为空阵容应战"的公开命令或等价规则。
+  2. `nextRound` 因 `unsettled-round`（待领奖励、待选项或奖励容量不足）拒绝时，房间只能有限次延长结算截止，然后 `seat-stuck` 中断。需要超时自动领取/放弃奖励的公开命令，且不得重复发奖。
+- 验收：任一席位在任何节点超时都能在不花费资源的前提下推进到下一轮。
+
+### SR-B1-05 淘汰归还卡池与共享卡池版本（P1，TP）
+
+- 现状：`RoomState.poolRevision` 预留、恒为 0；商店各自独立。
+- 需要：淘汰席位归还卡池的事务钩子（在本轮排名计算后、下一轮商店生成前调用），以及买/刷/卖/升星/奖励与席位资产同一事务提交的公开入口；失败时库存、占用、金币、商店、随机流均不变。
+- 验收：八席全程卡池守恒；淘汰后该席占用全部归还。
+
+### SR-B1-06 本席私有投影不含随机流（P2）
+
+- 现状：`toPlayerView` 只输出白名单公开数据；本席私有状态（商店、待选项、棋盘）目前只能由适配器直接读 `SeatState.match`，而 `MatchState` 含 `rngState`、`battleSeedRngState`、`choiceRngState`、`rewardRngState`、未来掉落计划。
+- 需要：规则侧提供"去随机流与未来计划"的本席私有视图构造函数（或列出可安全下发的字段清单），供 T5 网络层发送。
