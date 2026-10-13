@@ -638,7 +638,9 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 
 ### SR-C8-01：swap-checks 第 5 步在 15 秒准备期内可能被阶段切换打断，建议 Claude 在断言前核对 state.phase 仍为 preparation，或把 CAT_PREP_SEC 提到 25
 
-- 状态：待 Claude 处理；2026-10-13 Codex 交叉验货发现，属于 C8 测试时序，与 C9 无关。
+- 状态：**已处理**；2026-10-13 Codex 交叉验货 PR #63（`a37b4f0348ab4245cc1abf796d0ccfa594f852a4`）通过，已合入 `multiplayer`（`9c13d7a496efb02b792f0c2bb201067e315a99f6`）。此项属于 C8 测试时序，与 C9 无关；以下保留原复现记录。
+- 处理：`swap-checks.mjs` 在每次拖动和断言前检查同一回合的 `preparation`，等待失败时也核对阶段，记录 roundId/phase/累计毫秒/ISO 时间；阶段变化抛出前置条件失败。`c7-playtest.mjs` 仅将测试服务器的 `CAT_PREP_SEC` 从 15 改为 25，保留全部五步及满人口拒绝/布局不变断言，产品默认计时和玩法未改。
+- 复验：Node v24.21.0 / npm 11.19.0 / Chromium 1243，原慢环境未改源码和测试计时。`npm run typecheck`、`npx vitest run tests/server`（21 文件、140 用例）、`npm run build:game && node tests/server/e2e/c13-dead-tokens.mjs`、`node tests/server/e2e/c7-playtest.mjs` 均退出 0。第 5 步断言日志为 `round 1-3 phase preparation +14874ms 2026-10-13T04:06:35.009Z`，hover/after 均为“人口已满 · 按 F 升级或先移回一个单位”，布局未变；C13 正常/跳过 PvP 回放及两轮结算 3/3 恢复均通过。服务器测试首次受沙箱 `listen EPERM` 限制中止，允许本地端口后完整重跑通过；日志保存在本地 `artifacts/pr63-review/`，不提交。
 - 复现：在不含 C9 的固定基线 `6088a11427535beaebef48236911df5ce41296f9` 上执行 `npm run build:game && node tests/server/e2e/c7-playtest.mjs`（Node 24.21.0，CHROMIUM 指向本机 Chromium 1243），第 5 步同样失败；未修改基线源码、15 秒准备期或断言。
 - C9 原失败行：`bench → empty cell at the cap refused (hover "人口已满 · 按 F 升级或先移回一个单位", after "")`。原日志未记录时间戳及阶段切换，不能还原该次 ok→失败间隔或 1-3 preparation→battle 的准确时间。
 - 基线失败行：`bench → empty cell at the cap refused (hover "战斗与回合结算期间构筑已锁定", after "人口已满 · 按 F 升级或先移回一个单位")`。同次输出中，`ok  bench unit-2 ↔ bench unit-4 swapped` 为 10:28:09.534，错误输出为 10:28:13.784（UTC+8），相隔 4.250 秒；这是输出接收间隔，包含错误上抛前的浏览器清理，非精确断言耗时。服务器默认日志未记录逐次 phase 切换，锁定提示表明已离开可构筑阶段，不能据此补造切换时刻。
