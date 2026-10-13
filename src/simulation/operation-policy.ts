@@ -1,12 +1,21 @@
 import type { MatchState } from './match-types';
 
-/** Digested rules revisions; no offline phase or automatic-deployment changes. */
+/** Digested multiplayer operations; deployment and upgrade policy are unchanged. */
 export const MULTIPLAYER_OPERATION_RULES = {
-  version: 'multiplayer-combat-ops-v1',
+  version: 'multiplayer-combat-ops-v2',
   phases: ['preparation', 'combat', 'choice', 'settlement'],
   upgradeVersion: 'bench-during-combat-deferred-v1',
   autoDeploymentVersion: 'front-center-left-first-v1',
 } as const;
+
+export const EQUIPMENT_OPERATION_RULES_VERSION = 'equipment-ops-next-battle-v1';
+
+/** Permanent equipment is editable in every live phase, including a locked PvP roster. */
+export function canOperateEquipment(state: Readonly<MatchState>): boolean {
+  return state.multiplayer?.status !== 'eliminated'
+    && (state.phase === 'preparation' || state.phase === 'combat'
+      || state.phase === 'choice' || state.phase === 'settlement');
+}
 
 /** Authority is opt-in multiplayer metadata, never a client-supplied command flag. */
 export function canOperateMatch(state: Readonly<MatchState>): boolean {

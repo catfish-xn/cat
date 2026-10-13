@@ -664,3 +664,12 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 - 建议：A 先行；用户若仍嫌首轮空，再做 B。
 - **用户决定（2026-10-13）：选 A。** 规则不改，Codex 无需动作。Claude 在联机面板状态行的首个准备期（`view.phase.round === 1`）追加"首轮 0 金币，1-2 战后到账 2 金币"，只改 `src/rendering/online/online-application.ts`。若以后 P-O01 的 1-2 收入改动，需同步这句文案。
 - 验收（B）：seed 42 单人与八席各一局，1-2 准备期金币等于新约定，可买一张 1 费卡；进入 2-1 时无操作基准仍为 10G、3 级、0XP；合同、版本号与 digest 同步更新。
+
+
+## T12 对 Claude 的接线说明（2026-10-14）
+
+规则与接口以 [MULTIPLAYER_CONTRACT §17](MULTIPLAYER_CONTRACT.md#17-t12战斗中装备永不锁定r22026-10-14) 为准。`src/server/room/room.ts` 的 `ROOM_COMMAND_GATE` 在 battle/awaiting-settlement/settlement 已放行 `equip`/`combine`，服务器不需改闸门；线上 equip 字段不变，继续在最新 live seat 提交事件，不覆盖冻结信封。
+
+界面改读 `previewEquip`：它在 preparation/combat/choice/settlement 均给出己方棋盘/备战席真实合法结果，含永久单位本场已阵亡的情况；组件对组件的成功预览可返回 `combination`，失败继续展示真实槽位/唯一/独占/配方原因。不要复用 deploy 的棋盘锁判断装备拖放。同步更新 `strategy-panel.ts` 两处“战斗中构筑/棋盘单位锁定”文案及拖放目标判断，清楚提示战中新装备下场生效。
+
+本场属性、血量、触发与回放继续读 CombatView；运营装备读现有 items/temporaryEquipment，不能把新装备加到本场伤害显示。未新增“本场使用装备 vs 运营装备”的权威投影字段，§14 白名单不变。无布局、颜色或视觉要求；买卖/部署的原锁定提示与规则保留。

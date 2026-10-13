@@ -94,7 +94,7 @@ describe('t10-deferred-upgrades and shared-pool operations',()=>{
     const snapshot=snapshotForBattle(r.state,r.state.multiplayer!.seatId),frozen=structuredClone(snapshot);
     r={...r,state:accepted(lockMatchCombatRoster(r.state))};
     expect(lockMatchCombatRoster(r.state).state).toBe(r.state);
-    for(const command of [s=>deployMatchUnit(s,'unit-2',bench(0)),s=>equipItem(s,'x','unit-2',0),autoDeployToCap] as ((s:MatchState)=>ReturnType<typeof autoDeployToCap>)[])
+    for(const command of [s=>deployMatchUnit(s,'unit-2',bench(0)),autoDeployToCap] as ((s:MatchState)=>ReturnType<typeof autoDeployToCap>)[])
       expect(command(r.state)).toEqual({ok:false,state:r.state,reason:'wrong-phase'});
     rejected(sellSharedUnit(r.pool,r.state,'unit-2'),r.pool,r.state,'wrong-phase');
     for(const slot of [1,2])r=accept(buySharedUnit(r.pool,r.state,slot,r.state.shop.generation));
@@ -119,7 +119,7 @@ describe('t10-deferred-upgrades and shared-pool operations',()=>{
     expect(proposeSettlement(expected).a.seatId).toBe('A');expect(live.gold).not.toBe(base.gold);
   });
   it('versions participate in computed digest; old content saves reject and new offline saves round-trip',()=>{
-    expect(MULTIPLAYER_OPERATION_RULES).toMatchObject({version:'multiplayer-combat-ops-v1',autoDeploymentVersion:'front-center-left-first-v1'});
+    expect(MULTIPLAYER_OPERATION_RULES).toMatchObject({version:'multiplayer-combat-ops-v2',autoDeploymentVersion:'front-center-left-first-v1'});
     const state=createMatch(5);expect(state.contentDigest).toBe(CONTENT_DIGEST);
     expect(CONTENT_DIGEST).not.toBe('fnv1a32-utf16:20b58a63');
     expect(()=>restoreMatch({...state,contentDigest:'fnv1a32-utf16:20b58a63'})).toThrow('content-digest');

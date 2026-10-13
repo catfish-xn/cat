@@ -14,6 +14,7 @@ export type CombinePlanResult = {
 export type EquipPlanResult = {
   readonly ok: true;
   readonly items: readonly ItemInstance[];
+  readonly nextItemSerial: number;
   readonly events: readonly StrategyEvent[];
 } | { readonly ok: false; readonly reason: EquipmentFailure };
 
@@ -68,19 +69,51 @@ export function validateEquip(
   const unit = preparation.units.find(candidate => candidate.id === unitId);
   if (!unit || unit.team !== 'player') return { allowed: false, reason: 'unknown-unit', conflictingItemIds: [] };
   if (item.location.kind !== 'inventory') return { allowed: false, reason: 'item-not-inventory', conflictingItemIds: [] };
+  if (!Number.isInteger(slot) || slot < 0 || slot > 2) return { allowed: false, reason: 'invalid-slot', conflictingItemIds: [] };
+  const target = items.find(other => other.location.kind === 'unit' && other.location.unitId === unitId && other.location.slot === slot);
+  if (target && ITEM_DEFINITIONS[target.definitionId]?.kind === 'component'
+    && ITEM_DEFINITIONS[item.definitionId]?.kind === 'component') {
+    // Reuse the recipe validator on detached inputs; neither preview nor failure allocates anything.
+    const recipe = validateCombine([item, { ...target, location: { kind: 'inventory' } }], itemId, target.id);
+    if (!recipe.allowed) return { ...recipe, conflictingItemIds: [] };
+    const remaining = items.filter(other => other.id !== itemId && other.id !== target.id);
+    const placement = checkEquipmentPlacement(remaining,
+      { ...item, definitionId: recipe.resultDefinitionId }, unitId, slot);
+    return placement.allowed ? { ...placement, combination: {
+      resultDefinitionId: recipe.resultDefinitionId, consumedItemIds: recipe.consumedItemIds,
+    } } : placement;
+  }
+  if (target && ITEM_DEFINITIONS[target.definitionId]?.kind === 'component') {
+    const placement = checkEquipmentPlacement(items, item, unitId, slot);
+    if (!placement.allowed && (placement.reason === 'unique-conflict' || placement.reason === 'exclusive-slots')) return placement;
+    return { allowed: false, reason: 'invalid-recipe', conflictingItemIds: [target.id] };
+  }
   return checkEquipmentPlacement(items, item, unitId, slot);
 }
 
-/** No replacement or unequip is implicit. */
+/** Only an inventory component plus the target component may combine in place. */
 export function planEquip(
   items: readonly ItemInstance[], preparation: GameState, itemId: string, unitId: string, slot: number,
+  nextItemSerial: number,
 ): EquipPlanResult {
   const placement = validateEquip(items, preparation, itemId, unitId, slot);
   if (!placement.allowed) return { ok: false, reason: placement.reason };
   // Three-slot parents always occupy slot 0; slots 1/2 are reserved for children.
   slot = placement.occupiedSlots[0];
+  if (placement.combination) {
+    const consumed = placement.combination.consumedItemIds;
+    const inputs = items.map(item => consumed.includes(item.id) ? { ...item, location: { kind: 'inventory' as const } } : item);
+    const combined = planCombine(inputs, nextItemSerial, consumed[0], consumed[1]);
+    if (!combined.ok) return combined;
+    const createdId = `item-${nextItemSerial}`;
+    return { ok: true, nextItemSerial: combined.nextItemSerial,
+      items: combined.items.map(item => item.id === createdId ? { ...item, location: { kind: 'unit' as const, unitId, slot } } : item),
+      events: [...combined.events, { type: 'itemEquipped', itemId: createdId, unitId, slot }],
+    };
+  }
   return {
     ok: true,
+    nextItemSerial,
     items: items.map(candidate => candidate.id === itemId
       ? { ...candidate, location: { kind: 'unit' as const, unitId, slot } } : candidate).sort(compareIds),
     events: [{ type: 'itemEquipped', itemId, unitId, slot }],

@@ -51,7 +51,7 @@ describe('B8 within-restore complete resource projection reuse', () => {
     const raw = JSON.parse(JSON.stringify(running()));
     raw.combatInputBasis.provenancePrefixLength = 0;
     const fold = vi.spyOn(provenance, 'foldResourceProvenance');
-    expect(() => restoreMatch(JSON.stringify(raw))).toThrow(/^Invalid combat input basis$/);
+    expect(() => restoreMatch(JSON.stringify(raw))).toThrow(/^Invalid B8 Match: integer$/);
     expect(fold).toHaveBeenCalledTimes(1);
   });
 

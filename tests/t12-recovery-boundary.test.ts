@@ -7,9 +7,9 @@ import {
 import { reachRound } from './match-helpers';
 import { accepted } from './t10-helpers';
 
-// Baseline diagnostic only. These assertions record the pre-existing boundary;
-// they are NOT the T12 equipment or multiplayer recovery acceptance tests.
-describe('T12 baseline recovery scope decision', () => {
+// User-approved option B: preserve the offline-only save boundary.
+// Equipment acceptance lives in t12-combat-equip.test.ts.
+describe('T12 option B recovery boundary', () => {
   for (const roundId of ['1-2', '2-1']) {
     it(`offline ${roundId} saves, restores and continues through the public entry`, () => {
       const preparation = accepted(deployMatchUnit(reachRound(roundId), 'unit-1',

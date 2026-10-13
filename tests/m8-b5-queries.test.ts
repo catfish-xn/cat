@@ -40,7 +40,7 @@ describe('B5 shared command previews and read-only equipment', () => {
     expect(previewEquip(state, 'item-22', 'unit-1', 2)).toEqual({ allowed: false, reason: 'unique-conflict', conflictingItemIds: ['item-23'] });
     expect(previewEquip(state, 'item-24', 'unit-1', 1)).toEqual({ allowed: false, reason: 'exclusive-slots', conflictingItemIds: ['item-23', 'item-26'] });
     expect(previewEquip(state, 'item-20', 'unit-2', 2)).toEqual({ allowed: false, reason: 'exclusive-slots', conflictingItemIds: ['item-25'] });
-    expect(previewEquip(state, 'item-20', 'unit-1', 2)).toEqual({ allowed: false, reason: 'item-slot-occupied', conflictingItemIds: ['item-26'] });
+    expect(previewEquip(state, 'item-20', 'unit-1', 2)).toMatchObject({ allowed: true, combination: { resultDefinitionId: 'edge-of-night' } });
   });
   it('preview and command agree over identities, locations, recipes, slots, conflicts and phase', () => {
     const base = fixture();
@@ -67,7 +67,7 @@ describe('B5 shared command previews and read-only equipment', () => {
   it('a previous successful preview never authorizes a stale command', () => {
     const state = fixture();
     expect(previewEquip(state, 'item-20', 'unit-3', 0).allowed).toBe(true);
-    const changed = accepted(equipItem(state, 'item-21', 'unit-3', 0));
+    const changed = accepted(equipItem(state, 'item-22', 'unit-3', 0));
     expect(equipItem(changed, 'item-20', 'unit-3', 0)).toEqual({ ok: false, state: changed, reason: 'item-slot-occupied' });
     expect(previewCombine(state, 'item-20', 'item-21').allowed).toBe(true);
     const combined = accepted(combineItems(state, 'item-20', 'item-21'));

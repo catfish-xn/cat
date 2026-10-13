@@ -6,6 +6,7 @@ import { LOOT_REPLAY_DIGEST } from '../src/simulation/loot-freeze';
 import { OPENING_ECONOMY_RULES } from '../src/simulation/match-rules';
 import { restoreMatch } from '../src/simulation/serialization';
 import baseline from './t11-content-baseline.json';
+import t12 from './t12-content-baseline.json';
 import audit from '../docs/evidence/t11/golden-audit.json';
 
 const bytes = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url));
@@ -15,7 +16,8 @@ it('T11 binds regenerated route/probe evidence to the reviewed audit and current
   expect(sha('tests/fixtures/m5/full-match-golden.t11.json')).toBe(audit.candidateSha256);
   expect(sha('tests/t11-content-baseline.json')).toBe(audit.baselineSha256);
   expect(sha('scripts/update-t11-golden.cjs')).toBe(audit.updaterSha256);
-  expect(CONTENT_DIGEST).toBe(baseline.contentDigest);
+  expect(t12.previousContentDigest).toBe(baseline.contentDigest);
+  expect(CONTENT_DIGEST).toBe(t12.contentDigest);
   expect(LOOT_REPLAY_DIGEST).toBe(baseline.lootReplayDigest);
   expect(OPENING_ECONOMY_RULES.version).toBe(baseline.openingRulesVersion);
 });

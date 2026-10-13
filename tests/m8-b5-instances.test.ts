@@ -47,7 +47,12 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     const legal = publicInventory(['sword', 'sword', 'sword', 'sword']);
     let control = legal.state;
     for (let slot = 0; slot < 3; slot++) control = accepted(equipItem(control, legal.itemIds[slot], 'unit-1', slot));
-    for (let slot = 0; slot < 3; slot++) rejected(control, s => equipItem(s, legal.itemIds[3], 'unit-1', slot), 'item-slot-occupied');
+    // T12 permits the fourth inventory component to combine in any occupied component slot.
+    for (let slot = 0; slot < 3; slot++) {
+      const combined = accepted(equipItem(control, legal.itemIds[3], 'unit-1', slot));
+      expect(combined.items).toHaveLength(3);
+      expect(restoreMatch(serializeMatch(combined))).toEqual(combined);
+    }
     expect(restoreMatch(serializeMatch(control))).toEqual(control);
   });
   it.each([0, 1, 2])('three-slot item requested at %s uses canonical parent slot 0 and reserves all slots', slot => {
@@ -74,8 +79,8 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     for (const slot of [0, 1, 2]) rejected(state, s => equipItem(s, 'item-21', 'unit-1', slot), 'exclusive-slots');
   });
   it('phase then identity then input then conflicts; same item has the frozen reason', () => {
-    rejected(reachRound('2-1',false), s => equipItem(s, 'missing', 'missing', -1), 'wrong-phase');
-    rejected(reachRound('2-1',false), s => combineItems(s, 'missing', 'missing'), 'wrong-phase');
+    rejected(reachRound('2-1',false), s => equipItem(s, 'missing', 'missing', -1), 'unknown-item');
+    rejected(reachRound('2-1',false), s => combineItems(s, 'missing', 'missing'), 'unknown-item');
     const state = stateWith([item(20, 'sword'), item(21, 'sword', 'unit-1')]);
     rejected(state, s => equipItem(s, 'missing', 'unit-1', -1), 'unknown-item');
     rejected(state, s => equipItem(s, 'item-20', 'missing', -1), 'unknown-unit');

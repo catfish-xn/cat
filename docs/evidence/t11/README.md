@@ -50,3 +50,12 @@ npm test -- tests/t11- tests/m8-b6-opening-economy.test.ts tests/m8-b6-match-wir
 ```
 
 采集目录必须新建（本次 audit SHA 为 `2bbbfc3a475a2a5f74060970587df42b31cc892c3b3ccc4e891f6494ccf4ec4d`）。golden 是轨迹证据，不替代独立经济断言；测试未放宽阈值或跳过失败。整局性能用例首次并行运行 30.535 秒超过既有 30 秒门槛，降低运行并发后单独复核，不改测试门槛。验收不包含真机/UI 浏览器试玩。
+
+## T11 装备夹具补记（2026-10-13）
+
+T12 基线检查发现两份 B5 装备测试仍写死 T11 前的经验路线；用户要求以独立小 PR 修正，不改生产代码、版本或 golden。
+
+- `m8-b5-equipment-history.test.ts` 的 8 条用例共用路线：开局 6XP，加 2-1…2-7 七次各 2XP，共 20XP，恰等于升级累计 `2+2+6+10`，因此进入 3-1 为五级 0XP（旧四级）。自然升四的边界从 2-3 提前到 2-2：检查结算前/后装备 roll 上限的伪造目标同步改为 2-2，仍拒绝把本场三级 roll 伪造为战后四级。2-4 roll 仍四级，3-1 roll 改五级；低于上一轮等级的伪造仍拒绝，合法保存恢复和历史回放仍完整验证。
+- `m8-b5-temporary.test.ts` 的跨级购买路线保留同样购买次数和 4G 余额；T11 增加的 2XP 使装备时经验从六级 32XP 变为六级 34XP。随后买 4XP 仍升七级，既有父实例 roll 不刷新、出售重穿不重抽的断言不变。
+
+验证：`npm run typecheck` 通过；`npm test -- tests/m8-b5-equipment-history.test.ts tests/m8-b5-temporary.test.ts --maxWorkers=2` 两文件 38 条全部通过。修复的是旧路线预期，不是修改升级阈值、装备 RNG 或恢复合法性规则。
