@@ -98,7 +98,7 @@ export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapsho
 
 /** Only called on server-owned preparation state; history/authentication remain upstream. */
 export function snapshotForBattle(state: MatchState, seatId: string): PlayerBattleSnapshot {
-  if (state.phase !== 'preparation') throw new BattleValidationError('wrong-phase');
+  if ((state.phase !== 'preparation' || state.multiplayer?.combatRosterLocked)) throw new BattleValidationError('wrong-phase');
   if (state.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
   if ((['schemaVersion','rulesVersion','contentVersion','commandProtocolVersion','rngAlgorithm','tickMs'] as const)
     .some(key => state[key] !== M8_VERSION[key])) throw new BattleValidationError('snapshot-version');

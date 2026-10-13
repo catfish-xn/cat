@@ -65,3 +65,9 @@ deployMatchUnit(state: MatchState, unitId: string, target: UnitLocation): MatchC
 规则身份：新增子规则版本 `DEPLOYMENT_RULES_VERSION = 'preparation-swap-v1'` 纳入 CONTENT_DIGEST；digest 从 `fnv1a32-utf16:c7ac9b0c` 变为 `fnv1a32-utf16:20b58a63`。M8 schema、命令 protocol2 与内容数值不变，旧 digest 的存档/回放按现有规则明确拒绝，不做静默迁移。
 
 T1 首战没有互换命令。完整状态 trace SHA-256 因 Match 及 combatInputs 的 contentDigest 改为 `05d9283c62258433146e564bb0d7a78b22d9d51baf49fa652f59094d7ef4cb1f`；把这些指纹恢复为旧值后，逐状态字节仍匹配原 trace `2750307d4dea28641853737163d3621a6b3cce3901cfd184a0dc8c4178689167`。原 `tests/t1-probe-baseline.json` 保留，新增 `tests/t1-deployment-baseline.json`，校验器同时断言新 trace 与仅指纹归一化的原 trace；事件/RNG trace、164 tick、106条战斗事件以及首战 Combat 终态 hash 均保持原固定值，不改任何数值 golden。
+
+## T10 联机运营与截止自动部署（2026-10-13）
+
+联机 opt-in 覆盖上文普通命令只能 preparation 的限制，完整允许矩阵、失败原因、服务器调用顺序见 [MULTIPLAYER_CONTRACT §15](MULTIPLAYER_CONTRACT.md#15-t10战斗运营与准备截止自动上场2026-10-13)。combat/choice/settlement 允许买刷经验锁店、备战席出售/互换/装备与库存合成，禁止棋盘出售/部署/装备；冻结战斗不回写。战斗中三合一只使用备战席，涉及棋盘的合并在战后提交成长后自动执行。
+
+新增 `autoDeployToCap(state): MatchCommandResult` 仅供服务器准备截止显式调用：最左备战槽依次上场，前排起逐行按列 `3,2,4,1,5,0,6` 找空格，不耗 RNG；线上普通与自动部署共用 `unitDeployed {unitId,from,to,domain,eventSeq}`，离线部署事件行为保持。PvP 冻结两方快照后用 `lockMatchCombatRoster` 锁 live seat，结算自动解锁；共享 PvP 用 `runSharedMatchCommand(pool,state,{type:'settleRound',receipt})` 原子迁移来源，不能只提交旧 Match。单人不调用自动上场，既有操作阶段和行为保持；新细分规则版本进入 digest，旧 digest 存档拒绝。

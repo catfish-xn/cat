@@ -25,6 +25,7 @@ export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly att
 export type ResourceFact =
   | { readonly kind: 'unit-acquired'; readonly unitId: string; readonly source: UnitAcquisitionSource }
   | { readonly kind: 'unit-upgraded'; readonly acquisitionSequence: number; readonly event: UnitUpgradedEvent }
+  | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-sold'; readonly unitId: string; readonly context: 'preparation' | 'settlement-capacity'; readonly goldGranted: number }
   | { readonly kind: 'item-acquired'; readonly itemId: string; readonly source: ItemAcquisitionSource }
   | { readonly kind: 'item-combined'; readonly event: Extract<StrategyEvent, { readonly type: 'itemCombined' }> }

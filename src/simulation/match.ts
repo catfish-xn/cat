@@ -1,3 +1,5 @@
+import { resolveDeferredUpgrades } from './deferred-upgrades';
+import { canOperateMatch, isCombatRosterLocked } from './operation-policy';
 import type { UnitLootPolicy } from './loot-runtime';
 import type { MultiplayerCommandResult, MultiplayerFailure } from './round-settlement';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
@@ -13,7 +15,7 @@ import { deployUnit, getPlayerDeploymentCount } from './game';
 import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
-import { DEFAULT_BOARD } from './board';
+import { DEFAULT_BOARD, sameCell } from './board';
 import { planCatalogRoundEconomy, OPENING_INITIAL_STATE } from './opening-economy';
 import { getCatalogRoundByOrdinal, getNextCatalogRound } from './round-selectors';
 import { freezeContent } from './content/freeze';
@@ -51,8 +53,22 @@ const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCom
   return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
 };
 function acceptEquipment(state: MatchState, events: readonly MatchEvent[]): MatchCommandResult {
+  // Choice-phase trading can consume/sell the currently selected anomaly target.
+  // Follow an upgrade survivor, or ask for a new target without offering a free reroll.
+  const choice = state.pendingChoice;
+  const choiceEvents: MatchEvent[] = [];
+  if (state.multiplayer && state.phase === 'choice' && choice?.kind === 'anomaly' && choice.targetId) {
+    let targetId: string | null = choice.targetId;
+    for (const event of events) if (event.type === 'unitUpgraded' && event.consumedIds.includes(targetId)) targetId = event.survivorId;
+    if (!state.preparation.units.some(unit => unit.id === targetId && unit.team === 'player')) targetId = null;
+    if (targetId !== choice.targetId) {
+      const pendingChoice = { ...choice, targetId, step: targetId ? 'offer' as const : 'target' as const, generation: choice.generation + 1 };
+      state = { ...state, pendingChoice };
+      choiceEvents.push({type:'choiceOpened',choice:pendingChoice});
+    }
+  }
   const planned = planTemporaryEquipment(state);
-  return accept(planned.state, [...events, ...planned.events]);
+  return accept(planned.state, [...events, ...choiceEvents, ...planned.events]);
 }
 /** Only the uncompleted anomaly node may defer choice while its roster is empty. */
 export function needsAnomalyRecruitment(state: MatchState): boolean {
@@ -123,7 +139,9 @@ export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
 }
 export function getDeploymentCap(state: MatchState): number { return state.level; }
 export function validateMatchDeployment(state: MatchState, unitId: string, target: UnitLocation): MatchFailure | undefined {
-  if (state.phase !== 'preparation') return 'wrong-phase';
+  if (!canOperateMatch(state)) return 'wrong-phase';
+  if ((state.phase !== 'preparation' || isCombatRosterLocked(state)) && (target?.kind === 'board'
+    || state.preparation.units.some(unit => unit.id === unitId && unit.location.kind === 'board'))) return 'wrong-phase';
   const planned = deployUnit(state.preparation, unitId, target);
   if (!planned.ok) return planned.reason;
   // Check the final formation: swapping at the cap does not add a deployed unit.
@@ -133,10 +151,52 @@ export function deployMatchUnit(state: MatchState, unitId: string, target: UnitL
   const reason = validateMatchDeployment(state, unitId, target);
   if (reason) return fail(state, reason);
   const result = deployUnit(state.preparation, unitId, target);
-  return result.ok ? accept({ ...state, preparation: result.state }) : fail(state, result.reason);
+  if (!result.ok) return fail(state, result.reason);
+  // Online manual and automatic placement share the same complete deploy events.
+  const events: MatchEvent[] = state.multiplayer ? result.state.units.flatMap(unit => {
+    const from = state.preparation.units.find(previous => previous.id === unit.id)!.location;
+    const to = unit.location;
+    if (from.kind === 'board' && to.kind === 'board' ? sameCell(from.cell, to.cell)
+      : from.kind === 'bench' && to.kind === 'bench' && from.slot === to.slot) return [];
+    return [{ type: 'unitDeployed' as const, unitId: unit.id, from: structuredClone(from), to: structuredClone(unit.location) }];
+  }) : [];
+  return accept({ ...state, preparation: result.state }, events);
+}
+/** After PvP snapshots are frozen, protect the live roster while keeping the T3 state shape. */
+export function lockMatchCombatRoster(state: MatchState): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.status !== 'active' || state.phase !== 'preparation'
+    || state.m8.round.kind !== 'pvp' || state.pendingChoice !== null) return fail(state, 'wrong-phase');
+  if (state.multiplayer.combatRosterLocked) return { ok: true, state, events: [] };
+  return { ok: true, state: { ...state, multiplayer: { ...state.multiplayer, combatRosterLocked: true } }, events: [] };
+}
+/** Server preparation-deadline hook. Never called by the offline Start path. */
+export function autoDeployToCap(state: MatchState): MatchCommandResult {
+  if (!state.multiplayer || state.multiplayer.status !== 'active' || state.phase !== 'preparation' || isCombatRosterLocked(state)) return fail(state, 'wrong-phase');
+  const cap = getDeploymentCap(state), count = getPlayerDeploymentCount(state.preparation);
+  if (count > cap) return fail(state, 'population-cap');
+  const board = state.preparation.board, zone = board.deploymentZones.player;
+  const columns = Array.from({ length: board.columns }, (_, col) => col)
+    .sort((a, b) => Math.abs(a - (board.columns - 1) / 2) - Math.abs(b - (board.columns - 1) / 2) || a - b);
+  const rows = Array.from({ length: zone.lastRow - zone.firstRow + 1 }, (_, offset) => zone.firstRow + offset);
+  if (board.deploymentZones.enemy.firstRow > zone.lastRow) rows.reverse();
+  const cells = rows.flatMap(row => columns.map(col => ({ col, row })));
+  const reserves = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench')
+    .sort((a, b) => (a.location as Extract<UnitLocation, {kind:'bench'}>).slot - (b.location as Extract<UnitLocation, {kind:'bench'}>).slot);
+  let next: MatchState = state;
+  const events: MatchEvent[] = [];
+  for (const unit of reserves) {
+    if (getPlayerDeploymentCount(next.preparation) >= cap) break;
+    const cell = cells.find(cell => !next.preparation.units.some(other => other.location.kind === 'board'
+      && other.location.cell.col === cell.col && other.location.cell.row === cell.row));
+    if (!cell) break;
+    const result = deployMatchUnit(next, unit.id, { kind: 'board', cell });
+    if (!result.ok) return fail(state, result.reason);
+    next = result.state; events.push(...result.events);
+  }
+  return { ok: true, state: next, events };
 }
 export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration: number): MatchCommandResult {
-  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= state.shop.slots.length) return fail(state, 'invalid-slot');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
   const offer = state.shop.slots[slotIndex];
@@ -144,7 +204,7 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
   const cost = UNIT_DEFINITIONS[offer.definitionId].cost;
   if (state.gold < cost) return fail(state, 'insufficient-gold');
   const plan = planUnitAcquisition(state, offer.definitionId,
-    { kind: 'shop', generation: expectedGeneration, slotIndex, definitionId: offer.definitionId }, state.resourceProvenance.entries.length);
+    { kind: 'shop', generation: expectedGeneration, slotIndex, definitionId: offer.definitionId }, state.resourceProvenance.entries.length, isCombatRosterLocked(state));
   if (!plan.ok) return fail(state, plan.reason);
   const purchased: MatchState = { ...state, items: plan.items, anomalyBinding: plan.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.upgradeEvents), gold: state.gold - cost, nextUnitSerial: plan.nextUnitSerial,
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId, plan.facts),
@@ -156,10 +216,11 @@ export function buyUnit(state: MatchState, slotIndex: number, expectedGeneration
 }
 export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const capacity = state.phase === 'settlement' && hasPendingLootCapacity(state) && !unresolvedLootChoices(state).length;
-  if (state.phase !== 'preparation' && !capacity) return fail(state, 'wrong-phase');
+  if (!canOperateMatch(state) && !(capacity && !state.multiplayer)) return fail(state, 'wrong-phase');
   const unit = state.preparation.units.find(unit => unit.id === unitId);
   if (!unit) return fail(state, 'unknown-unit');
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
+  if (state.multiplayer && (state.phase !== 'preparation' || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
   const returned = returnUnitItems(state.items, unitId), removesBinding = state.anomalyBinding?.unitId === unitId;
   const goldGranted = getUnitSellPrice(unit);
   let sold: MatchState = { ...state, items: returned.items, anomalyBinding: removesBinding ? null : state.anomalyBinding,
@@ -172,14 +233,14 @@ export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Uni
   return acceptEquipment(sold,events);
 }
 export function setShopLock(state: MatchState, locked: boolean, expectedGeneration: number): MatchCommandResult {
-  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (typeof locked !== 'boolean') return fail(state, 'invalid-choice');
   if (expectedGeneration !== state.shop.generation) return fail(state, 'stale-shop');
   if (Boolean(state.shop.locked) === locked) return { ok: true, state, events: [] };
   return accept({ ...state, shop: { ...state.shop, locked } });
 }
 export function rerollShop(state: MatchState): MatchCommandResult {
-  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.gold < MATCH_RULES.rerollCost) return fail(state, 'insufficient-gold');
   const generated = generateShop(state.rngState, state.shop.generation + 1, state.level);
   if (needsAnomalyRecruitment(state) && !affordableOffer({ ...state, ...generated }, state.gold - MATCH_RULES.rerollCost)) return fail(state, 'insufficient-gold');
@@ -187,7 +248,7 @@ export function rerollShop(state: MatchState): MatchCommandResult {
     shop: { ...generated.shop, locked: Boolean(state.shop.locked) } });
 }
 export function buyXp(state: MatchState): MatchCommandResult {
-  if (state.phase !== 'preparation') return fail(state, 'wrong-phase');
+  if (!canOperateMatch(state)) return fail(state, 'wrong-phase');
   if (state.level >= MATCH_RULES.maxLevel) return fail(state, 'max-level');
   if (state.gold < MATCH_RULES.xpPurchaseCost) return fail(state, 'insufficient-gold');
   if (needsAnomalyRecruitment(state) && !affordableOffer(state, state.gold - MATCH_RULES.xpPurchaseCost)) return fail(state, 'insufficient-gold');
@@ -262,7 +323,8 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
     state=fallback.state;events.push(...fallback.events);
   }
   const equipment=planTemporaryEquipment(state); events.push(...equipment.events);
-  const settled=settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents));
+  const settledPlan=resolveDeferredUpgrades(settleRound(equipment.state,combat as FinishedCombat,mergeGrowthLedger(combatGrowth(combat),granted.upgradeEvents)));
+  const settled=settledPlan.state; events.push(...settledPlan.events);
   events.push({type:'roundSettled',round:state.round});
   if (settled.phase==='gameOver' || settled.multiplayer?.status==='eliminated') return {state:settled,events};
   const choice=enterLootChoice(settled);
@@ -343,7 +405,7 @@ export function equipItem(state: MatchState, itemId: string, unitId: string, slo
   return plan.ok ? acceptEquipment({ ...state, items: plan.items }, plan.events) : fail(state, plan.reason);
 }
 function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {
-  if (state.phase !== 'choice') return 'wrong-phase';
+  if (state.phase !== 'choice' || isCombatRosterLocked(state)) return 'wrong-phase';
   if (!state.pendingChoice || state.pendingChoice.choiceId !== choiceId || state.pendingChoice.generation !== generation) return 'stale-choice';
   return undefined;
 }
@@ -353,7 +415,9 @@ export function selectAnomalyTarget(state: MatchState, choiceId: string, generat
   if (choice.kind !== 'anomaly' || choice.step !== 'target') return fail(state, 'invalid-choice');
   const target = state.preparation.units.find(unit => unit.id === unitId);
   if (!target || target.team !== 'player' || state.anomalyBinding !== null) return fail(state, 'invalid-target');
-  const draw = generateAnomalyOffer(Object.keys(ANOMALY_DEFINITIONS), state.choiceRngState);
+  const draw = state.multiplayer && choice.offers.length
+    ? {offers:choice.offers,choiceRngState:state.choiceRngState}
+    : generateAnomalyOffer(Object.keys(ANOMALY_DEFINITIONS), state.choiceRngState);
   return accept({ ...state, choiceRngState: draw.choiceRngState, pendingChoice: { ...choice, step: 'offer', targetId: unitId, offers: draw.offers, generation: generation + 1 } },
     [{ type: 'anomalyTargetSelected', choiceId, unitId }]);
 }

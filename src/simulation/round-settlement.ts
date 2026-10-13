@@ -1,3 +1,4 @@
+import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canonicalContent } from './content';
 import { planCatalogRoundEconomy } from './opening-economy';
 import { planRoundEconomy } from './economy';
@@ -15,6 +16,7 @@ export const ROUND_SETTLEMENT_VERSION = 'multiplayer-settlement-v1';
 export interface MultiplayerProgress {
   readonly version: typeof ROUND_SETTLEMENT_VERSION;
   readonly seatId: string;
+  readonly combatRosterLocked?: true;
   readonly status: 'active' | 'eliminated';
   readonly receipts: readonly RoundSettlementReceipt[];
   readonly forfeitedChoices: readonly string[];
@@ -117,11 +119,15 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
       investmentHp:state.augmentProgress.investmentHp+(state.augments.some(a=>a.definitionId==='investment-strategy-i')?8*plan.incomeBreakdown.interest:0),
     };
     if (!Object.values(augmentProgress).every(n=>integer(n)) || !integer(state.nextMatchEventSeq+1)) return fail(state,'invalid-receipt');
+    const {combatRosterLocked: _combatRosterLocked, ...unlockedMultiplayer} = state.multiplayer;
     const next: MatchState = {...state,phase:'settlement',combat:null,combatInputBasis:null,outcome:null,
       gold:plan.goldAfter,playerHp:hpAfter,level:plan.progression.level,xp:plan.progression.xp,streak:plan.streakAfter,
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
       augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
-      multiplayer:{...state.multiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
-    return {ok:true,state:next,events:[{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq}]};
+      multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
+    const merged = resolveDeferredUpgrades(next);
+    const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
+      ...merged.events.map((event,index) => ({...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
+    return {ok:true,state:{...merged.state,nextMatchEventSeq:next.nextMatchEventSeq+merged.events.length},events};
   } catch { return fail(state,'invalid-receipt'); }
 }

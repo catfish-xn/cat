@@ -54,6 +54,7 @@ export type SharedPoolBatchResult =
       readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[] }
   | { readonly ok:false; readonly pool:SharedPoolState; readonly states:readonly MatchState[]; readonly reason:SharedPoolFailure };
 export type SharedMatchCommand =
+  | {readonly type:'settleRound';readonly receipt:import('./round-settlement').RoundSettlementReceipt}
   | {readonly type:'startCombat'} | {readonly type:'step'}
   | {readonly type:'choose';readonly choiceId:string;readonly generation:number;readonly definitionId:string}
   | {readonly type:'timeoutChoice';readonly round:number;readonly choiceId:string|null;readonly generation:number|null}
