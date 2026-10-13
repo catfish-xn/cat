@@ -4,7 +4,7 @@ import { readRoundInfo } from '../simulation/round-selectors';
 import { encounterPreviewSection } from '../presentation/encounter-preview';
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
-import type { RoundGains } from './online/round-gains';
+import { readRevealedLoot } from './online/seat-view-adapter';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
@@ -30,7 +30,7 @@ import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/i
 import { equipmentFailureText, slotList, slotViews, temporaryItemText } from '../presentation/equipment-feedback';
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
-import { continueBlockText, lootPanelSection, lootTerminalSummary } from '../presentation/loot-view';
+import { continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
@@ -72,8 +72,6 @@ interface PanelActions {
   readonly status: (message: string) => void;
   readonly help: () => void;
   readonly highlight: (unitIds: readonly string[]) => void;
-  /** Online only (C7): this round's gains from two server states; the placeholder loot ledger is never shown online. */
-  readonly roundGains?: () => RoundGains | null;
 }
 
 function traitLine(definitionId: string): HTMLElement {
@@ -399,29 +397,29 @@ export class StrategyPanel {
   }
   /** U6: the domain's LootView only; PvE rounds after Start. Nothing here grants, settles or decides Continue. */
   private lootPanel(state: MatchState): HTMLElement | null {
-    if (isOnline()) return this.roundGainsPanel(state);
+    if (isOnline()) return this.revealedLootPanel(state);
     if (state.m8.round.kind !== 'pve' || state.phase === 'preparation') { this.lootKey = ''; return null; }
     const view = readLootView(state);
     this.lootKey = JSON.stringify([view, state.pendingChoice?.choiceId ?? null]);
-    // Drop sources are the round's public neutral units (same unit IDs as the encounter preview).
-    const names = new Map(readEncounterPreview(state)?.units.map(unit => [unit.unitId, unit.name]) ?? []);
-    const labels = { sourceName: (id: string | null) => (id && names.get(id)) || '本回合野怪' };
-    return state.phase === 'gameOver' ? lootTerminalSummary(view, labels) : lootPanelSection(view, labels);
+    return state.phase === 'gameOver' ? lootTerminalSummary(view, this.lootLabels(state)) : lootPanelSection(view, this.lootLabels(state));
   }
-  /** Online: "本轮获得" after the battle (choice and settlement); a PvE round with nothing new says so. */
-  private roundGainsPanel(state: MatchState): HTMLElement | null {
-    const gains = this.actions.roundGains?.() ?? null;
-    this.lootKey = JSON.stringify([gains, state.pendingChoice?.choiceId ?? null]);
-    if (!gains) return null;
-    const parts = [
-      ...gains.units.map(unit => `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}`),
-      ...gains.items.map(item => ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId),
-      ...(gains.gold > 0 ? [`${gains.gold} 金币`] : []),
-    ];
-    if (!parts.length && state.m8.round.kind !== 'pve') return null;
-    const section = element('section', '', 'loot-panel round-gains'); section.dataset.debug = 'online:round-loot';
-    section.append(element('h3', `本轮获得：${parts.join('、') || '无'}`));
-    if (state.phase === 'choice' && state.pendingChoice?.kind === 'component') section.append(element('p', '组件奖励选择后入库，会出现在这里。', 'loot-note'));
+  /** Drop sources are the round's public neutral units (same unit IDs as the encounter preview). */
+  private lootLabels(state: MatchState) {
+    const names = new Map(readEncounterPreview(state)?.units.map(unit => [unit.unitId, unit.name]) ?? []);
+    return { sourceName: (id: string | null) => (id && names.get(id)) || '本回合野怪' };
+  }
+  /**
+   * Online (C9): the server's revealed-loot summary of my current PvE round, rendered like the offline settlement
+   * block. Shown after the battle (choice and settlement); absent field (PvP, supply, not sent) shows nothing.
+   * Continue, pending claims and the pick identity are not sent online and are not inferred here.
+   */
+  private revealedLootPanel(state: MatchState): HTMLElement | null {
+    const loot = state.phase === 'preparation' || state.phase === 'combat' ? null : readRevealedLoot(state);
+    this.lootKey = JSON.stringify([loot, state.pendingChoice?.choiceId ?? null]);
+    if (!loot) return null;
+    const pick = state.phase === 'choice' && state.pendingChoice?.kind === 'component';
+    const section = lootRevealedSection(loot, this.lootLabels(state), !pick); section.dataset.online = 'true';
+    if (pick) section.append(element('p', '组件奖励选择后入库，会出现在这里。', 'loot-note'));
     return section;
   }
   private renderTraits(state: MatchState): void {
@@ -655,7 +653,7 @@ export class StrategyPanel {
     this.lastCombatId = combat?.combatId; this.lastCombatTick = combat?.tick ?? -1;
     // Drops are revealed mid-combat by the domain; refresh only when the projection changes.
     if (this.lootSection && combat?.status === 'running') {
-      const view = readLootView(state);
+      const view = isOnline() ? readRevealedLoot(state) : readLootView(state);
       if (JSON.stringify([view, state.pendingChoice?.choiceId ?? null]) !== this.lootKey) {
         const next = this.lootPanel(state); if (next) { this.lootSection.replaceWith(next); this.lootSection = next; }
       }
