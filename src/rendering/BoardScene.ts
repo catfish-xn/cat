@@ -470,10 +470,15 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private reconcileTokens() {
-    const units = [...this.state.units], ids = new Set(units.map(unit => unit.id));
+    const view = this.session.combatView, fighting = new Set(view?.units.map(unit => unit.id));
+    // While a battle is shown it stands in for the board. A two-sided (PvP) replay names my units by their
+    // battle ids (contract §13.5, mapping stays on the server), so a board unit it does not name is shown
+    // by its combat unit only, never as a second token at its preparation cell (C10).
+    const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
+    const ids = new Set(units.map(unit => unit.id));
     // Rewards can consume an old unit while its finished combat is still displayed.
     // Keep that combat view until Continue clears it, including restored settlements.
-    for (const unit of this.session.combatView?.units ?? []) if (!ids.has(unit.id)) {
+    for (const unit of view?.units ?? []) if (!ids.has(unit.id)) {
       units.push({ id: unit.id, definitionId: unit.definitionId, team: unit.team,
         starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell } });
       ids.add(unit.id);
@@ -674,7 +679,8 @@ export class BoardScene extends Phaser.Scene {
     if (!view) return;
     const combat: DisplayCombat & { readonly tick: number; readonly maxTicks: number } = runtime ?? view;
     for (const unit of this.state.units) {
-      const token = this.tokens.get(unit.id)!;
+      const token = this.tokens.get(unit.id);
+      if (!token) continue; // a board unit the battle shows under its battle id
       if (token.input) { this.input.setDraggable(token, false); token.input.enabled = true; }
       if (unit.location.kind === 'bench') token.setAlpha(0.35);
     }
