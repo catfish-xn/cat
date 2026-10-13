@@ -99,13 +99,20 @@ export class OnlineApplication implements SceneApplication {
     if (confirmed.length && sameView) {
       this.session.receiveState(state, [...confirmed.flatMap(command => command.events), ...serverEvents]);
       this.hooks.confirmed?.(confirmed);
-    } else { this.session.receiveState(state, serverEvents); this.hooks.refresh(); }
+    } else {
+      this.session.receiveState(state, serverEvents); this.hooks.refresh();
+      // The redraw rebuilt the panel and its status line; a phase line the view set just before (the first push of a round
+      // sends the view ahead of the seat state) is put back once.
+      const line = this.phaseLine;
+      if (line && line.round === state.round && line.phase === state.phase) { this.phaseLine = null; this.hooks.status(line.text); }
+    }
     // The settlement's merges arrive before the phase change; its status line keeps them (syncStatus).
     const merged = mergeNotice(serverEvents);
     if (merged) this.mergeNote = { round: state.round, text: merged };
     if (serverEvents.length) this.hooks.serverEvents?.(serverEvents);
   }
   private mergeNote: { readonly round: number; readonly text: string } | null = null;
+  private phaseLine: { readonly round: number; readonly phase: string; readonly text: string } | null = null;
   private onRefused(refusal: RefusedCommand) {
     const text = NON_RULE_REFUSALS[refusal.reason] ?? null;
     this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
@@ -172,7 +179,12 @@ export class OnlineApplication implements SceneApplication {
     const key = `${view.phase.kind}/${view.phase.round}`; if (key === this.lastPhase) return; this.lastPhase = key;
     if (this.spectating) return; // the spectate line stays; phases still show in the countdown and sidebar
     const opponent = view.seats.find(seat => seat.seatId === view.opponentSeatId);
-    if (view.phase.kind === 'preparation') this.hooks.status(opponent ? `对手：${opponent.name} · ${view.phase.roundName} · 倒计时结束自动开战` : `${view.phase.roundName} · 野怪回合 · 倒计时结束自动开战`);
+    // SR-C14-01 (option A): the first preparation opens at 0 gold under the opening rules; say so instead of leaving an unaffordable shop unexplained.
+    const opening = view.phase.round === 1 ? ' · 首轮 0 金币，1-2 战后到账 2 金币' : '';
+    if (view.phase.kind === 'preparation') {
+      const text = opponent ? `对手：${opponent.name} · ${view.phase.roundName} · 倒计时结束自动开战` : `${view.phase.roundName} · 野怪回合${opening} · 倒计时结束自动开战`;
+      this.phaseLine = { round: view.phase.round, phase: 'preparation', text }; this.hooks.status(text);
+    }
     else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name} · 战斗由服务器计算` : '战斗由服务器计算 · 正在播放');
     const merged = this.mergeNote?.round === view.phase.round ? `${this.mergeNote.text} · ` : '';
     if (view.phase.kind === 'choice') this.hooks.status(`${merged}请在倒计时内完成选择 · 超时由服务器代选`);
@@ -180,7 +192,7 @@ export class OnlineApplication implements SceneApplication {
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
-    this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.view = null;
+    this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
     this.session.skipPlayback(); this.session.resume('ended'); this.session.pause('lobby'); this.hooks.clearInput(); this.syncMode();
   }
