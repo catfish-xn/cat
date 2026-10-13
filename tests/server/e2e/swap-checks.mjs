@@ -10,6 +10,10 @@
  *   4. bench ↔ bench swaps;
  *   5. bench → empty board cell at the cap is refused with the population-cap text and nothing moves.
  * While hovering an ally the drag status says 可互换; the refusal shows the 人口已满 text mid-drag and after release.
+ *
+ * SR-C8-01: before every drag and every assertion the current state must still be the same round's preparation;
+ * each such point logs roundId/phase/elapsed time. If the round moved on, the run fails with "前置条件失败"
+ * (a timing problem of the test) instead of a refusal or swap assertion (a logic regression); no check is skipped.
  */
 export const readDebug = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
 
@@ -52,53 +56,67 @@ export function swapReady(state) {
   return state.phase === 'preparation' && state.level >= 2 && board === state.level && units.length - board >= 2;
 }
 
+/** Thrown when the round left preparation mid-checks: a test timing failure, not a swap or refusal regression. */
+export class PreconditionError extends Error {}
+
 export async function runSwapChecks(page, { check, shot }) {
   let snap = await readDebug(page);
-  const start = snap.state;
+  const start = snap.state, startedAt = Date.now();
+  // SR-C8-01: same round's preparation before each drag and assertion, with roundId/phase/time in the log.
+  const guard = async what => {
+    const state = (await readDebug(page))?.state;
+    const line = `round ${state?.roundDefinitionId} phase ${state?.phase} +${Date.now() - startedAt}ms ${new Date().toISOString()}`;
+    console.log(`    [swap] ${what}: ${line}`);
+    if (state?.phase !== 'preparation' || state.roundDefinitionId !== start.roundDefinitionId)
+      throw new PreconditionError(`前置条件失败: swap checks need ${start.roundDefinitionId} preparation before "${what}", now ${line}`);
+  };
+  const assert = async (condition, message) => { await guard(`assert ${message}`); check(condition, message); };
+  const drag = async (what, ...args) => { await guard(`drag ${what}`); return dragUnit(page, ...args); };
+  const wait = (predicate, what, timeout) => waitFor(page, predicate, what, timeout).catch(async error => { await guard(`wait ${what}`); throw error; });
   const board = () => mine(snap.state).filter(unit => unit.location.kind === 'board');
   const bench = () => mine(snap.state).filter(unit => unit.location.kind === 'bench');
-  check(swapReady(start),
+  await assert(swapReady(start),
     `swap precondition: level ${start.level}, board ${board().length}, bench ${bench().length}`);
   const count = () => board().length;
   const swapped = async (a, b, what) => {
     const before = { a: where(snap.state, a), b: where(snap.state, b) };
-    snap = await waitFor(page, s => where(s.state, a) === before.b && where(s.state, b) === before.a, what);
+    snap = await wait(s => where(s.state, a) === before.b && where(s.state, b) === before.a, what);
   };
 
   // 1. Bench → occupied board cell at full population.
   {
     const up = bench()[0], down = board()[0];
-    const hover = await dragUnit(page, up.id, down.location, () => shot('swap-0-hover-ally'));
-    check(hover.startsWith('可互换'), `bench→board hover says swap (${hover})`);
+    const hover = await drag('1 bench→board', up.id, down.location, () => shot('swap-0-hover-ally'));
+    await assert(hover.startsWith('可互换'), `bench→board hover says swap (${hover})`);
     await swapped(up.id, down.id, 'bench→board swap');
     const done = await waitFor(page, s => s.texts.some(text => text.startsWith('互换成功')), 'swap success text', 3_000).then(() => true, () => false);
-    check(count() === start.level && done, `bench ${up.id} ↔ board ${down.id} swapped at full population (${count()}/${start.level}), board status says 互换成功`);
+    await assert(count() === start.level && done, `bench ${up.id} ↔ board ${down.id} swapped at full population (${count()}/${start.level}), board status says 互换成功`);
     await shot('swap-1-bench-to-board');
   }
   // 2. Board → occupied bench slot.
   {
     const down = board()[0], up = bench()[0];
-    const hover = await dragUnit(page, down.id, up.location);
-    check(hover.startsWith('可互换'), `board→bench hover says swap (${hover})`);
+    const hover = await drag('2 board→bench', down.id, up.location);
+    await assert(hover.startsWith('可互换'), `board→bench hover says swap (${hover})`);
     await swapped(down.id, up.id, 'board→bench swap');
-    check(count() === start.level, `board ${down.id} ↔ bench ${up.id} swapped`);
+    await assert(count() === start.level, `board ${down.id} ↔ bench ${up.id} swapped`);
     await shot('swap-2-board-to-bench');
   }
   // 3. Board ↔ board.
   {
     const [a, b] = board();
-    const hover = await dragUnit(page, a.id, b.location);
-    check(hover.startsWith('可互换'), `board↔board hover says swap (${hover})`);
+    const hover = await drag('3 board↔board', a.id, b.location);
+    await assert(hover.startsWith('可互换'), `board↔board hover says swap (${hover})`);
     await swapped(a.id, b.id, 'board↔board swap');
-    check(count() === start.level, `board ${a.id} ↔ board ${b.id} swapped`);
+    await assert(count() === start.level, `board ${a.id} ↔ board ${b.id} swapped`);
     await shot('swap-3-board-to-board');
   }
   // 4. Bench ↔ bench.
   {
     const [a, b] = bench();
-    await dragUnit(page, a.id, b.location);
+    await drag('4 bench↔bench', a.id, b.location);
     await swapped(a.id, b.id, 'bench↔bench swap');
-    check(count() === start.level, `bench ${a.id} ↔ bench ${b.id} swapped`);
+    await assert(count() === start.level, `bench ${a.id} ↔ bench ${b.id} swapped`);
   }
   // 5. Bench → empty board cell at the cap: refused, nothing moves.
   {
@@ -107,11 +125,11 @@ export async function runSwapChecks(page, { check, shot }) {
     let cell = null;
     for (let row = zone.firstRow; row <= zone.lastRow && !cell; row++) for (let col = 0; col < snap.state.preparation.board.columns && !cell; col++) if (!taken.has(`b:${col},${row}`)) cell = { col, row };
     const before = layoutKey(snap.state);
-    const hover = await dragUnit(page, bench()[0].id, { kind: 'board', cell }, () => shot('swap-4-hover-cap'));
+    const hover = await drag('5 bench→empty cell', bench()[0].id, { kind: 'board', cell }, () => shot('swap-4-hover-cap'));
     await page.waitForTimeout(800);
     snap = await readDebug(page);
     const after = snap.texts.find(text => text.startsWith('人口已满')) ?? '';
-    check(hover.startsWith('人口已满') && after && layoutKey(snap.state) === before,
+    await assert(hover.startsWith('人口已满') && after && layoutKey(snap.state) === before,
       `bench → empty cell at the cap refused (hover "${hover}", after "${after}")`);
     await shot('swap-4-cap-refused');
   }

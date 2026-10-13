@@ -50,7 +50,7 @@ const click = (page, name) => page.evaluate(debug => { const node = document.que
 const text = (page, selector) => page.evaluate(sel => document.querySelector(sel)?.textContent ?? null, selector);
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '15', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '200' }, /listening on/);
+  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '25', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '200' }, /listening on/);
   await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
   const browser = await chromium.launch({ executablePath });
   const errors = [];
