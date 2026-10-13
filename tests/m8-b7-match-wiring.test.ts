@@ -186,7 +186,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
         roundTrip(s);
       }
     }
-    expect(s).toMatchObject({roundDefinitionId:'2-1',gold:10,level:3,xp:0,playerHp:100});
+    expect(s).toMatchObject({roundDefinitionId:'2-1',gold:10,level:3,xp:2,playerHp:100});
     expect(s.items.map(item=>item.definitionId)).toEqual(['sword','sword']);
     expect(s.m8.loot.receipts.filter(receipt=>receipt.payload.kind==='item').map(receipt=>receipt.payload))
       .toEqual([{kind:'item',definitionId:'sword',quantity:1},{kind:'item',definitionId:'sword',quantity:1}]);

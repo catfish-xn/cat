@@ -8,7 +8,7 @@
  * [data-debug="income-receipt"], up to and including 3-1, and prints one table row per round.
  *
  * Checks (rules: src/simulation/opening-economy.ts for 1-x, src/simulation/economy.ts from 2-1):
- *   - 1-2/1-3/1-4: income 2/3/5, xpAwarded 2/2/0, interest 0;
+ *   - 1-2/1-3/1-4: income 2/3/5, xpAwarded 2/2/2, interest 0;
  *   - from 2-1: xpAwarded == 2 unless the level was already the maximum;
  *   - goldBefore >= 10: interest == min(5, floor(goldBefore / 10)); economy.ts samples interest on
  *     goldBefore + victory gold, so a PvP win is checked against that basis (interestBasis) and noted;
@@ -27,7 +27,7 @@ const WS_PORT = 8791;
 const BASE = `http://127.0.0.1:${VITE_PORT}/`;
 const LAST_ROUND = '3-1';
 const MAX_LEVEL = 9;
-const OPENING = { '1-2': { gold: 2, xp: 2 }, '1-3': { gold: 3, xp: 2 }, '1-4': { gold: 5, xp: 0 } };
+const OPENING = { '1-2': { gold: 2, xp: 2 }, '1-3': { gold: 3, xp: 2 }, '1-4': { gold: 5, xp: 2 } };
 const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 mkdirSync(OUT, { recursive: true });
 

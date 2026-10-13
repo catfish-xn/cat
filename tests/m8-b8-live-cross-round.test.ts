@@ -36,7 +36,7 @@ const lootItem = (state: MatchState, definitionId: string) => state.m8.loot.rece
 
 /* Real seed-42 opening, Irelia fielded, no other operations: 1-2 Maddie, 1-3 Lux and a
  * component pick (bow), 1-4 a component pick (rod). Independent expectation from the
- * frozen B8 gate "真实新局经1-2～1-4到2-1：无运营全清10G／3级0XP／三指定英雄／两组件". */
+ * B8 loot gate with T11 XP revision: "真实新局经1-2～1-4到2-1：无运营全清10G／3级2XP／三指定英雄／两组件". */
 const choiceViews: { roundId: string; kind: string; choiceId: string; view: ReturnType<typeof api.readLootView> }[] = [];
 const openingState = createOpening();
 function createOpening(): MatchState {
@@ -59,7 +59,7 @@ function createOpening(): MatchState {
 describe('B8 loot carried across rounds: combine, equip, fight and sell', () => {
   const opening = openingState;
   it('arrives at 2-1 with the frozen opening rewards and only current-round loot in the view', () => {
-    expect([opening.gold, opening.level, opening.xp]).toEqual([10, 3, 0]);
+    expect([opening.gold, opening.level, opening.xp]).toEqual([10, 3, 2]);
     expect(players(opening).map(unit => unit.definitionId).sort()).toEqual(['irelia', 'lux', 'maddie']);
     expect(opening.items.map(item => [item.definitionId, item.location.kind]).sort()).toEqual([['bow', 'inventory'], ['rod', 'inventory']]);
     expect(opening.m8.loot.receipts.map(receipt => [JSON.parse(receipt.dropId)[0], receipt.payload.kind, 'definitionId' in receipt.payload ? receipt.payload.definitionId : null]))

@@ -9,13 +9,14 @@ import type { LootPayload, RngStream } from './m8/contracts';
 import { compareLootFreezeSlots, lootDropId } from './loot-identity';
 import type { FrozenDirectDrop, FrozenLootLedger, FrozenLootRound, LootChoiceDescriptor } from './loot-types';
 import { nextRandom, validateSeed } from './rng';
+import { OPENING_ECONOMY_RULES } from './match-rules';
 import { M5_UNIT_DEFINITIONS } from './units';
 
 export const LOOT_FREEZE_VERSION = 'm8-b8-loot-freeze-v1';
 export { LOOT_FREEZE_ALGORITHM } from './content/loot';
 export const LOOT_REPLAY_DIGEST = digestContent({
   version:LOOT_FREEZE_VERSION, algorithm:LOOT_FREEZE_ALGORITHM,
-  policy:NEUTRAL_ENCOUNTER_POLICY_VERSION, openingPolicy:'m8b-opening-project-v1', lootPolicy:LOOT_POLICY_VERSION,
+  policy:NEUTRAL_ENCOUNTER_POLICY_VERSION, openingPolicy:OPENING_ECONOMY_RULES.version, lootPolicy:LOOT_POLICY_VERSION,
   componentPool:{version:COMPONENT_POOL_VERSION,entries:COMPONENT_POOL},
   heroPools:{version:LOOT_HERO_POOL_VERSION,entries:LOOT_HERO_POOLS},
   slots:LOOT_SLOTS,categories:LOOT_CATEGORIES,schedule:ROUND_CATALOG,

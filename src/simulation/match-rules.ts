@@ -29,7 +29,7 @@ export const ECONOMY_RULES = Object.freeze({ interestDivisor: 10, interestCap: 5
 
 /** Frozen numeric policy: the planner and digest consume these exact parameters. */
 export const OPENING_ECONOMY_RULES = freezeContent({
-  version:'m8b-opening-project-v1',
-  rounds:{'1-2':{baseGold:2,naturalXp:2},'1-3':{baseGold:3,naturalXp:2},'1-4':{baseGold:5,naturalXp:0}},
+  version:'m8b-opening-project-v2',
+  rounds:{'1-2':{baseGold:2,naturalXp:2},'1-3':{baseGold:3,naturalXp:2},'1-4':{baseGold:5,naturalXp:2}},
   interest:0, victoryGold:0, streakGold:0, updateStreak:false, pveFailureDamage:ECONOMY_RULES.pveFailureDamage,
 } as const);
