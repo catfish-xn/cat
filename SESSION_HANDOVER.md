@@ -12,17 +12,46 @@
 
 派单流程：指挥写提示词 → 用户转给对应模型 → 模型出 PR 合 `multiplayer` → 指挥验货 → 用户决定合并。Codex 的 PR 由指挥跑测试并对照合同；Opus 的 PR 由指挥检查是否越过目录、是否自行算规则，必要时再让 Codex 看一眼规则调用。
 
-## 0.1 当前进行中（2026-10-13 晚）
+## 0.1 今晚交付与验货结果（2026-10-13 晚，指挥验货完成）
 
-- **T12 战中装备永不锁定（R2）**：Codex 在 PR #71（draft，`codex/t12-combat-equip`）停在"联机存档恢复"的规格冲突。用户已选 **B**：联机不新增存档恢复入口，只验冻结输入恢复重算 + 可信席位续算；单人完整恢复。Codex 正在继续，PR 转正式后再验货。
-- **T11 遗留**：`multiplayer` 基线上 `tests/m8-b5-equipment-history`（8 条）和 `tests/m8-b5-temporary`（1 条）因 1-4 经验 +2 而失败（等级 4→5、经验 32→34），PR #70 没有更新夹具。已要求 Codex 单独出小 PR 修夹具并补 `docs/evidence/t11/README.md`。
-- **并行派给 Opus 5.5**（见 §4）：C15 PvP 回放我方装备图标；C16 界面装备操作改为全读 `previewEquip`，为 T12 预接线。
-- **并行派给 Codex（只写文档）**：R3+R4 掉落系统设计稿与合同草案，等 T12 合入后实施。
-- **用户侧**：C10–C12 仍未真机试玩；部署步骤未在任何服务器执行过。
+五个 PR 已验货，均未越界、未改玩法。验货方式：每个 PR 独立 worktree，typecheck + 对应测试 + 目录 diff；T12 另在空闲机上单独重跑耗时套件；最后把 #72+#73+#74+#71 合成一棵树跑 typecheck 与专项测试（通过）。
 
-## 0.2 联机收尾还剩什么
+| PR | 范围 | 核心文件与逻辑 | 验货结论 |
+| --- | --- | --- | --- |
+| #72 T11 夹具 | Codex，tests/docs | `tests/m8-b5-equipment-history`、`m8-b5-temporary` 的等级/经验预期按 1-4 +2 修正；`docs/evidence/t11/README.md` 补原因 | **通过**。38 条全绿 |
+| #73 C15 PvP 回放装备图标 | Opus，server+rendering | `src/server/room/projection.ts` 新增 `SeatReplay.unitIds`，来自 `BattleResult.battle.mapping`，只过滤 `kind==='unit'` 且本席 seatId，a/b 两侧同函数，PvE 空数组；`src/server/net/messages.ts` `readReplayUnitIds` 结构校验；`remote-session.ts` `equipmentOwnerId()` 把战斗 ID 换回原 ID；`BoardScene.reconcileTokens` 读装备前先换 ID。不解析 ID 字符串，不下发对手/物品条目 | **通过**。typecheck、`tests/server` 新用例、真服务器 e2e（两真人六机器人）通过；projection 双重过滤已逐行核对 |
+| #74 C16 装备 UI 全读 previewEquip | Opus，rendering/presentation | `strategy-panel.ts`：`itemsOpen()` 不看阶段，`equipAt()` 先 `previewEquip` 再发命令；状态行按阶段描述、不写死"已锁定"；`equipment-feedback.ts` 未知失败码走 `EQUIPMENT_FAILURE_FALLBACK`；`BoardScene` 装备命令拒绝走装备文案表 | **通过**。typecheck，e2e c16/c7/c12/c8 共 79 条全绿；UI 没有自行判断装备合法性 |
+| #71 T12 战中装备永不锁定（R2） | Codex，simulation/tests/docs | `operation-policy.ts` 新增 `canOperateEquipment`（四阶段、单人联机同用）与 `equipment-ops-next-battle-v1`；`item-selectors.ts` previewEquip/previewCombine 改用它，删掉棋盘目标锁；`inventory.ts` validateEquip/planEquip 支持"库存组件 + 身上组件"原子合成并留在目标槽；`match.ts` equipItem 记 `item-combined` 来源；`b8-restore.ts`/`resource-provenance.ts` 接受战中合成的 suffix；digest b4a5c2e2 → **44fe9c0e**；合同 §17、MATCH_CONTRACT T12、S13_RULES_GAP §2.6、UI_REQUESTS 接线说明 | **通过**。typecheck；T12 四文件 60 条；B5/B8/T10/T11 回归 244 条；T1 入口 165 状态字节一致；`tests/server` 并行时 4 条耗时断言失败，空闲机单跑 30/30 通过，判定为 CPU 争用 |
+| #75 R3+R4 掉落设计稿 | Codex，docs（draft） | `docs/M8B_LOOT.md` §11、`MULTIPLAYER_CONTRACT.md` §17 草案、新建 `docs/R3R4_LOOT_DESIGN.md`（估 9–15 人日，D1–D8 待拍板） | 文档，无代码。**合并前需改编号**：与 T12 的合同 §17 撞号，应改为 §18 |
 
-T12 → R3+R4 掉落系统 → T9 两机真机整局验收 → 合 main（提醒旧单机存档作废，digest 已改三次）→ 按 `docs/MULTIPLAYER_RELEASE_NOTES.md` 部署。性能项 SR-B8-02/03 不阻塞上线。
+**合并顺序（已用试合并验证）**：#72 → #73 → #74 → #71 → #75。
+- #71 与 #73 在 `docs/UI_REQUESTS.md` 末尾冲突（两段各自追加），保留两段即可；建议 Codex 先把 `multiplayer` 合进 `codex/t12-combat-equip` 再合。
+- #75 与 #71 在 `docs/MULTIPLAYER_CONTRACT.md` 冲突（都新增 §17），Codex 在 T12 合入后把草案改成 §18 并重新合 `multiplayer`。
+- 四个代码 PR 合成一棵树后 typecheck 通过、T12/C15 专项 61 条通过。
+
+## 0.2 遗留问题与未解 bug
+
+- **T11 遗留的基线测试失败（新发现，P1）**：`multiplayer` 基线上除 #72 修的 9 条外，还有 9 个文件因 1-4 经验 +2 而失败，PR #70 验货时只跑了专项没发现：`tests/match-session`、`match-lifecycle`（升级后 xp 应为 2 不是 0）；`m8-b8-live-growth`、`m8-b8-live-capacity`（金币 26≠19）、`m8-b8-live-transfer`、`m8-b8-loot-view`、`m8-b10-temporary-replay`（固定购买序列遇 `stale-shop`）；`m8-b8-live-reveal`（战斗提前进入 settlement）；`m8-content-equivalence`（录制存档 digest 过期）。全是夹具路线失效，不是规则 bug。需 Codex 单独 PR 修夹具，T12 合入后 digest 又变，`m8-content-equivalence` 要按 44fe9c0e 重录。
+- **耗时预算类测试在 4 核机上不稳定**：`tests/server` 的 bot-driver/room/round-commit/local-room-client 在整套并行时超预算，单跑通过。验货时须空闲机单跑，否则会误判。
+- **T12 小出入（不阻塞）**：成装拖到被组件占用的槽返回 `invalid-recipe` 而非 `item-slot-occupied`，只影响提示文案，C16 的文案表已能显示。
+- **T12 之后的界面项未做**：拖组件到已带组件的单位自动合成（T12 已提供 `previewEquip(...).combination`，C16 的 `equipAt` 目前按槽位走，拖到棋盘单位仍取"第一个允许的槽"，已带组件的槽现在也会被预览允许，实际行为需真机确认）；战中装备"下场生效"的提示文案。
+- **真机未验证**：C10–C16 全部只过 e2e，没人工试玩；T12 的战中装备更没有真人试过。
+- **部署未做**：`docs/MULTIPLAYER_RELEASE_NOTES.md` 的 systemd + Caddy 步骤未在任何服务器执行。
+- **旧单机存档作废**：digest 今天第三次变更（b4a5c2e2 → 44fe9c0e），合 main 时要提醒。
+- 性能项 SR-B8-02/03 未排期，不阻塞上线。
+- PR #68（S13 规则差异文档）仍开着，内容已随 #70 进入 `multiplayer`，可直接关闭。
+
+## 0.3 明天第一步
+
+1. **用户合并**：按 #72 → #73 → #74 顺序合；然后让 Codex 把 `multiplayer` 合进 T12 分支解决 `UI_REQUESTS.md` 冲突后合 #71；再让 Codex 把 #75 的 §17 改 §18 后合。关闭 #68。
+2. **派 Codex**：T11/T12 夹具修复 PR（上面 9 个文件 + `m8-content-equivalence` 按新 digest 重录），要求跑 `npm test` 全套并如实报告，目标是 `multiplayer` 全套绿。
+3. **派 Opus 5.5**：C17 战中装备真机接线收尾：拖组件到已带组件单位时读 `previewEquip(...).combination` 显示"将合成 X"，成功提示"下场生效"；跑 c16 e2e 的"允许槽"分支（T12 合入后该分支才会触发）。
+4. **用户拍板** `docs/R3R4_LOOT_DESIGN.md` §6 的 D1–D8，建议全部按 Codex 推荐（A）签；签完派 Codex 实施 R3+R4。
+5. **用户真机试玩一整局**（两台电脑，`npm run serve:game` + `npx vite --host`），重点：战斗中给棋盘单位穿装备、下一场生效；PvP 回放看到自己单位的装备图标；战斗中买牌/刷新/自动上场；结算显示利息和经验。
+
+## 0.4 联机收尾还剩什么
+
+T12（验货通过，待合并）→ 夹具修复 → R3+R4 掉落系统 → T9 两机真机整局验收 → 合 main（提醒旧单机存档作废，digest 已改三次）→ 按 `docs/MULTIPLAYER_RELEASE_NOTES.md` 部署。性能项 SR-B8-02/03 不阻塞上线。
 
 ---
 
@@ -58,7 +87,7 @@ T12 → R3+R4 掉落系统 → T9 两机真机整局验收 → 合 main（提醒
 2. 发现 bug 按今天的流程派单：界面与服务器归 Claude，规则归 Codex，交叉验货后合入 `multiplayer`。
 3. 试玩通过后决定合 main 与部署：`git checkout main && git merge multiplayer`，按发布说明 §2–§4 部署；合 main 前提醒用户旧单机存档会因规则版本变化作废（digest 已两次变更）。
 
-## 4. 派单提示词（2026-10-13 晚，指挥拟）
+## 4. 派单提示词（2026-10-13 晚，指挥拟；三项均已交付：#73、#74、#75）
 
 ### 4.1 给 Opus 5.5：C15 PvP 回放显示我方单位装备图标
 
