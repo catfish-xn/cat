@@ -442,3 +442,12 @@ Codex 交叉验货：typecheck、tests/server（21 文件 140 用例）通过；
 - 把 `src/rendering/online/round-gains.ts` 的差分删掉，联机结算面板改读 `revealedLoot`，与单机 `lootPanelSection` 同一渲染；没有该字段时不显示掉落行。
 - `tests/server/e2e/c7-playtest.mjs` 的"本轮获得"检查改为核对权威条目（麦迪、拉克丝、暴风大剑等应与之前一致）。
 - 不改 `src/simulation`、`scripts`。验收：typecheck、tests/server、c7-playtest.mjs 通过。
+
+## 派工单 T10/C12：联机战斗运营接线
+
+**状态：已交付，PR #66 于 2026-10-13 合入 multiplayer（1f2711a）。** T10 规则由 PR #65 交付；C12 按 `MULTIPLAYER_CONTRACT.md` §15 接入房间与界面。
+
+- 阶段闸门逐项符合 §15.2；准备截止对存活真人 preparation 席调用 `autoDeployToCap`，冻结输入后为 PvP live seat 调用 `lockMatchCombatRoster`。
+- 结算沿最新 live state/pool 调用规则公共入口，保留战中购买、刷新、经验与合并；空阵容 PvE 已提前结算的席位在战中运营后仍正常结算并进入下一回合。服务器不另算经济、合并、人口或胜负，`src/simulation/` 未改。
+- 最终复验提交 `beded6e`：`npx vitest run tests/server` 全通过（22 文件、150 用例）；`npm run build:game && node tests/server/e2e/c12-combat-ops.mjs` 全通过，包含自动上场、战中运营、战后合并和空阵容回归。
+- C12 使用未修改脚本的默认端口（页面 5202，服务器 8793/8794），仅通过 `CHROMIUM` 指定本机浏览器路径；购买等操作在 `applied` 后等待状态推送，原购买画面断言的时序缺口已修复。此前 `d95af89` 上的 typecheck、C7 E2E 通过；最终补丁仅调整 C12 E2E。
