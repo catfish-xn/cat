@@ -310,7 +310,7 @@ export class StrategyPanel {
     chip('人口', `${getPlayerDeploymentCount(state.preparation)}/${getDeploymentCap(state)}`, 'pop');
     if (dock) chip('生命', String(state.playerHp), 'hp');
     if (dock) dock.append(stats); else head.append(stats);
-    head.append(element('p', `利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
+    head.append(element('p', `预计利息 +${interest} · ${state.streak.kind === 'win' ? '连胜' : state.streak.kind === 'loss' ? '连败' : '连胜败'} ${state.streak.count} · ${ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : (online && ONLINE_PHASE_HINT[state.phase]) || PHASE_HINT[state.phase]}`, 'hud-hint'));
     this.root.append(head);
     // One phase-appropriate primary action; the other lifecycle buttons stay reachable as secondary.
     const primary: ControlName = state.phase === 'settlement' ? 'continue' : state.phase === 'gameOver' ? 'new-match' : 'start-combat';
@@ -365,7 +365,8 @@ export class StrategyPanel {
     const result = state.roundResults.at(-1);
     if (result) {
       const receipt = element('details', '', 'income-receipt'); receipt.dataset.debug = 'income-receipt';
-      receipt.append(element('summary', `上轮收入 +${result.income} 金币 · 生命 ${result.hpBefore} → ${result.hpAfter}`));
+      // C11: interest and XP sit in the summary so they show without expanding the receipt.
+      receipt.append(element('summary', `上轮收入 +${result.income} 金币（利息 ${result.incomeBreakdown.interest}）· 经验 +${result.xpAwarded} · 生命 ${result.hpBefore} → ${result.hpAfter}`));
       const income = result.incomeBreakdown;
       // Online round records come from the private seat view: interestBasis is whitelisted (PR #50), XP requested is not (B7).
       const basis = result.interestBasis === undefined ? '' : `（基数 ${result.interestBasis}）`, requested = result.xpRequested === undefined ? '' : `/${result.xpRequested}`;
