@@ -14,6 +14,10 @@
  *   C. Deferred merge: during a battle, with a one-star A on the board, buy A until two one-star copies sit on the bench
  *      (rerolling a little if needed): nothing merges during the battle; after the settlement the board copy is two-star,
  *      the bench copies are gone (state and tokens) and the status says 战后合并.
+ *   D. P1 regression (second, short match on its own server): the human sells its whole roster in the 1-3 preparation, so
+ *      the rules settle its PvE loss the moment the battle starts; during the battle it locks the shop and buys a unit
+ *      (both `applied`). The round settles (no fault, match not ended), the loss costs HP, the lock and the unit stay,
+ *      and the next round starts with the shop still locked.
  * Screenshots and report go to artifacts/c12/ (not committed). CHROMIUM overrides the browser path.
  */
 import { spawn } from 'node:child_process';
@@ -71,13 +75,100 @@ function expectedDeployment(prep) {
   return reserves.slice(0, count).map((unit, index) => [unit.id, free[index]]);
 }
 
+/** Opens a page on the server at `port`, joins as `name` and starts the match; `act` clicks a control and waits for its receipt. */
+async function openMatch(browser, port, name, errors) {
+  const sent = new Map(), applied = new Map();
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
+  page.on('websocket', socket => {
+    socket.on('framesent', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'command') sent.set(m.commandId, m.command.type); } catch { /* ignore */ } });
+    socket.on('framereceived', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'receipt' && sent.has(m.commandId)) applied.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); } catch { /* ignore */ } });
+  });
+  const act = async (control, type) => {
+    const before = new Set(sent.keys());
+    if (!(await click(page, control))) return 'disabled';
+    const deadline = Date.now() + 5_000;
+    for (;;) {
+      const id = [...sent].find(([commandId, kind]) => !before.has(commandId) && kind === type)?.[0];
+      if (id !== undefined && applied.has(id)) return applied.get(id);
+      if (Date.now() > deadline) return null;
+      await page.waitForTimeout(40);
+    }
+  };
+  await page.goto(`${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${port}`);
+  await page.waitForSelector('[data-debug="online:join"]');
+  await page.fill('[data-debug="online:name"]', name); await page.click('[data-debug="online:join"]');
+  await page.click('[data-debug="online:start"]');
+  return { page, act, sent, applied };
+}
+
+/** D. Empty roster in a PvE round, operations while the rules have already settled the seat (P1 found by Codex). */
+async function emptyBoardRepro(browser, errors) {
+  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT + 1), CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' }, /listening on/);
+  const { page, act } = await openMatch(browser, WS_PORT + 1, '卖空', errors);
+  const answered = new Set();
+  const until = async (predicate, what, timeout = 90_000) => {
+    const deadline = Date.now() + timeout;
+    for (;;) {
+      const s = await read(page).catch(() => null);
+      if (s?.state) {
+        const choice = s.state.phase === 'choice' ? s.state.pendingChoice : null;
+        if (choice && !answered.has(`${choice.choiceId}:${choice.step ?? 0}:${choice.generation ?? 0}`)) {
+          answered.add(`${choice.choiceId}:${choice.step ?? 0}:${choice.generation ?? 0}`);
+          await click(page, `choice:${choice.offers[0]}`);
+        }
+        if (predicate(s)) return s;
+        if (s.m6?.phase?.kind === 'ended') throw new Error(`D: match ended while waiting for ${what} (${JSON.stringify(s.m6.phase)})`);
+      }
+      if (Date.now() > deadline) throw new Error(`D: timed out waiting for ${what}`);
+      await page.waitForTimeout(60);
+    }
+  };
+  // 1-3 is round 2 (PvE). Sell every own unit by selecting its token and pressing 出售.
+  let s = await until(x => inPreparation(x) && x.state.round === 2, '1-3 preparation');
+  for (let guard = 0; guard < 12 && mine(s.state).length > 0; guard++) {
+    const unit = mine(s.state)[0], token = s.tokens.find(entry => entry.id === unit.id);
+    await page.mouse.click(token.screenX, token.screenY);
+    await click(page, 'mobile:sell');
+    await waitRead(page, x => !mine(x.state).some(other => other.id === unit.id), `sale of ${unit.id}`, 3_000);
+    s = await read(page);
+  }
+  check(inPreparation(s) && mine(s.state).length === 0, `D 1-3: the whole roster was sold in preparation (${mine(s.state).length} left)`);
+  // The rules settle the empty PvE board when its battle starts; the room is in its battle phase.
+  // The view says combat for the frozen step too (commands refused there); the battle proper begins with my replay.
+  s = await until(x => x.m6?.phase?.kind === 'combat' && x.state.round === 2 && x.replay?.terminalTick != null, '1-3 battle', 30_000);
+  const lock = await act('shop-lock', 'shopLock');
+  const locked = await waitRead(page, x => x.state.shop.locked === true, 'locked shop on screen', 3_000);
+  const now = await read(page);
+  const slot = now.state.shop.slots.findIndex(offer => offer.status === 'available' && !offer.empty);
+  const buy = slot >= 0 && now.state.gold >= 1 ? await act(`mobile:buy-${slot}`, 'buy') : `skipped (gold ${now.state.gold})`;
+  const during = await read(page);
+  check(during.m6?.phase?.kind === 'combat' && lock === 'applied' && locked !== null, `D 1-3: shopLock during the battle applied (${lock}), shop shows locked`);
+  check(buy === 'applied' && mine(during.state).length === 1, `D 1-3: buy during the battle applied (${buy}), one unit on the bench`);
+  await page.screenshot({ path: `${OUT}/D-empty-board-battle.png` });
+  const settled = await until(x => x.state.roundResults.some(record => record.round === 2) && x.m6?.phase?.kind !== 'combat', '1-3 settlement', 60_000);
+  const record = settled.state.roundResults.find(entry => entry.round === 2);
+  report.emptyBoard = { lock, buy, record: { result: record.result, hpBefore: record.hpBefore, hpAfter: record.hpAfter, goldBefore: record.goldBefore }, phase: settled.m6.phase };
+  check(settled.m6.phase.kind !== 'ended', `D 1-3: the round settled and the match goes on (${settled.m6.phase.kind})`);
+  check(record.result === 'enemyWin' && record.hpAfter < record.hpBefore && settled.state.playerHp === record.hpAfter,
+    `D 1-3: PvE loss costs HP ${record.hpBefore} → ${record.hpAfter}`);
+  check(settled.state.shop.locked === true && mine(settled.state).length === 1, `D 1-3: the settled state keeps the locked shop and the bought unit`);
+  const next = await until(x => inPreparation(x) && x.state.round === 3, '1-4 preparation', 60_000);
+  check(next.state.shop.locked === true && next.m6.phase.kind === 'preparation', `D 1-4: the next round starts with the shop still locked`);
+  await page.screenshot({ path: `${OUT}/D-next-round.png` });
+  await page.context().close();
+}
+
+const report = { autoDeploy: [], ops: null, merge: null, emptyBoard: null };
+
 async function main() {
   await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '5', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' }, /listening on/);
   await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
   const browser = await chromium.launch({ executablePath });
   const errors = [];
   const sent = new Map(), applied = new Map();
-  const report = { autoDeploy: [], ops: null, merge: null };
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -239,6 +330,7 @@ async function main() {
       }
       await page.waitForTimeout(80);
     }
+    await emptyBoardRepro(browser, errors);
     check(errors.length === 0, `no page errors (${errors.join(' | ')})`);
     writeFileSync(`${OUT}/report.json`, JSON.stringify({ ...report, errors }, null, 2));
     if (failures.length) throw new Error(`${failures.length} check(s) failed:\n${failures.join('\n')}`);

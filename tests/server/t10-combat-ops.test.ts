@@ -198,3 +198,63 @@ describe('T10 deferred merge after the battle (contract §15.3)', () => {
     expect(upgrades[0]).toMatchObject({ survivorId: boardCopy.id, fromStar: 1, toStar: 2 });
   }, 60_000);
 });
+
+describe('T10 PvE seat the rules settle when its battle starts (empty board) — P1 regression', () => {
+  /**
+   * Human s0 sells its whole roster in the 1-3 preparation, so its PvE battle is lost the moment it starts and the
+   * live seat is already settled during the room's battle. `operate` then sends one operation in that battle.
+   */
+  function emptyBoardRound(operate: 'none' | 'shopLock' | 'buy') {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+    room.start();
+    runUntil(room, clock, state => state.round === 2 && state.phase === 'preparation');
+    expect(room.state.roundKind).toBe('pve');
+    for (const unit of own(seat(room.state, 's0').match)) expect(room.handle('s0', { type: 'sell', unitId: unit.id })).toMatchObject({ ok: true });
+    expect(own(seat(room.state, 's0').match)).toHaveLength(0);
+    const hpBefore = seat(room.state, 's0').hp;
+    clock.runNext(); // deadline → battle
+    expect(room.state.phase).toBe('battle');
+    const live = seat(room.state, 's0').match;
+    expect(live.phase).toBe('settlement');
+    expect(live.roundResults.at(-1)?.round).toBe(2);
+    let bought: string | null = null;
+    if (operate === 'shopLock') {
+      expect(room.handle('s0', { type: 'shopLock', locked: true, generation: live.shop.generation })).toMatchObject({ ok: true });
+    } else if (operate === 'buy') {
+      const slot = live.shop.slots.findIndex(offer => offer.status === 'available');
+      const result = room.handle('s0', { type: 'buy', slot, generation: live.shop.generation });
+      expect(result).toMatchObject({ ok: true });
+      bought = own(seat(room.state, 's0').match)[0]?.id ?? null;
+    }
+    const operated = seat(room.state, 's0').match;
+    expect(operated === live).toBe(operate === 'none');
+    runUntil(room, clock, state => state.round === 2 && state.phase !== 'battle');
+    return { room, clock, hpBefore, operated, bought, settled: seat(room.state, 's0') };
+  }
+
+  for (const operate of ['shopLock', 'buy'] as const) {
+    it(`a ${operate} during the battle settles from the live seat instead of ending the match`, () => {
+      const idle = emptyBoardRound('none'), busy = emptyBoardRound(operate);
+      expect(busy.room.state.fault).toBeNull();
+      expect(busy.room.state.phase).not.toBe('ended');
+      expect(busy.room.state.settlements).toContain('test-room:round-2');
+      // PvE loss by the rules: the same HP as without the operation, and the room HP is the rules' record.
+      const record = busy.settled.match.roundResults.at(-1)!;
+      expect(record.round).toBe(2);
+      expect(record.result).toBe('enemyWin');
+      expect(busy.settled.hp).toBeLessThan(busy.hpBefore);
+      expect(busy.settled.hp).toBe(record.hpAfter);
+      expect(busy.settled.hp).toBe(idle.settled.hp);
+      // The live seat, with the operation, is what was published.
+      expect(busy.settled.match).toBe(busy.operated);
+      if (operate === 'shopLock') expect(busy.settled.match.shop.locked).toBe(true);
+      else expect(own(busy.settled.match).map(unit => unit.id)).toEqual([busy.bought]);
+      // The match goes on into the next round with the operation kept.
+      runUntil(busy.room, busy.clock, state => state.round === 3 && state.phase === 'preparation');
+      expect(busy.room.state.fault).toBeNull();
+      const next = seat(busy.room.state, 's0').match;
+      if (operate === 'shopLock') expect(next.shop.locked).toBe(true);
+      else expect(own(next).some(unit => unit.id === busy.bought)).toBe(true);
+    }, 60_000);
+  }
+});

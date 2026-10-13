@@ -394,7 +394,15 @@ export class Room {
         pool = finished.pool; seats.push(settled(finished.state, outcome.damage, null, finished.events));
         continue;
       }
-      // No live battle (supply, or a state the resolver left as it was): the live seat itself is the settled state.
+      // The rules already settled this round on the live seat at or before the freeze (an empty PvE board loses at once
+      // when its battle starts; a supply round settles in its choice): that live seat, with whatever was operated since,
+      // is the result. Its HP is the rules' own and must agree with the resolved battle.
+      if (seat.match.roundResults.at(-1)?.round === state.round) {
+        if (seat.match.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: live HP ${seat.match.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
+        seats.push(settled(seat.match, outcome.damage, null, []));
+        continue;
+      }
+      // Neither in a live battle nor settled by the rules (a state the resolver left as it was): only an unchanged seat may pass.
       if (outcome.state !== job.frozen) return { ok: false, detail: `seat ${seat.seatId} changed after the freeze but its battle was not run on the live state` };
       seats.push(settled(seat.match, outcome.damage, null, []));
     }
