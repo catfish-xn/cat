@@ -19,7 +19,7 @@
  * No DOM dependency besides the injectable WebSocket/storage/timers, so tests drive it under Node.
  */
 import { createMatch } from '../../simulation/match';
-import type { MatchState } from '../../simulation/match-types';
+import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { PrivateSeatView } from '../../server-entry';
 import {
   NET_PROTOCOL_VERSION, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
@@ -242,7 +242,7 @@ export class WsGameClient implements GameClient {
         if (this.bound && this.roomId !== null) { this.forgetSeat(); this.lastView = null; this.lastState = null; this.lastReplayKey = ''; }
         this.lobbyView = message.view; this.emitLobby(); return;
       case 'view': return this.onView(message.roomId, message.view);
-      case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state);
+      case 'state': return this.onState(message.roomId, message.round, message.seatRevision, message.state, message.events ?? []);
       case 'replay': return this.onReplay(message);
       case 'receipt': return this.onReceipt(message);
       case 'error': return this.onError(message.code, message.message);
@@ -257,12 +257,12 @@ export class WsGameClient implements GameClient {
     this.listeners?.view(view);
   }
   /** The server sends my seat as the rules' private view (B7); the UI gets a display-only MatchState of it. */
-  private onState(roomId: string, round: number, seatRevision: number, view: PrivateSeatView): void {
+  private onState(roomId: string, round: number, seatRevision: number, view: PrivateSeatView, serverEvents: readonly MatchEvent[]): void {
     const state = toDisplayMatch(view);
     this.roomId = roomId; this.round = round; this.stateRevision = seatRevision; this.lastState = state;
     const confirmed = this.confirmed.filter(entry => entry.seatRevision <= seatRevision);
     this.confirmed = this.confirmed.filter(entry => entry.seatRevision > seatRevision);
-    this.listeners?.state(state, confirmed.map(({ commandId, events }) => ({ commandId, events })));
+    this.listeners?.state(state, confirmed.map(({ commandId, events }) => ({ commandId, events })), serverEvents);
     this.flushRetries();
   }
   /** My battle as a compact replay (B7/C6). A resume snapshot repeats the battle already played; show it only once. */

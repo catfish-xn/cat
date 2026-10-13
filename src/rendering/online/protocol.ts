@@ -35,9 +35,10 @@ export interface ClientListeners {
   view(view: PlayerView): void;
   /**
    * My seat outside combat, as a display MatchState built from the server's private seat view (B7): server-only
-   * fields are placeholders (see seat-view-adapter.ts); `confirmed` lists my commands this push confirms.
+   * fields are placeholders (see seat-view-adapter.ts); `confirmed` lists my commands this push confirms; `serverEvents`
+   * are the server's own events behind this state (T10: deadline auto-deployment, post-battle merges).
    */
-  state(state: MatchState, confirmed?: readonly ConfirmedCommand[]): void;
+  state(state: MatchState, confirmed?: readonly ConfirmedCommand[], serverEvents?: readonly MatchEvent[]): void;
   /** My finished battle of this round as a compact replay (contract §14.2), played back at tick pace (C6). */
   replay(replay: CombatReplay): void;
   refused?(refusal: RefusedCommand): void;

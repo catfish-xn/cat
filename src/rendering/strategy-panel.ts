@@ -42,7 +42,7 @@ const PHASE_HINT: Readonly<Record<MatchState['phase'], string>> = {
 /** Online (`?mode=online`): the server advances phases and there is no local 新局, so the single-player calls to action change. */
 const ONLINE_PHASE_LABEL: Partial<Record<MatchState['phase'], string>> = { gameOver: '对局结束' };
 const ONLINE_PHASE_HINT: Partial<Record<MatchState['phase'], string>> = {
-  preparation: '购买、部署、装备 · 倒计时结束自动开战', settlement: '收入与经验已到账 · 稍后自动进入下一回合', gameOver: '对局结束 · 查看排名',
+  preparation: '购买、部署、装备 · 倒计时结束自动开战', combat: '战斗中 · 可购买、刷新、买经验和整理备战席', settlement: '收入与经验已到账 · 可继续购买 · 稍后自动进入下一回合', gameOver: '对局结束 · 查看排名',
 };
 const isOnline = () => typeof document !== 'undefined' && document.body.dataset.online !== undefined;
 /** The room ended (all other seats out, or I was eliminated) even when my own MatchState is still mid-round. */
@@ -291,6 +291,8 @@ export class StrategyPanel {
   render(): void {
     const spectating = isOnlineSpectating();
     const state = this.actions.state(), ready = state.phase === 'preparation' && !spectating;
+    // Online (T10, contract §15.1): the shop, XP and shop lock stay open through my battle, the choice window and the settlement.
+    const operable = ready || (isOnline() && !spectating && !isOnlineEnded() && (state.phase === 'combat' || state.phase === 'choice' || state.phase === 'settlement'));
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.eventList = null;
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
@@ -343,9 +345,9 @@ export class StrategyPanel {
       return button;
     };
     actions.append(controlButton(primary, 'primary-action'));
-    const controls = element('div', '', 'mobile-controls'); controls.classList.toggle('locked', !ready);
+    const controls = element('div', '', 'mobile-controls'); controls.classList.toggle('locked', !operable);
     for (const name of ['reroll', 'buy-xp', 'sell'] as const) controls.append(controlButton(name, 'economy-action'));
-    const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !ready);
+    const lock = this.button('shop-lock', state.shop.locked ? '🔒 已锁店' : '锁店', () => this.actions.shopLock(!state.shop.locked, state.shop.generation), !operable);
     lock.setAttribute('aria-pressed', String(Boolean(state.shop.locked))); lock.classList.add('economy-action'); controls.append(lock);
     if (dock) dock.append(controls); else actions.append(controls);
     this.root.append(actions);
@@ -353,7 +355,7 @@ export class StrategyPanel {
     // keeping the shop within the first screen on small phones.
     const secondary = element('div', '', 'secondary-controls');
     for (const name of (['start-combat', 'continue', 'new-match'] as const).filter(name => name !== primary)) secondary.append(controlButton(name, 'secondary-action'));
-    this.renderShop(state, ready);
+    this.renderShop(state, operable);
     this.root.append(secondary);
     this.actions.highlight([]);
     const preview = encounterPreviewSection(state, {
@@ -374,7 +376,7 @@ export class StrategyPanel {
       this.root.append(receipt);
     }
     this.lootSection = this.lootPanel(state); if (this.lootSection) this.root.append(this.lootSection);
-    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : '战斗与回合结算期间构筑已锁定', 'panel-status');
+    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? '可购买、刷新、买经验；备战席可拖动整理，棋盘单位锁定到下个准备阶段' : '战斗与回合结算期间构筑已锁定', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     for (const [tab, label] of [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const) {

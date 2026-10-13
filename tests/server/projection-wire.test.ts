@@ -240,8 +240,8 @@ describe('B7 compact replay', () => {
 
 describe('B7 overtime (§11.5)', () => {
   it('runs a match past 6-7 into overtime-N rounds and ends with a unique ranking', () => {
-    // Seed 6: idle seats leave two or more alive after 6-7; the match is decided in overtime-2.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 6 });
+    // Seed 12: idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7; decided in overtime-4.
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 12 });
     room.start();
     const names = new Map<number, string>();
     const ids = new Map<number, string>();
@@ -275,16 +275,10 @@ describe('B7 overtime (§11.5)', () => {
     const clearBoards = (state: RoomState) => {
       if (state.phase !== 'preparation' || state.round === lastCleared) return;
       lastCleared = state.round;
+      // Sell every own unit: a benched one would be put back on the board at the deadline (T10 auto-deploy).
       for (const seat of state.seats) {
         if (!seat.alive) continue;
-        let slot = 0;
-        for (const unit of seat.match.preparation.units) {
-          if (unit.team !== 'player' || unit.location.kind !== 'board') continue;
-          const used = new Set(room.state.seats.find(candidate => candidate.seatId === seat.seatId)!.match.preparation.units.flatMap(other => other.location.kind === 'bench' ? [other.location.slot] : []));
-          while (used.has(slot)) slot++;
-          const result = room.handle(seat.seatId, { type: 'deploy', unitId: unit.id, target: { kind: 'bench', slot } });
-          if (!result.ok) room.handle(seat.seatId, { type: 'sell', unitId: unit.id });
-        }
+        for (const unit of seat.match.preparation.units) if (unit.team === 'player') room.handle(seat.seatId, { type: 'sell', unitId: unit.id });
       }
     };
     let state = room.state;

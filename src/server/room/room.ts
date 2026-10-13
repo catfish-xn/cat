@@ -4,7 +4,9 @@
  * the one-shot round publication and the ranking; every rule (gold, shop, combat, damage,
  * income, growth, the shared card pool) comes from src/simulation through its public commands,
  * the TP shared-pool transactions (contract §12), the injected BattleResolver and the T3
- * receipt entry `applyRoundSettlement` (contract §11.3).
+ * receipt entry, applied through the shared `settleRound` wrapper on the latest live seat (contract §11.3, §15.3).
+ * T10 (§15): operations stay open through battle/choice/settlement; the preparation deadline auto-deploys human
+ * seats, freezes the inputs and locks (PvP) or starts (PvE) the live seats.
  */
 import {
   buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, selectAnomalyTarget,
@@ -13,11 +15,12 @@ import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulatio
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
-  applyRoundSettlement, assertSharedPoolConservation, buySharedUnit, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
+  assertSharedPoolConservation, autoDeployToCap, buySharedUnit, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
   refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellSharedUnit, setSharedShopLock,
   type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
+import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
 import { findPairing, planPairings } from './pairing';
 import {
@@ -56,7 +59,8 @@ export interface RoomOptions extends RoomTimings {
 }
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
-export type CommitFailure = 'duplicate-settlement' | 'stale-round' | 'wrong-phase' | 'invalid-settlement';
+/** `stale-seat`: a seat or the pool changed after the plan was made; plan again on the latest live states. */
+export type CommitFailure = 'duplicate-settlement' | 'stale-round' | 'stale-seat' | 'wrong-phase' | 'invalid-settlement';
 export type CommitResult = { readonly ok: true; readonly state: RoomState } | { readonly ok: false; readonly reason: CommitFailure; readonly state: RoomState };
 export type PlanResult = { readonly ok: true; readonly settlement: RoundSettlement } | { readonly ok: false; readonly detail: string };
 /** What a room still holds besides its published state; every count is 0 once it ended or was disposed (B8). */
@@ -75,7 +79,16 @@ interface Resolution {
   job: BattleJob | null;
 }
 
-const CHOICE_COMMANDS: ReadonlySet<SeatCommand['type']> = new Set(['choose', 'anomalyTarget', 'anomalyReroll']);
+/** Contract §15.2: operations and choices the room passes to the rules, by room phase; the rules then check the seat's own phase and target (§15.1). */
+const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip'];
+const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll'];
+export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
+  waiting: new Set(), preparation: new Set([...OPS, ...CHOICES]), choice: new Set([...OPS, ...CHOICES]),
+  // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
+  frozen: new Set(), battle: new Set(OPS), 'awaiting-settlement': new Set(OPS), settlement: new Set(OPS), ended: new Set(),
+};
+/** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
+const LIVE_COMBAT_MAX_STEPS = 5_000;
 
 /** One seat transaction: on success the pool and the seat state are published together; on failure both are the input references. */
 export type SeatCommandOutcome =
@@ -158,6 +171,11 @@ export class Room {
   /** Unpublished pool the current round's battles chained through (§12.4); published only with the round. */
   private resolvedPool: SharedPoolState | null = null;
   private resolution: Resolution | null = null;
+  /** Pool and live seats as the freeze published them (§15.4); a settlement may adopt the resolver's states only while both are unchanged. */
+  private lockedPool: SharedPoolState | null = null;
+  /** Deadline deployments staged during `frozen`, published with the locks at battle entry. */
+  private deployed: ReadonlyMap<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }> = new Map();
+  private lockedSeats: ReadonlyMap<string, MatchState> = new Map();
   private disposed = false;
   private extensions = 0;
   private readonly listeners = new Set<(state: RoomState) => void>();
@@ -248,7 +266,7 @@ export class Room {
     const seatId = seat.seatId;
     if (!seat.alive) return { ok: false, reason: 'seat-eliminated', state: seat.match };
     const phase = this.current.phase;
-    const allowed = !this.disposed && (phase === 'preparation' || (phase === 'choice' && CHOICE_COMMANDS.has(command.type)));
+    const allowed = !this.disposed && ROOM_COMMAND_GATE[phase].has(command.type);
     if (!allowed) return { ok: false, reason: 'wrong-phase', state: seat.match };
     const result = applySeatCommand(this.current.pool, seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
@@ -291,23 +309,30 @@ export class Room {
   /* ---------------- settlement (§11.3) ---------------- */
 
   /**
-   * Builds this round's settlement from a full set of results without touching the room: every result is
-   * checked against the frozen envelope, every real seat is staged exactly once (two-sided seats through
-   * `applyRoundSettlement` on a private copy of the seat map, PvE/supply seats from the rules' own
-   * settled state), and any failure discards the whole stage. Pure: calling it again with the same
-   * results and the same room state is the retry the contract asks for, with the same seeds.
+   * Builds this round's settlement from a full set of results without touching the room: every result is checked
+   * against the frozen envelope, then every alive seat is settled exactly once, in seat order, on its LATEST live
+   * state and the latest pool (contract §15.2): two-sided seats through the shared `settleRound` wrapper with the
+   * receipt; PvE seats whose live battle is still running are finished by the rules' shared `step`. The resolver's
+   * own pre-battle states are only adopted when nothing changed since the freeze (then they are exactly what the live
+   * run gives). Any failure discards the whole stage. Pure: calling it again with the same results and room is the
+   * retry the contract asks for, with the same seeds.
    */
-  planSettlement(results: readonly BattleResult[], pool: SharedPoolState = this.resolvedPool ?? this.current.pool): PlanResult {
-    const state = this.current;
-    const alive = this.aliveSeats();
+  planSettlement(results: readonly BattleResult[], resolverPool: SharedPoolState = this.resolvedPool ?? this.current.pool): PlanResult {
+    return this.plan(this.current, results, resolverPool, this.untouchedSinceFreeze());
+  }
+
+  /** planSettlement on a given room state: the published one, or the battle-entry state about to be published. */
+  private plan(state: RoomState, results: readonly BattleResult[], resolverPool: SharedPoolState, untouched: boolean): PlanResult {
+    const alive = state.seats.filter(seat => seat.alive);
     const byId = new Map(state.seats.map(seat => [seat.seatId, seat] as const));
     const envelopes = new Map(this.frozenInputs.map(input => [input.battleId, input] as const));
-    const staged = new Map<string, SettledSeat>();
-    const stage = (settled: SettledSeat): string | null => {
-      if (staged.has(settled.seatId)) return `seat ${settled.seatId} reported twice`;
-      if (!alive.some(seat => seat.seatId === settled.seatId)) return `seat ${settled.seatId} is not alive`;
-      if (settled.match.round !== state.round) return `seat ${settled.seatId} state is at round ${settled.match.round}`;
-      staged.set(settled.seatId, settled); return null;
+    type Job = { readonly kind: 'receipt'; readonly receipt: RoundSettlementReceipt; readonly damage: number }
+      | { readonly kind: 'outcome'; readonly outcome: BattleSeatOutcome; readonly frozen: MatchState | null };
+    const jobs = new Map<string, Job>();
+    const queue = (seatId: string, job: Job): string | null => {
+      if (jobs.has(seatId)) return `seat ${seatId} reported twice`;
+      if (!alive.some(seat => seat.seatId === seatId)) return `seat ${seatId} is not alive`;
+      jobs.set(seatId, job); return null;
     };
     for (const result of results) {
       if (result.round !== state.round) return { ok: false, detail: `result ${result.battleId} is for round ${result.round}, room is at ${state.round}` };
@@ -320,37 +345,59 @@ export class Room {
         if (result.participants.length !== frozenSeats.length || result.participants.some(seatId => !frozenSeats.includes(seatId))) return { ok: false, detail: `battle ${result.battleId} participants differ from the frozen envelope` };
         if (result.battle.battleId !== result.battleId || result.battle.roundId !== state.roundId || result.battle.battleSeed !== envelope.battleSeed) return { ok: false, detail: `battle ${result.battleId} rules result does not match the frozen envelope` };
         for (const seatId of result.participants) {
-          const seat = byId.get(seatId);
-          if (!seat) return { ok: false, detail: `unknown seat ${seatId}` };
+          if (!byId.has(seatId)) return { ok: false, detail: `unknown seat ${seatId}` };
           const proposal = [result.proposals.a, result.proposals.b].find(candidate => candidate.seatId === seatId);
           if (!proposal) return { ok: false, detail: `battle ${result.battleId} has no proposal for seat ${seatId}` };
           if (!proposal.settlementEligible) return { ok: false, detail: `seat ${seatId} proposal is not eligible` };
-          const receipt = buildReceipt(state.roomId, envelope, proposal, result.battle.terminal.tick, result.battle.events.length);
-          const applied = applyRoundSettlement(seat.match, receipt);
-          if (!applied.ok) return { ok: false, detail: `seat ${seatId}: ${applied.reason}` };
-          if (applied.state.playerHp !== Math.max(0, seat.hp - proposal.damage)) return { ok: false, detail: `seat ${seatId}: rules HP ${applied.state.playerHp} disagrees with the room HP ${seat.hp} - ${proposal.damage}` };
-          const problem = stage({ seatId, hpBefore: seat.hp, damage: proposal.damage, hpAfterRaw: seat.hp - proposal.damage, hpAfter: applied.state.playerHp, match: applied.state, receipt, events: applied.events });
+          const problem = queue(seatId, { kind: 'receipt', receipt: buildReceipt(state.roomId, envelope, proposal, result.battle.terminal.tick, result.battle.events.length), damage: proposal.damage });
           if (problem) return { ok: false, detail: problem };
         }
       } else {
         if (envelope.roundKind === 'pvp' && this.pvpMode !== 'placeholder') return { ok: false, detail: `battle ${result.battleId} is a placeholder result on a PvP round in pvpMode=${this.pvpMode}` };
         if (result.outcomes.length !== frozenSeats.length || result.outcomes.some(outcome => !frozenSeats.includes(outcome.seatId))) return { ok: false, detail: `battle ${result.battleId} outcomes differ from the frozen envelope` };
         for (const outcome of result.outcomes) {
-          const seat = byId.get(outcome.seatId);
-          if (!seat) return { ok: false, detail: `unknown seat ${outcome.seatId}` };
+          if (!byId.has(outcome.seatId)) return { ok: false, detail: `unknown seat ${outcome.seatId}` };
           if (!Number.isInteger(outcome.damage) || outcome.damage < 0) return { ok: false, detail: `seat ${outcome.seatId} damage ${outcome.damage} is not a non-negative integer` };
-          // The rules settled this seat themselves (PvE/supply): their HP is authoritative and must agree with the room's. A
-          // placeholder outcome that left the state unsettled (test resolvers) is subtracted by the room as in B1.
-          const settledByRules = outcome.state.roundResults.at(-1)?.round === state.round;
-          const expected = Math.max(0, seat.hp - outcome.damage);
-          if (settledByRules && outcome.state.playerHp !== expected) return { ok: false, detail: `seat ${outcome.seatId}: rules HP ${outcome.state.playerHp} disagrees with the room HP ${seat.hp} - ${outcome.damage}` };
-          const problem = stage({ seatId: outcome.seatId, hpBefore: seat.hp, damage: outcome.damage, hpAfterRaw: seat.hp - outcome.damage, hpAfter: expected, match: outcome.state, receipt: null, events: [] });
+          const problem = queue(outcome.seatId, { kind: 'outcome', outcome, frozen: envelope.seats.find(seat => seat.seatId === outcome.seatId)?.state ?? null });
           if (problem) return { ok: false, detail: problem };
         }
       }
     }
-    for (const seat of alive) if (!staged.has(seat.seatId)) return { ok: false, detail: `seat ${seat.seatId} has no result` };
-    let seats = alive.map(seat => staged.get(seat.seatId)!);
+    for (const seat of alive) if (!jobs.has(seat.seatId)) return { ok: false, detail: `seat ${seat.seatId} has no result` };
+    // Nothing moved since the freeze: the resolver ran exactly the live seats, so its states and pool chain are the live result.
+    let pool = untouched ? resolverPool : state.pool;
+    let seats: SettledSeat[] = [];
+    // Fixed seat order, independent of result arrival order: each seat's transaction runs on the pool the previous one left.
+    for (const seat of alive) {
+      const job = jobs.get(seat.seatId)!;
+      const settled = (match: MatchState, damage: number, receipt: RoundSettlementReceipt | null, events: readonly MatchEvent[]): SettledSeat =>
+        ({ seatId: seat.seatId, hpBefore: seat.hp, damage, hpAfterRaw: seat.hp - damage, hpAfter: Math.max(0, seat.hp - damage), match, receipt, events });
+      if (job.kind === 'receipt') {
+        const applied = runSharedMatchCommand(pool, seat.match, { type: 'settleRound', receipt: job.receipt });
+        if (!applied.ok) return { ok: false, detail: `seat ${seat.seatId}: ${applied.reason}` };
+        if (applied.state.playerHp !== Math.max(0, seat.hp - job.damage)) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${applied.state.playerHp} disagrees with the room HP ${seat.hp} - ${job.damage}` };
+        pool = applied.pool; seats.push(settled(applied.state, job.damage, job.receipt, applied.events));
+        continue;
+      }
+      const { outcome } = job;
+      // The rules settled this seat themselves (PvE/supply): their HP is authoritative and must agree with the room's. A
+      // placeholder outcome that left the state unsettled (test resolvers) is subtracted by the room as in B1.
+      const settledByRules = outcome.state.roundResults.at(-1)?.round === state.round;
+      const expected = Math.max(0, seat.hp - outcome.damage);
+      if (settledByRules && outcome.state.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: rules HP ${outcome.state.playerHp} disagrees with the room HP ${seat.hp} - ${outcome.damage}` };
+      if (untouched) { seats.push(settled(outcome.state, outcome.damage, null, [])); continue; }
+      if (seat.match.phase === 'combat') {
+        if (!settledByRules) return { ok: false, detail: `seat ${seat.seatId}: an unsettled placeholder outcome cannot settle a live battle` };
+        const finished = finishLiveCombat(pool, seat.match);
+        if (!finished.ok) return { ok: false, detail: `seat ${seat.seatId}: ${finished.reason}` };
+        if (finished.state.playerHp !== expected) return { ok: false, detail: `seat ${seat.seatId}: live HP ${finished.state.playerHp} disagrees with the resolved battle ${seat.hp} - ${outcome.damage}` };
+        pool = finished.pool; seats.push(settled(finished.state, outcome.damage, null, finished.events));
+        continue;
+      }
+      // No live battle (supply, or a state the resolver left as it was): the live seat itself is the settled state.
+      if (outcome.state !== job.frozen) return { ok: false, detail: `seat ${seat.seatId} changed after the freeze but its battle was not run on the live state` };
+      seats.push(settled(seat.match, outcome.damage, null, []));
+    }
     // The staged states must be exactly the ones the chained pool knows (a resolver that awarded a unit outside the pool fails here).
     const unbalanced = conservationProblem(pool, seats.map(seat => seat.match));
     if (unbalanced) return { ok: false, detail: `shared pool: ${unbalanced}` };
@@ -383,7 +430,8 @@ export class Room {
       ...eliminated,
       ...state.seats.filter(seat => !seat.alive).map(seat => ({ seatId: seat.seatId, rank: seat.rank! })),
     ].sort((a, b) => a.rank - b.rank) : null;
-    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking, pool: released } };
+    return { ok: true, settlement: { settlementId: `${state.roomId}:round-${state.round}`, round: state.round, roundId: state.roundId, results, seats, eliminated, finalRanking, pool: released,
+      basis: { poolRevision: state.poolRevision, seatRevisions: Object.fromEntries(alive.map(seat => [seat.seatId, seat.seatRevision])) } } };
   }
 
   /** Publishes the staged round once: HP from the staged states, eliminations and ranking; a repeated settlementId changes nothing. */
@@ -394,6 +442,8 @@ export class Room {
     if (settlement.round !== state.round || settlement.settlementId !== `${state.roomId}:round-${state.round}`) return { ok: false, reason: 'stale-round', state };
     const alive = this.aliveSeats();
     if (settlement.seats.length !== alive.length || alive.some(seat => !settlement.seats.some(settled => settled.seatId === seat.seatId))) return { ok: false, reason: 'invalid-settlement', state };
+    // Planned on other live states (a command landed in between): publishing it would overwrite that command (§15.2).
+    if (settlement.basis.poolRevision !== state.poolRevision || alive.some(seat => settlement.basis.seatRevisions[seat.seatId] !== seat.seatRevision)) return { ok: false, reason: 'stale-seat', state };
     const settled = new Map(settlement.seats.map(seat => [seat.seatId, seat] as const));
     const ranks = new Map<string, number>(settlement.eliminated.map(entry => [entry.seatId, entry.rank]));
     for (const entry of settlement.finalRanking ?? []) ranks.set(entry.seatId, entry.rank);
@@ -402,7 +452,8 @@ export class Room {
       if (!outcome) return seat;
       const rank = ranks.get(seat.seatId) ?? null;
       const stillAlive = outcome.hpAfter > 0;
-      return { ...seat, hp: outcome.hpAfter, alive: stillAlive, rank, eliminatedRound: stillAlive ? null : settlement.round, match: outcome.match, seatRevision: seat.seatRevision + 1 };
+      return { ...seat, hp: outcome.hpAfter, alive: stillAlive, rank, eliminatedRound: stillAlive ? null : settlement.round, match: outcome.match, seatRevision: seat.seatRevision + 1,
+        serverEvents: { seatRevision: seat.seatRevision + 1, events: outcome.events } };
     });
     this.replace({ ...state, seats, pool: settlement.pool, poolRevision: settlement.pool.revision, settlements: [...state.settlements, settlement.settlementId], ranking: settlement.finalRanking });
     return { ok: true, state: this.current };
@@ -458,10 +509,68 @@ export class Room {
   private freezeAndResolve(): void {
     this.setPhase('frozen', null);
     if (!this.applyTimeouts('preparation')) return;
-    this.frozenInputs = this.buildInputs();
+    // §15.4: deploy every human seat up to its cap, freeze every input on the deployed states, then lock the live seats.
+    // Staged only: the deployments, locks and starts are published together at battle entry (§15.4 item 4), so a
+    // refused battle or receipt leaves every seat exactly as the deadline found it.
+    const deployed = this.autoDeploy();
+    if (!deployed) return;
+    this.deployed = deployed;
+    this.frozenInputs = this.buildInputs(deployed);
     // §12.4: one unpublished proposal for the whole round; a battle that awards a unit hands its pool to the next battle.
     this.resolution = { results: [], pool: this.current.pool, job: null };
     this.scheduleSlice();
+  }
+
+  /** Staged `autoDeployToCap` of every alive human seat in preparation; nothing is published yet. A refusal faults the round. */
+  private autoDeploy(): ReadonlyMap<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }> | null {
+    const staged = new Map<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }>();
+    for (const seat of this.aliveSeats()) {
+      if (seat.kind !== 'human' || seat.match.phase !== 'preparation') continue;
+      const result = autoDeployToCap(seat.match);
+      if (!result.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: `auto-deploy:${result.reason}` }); return null; }
+      if (result.state !== seat.match) staged.set(seat.seatId, { match: result.state, events: result.events });
+    }
+    return staged;
+  }
+
+  /**
+   * After every input is frozen: PvP seats get the rules' combat roster lock (§15.3), PvE seats start their real
+   * battle through the shared wrapper (§15.4 item 3). One publication carries the deployments, locks and starts;
+   * later operations act on these live seats, never on the frozen inputs.
+   */
+  private lockedRoom(deployed: ReadonlyMap<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }>): RoomState | null {
+    const kind = this.current.roundKind;
+    let pool = this.current.pool;
+    const locked = new Map<string, { readonly match: MatchState; readonly events: readonly MatchEvent[] }>();
+    for (const seat of this.aliveSeats()) {
+      const staged = deployed.get(seat.seatId);
+      let match = staged?.match ?? seat.match;
+      if (match.phase === 'preparation' && kind === 'pvp') {
+        const result = lockMatchCombatRoster(match);
+        if (!result.ok) { this.fail({ kind: 'seat-stuck', seatId: seat.seatId, reason: `lock:${result.reason}` }); return null; }
+        match = result.state;
+      } else if (match.phase === 'preparation' && kind === 'pve') {
+        const started = runSharedMatchCommand(pool, match, { type: 'startCombat' });
+        if (!started.ok) {
+          this.fail({ kind: 'resolver-error', battleId: `${this.current.roomId}:r${this.current.round}:${seat.seatId}`, message: `seat ${seat.seatId}: ${started.reason}`, reason: started.reason });
+          return null;
+        }
+        match = started.state; pool = started.pool;
+      }
+      if (match !== seat.match) locked.set(seat.seatId, { match, events: staged?.events ?? [] });
+    }
+    if (locked.size === 0) return this.current;
+    return { ...this.current, pool, poolRevision: pool.revision, seats: this.current.seats.map(seat => {
+      const next = locked.get(seat.seatId);
+      if (!next) return seat;
+      const seatRevision = seat.seatRevision + 1;
+      return { ...seat, match: next.match, seatRevision, serverEvents: { seatRevision, events: next.events } };
+    }) };
+  }
+
+  /** True while no command touched any alive seat or the pool since the freeze published the locked seats. */
+  private untouchedSinceFreeze(): boolean {
+    return this.lockedPool === this.current.pool && this.aliveSeats().every(seat => this.lockedSeats.get(seat.seatId) === seat.match);
   }
 
   private scheduleSlice(): void {
@@ -494,10 +603,15 @@ export class Room {
 
   private stageResolved(results: readonly BattleResult[], pool: SharedPoolState): void {
     this.resolvedPool = pool;
-    const plan = this.planSettlement(results, pool);
+    const entry = this.lockedRoom(this.deployed);
+    if (!entry) return;
+    // Checked on the battle-entry state before anything is published: a refused receipt or result faults with no seat moved.
+    const plan = this.plan(entry, results, pool, true);
     if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
     this.pendingSettlement = plan.settlement;
-    this.replace({ ...this.current, battles: results });
+    this.replace({ ...entry, battles: results });
+    this.lockedPool = this.current.pool;
+    this.lockedSeats = new Map(this.aliveSeats().map(seat => [seat.seatId, seat.match] as const));
     // Playback runs one tick record per tick, 0..terminal (contract §14.2): terminal.tick + 1 records per battle.
     const ticks = (combat: { readonly terminal: { readonly tick: number } } | null) => combat === null ? 0 : combat.terminal.tick + 1;
     const longest = Math.max(0, ...results.flatMap(result => result.kind === 'placeholder' ? result.outcomes.map(outcome => ticks(outcome.combat)) : [ticks(result.battle)]));
@@ -506,10 +620,10 @@ export class Room {
     this.setPhase('battle', longest * tickMs + this.options.battleTailMs);
   }
 
-  private buildInputs(): readonly BattleInput[] {
+  private buildInputs(deployed: ReadonlyMap<string, { readonly match: MatchState }>): readonly BattleInput[] {
     const state = this.current;
     const alive = this.aliveSeats();
-    const seatInput = (seat: SeatState) => ({ seatId: seat.seatId, state: seat.match });
+    const seatInput = (seat: SeatState) => ({ seatId: seat.seatId, state: deployed.get(seat.seatId)?.match ?? seat.match });
     const seed = (battleId: string): number => {
       const value = state.battleSeeds[battleId];
       if (value === undefined) throw new Error(`battle ${battleId} has no frozen seed`);
@@ -542,8 +656,14 @@ export class Room {
   private commitPending(): void {
     const settlement = this.pendingSettlement;
     this.pendingSettlement = null;
-    if (settlement) {
-      const commit = this.commitSettlement(settlement);
+    if (settlement && !this.current.settlements.includes(settlement.settlementId)) {
+      let commit = this.commitSettlement(settlement);
+      // Operations during the battle changed live seats: settle again on the latest states (§15.2), never on the staged ones.
+      if (!commit.ok && commit.reason === 'stale-seat') {
+        const plan = this.planSettlement(settlement.results);
+        if (!plan.ok) return this.fail({ kind: 'invalid-results', detail: plan.detail });
+        commit = this.commitSettlement(plan.settlement);
+      }
       if (!commit.ok && commit.reason !== 'duplicate-settlement') return this.fail({ kind: 'invalid-results', detail: commit.reason });
     }
     if (this.current.ranking) return this.setPhase('ended', null);
@@ -601,7 +721,7 @@ export class Room {
     if (deadlineAt !== null) this.timer = this.options.clock.schedule(deadlineAt, () => this.onDeadline());
   }
   /** Forgets the current round's frozen envelopes, the resolution in progress and the staged settlement. */
-  private releaseRound(): void { this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; }
+  private releaseRound(): void { this.pendingSettlement = null; this.frozenInputs = []; this.resolvedPool = null; this.resolution = null; this.lockedPool = null; this.lockedSeats = new Map(); this.deployed = new Map(); }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
   private replaceSeats(seats: readonly SeatState[]): void { this.replace({ ...this.current, seats }); }
   /** Publishes one seat transaction: its state and the pool it was decided against, together (§12.1). */
@@ -623,6 +743,22 @@ export class Room {
     if (state.poolRevision !== state.pool.revision) throw new Error(`poolRevision ${state.poolRevision} is not pool.revision ${state.pool.revision}`);
     assertSharedPoolConservation(state.pool, state.seats.map(seat => seat.match));
   }
+}
+
+/** Finishes a live PvE battle with the rules' shared `step` on the latest pool; the seat leaves `combat` settled by the rules. */
+function finishLiveCombat(pool: SharedPoolState, state: MatchState):
+  { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] } | { readonly ok: false; readonly reason: string } {
+  let current = state, latest = pool;
+  const events: MatchEvent[] = [];
+  for (let steps = 0; current.phase === 'combat'; steps++) {
+    if (steps >= LIVE_COMBAT_MAX_STEPS) return { ok: false, reason: 'live-combat-steps-exhausted' };
+    const step = runSharedMatchCommand(latest, current, { type: 'step' });
+    if (!step.ok) return { ok: false, reason: step.reason };
+    current = step.state; latest = step.pool;
+    // Combat ledger events stay with the resolved battle (its replay); the seat keeps the match-domain ones.
+    for (const event of step.events) if (!('tick' in event)) events.push(event);
+  }
+  return { ok: true, pool: latest, state: current, events };
 }
 
 /** The rules' conservation check as a value: null when balanced, else its reason (never used as protocol text). */

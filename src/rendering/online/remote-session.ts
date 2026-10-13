@@ -22,6 +22,8 @@ import type { ClientCommand, GameClient } from './protocol';
 export type IntentNotice = { readonly kind: 'pending'; readonly commandId: number } | { readonly kind: 'offline'; readonly text: string };
 /** The "开战" transition: the initial view is held this long before tick 0 plays (inside the room's battle tail). */
 export const REPLAY_OPENING_MS = 400;
+/** Commands the room passes to the rules while a battle runs (contract §15.2 `OPS`). */
+const BATTLE_COMMANDS: ReadonlySet<ClientCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip']);
 /** Playback behind wall time by more than this (dropped or stalled frames) catches up at once; 1x otherwise. */
 const CATCH_UP_MS = 250;
 
@@ -50,13 +52,22 @@ export class RemoteSession extends MatchSession {
   override get combatView(): CombatViewState | null { return this.view; }
   override get combatRuntime(): null { return null; }
   override get displayLog(): readonly DisplayCombatEvent[] { return this.played; }
-  /** Server pushed my authoritative state; `events` are those of my commands it confirms. */
-  receiveState(state: MatchState, events: readonly MatchEvent[] = []): void {
+  /**
+   * True while my battle of this round is on the board and `state` is my live seat of that same round, still before
+   * its settlement (T10: a PvP seat stays in preparation under the server's roster lock, a PvE seat in combat). Such a
+   * state only refreshes what the battle is shown on: gold, shop, level and bench move, the battle keeps playing.
+   */
+  holdsBattle(state: MatchState): boolean {
     const base = this.playbackBase;
-    // A pre-battle state of the same round (resume snapshot order) only refreshes what the battle is shown on.
-    if (base && this.replay && state.round === base.round && state.phase === 'preparation') {
+    return base !== null && this.replay !== null && state.round === base.round && (state.phase === 'preparation' || state.phase === 'combat');
+  }
+  /** My battle of this round is on the board (playing or held on its terminal view until the settlement arrives). */
+  get inBattle(): boolean { return this.replay !== null; }
+  /** Server pushed my authoritative state; `events` are those of my commands it confirms and of its own deadline/settlement transactions. */
+  receiveState(state: MatchState, events: readonly MatchEvent[] = []): void {
+    if (this.holdsBattle(state)) {
       this.playbackBase = state;
-      const before = this.matchState; this.matchState = this.overlay(); this.notify(before, [], 'command');
+      const before = this.matchState; this.matchState = this.overlay(); this.notify(before, this.record(events), 'command');
       return;
     }
     if (this.playingBack) { this.superseded++; this.skipPlayback(); } // a newer state supersedes the battle still being played
@@ -115,12 +126,21 @@ export class RemoteSession extends MatchSession {
     this.notice = null;
     if (this.offline !== null) { this.notice = { kind: 'offline', text: this.offline }; return this.blocked(); }
     if (this.spectating) { this.notice = { kind: 'offline', text: '已淘汰 · 观战中，不能操作' }; return this.blocked(); }
-    if (this.paused || this.playingBack) return this.blocked();
+    // Contract §15.2: a running battle accepts operations only (choices wait for their window); the server and the rules
+    // decide everything else, including the board-target refusals of §15.1.
+    if (this.paused || (this.inBattle && !BATTLE_COMMANDS.has(command.type))) return this.blocked();
     const result = this.client.send(command);
     // Pending: nothing changes until the receipt and the state push after it (never spend gold ahead of the server).
     if (result.ok === 'pending') { this.notice = { kind: 'pending', commandId: result.commandId }; return this.blocked(); }
     if (!result.ok) return result;
     const before = this.matchState;
+    if (this.holdsBattle(result.state)) {
+      // An operation during my battle: the board keeps the battle, the panels show the new live state.
+      this.playbackBase = result.state; this.matchState = this.overlay();
+      const events = this.record(result.events);
+      this.notify(before, events, 'command');
+      return { ...result, state: this.matchState };
+    }
     if (result.state.round !== before.round) this.combatLedger = [];
     this.matchState = result.state;
     const events = this.record(result.events);

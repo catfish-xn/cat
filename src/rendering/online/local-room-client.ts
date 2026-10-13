@@ -12,7 +12,7 @@
 import { createMatch } from '../../simulation/match';
 import type { MatchCommandResult, MatchFailure, MatchState } from '../../simulation/match-types';
 import {
-  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView,
+  Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView, seatPushEvents,
   type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
 import type { ClientCommand, ClientListeners, GameClient, LobbyView, PlayerView } from './protocol';
@@ -174,7 +174,7 @@ export class LocalRoomClient implements GameClient {
     const seat = state.seats.find(candidate => candidate.seatId === this.mySeatId);
     // Same rule as the network server: an eliminated seat's last state is the one of the round that eliminated it.
     const receivesState = seat !== undefined && (seat.alive || seat.eliminatedRound === state.round);
-    if (seat && receivesState && seat.match !== this.emittedMatch && !this.inCommand) listeners.state(this.display(seat.match));
+    if (seat && receivesState && seat.match !== this.emittedMatch && !this.inCommand) listeners.state(this.display(seat.match), undefined, seatPushEvents(seat));
     if ((state.phase === 'battle' || state.phase === 'frozen') && state.battles.length > 0 && state.round !== this.emittedBattleRound) {
       // The replay is combat view data; the settled state follows as a state push once the room commits.
       this.emittedBattleRound = state.round;

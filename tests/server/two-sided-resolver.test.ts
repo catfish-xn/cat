@@ -37,7 +37,7 @@ describe('resolveTwoSidedPvp', () => {
     const actors = new Set(result.battle.events.flatMap(event => 'unitId' in event ? [event.unitId] : 'attackerId' in event ? [event.attackerId] : []));
     expect([...a].some(id => actors.has(id))).toBe(true);
     expect([...b].some(id => actors.has(id))).toBe(true);
-    expect(result.battle.initial.units.map(unit => unit.team).sort()).toEqual(['enemy', 'player']);
+    expect(new Set(result.battle.initial.units.map(unit => unit.team))).toEqual(new Set(['enemy', 'player']));
     expect(result.battle.mirrorOfSeatId).toBeNull();
     for (const proposal of [result.proposals.a, result.proposals.b]) {
       expect(proposal.settlementEligible).toBe(true);

@@ -6,7 +6,7 @@
  */
 import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatUnit } from '../../simulation/combat-types';
-import type { MatchState } from '../../simulation/match-types';
+import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
 } from '../../server-entry';
@@ -76,6 +76,14 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
 
 /** The only shape in which a seat's own MatchState leaves the room (initial, increment, resume, fault, refusal). */
 export function toSeatPrivateView(match: MatchState): PrivateSeatView { return toPrivateSeatView(match); }
+
+/** Server-originated events a seat's client may see with its state push: only own-unit moves and merges (T10), nothing else of the ledger. */
+const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded']);
+export function seatPushEvents(seat: SeatState): readonly MatchEvent[] {
+  const pushed = seat.serverEvents;
+  if (!pushed || pushed.seatRevision !== seat.seatRevision) return [];
+  return pushed.events.filter(event => PUSHED_EVENT_TYPES.has(event.type) && !('tick' in event));
+}
 
 export interface SeatReplay { readonly battleId: string; readonly replay: CombatReplay }
 

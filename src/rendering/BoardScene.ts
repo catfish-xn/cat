@@ -16,7 +16,7 @@ import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
 import { createGameClient, isOnlineMode } from './online/mode';
 import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
-import { OnlineApplication } from './online/online-application';
+import { OnlineApplication, mergeNotice } from './online/online-application';
 import { REPLAY_OPENING_MS, RemoteSession } from './online/remote-session';
 import type { SceneApplication } from './online/scene-application';
 import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
@@ -198,6 +198,7 @@ export class BoardScene extends Phaser.Scene {
     this.application = client ? new OnlineApplication(this.session as RemoteSession, client, {
       refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
       confirmed: commands => this.confirmed(commands.map(command => command.commandId), commands.flatMap(command => command.events)),
+      serverEvents: events => this.serverEvents(events),
       refused: (commandId, reason, text) => { this.pendingSuccess.delete(commandId); this.setStatus(text ?? this.failureMessage(reason ?? 'wrong-phase')); },
     }, mounts) : new MatchApplication(this.session, {
       replace: session => {
@@ -345,7 +346,8 @@ export class BoardScene extends Phaser.Scene {
 
   private installDragHandlers() {
     this.input.on('dragstart', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
-      if (this.session.phase !== 'preparation' || !this.tokens.has(token.getData('unitId'))) return;
+      const unit = this.state.units.find(candidate => candidate.id === token.getData('unitId'));
+      if (!unit || !this.canDrag(unit) || !this.tokens.has(unit.id)) return;
       const gesture = this.inputRouter.begin('unit', token.getData('unitId'), pointer.id);
       if (!gesture) return;
       token.setData('gesture', gesture);
@@ -353,7 +355,7 @@ export class BoardScene extends Phaser.Scene {
       token.setDepth(10).setScale(1.08); this.syncSelection();
     });
     this.input.on('drag', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
-      if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
+      if (!this.dragPhase() || this.draggingId !== token.getData('unitId')) return;
       if (!token.getData('gesture') || !this.inputRouter.owns(token.getData('gesture')) || pointer.id !== token.getData('gesture').pointerId) return;
       // Center the token on the pointer: Phaser's threshold-delayed drag offset
       // otherwise incorporates the first mouse move and can shift a whole hex.
@@ -361,7 +363,8 @@ export class BoardScene extends Phaser.Scene {
       token.setPosition(x, y); this.overlay.clear();
       const target = this.target({ x, y });
       if (target) {
-        const reason = validateMatchDeployment(this.session.state, token.getData('unitId'), target);
+        // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
+        const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
         this.setStatus(reason ? this.failureMessage(reason) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
         this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
         if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
@@ -369,7 +372,7 @@ export class BoardScene extends Phaser.Scene {
       } else this.setStatus(this.failureMessage('invalid-location'));
     });
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
-      if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
+      if (!this.dragPhase() || this.draggingId !== token.getData('unitId')) return;
       const gesture = token.getData('gesture');
       if (!gesture || pointer.id !== gesture.pointerId) return;
       if (pointer.wasCanceled) { this.clearDrag(); return; }
@@ -378,11 +381,23 @@ export class BoardScene extends Phaser.Scene {
       const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
       // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
       const swap = !!target && this.swapsWith(token.getData('unitId'), target);
-      if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
+      if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
+      else if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
       else this.setStatus(this.failureMessage('invalid-location'));
       this.clearDrag(); this.sync();
     });
   }
+  /**
+   * Online (T10, contract §15.1): during my battle, the choice window and the settlement the shop, XP and my bench stay
+   * operable; board units stay where the battle froze them until the next preparation.
+   */
+  private benchOps(): boolean {
+    const session = this.session;
+    return this.online && session instanceof RemoteSession && !session.spectating && session.offline === null
+      && (session.phase === 'combat' || session.phase === 'choice' || session.phase === 'settlement');
+  }
+  private dragPhase(): boolean { return this.session.phase === 'preparation' || this.benchOps(); }
+  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && unit.location.kind === 'bench')); }
   /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
   private swapsWith(unitId: string, target: UnitLocation): boolean {
     return this.state.units.some(unit => unit.id !== unitId && unit.team === 'player' && (unit.location.kind === 'board' && target.kind === 'board'
@@ -408,7 +423,8 @@ export class BoardScene extends Phaser.Scene {
   }
   private failureMessage(reason: MatchFailure): string {
     const messages: Record<MatchFailure, string> = {
-      'wrong-phase': this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
+      'wrong-phase': this.benchOps() ? '战斗与结算期间只能操作商店和备战席 · 棋盘单位请在下个准备阶段调整'
+        : this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
         : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
         : this.session.phase === 'settlement' ? (this.online ? '本轮已结算 · 稍后自动进入下一回合' : '本轮已结算 · 点击 继续进入下一回合')
@@ -447,11 +463,19 @@ export class BoardScene extends Phaser.Scene {
       this.setStatus(notice?.kind === 'offline' ? notice.text : this.failureMessage(result.reason)); return;
     }
     this.clearCombatEffects();
-    if (this.session.phase !== 'preparation') this.selectedId = null;
+    if (this.session.phase !== 'preparation' && !this.benchOps()) this.selectedId = null;
     if (!this.session.combatView) this.recentCombatEvents = [];
     this.sync();
     this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
-    const upgrades = result.events.filter(event => event.type === 'unitUpgraded');
+    const upgrades = this.showUpgrades(result.events);
+    this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
+    if (this.session.phase === 'gameOver') this.setStatus(this.endText());
+    else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
+    else if (this.session.phase === 'settlement') this.setStatus(this.settledText());
+  }
+  /** Floating "N★ 升星" labels for the upgrades among `events`; returns them. */
+  private showUpgrades(events: readonly MatchEvent[]) {
+    const upgrades = events.filter(event => event.type === 'unitUpgraded');
     for (const event of upgrades) {
       const token = this.tokens.get(event.survivorId);
       // A cascade can consume an intermediate survivor in the same transaction.
@@ -462,10 +486,14 @@ export class BoardScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(20);
       this.fadeEffect(label, 1000); this.renderedUpgradeCount++;
     }
-    this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
-    if (this.session.phase === 'gameOver') this.setStatus(this.endText());
-    else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
-    else if (this.session.phase === 'settlement') this.setStatus(this.settledText());
+    return upgrades;
+  }
+  /** Online (T10): the server's own deadline deployment and post-battle merges arrive with its state push. */
+  private serverEvents(events: readonly MatchEvent[]) {
+    const deployed = events.filter(event => event.type === 'unitDeployed').length;
+    const merged = this.showUpgrades(events).length ? mergeNotice(events) : null;
+    if (merged) this.setStatus(merged);
+    else if (deployed) this.setStatus(`准备时间结束 · 已自动上场 ${deployed} 个单位`);
   }
 
   private reconcileTokens() {
@@ -516,6 +544,7 @@ export class BoardScene extends Phaser.Scene {
     this.strategyPanel?.render();
     if (this.session.phase !== 'preparation') {
       for (const token of this.tokens.values()) if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
+      if (this.benchOps()) this.syncOperable();
       this.syncCombat(); return;
     }
     for (const unit of this.state.units) {
@@ -525,8 +554,23 @@ export class BoardScene extends Phaser.Scene {
       if (token.input) { token.input.enabled = true; this.input.setDraggable(token, true); }
     }
   }
+  /**
+   * Online outside preparation: bench tokens sit on their slots, selectable and draggable (bench only). Without a battle
+   * on the board (choice, settlement) the whole lineup is laid out as the latest state has it, so post-battle merges show.
+   */
+  private syncOperable() {
+    const laidOut = !this.session.combatView;
+    for (const unit of this.state.units) {
+      const token = this.tokens.get(unit.id);
+      if (!token || unit.team !== 'player' || (!laidOut && unit.location.kind !== 'bench')) continue;
+      if (this.draggingId !== unit.id) { const p = this.position(unit.location); token.setPosition(p.x, p.y); }
+      token.setVisible(true).setAlpha(1).setScale(1).setDepth(0);
+      if (laidOut) { this.views.get(unit.id)?.resetMeters(); this.renderedCells.delete(unit.id); }
+      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, unit.location.kind === 'bench'); }
+    }
+  }
   private syncHud() {
-    const match = this.session.state, ready = match.phase === 'preparation';
+    const match = this.session.state, ready = match.phase === 'preparation', operable = ready || this.benchOps();
     const round = readRoundInfo(match);
     this.roundLabel.setText(round.displayName); this.goldLabel.setText(`金币 ${match.gold}`);
     this.hpLabel.setText(`生命 ${match.playerHp}`);
@@ -541,8 +585,8 @@ export class BoardScene extends Phaser.Scene {
     const canContinue = readLootView(match).canContinue;
     this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
     if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
-    this.rerollButton.setAlpha(ready ? 1 : 0.4);
-    this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(ready && threshold !== null ? 1 : 0.4);
+    this.rerollButton.setAlpha(operable ? 1 : 0.4);
+    this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(operable && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];
       const frame = this.shopFrames[slot].clear().setVisible(false);
@@ -552,15 +596,15 @@ export class BoardScene extends Phaser.Scene {
         const definition = UNIT_DEFINITIONS[offer.definitionId];
         const colors = ['#304653', '#245841', '#28517d', '#634786', '#846230'];
         const borders = [0x7b94a3, 0x68c087, 0x72b6ff, 0xba8bff, 0xffd675];
-        button.setText(`${definition.symbol} ${definition.name}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(ready ? 1 : 0.4);
-        frame.lineStyle(2, borders[definition.cost - 1], ready ? 1 : 0.4).strokeRect(204 + slot * 106, 567, 104, 54);
+        button.setText(`${definition.symbol} ${definition.name}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(operable ? 1 : 0.4);
+        frame.lineStyle(2, borders[definition.cost - 1], operable ? 1 : 0.4).strokeRect(204 + slot * 106, 567, 104, 54);
       }
     }
     const failure = this.session.startFailure;
     this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与经验，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
     this.phaseLabel.setText(this.onlineEnded() ? this.endText() : ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
       : match.phase === 'choice' ? '构筑选择 · 完成组件 / 强化 / 异常 后继续'
-      : match.phase === 'combat' ? '自动战斗 · 积累法力 并施法，商店与部署已锁定'
+      : match.phase === 'combat' ? (this.online ? '自动战斗 · 可购买 / 刷新 / 买经验，备战席可整理；棋盘已锁定' : '自动战斗 · 积累法力 并施法，商店与部署已锁定')
       : match.phase === 'gameOver' ? this.endText() : '回合结算 · 收入与经验 已到账，继续进入下一回合');
     const result = match.roundResults.at(-1);
     if ((match.phase === 'settlement' || match.phase === 'gameOver') && result) {
@@ -576,7 +620,7 @@ export class BoardScene extends Phaser.Scene {
     const selected = this.state.units.find(unit => unit.id === this.selectedId);
     if (!selected) this.selectedId = null;
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
-    const displayed = this.session.phase === 'preparation' ? this.state.units.find(unit => unit.id === displayId) : undefined;
+    const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
       const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
       this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
@@ -680,8 +724,9 @@ export class BoardScene extends Phaser.Scene {
     for (const unit of this.state.units) {
       const token = this.tokens.get(unit.id);
       if (!token) continue; // a board unit the battle shows under its battle id
-      if (token.input) { this.input.setDraggable(token, false); token.input.enabled = true; }
-      if (unit.location.kind === 'bench') token.setAlpha(0.35);
+      const bench = unit.location.kind === 'bench', operable = bench && unit.team === 'player' && this.benchOps();
+      if (token.input) { this.input.setDraggable(token, operable); token.input.enabled = true; }
+      if (bench) token.setAlpha(operable ? 1 : 0.35);
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {

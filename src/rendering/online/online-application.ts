@@ -5,7 +5,8 @@
  */
 import type { SessionChange } from '../../m6/contracts';
 import type { ReceiptFailure } from '../../server/net/messages';
-import type { MatchFailure, MatchState } from '../../simulation/match-types';
+import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
+import { UNIT_DEFINITIONS } from '../../simulation/units';
 import type { ReplaySnapshot } from '../../replay';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
@@ -26,6 +27,13 @@ export interface OnlineHooks {
   confirmed?(commands: readonly ConfirmedCommand[]): void;
   /** The server refused a pending command; `text` is set for network/room refusals, else `reason` is a rule failure. */
   refused?(commandId: number, reason: MatchFailure | null, text: string | null): void;
+  /** The server's own events behind a state push (T10: deadline auto-deployment, post-battle merges), after it is shown. */
+  serverEvents?(events: readonly MatchEvent[]): void;
+}
+/** Status text of the post-battle merges among server events (T10 §15.3), or null when there are none. */
+export function mergeNotice(events: readonly MatchEvent[]): string | null {
+  const upgrades = events.filter(event => event.type === 'unitUpgraded');
+  return upgrades.length ? `战后合并 · ${upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId]?.name ?? event.definitionId} → ${event.toStar}★`).join(' · ')}` : null;
 }
 /** Refusals that are not rule failures (docs/UI_REQUESTS.md B2 错误码表); everything else uses the offline wording. */
 const NON_RULE_REFUSALS: Partial<Record<ReceiptFailure, string>> = {
@@ -73,7 +81,7 @@ export class OnlineApplication implements SceneApplication {
     this.unlisten = client.listen({
       lobby: view => this.onLobby(view),
       view: view => this.onView(view),
-      state: (state, confirmed) => this.onState(state, confirmed ?? []),
+      state: (state, confirmed, serverEvents) => this.onState(state, confirmed ?? [], serverEvents ?? []),
       replay: replay => { this.session.receiveReplay(replay); this.hooks.clearInput(); this.hooks.refresh(); },
       refused: refusal => this.onRefused(refusal),
       connection: status => this.onConnection(status),
@@ -84,15 +92,20 @@ export class OnlineApplication implements SceneApplication {
   get isActive(): boolean { return this.mode === 'active' && !document.hidden; }
   private onLobby(view: LobbyView) { this.lobby.render(view); }
   /** A push that only confirms my own commands keeps selection and panels (like a local command); anything else redraws. */
-  private onState(state: MatchState, confirmed: readonly ConfirmedCommand[]) {
+  private onState(state: MatchState, confirmed: readonly ConfirmedCommand[], serverEvents: readonly MatchEvent[]) {
     const before = this.session.state;
-    if (confirmed.length && !this.session.playingBack && before.phase === state.phase && before.round === state.round) {
-      this.session.receiveState(state, confirmed.flatMap(command => command.events));
+    // During my battle (T10) an operation's push refreshes the panels and bench under the battle; it is still a confirmation.
+    const sameView = this.session.holdsBattle(state) || (!this.session.playingBack && before.phase === state.phase && before.round === state.round);
+    if (confirmed.length && sameView) {
+      this.session.receiveState(state, [...confirmed.flatMap(command => command.events), ...serverEvents]);
       this.hooks.confirmed?.(confirmed);
-      return;
-    }
-    this.session.receiveState(state); this.hooks.refresh();
+    } else { this.session.receiveState(state, serverEvents); this.hooks.refresh(); }
+    // The settlement's merges arrive before the phase change; its status line keeps them (syncStatus).
+    const merged = mergeNotice(serverEvents);
+    if (merged) this.mergeNote = { round: state.round, text: merged };
+    if (serverEvents.length) this.hooks.serverEvents?.(serverEvents);
   }
+  private mergeNote: { readonly round: number; readonly text: string } | null = null;
   private onRefused(refusal: RefusedCommand) {
     const text = NON_RULE_REFUSALS[refusal.reason] ?? null;
     this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
@@ -161,8 +174,9 @@ export class OnlineApplication implements SceneApplication {
     const opponent = view.seats.find(seat => seat.seatId === view.opponentSeatId);
     if (view.phase.kind === 'preparation') this.hooks.status(opponent ? `对手：${opponent.name} · ${view.phase.roundName} · 倒计时结束自动开战` : `${view.phase.roundName} · 野怪回合 · 倒计时结束自动开战`);
     else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name} · 战斗由服务器计算` : '战斗由服务器计算 · 正在播放');
-    else if (view.phase.kind === 'choice') this.hooks.status('请在倒计时内完成选择 · 超时由服务器代选');
-    else if (view.phase.kind === 'settlement') this.hooks.status('回合结算 · 稍后自动进入下一回合');
+    const merged = this.mergeNote?.round === view.phase.round ? `${this.mergeNote.text} · ` : '';
+    if (view.phase.kind === 'choice') this.hooks.status(`${merged}请在倒计时内完成选择 · 超时由服务器代选`);
+    else if (view.phase.kind === 'settlement') this.hooks.status(`${merged}回合结算 · 稍后自动进入下一回合`);
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
