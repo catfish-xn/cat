@@ -1,4 +1,32 @@
-# 交接记录（2026-10-13）
+# 交接记录（2026-10-13，晚间更新）
+
+## 0. 角色分工（2026-10-13 用户确认）
+
+三个 AI 参与，职责如下。AGENTS.md 的目录权限不变：规则/测试/文档归 Codex，界面与 `src/server/` 归 Claude 流水线；只是 Claude 流水线内部再分两层。
+
+| 角色 | 模型 | 做什么 | 不做什么 |
+| --- | --- | --- | --- |
+| 指挥 | Claude（本指挥会话） | 读交接与合同，拆任务、写派单提示词、交叉验货（跑测试、对照合同、答"测试过了吗/越界了吗/改玩法了吗"）、维护本文件、向用户汇报并提出待拍板项 | 不写功能代码；不替用户做玩法取舍 |
+| 后端 | Codex（GPT） | `src/simulation/`、`tests/`、`scripts/`、`docs/` 合同；规则、经济、战斗、恢复校验、digest 与证据 | 不改 `src/server/`、`src/rendering/` |
+| 前端 | Claude Opus 5.5 | `src/rendering/`、`src/presentation/`、`src/server/`（投影、房间状态机、网络）、AGENTS.md 列出的四个界面文件；e2e 脚本 `tests/server/e2e/` | 不改 `src/simulation/`、不自行算规则；需要新数据写 `docs/UI_REQUESTS.md` |
+
+派单流程：指挥写提示词 → 用户转给对应模型 → 模型出 PR 合 `multiplayer` → 指挥验货 → 用户决定合并。Codex 的 PR 由指挥跑测试并对照合同；Opus 的 PR 由指挥检查是否越过目录、是否自行算规则，必要时再让 Codex 看一眼规则调用。
+
+## 0.1 当前进行中（2026-10-13 晚）
+
+- **T12 战中装备永不锁定（R2）**：Codex 在 PR #71（draft，`codex/t12-combat-equip`）停在"联机存档恢复"的规格冲突。用户已选 **B**：联机不新增存档恢复入口，只验冻结输入恢复重算 + 可信席位续算；单人完整恢复。Codex 正在继续，PR 转正式后再验货。
+- **T11 遗留**：`multiplayer` 基线上 `tests/m8-b5-equipment-history`（8 条）和 `tests/m8-b5-temporary`（1 条）因 1-4 经验 +2 而失败（等级 4→5、经验 32→34），PR #70 没有更新夹具。已要求 Codex 单独出小 PR 修夹具并补 `docs/evidence/t11/README.md`。
+- **并行派给 Opus 5.5**（见 §4）：C15 PvP 回放我方装备图标；C16 界面装备操作改为全读 `previewEquip`，为 T12 预接线。
+- **并行派给 Codex（只写文档）**：R3+R4 掉落系统设计稿与合同草案，等 T12 合入后实施。
+- **用户侧**：C10–C12 仍未真机试玩；部署步骤未在任何服务器执行过。
+
+## 0.2 联机收尾还剩什么
+
+T12 → R3+R4 掉落系统 → T9 两机真机整局验收 → 合 main（提醒旧单机存档作废，digest 已改三次）→ 按 `docs/MULTIPLAYER_RELEASE_NOTES.md` 部署。性能项 SR-B8-02/03 不阻塞上线。
+
+---
+
+以下为白天的原记录。
 
 分支：`multiplayer`（1cf3b80），今天合入 6 个 PR（#61–#66），类型检查与 22 文件/150 个服务器用例全绿。main 未动，正式站 `/cat/` 仍是单机版。
 
@@ -29,3 +57,30 @@
 1. 用户两台电脑试一整局（A 机 `npm run serve:game` + `npx vite --host`，两边开 `?mode=online&server=ws&name=…`）。重点验证五项：战斗中能买牌、刷新、买经验、动备战席；准备倒计时结束后备战席棋子自动补上前排；棋盘一张加备战两张在战斗中凑齐时战后才合并；PvP 回放无重复棋子、死亡棋子消失；结算摘要行显示利息和经验。
 2. 发现 bug 按今天的流程派单：界面与服务器归 Claude，规则归 Codex，交叉验货后合入 `multiplayer`。
 3. 试玩通过后决定合 main 与部署：`git checkout main && git merge multiplayer`，按发布说明 §2–§4 部署；合 main 前提醒用户旧单机存档会因规则版本变化作废（digest 已两次变更）。
+
+## 4. 派单提示词（2026-10-13 晚，指挥拟）
+
+### 4.1 给 Opus 5.5：C15 PvP 回放显示我方单位装备图标
+
+现象：PvP 战斗回放里我方单位不显示装备图标（交接遗留项）。原因：回放 `CombatViewState` 内的单位 ID 是战斗 ID（合同 §10：`JSON.stringify(['t2', seatId, kind, originalId])`），客户端按它查不到本席 `items`；合同明确"不按字符串切割推断"，所以客户端不能自己解析。
+做法：服务器在 `src/server/room/projection.ts` 的 `SeatReplay` 增加本席专用映射 `unitIds: { combatId: string; originalId: string }[]`，只含 `kind==='unit'` 且 `seatId` 为本席的条目，来源是 `BattleResult.battle.mapping`（`BattleIdMapping`）；PvE 的 placeholder 战斗没有映射，`unitIds` 为空数组，客户端按现有逻辑直接用原 ID。镜像席（b 侧）同样只给自己的条目。不下发对手映射，不下发 item/augment/anomaly 条目。`src/server/net/messages.ts` 的推送结构同步加字段并更新结构校验。客户端 `src/rendering/BoardScene.ts` 回放建 token 时，用映射把战斗 ID 换成原 ID 再读装备（沿用现有 `readUnitEquipment`/图标路径），找不到映射就不显示装备，不报错。
+约束：不改 `src/simulation/`；不解析战斗 ID 字符串；不改回放 tick、事件或结果。
+测试：`tests/server/` 加投影用例（a 侧、b 侧各只拿到自己的单位映射，PvE 为空，对手条目不出现）；e2e `tests/server/e2e/` 加一条：两席各带一件装备进 PvP，回放期间双方各自看到自己单位的装备图标，对手单位按现状。跑 `npm run typecheck`、`npx vitest run tests/server`、新 e2e。
+交付：PR 合 `multiplayer`，标题 `C15: own-unit equipment icons in PvP replay`。在 `docs/UI_REQUESTS.md` 记一条已解决项说明字段形状。
+
+### 4.2 给 Opus 5.5：C16 装备操作完全按 previewEquip，为 T12 预接线
+
+背景：T12（PR #71，Codex 进行中）会把装备/合成放开到 combat/choice/settlement 四阶段，并允许库存组件直接合到棋盘单位身上已穿的组件。现在界面在 `src/rendering/strategy-panel.ts`（第 39 行附近的阶段文案、第 379 行附近 "棋盘单位锁定到下个准备阶段"）和 `BoardScene` 的拖放判断里自己写死了"战斗中棋盘单位不可装备"，违反"界面只读规则结果"的约定。
+做法：所有装备目标能否放、放到哪个槽、提示什么，一律以 `previewEquip(state, itemId, unitId, slot)` 的 `allowed/reason/conflictingItemIds` 为准，删掉界面自己的阶段判断；拒绝文案继续走 `src/presentation/equipment-feedback.ts` 的 `EQUIPMENT_FAILURE_TEXT`。状态行文案改为按阶段描述可做的事（例如战斗中："可购买、刷新、买经验、整理备战席；装备以单位提示为准"），不再写死"已锁定"。合成按钮继续读 `previewCombine`。T12 合入后不需要再改界面即可生效；T12 合入前行为与现在完全一致（因为 previewEquip 现在就拒绝战中棋盘目标）。
+约束：不改 `src/simulation/`；不预判 T12 的新失败码，未知 reason 显示通用文案；不改拖放手感和布局。
+测试：现有 `tests/server/e2e/swap-checks.mjs`、`c7-playtest.mjs`、`c12-combat-ops.mjs` 必须照常通过；补一条 e2e：战斗中把装备拖到棋盘单位上，提示文案与 `previewEquip` 的 reason 对应文案一致。
+交付：PR 合 `multiplayer`，标题 `C16: equipment UI follows previewEquip in every phase`。与 C15 分开 PR。
+
+### 4.3 给 Codex：R3+R4 掉落系统设计稿与合同草案（只写文档，不写代码）
+
+基线 `origin/multiplayer@25dae94`，分支 `codex/r3r4-loot-design`，只改 `docs/`。按 `docs/S13_RULES_GAP.md` §3（R3 野怪宝珠）和 §4（R4 拆卸器与重铸器）已签字的方向，产出：
+1. `docs/M8B_LOOT.md` 修订草案（标明"草案，未签字"）：宝珠品质体系（灰/蓝/金/棱彩）、同局各席数量与品质一致政策、开局累计 2–3 组件价值、PvE 改随机、保留五次 `.4` 自选；拆卸器、重铸器三个项目消耗品的定义、来源、一次性语义、使用阶段（结合 R2 四阶段装备权限）、失败原因。每个数值标注来源等级（S1–S9/L1）或"项目自定"。
+2. `docs/MULTIPLAYER_CONTRACT.md` 新节草案：新增/修改的公共命令签名、`revealedLoot` 投影字段变化、共享池影响、失败枚举。
+3. 工作量与版本：影响文件清单、需要的新细分版本名、与 T12 的 digest 合并发布方案（S13_RULES_GAP §2.5 建议统一升级）、测试清单。
+4. 列出需要用户拍板的数值或取舍（每项给选项和建议）。
+不改 `src/`、`tests/`，不改 digest。PR 合 `multiplayer`，标题 `docs: R3+R4 loot system design draft`。
