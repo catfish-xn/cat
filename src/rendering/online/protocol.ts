@@ -6,7 +6,7 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReceiptFailure } from '../../server/net/messages';
-import type { ClientCommand, LobbyView, PlayerView } from '../../server/protocol';
+import type { ClientCommand, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
 import type { CombatReplay } from '../../server-entry';
 
 export * from '../../server/protocol';
@@ -39,8 +39,11 @@ export interface ClientListeners {
    * are the server's own events behind this state (T10: deadline auto-deployment, post-battle merges).
    */
   state(state: MatchState, confirmed?: readonly ConfirmedCommand[], serverEvents?: readonly MatchEvent[]): void;
-  /** My finished battle of this round as a compact replay (contract §14.2), played back at tick pace (C6). */
-  replay(replay: CombatReplay): void;
+  /**
+   * My finished battle of this round as a compact replay (contract §14.2), played back at tick pace (C6). `unitIds` (C15)
+   * says which battle id is which of my units, so their equipment can be shown; empty for PvE or when the push had none.
+   */
+  replay(replay: CombatReplay, unitIds?: readonly ReplayUnitId[]): void;
   refused?(refusal: RefusedCommand): void;
   connection?(status: ConnectionStatus): void;
 }

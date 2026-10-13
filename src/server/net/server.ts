@@ -198,7 +198,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         let replay: ReturnType<typeof toCombatReplayFor> = null;
         try { replay = toCombatReplayFor(state, seat.seatId); }
         catch (error) { log(`replay of ${battle.battleId} failed: ${error instanceof Error ? error.message : String(error)}`); }
-        if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay });
+        if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay, unitIds: replay.unitIds });
       }
     }
   }

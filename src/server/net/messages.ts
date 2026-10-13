@@ -12,7 +12,7 @@
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
 import type { CombatReplay, PrivateSeatView } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ClientCommand, LobbyView, PlayerView } from '../protocol';
+import type { ClientCommand, LobbyView, PlayerView, ReplayUnitId } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 
 export const NET_PROTOCOL_VERSION = 1;
@@ -94,8 +94,10 @@ export type ServerMessage =
   /**
    * My battle of this round as a compact replay from my point of view (contract §14.2): initial view, one record
    * per tick with keyframes, terminal view. The only battle message (C6); a whole match stays far below the frame cap.
+   * `unitIds` (C15): which battle id is which of MY units, from the rules' mapping; empty for PvE. The client reads it
+   * through `readReplayUnitIds` and never parses a battle id.
    */
-  | { readonly type: 'replay'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly replay: CombatReplay }
+  | { readonly type: 'replay'; readonly roomId: string; readonly round: number; readonly battleId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
   | ReceiptMessage
   | { readonly type: 'error'; readonly code: ErrorCode; readonly message: string; readonly commandId: number | null };
 
@@ -200,6 +202,28 @@ export function parseClientMessage(raw: string): ParseResult {
     if (error instanceof Invalid) return { ok: false, code: 'invalid-message', detail: error.message, commandId };
     throw error;
   }
+}
+
+/**
+ * Structure check of the replay push's `unitIds` (C15), for the client: an array of `{combatId, originalId}` non-empty
+ * strings and nothing else. Null when the field is missing or malformed; the client then shows no equipment in the replay.
+ */
+export function readReplayUnitIds(value: unknown): readonly ReplayUnitId[] | null {
+  if (!Array.isArray(value)) return null;
+  const ids: ReplayUnitId[] = [];
+  try {
+    value.forEach((entry: unknown, index) => {
+      const where = `unitIds[${index}]`;
+      if (!isRecord(entry)) bad(`${where} must be an object`);
+      const record = entry as Shape;
+      onlyKeys(record, ['combatId', 'originalId'], where);
+      ids.push({ combatId: str(record.combatId, `${where}.combatId`, 4 * LIMITS.idChars), originalId: str(record.originalId, `${where}.originalId`) });
+    });
+  } catch (error) {
+    if (error instanceof Invalid) return null;
+    throw error;
+  }
+  return ids;
 }
 
 /** Deterministic JSON with sorted keys: the content identity a commandId is compared against. */

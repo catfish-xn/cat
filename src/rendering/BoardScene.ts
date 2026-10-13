@@ -499,7 +499,7 @@ export class BoardScene extends Phaser.Scene {
   private reconcileTokens() {
     const view = this.session.combatView, fighting = new Set(view?.units.map(unit => unit.id));
     // While a battle is shown it stands in for the board. A two-sided (PvP) replay names my units by their
-    // battle ids (contract §13.5, mapping stays on the server), so a board unit it does not name is shown
+    // battle ids (contract §10.2; only my own unit mapping reaches the client, C15), so a board unit it does not name is shown
     // by its combat unit only, never as a second token at its preparation cell (C10).
     const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
     const ids = new Set(units.map(unit => unit.id));
@@ -517,10 +517,13 @@ export class BoardScene extends Phaser.Scene {
       this.namedObjects.delete(`unit:${id}`);
       if (this.selectedId === id) this.selectedId = null;
     }
-    const items = this.session.state.items;
+    const items = this.session.state.items, session = this.session;
+    // C15: a PvP replay names my units by battle id; the server's own-unit mapping says whose items each one carries.
+    const ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
     for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
-      const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
+      const owner = ownerOf(unit.id);
+      const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === owner)
         .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
       this.views.get(unit.id)!.update(unit, equipped);
     }
@@ -783,7 +786,8 @@ export class BoardScene extends Phaser.Scene {
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
-        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip })),
+        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip,
+        equipped: this.views.get(id)!.equipped })),
       health: meters('hp'), mana: meters('mana'),
       shields: meters('shield').map(meter => ({ ...meter, text: this.views.get(meter.id)!.shieldLabel.text, labelVisible: this.views.get(meter.id)!.shieldLabel.visible })),
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,
