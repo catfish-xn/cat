@@ -18,7 +18,9 @@
  *      the rules settle its PvE loss the moment the battle starts; during the battle it locks the shop and buys a unit
  *      (both `applied`). The round settles (no fault, match not ended), the loss costs HP, the lock and the unit stay,
  *      and the next round starts with the shop still locked.
- * Screenshots and report go to artifacts/c12/ (not committed). CHROMIUM overrides the browser path.
+ * Every operation's screen check waits (10 s) for the state push after its `applied` receipt.
+ * Screenshots and report go to artifacts/c12/ (not committed). CHROMIUM overrides the browser path; C12_VITE_PORT
+ * (default 5202) and C12_WS_PORT (default 8793; segment D uses the next port) override the ports.
  */
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -27,8 +29,9 @@ import { dragUnit } from './swap-checks.mjs';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 const OUT = `${ROOT}artifacts/c12`;
-const VITE_PORT = 5201;
-const WS_PORT = 8793;
+// Ports are configurable so parallel runs (or another e2e left running) do not collide; WS_PORT + 1 serves segment D.
+const VITE_PORT = Number(process.env.C12_VITE_PORT ?? 5202);
+const WS_PORT = Number(process.env.C12_WS_PORT ?? 8793);
 const BASE = `http://127.0.0.1:${VITE_PORT}/`;
 const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const COLUMNS = [3, 2, 4, 1, 5, 0, 6], ROWS = [4, 5, 6, 7];
@@ -50,7 +53,7 @@ const failures = [];
 const check = (condition, message) => { if (condition) console.log(`ok  ${message}`); else { console.log(`FAIL ${message}`); failures.push(message); } };
 const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
 const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
-async function waitRead(page, predicate, what, timeout = 8_000) {
+async function waitRead(page, predicate, what, timeout = 10_000) {
   const deadline = Date.now() + timeout;
   for (;;) {
     const snapshot = await read(page).catch(() => null);
@@ -61,6 +64,15 @@ async function waitRead(page, predicate, what, timeout = 8_000) {
 }
 const mine = state => state.preparation.units.filter(unit => unit.team === 'player');
 const cellKey = location => location.kind === 'board' ? `${location.cell.col},${location.cell.row}` : `bench:${location.slot}`;
+/**
+ * An `applied` receipt arrives before the state push that shows it: wait (10 s) until the page state satisfies
+ * `predicate`; a timeout is reported as a failed precondition, never read as the screen's answer.
+ */
+async function waitPushed(page, predicate, what) {
+  const snapshot = await waitRead(page, predicate, what, 10_000);
+  check(snapshot !== null, `precondition: state push after ${what} reached the page within 10 s`);
+  return snapshot;
+}
 const inBattle = s => s?.m6?.phase?.kind === 'combat' && s.state.phase === 'combat';
 const inPreparation = s => s?.m6?.phase?.kind === 'preparation' && s.state.phase === 'preparation';
 
@@ -132,21 +144,24 @@ async function emptyBoardRepro(browser, errors) {
     const unit = mine(s.state)[0], token = s.tokens.find(entry => entry.id === unit.id);
     await page.mouse.click(token.screenX, token.screenY);
     await click(page, 'mobile:sell');
-    await waitRead(page, x => !mine(x.state).some(other => other.id === unit.id), `sale of ${unit.id}`, 3_000);
-    s = await read(page);
+    s = await waitPushed(page, x => !mine(x.state).some(other => other.id === unit.id), `sale of ${unit.id}`) ?? await read(page);
   }
   check(inPreparation(s) && mine(s.state).length === 0, `D 1-3: the whole roster was sold in preparation (${mine(s.state).length} left)`);
   // The rules settle the empty PvE board when its battle starts; the room is in its battle phase.
   // The view says combat for the frozen step too (commands refused there); the battle proper begins with my replay.
   s = await until(x => x.m6?.phase?.kind === 'combat' && x.state.round === 2 && x.replay?.terminalTick != null, '1-3 battle', 30_000);
   const lock = await act('shop-lock', 'shopLock');
-  const locked = await waitRead(page, x => x.state.shop.locked === true, 'locked shop on screen', 3_000);
-  const now = await read(page);
+  const lockPhase = (await read(page)).m6?.phase?.kind;
+  const locked = lock === 'applied' ? await waitPushed(page, x => x.state.shop.locked === true, 'shopLock') : null;
+  const now = locked ?? await read(page);
   const slot = now.state.shop.slots.findIndex(offer => offer.status === 'available' && !offer.empty);
-  const buy = slot >= 0 && now.state.gold >= 1 ? await act(`mobile:buy-${slot}`, 'buy') : `skipped (gold ${now.state.gold})`;
-  const during = await read(page);
-  check(during.m6?.phase?.kind === 'combat' && lock === 'applied' && locked !== null, `D 1-3: shopLock during the battle applied (${lock}), shop shows locked`);
-  check(buy === 'applied' && mine(during.state).length === 1, `D 1-3: buy during the battle applied (${buy}), one unit on the bench`);
+  const gold0 = now.state.gold;
+  const buy = slot >= 0 && gold0 >= 1 ? await act(`mobile:buy-${slot}`, 'buy') : `skipped (gold ${gold0})`;
+  const buyPhase = (await read(page)).m6?.phase?.kind;
+  const during = buy === 'applied' ? await waitPushed(page, x => mine(x.state).some(unit => unit.location.kind === 'bench') && x.state.gold < gold0, 'buy') : null;
+  check(lockPhase === 'combat' && lock === 'applied' && locked?.state.shop.locked === true, `D 1-3: shopLock during the battle applied (${lock}, ${lockPhase}), shop shows locked`);
+  check(buyPhase === 'combat' && buy === 'applied' && during !== null && mine(during.state).length === 1 && during.state.gold < gold0,
+    `D 1-3: buy during the battle applied (${buy}, ${buyPhase}), one unit on the bench, gold ${gold0} → ${during?.state.gold}`);
   await page.screenshot({ path: `${OUT}/D-empty-board-battle.png` });
   const settled = await until(x => x.state.roundResults.some(record => record.round === 2) && x.m6?.phase?.kind !== 'combat', '1-3 settlement', 60_000);
   const record = settled.state.roundResults.find(entry => entry.round === 2);
@@ -239,13 +254,16 @@ async function main() {
         if (slot >= 0 && state.gold >= 12 && state.level < 9) {
           const superseded = s.replay.superseded;
           const gold0 = state.gold, gen0 = state.shop.generation, xp0 = state.level * 1000 + state.xp, units0 = mine(state).length;
+          // Each receipt is followed by its state push; the screen is read only once that push arrived.
           const buy = await act(`mobile:buy-${slot}`, 'buy');
-          const afterBuy = await waitRead(page, x => mine(x.state).length > units0 || x.state.gold < gold0, 'bought unit on screen');
+          const afterBuy = await waitPushed(page, x => mine(x.state).length > units0 && x.state.gold < gold0, 'buy');
+          const gold1 = afterBuy?.state.gold ?? gold0;
           const reroll = await act('mobile:reroll', 'reroll');
-          const afterReroll = await waitRead(page, x => x.state.shop.generation === gen0 + 1, 'rerolled shop on screen');
+          const afterReroll = await waitPushed(page, x => x.state.shop.generation === gen0 + 1 && x.state.gold === gold1 - 2, 'reroll');
+          const gold2 = afterReroll?.state.gold ?? gold1;
           const xp = await act('mobile:buy-xp', 'buyXp');
-          const afterXp = await waitRead(page, x => x.state.level * 1000 + x.state.xp > xp0, 'XP on screen');
-          const now = await read(page);
+          const afterXp = await waitPushed(page, x => x.state.level * 1000 + x.state.xp > xp0 && x.state.gold === gold2 - 4, 'buyXp');
+          const now = afterXp ?? await read(page);
           const spent = gold0 - now.state.gold;
           const tokens = Object.fromEntries(now.tokens.map(token => [token.id, token]));
           const benchIds = mine(now.state).filter(unit => unit.location.kind === 'bench').map(unit => unit.id);
@@ -264,7 +282,7 @@ async function main() {
           const moving = mine(now.state).find(unit => unit.location.kind === 'bench');
           if (moving && empty !== undefined && inBattle(await read(page))) {
             await dragUnit(page, moving.id, { kind: 'bench', slot: empty });
-            const moved = await waitRead(page, x => mine(x.state).some(unit => unit.id === moving.id && cellKey(unit.location) === `bench:${empty}`), 'bench drag');
+            const moved = await waitPushed(page, x => mine(x.state).some(unit => unit.id === moving.id && cellKey(unit.location) === `bench:${empty}`), 'bench drag');
             check(moved !== null, `B ${state.roundDefinitionId}: bench drag ${moving.id} ${cellKey(moving.location)} → bench:${empty} during the battle`);
           }
           const live = (await read(page)).state;
@@ -296,8 +314,7 @@ async function main() {
             const offer = offersOf(now, target)[0];
             if (offer === undefined || now.gold < 1) break;
             const units0 = mine(now).length;
-            await act(`mobile:buy-${offer}`, 'buy');
-            await waitRead(page, x => mine(x.state).length !== units0, 'deferred-merge purchase');
+            if (await act(`mobile:buy-${offer}`, 'buy') === 'applied') await waitPushed(page, x => mine(x.state).length !== units0, 'deferred-merge buy');
           }
           const during = await read(page);
           const copies = mine(during.state).filter(unit => unit.definitionId === target);
@@ -311,7 +328,10 @@ async function main() {
           }
         } else {
           const tries = rerollsThisRound.get(round) ?? 0;
-          if (tries < 3 && state.gold >= 6) { rerollsThisRound.set(round, tries + 1); await act('mobile:reroll', 'reroll'); }
+          if (tries < 3 && state.gold >= 6) {
+            rerollsThisRound.set(round, tries + 1);
+            if (await act('mobile:reroll', 'reroll') === 'applied') await waitPushed(page, x => x.state.shop.generation > state.shop.generation, 'deferred-merge reroll');
+          }
         }
       }
       if (merge && !mergeDone && s.state.roundResults.some(record => record.round === merge.round)) {
