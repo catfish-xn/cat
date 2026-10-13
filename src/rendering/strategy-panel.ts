@@ -36,13 +36,17 @@ import { isEmptyShopSlot } from './online/pool-feedback';
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
 const PHASE_HINT: Readonly<Record<MatchState['phase'], string>> = {
-  preparation: '购买、部署、装备后，点击开始战斗', choice: '完成三选一后继续运营', combat: '自动战斗进行中 · 运营已锁定',
+  preparation: '购买、部署、装备后，点击开始战斗', choice: '完成三选一后继续运营', combat: '自动战斗进行中 · 等待本轮结算',
   settlement: '收入与经验已到账 · 点击继续进入下一回合', gameOver: '本局结束 · 点击新局重新开始',
 };
+/** Online outside preparation: what stays open. Equipment legality is per target, read from previewEquip. */
+const ONLINE_OPS_TEXT = '可购买、刷新、买经验、整理备战席；装备以单位提示为准';
+/** Status line when nothing can be operated outside preparation (single player). */
+const IDLE_STATUS: Partial<Record<MatchState['phase'], string>> = { combat: '自动战斗进行中 · 等待本轮结算', settlement: '本轮已结算 · 点击继续进入下一回合' };
 /** Online (`?mode=online`): the server advances phases and there is no local 新局, so the single-player calls to action change. */
 const ONLINE_PHASE_LABEL: Partial<Record<MatchState['phase'], string>> = { gameOver: '对局结束' };
 const ONLINE_PHASE_HINT: Partial<Record<MatchState['phase'], string>> = {
-  preparation: '购买、部署、装备 · 倒计时结束自动开战', combat: '战斗中 · 可购买、刷新、买经验和整理备战席', settlement: '收入与经验已到账 · 可继续购买 · 稍后自动进入下一回合', gameOver: '对局结束 · 查看排名',
+  preparation: '购买、部署、装备 · 倒计时结束自动开战', combat: `战斗中 · ${ONLINE_OPS_TEXT}`, settlement: '收入与经验已到账 · 可继续购买 · 稍后自动进入下一回合', gameOver: '对局结束 · 查看排名',
 };
 const isOnline = () => typeof document !== 'undefined' && document.body.dataset.online !== undefined;
 /** The room ended (all other seats out, or I was eliminated) even when my own MatchState is still mid-round. */
@@ -225,7 +229,7 @@ export class StrategyPanel {
       const unitId = target?.dataset.equipUnit ?? this.actions.unitAt(event.clientX, event.clientY);
       if (!unitId) { this.actions.status('物品未装备 · 请放到我方单位或空装备槽'); return; }
       const state = this.actions.state();
-      if (target) { this.actions.equip(drag.gesture.id, unitId, Number(target.dataset.equipSlot)); return; }
+      if (target) { this.equipAt(drag.gesture.id, unitId, Number(target.dataset.equipSlot)); return; }
       // Dropped on a board piece: use the first slot the domain preview accepts (three-slot items reserve 1–3).
       const previews = [0, 1, 2].map(slot => previewEquip(state, drag.gesture.id, unitId, slot));
       const slot = previews.findIndex(preview => preview.allowed);
@@ -283,16 +287,30 @@ export class StrategyPanel {
     button.addEventListener('click', action);
     return button;
   }
+  /** Online (T10, contract §15.1): the shop, XP and shop lock stay open through my battle, the choice window and the settlement. */
+  private operable(state: MatchState): boolean {
+    if (isOnlineSpectating()) return false;
+    return state.phase === 'preparation' || (isOnline() && !isOnlineEnded() && (state.phase === 'combat' || state.phase === 'choice' || state.phase === 'settlement'));
+  }
+  /**
+   * Item cards and slots are live whenever this seat can send commands at all. No phase check here: whether an item
+   * combines, and which unit and slot it fits, in any phase, is previewCombine / previewEquip's answer alone.
+   */
+  private itemsOpen(): boolean { return !isOnlineSpectating() && !isOnlineEnded(); }
+  /** A chosen slot: send only what previewEquip accepts, otherwise name its reason. */
+  private equipAt(itemId: string, unitId: string, slot: number): void {
+    const preview = previewEquip(this.actions.state(), itemId, unitId, slot);
+    if (preview.allowed) this.actions.equip(itemId, unitId, slot); else this.actions.status(equipmentFailureText(preview.reason));
+  }
   private selectItem(id: string) {
-    if (this.actions.state().phase !== 'preparation') return;
+    if (!this.itemsOpen()) return;
     this.selectedItems = this.selectedItems.includes(id) ? this.selectedItems.filter(item => item !== id) : [...this.selectedItems.slice(-1), id];
     this.render();
   }
   render(): void {
     const spectating = isOnlineSpectating();
     const state = this.actions.state(), ready = state.phase === 'preparation' && !spectating;
-    // Online (T10, contract §15.1): the shop, XP and shop lock stay open through my battle, the choice window and the settlement.
-    const operable = ready || (isOnline() && !spectating && !isOnlineEnded() && (state.phase === 'combat' || state.phase === 'choice' || state.phase === 'settlement'));
+    const operable = this.operable(state);
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.eventList = null;
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
@@ -376,7 +394,7 @@ export class StrategyPanel {
       this.root.append(receipt);
     }
     this.lootSection = this.lootPanel(state); if (this.lootSection) this.root.append(this.lootSection);
-    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? '可购买、刷新、买经验；备战席可拖动整理，棋盘单位锁定到下个准备阶段' : '战斗与回合结算期间构筑已锁定', 'panel-status');
+    this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
     for (const [tab, label] of [['traits', '羁绊'], ['items', '装备'], ['units', '部署'], ['builds', '构筑'], ['events', '记录']] as const) {
@@ -386,7 +404,7 @@ export class StrategyPanel {
     this.root.append(tabs);
     this.combatText = element('section', '', 'combat-sources'); this.root.append(this.combatText); this.lastCombatTick = -1; this.lastCombatId = undefined; this.updateCombat();
     if (this.tab === 'traits') this.renderTraits(state);
-    if (this.tab === 'items') this.renderItems(state, ready);
+    if (this.tab === 'items') this.renderItems(state, this.itemsOpen());
     if (this.tab === 'units') this.renderUnits(state, ready);
     if (this.tab === 'builds') this.renderBuilds();
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
@@ -439,18 +457,19 @@ export class StrategyPanel {
     }
     this.root.append(list);
   }
-  private renderItems(state: MatchState, ready: boolean): void {
+  /** `open`: this seat can send commands at all; each combine/equip target's legality comes from the previews. */
+  private renderItems(state: MatchState, open: boolean): void {
     const section = element('section', '', 'item-panel'); section.dataset.items = 'true'; section.append(element('h3', '物品备战席'));
     const inventory = element('div', '', 'item-inventory');
     for (const item of state.items.filter(item => item.location.kind === 'inventory')) {
       const definition = ITEM_DEFINITIONS[item.definitionId];
       const tags = catalogEntry(item.definitionId) ? itemTags(catalogEntry(item.definitionId)!).map(tag => tag.text) : [];
-      const button = this.button(`item:${item.id}`, `${definition.name}${tags.length ? `\n${tags.join(' · ')}` : ''}`, () => {}, !ready);
+      const button = this.button(`item:${item.id}`, `${definition.name}${tags.length ? `\n${tags.join(' · ')}` : ''}`, () => {}, !open);
       button.setAttribute('aria-pressed', String(this.selectedItems.includes(item.id))); button.classList.add('item-card');
       button.insertAdjacentHTML('afterbegin', itemMarkHtml(item.definitionId, 28));
       button.dataset.itemDef = item.definitionId; button.dataset.itemId = item.id; button.title = `${item.id} · ${definition.id}`;
       button.addEventListener('pointerdown', event => {
-        if (!ready || event.button !== 0) return;
+        if (!open || event.button !== 0) return;
         const gesture = this.router.begin('item', item.id, event.pointerId);
         if (!gesture) return;
         button.setPointerCapture(event.pointerId);
@@ -464,7 +483,7 @@ export class StrategyPanel {
     // the commands still re-check the current state when clicked.
     const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? ITEM_DEFINITIONS[item.definitionId].name : '已不存在的物品'; };
     const selected = [...this.selectedItems];
-    const combine = ready && selected.length === 2 ? previewCombine(state, selected[0], selected[1]) : null;
+    const combine = open && selected.length === 2 ? previewCombine(state, selected[0], selected[1]) : null;
     const resultName = combine?.allowed ? ITEM_DEFINITIONS[combine.resultDefinitionId]?.name ?? combine.resultDefinitionId : '';
     const choice = element('p', `选择：${selected.map(itemName).join(' + ') || '无'}${combine?.allowed ? ` → ${resultName}` : ''}`, 'combine-selection');
     section.append(choice);
@@ -472,9 +491,9 @@ export class StrategyPanel {
     section.append(this.button('combine-items', combine?.allowed ? `合成 ${resultName}` : combine ? '无法合成' : '选择两件组件合成', () => {
       if (this.router.current) { this.actions.status('请先结束当前拖拽，再确认合成'); return; }
       this.actions.combine(selected[0], selected[1]);
-    }, !ready || !combine?.allowed));
+    }, !open || !combine?.allowed));
     section.append(element('h3', '单位装备 · 每单位 3 槽'));
-    const chosen = ready ? this.selectedItems.filter(id => state.items.some(item => item.id === id)).at(-1) : undefined;
+    const chosen = open ? this.selectedItems.filter(id => state.items.some(item => item.id === id)).at(-1) : undefined;
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const row = element('article', '', 'equipment-row');
       row.append(element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`));
@@ -490,8 +509,8 @@ export class StrategyPanel {
           : reserved ? `${itemName(entry.reservedByItemInstanceId!)} 占用` : `空槽 ${slot + 1}`;
         const button = this.button(`equipment:${unit.id}:${slot}`, label, () => {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
-          if (chosen) this.actions.equip(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
-        }, !ready || reserved);
+          if (chosen) this.equipAt(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
+        }, !open || reserved);
         if (item) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(item.definitionId, 22)); button.dataset.itemDef = item.definitionId; }
         else if (entry.temporary) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.temporary.definitionId, 22)); button.dataset.itemDef = entry.temporary.definitionId; }
         if (reserved) { button.classList.add('slot-reserved'); button.dataset.reservedBy = entry.reservedByItemInstanceId!; }
