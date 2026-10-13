@@ -432,6 +432,10 @@ typecheck、tests/server 全绿；c7-playtest.mjs 与 b6-bots.mjs 通过；PR �
 
 ## 派工单 C9：联机结算面板改用权威掉落摘要（SR-C7-02 已由 PR #59 交付）
 
+**状态：已交付，PR #61 于 2026-10-13 合入 multiplayer（7cdbf66）。**
+
+Codex 交叉验货：typecheck、tests/server（21 文件 140 用例）通过；9 个改动文件均在 `src/presentation/loot-view.ts`、`src/rendering/`、`tests/server/` 内。联机掉落列表直接读取 `privateView.revealedLoot`，不推断 canContinue、pendingClaims，不发奖、不改玩法。C7 E2E 在本机的 C8 `swap-checks.mjs` 第 5 步失败；不含 C9 的固定基线 6088a11 同样在该步失败，按用户确认作为既存测试时序问题独立跟进（见 `docs/UI_REQUESTS.md` SR-C8-01），不宣称本机 E2E 通过。
+
 分支：`claude/c9-loot-view`，基于 `origin/multiplayer`（0d97c60 之后）。
 
 - 私有投影新增可选顶层 `revealedLoot: { roundId, revealedDrops }`（形状见 `docs/MULTIPLAYER_CONTRACT.md` §14.1），只在本席当前 PvE 回合存在。

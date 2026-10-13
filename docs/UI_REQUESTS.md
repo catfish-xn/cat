@@ -621,7 +621,7 @@ B6（PR #51）已实现，合同文档尚未记载，请 Codex 在 `docs/MULTIPL
 SR-C7-01 验证：实际 Node v22.23.3 / npm 10.9.9；11文件182个部署/经济/序列化/共享池/机器人用例通过，再补1个互换后保存恢复与开战续算用例（最新互换文件15个用例全部通过，合计183个不同用例）。typecheck、T1 Node/browser 入口与指纹归一化校验通过。额外四构筑完整单人逐 tick 恢复套件运行约10分钟仍未结束，已中止，不计为通过；本次无完整单人回放套件通过声明。UI真机拖放待Claude接线后验收。
 ## C7 真机试玩修复后的需求（2026-10-12，Claude 流水线 C）
 
-C7 已让联机结算阶段显示「本轮获得」：客户端对比本席本回合最后一个战前状态与当前状态，列出新增单位、新增库存物品和收入前到账的金币（`src/rendering/online/round-gains.ts`）。这只是两份服务器状态的差，不判断来源；有三处不能保真：重连到战后无基线时不显示；掉落英雄若当场触发升星合并，新单位 ID 不出现，会漏列；4-6 异常刷新等战后扣金币会把金币掉落抵掉。
+**已被 C9 替换（PR #61，2026-10-13 合入 multiplayer，7cdbf66）。** C7 原先通过 `src/rendering/online/round-gains.ts` 对比战前与当前本席状态，显示「本轮获得」；该差分及基线接线已删除。联机结算现在直接读取合同 §14.1 SR-C7-02 的 `privateView.revealedLoot`，与单机共用已揭示掉落行渲染；无字段时不显示掉落行，不推断 canContinue、pendingClaims，不发奖。原差分存在的战后重连无基线、掉落英雄立即升星漏列、战后扣费抵掉金币掉落三类失真不再依赖客户端快照差来处理。
 
 ### SR-C7-02 私有投影公开本轮已揭示掉落（P2，界面体验）
 
@@ -635,3 +635,12 @@ C7 已让联机结算阶段显示「本轮获得」：客户端对比本席本�
 Claude 接线直接读 `privateView.revealedLoot?.revealedDrops`，可据此替换 `round-gains.ts` 差分，不需战前基线，也不需将私有 DTO 强转 MatchState 再调用 readLootView。现有服务器 `toSeatPrivateView` 自动透传本字段，无需修改 src/server；本 PR 不改界面、服务器或 golden。
 
 SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用例通过（最终补测的 2 文件 25 用例全部通过），typecheck、T1 与 T5R Node 入口校验通过，现有 T1 状态/事件/RNG 指纹保持不变。seed 42 八席闲置对局从开局跑到自然终局，逐次检查本席状态的 JSON 投影；实际经过的每个 PvE 轮（至 5-7）所有参战席在准备及结算后均与 readLootView 相等，八席均有真实已揭示奖励，PvP/补给无摘要。淘汰席不再进入后续回合；另用目录全部 8 个 PvE 轮的投影夹具覆盖 6-7，并覆盖共享池缺货补偿、容量等待/放弃、未知字段与未来计划隔离。本测试没有启用机器人调度，不代替真机 UI 或网络压测。
+
+### SR-C8-01：swap-checks 第 5 步在 15 秒准备期内可能被阶段切换打断，建议 Claude 在断言前核对 state.phase 仍为 preparation，或把 CAT_PREP_SEC 提到 25
+
+- 状态：待 Claude 处理；2026-10-13 Codex 交叉验货发现，属于 C8 测试时序，与 C9 无关。
+- 复现：在不含 C9 的固定基线 `6088a11427535beaebef48236911df5ce41296f9` 上执行 `npm run build:game && node tests/server/e2e/c7-playtest.mjs`（Node 24.21.0，CHROMIUM 指向本机 Chromium 1243），第 5 步同样失败；未修改基线源码、15 秒准备期或断言。
+- C9 原失败行：`bench → empty cell at the cap refused (hover "人口已满 · 按 F 升级或先移回一个单位", after "")`。原日志未记录时间戳及阶段切换，不能还原该次 ok→失败间隔或 1-3 preparation→battle 的准确时间。
+- 基线失败行：`bench → empty cell at the cap refused (hover "战斗与回合结算期间构筑已锁定", after "人口已满 · 按 F 升级或先移回一个单位")`。同次输出中，`ok  bench unit-2 ↔ bench unit-4 swapped` 为 10:28:09.534，错误输出为 10:28:13.784（UTC+8），相隔 4.250 秒；这是输出接收间隔，包含错误上抛前的浏览器清理，非精确断言耗时。服务器默认日志未记录逐次 phase 切换，锁定提示表明已离开可构筑阶段，不能据此补造切换时刻。
+- 建议：测试操作及断言前核对 `state.phase === 'preparation'` 并记录 roundId/phase/时间；或仅将此 E2E 启动参数 `CAT_PREP_SEC` 从 15 提到 25，给买入、部署、截图和五步鼠标检查留足时间。遇到阶段切换应明确报测试前置条件失败，不跳过满人口拒绝断言、不更改产品默认计时或规则。
+- 验收：在原慢环境重复运行，保留满人口拖到空格的拒绝提示与布局不变断言；失败日志能区分阶段切换和拒绝逻辑回归。content-digest 的既存基线失败单独跟进，不计入 C9 结论。
