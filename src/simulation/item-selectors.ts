@@ -1,3 +1,4 @@
+import { canOperateMatch, isCombatRosterLocked } from './operation-policy';
 import { ITEM_DEFINITIONS } from './content/items';
 import { validateCombine, validateEquip } from './inventory';
 import type { MatchState } from './match-types';
@@ -18,13 +19,14 @@ export function readItemInventory(state: Readonly<MatchState>): readonly Invento
 
 /** These are the public command validators; a preview never allocates an instance. */
 export function previewCombine(state: Readonly<MatchState>, aId: string, bId: string): CombinePreview {
-  if (state.phase !== 'preparation') return { allowed: false, reason: 'wrong-phase' };
+  if (!canOperateMatch(state)) return { allowed: false, reason: 'wrong-phase' };
   if (isTemporaryItemId(state, aId) || isTemporaryItemId(state, bId)) return { allowed: false, reason: 'temporary-item' };
   return validateCombine(state.items, aId, bId);
 }
 
 export function previewEquip(state: Readonly<MatchState>, itemId: string, unitId: string, slot: number): EquipPreview {
-  if (state.phase !== 'preparation') return { allowed: false, reason: 'wrong-phase', conflictingItemIds: [] };
+  if (!canOperateMatch(state)) return { allowed: false, reason: 'wrong-phase', conflictingItemIds: [] };
+  if ((state.phase !== 'preparation' || isCombatRosterLocked(state)) && state.preparation.units.some(unit => unit.id === unitId && unit.location.kind === 'board')) return { allowed: false, reason: 'wrong-phase', conflictingItemIds: [] };
   if (isTemporaryItemId(state, itemId)) return { allowed: false, reason: 'temporary-item', conflictingItemIds: [] };
   return validateEquip(state.items, state.preparation, itemId, unitId, slot);
 }

@@ -552,7 +552,7 @@ interface RoundSettlementReceipt {
 
 ### 11.3 B4 全轮编排（由 Claude 在 src/server 实现）
 
-1. 冻结本轮 active 席位、配对、battleSeed、battleId、roomRevision；准备截止时先处理 §11.4，随后冻结快照。运行中拒绝修改冻结席位。
+1. 冻结本轮 active 席位、配对、battleSeed、battleId、roomRevision；准备截止时先处理 §11.4 与 §15.4 自动上场，随后冻结快照。运行中冻结输入不可修改，live seat 运营按 §15。
 2. 收齐本轮所有真实席结果，每个真实席恰一份，普通配对两份、镜像配对仅 a；镜像 b 不进入队列，镜像原主由它的真实配对提交。校验 battleId/round/执行代次与冻结信封完全一致，漏席/重复席/旧代次整轮拒绝。
 3. 用原席位 map 建一个临时 map，逐席 apply。任何失败（包括 unexpected duplicate）丢弃整张临时 map 及其事件，不发布已经成功的一席。整轮已提交重试由调度层 round commit ID 去重，不能凭单席 duplicate 推断整轮完成。
 4. 全部成功后，一次替换 map、更新 SeatState.hp **取返回 state.playerHp**，再发布事件和版本；不在房间重算伤害/收入/成长。PvE/补给已结算的暂存状态也随本次原子发布采纳。房间自身提交失败，仍用同信封和原始 map 重试，不换随机种子。
@@ -697,7 +697,7 @@ type SharedMatchCommand =
   | {type:'claimLoot'; round:number};
 ```
 
-对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 继续按项目规则默认选第一项，claimLoot 领取可容纳已赚奖励、放弃容量不足部分，均不重复发奖。移动/装备/买经验/异常目标等不转移棋子来源的旧公开命令与 `applyRoundSettlement` 仍可调用，须保留 sharedPool 绑定；买/卖/刷/锁、奖励及推进必须用 TP 包装。PvP 继续走 T2→T3；startCombat/step 包装用于原非 PvP 战斗，不提供第二套 PvP 结算。整轮 PvE 必须在同一未发布提案内串接最新 pool 和各席 state：前一席发奖占用的池是后一席的输入，不得从同一旧池独立计算多份奖励后合并。任一席失败丢弃整个全轮提案，全部成功再发布（沿用 §11.3）。
+对应 startMatchCombat/stepMatch/selectChoice/forfeitPendingChoice/claimOrDiscardLoot，内部注入事务局部 UnitLootPolicy；该回调不存入 MatchState，不是客户端可配置玩法。timeoutChoice 继续按项目规则默认选第一项，claimLoot 领取可容纳已赚奖励、放弃容量不足部分，均不重复发奖。移动/装备/买经验/异常目标等不转移棋子来源的旧公开命令仍可调用，须保留 sharedPool 绑定；T10 起共享 PvP 结算改走 §15.3 的 settleRound 包装以提交延迟升星来源；买/卖/刷/锁、奖励及推进必须用 TP 包装。PvP 继续走 T2→T3；startCombat/step 包装用于原非 PvP 战斗，不提供第二套 PvP 结算。整轮 PvE 必须在同一未发布提案内串接最新 pool 和各席 state：前一席发奖占用的池是后一席的输入，不得从同一旧池独立计算多份奖励后合并。任一席失败丢弃整个全轮提案，全部成功再发布（沿用 §11.3）。
 
 `releaseSeatOnElimination` 只接受 multiplayer.status=eliminated 且 HP=0，在 **本轮排名已计算后、下一轮自然店生成前** 调用。归还所有店卡、持有来源和待领预留，清空店格，将 pending 标记为 forfeited 并产生一次 Match/pool 事件，不发出售金币。released=true 后第二次返回 duplicate-release，其他池命令返回 seat-eliminated。终态 preparation 军队保留为只读展示档案，已无真实所有权；不可再卖/获取/返还，镜像不能以此档案创建新实体。
 
@@ -981,3 +981,124 @@ B4：接 §11.5 推进/失败处理；B5：用 nextSharedRound 全席批量推�
 交付验证：实际 nvm Node **v22.23.3** / npm **10.9.9**；T5R 3文件14例，连同 T2/T3/TP/T7、单人经济/命令/序列化/跨轮/来源账本与纯依赖回归共 **21文件336例通过**。typecheck、build、test:server-entry、verify-t2/t3/tp/t7/t5r-node-entry 均通过；T1 的既有状态/事件/RNG 轨迹哈希不变。未运行完整浏览器/公网性能套件，网络发布和客户端播放尚待 B7 接入验证。
 
 同步最新 `origin/multiplayer@bc35bac`（B4）后，重新 build/typecheck 与 T5R Node 测量通过，并追加 `tests/server/{room,round-commit,projection,two-sided-resolver,local-room-client}.test.ts` **5文件42例通过**；合计已验证26文件378例。同步只处理 docs/UI_REQUESTS.md 末尾追加冲突，完整保留 B4 新需求；PR 相对该集成基线无服务器/界面改动。
+
+## 15 T10：战斗运营与准备截止自动上场（2026-10-13）
+
+本节按用户本次确认的 TFT 行为定稿，覆盖 §9 的旧 preparation-only 限制、§11.3 的“运行中拒绝修改席位”和 §12.4 的 PvP 直接结算接法。只允许更新本席当前运营资产，绝不改写已冻结的本场战斗输入。Codex 交付 simulation、纯 Node 导出、测试和合同；`src/server/room/room.ts` 阶段闸门、截止调用及服务器并发编排由 Claude 接入，本次不修改 `src/server/` 或 `src/rendering/`。
+
+### 15.1 本席 (phase, command) 允许矩阵
+
+以下仅适用于 `multiplayer.status='active'` 的席位；preparation 一列指未锁定棋盘的准备态。单人阶段限制保持原样（包括既有 settlement 满备战区待领奖让位出售特例）。gameOver、淘汰席一律不能执行这些运营命令。接口签名沿用 §9.2/§12.2；`combine`、`equip` 是线上 ClientCommand 名称，分别调用 combineItems/equipItem。
+
+| 命令 / 目标 | preparation | combat（含下述 PvP 阵容锁） | choice | settlement |
+| --- | --- | --- | --- | --- |
+| buy、reroll、buyXp、shopLock | 允许 | 允许 | 允许 | 允许 |
+| sell 备战席己方单位 | 允许 | 允许 | 允许 | 允许 |
+| sell 棋盘单位 | 允许 | wrong-phase | wrong-phase | wrong-phase |
+| deploy bench→bench 空槽移动 / 己方互换 | 允许 | 允许 | 允许 | 允许 |
+| deploy bench→board、board→bench、board→board（含互换） | 允许 | wrong-phase | wrong-phase | wrong-phase |
+| combine 两件库存组件 | 允许 | 允许 | 允许 | 允许 |
+| equip 库存装备给备战席单位 | 允许 | 允许 | 允许 | 允许 |
+| equip 给棋盘单位 | 允许 | wrong-phase | wrong-phase | wrong-phase |
+| choose、anomalyTarget、anomalyReroll | wrong-phase | wrong-phase | 按现有 pendingChoice 校验 | wrong-phase |
+
+startCombat / step / timeoutChoice / claimLoot / settleRound / 推进下一轮仅属服务器调度，沿用对应入口阶段前提，不属于客户端新增白名单。
+
+“允许”仍须通过所属、槽位、库存、费用、generation、人口、卡池等原有校验，不代表无条件成功。运营不改变当前 phase，不推进战斗，不修改 `combatInputBasis`、当前 `combat` 或两方 `PlayerBattleSnapshot/BattleInput`；买经验只增加当前运营等级/经验，人口变化不向本场战斗补人。刷新只消费既有 shop RNG；装备父件生成临时装备仍按既有独立 equipment RNG，不能消费 battleSeed/Combat RNG。正常物品/棋子 ID、事件序号、来源、装备与成长迁移、商店和共享池事务同样必须保留，不能只改显示金币。
+
+购买的新棋子进入最左空备战槽；合成仍检查**最终**备战席容量。战斗中只以备战席棋子加本次购买候选做递归三合一，棋盘单位在每一星级均不参与：棋盘一张 A、备战席两张 A 暂不合并；备战席买到第三张 A 立即合并。三合一能腾出空间时沿用既有购买成功规则；无法容纳的购买返回 `bench-full`，不扣钱、不占新池、不消耗 ID/RNG。choice/settlement 没有进行中的战斗锁时，购买沿用正常全阵容升星；已冻结的旧战斗仍不受影响。
+
+### 15.2 Claude 的 room.ts 阶段闸门与原子提交要求
+
+`RoomPhase` 实际名称是 battle，界面投影才叫 combat；本席 MatchPhase 与 RoomPhase 不能混用。room.ts 原第 251 行的 allowed 应按下表准入，再由规则执行 §15.1 的目标校验。`OPS` 精确枚举为 `buy | sell | reroll | buyXp | shopLock | deploy | combine | equip`；`CHOICES` 为 `choose | anomalyTarget | anomalyReroll`。不新增客户端命令、锁字段或自动上场按钮。
+
+| RoomPhase | 可送入规则的 ClientCommand.type | 说明 |
+| --- | --- | --- |
+| preparation | OPS、CHOICES | 各席 choice/preparation 不同；规则继续验证本席阶段 |
+| choice | OPS、CHOICES | 非选择操作不关闭/跳过选择窗口 |
+| frozen | 无 | 这是截止、自动部署、快照冻结的不可交错原子边界，完成后进入 battle |
+| battle | OPS | 目标仍按 §15.1 限制为备战席；即使内部 PvP Match.phase 仍是 preparation 也必须锁定 |
+| awaiting-settlement | OPS | 使用本席仍有效的战斗锁，等待结果期间可运营；真正提交整轮事务时不允许命令插入 |
+| settlement | OPS | 按本席阶段校验；若本席尚有 choice，先进入既有 choice 窗口才接受 CHOICES |
+| waiting、ended，或 disposed | 无 | wrong-phase |
+
+现有身份/席位/连接代次/commandId/轮次/seatRevision/generation 检查继续生效；淘汰、接管和旧控制代次分别沿用 `seat-eliminated`、`seat-controlled`、`control-revoked`，阶段拒绝用 `wrong-phase`，不新增 room 错误枚举。失败不发布新版本/状态。成功按现有单写队列提交 pool + 最新 live seat，并递增可见版本。
+
+**不能用战前的 state/pool 覆盖运营结果。** 冻结信封只作为战斗输入/身份依据，最新 live seat 是购物、装备、金币、经验、商店、来源的权威。PvP 收据在最新 live seat 上应用；PvE start/step/奖励事务同样必须沿最新 seat/pool 推进或由规则产生最新结算，不能把 resolver 预先计算的整份旧 MatchState 在播放结束时直接覆盖回来。利息/经验沿用规则在实际结算提交时读取的 gold/level/xp，不回滚期间花费，不重复奖励。多席原子 staging 仍遵循 §11.3：从当前提交版本开始，任何一席失败则整批不发布；旧执行代次拒绝，冻结 battleSeed 不重抽。
+
+### 15.3 PvP 阵容锁、战后合并与共享池入口
+
+既有 T2/T3 用 preparation + combat=null 表示 PvP 本席，不能伪造 RunningCombat，也不能仅开放 RoomPhase 后把它当普通准备态调用。新增公共导出：
+
+```ts
+// src/simulation/match.ts 和 src/server-entry/index.ts
+lockMatchCombatRoster(state: MatchState): MatchCommandResult;
+```
+
+输入必须是 active 联机、PvP、preparation、pendingChoice=null；否则 `{ok:false,state,reason:'wrong-phase'}`。服务器先按 §15.4 完成部署并冻结两方/镜像快照，再对**live seat**调用本函数；冻结快照保留锁前独立对象。成功仅设置服务器私有 `multiplayer.combatRosterLocked?: true`，无事件、无资源/RNG/序号变化；重复锁定成功返回同一 state、空事件。它使棋盘出售/部署/装备拒绝、购买只做备战席升星，买刷经验等继续允许；`snapshotForBattle` 对已锁 live state 返回 `BattleValidationError('wrong-phase')`，防止拿运营后状态重编译当前战斗。此字段不下发，也不接受客户端指定。
+
+PvE 使用真实 combat 阶段，自带同等锁定语义。正常战后合并已接入 `stepMatch`/`startMatchCombat` 的战斗结束路径与 `applyRoundSettlement`：先提交本场合法成长，再按原升星保留顺序（棋盘优先、棋盘行列、备战席槽位、ID）递归合并。产生既有 `unitUpgraded` 与装备迁移事件，迁移 persistentGrowth/anomalyBinding/装备及三合一来源；不发新棋子、不消耗单位 ID、不再次扣池。装备临时子项沿原父实例 roll 复用。延迟合并不重跑本场战斗，冻结快照与 Combat 账本仍保留旧星级。PvP 合法结算原子移除 `combatRosterLocked`；重复收据仍 `duplicate-settlement`，不会再次合并/发资源。
+
+延迟合并新增私有来源事实 `{kind:'unit-upgraded-after-combat', event:UnitUpgradedEvent}`，不伪造新的购买 acquisitionSequence；共享池按真实 consumedIds 合并原有 sources。单人不生成此事实，旧单人恢复边界保持拒绝 multiplayer 状态。
+
+**共享池 PvP 必须使用新增 settleRound 包装**，因为战后合并会改变持有 ID，不能再直接 applyRoundSettlement 后只替换 Match：
+
+```ts
+type SharedMatchCommand = /* §12.4 原有分支 */
+  | { readonly type: 'settleRound'; readonly receipt: RoundSettlementReceipt };
+runSharedMatchCommand(pool: SharedPoolState, state: MatchState,
+  command: SharedMatchCommand): SharedPoolResult;
+// 每席 staging 串接前一席成功返回的 pool；全部成功后一次发布。
+const result = runSharedMatchCommand(latestPool, latestSeat,
+  {type:'settleRound', receipt});
+```
+
+返回/失败沿用 §12.5 + §11.2，含守恒、stale-seat、seat-eliminated、invalid-receipt、duplicate-settlement 等；失败 pool/state 均保持输入引用。无共享池的规则用例仍可直接 applyRoundSettlement。PvE 已使用的 startCombat/step 共享包装会自动折叠战后合并，无需新增单独的 merge 命令。
+
+choice 开放买卖后，若已选异常目标被升星消费，pendingChoice.targetId 跟随 survivor；被出售则回到 target 步骤。两者 generation +1、发 choiceOpened，旧 generation 得到 stale-choice；保留已抽 offers/rerollCount，重新指定目标不再抽 RNG、不免费刷新。备战席目标卖空后沿用既有超时“空异常”处理。这是避免运营使选择卡死的必要接续，不改变异常价格或候选算法。
+
+### 15.4 准备截止自动上场签名、顺序与事件
+
+```ts
+// src/simulation/match.ts 和 src/server-entry/index.ts
+function autoDeployToCap(state: MatchState): MatchCommandResult;
+// 新增 MatchEvent 分支，线上手动 deploy 与自动 deploy 共用：
+{ readonly type:'unitDeployed'; readonly unitId:string;
+  readonly from:UnitLocation; readonly to:UnitLocation;
+  readonly domain:'match'; readonly eventSeq:number }
+```
+
+输入是可信 active 联机 preparation、尚未锁定的本席状态。己方棋盘人数少于 `getDeploymentCap(state)` 时，按**备战席槽位从左到右**依次取己方单位；不区分类型，不读射程。落点从**最靠近敌方的前排**开始，每行先中间、再向两侧；同距先左。默认 7 列的列顺序精确定为 `3,2,4,1,5,0,6`，己方行顺序 `4,5,6,7`。这是用户后续确认的落点规则，取代最初“左下角按行从左到右”的描述。跳过所有已占格，绝不交换/挤走棋盘单位；行满后退一排，填到人口上限或备战席空（几何无空格也停止）。不排序/移动原有棋盘阵容。
+
+每次实际部署复用 deployMatchUnit，输出 unitDeployed；手动互换中每个实际移动单位各有一条，序号连续。未移动不发事件。成功返回新 preparation 和累积事件序号，其余金币、经验、商店、装备、成长、来源、ID 与**所有 RNG**完全不变。已满人口/空备战席成功返回原 state 和空 events；重复调用不会重复事件。单人 startMatchCombat、PvP snapshotForBattle 都**不会隐式调用**此函数。
+
+失败原子返回原 state、无 events：非联机/已淘汰/非 preparation/已经锁定 → `wrong-phase`；输入已超过人口 → `population-cap`。内部正常部署若拒绝，整次回滚并透传 `unknown-unit | enemy-unit | invalid-location | outside-deployment-zone | occupied | population-cap | wrong-phase`；可信合法输入不会出现单位/几何失败。不消费 RNG，不产生部分部署。
+
+Claude 准备截止时按以下顺序接入，客户端命令不能插入中间：
+
+1. 按 §11.4 处理已到期 choice/待领资源；需要等待选择的席位仍按原窗口推进，不能强行改 phase。
+2. 对所有本轮存活 preparation 席位调用 autoDeployToCap，暂存返回 state/events；失败整轮停止，不能拿部分部署结果开战。纯部署不改变共享持有来源，pool 不变，保留 sharedPool 绑定。
+3. 所有席位部署完成后统一冻结 PvP 双方及奇数镜像来源快照；先全部冻结再锁 live seat，避免镜像来源已经被锁。PvE 在自动部署结果上调用共享 startCombat；其 combatInputBasis 必须包含这些落点。
+4. PvP 对 live seat 调用 lockMatchCombatRoster，保留已冻结信封；切入 battle、发布新的席位/房间版本与部署事件。后续运营始终作用于 live seat，不替换冻结输入。
+
+### 15.5 失败原因、版本与验证
+
+运营白名单没有新增失败枚举；下表是调用方须处理的规则失败，共享入口还可能返回 §12.5 的结构/绑定/事务失败：
+
+| 命令 | 失败 reason |
+| --- | --- |
+| 所有运营 | wrong-phase（阶段、棋盘目标限制或 Match 淘汰保护）；共享入口淘汰为 seat-eliminated |
+| buy | invalid-slot、stale-shop、purchased-slot、insufficient-gold、bench-full；共享缺货格另有 empty-slot |
+| sell | unknown-unit、enemy-unit；共享返回原池/状态 |
+| reroll | insufficient-gold；共享另有 stale-shop、pool-empty |
+| buyXp | max-level、insufficient-gold |
+| shopLock | invalid-choice（非 boolean）、stale-shop |
+| deploy | unknown-unit、enemy-unit、invalid-location、outside-deployment-zone、occupied、population-cap |
+| combine | temporary-item、unknown-item、same-item、item-not-inventory、invalid-recipe |
+| equip | temporary-item、unknown-item、unknown-unit、item-not-inventory、invalid-slot、item-slot-occupied、unique-conflict、exclusive-slots |
+
+阶段/棋盘限制先于资源校验，合法阶段内沿用既有校验顺序；未知单位继续由对应命令报告所属/身份错误。失败不变金币、商店、pool/seat revision、任何随机流、ID 或事件序号。原已消费商店格不是 bench-full；不能把其它失败统一翻译成容量失败。
+
+沿用 SR-C7-01 的规则修订流程：固定 M8 schema6/rules/content/protocol 标识保持，新增细分规则版本并加入 `content/index.ts` 的 canonical digest：`multiplayer-combat-ops-v1`、`bench-during-combat-deferred-v1`、`front-center-left-first-v1`。digest 从 `fnv1a32-utf16:20b58a63` 更新为 **`fnv1a32-utf16:a0b38123`**；旧 digest 存档明确拒绝、不迁移。新证据保存于 `tests/t10-content-baseline.json`；T1 验证新 identity，替换**仅 digest**后必须逐字节匹配原离线战斗状态轨迹，原事件/RNG/战斗数值基线不改。
+
+新增回归位于 `tests/t10-auto-deploy.test.ts`、`tests/t10-combat-ops.test.ts`、`tests/t10-deferred-upgrades.test.ts`：独立落点序列、填满/空席/幂等/无 RNG、单人不自动上场、三阶段白名单与棋盘拒绝、失败原子性、共享卡池守恒、满备战席、战斗中备战席独立升星、PvE/PvP 战后合并与成长/装备迁移、选择目标失效接续、冻结战斗逐 tick/完整两方结果不变、旧 digest 拒绝。服务器闸门、播放期间运营不被旧 resolver state 覆盖及真实多人 UI 接线须由 Claude 按 §15.2–15.4 验收。

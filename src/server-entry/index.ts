@@ -1,6 +1,6 @@
 /** Pure rule boundary for Node callers. No scheduler, transport or browser adapters. */
 export {
-  createMatch, deployMatchUnit, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,
+  createMatch, deployMatchUnit, autoDeployToCap, lockMatchCombatRoster, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem,
   selectAnomalyTarget, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,

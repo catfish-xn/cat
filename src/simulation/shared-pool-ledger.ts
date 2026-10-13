@@ -123,7 +123,7 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
         const receipt:PoolRewardReceipt={...p,resolution:'held',gold:0};pool.rewards.push(receipt);events.push({type:'sharedRewardResolved',receipt});
       }
       pool.holdings.push({seatId,unitId:fact.unitId,definitionId,sources:[source]});
-    } else if(fact.kind==='unit-upgraded') {
+    } else if(fact.kind==='unit-upgraded'||fact.kind==='unit-upgraded-after-combat') {
       const e=fact.event,ids=[e.survivorId,...e.consumedIds];
       const parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));
       requirePool(parts.every(h=>h&&h.definitionId===e.definitionId&&h.sources.length===3**(e.fromStar-1)),'invalid-seat-state');

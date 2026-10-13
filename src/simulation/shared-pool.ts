@@ -1,8 +1,9 @@
+import { canOperateMatch } from './operation-policy';
 import { canonicalContent } from './content';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST, OPENING_INITIAL_STATE } from './match-rules';
 import { buyUnit, sellUnit, setShopLock, advanceMultiplayerRound, startMatchCombat, stepMatch, selectChoice,
   forfeitPendingChoice, claimOrDiscardLoot } from './match';
-import { enableMultiplayerSettlement } from './round-settlement';
+import { enableMultiplayerSettlement, applyRoundSettlement } from './round-settlement';
 import type { MultiplayerCommandResult } from './round-settlement';
 import type { MatchEvent, MatchState, ShopSlot } from './match-types';
 import type { UnitLootPolicy } from './loot-runtime';
@@ -114,7 +115,7 @@ export function generateSharedShop(pool:SharedPoolState,state:MatchState,expecte
 }
 export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,()=>{
-    requirePool(state.phase==='preparation','wrong-phase');
+    requirePool(canOperateMatch(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     requirePool(Number.isInteger(slot)&&slot>=0&&slot<MATCH_RULES.shopSize,'invalid-slot');
     requirePool(!('empty' in state.shop.slots[slot] && state.shop.slots[slot].empty),'empty-slot');
@@ -123,7 +124,7 @@ export function buySharedUnit(pool:SharedPoolState,state:MatchState,slot:number,
 }
 export function rerollSharedShop(pool:SharedPoolState,state:MatchState,expectedGeneration:number):SharedPoolResult {
   return transact(pool,state,(draft,_policy,events)=>{
-    requirePool(state.phase==='preparation','wrong-phase');
+    requirePool(canOperateMatch(state),'wrong-phase');
     requirePool(state.shop.generation===expectedGeneration,'stale-shop');
     requirePool(state.gold>=MATCH_RULES.rerollCost,'insufficient-gold');
     releaseShop(draft,state.sharedPool!.seatId);
@@ -149,6 +150,7 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
+      case 'settleRound': return applyRoundSettlement(state,command.receipt);
       case 'startCombat': return startMatchCombat(state,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}
       case 'choose': return selectChoice(state,command.choiceId,command.generation,command.definitionId,policy);

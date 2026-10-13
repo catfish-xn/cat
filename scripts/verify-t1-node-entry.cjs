@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, '..');
 const out = path.join(root, 'artifacts/t1-node-entry');
 const baseline = require('../tests/t1-probe-baseline.json');
 const deploymentBaseline = require('../tests/t1-deployment-baseline.json');
+const t10Baseline = require('../tests/t10-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
@@ -57,7 +58,7 @@ async function worker() {
     'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay',
     'applyCombatReplayTick', 'COMBAT_REPLAY_KEYFRAME_INTERVAL',
     'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',
-    'createMatch', 'deployMatchUnit', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
+    'createMatch', 'deployMatchUnit', 'autoDeployToCap', 'lockMatchCombatRoster', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
     'startMatchCombat', 'stepMatch', 'nextRound', 'combineItems', 'equipItem',
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',
     'validateMatchDeployment', 'matchStartFailure', 'needsAnomalyRecruitment', 'serializeMatch', 'restoreMatch',
@@ -74,7 +75,8 @@ async function worker() {
   assert.equal(actual.steps.length, expected.steps.length);
   const traceHashes = {};
   let originalStateTraceHash;
-  assert.equal(actual.initial.contentDigest, deploymentBaseline.contentDigest);
+  assert.equal(actual.initial.contentDigest, t10Baseline.contentDigest);
+  assert.equal(t10Baseline.previousContentDigest, deploymentBaseline.contentDigest);
   for (const [key, project] of Object.entries({
     state: step => step.state, events: step => step.events, rng: step => randomState(step.state),
   })) {
@@ -84,11 +86,11 @@ async function worker() {
     assert(nodeBytes.equals(browserBytes), `${key} trace differs from browser-target source bundle`);
     traceHashes[key] = sha256(nodeBytes);
     if (key === 'state') {
-      assert.equal(traceHashes.state, deploymentBaseline.stateTraceHash, 'state changed from the swap revision baseline');
-      // The approved deployment revision changes content identity, including frozen combat inputs.
+      assert.equal(traceHashes.state, t10Baseline.stateTraceHash, 'state changed from the T10 content revision baseline');
+      // The approved online operations revision changes content identity, including frozen combat inputs.
       // Preserve the original golden: after replacing ONLY that digest, every state byte must still match.
       const originalBytes = JSON.stringify(actual.steps.map(project), (name, value) =>
-        name === 'contentDigest' && value === deploymentBaseline.contentDigest ? deploymentBaseline.previousContentDigest : value);
+        name === 'contentDigest' && value === t10Baseline.contentDigest ? deploymentBaseline.previousContentDigest : value);
       originalStateTraceHash = sha256(originalBytes);
       assert.equal(originalStateTraceHash, baseline.traceHashes.state, 'first battle changed beyond deployment content identity');
     } else assert.equal(traceHashes[key], baseline.traceHashes[key], `${key} changed from the pinned source baseline`);
@@ -134,7 +136,7 @@ async function worker() {
   assert.equal(terminal.state, actual.state);
   assert.deepStrictEqual(terminal.events, []);
   fs.writeFileSync(path.join(out, 'node-terminal.json'), JSON.stringify({ state: actual.state, events: actual.events }));
-  return { ...summary, traceHashes, originalStateTraceHash, deploymentBaseline, comparedStates: actual.steps.length, exports: expectedExports,
+  return { ...summary, traceHashes, originalStateTraceHash, deploymentBaseline, t10Baseline, comparedStates: actual.steps.length, exports: expectedExports,
     unchangedFailures: ['stale-shop', 'insufficient-gold (buy/reroll/XP)', 'wrong-phase'],
     restoreTick: 40, restoreTextAndObject: true, rejectedBadDigestAndVersion: true,
     browserGlobalsAndImplicitClockAndRandomBlocked: true };
