@@ -14,7 +14,21 @@
  */
 import { createMatch } from '../../simulation/match';
 import type { MatchState, RoundResult } from '../../simulation/match-types';
+import type { RevealedLootSummary } from '../../presentation/loot-view';
 import type { PrivateSeatView } from '../../server-entry';
+
+/** Display MatchState of a seat view plus the server's revealed-loot summary of my current PvE round (SR-C7-02). */
+export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary };
+
+/**
+ * The authoritative drops of my current PvE round, straight from the private view (contract §14.1 SR-C7-02);
+ * null for PvP, supply rounds, offline states and anything the server did not send. Never derived from
+ * a snapshot diff, unit ids or gold (work order C9).
+ */
+export function readRevealedLoot(state: MatchState): RevealedLootSummary | null {
+  const loot = (state as DisplayMatch).revealedLoot;
+  return loot && typeof loot.roundId === 'string' && Array.isArray(loot.revealedDrops) ? loot : null;
+}
 
 let shell: MatchState | null = null;
 /** Neutral MatchState skeleton for the fields a seat view does not carry; built once, never mutated. */
@@ -36,7 +50,7 @@ function placeholderShell(): MatchState {
  * Round records miss the server-only bookkeeping (settlementId, roundKind, streaks, XP requested); they stay
  * absent and the panels print only what is there. `interestBasis` is whitelisted (PR #50) and shown as is.
  */
-export function toDisplayMatch(view: PrivateSeatView): MatchState {
+export function toDisplayMatch(view: PrivateSeatView): DisplayMatch {
   const base = placeholderShell();
   const round = { ...view.m8.round, isFinal: false };
   // Present only for this round's public PvE encounter (contract §14.1).
@@ -54,5 +68,7 @@ export function toDisplayMatch(view: PrivateSeatView): MatchState {
         : { ...base.m8.preparation, roundId: view.roundDefinitionId, encounterId: null, contentStatus: 'not-pve', enemies: [] },
     },
     combat: null,
-  } as unknown as MatchState;
+    // Carried as is: the panel reads it through readRevealedLoot instead of faking m8.loot for readLootView.
+    ...(view.revealedLoot ? { revealedLoot: view.revealedLoot } : {}),
+  } as unknown as DisplayMatch;
 }

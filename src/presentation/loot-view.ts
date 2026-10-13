@@ -63,15 +63,27 @@ export function lootDropRow(drop: RevealedDropView, labels: LootLabels): HTMLEle
   return row;
 }
 
+/** The two LootView fields every revealed-drop list is built from; online receives exactly these (contract §14.1 SR-C7-02). */
+export type RevealedLootSummary = Pick<LootView, 'roundId' | 'revealedDrops'>;
+
+/**
+ * Round heading plus one row per revealed drop, in the domain's order; shared by the offline settlement block and the
+ * online panel (work order C9). `showEmpty` false keeps the empty line out while a loot pick is still open.
+ */
+export function lootRevealedSection(summary: RevealedLootSummary, labels: LootLabels, showEmpty = true): HTMLElement {
+  const section = node('section', '', 'loot-panel'); section.dataset.debug = 'loot-panel';
+  section.append(node('h3', `${summary.roundId} 奖励`));
+  const list = node('ul', '', 'loot-list');
+  for (const drop of summary.revealedDrops) list.append(lootDropRow(drop, labels));
+  if (!summary.revealedDrops.length && showEmpty) list.append(node('li', '本回合没有已揭示的奖励', 'loot-empty'));
+  section.append(list);
+  return section;
+}
+
 /** Settlement block: revealed rewards, the pending loot pick (identity only) and the domain's own Continue verdict. */
 export function lootPanelSection(view: LootView, labels: LootLabels): HTMLElement {
-  const section = node('section', '', 'loot-panel'); section.dataset.debug = 'loot-panel';
+  const section = lootRevealedSection(view, labels, !view.pendingChoice);
   section.dataset.canContinue = String(view.canContinue);
-  section.append(node('h3', `${view.roundId} 奖励`));
-  const list = node('ul', '', 'loot-list');
-  for (const drop of view.revealedDrops) list.append(lootDropRow(drop, labels));
-  if (!view.revealedDrops.length && !view.pendingChoice) list.append(node('li', '本回合没有已揭示的奖励', 'loot-empty'));
-  section.append(list);
   // The open pick is never displayed as an owned item: only its source, until a receipt exists.
   if (view.pendingChoice) {
     const pending = node('p', `待选：${labels.sourceName(view.pendingChoice.sourceUnitId)} 的组件奖励（固定 8 选 1）`, 'loot-choice-pending');
