@@ -29,10 +29,11 @@ describe('Room: start and command gate', () => {
     clock.advance(1_000); // preparation deadline → frozen → battle
     expect(room.state.phase).toBe('battle');
     const inBattle = room.state;
-    const refused = room.handle('s1', { type: 'buyXp' });
+    // T10 §15.2: a battle accepts operations only; a choice command is a room-phase refusal that touches nothing.
+    const refused = room.handle('s1', { type: 'choose', choiceId: 'none', generation: 0, definitionId: 'none' });
     expect(refused).toEqual({ ok: false, reason: 'wrong-phase', state: inBattle.seats[1]!.match });
     expect(room.state).toBe(inBattle);
-    expect(inBattle.seats[1]!.match).toBe(started.seats[1]!.match);
+    expect(inBattle.seats[1]!.match.round).toBe(started.seats[1]!.match.round);
   });
   it('passes a preparation command to the rules and keeps a rules refusal free of side effects', () => {
     const { room } = makeRoom(new DamageResolver(() => 0));
@@ -175,7 +176,9 @@ describe('Room: choice window and stuck seats', () => {
     room.start();
     runUntil(room, clock, current => current.round === 4);
     expect(room.state.phase).toBe('choice');
-    expect(room.handle('s0', { type: 'reroll' })).toMatchObject({ ok: false, reason: 'wrong-phase' });
+    // T10 §15.2: the choice window also accepts operations; they neither close nor skip the choice.
+    expect(room.handle('s0', { type: 'buyXp' })).not.toMatchObject({ reason: 'wrong-phase' });
+    expect(room.state.seats[0]!.match.phase).toBe('choice');
     const deadline = room.state.deadlineAt!;
     for (const seat of room.state.seats) {
       const pending = seat.match.pendingChoice!;

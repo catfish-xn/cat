@@ -14,7 +14,7 @@ import { startBattleJob, type BattleJob, type BattleResolver } from '../room/bat
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
-import { toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
+import { seatPushEvents, toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
@@ -186,7 +186,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const receivesState = seat.alive || seat.eliminatedRound === state.round;
     if (receivesState && conn.sentSeatRevision !== seat.seatRevision) {
       conn.sentSeatRevision = seat.seatRevision;
-      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: toSeatPrivateView(seat.match) });
+      const events = seatPushEvents(seat);
+      send(conn, { type: 'state', roomId: state.roomId, round: state.round, seatRevision: seat.seatRevision, state: toSeatPrivateView(seat.match), ...(events.length ? { events } : {}) });
     }
     const battle = state.battles.find(candidate => candidate.kind === 'two-sided' ? candidate.participants.includes(seat.seatId) : candidate.outcomes.some(outcome => outcome.seatId === seat.seatId));
     if (battle) {

@@ -85,7 +85,12 @@ export type ServerMessage =
    * My seat's private state as the rules' whitelist projection (contract §14.1): not a MatchState, never
    * restorable, no RNG, plans or ledgers. Not sent any more once my seat is eliminated (then only view/replay).
    */
-  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: PrivateSeatView }
+  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: PrivateSeatView;
+    /**
+     * Events of the server's own transaction that produced this revision (T10): the deadline's automatic deployment
+     * (`unitDeployed`) and the post-battle merges of the settlement (`unitUpgraded`). Absent when there were none.
+     */
+    readonly events?: readonly MatchEvent[] }
   /**
    * My battle of this round as a compact replay from my point of view (contract §14.2): initial view, one record
    * per tick with keyframes, terminal view. The only battle message (C6); a whole match stays far below the frame cap.

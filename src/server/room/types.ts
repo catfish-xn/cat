@@ -56,6 +56,11 @@ export interface SeatState {
   /** Private rule state of this seat; only src/simulation/match.ts commands change it. */
   readonly match: MatchState;
   readonly seed: number;
+  /**
+   * Events of the room's own transaction that produced `seatRevision` (automatic deployment at the deadline, the round
+   * settlement with its post-battle merges); the server sends them with that state push. Ignored once the seat moved on.
+   */
+  readonly serverEvents?: { readonly seatRevision: number; readonly events: readonly MatchEvent[] };
 }
 
 /** An opponent is either a real seat or the frozen mirror of another survivor (V2 D6). */
@@ -163,6 +168,8 @@ export interface RoundSettlement {
    * rules eliminated this round released with `releaseSeatOnElimination` (after the ranking, before the next refresh).
    */
   readonly pool: SharedPoolState;
+  /** Pool and seat revisions the plan was made on; a commit after any of them moved is refused as stale (§15.2). */
+  readonly basis: { readonly poolRevision: number; readonly seatRevisions: Readonly<Record<string, number>> };
 }
 
 export type RoomFault =
