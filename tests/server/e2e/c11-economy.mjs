@@ -8,7 +8,8 @@
  * [data-debug="income-receipt"], up to and including 3-1, and prints one table row per round.
  *
  * Checks (rules: src/simulation/opening-economy.ts for 1-x, src/simulation/economy.ts from 2-1):
- *   - 1-2/1-3/1-4: income 2/3/5, xpAwarded 2/2/0, interest 0;
+ *   - 1-2/1-3/1-4: income 2/3/5, xpAwarded 2/2/2, interest 0;
+ *   - entering 2-1 (T11): level 3 with 2/6 XP, i.e. 1-4 settles to levelAfter 3 / xpAfter 2 and 2-1 starts there;
  *   - from 2-1: xpAwarded == 2 unless the level was already the maximum;
  *   - goldBefore >= 10: interest == min(5, floor(goldBefore / 10)); economy.ts samples interest on
  *     goldBefore + victory gold, so a PvP win is checked against that basis (interestBasis) and noted;
@@ -27,7 +28,8 @@ const WS_PORT = 8791;
 const BASE = `http://127.0.0.1:${VITE_PORT}/`;
 const LAST_ROUND = '3-1';
 const MAX_LEVEL = 9;
-const OPENING = { '1-2': { gold: 2, xp: 2 }, '1-3': { gold: 3, xp: 2 }, '1-4': { gold: 5, xp: 0 } };
+const OPENING = { '1-2': { gold: 2, xp: 2 }, '1-3': { gold: 3, xp: 2 }, '1-4': { gold: 5, xp: 2 } };
+const ENTER_2_1 = { level: 3, xp: 2, xpToNext: 6 }; // T11: 2+2+2 opening XP against the unchanged 1:2, 2:2, 3:6 thresholds
 const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 mkdirSync(OUT, { recursive: true });
 
@@ -138,6 +140,11 @@ async function main() {
       check(row.summaryVisible && row.summaryInterest === row.interest && row.summaryXp === row.xpAwarded,
         `${row.roundId} visible receipt summary shows 利息 ${row.summaryInterest} / 经验 +${row.summaryXp}`);
     }
+    const r14 = rows.find(row => row.roundId === '1-4'), r21 = rows.find(row => row.roundId === '2-1');
+    check(r14?.levelAfter === ENTER_2_1.level && r14?.xpAfter === ENTER_2_1.xp,
+      `1-4 settles to level ${r14?.levelAfter} ${r14?.xpAfter}/${ENTER_2_1.xpToNext} XP (want ${ENTER_2_1.level} ${ENTER_2_1.xp}/${ENTER_2_1.xpToNext})`);
+    check(r21?.levelBefore === ENTER_2_1.level && r21?.xpBefore === ENTER_2_1.xp,
+      `2-1 entered at level ${r21?.levelBefore} ${r21?.xpBefore}/${ENTER_2_1.xpToNext} XP (want ${ENTER_2_1.level} ${ENTER_2_1.xp}/${ENTER_2_1.xpToNext})`);
     check(rows.some(row => !OPENING[row.roundId] && row.goldBefore >= 10), 'at least one round from 2-1 settled with goldBefore >= 10');
     check(errors.length === 0, `no page errors (${errors.join(' | ')})`);
     if (failures.length) throw new Error(`${failures.length} check(s) failed:\n${failures.join('\n')}`);

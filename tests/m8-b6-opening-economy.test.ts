@@ -25,7 +25,7 @@ describe('B6 isolated opening economy', () => {
     for (const expected of [
       {roundId:'1-2', base:2, naturalXp:2, gold:2, level:2, xp:0, gained:1},
       {roundId:'1-3', base:3, naturalXp:2, gold:5, level:3, xp:0, gained:1},
-      {roundId:'1-4', base:5, naturalXp:0, gold:10, level:3, xp:0, gained:0},
+      {roundId:'1-4', base:5, naturalXp:2, gold:10, level:3, xp:2, gained:0},
     ]) {
       const plan = planOpeningEconomy({...current, roundId:expected.roundId});
       expect(plan.kind).toBe('opening');
@@ -45,7 +45,7 @@ describe('B6 isolated opening economy', () => {
   });
 
   it.each([
-    ['1-2',2,2], ['1-3',3,2], ['1-4',5,0],
+    ['1-2',2,2], ['1-3',3,2], ['1-4',5,2],
   ] as const)('%s pays %iG and %iXP on win, loss and draw without interest or streak changes', (roundId, base, naturalXp) => {
     for (const result of ['playerWin','enemyWin','draw'] as const) {
       for (const streak of [{kind:null,count:0}, {kind:'win',count:6}, {kind:'loss',count:4}] as const) {
@@ -68,7 +68,7 @@ describe('B6 isolated opening economy', () => {
     const cases = [
       {roundId:'1-2', gold:17, level:3, xp:5, afterGold:19, afterLevel:4, afterXp:1, applied:2, gained:1},
       {roundId:'1-3', gold:1, level:8, xp:75, afterGold:4, afterLevel:9, afterXp:0, applied:1, gained:1},
-      {roundId:'1-4', gold:23, level:4, xp:7, afterGold:28, afterLevel:4, afterXp:7, applied:0, gained:0},
+      {roundId:'1-4', gold:23, level:4, xp:7, afterGold:28, afterLevel:4, afterXp:9, applied:2, gained:0},
       {roundId:'1-2', gold:3, level:9, xp:0, afterGold:5, afterLevel:9, afterXp:0, applied:0, gained:0},
     ];
     for (const c of cases) {

@@ -1102,3 +1102,17 @@ Claude 准备截止时按以下顺序接入，客户端命令不能插入中间�
 沿用 SR-C7-01 的规则修订流程：固定 M8 schema6/rules/content/protocol 标识保持，新增细分规则版本并加入 `content/index.ts` 的 canonical digest：`multiplayer-combat-ops-v1`、`bench-during-combat-deferred-v1`、`front-center-left-first-v1`。digest 从 `fnv1a32-utf16:20b58a63` 更新为 **`fnv1a32-utf16:a0b38123`**；旧 digest 存档明确拒绝、不迁移。新证据保存于 `tests/t10-content-baseline.json`；T1 验证新 identity，替换**仅 digest**后必须逐字节匹配原离线战斗状态轨迹，原事件/RNG/战斗数值基线不改。
 
 新增回归位于 `tests/t10-auto-deploy.test.ts`、`tests/t10-combat-ops.test.ts`、`tests/t10-deferred-upgrades.test.ts`：独立落点序列、填满/空席/幂等/无 RNG、单人不自动上场、三阶段白名单与棋盘拒绝、失败原子性、共享卡池守恒、满备战席、战斗中备战席独立升星、PvE/PvP 战后合并与成长/装备迁移、选择目标失效接续、冻结战斗逐 tick/完整两方结果不变、旧 digest 拒绝。服务器闸门、播放期间运营不被旧 resolver state 覆盖及真实多人 UI 接线须由 Claude 按 §15.2–15.4 验收。
+
+## 16. T11：开局经验与自动接续（2026-10-13）
+
+用户签字见 [S13_RULES_GAP 顶部](S13_RULES_GAP.md)。仅实施 R1、验证 R6；§15 操作矩阵及 combatInputBasis 冻结保持原合同，R2 后续单独实施。
+
+- `OPENING_ECONOMY_RULES.version = m8b-opening-project-v2`；1-2/1-3/1-4 自然 XP 为 2/2/2，基础金币仍为 2/3/5。阈值表 `1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76` 不变。
+- XP 由现有唯一结算收据发放，胜、败、平相同。不能在进入 2-1 时补发，也不能重置玩家合法买 XP 的成长。无买卖/刷新/买 XP、seed 42 的单人及八席，在进入 2-1 强化选择前每席均为 **10G、等级 3、2/6 XP**。
+- `planOpeningEconomy(input: OpeningEconomyInput): OpeningEconomyPlan` 和 Match/Room 既有公共签名、失败原因均不新增。重复 step/继续及保存恢复不增加结算次数；失败返回原对象、不发事件、不消耗 RNG。
+- 外层 schema6 / rules `m8-14.24b-v1` / content `s13-14.24b-m8-v1` / save2 / replay2 / commandProtocol2 / NET_PROTOCOL_VERSION=1 不变。细分开局版本进入 `CONTENT_DIGEST`，`LOOT_REPLAY_DIGEST` 的 openingPolicy 同步引用它；因此即使第一场战斗的数值未变，其冻结身份也改变。旧 digest 存档/快照由既有严格校验拒绝，不迁移或补写旧账本；上线须在活动局结束后切换。
+- 自动日程保持 x-3 战斗结算 → x-4 供给选择/结算 → x-5 准备，x-7 野怪结算 → 下一阶段 x-1（如有强化先完成选择再准备）。供给轮不进入 battle、不多开一场；每推进轮只结算一次。**6-7 后联机使用 `overtime-1` 并继续纯 PvP 加时**；不是常规 7-1 野怪/供给日程，单人仍在 6-7 终局。T11 只增加整局定时器接续测试，不改 round-catalog 或服务器调度。
+
+本次为批准的项目修订；14.24b 原档缺逐轮 XP/完整日程执行脚本的历史证据限制仍见设计来源台账。
+
+T11 固定身份：CONTENT_DIGEST `fnv1a32-utf16:b4a5c2e2`；LOOT_REPLAY_DIGEST `fnv1a32-utf16:7b14bfba`。变更与 golden 逐项说明见 [T11 审计](evidence/t11/README.md)。

@@ -32,7 +32,7 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
  const survivingEnemyCount=combat?.units.filter(u=>u.team==='enemy'&&u.alive).length??0;
  let streakAfter=before.streak;
  if(roundKind==='pvp'){const kind=result==='playerWin'?'win':'loss';streakAfter={kind,count:before.streak.kind===kind?before.streak.count+1:1};}
- const base=stage===1?{2:2,3:3,4:5}[sub]:5,naturalXp=stage===1&&sub===4?0:2;
+ const base=stage===1?{2:2,3:3,4:5}[sub]:5,naturalXp=2 /* T11 signed opening: 2/2/2; XP thresholds unchanged */;
  const win=roundKind==='pvp'&&result==='playerWin'?1:0,interestBasis=goldBefore+win;
  const interest=stage===1?0:Math.min(5,Math.floor(interestBasis/10));
  const streak=roundKind!=='pvp'?0:streakAfter.count>=6?3:streakAfter.count>=4?2:streakAfter.count>=2?1:0;

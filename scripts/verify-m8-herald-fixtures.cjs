@@ -7,7 +7,8 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
-const directory = path.join(root, 'tests/fixtures/m8-herald-raw');
+// T11 keeps the B9 raw inputs as historical evidence; regenerate current-rule inputs separately.
+const directory = path.join(root, 'tests/fixtures/t11-herald-raw');
 const args = process.argv.slice(2);
 const write = args.includes('--write');
 const baselineArgument = args.find(argument => argument.startsWith('--baseline-dir='));
@@ -84,9 +85,11 @@ async function main() {
       assert.equal(rawState.roundDefinitionId, '6-7');
       assert.equal(rawState.phase, 'preparation');
       assert.equal(battles.length, 14, 'Original 3 stage-four, 6 stage-five and 5 stage-six battles');
-      assert.equal(battles.reduce((sum, battle) => sum + battle.ticks, 0), 5844, 'Original full scenario ticks');
-      assert.equal(rawState.playerHp, 61); assert.equal(rawState.gold, 229);
-      assert.deepEqual(rawState.augmentProgress, { pumpingRounds: 19, investmentHp: 1024 });
+      // T11 route evidence: extra opening XP changes later shop/level decisions and combat;
+      // independently audited command/economy trace, not a rule oracle for these totals.
+      assert.equal(battles.reduce((sum, battle) => sum + battle.ticks, 0), 5833, 'T11 full scenario ticks');
+      assert.equal(rawState.playerHp, 64); assert.equal(rawState.gold, 231);
+      assert.deepEqual(rawState.augmentProgress, { pumpingRounds: 19, investmentHp: 1056 });
       // This is the raw exported input. Neither serializeMatch nor restoreMatch
       // participates in building it, ordering it, granting it or validating it.
       const rawBytes = canonicalContent(rawState) + '\n';
@@ -94,7 +97,7 @@ async function main() {
         rawStateSha256: sha256(rawBytes) };
       generated.push({ entry, rawState, rawBytes, trace });
       console.log(JSON.stringify({ phase: 'raw-exported', name: entry.name, battles: battles.length,
-        ticks: 5844, rawBytes: Buffer.byteLength(rawBytes), rawSha256: sha256(rawBytes),
+        ticks: 5833, rawBytes: Buffer.byteLength(rawBytes), rawSha256: sha256(rawBytes),
         generationMs: performance.now() - generationStarted }));
     }
     // Programmatic boundary: even module evaluation of the production restore
@@ -154,6 +157,7 @@ async function main() {
     const outputs = new Map(generated.map(value => [`${value.entry.name}.json`, value.rawBytes]));
     outputs.set('trajectory.json', traceBytes); outputs.set('manifest.json', canonicalContent(manifest) + '\n');
     if (write) {
+      fs.mkdirSync(directory, { recursive: true });
       for (const [file, bytes] of outputs) fs.writeFileSync(path.join(directory, file), bytes);
     } else {
       for (const [file, bytes] of outputs) assert.equal(fs.readFileSync(path.join(directory, file), 'utf8'), bytes,

@@ -45,7 +45,7 @@ export function planOpeningEconomy(input: OpeningEconomyInput): OpeningEconomyPl
   if (!Number.isSafeInteger(count) || count < 0 || !['win','loss',null].includes(kind)
     || (kind === null) !== (count === 0)) throw new RangeError('Invalid opening streak');
 
-  // OPENING §3.1: approved 2/3/5G and 2/2/0XP, independent of combat outcome.
+  // OPENING §3.1: approved 2/3/5G and 2/2/2XP, independent of combat outcome.
   const parameters = OPENING_ECONOMY_RULES.rounds[round.roundId as keyof typeof OPENING_ECONOMY_RULES.rounds];
   if (!parameters) throw new RangeError('Missing opening economy parameters');
   const {baseGold:base,naturalXp} = parameters;

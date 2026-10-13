@@ -71,3 +71,9 @@ T1 首战没有互换命令。完整状态 trace SHA-256 因 Match 及 combatInp
 联机 opt-in 覆盖上文普通命令只能 preparation 的限制，完整允许矩阵、失败原因、服务器调用顺序见 [MULTIPLAYER_CONTRACT §15](MULTIPLAYER_CONTRACT.md#15-t10战斗运营与准备截止自动上场2026-10-13)。combat/choice/settlement 允许买刷经验锁店、备战席出售/互换/装备与库存合成，禁止棋盘出售/部署/装备；冻结战斗不回写。战斗中三合一只使用备战席，涉及棋盘的合并在战后提交成长后自动执行。
 
 新增 `autoDeployToCap(state): MatchCommandResult` 仅供服务器准备截止显式调用：最左备战槽依次上场，前排起逐行按列 `3,2,4,1,5,0,6` 找空格，不耗 RNG；线上普通与自动部署共用 `unitDeployed {unitId,from,to,domain,eventSeq}`，离线部署事件行为保持。PvP 冻结两方快照后用 `lockMatchCombatRoster` 锁 live seat，结算自动解锁；共享 PvP 用 `runSharedMatchCommand(pool,state,{type:'settleRound',receipt})` 原子迁移来源，不能只提交旧 Match。单人不调用自动上场，既有操作阶段和行为保持；新细分规则版本进入 digest，旧 digest 存档拒绝。
+
+## T11 开局自然经验修订（2026-10-13）
+
+用户批准 [S13_RULES_GAP R1/R6](S13_RULES_GAP.md)：[OPENING §3.1](M8B_OPENING.md#31-基础收入与失败规则) 的 1-4 自然 XP 从 0 改为 2，开局政策升级 `m8b-opening-project-v2`。此前 B6 的 2/2/0 XP、进入 2-1 三级 0 XP 文字由本条覆盖；现在 2/2/2 XP，无经济操作的 seed 42 进入 2-1 强化前为 10G、三级 2/6 XP。XP 阈值不变，买 XP 按累计值推进，不强制回填基准。
+
+发放仍发生在唯一结算事务；重复 step/继续/恢复不重发。公共 API 签名、失败原因、外层 M8 格式和 RNG 算法均不改变。内容 digest 与掉落回放 digest 随开局版本改变；旧身份存档拒绝，不做迁移。联机接续及加时边界见 [联机合同 §16](MULTIPLAYER_CONTRACT.md#16-t11开局经验与自动接续2026-10-13)。本次不开放战中棋盘单位装备、不新增宝珠/消耗品，也不扩展野怪回血。
