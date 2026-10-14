@@ -1,12 +1,13 @@
 /**
- * C18-B server side of SR-C18-03 (contract §18.3 draft field names): the wire validator for `useConsumable`, the room
- * gate in the four operating phases, and the dispatch stub that refuses atomically until T13-B exports the rules entry.
- * When T13-B lands, only the dispatch body (src/server/room/consumables.ts) and the type imports change; these wire and
- * gate cases stay.
+ * C18-B server side of SR-C18-03 (contract §18.3/§18.8): the wire validator for `useConsumable`, the room gate in the
+ * four operating phases, the single dispatch to the rules' shared transaction (refusals atomic, a real remover used
+ * during a battle) and the `consumable-used` receipt whitelist.
  */
 import { describe, expect, it } from 'vitest';
 import { NET_PROTOCOL_VERSION, parseClientMessage } from '../../src/server/net/messages';
 import { applySeatCommand, ROOM_COMMAND_GATE } from '../../src/server/room/room';
+import { consumableDisplayEvents } from '../../src/server/room/consumables';
+import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { RoomPhase } from '../../src/server/room/types';
 import { makeRoom, runUntil } from './helpers';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
@@ -69,6 +70,37 @@ describe('C18-B useConsumable room gate and dispatch', () => {
       expect(room.state.seats[0]!.seatRevision).toBe(revision);
     }
   });
+  it('a remover used on my board unit during a PvE battle: item back to the inventory, one tool less, the battle unchanged', () => {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+    room.start();
+    // Seed 42: at 1-4 seat s0 holds a tear in its inventory and two removers (1-2 and 1-3 orbs).
+    runUntil(room, clock, state => state.phase === 'preparation' && state.seats[0]!.match.items.some(item => item.location.kind === 'inventory'));
+    const s0 = () => room.state.seats[0]!;
+    const item = s0().match.items.find(entry => entry.location.kind === 'inventory')!;
+    const unit = s0().match.preparation.units.find(entry => entry.team === 'player' && entry.location.kind === 'board')!;
+    expect(room.handle('s0', { type: 'equip', itemId: item.id, unitId: unit.id, slot: 0 })).toMatchObject({ ok: true });
+    clock.runNext(); // preparation deadline → battle
+    expect(room.state.phase).toBe('battle');
+    const battles = room.state.battles, tools = s0().match.consumables, revision = s0().seatRevision;
+    const remover = tools.find(tool => tool.definitionId === 'magnetic-remover')!;
+    const used = room.handle('s0', { type: 'useConsumable', consumableId: remover.consumableId, target: { kind: 'unit', unitId: unit.id } });
+    expect(used).toMatchObject({ ok: true });
+    if (!used.ok) return;
+    expect(s0().match.items.find(entry => entry.id === item.id)!.location).toEqual({ kind: 'inventory' });
+    expect(s0().match.consumables.map(tool => tool.consumableId)).toEqual(tools.filter(tool => tool !== remover).map(tool => tool.consumableId));
+    expect(s0().seatRevision).toBe(revision + 1);
+    expect(room.state.battles).toBe(battles);
+    // The receipt carries the whitelist copy: itemsRemoved first, then consumableUsed, nothing else.
+    const display = consumableDisplayEvents(used.events);
+    expect(display.map(event => event.type)).toEqual(['itemsRemoved', 'consumableUsed']);
+    expect(display[0]).toMatchObject({ unitId: unit.id, itemIds: [item.id] });
+    expect(display[1]).toMatchObject({ consumableId: remover.consumableId, definitionId: 'magnetic-remover', target: { kind: 'unit', unitId: unit.id }, effect: 'remove-all', affectedItemIds: [item.id], outputItemId: null });
+    for (const event of display) expect(Object.keys(event).every(key => !/rng|provenance/i.test(key))).toBe(true);
+    // The consumed tool is gone: a new command with it is unknown-consumable, nothing published.
+    const after = room.state;
+    expect(room.handle('s0', { type: 'useConsumable', consumableId: remover.consumableId, target: { kind: 'unit', unitId: unit.id } })).toMatchObject({ ok: false, reason: 'unknown-consumable' });
+    expect(room.state).toBe(after);
+  }, 60_000);
   it('outside the gate the room answers wrong-phase before the rules are asked', () => {
     const { room } = makeRoom();
     expect(room.state.phase).toBe('waiting');

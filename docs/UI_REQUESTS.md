@@ -412,7 +412,7 @@
 
 ## 联机客户端消息说明（B2，2026-10-12，Claude 流水线 B → 流水线 C / C4）
 
-`src/server/net/` 已交付单房间 WebSocket 服务器（`createGameServer`）、座位凭证、commandId 去重、单写队列与 Node 测试客户端（`src/server/net/test-client.ts`）。C4 的浏览器客户端只需实现下面的消息流；类型与校验函数在 `src/server/net/messages.ts`（无 ws / node 依赖，可直接在浏览器 import），共享视图类型在 `src/server/protocol.ts`。协议版本 `NET_PROTOCOL_VERSION = 1`。
+`src/server/net/` 已交付单房间 WebSocket 服务器（`createGameServer`）、座位凭证、commandId 去重、单写队列与 Node 测试客户端（`src/server/net/test-client.ts`）。C4 的浏览器客户端只需实现下面的消息流；类型与校验函数在 `src/server/net/messages.ts`（无 ws / node 依赖，可直接在浏览器 import），共享视图类型在 `src/server/protocol.ts`。协议版本 `NET_PROTOCOL_VERSION = 2`（合同 §18.7：T13 R3/R4 掉落与消耗品字段）。
 
 ### 消息一览
 
@@ -688,6 +688,8 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 
 ## C18-B R3/R4 掉落界面预接线的合同缺口（2026-10-14，Claude 流水线 B/C）
 
+> **2026-10-14 已换真字段（基于 `codex/t13-loot@ad72928`）：** 假数据与 `?fakeLoot=1` 已删除，`fake-loot.ts` 换成 `src/rendering/online/seat-loot.ts`，只读服务器下发的 `revealedLoot` v2、`consumables`、`consumableTargets`；名称与说明读 `CONSUMABLE_DEFINITIONS`；失败文案按合同 §18.8 七项。服务器 `useConsumable` 只经 `src/server/room/consumables.ts` 一处转发 `runSharedMatchCommand`，成功回执为 `consumable-used`（三类事件白名单）；`WireCommand` 已收敛为 `ClientCommand` 别名；`NET_PROTOCOL_VERSION = 2`。房间席位按 §18.2 用 `createMatch(seed, { mode: 'shared-deferred' })` 构造。下文为接线前的原始需求记录。
+
 界面已按 [MULTIPLAYER_CONTRACT §18.4](MULTIPLAYER_CONTRACT.md#184-revealedloot-与工具投影草案) 草案字段先做好（分支 `claude/c18b-loot-ui`，`?fakeLoot=1` 用本地假数据预览；T13 PR #79 合入后换真字段再提 PR）：
 
 - `src/presentation/orb-loot.ts` 渲染宝珠卡（四品质、珠聚合状态、条目状态、放弃原因）、消耗品架，以及拖放提示文案。
@@ -734,6 +736,13 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
   - 掉落来源名沿用 `readEncounterPreview` 的 `sourceUnitId → name` 映射。
 - 联机显示时机（界面决定，告知即可）：准备阶段和本席战斗回放播放期间隐藏（防止击杀前剧透），回放播完后显示，包括断线重连时服务器重新推送回放、并把状态覆盖成 combat 的情况。所以 `revealedLoot` 必须在本轮结算期间一直下发，重连后的首次推送也要带上。
 - 验收：重连 e2e（`tests/server/e2e/c18b-loot-preview.mjs` 换接真字段后）中，结算期刷新页面，回放播完后宝珠卡再次出现，内容与刷新前相同。
+
+### SR-C18-05 共享事务逐 tick 开销回退（P2，性能；Claude 2026-10-14）
+
+- 现象：T13-B 后服务器三条整局性能预算在空闲机单跑也超：`tests/server/room.test.ts` 选择窗口用例 2.2s → 6.5s（5s 超时）；`round-commit.test.ts` 整局 19s → 42s（预算 30s）；`bot-driver.test.ts` 八机器人整局 38s → 63s（预算 60s）。基线为 `multiplayer@524e9ea`，同机同命令。
+- 定位（CPU profile，PlaceholderBattleResolver 跑到第 4 轮共 5.7s）：几乎全部在 `runSharedMatchCommand({ type: 'step' })` 的 `transact` 内：`assertSharedPoolConservation` 4.1s、`canonicalContent` 2.8s（`transact` 第 58 行对 draft 与 pool 各序列化一次，外加守恒检查内）、`active`→`restoreOrbLayout`/`freezeLootThroughRound` 约 1.4s；战斗本身 `stepCombat` 仅 1.2s。服务器按合同逐 tick 走共享事务（终局 tick 的发奖需要池策略），不能自行改用 `stepMatch` 绕开。
+- 需要：规则侧降低单次共享事务的固定成本（例如无池变化的 step 不做整池 canonical 比较、模板绑定校验按 revision 缓存或只在跨轮/授予时做），或提供合同内的批量推进入口（如 `{ type: 'step', maxTicks }`，结果与逐 tick 相同）。服务器不改预算、不跳过事务。
+- 验收：上述三条在基线机器上回到原预算内；`tests/server` 全绿；逐 tick 与新路径的事件账本、池、席位深相等。
 
 ## T13 对 Claude 的接线说明
 

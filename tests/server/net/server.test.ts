@@ -104,7 +104,7 @@ describe('game server: rejections leave the room untouched', () => {
     const reasons = receipts.map(receipt => receipt.ok ? 'ok' : receipt.reason);
     expect(reasons).toEqual(['invalid-message', 'invalid-message', 'invalid-message', 'invalid-message', 'stale-shop', 'stale-round', 'seat-revision-mismatch', 'wrong-room', 'invalid-token']);
     // Wrong protocol version: refused before anything else, still answered on its commandId.
-    a.sendRaw(JSON.stringify({ protocolVersion: 2, commandId: 500, type: 'command', ...base, command: { type: 'reroll' } }));
+    a.sendRaw(JSON.stringify({ protocolVersion: 1, commandId: 500, type: 'command', ...base, command: { type: 'reroll' } }));
     const stale = await a.waitFor(message => message.type === 'receipt' && message.commandId === 500);
     expect(stale).toMatchObject({ ok: false, reason: 'unsupported-protocol' });
     // Unparseable frames are answered with an error, not dropped silently.
@@ -288,7 +288,7 @@ describe('game server: connection limits', () => {
     const client = await harness.connect();
     // With permessage-deflate on, Node's built-in client reports 1006 if the close races the first (inflating) push; let it land first.
     await client.waitFor(message => message.type === 'lobby');
-    client.sendRaw(JSON.stringify({ protocolVersion: 1, commandId: 1, type: 'join', name: 'x'.repeat(2048) }));
+    client.sendRaw(JSON.stringify({ protocolVersion: 2, commandId: 1, type: 'join', name: 'x'.repeat(2048) }));
     const closed = await client.closed;
     expect(closed.code).toBe(1009);
   });
@@ -296,9 +296,9 @@ describe('game server: connection limits', () => {
     harness = await startServer({ limits: { maxMessagesPerWindow: 3, rateWindowMs: 1_000 } });
     const client = await harness.connect();
     expectOk(await client.join('甲'));
-    client.sendRaw('{"protocolVersion":1,"commandId":2,"type":"start"}');
-    client.sendRaw('{"protocolVersion":1,"commandId":3,"type":"leaveQueue"}');
-    client.sendRaw('{"protocolVersion":1,"commandId":4,"type":"leaveQueue"}');
+    client.sendRaw('{"protocolVersion":2,"commandId":2,"type":"start"}');
+    client.sendRaw('{"protocolVersion":2,"commandId":3,"type":"leaveQueue"}');
+    client.sendRaw('{"protocolVersion":2,"commandId":4,"type":"leaveQueue"}');
     const limited = await client.waitFor(message => message.type === 'error' && message.code === 'rate-limited');
     expect(limited.type).toBe('error');
     harness.clock.advance(1_000);

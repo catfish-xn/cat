@@ -6,7 +6,8 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableFailure, ConsumableTarget } from '../server-entry';
+import type { ConsumableDefinitionId, ConsumableFailure, ConsumableTarget } from '../server-entry';
+import type { ConsumableEffect } from '../simulation/consumable-types';
 
 export const ROOM_CAPACITY = 8;
 export const ROOM_PROTOCOL_VERSION = 1;
@@ -103,6 +104,15 @@ export interface LobbyView {
 
 /** R4 consumables (contract §18.1/§18.5): the rules' own target and failure types, re-exported for the client. */
 export type { ConsumableTarget, ConsumableFailure };
+/**
+ * §18.8 SR-C18-03: the field-by-field whitelist of the three Match events a successful useConsumable produces, in the
+ * rules' order, with `domain: 'match'` and the original eventSeq. Seat operation events: never combat view events.
+ */
+type MatchEventStamp = { readonly domain?: 'match'; readonly eventSeq?: number };
+export type ConsumableDisplayEvent = MatchEventStamp & (
+  | { readonly type: 'itemsRemoved'; readonly unitId: string; readonly itemIds: readonly string[] }
+  | { readonly type: 'itemReforged'; readonly itemId: string; readonly definitionId: string; readonly outputItemId: string; readonly outputDefinitionId: string; readonly consumableId: string }
+  | { readonly type: 'consumableUsed'; readonly consumableId: string; readonly definitionId: ConsumableDefinitionId; readonly target: ConsumableTarget; readonly effect: ConsumableEffect; readonly affectedItemIds: readonly string[]; readonly outputItemId: string | null });
 
 /** Every command maps 1:1 to a public command of src/simulation/match.ts; the room adds nothing. */
 export type ClientCommand =

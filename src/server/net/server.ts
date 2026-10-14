@@ -14,6 +14,7 @@ import { startBattleJob, type BattleJob, type BattleResolver } from '../room/bat
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
+import { consumableDisplayEvents } from '../room/consumables';
 import { seatPushEvents, toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
@@ -324,7 +325,10 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       if (message.round !== state.round) return fail(commandId, 'stale-round', `room is at round ${state.round}`);
       if (message.seatRevision !== seat.seatRevision) return fail(commandId, 'seat-revision-mismatch', `seat is at revision ${seat.seatRevision}`);
       const result = current.handle(session.seatId, message.command);
-      return result.ok ? done(commandId, { kind: 'applied', seatRevision: result.seatRevision, roomRevision: result.roomRevision, events: result.events }) : fail(commandId, result.reason);
+      if (!result.ok) return fail(commandId, result.reason);
+      return done(commandId, message.command.type === 'useConsumable'
+        ? { kind: 'consumable-used', seatRevision: result.seatRevision, roomRevision: result.roomRevision, events: consumableDisplayEvents(result.events) }
+        : { kind: 'applied', seatRevision: result.seatRevision, roomRevision: result.roomRevision, events: result.events });
     });
   }
 

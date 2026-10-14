@@ -106,7 +106,7 @@ describe('T10 settlement on the latest live seat (contract §15.2)', () => {
       if (round !== 3) expect(lootGold).toBe(0);
       expect(record.goldBefore).toBe(busy.live.gold + lootGold);
       expect(record.goldAfter).toBe(busy.settled.match.gold);
-      expect(busy.settled.match.gold).toBe(busy.live.gold + record.income);
+      expect(busy.settled.match.gold).toBe(busy.live.gold + lootGold + record.income);
       expect(record.levelBefore).toBe(busy.live.level);
       // The bought unit is still owned (possibly merged), the shop is the rerolled one.
       expect(busy.bought).not.toBeNull();

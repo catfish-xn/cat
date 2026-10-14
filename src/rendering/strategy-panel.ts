@@ -32,8 +32,8 @@ import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
-import { previewConsumable, readConsumables, readOrbLoot } from './online/fake-loot';
-import { CONSUMABLE_TEXT, consumableDropText, consumableShelf, consumableTargetHint, orbLootSection, type DraftConsumable, type DraftConsumableTarget } from '../presentation/orb-loot';
+import { consumableAnswer, readConsumables, readOrbLoot } from './online/seat-loot';
+import { consumableDropText, consumableName, consumableShelf, consumableTargetHint, consumableTargetKind, orbLootSection, type ConsumableInstance, type ConsumableTarget } from '../presentation/orb-loot';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -70,8 +70,8 @@ interface PanelActions {
   readonly combine: (a: string, b: string) => void;
   /** `combinedName`: the finished item previewEquip says this equip creates in the slot (C17), for the success text. */
   readonly equip: (item: string, unit: string, slot: number, combinedName?: string) => void;
-  /** C18-B (§18.3 draft): send useConsumable; online only, absent offline. The panel calls it only on a preview ok:true. */
-  readonly useConsumable?: (consumableId: string, target: DraftConsumableTarget, success: string) => void;
+  /** C18-B (§18.3): send useConsumable; online only, absent offline. The panel calls it only where the server's target answer allows it. */
+  readonly useConsumable?: (consumableId: string, target: ConsumableTarget, success: string) => void;
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
@@ -154,7 +154,7 @@ export class StrategyPanel {
   private readonly modal: HTMLElement;
   private readonly disposers: (() => void)[] = [];
   private selectedItems: string[] = [];
-  /** C18-B: the consumable picked for targeting (use not wired yet, contract §18.1). */
+  /** C18-B: the consumable picked for targeting (contract §18.3). */
   private selectedConsumable: string | null = null;
   private tab: 'traits' | 'items' | 'units' | 'builds' | 'events' = 'items';
   private lastCombatTick = -1;
@@ -163,8 +163,8 @@ export class StrategyPanel {
   private eventTexts: string[] = [];
   private eventCombatId: string | undefined;
   private pointerPosition: { x: number; y: number } | null = null;
-  /** `tool` (C18-B): a consumable being dragged; its drop only names the target, no command is sent yet (§18.1). */
-  private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string; tool?: DraftConsumable } | null = null;
+  /** `tool` (C18-B): a consumable being dragged; dropped on a target the server allows, it sends useConsumable (§18.3). */
+  private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string; tool?: ConsumableInstance } | null = null;
   private choiceToken = '';
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
@@ -231,10 +231,10 @@ export class StrategyPanel {
       if (!drag.moved) return;
       drag.element.classList.add('dragging');
       if (drag.tool) {
-        const target = this.toolTarget(event.clientX, event.clientY), key = target ? JSON.stringify(target.target) : '';
+        const target = this.toolTarget(drag.tool, event.clientX, event.clientY), key = target ? JSON.stringify(target.target) : '';
         if (key === drag.target) return;
         drag.target = key;
-        this.actions.status(target ? this.toolDropText(drag.tool, target) : `拖动${CONSUMABLE_TEXT[drag.tool.definitionId]?.name ?? '消耗品'}到我方单位或装备上`);
+        this.actions.status(target ? this.toolDropText(drag.tool, target) : `拖动${consumableName(drag.tool.definitionId)}到我方单位或装备上`);
         return;
       }
       // C17: over a unit or a slot, name what a drop there would do (previewEquip's answer); elsewhere the drag hint.
@@ -251,7 +251,7 @@ export class StrategyPanel {
       if (drag.element.hasPointerCapture(event.pointerId)) drag.element.releasePointerCapture(event.pointerId);
       if (drag.tool) {
         if (!drag.moved) { this.selectConsumable(drag.tool.consumableId); return; }
-        const target = this.toolTarget(event.clientX, event.clientY);
+        const target = this.toolTarget(drag.tool, event.clientX, event.clientY);
         if (target) this.useTool(drag.tool, target); else this.actions.status('消耗品未使用 · 请放到我方单位或装备上');
         return;
       }
@@ -360,29 +360,32 @@ export class StrategyPanel {
     return preview?.allowed ? allowedPreviewText(preview, chosen, itemDefinitionName) : this.unitRefusalText(previews);
   }
   /**
-   * C18-B: what a consumable drag points at, as a §18.1 ConsumableTarget: an item card or a worn item's slot (item), an
-   * equipment row or a board piece of mine (unit). Only names the target; whether the tool fits it is the preview's call.
+   * C18-B: what a consumable drag points at, as a §18.1 ConsumableTarget: for an item tool an item card or a worn item's
+   * slot (item); an equipment row (any of its slots for a unit tool) or a board piece of mine (unit). Only names the
+   * target; whether the tool fits it is the server's answer.
    */
-  private toolTarget(x: number, y: number): { target: DraftConsumableTarget; label: string } | null {
+  private toolTarget(tool: ConsumableInstance, x: number, y: number): { target: ConsumableTarget; label: string } | null {
     const state = this.actions.state(), hit = document.elementFromPoint(x, y);
-    const itemId = hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
+    const itemId = consumableTargetKind(tool.definitionId) === 'unit' ? undefined : hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
     if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : itemId }; }
     const unitId = hit?.closest<HTMLElement>('[data-unit-id]')?.dataset.unitId ?? this.actions.unitAt(x, y);
     const unit = unitId ? state.preparation.units.find(entry => entry.id === unitId) : undefined;
     return unit ? { target: { kind: 'unit', unitId: unit.id }, label: displayUnitName(unit.definitionId) } : null;
   }
   /**
-   * A tool dropped (or clicked) on a target: sent only when the preview answers ok:true; otherwise its answer is shown.
-   * TODO(T13-B, contract §18.1): previewConsumable is a placeholder answering `pending`, so nothing is sent before then.
+   * A tool dropped (or clicked) on a target: sent only when the server's target answer (§18.8 consumableTargets) allows
+   * it; otherwise that answer is shown. The server re-checks on its latest seat and its receipt is the only success.
    */
-  private useTool(tool: DraftConsumable, target: { target: DraftConsumableTarget; label: string }): void {
-    const preview = previewConsumable(this.actions.state(), tool.consumableId, target.target), text = this.toolDropText(tool, target);
-    if (preview.ok === true && this.actions.useConsumable) this.actions.useConsumable(tool.consumableId, target.target, text);
-    else this.actions.status(preview.ok === 'pending' ? `${text} · 未使用（useConsumable 待接线）` : text);
+  private useTool(tool: ConsumableInstance, target: { target: ConsumableTarget; label: string }): void {
+    const answer = consumableAnswer(this.actions.state(), tool.consumableId, target.target), text = this.toolDropText(tool, target);
+    if (answer.ok && this.actions.useConsumable) { this.selectedConsumable = null; this.actions.useConsumable(tool.consumableId, target.target, text); }
+    else this.actions.status(text);
   }
-  private toolDropText(tool: DraftConsumable, target: { target: DraftConsumableTarget; label: string }): string {
+  private toolDropText(tool: ConsumableInstance, target: { target: ConsumableTarget; label: string }): string {
     const state = this.actions.state();
-    return consumableDropText(tool, target.label, previewConsumable(state, tool.consumableId, target.target), itemDefinitionName);
+    // affectedItemIds are item instance ids: name them by the item they are now (they still exist before the use).
+    const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? itemDefinitionName(item.definitionId) : id; };
+    return consumableDropText(tool, target.label, consumableAnswer(state, tool.consumableId, target.target), itemName);
   }
   private selectConsumable(id: string) {
     if (!this.itemsOpen()) return;
@@ -525,10 +528,10 @@ export class StrategyPanel {
   private revealedLootPanel(state: MatchState): HTMLElement | null {
     const hidden = this.onlineLootHidden(state);
     const loot = hidden ? null : readRevealedLoot(state);
-    // C18-B: the R3/R4 orb summary (contract §18.4 draft) when the server sends one, or the ?fakeLoot=1 sample.
+    // C18-B: the R3/R4 orb summary (contract §18.4 v2 revealedLoot) when the server sends one.
     const orbs = hidden ? null : readOrbLoot(state);
     this.lootKey = this.onlineLootKey(state);
-    if (orbs) { const section = orbLootSection(orbs.loot, this.lootLabels(state), { preview: orbs.preview }); section.dataset.online = 'true'; return section; }
+    if (orbs) { const section = orbLootSection(orbs, this.lootLabels(state)); section.dataset.online = 'true'; return section; }
     if (!loot) return null;
     const pick = state.phase === 'choice' && state.pendingChoice?.kind === 'component';
     const section = lootRevealedSection(loot, this.lootLabels(state), !pick); section.dataset.online = 'true';
@@ -585,12 +588,13 @@ export class StrategyPanel {
       inventory.append(button);
     }
     section.append(inventory);
-    // C18-B: consumable tools (contract §18.4 draft); picking one names its target, using it awaits §18.1.
-    const consumables = readConsumables(state);
-    const tool = consumables?.tools.find(entry => entry.consumableId === this.selectedConsumable) ?? null;
+    // C18-B: consumable tools (contract §18.4); a picked tool marks the targets the server allows (§18.8 consumableTargets).
+    const consumables = isOnline() ? readConsumables(state) : null;
+    const tool = consumables?.find(entry => entry.consumableId === this.selectedConsumable) ?? null;
     if (!tool) this.selectedConsumable = null;
-    const toolTarget = tool ? CONSUMABLE_TEXT[tool.definitionId]?.target ?? null : null;
-    if (consumables) section.append(consumableShelf(consumables.tools, this.selectedConsumable, (card, entry) => {
+    const toolTarget = tool ? consumableTargetKind(tool.definitionId) : null;
+    const allows = (target: ConsumableTarget) => !!tool && consumableAnswer(state, tool.consumableId, target).ok;
+    if (consumables) section.append(consumableShelf(consumables, this.selectedConsumable, (card, entry) => {
       card.disabled = !open;
       card.addEventListener('pointerdown', event => {
         if (!open || event.button !== 0) return;
@@ -600,8 +604,8 @@ export class StrategyPanel {
         this.itemDrag = { gesture, x: event.clientX, y: event.clientY, moved: false, element: card, tool: entry };
       });
       card.addEventListener('keydown', event => { if (event.code === 'Enter' || event.code === 'Space') { event.preventDefault(); this.selectConsumable(entry.consumableId); } });
-    }, { preview: consumables.preview }));
-    if (toolTarget === 'item') for (const card of Array.from(inventory.querySelectorAll<HTMLElement>('.item-card'))) card.classList.add('consumable-candidate');
+    }));
+    if (toolTarget === 'item') for (const card of Array.from(inventory.querySelectorAll<HTMLElement>('.item-card'))) if (allows({ kind: 'item', itemId: card.dataset.itemId ?? '' })) card.classList.add('consumable-candidate');
     // Combine and equip legality come from the B5 previews (same validators as the commands);
     // the commands still re-check the current state when clicked.
     const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? ITEM_DEFINITIONS[item.definitionId].name : '已不存在的物品'; };
@@ -624,7 +628,7 @@ export class StrategyPanel {
       // C18: during a shown battle, items worn now but not in that battle's snapshot are marked "下场生效".
       const loadout = battleLoadout(state.items, frozen, unit.id), loadoutText = loadout?.changed ? battleLoadoutText(loadout, itemDefinitionName) : '';
       if (loadoutText) { heading.title = loadoutText; row.classList.add('has-pending'); }
-      if (tool && toolTarget === 'unit') { row.classList.add('consumable-candidate'); heading.title = consumableTargetHint(tool); }
+      if (tool && toolTarget === 'unit' && allows({ kind: 'unit', unitId: unit.id })) { row.classList.add('consumable-candidate'); heading.title = consumableTargetHint(tool); }
       row.append(heading);
       const view = readUnitEquipment(state, unit.id);
       const previews: EquipPreview[] | null = chosen ? [0, 1, 2].map(slot => previewEquip(state, chosen, unit.id, slot)) : null;
@@ -638,9 +642,9 @@ export class StrategyPanel {
           : reserved ? `${itemName(entry.reservedByItemInstanceId!)} 占用` : `空槽 ${slot + 1}`;
         const button = this.button(`equipment:${unit.id}:${slot}`, label, () => {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
-          // TODO(T13-B, contract §18.1): send useConsumable once previewUseConsumable answers for this target.
+          // C18-B: with a tool picked, the slot names its target: the unit for a unit tool or an empty slot, else the worn item.
           if (tool) {
-            const target: DraftConsumableTarget = item ? { kind: 'item', itemId: item.id } : { kind: 'unit', unitId: unit.id };
+            const target: ConsumableTarget = item && toolTarget !== 'unit' ? { kind: 'item', itemId: item.id } : { kind: 'unit', unitId: unit.id };
             this.useTool(tool, { target, label: item ? ITEM_DEFINITIONS[item.definitionId].name : displayUnitName(unit.definitionId) });
             return;
           }
@@ -651,7 +655,7 @@ export class StrategyPanel {
         if (reserved) { button.classList.add('slot-reserved'); button.dataset.reservedBy = entry.reservedByItemInstanceId!; }
         if (entry.temporary) { button.classList.add('slot-temporary'); button.dataset.temporaryId = entry.temporary.temporaryId; }
         if (item) button.dataset.itemId = item.id;
-        if (item && toolTarget === 'item') button.classList.add('consumable-candidate');
+        if (item && toolTarget === 'item' && allows({ kind: 'item', itemId: item.id })) button.classList.add('consumable-candidate');
         if (item && loadout?.pendingIds.has(item.id)) this.markPending(button, loadout);
         else if (loadoutText) button.title = loadoutText;
         const routed = previews ? routeSlotDrop(previews, slot) : slot, preview = previews?.[routed];

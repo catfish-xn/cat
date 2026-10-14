@@ -1,20 +1,18 @@
 /**
- * C18-B / SR-C18-03, server side: the `useConsumable` wire command (contract §18.3 draft field names) end to end over a
- * real game server, one Node test client + seven bots.
+ * C18-B / SR-C18-03: the `useConsumable` wire command (contract §18.3/§18.8) end to end over a real game server, one
+ * Node test client + seven bots.
  *
  *   npm run build:game && node tests/server/e2e/c18b-use-consumable.mjs
  *
- * Always:
  *   - malformed shapes (extra field at either layer, mixed target, empty id, unknown kind) are refused
  *     `invalid-message` (a receipt when the commandId is readable, as for every command) and reach no room;
- *   - the room gate forwards the command in preparation, combat (battle) and settlement;
- *   - the same commandId with the same body replays the cached receipt; with another body it is `commandId-conflict`.
- * Before T13-B (no `consumables` in my private state, the fake-data stage): every use is refused `unknown-consumable`
- * by the dispatch stub, atomically (seatRevision unchanged, no state push for it).
- * After T13-B (my state carries `consumables`): when I hold a magnetic remover and a board unit of mine wears permanent
- * items, using it during my battle is applied: the unit's items are back in the inventory with their ids, the tool is
- * gone, and a second use of the same tool instance is `unknown-consumable`. The icon and record checks of SR-C18-03
- * live in the browser e2e (c18b-loot-preview) once real fields arrive.
+ *   - the room gate forwards the command in preparation, combat (battle) and settlement: a tool I do not hold is
+ *     refused `unknown-consumable` by the rules, atomically (seatRevision unchanged, no state push for it);
+ *   - the same commandId with the same body replays the cached receipt; with another body it is `commandId-conflict`;
+ *   - my private state carries `consumables` and `consumableTargets`; once I hold a magnetic remover, an item is put on a
+ *     board unit in preparation and the remover is used on that unit during my battle: the receipt is `consumable-used`
+ *     with itemsRemoved then consumableUsed only, the items are back in the inventory with their ids, the tool is gone,
+ *     and a second use of the same tool instance is `unknown-consumable`.
  * C18B_WS_PORT (default 8800) overrides the port.
  */
 import { spawn } from 'node:child_process';
@@ -59,14 +57,13 @@ async function main() {
     let id = 900;
     for (const command of malformed) {
       const commandId = ++id, from = client.inbox.length;
-      client.sendRaw(JSON.stringify({ protocolVersion: 1, commandId, type: 'command', roomId: client.view.roomId, round: client.view.phase.round, seatRevision: client.stateRevision, command }));
+      client.sendRaw(JSON.stringify({ protocolVersion: 2, commandId, type: 'command', roomId: client.view.roomId, round: client.view.phase.round, seatRevision: client.stateRevision, command }));
       const answer = await client.waitFor(message => (message.type === 'error' || message.type === 'receipt') && message.commandId === commandId, 5_000, from).catch(() => null);
       check((answer?.type === 'error' && answer.code === 'invalid-message') || (answer?.type === 'receipt' && !answer.ok && answer.reason === 'invalid-message'), `malformed ${JSON.stringify(command).slice(0, 90)} → ${answer?.type}:${answer?.code ?? answer?.reason}`);
     }
 
-    // 2. Per phase: the gate forwards it; before T13-B the stub refuses atomically, after T13-B the real flow runs.
-    const realStage = Array.isArray(client.state?.consumables);
-    console.log(`stage: ${realStage ? 'real (consumables projected)' : 'fake (no consumables field yet: stub refuses)'}`);
+    // 2. Per phase: the gate forwards it and the rules refuse a tool I do not hold, atomically.
+    check(Array.isArray(client.state?.consumables) && Array.isArray(client.state?.consumableTargets), 'my private state carries consumables and consumableTargets (§18.4/§18.8)');
     const seen = new Set();
     const deadline = Date.now() + 5 * 60_000;
     while (seen.size < 3 && Date.now() < deadline) {
@@ -95,29 +92,45 @@ async function main() {
     check(JSON.stringify(again) === JSON.stringify(first), `same commandId and body replays the cached receipt (${first.ok ? 'ok' : first.reason})`);
     check(!other.ok && other.reason === 'commandId-conflict', `same commandId, other body → ${other.ok ? 'ok' : other.reason}`);
 
-    // 4. After T13-B only: a real remover on a board unit wearing items, during my battle.
-    if (!realStage) console.log('skip real use: T13-B has not projected `consumables` yet (switch the fields, then this branch runs)');
-    else {
-      const used = { done: false };
-      const until = Date.now() + 8 * 60_000;
-      while (!used.done && Date.now() < until) {
-        const state = client.state, tool = state?.consumables?.find(entry => entry.definitionId === 'magnetic-remover');
-        const worn = unit => state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id);
-        const unit = state && mine().find(entry => entry.location.kind === 'board' && worn(entry).length);
-        if (phase() !== 'combat' || !tool || !unit) { await sleep(150); continue; }
-        const ids = worn(unit).map(item => item.id), tools = state.consumables.length;
-        const receipt = await client.command({ type: 'useConsumable', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id } });
-        check(receipt.ok && receipt.result.kind !== undefined, `remover on ${unit.id} during my battle applied (${receipt.ok ? receipt.result.kind : receipt.reason})`);
-        if (receipt.ok) await client.waitFor(message => message.type === 'state' && message.seatRevision >= receipt.result.seatRevision, 10_000);
-        const after = client.state;
-        check(ids.every(item => after.items.some(entry => entry.id === item && entry.location.kind === 'inventory')), `its items ${ids.join(', ')} are back in the inventory with the same ids`);
-        check(after.consumables.length === tools - 1 && !after.consumables.some(entry => entry.consumableId === tool.consumableId), `the tool is used up (${tools} → ${after.consumables.length})`);
-        const reuse = await client.command({ type: 'useConsumable', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id } });
-        check(!reuse.ok && reuse.reason === 'unknown-consumable', `the same tool instance again → ${reuse.ok ? 'applied' : reuse.reason}`);
-        used.done = true;
+    // 4. A real remover on a board unit wearing an item I put on it in preparation, used during my battle.
+    const used = { done: false };
+    const until = Date.now() + 8 * 60_000;
+    let equipped = null;
+    while (!used.done && Date.now() < until) {
+      const state = client.state, tool = state?.consumables?.find(entry => entry.definitionId === 'magnetic-remover');
+      const worn = unit => state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id);
+      if (phase() === 'preparation' && tool && !equipped) {
+        const item = state.items.find(entry => entry.location.kind === 'inventory');
+        const holder = mine().find(entry => entry.location.kind === 'board');
+        if (item && holder) {
+          const receipt = await client.command({ type: 'equip', itemId: item.id, unitId: holder.id, slot: worn(holder).length });
+          if (receipt.ok) { equipped = holder.id; console.log(`equipped ${item.id} on ${holder.id} in preparation`); }
+        }
+        await sleep(150); continue;
       }
-      check(used.done, 'found a battle with a remover and a board unit wearing items');
+      const unit = state && mine().find(entry => entry.location.kind === 'board' && (equipped === null || entry.id === equipped) && worn(entry).length);
+      if (phase() !== 'combat' || !tool || !unit) { await sleep(150); continue; }
+      const ids = worn(unit).map(item => item.id), tools = state.consumables.length;
+      const listed = state.consumableTargets.find(row => row.consumableId === tool.consumableId)?.targets.find(entry => entry.target.kind === 'unit' && entry.target.unitId === unit.id);
+      check(listed?.allowed === true && JSON.stringify([...listed.affectedItemIds].sort()) === JSON.stringify([...ids].sort()), `consumableTargets allows the remover on ${unit.id}, affecting ${ids.join(', ')}`);
+      const receipt = await client.command({ type: 'useConsumable', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id } });
+      if (!receipt.ok && receipt.reason === 'wrong-phase') { await sleep(250); continue; } // the freeze boundary shows as combat too
+      check(receipt.ok && receipt.result.kind === 'consumable-used', `remover on ${unit.id} during my battle applied (${receipt.ok ? receipt.result.kind : receipt.reason})`);
+      if (receipt.ok) {
+        const types = receipt.result.events.map(event => event.type);
+        check(JSON.stringify(types) === JSON.stringify(['itemsRemoved', 'consumableUsed']), `receipt events are the whitelist, in order (${types.join(', ')})`);
+        check(!JSON.stringify(receipt.result.events).match(/rng|provenance/i), 'receipt events carry no RNG or provenance');
+        await client.waitFor(message => message.type === 'state' && message.seatRevision >= receipt.result.seatRevision, 10_000);
+      }
+      const after = client.state;
+      check(ids.every(item => after.items.some(entry => entry.id === item && entry.location.kind === 'inventory')), `its items ${ids.join(', ')} are back in the inventory with the same ids`);
+      check(after.consumables.length === tools - 1 && !after.consumables.some(entry => entry.consumableId === tool.consumableId), `the tool is used up (${tools} → ${after.consumables.length})`);
+      check(!after.consumableTargets.some(row => row.consumableId === tool.consumableId), 'its consumableTargets row is gone');
+      const reuse = await client.command({ type: 'useConsumable', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id } });
+      check(!reuse.ok && reuse.reason === 'unknown-consumable', `the same tool instance again → ${reuse.ok ? 'applied' : reuse.reason}`);
+      used.done = true;
     }
+    check(used.done, 'found a battle with a remover and a board unit wearing items');
   } finally {
     client.close?.();
     stopAll();

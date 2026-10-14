@@ -12,10 +12,11 @@
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
 import type { CombatReplay, PrivateSeatView } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ConsumableFailure, ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand } from '../protocol';
+import type { ConsumableDisplayEvent, ConsumableFailure, ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 
-export const NET_PROTOCOL_VERSION = 1;
+/** 2 (contract §18.7): §18.4 revealedLoot v2, consumables/consumableTargets, useConsumable and its consumable-used receipt. */
+export const NET_PROTOCOL_VERSION = 2;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
@@ -58,7 +59,9 @@ export type ReceiptResult =
    * otherwise. The client shows "已接回席位" from it.
    */
   | { readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null; readonly connectionEpoch: number; readonly lastCommandId: number; readonly reclaimed?: true }
-  | { readonly kind: 'applied'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly MatchEvent[] };
+  | { readonly kind: 'applied'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly MatchEvent[] }
+  /** §18.8 SR-C18-03: a successful useConsumable; `events` is the whitelist copy of its three seat operation events. */
+  | { readonly kind: 'consumable-used'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly ConsumableDisplayEvent[] };
 
 /** Failures decided by the network layer before the room or the rules see the message. */
 export type NetFailure =
