@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONSUMABLE_DEFINITIONS, toPrivateSeatView } from '../src/server-entry';
+import { RULES_GAP_MANIFEST } from '../src/simulation/content/rules-manifest';
+import { digestContent } from '../src/simulation/content';
 import { previewUseConsumable } from '../src/simulation/consumables';
 import { equipItem, nextRound, startMatchCombat, useConsumable } from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match-types';
@@ -69,6 +71,10 @@ describe('SR-C18 authority-projected consumable targets', () => {
   }, 30000);
   it('exports three frozen content definitions with UI text and target kind', () => {
     expect(Object.keys(CONSUMABLE_DEFINITIONS)).toEqual(['magnetic-remover', 'component-reforger', 'completed-reforger']);
+    expect(RULES_GAP_MANIFEST.consumables.definitions).toBe(CONSUMABLE_DEFINITIONS);
+    const changed = structuredClone(RULES_GAP_MANIFEST);
+    Object.assign(changed.consumables.definitions['magnetic-remover'], { description: 'changed' });
+    expect(digestContent(changed)).not.toBe(digestContent(RULES_GAP_MANIFEST));
     for (const [id, definition] of Object.entries(CONSUMABLE_DEFINITIONS)) {
       expect(definition.id).toBe(id); expect(definition.targetKind).toBe(definition.target);
       expect(definition.name.length).toBeGreaterThan(0); expect(definition.description.length).toBeGreaterThan(0);
