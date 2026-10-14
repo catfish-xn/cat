@@ -685,3 +685,46 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 界面改读 `previewEquip`：它在 preparation/combat/choice/settlement 均给出己方棋盘/备战席真实合法结果，含永久单位本场已阵亡的情况；组件对组件的成功预览可返回 `combination`，失败继续展示真实槽位/唯一/独占/配方原因。不要复用 deploy 的棋盘锁判断装备拖放。同步更新 `strategy-panel.ts` 两处“战斗中构筑/棋盘单位锁定”文案及拖放目标判断，清楚提示战中新装备下场生效。
 
 本场属性、血量、触发与回放继续读 CombatView；运营装备读现有 items/temporaryEquipment，不能把新装备加到本场伤害显示。未新增“本场使用装备 vs 运营装备”的权威投影字段，§14 白名单不变。无布局、颜色或视觉要求；买卖/部署的原锁定提示与规则保留。
+
+## C18-B R3/R4 掉落界面预接线的合同缺口（2026-10-14，Claude 流水线 B/C）
+
+界面已按 [MULTIPLAYER_CONTRACT §18.4](MULTIPLAYER_CONTRACT.md#184-revealedloot-与工具投影草案) 草案字段先做好（分支 `claude/c18b-loot-ui`，`?fakeLoot=1` 用本地假数据预览；T13 PR #79 合入后换真字段再提 PR）：
+
+- `src/presentation/orb-loot.ts` 渲染宝珠卡（四品质、珠聚合状态、条目状态、放弃原因）、消耗品架，以及拖放提示文案。
+- `src/rendering/online/fake-loot.ts` 优先读服务器字段 `revealedLoot.revealedOrbs` / `consumables`，没有时才用假数据。
+- 消耗品能否用在某个目标上，界面只问一个占位函数 `previewConsumable(state, consumableId, target)`。它目前对所有目标都返回 `{ ok: 'pending' }`，不会自称合法，接线时只替换这一处。
+- 拖放和点击都不发命令。
+
+下列是接真字段前需要 Codex 定下来的内容。
+
+### SR-C18-01 客户端可用的消耗品目标预览（P1，阻塞"拖到目标"的合法提示）
+
+- 缺口：§18.1 规定 `previewUseConsumable` 只接受可信权威状态，"客户端不能在残缺私有投影上运行这个权威预览"。但 §18.3 要求客户端"显示库存工具和可选目标"。现在界面拿不到任何目标合法性，只能写死"拆卸器→单位、重铸器→装备"的说明文字，不能把非法目标标灰。
+- 需要（二选一，由 Codex 定）：
+  - A（推荐）：私有投影新增 `consumableTargets: readonly { consumableId: string; targets: readonly { target: ConsumableTarget; allowed: true } | { target: ConsumableTarget; allowed: false; reason: ConsumableFailure } }[]`，由服务器对每件工具和本席全部可见单位、永久物品调用 `previewUseConsumable` 得出。只列本席持有的目标；不泄漏重铸结果，不消耗 RNG。
+  - B：导出一个只读结构判断函数，签名形如 `previewConsumableOnSeatView(view: PrivateSeatView, consumableId, target): ConsumablePreview`。合同里写明它只看投影上已有的字段，结论与权威预览一致（失败原因相同，执行时仍会重新校验）。
+- 用途：拖动工具时把合法目标高亮，把非法目标标灰并显示原因；松手前就预告"将拆下 N 件 / 将重铸 X"。
+- 验收：对 §18.5 每个失败原因（错误目标类型、临时子件、敌方/野怪、空身单位、已消费工具）各给一个用例，A 字段或 B 函数的结果都与 `previewUseConsumable(权威状态)` 相同；四个阶段都覆盖；读取前后 RNG、ID 分配和 revision 不变。
+
+### SR-C18-02 导出消耗品内容表（P2）
+
+- 字段：`CONSUMABLE_DEFINITIONS: Record<ConsumableDefinitionId, { id; name; description; targetKind: 'unit' | 'item' }>`，放在 `src/simulation/content/consumables.ts`（设计稿 §2 已列为拟新增）。
+- 用途：消耗品架、宝珠条目、事件记录里的名称和说明。目前界面在 `CONSUMABLE_TEXT` 里写死了"磁力拆卸器 / 组件重铸器 / 成装重铸器"和用途说明，带 TODO。
+- 验收：三个定义都在表里并纳入 digest；界面改读这张表后，不再写死名称。
+
+### SR-C18-03 useConsumable 的回执、事件与失败文案（P2）
+
+- 需要合同写明：wire 回执 `result.kind`（建议 `'consumable-used'`）；成功时私有投影里会变的字段（`consumables` 少一件，`items` 新增或回到库存）；显示事件 `consumableUsed` / `itemReforged` / `itemsRemoved` 是否进入 §14.2 白名单（界面要在记录页写"重铸：A → B"）。
+- 失败文案建议（界面照此显示，Codex 可修改）：`unknown-consumable` 该消耗品已不存在，请重新选择；`invalid-consumable-target` 这件消耗品不能用在该目标上；`no-removable-items` 该单位身上没有可拆下的装备；`temporary-item` 临时装备由本轮自动生成，不能拆卸或重铸；`wrong-phase` 当前阶段不能使用消耗品。
+- 服务器侧（Claude 自己做，T13-B 后）：`src/server/protocol.ts` / `net/messages.ts` 加 `useConsumable` 的逐层 onlyKeys 校验，`ROOM_COMMAND_GATE` 在四个阶段放行；不需要 Codex 改动。
+- 验收：一条 e2e，战斗中对场上单位使用拆卸器，装备回到库存、工具少一件，本场图标不变（沿用 C18-A 的"下场生效"显示），记录页出现一行事件。
+
+### SR-C18-04 revealedLoot v2 的显示约定确认（P3，只改文档）
+
+- 界面目前的做法，请在 §18.4 里确认或修正：
+  - 宝珠卡按 `revealedOrbs` 的顺序排列；每张卡只列它 `entryDropIds` 引用到的条目；没被任何珠引用的条目归入"其他"卡。
+  - 珠的状态只显示服务器给的聚合值，不按条目重新计算。
+  - `forfeited` 条目显示为划线，`timeout-forfeited` / `eliminated-forfeited` 各有一句原因说明。
+  - 掉落来源名沿用 `readEncounterPreview` 的 `sourceUnitId → name` 映射。
+- 联机显示时机（界面决定，告知即可）：准备阶段和本席战斗回放播放期间隐藏（防止击杀前剧透），回放播完后显示，包括断线重连时服务器重新推送回放、并把状态覆盖成 combat 的情况。所以 `revealedLoot` 必须在本轮结算期间一直下发，重连后的首次推送也要带上。
+- 验收：重连 e2e（`tests/server/e2e/c18b-loot-preview.mjs` 换接真字段后）中，结算期刷新页面，回放播完后宝珠卡再次出现，内容与刷新前相同。
