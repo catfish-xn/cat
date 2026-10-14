@@ -136,7 +136,8 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     ]);
     expect(result.events.some(e => e.type === 'equipmentRolled')).toBe(false);
     expect(result.events.filter(e => e.type === 'itemsReturned')).toEqual([expect.objectContaining({ unitId: returnedHolder, itemIds: [returned] })]);
-    expect(next.resourceProvenance.entries.filter(entry => entry.kind === 'unit-acquired' && entry.source.kind === 'shop')).toHaveLength(9);
+    expect(next.resourceProvenance.entries.filter(entry => entry.kind === 'unit-acquired' && entry.source.kind === 'shop')).toHaveLength(
+      inventory.state.resourceProvenance.entries.filter(entry => entry.kind === 'unit-acquired' && entry.source.kind === 'shop').length + 9);
     const restored = restoreMatch(serializeMatch(next));
     expect(restored).toEqual(next);
     const repeat = buyUnit(restored, chain.slot, restored.shop.generation);
@@ -151,18 +152,21 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1]],
     ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1]],
     ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1]],
-  ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, returned) => {
+  ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, fixedReturned) => {
     const inventory = publicInventory(definitions, true), chain = publicRecursivePurchase(inventory.state);
     let equipped = chain.state;
     for (const [index, id] of inventory.itemIds.entries()) equipped = accepted(equipItem(equipped, id, [chain.survivorId, chain.secondId, chain.incomingId, chain.purchaseIds[7]][holders[index]], slots[index]));
     const state = freeze(equipped), result = buyUnit(state, chain.slot, state.shop.generation), next = accepted(result);
-    // Codepoint order puts unit-10 before unit-7: the rod from unit-7 overflows last.
+    // Incoming holder already owns vest/cloak after the first triple. The final
+    // triple visits consumed holders in codepoint order, regardless of their serial width.
+    const returned = _label === 'full ordinary' ? [chain.secondId < chain.incomingId ? 3 : 1] : fixedReturned;
+    const returnedHolder = _label === 'full ordinary' && returned[0] === 3 ? chain.incomingId : chain.secondId;
     for (const n of returned) expect(next.items.find(i => i.id === inventory.itemIds[n])?.location.kind).toBe('inventory');
     expect(next.items.map(i => i.id).sort()).toEqual(state.items.map(i => i.id).sort());
     expect(next.equipmentState).toEqual(state.equipmentState);
     if (!result.ok) throw new Error(result.reason);
     expect(result.events.filter(event => event.type === 'unitUpgraded')).toHaveLength(2);
-    expect(result.events.filter(event => event.type === 'itemsReturned').map(({ domain: _domain, eventSeq: _seq, ...event }) => event)).toEqual([{ type: 'itemsReturned', unitId: chain.secondId, itemIds: returned.map(index => inventory.itemIds[index]).sort() }]);
+    expect(result.events.filter(event => event.type === 'itemsReturned').map(({ domain: _domain, eventSeq: _seq, ...event }) => event)).toEqual([{ type: 'itemsReturned', unitId: returnedHolder, itemIds: returned.map(index => inventory.itemIds[index]).sort() }]);
     expect(restoreMatch(serializeMatch(next))).toEqual(next);
     const old = definitions.map((definition, index) => item(20 + index, definition, ['unit-1', 'unit-2', 'unit-3', 'unit-4'][holders[index]], slots[index]));
     const forged = forgedChain(old);

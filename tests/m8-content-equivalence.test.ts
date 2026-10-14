@@ -30,7 +30,7 @@ describe('restoreMatch text fast path is exact', () => {
   });
   it.each(['cannon', 'sniper'] as const)('recorded %s states: restore from text equals restore from the parsed object', build => {
     expect(states.length).toBeGreaterThan(100);
-    expect(byBuild[build]).toHaveLength(67); // 33 public-route combats, before/after plus final, re-recorded at T12.
+    expect(byBuild[build]).toHaveLength(67); // 33 public-route combats, before/after plus final, re-recorded at T13.
     for (const state of byBuild[build]) {
       const source = JSON.stringify(state);
       expect(() => assertParsedContent(JSON.parse(source))).not.toThrow();

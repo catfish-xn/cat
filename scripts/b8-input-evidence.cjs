@@ -14,7 +14,7 @@ const path = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
 const { hash } = require('./m4-evidence.cjs');
 
-const SEED = 42, OPENING_COMPONENTS = ['bow', 'rod'];
+const SEED = 14349, OPENING_COMPONENTS = ['bow', 'rod'];
 const INPUT_TYPES = new Set(['pointerdown', 'pointerup', 'pointerout', 'mousedown', 'mouseup', 'mouseout', 'mouseleave', 'click']);
 const POINTER_TYPES = new Set(['pointerdown', 'pointerup', 'pointerout', 'click']);
 const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -107,9 +107,8 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
   };
 
   // Trusted start and the gate's opening policy: Start in preparation, Continue in settlement,
-  // components bow then rod, any other pick the first non-placebo offer.
+  // T13 seed 14349 earns bow/rod randomly; choose the first non-placebo augment.
   let state = api.createMatch(SEED);
-  const components = [...OPENING_COMPONENTS];
   for (let guard = 0; state.m8.round.roundId !== '2-1' || state.phase !== 'preparation'; guard++) {
     assert(guard < 200, 'B8 Rageblade replay: 2-1 preparation not reached');
     if (state.phase === 'preparation') {
@@ -117,7 +116,7 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
       while (state.phase === 'combat') state = api.stepMatch(state).state;
     } else if (state.phase === 'choice') {
       const choice = state.pendingChoice;
-      const pick = choice.kind === 'component' ? components.shift() : choice.offers.find(id => id !== 'placebo');
+      const pick = choice.offers.find(id => id !== 'placebo');
       assert(pick && choice.offers.includes(pick), `B8 Rageblade replay: offer ${pick}`);
       const after = accepted(api.selectChoice(state, choice.choiceId, choice.generation, pick), `pick ${pick}`);
       step(`b8-opening-${choice.kind}-${pick}`, state, after, [`choice:${pick}`]);
@@ -125,9 +124,8 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
     } else if (state.phase === 'settlement') state = accepted(api.nextRound(state, state.round), 'continue');
     else assert.fail(`B8 Rageblade replay: opening ended at ${state.phase}`);
   }
-  assert.deepEqual(components, [], 'B8 Rageblade replay: both loot component picks were made');
 
-  // Identities from the replay: components from the real loot picks, Lux from its loot receipt.
+  // Identities from the replay: components from the real random drops, Lux from its loot receipt.
   const lootItem = id => state.m8.loot.receipts.find(receipt => receipt.payload.kind === 'item' && receipt.payload.definitionId === id)?.grantedItemIds[0];
   const [bow, rod] = OPENING_COMPONENTS.map(lootItem);
   assert(bow && rod, 'B8 Rageblade evidence: bow and rod loot receipts');

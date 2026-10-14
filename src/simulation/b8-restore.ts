@@ -1,3 +1,5 @@
+import { validateConsumableState, replayConsumableItems } from './consumables';
+import { ITEM_DEFINITIONS } from './content/items';
 import { canonicalContent } from './content';
 import { LOOT_POLICY_VERSION, LOOT_SLOTS } from './content/loot';
 import { restoreFrozenLootLedger } from './loot-freeze';
@@ -58,8 +60,9 @@ function equipmentContinuation(expected: readonly ItemInstance[], actual: readon
 /** Pure ledger validation. Historical deaths have bounded evidence, not independent replay authentication. */
 export function validateB8Loot(state: MatchState): boolean {
   const loot = state.m8.loot;
-  keys(loot, ['frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters']);
-  const frozen = restoreFrozenLootLedger(loot.frozen, {seed:state.seed, throughRoundOrdinal:state.round});
+  keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters']);
+  check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
+  const frozen = restoreFrozenLootLedger(loot.frozen, {seed:state.seed, throughRoundOrdinal:state.round,layout:loot.layoutBinding.layout});
   for (const value of [loot.direct,loot.choiceEligibility,loot.choiceResolutions,loot.earnedEvidence,loot.receipts]) check(Array.isArray(value), 'ledger array');
   const direct = frozen.rounds.flatMap(round => round.encounterPlan.drops), choices = allChoices(state);
   check(equal(loot.direct.map(entry => entry.dropId),direct.map(entry => entry.dropId))
@@ -136,7 +139,7 @@ export function validateB8Loot(state: MatchState): boolean {
     if (state.combat?.status === 'running' && slot.roundId === state.roundDefinitionId) check(!resolution, 'combat choice grant');
   }
   const counters = Object.fromEntries(Object.keys(LOOT_SLOTS).map(roundId => [JSON.stringify([LOOT_POLICY_VERSION,roundId,'components-granted']),0]));
-  for (const receipt of loot.receipts) if (receipt.payload.kind === 'item') counters[JSON.stringify([LOOT_POLICY_VERSION,slots.get(receipt.dropId)!.roundId,'components-granted'])]++;
+  for (const receipt of loot.receipts) if (receipt.payload.kind === 'item') counters[JSON.stringify([LOOT_POLICY_VERSION,slots.get(receipt.dropId)!.roundId,'components-granted'])]+=ITEM_DEFINITIONS[receipt.payload.definitionId].kind==='completed'?2:1;
   check(equal(counters,loot.guaranteeCounters), 'actual guarantee counters');
   const unresolved = orderedUnresolvedLootChoices(choices,loot.choiceEligibility,loot.choiceResolutions);
   if (state.combat?.status === 'finished' && state.phase !== 'gameOver' && unresolved.length) {
@@ -147,6 +150,7 @@ export function validateB8Loot(state: MatchState): boolean {
 
 /** Verify all births/consumption and independently compile the immutable combat prefix. */
 export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
+  validateConsumableState(state);
   const context: ResourceProvenanceContext = { scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
@@ -182,8 +186,8 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
     check(equal(live, frozenInputs), 'running input mutation');
     let items = originalItems, serial = basis.nextItemSerial;
     for (const fact of entries.slice(prefixLength)) {
-      check(fact.kind === 'item-combined' && fact.roundId === state.roundDefinitionId, 'running resource suffix');
-      const plan = replayCombination(items, state.preparation, serial, fact);
+      check((fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
+      const plan = fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact);
       items = plan.items; serial = plan.nextItemSerial;
     }
     check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
@@ -209,7 +213,13 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
   };
   const combinations = () => {
-    while (entries[cursor]?.kind === 'item-combined') {
+    while (entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
+      const tool=entries[cursor];
+      if(tool.kind==='consumable-used') {
+        check(!committed||state.phase!=='gameOver','terminal consumable operation');
+        const plan=replayConsumableItems(items,nextItem,tool.record,state.preparation);take({kind:'consumable-used',record:tool.record});
+        items=plan.items;nextItem=plan.nextItemSerial;continue;
+      }
       check(!committed || state.phase !== 'gameOver', 'terminal equipment operation');
       const fact = entries[cursor] as Extract<ResourceFact, { kind: 'item-combined' }>;
       const plan = replayCombination(items, preparation, nextItem, fact);
@@ -249,7 +259,8 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
       take({kind:'item-acquired',itemId,source:{kind:'loot',receiptId:lootReceiptId(slot.dropId)}});
       items = [...items,{id:itemId,definitionId:payload.definitionId,location:{kind:'inventory'}}]; itemIds = [itemId]; nextItem++;
     }
-    check(equal(receipt,{receiptId:lootReceiptId(slot.dropId),dropId:slot.dropId,payload,grantedItemIds:itemIds,grantedUnitIds:unitIds}), 'actual grant receipt');
+    check(equal(receipt,{receiptId:lootReceiptId(slot.dropId),dropId:slot.dropId,payload,grantedItemIds:itemIds,grantedUnitIds:unitIds,
+      ...(payload.kind==='consumable'?{grantedConsumableIds:receipt?.grantedConsumableIds}:{})}), 'actual grant receipt');
     actualReceiptOrder.push(slot.dropId); return true;
   };
   combinations(); // Commands during combat precede the atomic terminal grants/commit.

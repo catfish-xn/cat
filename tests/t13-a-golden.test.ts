@@ -9,9 +9,9 @@ import old from './t12-content-baseline.json';
 import audit from '../docs/evidence/t13-a/golden-audit.json';
 const bytes=(path:string)=>readFileSync(new URL(`../${path}`,import.meta.url));
 const sha=(path:string)=>createHash('sha256').update(bytes(path)).digest('hex');
-it('T13-A binds full-route digest-only audit and current identity without changing historical evidence',()=>{
-  expect(CONTENT_DIGEST).toBe(baseline.contentDigest);
-  expect(LOOT_REPLAY_DIGEST).toBe(baseline.lootReplayDigest);
+it('T13-A binds full-route digest-only audit and preserved historical identity without changing historical evidence',()=>{
+  expect(CONTENT_DIGEST).not.toBe(baseline.contentDigest);
+  expect(LOOT_REPLAY_DIGEST).not.toBe(baseline.lootReplayDigest);
   expect(baseline.previousContentDigest).toBe(old.contentDigest);
   expect(baseline.previousStateTraceHash).toBe(old.stateTraceHash);
   expect(sha('scripts/update-t13-a-golden.cjs')).toBe(audit.updaterSha256);
@@ -25,6 +25,6 @@ for(const name of ['ionic-spark','evenshroud','ionic-spark--evenshroud','quicksi
     const current=JSON.parse(bytes(`tests/fixtures/t13-a-herald-raw/${name}.json`).toString());
     const normalized=JSON.stringify(current,(k,v)=>k==='contentDigest'&&v===baseline.contentDigest?old.contentDigest:v);
     expect(JSON.parse(normalized)).toEqual(JSON.parse(previous));
-    expect(()=>restoreMatch(previous)).toThrow(/content-digest/);
-    expect(restoreMatch(current)).toEqual(current);
+    expect(()=>restoreMatch(previous)).toThrow(/unsupported-version/);
+    expect(()=>restoreMatch(current)).toThrow(/unsupported-version/);
   });

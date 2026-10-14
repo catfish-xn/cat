@@ -65,12 +65,12 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const cdp = await context.newCDPSession(page);
     const read = () => page.evaluate(() => window.__CAT_DEBUG__.read());
     const state = async () => (await read()).state;
-    async function startFixed42() {
+    async function startFixed42(seed = 42) {
       const oldRun = (await read()).m6?.runId ?? null;
-      await page.locator('[data-debug="m6-seed-input"]').fill('42');
+      await page.locator('[data-debug="m6-seed-input"]').fill(String(seed));
       await page.locator('[data-debug="m6-fixed-start"]').click();
-      await page.waitForFunction(previous => { const snapshot = window.__CAT_DEBUG__.read();
-        return snapshot.state.seed === 42 && snapshot.m6?.mode === 'active' && snapshot.m6.runId !== previous; }, oldRun);
+      await page.waitForFunction(({previous, seed}) => { const snapshot = window.__CAT_DEBUG__.read();
+        return snapshot.state.seed === seed && snapshot.m6?.mode === 'active' && snapshot.m6.runId !== previous; }, {previous: oldRun, seed});
     }
     await startFixed42();
     const initial = await state(); assert.deepEqual(initial, structuredClone(api.createMatch(42)));
@@ -414,19 +414,18 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       heapNote: 'Heap measurements are observations without forced GC; zero ledger/effects/tweens is asserted, heap reduction is not inferred.' };
     fs.writeFileSync(path.join(output, 'performance.json'), JSON.stringify(report.performance, null, 2));
     fs.writeFileSync(path.join(output, 'frame-intervals.json'), JSON.stringify(frameSamples));
-    // B8: the frozen opening grants Lux (1-3) and the component picks (1-3, 1-4)
+    // T13 seed 14349 earns Lux, bow and rod as random opening drops
     // only for real kills, so the original Rageblade-on-Lux chain runs in the
     // first combat that can have it (2-1) instead of 1-2. Every step is a native
     // input whose full resulting state equals the public command's result.
     {
-      await click('mobile:new-match'); await startFixed42();
-      const components = ['bow', 'rod'];
+      await click('mobile:new-match'); await startFixed42(14349);
       for (let guard = 0; guard < 40; guard++) {
         const current = await state();
         if (current.m8.round.roundId === '2-1' && current.phase === 'preparation') break;
         if (current.phase === 'choice') {
           const choice = current.pendingChoice, start = await offset();
-          const pick = choice.kind === 'component' ? components.shift() : choice.offers.find(id => id !== 'placebo');
+          const pick = choice.offers.find(id => id !== 'placebo');
           assert(pick && choice.offers.includes(pick), `B8 opening offers ${pick}`);
           await click(`choice:${pick}`);
           await record(`b8-opening-${choice.kind}-${pick}`, current, accepted(api.selectChoice(current, choice.choiceId, choice.generation, pick)), start);
@@ -435,7 +434,6 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         else if (current.phase === 'settlement') await click('continue');
         else throw new Error(`B8 opening ended at ${current.phase}`);
       }
-      assert.deepEqual(components, [], 'both real loot component choices were made');
       let buildBefore = await state();
       assert.equal(buildBefore.m8.round.roundId, '2-1'); assert.equal(buildBefore.phase, 'preparation');
       const [bow, rod] = ['bow', 'rod'].map(id => buildBefore.items.find(item => item.definitionId === id && item.location.kind === 'inventory'));

@@ -34,25 +34,22 @@ function reject(state: MatchState, message: string, change: (raw: any) => void):
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
 const lootItem = (state: MatchState, definitionId: string) => state.m8.loot.receipts.find(r => r.payload.kind === 'item' && r.payload.definitionId === definitionId)!;
 
-/* Real seed-42 opening, Irelia fielded, no other operations: 1-2 Maddie, 1-3 Lux and a
- * component pick (bow), 1-4 a component pick (rod). Independent expectation from the
- * B8 loot gate with T11 XP revision: "真实新局经1-2～1-4到2-1：无运营全清10G／3级2XP／三指定英雄／两组件". */
+/* T13 seed 14349: independent literal-table oracle gives Irelia/Lux, rod,
+ * gloves and bow. Cross-round components are random earned drops, not PvE picks. */
 const choiceViews: { roundId: string; kind: string; choiceId: string; view: ReturnType<typeof api.readLootView> }[] = [];
 const openingState = createOpening();
 function createOpening(): MatchState {
-  let current = api.createMatch(42);
-  const picks = ['bow', 'rod'];
+  let current = api.createMatch(14349);
   while (current.roundDefinitionId !== '2-1' || current.phase !== 'preparation') {
     if (current.phase === 'preparation') current = fight(current).state;
     else if (current.phase === 'choice') {
       const choice = current.pendingChoice!;
       choiceViews.push({ roundId: current.roundDefinitionId, kind: choice.kind, choiceId: choice.choiceId, view: api.readLootView(current) });
-      const pick = choice.kind === 'component' ? picks.shift()! : choice.offers.find(id => id !== 'placebo')!;
+      const pick = choice.offers.find(id => id !== 'placebo')!;
       current = accepted(api.selectChoice(current, choice.choiceId, choice.generation, pick));
     } else if (current.phase === 'settlement') current = accepted(api.nextRound(current, current.round));
     else throw new Error(`Opening ended at ${current.phase}`);
   }
-  expect(picks).toEqual([]);
   return current;
 }
 
@@ -60,11 +57,12 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   const opening = openingState;
   it('arrives at 2-1 with the frozen opening rewards and only current-round loot in the view', () => {
     expect([opening.gold, opening.level, opening.xp]).toEqual([10, 3, 2]);
-    expect(players(opening).map(unit => unit.definitionId).sort()).toEqual(['irelia', 'lux', 'maddie']);
-    expect(opening.items.map(item => [item.definitionId, item.location.kind]).sort()).toEqual([['bow', 'inventory'], ['rod', 'inventory']]);
-    expect(opening.m8.loot.receipts.map(receipt => [JSON.parse(receipt.dropId)[0], receipt.payload.kind, 'definitionId' in receipt.payload ? receipt.payload.definitionId : null]))
-      .toEqual([['1-2', 'unit', 'maddie'], ['1-3', 'unit', 'lux'], ['1-3', 'item', 'bow'], ['1-4', 'item', 'rod']]);
-    expect(api.readLootView(opening)).toEqual({ roundId: '2-1', revealedDrops: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
+    expect(players(opening).map(unit => unit.definitionId).sort()).toEqual(['irelia', 'irelia', 'lux']);
+    expect(opening.items.map(item => [item.definitionId, item.location.kind]).sort()).toEqual([['bow', 'inventory'], ['gloves', 'inventory'], ['rod', 'inventory']]);
+    expect(opening.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'item').map(receipt => [JSON.parse(JSON.parse(receipt.dropId)[0])[1], 'definitionId' in receipt.payload ? receipt.payload.definitionId : null]))
+      .toEqual([['1-3', 'rod'], ['1-4', 'gloves'], ['1-4', 'bow']]);
+    expect(opening.consumables.map(tool => tool.definitionId)).toEqual(Array(3).fill('magnetic-remover'));
+    expect(api.readLootView(opening)).toEqual({ roundId: '2-1', revealedDrops: [], revealedOrbs: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
     roundTrip(opening);
   });
 
@@ -81,7 +79,7 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
 
   it('names only real loot picks as pending-choice; the 2-1 augment and 2-4 supply picks are not', () => {
     expect(choiceViews.map(entry => [entry.roundId, entry.kind, entry.view.reason])).toEqual([
-      ['1-3', 'component', 'pending-choice'], ['1-4', 'component', 'pending-choice'], ['2-1', 'augment', 'unsettled-round']]);
+      ['2-1', 'augment', 'unsettled-round']]);
     for (const entry of choiceViews.filter(entry => entry.view.reason === 'pending-choice')) {
       const descriptor = openingState.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === entry.roundId)!.choices[0];
       expect(entry.view.pendingChoice).toEqual({ dropId: descriptor.dropId, encounterId: descriptor.encounterId,

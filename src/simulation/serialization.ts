@@ -128,6 +128,7 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(!receipts.has(choice.eventId), 'choice already completed');
     const event = getRoundSchedule(state.round).find(event => event.id === choice.eventId);
     requireValue(event?.kind === choice.kind && choice.kind !== undefined, 'choice scheduled');
+    requireValue(choice.returnPhase === (event?.timing === 'after' || getRoundKind(state.round) === 'supply' ? 'settlement' : 'preparation'), 'choice return phase');
     if (choice.step === 'target') requireValue(choice.kind === 'anomaly' && choice.targetId === null && choice.offers.length === 0 && choice.generation === 0 && choice.rerollCount === 0 && state.preparation.units.some(unit => unit.team === 'player'), 'target substate');
     else {
       requireValue(choice.step === 'offer' && choice.offers.length === (choice.kind === 'component' ? 8 : choice.kind === 'anomaly' ? 1 : 3) && new Set(choice.offers).size === choice.offers.length, 'offer substate');

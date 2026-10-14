@@ -1,0 +1,1001 @@
+{
+  "baseline": "b198f822ff60de6ca77819472aa60f607bc4f016",
+  "node": "v24.21.0",
+  "command": "npx vitest run tests/server",
+  "files": 25,
+  "passed": 168,
+  "failed": 0,
+  "skipped": 0,
+  "testResults": [
+    {
+      "file": "tests/server/bot-driver.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "BotDriver: whole matches (§13.3) plays eight bots from the first round to a unique ranking; every intention is accepted by the rules",
+          "status": "passed",
+          "durationMs": 50855.654
+        },
+        {
+          "title": "BotDriver: whole matches (§13.3) plays one idle human and seven bots through the lobby to a unique ranking; the human seat is never driven",
+          "status": "passed",
+          "durationMs": 43487.698
+        },
+        {
+          "title": "BotDriver: scheduling behaves the same for the same input: identical intentions, policy streams and seat states",
+          "status": "passed",
+          "durationMs": 8001.504
+        },
+        {
+          "title": "BotDriver: scheduling draws the policy stream from its own derivation, never from the room stream",
+          "status": "passed",
+          "durationMs": 31.459
+        },
+        {
+          "title": "BotDriver: scheduling spreads steps over the phase on the clock instead of firing them all at the deadline",
+          "status": "passed",
+          "durationMs": 20.968
+        },
+        {
+          "title": "BotDriver: scheduling caps every seat at maxSteps attempts per round and keeps the count across phases",
+          "status": "passed",
+          "durationMs": 2419.487
+        },
+        {
+          "title": "BotDriver: scheduling stops a seat for the rest of the round after one refusal (policy answers done) and plays again next round",
+          "status": "passed",
+          "durationMs": 447.048
+        },
+        {
+          "title": "BotDriver: disconnect takeover (§13.3 item 1) hands a seat to a bot only after takeoverMs disconnected, and back at once on resume; one controller at a time",
+          "status": "passed",
+          "durationMs": 30.103
+        },
+        {
+          "title": "BotDriver: disconnect takeover (§13.3 item 1) does not take over a seat whose player came back in time, nor a fill-in bot seat or a seat in a finished room",
+          "status": "passed",
+          "durationMs": 19.323
+        },
+        {
+          "title": "BotDriver: disconnect takeover (§13.3 item 1) refuses a step that was already queued when the player resumed (control generation)",
+          "status": "passed",
+          "durationMs": 21.281
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c15-replay-unit-ids.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "C15 own-unit mapping on the replay side A and mirrored side B each get exactly their own unit entries, never the opponent's",
+          "status": "passed",
+          "durationMs": 4489.097
+        },
+        {
+          "title": "C15 own-unit mapping on the replay a mirror battle gives its real seat only its own entries; PvE replays carry none",
+          "status": "passed",
+          "durationMs": 943.902
+        },
+        {
+          "title": "C15 client side readReplayUnitIds accepts only an array of {combatId, originalId} strings",
+          "status": "passed",
+          "durationMs": 1.066
+        },
+        {
+          "title": "C15 client side RemoteSession resolves my battle ids to my units while the replay is on the board, and only then",
+          "status": "passed",
+          "durationMs": 2.113
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c18b-consumable-preview.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "C18-B consumable target answers the fixture holds tools of every kind (precondition)",
+          "status": "passed",
+          "durationMs": 3.243
+        },
+        {
+          "title": "C18-B consumable target answers online: the seat view answer equals the authority for every candidate, without reading the authority",
+          "status": "passed",
+          "durationMs": 10.346
+        },
+        {
+          "title": "C18-B consumable target answers online: targets the projection does not list (enemy, unknown, consumed tool) are not usable",
+          "status": "passed",
+          "durationMs": 1.469
+        },
+        {
+          "title": "C18-B consumable target answers offline: the answer is the rules' own preview on the real state, which stays untouched",
+          "status": "passed",
+          "durationMs": 3.493
+        },
+        {
+          "title": "C18-B consumable target answers words an allowed answer from affectedItemIds and a refusal from the §18.8 table; next-battle only outside preparation",
+          "status": "passed",
+          "durationMs": 0.85
+        },
+        {
+          "title": "C18-B consumable target answers record lines for reforge and removal; consumableUsed adds none",
+          "status": "passed",
+          "durationMs": 0.638
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c18b-use-consumable.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "C18-B useConsumable wire validation (§18.3 onlyKeys per layer) accepts an item target and a unit target and rebuilds them field by field",
+          "status": "passed",
+          "durationMs": 4.879
+        },
+        {
+          "title": "C18-B useConsumable wire validation (§18.3 onlyKeys per layer) refuses extra fields at either layer, mixed targets, empty or missing ids and unknown kinds",
+          "status": "passed",
+          "durationMs": 2.216
+        },
+        {
+          "title": "C18-B useConsumable room gate and dispatch passes the gate in preparation, choice, battle, awaiting-settlement and settlement only",
+          "status": "passed",
+          "durationMs": 1.302
+        },
+        {
+          "title": "C18-B useConsumable room gate and dispatch dispatch: a tool the seat does not hold is refused unknown-consumable with the input pool and state references",
+          "status": "passed",
+          "durationMs": 64.599
+        },
+        {
+          "title": "C18-B useConsumable room gate and dispatch through the room, in preparation and in a battle: refused, nothing published (same room state, same seatRevision)",
+          "status": "passed",
+          "durationMs": 720.819
+        },
+        {
+          "title": "C18-B useConsumable room gate and dispatch outside the gate the room answers wrong-phase before the rules are asked",
+          "status": "passed",
+          "durationMs": 20.529
+        },
+        {
+          "title": "C18-B useConsumable success through the room (§18.6) a remover on a board unit wearing an item: applied on the live seat, items back with their ids, tool gone, pool shop untouched",
+          "status": "passed",
+          "durationMs": 1443.255
+        },
+        {
+          "title": "C18-B client send path RemoteSession.useConsumable sends exactly the §18.3 command, also while my battle plays, and changes nothing locally",
+          "status": "passed",
+          "durationMs": 3.379
+        }
+      ]
+    },
+    {
+      "file": "tests/server/c9-revealed-loot.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "C9 revealed loot on the display state carries the private view summary through toDisplayMatch, by value",
+          "status": "passed",
+          "durationMs": 18.051
+        },
+        {
+          "title": "C9 revealed loot on the display state is null for 2-1, which the view omits",
+          "status": "passed",
+          "durationMs": 3.871
+        },
+        {
+          "title": "C9 revealed loot on the display state is null for 2-2, which the view omits",
+          "status": "passed",
+          "durationMs": 2.358
+        },
+        {
+          "title": "C9 revealed loot on the display state is null for 2-3, which the view omits",
+          "status": "passed",
+          "durationMs": 2.321
+        },
+        {
+          "title": "C9 revealed loot on the display state is null on an offline authoritative state and ignores malformed fields",
+          "status": "passed",
+          "durationMs": 4.13
+        }
+      ]
+    },
+    {
+      "file": "tests/server/clock.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "ManualClock fires due timers in time order and sets now to each due time",
+          "status": "passed",
+          "durationMs": 3.883
+        },
+        {
+          "title": "ManualClock cancels and runs timers scheduled from a callback within the same advance",
+          "status": "passed",
+          "durationMs": 0.66
+        },
+        {
+          "title": "ManualClock runNext jumps straight to the next timer and refuses negative advances",
+          "status": "passed",
+          "durationMs": 0.888
+        }
+      ]
+    },
+    {
+      "file": "tests/server/lifecycle.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "B8 lifecycle: a lobby running matches back to back returns timers and room leftovers to the baseline after every match and disposes the replaced room",
+          "status": "passed",
+          "durationMs": 240.31
+        },
+        {
+          "title": "B8 lifecycle: the network server across matches keeps connections, credentials, dedupe windows and timers at the same baseline after each of five matches",
+          "status": "passed",
+          "durationMs": 771.896
+        },
+        {
+          "title": "B8 sliced resolution publishes the same rounds whether a frozen round is resolved in one go or in slices of a few ticks",
+          "status": "passed",
+          "durationMs": 6402.177
+        },
+        {
+          "title": "B8 sliced resolution refuses commands while the round is frozen and resolves one slice per clock turn",
+          "status": "passed",
+          "durationMs": 2721.249
+        },
+        {
+          "title": "B8 sliced resolution stops resolving and publishes nothing once disposed in the middle of a frozen round",
+          "status": "passed",
+          "durationMs": 2801.526
+        }
+      ]
+    },
+    {
+      "file": "tests/server/lobby.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "Lobby (single queue, no rooms) accepts eight players, refuses the ninth, and fills the rest with idle bots",
+          "status": "passed",
+          "durationMs": 75.719
+        },
+        {
+          "title": "Lobby (single queue, no rooms) starts with one player and seven bots; bots never act and nobody joins mid-match",
+          "status": "passed",
+          "durationMs": 40.337
+        },
+        {
+          "title": "Lobby (single queue, no rooms) refuses to start empty and lets players leave",
+          "status": "passed",
+          "durationMs": 0.806
+        },
+        {
+          "title": "Lobby (single queue, no rooms) starts on the queue timeout without anyone pressing start",
+          "status": "passed",
+          "durationMs": 43.79
+        }
+      ]
+    },
+    {
+      "file": "tests/server/local-room-client.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "LocalRoomClient reports transport local-room, queues me, and fills seven bot seats on start",
+          "status": "passed",
+          "durationMs": 74.397
+        },
+        {
+          "title": "LocalRoomClient forwards commands to the room unchanged and keeps a refusal free of side effects",
+          "status": "passed",
+          "durationMs": 38.698
+        },
+        {
+          "title": "LocalRoomClient plays the room from the first preparation to the final ranking, pushing one replay per battle round",
+          "status": "passed",
+          "durationMs": 39245.085
+        },
+        {
+          "title": "LocalRoomClient surfaces a room fault as view.fault with readable text and no ranking",
+          "status": "passed",
+          "durationMs": 562.831
+        },
+        {
+          "title": "LocalRoomClient returns to the lobby after reset and can queue a new match",
+          "status": "passed",
+          "durationMs": 41.134
+        },
+        {
+          "title": "LocalRoomClient refuses the ninth seat with a visible lobby error",
+          "status": "passed",
+          "durationMs": 1.988
+        }
+      ]
+    },
+    {
+      "file": "tests/server/pairing.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "planPairings 8 survivors: nobody fights themself or twice, odd counts mirror exactly one seat",
+          "status": "passed",
+          "durationMs": 7.526
+        },
+        {
+          "title": "planPairings 7 survivors: nobody fights themself or twice, odd counts mirror exactly one seat",
+          "status": "passed",
+          "durationMs": 2.357
+        },
+        {
+          "title": "planPairings 6 survivors: nobody fights themself or twice, odd counts mirror exactly one seat",
+          "status": "passed",
+          "durationMs": 0.916
+        },
+        {
+          "title": "planPairings 5 survivors: nobody fights themself or twice, odd counts mirror exactly one seat",
+          "status": "passed",
+          "durationMs": 0.757
+        },
+        {
+          "title": "planPairings 4 survivors: nobody fights themself or twice, odd counts mirror exactly one seat",
+          "status": "passed",
+          "durationMs": 0.57
+        },
+        {
+          "title": "planPairings 3 survivors: nobody fights themself or twice, odd counts mirror exactly one seat",
+          "status": "passed",
+          "durationMs": 0.852
+        },
+        {
+          "title": "planPairings 2 survivors: nobody fights themself or twice, odd counts mirror exactly one seat",
+          "status": "passed",
+          "durationMs": 0.738
+        },
+        {
+          "title": "planPairings is reproducible for the same input and consumes the rng",
+          "status": "passed",
+          "durationMs": 0.73
+        },
+        {
+          "title": "planPairings needs at least two survivors and unique ids",
+          "status": "passed",
+          "durationMs": 0.545
+        }
+      ]
+    },
+    {
+      "file": "tests/server/projection-wire.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "B7 private seat view on every state path sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot",
+          "status": "passed",
+          "durationMs": 233.746
+        },
+        {
+          "title": "B7 private seat view on every state path keeps the fault snapshot projected",
+          "status": "passed",
+          "durationMs": 143.423
+        },
+        {
+          "title": "B7 private seat view on every state path hands the local client the same projection on pushes, accepted and refused commands",
+          "status": "passed",
+          "durationMs": 43.558
+        },
+        {
+          "title": "B7 compact replay mirrors side B (cells, movement, cast cells, unitUpdated, teams, result) and plays to the terminal view",
+          "status": "passed",
+          "durationMs": 4496.762
+        },
+        {
+          "title": "B7 compact replay mirrors every coordinate-bearing replay field, including ones a short battle may not produce",
+          "status": "passed",
+          "durationMs": 2.579
+        },
+        {
+          "title": "B7 compact replay builds PvE replays from the rules own combat (start, finish and ledger; no per-tick frames kept)",
+          "status": "passed",
+          "durationMs": 960.745
+        },
+        {
+          "title": "B7 compact replay sends each battle once as the room's own replay and never as combat frames (C6)",
+          "status": "passed",
+          "durationMs": 760.117
+        },
+        {
+          "title": "B7 overtime (§11.5) runs a match past 6-7 into overtime-N rounds and ends with a unique ranking",
+          "status": "passed",
+          "durationMs": 23176.782
+        },
+        {
+          "title": "B7 overtime (§11.5) ends a match of eight empty boards in a bounded number of rounds (every draw costs both real seats HP)",
+          "status": "passed",
+          "durationMs": 686.754
+        }
+      ]
+    },
+    {
+      "file": "tests/server/projection.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "toPlayerView is a whitelist: no rule state, rng or other seats' private data leaks",
+          "status": "passed",
+          "durationMs": 90.067
+        },
+        {
+          "title": "toPlayerView maps room phases to client phases and names the pvp opponent",
+          "status": "passed",
+          "durationMs": 3785.681
+        },
+        {
+          "title": "toPlayerView publishes the final standings once the match ends",
+          "status": "passed",
+          "durationMs": 47.076
+        },
+        {
+          "title": "toPublicBoard (C5) shows only my deployed units with their item definitions, never the bench, enemies, shop, gold or ids",
+          "status": "passed",
+          "durationMs": 40.905
+        },
+        {
+          "title": "toPublicBoard (C5) rides on every seat of every view, so each player sees the same public board of a seat",
+          "status": "passed",
+          "durationMs": 26.93
+        }
+      ]
+    },
+    {
+      "file": "tests/server/purity.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "src/server stays pure has no browser, network, real-clock or ambient-random dependency outside the listed adapters",
+          "status": "passed",
+          "durationMs": 18.355
+        },
+        {
+          "title": "src/server stays pure keeps node:crypto in session.ts and ws in server.ts only",
+          "status": "passed",
+          "durationMs": 3.361
+        },
+        {
+          "title": "src/server stays pure lets src/server/net reach the room only through its public modules and never the simulation directly",
+          "status": "passed",
+          "durationMs": 2.607
+        },
+        {
+          "title": "src/server stays pure declares the shared protocol once, as pure types",
+          "status": "passed",
+          "durationMs": 1.022
+        }
+      ]
+    },
+    {
+      "file": "tests/server/real-clock.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "RealClock fires a scheduled callback once the real time reaches its deadline, and not before",
+          "status": "passed",
+          "durationMs": 8.113
+        },
+        {
+          "title": "RealClock runs a past deadline on the next timer turn and cancels cleanly",
+          "status": "passed",
+          "durationMs": 1.47
+        }
+      ]
+    },
+    {
+      "file": "tests/server/replay-client.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "C6 replay playback in RemoteSession applies every tick record in order and ends exactly on the terminal view (A and mirrored B)",
+          "status": "passed",
+          "durationMs": 4006.865
+        },
+        {
+          "title": "C6 replay playback in RemoteSession a keyframe replaces the whole view; diffs between keyframes agree with it",
+          "status": "passed",
+          "durationMs": 16.776
+        },
+        {
+          "title": "C6 replay playback in RemoteSession side B sees every cell row-flipped and teams swapped, values unchanged",
+          "status": "passed",
+          "durationMs": 12.767
+        },
+        {
+          "title": "C6 replay playback in RemoteSession skips to the terminal view when the tab returns and drops the battle once the settled state arrives",
+          "status": "passed",
+          "durationMs": 3.037
+        },
+        {
+          "title": "C6 playback keeps 1x across dropped frames catches up with wall time when frames were dropped, never runs ahead of it",
+          "status": "passed",
+          "durationMs": 1.802
+        },
+        {
+          "title": "C6 one display whitelist for offline and online projects a local ledger exactly like the server replay events (PvP and PvE)",
+          "status": "passed",
+          "durationMs": 74.944
+        }
+      ]
+    },
+    {
+      "file": "tests/server/room.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "Room: start and command gate opens with exactly eight seats, room-derived seeds and one authoritative HP per seat",
+          "status": "passed",
+          "durationMs": 69.404
+        },
+        {
+          "title": "Room: start and command gate rejects commands from unknown seats and in the wrong phase without touching any reference",
+          "status": "passed",
+          "durationMs": 91.97
+        },
+        {
+          "title": "Room: start and command gate passes a preparation command to the rules and keeps a rules refusal free of side effects",
+          "status": "passed",
+          "durationMs": 55.128
+        },
+        {
+          "title": "Room: settlement commits nothing when one battle of the round throws",
+          "status": "passed",
+          "durationMs": 30.689
+        },
+        {
+          "title": "Room: settlement faults instead of committing a round whose results miss a seat",
+          "status": "passed",
+          "durationMs": 50.058
+        },
+        {
+          "title": "Room: settlement applies the same RoundSettlement only once",
+          "status": "passed",
+          "durationMs": 36.391
+        },
+        {
+          "title": "Room: settlement ranks several seats that reach zero in the same round uniquely, independent of result order",
+          "status": "passed",
+          "durationMs": 56.144
+        },
+        {
+          "title": "Room: settlement gives every seat a unique final rank when all eight reach zero together",
+          "status": "passed",
+          "durationMs": 34.928
+        },
+        {
+          "title": "Room: settlement uses the raw HP before the seat order when zero is reached from different heights",
+          "status": "passed",
+          "durationMs": 33.61
+        },
+        {
+          "title": "Room: real resolver end to end runs a whole idle match on the manual clock until the rules decide it",
+          "status": "passed",
+          "durationMs": 21404.263
+        },
+        {
+          "title": "Room: real resolver end to end pairs survivors on pvp rounds and freezes two seats per real pairing",
+          "status": "passed",
+          "durationMs": 2856.558
+        },
+        {
+          "title": "Room: choice window and stuck seats opens a choice window at a round with a pending choice and moves on as soon as every seat chose",
+          "status": "passed",
+          "durationMs": 2103.214
+        },
+        {
+          "title": "Room: choice window and stuck seats re-arms the settlement a bounded number of times for a seat the rules refuse to advance, then faults",
+          "status": "passed",
+          "durationMs": 24.969
+        }
+      ]
+    },
+    {
+      "file": "tests/server/round-commit.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "Room: whole-round commit through T3 receipts publishes the round once: every seat HP is the rules' playerHp and each real seat holds exactly one receipt",
+          "status": "passed",
+          "durationMs": 3856.464
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts applies the same round commit only once",
+          "status": "passed",
+          "durationMs": 2876.968
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts discards the whole round when one receipt fails: no HP, no receipt, no state change for anyone",
+          "status": "passed",
+          "durationMs": 2766.094
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts never commits the mirror proposal; the mirror source settles through its own pairing",
+          "status": "passed",
+          "durationMs": 2213.889
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts eliminates seats round by round down to a unique ranking (overtime after 6-7, B7), and ranks later eliminations better",
+          "status": "passed",
+          "durationMs": 20124.447
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts ranks three seats that reach zero in one round by raw HP, then HP before, then seat index, in any arrival order",
+          "status": "passed",
+          "durationMs": 29.731
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts resolves choice and loot timeouts with the rules' commands, never with a client-style fallback",
+          "status": "passed",
+          "durationMs": 2315.263
+        }
+      ]
+    },
+    {
+      "file": "tests/server/shared-pool-room.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "Room on the shared pool: opening (§12.2) imports eight openings by fixed seat index, refreshes once and publishes a balanced pool",
+          "status": "passed",
+          "durationMs": 107.667
+        },
+        {
+          "title": "Room on the shared pool: opening (§12.2) never shows the pool to a client: the player view carries no stock, binding or reservation",
+          "status": "passed",
+          "durationMs": 36.436
+        },
+        {
+          "title": "Room on the shared pool: seat commands are pool transactions lets two seats compete for the last copy without overselling; an empty paid reroll fails for free",
+          "status": "passed",
+          "durationMs": 628.829
+        },
+        {
+          "title": "Room on the shared pool: seat commands are pool transactions keeps pool, poolRevision and the seat untouched on every refused command",
+          "status": "passed",
+          "durationMs": 577.385
+        },
+        {
+          "title": "Room on the shared pool: elimination and round advance (§12.3, §12.4) releases an eliminated seat once, after the ranking and before the next refresh, and advances the survivors only",
+          "status": "passed",
+          "durationMs": 609.255
+        },
+        {
+          "title": "Room on the shared pool: whole matches stay balanced pvpMode=two-sided",
+          "status": "passed",
+          "durationMs": 21481.118
+        },
+        {
+          "title": "Room on the shared pool: whole matches stay balanced pvpMode=placeholder",
+          "status": "passed",
+          "durationMs": 19359.469
+        }
+      ]
+    },
+    {
+      "file": "tests/server/t10-combat-ops.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "T10 room gate (contract §15.2) passes exactly OPS and CHOICES per room phase",
+          "status": "passed",
+          "durationMs": 4.001
+        },
+        {
+          "title": "T10 room gate (contract §15.2) in a PvP battle: shop, XP and bench pass; choices and board targets are refused with wrong-phase and change nothing",
+          "status": "passed",
+          "durationMs": 4251.779
+        },
+        {
+          "title": "T10 settlement on the latest live seat (contract §15.2) PvE (1-4): operations during the battle survive the commit; gold, XP and level settle from the live state; the battle is unchanged",
+          "status": "passed",
+          "durationMs": 6033.099
+        },
+        {
+          "title": "T10 settlement on the latest live seat (contract §15.2) PvP (2-2): operations during the battle survive the commit; gold, XP and level settle from the live state; the battle is unchanged",
+          "status": "passed",
+          "durationMs": 6021.767
+        },
+        {
+          "title": "T10 settlement on the latest live seat (contract §15.2) PvP human seat (2-2): operations during the battle survive the commit; gold, XP and level settle from the live state; the battle is unchanged",
+          "status": "passed",
+          "durationMs": 5622.362
+        },
+        {
+          "title": "T10 deadline auto-deployment (contract §15.4) fills human boards to the cap from the bench, left slot first, front row centre-out 3/2/4/1/5/0/6; bots are left alone",
+          "status": "passed",
+          "durationMs": 2900.767
+        },
+        {
+          "title": "T10 deadline auto-deployment (contract §15.4) a full board or an empty bench publishes no deployment",
+          "status": "passed",
+          "durationMs": 1015.537
+        },
+        {
+          "title": "T10 deferred merge after the battle (contract §15.3) board A + bench A + a third A bought during the battle merges only after the settlement, onto the board copy",
+          "status": "passed",
+          "durationMs": 2631.626
+        },
+        {
+          "title": "T10 PvE seat the rules settle when its battle starts (empty board) — P1 regression a shopLock during the battle settles from the live seat instead of ending the match",
+          "status": "passed",
+          "durationMs": 2820.56
+        },
+        {
+          "title": "T10 PvE seat the rules settle when its battle starts (empty board) — P1 regression a buy during the battle settles from the live seat instead of ending the match",
+          "status": "passed",
+          "durationMs": 2453.862
+        }
+      ]
+    },
+    {
+      "file": "tests/server/two-sided-resolver.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "resolveTwoSidedPvp puts both real lineups into ONE battle: the mapping names both seats and the ledger shows both sides acting",
+          "status": "passed",
+          "durationMs": 229.42
+        },
+        {
+          "title": "resolveTwoSidedPvp is a pure function of the envelope: a rerun is deepEqual and keeps the frozen battleSeed",
+          "status": "passed",
+          "durationMs": 513.996
+        },
+        {
+          "title": "resolveTwoSidedPvp mirror pairing: the real seat is A, the frozen source is B, and B's proposal can never settle",
+          "status": "passed",
+          "durationMs": 265.307
+        },
+        {
+          "title": "resolveTwoSidedPvp keeps the one battle the rules ran, no per-tick frames: the replay is built from it (C6)",
+          "status": "passed",
+          "durationMs": 456.736
+        },
+        {
+          "title": "resolveTwoSidedPvp rejects an envelope whose round differs from the seats' preparation round before touching the rules",
+          "status": "passed",
+          "durationMs": 0.892
+        },
+        {
+          "title": "resolveTwoSidedPvp turns a rules refusal (BattleValidationError) into a resolver fault with the stable reason",
+          "status": "passed",
+          "durationMs": 11.99
+        },
+        {
+          "title": "resolveTwoSidedPvp never sends PvE or supply rounds to the PvP entry",
+          "status": "passed",
+          "durationMs": 24.942
+        },
+        {
+          "title": "Room in pvpMode=two-sided drops the whole round when the rules refuse one battle: nothing is staged and no HP moves",
+          "status": "passed",
+          "durationMs": 2797.925
+        },
+        {
+          "title": "Room in pvpMode=two-sided in pvpMode=placeholder a two-sided result is refused instead of being settled by the room",
+          "status": "passed",
+          "durationMs": 2812.563
+        },
+        {
+          "title": "Room in pvpMode=two-sided replay: side A plays as-is, side B mirrored, and a mirror source gets only its own battle",
+          "status": "passed",
+          "durationMs": 3152.155
+        }
+      ]
+    },
+    {
+      "file": "tests/server/ws-client.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "WsGameClient: pending commands keeps the local state until the receipt and confirms through the following state push; a refusal changes nothing",
+          "status": "passed",
+          "durationMs": 208.697
+        },
+        {
+          "title": "WsGameClient: pending commands pipelines consecutive commands with increasing seatRevision and reports a stale one once nothing is in flight",
+          "status": "passed",
+          "durationMs": 124.525
+        },
+        {
+          "title": "WsGameClient: reconnect and resume reconnects a dropped socket with the stored token and restores view → state in snapshot order",
+          "status": "passed",
+          "durationMs": 127.982
+        },
+        {
+          "title": "WsGameClient: reconnect and resume returns a reloaded page to its seat from storage and supersedes the old tab, which stops for good",
+          "status": "passed",
+          "durationMs": 242.078
+        },
+        {
+          "title": "WsGameClient: reconnect and resume treats a queue drop as leaving the queue and a dead token as a lost seat",
+          "status": "passed",
+          "durationMs": 68.78
+        },
+        {
+          "title": "WsGameClient: persistent seat token (C7) keeps one token per server address; a closed tab reopened on the same address resumes its seat",
+          "status": "passed",
+          "durationMs": 99.462
+        },
+        {
+          "title": "WsGameClient: persistent seat token (C7) clears the token once the match ended, and when a new match revoked the seat",
+          "status": "passed",
+          "durationMs": 135.419
+        },
+        {
+          "title": "WsGameClient: battle replay hands each battle over once as a replay, even after a resume snapshot repeats it",
+          "status": "passed",
+          "durationMs": 205.325
+        }
+      ]
+    },
+    {
+      "file": "tests/server/net/dedupe-session.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "net/dedupe replays the original receipt for the same id and content, refuses the same id with other content",
+          "status": "passed",
+          "durationMs": 3.497
+        },
+        {
+          "title": "net/dedupe treats ids older than the window as expired and forgets the lowest id first",
+          "status": "passed",
+          "durationMs": 1.021
+        },
+        {
+          "title": "net/dedupe accepts an unseen id below the highest while it is still inside the window",
+          "status": "passed",
+          "durationMs": 0.261
+        },
+        {
+          "title": "net/dedupe rejects a non-positive window",
+          "status": "passed",
+          "durationMs": 0.562
+        },
+        {
+          "title": "net/session issues unguessable tokens, keeps only digests and resumes by token with a new epoch",
+          "status": "passed",
+          "durationMs": 3.254
+        },
+        {
+          "title": "net/session re-issuing or revoking a seat invalidates the previous token",
+          "status": "passed",
+          "durationMs": 1.093
+        }
+      ]
+    },
+    {
+      "file": "tests/server/net/messages.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "net/messages: validation accepts every client message shape and rebuilds it field by field",
+          "status": "passed",
+          "durationMs": 7.753
+        },
+        {
+          "title": "net/messages: validation refuses fields a client must not supply: seatId, gold, hp, anything unknown",
+          "status": "passed",
+          "durationMs": 2.724
+        },
+        {
+          "title": "net/messages: validation refuses wrong field types and ranges",
+          "status": "passed",
+          "durationMs": 3.509
+        },
+        {
+          "title": "net/messages: validation refuses the wrong protocol version, bad ids and non-JSON, keeping the commandId when usable",
+          "status": "passed",
+          "durationMs": 1.204
+        },
+        {
+          "title": "net/messages: validation validateClientCommand throws on anything outside the union",
+          "status": "passed",
+          "durationMs": 2.135
+        },
+        {
+          "title": "net/messages: content identity canonicalJson sorts keys at every depth",
+          "status": "passed",
+          "durationMs": 0.726
+        },
+        {
+          "title": "net/messages: content identity commandContent ignores commandId and protocolVersion but sees every other field",
+          "status": "passed",
+          "durationMs": 2.69
+        }
+      ]
+    },
+    {
+      "file": "tests/server/net/server.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "game server: visibility shows the other seat its level and HP changes but never its shop or private state",
+          "status": "passed",
+          "durationMs": 6872.652
+        },
+        {
+          "title": "game server: rejections leave the room untouched refuses forged seats, uploaded gold, wrong protocol, wrong types and stale versions",
+          "status": "passed",
+          "durationMs": 122.608
+        },
+        {
+          "title": "game server: commandId dedupe executes a repeated commandId once and refuses the same id with other content",
+          "status": "passed",
+          "durationMs": 47.569
+        },
+        {
+          "title": "game server: commandId dedupe refuses an id that fell out of the retention window and demands a resync",
+          "status": "passed",
+          "durationMs": 83.263
+        },
+        {
+          "title": "game server: disconnect and resume returns a dropped seat to its owner by token, snapshot before increments, and disarms the old socket",
+          "status": "passed",
+          "durationMs": 128.84
+        },
+        {
+          "title": "game server: disconnect and resume drops a queued player that disconnects before the match and frees the seat",
+          "status": "passed",
+          "durationMs": 13.309
+        },
+        {
+          "title": "game server: queue refuses the ninth join with \"full\" and leaves the queue at eight",
+          "status": "passed",
+          "durationMs": 108.059
+        },
+        {
+          "title": "game server: queue refuses a join while a match runs and lets a new queue form after it ends",
+          "status": "passed",
+          "durationMs": 60.902
+        },
+        {
+          "title": "game server: single writer runs 50 pipelined commands strictly in arrival order with no interleaving",
+          "status": "passed",
+          "durationMs": 257.758
+        },
+        {
+          "title": "game server: connection limits closes a connection that sends an oversized frame",
+          "status": "passed",
+          "durationMs": 8.32
+        },
+        {
+          "title": "game server: connection limits rate-limits a connection on the room clock and accepts again in the next window",
+          "status": "passed",
+          "durationMs": 37.712
+        },
+        {
+          "title": "game server: whole match over the wire drives two clients from the queue to a full ranking with replays on the manual clock",
+          "status": "passed",
+          "durationMs": 45191.561
+        }
+      ]
+    },
+    {
+      "file": "tests/server/net/takeover.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "game server: bot takeover of a disconnected seat (B6) shows the takeover to everyone after takeoverMs and hands the seat back on resume with reclaimed=true",
+          "status": "passed",
+          "durationMs": 334.15
+        },
+        {
+          "title": "game server: bot takeover of a disconnected seat (B6) a resume before takeoverMs is a plain reconnect: no takeover, no reclaimed flag",
+          "status": "passed",
+          "durationMs": 141.137
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,15 @@
+import { vi } from 'vitest';
+
+// Rule-side integration fixture: construct actual deferred openings per §18.2.
+// Only the constructor option is supplied here; every pool transaction, room timer,
+// battle, projection and assertion is real. Production Room wiring is Claude §5.1
+// and remains independently exercised (and reported) by the unchanged tests/server.
+vi.mock('../src/simulation/match', async importOriginal => {
+  const actual = await importOriginal<typeof import('../src/simulation/match')>();
+  return { ...actual, createMatch: (seed: number, options?: Parameters<typeof actual.createMatch>[1]) =>
+    actual.createMatch(seed, options ?? { mode: 'shared-deferred' }) };
+});
+
 import { expect, it } from 'vitest';
 import { applyCombatReplayTick } from '../src/server-entry';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
@@ -31,7 +43,7 @@ it('SR-B7-01 / SR-C7-02: seed42 eight-seat complete match preserves every replay
       }
       const expected = readLootView(match).revealedDrops;
       expect(view.revealedLoot, `${match.roundDefinitionId}/${seat.seatId}/${match.phase}`)
-        .toEqual({ roundId: match.roundDefinitionId, revealedDrops: expected });
+        .toEqual({ roundId: match.roundDefinitionId, revealedDrops: expected, revealedOrbs: readLootView(match).revealedOrbs });
       for (const drop of view.revealedLoot.revealedDrops) {
         expect(drop.roundId).toBe(match.roundDefinitionId);
         expect(drop.encounterId).toBe(match.m8.round.encounterId);
@@ -87,4 +99,5 @@ it('SR-B7-01 / SR-C7-02: seed42 eight-seat complete match preserves every replay
     expect(pveSeats.get('3-7')!.size).toBe(8);
     expect(rewardedSeats.size).toBe(8);
   } finally { room.dispose(); }
-}, 60_000);
+// T13 eight-seat replay audit measured 62.88s on one worker; preserve the complete run.
+}, 120_000);

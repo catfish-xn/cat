@@ -38,12 +38,12 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   for(const[level,xp,applied]of[[8,75,1],[9,0,0]]){const end=accepted(startMatchCombat({...emptyBoard(),level,xp}));expect(end).toMatchObject({level:9,xp:0});expect(end.roundResults[0]).toMatchObject({xpRequested:2,xpAwarded:applied});}
  });
  it('rejects stale or unsettled Continue with the original complete state',()=>{
-  const first=finish(battle()),pending=freeze(finish(accepted(startMatchCombat(accepted(nextRound(first,1))))));
-  const pendingBefore=structuredClone(pending);expect(pending.phase).toBe('choice');
-  // B8: 1-3 must resolve its earned component choice before stale/receipt guards are reachable.
+  const first=finish(battle()),second=freeze(finish(accepted(startMatchCombat(accepted(nextRound(first,1))))));
+  // T13 grants PvE entries directly; the real augment choice remains phase-gated.
+  const pending=freeze(reachRound('2-1',false)),pendingBefore=structuredClone(pending);
+  expect(pending.phase).toBe('choice');
   for(const round of [1,2]){const rejected=nextRound(pending,round);expect(rejected).toEqual({ok:false,state:pending,reason:'wrong-phase'});expect(rejected.state).toBe(pending);}
-  const second=freeze(resolveM5Choices(pending)),before=structuredClone(second);expect(second.phase).toBe('settlement');
-  expect(pending).toEqual(pendingBefore);
+  const before=structuredClone(second);expect(second.phase).toBe('settlement');expect(pending).toEqual(pendingBefore);
   const stale=nextRound(second,1);expect(stale).toEqual({ok:false,state:second,reason:'stale-round'});expect(stale.state).toBe(second);expect(second).toEqual(before);
   const invalid=freeze({...second,roundResults:[]}),invalidBefore=structuredClone(invalid);
   expect(nextRound(invalid,2)).toEqual({ok:false,state:invalid,reason:'unsettled-round'});expect(nextRound(invalid,2).state).toBe(invalid);expect(invalid).toEqual(invalidBefore);
@@ -79,9 +79,10 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   const prep=freeze(deployed()),copy=structuredClone(prep),started=startMatchCombat(prep);let state=accepted(started);
   if(!started.ok)throw Error(started.reason);
   const basis=state.combatInputBasis,basisBefore=structuredClone(basis),events:MatchEvent[]=[...started.events];
-  const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),dropId=JSON.stringify(['1-2','minions-a-v1',sourceUnitId,0]);
-  const receiptId=JSON.stringify([dropId,'grant']),receipt={receiptId,dropId,payload:{kind:'unit',definitionId:'maddie',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
-  const maddie={id:'unit-2',definitionId:'maddie',team:'player',starLevel:1,location:{kind:'bench',slot:0}};
+  const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),orbId=JSON.stringify(['orb','1-2','minions-a-v1',sourceUnitId,0]),dropId=JSON.stringify([orbId,0]),toolDropId=JSON.stringify([orbId,1]);
+  const receiptId=JSON.stringify([dropId,'grant']),receipt={receiptId,dropId,payload:{kind:'unit',definitionId:'darius',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
+  const toolReceiptId=JSON.stringify([toolDropId,'grant']),toolReceipt={receiptId:toolReceiptId,dropId:toolDropId,payload:{kind:'consumable',definitionId:'magnetic-remover',quantity:1},grantedItemIds:[],grantedUnitIds:[],grantedConsumableIds:['consumable-1']};
+  const maddie={id:'unit-2',definitionId:'darius',team:'player',starLevel:1,location:{kind:'bench',slot:0}};
   while(state.phase==='combat'){
    const prior=freeze(state),saved=structuredClone(prior),step=stepMatch(prior);state=step.state;events.push(...step.events);
    expect(prior).toEqual(saved);expect(state.shop).toBe(prep.shop);
@@ -92,12 +93,13 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
     expect([state.gold,state.level,state.xp,state.playerHp]).toEqual([prep.gold,prep.level,prep.xp,prep.playerHp]);
     expect(state.nextUnitSerial).toBe(2);expect(state.m8.loot.receipts).toEqual([]);
    }else{
-    // B8: terminal preparation admits only the unique approved Maddie birth, never live combat changes.
+    // B8: terminal preparation admits only the random Darius birth and tool receipt, never live combat changes.
     expect(state.preparation).toEqual({...prep.preparation,units:[...prep.preparation.units.filter(u=>u.team==='enemy'),...players(prep),maddie]});
     expect(state.nextUnitSerial).toBe(3);expect(state.items).toEqual(prep.items);expect(state.nextItemSerial).toBe(prep.nextItemSerial);
-    expect(state.m8.loot.receipts).toEqual([receipt]);expect(step.events.filter(e=>e.domain==='match')).toEqual([
+    expect(state.m8.loot.receipts).toEqual([receipt,toolReceipt]);expect(state.consumables).toHaveLength(1);expect(step.events.filter(e=>e.domain==='match')).toEqual([
      {type:'lootGranted',receipt,domain:'match',eventSeq:prior.nextMatchEventSeq},
-     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
+     {type:'lootGranted',receipt:toolReceipt,domain:'match',eventSeq:prior.nextMatchEventSeq+1},
+     {type:'roundSettled',round:1,domain:'match',eventSeq:prior.nextMatchEventSeq+2},
     ]);
     expect(state.resourceProvenance).toEqual({...prep.resourceProvenance,entries:[...prep.resourceProvenance.entries,
      {sequence:1,roundId:'1-2',kind:'unit-acquired',unitId:'unit-2',source:{kind:'loot',receiptId}},
@@ -106,14 +108,16 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
    }
   }
   const deaths=events.filter((e):e is Extract<MatchEvent,{type:'death'}>=>e.type==='death'&&e.unitId===sourceUnitId);expect(deaths).toHaveLength(1);
-  expect(state.m8.loot.earnedEvidence).toEqual([{dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq}}]);
+  expect(state.m8.loot.earnedEvidence).toEqual([dropId,toolDropId].map(id=>({dropId:id,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq}})));
   expect(events.filter(e=>e.domain==='match')).toEqual([
    {type:'lootRevealed',dropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq},domain:'match',eventSeq:prep.nextMatchEventSeq},
-   {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+1},
-   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
+   {type:'lootRevealed',dropId:toolDropId,death:{combatId:'round-1',tick:deaths[0].tick,eventSeq:deaths[0].eventSeq},domain:'match',eventSeq:prep.nextMatchEventSeq+1},
+   {type:'lootGranted',receipt,domain:'match',eventSeq:prep.nextMatchEventSeq+2},
+   {type:'lootGranted',receipt:toolReceipt,domain:'match',eventSeq:prep.nextMatchEventSeq+3},
+   {type:'roundSettled',round:1,domain:'match',eventSeq:prep.nextMatchEventSeq+4},
   ]);
   expect(state.m8.loot.frozen).toBe(prep.m8.loot.frozen);
-  expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId}]);
+  expect(state.m8.loot.direct).toEqual([{dropId,status:'granted',receiptId},{dropId:toolDropId,status:'granted',receiptId:toolReceiptId}]);
   expect(state.m8.loot.choiceResolutions).toEqual([]);expect(state.m8.loot.choiceEligibility).toEqual([]);
   expect(state.m8.loot.guaranteeCounters).toEqual(prep.m8.loot.guaranteeCounters);
   const combatEvents=events.filter(e=>e.domain==='combat');expect(combatEvents.map(e=>e.eventSeq)).toEqual(combatEvents.map((_,i)=>i));

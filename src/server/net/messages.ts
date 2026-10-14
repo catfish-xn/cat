@@ -12,10 +12,12 @@
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
 import type { CombatReplay, PrivateSeatView } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ClientCommand, LobbyView, PlayerView, ReplayUnitId } from '../protocol';
+import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
+import type { ConsumableDisplayEvent } from '../room/projection';
 
-export const NET_PROTOCOL_VERSION = 1;
+/** 2 since T13-B (contract §18.7): R3/R4 projection and the useConsumable receipt; protocol 1 clients are refused. */
+export const NET_PROTOCOL_VERSION = 2;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
@@ -41,7 +43,7 @@ export interface CommandMessage extends ClientEnvelope {
   readonly round: number;
   /** seatRevision the client last received; must equal the seat's current revision. */
   readonly seatRevision: number;
-  readonly command: ClientCommand;
+  readonly command: WireCommand;
 }
 export type ClientMessage = JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage;
 export type ClientMessageType = ClientMessage['type'];
@@ -58,7 +60,9 @@ export type ReceiptResult =
    * otherwise. The client shows "已接回席位" from it.
    */
   | { readonly kind: 'resumed'; readonly seatId: string; readonly roomId: string | null; readonly connectionEpoch: number; readonly lastCommandId: number; readonly reclaimed?: true }
-  | { readonly kind: 'applied'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly MatchEvent[] };
+  | { readonly kind: 'applied'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly MatchEvent[] }
+  /** Contract §18.8 03: a successful useConsumable; `events` are the whitelisted seat operation events only. */
+  | { readonly kind: 'consumable-used'; readonly seatRevision: number; readonly roomRevision: number; readonly events: readonly ConsumableDisplayEvent[] };
 
 /** Failures decided by the network layer before the room or the rules see the message. */
 export type NetFailure =
@@ -147,8 +151,17 @@ function location(value: unknown, where: string): UnitLocation {
   }
 }
 
+/** §18.3: each target kind carries exactly its own id (onlyKeys per layer); anything else is invalid-message. */
+function consumableTarget(value: unknown, where: string): ConsumableTarget {
+  if (!isRecord(value)) return bad(`${where} must be an object`);
+  switch (value.kind) {
+    case 'item': onlyKeys(value, ['kind', 'itemId'], where); return { kind: 'item', itemId: str(value.itemId, `${where}.itemId`) };
+    case 'unit': onlyKeys(value, ['kind', 'unitId'], where); return { kind: 'unit', unitId: str(value.unitId, `${where}.unitId`) };
+    default: return bad(`${where}.kind must be "item" or "unit"`);
+  }
+}
 /** Rebuilds the command field by field: anything not in the union is refused. */
-export function validateClientCommand(value: unknown): ClientCommand {
+export function validateClientCommand(value: unknown): WireCommand {
   if (!isRecord(value)) return bad('command must be an object');
   const w = 'command';
   switch (value.type) {
@@ -159,6 +172,8 @@ export function validateClientCommand(value: unknown): ClientCommand {
     case 'reroll': onlyKeys(value, ['type'], w); return { type: 'reroll' };
     case 'buyXp': onlyKeys(value, ['type'], w); return { type: 'buyXp' };
     case 'combine': onlyKeys(value, ['type', 'a', 'b'], w); return { type: 'combine', a: str(value.a, `${w}.a`), b: str(value.b, `${w}.b`) };
+    case 'useConsumable': onlyKeys(value, ['type', 'consumableId', 'target'], w);
+      return { type: 'useConsumable', consumableId: str(value.consumableId, `${w}.consumableId`), target: consumableTarget(value.target, `${w}.target`) };
     case 'equip': onlyKeys(value, ['type', 'itemId', 'unitId', 'slot'], w); return { type: 'equip', itemId: str(value.itemId, `${w}.itemId`), unitId: str(value.unitId, `${w}.unitId`), slot: int(value.slot, `${w}.slot`, 0) };
     case 'choose': onlyKeys(value, ['type', 'choiceId', 'generation', 'definitionId'], w);
       return { type: 'choose', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), definitionId: str(value.definitionId, `${w}.definitionId`) };

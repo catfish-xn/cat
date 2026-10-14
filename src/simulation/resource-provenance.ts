@@ -1,7 +1,7 @@
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
-import { freezeContent } from './content/freeze';
+import { freezeContent, isFrozenContent } from './content/freeze';
 import { ITEM_DEFINITIONS } from './content/items';
-import { lootDropId, lootReceiptId } from './loot-identity';
+import { lootReceiptId, lootOrbId, lootEntryId } from './loot-identity';
 import { MATCH_RULES, OPENING_INITIAL_STATE, SHOP_CATALOG } from './match-rules';
 import type { PersistentGrowth } from './match-types';
 import type { LootReceipt } from './m8/contracts';
@@ -23,6 +23,7 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'loot'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | {readonly kind:'consumable-used';readonly record:import('./consumable-types').ConsumableUseRecord}
   | { readonly kind: 'unit-acquired'; readonly unitId: string; readonly source: UnitAcquisitionSource }
   | { readonly kind: 'unit-upgraded'; readonly acquisitionSequence: number; readonly event: UnitUpgradedEvent }
   | { readonly kind: 'unit-upgraded-after-combat'; readonly event: UnitUpgradedEvent }
@@ -109,7 +110,7 @@ export function appendResourceProvenance(
   const added = Array.isArray(facts) ? facts : [facts];
   plainJson(added);
   return freezeContent({ version: RESOURCE_PROVENANCE_VERSION,
-    entries: [...structuredClone(provenance.entries), ...added.map((fact, index) => ({
+    entries: [...(isFrozenContent(provenance.entries) ? provenance.entries : structuredClone(provenance.entries)), ...added.map((fact, index) => ({
       ...structuredClone(fact), sequence: provenance.entries.length + index, roundId,
     }))] });
 }
@@ -164,20 +165,27 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
   }
   for (const receipt of context.lootReceipts) {
     plainJson(receipt);
-    keys(receipt, ['receiptId', 'dropId', 'payload', 'grantedItemIds', 'grantedUnitIds']);
+    keys(receipt, ['receiptId', 'dropId', 'payload', 'grantedItemIds', 'grantedUnitIds',...(receipt.payload?.kind==='consumable'?['grantedConsumableIds']:[])]);
     nonempty(receipt.dropId);
     const tuple: unknown = JSON.parse(receipt.dropId);
-    requireValue(Array.isArray(tuple) && tuple.length === 4, 'loot drop identity');
-    const [roundId, encounterId, sourceUnitId, slotOrdinal] = tuple;
+    requireValue(Array.isArray(tuple) && tuple.length === 2, 'loot drop identity');
+    const orb:unknown=JSON.parse(tuple[0]);
+    requireValue(Array.isArray(orb)&&orb.length===5&&orb[0]==='orb','loot orb identity');
+    const [,roundId, encounterId, sourceUnitId, slotOrdinal] = orb;
+    integer(tuple[1]);
     nonempty(roundId); nonempty(encounterId); nonempty(sourceUnitId); integer(slotOrdinal);
     const round = getCatalogRoundById(roundId);
     requireValue(round.ordinal <= context.throughRoundOrdinal && round.encounterId === encounterId
-      && receipt.dropId === lootDropId(roundId, encounterId, sourceUnitId, slotOrdinal)
+      && receipt.dropId === lootEntryId(lootOrbId(roundId, encounterId, sourceUnitId, slotOrdinal),tuple[1])
       && receipt.receiptId === lootReceiptId(receipt.dropId), 'loot receipt identity');
     requireValue(!receiptIds.has(`loot:${receipt.receiptId}`), 'duplicate loot receipt');
     receiptIds.add(`loot:${receipt.receiptId}`);
     requireValue(Array.isArray(receipt.grantedItemIds) && Array.isArray(receipt.grantedUnitIds), 'loot granted IDs');
     record(receipt.payload);
+    if(receipt.payload.kind==='consumable') {
+      requireValue(receipt.payload.quantity===1&&receipt.grantedConsumableIds?.length===1&&!receipt.grantedItemIds.length&&!receipt.grantedUnitIds.length,'consumable birth');
+      continue;
+    }
     if (receipt.payload.kind === 'gold') {
       keys(receipt.payload, ['kind', 'quantity']); integer(receipt.payload.quantity, 1);
       requireValue(!receipt.grantedItemIds.length && !receipt.grantedUnitIds.length, 'gold birth');
@@ -187,7 +195,7 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
     const { kind, definitionId, quantity } = receipt.payload; nonempty(definitionId);
     requireValue((kind === 'unit' || kind === 'item') && quantity === 1, 'loot resource quantity');
     requireValue(kind === 'unit' ? SHOP_CATALOG.includes(definitionId)
-      : ITEM_DEFINITIONS[definitionId]?.kind === 'component', 'loot resource definition');
+      : !!ITEM_DEFINITIONS[definitionId], 'loot resource definition');
     const granted = kind === 'unit' ? receipt.grantedUnitIds : receipt.grantedItemIds;
     requireValue(granted.length === 1 && (kind === 'unit' ? receipt.grantedItemIds : receipt.grantedUnitIds).length === 0, 'loot resource identity');
     nonempty(granted[0]);
@@ -332,6 +340,29 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
           || recipe.recipe[0] === b.definitionId && recipe.recipe[1] === a.definitionId), 'combination recipe/ownership');
       requireValue(event.itemId === `item-${nextItemSerial}`, 'combined item serial'); integer(nextItemSerial + 1, 1);
       event.consumedIds.forEach(id => items.delete(id)); items.set(event.itemId, { id: event.itemId, definitionId: event.definitionId }); nextItemSerial++;
+    } else if(entry.kind==='consumable-used') {
+      keys(entry,[...common,'record']);const r=entry.record;
+      keys(r,['consumableId','definitionId','target','effect','affectedItems','output','rngBefore','rngAfter']);
+      requireValue(Array.isArray(r.affectedItems)&&r.affectedItems.length>0,'consumable affected items');
+      for(const rawItem of r.affectedItems) {
+        keys(rawItem, ['id','definitionId','location']);
+        const item = rawItem as unknown as import('./strategy-types').ItemInstance;
+        keys(item.location, item.location.kind === 'inventory' ? ['kind'] : ['kind','unitId','slot']);
+        requireValue(items.get(item.id)?.definitionId===item.definitionId,'consumable ownership');
+        if (item.location.kind !== 'inventory') {
+          requireValue(item.location.kind === 'unit' && units.has(item.location.unitId), 'consumable holder');
+          integer(item.location.slot); requireValue(item.location.slot < 3, 'consumable slot');
+        }
+      }
+      keys(r.target, r.target.kind === 'unit' ? ['kind','unitId'] : ['kind','itemId']);
+      keys(r.rngBefore, ['state','draws']); keys(r.rngAfter, ['state','draws']);
+      if (r.output) keys(r.output, ['id','definitionId']);
+      if(r.effect==='remove-all')requireValue(r.target.kind==='unit'&&units.has(r.target.unitId)&&r.output===null,'remover target');
+      else {
+        requireValue(r.target.kind==='item'&&r.affectedItems.length===1&&r.affectedItems[0].id===r.target.itemId
+          &&r.output?.id===`item-${nextItemSerial}`&&!!ITEM_DEFINITIONS[r.output.definitionId],'reforge serial');
+        items.delete(r.target.itemId);items.set(r.output.id,{...r.output});nextItemSerial++;
+      }
     } else if (entry.kind === 'combat-growth-committed') {
       keys(entry, [...common, 'combatId', 'settlementId', 'combatStartProvenancePrefixLength', 'sourceDeltas']);
       requireValue(round.kind !== 'supply' && entry.combatId === `round-${round.ordinal}`
@@ -341,7 +372,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(start <= index && Array.isArray(entry.sourceDeltas), 'combat start prefix');
       requireValue(start <= (firstLootBirth.get(entry.roundId) ?? index), 'loot before combat start');
       const suffix = entries.slice(start, index);
-      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind === 'item-combined' || fact.kind === 'unit-upgraded'
+      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind === 'item-combined' || fact.kind === 'consumable-used' || fact.kind === 'unit-upgraded'
         || (fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'loot')), 'combat resource suffix');
       requireValue(start === entries.length || entries[start]?.kind !== 'unit-upgraded', 'combat start transaction boundary');
       const originalUnits = unitPrefixes.get(start)!;

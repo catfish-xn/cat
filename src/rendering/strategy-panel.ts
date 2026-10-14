@@ -3,6 +3,8 @@ export { displayUnitName } from './display-names';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { encounterPreviewSection } from '../presentation/encounter-preview';
 import { UNIT_DEFINITIONS } from '../simulation/units';
+import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
+import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { readRevealedLoot } from './online/seat-view-adapter';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
@@ -10,7 +12,7 @@ import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { deriveTraits } from '../simulation/trait-snapshot';
 import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment } from '../simulation/match';
-import type { MatchState } from '../simulation/match-types';
+import type { MatchEvent, MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
 import type { Effect } from '../simulation/strategy-types';
 import type { CombatOrigin } from '../simulation/combat-types';
@@ -30,8 +32,11 @@ import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/i
 import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
-import { continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
+import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
+import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
+import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection } from '../presentation/orb-loot';
+import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -68,6 +73,8 @@ interface PanelActions {
   readonly combine: (a: string, b: string) => void;
   /** `combinedName`: the finished item previewEquip says this equip creates in the slot (C17), for the success text. */
   readonly equip: (item: string, unit: string, slot: number, combinedName?: string) => void;
+  /** C18-B (§18.3): send useConsumable; the panel calls it only when the target answer is ok (the rules check again). */
+  readonly useConsumable: (consumableId: string, target: ConsumableTarget, success: string) => void;
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
@@ -98,6 +105,8 @@ const TERM: Readonly<Record<string,string>> = {
 const term = (value: string) => TERM[value] ?? value;
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
 const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
+/** C18-B: a tool whose content-table target kind is a unit (the remover). */
+const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
 const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? TRAIT_DEFINITIONS[id]?.name ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
 export function describeEffect(effect: Effect): string {
   if (effect.kind === 'mechanic') {
@@ -150,6 +159,8 @@ export class StrategyPanel {
   private readonly modal: HTMLElement;
   private readonly disposers: (() => void)[] = [];
   private selectedItems: string[] = [];
+  /** C18-B: the consumable picked for targeting (use not wired yet, contract §18.1). */
+  private selectedConsumable: string | null = null;
   private tab: 'traits' | 'items' | 'units' | 'builds' | 'events' = 'items';
   private lastCombatTick = -1;
   private lastCombatId: string | undefined;
@@ -157,7 +168,8 @@ export class StrategyPanel {
   private eventTexts: string[] = [];
   private eventCombatId: string | undefined;
   private pointerPosition: { x: number; y: number } | null = null;
-  private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string } | null = null;
+  /** `tool` (C18-B): a consumable being dragged; its drop only names the target, no command is sent yet (§18.1). */
+  private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string; tool?: ConsumableInstance } | null = null;
   private choiceToken = '';
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
@@ -223,6 +235,13 @@ export class StrategyPanel {
       if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 6) drag.moved = true;
       if (!drag.moved) return;
       drag.element.classList.add('dragging');
+      if (drag.tool) {
+        const target = this.toolTarget(drag.tool, event.clientX, event.clientY), key = target ? JSON.stringify(target.target) : '';
+        if (key === drag.target) return;
+        drag.target = key;
+        this.actions.status(target ? this.toolDropText(drag.tool, target) : `拖动${consumableName(drag.tool.definitionId)}到我方单位或装备上`);
+        return;
+      }
       // C17: over a unit or a slot, name what a drop there would do (previewEquip's answer); elsewhere the drag hint.
       const target = this.dropTarget(event.clientX, event.clientY), key = target ? `${target.unitId}:${target.slot ?? '*'}` : '';
       if (key === drag.target) return;
@@ -235,6 +254,12 @@ export class StrategyPanel {
       this.itemDrag = null; drag.element.classList.remove('dragging');
       if (!this.router.release(drag.gesture)) return;
       if (drag.element.hasPointerCapture(event.pointerId)) drag.element.releasePointerCapture(event.pointerId);
+      if (drag.tool) {
+        if (!drag.moved) { this.selectConsumable(drag.tool.consumableId); return; }
+        const target = this.toolTarget(drag.tool, event.clientX, event.clientY);
+        if (target) this.useTool(drag.tool, target); else this.actions.status('消耗品未使用 · 请放到我方单位或装备上');
+        return;
+      }
       if (!drag.moved) { this.selectItem(drag.gesture.id); return; }
       const target = this.dropTarget(event.clientX, event.clientY);
       if (!target) { this.actions.status('物品未装备 · 请放到我方单位或空装备槽'); return; }
@@ -286,7 +311,7 @@ export class StrategyPanel {
       this.itemDrag = null;
     }
   }
-  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.choiceToken = ''; this.previewOpen = null; }
+  reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
   destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
@@ -338,6 +363,38 @@ export class StrategyPanel {
     }
     const previews = this.unitPreviews(itemId, unitId), chosen = pickUnitDropSlot(previews), preview = previews[chosen];
     return preview?.allowed ? allowedPreviewText(preview, chosen, itemDefinitionName) : this.unitRefusalText(previews);
+  }
+  /**
+   * C18-B: what a consumable drag points at, as a §18.1 ConsumableTarget: an item card or a worn item's slot (item), an
+   * equipment row or a board piece of mine (unit). Only names the target; whether the tool fits it is the preview's call.
+   */
+  private toolTarget(tool: { readonly definitionId: string }, x: number, y: number): { target: ConsumableTarget; label: string } | null {
+    const state = this.actions.state(), hit = document.elementFromPoint(x, y);
+    // A unit tool (the remover) names the unit from any of its slots, also one wearing an item.
+    const itemId = unitTool(tool) ? undefined : hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
+    if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : itemId }; }
+    const unitId = hit?.closest<HTMLElement>('[data-unit-id]')?.dataset.unitId ?? this.actions.unitAt(x, y);
+    const unit = unitId ? state.preparation.units.find(entry => entry.id === unitId) : undefined;
+    return unit ? { target: { kind: 'unit', unitId: unit.id }, label: displayUnitName(unit.definitionId) } : null;
+  }
+  /**
+   * A tool dropped (or clicked) on a target: sent only when the target answer is ok (§18.8 01); otherwise its reason is
+   * shown and nothing is sent. The success text is the preview's wording, confirmed by the server's receipt.
+   */
+  private useTool(tool: ConsumableInstance, target: { target: ConsumableTarget; label: string }): void {
+    const preview = previewConsumable(this.actions.state(), tool.consumableId, target.target), text = this.toolDropText(tool, target);
+    if (preview.ok) { this.selectedConsumable = null; this.actions.useConsumable(tool.consumableId, target.target, text.replace('：将', '：已')); }
+    else this.actions.status(text);
+  }
+  private toolDropText(tool: ConsumableInstance, target: { target: ConsumableTarget; label: string }): string {
+    const state = this.actions.state();
+    // affectedItemIds are permanent item ids (§18.8 01): named through the items they point at.
+    const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? itemDefinitionName(item.definitionId) : '已移除的装备'; };
+    return consumableDropText(tool, target.label, previewConsumable(state, tool.consumableId, target.target), itemName, state.phase);
+  }
+  private selectConsumable(id: string) {
+    if (!this.itemsOpen()) return;
+    this.selectedConsumable = this.selectedConsumable === id ? null : id; this.render();
   }
   private selectItem(id: string) {
     if (!this.itemsOpen()) return;
@@ -430,7 +487,9 @@ export class StrategyPanel {
       receipt.append(element('p', `基础 ${income.base} + 胜利 ${income.win} + 利息 ${income.interest}${basis}+ 连胜败 ${income.streak} = ${result.income} 金币；余额 ${result.goldBefore} → ${result.goldAfter}；经验 +${result.xpAwarded}${requested}`));
       this.root.append(receipt);
     }
-    this.lootSection = this.lootPanel(state); if (this.lootSection) this.root.append(this.lootSection);
+    // Online keeps an empty slot so the panel can appear once my battle has played out (updateCombat).
+    this.lootSection = this.lootPanel(state) ?? (isOnline() ? Object.assign(element('section'), { hidden: true }) : null);
+    if (this.lootSection) this.root.append(this.lootSection);
     this.statusText = element('p', ended ? ONLINE_END_TEXT : spectating ? ONLINE_SPECTATE_TEXT : ready ? '点物品选择；两件组件可合成；选物品后点空装备槽。' : state.phase === 'choice' ? '完成选择后继续运营' : state.phase === 'gameOver' ? (online ? ONLINE_END_TEXT : `${state.outcome === 'victory' ? '胜利 · 完成最终挑战' : '失败 · 对局结束'} · 点击新局`) : operable ? ONLINE_OPS_TEXT : IDLE_STATUS[state.phase] ?? '', 'panel-status');
     this.statusText.setAttribute('role', 'status'); this.root.append(this.statusText);
     const tabs = element('nav', '', 'panel-tabs'); tabs.setAttribute('aria-label', '构筑面板');
@@ -457,9 +516,11 @@ export class StrategyPanel {
   private lootPanel(state: MatchState): HTMLElement | null {
     if (isOnline()) return this.revealedLootPanel(state);
     if (state.m8.round.kind !== 'pve' || state.phase === 'preparation') { this.lootKey = ''; return null; }
-    const view = readLootView(state);
+    const view = readLootView(state), orbs = readOrbLoot(state);
     this.lootKey = JSON.stringify([view, state.pendingChoice?.choiceId ?? null]);
-    return state.phase === 'gameOver' ? lootTerminalSummary(view, this.lootLabels(state)) : lootPanelSection(view, this.lootLabels(state));
+    if (state.phase === 'gameOver') return lootTerminalSummary(view, this.lootLabels(state));
+    // C18-B: the round's orbs as cards, then the domain's own pick/Continue verdict (lootPanelSection without its list).
+    return orbs ? appendLootStatus(orbLootSection(orbs, this.lootLabels(state)), view, this.lootLabels(state)) : lootPanelSection(view, this.lootLabels(state));
   }
   /** Drop sources are the round's public neutral units (same unit IDs as the encounter preview). */
   private lootLabels(state: MatchState) {
@@ -472,13 +533,35 @@ export class StrategyPanel {
    * Continue, pending claims and the pick identity are not sent online and are not inferred here.
    */
   private revealedLootPanel(state: MatchState): HTMLElement | null {
-    const loot = state.phase === 'preparation' || state.phase === 'combat' ? null : readRevealedLoot(state);
-    this.lootKey = JSON.stringify([loot, state.pendingChoice?.choiceId ?? null]);
+    const hidden = this.onlineLootHidden(state);
+    const loot = hidden ? null : readRevealedLoot(state);
+    // C18-B: the R3/R4 orb summary of the private view (contract §18.4), shown under the same timing as C9.
+    const orbs = hidden ? null : readOrbLoot(state);
+    this.lootKey = this.onlineLootKey(state);
+    if (orbs) {
+      const section = orbLootSection(orbs, this.lootLabels(state)); section.dataset.online = 'true';
+      if (state.phase === 'choice' && state.pendingChoice?.kind === 'component') section.append(element('p', '组件奖励选择后入库，会出现在这里。', 'loot-note'));
+      return section;
+    }
     if (!loot) return null;
     const pick = state.phase === 'choice' && state.pendingChoice?.kind === 'component';
     const section = lootRevealedSection(loot, this.lootLabels(state), !pick); section.dataset.online = 'true';
     if (pick) section.append(element('p', '组件奖励选择后入库，会出现在这里。', 'loot-note'));
     return section;
+  }
+  /**
+   * Online: the drops stay hidden in preparation (an older round's) and while my battle is still playing back (no
+   * spoiler before the kill). Once it has played out they show, also when a reconnect replays the battle over the
+   * settlement (C18-B: still visible after a reconnect).
+   */
+  private onlineLootHidden(state: MatchState): boolean {
+    if (state.phase === 'preparation') return true;
+    const battle = this.actions.combat().view;
+    return state.phase === 'combat' && (!battle || battle.status === 'running');
+  }
+  private onlineLootKey(state: MatchState): string {
+    const hidden = this.onlineLootHidden(state);
+    return JSON.stringify([hidden, hidden ? null : readRevealedLoot(state), hidden ? null : readOrbLoot(state), state.pendingChoice?.choiceId ?? null]);
   }
   private renderTraits(state: MatchState): void {
     const list = element('section', '', 'trait-list'); list.dataset.debug = 'trait-panel';
@@ -516,6 +599,23 @@ export class StrategyPanel {
       inventory.append(button);
     }
     section.append(inventory);
+    // C18-B: consumable tools (§18.4); a picked or dragged tool outlines the targets the answers allow (§18.8 01).
+    const consumables = readConsumables(state);
+    const tool = consumables.find(entry => entry.consumableId === this.selectedConsumable) ?? null;
+    if (!tool) this.selectedConsumable = null;
+    const usable = (target: ConsumableTarget) => tool !== null && previewConsumable(state, tool.consumableId, target).ok;
+    if (consumables.length) section.append(consumableShelf(consumables, this.selectedConsumable, (card, entry) => {
+      card.disabled = !open;
+      card.addEventListener('pointerdown', event => {
+        if (!open || event.button !== 0) return;
+        const gesture = this.router.begin('item', entry.consumableId, event.pointerId);
+        if (!gesture) return;
+        card.setPointerCapture(event.pointerId);
+        this.itemDrag = { gesture, x: event.clientX, y: event.clientY, moved: false, element: card, tool: entry };
+      });
+      card.addEventListener('keydown', event => { if (event.code === 'Enter' || event.code === 'Space') { event.preventDefault(); this.selectConsumable(entry.consumableId); } });
+    }));
+    for (const card of Array.from(inventory.querySelectorAll<HTMLElement>('.item-card'))) if (usable({ kind: 'item', itemId: card.dataset.itemId! })) card.classList.add('consumable-candidate');
     // Combine and equip legality come from the B5 previews (same validators as the commands);
     // the commands still re-check the current state when clicked.
     const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? ITEM_DEFINITIONS[item.definitionId].name : '已不存在的物品'; };
@@ -533,11 +633,12 @@ export class StrategyPanel {
     const chosen = open ? this.selectedItems.filter(id => state.items.some(item => item.id === id)).at(-1) : undefined;
     const frozen = this.actions.battleItems();
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
-      const row = element('article', '', 'equipment-row');
+      const row = element('article', '', 'equipment-row'); row.dataset.unitId = unit.id;
       const heading = element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`);
       // C18: during a shown battle, items worn now but not in that battle's snapshot are marked "下场生效".
       const loadout = battleLoadout(state.items, frozen, unit.id), loadoutText = loadout?.changed ? battleLoadoutText(loadout, itemDefinitionName) : '';
       if (loadoutText) { heading.title = loadoutText; row.classList.add('has-pending'); }
+      if (tool && usable({ kind: 'unit', unitId: unit.id })) { row.classList.add('consumable-candidate'); heading.title = consumableTargetHint(tool); }
       row.append(heading);
       const view = readUnitEquipment(state, unit.id);
       const previews: EquipPreview[] | null = chosen ? [0, 1, 2].map(slot => previewEquip(state, chosen, unit.id, slot)) : null;
@@ -551,12 +652,20 @@ export class StrategyPanel {
           : reserved ? `${itemName(entry.reservedByItemInstanceId!)} 占用` : `空槽 ${slot + 1}`;
         const button = this.button(`equipment:${unit.id}:${slot}`, label, () => {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
+          if (tool) {
+            const onItem = item && !unitTool(tool) ? item : undefined;
+            const target: ConsumableTarget = onItem ? { kind: 'item', itemId: onItem.id } : { kind: 'unit', unitId: unit.id };
+            this.useTool(tool, { target, label: onItem ? ITEM_DEFINITIONS[onItem.definitionId].name : displayUnitName(unit.definitionId) });
+            return;
+          }
           if (chosen) this.equipAt(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
         }, !open || reserved);
         if (item) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(item.definitionId, 22)); button.dataset.itemDef = item.definitionId; }
         else if (entry.temporary) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.temporary.definitionId, 22)); button.dataset.itemDef = entry.temporary.definitionId; }
         if (reserved) { button.classList.add('slot-reserved'); button.dataset.reservedBy = entry.reservedByItemInstanceId!; }
         if (entry.temporary) { button.classList.add('slot-temporary'); button.dataset.temporaryId = entry.temporary.temporaryId; }
+        if (item) button.dataset.itemId = item.id;
+        if (item && usable({ kind: 'item', itemId: item.id })) button.classList.add('consumable-candidate');
         if (item && loadout?.pendingIds.has(item.id)) this.markPending(button, loadout);
         else if (loadoutText) button.title = loadoutText;
         const routed = previews ? routeSlotDrop(previews, slot) : slot, preview = previews?.[routed];
@@ -736,7 +845,12 @@ export class StrategyPanel {
     if (combat && this.lastCombatId === combat.combatId && combat.status === 'running' && combat.tick - this.lastCombatTick < 2) return;
     this.lastCombatId = combat?.combatId; this.lastCombatTick = combat?.tick ?? -1;
     // Drops are revealed mid-combat by the domain; refresh only when the projection changes.
-    if (this.lootSection && combat?.status === 'running') {
+    if (this.lootSection && isOnline()) {
+      if (this.onlineLootKey(state) !== this.lootKey) {
+        const next = this.lootPanel(state) ?? Object.assign(element('section'), { hidden: true });
+        this.lootSection.replaceWith(next); this.lootSection = next;
+      }
+    } else if (this.lootSection && combat?.status === 'running') {
       const view = isOnline() ? readRevealedLoot(state) : readLootView(state);
       if (JSON.stringify([view, state.pendingChoice?.choiceId ?? null]) !== this.lootKey) {
         const next = this.lootPanel(state); if (next) { this.lootSection.replaceWith(next); this.lootSection = next; }
@@ -823,6 +937,17 @@ export class StrategyPanel {
       const text = isLedgerEvent(event) ? combatEventText(event, id => this.combatUnitName(id)) : viewEventLine(event, id => this.combatUnitName(id));
       if (text) this.eventTexts.push(text);
     }
+    if (this.eventTexts.length > 200) this.eventTexts.splice(0, this.eventTexts.length - 200);
+    this.renderEventList();
+  }
+  /** C18-B: tool-use lines (§18.8 03) join the record of this round. */
+  recordOperations(events: readonly MatchEvent[]): void {
+    const state = this.actions.state();
+    const item = (id: string) => { const found = state.items.find(entry => entry.id === id); return found ? itemDefinitionName(found.definitionId) : '已移除的装备'; };
+    const unit = (id: string) => { const found = state.preparation.units.find(entry => entry.id === id); return found ? displayUnitName(found.definitionId) : '单位'; };
+    const lines = events.map(event => consumableEventText(event, { item, unit })).filter((text): text is string => text !== null);
+    if (!lines.length) return;
+    this.eventTexts.push(...lines);
     if (this.eventTexts.length > 200) this.eventTexts.splice(0, this.eventTexts.length - 200);
     this.renderEventList();
   }

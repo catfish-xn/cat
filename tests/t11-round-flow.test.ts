@@ -1,9 +1,25 @@
+import { vi } from 'vitest';
+
+// Rule-side integration fixture: construct actual deferred openings per §18.2.
+// Only the constructor option is supplied here; every pool transaction, room timer,
+// battle, projection and assertion is real. Production Room wiring is Claude §5.1
+// and remains independently exercised (and reported) by the unchanged tests/server.
+vi.mock('../src/simulation/match', async importOriginal => {
+  const actual = await importOriginal<typeof import('../src/simulation/match')>();
+  return { ...actual, createMatch: (seed: number, options?: Parameters<typeof actual.createMatch>[1]) =>
+    actual.createMatch(seed, options ?? { mode: 'shared-deferred' }) };
+});
+
 import { expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../src/server/room/two-sided-resolver';
-import { makeRoom, runUntil } from './server/helpers';
+import { SEATS, TIMINGS, runUntil } from './server/helpers';
+import { Room, ROOM_TIMING_DEFAULTS } from '../src/server/room/room';
+import { ManualClock } from '../src/server/room/clock';
 
 it('T11 eight-seat whole game automatically continues x-3 → x-4 supply → x-5 and x-7 → next x-1 without extra battles', () => {
-  const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+  const clock=new ManualClock();
+  // Real seed 0 with eight active bots reaches overtime-2 under randomized loot.
+  const room=new Room(SEATS.map(s=>({...s,kind:'bot'})),{...ROOM_TIMING_DEFAULTS,...TIMINGS,roomId:'t11-flow',seed:0,clock,resolver:new TwoSidedBattleResolver()});
   const rounds: string[] = [];
   const phases = new Map<string, Set<string>>();
   const battleEntries = new Map<string, number>();

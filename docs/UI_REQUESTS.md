@@ -738,3 +738,53 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 ## T13 对 Claude 的接线说明
 
 T13-A：界面不再需要自己选合成槽。将玩家请求的合法 slot 原样交给 equipItem；previewEquip 成功时按 occupiedSlots 高亮真实落槽，按原 combination 显示配方结果。单位身上已有散件时，拖到空槽或成装槽也会在原散件槽合成；旧状态多个散件优先最低槽。三槽父件仍按 occupiedSlots=[0,1,2] 显示。无需新命令或新失败码，四阶段及下场生效文案沿用 T12。
+
+
+### T13 对 Claude 的接线说明：R3/R4（C18-B）
+
+D1–D8 已选 A；完整签名、阶段、失败码、投影见 MULTIPLAYER_CONTRACT §18。T13-A 界面不再需要自己选合成槽，成功 preview.occupiedSlots 表示真实落槽。
+
+- 对局创建：先 createSharedPool(poolId, roomSeed)，逐席 createMatch(seatSeed, {mode:'shared-deferred'}) 后 initializeSharedSeat(pool, seat, seatId, index)，每次接住返回 pool/state；随后走既有共享商店初始化。禁止 createMatch(seed) 的 solo 状态传共享初始化。
+- 换轮只调 nextSharedRound(pool, latestSeats, expectedRound)，原子接住所有返回；pool.orbLayout 私有，界面不能计算或存储颜色。
+- ClientCommand 增加 useConsumable：consumableId 加 target={kind:'unit',unitId}（拆卸器）或 {kind:'item',itemId}（两重铸器）。服务器逐层 onlyKeys，沿原信封去重、round/revision 权限，转 runSharedMatchCommand。成功保存最新席位与 pool，不能覆写冻结战斗输入。
+- 新私有字段 consumables；revealedLoot 新 revealedOrbs，entry 新 orbId/entryOrdinal；payload 新 consumable。已授予英雄缺货时展示实际 receipt 的金币。已揭示后放弃仍显示，未揭示奖励仍隐藏。列表无点击开珠/领取入口。
+- 新失败文案建议：unknown-consumable「该工具已使用或不存在」；invalid-consumable-target「该工具不能用于此目标」；no-removable-items「该单位没有可拆卸装备」。wrong-phase/temporary-item/unknown-item/unknown-unit 沿现有码；layout 三失败属于服务器权威错误，不要求玩家挑颜色。
+- 已放弃状态与工具名称为占位，由 Claude C18-B 正式接线。已授权的 presentation/loot-view.ts、loot-preview/fixtures.ts 仅做最小兼容；未实现工具交互或宝珠布局。
+- 联合部署切换网络协议到 2，拒绝旧协议；旧格式 2 存档只读保全导出、新开局，不迁移。当前 src/server/ 未修改；其原 solo 初始化调用是 C18-B 必须处理的接线依赖。
+
+
+### T13-B 对 SR-C18-01～04 的接线回应
+
+以 multiplayer@9774682 四项需求为准，正式合同见 MULTIPLAYER_CONTRACT §18.8。
+- 01 选 A：读 privateView.consumableTargets；allowed:true 的 affectedItemIds 可给“将拆下 N 件/重铸 X”。无行/无候选即不可用；提交时仍重新校验，不在私有投影上调用 previewUseConsumable。
+- 02 已从 server-entry 导出 CONSUMABLE_DEFINITIONS，含 name/description/targetKind；正式名称“拆卸器”，删除本地占位文字表。
+- 03 useConsumable 成功 wire result.kind='consumable-used'，带 seatRevision/roomRevision 与三个运营事件的字段白名单；不并入战斗回放。七项失败码与文案见 §18.8。协议校验、四阶段 gate、回执与 e2e 由 Claude 接线。
+- 04 已确认卡片分组/状态/来源/放弃原因及本轮结算重连期间持续下发；播放时的隐藏由界面处理。
+
+已放弃状态与工具名称为占位，由 Claude C18-B 正式接线。此次仅增加数据与合同，不改界面交互或布局。T13-A 先行 #80；R3/R4 在 codex/t13-loot 的 #81 按里程碑推送草稿，发布身份独立于 A。
+
+
+SR-C18-03（8968c8a）补充回应：ClientCommand 已纳入 useConsumable；Codex 的 legal() 暂恒拒绝此机器人动作，execute() 转发真实领域命令。用户另准许 applySeatCommand 一行直通 runSharedMatchCommand 以保持当前基线可编译；C18-B 合入时 Claude 将这行替换为 useSeatConsumable。gate、网络 onlyKeys、consumables.ts 均未改，继续使用 Claude 分支实现；不得两次消费同一命令。
+
+## C18-B 换接真字段后的状态与新缺口（2026-10-14，Claude 流水线 B/C，基线 codex/t13-loot@ad72928）
+
+### C18-B 接线完成情况（回应 §18.2、§18.8，无需 Codex 动作）
+
+- 服务器（§18.2）：`Room` 构造时逐席调用 `createMatch(seatSeed, { mode: 'shared-deferred' })` 后再 `initializeSharedSeat`，不再先建 solo。换轮仍只走 `nextSharedRound`。结算批次失败时，为了在故障信息里指出卡住的席位，会对每席试跑一次 solo `nextRound`；这次试跑已加异常保护，结果只用于诊断，不代替批事务。
+- 服务器（§18.3、§18.8 03）：`applySeatCommand` 改为只经 `useSeatConsumable` 调用 `runSharedMatchCommand`，Codex 原来那行直通已删除，不会两次分发。`WireCommand` 改为 `ClientCommand` 的别名。成功回执的 `result.kind` 为 `'consumable-used'`，其中只按白名单逐字段复制 `itemsRemoved`、`itemReforged`、`consumableUsed` 三类事件（保留 domain 和 eventSeq），不含来源账本或 RNG。`NET_PROTOCOL_VERSION` 改为 2，协议 1 的客户端会被拒绝。
+- 界面：假数据和 `?fakeLoot=1` 已删除。宝珠卡读私有投影的 `revealedLoot.revealedOrbs`，离线读 `readLootView`。工具名称和说明读 `CONSUMABLE_DEFINITIONS`。目标是否可用，联机读 `consumableTargets`（缺行或缺目标一律视为不可用），离线直接在完整状态上调用 `previewUseConsumable`。拖放只在答复可用时发命令。记录页显示"重铸：A → B""拆卸：X 卸下 …"。单人模式经 `MatchSession.useConsumable` 调用领域 `useConsumable`。
+
+### SR-C18-05 共享池守恒校验每笔事务都重算全部席位的掉落冻结，房间运行慢 2～3 倍（P1，性能，规则侧）
+
+- 现象：`tests/server` 有 3 条用例超出原有时间预算。对比 T13 之前：选择窗口用例 1.8 s → 5.6 s（超过 vitest 默认的 5 s），整局淘汰用例 18 s → 42 s（预算 30 s），8 机器人整局 37 s → 65 s（预算 60 s）。这些预算没有放宽。
+- 定位（CPU profile，seed 42 跑到第 12 轮共 13.4 s）：`canonicalContent` 自身约 6.3 s，`structuredClone` 约 1.8 s，`assertSharedPoolConservation` 约 0.9 s。调用链为 `runSharedMatchCommand → transact / active → assertSharedPoolConservation`。T13-B 在其中新增了逐席比对 `canonicalContent(state.m8.loot.frozen) === canonicalContent(freezeLootThroughRound(seed, ordinal, pool.orbLayout))`，即每笔共享事务（含 PvE 战斗中的每一步 `ownCombatSteps`）都要把每个席位的掉落从头重建并序列化一遍。
+- 需要：在不削弱恢复校验的前提下，把这项比对移到真正需要它的边界，例如初始化、换轮批事务、恢复入口，或改为增量/缓存比对。不能以放宽测试时间预算代替。
+- 验收：上述 3 条用例在原预算内通过；`assertSharedPoolConservation` 对掉落被篡改的席位仍报 `invalid-seat-state`（沿用现有篡改用例）。
+
+#### SR-C18-05 / SR-B8-03 窗口 1 实施（2026-10-14）
+
+`restoreOrbLayout` 只信任确定性构造器产生的深冻结布局；逐席掉落比较按 `(冻结账本对象, 布局对象)` 弱引用缓存，仍逐次核对席位 seed、轮次和绑定。初始化/新布局/换轮第一次比较建立缓存；外部 JSON 或可变副本不会进入缓存，恢复验证未删减。篡改后仍返回 `invalid-seat-state`，失败返回原 pool/state 且无事件。
+
+SR-B8-03 与 C18-05 重叠的是每 tick 共享事务的重复冻结重放，此路径同时受益；池资产总量、席位版本、商店/持有/待领奖励仍逐 tick 校验。来源账本 append 只共享已深冻结历史记录，新增事实仍复制冻结，可变输入仍复制；未改战斗 `structuredClone` 或引入“未终局跳检查”。因此不把更广的增量池事务或战斗克隆优化宣称为已完成。
+
+Blue Buff 超时走单人公共夹具，并不调用 shared-pool。为四泪/四剑向量分别选 seed 17/4 的真实开局组件，减少无关后期战斗，未注入物品或改变断言。所有时间预算保持原值；验收、冷热路径逐 tick 等价和篡改覆盖见 `docs/evidence/t13/WINDOW1.md`。

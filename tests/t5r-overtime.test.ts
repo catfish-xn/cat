@@ -1,3 +1,4 @@
+import { syntheticSharedRound } from './tp-helpers';
 import { describe, expect, it } from 'vitest';
 import { advanceMultiplayerRound, snapshotForBattle, compileBattle, resolveTwoSidedBattle, proposeSettlement,
   applyRoundSettlement, nextRound, createMatch, nextSharedRound, buySharedUnit, sellSharedUnit,
@@ -56,7 +57,8 @@ describe('T5R online overtime',()=>{
   });
   it('shared shops use the release barrier, rotate through five overtime rounds, and permit buy/sell',()=>{
     const roomState=room();let pool={...roomState.pool,naturalRound:FINAL_ROUND};
-    let states:readonly MatchState[]=roomState.states.map(finalSettlement);
+    const bound=syntheticSharedRound(pool,roomState.states.map(finalSettlement),FINAL_ROUND);pool=bound.pool;
+    let states:readonly MatchState[]=bound.states;
     for(let n=1;n<=5;n++) {
       const prior=states;
       const result=batch(nextSharedRound(freeze(pool),freeze(states),FINAL_ROUND+n-1));pool=result.pool;states=result.states;

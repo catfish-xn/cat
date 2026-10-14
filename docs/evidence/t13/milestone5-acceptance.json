@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "validationScope": "User stopped full suite; only final B4 file rerun; no M5/M6 or full rerun authorized",
+  "command": "npm test -- tests/m8-b4-audit-regressions.test.ts --maxWorkers=1 --no-file-parallelism --reporter=default --reporter=json --outputFile=../b4-final.json",
+  "passed": 14,
+  "failed": 0,
+  "pending": 0,
+  "reportSha256": "90351026ed7d107055c046fdbbc4f2ac61e9aefd17e22752373cd15b9fcf4b20",
+  "logSha256": "25036bcddd5e7e850a854c837deebb144c0192921663dc21e716aa531d4c035d",
+  "typecheck": "passed on bbe2258 before final B4/M5 edits",
+  "fullSuite": "stopped by explicit user instruction; incomplete",
+  "serverDisposition": "待 Claude §5.1"
+}

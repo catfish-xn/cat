@@ -82,12 +82,12 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
     expect(Object.keys(view).sort()).toEqual(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
-      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8'].sort());
+      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets'].sort());
   });
   it('hidden RNG/future plans never affect output; nested sentinel additions never leak',()=>{
     const state=richSeat(),before=JSON.stringify(state),expected=toPrivateSeatView(state),hidden=structuredClone(state);
     Object.assign(hidden,{seed:999,rngState:123,battleSeedRngState:321,choiceRngState:444,rewardRngState:555,
-      combatInputBasis:{secret:'DO_NOT_SEND'},resourceProvenance:{secret:'DO_NOT_SEND'},equipmentState:{secret:'DO_NOT_SEND'}});
+      combatInputBasis:{secret:'DO_NOT_SEND'},resourceProvenance:{secret:'DO_NOT_SEND'},equipmentState:{...hidden.equipmentState,equipment:{state:123,draws:999},secret:'DO_NOT_SEND'}});
     Object.assign(hidden.m8,{loot:{secret:'DO_NOT_SEND'},encounterPlan:{secret:'DO_NOT_SEND'}});
     expect(toPrivateSeatView(hidden)).toEqual(expected);
     const injected=structuredClone(state);sentinels(injected);

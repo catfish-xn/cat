@@ -432,3 +432,27 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
 body[data-online-spectating] .choice-overlay { display: none !important; }
 
+/* C18-B: R3/R4 orbs and consumables (contract §18.4/§18.8). */
+.orb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.orb-card { padding: 6px 8px; background: #0f1a24; border-radius: 6px; border-left: 4px solid #8a97a2; }
+.orb-head { display: flex; align-items: center; gap: 8px; }
+.orb-head strong { flex: 1; font-size: 14px; }
+.orb-gem { width: 14px; height: 14px; border-radius: 50%; background: #8a97a2; box-shadow: 0 0 0 2px #0b151f, 0 0 6px currentColor; color: #8a97a2; }
+.orb-gray { border-left-color: #8a97a2; } .orb-gray .orb-gem { background: #8a97a2; color: #8a97a2; }
+.orb-blue { border-left-color: #4f9cff; } .orb-blue .orb-gem { background: #4f9cff; color: #4f9cff; }
+.orb-gold { border-left-color: #f2c14e; } .orb-gold .orb-gem { background: #f2c14e; color: #f2c14e; }
+.orb-prismatic { border-left-color: #c58bff; } .orb-prismatic .orb-gem { background: linear-gradient(135deg, #7ef0e0, #c58bff 50%, #ffb3d9); color: #c58bff; }
+.orb-status-forfeited { opacity: .7; }
+.orb-entries { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.orb-entry { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.orb-entry-name { flex: 1; }
+.orb-entry.loot-forfeited .orb-entry-name { text-decoration: line-through; color: var(--c-text-muted); }
+.loot-forfeited .loot-badge { background: #4a2626; }
+.consumable-shelf h4 { margin: 10px 0 6px; font-size: 13px; }
+.consumable-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.consumable-card { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
+.consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
+.consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
+.consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
+.consumable-candidate { outline: 2px dashed #68ddd0 !important; outline-offset: -2px; }
+.consumable-hint { color: #9ff0e4 !important; }

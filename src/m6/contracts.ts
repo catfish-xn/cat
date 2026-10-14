@@ -1,3 +1,4 @@
+import type { M8_VERSION } from '../simulation/m8/version';
 /** M6 F1 public protocol. Persistence identity never participates in domain rules. */
 import type { MatchState } from '../simulation/match-types';
 import type { CombatState, CombatResult } from '../simulation/combat-types';
@@ -8,7 +9,7 @@ export interface BattleRecordVersion {
   readonly rulesVersion: MatchState['rulesVersion'];
   readonly contentVersion: MatchState['contentVersion'];
   readonly contentDigest: string;
-  readonly replayFormatVersion: 2;
+  readonly replayFormatVersion: typeof M8_VERSION.replayFormatVersion;
 }
 export interface BattleRecord {
   readonly version: BattleRecordVersion;
@@ -26,8 +27,8 @@ export interface BattleRecord {
 }
 export interface SaveEnvelope {
   readonly kind: 'hex-autobattler-save';
-  readonly saveFormatVersion: 2;
-  readonly replayFormatVersion: 2;
+  readonly saveFormatVersion: typeof M8_VERSION.saveFormatVersion;
+  readonly replayFormatVersion: typeof M8_VERSION.replayFormatVersion;
   readonly runId: string;
   readonly createdAt: string;
   readonly match: MatchState;

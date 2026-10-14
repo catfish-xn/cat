@@ -33,7 +33,9 @@ const commit = (ordinal: number, prefix: number, sourceDeltas: readonly CombatGr
 });
 function loot(kind: 'unit' | 'item', definitionId: string, id: string, roundId = '3-7', encounterId = 'wolves-v1', slotId = 'w00', slotOrdinal = 1): LootReceipt {
   const source = JSON.stringify(['pve', roundId, encounterId, slotId]);
-  const dropId = JSON.stringify([roundId, encounterId, source, slotOrdinal]);
+  // Contract §18: each receipt names an entry within a frozen orb.
+  const orbId = JSON.stringify(['orb', roundId, encounterId, source, slotOrdinal]);
+  const dropId = JSON.stringify([orbId, 0]);
   return { receiptId: JSON.stringify([dropId, 'grant']), dropId, payload: { kind, definitionId, quantity: 1 },
     grantedItemIds: kind === 'item' ? [id] : [], grantedUnitIds: kind === 'unit' ? [id] : [] };
 }

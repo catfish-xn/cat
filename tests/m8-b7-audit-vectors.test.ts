@@ -140,7 +140,8 @@ describe('B7 audit: Match save/restore of real encounters', () => {
     expect(resumedEvents).toEqual(continuousEvents);
     expect(serializeMatch(resumed)).toBe(serializeMatch(continuous));
     expect(mechanismRestores).toBeGreaterThan(0);
-  });
+  // T13 idle single-worker: 3-7 5.51s, 4-7 7.91s, 5-7 9.17s; keep every restore/assertion.
+  }, 20000);
 
   it('6-7 rejects retimed stun, forged death, un-expired receipt and forged removal reasons', () => {
     let s = api.stepMatch(accepted(api.startMatchCombat(encounterArmy(prepared('6-7'))))).state;

@@ -1,3 +1,7 @@
+import { createOrbLayout, freezeOrbLayoutThroughRound } from './orb-layout';
+import { FINAL_ROUND } from './round-schedule';
+import { prepareMatchLoot } from './loot-runtime';
+import { createMatch, useConsumable } from './match';
 import { canOperateMatch } from './operation-policy';
 import { canonicalContent } from './content';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST, OPENING_INITIAL_STATE } from './match-rules';
@@ -25,7 +29,7 @@ export function createSharedPool(poolId:string,seed:number,options:{readonly sea
   requirePool(typeof poolId==='string'&&poolId.length>0);
   if(options.capacities) requirePool(Object.keys(options.capacities).every(id=>SHOP_CATALOG.includes(id)));
   const initial=Object.fromEntries(SHOP_CATALOG.map(id=>[id,options.capacities ? options.capacities[id]??0 : POOL_CAPACITY_BY_COST[UNIT_DEFINITIONS[id].cost]]));
-  const pool:SharedPoolState={version:SHARED_POOL_VERSION,poolId,seed,seatCount:options.seatCount??8,revision:0,
+  const pool:SharedPoolState={orbLayout:createOrbLayout(seed),version:SHARED_POOL_VERSION,poolId,seed,seatCount:options.seatCount??8,revision:0,
     initial,available:{...initial},seats:[],shops:[],holdings:[],pending:[],rewards:[],naturalRound:0,order:[]};
   assertSharedPoolConservation(pool);return pool;
 }
@@ -65,17 +69,24 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
     requirePool(typeof seatId==='string'&&seatId.length>0&&safe(seatIndex)&&seatIndex<pool.seatCount
       &&!pool.seats.some(s=>s.seatId===seatId||s.seatIndex===seatIndex),'invalid-seat');
     const roster=state.preparation.units.filter(u=>u.team==='player');
-    requirePool(!state.sharedPool&&state.round===1&&state.phase==='preparation'&&state.roundResults.length===0
+    requirePool(state.m8.loot.layoutBinding.mode==='shared-deferred'&&state.m8.loot.frozen.throughRoundOrdinal===0
+      &&state.m8.loot.frozen.rng.draws===0&&!state.sharedPool&&state.round===1&&state.phase==='preparation'&&state.roundResults.length===0
       &&state.m8.loot.receipts.length===0&&roster.length===1&&roster[0].id===OPENING_INITIAL_STATE.unit.id
       &&roster[0].definitionId===OPENING_INITIAL_STATE.unit.definitionId&&roster[0].starLevel===1
       &&state.resourceProvenance.entries.length===1&&state.resourceProvenance.entries[0].kind==='unit-acquired'
       &&state.resourceProvenance.entries[0].source.kind==='opening','invalid-seat-state');
+    requirePool(canonicalContent(state) === canonicalContent(createMatch(state.seed, {mode:'shared-deferred'})), 'invalid-seat-state');
     const enabled=enableMultiplayerSettlement(state,seatId);if(!enabled.ok)return failure(pool,state,enabled.reason);
-    const draft=draftPool(pool),hero=roster[0];requirePool(draft.available[hero.definitionId]>0,'pool-empty');
+    const draft=draftPool(pool),hero=roster[0];
+    const frozenLayout=freezeOrbLayoutThroughRound(draft.orbLayout,1);
+    if(!frozenLayout.ok)throw new PoolError(frozenLayout.reason);draft.orbLayout=frozenLayout.layout;
+    const boundLoot=prepareMatchLoot(state.seed,1,{...state.m8.loot,layoutBinding:{mode:'shared',poolId:pool.poolId,
+      version:'s13-orb-layout-v1',throughRoundOrdinal:0}},draft.orbLayout);
+    requirePool(draft.available[hero.definitionId]>0,'pool-empty');
     draft.available[hero.definitionId]--;
     draft.holdings.push({seatId,unitId:hero.id,definitionId:hero.definitionId,sources:[sourceKey('opening',seatId)]});
     // createMatch's private infinite shop was never published. Its draws are discarded too.
-    const next:MatchState={...enabled.state,rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
+    const next:MatchState={...enabled.state,m8:{...enabled.state.m8,loot:boundLoot},rngState:state.seed,shop:{generation:0,locked:false,slots:Array.from({length:MATCH_RULES.shopSize},()=>({status:'purchased' as const,empty:true as const}))},
       sharedPool:{poolId:pool.poolId,seatId,revision:0}};
     draft.seats.push({seatId,seatIndex,revision:0,released:false,shop:next.shop});draft.revision++;
     assertSharedPoolConservation(draft,[next]);return {ok:true,pool:draft,state:next,events:[],poolEvents:[]};
@@ -150,6 +161,7 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
 export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,command:SharedMatchCommand):SharedPoolResult {
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
+      case 'useConsumable': return useConsumable(state,command.consumableId,command.target);
       case 'settleRound': return applyRoundSettlement(state,command.receipt);
       case 'startCombat': return startMatchCombat(state,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}
@@ -195,10 +207,12 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
     requirePool(targetRound===pool.naturalRound+1,'stale-refresh');
     if(!advance&&targetRound===1) requirePool(states.every(s=>s.shop.generation===0),'already-generated');
     const draft=draftPool(pool),poolEvents:SharedPoolEvent[]=[],events:{seatId:string;events:readonly MatchEvent[]}[]=[];
+    const frozenLayout=freezeOrbLayoutThroughRound(draft.orbLayout,Math.min(targetRound,FINAL_ROUND));
+    if(!frozenLayout.ok)throw new PoolError(frozenLayout.reason);draft.orbLayout=frozenLayout.layout;
     const prepared=states.map((state):MatchState=>{
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
       const {sharedPool, ...unbound}=state;
-      const result=advanceMultiplayerRound(unbound,round);if(!result.ok)throw new PoolError(result.reason);
+      const result=advanceMultiplayerRound(unbound,round,draft.orbLayout);if(!result.ok)throw new PoolError(result.reason);
       events.push({seatId:state.sharedPool!.seatId,events:result.events});
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.
       return {...result.state,sharedPool,shop:state.shop,rngState:state.rngState};

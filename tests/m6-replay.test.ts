@@ -19,7 +19,7 @@ function battle(initial = readyMatch(42), maxTick = Infinity) {
     history.observe({before,after:match,events:next.events.filter((e):e is CombatEvent=>e.domain==='combat'),reason:'tick'});
     ticks.set(match.combat!.tick,structuredClone(match));
   }
-  const envelope: SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId:'test-run',createdAt:'2026-10-06T00:00:00Z',match,battles:history.completedRecords,currentBattle:history.capturePrefix()};
+  const envelope: SaveEnvelope={kind:'hex-autobattler-save',saveFormatVersion:3,replayFormatVersion:3,runId:'test-run',createdAt:'2026-10-06T00:00:00Z',match,battles:history.completedRecords,currentBattle:history.capturePrefix()};
   return {history,envelope,ticks};
 }
 describe('M6 isolated battle records and replay',()=>{
@@ -138,8 +138,8 @@ describe('M6 isolated battle records and replay',()=>{
     const playback=new PlaybackSession(first),snapshot=playback.read();
     expect(playback.advance(50)).toBe(snapshot);expect(Object.isFrozen(snapshot.combat.units)).toBe(true);
   });
-  // B8 restored the actual post-combat PvE component choice (1-3 loot) this scenario needs.
-  it('[B8] keeps completed records through after-choice and exposes frozen history/snapshot references',async()=>{
+  // T13 removes PvE choices; retain the completed battles through the actual 2-1 augment choice.
+  it('[T13] keeps completed records through the next-round choice and exposes frozen history/snapshot references',async()=>{
     const history=new BattleHistory('choice-run');let match=readyMatch(42);let sawChoice=false;
     while(match.round<=getCatalogRoundById('2-7').ordinal&&!sawChoice) {
       const before=match,start=startMatchCombat(match);if(!start.ok)throw Error(start.reason);match=start.state;
@@ -147,11 +147,12 @@ describe('M6 isolated battle records and replay',()=>{
       while(match.phase==='combat'){const before=match,next=stepMatch(match);match=next.state;history.observe({before,after:match,events:next.events.filter((e):e is CombatEvent=>e.domain==='combat'),reason:'tick'});}
       if(match.phase==='choice'){sawChoice=true;break;}
       if(match.phase==='gameOver')break;
-      match=resolveM5Choices(accepted(nextRound(match,match.round)));
-      while(match.phase==='settlement') match=resolveM5Choices(accepted(nextRound(match,match.round)));
+      match=accepted(nextRound(match,match.round));
+      if(match.phase==='choice'){sawChoice=true;break;}
+      while(match.phase==='settlement') match=accepted(nextRound(match,match.round));
     }
     expect(sawChoice).toBe(true);expect(history.capturePrefix()).toBeNull();
-    await expect(validateBattleCollection({kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId:'choice-run',createdAt:'2026-10-06',match,battles:history.completedRecords,currentBattle:null})).resolves.toBeUndefined();
+    await expect(validateBattleCollection({kind:'hex-autobattler-save',saveFormatVersion:3,replayFormatVersion:3,runId:'choice-run',createdAt:'2026-10-06',match,battles:history.completedRecords,currentBattle:null})).resolves.toBeUndefined();
     const first=history.completedRecords[0];expect(history.completedRecords[0]).toBe(first);expect(Object.isFrozen(first.context.preparation.units)).toBe(true);
     const playback=new PlaybackSession(first), snapshot=playback.read();expect(playback.advance(50)).toBe(snapshot);expect(Object.isFrozen(snapshot.combat.units)).toBe(true);
   });
