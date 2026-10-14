@@ -94,7 +94,7 @@ describe('T12 in-place recipes and atomic failures', () => {
   it('also accepts every current ordinary recipe with a full final three-slot set', () => {
     for (const definition of Object.values(ITEM_DEFINITIONS).filter(d => d.recipe && d.slotCost !== 3)) {
       const state = { ...prepared(), nextItemSerial: 5, items: [stock('item-1', definition.recipe![0]),
-        held('item-2', definition.recipe![1], 'unit-1', 1), held('item-3','sword'), held('item-4','rod','unit-1',2)] };
+        held('item-2', definition.recipe![1], 'unit-1', 1), held('item-3','deathblade'), held('item-4','deathcap','unit-1',2)] };
       const next = accepted(equipItem(state, 'item-1', 'unit-1', 1));
       expect(next.items.find(i => i.id === 'item-5')).toEqual(held('item-5', definition.id, 'unit-1', 1));
       expect(next.items).toHaveLength(3);

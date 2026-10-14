@@ -1169,6 +1169,18 @@ canOperateEquipment(state: Readonly<MatchState>): boolean;
 
 独立依据、每个 golden 的原因和实际测试结果见 [T12 证据](evidence/t12/README.md)。T1 原事件/RNG/战斗数值锚点不变，只替换 T12 digest 后 165 个状态逐字节匹配 T11；继续历史归一化匹配原 T1。room 闸门已放行 equip/combine，Claude 只需按 [UI_REQUESTS 的 T12 说明](UI_REQUESTS.md#t12-对-claude-的接线说明2026-10-14) 调整预览、拖放目标与提示。不新增 §14 投影字段，不规定布局和视觉。
 
+### 17.7 T13-A 单位全槽自动合成
+
+`equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult`
+与 `previewEquip(state: Readonly<MatchState>, itemId: string, unitId: string, slot: number): EquipPreview`
+沿用原签名及失败枚举。库存普通组件遇到该单位任意槽的永久普通组件，必定优先合成；请求槽只在没有已穿组件时决定落点。合法 slot 仍为 0/1/2，非法值返回 invalid-slot。
+
+旧状态若持有多个散件，按槽号从小到大选第一件，不按数组顺序或请求槽挑选。普通成装留在被消耗散件所在槽；三槽窃贼父件继续规范到 0 槽并占用 0/1/2。`combination` 形状不变；成功预览 `occupiedSlots` 是**实际**落槽，客户端不可再使用请求槽推断。
+
+配方、唯一性及独占冲突沿用 invalid-recipe / unique-conflict / exclusive-slots 等现有码。失败保留原状态、无事件、无资源/RNG/ID 消耗；成功合成仅分配一个永久 item ID。窃贼 roll、B8 来源 fold 和 T12 四阶段/冻结战斗边界全部沿用。
+
+本变更属于玩法变化；与 R3/R4 在 D8-A 候选发布中统一提升 digest，不能单独以旧身份发布。T1 相同冻结 BattleInput 的战斗事件/RNG应保持；包含新增自动合成命令的运营轨迹会改变物品 ID、装备及后续战斗，不得仅归一化 digest 声称无行为差异。
+
 ## 18. R3+R4 掉落系统合同草案，未签字
 
 本节基于 origin/multiplayer@25dae94；与 T12（PR #71）并行出设计，**未导出、未接线、未生效**。签字且 T12 合入后，才按 [M8B_LOOT §11](M8B_LOOT.md#11-r3r4-修订草案未签字) 实施。现行 §12/§14/§15 保持；本节只是它们的候选修订。规则数值及来源均见 LOOT §11；本节新增序号、计数、版本和数据结构均为项目自定/P，旧边界为 L1/P。
