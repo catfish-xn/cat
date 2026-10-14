@@ -24,3 +24,9 @@ SR-C18-01～04 已收到（multiplayer@9774682）：01 选择 A 权威投影；0
 B 当前 CONTENT_DIGEST=fnv1a32-utf16:bd9c3a8e、LOOT_REPLAY_DIGEST=fnv1a32-utf16:5cd0487c；四条完整公共路线经独立账本重新审核，五份 Herald 原始存档及后续 15 ticks 恢复通过，T1 Node/browser-target/CLI 165 状态对照及 tick40 恢复通过，报告已更新。本次还补 ClientCommand 的 useConsumable、bot legal 恒 false、测试 execute 真实调用，以及用户授权的 applySeatCommand 单行共享事务转发；C18-B 将用 useSeatConsumable 替换该行。未改 gate/onlyKeys/consumables.ts。
 
 本里程碑空闲机单跑 12 文件 / 162 用例通过（35.67s），typecheck 通过；B 仍是施工草稿，未宣称全套通过。历史旧 fixture 迁移及 Claude 的 shared-deferred 初始化/正式网络与 UI 接线仍待完成；前述早期全套/领域失败数保留为诊断记录，不代表本提交最终结果。
+
+里程碑 4：按用户要求先合入 multiplayer@524e9ea（合并提交 1bd10b7，已推送），随后继续测试迁移。合并无冲突，上游 BoardScene 三处空值保护仅随基线带入；相对新基线的界面/服务器差异仍严格限于已授权例外。
+
+本里程碑不改运行规则或 digest。拳套测试通过真实 2-4/3-4 自选获取父装备；保留原 level3/6/7/9 独立 LCG 机制向量，level3 的合法存档对照改为相同低级池的 level5，所有 35 条公共路线实际绑定全部 43 种临时装备。历史等级伪造、完整战斗档案、递归九卡购买、冲突返还和 Tristana 成长仍经真实公共命令/严格恢复验证。完整路线按签署的 15–16 组件价值校验（成装计2），同时对照所有物品掉落和领取回执，不删除随机额外奖励。
+
+空闲机单 worker 顺序验证：6 文件 / 77 用例通过（57.80s），依赖回归 4 文件 / 107 用例通过（149.15s），合计 10 文件 / 184 用例；typecheck 全绿。依赖组包含四条完整路线、T12 战中装备和全部 44 种装备的保存/回放。B 全套仍未完成：旧 B8 固定掉落/身份路线、三个长 M6 回放超时及 Claude shared-deferred/正式网络接线仍待处理；本草稿不可发布。

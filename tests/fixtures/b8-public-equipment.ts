@@ -71,9 +71,9 @@ const preparations = new Map<string, MatchState>();
 export function publicEquipmentPreparation(components: readonly string[],
   options: { seed?: number; history?: BattleHistory } = {}): MatchState {
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
-  // Seed 38 supplies gloves in the opening and 3-7; the 2-4/3-4 picks
-  // complete four gloves by 4-1 without fabricating an early PvE choice.
-  const seed=options.seed??(components.filter(id=>id==='gloves').length>=3?38:42),key=JSON.stringify([seed,components]);
+  // Seed 38 supplies gloves in the opening and 3-7. Use it for multi-item
+  // glove recipes, leaving real supply choices for their other ingredients.
+  const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components]);
   if(!options.history&&preparations.has(key))return structuredClone(preparations.get(key)!);
   let state=createMatch(seed);
   const missing=()=>{

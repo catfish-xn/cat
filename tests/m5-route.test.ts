@@ -1,3 +1,4 @@
+import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 const FINAL_ROUND=ROUND_CATALOG.at(-1)!.ordinal;
 const BATTLE_COUNT=ROUND_CATALOG.filter(r=>r.kind!=='supply').length;
@@ -34,8 +35,8 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
   expect(api.stepMatch(end)).toEqual({state:end,events:[]});
   expect(api.createMatch(42)).toEqual(route.initial);
  },120000);
- // B8 restored the opening/PvE loot chain. M8B_LOOT §"6-7结算" freezes the permanent component total at
- // 10 loot + 5 supply = 15 (it replaces the old 2 opening + 5 supply + 4×2 PvE schedule grants, also 15).
+ // Signed R3/R4: 2–3 opening component value + four 2-value PvE packages + five supply choices.
+ // Prismatic packages substitute a completed item (value 2); 6-7 grants gold/tool only.
  for(const build of ['sniper-caitlyn','cannon','sniper','mage'])it(`[B8] ${build}: complete-build battles and full component grant chain`,()=>{
   const route=routes.get(build)!;
   expect(route.summary.formedBattles).toBeGreaterThanOrEqual(3);
@@ -53,9 +54,11 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    const supply=route.final.scheduleReceipts.reduce((n,r)=>n+r.itemIds.length,0);
    const loot=route.final.m8.loot.receipts.filter(r=>r.payload.kind==='item');
    expect(supply).toBe(5);
-   expect(loot).toHaveLength(10);
+   const planned=route.final.m8.loot.frozen.rounds.flatMap(r=>r.encounterPlan.drops).filter(d=>d.payload.kind==='item');
+   expect(loot.map(r=>r.dropId).sort()).toEqual(planned.map(d=>d.dropId).sort());
    expect(loot.every(r=>r.grantedItemIds.length===1&&r.payload.quantity===1)).toBe(true);
-   expect(supply+loot.length).toBe(15);
+   const value=loot.reduce((n,r)=>n+(r.payload.kind==='item'&&ITEM_DEFINITIONS[r.payload.definitionId].kind==='completed'?2:1),0);
+   expect([15,16]).toContain(supply+value);
   }
  });
 });

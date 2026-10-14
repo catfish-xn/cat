@@ -41,17 +41,19 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     for (let slot = 0; slot < 3; slot++) state = accepted(equipItem(state, `item-${20 + slot}`, 'unit-1', slot));
     for (let slot = 0; slot < 3; slot++) rejected(state, s => equipItem(s, 'item-23', 'unit-1', slot), 'item-slot-occupied');
     expect(() => restoreMatch(serializeMatch(state))).toThrow('Invalid B8 Match: current resource fold');
-    // Four Deathblades require eight identical components, beyond this bounded
-    // choice fixture. Keep that matrix above and prove identical nonunique slot
-    // capacity using four genuinely acquired Swords (one permanent slot each).
+    // Keep the four-Deathblade capacity mechanism above. Four genuinely acquired
+    // swords additionally prove T13 automatic combination without losing other drops.
     const legal = publicInventory(['sword', 'sword', 'sword', 'sword']);
     let control = legal.state;
     for (let slot = 0; slot < 3; slot++) control = accepted(equipItem(control, legal.itemIds[slot], 'unit-1', slot));
     // T13 combines the first pair automatically; the fourth joins the remaining worn sword for any request slot.
     for (let slot = 0; slot < 3; slot++) {
       const combined = accepted(equipItem(control, legal.itemIds[3], 'unit-1', slot));
-      expect(combined.items).toHaveLength(2);
-      expect(combined.items.map(i=>i.definitionId)).toEqual(['deathblade','deathblade']);
+      expect(combined.items).toHaveLength(legal.state.items.length - 2);
+      expect(combined.items.filter(i=>i.location.kind==='unit' && i.location.unitId==='unit-1')
+        .map(i=>i.definitionId)).toEqual(['deathblade','deathblade']);
+      expect(combined.items.filter(i=>i.location.kind==='inventory'))
+        .toEqual(legal.state.items.filter(i=>!legal.itemIds.includes(i.id)));
       expect(restoreMatch(serializeMatch(combined))).toEqual(combined);
     }
     expect(restoreMatch(serializeMatch(control))).toEqual(control);

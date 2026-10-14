@@ -17,7 +17,10 @@ export function publicInventory(definitions: readonly string[], late = false): {
     return [...(definition.recipe ?? [id])];
   });
   if (late) while (components.length < 4) components.push('sword');
-  let state = publicEquipmentPreparation(components);
+  // Recursive nine-card purchase controls need the later seed-42 economy;
+  // the faster seed-38 glove route intentionally stops with less liquid gold.
+  let state = publicEquipmentPreparation(components,
+    late && components.filter(id => id === 'gloves').length === 2 ? { seed: 42 } : {});
   const available = [...state.items], itemIds: string[] = [];
   for (const id of definitions) {
     const definition = ITEM_DEFINITIONS[id];
