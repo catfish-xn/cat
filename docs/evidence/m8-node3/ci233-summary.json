@@ -1,0 +1,178 @@
+{
+  "sha": "cf76af02ccc70e9b7adb94c718bbb2e0365b8acd",
+  "conclusion": "success",
+  "runNumber": 233,
+  "runId": 38146630851,
+  "runUrl": "https://github.com/catfish-xn/cat/actions/runs/38146630851",
+  "tests": {
+    "filesPassed": 146,
+    "testsPassed": 2059,
+    "skipped": 0,
+    "durationSeconds": 770.15,
+    "replayCases": [
+      "✓ M5 cannon restores every command and tick; rejected insertion preserves every field 95245ms",
+      "✓ M5 sniper restores every command and tick; rejected insertion preserves every field 146173ms",
+      "✓ M5 mage restores every command and tick; rejected insertion preserves every field 139264ms",
+      "✓ M5 sniper-caitlyn restores every command and tick; rejected insertion preserves every field 133281ms"
+    ]
+  },
+  "jobs": [
+    {
+      "id": 114491254542,
+      "name": "m8-u3-dynamic",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254628,
+      "name": "test-and-build-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254679,
+      "name": "browser-preview-sniper-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254683,
+      "name": "browser-dev-cannon-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254684,
+      "name": "browser-preview-mage-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254696,
+      "name": "browser-dev-sniper-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254702,
+      "name": "browser-dev-mage-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254709,
+      "name": "m7-presentation-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254723,
+      "name": "m8-u6-loot",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254727,
+      "name": "input-dev-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254728,
+      "name": "browser-preview-cannon-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254741,
+      "name": "input-preview-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491254759,
+      "name": "m6-retention",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 114491255330,
+      "name": "warmup-experiment",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 114491255448,
+      "name": "heap-diagnostics",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 114496732301,
+      "name": "compare-evidence-sample1",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "comparison": [
+    [
+      {
+        "build": "cannon",
+        "evidenceClass": "final-clean-commit",
+        "sha": "cf76af02ccc70e9b7adb94c718bbb2e0365b8acd",
+        "sourceFingerprint": "d2852e5268d6c802ff74d0b6fdfdac24494336e230fc3ce6f5d8178f0b4a293f",
+        "checkpoints": 194,
+        "rounds": 33,
+        "finalHash": "05b4ab4140a31a2c7e5ecaa2065ef5ab275165615b0d0850ac714aafb415cb52",
+        "fullApplicationRoutePassed": true,
+        "browserBattlesCompared": 33,
+        "skippedBrowserRoundIds": [],
+        "domainRouteComparedInFull": true,
+        "passed": true
+      },
+      {
+        "build": "sniper",
+        "evidenceClass": "final-clean-commit",
+        "sha": "cf76af02ccc70e9b7adb94c718bbb2e0365b8acd",
+        "sourceFingerprint": "d2852e5268d6c802ff74d0b6fdfdac24494336e230fc3ce6f5d8178f0b4a293f",
+        "checkpoints": 182,
+        "rounds": 33,
+        "finalHash": "903c9be8d9dfcba717f909b58303eefdce5cf66875a1aa84ef1f1dad1641928d",
+        "fullApplicationRoutePassed": true,
+        "browserBattlesCompared": 33,
+        "skippedBrowserRoundIds": [],
+        "domainRouteComparedInFull": true,
+        "passed": true
+      },
+      {
+        "build": "mage",
+        "evidenceClass": "final-clean-commit",
+        "sha": "cf76af02ccc70e9b7adb94c718bbb2e0365b8acd",
+        "sourceFingerprint": "d2852e5268d6c802ff74d0b6fdfdac24494336e230fc3ce6f5d8178f0b4a293f",
+        "checkpoints": 176,
+        "rounds": 33,
+        "finalHash": "6814a267e6697167f71a497c55bdfa3ec8c018ca3e0d3f5a2e497fa71e570179",
+        "fullApplicationRoutePassed": true,
+        "browserBattlesCompared": 33,
+        "skippedBrowserRoundIds": [],
+        "domainRouteComparedInFull": true,
+        "passed": true
+      }
+    ],
+    {
+      "sha": "cf76af02ccc70e9b7adb94c718bbb2e0365b8acd",
+      "manifests": 12,
+      "acceptanceScope": "all M6 application, browser and performance gates at the catalog capacity (B9)",
+      "fullApplicationRoutePassed": true,
+      "skipped": [],
+      "passed": true
+    }
+  ],
+  "optionalDiagnosticJobsSkipped": [
+    "warmup-experiment",
+    "heap-diagnostics"
+  ],
+  "node3Accepted": false,
+  "note": "Frozen 9v9 CPU budget and hardware frame/playtest gates remain unresolved. CI success does not supersede performance measurements."
+}
+

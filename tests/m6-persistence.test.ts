@@ -6,9 +6,9 @@ import { BattleHistory } from '../src/replay/history';
 import { fixedCapture, mergeCaptures } from '../src/persistence/capture-ownership';
 import { SaveError } from '../src/persistence/repository';
 import { createMatch } from '../src/simulation/match';
-import { MAX_SAVE_BYTES } from '../src/m6/limits';
+import { MAX_BATTLE_RECORDS, MAX_SAVE_BYTES } from '../src/m6/limits';
 import type { CapturedSave, SaveEnvelope, SaveStatus, SlotToken } from '../src/m6/contracts';
-const envelope = (): SaveEnvelope => ({ kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1, runId: 'test-run', createdAt: '2026-10-06T00:00:00.000Z', match: createMatch(42), battles: [], currentBattle: null });
+const envelope = (): SaveEnvelope => ({ kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3, runId: 'test-run', createdAt: '2026-10-06T00:00:00.000Z', match: createMatch(42), battles: [], currentBattle: null });
 const captured = (): CapturedSave => ({ match: createMatch(42), currentBattle: null, battleKeys: [], addedBattles: [] });
 const token: SlotToken = { runId: 'test-run', activationEpoch: 'test-epoch', revision: 1 };
 describe('M6 seed and file boundaries', () => {
@@ -23,7 +23,8 @@ describe('M6 seed and file boundaries', () => {
     const history = vi.fn(); const original = envelope(); const copy = await validateFile(exportFile(original), history);
     expect(copy).toEqual(original); expect(copy).not.toBe(original); expect(copy.match).not.toBe(original.match); expect(history).toHaveBeenCalledTimes(1);
   });
-  it.each([{ extra: true }, { kind: 'wrong' }, { saveFormatVersion: 2 }, { replayFormatVersion: 2 }, { runId: '' }, { createdAt: 'bad' }, { currentBattle: [] }])('rejects outer corruption before history %j', async patch => {
+  // B9 flip (M8_B9_U7_PLAN §6): save3/replay3 is now the accepted format; format 1 and unknown versions are refused.
+  it.each([{ extra: true }, { kind: 'wrong' }, { saveFormatVersion: 1 }, { replayFormatVersion: 1 }, { saveFormatVersion: 2 }, { replayFormatVersion: 2 }, { saveFormatVersion: 4 }, { replayFormatVersion: 4 }, { runId: '' }, { createdAt: 'bad' }, { currentBattle: [] }])('rejects outer corruption before history %j', async patch => {
     const history = vi.fn(); await expect(validateEnvelope({ ...envelope(), ...patch }, history)).rejects.toThrow(); expect(history).not.toHaveBeenCalled();
   });
   it('checks file byte size before reading and bad JSON before history', async () => {
@@ -39,7 +40,7 @@ describe('M6 seed and file boundaries', () => {
   });
   it('rejects a bare M5 state and record/event overflow before history', async () => {
     await expect(validateEnvelope(createMatch(42), vi.fn())).rejects.toThrow();
-    await expect(validateEnvelope({ ...envelope(), battles: Array(31).fill({ events: [] }) }, vi.fn())).rejects.toThrow('数量');
+    await expect(validateEnvelope({ ...envelope(), battles: Array(MAX_BATTLE_RECORDS + 1).fill({ events: [] }) }, vi.fn())).rejects.toThrow('数量');
     await expect(validateEnvelope({ ...envelope(), battles: [{ events: Array(100001).fill(null) }] }, vi.fn())).rejects.toThrow('边界');
   });
 });

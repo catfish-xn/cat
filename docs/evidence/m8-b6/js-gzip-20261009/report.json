@@ -1,0 +1,150 @@
+{
+  "createdAt": "2026-10-09T10:51:26.268Z",
+  "method": "Sum gzipSync(asset,{level:9}).length separately for every dist/assets/*.js, exactly current scripts/m7-budget.cjs jsGzip; no concatenation or estimates.",
+  "scope": "JS only, not interactive gate or overall M7 acceptance.",
+  "node": "v22.23.3",
+  "versions": {
+    "node": "22.23.3",
+    "acorn": "8.16.0",
+    "ada": "2.9.2",
+    "amaro": "1.1.8",
+    "ares": "1.34.8",
+    "brotli": "1.1.0",
+    "cjs_module_lexer": "2.2.0",
+    "cldr": "48.0",
+    "icu": "78.3",
+    "llhttp": "9.4.3",
+    "modules": "127",
+    "napi": "10",
+    "nbytes": "0.1.3",
+    "ncrypto": "0.0.1",
+    "nghttp2": "1.69.0",
+    "openssl": "3.5.8",
+    "simdjson": "4.5.0",
+    "simdutf": "6.4.2",
+    "sqlite": "3.51.3",
+    "tz": "2026c",
+    "undici": "6.28.1",
+    "unicode": "17.0",
+    "uv": "1.51.0",
+    "uvwasi": "0.0.23",
+    "v8": "12.4.254.21-node.57",
+    "zlib": "1.3.1-e00f703",
+    "zstd": "1.5.7"
+  },
+  "npm": "11.9.0",
+  "dependencyVersions": {
+    "vite": "7.3.6",
+    "typescript": "5.9.3",
+    "phaser": "3.90.0",
+    "rollup": "4.64.0",
+    "esbuild": "0.28.2"
+  },
+  "currentGateScript": {
+    "sourceSHA": "ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+    "path": "scripts/m7-budget.cjs",
+    "sha256": "980b65786ec6b3fc7bdbd14619c228d94b713b13b3f93d222bedf82062fce67c",
+    "multiplier": 1.15
+  },
+  "builds": {
+    "m7": {
+      "sourceSHA": "15313a75c6e74beec739fe52a2875c104c55eae3",
+      "lockfileSHA256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+      "assets": [
+        {
+          "file": "index-CsWIfx1z.js",
+          "bytes": 1497604,
+          "gzipLevel9Bytes": 424763,
+          "sha256": "87d019691e175cb4d37b4dd3bb2ea96185f807ada29fd8caaaa50e536ddd0269"
+        }
+      ],
+      "totalJSGzipBytes": 424763,
+      "buildLog": "m7-build.log",
+      "deltaVsFixed041Bytes": -54434,
+      "exactHeadroomBytes": 63714.44999999995,
+      "integerHeadroomBytes": 63714,
+      "jsGatePassed": true
+    },
+    "fixed": {
+      "sourceSHA": "0411ad65c1933e87df840042f38cfe1ce834d127",
+      "lockfileSHA256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+      "assets": [
+        {
+          "file": "index-DdMOBtRY.js",
+          "bytes": 1673838,
+          "gzipLevel9Bytes": 479197,
+          "sha256": "7b8ae1564939905d4c50d3b63faf5a0649a263c385ba037385eaa0b65b4f1c37"
+        }
+      ],
+      "totalJSGzipBytes": 479197,
+      "buildLog": "fixed-build.log",
+      "deltaVsFixed041Bytes": 0,
+      "exactHeadroomBytes": 9280.449999999953,
+      "integerHeadroomBytes": 9280,
+      "jsGatePassed": true
+    },
+    "b6": {
+      "sourceSHA": "ac76255df7876f2dfa47deaa4a4475a0beaf81b8",
+      "lockfileSHA256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+      "assets": [
+        {
+          "file": "index-DUu5xtPS.js",
+          "bytes": 1680043,
+          "gzipLevel9Bytes": 480808,
+          "sha256": "479bff758fc5f6157b04629cb358b2bc1ae92782c17d447a503280bdaf8455c2"
+        }
+      ],
+      "totalJSGzipBytes": 480808,
+      "buildLog": "b6-build.log",
+      "deltaVsFixed041Bytes": 1611,
+      "exactHeadroomBytes": 7669.449999999953,
+      "integerHeadroomBytes": 7669,
+      "jsGatePassed": true
+    },
+    "b7": {
+      "sourceSHA": "469afdae118c81e8c8ec44bc96b139552915455f",
+      "lockfileSHA256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+      "assets": [
+        {
+          "file": "index-DESX2A9r.js",
+          "bytes": 1668522,
+          "gzipLevel9Bytes": 477438,
+          "sha256": "adef761459f051f17b3c11e0ed14608edb2931e9ce86e33dbc406f157b515b07"
+        }
+      ],
+      "totalJSGzipBytes": 477438,
+      "buildLog": "b7-build.log",
+      "deltaVsFixed041Bytes": -1759,
+      "exactHeadroomBytes": 11039.449999999953,
+      "integerHeadroomBytes": 11039,
+      "jsGatePassed": true
+    },
+    "b7-own-base": {
+      "sourceSHA": "5bd7968ee31e107e12701145aa4fdac0bec7ea8d",
+      "lockfileSHA256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+      "assets": [
+        {
+          "file": "index-DESX2A9r.js",
+          "bytes": 1668522,
+          "gzipLevel9Bytes": 477438,
+          "sha256": "adef761459f051f17b3c11e0ed14608edb2931e9ce86e33dbc406f157b515b07"
+        }
+      ],
+      "totalJSGzipBytes": 477438,
+      "buildLog": "b7-own-base-build.log",
+      "deltaVsFixed041Bytes": -1759,
+      "exactHeadroomBytes": 11039.449999999953,
+      "integerHeadroomBytes": 11039,
+      "jsGatePassed": true
+    }
+  },
+  "thresholdBytes": 488477.44999999995,
+  "maximumIntegerBytes": 488477,
+  "b7DeltaVsOwnBaseBytes": 0,
+  "caveats": [
+    "B6 raw head based on adf24b4ef6f5ec65b3abd59adc050ad2b6b82880; comparison vs 041 is not hypothetical integration with latest B3 fix.",
+    "B7 isolated catalog is based on 5bd7968ee31e107e12701145aa4fdac0bec7ea8d and is not wired into Match/content index; raw negative comparison vs 041 is not B7 incremental saving. Future wiring requires fresh measurement.",
+    "All builds use same Node and same preexisting node_modules symlink. Lockfile hashes recorded; no install, runtime change, config/gate/test edits, commits, merges, or branches created.",
+    "Historical M7 script used 1.10; 1.15 is read from current B6 gate, applied to rebuilt signed-off M7 assets."
+  ]
+}

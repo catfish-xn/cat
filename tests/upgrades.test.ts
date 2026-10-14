@@ -146,7 +146,7 @@ describe('atomic purchase and automatic upgrades', () => {
   });
 });
 
-const item = (id: string, unitId?: string, slot = 0, definitionId = 'blade'): ItemInstance => ({
+const item = (id: string, unitId?: string, slot = 0, definitionId = 'sword'): ItemInstance => ({
   id, definitionId, location: unitId === undefined ? { kind: 'inventory' } : { kind: 'unit', unitId, slot },
 });
 const anomaly = (unitId: string): AnomalyBinding => ({

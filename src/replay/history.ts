@@ -1,8 +1,10 @@
-import type { BattleRecord, SaveEnvelope, SessionChange } from '../m6/contracts';
+import type { BattleRecord, BattleRecordVersion, SaveEnvelope, SessionChange } from '../m6/contracts';
+import { M8_VERSION } from '../simulation/m8/version';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { startMatchCombat, stepMatch } from '../simulation/match';
 import type { MatchState } from '../simulation/match-types';
-import type { CombatState, CombatEvent } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { MAX_COMBAT_TICKS } from '../simulation/combat-types';
 import { restoreMatch } from '../simulation/serialization';
 import { canonicalContent, digestContent } from '../simulation/content';
@@ -23,7 +25,12 @@ export function deepFreeze<T>(value: T): T {
 }
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`战斗档案无效：${message}`); }
 export function equalContent(a: unknown, b: unknown): boolean { return canonicalContent(a) === canonicalContent(b); }
-const keys = ['runId','combatId','context','initial','events','endTick','nextEventSeq','result','stateHash','eventHash'].sort();
+const keys = ['version','roundId','runId','combatId','context','initial','events','endTick','nextEventSeq','result','stateHash','eventHash'].sort();
+const VERSION_KEYS = ['schemaVersion','rulesVersion','contentVersion','contentDigest','replayFormatVersion'] as const;
+/** The version block a record made from this context must carry. */
+export function recordVersion(context: MatchState): BattleRecordVersion {
+  return { schemaVersion: context.schemaVersion, rulesVersion: context.rulesVersion, contentVersion: context.contentVersion, contentDigest: context.contentDigest, replayFormatVersion: M8_VERSION.replayFormatVersion };
+}
 function checkShape(record: BattleRecord) {
   check(record && typeof record === 'object' && !Array.isArray(record), '记录类型');
   check(equalContent(Object.keys(record).sort(), keys), '记录字段');
@@ -42,10 +49,49 @@ function checkShape(record: BattleRecord) {
   }
 }
 export interface VerifiedReplay { readonly terminal: CombatState; readonly settledMatch: MatchState }
+/** Version routing first (M8_RULES §10): only the exact M8 replay2 record has a validator; anything else is refused. */
+function validatorFor(record: BattleRecord): (record: BattleRecord) => VerifiedReplay {
+  const version = record && typeof record === 'object' ? (record as { version?: unknown }).version : undefined;
+  check(version !== null && typeof version === 'object' && !Array.isArray(version) && equalContent(Object.keys(version).sort(), [...VERSION_KEYS].sort()), '记录版本');
+  const v = version as BattleRecordVersion;
+  check(v.schemaVersion === M8_VERSION.schemaVersion && v.rulesVersion === M8_VERSION.rulesVersion && v.contentVersion === M8_VERSION.contentVersion
+    && v.replayFormatVersion === M8_VERSION.replayFormatVersion && typeof v.contentDigest === 'string', '不支持的战斗档案版本');
+  return validateM8Record;
+}
+/** N2-P2-5: version and content compatibility of a stored record, without replay: version routing, shape, a
+ * restorable M8 context whose version block and round match the record, and the event hash. Replay validation
+ * still runs when a record is opened (PlaybackSession). */
+export function checkRecordCompatibility(record: BattleRecord): void {
+  validatorFor(record);
+  checkShape(record);
+  const context = restoreMatch(record.context);
+  check(equalContent(record.version, recordVersion(context)) && record.roundId === context.m8.round.roundId, '记录版本与开战上下文');
+  check(digestContent(record.events) === record.eventHash, '事件校验值');
+}
+export interface ArchiveAdmission { readonly records: readonly BattleRecord[]; readonly quarantined: readonly { readonly runId: string; readonly reason: string }[] }
+/** Only archives that route as current M8 files and whose every record is compatible enter the replay list;
+ * anything else is quarantined whole (never partially listed). */
+export function admitArchives(envelopes: readonly unknown[], route: (file: unknown) => { readonly view: unknown; readonly envelope: SaveEnvelope | null }): ArchiveAdmission {
+  const records: BattleRecord[] = [], quarantined: { runId: string; reason: string }[] = [];
+  for (const file of envelopes) {
+    const runId = file && typeof file === 'object' && typeof (file as { runId?: unknown }).runId === 'string' ? (file as { runId: string }).runId : '';
+    try {
+      const routed = route(file);
+      check(routed.view === null && routed.envelope, '归档版本或内容不兼容');
+      const envelope = routed.envelope!;
+      check(Array.isArray(envelope.battles) && envelope.battles.every(record => record.runId === envelope.runId), '归档局身份');
+      for (const record of envelope.battles) checkRecordCompatibility(record);
+      records.push(...envelope.battles);
+    } catch (error) { quarantined.push({ runId, reason: error instanceof Error ? error.message : String(error) }); }
+  }
+  return { records, quarantined };
+}
 /** Full deterministic validation; never reads an active session. */
-export function validateBattleRecord(record: BattleRecord): VerifiedReplay {
+export function validateBattleRecord(record: BattleRecord): VerifiedReplay { return validatorFor(record)(record); }
+function validateM8Record(record: BattleRecord): VerifiedReplay {
   checkShape(record);
   let state = restoreMatch(record.context);
+  check(equalContent(record.version, recordVersion(state)) && record.roundId === state.m8.round.roundId, '记录版本与开战上下文');
   check(state.phase === 'preparation' && record.combatId === `round-${state.round}`, '开战上下文');
   const start = startMatchCombat(state);
   check(start.ok && start.state.combat, '无法开战');
@@ -68,8 +114,8 @@ export function validateBattleRecord(record: BattleRecord): VerifiedReplay {
   check(digestContent(terminal) === record.stateHash && digestContent(record.events) === record.eventHash, '内容校验');
   return { terminal, settledMatch: state };
 }
-/** Strict archive topology and historical context validation. Yields between battles. */
-export async function validateBattleCollection(envelope: SaveEnvelope): Promise<void> {
+/** Strict archive topology and historical context validation; yields once after each battle. */
+function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, void> {
   const match = restoreMatch(envelope.match);
   check(Array.isArray(envelope.battles) && envelope.battles.length <= MAX_BATTLE_RECORDS, '战斗数量');
   const results = match.roundResults.filter(result => result.result !== 'supply');
@@ -86,7 +132,7 @@ export async function validateBattleCollection(envelope: SaveEnvelope): Promise<
     check(record.context.round === result.round && record.result !== null && verified.terminal.status === 'finished', '历史身份或完成状态');
     check(equalContent(verified.settledMatch.roundResults.at(-1), result), '历史结算结果');
     if (match.combat?.status === 'finished' && match.combat.combatId === record.combatId) check(equalContent(verified.terminal, match.combat), '当前终战状态');
-    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    yield;
   }
   if (match.combat?.status === 'running') {
     check(envelope.currentBattle !== null, '缺少当前事件前缀');
@@ -96,13 +142,21 @@ export async function validateBattleCollection(envelope: SaveEnvelope): Promise<
     check(equalContent(verified.settledMatch, match), '当前会话与开战上下文不一致');
   } else check(envelope.currentBattle === null, '已结束战斗重复前缀');
 }
+/** Same checks, yielding to the event loop between battles (import/continue paths). */
+export async function validateBattleCollection(envelope: SaveEnvelope): Promise<void> {
+  for (const _ of battleCollectionChecks(envelope)) await new Promise<void>(resolve => setTimeout(resolve, 0));
+}
+/** Same checks without yielding, for the synchronous readCompatibility query. */
+export function validateBattleCollectionSync(envelope: SaveEnvelope): void {
+  for (const _ of battleCollectionChecks(envelope)) { /* drain */ }
+}
 
-interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: CombatEvent[] }
+interface WorkingRecord { context: MatchState; initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[] }
 function capture(runId: string, working: WorkingRecord): BattleRecord {
   const { context, initial, terminal, events } = working;
   // Context, initial state and individual events are already owned and deeply frozen.
   // Only the growing array needs a new snapshot; hashes still cover the complete payload.
-  return markOwned(Object.freeze({ runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
+  return markOwned(Object.freeze({ version: Object.freeze(recordVersion(context)), roundId: context.m8.round.roundId, runId, combatId: terminal.combatId!, context, initial, events: Object.freeze([...events]),
     endTick: terminal.tick, nextEventSeq: terminal.nextEventSeq!, result: terminal.result,
     stateHash: digestContent(terminal), eventHash: digestContent(events) }));
 }

@@ -1,0 +1,58 @@
+import {describe,expect,it} from 'vitest';
+import * as api from '../src/simulation/match';
+import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
+import type {MatchState} from '../src/simulation/match';
+import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-public';
+let preparation=api.createMatch(42);
+while(preparation.roundDefinitionId!=='2-7'){
+ if(preparation.phase==='choice'){const c=preparation.pendingChoice!;preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
+ else if(preparation.phase==='settlement')preparation=accepted(api.nextRound(preparation,preparation.round));
+ else{if(preparation.round>3)preparation=reserveExcept(preparation,[]);
+  else for(const u of players(preparation).filter(u=>u.location.kind==='bench'))preparation=accepted(api.deployMatchUnit(preparation,u.id,{kind:'board',cell:{col:u.id==='unit-2'?3:5,row:7}}));
+  preparation=battle(preparation).ended;}
+}
+for(const [i,u]of players(preparation).entries())preparation=accepted(api.deployMatchUnit(preparation,u.id,{kind:'board',cell:{col:[1,3,5][i],row:i===2?7:4}}));
+preparation=accepted(api.equipItem(preparation,'item-1','unit-1',0));
+preparation=accepted(api.equipItem(preparation,'item-2','unit-1',1));
+preparation=accepted(api.equipItem(preparation,'item-3','unit-2',0));
+function roundTrip(s:MatchState){const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
+function reject(s:MatchState,change:(s:any)=>void,message:string){const saved=serializeMatch(s),bad=JSON.parse(saved);change(bad);expect(()=>restoreMatch(bad)).toThrow(message);expect(serializeMatch(s)).toBe(saved);}
+// Isolated H=80 arithmetic remains in the independent oracle. This real route has H=128.
+describe('B8 live gold before interest, randomized direct loot',()=>{
+ it.each([{gold:9,basis:10,interest:1,after:16,hp:136},{gold:49,basis:50,interest:5,after:60,hp:168},{gold:50,basis:51,interest:5,after:61,hp:168}])('$gold G plus earned 1G settles to $after once, across exact restore/Continue',v=>{
+  expect(preparation).toMatchObject({gold:65,playerHp:73,level:4,augmentProgress:{investmentHp:128}});
+  let before=preparation;
+  if(v.gold%2===0)before=accepted(api.buyUnit(before,0,before.shop.generation));
+  while(before.gold>v.gold)before=accepted(api.rerollShop(before));
+  expect(before.gold).toBe(v.gold);roundTrip(before);
+  const l=battle(before),s=l.ended;
+  expect(battle(roundTrip(before))).toEqual(l);
+  expect(s.phase).toBe('settlement');expect(s.pendingChoice).toBeNull();
+  expect(s.roundResults.at(-1)).toMatchObject({roundId:'2-7',result:'playerWin',combatTicks:205,combatEventCount:217,interestBasis:v.basis,goldBefore:v.basis,goldAfter:v.after,incomeBreakdown:{base:5,win:0,interest:v.interest,streak:0}});
+  expect(s.gold).toBe(v.after);expect(s.augmentProgress.investmentHp).toBe(v.hp);
+  expect(s.augmentProgress.investmentHp).toBe(before.augmentProgress.investmentHp+8*v.interest);
+  const drops=plan(before).encounterPlan.drops,ids=new Set(drops.map(d=>d.dropId));
+  expect(drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'cloak',quantity:1},{kind:'item',definitionId:'rod',quantity:1},{kind:'gold',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
+  const receipts=s.m8.loot.receipts.filter(r=>ids.has(r.dropId));expect(receipts.map(r=>r.payload)).toEqual(drops.map(d=>d.payload));
+  expect(receipts.slice(0,2).map(r=>r.grantedItemIds)).toEqual([['item-5'],['item-6']]);
+  expect(s.nextUnitSerial).toBe(before.nextUnitSerial);expect(s.nextItemSerial).toBe(7);
+  expect(s.scheduleReceipts).toEqual(before.scheduleReceipts);expect(s.m8.loot.frozen).toEqual(before.m8.loot.frozen);
+  for(const key of ['rngState','choiceRngState','rewardRngState','equipmentState'] as const)expect(s[key]).toEqual(before[key]);
+  expect(s.combatInputBasis).toEqual(l.started.combatInputBasis);
+  expect(l.events.filter(e=>e.type==='roundSettled')).toHaveLength(1);
+  expect(l.events.filter(e=>e.type==='lootGranted')).toHaveLength(4);
+  for(const x of [s,roundTrip(s)]){
+   expect(api.stepMatch(x)).toEqual({state:x,events:[]});
+   expect(api.startMatchCombat(x)).toEqual({ok:false,state:x,reason:'wrong-phase'});
+   expect(api.selectChoice(x,'obsolete-pve-choice',0,'tear')).toEqual({ok:false,state:x,reason:'wrong-phase'});
+  }
+  reject(s,x=>{x.gold++;},'current settlement totals');
+  reject(s,x=>{x.roundResults.at(-1).interestBasis--;},'history income');
+  reject(s,x=>{x.augmentProgress.investmentHp+=8;},'investment');
+  reject(s,x=>{x.m8.loot.receipts.find((r:any)=>r.dropId===drops[2].dropId).payload.quantity=2;},'frozen receipt payload');
+  const next=accepted(api.nextRound(s,10));expect(api.nextRound(roundTrip(s),10)).toEqual(api.nextRound(s,10));roundTrip(next);
+  expect(next).toMatchObject({roundDefinitionId:'3-1',gold:v.after,augmentProgress:{investmentHp:v.hp},combat:null,combatInputBasis:null});
+  expect(next.resourceProvenance).toEqual(s.resourceProvenance);expect(next.m8.loot.receipts).toEqual(s.m8.loot.receipts);
+  expect(api.nextRound(next,10)).toEqual({ok:false,state:next,reason:'wrong-phase'});
+ });
+});

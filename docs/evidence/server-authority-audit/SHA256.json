@@ -1,0 +1,5 @@
+{
+  "scripts/verify-server-engine-portability.cjs": "dcfb7b4a1f03f2b41ba422fe180f2acf4ef8370a4f40174981f56b0f191c16ef",
+  "docs/evidence/server-authority-audit/report.json": "5e2651ce2dd6241f4378c022ba0a864cbde763fe17131451f7187600011e2beb",
+  "docs/evidence/server-authority-audit/first-run.txt": "ba2835fb00c1ec2fb7ebd345e85227d66b5e11612b65ccdbf0326c29f0fdad09"
+}

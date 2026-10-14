@@ -1,0 +1,14 @@
+{
+  "contentDigest": "fnv1a32-utf16:bd9c3a8e",
+  "lootReplayDigest": "fnv1a32-utf16:5cd0487c",
+  "rulesVersion": "s13-rules-gap-v1",
+  "schemaVersion": 7,
+  "previousContentDigest": "fnv1a32-utf16:96c9126d",
+  "previousLootReplayDigest": "fnv1a32-utf16:7b14bfba",
+  "traceHashes": {
+    "state": "c3bbaabe5691b9daafef58f943e05041cb28efb7f68e8d2c18178d00386cf413",
+    "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
+    "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+  },
+  "reason": "R3/R4 release after standalone T13-A: random loot, consumable schema/content including SR-C18 text and targetKind; canonical burn refresh preserves save fractional damage. Full traces intentionally differ; first combat remains pinned."
+}

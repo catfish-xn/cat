@@ -129,6 +129,9 @@ jobs:
           node scripts/ci-m5-step.cjs m6-layout node scripts/m6-layout-product-smoke.cjs "${args[@]}"
           if [ "$MODE" = dev ]; then
             node scripts/ci-m5-step.cjs m6-storage node scripts/verify-m6-storage.cjs
+            node scripts/ci-m5-step.cjs m8-b9-legacy node scripts/verify-m8-b9-legacy.cjs
+            node scripts/ci-m5-step.cjs m8-u7-compat node scripts/verify-m8-u7-compat.cjs
+            node scripts/ci-m5-step.cjs m8-b9-archives node scripts/verify-m8-b9-archives.cjs
             node scripts/ci-m5-step.cjs m6-components node tests/m6-stats-browser.cjs
             node scripts/ci-m5-step.cjs m6-performance node scripts/verify-m6-performance.cjs
             node scripts/ci-m5-step.cjs m6-retry node tests/m6-persistence-retry.cjs
@@ -139,6 +142,80 @@ jobs:
         with:
           name: m5-input-${{ matrix.mode }}-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           path: artifacts/
+  m8-u3-dynamic:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: m8-u3-dynamic
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      M5_JOB_KEY: m8-u3-dynamic
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - name: Desktop equipment previews and native board drops (UR-U3-08)
+        run: node scripts/ci-m5-step.cjs m8-u3-dynamic node scripts/verify-m8-u3-dynamic.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m8-u3-dynamic-${{ env.M5_COMMIT_SHA }}
+          path: |
+            artifacts/m8-u3-dynamic/
+            artifacts/m5-ci-timing-m8-u3-dynamic/
+  m8-u6-loot:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: m8-u6-loot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      M5_JOB_KEY: m8-u6-loot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: node scripts/ci-m5-step.cjs install npm ci
+      - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
+      - name: Live loot panel, loot pick, capacity wait and terminal record (U6)
+        run: node scripts/ci-m5-step.cjs m8-u6-loot node scripts/verify-m8-u6-loot.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m8-u6-loot-${{ env.M5_COMMIT_SHA }}
+          path: |
+            artifacts/m8-u6-loot/
+            artifacts/m5-ci-timing-m8-u6-loot/
+  m6-retention:
+    if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
+    name: m6-retention
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.M5_COMMIT_SHA }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Independent native resources through the real application
+        run: npm run test:retention
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: m6-retention-${{ env.M5_COMMIT_SHA }}
+          path: artifacts/m6-retention/
   m7-presentation:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: m7-presentation-sample${{ matrix.sample }}
@@ -162,11 +239,15 @@ jobs:
       - run: node scripts/ci-m5-step.cjs install npm ci
       - run: node scripts/ci-m5-step.cjs browser-install npx playwright install --with-deps chromium
       - run: node scripts/ci-m5-step.cjs build npm run build
-      - name: Signed-off M6 build for paired budgets
+      - name: Signed-off M6 interaction and M7 JS budget builds
         run: |
           git worktree add ../m6-base 631c131f1f2fd387c873f0fd8b5a238bca79dbe0
           ln -s "$PWD/node_modules" ../m6-base/node_modules
           (cd ../m6-base && npx vite build)
+          # M8_PLAN §7.6: production JS gzip <= signed-off M7 x 1.30 (M8-only; budget plan §7, 2026-10-10).
+          git worktree add ../m7-js-base 15313a75c6e74beec739fe52a2875c104c55eae3
+          ln -s "$PWD/node_modules" ../m7-js-base/node_modules
+          (cd ../m7-js-base && npx vite build)
       - name: M7 presentation, five viewports, sub-path deploy and budgets
         run: |
           mkdir -p artifacts
@@ -175,7 +256,7 @@ jobs:
           node scripts/ci-m5-step.cjs m7-presentation node scripts/verify-m7-presentation.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-presentation
           node scripts/ci-m5-step.cjs m7-screens node scripts/m7-screens.cjs --url=http://127.0.0.1:4173 --out=artifacts/m7-screens
           node scripts/ci-m5-step.cjs m7-subpath node scripts/verify-m7-subpath.cjs
-          node scripts/ci-m5-step.cjs m7-budget node scripts/m7-budget.cjs --base=../m6-base/dist --current=dist --out=artifacts/m7-budget
+          node scripts/ci-m5-step.cjs m7-budget node scripts/m7-budget.cjs --base=../m6-base/dist --js-base=../m7-js-base/dist --current=dist --out=artifacts/m7-budget
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -184,7 +265,7 @@ jobs:
   compare-evidence:
     if: ${{ !inputs.heap_diagnostics && !inputs.warmup_experiment }}
     name: compare-evidence-sample${{ matrix.sample }}
-    needs: [test-and-build, chromium-match, chromium-input]
+    needs: [test-and-build, chromium-match, chromium-input, m6-retention, m8-u6-loot]
     runs-on: ubuntu-24.04
     timeout-minutes: 6 # Three measured comparison jobs, including artifact transfer.
     strategy:
@@ -197,12 +278,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+      # The final comparator recomputes the B8 Rageblade attack interval with the domain's readCombatStats.
+      - run: npm ci
       - uses: actions/download-artifact@v4
         with:
           pattern: m5-*-sample${{ matrix.sample }}-${{ env.M5_COMMIT_SHA }}
           merge-multiple: true
           path: artifacts/
+      - uses: actions/download-artifact@v4
+        with:
+          name: m8-u6-loot-${{ env.M5_COMMIT_SHA }}
+          path: u6-evidence/
       - run: node scripts/compare-m5-evidence.cjs --final
+        env:
+          M8_U6_EVIDENCE_DIR: u6-evidence
       - run: node scripts/compare-m6-evidence.cjs
       - uses: actions/upload-artifact@v4
         if: always()

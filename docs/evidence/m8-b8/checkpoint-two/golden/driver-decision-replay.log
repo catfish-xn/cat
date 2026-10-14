@@ -1,0 +1,6 @@
+(node:8) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"node":"v22.23.3","build":"cannon","commands":194,"battles":33,"exactUnmodifiedDriverDecisionReplay":"passed"}
+{"node":"v22.23.3","build":"sniper","commands":182,"battles":33,"exactUnmodifiedDriverDecisionReplay":"passed"}
+{"node":"v22.23.3","build":"mage","commands":176,"battles":33,"exactUnmodifiedDriverDecisionReplay":"passed"}
+{"node":"v22.23.3","build":"sniper-caitlyn","commands":185,"battles":33,"exactUnmodifiedDriverDecisionReplay":"passed"}

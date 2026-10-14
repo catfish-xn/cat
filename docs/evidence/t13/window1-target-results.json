@@ -1,0 +1,731 @@
+{
+  "baseline": "b198f822ff60de6ca77819472aa60f607bc4f016",
+  "node": "v24.21.0",
+  "typecheck": "passed",
+  "command": "npx vitest run tests/server/room.test.ts tests/server/bot-driver.test.ts tests/server/round-commit.test.ts tests/m8-b5-instances.test.ts tests/t13-golden.test.ts tests/m8-b10-temporary-replay.test.ts tests/m8-b8-resource-provenance.test.ts tests/shared-pool*.test.ts tests/tp-shared-pool.test.ts",
+  "files": 9,
+  "passed": 133,
+  "failed": 0,
+  "skipped": 0,
+  "testResults": [
+    {
+      "file": "tests/m8-b10-temporary-replay.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "B10 temporary equipment replay rebuild records the temporary children in the battle context and rebuilds the identical terminal",
+          "status": "passed",
+          "durationMs": 283.539
+        },
+        {
+          "title": "B10 temporary equipment replay rebuild plays at 1×, 2× and 4× from tick 0 and seeks to the same states as the live battle",
+          "status": "passed",
+          "durationMs": 1778.728
+        },
+        {
+          "title": "B10 temporary equipment replay rebuild rejects a record whose context forges, drops or moves a temporary child",
+          "status": "passed",
+          "durationMs": 70.499
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b5-instances.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "B5 permanent equipment constraints and atomic commands blue-buff is unique per holder, not per inventory or team",
+          "status": "passed",
+          "durationMs": 3646.015
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands last-whisper is unique per holder, not per inventory or team",
+          "status": "passed",
+          "durationMs": 1995.086
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands quicksilver is unique per holder, not per inventory or team",
+          "status": "passed",
+          "durationMs": 2455.631
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands allows three nonunique copies but refuses a fourth without spending resources or event IDs",
+          "status": "passed",
+          "durationMs": 4120.38
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands three-slot item requested at 0 uses canonical parent slot 0 and reserves all slots",
+          "status": "passed",
+          "durationMs": 3173.352
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands three-slot item requested at 1 uses canonical parent slot 0 and reserves all slots",
+          "status": "passed",
+          "durationMs": 40.796
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands three-slot item requested at 2 uses canonical parent slot 0 and reserves all slots",
+          "status": "passed",
+          "durationMs": 44.024
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands cannot equip an exclusive parent over an ordinary item in slot 0",
+          "status": "passed",
+          "durationMs": 6.108
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands cannot equip an exclusive parent over an ordinary item in slot 1",
+          "status": "passed",
+          "durationMs": 4.964
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands cannot equip an exclusive parent over an ordinary item in slot 2",
+          "status": "passed",
+          "durationMs": 5.622
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands phase then identity then input then conflicts; same item has the frozen reason",
+          "status": "passed",
+          "durationMs": 15.895
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands successful combine consumes exactly two IDs and one serial; stale replay fails atomically",
+          "status": "passed",
+          "durationMs": 2024.759
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands restore rejects invalid unique, exclusive or parent-slot placements",
+          "status": "passed",
+          "durationMs": 4118.836
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands restore rejects invalid unique, exclusive or parent-slot placements",
+          "status": "passed",
+          "durationMs": 19.076
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands restore rejects invalid unique, exclusive or parent-slot placements",
+          "status": "passed",
+          "durationMs": 20.669
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands upgrade does not bypass blue-buff / blue-buff placement constraints",
+          "status": "passed",
+          "durationMs": 0.589
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands upgrade does not bypass thiefs-gloves / sword placement constraints",
+          "status": "passed",
+          "durationMs": 0.189
+        },
+        {
+          "title": "B5 permanent equipment constraints and atomic commands upgrade does not bypass sword / thiefs-gloves placement constraints",
+          "status": "passed",
+          "durationMs": 0.625
+        }
+      ]
+    },
+    {
+      "file": "tests/m8-b8-resource-provenance.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "B8 provenance shared stock/delta algebra moves 300 stock and 70 pending delta separately, yielding the independent 370 vector",
+          "status": "passed",
+          "durationMs": 3.979
+        },
+        {
+          "title": "B8 provenance shared stock/delta algebra follows a changed survivor through the second merge, including a dead source delta",
+          "status": "passed",
+          "durationMs": 0.695
+        },
+        {
+          "title": "B8 provenance shared stock/delta algebra accepts nonnegative integer algebra without weakening domain growth validation",
+          "status": "passed",
+          "durationMs": 1.642
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections initializes the only opening identity and independent immutable appends",
+          "status": "passed",
+          "durationMs": 3.263
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections projects any prefix while authenticating the complete stream and later receipts",
+          "status": "passed",
+          "durationMs": 17.136
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects no opening",
+          "status": "passed",
+          "durationMs": 1.155
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects duplicate opening",
+          "status": "passed",
+          "durationMs": 0.8
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects wrong opening unit",
+          "status": "passed",
+          "durationMs": 0.888
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects wrong opening round",
+          "status": "passed",
+          "durationMs": 0.673
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects wrong first source",
+          "status": "passed",
+          "durationMs": 0.458
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects noncontinuous sequence",
+          "status": "passed",
+          "durationMs": 0.353
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects extra state authority",
+          "status": "passed",
+          "durationMs": 0.201
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects future rounds, descending catalog order, missing fields and bad prefix bounds",
+          "status": "passed",
+          "durationMs": 1.728
+        },
+        {
+          "title": "B8 provenance opening, append and prefix projections rejects unsupported JSON values and prototype-bearing records",
+          "status": "passed",
+          "durationMs": 1.686
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain binds a received candidate even when it is immediately consumed; folds legal 1000 Bps",
+          "status": "passed",
+          "durationMs": 1.99
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain follows an actual two-level chain with changing survivor and no dead-source filter",
+          "status": "passed",
+          "durationMs": 1.337
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects deleted, duplicated and forged receipt births",
+          "status": "passed",
+          "durationMs": 3.289
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain requires every valid receipt birth, including a fully consumed component",
+          "status": "passed",
+          "durationMs": 2.758
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade missing consumption",
+          "status": "passed",
+          "durationMs": 0.826
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade duplicate consumed ID",
+          "status": "passed",
+          "durationMs": 0.656
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade survivor consumed",
+          "status": "passed",
+          "durationMs": 1.078
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade wrong definition",
+          "status": "passed",
+          "durationMs": 1.133
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade wrong star",
+          "status": "passed",
+          "durationMs": 0.588
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade illegal star jump",
+          "status": "passed",
+          "durationMs": 0.83
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade absent source",
+          "status": "passed",
+          "durationMs": 0.57
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade old acquisition",
+          "status": "passed",
+          "durationMs": 0.582
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade self reference",
+          "status": "passed",
+          "durationMs": 0.608
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects upgrade wrong event shape",
+          "status": "passed",
+          "durationMs": 0.767
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain rejects a nonconsecutive transaction, duplicate consumption and a forged reverse cycle",
+          "status": "passed",
+          "durationMs": 1.321
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain enforces shop structural boundaries without claiming RNG or command-history authenticity",
+          "status": "passed",
+          "durationMs": 2.696
+        },
+        {
+          "title": "B8 provenance receipt, birth and consumption chain recomputes star-dependent sale price and deletes growth without reusing unit serials",
+          "status": "passed",
+          "durationMs": 4.13
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement records empty deltas too and rejects a missing or repeated settlement",
+          "status": "passed",
+          "durationMs": 1.767
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth combat identity",
+          "status": "passed",
+          "durationMs": 1.002
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth settlement identity",
+          "status": "passed",
+          "durationMs": 0.96
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth negative delta",
+          "status": "passed",
+          "durationMs": 0.761
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth zero delta",
+          "status": "passed",
+          "durationMs": 1.027
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth illegal 30/40 algebra in a save",
+          "status": "passed",
+          "durationMs": 0.753
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth duplicate source",
+          "status": "passed",
+          "durationMs": 0.971
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth unsorted source",
+          "status": "passed",
+          "durationMs": 0.673
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth non-Tristana source",
+          "status": "passed",
+          "durationMs": 0.665
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth post-start candidate",
+          "status": "passed",
+          "durationMs": 0.936
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth unknown source",
+          "status": "passed",
+          "durationMs": 0.884
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth future prefix",
+          "status": "passed",
+          "durationMs": 0.788
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth prefix before previous commit",
+          "status": "passed",
+          "durationMs": 0.63
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth prefix inside acquisition",
+          "status": "passed",
+          "durationMs": 0.683
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects growth prefix after upgrade revives consumed source",
+          "status": "passed",
+          "durationMs": 0.854
+        },
+        {
+          "title": "B8 provenance growth identity, ownership and once-only settlement rejects a sale or shop acquisition between start-prefix and growth commit",
+          "status": "passed",
+          "durationMs": 1.408
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts rejects wrong recipe",
+          "status": "passed",
+          "durationMs": 0.91
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts rejects same component twice",
+          "status": "passed",
+          "durationMs": 0.507
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts rejects unborn component",
+          "status": "passed",
+          "durationMs": 4.522
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts rejects reversed canonical inputs",
+          "status": "passed",
+          "durationMs": 0.676
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts rejects skipped serial",
+          "status": "passed",
+          "durationMs": 0.542
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts rejects reused serial",
+          "status": "passed",
+          "durationMs": 0.425
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts rejects repeated consumption, a completed item as a component, and product double-birth",
+          "status": "passed",
+          "durationMs": 1.259
+        },
+        {
+          "title": "B8 provenance item recipes, continuous product serials and receipts reads item identity only from its loot receipt and rejects unbound or late receipts",
+          "status": "passed",
+          "durationMs": 1.394
+        },
+        {
+          "title": "B8 provenance known historical operation boundaries rejects post-settlement shop purchases and preparation sales",
+          "status": "passed",
+          "durationMs": 0.954
+        },
+        {
+          "title": "B8 provenance known historical operation boundaries T12 accepts an owned legal combination after historical settlement",
+          "status": "passed",
+          "durationMs": 0.616
+        },
+        {
+          "title": "B8 provenance known historical operation boundaries T12 permits supply combinations while purchases and sales remain rejected",
+          "status": "passed",
+          "durationMs": 1.042
+        },
+        {
+          "title": "B8 provenance known historical operation boundaries permits a same-round capacity receipt only after its real candidate birth",
+          "status": "passed",
+          "durationMs": 0.979
+        },
+        {
+          "title": "B8 provenance known historical operation boundaries rejects array-coerced definition and source identities at the JSON boundary",
+          "status": "passed",
+          "durationMs": 1.142
+        },
+        {
+          "title": "B8 provenance loot cannot become a same-round combat input rejects a forged start prefix that grants current-combat growth to its loot candidate",
+          "status": "passed",
+          "durationMs": 0.828
+        },
+        {
+          "title": "B8 provenance loot cannot become a same-round combat input rejects a same-round item receipt hidden inside the start prefix, even with empty delta",
+          "status": "passed",
+          "durationMs": 0.521
+        },
+        {
+          "title": "B8 provenance loot cannot become a same-round combat input still accepts same-round shop Tristana in the real pre-combat prefix",
+          "status": "passed",
+          "durationMs": 0.458
+        },
+        {
+          "title": "B8 provenance loot cannot become a same-round combat input still accepts a capacity candidate after commitment, eligible for the next round only",
+          "status": "passed",
+          "durationMs": 0.979
+        }
+      ]
+    },
+    {
+      "file": "tests/shared-pool-cache.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "shared loot validation cache boundaries matches uncached JSON transactions through a real PvE reward and preserves all events",
+          "status": "passed",
+          "durationMs": 625.721
+        },
+        {
+          "title": "shared loot validation cache boundaries rejects replaced, shallow-frozen and deep-frozen forged ledgers after warming the cache",
+          "status": "passed",
+          "durationMs": 12.908
+        },
+        {
+          "title": "shared loot validation cache boundaries does not trust a mutable ledger/layout after an earlier successful check",
+          "status": "passed",
+          "durationMs": 8.93
+        }
+      ]
+    },
+    {
+      "file": "tests/t13-golden.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "T13 records independent full-route audits while preserving the T12 golden bytes",
+          "status": "passed",
+          "durationMs": 13.5
+        }
+      ]
+    },
+    {
+      "file": "tests/tp-shared-pool.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "TP finite shop transactions uses exactly the existing 19 heroes and Riot 30/25/18/10/9; all opening gifts precede shops",
+          "status": "passed",
+          "durationMs": 73.075
+        },
+        {
+          "title": "TP finite shop transactions two seats competing for the last copy cannot both display it; purchase moves the reservation",
+          "status": "passed",
+          "durationMs": 15.218
+        },
+        {
+          "title": "TP finite shop transactions uses remaining-copy weights, consumes exactly two words per nonempty slot, and never retries empties",
+          "status": "passed",
+          "durationMs": 8.637
+        },
+        {
+          "title": "TP finite shop transactions renormalizes only positive-probability tiers and cannot draw an unavailable tier at level 1",
+          "status": "passed",
+          "durationMs": 14.348
+        },
+        {
+          "title": "TP finite shop transactions reroll refunds unused offers first; generation protects duplicate reroll and empty rerolls fail for free",
+          "status": "passed",
+          "durationMs": 10.767
+        },
+        {
+          "title": "TP finite shop transactions insufficient gold, full bench, bad slot and stale generation preserve pool, state and RNG",
+          "status": "passed",
+          "durationMs": 27.872
+        },
+        {
+          "title": "TP finite shop transactions merges 3 base sources through real upgrades and returns them once on sale",
+          "status": "passed",
+          "durationMs": 17.973
+        },
+        {
+          "title": "TP finite shop transactions merges 9 base sources through real upgrades and returns them once on sale",
+          "status": "passed",
+          "durationMs": 14.255
+        },
+        {
+          "title": "TP finite shop transactions releases all shops and real holdings once after elimination; archived army is not sellable",
+          "status": "passed",
+          "durationMs": 14.585
+        },
+        {
+          "title": "TP finite shop transactions rejects copied unowned units, foreign pool bindings, and malformed capacity configurations",
+          "status": "passed",
+          "durationMs": 14.218
+        },
+        {
+          "title": "TP whole-room natural refresh all eight release before any draw, deterministic seeded order rotates, locks retain generation/reservations",
+          "status": "passed",
+          "durationMs": 135.163
+        },
+        {
+          "title": "TP whole-room natural refresh the first seat in a new round can draw the old last seat reservation (release barrier)",
+          "status": "passed",
+          "durationMs": 11.183
+        },
+        {
+          "title": "TP whole-room natural refresh missing seats and a late wrong-phase state reject the entire batch unchanged",
+          "status": "passed",
+          "durationMs": 5.945
+        },
+        {
+          "title": "TP whole-room natural refresh mixed eight-seat command history is reproducible and conserves after every success and rejection",
+          "status": "passed",
+          "durationMs": 352.068
+        }
+      ]
+    },
+    {
+      "file": "tests/server/bot-driver.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "BotDriver: whole matches (§13.3) plays eight bots from the first round to a unique ranking; every intention is accepted by the rules",
+          "status": "passed",
+          "durationMs": 57639.228
+        },
+        {
+          "title": "BotDriver: whole matches (§13.3) plays one idle human and seven bots through the lobby to a unique ranking; the human seat is never driven",
+          "status": "passed",
+          "durationMs": 37171.715
+        },
+        {
+          "title": "BotDriver: scheduling behaves the same for the same input: identical intentions, policy streams and seat states",
+          "status": "passed",
+          "durationMs": 7707.978
+        },
+        {
+          "title": "BotDriver: scheduling draws the policy stream from its own derivation, never from the room stream",
+          "status": "passed",
+          "durationMs": 36.036
+        },
+        {
+          "title": "BotDriver: scheduling spreads steps over the phase on the clock instead of firing them all at the deadline",
+          "status": "passed",
+          "durationMs": 21.238
+        },
+        {
+          "title": "BotDriver: scheduling caps every seat at maxSteps attempts per round and keeps the count across phases",
+          "status": "passed",
+          "durationMs": 2446.171
+        },
+        {
+          "title": "BotDriver: scheduling stops a seat for the rest of the round after one refusal (policy answers done) and plays again next round",
+          "status": "passed",
+          "durationMs": 428.992
+        },
+        {
+          "title": "BotDriver: disconnect takeover (§13.3 item 1) hands a seat to a bot only after takeoverMs disconnected, and back at once on resume; one controller at a time",
+          "status": "passed",
+          "durationMs": 28.049
+        },
+        {
+          "title": "BotDriver: disconnect takeover (§13.3 item 1) does not take over a seat whose player came back in time, nor a fill-in bot seat or a seat in a finished room",
+          "status": "passed",
+          "durationMs": 20.885
+        },
+        {
+          "title": "BotDriver: disconnect takeover (§13.3 item 1) refuses a step that was already queued when the player resumed (control generation)",
+          "status": "passed",
+          "durationMs": 19.796
+        }
+      ]
+    },
+    {
+      "file": "tests/server/room.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "Room: start and command gate opens with exactly eight seats, room-derived seeds and one authoritative HP per seat",
+          "status": "passed",
+          "durationMs": 113.364
+        },
+        {
+          "title": "Room: start and command gate rejects commands from unknown seats and in the wrong phase without touching any reference",
+          "status": "passed",
+          "durationMs": 77.412
+        },
+        {
+          "title": "Room: start and command gate passes a preparation command to the rules and keeps a rules refusal free of side effects",
+          "status": "passed",
+          "durationMs": 69.44
+        },
+        {
+          "title": "Room: settlement commits nothing when one battle of the round throws",
+          "status": "passed",
+          "durationMs": 31.927
+        },
+        {
+          "title": "Room: settlement faults instead of committing a round whose results miss a seat",
+          "status": "passed",
+          "durationMs": 75.664
+        },
+        {
+          "title": "Room: settlement applies the same RoundSettlement only once",
+          "status": "passed",
+          "durationMs": 48.788
+        },
+        {
+          "title": "Room: settlement ranks several seats that reach zero in the same round uniquely, independent of result order",
+          "status": "passed",
+          "durationMs": 62.534
+        },
+        {
+          "title": "Room: settlement gives every seat a unique final rank when all eight reach zero together",
+          "status": "passed",
+          "durationMs": 73.659
+        },
+        {
+          "title": "Room: settlement uses the raw HP before the seat order when zero is reached from different heights",
+          "status": "passed",
+          "durationMs": 33.595
+        },
+        {
+          "title": "Room: real resolver end to end runs a whole idle match on the manual clock until the rules decide it",
+          "status": "passed",
+          "durationMs": 26907.117
+        },
+        {
+          "title": "Room: real resolver end to end pairs survivors on pvp rounds and freezes two seats per real pairing",
+          "status": "passed",
+          "durationMs": 2830.964
+        },
+        {
+          "title": "Room: choice window and stuck seats opens a choice window at a round with a pending choice and moves on as soon as every seat chose",
+          "status": "passed",
+          "durationMs": 2801.097
+        },
+        {
+          "title": "Room: choice window and stuck seats re-arms the settlement a bounded number of times for a seat the rules refuse to advance, then faults",
+          "status": "passed",
+          "durationMs": 25.435
+        }
+      ]
+    },
+    {
+      "file": "tests/server/round-commit.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "title": "Room: whole-round commit through T3 receipts publishes the round once: every seat HP is the rules' playerHp and each real seat holds exactly one receipt",
+          "status": "passed",
+          "durationMs": 5299.112
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts applies the same round commit only once",
+          "status": "passed",
+          "durationMs": 3570.809
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts discards the whole round when one receipt fails: no HP, no receipt, no state change for anyone",
+          "status": "passed",
+          "durationMs": 3613.462
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts never commits the mirror proposal; the mirror source settles through its own pairing",
+          "status": "passed",
+          "durationMs": 2946.06
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts eliminates seats round by round down to a unique ranking (overtime after 6-7, B7), and ranks later eliminations better",
+          "status": "passed",
+          "durationMs": 22983.345
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts ranks three seats that reach zero in one round by raw HP, then HP before, then seat index, in any arrival order",
+          "status": "passed",
+          "durationMs": 23.069
+        },
+        {
+          "title": "Room: whole-round commit through T3 receipts resolves choice and loot timeouts with the rules' commands, never with a client-style fallback",
+          "status": "passed",
+          "durationMs": 2336.393
+        }
+      ]
+    }
+  ]
+}

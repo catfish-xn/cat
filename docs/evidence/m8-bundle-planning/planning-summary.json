@@ -1,0 +1,62 @@
+{
+  "status": "approved-policy-pending-separate-gate-implementation",
+  "fixedBaseline": "87782695f864ba5d493d7a40c9c3652b48aacc86",
+  "baselineGzip9Bytes": 485743,
+  "signedM7Gzip9Bytes": 424763,
+  "forecastNotMeasurements": {
+    "U5": [
+      3000,
+      4500,
+      6500
+    ],
+    "B8": [
+      6000,
+      10000,
+      16000
+    ],
+    "U6": [
+      2000,
+      3500,
+      5500
+    ],
+    "B9": [
+      5000,
+      9000,
+      15000
+    ],
+    "U7": [
+      2000,
+      3500,
+      5500
+    ],
+    "Chinese names": [
+      0,
+      1500,
+      3000
+    ]
+  },
+  "aggregateLowCentralHigh": [
+    18000,
+    32000,
+    51500
+  ],
+  "forecastTotals": [
+    503743,
+    517743,
+    537243
+  ],
+  "proposedFactor": 1.3,
+  "effectiveCap": 552191,
+  "highScenarioReserve": 14948,
+  "approvedScope": "Remaining M8 only; M9 requires reassessment",
+  "centralOverrunStopMultiplier": 1.3,
+  "strictlyGreaterStopThresholds": {
+    "U5": 5850,
+    "B8": 13000,
+    "U6": 4550,
+    "B9": 11700,
+    "U7": 4550,
+    "Chinese names": 1950
+  },
+  "heroDescriptions": "Retain all 19; user explicitly declined trimming"
+}

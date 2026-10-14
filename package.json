@@ -8,19 +8,31 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",
+    "build:server": "node scripts/build-server.cjs",
+    "test:server-entry": "npm run build:server && node scripts/verify-t1-node-entry.cjs",
+    "build:game": "esbuild src/server/main.ts src/server/net/test-client.ts --bundle --platform=node --format=esm --target=node22.12 --packages=external --outdir=dist-server/game --out-extension:.js=.mjs --entry-names=[name] --log-level=warning",
+    "serve:game": "npm run build:game && node dist-server/game/main.mjs",
+    "client:game": "npm run build:game && node dist-server/game/test-client.mjs",
+    "dev:online": "run-p --race serve:game dev",
     "preview": "vite preview",
     "test:browser": "node scripts/verify-m5-browser.cjs",
     "test:preview": "node scripts/verify-m5-browser.cjs --preview",
     "test:headless": "node scripts/verify-m5-headless.cjs --multi-seed",
     "test:input": "node scripts/verify-m5-input.cjs",
     "test:input:preview": "node scripts/verify-m5-input.cjs --preview",
+    "test:retention": "node scripts/verify-m6-retention.cjs",
     "test:compare": "node scripts/compare-m5-evidence.cjs",
     "test:performance": "node scripts/verify-m5-headless.cjs --repeat=3"
   },
   "dependencies": {
-    "phaser": "^3.90.0"
+    "phaser": "^3.90.0",
+    "ws": "8.22.0"
   },
   "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/ws": "8.18.2",
+    "esbuild": "0.28.2",
+    "npm-run-all2": "9.0.3",
     "playwright": "1.63.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.0",

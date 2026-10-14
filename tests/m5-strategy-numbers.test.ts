@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createMatch, nextRound, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import type { Unit } from '../src/simulation/units';
-import { accepted, emptyBoard } from './match-helpers';
+import { accepted, emptyBoard, reachRound } from './match-helpers';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
 
@@ -165,7 +165,7 @@ describe('M5 six augments and permanent accumulation', () => {
     const state = augment(fixture(), 'placebo');
     expect(resolved(state).stats).toMatchObject({ baseAttackSpeedBps: 7000, attackSpeedBonusBps: 100 });
     expect(mechanisms(state)).toEqual([{ mechanic: 'acquisitionGold', values: { amount: 8 } }]);
-    expect(state.gold).toBe(10); // Compiling a snapshot must not grant acquisition gold again.
+    expect(state.gold).toBe(0); // Compiling a snapshot must not grant acquisition gold again.
   });
   it.each([
     ['manaflow-i', 'extraAttackMana', { amount: 2, backRowOnly: 1 }],
@@ -191,12 +191,12 @@ describe('M5 six augments and permanent accumulation', () => {
     expect(resolved(newcomer, 'later-purchase').stats.health).toBe(572);
   });
   it('two actual loss settlements count 4+5 interest and two rounds exactly once', () => {
-    let state = augment({ ...emptyBoard(), gold: 49 }, 'pumping-up-i', 'investment-strategy-i');
+    let state = augment({ ...emptyBoard(reachRound('2-1')), gold: 49 }, 'pumping-up-i', 'investment-strategy-i');
     state = accepted(startMatchCombat(state));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 1, investmentHp: 32 });
     expect(state.gold).toBe(58);
     expect(stepMatch(state).state).toBe(state);
-    state = accepted(nextRound(state, 1));
+    state = accepted(nextRound(state, state.round));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 1, investmentHp: 32 });
     state = accepted(startMatchCombat(state));
     expect(state.augmentProgress).toEqual({ pumpingRounds: 2, investmentHp: 72 });

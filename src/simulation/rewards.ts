@@ -4,6 +4,7 @@ import type { ItemInstance, ScheduleEvent, ScheduleReceipt } from './strategy-ty
 import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
 import { ROUND_SCHEDULE } from './round-schedule';
 import { nextRandom } from './rng';
+import { planPermanentItemGrant } from './item-grants';
 
 export interface RewardPlan {
   readonly items: readonly ItemInstance[];
@@ -26,7 +27,7 @@ export function planReward(state: MatchState, event: Extract<ScheduleEvent, { ki
   let nextItemSerial = state.nextItemSerial;
   let nextUnitSerial = state.nextUnitSerial;
   let preparation = state.preparation;
-  const items = [...state.items];
+  let items = state.items;
   const definitions = [...event.components];
   if (!Number.isSafeInteger(event.randomComponents) || event.randomComponents < 0 || !Number.isSafeInteger(event.gold) || event.gold < 0) throw new RangeError('Invalid reward');
   for (let i = 0; i < event.randomComponents; i++) {
@@ -37,9 +38,10 @@ export function planReward(state: MatchState, event: Extract<ScheduleEvent, { ki
   const itemIds: string[] = [];
   for (const definitionId of definitions) {
     if (ITEM_DEFINITIONS[definitionId]?.kind !== 'component') throw new RangeError(`Unknown reward component: ${definitionId}`);
-    const id = `item-${nextItemSerial++}`;
-    items.push({ id, definitionId, location: { kind: 'inventory' } });
-    itemIds.push(id);
+    const granted = planPermanentItemGrant({ items, nextItemSerial }, { definitionId, receiptId: event.id }, state.scheduleReceipts.map(receipt => receipt.eventId));
+    if (!granted.ok) throw new RangeError(`Invalid reward item grant: ${granted.reason}`);
+    ({ items, nextItemSerial } = granted.state);
+    itemIds.push(...granted.grantedItemIds);
   }
   let unitId: string | null = null;
   if (event.recruitIfEmpty && !preparation.units.some(unit => unit.team === 'player')) {

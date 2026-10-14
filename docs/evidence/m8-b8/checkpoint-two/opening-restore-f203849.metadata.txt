@@ -1,0 +1,20 @@
+head=f203849146ad735504d0a1306c755b522807c5fc
+tree=27f164ad3af81e74ea3ae728bc9db9706f3229ef
+utc_started=2026-10-10T05:12:53Z
+node=v24.19.0
+source_diff_before
+diagnostic_and_dependency_hashes
+5bc1f80873e1742873fc0993b6e8bba255db20d57c6081224f8cb8cc37caaf43  docs/evidence/m8-b8/checkpoint-two/diagnose-opening-restore.mjs
+b0b1862b4484f5651550331bc8aafcb0fe2c6d31a92b39162025d7639c1c6c7c  package.json
+3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f  package-lock.json
+other_worktree_changes
+ M tests/fixtures/m5/oracle.cjs
+?? docs/evidence/m8-b8/checkpoint-two/ci174-failure-diagnosis.md
+?? docs/evidence/m8-b8/checkpoint-two/diagnose-opening-restore.mjs
+?? docs/evidence/m8-b8/checkpoint-two/opening-restore-f203849.metadata.txt
+?? node_modules
+exit_code=0
+utc_finished=2026-10-10T05:12:55Z
+head_after=f203849146ad735504d0a1306c755b522807c5fc
+tree_after=27f164ad3af81e74ea3ae728bc9db9706f3229ef
+source_hashes_identical=true

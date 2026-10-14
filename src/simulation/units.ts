@@ -1,3 +1,7 @@
+import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
+import { attackInterval } from './m8/stats';
+import { validateNeutralInputs } from './m8/unit-inputs';
+import { validateManaDefinition } from './m8/mana';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
 import type { UnitDefinition } from './unit-types';
 import { freezeContent } from './content/freeze';
@@ -578,18 +582,30 @@ export const NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> =
     "traits": []
   }
 });
+/** ENCOUNTERS §3 permits cost 1 solely as a legacy display-type adapter, never an acquisition price.
+ * The authoritative neutral catalog has no cost; all purchasing/grants remain M5-catalog-only. */
+export const M8_NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = freezeContent(Object.fromEntries(
+  Object.values(NEUTRAL_DEFINITIONS).map(d => [d.id, {
+    id:d.id,name:d.name,symbol:'兽',color:9993582,cost:1,traits:[],unitKind:d.unitKind,monsterFamily:d.monsterFamily,
+    baseStats:{health:d.health,attack:d.attack,armor:d.armor,magicResist:d.magicResist},
+    attackRange:d.attackRange,attackIntervalTicks:attackInterval(d.baseAttackSpeedBps,0),baseAttackSpeedBps:d.baseAttackSpeedBps,
+    initialMana:d.initialMana,maxMana:d.maxMana,abilityId:neutralAbilityId(d),
+    baseCritChanceBps:d.baseCritChanceBps,baseCritMultiplierBps:d.baseCritMultiplierBps,
+  }])));
 export const M5_UNIT_IDS: readonly string[] = Object.freeze(Object.keys(M5_UNIT_DEFINITIONS).sort());
-export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS});
+export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
 /** Reject malformed IDs and fields without silently changing shop sampling. */
 export function validateUnitDefinitions(definitions: Readonly<Record<string,UnitDefinition>> = UNIT_DEFINITIONS, catalogByCost = SHOP_CATALOG_BY_COST): void {
   const integerAtLeast = (value:number,minimum:number) => Number.isSafeInteger(value) && value >= minimum;
   for (const [id, definition] of Object.entries(definitions)) {
+    validateManaDefinition(definition);
+    validateNeutralInputs(definition);
     const s=definition.baseStats;
     if (definition.id !== id || !/^[a-z][a-z0-9-]*$/.test(id) || !definition.name || !definition.symbol || !definition.abilityId
       || !integerAtLeast(definition.color,0) || definition.color>0xffffff || !integerAtLeast(definition.cost,1) || definition.cost>5
       || !integerAtLeast(s.health,1) || !integerAtLeast(s.attack,0) || !integerAtLeast(s.armor,0) || !integerAtLeast(s.magicResist,0)
       || !integerAtLeast(definition.attackRange,1) || !integerAtLeast(definition.attackIntervalTicks,1)
-      || !integerAtLeast(definition.maxMana,1) || !integerAtLeast(definition.initialMana,0) || definition.initialMana>definition.maxMana
+      || !integerAtLeast(definition.maxMana,0) || !integerAtLeast(definition.initialMana,0) || definition.initialMana>definition.maxMana
       || !Array.isArray(definition.traits) || new Set(definition.traits).size!==definition.traits.length
       || definition.traits.some(trait=>typeof trait!=='string'||!trait)) throw new RangeError(`Invalid unit definition: ${id}`);
   }

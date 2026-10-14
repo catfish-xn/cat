@@ -1,0 +1,58 @@
+[
+  {
+    "file": "run-final.json",
+    "rawBytes": 27547,
+    "rawSha256": "af87e924b99c0f2c4d966debd56163183c3bf99e9a147930e64d2a096dc2cbe6",
+    "gzipBytes": 2201,
+    "gzipSha256": "fbffbbd9aa90a3ba612ade3097a54884f405b2f8ab92ec0f349d4c15bbf9eb89"
+  },
+  {
+    "file": "jobs-final.json",
+    "rawBytes": 81176,
+    "rawSha256": "15cd62f82f3d11000cedfcd7bf222cdabe40449dae221e4cda649a6bc764d3d3",
+    "gzipBytes": 4999,
+    "gzipSha256": "fc2ffe3e8808e1f1c0ca1629f7ea45ee84c8f339198738817e958da244cb7f18"
+  },
+  {
+    "file": "artifacts-final.json",
+    "rawBytes": 8302,
+    "rawSha256": "967bae300a88a010ca6e9a3a1fe5e46f18c96d7d3653ddeafe74294ddc5d9337",
+    "gzipBytes": 1365,
+    "gzipSha256": "9336e5d53bebafc80611f39b54726171133a656ac91ed457728778e9354a3eb2"
+  },
+  {
+    "file": "artifact-integrity.json",
+    "rawBytes": 3431,
+    "rawSha256": "02165000079d6eebae099198a03976023b0da8972eaa97d87e90da7c910b3b65",
+    "gzipBytes": 944,
+    "gzipSha256": "82e2ff980c6c84e951d78dd6fad65ecb3dfe260cd9dfc8dda4c5656a2838d500"
+  },
+  {
+    "file": "RESULT.md",
+    "rawBytes": 3912,
+    "rawSha256": "1222b0bc98681b09256736f0eda429fff32eaaa2845462bd725d9996e96d9463",
+    "gzipBytes": 2067,
+    "gzipSha256": "1d94989381b780be16dab9012f10f8124a50beb6c3aa132e1bcd092ba5fc7630"
+  },
+  {
+    "file": "job-114152012079.log",
+    "rawBytes": 73134,
+    "rawSha256": "310293c824334308e984d936ae1ac8699bab1783e0b7d911a4832565822ccefd",
+    "gzipBytes": 16521,
+    "gzipSha256": "73221dd24886d64b55fed2ebfd3fe7a25227122279516789b77c2914dc47dc6a"
+  },
+  {
+    "file": "job-114152012025.log",
+    "rawBytes": 49608,
+    "rawSha256": "28263cb7930364a11ef32d11874403c456443eb1576c04e105e5035707fa922a",
+    "gzipBytes": 11597,
+    "gzipSha256": "ffd3cd33c504fd09bda335a126dfbc128e628127266a07e1e88cadab45247ffb"
+  },
+  {
+    "file": "m6-performance-failure.json",
+    "rawBytes": 9018,
+    "rawSha256": "f53173f24648e54fc9dcd8e5626de676599ecba38048f834530157d764568d04",
+    "gzipBytes": 2001,
+    "gzipSha256": "cba67d9ff58e14b375f7e4c3dc1fa83a05efa6fb50cd3c45920ff52c5d41e37f"
+  }
+]

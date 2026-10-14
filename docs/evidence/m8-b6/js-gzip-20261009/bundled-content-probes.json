@@ -1,0 +1,218 @@
+{
+  "fixed": [
+    {
+      "marker": "Enter a defensive stance and gain",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "src/simulation/content/source/s13-14.24.json",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "approvedSimplifications",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "championApiNames",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "variableConvention",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "No origin-trait effects",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "m6-fixed-start",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "__CAT_DEBUG__",
+      "assets": [
+        "index-DdMOBtRY.js"
+      ]
+    },
+    {
+      "marker": "m8b-encounters-project-v1",
+      "assets": []
+    },
+    {
+      "marker": "m8b-pve-project-v1",
+      "assets": []
+    },
+    {
+      "marker": "pve-minion-melee-a",
+      "assets": []
+    },
+    {
+      "marker": "neutral-encounter-compiler",
+      "assets": []
+    }
+  ],
+  "b6": [
+    {
+      "marker": "Enter a defensive stance and gain",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "src/simulation/content/source/s13-14.24.json",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "approvedSimplifications",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "championApiNames",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "variableConvention",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "No origin-trait effects",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "m6-fixed-start",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "__CAT_DEBUG__",
+      "assets": [
+        "index-DUu5xtPS.js"
+      ]
+    },
+    {
+      "marker": "m8b-encounters-project-v1",
+      "assets": []
+    },
+    {
+      "marker": "m8b-pve-project-v1",
+      "assets": []
+    },
+    {
+      "marker": "pve-minion-melee-a",
+      "assets": []
+    },
+    {
+      "marker": "neutral-encounter-compiler",
+      "assets": []
+    }
+  ],
+  "b7": [
+    {
+      "marker": "Enter a defensive stance and gain",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "https://raw.communitydragon.org/14.24/cdragon/tft/en_us.json",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "src/simulation/content/source/s13-14.24.json",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "approvedSimplifications",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "championApiNames",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "variableConvention",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "No origin-trait effects",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "m6-fixed-start",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "__CAT_DEBUG__",
+      "assets": [
+        "index-DESX2A9r.js"
+      ]
+    },
+    {
+      "marker": "m8b-encounters-project-v1",
+      "assets": []
+    },
+    {
+      "marker": "m8b-pve-project-v1",
+      "assets": []
+    },
+    {
+      "marker": "pve-minion-melee-a",
+      "assets": []
+    },
+    {
+      "marker": "neutral-encounter-compiler",
+      "assets": []
+    }
+  ]
+}

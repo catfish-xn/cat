@@ -1,0 +1,2356 @@
+{
+  "auditBaseSha": "39ca01c5ea20315f751f4d332ada1eedfc2ca225",
+  "runtimeFixSha": "6e0d902bcabafae09d49cabdfd9e897658858d7b",
+  "branch": "feat/m8-b4",
+  "scope": [
+    "R1",
+    "R2",
+    "R3a",
+    "R3b",
+    "R4",
+    "R5",
+    "H2"
+  ],
+  "notApplied": {
+    "frozenContractChanges": false,
+    "g12Changes": false,
+    "memoryGateChanges": false,
+    "bundleGateChanges": false,
+    "bundleOptimization": false,
+    "u4MergeIntoB4Branch": false
+  },
+  "parentReproduction": {
+    "sha": "39ca01c5ea20315f751f4d332ada1eedfc2ca225",
+    "testFiles": 3,
+    "tests": 39,
+    "failedTests": 16,
+    "passedTests": 23,
+    "genuine51SaveFailure": "Invalid Match save: status source/timing projection",
+    "logSha256": "7f73ab80af8f256ef54f7e36ead3478277fe302e63353672eae7e77d28f61095"
+  },
+  "checks": {
+    "targetedAudit": {
+      "files": 4,
+      "passedTests": 41,
+      "logSha256": "95ccde3fcae5278be185405b503306aba290806b4af0e21c3f2de07db5db1a97"
+    },
+    "b3AndGenericMechanisms": {
+      "command": "npm test -- tests/m8-b3-*.test.ts tests/m8-g*.test.ts --maxWorkers=2 --reporter=json",
+      "files": 21,
+      "passedTests": 156,
+      "b3OriginalFiles": 6,
+      "b3OriginalPassedTests": 78,
+      "results": [
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "B3 audit independent lifecycle and identity expectations"
+              ],
+              "fullName": "B3 audit independent lifecycle and identity expectations preserves frozen UTF-16 FNV hashes while avoiding per-character array allocation",
+              "status": "passed",
+              "title": "preserves frozen UTF-16 FNV hashes while avoiding per-character array allocation",
+              "duration": 3.2436569999999847,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 audit independent lifecycle and identity expectations"
+              ],
+              "fullName": "B3 audit independent lifecycle and identity expectations R1 real dragon claw: tick39 canonical save→restore→tick40 complete events equal and continued archive validates",
+              "status": "passed",
+              "title": "R1 real dragon claw: tick39 canonical save→restore→tick40 complete events equal and continued archive validates",
+              "duration": 199.06097699999987,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 audit independent lifecycle and identity expectations"
+              ],
+              "fullName": "B3 audit independent lifecycle and identity expectations R1 fallback direct heals also ignore Source property insertion order",
+              "status": "passed",
+              "title": "R1 fallback direct heals also ignore Source property insertion order",
+              "duration": 10.031003999999939,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 audit independent lifecycle and identity expectations"
+              ],
+              "fullName": "B3 audit independent lifecycle and identity expectations R2 real tick104 active shield rejects a consumed reward with positive remaining",
+              "status": "passed",
+              "title": "R2 real tick104 active shield rejects a consumed reward with positive remaining",
+              "duration": 106.76886399999967,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 audit independent lifecycle and identity expectations"
+              ],
+              "fullName": "B3 audit independent lifecycle and identity expectations R2 restore distinguishes pending zero, consumed zero and invalid reason/task combinations",
+              "status": "passed",
+              "title": "R2 restore distinguishes pending zero, consumed zero and invalid reason/task combinations",
+              "duration": 106.7350620000002,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 audit independent lifecycle and identity expectations"
+              ],
+              "fullName": "B3 audit independent lifecycle and identity expectations R2 shield conservation allows active, zero pending and consumed zero but rejects consumed positive",
+              "status": "passed",
+              "title": "R2 shield conservation allows active, zero pending and consumed zero but rejects consumed positive",
+              "duration": 1.083082000000104,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442475375,
+          "endTime": 1791442475804.083,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-b3-audit.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline irelia authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "irelia authorizes only its skill damage packets",
+              "duration": 63.00785100000002,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline maddie authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "maddie authorizes only its skill damage packets",
+              "duration": 9.256617000000006,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline darius authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "darius authorizes only its skill damage packets",
+              "duration": 7.802265000000034,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline lux authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "lux authorizes only its skill damage packets",
+              "duration": 12.509491999999966,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline zyra authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "zyra authorizes only its skill damage packets",
+              "duration": 5.066485,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline tristana authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "tristana authorizes only its skill damage packets",
+              "duration": 2.9531220000000076,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline urgot authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "urgot authorizes only its skill damage packets",
+              "duration": 3.5300019999999677,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline rell authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "rell authorizes only its skill damage packets",
+              "duration": 4.994411000000014,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline leona authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "leona authorizes only its skill damage packets",
+              "duration": 31.504065000000026,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline kogmaw authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "kogmaw authorizes only its skill damage packets",
+              "duration": 6.125262000000021,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline scar authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "scar authorizes only its skill damage packets",
+              "duration": 2.7170619999999985,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline ezreal authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "ezreal authorizes only its skill damage packets",
+              "duration": 7.096600000000024,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline loris authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "loris authorizes only its skill damage packets",
+              "duration": 40.06367700000004,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline nami authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "nami authorizes only its skill damage packets",
+              "duration": 2.9452999999999747,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline corki authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "corki authorizes only its skill damage packets",
+              "duration": 10.57687599999997,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline garen authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "garen authorizes only its skill damage packets",
+              "duration": 4.999160000000074,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline zoe authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "zoe authorizes only its skill damage packets",
+              "duration": 2.339366000000041,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline caitlyn authorizes only its skill damage packets",
+              "status": "passed",
+              "title": "caitlyn authorizes only its skill damage packets",
+              "duration": 5.205885999999964,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline Vander replaces the basic attack, drawing once; his resists stay100 with spell authorization",
+              "status": "passed",
+              "title": "Vander replaces the basic attack, drawing once; his resists stay100 with spell authorization",
+              "duration": 15.616263000000004,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline rolls A/B/C independently in target order: seed42 words .252/.088/.577",
+              "status": "passed",
+              "title": "rolls A/B/C independently in target order: seed42 words .252/.088/.577",
+              "duration": 1.8069050000000288,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline cancelled Maddie future shots cost zero words; the committed first shot retains its word",
+              "status": "passed",
+              "title": "cancelled Maddie future shots cost zero words; the committed first shot retains its word",
+              "duration": 9.00547199999994,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline Lux appended damage draws separately from the basic packet",
+              "status": "passed",
+              "title": "Lux appended damage draws separately from the basic packet",
+              "duration": 5.727173999999991,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline Tristana overflow retains its critical fact and waits for the next tick without drawing again",
+              "status": "passed",
+              "title": "Tristana overflow retains its critical fact and waits for the next tick without drawing again",
+              "duration": 5.742818000000057,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline G02 Gunblade uses positive shield+HP once, omits the caster from friendly healing",
+              "status": "passed",
+              "title": "G02 Gunblade uses positive shield+HP once, omits the caster from friendly healing",
+              "duration": 2.3172969999999395,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 existing nineteen champions on the G01–G03 pipeline"
+              ],
+              "fullName": "B3 existing nineteen champions on the G01–G03 pipeline aggregates frozen true-damage outcomes as HP only; shields and overkill stay separate",
+              "status": "passed",
+              "title": "aggregates frozen true-damage outcomes as HP only; shields and overkill stay separate",
+              "duration": 2.2885219999999435,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442476131,
+          "endTime": 1791442476400.2886,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-b3-integration.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "B2 A06/A07/R1 programs on the production tick pipeline"
+              ],
+              "fullName": "B2 A06/A07/R1 programs on the production tick pipeline Redemption100 selects one set, A0/B1 carry1500/3500; B leaves with state retained, A returns with3000",
+              "status": "passed",
+              "title": "Redemption100 selects one set, A0/B1 carry1500/3500; B leaves with state retained, A returns with3000",
+              "duration": 115.39468799999997,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B2 A06/A07/R1 programs on the production tick pipeline"
+              ],
+              "fullName": "B2 A06/A07/R1 programs on the production tick pipeline source death cancels Redemption future pulses while ally contribution continues to201",
+              "status": "passed",
+              "title": "source death cancels Redemption future pulses while ally contribution continues to201",
+              "duration": 39.101,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B2 A06/A07/R1 programs on the production tick pipeline"
+              ],
+              "fullName": "B2 A06/A07/R1 programs on the production tick pipeline burn strong terminal40 pays20 once; weak recovers60; refresh preserves source fractional remainder",
+              "status": "passed",
+              "title": "burn strong terminal40 pays20 once; weak recovers60; refresh preserves source fractional remainder",
+              "duration": 30.56653,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B2 A06/A07/R1 programs on the production tick pipeline"
+              ],
+              "fullName": "B2 A06/A07/R1 programs on the production tick pipeline night prevention naturally ending at30 grants1500AS once; control/immunity are independently removed",
+              "status": "passed",
+              "title": "night prevention naturally ending at30 grants1500AS once; control/immunity are independently removed",
+              "duration": 5.9604400000000055,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B2 A06/A07/R1 programs on the production tick pipeline"
+              ],
+              "fullName": "B2 A06/A07/R1 programs on the production tick pipeline post-damage cleanse removes hostile burn/wound/control and future attached tasks, retaining friendly immunity",
+              "status": "passed",
+              "title": "post-damage cleanse removes hostile burn/wound/control and future attached tasks, retaining friendly immunity",
+              "duration": 3.1467190000000187,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B2 A06/A07/R1 programs on the production tick pipeline"
+              ],
+              "fullName": "B2 A06/A07/R1 programs on the production tick pipeline R3 expiry of short status preserves an independent same-key timer and applies again at40",
+              "status": "passed",
+              "title": "R3 expiry of short status preserves an independent same-key timer and applies again at40",
+              "duration": 11.756614999999954,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B2 A06/A07/R1 programs on the production tick pipeline"
+              ],
+              "fullName": "B2 A06/A07/R1 programs on the production tick pipeline R3 cleanse of short status preserves an independent same-key timer and applies again at40",
+              "status": "passed",
+              "title": "R3 cleanse of short status preserves an independent same-key timer and applies again at40",
+              "duration": 11.004296999999951,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442476732,
+          "endTime": 1791442476950.0044,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-b3-periodic-integration.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts ordinary tick0 and active shields restore without new grants, events or random draws",
+              "status": "passed",
+              "title": "ordinary tick0 and active shields restore without new grants, events or random draws",
+              "duration": 207.9183869999997,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts stepping frozen sourced shields and declarations preserves every prior snapshot",
+              "status": "passed",
+              "title": "stepping frozen sourced shields and declarations preserves every prior snapshot",
+              "duration": 876.0449790000002,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts retained playback snapshots stay frozen and independent across advance, seek and disposal",
+              "status": "passed",
+              "title": "retained playback snapshots stay frozen and independent across advance, seek and disposal",
+              "duration": 1072.7157790000006,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects forged definitions without changing original state",
+              "status": "passed",
+              "title": "rejects forged definitions without changing original state",
+              "duration": 40.132400999999845,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects lost initialized marker without changing original state",
+              "status": "passed",
+              "title": "rejects lost initialized marker without changing original state",
+              "duration": 52.91315300000042,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects wrong combat namespace without changing original state",
+              "status": "passed",
+              "title": "rejects wrong combat namespace without changing original state",
+              "duration": 42.1588840000004,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects invented remainder without changing original state",
+              "status": "passed",
+              "title": "rejects invented remainder without changing original state",
+              "duration": 38.66910900000039,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects invented trigger consumption without changing original state",
+              "status": "passed",
+              "title": "rejects invented trigger consumption without changing original state",
+              "duration": 33.75264000000061,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects wrong HP basis without changing original state",
+              "status": "passed",
+              "title": "rejects wrong HP basis without changing original state",
+              "duration": 48.764368000000104,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects shield double absorption without changing original state",
+              "status": "passed",
+              "title": "rejects shield double absorption without changing original state",
+              "duration": 34.795772999999826,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects shield lost frozen record without changing original state",
+              "status": "passed",
+              "title": "rejects shield lost frozen record without changing original state",
+              "duration": 38.688945000000786,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects shield foreign identity without changing original state",
+              "status": "passed",
+              "title": "rejects shield foreign identity without changing original state",
+              "duration": 41.79794899999979,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch restore binds finite programs and accounting facts"
+              ],
+              "fullName": "B3 second batch restore binds finite programs and accounting facts rejects shield lost end declaration without changing original state",
+              "status": "passed",
+              "title": "rejects shield lost end declaration without changing original state",
+              "duration": 56.75743599999987,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442475361,
+          "endTime": 1791442477947.7573,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-b3-restore.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline two independent threshold shields use700−300=400 and grant250+250 once, following tick absorbs earliest shield",
+              "status": "passed",
+              "title": "two independent threshold shields use700−300=400 and grant250+250 once, following tick absorbs earliest shield",
+              "duration": 28.212079000000017,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline lethal two-packet batch never grants any of the four survival mechanisms",
+              "status": "passed",
+              "title": "lethal two-packet batch never grants any of the four survival mechanisms",
+              "duration": 4.156048999999996,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline same frozen threshold snapshot pays shield250 even if maxHP grows1000→1250 first; growth is not healing",
+              "status": "passed",
+              "title": "same frozen threshold snapshot pays shield250 even if maxHP grows1000→1250 first; growth is not healing",
+              "duration": 2.230415999999991,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline A10 two sources create one actual S13 heal35→23→20, with11/9 shares counted once",
+              "status": "passed",
+              "title": "A10 two sources create one actual S13 heal35→23→20, with11/9 shares counted once",
+              "duration": 5.435801000000026,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline immunity prevents Zyra control without cleansing preexisting states; prevention handles existing packets",
+              "status": "passed",
+              "title": "immunity prevents Zyra control without cleansing preexisting states; prevention handles existing packets",
+              "duration": 6.287571000000014,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline actual dragon claw preserves25/1000 per40tick instead of discarding fractional maxHP each pulse",
+              "status": "passed",
+              "title": "actual dragon claw preserves25/1000 per40tick instead of discarding fractional maxHP each pulse",
+              "duration": 21.978703999999993,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline Irelia actual layer preserves600=370+120+110 through save and end damage reads actual absorbed only",
+              "status": "passed",
+              "title": "Irelia actual layer preserves600=370+120+110 through save and end damage reads actual absorbed only",
+              "duration": 7.865120999999988,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline Corki multi-shot status identities encode canonical action/ordinal/target tuples",
+              "status": "passed",
+              "title": "Corki multi-shot status identities encode canonical action/ordinal/target tuples",
+              "duration": 3.9462500000000205,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline Garen existing passive also heals once on a positive basic attack, not only a cast",
+              "status": "passed",
+              "title": "Garen existing passive also heals once on a positive basic attack, not only a cast",
+              "duration": 2.932169999999985,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline Darius recast10→20 replaces next30 with40 as explicitly confirmed; originalfour integer total stays conserved",
+              "status": "passed",
+              "title": "Darius recast10→20 replaces next30 with40 as explicitly confirmed; originalfour integer total stays conserved",
+              "duration": 2.0633589999999913,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline R4 actual shield expiry emits70 area damage linked to original cast7 exactly once",
+              "status": "passed",
+              "title": "R4 actual shield expiry emits70 area damage linked to original cast7 exactly once",
+              "duration": 2.0630789999999593,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline R6 lethal240 against100HP removes all four attached tasks while combat continues",
+              "status": "passed",
+              "title": "R6 lethal240 against100HP removes all four attached tasks while combat continues",
+              "duration": 1.542071999999962,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 second batch on the actual S13 step pipeline"
+              ],
+              "fullName": "B3 second batch on the actual S13 step pipeline R6 source death keeps four legitimate attached bleeds on living target and consumes them without RNG",
+              "status": "passed",
+              "title": "R6 source death keeps four legitimate attached bleeds on living target and consumes them without RNG",
+              "duration": 27.991663000000017,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442477258,
+          "endTime": 1791442477375.9917,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-b3-second-integration.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R1 earlier magic100 sees MR100 =>50; own35 sees MR70 =>20 (other root=false)",
+              "status": "passed",
+              "title": "R1 earlier magic100 sees MR100 =>50; own35 sees MR70 =>20 (other root=false)",
+              "duration": 23.861595999999963,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R1 earlier magic100 sees MR100 =>50; own35 sees MR70 =>20 (other root=true)",
+              "status": "passed",
+              "title": "R1 earlier magic100 sees MR100 =>50; own35 sees MR70 =>20 (other root=true)",
+              "duration": 4.246842000000015,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R2 counter-only kill-or-assist subscription: kill",
+              "status": "passed",
+              "title": "R2 counter-only kill-or-assist subscription: kill",
+              "duration": 6.441778000000056,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R2 counter-only kill-or-assist subscription: assist",
+              "status": "passed",
+              "title": "R2 counter-only kill-or-assist subscription: assist",
+              "duration": 4.2714260000000195,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R2 counter-only kill-or-assist subscription: dead",
+              "status": "passed",
+              "title": "R2 counter-only kill-or-assist subscription: dead",
+              "duration": 1.5401150000000143,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R3 bound area[A,B] and explicit centerB survive JSON; execution makes no new draw",
+              "status": "passed",
+              "title": "R3 bound area[A,B] and explicit centerB survive JSON; execution makes no new draw",
+              "duration": 1.9220020000000204,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R3 explicit null does not borrow a stale bound target for center damage",
+              "status": "passed",
+              "title": "R3 explicit null does not borrow a stale bound target for center damage",
+              "duration": 0.4595490000000382,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R3 empty random candidates consume zero words and null never becomes a stale center",
+              "status": "passed",
+              "title": "R3 empty random candidates consume zero words and null never becomes a stale center",
+              "duration": 0.8872489999999971,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R4 aim excludes untargetable; path includes it; separate prevention=false",
+              "status": "passed",
+              "title": "R4 aim excludes untargetable; path includes it; separate prevention=false",
+              "duration": 12.570395000000019,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R4 aim excludes untargetable; path includes it; separate prevention=true",
+              "status": "passed",
+              "title": "R4 aim excludes untargetable; path includes it; separate prevention=true",
+              "duration": 1.4219459999999913,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R5 max1 rejects two identities including pending; one identity remains valid",
+              "status": "passed",
+              "title": "R5 max1 rejects two identities including pending; one identity remains valid",
+              "duration": 9.542961999999989,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R5 max1 rejects two identities including executed; one identity remains valid",
+              "status": "passed",
+              "title": "R5 max1 rejects two identities including executed; one identity remains valid",
+              "duration": 1.2129840000000058,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R5 max1 rejects two identities including cancelled; one identity remains valid",
+              "status": "passed",
+              "title": "R5 max1 rejects two identities including cancelled; one identity remains valid",
+              "duration": 0.5240810000000238,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "B3 third audit: independent counterexamples before implementation"
+              ],
+              "fullName": "B3 third audit: independent counterexamples before implementation R5 separate effectIndex and parentItemInstanceId each have their own max1 allowance",
+              "status": "passed",
+              "title": "R5 separate effectIndex and parentItemInstanceId each have their own max1 allowance",
+              "duration": 1.8440600000000131,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442478116,
+          "endTime": 1791442478186.844,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-b3-third-audit.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G01 hand-calculated execution vectors"
+              ],
+              "fullName": "G01 hand-calculated execution vectors uses one original HP basis for Warmog and Sterak, never compounded HP",
+              "status": "passed",
+              "title": "uses one original HP basis for Warmog and Sterak, never compounded HP",
+              "duration": 5.310646999999989,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G01 hand-calculated execution vectors"
+              ],
+              "fullName": "G01 hand-calculated execution vectors adds AD before percentages and normalizes AS only at the final ceil",
+              "status": "passed",
+              "title": "adds AD before percentages and normalizes AS only at the final ceil",
+              "duration": 0.8995419999999967,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G01 hand-calculated execution vectors"
+              ],
+              "fullName": "G01 hand-calculated execution vectors samples strict Giant Slayer and HoJ conditions at each read",
+              "status": "passed",
+              "title": "samples strict Giant Slayer and HoJ conditions at each read",
+              "duration": 0.7104150000000118,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G01 hand-calculated execution vectors"
+              ],
+              "fullName": "G01 hand-calculated execution vectors scales distinct current targeting enemies; duplicate IDs never add count",
+              "status": "passed",
+              "title": "scales distinct current targeting enemies; duplicate IDs never add count",
+              "duration": 0.4872050000000172,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G01 hand-calculated execution vectors"
+              ],
+              "fullName": "G01 hand-calculated execution vectors adds flat resistance, keeps the strongest percent reduction and clamps resistance at zero",
+              "status": "passed",
+              "title": "adds flat resistance, keeps the strongest percent reduction and clamps resistance at zero",
+              "duration": 0.4056319999999971,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G01 hand-calculated execution vectors"
+              ],
+              "fullName": "G01 hand-calculated execution vectors keeps same-named counters on independent item instances separate",
+              "status": "passed",
+              "title": "keeps same-named counters on independent item instances separate",
+              "duration": 0.4313330000000235,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G01 hand-calculated execution vectors"
+              ],
+              "fullName": "G01 hand-calculated execution vectors combines coefficients before floor and requires bound result/receipt contexts",
+              "status": "passed",
+              "title": "combines coefficients before floor and requires bound result/receipt contexts",
+              "duration": 2.0354219999999827,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479946,
+          "endTime": 1791442479956.0354,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g01.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G02 hand-calculated execution vectors"
+              ],
+              "fullName": "G02 hand-calculated execution vectors physical separates shield, HP and overkill",
+              "status": "passed",
+              "title": "physical separates shield, HP and overkill",
+              "duration": 5.5520150000000115,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G02 hand-calculated execution vectors"
+              ],
+              "fullName": "G02 hand-calculated execution vectors magic separates shield, HP and overkill",
+              "status": "passed",
+              "title": "magic separates shield, HP and overkill",
+              "duration": 0.6796850000000063,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G02 hand-calculated execution vectors"
+              ],
+              "fullName": "G02 hand-calculated execution vectors true separates shield, HP and overkill",
+              "status": "passed",
+              "title": "true separates shield, HP and overkill",
+              "duration": 0.3570229999999981,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G02 hand-calculated execution vectors"
+              ],
+              "fullName": "G02 hand-calculated execution vectors selects strongest applicable reduction; true bypasses resistance and reduction",
+              "status": "passed",
+              "title": "selects strongest applicable reduction; true bypasses resistance and reduction",
+              "duration": 0.800089000000014,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G02 hand-calculated execution vectors"
+              ],
+              "fullName": "G02 hand-calculated execution vectors inherits after-mitigation exactly once and retains original critical fact",
+              "status": "passed",
+              "title": "inherits after-mitigation exactly once and retains original critical fact",
+              "duration": 0.5481049999999925,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G02 hand-calculated execution vectors"
+              ],
+              "fullName": "G02 hand-calculated execution vectors prevention stays zero, burn may floor to zero and caps after amplification",
+              "status": "passed",
+              "title": "prevention stays zero, burn may floor to zero and caps after amplification",
+              "duration": 0.5743650000000002,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G02 hand-calculated execution vectors"
+              ],
+              "fullName": "G02 hand-calculated execution vectors qualifies shield-only hits, excludes equipment healing and refuses forged permissions",
+              "status": "passed",
+              "title": "qualifies shield-only hits, excludes equipment healing and refuses forged permissions",
+              "duration": 2.159737999999976,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479155,
+          "endTime": 1791442479165.1597,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g02.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G03 hand-calculated execution vectors"
+              ],
+              "fullName": "G03 hand-calculated execution vectors counts redundant equipment authorizations independently of slot and prior nonitem sources",
+              "status": "passed",
+              "title": "counts redundant equipment authorizations independently of slot and prior nonitem sources",
+              "duration": 5.655379000000011,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G03 hand-calculated execution vectors"
+              ],
+              "fullName": "G03 hand-calculated execution vectors uses an exact word threshold and draws for basic at both 0% and 100%",
+              "status": "passed",
+              "title": "uses an exact word threshold and draws for basic at both 0% and 100%",
+              "duration": 1.150966000000011,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G03 hand-calculated execution vectors"
+              ],
+              "fullName": "G03 hand-calculated execution vectors draws only for authorized noninherited skill damage; equipment never inherits authorization",
+              "status": "passed",
+              "title": "draws only for authorized noninherited skill damage; equipment never inherits authorization",
+              "duration": 0.5008930000000191,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G03 hand-calculated execution vectors"
+              ],
+              "fullName": "G03 hand-calculated execution vectors rejects forged authorization before consuming a random word",
+              "status": "passed",
+              "title": "rejects forged authorization before consuming a random word",
+              "duration": 1.5909599999999955,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479923,
+          "endTime": 1791442479931.591,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g03.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G04 independently specified frozen status vectors"
+              ],
+              "fullName": "G04 independently specified frozen status vectors retains suppressed30% shred;50% expires60,30% expires100; same source refresh never duplicates",
+              "status": "passed",
+              "title": "retains suppressed30% shred;50% expires60,30% expires100; same source refresh never duplicates",
+              "duration": 5.657053999999988,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G04 independently specified frozen status vectors"
+              ],
+              "fullName": "G04 independently specified frozen status vectors burn first20, refresh10 and takeover15 keep20; suppressed source keeps its own identity",
+              "status": "passed",
+              "title": "burn first20, refresh10 and takeover15 keep20; suppressed source keeps its own identity",
+              "duration": 0.8774719999999832,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G04 independently specified frozen status vectors"
+              ],
+              "fullName": "G04 independently specified frozen status vectors delayed start1 expires101; active same source refresh20 preserves1 and extends121",
+              "status": "passed",
+              "title": "delayed start1 expires101; active same source refresh20 preserves1 and extends121",
+              "duration": 1.2093530000000214,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G04 independently specified frozen status vectors"
+              ],
+              "fullName": "G04 independently specified frozen status vectors immunity blocks new stun, keeps existing stun; cleanse removes hostile removable states only",
+              "status": "passed",
+              "title": "immunity blocks new stun, keeps existing stun; cleanse removes hostile removable states only",
+              "duration": 1.0344719999999938,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G04 independently specified frozen status vectors"
+              ],
+              "fullName": "G04 independently specified frozen status vectors different instances stay separate and same instance max refresh preserves magnitude and start",
+              "status": "passed",
+              "title": "different instances stay separate and same instance max refresh preserves magnitude and start",
+              "duration": 0.5609570000000019,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479724,
+          "endTime": 1791442479733.561,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g04.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G05 exact independent periodic accounts and scheduling vectors"
+              ],
+              "fullName": "G05 exact independent periodic accounts and scheduling vectors R1 redemption100/200/300: A0/0/0 B1/1/1, accounts1500/3000/4500 and3500/5500/6000",
+              "status": "passed",
+              "title": "R1 redemption100/200/300: A0/0/0 B1/1/1, accounts1500/3000/4500 and3500/5500/6000",
+              "duration": 13.170740999999992,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G05 exact independent periodic accounts and scheduling vectors"
+              ],
+              "fullName": "G05 exact independent periodic accounts and scheduling vectors no borrowing across effect,target,source; leave retains; death removes only target; cap clears",
+              "status": "passed",
+              "title": "no borrowing across effect,target,source; leave retains; death removes only target; cap clears",
+              "duration": 3.151188999999988,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G05 exact independent periodic accounts and scheduling vectors"
+              ],
+              "fullName": "G05 exact independent periodic accounts and scheduling vectors 1001HP at1% for100 jumps sums1001, not1000; total101 splits26/25/25/25",
+              "status": "passed",
+              "title": "1001HP at1% for100 jumps sums1001, not1000; total101 splits26/25/25/25",
+              "duration": 3.6249839999999836,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G05 exact independent periodic accounts and scheduling vectors"
+              ],
+              "fullName": "G05 exact independent periodic accounts and scheduling vectors final-before-expiry permits20/40/60/80; source cancel versus persist; invalid account rejected",
+              "status": "passed",
+              "title": "final-before-expiry permits20/40/60/80; source cancel versus persist; invalid account rejected",
+              "duration": 3.24561300000002,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479486,
+          "endTime": 1791442479509.2456,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g05.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G06 one mutation and independently calculated share vectors"
+              ],
+              "fullName": "G06 one mutation and independently calculated share vectors non-item direct healing preserves provenance and applies wound to a missing-HP request",
+              "status": "passed",
+              "title": "non-item direct healing preserves provenance and applies wound to a missing-HP request",
+              "duration": 8.552348999999992,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G06 one mutation and independently calculated share vectors"
+              ],
+              "fullName": "G06 one mutation and independently calculated share vectors A10 total35, actual20: requested20/15, actual11/9, overheal9/6",
+              "status": "passed",
+              "title": "A10 total35, actual20: requested20/15, actual11/9, overheal9/6",
+              "duration": 1.036707000000007,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G06 one mutation and independently calculated share vectors"
+              ],
+              "fullName": "G06 one mutation and independently calculated share vectors A10 wound33%:35→23→20; shares13/10 allowed,11/9 actual,2/1 excess,7/5 wound",
+              "status": "passed",
+              "title": "A10 wound33%:35→23→20; shares13/10 allowed,11/9 actual,2/1 excess,7/5 wound",
+              "duration": 1.2719299999999976,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G06 one mutation and independently calculated share vectors"
+              ],
+              "fullName": "G06 one mutation and independently calculated share vectors 300 request with33% wound and missing100 yields201 allowed100 actual101 excess99 blocked; dead never revives",
+              "status": "passed",
+              "title": "300 request with33% wound and missing100 yields201 allowed100 actual101 excess99 blocked; dead never revives",
+              "duration": 0.4958650000000091,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G06 one mutation and independently calculated share vectors"
+              ],
+              "fullName": "G06 one mutation and independently calculated share vectors merges rational amounts before floor, duplicate same source; tie canonical source key",
+              "status": "passed",
+              "title": "merges rational amounts before floor, duplicate same source; tie canonical source key",
+              "duration": 1.4415010000000166,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G06 one mutation and independently calculated share vectors"
+              ],
+              "fullName": "G06 one mutation and independently calculated share vectors vamp sums shield+HP once, rejects equipment/dead source, excludes self/dead allies and ties byID",
+              "status": "passed",
+              "title": "vamp sums shield+HP once, rejects equipment/dead source, excludes self/dead allies and ties byID",
+              "duration": 1.5881650000000036,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479252,
+          "endTime": 1791442479266.5881,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g06.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G07 frozen independent shield and post-damage survival vectors"
+              ],
+              "fullName": "G07 frozen independent shield and post-damage survival vectors A03 grant600, decay100, absorb120, next decay10:370 remaining/120 absorbed/110 decayed; bonus36",
+              "status": "passed",
+              "title": "A03 grant600, decay100, absorb120, next decay10:370 remaining/120 absorbed/110 decayed; bonus36",
+              "duration": 6.108222000000012,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G07 frozen independent shield and post-damage survival vectors"
+              ],
+              "fullName": "G07 frozen independent shield and post-damage survival vectors orders expiry then canonical source, refresh max remaining/later expiry resets decay and absorption",
+              "status": "passed",
+              "title": "orders expiry then canonical source, refresh max remaining/later expiry resets decay and absorption",
+              "duration": 1.9862540000000024,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G07 frozen independent shield and post-damage survival vectors"
+              ],
+              "fullName": "G07 frozen independent shield and post-damage survival vectors decay and expiry have distinct end events, discard unused shield; consumed marker is once only",
+              "status": "passed",
+              "title": "decay and expiry have distinct end events, discard unused shield; consumed marker is once only",
+              "duration": 0.7255000000000109,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G07 frozen independent shield and post-damage survival vectors"
+              ],
+              "fullName": "G07 frozen independent shield and post-damage survival vectors 300 damage700→400 qualifies;800 damage700→0 does not; shield-only positive qualifies below threshold",
+              "status": "passed",
+              "title": "300 damage700→400 qualifies;800 damage700→0 does not; shield-only positive qualifies below threshold",
+              "duration": 5.161189000000007,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G07 frozen independent shield and post-damage survival vectors"
+              ],
+              "fullName": "G07 frozen independent shield and post-damage survival vectors all qualifications/maxHP frozen before effects; two independent shields250 each; cooldown marker blocks until30",
+              "status": "passed",
+              "title": "all qualifications/maxHP frozen before effects; two independent shields250 each; cooldown marker blocks until30",
+              "duration": 1.1445410000000038,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G07 frozen independent shield and post-damage survival vectors"
+              ],
+              "fullName": "G07 frozen independent shield and post-damage survival vectors one source shares its consumed marker across combat-start and post-damage listeners",
+              "status": "passed",
+              "title": "one source shares its consumed marker across combat-start and post-damage listeners",
+              "duration": 0.5380490000000009,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479676,
+          "endTime": 1791442479692.538,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g07.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G08 independent mana and cast vectors (B2 §7)"
+              ],
+              "fullName": "G08 independent mana and cast vectors (B2 §7) 75+10→80, overflow5; explicit lock blocks10, expiry releases; zero maximum overflows10",
+              "status": "passed",
+              "title": "75+10→80, overflow5; explicit lock blocks10, expiry releases; zero maximum overflows10",
+              "duration": 5.214268000000004,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G08 independent mana and cast vectors (B2 §7)"
+              ],
+              "fullName": "G08 independent mana and cast vectors (B2 §7) HP loss33+33→1, 667→20; shields and overkill do not enter this total",
+              "status": "passed",
+              "title": "HP loss33+33→1, 667→20; shields and overkill do not enter this total",
+              "duration": 3.7875720000000115,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G08 independent mana and cast vectors (B2 §7)"
+              ],
+              "fullName": "G08 independent mana and cast vectors (B2 §7) cost80 then refund10 retains80 spent and exact target order/duplicates; no automatic lock",
+              "status": "passed",
+              "title": "cost80 then refund10 retains80 spent and exact target order/duplicates; no automatic lock",
+              "duration": 1.4308849999999893,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G08 independent mana and cast vectors (B2 §7)"
+              ],
+              "fullName": "G08 independent mana and cast vectors (B2 §7) IF-MANA explicitly neutral0/0 accepted;1/0 and undeclared zero-resource heroes rejected",
+              "status": "passed",
+              "title": "IF-MANA explicitly neutral0/0 accepted;1/0 and undeclared zero-resource heroes rejected",
+              "duration": 6.130012000000022,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G08 independent mana and cast vectors (B2 §7)"
+              ],
+              "fullName": "G08 independent mana and cast vectors (B2 §7) S13 same-tick cast spending100 plus HP loss100 gives3 mana; no cast recursion",
+              "status": "passed",
+              "title": "S13 same-tick cast spending100 plus HP loss100 gives3 mana; no cast recursion",
+              "duration": 21.278346999999997,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442478491,
+          "endTime": 1791442478529.2783,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g08.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G09 S13 event consumers"
+              ],
+              "fullName": "G09 S13 event consumers one completed Kog attack with two packets grants extra5 once and ordinary10 once",
+              "status": "passed",
+              "title": "one completed Kog attack with two packets grants extra5 once and ordinary10 once",
+              "duration": 29.812816999999995,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G09 S13 event consumers"
+              ],
+              "fullName": "G09 S13 event consumers enemy completed receipt spends80; two independent ion-like listeners request128 each, no extra attacks",
+              "status": "passed",
+              "title": "enemy completed receipt spends80; two independent ion-like listeners request128 each, no extra attacks",
+              "duration": 10.754548999999997,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G09 S13 event consumers"
+              ],
+              "fullName": "G09 S13 event consumers shield-hit grants immediate damage amplification only to later packets; counters still count occurrences",
+              "status": "passed",
+              "title": "shield-hit grants immediate damage amplification only to later packets; counters still count occurrences",
+              "duration": 5.677727000000004,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G09 S13 event consumers"
+              ],
+              "fullName": "G09 S13 event consumers IF-DEATH two same-family deaths pay134 then44 at t+1 after wound, with per-request current missingHP",
+              "status": "passed",
+              "title": "IF-DEATH two same-family deaths pay134 then44 at t+1 after wound, with per-request current missingHP",
+              "duration": 13.668002000000001,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442477691,
+          "endTime": 1791442477750.668,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g09-integration.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G09 frozen occurrence counters, gates and full result facts"
+              ],
+              "fullName": "G09 frozen occurrence counters, gates and full result facts attacks1..6 count1..6 and fire only3/6; duplicate/recovered events do not count",
+              "status": "passed",
+              "title": "attacks1..6 count1..6 and fire only3/6; duplicate/recovered events do not count",
+              "duration": 8.91188600000001,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G09 frozen occurrence counters, gates and full result facts"
+              ],
+              "fullName": "G09 frozen occurrence counters, gates and full result facts no target at3 loses only that proc,6 fires; ICD does not undo occurrence counts",
+              "status": "passed",
+              "title": "no target at3 loses only that proc,6 fires; ICD does not undo occurrence counts",
+              "duration": 1.4951379999999972,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G09 frozen occurrence counters, gates and full result facts"
+              ],
+              "fullName": "G09 frozen occurrence counters, gates and full result facts 24/25/26 produce24/25/25 and exactly one cap reward; two item instances independent",
+              "status": "passed",
+              "title": "24/25/26 produce24/25/25 and exactly one cap reward; two item instances independent",
+              "duration": 4.33623700000004,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G09 frozen occurrence counters, gates and full result facts"
+              ],
+              "fullName": "G09 frozen occurrence counters, gates and full result facts cast actor B80 mana at completion distance2 selectsB, never closerA; facts preserve amount fields",
+              "status": "passed",
+              "title": "cast actor B80 mana at completion distance2 selectsB, never closerA; facts preserve amount fields",
+              "duration": 1.888198999999986,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442479430,
+          "endTime": 1791442479446.8882,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g09.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G10 actual opening hook and finite delayed execution"
+              ],
+              "fullName": "G10 actual opening hook and finite delayed execution tick1 control cancels delayed opening damage but cannot retroactively block the tick0 movement",
+              "status": "passed",
+              "title": "tick1 control cancels delayed opening damage but cannot retroactively block the tick0 movement",
+              "duration": 20.23130299999997,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G10 actual opening hook and finite delayed execution"
+              ],
+              "fullName": "G10 actual opening hook and finite delayed execution starting-row listener stays frozen after movement while target positions remain current",
+              "status": "passed",
+              "title": "starting-row listener stays frozen after movement while target positions remain current",
+              "duration": 11.239240999999993,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G10 actual opening hook and finite delayed execution"
+              ],
+              "fullName": "G10 actual opening hook and finite delayed execution commits movement at0 then150 damage in normaltick1 batch; restored state never repositions",
+              "status": "passed",
+              "title": "commits movement at0 then150 damage in normaltick1 batch; restored state never repositions",
+              "duration": 4.067770999999993,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442478877,
+          "endTime": 1791442478913.0679,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g10-integration.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G10 frozen geometry and explicit random selection boundary"
+              ],
+              "fullName": "G10 frozen geometry and explicit random selection boundary A04 fixed primary anchor givesp,a,b,c regardless of candidate input order; no RNG",
+              "status": "passed",
+              "title": "A04 fixed primary anchor givesp,a,b,c regardless of candidate input order; no RNG",
+              "duration": 5.777458999999993,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G10 frozen geometry and explicit random selection boundary"
+              ],
+              "fullName": "G10 frozen geometry and explicit random selection boundary event-actor never falls back to closer units and a missing previous anchor has no candidates",
+              "status": "passed",
+              "title": "event-actor never falls back to closer units and a missing previous anchor has no candidates",
+              "duration": 0.7570680000000038,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G10 frozen geometry and explicit random selection boundary"
+              ],
+              "fullName": "G10 frozen geometry and explicit random selection boundary Lux compares absoluteHP then distance/ID, healing uses ratio thenID",
+              "status": "passed",
+              "title": "Lux compares absoluteHP then distance/ID, healing uses ratio thenID",
+              "duration": 0.5581629999999791,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G10 frozen geometry and explicit random selection boundary"
+              ],
+              "fullName": "G10 frozen geometry and explicit random selection boundary Caitlyn one raw word modulo sorted count, selection separated from deterministic area expansion",
+              "status": "passed",
+              "title": "Caitlyn one raw word modulo sorted count, selection separated from deterministic area expansion",
+              "duration": 1.635657000000009,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G10 frozen geometry and explicit random selection boundary"
+              ],
+              "fullName": "G10 frozen geometry and explicit random selection boundary four-cell axial cone odd/even rows is finite, not radius; selects at most2 by primary distance/ID",
+              "status": "passed",
+              "title": "four-cell axial cone odd/even rows is finite, not radius; selects at most2 by primary distance/ID",
+              "duration": 1.5630240000000128,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G10 frozen geometry and explicit random selection boundary"
+              ],
+              "fullName": "G10 frozen geometry and explicit random selection boundary front/back rows mirror player4/5,6/7 and enemy2/3,0/1",
+              "status": "passed",
+              "title": "front/back rows mirror player4/5,6/7 and enemy2/3,0/1",
+              "duration": 0.5204489999999851,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442480129,
+          "endTime": 1791442480140.5205,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g10.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G11 current eligibility independent from already-bound damage and prevention"
+              ],
+              "fullName": "G11 current eligibility independent from already-bound damage and prevention ordinary target and current aggro clear while untargetable; expiry tick reselects before actions",
+              "status": "passed",
+              "title": "ordinary target and current aggro clear while untargetable; expiry tick reselects before actions",
+              "duration": 21.71135700000002,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G11 current eligibility independent from already-bound damage and prevention"
+              ],
+              "fullName": "G11 current eligibility independent from already-bound damage and prevention already attached DOT ignores untargetability; independent prevention absorbs neitherHP nor shield",
+              "status": "passed",
+              "title": "already attached DOT ignores untargetability; independent prevention absorbs neitherHP nor shield",
+              "duration": 3.160966999999971,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G11 current eligibility independent from already-bound damage and prevention"
+              ],
+              "fullName": "G11 current eligibility independent from already-bound damage and prevention area members can be untargetable while new chain/single centers exclude them",
+              "status": "passed",
+              "title": "area members can be untargetable while new chain/single centers exclude them",
+              "duration": 1.997429000000011,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G11 current eligibility independent from already-bound damage and prevention"
+              ],
+              "fullName": "G11 current eligibility independent from already-bound damage and prevention existing random-center ability excludes untargetable centers but its area still deals100 to them",
+              "status": "passed",
+              "title": "existing random-center ability excludes untargetable centers but its area still deals100 to them",
+              "duration": 3.851826000000017,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G11 current eligibility independent from already-bound damage and prevention"
+              ],
+              "fullName": "G11 current eligibility independent from already-bound damage and prevention finite shield-end area keeps its generic selector and hits an untargetable neighbor for20",
+              "status": "passed",
+              "title": "finite shield-end area keeps its generic selector and hits an untargetable neighbor for20",
+              "duration": 6.571123,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G11 current eligibility independent from already-bound damage and prevention"
+              ],
+              "fullName": "G11 current eligibility independent from already-bound damage and prevention night-like cleanse removes hostile attachedDOT, keeps benign buff/lock, and clears enemies targeting holder",
+              "status": "passed",
+              "title": "night-like cleanse removes hostile attachedDOT, keeps benign buff/lock, and clears enemies targeting holder",
+              "duration": 2.496368000000018,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442478599,
+          "endTime": 1791442478639.4963,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g11.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G12 bound temporary programs use the common combat-start consumers"
+              ],
+              "fullName": "G12 bound temporary programs use the common combat-start consumers next-tick temporary AS bound at0 is effective for the first attack at1:8000×1.15→22ticks",
+              "status": "passed",
+              "title": "next-tick temporary AS bound at0 is effective for the first attack at1:8000×1.15→22ticks",
+              "duration": 31.00428999999997,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 bound temporary programs use the common combat-start consumers"
+              ],
+              "fullName": "G12 bound temporary programs use the common combat-start consumers clearing aggro through a temporary status dispatches the same target-changed occurrence to listeners",
+              "status": "passed",
+              "title": "clearing aggro through a temporary status dispatches the same target-changed occurrence to listeners",
+              "duration": 3.8551779999999667,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 bound temporary programs use the common combat-start consumers"
+              ],
+              "fullName": "G12 bound temporary programs use the common combat-start consumers initial temporary status freezes before the shared opening selection, without a movement or reroll",
+              "status": "passed",
+              "title": "initial temporary status freezes before the shared opening selection, without a movement or reroll",
+              "duration": 4.225051000000008,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442478968,
+          "endTime": 1791442479007.225,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g12-integration.test.ts"
+        },
+        {
+          "assertionResults": [
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors seed0 stream XOR seeds consume0; rejects upper11 words for35 before modulo",
+              "status": "passed",
+              "title": "seed0 stream XOR seeds consume0; rejects upper11 words for35 before modulo",
+              "duration": 3.811597000000006,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors parents sorted before draws; low35×8, high35×34 without replacement; same round transfer/level-up0words",
+              "status": "passed",
+              "title": "parents sorted before draws; low35×8, high35×34 without replacement; same round transfer/level-up0words",
+              "duration": 4.019722000000002,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors 280 low-tier ordered pairs occur once;1190 high-tier draws produce595 unordered pairs exactlytwice",
+              "status": "passed",
+              "title": "280 low-tier ordered pairs occur once;1190 high-tier draws produce595 unordered pairs exactlytwice",
+              "duration": 43.730288,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors temporary modifiers use complete parent/child/holder provenance and can be revoked without RNG",
+              "status": "passed",
+              "title": "temporary modifiers use complete parent/child/holder provenance and can be revoked without RNG",
+              "duration": 1.5538050000000112,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors finite child effects retain independent sources across transfer and revoke, without a draw callback",
+              "status": "passed",
+              "title": "finite child effects retain independent sources across transfer and revoke, without a draw callback",
+              "duration": 0.7461729999999989,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors one child definition gives distinct effect ordinals to static and finite contributions",
+              "status": "passed",
+              "title": "one child definition gives distinct effect ordinals to static and finite contributions",
+              "duration": 0.909039000000007,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors pool exclusion uses the finite policy, and a new round retains historical receipts",
+              "status": "passed",
+              "title": "pool exclusion uses the finite policy, and a new round retains historical receipts",
+              "duration": 3.2782980000000066,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            },
+            {
+              "ancestorTitles": [
+                "G12 TG-01 independent accepted-word and lifecycle vectors"
+              ],
+              "fullName": "G12 TG-01 independent accepted-word and lifecycle vectors failed plans keep input/RNG untouched; child application/revocation has no random input",
+              "status": "passed",
+              "title": "failed plans keep input/RNG untouched; child application/revocation has no random input",
+              "duration": 0.6453229999999621,
+              "failureMessages": [],
+              "meta": {},
+              "tags": [],
+              "benchmarks": []
+            }
+          ],
+          "startTime": 1791442478233,
+          "endTime": 1791442478291.6453,
+          "status": "passed",
+          "message": "",
+          "name": "/root/Documents/Codex/2026-10-08/b3-feat-m8-b0-baseline-feat/work/hex-autobattler/tests/m8-g12.test.ts"
+        }
+      ]
+    },
+    "fullNpmTest": {
+      "command": "npm test",
+      "files": 93,
+      "passedTests": 1165,
+      "failedTests": 0,
+      "durationSeconds": 612.4,
+      "logSha256": "f9d89ef12f16cb06022fe17678001ca5b3044187013ad76ecf11eb6c2ced4f9f"
+    },
+    "builds": {
+      "b4": "passed",
+      "b4u4": "passed",
+      "b4LogSha256": "2cbe27c41a263800a368f5fd993d47e4680f6e731f90d796a21d4dcd3b3b5866",
+      "b4u4LogSha256": "c6317de2bdff410222c618a1e41ac7f31dcc20a9153392ede3b2413e4db6630e"
+    },
+    "legacyRouteComparison": {
+      "commandsIdentical": true,
+      "perRoundCompleteEventHashesIdentical": true,
+      "routes": 4,
+      "battlesPerRoute": 30,
+      "commandCounts": {
+        "cannon": 182,
+        "sniper": 178,
+        "mage": 172,
+        "sniper-caitlyn": 182
+      },
+      "regenerationScript": "scripts/update-m8-b4-audit-golden.cjs",
+      "logSha256": "1dd780b2ccb07f4bf09d14b081e7bef731ba0beb6dd6f8b2f3bfe5d02f2a46d8"
+    }
+  },
+  "bundle": {
+    "method": "Sum all dist/assets/*.js compressed separately with Node gzip level 9",
+    "node": "v24.21.0",
+    "lockfileSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+    "baselineSha": "15313a75c6e74beec739fe52a2875c104c55eae3",
+    "u4Sha": "5778cab29fd02a5aeb002b1e12b16f1ac4dc39bf",
+    "m7": {
+      "assets": [
+        {
+          "file": "index-CsWIfx1z.js",
+          "raw": 1497604,
+          "gzip": 424763,
+          "sha256": "87d019691e175cb4d37b4dd3bb2ea96185f807ada29fd8caaaa50e536ddd0269"
+        }
+      ],
+      "gzip": 424763
+    },
+    "b4": {
+      "assets": [
+        {
+          "file": "index-BvTV4hhW.js",
+          "raw": 1635047,
+          "gzip": 465933,
+          "sha256": "2774bb8b352457fab600ce369c0e3569ccf5f6ae6d0016dfd55a588e19178b07"
+        }
+      ],
+      "gzip": 465933,
+      "marginBytes": 1306
+    },
+    "limitBytes": 467239,
+    "codeSha": "6e0d902bcabafae09d49cabdfd9e897658858d7b",
+    "b4u4": {
+      "assets": [
+        {
+          "file": "index-5dnH8QIV.js",
+          "raw": 1645111,
+          "gzip": 469878,
+          "sha256": "fa1f92dbb629fbad157d0a238fc77dc8d3b04414ae92defb2218726190974fe6"
+        }
+      ],
+      "gzip": 469878,
+      "deltaFromB4Bytes": 3945,
+      "marginBytes": -2639,
+      "mergeDiffSha256": "2ab9a4e62eec1abb48f830c66aa596852205c4bd6497b2903792e26efb100367"
+    },
+    "u4MergedIntoFeatM8B4": false,
+    "bundleConfigurationModified": false
+  },
+  "h2": {
+    "runnerHash": "6b7f06e2a963ced3b601fd19074aa07a9fa1a670f6aa4467a2445bc3af8d7f25",
+    "rawScriptBytesSha256": "1a5e52defeb2c30fc9e524a1edf958a0f3a9de56b515ed7f738a2bf867356c05",
+    "scriptChanged": false
+  },
+  "h1": {
+    "status": "registered-for-separate-task",
+    "memoryGateBytes": 1048576,
+    "newEquipmentLoadCoverageCompleted": false
+  },
+  "ci": {
+    "workflow": "CI",
+    "workflowId": 374546050,
+    "required": "Full default workflow on final delivery HEAD; optional diagnostics off; see final signoff and Actions for SHA-linked result",
+    "oldCi91AppliesTo": "65252f332c1f1f15523cfd01b497c425089997bd"
+  }
+}

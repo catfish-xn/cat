@@ -1,16 +1,39 @@
+import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';
 import { createCombatWithEvents, type CombatEvent } from '../src/simulation/combat';
-import { createMatch, deployMatchUnit, type MatchCommandResult, type MatchState } from '../src/simulation/match';
-import { readyMatch, emptyBoard } from './match-helpers';
+import { createMatch, deployMatchUnit, nextRound, startMatchCombat, type MatchCommandResult, type MatchState } from '../src/simulation/match';
+import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch } from './match-helpers';
 import { settlement } from './fixtures/m5/oracle.cjs';
 import { nextRandom } from '../src/simulation/rng';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 
 function preparation(): MatchState {
-  return deployMatchUnit(readyMatch(), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
+  return deployMatchUnit(readyMatch(6240), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
 }
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
+// Independent M8B_LOOT §2 opening transcription: no receipt or unit fields copied from the result.
+function openingHeroReceipt(roundId: '1-2' | '1-3') {
+  const encounterId = roundId === '1-2' ? 'minions-a-v1' : 'minions-b-v1';
+  const sourceUnitId = JSON.stringify(['pve', roundId, encounterId, 'm01']);
+  const dropId = JSON.stringify([JSON.stringify(['orb', roundId, encounterId, sourceUnitId, 0]), 0]);
+  return { receiptId: JSON.stringify([dropId, 'grant']), dropId,
+    payload: { kind: 'unit', definitionId: roundId === '1-2' ? 'maddie' : 'lux', quantity: 1 },
+    grantedItemIds: [], grantedUnitIds: [roundId === '1-2' ? 'unit-2' : 'unit-3'] };
+}
+function expectOpeningHeroSource(session: MatchSession, roundId: '1-2' | '1-3') {
+  const receipt = openingHeroReceipt(roundId), sourceUnitId = JSON.stringify(['pve', roundId, roundId === '1-2' ? 'minions-a-v1' : 'minions-b-v1', 'm01']);
+  expect(session.state.m8.loot.receipts.filter(r => r.dropId === receipt.dropId)).toEqual([receipt]);
+  const deaths = session.combatEvents.filter(event => event.type === 'death' && event.unitId === sourceUnitId);
+  expect(deaths).toHaveLength(1);
+  expect(session.state.m8.loot.earnedEvidence.filter(e => e.dropId === receipt.dropId)).toEqual([
+    { dropId: receipt.dropId, death: { combatId: roundId === '1-2' ? 'round-1' : 'round-2', tick: deaths[0].tick, eventSeq: deaths[0].eventSeq } },
+  ]);
+  expect(session.state.resourceProvenance.entries.filter(e => e.kind === 'unit-acquired' && e.unitId === receipt.grantedUnitIds[0])).toEqual([
+    { sequence: roundId === '1-2' ? 1 : 3, roundId, kind: 'unit-acquired', unitId: receipt.grantedUnitIds[0], source: { kind: 'loot', receiptId: receipt.receiptId } },
+  ]);
+}
+
 function rejected(session: MatchSession, result: MatchCommandResult, reason: string, before: MatchState) {
   expect(result).toEqual({ ok: false, state: before, reason });
   expect(result.state).toBe(before); expect(session.state).toBe(before);
@@ -41,35 +64,62 @@ describe('match session commands and fixed clock', () => {
     const settled = session.state;
     expect(session.advance(500)).toEqual([]); expect(session.state).toBe(settled);
     expect(settled.roundResults).toHaveLength(1); expect(settled.roundResults[0]).toEqual(settlement(preparation(),settled.combat));
-    expect(settled.xp).toBe(2);
+    expect(settled.xp).toBe(0);
+    expect(settled.roundResults[0].combatEventCount).toBe(session.combatEvents.length);
+    expect(session.combatEvents.map(event => event.eventSeq)).toEqual(session.combatEvents.map((_, i) => i));
   });
 
   it('Continue preserves player stars/positions while resetting combat Mana, shield and partial clock', () => {
-    const prep = preparation(), session = new MatchSession(prep), before = structuredClone(players(prep));
+    const prep = preparation(), original = structuredClone(prep), session = new MatchSession(prep), before = structuredClone(players(prep));
+    // B8: preserve every original hero and independently add only the approved one-star bench grant.
+    const firstRoster = [...before, { id: 'unit-2', definitionId: 'maddie', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } }];
     expect(session.continue(1).ok).toBe(false);
-    session.start(); session.advance(60_025);
+    expect(session.start().ok).toBe(true); const firstBasis = session.state.combatInputBasis;
+    session.advance(60_025);
     expect(session.combat?.units.some(unit => !unit.alive)).toBe(true);
     expect(session.combat?.units.some(unit => unit.hp < unit.maxHp)).toBe(true);
-    expect(players(session.state)).toEqual(before);
+    expect(players(session.state)).toEqual(firstRoster);
+    expect(session.state.m8.loot.receipts.filter(r => r.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-2')]);expectOpeningHeroSource(session, '1-2');
+    expect(session.state.nextUnitSerial).toBe(3);expect(session.state.combatInputBasis).toEqual(firstBasis);
+    expect(session.combat?.units.filter(unit => unit.team === 'player').map(unit => unit.id)).toEqual(['unit-1']);
     expect(session.continue(1).ok).toBe(true);
     expect(session.phase).toBe('preparation');
     expect(session.advance(1000)).toEqual([]);
     resolveSessionChoices(session);
     expect(session.phase).toBe('preparation'); expect(session.combat).toBeNull();
-    expect(players(session.state)).toEqual(before);
+    expect(players(session.state)).toEqual(firstRoster);
+    expect(session.state.m8.loot.receipts.filter(r => r.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-2')]);expect(session.state.nextUnitSerial).toBe(3);
     expect(session.advance(1000)).toEqual([]);
     expect(session.deploy('unit-1', { kind: 'board', cell: { col: 4, row: 6 } }).ok).toBe(true);
-    const secondRoster = structuredClone(players(session.state));
+    const secondPreparation = session.state, secondBefore = structuredClone(secondPreparation);
+    const secondRoster = [...before.map(unit => ({ ...unit, location: { kind: 'board', cell: { col: 4, row: 6 } } })), firstRoster[1]];
+    expect(players(session.state)).toEqual(secondRoster);
     const secondInitial = createCombatWithEvents(session.state.preparation, buildStrategySnapshot(session.state), 'round-2', nextRandom(session.state.battleSeedRngState).word).state;
-    session.start();
+    expect(session.start().ok).toBe(true); const secondBasis = session.state.combatInputBasis;
     expect(session.combat).toEqual(secondInitial);
     expect(session.combat?.units.every(unit => unit.hp === unit.maxHp && unit.alive && unit.targetId === null
       && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0)).toBe(true);
     expect(session.combat?.units.find(unit => unit.id === 'unit-1')?.cell).toEqual({ col: 4, row: 6 });
     expect(session.advance(25)).toEqual([]); expect(session.combat?.tick).toBe(0);
     session.advance(25); expect(session.combat?.tick).toBe(1);
-    session.advance(60_000); session.continue(2);
-    expect(players(session.state)).toEqual(secondRoster); expect(players(prep)).toEqual(before);
+    session.advance(60_000);
+    const secondSettledRoster = [...secondRoster, { id: 'unit-3', definitionId: 'lux', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 1 } }];
+    expect(players(session.state)).toEqual(secondSettledRoster);expectOpeningHeroSource(session, '1-3');
+    expect(session.state.m8.loot.receipts.filter(r => r.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-2'), openingHeroReceipt('1-3')]);
+    expect(session.state.nextUnitSerial).toBe(4);expect(session.state.combatInputBasis).toEqual(secondBasis);
+    expect(session.combat?.units.map(unit => unit.id)).toEqual(secondInitial.units.map(unit => unit.id));
+    // §18: PvE components are automatic orb entries; only .4 supply opens a pick.
+    expect(session.phase).toBe('settlement');
+    expect(session.state.pendingChoice).toBeNull();
+    expect(session.state.m8.loot.choiceResolutions).toEqual([]);
+    expect(session.state.items).toEqual([{ id: 'item-1', definitionId: 'cloak', location: { kind: 'inventory' } }]);
+    expect(session.state.consumables).toHaveLength(2);
+    expect(players(session.state)).toEqual(secondSettledRoster);
+    const resolved = session.state, resolvedBefore = structuredClone(resolved);
+    expect(session.continue(2).ok).toBe(true);
+    expect(players(session.state)).toEqual(secondSettledRoster);expect(session.combat).toBeNull();
+    expect(session.state.m8.loot.receipts).toEqual(resolvedBefore.m8.loot.receipts);expect(session.state.nextUnitSerial).toBe(4);
+    expect(resolved).toEqual(resolvedBefore);expect(secondPreparation).toEqual(secondBefore);expect(prep).toEqual(original);expect(players(prep)).toEqual(before);
   });
 
   it('only advances whole 50 ms ticks and ignores invalid deltas', () => {
@@ -94,7 +144,9 @@ describe('match session commands and fixed clock', () => {
     expect(run([60_000])).toEqual(run(Array(1200).fill(50)));
     const completed = run([60_000]);
     expect(completed.state.phase).toBe('settlement');
-    expect(completed.events.map(event => event.type)).toEqual(expect.arrayContaining(['cast', 'manaChanged', 'shieldLayerChanged', 'damage']));
+    // replay2 (M8_RULES §10): the aggregate `damage` event is no longer published; per-packet packetDamage carries the damage.
+    expect(completed.events.map(event => event.type)).toEqual(expect.arrayContaining(['cast', 'manaChanged', 'shieldLayerChanged', 'packetDamage']));
+    expect(completed.events.some(event => (event.type as string) === 'damage')).toBe(false);
   });
 
   it.each(['missing-enemy', 'missing-both'] as const)('rejects %s without creating combat or changing state', reason => {
@@ -110,7 +162,7 @@ describe('match session commands and fixed clock', () => {
     const session = new MatchSession(emptyBoard());
     expect(session.startFailure).toBeUndefined(); expect(session.start().ok).toBe(true);
     expect(session.phase).toBe('settlement'); expect(session.combat?.tick).toBe(0);
-    expect(session.state).toMatchObject({ gold: 16, playerHp: 95, xp: 2 });
+    expect(session.state).toMatchObject({ gold: 2, playerHp: 97, level:2, xp: 0 });
     const settled = session.state;
     rejected(session, session.start(), 'wrong-phase', settled);
     expect(session.advance(60_000)).toEqual([]); expect(session.state).toBe(settled);
@@ -123,38 +175,51 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => {
-    const session = new MatchSession(readyMatch());
-    expect(session.buy(0, 1).ok).toBe(true);
+    const session = new MatchSession(reachRound('1-3',true,6240));
+    expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
     const stale = session.state; rejected(session, session.buy(0, 0), 'stale-shop', stale);
     session.deploy(owned[0].id, { kind: 'board', cell: { col: 2, row: 7 } });
-    const roster = structuredClone(players(session.state));
-    for (let round = 1; round <= 5; round++) {
+    const preparationBefore = session.state, original = structuredClone(preparationBefore), roster = structuredClone(players(session.state));
+    // This route conceded 1-2 and bought unit-2; 1-3 still grants Lux/unit-3 into the freed bench slot 0.
+    const expectedRoster = [...roster, { id: 'unit-3', definitionId: 'lux', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 0 } }];
+    for (let round = 2; round <= 6; round++) {
       if(session.phase === 'preparation') { expect(session.start().ok).toBe(true); session.advance(60_025); }
       expect(session.state.roundResults.at(-1)?.goldAfter).toBe(session.state.gold);
       expect(session.state.roundResults).toHaveLength(round);
+      expect(players(session.state)).toEqual(expectedRoster);
+      expect(session.state.m8.loot.receipts.filter(receipt => receipt.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-3')]);
+      if (round === 2) expectOpeningHeroSource(session, '1-3');
+      if (session.phase === 'choice') {
+        const pending = session.state, before = structuredClone(pending);
+        rejected(session, session.continue(round), 'wrong-phase', pending);expect(pending).toEqual(before);
+        resolveSessionChoices(session);
+      }
+      expect(session.phase).toBe('settlement');
       expect(session.continue(round).ok).toBe(true);
       resolveSessionChoices(session);
       const next = session.state; rejected(session, session.continue(round), next.phase === 'settlement' ? 'stale-round' : 'wrong-phase', next);
-      expect(players(session.state)).toEqual(roster); expect(session.combat).toBeNull();
+      expect(players(session.state)).toEqual(expectedRoster); expect(session.combat).toBeNull();expect(session.state.nextUnitSerial).toBe(4);
     }
-    expect(session.state.round).toBe(6); expect(session.state.shop.generation).toBe(6);
+    expect(session.state.round).toBe(7); expect(session.state.shop.generation).toBe(7);expect(preparationBefore).toEqual(original);
   });
 
   it('F commits synchronously, preserves the shop, and immediately enables another deployment', () => {
-    const session = new MatchSession(readyMatch());
-    expect(session.buy(0,session.state.shop.generation).ok).toBe(true);
-    for (let i = 1; i <= 3; i++) expect(session.deploy(`unit-${i}`, { kind: 'board', cell: { col: i, row: 6 } }).ok).toBe(true);
-    const capped = session.state; rejected(session, session.deploy('unit-4', { kind: 'board', cell: { col: 4, row: 7 } }), 'population-cap', capped);
-    const shop = structuredClone(session.state.shop), rng = session.state.rngState;
-    expect(session.buyXp().ok).toBe(true); expect(session.buyXp().ok).toBe(true);
-    expect(session.state).toMatchObject({ level: 4, xp: 2, gold: 1, rngState: rng, shop });
-    expect(session.deploy('unit-4', { kind: 'board', cell: { col: 4, row: 7 } }).ok).toBe(true);
+    const prepared=accepted(nextRound(accepted(startMatchCombat(emptyBoard(purchasedThreeHeroMatch()))),getCatalogRoundById('2-1').ordinal));
+    const session=new MatchSession(prepared);
+    const slot=session.state.shop.slots.findIndex(o=>o.status==='available'&&!['irelia','maddie','lux'].includes(o.definitionId));
+    expect(session.buy(slot,session.state.shop.generation).ok).toBe(true);
+    for(let i=1;i<=3;i++) expect(session.deploy(`unit-${i}`,{kind:'board',cell:{col:i,row:6}}).ok).toBe(true);
+    const capped=session.state;rejected(session,session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}),'population-cap',capped);
+    const shop=structuredClone(session.state.shop),rng=session.state.rngState,gold=session.state.gold;
+    expect(session.buyXp().ok).toBe(true);
+    expect(session.state).toMatchObject({level:4,xp:2,gold:gold-4,rngState:rng,shop});
+    expect(session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}).ok).toBe(true);
   });
 
   it('returns upgrade events without delaying the next sell or allocating a second purchase', () => {
     const initial = readyMatch();
-    const session = new MatchSession({ ...initial, nextUnitSerial: 5, preparation:{...initial.preparation,units:[...initial.preparation.units,
+    const session = new MatchSession({ ...initial, gold:10, nextUnitSerial: 5, preparation:{...initial.preparation,units:[...initial.preparation.units,
       {id:'unit-4',definitionId:'irelia',team:'player',starLevel:1,location:{kind:'bench',slot:0}}]},
       shop: { ...initial.shop, slots: [{ status: 'available', definitionId: 'irelia' }, ...initial.shop.slots.slice(1)] } });
     const result=session.buy(0,1);expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
@@ -180,7 +245,7 @@ describe('match session commands and fixed clock', () => {
 });
 
 describe('rapid D/F/E commands without frame or animation waits', () => {
-  const odds: Record<number, number[]> = { 3: [75,25,0,0,0], 4: [55,30,15,0,0], 5: [45,33,20,2,0] };
+  const odds: Record<number, number[]> = { 1:[100,0,0,0,0], 2:[100,0,0,0,0], 3: [75,25,0,0,0], 4: [55,30,15,0,0], 5: [45,33,20,2,0] };
   const catalogs = [['darius','irelia','lux','maddie','zyra'], ['leona','rell','tristana','urgot','vander'],
     ['ezreal','kogmaw','loris','nami','scar'], ['corki','garen','zoe'], ['caitlyn']];
   function referenceShop(initialState: number, level: number) {
@@ -196,7 +261,7 @@ describe('rapid D/F/E commands without frame or animation waits', () => {
   function runBurst(seed: number) {
     const created = readyMatch(seed), initial: MatchState = { ...created, gold: 200, preparation: { ...created.preparation, units: created.preparation.units.filter(unit => unit.team === 'enemy') } };
     const original = structuredClone(initial), session = new MatchSession(initial), trace: MatchCommandResult[] = [];
-    let gold = 200, level = 3, xp = 0, generation = 1, serial = 4, reference = referenceShop(seed, level);
+    let gold = 200, level = 1, xp = 0, generation = 1, serial = 2, reference = referenceShop(seed, level);
     function check(result: MatchCommandResult) {
       expect(result.ok).toBe(true); expect(result.state).toBe(session.state);
       expect(session.state).toMatchObject({ gold, level, xp, nextUnitSerial: serial, rngState: reference.rngState, shop: { generation, slots: reference.slots }, phase: 'preparation', combat: null, round: 1, roundResults: [] });
@@ -216,14 +281,14 @@ describe('rapid D/F/E commands without frame or animation waits', () => {
     for (let cycle = 0; cycle < 6; cycle++) {
       reroll(); buyDeploySell(0);
       gold -= 4; xp += 4;
-      while (xp >= ({ 3: 6, 4: 10, 5: 20 } as Record<number, number>)[level]) { xp -= ({ 3: 6, 4: 10, 5: 20 } as Record<number, number>)[level]; level++; }
+      while (xp >= ({ 1:2, 2:2, 3: 6, 4: 10, 5: 20 } as Record<number, number>)[level]) { xp -= ({ 1:2, 2:2, 3: 6, 4: 10, 5: 20 } as Record<number, number>)[level]; level++; }
       check(session.buyXp()); reroll(); buyDeploySell(4);
     }
     expect(initial).toEqual(original); return { state: session.state, trace };
   }
   it('commits six mixed D/buy/deploy/E/F/D/buy/E cycles with an independent RNG and XP ledger', () => {
     const { state } = runBurst(42);
-    expect(state).toMatchObject({ gold: 152, level: 5, xp: 8, nextUnitSerial: 16, shop: { generation: 13 } });
+    expect(state).toMatchObject({ gold: 152, level: 5, xp: 4, nextUnitSerial: 14, shop: { generation: 13 } });
     expect(players(state)).toHaveLength(0);
   });
   it.each(['reroll', 'buyXp'] as const)('preserves the complete state after funds run out for %s', method => {
@@ -235,7 +300,7 @@ describe('rapid D/F/E commands without frame or animation waits', () => {
     expect(session.state.gold).toBe(1);
   });
   it('rejects thirty max-level F events without spending or advancing anything', () => {
-    const session = new MatchSession({ ...readyMatch(), level: 9, xp: 0 }), before = session.state;
+    const session = new MatchSession({ ...readyMatch(6240), level: 9, xp: 0 }), before = session.state;
     for (let i = 0; i < 30; i++) rejected(session, session.buyXp(), 'max-level', before);
   });
   it('replays all accepted/rejected mixed events and isolates other sessions', () => {

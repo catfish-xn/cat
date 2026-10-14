@@ -1,0 +1,8 @@
+v22.23.3
+(node:1223) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+11.9.0
+bfaff72030d3a25ecc862d3cbb923f4057788eeb
+495d02bb42de698b5c18d4988bd8e7df615a2322
+16568c527580d74caca79e988bb5e8a1d43a290b

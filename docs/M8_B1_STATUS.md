@@ -1,0 +1,44 @@
+# M8 B1 状态：装备来源与 M8B 项目设计已签收，历史证据缺口保留
+
+## M8B 项目表补充（2026-10-07）
+
+2026-10-07 用户已复审签收 M8B 首版设计，现表49项配置全部批准，含野怪25%基础暴击／1.4倍倍率；签收权威为 [M8B_POLICY.md §9](M8B_POLICY.md)。方案 B、明确野怪项目适配及 D1–D6 不变，开场替代旧赠送、15组件且保留自选、五费单独处理、沿用冻结击杀/保底且不加漏奖顺延按签收表执行。
+
+[M8B_POLICY.md](M8B_POLICY.md) 索引 Q03 开场逐步账本、Q04 八场遭遇/中立定义、Q05 逐怪掉落与保底表、历史差异及最小合同增补。**这些具体参数与最小合同增补的首版设计已签收，实现、恢复及实战平衡仍待验收**。历史原始概率/遭遇脚本的unknown继续保留，不改九条候选的证据等级，也不影响已签收装备计数；不能把项目设计签收写成原计划全部历史来源已完备。
+
+本次只写 Markdown：没有修改原始/规范化数据、冻结 B2 正文/类型、版本/digest 或运行代码；未实施或验证 B6–B9。下文较早装备来源与验证记录按其原范围保留。
+
+## 本轮精确计数
+
+- 已完成装备来源：**44 / 44**；配方：**36 / 36**；effects字段：**218 / 218**
+- 已批准项目约定：**46**（原5条及本次审计后批准41条）
+- 剩余待逐项确认项目约定：**0**；B-07、B-10批准暂行，历史语义继续待核验
+- 装备未知/冲突项：**0**。这指项目中尚未作出处理决定的问题，不代表每条语义都有官方执行脚本证据
+- 中文名称核对已移出B1。44项临时译名仍待用户稍后确认，不计入上述未知/约定数量
+
+装备签收细表见 [M8_B1_EQUIPMENT_ACCEPTANCE.md](M8_B1_EQUIPMENT_ACCEPTANCE.md)；约定清单见 [M8_PROJECT_CONVENTIONS_REVIEW.md](M8_PROJECT_CONVENTIONS_REVIEW.md)；中文遗留项见 [M8_LOCALIZATION_FOLLOWUP.md](M8_LOCALIZATION_FOLLOWUP.md)。
+
+## 原始证据与可重现性
+
+用户提供en_us.json 12,061,650字节，SHA-256 c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3，与已有SOURCE_MANIFEST一致。独立数据分支提交57344b0688c33f4b473fc3ceb70c022ca701945e归档原件gzip。本轮保留原件/选取原记录/apiName/composition/effects原值，没有修改原始数值。
+
+标准模式唯一选择器setData[mutator===TFTSet13]，与全局items交集后精确选8组件+36成装。44条from为null，配方均取composition。provenance/item-review-a.json和item-review-b.json逐字段记录原值、单位、整数/Bps/tick、使用或不使用决定、desc占位符和项目约定；source hash与JSON pointer可回查。normalizedEffects是来源冻结结果，未导入运行引擎。
+
+官方14.24/B无对应改动时采用14.24effects；desc定语义。反甲7%生命与正义12%基础全能吸血已含于源档，不重复覆盖。巨杀采用20%条件额外增伤、目标maxHP>1750；同件5%+20%=25%为已批准GS约定。窃贼本体20%暴击、150生命来自客户端；7级分档和35/8池权重为已批准TG-01，不冒称官方历史随机表。
+
+## 再生成与验证
+
+```sh
+python3 scripts/import-m8-source.py
+python3 scripts/import-m8-source.py --check
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_import_m8_source.py' -v
+npm run build
+```
+
+20项离线来源测试覆盖hash门控、模式/配方边界、218字段Decimal独立换算、原件与gzip一致、再生成、篡改、显示名不影响身份数值配方、GS项目边界参考样例、TG等级6/7及280/595池组合。独立审查覆盖全部44项。以上不是尚未实现的装备战斗/存档/回放执行测试；没有重新运行完整浏览器验收或改B0性能证据。
+
+## 原计划非装备历史证据与实现边界
+
+原计划B1含五类非装备工作：开场经济、遭遇映射、中立单位行为、掉落/保底、具体单人政策。上述项目适配首版设计现已按POLICY §9签收；未取得的历史开场脚本、遭遇映射、执行行为及掉率证据仍保留unknown。九条中立候选原记录已归档，不等于完整历史遭遇表或掉率已取得。装备来源签收与本次M8B项目设计签收各有范围，均不能冒充全部历史证据完备或B6–B9运行验收完成。
+
+B2于提交 `2632925` 通过用户复审签收，合同与类型冻结，见M8_RULES.md。后续B3第一批G01/G02/G03已接入现有9成装/19英雄，采用开发期修订及digest，详见 [M8_B3_STATUS.md](M8_B3_STATUS.md)；B1归档44项仍runtimeEligible=false，B4目录未交付。以上来源归档工作没有改运行源；后续B3运行差异单独记录，main与部署未改，没有合并分支。

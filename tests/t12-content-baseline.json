@@ -1,0 +1,8 @@
+{
+  "equipmentOperationsVersion": "equipment-ops-next-battle-v1",
+  "previousContentDigest": "fnv1a32-utf16:b4a5c2e2",
+  "contentDigest": "fnv1a32-utf16:44fe9c0e",
+  "lootReplayDigest": "fnv1a32-utf16:7b14bfba",
+  "stateTraceHash": "bf4da979eab5889734e1b61c03a33c268d08ca58f7413844aaacc1c17c1b504c",
+  "previousStateTraceHash": "5eef930e6e9672117cf15ba84fd61b9228769bf4c4e4fa45bdd2110a65dbb89a"
+}

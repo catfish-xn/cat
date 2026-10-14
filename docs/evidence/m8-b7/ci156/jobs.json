@@ -1,0 +1,91 @@
+{
+  "run": {
+    "id": 37963368019,
+    "number": 156,
+    "sha": "e29c91e61af6ed9e32cfdb701bcadb6caa66c138",
+    "conclusion": "failure"
+  },
+  "jobs": [
+    {
+      "id": 113931502904,
+      "name": "test-and-build-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931502904",
+      "file": "113931502904-test-and-build-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:11:29.6630377Z AssertionError: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 396
+    },
+    {
+      "id": 113931502942,
+      "name": "input-dev-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931502942",
+      "file": "113931502942-input-dev-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:07:09.2168340Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 24
+    },
+    {
+      "id": 113931502975,
+      "name": "browser-preview-sniper-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931502975",
+      "file": "113931502975-browser-preview-sniper-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:02:58.5871976Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 18
+    },
+    {
+      "id": 113931503021,
+      "name": "input-preview-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931503021",
+      "file": "113931503021-input-preview-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:06:40.6195196Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 24
+    },
+    {
+      "id": 113931503069,
+      "name": "browser-dev-cannon-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931503069",
+      "file": "113931503069-browser-dev-cannon-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:02:59.6016837Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 18
+    },
+    {
+      "id": 113931503208,
+      "name": "browser-dev-sniper-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931503208",
+      "file": "113931503208-browser-dev-sniper-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:03:00.5713016Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 18
+    },
+    {
+      "id": 113931503213,
+      "name": "browser-preview-mage-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931503213",
+      "file": "113931503213-browser-preview-mage-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:02:43.2158740Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 18
+    },
+    {
+      "id": 113931503335,
+      "name": "browser-preview-cannon-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931503335",
+      "file": "113931503335-browser-preview-cannon-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:02:57.9531122Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 18
+    },
+    {
+      "id": 113931503419,
+      "name": "browser-dev-mage-sample1",
+      "conclusion": "failure",
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37963368019/job/113931503419",
+      "file": "113931503419-browser-dev-mage-sample1.sanitized.log",
+      "firstFailure": "2026-10-09T17:02:50.7113627Z AssertionError [ERR_ASSERTION]: golden contentDigest: review explicit rule/version change",
+      "retainedLines": 18
+    }
+  ]
+}

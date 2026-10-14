@@ -1,0 +1,85 @@
+(node:7) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test
+> vitest run tests/m8-b7-cleanup.test.ts
+
+(node:20) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ RUN  v5.0.3 /tmp/b7-cleanup-probe
+
+(node:32) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ❯ tests/m8-b7-cleanup.test.ts (5 tests | 3 failed) 99ms
+   ❯ B7 cleanup independent restore boundaries (5)
+     × derives execution 1 + duration 7 as [2, 9) 44ms
+     × derives execution 1 + duration 17 as [2, 19) 17ms
+     × derives execution 4 + duration 7 as [5, 12) 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/m8-b7-cleanup.test.ts > B7 cleanup independent restore boundaries > derives execution 1 + duration 7 as [2, 9)
+AssertionError: expected [Function] to not throw an error but 'Error: Invalid Match save: neutral co…' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"Error: Invalid Match save: neutral control removal reason"
+
+ ❯ tests/m8-b7-cleanup.test.ts:69:84
+     67|         combat = stepCombat(combat).state;
+     68|         if (tick < execution) continue;
+     69|         expect(() => validateNeutralCombat(combat, f.preparation, f.st…
+       |                                                                                    ^
+     70|         const control = combat.units.find(u => u.id === 'p')!.mechanis…
+     71|           .flatMap(g => g.contributions).find(c => c.application.kind …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/m8-b7-cleanup.test.ts > B7 cleanup independent restore boundaries > derives execution 1 + duration 17 as [2, 19)
+AssertionError: expected [Function] to not throw an error but 'Error: Invalid Match save: neutral lo…' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"Error: Invalid Match save: neutral lost control"
+
+ ❯ tests/m8-b7-cleanup.test.ts:69:84
+     67|         combat = stepCombat(combat).state;
+     68|         if (tick < execution) continue;
+     69|         expect(() => validateNeutralCombat(combat, f.preparation, f.st…
+       |                                                                                    ^
+     70|         const control = combat.units.find(u => u.id === 'p')!.mechanis…
+     71|           .flatMap(g => g.contributions).find(c => c.application.kind …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  tests/m8-b7-cleanup.test.ts > B7 cleanup independent restore boundaries > derives execution 4 + duration 7 as [5, 12)
+AssertionError: expected [Function] to not throw an error but 'Error: Invalid Match save: neutral st…' was thrown
+
+- Expected:
+undefined
+
++ Received:
+"Error: Invalid Match save: neutral status declaration"
+
+ ❯ tests/m8-b7-cleanup.test.ts:69:84
+     67|         combat = stepCombat(combat).state;
+     68|         if (tick < execution) continue;
+     69|         expect(() => validateNeutralCombat(combat, f.preparation, f.st…
+       |                                                                                    ^
+     70|         const control = combat.units.find(u => u.id === 'p')!.mechanis…
+     71|           .flatMap(g => g.contributions).find(c => c.application.kind …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 2 passed (5)
+   Start at  01:54:18
+   Duration  1.04s (transform 76%, import 13%, tests 11%)
+

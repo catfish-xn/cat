@@ -1,0 +1,83 @@
+{
+  "cannon": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "commands": 158,
+    "changedRoundEventHashes": [
+      1,
+      2,
+      3,
+      10,
+      17,
+      24,
+      25,
+      26,
+      27,
+      29,
+      30,
+      31,
+      32,
+      34,
+      36,
+      37,
+      38
+    ],
+    "formedBattles": 0,
+    "componentGrants": 5
+  },
+  "sniper": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "commands": 160,
+    "changedRoundEventHashes": [
+      1,
+      2,
+      3,
+      10,
+      17,
+      24,
+      31,
+      38
+    ],
+    "formedBattles": 0,
+    "componentGrants": 5
+  },
+  "mage": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "commands": 157,
+    "changedRoundEventHashes": [
+      1,
+      2,
+      3,
+      10,
+      17,
+      24,
+      31,
+      38
+    ],
+    "formedBattles": 0,
+    "componentGrants": 5
+  },
+  "sniper-caitlyn": {
+    "outcome": "victory",
+    "roundId": "6-7",
+    "battles": 33,
+    "commands": 163,
+    "changedRoundEventHashes": [
+      1,
+      2,
+      3,
+      10,
+      17,
+      24,
+      31,
+      38
+    ],
+    "formedBattles": 0,
+    "componentGrants": 5
+  }
+}

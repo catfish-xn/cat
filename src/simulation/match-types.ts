@@ -1,16 +1,19 @@
-import type { CombatEvent, CombatResult, CombatStartFailure, CombatState } from './combat';
+import type { CombatResult, CombatStartFailure, CombatState } from './combat';
+import type { LedgerCombatEvent } from './combat-types';
 import type { DeploymentFailure, GameState } from './game';
 import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, ScheduleReceipt, StrategyEvent } from './strategy-types';
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
-export type MatchEvent = CombatEvent | ((UnitUpgradedEvent | StrategyEvent | { readonly type: 'roundSettled'; readonly round: number }) & { readonly domain?: 'match'; readonly eventSeq?: number });
-export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased' };
+export type MatchEvent = LedgerCombatEvent | ((import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
+  | {readonly type:'choiceTimedOut';readonly choiceId:string;readonly resolution:'first-offer'|'empty-anomaly'}) & { readonly domain?: 'match'; readonly eventSeq?: number });
+export type ShopSlot = { readonly status: 'available'; readonly definitionId: string } | { readonly status: 'purchased'; readonly empty?: true };
 export interface Shop { readonly generation: number; readonly slots: readonly ShopSlot[]; readonly locked?: boolean }
 export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: number }
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
-  readonly round: number; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
+  readonly round: number; readonly roundId: string; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
+  readonly combatEventCount: number;
   readonly settlementId: string; readonly roundKind: RoundKind;
   readonly incomeBreakdown: { readonly base: number; readonly win: number; readonly interest: number; readonly streak: number };
   readonly interestBasis: number; readonly streakBefore: Streak; readonly streakAfter: Streak; readonly xpRequested: number;
@@ -19,9 +22,30 @@ export interface RoundResult {
   readonly xpBefore: number; readonly xpAfter: number; readonly hpBefore: number; readonly hpAfter: number;
   readonly baseDamage: number; readonly survivingEnemyCount: number; readonly playerDamage: number; readonly hpLost: number;
 }
+/** Enemy preparation and the independent loot ledger each retain one authority. */
+export interface RoundPreparation {
+  readonly version: 'm8-b8-preparation-v1';
+  readonly roundId: string;
+  readonly encounterId: string | null;
+  readonly contentStatus: 'ready-b8-loot' | 'not-pve';
+  readonly enemies: readonly import('./unit-types').Unit[];
+}
 export interface MatchBase {
-  readonly schemaVersion: 5; readonly rulesVersion: 'm5-14.24b-v1'; readonly contentVersion: 's13-14.24b-slice-v1'; readonly contentDigest: string;
-  readonly commandProtocolVersion: 2; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
+  readonly consumables: readonly import('./consumable-types').ConsumableInstance[];
+  readonly nextConsumableSerial: number;
+  readonly reforgeState: import('./m8/contracts').RngStream;
+  /** Server-only shared inventory binding; absent in the single-player path. */
+  readonly sharedPool?: import('./shared-pool-types').SharedPoolBinding;
+  /** Server-only opt-in metadata. Absent from every offline state and save. */
+  readonly multiplayer?: import('./round-settlement').MultiplayerProgress;
+  readonly m8: Pick<import('./m8/contracts').M8MatchExtension, 'round' | 'encounterPlan'> & {readonly preparation: RoundPreparation; readonly loot: import('./loot-types').MatchLootState};
+  readonly combatInputBasis: import('./combat-input').CombatInputBasis | null;
+  readonly resourceProvenance: import('./resource-provenance').ResourceProvenance;
+
+  readonly equipmentState: import('./m8/equipment').EquipmentState;
+  readonly temporaryEquipment: readonly import('./m8/contracts').TemporaryEquipment[];
+  readonly schemaVersion: import('./m8/contracts').M8Version['schemaVersion']; readonly rulesVersion: import('./m8/contracts').M8Version['rulesVersion']; readonly contentVersion: import('./m8/contracts').M8Version['contentVersion']; readonly contentDigest: string;
+  readonly commandProtocolVersion: import('./m8/contracts').M8Version['commandProtocolVersion']; readonly rngAlgorithm: 'lcg32-v1'; readonly tickMs: 50;
   readonly roundDefinitionId: string; readonly streak: Streak; readonly outcome: 'victory' | 'defeat' | null;
   readonly battleSeedRngState: number; readonly persistentGrowth: readonly PersistentGrowth[];
   readonly augmentProgress: { readonly pumpingRounds: number; readonly investmentHp: number };
@@ -42,7 +66,8 @@ export type MatchState = MatchBase & (
 );
 export type MatchFailure = DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
-  | 'stale-choice' | 'invalid-choice' | 'invalid-target';
+  | 'stale-choice' | 'invalid-choice' | 'invalid-target'
+  | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure;
 export type MatchCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }
   | { readonly ok: false; readonly state: MatchState; readonly reason: MatchFailure };
 export interface MatchStep { readonly state: MatchState; readonly events: readonly MatchEvent[] }

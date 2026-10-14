@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "seed": 42,
+  "ticks": 164,
+  "events": 106,
+  "stateHash": "fnv1a32-utf16:acf238a8",
+  "eventHash": "fnv1a32-utf16:966105d6",
+  "traceHashes": {
+    "state": "bf4da979eab5889734e1b61c03a33c268d08ca58f7413844aaacc1c17c1b504c",
+    "events": "2a19081d29a4a070f35a0a8b0ee4fab3324d9939963759f6fc01b5c1b286bfbe",
+    "rng": "0663a319578257493a68c0f86632d94040e7f27fe534ade7d40911774154ae6d"
+  },
+  "originalStateTraceHash": "2750307d4dea28641853737163d3621a6b3cce3901cfd184a0dc8c4178689167",
+  "comparedStates": 165,
+  "restoreTick": 40,
+  "restoreTextAndObject": true,
+  "cliSnapshotMatches": true,
+  "cliBudgetEnforced": true,
+  "comparison": "UTF-8 Buffer.equals of all start/tick states, event batches and RNG; pinned probe FNV hashes; deepStrictEqual on every restored continuation step",
+  "scope": "seed 42 existing first battle; browser-target bundle executed in ordinary Node, not a live browser or multiplayer acceptance",
+  "t12Baseline": {
+    "equipmentOperationsVersion": "equipment-ops-next-battle-v1",
+    "previousContentDigest": "fnv1a32-utf16:b4a5c2e2",
+    "contentDigest": "fnv1a32-utf16:44fe9c0e",
+    "lootReplayDigest": "fnv1a32-utf16:7b14bfba",
+    "stateTraceHash": "bf4da979eab5889734e1b61c03a33c268d08ca58f7413844aaacc1c17c1b504c",
+    "previousStateTraceHash": "5eef930e6e9672117cf15ba84fd61b9228769bf4c4e4fa45bdd2110a65dbb89a"
+  }
+}

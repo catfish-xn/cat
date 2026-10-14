@@ -1,0 +1,6 @@
+tree a0d09f8705588aa96e9fb9741504fbb33075c41e
+parent 5373ca6ef729419cfa5bed64e790b680a1b6e792
+author dot <dot@users.noreply.github.com> 1791617059 +0200
+committer dot <dot@users.noreply.github.com> 1791617059 +0200
+
+fix: restrict in-call resource projection reuse to parsed JSON

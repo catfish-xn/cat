@@ -1,0 +1,8 @@
+{
+  "operationRulesVersion": "multiplayer-combat-ops-v1",
+  "autoDeploymentVersion": "front-center-left-first-v1",
+  "upgradeVersion": "bench-during-combat-deferred-v1",
+  "previousContentDigest": "fnv1a32-utf16:20b58a63",
+  "contentDigest": "fnv1a32-utf16:a0b38123",
+  "stateTraceHash": "6f1bd3b1c9694c33331a390ec698d5c0dc0c2b59dd4b0eb1da73ce7e919b2b94"
+}

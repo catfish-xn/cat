@@ -1,0 +1,513 @@
+{
+  "sha": "e77dd38da5c525b1915698a0663472724ff1fdcb",
+  "dirty": "",
+  "sourceFingerprint": "85307dbc1cc695a410f9f8d301f1f0ef040ef7c1b9e83d3154f94ac13c505755",
+  "scriptHash": "0ed69956cccb528183faf4764b4aa61b28210c683ffb83ab21e1c5af1a5949dc",
+  "node": "v22.23.3",
+  "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+  "cpuCount": 4,
+  "memoryBytes": 16765370368,
+  "loadAtStart": [
+    3.25,
+    3.8,
+    2.7
+  ],
+  "startedAt": "2026-10-10T08:15:02.244Z",
+  "passed": false,
+  "acceptanceScope": "B6 explicit B8/B9 dependencies deferred; bounded import is a separate real-path gate",
+  "restorationIssue": "https://github.com/catfish-xn/cat/issues/23",
+  "method": "Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 command policy; its missing 15-equipment coverage is explicitly B8-deferred. Module lifecycle is separate from E full application/Phaser lifecycle.",
+  "diagnostics": {
+    "schemaVersion": 1,
+    "file": "diagnostics.jsonl",
+    "browserProcessExit": "pw:browser stderr records Chromium PID and process exitCode/signal",
+    "debug": {
+      "prior": "",
+      "effective": "pw:browser",
+      "negativeSelectorsPreserved": []
+    },
+    "events": [
+      {
+        "sequence": 0,
+        "event": "stage",
+        "at": "2026-10-10T08:15:02.244Z",
+        "elapsedMs": 55.509567000000004,
+        "stage": "setup",
+        "cleanupStarted": false,
+        "details": {}
+      },
+      {
+        "sequence": 1,
+        "event": "stage",
+        "at": "2026-10-10T08:16:32.797Z",
+        "elapsedMs": 90608.59704000001,
+        "stage": "browser-launch",
+        "cleanupStarted": false,
+        "details": {}
+      },
+      {
+        "sequence": 2,
+        "event": "stage",
+        "at": "2026-10-10T08:16:32.857Z",
+        "elapsedMs": 90668.926844,
+        "stage": "page-create",
+        "cleanupStarted": false,
+        "details": {}
+      },
+      {
+        "sequence": 3,
+        "event": "stage",
+        "at": "2026-10-10T08:16:32.900Z",
+        "elapsedMs": 90711.307356,
+        "stage": "page-goto",
+        "cleanupStarted": false,
+        "details": {}
+      },
+      {
+        "sequence": 4,
+        "event": "stage",
+        "at": "2026-10-10T08:16:32.917Z",
+        "elapsedMs": 90728.82988800001,
+        "stage": "measurements-requested",
+        "cleanupStarted": false,
+        "details": {}
+      },
+      {
+        "sequence": 5,
+        "event": "page-close",
+        "at": "2026-10-10T08:16:47.797Z",
+        "elapsedMs": 105609.045509,
+        "stage": "measurements-requested",
+        "cleanupStarted": false,
+        "details": {
+          "closed": true,
+          "browserConnected": true
+        }
+      },
+      {
+        "sequence": 6,
+        "event": "script-catch",
+        "at": "2026-10-10T08:16:47.799Z",
+        "elapsedMs": 105610.71355700001,
+        "stage": "measurements-requested",
+        "cleanupStarted": false,
+        "details": {
+          "pageClosed": true,
+          "browserConnected": true,
+          "message": "Error: page.evaluate: Target page, context or browser has been closed"
+        }
+      },
+      {
+        "sequence": 7,
+        "event": "stage",
+        "at": "2026-10-10T08:16:47.846Z",
+        "elapsedMs": 105657.760528,
+        "stage": "script-cleanup-start",
+        "cleanupStarted": true,
+        "details": {
+          "failureRecorded": true
+        }
+      }
+    ],
+    "writeErrors": []
+  },
+  "skipped": [
+    {
+      "status": "skipped",
+      "owner": "B8",
+      "id": "full-load-15-equipment",
+      "reason": "The real command route awaits B8 loot; restore the original maximal-load coverage under https://github.com/catfish-xn/cat/issues/23"
+    }
+  ],
+  "fullLoadObserved": [
+    {
+      "round": 1,
+      "players": 1,
+      "enemies": 2,
+      "equipped": 0
+    },
+    {
+      "round": 2,
+      "players": 2,
+      "enemies": 3,
+      "equipped": 0
+    },
+    {
+      "round": 3,
+      "players": 2,
+      "enemies": 4,
+      "equipped": 1
+    },
+    {
+      "round": 4,
+      "players": 2,
+      "enemies": 3,
+      "equipped": 2
+    },
+    {
+      "round": 5,
+      "players": 3,
+      "enemies": 3,
+      "equipped": 2
+    },
+    {
+      "round": 6,
+      "players": 4,
+      "enemies": 3,
+      "equipped": 2
+    },
+    {
+      "round": 8,
+      "players": 4,
+      "enemies": 4,
+      "equipped": 3
+    },
+    {
+      "round": 9,
+      "players": 5,
+      "enemies": 4,
+      "equipped": 3
+    },
+    {
+      "round": 10,
+      "players": 5,
+      "enemies": 3,
+      "equipped": 3
+    },
+    {
+      "round": 11,
+      "players": 5,
+      "enemies": 5,
+      "equipped": 5
+    },
+    {
+      "round": 12,
+      "players": 5,
+      "enemies": 5,
+      "equipped": 5
+    },
+    {
+      "round": 13,
+      "players": 6,
+      "enemies": 5,
+      "equipped": 5
+    },
+    {
+      "round": 15,
+      "players": 6,
+      "enemies": 5,
+      "equipped": 6
+    },
+    {
+      "round": 16,
+      "players": 6,
+      "enemies": 5,
+      "equipped": 6
+    },
+    {
+      "round": 17,
+      "players": 6,
+      "enemies": 5,
+      "equipped": 6
+    },
+    {
+      "round": 18,
+      "players": 7,
+      "enemies": 6,
+      "equipped": 8
+    },
+    {
+      "round": 19,
+      "players": 7,
+      "enemies": 6,
+      "equipped": 8
+    },
+    {
+      "round": 20,
+      "players": 7,
+      "enemies": 6,
+      "equipped": 8
+    },
+    {
+      "round": 22,
+      "players": 8,
+      "enemies": 6,
+      "equipped": 9
+    },
+    {
+      "round": 23,
+      "players": 8,
+      "enemies": 6,
+      "equipped": 9
+    },
+    {
+      "round": 24,
+      "players": 8,
+      "enemies": 6,
+      "equipped": 9
+    },
+    {
+      "round": 25,
+      "players": 8,
+      "enemies": 7,
+      "equipped": 11
+    },
+    {
+      "round": 26,
+      "players": 8,
+      "enemies": 7,
+      "equipped": 11
+    },
+    {
+      "round": 27,
+      "players": 8,
+      "enemies": 7,
+      "equipped": 11
+    },
+    {
+      "round": 29,
+      "players": 8,
+      "enemies": 7,
+      "equipped": 12
+    },
+    {
+      "round": 30,
+      "players": 8,
+      "enemies": 7,
+      "equipped": 12
+    },
+    {
+      "round": 31,
+      "players": 9,
+      "enemies": 1,
+      "equipped": 12
+    },
+    {
+      "round": 32,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 14
+    },
+    {
+      "round": 33,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 14
+    },
+    {
+      "round": 34,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 14
+    },
+    {
+      "round": 36,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 15
+    },
+    {
+      "round": 37,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 15
+    },
+    {
+      "round": 38,
+      "players": 9,
+      "enemies": 1,
+      "equipped": 15
+    }
+  ],
+  "fullLoadCoverage": [
+    {
+      "round": 36,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 15
+    },
+    {
+      "round": 37,
+      "players": 9,
+      "enemies": 8,
+      "equipped": 15
+    },
+    {
+      "round": 38,
+      "players": 9,
+      "enemies": 1,
+      "equipped": 15
+    }
+  ],
+  "routes": [
+    {
+      "build": "cannon",
+      "bytes": 19453154,
+      "incrementalBytes": 1299945,
+      "summary": {
+        "caitlynBattles": 0,
+        "caitlynCasts": 0,
+        "tickTimingMs": {
+          "p50": 0.5926469999994879,
+          "p95": 1.231988999999885,
+          "p99": 1.9108550000000832,
+          "max": 11.207989999998972
+        },
+        "build": "cannon",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 100,
+        "gold": 222,
+        "formedAt": 23,
+        "formedBattles": 14,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 8467,
+        "commands": 194,
+        "durationSeconds": 14.047
+      }
+    },
+    {
+      "build": "sniper",
+      "bytes": 25153739,
+      "incrementalBytes": 2161940,
+      "summary": {
+        "caitlynBattles": 0,
+        "caitlynCasts": 0,
+        "tickTimingMs": {
+          "p50": 0.637271999999939,
+          "p95": 1.0810139999994135,
+          "p99": 1.7132870000023104,
+          "max": 2.6161150000007183
+        },
+        "build": "sniper",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 83,
+        "gold": 245,
+        "formedAt": 22,
+        "formedBattles": 15,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 11930,
+        "commands": 182,
+        "durationSeconds": 19.594
+      }
+    },
+    {
+      "build": "mage",
+      "bytes": 22614233,
+      "incrementalBytes": 2042784,
+      "summary": {
+        "caitlynBattles": 0,
+        "caitlynCasts": 0,
+        "tickTimingMs": {
+          "p50": 0.6011349999971571,
+          "p95": 1.008068999995885,
+          "p99": 1.681534000003012,
+          "max": 2.2885969999988447
+        },
+        "build": "mage",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 52,
+        "gold": 267,
+        "formedAt": 22,
+        "formedBattles": 15,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 12380,
+        "commands": 176,
+        "durationSeconds": 19.39
+      }
+    },
+    {
+      "build": "sniper-caitlyn",
+      "bytes": 25041592,
+      "incrementalBytes": 2190029,
+      "summary": {
+        "caitlynBattles": 12,
+        "caitlynCasts": 23,
+        "tickTimingMs": {
+          "p50": 0.616611000004923,
+          "p95": 1.0778229999996256,
+          "p99": 1.8131040000007488,
+          "max": 18.483630999995512
+        },
+        "build": "sniper-caitlyn",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 100,
+        "gold": 251,
+        "formedAt": 22,
+        "formedBattles": 3,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 11571,
+        "commands": 185,
+        "durationSeconds": 18.923
+      }
+    },
+    {
+      "build": "full-load",
+      "bytes": 21543400,
+      "incrementalBytes": 1381611,
+      "summary": {
+        "caitlynBattles": 0,
+        "caitlynCasts": 0,
+        "tickTimingMs": {
+          "p50": 0.5601489999971818,
+          "p95": 1.0654860000067856,
+          "p99": 1.7340729999996256,
+          "max": 19.87695399999211
+        },
+        "build": "cannon",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 96,
+        "gold": 160,
+        "formedAt": null,
+        "formedBattles": 0,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 10911,
+        "commands": 206,
+        "durationSeconds": 16.739
+      }
+    }
+  ],
+  "routeGenerationMs": 90217.46467500001,
+  "payload": {
+    "completeBytes": 25153739,
+    "incrementalBytes": 2190029,
+    "incrementalCombatId": "round-33",
+    "incrementalEvents": 3614,
+    "largestRecordBytes": 1982398,
+    "largestRecordCombatId": "round-33",
+    "boundedComplete": {
+      "build": "sniper-caitlyn",
+      "bytes": 21585345,
+      "roundId": "6-3",
+      "battles": 30,
+      "stateHash": "fnv1a32-utf16:8a360df4",
+      "notEquivalentToFullPayload": true
+    }
+  },
+  "browser": "153.0.8010.12",
+  "errors": [],
+  "failure": "page.evaluate: Target page, context or browser has been closed\n    at /home/runner/work/cat/cat/scripts/verify-m6-performance.cjs:86:34",
+  "endedAt": "2026-10-10T08:16:47.801Z",
+  "durationMs": 105612.57940100001,
+  "finalSourceFingerprint": "85307dbc1cc695a410f9f8d301f1f0ef040ef7c1b9e83d3154f94ac13c505755",
+  "peakProcessRssBytes": 2408030208,
+  "loadAtEnd": [
+    1.39,
+    2.97,
+    2.51
+  ]
+}

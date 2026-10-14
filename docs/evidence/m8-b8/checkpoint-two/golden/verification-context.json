@@ -1,0 +1,34 @@
+{
+  "observedAt": "2026-10-10T06:15:54.256Z",
+  "node": "v22.23.3",
+  "headObservedAfterTargetedTests": "03bee266a74d547117b061db0947c22105a27605",
+  "workingTreeNotCommittedByMigrationWorker": true,
+  "sourceInputFingerprint": "4506f5918cc3c9b8b5065f4332316a1c07bfb23ccd4d8fbbc5e70141ed90f44d",
+  "files": {
+    "scripts/update-m8-b8-golden.cjs": "ca53ebd5f6c9f0f23478aca8db5ecd6659fbfe6b7a8239bd9e4a7ff8b371dcc9",
+    "tests/m8-b8-golden-guard.test.mjs": "57d55f7711274adcb71e26292171f76c26136197fc68c6f5b0606683defe7daa",
+    "tests/m5-route.test.ts": "848559bd961f485d4adf741080dc7fb58292301b4827ce522d328aafbe9458ab",
+    "tests/m6-integration.test.ts": "c89e1fdc246cee64924fe82ba92ccb39a599e926231c4e77a03e386b5c76c058",
+    "tests/fixtures/m5/assert-golden.cjs": "0b43f667cc648d051bcfe9ff26cc8056b5e79bf2718e35621660acd22cecf566",
+    "tests/fixtures/m5/oracle.cjs": "10ebbfaa506d87e5678ee01e757ab7cc3f3611192ceb0213e8531bde4ffa9320",
+    "scripts/generate-m5-route.cjs": "eefbc3c1ebab30e8c5fe3e1e1af4d56364e65873afddad5fc13104150291c8e5",
+    "tests/fixtures/m5/full-match-golden.json": "8d129f70c093a63b339543f65814232f3cfb6daa13d95168aac3b06bdc39ac28",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b8.json": "007b6b4136d6959b227cbd9567948f83dca75db4ad788fd43d03c4e3cf069cc5"
+  },
+  "originalTargetedCommand": "npm test -- tests/m5-route.test.ts tests/m6-integration.test.ts",
+  "originalTargetedResult": {
+    "filesPassed": 2,
+    "testsPassed": 8,
+    "existingSkipped": 9,
+    "durationSeconds": 239.84,
+    "workerAndTimeoutOverrides": false
+  },
+  "guardDiagnosticResult": {
+    "passed": 19,
+    "failed": 0,
+    "singleWorkerDiagnostic": true,
+    "notReplacementForOriginalGates": true
+  },
+  "typecheck": "passed",
+  "internalReviewOnly": true
+}

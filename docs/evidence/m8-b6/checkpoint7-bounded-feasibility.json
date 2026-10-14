@@ -1,0 +1,78 @@
+{
+  "baseSha": "693f0191deaae8b8cfcd2efebf43b8afc5e830a3",
+  "status": "working-tree feasibility diagnostic, not fixed-SHA acceptance",
+  "node": "v22.23.3",
+  "browserExecuted": false,
+  "nativeIndexedDbExecuted": false,
+  "restorationIssue": "https://github.com/catfish-xn/cat/issues/23",
+  "routes": [
+    {
+      "build": "cannon",
+      "finalRound": "6-7",
+      "completedBattles": 33,
+      "boundedRound": "6-3",
+      "boundedPhase": "settlement",
+      "boundedBattles": 30,
+      "boundedBytes": 14773197,
+      "maxObservedEquipment": 2
+    },
+    {
+      "build": "sniper",
+      "finalRound": "6-7",
+      "completedBattles": 33,
+      "boundedRound": "6-3",
+      "boundedPhase": "settlement",
+      "boundedBattles": 30,
+      "boundedBytes": 20780416,
+      "maxObservedEquipment": 2
+    },
+    {
+      "build": "mage",
+      "finalRound": "6-7",
+      "completedBattles": 33,
+      "boundedRound": "6-3",
+      "boundedPhase": "settlement",
+      "boundedBattles": 30,
+      "boundedBytes": 18298438,
+      "maxObservedEquipment": 2
+    },
+    {
+      "build": "sniper-caitlyn",
+      "finalRound": "6-7",
+      "completedBattles": 33,
+      "boundedRound": "6-3",
+      "boundedPhase": "settlement",
+      "boundedBattles": 30,
+      "boundedBytes": 20733963,
+      "maxObservedEquipment": 2
+    },
+    {
+      "build": "full-load",
+      "finalRound": "6-7",
+      "completedBattles": 33,
+      "boundedRound": "6-3",
+      "boundedPhase": "settlement",
+      "boundedBattles": 30,
+      "boundedBytes": 17088903,
+      "maxObservedEquipment": 5
+    }
+  ],
+  "largestBoundedValidation": {
+    "scope": "Node feasibility only; not browser, IndexedDB activation or performance acceptance",
+    "largestBoundedBuild": "sniper",
+    "bytes": 20780416,
+    "roundId": "6-3",
+    "phase": "settlement",
+    "battles": 30,
+    "validateFileMs": 8744.799987999999,
+    "completeObjectEqual": true
+  },
+  "plannedBrowserGate": {
+    "samples": 3,
+    "metric": "max",
+    "ceilingMs": 30000,
+    "payload": "largest actual 30-battle settlement envelope from all five original strategies",
+    "original33BattleGateStatus": "skipped B9",
+    "notEquivalentToFullPayload": true
+  }
+}

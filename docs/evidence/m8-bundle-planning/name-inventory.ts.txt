@@ -1,0 +1,9 @@
+import {ITEM_DEFINITIONS} from './simulation/content/items';
+import {TRAIT_DEFINITIONS} from './simulation/content/traits';
+import {AUGMENT_DEFINITIONS} from './simulation/content/augments';
+import {ANOMALY_DEFINITIONS} from './simulation/content/anomalies';
+import {UNIT_DEFINITIONS} from './simulation/units';
+import {SHOP_CATALOG_BY_COST} from './simulation/match-rules';
+const heroIds=Object.values(SHOP_CATALOG_BY_COST).flat();
+const groups={items:ITEM_DEFINITIONS,traits:TRAIT_DEFINITIONS,augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,heroes:Object.fromEntries(heroIds.map(id=>[id,UNIT_DEFINITIONS[id]]))};
+console.log(JSON.stringify(Object.fromEntries(Object.entries(groups).map(([g,ds])=>[g,Object.fromEntries(Object.entries(ds).map(([id,d])=>[id,d.name]))])),null,2));

@@ -1,0 +1,99 @@
+{
+  "scope": "read-only CI artifact comparison; no fixed candidate modifications or reruns",
+  "baseline": {
+    "sha": "b64230816e60dd8c52ee08bd1b0a9a0d001b66a3",
+    "run": 37911325240,
+    "artifact": 11608916519,
+    "artifactSha256": "d309b6542208dbc3ec55532d0b87fa53172934f9fcca2daf9dab7b8d12283a3d",
+    "cpu": "AMD EPYC 7763 64-Core Processor",
+    "browser": "153.0.8010.12",
+    "payload": {
+      "completeBytes": 24803012,
+      "incrementalBytes": 2026215,
+      "incrementalCombatId": "round-34",
+      "incrementalEvents": 3469,
+      "largestRecordBytes": 1834558,
+      "largestRecordCombatId": "round-34"
+    },
+    "firstSeekSamples": [
+      1231.5,
+      1198.4000000001397,
+      1177.2999999998137
+    ],
+    "round34Identity": "6-6"
+  },
+  "b6FailedRun": {
+    "sha": "88efdc443e3641dc96c1fb4d90442a4d0edab913",
+    "run": 37915580089,
+    "job": 113770818833,
+    "artifact": 11611156424,
+    "artifactSha256": "49281db0fb0090684423a8aef323979d4849b873576e08bdea229b82fe3a4ed8",
+    "cpu": "Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz",
+    "browser": "153.0.8010.12",
+    "payload": {
+      "completeBytes": 23567394,
+      "incrementalBytes": 1708858,
+      "incrementalCombatId": "round-34",
+      "incrementalEvents": 3022,
+      "largestRecordBytes": 1547599,
+      "largestRecordCombatId": "round-34",
+      "boundedComplete": {
+        "build": "sniper",
+        "bytes": 20780416,
+        "roundId": "6-3",
+        "battles": 30,
+        "stateHash": "fnv1a32-utf16:511359c6",
+        "notEquivalentToFullPayload": true
+      }
+    },
+    "firstSeekSamples": [
+      909.1999999999534,
+      1176.6999999999534,
+      2271
+    ],
+    "round34Identity": "6-3",
+    "currentPrefixActualValidationRan": true,
+    "incrementalCompletedBattles": 29,
+    "boundedImport": {
+      "scope": "separate real 30-battle settlement import; not the original maximal 33-battle or game-over payload",
+      "restorationIssue": "https://github.com/catfish-xn/cat/issues/23",
+      "notEquivalentToFullPayload": true,
+      "sourceBuild": "sniper",
+      "bytes": 20780416,
+      "battles": 30,
+      "roundId": "6-3",
+      "phase": "settlement",
+      "samples": [
+        7015.699999999953,
+        6873.800000000047,
+        6873.09999999986
+      ],
+      "metric": "max",
+      "actual": 7015.699999999953,
+      "ceiling": 30000,
+      "passed": true,
+      "completeObjectEqual": true,
+      "nativeReadbackEqual": true,
+      "path": [
+        "exportFile",
+        "validateFile",
+        "validateBattleCollection",
+        "MatchSession",
+        "BattleHistory",
+        "SaveRepository.activate"
+      ],
+      "coldDatabaseFirstActivation": true,
+      "source": "captured by onStep when the real 30th combat settled; no truncated terminal envelope"
+    }
+  },
+  "observations": [
+    "Largest-byte single-record selection code and firstSeek constructor/seek callback are unchanged; legal route contents changed.",
+    "Same round-34 ID means different semantic rounds across old/new catalogs: 6-6 versus 6-3.",
+    "Record bytes decreased from 1834558 to 1547599; byte count alone does not establish equivalent computational work.",
+    "Overshoot was third sample, not first: 909.2, 1176.7, 2271 ms.",
+    "Current envelope is 29 completed + one prefix, so validateFile(current) actually ran before firstSeek. BattleHistory(current) also validates its prefix during construction.",
+    "Original pipeline included additional three complete validations and a full-load validation; removing that pipeline may change JIT/GC/allocation state, but these artifacts contain no profile proving causation.",
+    "Hardware differs (AMD EPYC 7763 versus Intel Xeon Platinum 8370C); current failure cannot be identified as flaky, purely cold, or purely payload-driven from these two runs.",
+    "No local Chromium rerun, warmup/sample removal, threshold change or new dependency skip is authorized by this comparison. Await current fixed CI150."
+  ]
+}

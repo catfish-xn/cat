@@ -1,12 +1,15 @@
+import { validateItemProgram } from './m8/item-program';
+import { validateComponentPool } from './component-pool';
 import { ABILITY_DEFINITIONS, validateAbilityDefinitions } from './combat-abilities';
-import { UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS, validateUnitDefinitions } from './units';
+import { UNIT_DEFINITIONS, M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS, M8_NEUTRAL_UNIT_DEFINITIONS, validateUnitDefinitions } from './units';
 import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL } from './match-rules';
 import { TRAIT_DEFINITIONS } from './content/traits';
 import { ITEM_DEFINITIONS } from './content/items';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { S13_ABILITY_DATA } from './content/abilities';
-import { ROUND_SCHEDULE } from './round-schedule';
+import { FINAL_ROUND, ROUND_SCHEDULE } from './round-schedule';
+import { ROUND_CATALOG } from './content/round-catalog';
 import type { AbilityDefinition } from './ability-types';
 import type { CostTier, UnitDefinition } from './unit-types';
 import type { ChoiceDefinition, Effect, ItemDefinition, ScheduleEvent, Stat, TraitDefinition } from './strategy-types';
@@ -88,8 +91,8 @@ export function validateStatBounds(content:ContentCatalogs):void {
     const ability=content.abilities[unit.abilityId];
     if(ability && !Number.isSafeInteger(Math.max(...ability.amountByStar)*10000*56)) fail(`Ability arithmetic bound: ${unit.id}`);
   }
-  // 1200 ticks, at most one AA per tick, three identical items, 35 rounds.
-  const maxima={ragebladeStacks:1200*3,archangelTicks:1200/100,interestHp:35*5*8,pumpingBps:35*50};
+  // Conservative bound over the explicit finite campaign; no ordinal formula.
+  const maxima={ragebladeStacks:1200*3,archangelTicks:1200/100,interestHp:ROUND_CATALOG.length*5*8,pumpingBps:ROUND_CATALOG.length*50};
   if(Object.values(maxima).some(n=>!Number.isSafeInteger(n))) fail('Dynamic bounds overflow');
 }
 export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
@@ -97,7 +100,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:19,traits:5,items:16,augments:6,anomalies:3})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:19,traits:5,items:44,augments:6,anomalies:3})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);
@@ -118,35 +121,36 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     }
   }
   const components=Object.values(content.items).filter(x=>x.kind==='component').map(x=>x.id).sort();
-  if(components.length!==7) fail('M5 requires seven obtainable components');
+  validateComponentPool(content.items);
   const recipes=new Set<string>();
   for(const item of Object.values(content.items)) {
-    if(!item.name) fail('Missing item name');effects(item.effects);
+    const approved=ITEM_DEFINITIONS[item.id];
+    if(!approved||item.apiName!==approved.apiName||item.kind!==approved.kind||item.unique!==approved.unique||item.slotCost!==approved.slotCost
+      ||[...item.recipe ?? []].sort().join('|')!==[...approved.recipe ?? []].sort().join('|')) fail('Item differs from approved B1 mapping');
+    if(!item.name) fail('Missing item name');if(item.effects.length) effects(item.effects); else if(!item.combatProgram) fail('Empty item effects'); if(item.combatProgram) validateItemProgram(item.combatProgram);
     if(item.kind==='component') {if(item.recipe!==undefined) fail('Component recipe');}
     else if(item.kind==='completed') {
       if(!item.recipe||item.recipe.length!==2||item.recipe.some(id=>!components.includes(id))) fail('Invalid item recipe');
       const key=[...item.recipe!].sort().join('|');if(recipes.has(key)) fail('Duplicate recipe');recipes.add(key);
     } else fail('Invalid item kind');
   }
+  for(let a=0;a<components.length;a++) for(let b=a;b<components.length;b++) if(!recipes.has([components[a],components[b]].sort().join('|'))) fail('Missing completed recipe');
+  if(recipes.size!==36) fail('M8 requires 36 unique recipes');
   if(Object.keys(content.augments).length<5||Object.keys(content.anomalies).length<2) fail('Choice pool exhausted');
   for(const c of [...Object.values(content.augments),...Object.values(content.anomalies)]) {if(!c.name||!c.description) fail('Missing choice text');effects(c.effects);}
-  const seen=new Set<string>();let priorRound=0,priorPriority=-1,priorId='';let randomComponents=0,componentChoices=0;
-  for(const {round,event:e} of content.schedule.fixed) {
-    if(!integer(round,1)||round>35||round<priorRound||!e.id||seen.has(e.id)||!integer(e.priority)
-      ||(round===priorRound&&(e.priority<priorPriority||(e.priority===priorPriority&&e.id<=priorId)))) fail('Schedule order or ID');
-    seen.add(e.id);priorRound=round;priorPriority=e.priority;priorId=e.id;
-    if(!['before','after'].includes(e.timing??'before')) fail('Invalid schedule timing');
-    if(e.kind==='reward') {
-      if(e.timing!=='after'||![7,14,21,28].includes(round)||e.components.some(id=>!components.includes(id))||!integer(e.randomComponents)||!integer(e.gold)||e.recruitIfEmpty) fail('Invalid PvE reward');
-      randomComponents+=e.randomComponents;
-    } else if(e.kind==='component') componentChoices++;
-    else if(e.kind==='augment') {if(e.timing!=='before'||![1,9,16].includes(round)) fail('Invalid augment schedule');}
-    else if(e.kind==='anomaly') {if(e.timing!=='before'||round!==20) fail('Invalid anomaly schedule');}
-    else fail('Unknown schedule event');
+  // This development schedule contains only the approved semantic nodes. PvE drops
+  // are not installed until B8; any extra/altered node remains invalid content.
+  if(content.schedule.fixed.length!==ROUND_SCHEDULE.fixed.length) fail('Incomplete acquisition schedule');
+  for(const [index,entry] of content.schedule.fixed.entries()) {
+    const expected=ROUND_SCHEDULE.fixed[index];
+    if(!integer(entry.round,1)||entry.round>FINAL_ROUND||entry.round!==expected.round
+      ||Object.keys(entry.event).length!==Object.keys(expected.event).length
+      ||Object.entries(expected.event).some(([key,value])=>entry.event[key as keyof ScheduleEvent]!==value)) fail('Invalid semantic schedule');
   }
-  const aug=content.schedule.fixed.filter(x=>x.event.kind==='augment').map(x=>x.round).join(',');
-  const anomaly=content.schedule.fixed.filter(x=>x.event.kind==='anomaly').map(x=>x.round).join(',');
-  if(aug!=='1,9,16'||anomaly!=='20'||randomComponents!==4||componentChoices!==11||!content.units[content.schedule.fallbackDefinitionId]) fail('Incomplete acquisition schedule');
+  if(content.schedule.recurring.fromRound!==ROUND_SCHEDULE.recurring.fromRound
+    ||content.schedule.recurring.everyRounds!==ROUND_SCHEDULE.recurring.everyRounds
+    ||content.schedule.recurring.randomComponents!==0
+    ||content.schedule.fallbackDefinitionId!==ROUND_SCHEDULE.fallbackDefinitionId) fail('Invalid finite schedule boundary');
   for(let level=1;level<=9;level++) {
     const row=SHOP_ODDS[level];if(!row||row.length!==5||row.some(x=>!integer(x))||row.reduce((a,b)=>a+b,0)!==100) fail('Invalid shop odds');
     if(level<9&&!integer(XP_TO_NEXT_LEVEL[level],1)) fail('Invalid XP');
@@ -156,6 +160,6 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
 /** No neutral or legacy unit can accidentally become purchasable. */
 export function validateAcquisitionIsolation():void {
   const active=new Set(Object.values(SHOP_CATALOG_BY_COST).flat());
-  for(const id of Object.keys(NEUTRAL_UNIT_DEFINITIONS)) if(active.has(id)) fail('Neutral unit in shop');
+  for(const id of Object.keys({...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS})) if(active.has(id)) fail('Neutral unit in shop');
   for(const id of active) if(!M5_UNIT_DEFINITIONS[id]||UNIT_DEFINITIONS[id]!==M5_UNIT_DEFINITIONS[id]) fail('Invalid active acquisition ID');
 }

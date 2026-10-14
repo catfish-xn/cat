@@ -1,0 +1,102 @@
+[
+  {
+    "label": "baseline",
+    "files": [
+      {
+        "file": "index-DNk6IFSw.js",
+        "gzip9": 488964
+      }
+    ],
+    "total": 488964
+  },
+  {
+    "label": "handoff-c0109",
+    "files": [
+      {
+        "file": "index-DwERYZ_b.js",
+        "gzip9": 502898
+      }
+    ],
+    "total": 502898
+  },
+  {
+    "label": "cand-tg-lootview",
+    "files": [
+      {
+        "file": "index-n8aQNwGY.js",
+        "gzip9": 503332
+      }
+    ],
+    "total": 503332
+  },
+  {
+    "label": "probe-b8-lootview-reachable",
+    "files": [
+      {
+        "file": "index-lAe31dw-.js",
+        "gzip9": 503701
+      }
+    ],
+    "total": 503701
+  },
+  {
+    "label": "cand-bbb3368",
+    "files": [
+      {
+        "file": "index-W5HKOESq.js",
+        "gzip9": 505000
+      }
+    ],
+    "total": 505000
+  },
+  {
+    "label": "cand-final (tests/scripts/docs only since bbb3368)",
+    "files": [
+      {
+        "file": "index-W5HKOESq.js",
+        "gzip9": 505000
+      }
+    ],
+    "total": 505000
+  },
+  {
+    "label": "B8 probe with LootView addendum, no U6",
+    "files": [
+      {
+        "file": "index-JHeX46hH.js",
+        "gzip9": 503883
+      }
+    ],
+    "total": 503883
+  },
+  {
+    "label": "integrated candidate with LootView addendum (B8+U6)",
+    "files": [
+      {
+        "file": "index-pvGv_5eC.js",
+        "gzip9": 505225
+      }
+    ],
+    "total": 505225
+  },
+  {
+    "label": "B8 probe after Q1 revert and P2-4 (U6 UI files at c0109ac, readLootView exported)",
+    "files": [
+      {
+        "file": "index-YaHrXGuU.js",
+        "gzip9": 503508
+      }
+    ],
+    "total": 503508
+  },
+  {
+    "label": "integrated candidate after Q1 revert and P2-4",
+    "files": [
+      {
+        "file": "index-px3kamYK.js",
+        "gzip9": 504905
+      }
+    ],
+    "total": 504905
+  }
+]

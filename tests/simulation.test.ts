@@ -22,14 +22,16 @@ describe('deployment state', () => {
     expect(third.ok).toBe(true);
     expect(third.state.units[0].location).toEqual({ kind: 'bench', slot: 0 });
   });
-  it('rejects occupied board cells and bench slots without changing state', () => {
+  it('exchanges occupied allied board cells and bench slots without mutating the input', () => {
     const state = deployUnit(createGame(), 'unit-1', { kind: 'board', cell: { col: 0, row: 4 } }).state;
+    const before = structuredClone(state);
     for (const target of [{ kind: 'board' as const, cell: { col: 0, row: 4 } }, { kind: 'bench' as const, slot: 2 }]) {
       const result = deployUnit(state, 'unit-2', target);
-      expect(result).toEqual({ ok: false, reason: 'occupied', state });
-      expect(result.state).toBe(state);
+      expect(result.ok).toBe(true);
+      expect(result.state.units.find(u => u.id === 'unit-2')!.location).toEqual(target);
+      expect(result.state.units.find(u => u.id === (target.kind === 'board' ? 'unit-1' : 'unit-3'))!.location).toEqual({ kind: 'bench', slot: 1 });
+      expect(state).toEqual(before);
     }
-    expect(deployUnit(state, 'unit-1', { kind: 'bench', slot: 1 }).ok).toBe(false);
   });
   it('allows dropping a unit onto its own bench slot or board cell', () => {
     expect(deployUnit(createGame(), 'unit-1', { kind: 'bench', slot: 0 }).ok).toBe(true);

@@ -1,0 +1,15 @@
+{
+  "label": "names44-additive",
+  "node": "v22.23.3",
+  "zlib": "1.3.1-e00f703",
+  "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+  "files": [
+    {
+      "file": "index-Bn88oTts.js",
+      "rawBytes": 1698147,
+      "gzip9Bytes": 486782,
+      "sha256": "03014d7e37392415f1f54bdb0c290377f857a93e1feabdeb0ff02471709c3000"
+    }
+  ],
+  "totalGzip9Bytes": 486782
+}

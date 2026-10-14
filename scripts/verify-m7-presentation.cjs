@@ -64,16 +64,16 @@ async function benchEveryone(page) {
     await page.locator(`[data-debug="mobile:bench:${slot}"]`).click();
   }
 }
-async function advanceTo(page, round) {
+async function advanceTo(page, roundId) {
   for (let guard = 0; guard < 80; guard++) {
     const state = (await read(page)).state;
-    if (state.phase === 'preparation' && state.round === round) return;
+    if (state.phase === 'preparation' && state.m8.round.roundId === roundId) return;
     if (state.phase === 'choice') await chooseAll(page);
     else if (state.phase === 'preparation') { await page.waitForTimeout(LIFECYCLE_QUIET_MS); await page.locator('[data-debug="mobile:start-combat"]').click(); }
     else if (state.phase === 'settlement') await page.locator('[data-debug="mobile:continue"]').click();
     else await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
   }
-  throw new Error(`did not reach round ${round}`);
+  throw new Error(`did not reach round ${roundId}`);
 }
 async function firstBattle(browser, reduced) {
   const game = await newGame(browser);
@@ -94,12 +94,18 @@ async function firstBattle(browser, reduced) {
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-  const report = { url, checks: [] };
+  const report = { url, checks: [], acceptanceScope: 'B6 unskipped checks; post-PvE reward modal restored on the real B8 1-3 loot pick' };
   const check = (name, details = {}) => { report.checks.push({ name, ...details }); console.log(`ok ${name}`); };
   try {
     // Help dialog: information only, focus handling, shortcuts blocked while open.
     const { context, page, errors } = await newGame(browser);
     await chooseAll(page);
+    // B6 starts at 0G. Two public empty-board settlements provide 2+3=5G,
+    // so both D and F could actually execute if help failed to block them.
+    // This preparation is separate from the first-battle/reduced-motion checks below.
+    await benchEveryone(page);
+    await advanceTo(page, '1-4');
+    assert.equal((await read(page)).state.gold, 5, 'legal opening income funds help shortcut checks');
     const before = (await read(page)).state;
     await page.locator('[data-debug="help-open"]').click();
     await page.waitForSelector('[data-debug="help-dialog"]:not([hidden])');
@@ -137,9 +143,18 @@ async function firstBattle(browser, reduced) {
       await touch.page.locator('[data-debug="mobile:start-combat"]').tap();
       await touch.page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase === 'settlement', null, { timeout: 120000 });
       const box = await touch.page.locator('[data-debug="mobile:continue"]').boundingBox();
-      await touch.page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
-      await touch.page.waitForTimeout(40);
-      await touch.page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+      // Queue the second native touch without waiting for the first release acknowledgement.
+      // Driver round trips must not turn the intended 40ms burst into deliberate clicks.
+      const touchInput = await touch.context.newCDPSession(touch.page);
+      const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      try {
+        await touchInput.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+        const firstRelease = touchInput.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await new Promise(resolve => setTimeout(resolve, 40));
+        const secondPress = touchInput.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+        const secondRelease = touchInput.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await Promise.all([firstRelease, secondPress, secondRelease]);
+      } finally { await touchInput.detach(); }
       await touch.page.waitForTimeout(700);
       const touched = (await read(touch.page)).state;
       assert.notEqual(touched.phase, 'combat', 'double tap on 继续 must not start combat');
@@ -195,22 +210,24 @@ async function firstBattle(browser, reduced) {
     check('replay-identity', portraitPixels);
     assert.deepEqual([...normal.game.errors, ...replayErrors], [], 'no page or console errors');
 
-    // Audit F02: help stays on top when a post-combat reward choice appears underneath.
+    // Audit F02, restored after B8: help open over an actual post-PvE reward choice. B8 grants loot
+    // picks only for real kills, so the old preparation (bench everyone, field Irelia alone at 2-7)
+    // forfeits the 2-7 pick (verified headlessly: choiceEligibility 'forfeited', no PendingChoice).
+    // The first real post-PvE reward pick of the unbenched seed-42 opening is 1-3; the assertions
+    // below are the original ones.
     {
       const { context: ctx, page, errors: helpErrors } = await newGame(browser);
       await chooseAll(page);
-      await benchEveryone(page);
-      await advanceTo(page, 7);
-      await page.locator('[data-debug="panel:units"]').click();
-      await page.locator('[data-debug="mobile:unit:unit-1"]').click();
-      await page.locator('[data-debug="deploy:3,5"]').click();
+      await advanceTo(page, '1-3');
       await page.waitForTimeout(LIFECYCLE_QUIET_MS);
       await page.locator('[data-debug="mobile:start-combat"]').click();
       await page.locator('[data-debug="help-open"]').click();
       await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
       await page.waitForTimeout(300);
       const pending = (await read(page)).state;
-      assert.equal(pending.phase, 'choice', '2-7 PvE offers a reward choice');
+      assert.equal(pending.phase, 'choice', '1-3 PvE offers a reward choice');
+      assert.equal(pending.m8.round.kind, 'pve'); assert.equal(pending.pendingChoice.kind, 'component');
+      assert.equal(pending.pendingChoice.choiceId, JSON.stringify(['m8b-loot-choice', pending.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '1-3').choices[0].dropId]), 'the pick is the earned loot choice');
       const focusIn = () => page.evaluate(() => ({ help: Boolean(document.querySelector('[data-debug="help-dialog"]').contains(document.activeElement)),
         choice: Boolean(document.activeElement?.closest('.choice-overlay')), debug: document.activeElement?.dataset.debug ?? null }));
       assert.deepEqual(await focusIn(), { help: true, choice: false, debug: 'help-close' }, 'the new reward does not steal focus from help');
@@ -227,7 +244,7 @@ async function firstBattle(browser, reduced) {
       await chooseAll(page);
       assert.equal((await read(page)).state.items.length, pending.items.length + 1, 'reward chosen after help closes');
       assert.deepEqual(helpErrors, []); await ctx.close();
-      check('help-over-reward-choice', { round: pending.round, offers: pending.pendingChoice.offers });
+      check('help-over-reward-choice', { round: pending.round, roundId: pending.roundDefinitionId, offers: pending.pendingChoice.offers });
     }
 
     // Audit F07: a bundled portrait that fails to load falls back to the code-drawn emblem.

@@ -1,0 +1,35 @@
+B7 read-only review, 2026-10-09, current worktree
+Repo: /workspace/scratch/2d61d723fa5a/cat-b7-integration
+No repository edits, no full test/build. Reproduction scripts were esbuild-bundled stdin modules, not retained.
+Fixture: same prepared(roundId) synthetic earlier-victory boundary as tests/m8-b7-match-wiring.test.ts. Tested encounter uses ordinary Match start/step and serialize/restore. Does not claim a public no-cheat late-round route.
+
+Focused test stdout:
+Test Files 1 passed (1)
+Tests 26 passed (26)
+Duration 4.19s
+
+Independent 6-7 sole 3-star Garen at (3,4), all start/tick1..15 saves accepted:
+No equipment: control applicationId [0,1]
+Ionic Spark: [1,1]
+Evenshroud: [1,1]
+Both aura items: [2,1]
+Quicksilver: zero control receipts
+Edge of Night: one control receipt, no observed cleanse during this interval
+
+Independent prior-exploit stdout:
+PASS krug replay rejected at tick59 Invalid Match save: neutral death event identity
+PASS lost control rejected statuses Invalid Match save: neutral lost control
+PASS lost control rejected receipt Invalid Match save: neutral lost applied control receipt
+PASS lost control rejected both Invalid Match save: neutral lost applied control receipt
+
+Krug reproduction: use battleFixture('2-7')'s 3-star Garen/Caitlyn/Lux. Advance to tick59, where surviving k01 is 288/400 and its first executed reaction references death tick38. Change only that reaction: status=pending, registeredAtTick=59, executeAtTick=60, deathEventId=["round-10",59,0]. Former implementation accepted and healed112; current independent death fact rejects.
+Control reproduction: 6-7 sole 3-star Garen (3,4), step once. Delete player stun group+legacy projection, its neutralReceipts.controls record, or both. All rejected now.
+
+Independent whole Herald battles, sole 1-star Garen (3,4), every tick serialized/restored through terminal1200:
+PASS complete Herald battle [ 'quicksilver' ] ticks 1200 cleanseEvents 0 controlRemoval []
+PASS complete Herald battle [ 'edge-of-night' ] ticks 1200 cleanseEvents 0 controlRemoval [ [ 'expired', 12 ] ]
+PASS complete Herald battle [] ticks 1200 cleanseEvents 0 controlRemoval [ [ 'expired', 12 ] ]
+
+Limitations:
+No naturally reachable active-stun Edge-of-Night cleanse was observed; these completed battles exercise EON-equipped validity and ordinary expiry, not the cleanse removal branch. A deliberately wounded tick-zero experiment produced a cleanse event, but was not a legitimate preparation-derived start and correctly failed opening snapshot validation; it is excluded from passing evidence.
+Review contract: structural same-version consistency, not authenticity against jointly forged event histories. No new concrete defect found within that contract after these fixes.

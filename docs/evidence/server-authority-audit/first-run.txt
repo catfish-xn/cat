@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "node": "v22.23.3",
+  "browserGlobalsRequired": false,
+  "seed": 42,
+  "ticks": 164,
+  "events": 106,
+  "result": "playerWin",
+  "checkpoints": [
+    0,
+    39,
+    40,
+    41,
+    "end"
+  ],
+  "fullContinuationStateAndEvents": true,
+  "saveTextAndObject": true,
+  "rejectedStaleCommand": true,
+  "rejectedBadDigest": true,
+  "rejectedDroppedReplayEvent": true,
+  "replayValidationAndSeek": true,
+  "stateHash": "fnv1a32-utf16:acf238a8",
+  "eventHash": "fnv1a32-utf16:966105d6",
+  "inputCount": 108,
+  "report": "/workspace/cat/artifacts/server-authority-audit/report.json"
+}

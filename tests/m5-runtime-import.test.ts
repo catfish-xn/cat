@@ -2,14 +2,14 @@ import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch} from '../src/simulation/serialization';
 import {sourceKey} from '../src/simulation/combat-s13-state';
-import {readyMatch,accepted} from './match-helpers';
+import {purchasedThreeHeroMatch,accepted} from './match-helpers';
 import type {MatchState} from '../src/simulation/match-types';
 
 // Reach real transient records through normal commands/ticks. These are import
 // consistency tests, not independent proofs of the numerical combat rules.
 const frames:Record<string,MatchState>={};
 beforeAll(()=>{
- let state=accepted(api.startMatchCombat(readyMatch()));
+ let state=accepted(api.startMatchCombat(purchasedThreeHeroMatch()));
  while(state.phase==='combat'){
   for(const field of ['shieldLayers','statuses','tasks'] as const)
    if(!frames[field]&&state.combat.units.some(unit=>(unit[field]?.length??0)>0))frames[field]=state;

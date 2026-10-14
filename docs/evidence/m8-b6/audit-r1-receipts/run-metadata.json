@@ -1,0 +1,32 @@
+{
+  "baseSha": "4004561429aca4529698747f4b5aa65e962ba7de",
+  "scope": "R1 test-only working-tree snapshot; not a new fixed-SHA CI or independent audit acceptance",
+  "node": "v22.23.3",
+  "codeDiffPaths": "src tests scripts .github package.json package-lock.json tsconfig.json vite.config.ts",
+  "codeDiffSha256AtStart": "1cd6068cb3fdc060f3be0abb3215d36cbdd2f119c9019fbe82878b1bde8dc234",
+  "codeDiffSha256AtEnd": "1cd6068cb3fdc060f3be0abb3215d36cbdd2f119c9019fbe82878b1bde8dc234",
+  "fullUnit": {
+    "command": "npm test",
+    "startedAt": "2026-10-09T12:46:55Z",
+    "endedAt": "2026-10-09T12:54:46Z",
+    "durationSeconds": 470.12,
+    "exitCode": 0,
+    "filesPassed": 107,
+    "testsPassed": 1364,
+    "testsSkipped": 10,
+    "testsTotal": 1374,
+    "skipsUnchanged": true
+  },
+  "targeted": {
+    "command": "npm test -- tests/m4-review-regressions.test.ts",
+    "filesPassed": 1,
+    "testsPassed": 16,
+    "exitCode": 0
+  },
+  "build": {
+    "command": "npm run build",
+    "includesTypecheck": true,
+    "exitCode": 0
+  },
+  "productionChanged": false
+}

@@ -1,0 +1,116 @@
+import { canonicalContent, CONTENT_DIGEST } from './content';
+import { freezeContent } from './content/freeze';
+import { DEFAULT_BOARD } from './board';
+import { createInputValidation, validateInputAssets } from './input-assets';
+import { ITEM_DEFINITIONS } from './content/items';
+import { AUGMENT_DEFINITIONS } from './content/augments';
+import { ANOMALY_DEFINITIONS } from './content/anomalies';
+import { getCatalogRoundByOrdinal } from './round-selectors';
+import { getMultiplayerRoundById, getMultiplayerRoundByOrdinal } from './multiplayer-round';
+import { M8_VERSION } from './m8/version';
+import type { MatchState } from './match-types';
+import { BattleValidationError, PLAYER_BATTLE_SNAPSHOT_VERSION, type PlayerBattleSnapshot } from './two-sided-types';
+
+function requireSnapshot(condition: unknown): asserts condition {
+  if (!condition) throw new BattleValidationError('invalid-snapshot');
+}
+const validation = createInputValidation(requireSnapshot);
+const id: typeof validation.id = validation.id;
+const integer: typeof validation.integer = validation.integer;
+const list: typeof validation.list = validation.list;
+const record: typeof validation.record = validation.record;
+const ascii = (a: { id: string }, b: { id: string }) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+const nextSerial = (ids: readonly string[]) => Math.max(0, ...ids.map(value => Number(value.slice(value.indexOf('-') + 1)))) + 1;
+
+/** Own-format structural validation, not client authentication or asset-history validation. */
+export function restorePlayerBattleSnapshot(input: unknown): PlayerBattleSnapshot {
+  try {
+    const value: unknown = typeof input === 'string' ? JSON.parse(input) : input;
+    canonicalContent(value); record(value);
+    if (value.version !== PLAYER_BATTLE_SNAPSHOT_VERSION) throw new BattleValidationError('snapshot-version');
+    if (value.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
+    const s = value as unknown as PlayerBattleSnapshot;
+    id(s.seatId); id(s.roundId); integer(s.level, 1);
+    const round = getMultiplayerRoundById(s.roundId);
+    list(s.units); list(s.items); list(s.temporaryEquipment); list(s.augments); list(s.persistentGrowth);
+    for (const unit of s.units) { record(unit); id(unit.id); requireSnapshot(unit.team === 'player' && unit.location?.kind === 'board' && !unit.encounterId); }
+    for (const item of s.items) { record(item); id(item.id); requireSnapshot(item.location?.kind === 'unit'); }
+    const units = validateInputAssets({ preparation: { board: DEFAULT_BOARD, benchSize: 9, units: s.units }, items: s.items },
+      { playerLevel: s.level, nextUnitSerial: nextSerial(s.units.map(u => u.id)), nextItemSerial: nextSerial(s.items.map(i => i.id)) }, [], validation);
+    const itemIds = new Set(s.items.map(item => item.id)), temporarySlots = new Set<string>();
+    for (const child of s.temporaryEquipment) {
+      record(child); id(child.temporaryId); requireSnapshot(!itemIds.has(child.temporaryId)); itemIds.add(child.temporaryId);
+      const parent = s.items.find(item => item.id === child.parentItemInstanceId);
+      requireSnapshot(parent?.location.kind === 'unit' && ITEM_DEFINITIONS[parent.definitionId].slotCost === 3
+        && parent.location.unitId === child.holderId && (child.slot === 1 || child.slot === 2)
+        && child.roundId === s.roundId && child.expiresAfterRoundId === s.roundId
+        && Object.hasOwn(ITEM_DEFINITIONS, child.definitionId) && ITEM_DEFINITIONS[child.definitionId].slotCost !== 3);
+      const slot = JSON.stringify([child.parentItemInstanceId, child.slot]);
+      requireSnapshot(!temporarySlots.has(slot)); temporarySlots.add(slot);
+    }
+    for (const parent of s.items.filter(item => ITEM_DEFINITIONS[item.definitionId].slotCost === 3)) {
+      requireSnapshot([1, 2].every(slot => temporarySlots.has(JSON.stringify([parent.id, slot]))));
+    }
+    const augmentIds = new Set<string>(), choices = new Set<string>();
+    requireSnapshot(s.augments.length <= 3);
+    for (const augment of s.augments) {
+      record(augment); id(augment.choiceId); integer(augment.acquiredRound, 1);
+      requireSnapshot(augment.acquiredRound <= round.ordinal && Object.hasOwn(AUGMENT_DEFINITIONS, augment.definitionId)
+        && !augmentIds.has(augment.definitionId) && !choices.has(augment.choiceId));
+      augmentIds.add(augment.definitionId); choices.add(augment.choiceId);
+    }
+    if (s.anomalyBinding !== null) {
+      record(s.anomalyBinding); const binding = s.anomalyBinding; id(binding.choiceId); integer(binding.boundRound, 1);
+      requireSnapshot(binding.boundRound <= round.ordinal && units.has(binding.unitId) && Object.hasOwn(ANOMALY_DEFINITIONS, binding.definitionId));
+    }
+    const growthIds = new Set<string>();
+    for (const growth of s.persistentGrowth) {
+      record(growth); integer(growth.attackDamageBps, 1);
+      requireSnapshot(units.get(growth.unitId)?.definitionId === 'tristana' && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
+      growthIds.add(growth.unitId);
+    }
+    record(s.augmentProgress); integer(s.augmentProgress.pumpingRounds); integer(s.augmentProgress.investmentHp);
+    requireSnapshot(s.augmentProgress.pumpingRounds <= round.ordinal
+      && (augmentIds.has('pumping-up-i') || s.augmentProgress.pumpingRounds === 0)
+      && (augmentIds.has('investment-strategy-i') || s.augmentProgress.investmentHp === 0));
+    // Reject extra/private fields, including fields nested in unit and item descriptors.
+    const clean: PlayerBattleSnapshot = {
+      version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: CONTENT_DIGEST, seatId: s.seatId, roundId: s.roundId, level: s.level,
+      units: s.units.map(u => ({ id: u.id, definitionId: u.definitionId, team: 'player', starLevel: u.starLevel,
+        location: { kind: 'board', cell: u.location.kind === 'board' ? { col: u.location.cell.col, row: u.location.cell.row } : { col: -1, row: -1 } } })),
+      items: s.items.map(i => ({ id: i.id, definitionId: i.definitionId, location: i.location.kind === 'unit'
+        ? { kind: 'unit', unitId: i.location.unitId, slot: i.location.slot } : { kind: 'inventory' } })),
+      temporaryEquipment: s.temporaryEquipment.map(c => ({ temporaryId:c.temporaryId, parentItemInstanceId:c.parentItemInstanceId,
+        roundId:c.roundId, holderId:c.holderId, definitionId:c.definitionId, slot:c.slot, expiresAfterRoundId:c.expiresAfterRoundId })),
+      augments: s.augments.map(a => ({ definitionId:a.definitionId, choiceId:a.choiceId, acquiredRound:a.acquiredRound })),
+      anomalyBinding: s.anomalyBinding === null ? null : { definitionId:s.anomalyBinding.definitionId,
+        unitId:s.anomalyBinding.unitId, choiceId:s.anomalyBinding.choiceId, boundRound:s.anomalyBinding.boundRound },
+      persistentGrowth: s.persistentGrowth.map(g => ({unitId:g.unitId,attackDamageBps:g.attackDamageBps})),
+      augmentProgress: { pumpingRounds:s.augmentProgress.pumpingRounds, investmentHp:s.augmentProgress.investmentHp },
+    };
+    requireSnapshot(canonicalContent(clean) === canonicalContent(s));
+    return freezeContent(structuredClone(clean));
+  } catch (error) {
+    if (error instanceof BattleValidationError) throw error;
+    throw new BattleValidationError('invalid-snapshot');
+  }
+}
+
+/** Only called on server-owned preparation state; history/authentication remain upstream. */
+export function snapshotForBattle(state: MatchState, seatId: string): PlayerBattleSnapshot {
+  if ((state.phase !== 'preparation' || state.multiplayer?.combatRosterLocked)) throw new BattleValidationError('wrong-phase');
+  if (state.contentDigest !== CONTENT_DIGEST) throw new BattleValidationError('content-digest');
+  if ((['schemaVersion','rulesVersion','contentVersion','commandProtocolVersion','rngAlgorithm','tickMs'] as const)
+    .some(key => state[key] !== M8_VERSION[key])) throw new BattleValidationError('snapshot-version');
+  if ((state.multiplayer ? getMultiplayerRoundByOrdinal(state.round) : getCatalogRoundByOrdinal(state.round)).roundId !== state.roundDefinitionId) throw new BattleValidationError('round-mismatch');
+  requireSnapshot(canonicalContent(state.preparation.board) === canonicalContent(DEFAULT_BOARD) && state.preparation.benchSize === 9);
+  const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
+  const ids = new Set(units.map(unit => unit.id));
+  return restorePlayerBattleSnapshot({
+    version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, seatId, roundId: state.roundDefinitionId, level: state.level,
+    units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
+    temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),
+    augments: state.augments, anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId) ? state.anomalyBinding : null,
+    persistentGrowth: state.persistentGrowth.filter(growth => ids.has(growth.unitId)), augmentProgress: state.augmentProgress,
+  });
+}

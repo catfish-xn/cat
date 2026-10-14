@@ -1,13 +1,18 @@
 import { MatchSession } from '../rendering/match-session';
 import { createMatch } from '../simulation/match';
 import type { BattleRecord, SaveEnvelope, SaveStatus, SessionChange, SlotToken } from './contracts';
-import { AUTOSAVE_TICKS } from './limits';
+import { AUTOSAVE_TICKS, MAX_BATTLE_RECORDS } from './limits';
 import { SaveRepository, saveError } from '../persistence/repository';
 import { SaveCoordinator } from '../persistence/coordinator';
 import { createSeed, createRunId } from '../persistence/seed';
-import { exportFile, validateEnvelope, validateFile } from '../persistence/format';
+import { CompatibilityError, exportFile, validateEnvelope, validateFile } from '../persistence/format';
+import { currentView, rejectedView, routeSaveFile } from '../persistence/compatibility';
+import { M8_VERSION } from '../simulation/m8/version';
+import { legacyRecords } from '../persistence/legacy-records';
+import { readRoundInfo } from '../simulation/round-selectors';
+import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { createSaveControls, type SaveControls } from '../persistence/save-controls';
-import { BattleHistory, PlaybackSession, ReplayPanel, validateBattleCollection, type ReplaySnapshot } from '../replay';
+import { BattleHistory, PlaybackSession, ReplayPanel, admitArchives, validateBattleCollection, type ReplaySnapshot } from '../replay';
 import { ReplayView } from '../rendering/replay-view';
 
 interface ApplicationHooks {
@@ -18,6 +23,8 @@ interface ApplicationHooks {
   playback?(snapshot: ReplaySnapshot | null, record: BattleRecord | null): void;
 }
 type Mode = 'startup' | 'active' | 'import' | 'replay';
+/** A not-yet-validated slot may carry a bad round; the impact line then names no round. */
+function roundName(match: SaveEnvelope['match']): string { try { return readRoundInfo(match).displayName; } catch { return '轮次未知'; } }
 /** Owns product lifecycle. Domain rules remain exclusively in Match/Combat. */
 export class MatchApplication {
   private static instances = 0;
@@ -32,7 +39,9 @@ export class MatchApplication {
   private mode: Mode = 'startup';
   private status: SaveStatus | null = null;
   private existing: { token: SlotToken; envelope: SaveEnvelope } | null = null;
+  private compatibility: CompatibilityView | null = null;
   private archives: readonly BattleRecord[] = [];
+  private quarantinedArchives: readonly { readonly runId: string; readonly reason: string }[] = [];
   private unsubscribe: () => void;
   private playbackSession: PlaybackSession | null = null;
   replaySelectedUnit: string | null = null;
@@ -51,6 +60,8 @@ export class MatchApplication {
     this.controls = createSaveControls(document.getElementById('save-root')!, {
       onNewRandom: () => this.newRun(null), onNewFixed: seed => this.newRun(seed),
       onContinue: () => this.continueSaved(), onImport: file => this.import(file), onExport: () => this.export(),
+      onExportCurrent: async () => this.export(), onListLegacy: () => legacyRecords.listLegacyRecords(),
+      onExportLegacy: request => legacyRecords.exportLegacy(request),
     });
     this.replayPanel = new ReplayPanel(document.getElementById('replay-root')!, {
       select: record => { void this.openReplay(record); }, play: () => this.playbackSession?.play(), pause: () => this.playbackSession?.pause(),
@@ -75,16 +86,28 @@ export class MatchApplication {
     const current = () => !this.disposed && request === this.archiveRequest && session === this.session
       && run === this.runId && epoch === (this.coordinator?.token.activationEpoch ?? this.existing?.token.activationEpoch ?? null);
     try {
-      const records: BattleRecord[] = [];
+      const envelopes: SaveEnvelope[] = [], unreadable: { runId: string; reason: string }[] = [];
       const completed = await this.repository.listCompleted();
       if (!current()) return;
       for (const info of completed) {
         if (info.runId === run) continue;
-        const envelope = await this.repository.readCompleted(info.runId);
+        let envelope: SaveEnvelope;
+        try { envelope = await this.repository.readCompleted(info.runId); }
+        catch (error) {
+          if (!current()) return;
+          // N2-P2-5: a missing run or battle belongs to this runId and is quarantined; storage-wide
+          // failures (unavailable, abort, quota) still fail the whole load instead of reading as empty.
+          const failure = saveError(error);
+          if (failure.reason !== 'validation') throw failure;
+          unreadable.push({ runId: info.runId, reason: failure.message }); continue;
+        }
         if (!current()) return;
-        if (envelope) records.push(...envelope.battles);
+        envelopes.push(envelope);
       }
-      if (current()) { this.archives = records; this.refreshRecords(); }
+      // N2-P2-5: archives enter the replay list only after version/content admission; bad ones are quarantined.
+      const admission = admitArchives(envelopes, routeSaveFile), quarantined = [...unreadable, ...admission.quarantined];
+      if (current()) { this.archives = admission.records; this.quarantinedArchives = quarantined; this.refreshRecords();
+        if (quarantined.length) this.hooks.status(`已隔离 ${quarantined.length} 个无法读取或版本、内容不兼容的归档，不进入回放列表。`); }
     } catch (error) {
       // Handle failures in the same continuation as the identity check: a late
       // rejection must not report failure against a newly activated session.
@@ -101,10 +124,10 @@ export class MatchApplication {
     if (change.reason !== 'tick' || phaseChanged || change.after.combat !== null && change.after.combat.tick % AUTOSAVE_TICKS === 0) this.enqueue();
     this.replayPanel.setEnabled(this.mode === 'active' && ['preparation','settlement','gameOver'].includes(change.after.phase));
     // Do not materialize all historical records during a frame update.
-    if (completed.length > 30) throw new Error('战斗历史超过冻结边界');
+    if (completed.length > MAX_BATTLE_RECORDS) throw new Error('战斗历史超过冻结边界');
   }
   private envelope(): SaveEnvelope {
-    return { kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1,
+    return { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
       runId: this.runId, createdAt: this.createdAt, match: structuredClone(this.session.state),
       battles: this.history.completedRecords, currentBattle: this.history.capturePrefix() };
   }
@@ -149,6 +172,7 @@ export class MatchApplication {
     this.mode = 'active'; this.ignoreNextDelta = true;
     this.existing = null;
     this.hooks.replace(this.session); this.refreshRecords();
+    this.controls.releaseRunResources();
   }
   private async replaceCandidate(make: () => Promise<SaveEnvelope>, allowUnsavedInitial = false) {
     if (this.busy || this.mode === 'replay') return;
@@ -156,7 +180,11 @@ export class MatchApplication {
     let prepared: MatchSession | null = null;
     this.busy = true; this.mode = 'import'; this.session.pause('import'); this.hooks.clearInput(); this.syncMode();
     try {
-      const candidate = await make();
+      let candidate: SaveEnvelope;
+      try { candidate = await make(); }
+      catch (error) { if (error instanceof CompatibilityError && !this.disposed && id === this.operation) this.compatibility = error.view; throw error; }
+      // A notice describes a file or saved slot; a brand-new match (allowUnsavedInitial) has none.
+      this.compatibility = allowUnsavedInitial ? null : currentView();
       // Build and validate the candidate before touching persisted or active state.
       const ledger = candidate.currentBattle?.events ?? candidate.battles.find(record => record.combatId === candidate.match.combat?.combatId)?.events ?? [];
       prepared = new MatchSession(candidate.match, ledger);
@@ -192,7 +220,7 @@ export class MatchApplication {
   }
   private async newRun(seed: number | null) {
     if (!this.confirmReplacement()) return;
-    await this.replaceCandidate(async () => ({ kind: 'hex-autobattler-save', saveFormatVersion: 1, replayFormatVersion: 1,
+    await this.replaceCandidate(async () => ({ kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
       runId: createRunId(), createdAt: new Date().toISOString(), match: createMatch(seed ?? createSeed()), battles: [], currentBattle: null }), true);
   }
   private async continueSaved() {
@@ -201,7 +229,11 @@ export class MatchApplication {
   }
   private async import(file: File) {
     if (!this.confirmReplacement()) return;
-    await this.replaceCandidate(() => validateFile(file, validateBattleCollection));
+    // P3: a file rejected before version routing (bad JSON, size) still replaces the previous file's notice.
+    await this.replaceCandidate(() => validateFile(file, validateBattleCollection).catch(error => {
+      if (error instanceof CompatibilityError) throw error;
+      throw new CompatibilityError(rejectedView('invalid-data', null), error instanceof Error ? error.message.replace(/^存档无效：/, '') : String(error));
+    }));
   }
   private export() {
     const envelope = this.runId ? this.envelope() : this.existing?.envelope;
@@ -269,8 +301,12 @@ export class MatchApplication {
     } else this.session.resume('hidden');
   };
   private syncControls() {
+    const replaced = this.runId ? { match: this.session.state, battles: this.history.completedRecords.length }
+      : this.existing ? { match: this.existing.envelope.match, battles: this.existing.envelope.battles.length } : null;
     this.controls?.update({ startup: !this.runId, canContinue: this.existing !== null, seed: this.session.state.seed,
-      runId: this.runId, busy: this.busy || this.mode === 'replay', status: this.status, hasActive: Boolean(this.runId) });
+      runId: this.runId, busy: this.busy || this.mode === 'replay', status: this.status, hasActive: Boolean(this.runId),
+      compatibility: this.compatibility,
+      replacement: replaced ? { roundName: roundName(replaced.match), completedBattles: replaced.battles, gameOver: replaced.match.phase === 'gameOver' } : null });
   }
   private syncMode() {
     document.body.dataset.m6Mode = this.mode;
@@ -282,7 +318,7 @@ export class MatchApplication {
     this.replayPanel?.setEnabled(!this.busy && (this.mode === 'replay' || this.mode === 'active' && ['preparation','settlement','gameOver'].includes(this.session.phase)));
     this.syncControls();
   }
-  debug() { return { mode: this.mode, runId: this.runId, token: this.coordinator?.token ?? null, status: this.status,
+  debug() { return { mode: this.mode, runId: this.runId, token: this.coordinator?.token ?? null, status: this.status, quarantinedArchives: this.quarantinedArchives.length,
     completedCount: this.history.completedRecords.length, lifecycle: { applications: MatchApplication.instances, sessions: MatchSession.liveCount, observers: this.session.observerCount }, paused: this.session.paused,
     replay: this.playbackSession ? { tick: this.playbackSession.read().tick, endTick: this.playbackSession.read().endTick, fx: { ...this.replayView?.stats } } : null }; }
   dispose() {

@@ -1,0 +1,6 @@
+55caf496da782df652e513d2bf73cd2e23f2d90d0f54284631da69f6b80a1030  src/simulation/loot-types.ts
+b01e4dd4fb4c5c21bcd3e0a82835d38f768f00b0257b67fc17cecafb869ad99b  src/simulation/loot-identity.ts
+3d0e20ced2037072f948b667ad9e15b60edbb7e00458a2529be27f3c42f7de08  src/simulation/loot-freeze.ts
+c7326d19d82a768fdc246d8fdd7ddeeaa145bcb0f8b5a291967234d6a70f5001  src/simulation/loot-choice.ts
+e5c07ae62e29122d0e569c433632802f7b9e3104ca101d0afd731b4ef9b48be0  src/simulation/content/loot.ts
+edc6f915ec949771a798c33979233c11b78f3c8d1acd1919e9fda6ca1dbdbb9f  tests/m8-b8-loot-freeze.test.ts

@@ -1,0 +1,4834 @@
+{
+  "base": "67b22b9848beb18b84a2cf716113ea833a44de43",
+  "builds": {
+    "cannon": {
+      "outcome": "victory",
+      "battles": 33,
+      "rounds": 38,
+      "formedBattles": 14,
+      "caitlynBattles": 0,
+      "commandsBefore": 194,
+      "commandsAfter": 194,
+      "commandsUnchanged": false,
+      "changedStateRounds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changedEventRounds": [
+        11,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changes": [
+        {
+          "roundId": "1-4",
+          "fields": {
+            "xpRequested": [
+              0,
+              2
+            ],
+            "xpAwarded": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              0,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-1",
+          "fields": {
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-2",
+          "fields": {
+            "levelAfter": [
+              3,
+              4
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              0
+            ]
+          }
+        },
+        {
+          "roundId": "2-3",
+          "fields": {
+            "interestBasis": [
+              15,
+              19
+            ],
+            "goldBefore": [
+              14,
+              18
+            ],
+            "goldAfter": [
+              22,
+              26
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-4",
+          "fields": {
+            "interestBasis": [
+              22,
+              26
+            ],
+            "goldBefore": [
+              22,
+              26
+            ],
+            "goldAfter": [
+              29,
+              33
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-5",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 2,
+                "streak": 2
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 3,
+                "streak": 2
+              }
+            ],
+            "interestBasis": [
+              26,
+              30
+            ],
+            "income": [
+              10,
+              11
+            ],
+            "goldBefore": [
+              25,
+              29
+            ],
+            "goldAfter": [
+              35,
+              40
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "2-6",
+          "fields": {
+            "interestBasis": [
+              30,
+              35
+            ],
+            "goldBefore": [
+              29,
+              34
+            ],
+            "goldAfter": [
+              40,
+              45
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-7",
+          "fields": {
+            "interestBasis": [
+              41,
+              46
+            ],
+            "goldBefore": [
+              41,
+              46
+            ],
+            "goldAfter": [
+              50,
+              55
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-1",
+          "fields": {
+            "interestBasis": [
+              51,
+              56
+            ],
+            "goldBefore": [
+              50,
+              55
+            ],
+            "goldAfter": [
+              64,
+              69
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-2",
+          "fields": {
+            "interestBasis": [
+              71,
+              76
+            ],
+            "goldBefore": [
+              70,
+              75
+            ],
+            "goldAfter": [
+              84,
+              89
+            ],
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-3",
+          "fields": {
+            "interestBasis": [
+              35,
+              36
+            ],
+            "goldBefore": [
+              34,
+              35
+            ],
+            "goldAfter": [
+              46,
+              47
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "3-4",
+          "fields": {
+            "interestBasis": [
+              46,
+              47
+            ],
+            "goldBefore": [
+              46,
+              47
+            ],
+            "goldAfter": [
+              55,
+              56
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-5",
+          "fields": {
+            "interestBasis": [
+              35,
+              34
+            ],
+            "goldBefore": [
+              34,
+              33
+            ],
+            "goldAfter": [
+              46,
+              45
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-6",
+          "fields": {
+            "interestBasis": [
+              35,
+              34
+            ],
+            "goldBefore": [
+              34,
+              33
+            ],
+            "goldAfter": [
+              46,
+              45
+            ],
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-7",
+          "fields": {
+            "interestBasis": [
+              32,
+              35
+            ],
+            "goldBefore": [
+              32,
+              35
+            ],
+            "goldAfter": [
+              40,
+              43
+            ],
+            "xpBefore": [
+              26,
+              20
+            ],
+            "xpAfter": [
+              28,
+              22
+            ]
+          }
+        },
+        {
+          "roundId": "4-1",
+          "fields": {
+            "combatTicks": [
+              299,
+              393
+            ],
+            "combatEventCount": [
+              1049,
+              1321
+            ],
+            "interestBasis": [
+              33,
+              32
+            ],
+            "goldBefore": [
+              32,
+              31
+            ],
+            "goldAfter": [
+              44,
+              43
+            ],
+            "levelBefore": [
+              7,
+              6
+            ],
+            "xpBefore": [
+              0,
+              34
+            ],
+            "xpAfter": [
+              2,
+              0
+            ]
+          }
+        },
+        {
+          "roundId": "4-2",
+          "fields": {
+            "interestBasis": [
+              35,
+              34
+            ],
+            "goldBefore": [
+              34,
+              33
+            ],
+            "goldAfter": [
+              46,
+              45
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "4-3",
+          "fields": {
+            "interestBasis": [
+              35,
+              34
+            ],
+            "goldBefore": [
+              34,
+              33
+            ],
+            "goldAfter": [
+              46,
+              45
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "4-4",
+          "fields": {
+            "interestBasis": [
+              46,
+              45
+            ],
+            "goldBefore": [
+              46,
+              45
+            ],
+            "goldAfter": [
+              55,
+              54
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "4-5",
+          "fields": {
+            "combatTicks": [
+              252,
+              253
+            ],
+            "combatEventCount": [
+              953,
+              896
+            ],
+            "interestBasis": [
+              16,
+              19
+            ],
+            "goldBefore": [
+              15,
+              18
+            ],
+            "goldAfter": [
+              25,
+              28
+            ],
+            "levelBefore": [
+              8,
+              7
+            ],
+            "levelAfter": [
+              8,
+              7
+            ],
+            "xpBefore": [
+              0,
+              38
+            ],
+            "xpAfter": [
+              2,
+              40
+            ]
+          }
+        },
+        {
+          "roundId": "4-6",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 1,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 2,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              17,
+              20
+            ],
+            "income": [
+              10,
+              11
+            ],
+            "goldBefore": [
+              16,
+              19
+            ],
+            "goldAfter": [
+              26,
+              30
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "4-7",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 2,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 3,
+                "streak": 0
+              }
+            ],
+            "interestBasis": [
+              29,
+              33
+            ],
+            "income": [
+              7,
+              8
+            ],
+            "goldBefore": [
+              29,
+              33
+            ],
+            "goldAfter": [
+              36,
+              41
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "5-1",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 3,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              37,
+              42
+            ],
+            "income": [
+              12,
+              13
+            ],
+            "goldBefore": [
+              36,
+              41
+            ],
+            "goldAfter": [
+              48,
+              54
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "5-2",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              49,
+              55
+            ],
+            "income": [
+              13,
+              14
+            ],
+            "goldBefore": [
+              48,
+              54
+            ],
+            "goldAfter": [
+              61,
+              68
+            ],
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "5-3",
+          "fields": {
+            "interestBasis": [
+              62,
+              69
+            ],
+            "goldBefore": [
+              61,
+              68
+            ],
+            "goldAfter": [
+              75,
+              82
+            ],
+            "xpBefore": [
+              10,
+              8
+            ],
+            "xpAfter": [
+              12,
+              10
+            ]
+          }
+        },
+        {
+          "roundId": "5-4",
+          "fields": {
+            "interestBasis": [
+              75,
+              82
+            ],
+            "goldBefore": [
+              75,
+              82
+            ],
+            "goldAfter": [
+              85,
+              92
+            ],
+            "xpBefore": [
+              12,
+              10
+            ],
+            "xpAfter": [
+              14,
+              12
+            ]
+          }
+        },
+        {
+          "roundId": "5-5",
+          "fields": {
+            "interestBasis": [
+              86,
+              93
+            ],
+            "goldBefore": [
+              85,
+              92
+            ],
+            "goldAfter": [
+              99,
+              106
+            ],
+            "xpBefore": [
+              14,
+              12
+            ],
+            "xpAfter": [
+              16,
+              14
+            ]
+          }
+        },
+        {
+          "roundId": "5-6",
+          "fields": {
+            "interestBasis": [
+              100,
+              107
+            ],
+            "goldBefore": [
+              99,
+              106
+            ],
+            "goldAfter": [
+              113,
+              120
+            ],
+            "xpBefore": [
+              16,
+              14
+            ],
+            "xpAfter": [
+              18,
+              16
+            ]
+          }
+        },
+        {
+          "roundId": "5-7",
+          "fields": {
+            "interestBasis": [
+              117,
+              124
+            ],
+            "goldBefore": [
+              117,
+              124
+            ],
+            "goldAfter": [
+              127,
+              134
+            ],
+            "xpBefore": [
+              18,
+              16
+            ],
+            "xpAfter": [
+              20,
+              18
+            ]
+          }
+        },
+        {
+          "roundId": "6-1",
+          "fields": {
+            "interestBasis": [
+              128,
+              135
+            ],
+            "goldBefore": [
+              127,
+              134
+            ],
+            "goldAfter": [
+              141,
+              148
+            ],
+            "xpBefore": [
+              20,
+              18
+            ],
+            "xpAfter": [
+              22,
+              20
+            ]
+          }
+        },
+        {
+          "roundId": "6-2",
+          "fields": {
+            "interestBasis": [
+              142,
+              149
+            ],
+            "goldBefore": [
+              141,
+              148
+            ],
+            "goldAfter": [
+              155,
+              162
+            ],
+            "xpBefore": [
+              22,
+              20
+            ],
+            "xpAfter": [
+              24,
+              22
+            ]
+          }
+        },
+        {
+          "roundId": "6-3",
+          "fields": {
+            "interestBasis": [
+              156,
+              163
+            ],
+            "goldBefore": [
+              155,
+              162
+            ],
+            "goldAfter": [
+              169,
+              176
+            ],
+            "xpBefore": [
+              24,
+              22
+            ],
+            "xpAfter": [
+              26,
+              24
+            ]
+          }
+        },
+        {
+          "roundId": "6-4",
+          "fields": {
+            "interestBasis": [
+              169,
+              176
+            ],
+            "goldBefore": [
+              169,
+              176
+            ],
+            "goldAfter": [
+              179,
+              186
+            ],
+            "xpBefore": [
+              26,
+              24
+            ],
+            "xpAfter": [
+              28,
+              26
+            ]
+          }
+        },
+        {
+          "roundId": "6-5",
+          "fields": {
+            "interestBasis": [
+              180,
+              187
+            ],
+            "goldBefore": [
+              179,
+              186
+            ],
+            "goldAfter": [
+              193,
+              200
+            ],
+            "xpBefore": [
+              28,
+              26
+            ],
+            "xpAfter": [
+              30,
+              28
+            ]
+          }
+        },
+        {
+          "roundId": "6-6",
+          "fields": {
+            "interestBasis": [
+              194,
+              201
+            ],
+            "goldBefore": [
+              193,
+              200
+            ],
+            "goldAfter": [
+              207,
+              214
+            ],
+            "xpBefore": [
+              30,
+              28
+            ],
+            "xpAfter": [
+              32,
+              30
+            ]
+          }
+        },
+        {
+          "roundId": "6-7",
+          "fields": {
+            "interestBasis": [
+              212,
+              219
+            ],
+            "goldBefore": [
+              212,
+              219
+            ],
+            "goldAfter": [
+              222,
+              229
+            ],
+            "xpBefore": [
+              32,
+              30
+            ],
+            "xpAfter": [
+              34,
+              32
+            ]
+          }
+        }
+      ]
+    },
+    "sniper": {
+      "outcome": "victory",
+      "battles": 33,
+      "rounds": 38,
+      "formedBattles": 15,
+      "caitlynBattles": 0,
+      "commandsBefore": 182,
+      "commandsAfter": 183,
+      "commandsUnchanged": false,
+      "changedStateRounds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changedEventRounds": [
+        6,
+        11,
+        12,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changes": [
+        {
+          "roundId": "1-4",
+          "fields": {
+            "xpRequested": [
+              0,
+              2
+            ],
+            "xpAwarded": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              0,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-1",
+          "fields": {
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-2",
+          "fields": {
+            "levelAfter": [
+              3,
+              4
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              0
+            ]
+          }
+        },
+        {
+          "roundId": "2-3",
+          "fields": {
+            "combatTicks": [
+              308,
+              281
+            ],
+            "combatEventCount": [
+              386,
+              388
+            ],
+            "levelBefore": [
+              3,
+              4
+            ],
+            "xpBefore": [
+              4,
+              0
+            ],
+            "xpAfter": [
+              0,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-4",
+          "fields": {
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-5",
+          "fields": {
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "2-6",
+          "fields": {
+            "interestBasis": [
+              30,
+              34
+            ],
+            "goldBefore": [
+              29,
+              33
+            ],
+            "goldAfter": [
+              40,
+              44
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-7",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 3,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 4,
+                "streak": 0
+              }
+            ],
+            "interestBasis": [
+              36,
+              40
+            ],
+            "income": [
+              8,
+              9
+            ],
+            "goldBefore": [
+              36,
+              40
+            ],
+            "goldAfter": [
+              44,
+              49
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-1",
+          "fields": {
+            "combatEventCount": [
+              986,
+              991
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              45,
+              50
+            ],
+            "income": [
+              13,
+              14
+            ],
+            "goldBefore": [
+              44,
+              49
+            ],
+            "goldAfter": [
+              57,
+              63
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-2",
+          "fields": {
+            "interestBasis": [
+              63,
+              69
+            ],
+            "goldBefore": [
+              62,
+              68
+            ],
+            "goldAfter": [
+              76,
+              82
+            ],
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-3",
+          "fields": {
+            "interestBasis": [
+              35,
+              32
+            ],
+            "goldBefore": [
+              34,
+              31
+            ],
+            "goldAfter": [
+              46,
+              43
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "3-4",
+          "fields": {
+            "interestBasis": [
+              46,
+              43
+            ],
+            "goldBefore": [
+              46,
+              43
+            ],
+            "goldAfter": [
+              55,
+              52
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-5",
+          "fields": {
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-6",
+          "fields": {
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-7",
+          "fields": {
+            "xpBefore": [
+              22,
+              16
+            ],
+            "xpAfter": [
+              24,
+              18
+            ]
+          }
+        },
+        {
+          "roundId": "4-1",
+          "fields": {
+            "combatTicks": [
+              411,
+              484
+            ],
+            "combatEventCount": [
+              1296,
+              1466
+            ],
+            "levelBefore": [
+              7,
+              6
+            ],
+            "levelAfter": [
+              7,
+              6
+            ],
+            "xpBefore": [
+              0,
+              30
+            ],
+            "xpAfter": [
+              2,
+              32
+            ]
+          }
+        },
+        {
+          "roundId": "4-2",
+          "fields": {
+            "combatTicks": [
+              391,
+              365
+            ],
+            "combatEventCount": [
+              1208,
+              1117
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 3,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              36,
+              40
+            ],
+            "income": [
+              12,
+              13
+            ],
+            "goldBefore": [
+              35,
+              39
+            ],
+            "goldAfter": [
+              47,
+              52
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "4-3",
+          "fields": {
+            "combatTicks": [
+              352,
+              361
+            ],
+            "combatEventCount": [
+              1096,
+              1136
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              48,
+              53
+            ],
+            "income": [
+              13,
+              14
+            ],
+            "goldBefore": [
+              47,
+              52
+            ],
+            "goldAfter": [
+              60,
+              66
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "4-4",
+          "fields": {
+            "interestBasis": [
+              60,
+              66
+            ],
+            "goldBefore": [
+              60,
+              66
+            ],
+            "goldAfter": [
+              70,
+              76
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "4-5",
+          "fields": {
+            "combatTicks": [
+              360,
+              380
+            ],
+            "combatEventCount": [
+              1230,
+              1291
+            ],
+            "interestBasis": [
+              31,
+              33
+            ],
+            "goldBefore": [
+              30,
+              32
+            ],
+            "goldAfter": [
+              42,
+              44
+            ],
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "4-6",
+          "fields": {
+            "combatTicks": [
+              316,
+              307
+            ],
+            "combatEventCount": [
+              1101,
+              1065
+            ],
+            "interestBasis": [
+              42,
+              44
+            ],
+            "goldBefore": [
+              41,
+              43
+            ],
+            "goldAfter": [
+              54,
+              56
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "4-7",
+          "fields": {
+            "combatTicks": [
+              147,
+              155
+            ],
+            "combatEventCount": [
+              445,
+              458
+            ],
+            "interestBasis": [
+              57,
+              59
+            ],
+            "goldBefore": [
+              57,
+              59
+            ],
+            "goldAfter": [
+              67,
+              69
+            ],
+            "xpBefore": [
+              4,
+              6
+            ],
+            "xpAfter": [
+              6,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "5-1",
+          "fields": {
+            "combatTicks": [
+              409,
+              418
+            ],
+            "combatEventCount": [
+              1449,
+              1481
+            ],
+            "interestBasis": [
+              68,
+              70
+            ],
+            "goldBefore": [
+              67,
+              69
+            ],
+            "goldAfter": [
+              81,
+              83
+            ],
+            "xpBefore": [
+              6,
+              8
+            ],
+            "xpAfter": [
+              8,
+              10
+            ]
+          }
+        },
+        {
+          "roundId": "5-2",
+          "fields": {
+            "combatTicks": [
+              462,
+              457
+            ],
+            "combatEventCount": [
+              1826,
+              1808
+            ],
+            "interestBasis": [
+              82,
+              84
+            ],
+            "goldBefore": [
+              81,
+              83
+            ],
+            "goldAfter": [
+              95,
+              97
+            ],
+            "xpBefore": [
+              8,
+              10
+            ],
+            "xpAfter": [
+              10,
+              12
+            ]
+          }
+        },
+        {
+          "roundId": "5-3",
+          "fields": {
+            "combatTicks": [
+              409,
+              415
+            ],
+            "combatEventCount": [
+              1486,
+              1530
+            ],
+            "interestBasis": [
+              96,
+              98
+            ],
+            "goldBefore": [
+              95,
+              97
+            ],
+            "goldAfter": [
+              109,
+              111
+            ],
+            "xpBefore": [
+              10,
+              12
+            ],
+            "xpAfter": [
+              12,
+              14
+            ]
+          }
+        },
+        {
+          "roundId": "5-4",
+          "fields": {
+            "interestBasis": [
+              109,
+              111
+            ],
+            "goldBefore": [
+              109,
+              111
+            ],
+            "goldAfter": [
+              119,
+              121
+            ],
+            "xpBefore": [
+              12,
+              14
+            ],
+            "xpAfter": [
+              14,
+              16
+            ]
+          }
+        },
+        {
+          "roundId": "5-5",
+          "fields": {
+            "combatEventCount": [
+              1462,
+              1501
+            ],
+            "interestBasis": [
+              120,
+              122
+            ],
+            "goldBefore": [
+              119,
+              121
+            ],
+            "goldAfter": [
+              133,
+              135
+            ],
+            "xpBefore": [
+              14,
+              16
+            ],
+            "xpAfter": [
+              16,
+              18
+            ]
+          }
+        },
+        {
+          "roundId": "5-6",
+          "fields": {
+            "combatEventCount": [
+              1830,
+              1841
+            ],
+            "interestBasis": [
+              134,
+              136
+            ],
+            "goldBefore": [
+              133,
+              135
+            ],
+            "goldAfter": [
+              147,
+              149
+            ],
+            "xpBefore": [
+              16,
+              18
+            ],
+            "xpAfter": [
+              18,
+              20
+            ]
+          }
+        },
+        {
+          "roundId": "5-7",
+          "fields": {
+            "combatTicks": [
+              187,
+              186
+            ],
+            "combatEventCount": [
+              386,
+              390
+            ],
+            "interestBasis": [
+              151,
+              153
+            ],
+            "goldBefore": [
+              151,
+              153
+            ],
+            "goldAfter": [
+              161,
+              163
+            ],
+            "xpBefore": [
+              18,
+              20
+            ],
+            "xpAfter": [
+              20,
+              22
+            ]
+          }
+        },
+        {
+          "roundId": "6-1",
+          "fields": {
+            "combatTicks": [
+              516,
+              513
+            ],
+            "combatEventCount": [
+              2075,
+              2027
+            ],
+            "interestBasis": [
+              162,
+              164
+            ],
+            "goldBefore": [
+              161,
+              163
+            ],
+            "goldAfter": [
+              175,
+              177
+            ],
+            "xpBefore": [
+              20,
+              22
+            ],
+            "xpAfter": [
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "roundId": "6-2",
+          "fields": {
+            "result": [
+              "enemyWin",
+              "playerWin"
+            ],
+            "combatTicks": [
+              575,
+              559
+            ],
+            "combatEventCount": [
+              2744,
+              2666
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 5,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              175,
+              178
+            ],
+            "streakAfter": [
+              {
+                "kind": "loss",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 22
+              }
+            ],
+            "income": [
+              10,
+              14
+            ],
+            "goldBefore": [
+              175,
+              177
+            ],
+            "goldAfter": [
+              185,
+              191
+            ],
+            "xpBefore": [
+              22,
+              24
+            ],
+            "xpAfter": [
+              24,
+              26
+            ],
+            "hpAfter": [
+              83,
+              100
+            ],
+            "survivingEnemyCount": [
+              5,
+              0
+            ],
+            "playerDamage": [
+              17,
+              0
+            ],
+            "hpLost": [
+              17,
+              0
+            ]
+          }
+        },
+        {
+          "roundId": "6-3",
+          "fields": {
+            "combatTicks": [
+              545,
+              528
+            ],
+            "combatEventCount": [
+              2604,
+              2489
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              186,
+              192
+            ],
+            "streakBefore": [
+              {
+                "kind": "loss",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 22
+              }
+            ],
+            "streakAfter": [
+              {
+                "kind": "win",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 23
+              }
+            ],
+            "income": [
+              11,
+              14
+            ],
+            "goldBefore": [
+              185,
+              191
+            ],
+            "goldAfter": [
+              196,
+              205
+            ],
+            "xpBefore": [
+              24,
+              26
+            ],
+            "xpAfter": [
+              26,
+              28
+            ],
+            "hpBefore": [
+              83,
+              100
+            ],
+            "hpAfter": [
+              83,
+              100
+            ]
+          }
+        },
+        {
+          "roundId": "6-4",
+          "fields": {
+            "interestBasis": [
+              196,
+              205
+            ],
+            "streakBefore": [
+              {
+                "kind": "win",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 23
+              }
+            ],
+            "streakAfter": [
+              {
+                "kind": "win",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 23
+              }
+            ],
+            "goldBefore": [
+              196,
+              205
+            ],
+            "goldAfter": [
+              206,
+              215
+            ],
+            "xpBefore": [
+              26,
+              28
+            ],
+            "xpAfter": [
+              28,
+              30
+            ],
+            "hpBefore": [
+              83,
+              100
+            ],
+            "hpAfter": [
+              83,
+              100
+            ]
+          }
+        },
+        {
+          "roundId": "6-5",
+          "fields": {
+            "combatTicks": [
+              508,
+              496
+            ],
+            "combatEventCount": [
+              2056,
+              2001
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 1
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              207,
+              216
+            ],
+            "streakBefore": [
+              {
+                "kind": "win",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 23
+              }
+            ],
+            "streakAfter": [
+              {
+                "kind": "win",
+                "count": 2
+              },
+              {
+                "kind": "win",
+                "count": 24
+              }
+            ],
+            "income": [
+              12,
+              14
+            ],
+            "goldBefore": [
+              206,
+              215
+            ],
+            "goldAfter": [
+              218,
+              229
+            ],
+            "xpBefore": [
+              28,
+              30
+            ],
+            "xpAfter": [
+              30,
+              32
+            ],
+            "hpBefore": [
+              83,
+              100
+            ],
+            "hpAfter": [
+              83,
+              100
+            ]
+          }
+        },
+        {
+          "roundId": "6-6",
+          "fields": {
+            "combatTicks": [
+              606,
+              528
+            ],
+            "combatEventCount": [
+              2953,
+              2632
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 1
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              219,
+              230
+            ],
+            "streakBefore": [
+              {
+                "kind": "win",
+                "count": 2
+              },
+              {
+                "kind": "win",
+                "count": 24
+              }
+            ],
+            "streakAfter": [
+              {
+                "kind": "win",
+                "count": 3
+              },
+              {
+                "kind": "win",
+                "count": 25
+              }
+            ],
+            "income": [
+              12,
+              14
+            ],
+            "goldBefore": [
+              218,
+              229
+            ],
+            "goldAfter": [
+              230,
+              243
+            ],
+            "xpBefore": [
+              30,
+              32
+            ],
+            "xpAfter": [
+              32,
+              34
+            ],
+            "hpBefore": [
+              83,
+              100
+            ],
+            "hpAfter": [
+              83,
+              100
+            ]
+          }
+        },
+        {
+          "roundId": "6-7",
+          "fields": {
+            "combatEventCount": [
+              546,
+              541
+            ],
+            "interestBasis": [
+              235,
+              248
+            ],
+            "streakBefore": [
+              {
+                "kind": "win",
+                "count": 3
+              },
+              {
+                "kind": "win",
+                "count": 25
+              }
+            ],
+            "streakAfter": [
+              {
+                "kind": "win",
+                "count": 3
+              },
+              {
+                "kind": "win",
+                "count": 25
+              }
+            ],
+            "goldBefore": [
+              235,
+              248
+            ],
+            "goldAfter": [
+              245,
+              258
+            ],
+            "xpBefore": [
+              32,
+              34
+            ],
+            "xpAfter": [
+              34,
+              36
+            ],
+            "hpBefore": [
+              83,
+              100
+            ],
+            "hpAfter": [
+              83,
+              100
+            ]
+          }
+        }
+      ]
+    },
+    "mage": {
+      "outcome": "victory",
+      "battles": 33,
+      "rounds": 38,
+      "formedBattles": 15,
+      "caitlynBattles": 0,
+      "commandsBefore": 176,
+      "commandsAfter": 178,
+      "commandsUnchanged": false,
+      "changedStateRounds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changedEventRounds": [
+        11,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changes": [
+        {
+          "roundId": "1-4",
+          "fields": {
+            "xpRequested": [
+              0,
+              2
+            ],
+            "xpAwarded": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              0,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-1",
+          "fields": {
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-2",
+          "fields": {
+            "levelAfter": [
+              3,
+              4
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              0
+            ]
+          }
+        },
+        {
+          "roundId": "2-3",
+          "fields": {
+            "interestBasis": [
+              12,
+              16
+            ],
+            "goldBefore": [
+              11,
+              15
+            ],
+            "goldAfter": [
+              19,
+              23
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-4",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 1,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 2,
+                "streak": 0
+              }
+            ],
+            "interestBasis": [
+              19,
+              23
+            ],
+            "income": [
+              6,
+              7
+            ],
+            "goldBefore": [
+              19,
+              23
+            ],
+            "goldAfter": [
+              25,
+              30
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-5",
+          "fields": {
+            "interestBasis": [
+              23,
+              28
+            ],
+            "goldBefore": [
+              22,
+              27
+            ],
+            "goldAfter": [
+              32,
+              37
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "2-6",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 2,
+                "streak": 2
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 3,
+                "streak": 2
+              }
+            ],
+            "interestBasis": [
+              29,
+              34
+            ],
+            "income": [
+              10,
+              11
+            ],
+            "goldBefore": [
+              28,
+              33
+            ],
+            "goldAfter": [
+              38,
+              44
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-7",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 3,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 4,
+                "streak": 0
+              }
+            ],
+            "interestBasis": [
+              39,
+              45
+            ],
+            "income": [
+              8,
+              9
+            ],
+            "goldBefore": [
+              39,
+              45
+            ],
+            "goldAfter": [
+              47,
+              54
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-1",
+          "fields": {
+            "combatTicks": [
+              731,
+              672
+            ],
+            "combatEventCount": [
+              1116,
+              1198
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              45,
+              52
+            ],
+            "income": [
+              13,
+              14
+            ],
+            "goldBefore": [
+              44,
+              51
+            ],
+            "goldAfter": [
+              57,
+              65
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-2",
+          "fields": {
+            "interestBasis": [
+              64,
+              72
+            ],
+            "goldBefore": [
+              63,
+              71
+            ],
+            "goldAfter": [
+              77,
+              85
+            ],
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-3",
+          "fields": {
+            "combatTicks": [
+              397,
+              363
+            ],
+            "combatEventCount": [
+              682,
+              619
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 3,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 2,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              36,
+              29
+            ],
+            "income": [
+              12,
+              11
+            ],
+            "goldBefore": [
+              35,
+              28
+            ],
+            "goldAfter": [
+              47,
+              39
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "3-4",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 4,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 3,
+                "streak": 0
+              }
+            ],
+            "interestBasis": [
+              47,
+              39
+            ],
+            "income": [
+              9,
+              8
+            ],
+            "goldBefore": [
+              47,
+              39
+            ],
+            "goldAfter": [
+              56,
+              47
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-5",
+          "fields": {
+            "combatTicks": [
+              300,
+              308
+            ],
+            "combatEventCount": [
+              573,
+              588
+            ],
+            "interestBasis": [
+              31,
+              33
+            ],
+            "goldBefore": [
+              30,
+              32
+            ],
+            "goldAfter": [
+              42,
+              44
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-6",
+          "fields": {
+            "interestBasis": [
+              43,
+              45
+            ],
+            "goldBefore": [
+              42,
+              44
+            ],
+            "goldAfter": [
+              55,
+              57
+            ],
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-7",
+          "fields": {
+            "combatTicks": [
+              94,
+              137
+            ],
+            "combatEventCount": [
+              160,
+              240
+            ],
+            "interestBasis": [
+              33,
+              35
+            ],
+            "goldBefore": [
+              33,
+              35
+            ],
+            "goldAfter": [
+              41,
+              43
+            ],
+            "levelAfter": [
+              7,
+              6
+            ],
+            "xpBefore": [
+              34,
+              32
+            ],
+            "xpAfter": [
+              0,
+              34
+            ]
+          }
+        },
+        {
+          "roundId": "4-1",
+          "fields": {
+            "interestBasis": [
+              42,
+              40
+            ],
+            "goldBefore": [
+              41,
+              39
+            ],
+            "goldAfter": [
+              54,
+              52
+            ],
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "4-2",
+          "fields": {
+            "interestBasis": [
+              55,
+              53
+            ],
+            "goldBefore": [
+              54,
+              52
+            ],
+            "goldAfter": [
+              68,
+              66
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "4-3",
+          "fields": {
+            "interestBasis": [
+              69,
+              67
+            ],
+            "goldBefore": [
+              68,
+              66
+            ],
+            "goldAfter": [
+              82,
+              80
+            ],
+            "xpBefore": [
+              4,
+              6
+            ],
+            "xpAfter": [
+              6,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "4-4",
+          "fields": {
+            "interestBasis": [
+              82,
+              80
+            ],
+            "goldBefore": [
+              82,
+              80
+            ],
+            "goldAfter": [
+              92,
+              90
+            ],
+            "xpBefore": [
+              6,
+              8
+            ],
+            "xpAfter": [
+              8,
+              10
+            ]
+          }
+        },
+        {
+          "roundId": "4-5",
+          "fields": {
+            "combatEventCount": [
+              966,
+              965
+            ],
+            "interestBasis": [
+              53,
+              51
+            ],
+            "goldBefore": [
+              52,
+              50
+            ],
+            "goldAfter": [
+              66,
+              64
+            ],
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "4-6",
+          "fields": {
+            "combatEventCount": [
+              710,
+              709
+            ],
+            "interestBasis": [
+              66,
+              64
+            ],
+            "goldBefore": [
+              65,
+              63
+            ],
+            "goldAfter": [
+              79,
+              77
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "4-7",
+          "fields": {
+            "interestBasis": [
+              82,
+              80
+            ],
+            "goldBefore": [
+              82,
+              80
+            ],
+            "goldAfter": [
+              92,
+              90
+            ],
+            "xpBefore": [
+              4,
+              6
+            ],
+            "xpAfter": [
+              6,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "5-1",
+          "fields": {
+            "interestBasis": [
+              93,
+              91
+            ],
+            "goldBefore": [
+              92,
+              90
+            ],
+            "goldAfter": [
+              106,
+              104
+            ],
+            "xpBefore": [
+              6,
+              8
+            ],
+            "xpAfter": [
+              8,
+              10
+            ]
+          }
+        },
+        {
+          "roundId": "5-2",
+          "fields": {
+            "combatTicks": [
+              468,
+              450
+            ],
+            "combatEventCount": [
+              1395,
+              1365
+            ],
+            "interestBasis": [
+              107,
+              105
+            ],
+            "goldBefore": [
+              106,
+              104
+            ],
+            "goldAfter": [
+              120,
+              118
+            ],
+            "xpBefore": [
+              8,
+              10
+            ],
+            "xpAfter": [
+              10,
+              12
+            ]
+          }
+        },
+        {
+          "roundId": "5-3",
+          "fields": {
+            "interestBasis": [
+              121,
+              119
+            ],
+            "goldBefore": [
+              120,
+              118
+            ],
+            "goldAfter": [
+              134,
+              132
+            ],
+            "xpBefore": [
+              10,
+              12
+            ],
+            "xpAfter": [
+              12,
+              14
+            ]
+          }
+        },
+        {
+          "roundId": "5-4",
+          "fields": {
+            "interestBasis": [
+              134,
+              132
+            ],
+            "goldBefore": [
+              134,
+              132
+            ],
+            "goldAfter": [
+              144,
+              142
+            ],
+            "xpBefore": [
+              12,
+              14
+            ],
+            "xpAfter": [
+              14,
+              16
+            ]
+          }
+        },
+        {
+          "roundId": "5-5",
+          "fields": {
+            "interestBasis": [
+              145,
+              143
+            ],
+            "goldBefore": [
+              144,
+              142
+            ],
+            "goldAfter": [
+              158,
+              156
+            ],
+            "xpBefore": [
+              14,
+              16
+            ],
+            "xpAfter": [
+              16,
+              18
+            ]
+          }
+        },
+        {
+          "roundId": "5-6",
+          "fields": {
+            "combatTicks": [
+              446,
+              462
+            ],
+            "combatEventCount": [
+              1363,
+              1427
+            ],
+            "interestBasis": [
+              159,
+              157
+            ],
+            "goldBefore": [
+              158,
+              156
+            ],
+            "goldAfter": [
+              172,
+              170
+            ],
+            "xpBefore": [
+              16,
+              18
+            ],
+            "xpAfter": [
+              18,
+              20
+            ]
+          }
+        },
+        {
+          "roundId": "5-7",
+          "fields": {
+            "interestBasis": [
+              176,
+              174
+            ],
+            "goldBefore": [
+              176,
+              174
+            ],
+            "goldAfter": [
+              186,
+              184
+            ],
+            "xpBefore": [
+              18,
+              20
+            ],
+            "xpAfter": [
+              20,
+              22
+            ]
+          }
+        },
+        {
+          "roundId": "6-1",
+          "fields": {
+            "combatTicks": [
+              509,
+              517
+            ],
+            "combatEventCount": [
+              1748,
+              1761
+            ],
+            "interestBasis": [
+              187,
+              185
+            ],
+            "goldBefore": [
+              186,
+              184
+            ],
+            "goldAfter": [
+              200,
+              198
+            ],
+            "xpBefore": [
+              20,
+              22
+            ],
+            "xpAfter": [
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "roundId": "6-2",
+          "fields": {
+            "combatTicks": [
+              528,
+              579
+            ],
+            "combatEventCount": [
+              2162,
+              2180
+            ],
+            "interestBasis": [
+              200,
+              198
+            ],
+            "goldBefore": [
+              200,
+              198
+            ],
+            "goldAfter": [
+              210,
+              208
+            ],
+            "xpBefore": [
+              22,
+              24
+            ],
+            "xpAfter": [
+              24,
+              26
+            ],
+            "hpAfter": [
+              83,
+              86
+            ],
+            "survivingEnemyCount": [
+              5,
+              2
+            ],
+            "playerDamage": [
+              17,
+              14
+            ],
+            "hpLost": [
+              17,
+              14
+            ]
+          }
+        },
+        {
+          "roundId": "6-3",
+          "fields": {
+            "result": [
+              "enemyWin",
+              "playerWin"
+            ],
+            "combatTicks": [
+              811,
+              640
+            ],
+            "combatEventCount": [
+              3079,
+              2481
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 5,
+                "streak": 1
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 0
+              }
+            ],
+            "interestBasis": [
+              210,
+              209
+            ],
+            "streakAfter": [
+              {
+                "kind": "loss",
+                "count": 2
+              },
+              {
+                "kind": "win",
+                "count": 1
+              }
+            ],
+            "goldBefore": [
+              210,
+              208
+            ],
+            "goldAfter": [
+              221,
+              219
+            ],
+            "xpBefore": [
+              24,
+              26
+            ],
+            "xpAfter": [
+              26,
+              28
+            ],
+            "hpBefore": [
+              83,
+              86
+            ],
+            "hpAfter": [
+              69,
+              86
+            ],
+            "survivingEnemyCount": [
+              2,
+              0
+            ],
+            "playerDamage": [
+              14,
+              0
+            ],
+            "hpLost": [
+              14,
+              0
+            ]
+          }
+        },
+        {
+          "roundId": "6-4",
+          "fields": {
+            "interestBasis": [
+              221,
+              219
+            ],
+            "streakBefore": [
+              {
+                "kind": "loss",
+                "count": 2
+              },
+              {
+                "kind": "win",
+                "count": 1
+              }
+            ],
+            "streakAfter": [
+              {
+                "kind": "loss",
+                "count": 2
+              },
+              {
+                "kind": "win",
+                "count": 1
+              }
+            ],
+            "goldBefore": [
+              221,
+              219
+            ],
+            "goldAfter": [
+              231,
+              229
+            ],
+            "xpBefore": [
+              26,
+              28
+            ],
+            "xpAfter": [
+              28,
+              30
+            ],
+            "hpBefore": [
+              69,
+              86
+            ],
+            "hpAfter": [
+              69,
+              86
+            ]
+          }
+        },
+        {
+          "roundId": "6-5",
+          "fields": {
+            "combatEventCount": [
+              1769,
+              1767
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 1
+              }
+            ],
+            "interestBasis": [
+              232,
+              230
+            ],
+            "streakBefore": [
+              {
+                "kind": "loss",
+                "count": 2
+              },
+              {
+                "kind": "win",
+                "count": 1
+              }
+            ],
+            "streakAfter": [
+              {
+                "kind": "win",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 2
+              }
+            ],
+            "income": [
+              11,
+              12
+            ],
+            "goldBefore": [
+              231,
+              229
+            ],
+            "goldAfter": [
+              242,
+              241
+            ],
+            "xpBefore": [
+              28,
+              30
+            ],
+            "xpAfter": [
+              30,
+              32
+            ],
+            "hpBefore": [
+              69,
+              86
+            ],
+            "hpAfter": [
+              69,
+              86
+            ]
+          }
+        },
+        {
+          "roundId": "6-6",
+          "fields": {
+            "combatTicks": [
+              584,
+              575
+            ],
+            "combatEventCount": [
+              2275,
+              2307
+            ],
+            "interestBasis": [
+              242,
+              241
+            ],
+            "streakBefore": [
+              {
+                "kind": "win",
+                "count": 1
+              },
+              {
+                "kind": "win",
+                "count": 2
+              }
+            ],
+            "goldBefore": [
+              242,
+              241
+            ],
+            "goldAfter": [
+              252,
+              251
+            ],
+            "xpBefore": [
+              30,
+              32
+            ],
+            "xpAfter": [
+              32,
+              34
+            ],
+            "hpBefore": [
+              69,
+              86
+            ],
+            "hpAfter": [
+              52,
+              73
+            ],
+            "survivingEnemyCount": [
+              5,
+              1
+            ],
+            "playerDamage": [
+              17,
+              13
+            ],
+            "hpLost": [
+              17,
+              13
+            ]
+          }
+        },
+        {
+          "roundId": "6-7",
+          "fields": {
+            "combatTicks": [
+              283,
+              279
+            ],
+            "combatEventCount": [
+              487,
+              477
+            ],
+            "interestBasis": [
+              257,
+              256
+            ],
+            "goldBefore": [
+              257,
+              256
+            ],
+            "goldAfter": [
+              267,
+              266
+            ],
+            "xpBefore": [
+              32,
+              34
+            ],
+            "xpAfter": [
+              34,
+              36
+            ],
+            "hpBefore": [
+              52,
+              73
+            ],
+            "hpAfter": [
+              52,
+              73
+            ]
+          }
+        }
+      ]
+    },
+    "sniper-caitlyn": {
+      "outcome": "victory",
+      "battles": 33,
+      "rounds": 38,
+      "formedBattles": 3,
+      "caitlynBattles": 12,
+      "commandsBefore": 185,
+      "commandsAfter": 188,
+      "commandsUnchanged": false,
+      "changedStateRounds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changedEventRounds": [
+        6,
+        11,
+        12,
+        17,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        36,
+        37,
+        38
+      ],
+      "changes": [
+        {
+          "roundId": "1-4",
+          "fields": {
+            "xpRequested": [
+              0,
+              2
+            ],
+            "xpAwarded": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              0,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-1",
+          "fields": {
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-2",
+          "fields": {
+            "levelAfter": [
+              3,
+              4
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              0
+            ]
+          }
+        },
+        {
+          "roundId": "2-3",
+          "fields": {
+            "combatTicks": [
+              308,
+              281
+            ],
+            "combatEventCount": [
+              386,
+              388
+            ],
+            "levelBefore": [
+              3,
+              4
+            ],
+            "xpBefore": [
+              4,
+              0
+            ],
+            "xpAfter": [
+              0,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-4",
+          "fields": {
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "2-5",
+          "fields": {
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "2-6",
+          "fields": {
+            "interestBasis": [
+              30,
+              34
+            ],
+            "goldBefore": [
+              29,
+              33
+            ],
+            "goldAfter": [
+              40,
+              44
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "2-7",
+          "fields": {
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 3,
+                "streak": 0
+              },
+              {
+                "base": 5,
+                "win": 0,
+                "interest": 4,
+                "streak": 0
+              }
+            ],
+            "interestBasis": [
+              36,
+              40
+            ],
+            "income": [
+              8,
+              9
+            ],
+            "goldBefore": [
+              36,
+              40
+            ],
+            "goldAfter": [
+              44,
+              49
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-1",
+          "fields": {
+            "combatEventCount": [
+              986,
+              991
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              45,
+              50
+            ],
+            "income": [
+              13,
+              14
+            ],
+            "goldBefore": [
+              44,
+              49
+            ],
+            "goldAfter": [
+              57,
+              63
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-2",
+          "fields": {
+            "interestBasis": [
+              63,
+              69
+            ],
+            "goldBefore": [
+              62,
+              68
+            ],
+            "goldAfter": [
+              76,
+              82
+            ],
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-3",
+          "fields": {
+            "interestBasis": [
+              35,
+              32
+            ],
+            "goldBefore": [
+              34,
+              31
+            ],
+            "goldAfter": [
+              46,
+              43
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "3-4",
+          "fields": {
+            "interestBasis": [
+              46,
+              43
+            ],
+            "goldBefore": [
+              46,
+              43
+            ],
+            "goldAfter": [
+              55,
+              52
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "3-5",
+          "fields": {
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "3-6",
+          "fields": {
+            "xpBefore": [
+              8,
+              6
+            ],
+            "xpAfter": [
+              10,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "3-7",
+          "fields": {
+            "xpBefore": [
+              22,
+              16
+            ],
+            "xpAfter": [
+              24,
+              18
+            ]
+          }
+        },
+        {
+          "roundId": "4-1",
+          "fields": {
+            "combatTicks": [
+              411,
+              484
+            ],
+            "combatEventCount": [
+              1296,
+              1466
+            ],
+            "levelBefore": [
+              7,
+              6
+            ],
+            "levelAfter": [
+              7,
+              6
+            ],
+            "xpBefore": [
+              0,
+              30
+            ],
+            "xpAfter": [
+              2,
+              32
+            ]
+          }
+        },
+        {
+          "roundId": "4-2",
+          "fields": {
+            "combatTicks": [
+              391,
+              365
+            ],
+            "combatEventCount": [
+              1208,
+              1117
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 3,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              36,
+              40
+            ],
+            "income": [
+              12,
+              13
+            ],
+            "goldBefore": [
+              35,
+              39
+            ],
+            "goldAfter": [
+              47,
+              52
+            ],
+            "xpBefore": [
+              2,
+              0
+            ],
+            "xpAfter": [
+              4,
+              2
+            ]
+          }
+        },
+        {
+          "roundId": "4-3",
+          "fields": {
+            "combatTicks": [
+              352,
+              361
+            ],
+            "combatEventCount": [
+              1096,
+              1136
+            ],
+            "incomeBreakdown": [
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 4,
+                "streak": 3
+              },
+              {
+                "base": 5,
+                "win": 1,
+                "interest": 5,
+                "streak": 3
+              }
+            ],
+            "interestBasis": [
+              48,
+              53
+            ],
+            "income": [
+              13,
+              14
+            ],
+            "goldBefore": [
+              47,
+              52
+            ],
+            "goldAfter": [
+              60,
+              66
+            ],
+            "xpBefore": [
+              4,
+              2
+            ],
+            "xpAfter": [
+              6,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "4-4",
+          "fields": {
+            "interestBasis": [
+              60,
+              66
+            ],
+            "goldBefore": [
+              60,
+              66
+            ],
+            "goldAfter": [
+              70,
+              76
+            ],
+            "xpBefore": [
+              6,
+              4
+            ],
+            "xpAfter": [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "4-5",
+          "fields": {
+            "combatTicks": [
+              360,
+              380
+            ],
+            "combatEventCount": [
+              1230,
+              1291
+            ],
+            "interestBasis": [
+              31,
+              33
+            ],
+            "goldBefore": [
+              30,
+              32
+            ],
+            "goldAfter": [
+              42,
+              44
+            ],
+            "xpBefore": [
+              0,
+              2
+            ],
+            "xpAfter": [
+              2,
+              4
+            ]
+          }
+        },
+        {
+          "roundId": "4-6",
+          "fields": {
+            "combatTicks": [
+              316,
+              307
+            ],
+            "combatEventCount": [
+              1101,
+              1065
+            ],
+            "interestBasis": [
+              42,
+              44
+            ],
+            "goldBefore": [
+              41,
+              43
+            ],
+            "goldAfter": [
+              54,
+              56
+            ],
+            "xpBefore": [
+              2,
+              4
+            ],
+            "xpAfter": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "roundId": "4-7",
+          "fields": {
+            "combatTicks": [
+              147,
+              155
+            ],
+            "combatEventCount": [
+              445,
+              458
+            ],
+            "interestBasis": [
+              57,
+              59
+            ],
+            "goldBefore": [
+              57,
+              59
+            ],
+            "goldAfter": [
+              67,
+              69
+            ],
+            "xpBefore": [
+              4,
+              6
+            ],
+            "xpAfter": [
+              6,
+              8
+            ]
+          }
+        },
+        {
+          "roundId": "5-1",
+          "fields": {
+            "combatTicks": [
+              400,
+              389
+            ],
+            "combatEventCount": [
+              1401,
+              1338
+            ],
+            "interestBasis": [
+              63,
+              61
+            ],
+            "goldBefore": [
+              62,
+              60
+            ],
+            "goldAfter": [
+              76,
+              74
+            ],
+            "xpBefore": [
+              6,
+              8
+            ],
+            "xpAfter": [
+              8,
+              10
+            ]
+          }
+        },
+        {
+          "roundId": "5-2",
+          "fields": {
+            "combatTicks": [
+              434,
+              417
+            ],
+            "combatEventCount": [
+              1731,
+              1681
+            ],
+            "interestBasis": [
+              77,
+              75
+            ],
+            "goldBefore": [
+              76,
+              74
+            ],
+            "goldAfter": [
+              90,
+              88
+            ],
+            "xpBefore": [
+              8,
+              10
+            ],
+            "xpAfter": [
+              10,
+              12
+            ]
+          }
+        },
+        {
+          "roundId": "5-3",
+          "fields": {
+            "combatTicks": [
+              394,
+              390
+            ],
+            "combatEventCount": [
+              1440,
+              1425
+            ],
+            "interestBasis": [
+              91,
+              89
+            ],
+            "goldBefore": [
+              90,
+              88
+            ],
+            "goldAfter": [
+              104,
+              102
+            ],
+            "xpBefore": [
+              10,
+              12
+            ],
+            "xpAfter": [
+              12,
+              14
+            ]
+          }
+        },
+        {
+          "roundId": "5-4",
+          "fields": {
+            "interestBasis": [
+              104,
+              102
+            ],
+            "goldBefore": [
+              104,
+              102
+            ],
+            "goldAfter": [
+              114,
+              112
+            ],
+            "xpBefore": [
+              12,
+              14
+            ],
+            "xpAfter": [
+              14,
+              16
+            ]
+          }
+        },
+        {
+          "roundId": "5-5",
+          "fields": {
+            "combatTicks": [
+              393,
+              392
+            ],
+            "combatEventCount": [
+              1453,
+              1420
+            ],
+            "interestBasis": [
+              115,
+              113
+            ],
+            "goldBefore": [
+              114,
+              112
+            ],
+            "goldAfter": [
+              128,
+              126
+            ],
+            "xpBefore": [
+              14,
+              16
+            ],
+            "xpAfter": [
+              16,
+              18
+            ]
+          }
+        },
+        {
+          "roundId": "5-6",
+          "fields": {
+            "combatTicks": [
+              424,
+              417
+            ],
+            "combatEventCount": [
+              1714,
+              1660
+            ],
+            "interestBasis": [
+              129,
+              127
+            ],
+            "goldBefore": [
+              128,
+              126
+            ],
+            "goldAfter": [
+              142,
+              140
+            ],
+            "xpBefore": [
+              16,
+              18
+            ],
+            "xpAfter": [
+              18,
+              20
+            ]
+          }
+        },
+        {
+          "roundId": "5-7",
+          "fields": {
+            "combatTicks": [
+              168,
+              182
+            ],
+            "combatEventCount": [
+              356,
+              378
+            ],
+            "interestBasis": [
+              146,
+              144
+            ],
+            "goldBefore": [
+              146,
+              144
+            ],
+            "goldAfter": [
+              156,
+              154
+            ],
+            "xpBefore": [
+              18,
+              20
+            ],
+            "xpAfter": [
+              20,
+              22
+            ]
+          }
+        },
+        {
+          "roundId": "6-1",
+          "fields": {
+            "combatTicks": [
+              508,
+              482
+            ],
+            "combatEventCount": [
+              2089,
+              1891
+            ],
+            "interestBasis": [
+              157,
+              155
+            ],
+            "goldBefore": [
+              156,
+              154
+            ],
+            "goldAfter": [
+              170,
+              168
+            ],
+            "xpBefore": [
+              20,
+              22
+            ],
+            "xpAfter": [
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "roundId": "6-2",
+          "fields": {
+            "combatTicks": [
+              585,
+              568
+            ],
+            "combatEventCount": [
+              2909,
+              2818
+            ],
+            "interestBasis": [
+              171,
+              169
+            ],
+            "goldBefore": [
+              170,
+              168
+            ],
+            "goldAfter": [
+              184,
+              182
+            ],
+            "xpBefore": [
+              22,
+              24
+            ],
+            "xpAfter": [
+              24,
+              26
+            ]
+          }
+        },
+        {
+          "roundId": "6-3",
+          "fields": {
+            "combatTicks": [
+              486,
+              471
+            ],
+            "combatEventCount": [
+              2346,
+              2230
+            ],
+            "interestBasis": [
+              185,
+              183
+            ],
+            "goldBefore": [
+              184,
+              182
+            ],
+            "goldAfter": [
+              198,
+              196
+            ],
+            "xpBefore": [
+              24,
+              26
+            ],
+            "xpAfter": [
+              26,
+              28
+            ]
+          }
+        },
+        {
+          "roundId": "6-4",
+          "fields": {
+            "interestBasis": [
+              198,
+              196
+            ],
+            "goldBefore": [
+              198,
+              196
+            ],
+            "goldAfter": [
+              208,
+              206
+            ],
+            "xpBefore": [
+              26,
+              28
+            ],
+            "xpAfter": [
+              28,
+              30
+            ]
+          }
+        },
+        {
+          "roundId": "6-5",
+          "fields": {
+            "combatTicks": [
+              462,
+              473
+            ],
+            "combatEventCount": [
+              1870,
+              1892
+            ],
+            "interestBasis": [
+              209,
+              207
+            ],
+            "goldBefore": [
+              208,
+              206
+            ],
+            "goldAfter": [
+              222,
+              220
+            ],
+            "xpBefore": [
+              28,
+              30
+            ],
+            "xpAfter": [
+              30,
+              32
+            ]
+          }
+        },
+        {
+          "roundId": "6-6",
+          "fields": {
+            "combatTicks": [
+              533,
+              494
+            ],
+            "combatEventCount": [
+              2710,
+              2443
+            ],
+            "interestBasis": [
+              223,
+              221
+            ],
+            "goldBefore": [
+              222,
+              220
+            ],
+            "goldAfter": [
+              236,
+              234
+            ],
+            "xpBefore": [
+              30,
+              32
+            ],
+            "xpAfter": [
+              32,
+              34
+            ]
+          }
+        },
+        {
+          "roundId": "6-7",
+          "fields": {
+            "interestBasis": [
+              241,
+              239
+            ],
+            "goldBefore": [
+              241,
+              239
+            ],
+            "goldAfter": [
+              251,
+              249
+            ],
+            "xpBefore": [
+              32,
+              34
+            ],
+            "xpAfter": [
+              34,
+              36
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "candidateSha256": "1369f32bb8790f3a756819623e52f857e0e6c3649e511af95359b706c1495c56",
+  "baselineSha256": "574db2c81ff7200df78c22dcfc7a2124fb789168b82d312509cbe59a6d750e75",
+  "updaterSha256": "3b33f08c78f72ddbdfae9af93df0abdfefc02d0edf27cde6ba1994021a24adb9",
+  "capture": {
+    "base": "67b22b9848beb18b84a2cf716113ea833a44de43",
+    "files": {
+      "old-cannon.json": "9668fd3cc6dd6129d86666b65657b50238adcb99107cefb66d8fb5b55307752d",
+      "old-sniper.json": "05062301f6d3e6a9e8d116446baa093f95702c5d58be1731dd9c10440f2dc24c",
+      "old-mage.json": "6e9e9fe1ed6433105c789d99413de1a84cfe740aa81fe75824eefff0613dcab2",
+      "old-sniper-caitlyn.json": "b60620fb735d0651fee123917c774bc9404cdb405d1394841918114745519c2c",
+      "new-cannon.json": "1923b2e7f2c2fa98ef1b2cc87ef895e568790b782f89fe9665780a8cefc3ac88",
+      "new-sniper.json": "c6db72e80788989db86fa5dbab05282a863dfe825a32406a27c204f49dabefef",
+      "new-mage.json": "421ce1b4eac050fbf9f479efe2b23133a06aa31a2e954e69b217813db8183821",
+      "new-sniper-caitlyn.json": "f8507da3a57ed488c8a988a651f936973e0261e525f139f87a0606512930298c"
+    }
+  }
+}

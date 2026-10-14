@@ -1,0 +1,108 @@
+{
+  "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "dirty": false,
+  "node": "v22.23.3",
+  "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+  "mode": "production preview",
+  "viewport": [
+    1440,
+    1000
+  ],
+  "checks": [
+    {
+      "name": "catalog-count-and-filters",
+      "passed": true,
+      "evidence": {
+        "all": 44,
+        "component": 8,
+        "completed": 36,
+        "unique": 6,
+        "slots": 1,
+        "provisional": 2
+      }
+    },
+    {
+      "name": "recipe-matrix-64-cells-36-results",
+      "passed": true,
+      "evidence": {
+        "cells": 64,
+        "results": 36
+      }
+    },
+    {
+      "name": "all-44-verbatim-popovers-and-dismissal",
+      "passed": true,
+      "evidence": {
+        "definitions": 44,
+        "dismiss": [
+          "Escape",
+          "pointer leave",
+          "blur"
+        ]
+      }
+    },
+    {
+      "name": "matrix-native-keyboard-and-popover",
+      "passed": true
+    },
+    {
+      "name": "inventory-and-equipped-popovers",
+      "passed": true
+    },
+    {
+      "name": "search-shortcuts-are-read-only",
+      "passed": true
+    },
+    {
+      "name": "28-missing-icons-use-identifiable-placeholders",
+      "passed": true,
+      "evidence": [
+        "adaptive-helm",
+        "bloodthirster",
+        "blue-buff",
+        "bramble-vest",
+        "crownguard",
+        "protectors-vow",
+        "edge-of-night",
+        "infinity-edge",
+        "ionic-spark",
+        "jeweled-gauntlet",
+        "last-whisper",
+        "nashors-tooth",
+        "giant-slayer",
+        "morellonomicon",
+        "steadfast-heart",
+        "guardbreaker",
+        "quicksilver",
+        "red-buff",
+        "sunfire-cape",
+        "redemption",
+        "runaans-hurricane",
+        "gloves",
+        "evenshroud",
+        "statikk-shiv",
+        "steraks-gage",
+        "thiefs-gloves",
+        "titans-resolve",
+        "hand-of-justice"
+      ]
+    },
+    {
+      "name": "controlled-404-fallback",
+      "passed": true,
+      "intercepted": 1
+    }
+  ],
+  "errors": [],
+  "expected404": [
+    "http://127.0.0.1:39949/assets/s13/items/sword.png"
+  ],
+  "passed": true,
+  "fixture": {
+    "runId": "b10-2-7",
+    "roundId": "2-7",
+    "battles": 8,
+    "provenance": "public commands only, validated production save"
+  },
+  "browser": "151.0.7922.173"
+}

@@ -1,12 +1,24 @@
+import type { M8_VERSION } from '../simulation/m8/version';
 /** M6 F1 public protocol. Persistence identity never participates in domain rules. */
 import type { MatchState } from '../simulation/match-types';
-import type { CombatEvent, CombatState, CombatResult } from '../simulation/combat-types';
+import type { CombatState, CombatResult } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
+/** M8_RULES §10: each record names the exact version its validator must match. */
+export interface BattleRecordVersion {
+  readonly schemaVersion: MatchState['schemaVersion'];
+  readonly rulesVersion: MatchState['rulesVersion'];
+  readonly contentVersion: MatchState['contentVersion'];
+  readonly contentDigest: string;
+  readonly replayFormatVersion: typeof M8_VERSION.replayFormatVersion;
+}
 export interface BattleRecord {
+  readonly version: BattleRecordVersion;
+  readonly roundId: string;
   readonly runId: string;
   readonly combatId: string;
   readonly context: MatchState;
   readonly initial: CombatState;
-  readonly events: readonly CombatEvent[];
+  readonly events: readonly LedgerCombatEvent[];
   readonly endTick: number;
   readonly nextEventSeq: number;
   readonly result: CombatResult | null;
@@ -15,8 +27,8 @@ export interface BattleRecord {
 }
 export interface SaveEnvelope {
   readonly kind: 'hex-autobattler-save';
-  readonly saveFormatVersion: 1;
-  readonly replayFormatVersion: 1;
+  readonly saveFormatVersion: typeof M8_VERSION.saveFormatVersion;
+  readonly replayFormatVersion: typeof M8_VERSION.replayFormatVersion;
   readonly runId: string;
   readonly createdAt: string;
   readonly match: MatchState;
@@ -36,6 +48,6 @@ export type SaveStatus = { readonly kind: 'saving' }
 export interface SessionChange {
   readonly before: MatchState;
   readonly after: MatchState;
-  readonly events: readonly CombatEvent[];
+  readonly events: readonly LedgerCombatEvent[];
   readonly reason: 'command' | 'tick' | 'new-match';
 }

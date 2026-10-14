@@ -1,4 +1,5 @@
-import type { CombatEvent, CombatState } from '../simulation/combat-types';
+import type { CombatState } from '../simulation/combat-types';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { planFx, type FxSpec } from '../presentation/fx-plan';
 import { reducedMotion } from '../presentation/preferences';
 import { HexLayout } from './hex-layout';
@@ -6,6 +7,7 @@ import { BOARD_LAYOUT } from './layout-config';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { s13AssetUrl } from '../presentation/s13-assets';
 import { THEME, costColor } from '../presentation/theme';
+import { statusBadges } from '../presentation/combat-status';
 import { canvasLabelRects as labelRects, placeLabel, type LabelRect } from '../presentation/label-layout';
 
 const C = THEME.color;
@@ -53,7 +55,7 @@ export class ReplayView {
    * events only; seek backwards, large jumps and battle switches drop old effects instead of
    * replaying the whole history at once.
    */
-  private consume(state: CombatState, events: readonly CombatEvent[] | undefined, now: number): void {
+  private consume(state: CombatState, events: readonly LedgerCombatEvent[] | undefined, now: number): void {
     if (!events) return;
     if (state.combatId !== this.combatId || events.length < this.consumed || events.length - this.consumed > 400) {
       this.combatId = state.combatId; this.effects = []; this.consumed = events.length; return;
@@ -66,7 +68,7 @@ export class ReplayView {
     }
     if (this.effects.length > 120) this.effects.splice(0, this.effects.length - 120);
   }
-  render(state: CombatState, selected: string | null = null, events?: readonly CombatEvent[]) {
+  render(state: CombatState, selected: string | null = null, events?: readonly LedgerCombatEvent[]) {
     const now = performance.now();
     this.consume(state, events, now);
     this.last = { state, selected };
@@ -96,9 +98,11 @@ export class ReplayView {
       const stars = '★'.repeat(unit.starLevel), width = ctx.measureText(stars).width + 6;
       ctx.fillRect(p.x - width / 2, p.y - radius - 6, width, 13);
       ctx.fillStyle = STAR_COLORS[unit.starLevel - 1]; ctx.fillText(stars, p.x, p.y - radius + 1);
-      ctx.beginPath(); ctx.arc(p.x - 20, p.y + 18, 8, 0, Math.PI * 2); ctx.fillStyle = costColor(identity.cost); ctx.fill();
-      ctx.lineWidth = 2; ctx.strokeStyle = '#0b151f'; ctx.stroke();
-      ctx.fillStyle = '#0b151f'; ctx.font = 'bold 11px system-ui, sans-serif'; ctx.fillText(String(identity.cost), p.x - 20, p.y + 18);
+      ctx.lineWidth = 2; ctx.strokeStyle = '#0b151f'; ctx.font = 'bold 11px system-ui, sans-serif';
+      if (!identity.neutral) {
+        ctx.beginPath(); ctx.arc(p.x - 20, p.y + 18, 8, 0, Math.PI * 2); ctx.fillStyle = costColor(identity.cost); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#0b151f'; ctx.fillText(String(identity.cost), p.x - 20, p.y + 18);
+      }
       if (unit.team === 'enemy') {
         ctx.beginPath(); ctx.arc(p.x + 20, p.y - 19, 9, 0, Math.PI * 2); ctx.fillStyle = C.enemy; ctx.fill(); ctx.stroke();
         ctx.fillStyle = '#ffffff'; ctx.fillText('敌', p.x + 20, p.y - 19);
@@ -110,6 +114,15 @@ export class ReplayView {
         if (unit.shield > 0) { ctx.fillStyle = C.shield; ctx.fillRect(left + 52 * hp, p.y - 44, Math.max(2, Math.min(52 - 52 * hp, 52 * shield)), 6); }
         ctx.fillStyle = unit.mana === unit.maxMana ? C.manaFull : C.mana; ctx.fillRect(left, p.y - 35, 52 * mana, 3);
         if (unit.shield > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2); ctx.strokeStyle = C.shield; ctx.lineWidth = 3; ctx.stroke(); }
+        // Same status strip as the live piece, read from this snapshot's own mechanism store.
+        const badges = statusBadges(state, unit.id);
+        ctx.font = 'bold 10px system-ui, sans-serif';
+        for (const [text, align, fg, bg] of [[badges.harmful, -1, '#ffb0a0', '#3a1218e6'], [badges.beneficial, 1, '#9ff0e4', '#0f2e2ae6']] as const) {
+          if (!text) continue;
+          const w = ctx.measureText(text).width + 4, x = align < 0 ? p.x - 1 - w : p.x + 1;
+          ctx.fillStyle = bg; ctx.fillRect(x, p.y + 4, w, 12); ctx.fillStyle = fg; ctx.textAlign = 'left'; ctx.fillText(text, x + 2, p.y + 10);
+        }
+        ctx.textAlign = 'center';
       }
     }
     ctx.globalAlpha = 1;

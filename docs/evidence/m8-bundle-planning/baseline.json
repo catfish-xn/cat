@@ -1,0 +1,15 @@
+{
+  "label": "baseline877",
+  "node": "v22.23.3",
+  "zlib": "1.3.1-e00f703",
+  "lockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+  "files": [
+    {
+      "file": "index-OdG_Y-rB.js",
+      "rawBytes": 1696386,
+      "gzip9Bytes": 485743,
+      "sha256": "e5a9020c69b962234fcef64e332e6f1adf6008bf5447785abc97f75d94e1d170"
+    }
+  ],
+  "totalGzip9Bytes": 485743
+}

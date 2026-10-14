@@ -1,3 +1,4 @@
+const { prepareB6Opening } = require('./b6-public-preparation.cjs');
 /* Public-input layout gate. No Match commands or state are injected. */
 const { chromium } = require('playwright');
 const fs = require('node:fs');
@@ -32,6 +33,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await page.goto(url);await page.waitForFunction(()=>window.__CAT_DEBUG__);
       await page.locator('[data-debug="m6-seed-input"]').fill('42');await page.locator('[data-debug="m6-fixed-start"]').tap();
       await page.waitForFunction(()=>window.__CAT_DEBUG__.read().m6.mode==='active');
+      await prepareB6Opening(page, '2-1', { resolveChoices: false, redeploy: false });
       await page.waitForFunction(()=>document.querySelector('.choice-overlay:not([hidden])')?.contains(document.activeElement));
       const focusCount=await page.locator('.choice-overlay:not([hidden]) button:not(:disabled)').count();
       for(const key of ['Shift+Tab','Tab',...Array(focusCount+1).fill('Tab')]) {

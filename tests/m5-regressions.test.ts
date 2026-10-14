@@ -1,3 +1,4 @@
+import { reachRound } from './match-helpers';
 import {describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
@@ -13,7 +14,7 @@ describe('M4 coercion and atomicity boundaries remain permanent in schema5',()=>
   expect(JSON.stringify(live)).toBe(before);expect(restoreMatch(serializeMatch(live))).toEqual(live);
  });
  it.each(['unit','shop','item','augment','receipt','offer'])('rejects array-wrapped legal %s definition IDs in object and JSON imports',field=>{
-  const bad=clone(field==='offer'?api.createMatch(42):ready());
+  const bad=clone(field==='offer'?reachRound('2-1',false):reachRound('2-4'));
   if(field==='unit')bad.preparation.units[0].definitionId=[bad.preparation.units[0].definitionId];
   if(field==='shop')bad.shop.slots[0].definitionId=[bad.shop.slots[0].definitionId];
   if(field==='item')bad.items[0].definitionId=[bad.items[0].definitionId];
@@ -23,11 +24,11 @@ describe('M4 coercion and atomicity boundaries remain permanent in schema5',()=>
   expect(()=>restoreMatch(bad)).toThrow();expect(()=>restoreMatch(JSON.stringify(bad))).toThrow();
  });
  it('rejects coercive choice IDs and repeated confirmation without moving RNG, receipts or IDs',()=>{
-  const state=api.createMatch(42),choice=state.pendingChoice!,definitionId=choice.offers[0],before=JSON.stringify(state);
+  const state=reachRound('2-1',false),choice=state.pendingChoice!,definitionId=choice.offers[0],before=JSON.stringify(state);
   const wrapped=api.selectChoice(state,choice.choiceId,choice.generation,[definitionId] as unknown as string);
   expect(wrapped).toEqual({ok:false,state,reason:'invalid-choice'});expect(wrapped.state).toBe(state);expect(JSON.stringify(state)).toBe(before);
   const accepted=api.selectChoice(state,choice.choiceId,choice.generation,definitionId);if(!accepted.ok)throw Error(accepted.reason);
-  const repeated=api.selectChoice(accepted.state,choice.choiceId,choice.generation,definitionId);expect(repeated).toEqual({ok:false,state:accepted.state,reason:'stale-choice'});expect(repeated.state).toBe(accepted.state);
+  const repeated=api.selectChoice(accepted.state,choice.choiceId,choice.generation,definitionId);expect(repeated).toEqual({ok:false,state:accepted.state,reason:'wrong-phase'});expect(repeated.state).toBe(accepted.state);
  });
  it('lock no-op is same-reference and a locked natural refresh does not consume a shop word',()=>{
   const initial=ready(),noop=api.setShopLock(initial,false,initial.shop.generation);expect(noop).toEqual({ok:true,state:initial,events:[]});expect(noop.state).toBe(initial);

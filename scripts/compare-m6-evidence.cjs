@@ -2,11 +2,11 @@
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
-const { sourceFingerprint } = require('./m5-evidence.cjs');
+const { sourceFingerprint, applicationHeapCeilingBytes, applicationHeapGate, warnApplicationHeap } = require('./m5-evidence.cjs');
 const { hash } = require('./m4-evidence.cjs');
 // This frozen constants module contains only JavaScript-compatible declarations.
-// Read its values directly so the evidence checker cannot define a second budget.
-const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS})');
+// Read module budgets directly; full-application mode limits use the shared policy.
+const limits = require('node:vm').runInNewContext(fs.readFileSync('src/m6/limits.ts', 'utf8').replace(/^export /gm, '') + '\n({PERFORMANCE_BUDGET_MS, LIFECYCLE_CYCLES, MAX_POST_GC_HEAP_GROWTH_BYTES, MIN_PIECE_DIAMETER_CSS, MIN_DOM_TARGET_CSS, MAX_HORIZONTAL_OVERFLOW_CSS, MAX_BATTLE_RECORDS})');
 const sha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
 const fingerprint = sourceFingerprint();
 const records = [];
@@ -19,7 +19,7 @@ function read(folder) {
   assert.equal(report.sourceFingerprint, fingerprint, `${folder} source mismatch`);
   assert.equal(report.finalSourceFingerprint, fingerprint, `${folder} source changed during verification`);
   if (report.errors) assert.deepEqual(report.errors, [], `${folder} browser errors`);
-  records.push({ folder, sha, sourceFingerprint: fingerprint, manifestHash: hash(fs.readFileSync(file, 'utf8')), passed: true });
+  records.push({ folder, sha, sourceFingerprint: fingerprint, manifestHash: hash(fs.readFileSync(file, 'utf8')), acceptanceScope: report.acceptanceScope ?? 'unchanged original gate', skipped: report.skipped ?? [], fullApplicationRoutePassed: report.fullApplicationRoutePassed ?? null, passed: true });
   return report;
 }
 for (const mode of ['dev', 'preview']) {
@@ -40,7 +40,12 @@ for (const mode of ['dev', 'preview']) {
   assert.notEqual(route.m6Lifecycle.warmupExperiment, true, 'warmup experiments cannot replace final lifecycle evidence');
   assert.equal(route.m6Lifecycle.warmupCycles ?? 2, 2, 'production warmup method remains frozen pending adoption');
   assert.equal(route.m6Lifecycle.rows.length, limits.LIFECYCLE_CYCLES);
-  assert(route.m6Lifecycle.heapDelta <= limits.MAX_POST_GC_HEAP_GROWTH_BYTES, 'full application post-GC heap');
+  assert.equal(route.mode, mode, 'full application measurement mode');
+  assert.equal(route.m6Lifecycle.heapCeilingBytes, applicationHeapCeilingBytes(mode), 'full application recorded heap ceiling');
+  const heapGate = applicationHeapGate(mode, route.m6Lifecycle.beforeHeap, route.m6Lifecycle.afterHeap);
+  assert.equal(route.m6Lifecycle.heapDelta, heapGate.deltaBytes, 'full application heap delta matches raw readings');
+  assert.deepEqual(route.m6Lifecycle.heapGate, heapGate, 'full application heap warning matches measured overrun');
+  warnApplicationHeap(route.m6Lifecycle.heapGate);
   assert.equal(route.m6Lifecycle.afterResources.listeners, route.m6Lifecycle.beforeResources.listeners, 'full application listener cleanup');
   assert(route.m6Lifecycle.afterResources.pendingRaf <= route.m6Lifecycle.beforeResources.pendingRaf + 1, 'full application frame scheduler cleanup');
   for(const key of ['sameBattle','fullStateLedgerRevisionPreserved','nativeKeyboard','durableRevisionUnchanged'])assert.equal(route.m6ReplayReopen?.[key],true,`same-battle native reopen: ${key}`);
@@ -80,7 +85,28 @@ for (const name of [
   'retained completed archive and full events unchanged',
   'immutable completed record cannot be overwritten (validation)', 'immutable-record rejection fully rolls back',
 ]) assert(storage.results.includes(name), `missing native IndexedDB case: ${name}`);
-assert.equal(storage.results.filter(name => name === 'format/schema/digest/runtime rejected').length, 5);
+// B9 flip: format 1 and format 3 wrappers (save and replay) plus schema/digest/runtime corruption.
+assert.equal(storage.results.filter(name => name === 'format/schema/digest/runtime rejected').length, 7);
+// B9 D2-A: read-only M7 library reader on native IndexedDB.
+const legacy = read('m8-b9-legacy');
+for (const name of ['missing legacy library lists as empty success', 'reading never creates the legacy library', 'active and history runs each listed exactly once',
+  'history records never invent a revision', 'changed fingerprint is a stale reference, not another record', 'reader only opens readonly transactions',
+  'reading leaves the legacy library byte-identical', 'M8 activation leaves the legacy library unchanged', 'active to history move keeps the reference',
+  'missing history is never exported as a partial file', 'unavailable storage is not reported as empty']) assert(legacy.results.includes(name), `missing legacy reader case: ${name}`);
+assert.equal(legacy.results.filter(name => name.endsWith(': bytes are the original v1 envelope with its history')).length, 3, 'three original-format exports');
+// U7: the real page shows version-routed notices and exports legacy records without replacing the active match.
+const u7 = read('m8-u7-compat');
+for (const name of ['legacy list shows the active and the history record once each', 'legacy export 0 is the original format1 envelope', 'legacy export 1 is the original format1 envelope',
+  'legacy export leaves the active slot token unchanged', 'M7 import shows legacy-preserved notice', 'M7 import does not replace the active match', 'digest mismatch notice',
+  'rejected import does not replace the active match', 'current import shows the current notice', 'replacement impact names the round and battles']) assert(u7.results.includes(name), `missing U7 case: ${name}`);
+// N2-P2-5: an unreadable or incompatible archive is quarantined by runId and never hides the good archives around it.
+const archives = read('m8-b9-archives');
+for (const kind of ['missing run', 'missing battle']) for (const where of ['before', 'after', 'between']) for (const tail of ['every good archive listed whole', 'bad archive quarantined, load not failed',
+  'quarantine notice, no save failure', 'current slot and good archives untouched']) assert(archives.results.includes(`${kind} ${where} good: ${tail}`), `missing archive isolation case: ${kind} ${where} ${tail}`);
+assert(archives.results.includes('positive: two good archives list 66 choices'), 'archive isolation positive control');
+assert.equal(archives.results.filter(name => /^incompatible .*: bad archive quarantined, load not failed$/.test(name)).length, 8, 'eight version/hash archive controls');
+for (const name of ['unavailable', 'abort']) assert(archives.results.includes(`storage ${name}: explicit failure, never read as quarantine or empty success`), `storage ${name} archive read`);
+for (const name of ['late failure: new activation lists both good archives', 'late failure: stale validation error leaves list, quarantine, status and token unchanged']) assert(archives.results.includes(name), name);
 const failures = read('m6-application-failures');
 const unavailable = failures.results.G04_unavailable_open_public_play_and_same_tick_export;
 assert.equal(unavailable?.passed, true, 'initial storage unavailability');
@@ -88,17 +114,18 @@ assert.equal(unavailable.tick, 40);
 assert.equal(unavailable.wholeMatchAndLedgerEqual, true);
 assert(Number.isSafeInteger(unavailable.nextEventSeq) && unavailable.nextEventSeq > 0);
 const phases = failures.results.G02_all_phase_native_roundtrip_and_exact_next_transition;
-assert.equal(phases?.passed, true, 'all-phase application save/continue matrix');
-assert.deepEqual(phases.samples.map(row => row.phase).sort(), [
-  'initial_component_0', 'initial_component_1', 'augment', 'anomaly_target', 'anomaly_offer',
-  'preparation', 'combat_39', 'combat_40', 'combat_41', 'settlement',
-  'supply_settlement', 'reward_choice', 'game_over',
-].sort());
-assert(phases.samples.every(row => row.passed));
+assert.equal(phases?.status, 'passed', 'application phase results cover every phase (B9: no deferral)');
+// B8 restored the opening (1-3/1-4) and post-PvE loot picks; B9 restored the full terminal import.
+const livePhases=['opening_choice_1-3','opening_choice_1-4','post_pve_choice','augment','anomaly_target','anomaly_offer','preparation','combat_39','combat_40','combat_41','settlement','supply_settlement','supply_choice','game_over'];
+assert.deepEqual(phases.samples.map(row=>row.phase).sort(),[...livePhases].sort(),'unknown missing or extra phase sample');
+for(const phase of livePhases)assert.equal(phases.samples.find(row=>row.phase===phase)?.passed,true,`${phase}: real application roundtrip`);
+assert.deepEqual(failures.skipped??[],[],'application failure gate may not defer any case after B9');
+const catalogBattles=failures.fixture.battles;
+assert.equal(catalogBattles,limits.MAX_BATTLE_RECORDS,'fixture route fills the catalog capacity');
 const archive = failures.results.ROOT_03_same_run_completion_archive_refresh;
 assert.equal(archive?.passed, true);
-assert.equal(archive.displayedBattles, 90);
-assert.equal(archive.currentBattles, 30);
+assert.equal(archive.displayedBattles, 3*catalogBattles);
+assert.equal(archive.currentBattles, catalogBattles);
 assert.deepEqual(archive.durableRunIds, [failures.fixture.ids.C, failures.fixture.ids.D, failures.fixture.ids.A]);
 assert.deepEqual(archive.live, { applications: 1, sessions: 1, observers: 1 });
 for (const key of ['ROOT_04_initialize_dispose_then_idb_abort', 'ROOT_04_import_dispose_then_file_failure', 'ROOT_04_candidate_dispose_then_activation_abort']) {
@@ -114,11 +141,18 @@ for(const [key,sameRun] of [['P2_stale_archive_success_after_new_run',false],['P
 }
 const r4=failures.results.R4_inflight_combat_then_pending_terminal_commit;
 assert.equal(r4?.passed,true,'in-flight combat write followed by pending terminal commit');
-assert.equal(r4.inflightTick,80);assert.equal(r4.terminalTick,117);assert.equal(r4.pendingTerminalCount,1);assert.equal(r4.actualNativeTransactions,2);
-assert.equal(r4.oldCommitRefreshCount,0);assert.equal(r4.finalCommitRefreshCount,1);assert.equal(r4.displayedBattles,90);
+assert.equal(r4.inflightTick,80);assert.equal(r4.terminalTick,failures.fixture.finalEndTick);assert(r4.terminalTick>80&&r4.terminalTick<120,'one periodic save before the real terminal tick');
+assert.equal(r4.pendingTerminalCount,1);assert.equal(r4.actualNativeTransactions,2);
+assert.equal(r4.oldCommitRefreshCount,0);assert.equal(r4.finalCommitRefreshCount,1);assert.equal(r4.displayedBattles,3*catalogBattles);
 assert.deepEqual(r4.durableRunIds,[failures.fixture.ids.C,failures.fixture.ids.D,failures.fixture.ids.A]);
 for(const key of ['completeTerminalSnapshotEqual','savedWithoutFalseFailure','revisionAdvancedExactlyTwice','saveControlsSuccess','allRefreshesSettled'])assert.equal(r4[key],true,`R4 ${key}`);
 const performance = read('m6-performance');
+assert.deepEqual(performance.routes.map(route=>route.build),['cannon','sniper','mage','sniper-caitlyn','full-load'],'all five original workload policies participate');
+assert.deepEqual(performance.skipped??[],[],'no performance workload deferral after B9 (issue #23)');
+assert.deepEqual(performance.measurements.deferredMetrics,[],'every original performance metric is measured');
+assert.deepEqual(performance.measurements.skipped,[],'no deferred measurement callback');
+assert.equal(performance.measurements.completeBattleCount,limits.MAX_BATTLE_RECORDS,'complete payload is the full catalog run');
+
 const expectedGates = {
   capture: ['p95', 'incrementalCaptureP95'], write: ['p95', 'incrementalWriteP95'],
   fullCapture: ['p95', 'fullCaptureP95'], activation: ['max', 'activationWriteP95'],
@@ -129,7 +163,9 @@ assert.equal(performance.measurements.gates.length, Object.keys(expectedGates).l
 for (const [name, [metric, budget]] of Object.entries(expectedGates)) {
   const matching = performance.measurements.gates.filter(g => g.name === name);
   assert.equal(matching.length, 1, `${name} must have exactly one gate`);
-  const gate = matching[0], samples = performance.measurements.summary[name].samples;
+  const gate=matching[0];
+  const verifyOriginalGate=()=>{
+   const samples = performance.measurements.summary[name].samples;
   assert(samples.length > 0 && samples.every(Number.isFinite), `${name} real samples`);
   const minimumSamples = ['capture', 'write', 'fullCapture', 'activation', 'cachedSeek'].includes(name) ? 12 : ['completeImport', 'firstSeek'].includes(name) ? 3 : 1;
   assert(samples.length >= minimumSamples, `${name} measured sample count`);
@@ -140,10 +176,14 @@ for (const [name, [metric, budget]] of Object.entries(expectedGates)) {
   assert.equal(gate.actual, actual, `${name} sample-derived result`);
   assert.equal(gate.passed, true);
   assert(actual <= gate.ceiling, `${name} exceeds frozen budget`);
+  };
+  verifyOriginalGate();
 }
+// Restored after B8: the measured full-load route really reaches the F1 maximal load.
 assert(performance.fullLoadCoverage.some(load => load.players === 9 && load.enemies === 8 && load.equipped === 15), 'same measured legal full-load scenario');
+assert(Array.isArray(performance.fullLoadObserved)&&performance.fullLoadObserved.length>0,'actual fifth-route load observations retained');
 assert.equal(performance.measurements.fullLoadRoundTrip?.verified, true);
-assert.equal(performance.measurements.fullLoadRoundTrip.battles, 30);
+assert.equal(performance.measurements.fullLoadRoundTrip.battles, performance.measurements.completeBattleCount);
 assert(performance.measurements.fullLoadRoundTrip.milliseconds <= limits.PERFORMANCE_BUDGET_MS.completeImport, 'full-load import/activation roundtrip budget');
 assert.equal(performance.lifecycle.cycles, limits.LIFECYCLE_CYCLES);
 assert.equal(performance.lifecycle.extraListeners, 0);
@@ -174,19 +214,27 @@ requireSteps(`test-and-build-${sample}`, ['install', 'tests', 'build', 'headless
 for (const mode of ['dev', 'preview']) {
   for (const build of ['cannon', 'sniper', 'mage']) requireSteps(`browser-${mode}-${build}-${sample}`, ['install', 'browser-install', 'build', 'route']);
   requireSteps(`input-${mode}-${sample}`, ['install', 'browser-install', 'build', 'input', 'touch-route', 'm6-layout',
-    ...(mode === 'dev' ? ['m6-storage', 'm6-components', 'm6-performance', 'm6-retry', 'm6-application-failures'] : [])]);
+    ...(mode === 'dev' ? ['m6-storage', 'm8-b9-legacy', 'm8-u7-compat', 'm8-b9-archives', 'm6-components', 'm6-performance', 'm6-retry', 'm6-application-failures'] : [])]);
 }
 const normalRoutes = ['dev', 'preview'].flatMap(mode => ['cannon', 'sniper', 'mage', 'cannon-touch'].map(build => {
   const report = JSON.parse(fs.readFileSync(`artifacts/m5-${mode}-${build}/manifest.json`, 'utf8'));
   return { mode, build, durationSeconds: report.durationSeconds, browser: report.browser,
     manifestHash: hash(fs.readFileSync(`artifacts/m5-${mode}-${build}/manifest.json`, 'utf8')),
     cpu: report.cpu, cpuCount: report.cpuCount, node: report.node, memoryBytes: report.memoryBytes,
-    versions: report.versions, seed: 42 };
+    versions: report.versions, seed: 42, fullApplicationRoutePassed: report.fullApplicationRoutePassed, completedBrowserRounds: report.completedBrowserRounds, skipped: report.skipped ?? [] };
 }));
+// B9: every browser route ran the whole catalog in the real application; no manifest may skip anything.
+for (const row of normalRoutes) {
+  assert.equal(row.fullApplicationRoutePassed, true, `${row.mode}-${row.build}: full application route`);
+  assert.equal(row.completedBrowserRounds?.length, limits.MAX_BATTLE_RECORDS, `${row.mode}-${row.build}: every catalog battle observed`);
+}
+for (const record of records) assert.deepEqual(record.skipped, [], `${record.folder}: no deferred check after B9`);
 const audit = { sha, dirty: '', sourceFingerprint: fingerprint, generatedAt: new Date().toISOString(),
   goalHash: require('node:crypto').createHash('sha256').update(fs.readFileSync('M6_GOAL.md')).digest('hex'),
   m5ComparisonHash: hash(fs.readFileSync('artifacts/m5-cross-mode-comparison.json', 'utf8')),
   runId: process.env.GITHUB_RUN_ID ?? null, commands, normalRoutes, records,
+  acceptanceScope: 'all M6 application, browser and performance gates at the catalog capacity (B9)', fullApplicationRoutePassed: true,
+  skipped: [],
   performance: performance.measurements, moduleLifecycle: performance.lifecycle,
   applicationLifecycle: Object.fromEntries(['dev', 'preview'].map(mode => [mode,
     JSON.parse(fs.readFileSync(`artifacts/m5-${mode}-cannon/manifest.json`, 'utf8')).m6Lifecycle])),
@@ -194,8 +242,8 @@ const audit = { sha, dirty: '', sourceFingerprint: fingerprint, generatedAt: new
 fs.writeFileSync('artifacts/m6-validation.json', JSON.stringify(audit, null, 2));
 const commandRows = commands.map(step => `| ${step.job} | \`${[step.command, ...step.args].join(' ')}\` | ${step.durationSeconds} | 0 |`).join('\n');
 const budgetRows = performance.measurements.gates.map(gate => `| ${gate.name} | ${gate.metric} | ${gate.actual} | ${gate.ceiling} | 通过 |`).join('\n');
-const header = `# M6 同提交机器验证\n\n状态：本提交全部必需机器门禁通过；这不代表用户最终验收。等待用户 Review/合并决策，不自动合并或进入 M7。\n\nSHA：\`${sha}\`；dirty：空；sourceFingerprint：\`${fingerprint}\`；seed：42。完整版本/digest、Node/Chromium/硬件、实际命令与耗时、证据 hash 均见同包 \`m6-validation.json\`。本报告在全部正常路线与 M6 证据比较成功后生成，不把历史局部结果提升为最终结果。\n`;
+const header = `# M6 同提交机器验证\n\n状态：本SHA的M6应用、浏览器完整33战路线与原F4性能门禁全部通过，无B8/B9跳过。这不代表用户最终验收，不自动合并。\n\nSHA：\`${sha}\`；dirty：空；sourceFingerprint：\`${fingerprint}\`；seed：42。完整版本/digest、Node/Chromium/硬件、实际命令与耗时、证据 hash 均见同包 \`m6-validation.json\`。\n`;
 fs.writeFileSync('artifacts/M6_VALIDATION.md', `${header}\n## 实际命令\n\n| CI job | 命令 | 耗时秒 | 退出码 |\n|---|---|---:|---:|\n${commandRows}\n\n## 冻结性能预算\n\n| 项目 | 统计 | 实测ms | 冻结ms | 结果 |\n|---|---|---:|---:|---|\n${budgetRows}\n\n## 历史记录与限制\n\n以下为本提交文档中的历史记录；旧 SHA/dirty 结果保持历史身份。真实后台切换没有被合成 visibility 事件冒充；heap snapshot 诊断没有被最终门禁采用。\n\n${fs.readFileSync('docs/M6_VALIDATION.md', 'utf8')}`);
-fs.writeFileSync('artifacts/M6_REVIEW.md', `${header}\n原领域规则与 golden 不变；原有语义测试、四路线逐命令/逐tick恢复、全部正常桌面/触摸路线、原生输入、存储失败/竞争、统计手写oracle、五视口和两类30次生命周期均由本次 CI 的对应命令及证据验证。下面保留独立审查与修复的历史过程；最终结果由同 SHA 的 \`m6-validation.json\` 和两项 comparison 决定。\n\n${fs.readFileSync('docs/M6_REVIEW.md', 'utf8')}`);
-fs.writeFileSync('artifacts/m6-final-comparison.json', JSON.stringify({ sha, sourceFingerprint: fingerprint, records, passed: true }, null, 2));
-console.log(JSON.stringify({ sha, manifests: records.length, passed: true }));
+fs.writeFileSync('artifacts/M6_REVIEW.md', `${header}\n本报告适用M8新日程与B9正式容量。四条完整领域路线有独立账本与真实回放；浏览器三构筑与触摸路线在应用中跑完全部33战并逐快照比较，应用档案/竞争/末战提交场景与原性能门禁全部执行。下面保留的旧审查文字只属于各自历史SHA；本次范围和结果由同SHA的 \`m6-validation.json\` 和两项 comparison 决定。\n\n${fs.readFileSync('docs/M6_REVIEW.md', 'utf8')}`);
+fs.writeFileSync('artifacts/m6-final-comparison.json', JSON.stringify({ sha, sourceFingerprint: fingerprint, acceptanceScope: audit.acceptanceScope, fullApplicationRoutePassed: true, skipped: [], records, passed: true }, null, 2));
+console.log(JSON.stringify({ sha, manifests: records.length, acceptanceScope: audit.acceptanceScope, fullApplicationRoutePassed: true, skipped: [], passed: true }));

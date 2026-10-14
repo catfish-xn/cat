@@ -1,0 +1,465 @@
+{
+  "version": 1,
+  "contentDigest": "fnv1a32-utf16:bd9c3a8e",
+  "lootReplayDigest": "fnv1a32-utf16:5cd0487c",
+  "command": "node scripts/record-t13-fixture-evidence.cjs --write",
+  "growthCommandCount": 111,
+  "growthCommandsSha256": "ae5895769a3b7c21d564c1fc65b1019403eacf2303190c52ef63bbfea8e7c274",
+  "cases": [
+    {
+      "name": "growth",
+      "seed": 74,
+      "roundId": "3-7",
+      "stateSha256": {
+        "prepared": "2db9c23438a1c26b9a76a5a324c0ddf3c4e69f8c4661cc64f62e98560edf36eb",
+        "started": "8b779d2269e31bf568305ecf533bc2d618773d596d7f85636dceb06222d0fe7c",
+        "revealed": "50eb4898153192cda8ec619f68a481cde30fb48d9302cfb4175d8825937fe2d7",
+        "beforeFinal": "e7ec87d9d1b38fb7d1009f1a2431cba54aa5a4096e731cf8c22f858af06af3ef",
+        "ended": "ebc2966faa7f1e11c25628b1ce0bda78fa962e852a486d0ed67eaef4a6a7113e"
+      },
+      "eventsSha256": "1fc868acd988efad213e4358679c3006a05b798e9a1b37ee0228d928dffd58c7",
+      "payloads": [
+        {
+          "kind": "item",
+          "definitionId": "tear",
+          "quantity": 1
+        },
+        {
+          "kind": "item",
+          "definitionId": "belt",
+          "quantity": 1
+        },
+        {
+          "kind": "unit",
+          "definitionId": "tristana",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "magnetic-remover",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "completed-reforger",
+          "quantity": 1
+        }
+      ],
+      "ticks": {
+        "reveal": 82,
+        "terminal": 136
+      },
+      "upgradeEvents": [
+        {
+          "type": "unitUpgraded",
+          "survivorId": "unit-6",
+          "consumedIds": [
+            "unit-30",
+            "unit-7"
+          ],
+          "definitionId": "tristana",
+          "fromStar": 1,
+          "toStar": 2,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          },
+          "domain": "match",
+          "eventSeq": 69
+        }
+      ],
+      "growthEvents": [
+        {
+          "type": "growth",
+          "tick": 83,
+          "unitId": "unit-6",
+          "amountBps": 125,
+          "totalBps": 125,
+          "domain": "combat",
+          "combatId": "round-17",
+          "eventSeq": 153
+        }
+      ],
+      "priorGrowth": [
+        {
+          "unitId": "unit-6",
+          "attackDamageBps": 500
+        },
+        {
+          "unitId": "unit-7",
+          "attackDamageBps": 250
+        }
+      ],
+      "finalGrowth": [
+        {
+          "unitId": "unit-6",
+          "attackDamageBps": 875
+        }
+      ],
+      "goldBefore": 32,
+      "goldAfter": 40,
+      "statuses": [
+        "granted",
+        "granted",
+        "granted",
+        "granted",
+        "granted"
+      ]
+    },
+    {
+      "name": "transfer",
+      "seed": 4,
+      "roundId": "4-7",
+      "stateSha256": {
+        "prepared": "5b5672f9fe1edff1a9150056a3871da4e40c0896bae82fe4c1c8b578b46318f2",
+        "started": "e6f90a5cd087251debb3abd3898932d5b6195b197e84646b26d0fbc6ed752abf",
+        "revealed": "4ad2c7b8b22b04f25d4ce3f0b5db9d961a75cf40d6393ba61b84cf5736a94bb8",
+        "beforeFinal": "7867131f60848911722644db3d4c4894787b927f06862962ff1f36cf843e85ac",
+        "ended": "fcbe5d88a4fdb9398ff6abac3b40caf95f9c4870204f5bba862e9b6c16fda76b"
+      },
+      "eventsSha256": "c0bc4d63babeab0225f0e98e4adbca110270a47de7d0d6cfc10a8012d4c05abd",
+      "payloads": [
+        {
+          "kind": "item",
+          "definitionId": "cloak",
+          "quantity": 1
+        },
+        {
+          "kind": "item",
+          "definitionId": "rod",
+          "quantity": 1
+        },
+        {
+          "kind": "gold",
+          "quantity": 4
+        },
+        {
+          "kind": "unit",
+          "definitionId": "ezreal",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "magnetic-remover",
+          "quantity": 1
+        }
+      ],
+      "ticks": {
+        "reveal": 76,
+        "terminal": 110
+      },
+      "upgradeEvents": [
+        {
+          "type": "unitUpgraded",
+          "survivorId": "unit-22",
+          "consumedIds": [
+            "unit-25",
+            "unit-29"
+          ],
+          "definitionId": "ezreal",
+          "fromStar": 1,
+          "toStar": 2,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          },
+          "domain": "match",
+          "eventSeq": 115
+        }
+      ],
+      "growthEvents": [],
+      "priorGrowth": [],
+      "finalGrowth": [],
+      "goldBefore": 18,
+      "goldAfter": 29,
+      "statuses": [
+        "granted",
+        "granted",
+        "granted",
+        "granted",
+        "granted"
+      ]
+    },
+    {
+      "name": "transfer-conflict",
+      "seed": 4,
+      "roundId": "4-7",
+      "stateSha256": {
+        "prepared": "3a4938110e7ec6d8ffa45e2f33ecb341306c44da77bf12d027cec53d88a1b5f7",
+        "started": "5d05f8221ba11981795320a2b2a58741547e846602eacea9a204c73cec3903ae",
+        "revealed": "a81adda79ff40c9cebbf7cd5b00dfe3aaaa14efe831d7d98eda7bfa17ea5d1f0",
+        "beforeFinal": "34644a636771cbdc80cba278815a3c95405bf12f4eeda247c1a6aaf00ff44e52",
+        "ended": "7e610201b5a2a0c4a674300f2c61dee775bc5a43e69d1f78badd063b12126487"
+      },
+      "eventsSha256": "665fd3f3d5ee3be01a5df85212988d0e106f46dae4a71abbf3051cf52b3e3ac9",
+      "payloads": [
+        {
+          "kind": "item",
+          "definitionId": "cloak",
+          "quantity": 1
+        },
+        {
+          "kind": "item",
+          "definitionId": "rod",
+          "quantity": 1
+        },
+        {
+          "kind": "gold",
+          "quantity": 4
+        },
+        {
+          "kind": "unit",
+          "definitionId": "ezreal",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "magnetic-remover",
+          "quantity": 1
+        }
+      ],
+      "ticks": {
+        "reveal": 76,
+        "terminal": 110
+      },
+      "upgradeEvents": [
+        {
+          "type": "unitUpgraded",
+          "survivorId": "unit-22",
+          "consumedIds": [
+            "unit-25",
+            "unit-29"
+          ],
+          "definitionId": "ezreal",
+          "fromStar": 1,
+          "toStar": 2,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          },
+          "domain": "match",
+          "eventSeq": 116
+        }
+      ],
+      "growthEvents": [],
+      "priorGrowth": [],
+      "finalGrowth": [],
+      "goldBefore": 18,
+      "goldAfter": 29,
+      "statuses": [
+        "granted",
+        "granted",
+        "granted",
+        "granted",
+        "granted"
+      ]
+    },
+    {
+      "name": "capacity",
+      "seed": 36,
+      "roundId": "3-7",
+      "stateSha256": {
+        "prepared": "914236d6b729415f70398805f158eff52ea0e819146097f58bf0e3058ee05e98",
+        "started": "8fdcd1ed26bbd592f7e36cf7701c8c01f14d85ba6b93d5c4de178fd1692f0aa2",
+        "revealed": "ae49357a499970d13e0d37f8f86520caadc6f644bcd13bc078ec3a9912d6bfc9",
+        "beforeFinal": "1088b3ae108823525cfe742ad3d76ab8045fcc77640616c53fc63f185e8481a8",
+        "ended": "15ff9b42fa93cb554fe46e2c05caf57d176d71054162a752ba634de6f3254807"
+      },
+      "eventsSha256": "68d8c6284b5974f18a8ac03d4187751e35d085a8c9ed78d2e25ab74dba10b439",
+      "payloads": [
+        {
+          "kind": "item",
+          "definitionId": "bow",
+          "quantity": 1
+        },
+        {
+          "kind": "item",
+          "definitionId": "sword",
+          "quantity": 1
+        },
+        {
+          "kind": "unit",
+          "definitionId": "tristana",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "magnetic-remover",
+          "quantity": 1
+        }
+      ],
+      "ticks": {
+        "reveal": 76,
+        "terminal": 83
+      },
+      "upgradeEvents": [],
+      "growthEvents": [],
+      "priorGrowth": [],
+      "finalGrowth": [],
+      "goldBefore": 23,
+      "goldAfter": 30,
+      "statuses": [
+        "granted",
+        "granted",
+        "pending-capacity",
+        "granted"
+      ]
+    },
+    {
+      "name": "terminal-two-deaths",
+      "seed": 38,
+      "roundId": "4-7",
+      "stateSha256": {
+        "prepared": "0f8b3efca2a88f0d65e03698f31f4ab73ae748b680d0043362b2546b78704bc4",
+        "started": "34bc46ff998a285aa9026d798df3a1a9dda994027d11c159ddd1c5ccee3639da",
+        "revealed": "16af8e5d587ccfe1eae70924ef10851ce1403d9faac5565e51f409231d709469",
+        "beforeFinal": "72b8f23bf1f4726c39c9c6617bcc84f8f33ab1778953824ac3060cbf08a8771f",
+        "ended": "614c54f1194df43d71f58b99b7c926a06a8ce258f27870646ca0740771fb7b8f"
+      },
+      "eventsSha256": "198682a16e775fe9156a0a3b65607ba7c0c36d3ed5841e86fd5191a10ffea274",
+      "payloads": [
+        {
+          "kind": "item",
+          "definitionId": "tear",
+          "quantity": 1
+        },
+        {
+          "kind": "item",
+          "definitionId": "belt",
+          "quantity": 1
+        },
+        {
+          "kind": "unit",
+          "definitionId": "ezreal",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "magnetic-remover",
+          "quantity": 1
+        }
+      ],
+      "ticks": {
+        "reveal": 411,
+        "terminal": 608
+      },
+      "upgradeEvents": [],
+      "growthEvents": [],
+      "priorGrowth": [],
+      "finalGrowth": [],
+      "goldBefore": 16,
+      "goldAfter": 22,
+      "statuses": [
+        "granted",
+        "granted",
+        "retained-terminal",
+        "granted"
+      ]
+    },
+    {
+      "name": "terminal-carrier-only",
+      "seed": 38,
+      "roundId": "4-7",
+      "stateSha256": {
+        "prepared": "b040fa21e1a1307975a7129eacd99c5331ab1698d6538be32bb1193cf123027a",
+        "started": "b544546827e61f557d38dac690e2b32caa26598fda241f50e01388dc55941872",
+        "revealed": "0761587e216a02a768f8060a8751922092d4fa12889cefe04f1bdee06fcefbd4",
+        "beforeFinal": "58618978f5010906aaac220692ebb9c47b6ec351826e9fde552c384941d5e8e3",
+        "ended": "eee15ae59bed140ec402ac08fd38a06e109c919a5fa8f7dfd720aca5cadbce00"
+      },
+      "eventsSha256": "ce0baaa795388616b67038330d2a9bbbb0c1ff63b67c09c2ecd9fc7c41f2e02d",
+      "payloads": [
+        {
+          "kind": "item",
+          "definitionId": "tear",
+          "quantity": 1
+        },
+        {
+          "kind": "item",
+          "definitionId": "belt",
+          "quantity": 1
+        },
+        {
+          "kind": "unit",
+          "definitionId": "ezreal",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "magnetic-remover",
+          "quantity": 1
+        }
+      ],
+      "ticks": {
+        "reveal": 382,
+        "terminal": 473
+      },
+      "upgradeEvents": [],
+      "growthEvents": [],
+      "priorGrowth": [],
+      "finalGrowth": [],
+      "goldBefore": 16,
+      "goldAfter": 22,
+      "statuses": [
+        "granted",
+        "granted",
+        "retained-terminal",
+        "granted"
+      ]
+    },
+    {
+      "name": "terminal-no-carrier",
+      "seed": 38,
+      "roundId": "4-7",
+      "stateSha256": {
+        "prepared": "c5aa3973d63a7772bce5577307ee21ec42f4a6f3340e6bebffb506465674e06f",
+        "started": "1f76ebb33717a2fd254aec319003c80d9f68979e491d7861114aff20b62c8302",
+        "beforeFinal": "1f76ebb33717a2fd254aec319003c80d9f68979e491d7861114aff20b62c8302",
+        "ended": "1f76ebb33717a2fd254aec319003c80d9f68979e491d7861114aff20b62c8302"
+      },
+      "eventsSha256": "18411e74544c8193ccc1d7de98f5437d012f1ed1a500581aa980d070cfd4fc65",
+      "payloads": [
+        {
+          "kind": "item",
+          "definitionId": "tear",
+          "quantity": 1
+        },
+        {
+          "kind": "item",
+          "definitionId": "belt",
+          "quantity": 1
+        },
+        {
+          "kind": "unit",
+          "definitionId": "ezreal",
+          "quantity": 1
+        },
+        {
+          "kind": "consumable",
+          "definitionId": "magnetic-remover",
+          "quantity": 1
+        }
+      ],
+      "ticks": {
+        "reveal": null,
+        "terminal": 0
+      },
+      "upgradeEvents": [],
+      "growthEvents": [],
+      "priorGrowth": [],
+      "finalGrowth": [],
+      "goldBefore": 18,
+      "goldAfter": 24,
+      "statuses": []
+    }
+  ]
+}

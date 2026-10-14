@@ -59,7 +59,7 @@ describe('teams and preparation deployment', () => {
       ['unit-1', { kind: 'board', cell: { col: 2, row: 3 } }],
       ['unit-1', { kind: 'board', cell: { col: 7, row: 4 } }],
       ['unit-1', { kind: 'bench', slot: 7 }],
-      ['unit-1', { kind: 'bench', slot: 1 }],
+      ['unit-1', { kind: 'bench', slot: -1 }],
     ];
     for (const [id, target] of operations) {
       const result = deployUnit(state, id, target);

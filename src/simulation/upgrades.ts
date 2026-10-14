@@ -1,4 +1,5 @@
 import { contains, isDeploymentCell } from './board';
+import { checkEquipmentPlacement } from './equipment-policy';
 import type { GameState } from './game';
 import type { PurchasePlanResult } from './match-types';
 import type { AnomalyBinding, ItemInstance, StrategyEvent } from './strategy-types';
@@ -33,16 +34,13 @@ function validateRoster(preparation: GameState): void {
   }
 }
 
-/** Plan first, commit in Match only after success; the pending card occupies no slot. */
-export function planPurchase(preparation: GameState, definitionId: string, candidateId: string): PurchasePlanResult {
-  if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId)) throw new RangeError(`Unknown unit definition: ${definitionId}`);
-  validateRoster(preparation);
-  if (preparation.units.some(unit => unit.id === candidateId)) throw new Error(`Duplicate unit ID: ${candidateId}`);
-  let units: Candidate[] = [...preparation.units, { id: candidateId, definitionId, team: 'player', starLevel: 1, location: null }];
+/** The same retention and recursive triples for purchases and post-combat merges. */
+function mergeTriples(input: Candidate[], definitionId: string, benchOnly = false): { units: Candidate[]; events: UnitUpgradedEvent[] } {
+  let units = input;
   const events: UnitUpgradedEvent[] = [];
   for (const fromStar of [1, 2] as const) {
     while (true) {
-      const group = units.filter(unit => unit.team === 'player' && unit.definitionId === definitionId && unit.starLevel === fromStar).sort(compareRetention);
+      const group = units.filter(unit => unit.team === 'player' && unit.definitionId === definitionId && unit.starLevel === fromStar && (!benchOnly || unit.location?.kind !== 'board')).sort(compareRetention);
       if (group.length < 3) break;
       const [survivor, ...consumed] = group.slice(0, 3);
       // At most one unplaced candidate exists, so every triple has a placed survivor.
@@ -55,6 +53,17 @@ export function planPurchase(preparation: GameState, definitionId: string, candi
         fromStar, toStar, location: copyLocation(survivor.location) });
     }
   }
+  return { units, events };
+}
+
+/** Plan first, commit in Match only after success; the pending card occupies no slot. */
+export function planPurchase(preparation: GameState, definitionId: string, candidateId: string, benchOnly = false): PurchasePlanResult {
+  if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId) || UNIT_DEFINITIONS[definitionId].unitKind === 'neutral') throw new RangeError(`Unknown unit definition: ${definitionId}`);
+  validateRoster(preparation);
+  if (preparation.units.some(unit => unit.id === candidateId)) throw new Error(`Duplicate unit ID: ${candidateId}`);
+  let units: Candidate[] = [...preparation.units, { id: candidateId, definitionId, team: 'player', starLevel: 1, location: null }];
+  let events: UnitUpgradedEvent[] = [];
+  ({ units, events } = mergeTriples(units, definitionId, benchOnly));
   const pending = units.find(unit => unit.location === null);
   if (pending) {
     const occupied = new Set(units.flatMap(unit => unit.location?.kind === 'bench' ? [unit.location.slot] : []));
@@ -71,6 +80,22 @@ export function planPurchase(preparation: GameState, definitionId: string, candi
   return { ok: true, preparation: next, events };
 }
 
+/** No new candidate, ID, gold or RNG: finish triples deferred while the board was fighting. */
+export function planDeferredUpgrades(preparation: GameState): { preparation: GameState; events: UnitUpgradedEvent[] } {
+  validateRoster(preparation);
+  let units: Candidate[] = [...preparation.units];
+  const events: UnitUpgradedEvent[] = [];
+  const definitions = [...new Set(units.filter(unit => unit.team === 'player').map(unit => unit.definitionId))].sort();
+  for (const definitionId of definitions) {
+    const merged = mergeTriples(units, definitionId);
+    units = merged.units; events.push(...merged.events);
+  }
+  if (!events.length) return { preparation, events };
+  const next = { ...preparation, units: units as Unit[] };
+  validateRoster(next);
+  return { preparation: next, events };
+}
+
 /** Apply every upgrade to a temporary resource ledger before Match commits the purchase. */
 export function transferUpgradeResources(
   items: readonly ItemInstance[], binding: AnomalyBinding | null, upgradeEvents: readonly UnitUpgradedEvent[],
@@ -78,8 +103,6 @@ export function transferUpgradeResources(
   let nextItems = [...items], anomalyBinding = binding;
   const events: StrategyEvent[] = [];
   for (const upgrade of upgradeEvents) {
-    const occupiedSlots = new Set(nextItems.flatMap(item => item.location.kind === 'unit' && item.location.unitId === upgrade.survivorId
-      ? [item.location.slot] : []));
     for (const consumedId of [...upgrade.consumedIds].sort()) {
       const consumedItems = nextItems.filter(item => item.location.kind === 'unit' && item.location.unitId === consumedId)
         .sort((a, b) => {
@@ -89,12 +112,11 @@ export function transferUpgradeResources(
       const returnedIds: string[] = [];
       for (const item of consumedItems) {
         let slot = 0;
-        while (occupiedSlots.has(slot) && slot < 3) slot++;
+        while (slot < 3 && !checkEquipmentPlacement(nextItems, item, upgrade.survivorId, slot).allowed) slot++;
         const location: ItemInstance['location'] = slot < 3
           ? { kind: 'unit', unitId: upgrade.survivorId, slot } : { kind: 'inventory' };
         nextItems = nextItems.map(candidate => candidate.id === item.id ? { ...candidate, location } : candidate);
         if (slot < 3) {
-          occupiedSlots.add(slot);
           events.push({ type: 'itemEquipped', itemId: item.id, unitId: upgrade.survivorId, slot });
         } else returnedIds.push(item.id);
       }

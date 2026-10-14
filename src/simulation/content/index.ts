@@ -1,10 +1,22 @@
+import { RULES_GAP_MANIFEST } from './rules-manifest';
+import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../operation-policy';
+import { M8_VERSION } from '../m8/version';
+import { LOOT_RUNTIME_REVISION, LOOT_FREEZE_ALGORITHM, LOOT_POLICY_VERSION, LOOT_HERO_POOL_VERSION, LOOT_HERO_POOLS, LOOT_SLOTS, LOOT_CATEGORIES } from './loot';
+import { NEUTRAL_RUNTIME_VERSION } from '../neutral-receipts';
+import { NEUTRAL_DEFINITIONS } from './neutrals';
+import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './neutral-encounters';
+import { COMPONENT_POOL, COMPONENT_POOL_VERSION } from '../component-pool';
+import { TEMPORARY_EQUIPMENT_POOL } from '../temporary-equipment';
+import { EQUIPMENT_RULES_VERSION } from '../equipment-policy';
 import { S13_COMBAT_RULES } from '../s13-rules';
 import { ABILITY_DEFINITIONS } from '../combat-abilities';
 import { M5_UNIT_DEFINITIONS, NEUTRAL_UNIT_DEFINITIONS } from '../units';
-import { SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL, MATCH_RULES, STAGE_PLAYER_DAMAGE, ECONOMY_RULES } from '../match-rules';
-import { ROUND_SCHEDULE } from '../round-schedule';
-import { ENEMY_TEMPLATES, ENEMY_POSITIONS, ENEMY_GROWTH, createRoundEnemies, getRoundEnemyItems } from '../round-enemies';
+import { DEPLOYMENT_RULES_VERSION, SHOP_CATALOG_BY_COST, SHOP_ODDS, XP_TO_NEXT_LEVEL, MATCH_RULES, STAGE_PLAYER_DAMAGE, ECONOMY_RULES } from '../match-rules';
+import { FINAL_ROUND, ROUND_RULES_VERSION, ROUND_PREPARATION_RULES, ROUND_SCHEDULE } from '../round-schedule';
+import { ENEMY_TEMPLATES, ENEMY_POSITIONS, ENEMY_GROWTH, ROUND_ENEMY_PROJECTIONS } from '../round-enemies';
 import { S13_ABILITY_DATA } from './abilities';
+import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy';
+import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from './round-catalog';
 import { SOURCE_MANIFEST } from './source-manifest';
 import { TRAIT_DEFINITIONS } from './traits';
 import { ITEM_DEFINITIONS } from './items';
@@ -26,18 +38,44 @@ export function canonicalContent(value: unknown): string {
   }
   throw new TypeError('Content must be finite plain JSON data');
 }
+/** Validation-only walk for JSON.parse output, whose values are data properties in dense arrays and plain objects: there it
+ * accepts and rejects exactly what canonicalContent does (the only possible rejection is a non-finite number), without
+ * building the text. Values from anywhere else keep canonicalContent itself. */
+export function assertParsedContent(value: unknown): void {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
+  if (typeof value === 'number') { if (Number.isFinite(value)) return; throw new TypeError('Content must be finite plain JSON data'); }
+  if (Array.isArray(value)) { for (let i = 0; i < value.length; i++) assertParsedContent(value[i]); return; }
+  if (typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) { for (const key of Object.keys(value)) assertParsedContent((value as Record<string, unknown>)[key]); return; }
+  throw new TypeError('Content must be finite plain JSON data');
+}
 /** FNV-1a over UTF-16 code units: deterministic in both browsers and Node; no platform API. */
 export function digestContent(value: unknown): string {
   let hash = 0x811c9dc5;
-  for (const char of canonicalContent(value).split('')) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+  const text = canonicalContent(value);
+  for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193) >>> 0;
   return `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
 }
+import { ORB_RULES, ORB_SLOTS } from './orbs';
+import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
 export const CONTENT_DIGEST = digestContent({
+  rulesManifest: RULES_GAP_MANIFEST,
+  // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.
+  versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},
+  orbs:{rules:ORB_RULES,slots:ORB_SLOTS},
+  consumables:{rules:CONSUMABLE_RULES,definitions:CONSUMABLE_DEFINITIONS,pools:REFORGE_POOLS},
+  loot:{runtime:LOOT_RUNTIME_REVISION,freeze:LOOT_FREEZE_ALGORITHM,policy:LOOT_POLICY_VERSION,heroPoolVersion:LOOT_HERO_POOL_VERSION,heroPools:LOOT_HERO_POOLS,slots:LOOT_SLOTS,categories:LOOT_CATEGORIES},
+  neutralEncounters:{runtime:NEUTRAL_RUNTIME_VERSION,version:NEUTRAL_ENCOUNTER_CATALOG_VERSION,policy:NEUTRAL_ENCOUNTER_POLICY_VERSION,definitions:NEUTRAL_DEFINITIONS,encounters:NEUTRAL_ENCOUNTERS},
+  deploymentRulesVersion:DEPLOYMENT_RULES_VERSION, multiplayerOperations:MULTIPLAYER_OPERATION_RULES,
+  roundRulesVersion:ROUND_RULES_VERSION, roundCatalog:ROUND_CATALOG, roundSemanticNodes:ROUND_SEMANTIC_NODES,
+  roundPreparation:ROUND_PREPARATION_RULES, opening:{initial:OPENING_INITIAL_STATE,economy:OPENING_ECONOMY_RULES}, finalRound:FINAL_ROUND,
+  equipmentRulesVersion: EQUIPMENT_RULES_VERSION, equipmentOperations: EQUIPMENT_OPERATION_RULES_VERSION,
+  temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
   units: M5_UNIT_DEFINITIONS, neutralUnits: NEUTRAL_UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, s13Abilities: S13_ABILITY_DATA, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
   augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
   shopCatalog: SHOP_CATALOG_BY_COST, shopOdds: SHOP_ODDS,
   enemyTemplates: ENEMY_TEMPLATES, enemyPositions: ENEMY_POSITIONS, enemyGrowth: ENEMY_GROWTH,
-  opponents: Array.from({length:35},(_,index)=>({round:index+1,units:createRoundEnemies(index+1),items:getRoundEnemyItems(index+1)})),
+  opponents: ROUND_ENEMY_PROJECTIONS,
   economy: { rules: MATCH_RULES, stages: STAGE_PLAYER_DAMAGE, income: ECONOMY_RULES, experience: XP_TO_NEXT_LEVEL },
+  componentPool: {version:COMPONENT_POOL_VERSION,entries:COMPONENT_POOL},
   reference: SOURCE_MANIFEST, combatRules: S13_COMBAT_RULES,
 });

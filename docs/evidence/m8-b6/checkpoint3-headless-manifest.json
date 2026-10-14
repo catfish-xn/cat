@@ -1,0 +1,83 @@
+{
+  "sha": "b0367db8e3ac63ec9925a3b1e560b7b2b6216d81",
+  "status": "M docs/evidence/m8-b6/assertion-migration.md\n M scripts/verify-m5-headless.cjs\n M scripts/verify-m7-presentation.cjs\n M tests/m5-runtime-import.test.ts\n M tests/m8-b6-match-wiring.test.ts\n?? docs/evidence/m8-b6/build-b0367db.log.gz\n?? docs/evidence/m8-b6/full-b0367db-summary.json\n?? docs/evidence/m8-b6/full-b0367db.log.gz\n?? node_modules",
+  "diffHash": "30f777903e79a45f061cd4c86e4b74b10f088d08458d67517816b6cccce3f0dd",
+  "node": "v22.23.3",
+  "platform": "linux",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "memoryBytes": 10451464192,
+  "cpuCount": 9,
+  "loadAtStart": [
+    0,
+    0.27,
+    0.76
+  ],
+  "startedAt": "2026-10-09T08:25:33.223Z",
+  "sourceFingerprint": "f6e01aa479d8ef24bb44562758ffd91cf9652934bfc7c2e6359c58cbf4a476ae",
+  "routes": [
+    {
+      "repetition": 1,
+      "caitlynBattles": 0,
+      "caitlynCasts": 0,
+      "tickTimingMs": {
+        "p50": 0.436326999999892,
+        "p95": 1.1345070000006672,
+        "p99": 1.7356620000000476,
+        "max": 15.268495999999686
+      },
+      "build": "cannon",
+      "seed": 0,
+      "outcome": "victory",
+      "round": 38,
+      "hp": 87,
+      "gold": 224,
+      "formedAt": null,
+      "formedBattles": 0,
+      "boundBattles": 14,
+      "transitioned": false,
+      "ticks": 9221,
+      "commands": 154,
+      "durationSeconds": 5.522,
+      "maxCombatLedgerBytes": 895114,
+      "rssBytesAfterRoute": 284962816,
+      "peakProcessRssBytes": 284962816,
+      "finalHash": "1f98f6e21998906a9c93f04cc0980843a1541bfd00ae07671b16e1fc09fe5f9e"
+    },
+    {
+      "repetition": 1,
+      "caitlynBattles": 0,
+      "caitlynCasts": 0,
+      "tickTimingMs": {
+        "p50": 0.5104790000004868,
+        "p95": 0.9252520000009099,
+        "p99": 1.4661159999996016,
+        "max": 5.314629000000423
+      },
+      "build": "sniper",
+      "seed": 1,
+      "outcome": "victory",
+      "round": 38,
+      "hp": 7,
+      "gold": 184,
+      "formedAt": null,
+      "formedBattles": 0,
+      "boundBattles": 14,
+      "transitioned": false,
+      "ticks": 12524,
+      "commands": 176,
+      "durationSeconds": 7.043,
+      "maxCombatLedgerBytes": 1087967,
+      "rssBytesAfterRoute": 349376512,
+      "peakProcessRssBytes": 362385408,
+      "finalHash": "ec2e74bae4799dcf5b53fc687e73633ea15d0b9cb18ac1ce6edb1a2806268a7e"
+    }
+  ],
+  "passed": false,
+  "endedAt": "2026-10-09T08:25:54.236Z",
+  "finalSourceFingerprint": "f6e01aa479d8ef24bb44562758ffd91cf9652934bfc7c2e6359c58cbf4a476ae",
+  "loadAtEnd": [
+    0.49,
+    0.36,
+    0.78
+  ]
+}

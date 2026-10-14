@@ -63,6 +63,34 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .panel-tabs button { padding: 7px 2px; font-size: 12px; }
 .mode-note { color: #97aebc; font-size: 11px !important; }
 .income-receipt { border: 1px solid #355063; border-radius: 8px; padding: 0 8px; }
+.encounter-preview { border: 1px solid #5a3a46; border-radius: 8px; padding: 0 8px; margin-bottom: 8px; }
+.encounter-preview summary { padding: 6px 0; font-weight: 600; }
+.encounter-unit { padding: 6px 8px; margin-bottom: 6px; background: #0f1a24; border-radius: 6px; border-left: 3px solid var(--c-enemy); }
+.encounter-unit:hover, .encounter-unit:focus-visible { outline: 2px solid var(--c-focus); outline-offset: -2px; }
+.encounter-unit h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 14px; }
+.encounter-unit p, .encounter-note { margin: 2px 0; font-size: 12px; }
+.encounter-cell, .encounter-extra, .encounter-note { color: var(--c-text-muted); }
+.encounter-cell { margin-left: auto; font-weight: 400; font-size: 12px; }
+/* U6 rewards: status is carried by text and badge, colour only reinforces it. */
+.loot-panel { border: 1px solid #355063; border-radius: 8px; padding: 0 10px 8px; margin-bottom: 8px; }
+.loot-panel h3 { margin: 10px 0 6px; font-size: 15px; }
+.loot-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.loot-drop { padding: 6px 8px; background: #0f1a24; border-radius: 6px; border-left: 3px solid #527080; }
+.loot-granted { border-left-color: var(--c-accent); }
+.loot-pending-capacity { border-left-color: var(--c-gold); }
+.loot-retained-terminal { border-left-color: #7e95a4; opacity: .85; }
+.loot-drop-head { display: flex; align-items: center; gap: 8px; }
+.loot-drop-head strong { flex: 1; font-size: 14px; }
+.loot-badge { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: #1c2e3b; color: var(--c-text); }
+.loot-granted .loot-badge { background: #1f4a45; } .loot-pending-capacity .loot-badge { background: #5a4520; } .loot-retained-terminal .loot-badge { background: #2c3a45; }
+.loot-gold { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--c-gold); color: #0b151f; font-weight: 700; }
+.loot-note, .loot-empty { margin: 4px 0 0; font-size: 12px; color: var(--c-text-muted); }
+.loot-blocked, .loot-choice-pending { margin: 8px 0 0; padding: 6px 8px; border-radius: 6px; background: #3a2a18; color: #ffe0a8; font-size: 13px; }
+.loot-choice-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0 4px; }
+.loot-choice-card { display: grid; justify-items: center; gap: 4px; min-height: 132px; padding: 10px 8px; text-align: center; }
+.loot-choice-card strong { font-size: 15px; }
+.loot-choice-effect { font-size: 12px; color: var(--c-text-muted); line-height: 1.45; }
+.loot-choice-card:focus-visible { outline: 3px solid var(--c-focus); outline-offset: 2px; }
 .battle-record { max-height: 55dvh; overflow-y: auto; overflow-wrap: anywhere; }
 .battle-record p { border-bottom: 1px solid #2c404b; padding-bottom: 6px; }
 .choice-cards:has(button:nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -202,3 +230,229 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
   .shop-emblem img, .shop-emblem svg { width: 30px; height: 30px; }
   .shop-odds { margin: 3px 0 !important; }
 }
+
+/* M8 U3: item marks, codex, recipe table and description popover (static catalogue view). */
+.item-mark { position: relative; display: inline-grid; place-items: center; flex: none; border-radius: 5px; border: 1px solid #0b151f; overflow: hidden; vertical-align: middle; }
+.item-mark.kind-component { background: #3a5266; }
+.item-mark.kind-completed { background: #6b5432; }
+.item-glyph { font-size: 11px; font-weight: 700; line-height: 1; color: #f2f6f8; letter-spacing: -0.5px; }
+.item-mark .item-icon { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: 0; border-radius: 0; }
+.item-card .item-mark { display: grid; margin: 0 auto 3px; }
+.equipment-slots .item-mark { margin-right: 4px; }
+.item-tag { display: inline-block; margin: 0 3px 0 0; padding: 0 5px; border-radius: 999px; font-size: 11px; line-height: 17px; border: 1px solid var(--c-border); color: var(--c-text-muted); white-space: nowrap; }
+.item-tag.tag-unique { border-color: #c47cff; color: #dcb8ff; }
+.item-tag.tag-slots { border-color: #4fa3ff; color: #a9d2ff; }
+.item-tag.tag-provisional { border-color: #e6bc76; color: #ffd98f; }
+.item-l10n { margin-left: 2px; font-size: 9px; color: var(--c-text-faint); }
+.item-codex { margin-top: 12px; padding: 0 9px 9px; background: var(--c-surface-alt); border-radius: 8px; }
+.item-codex .codex-note { color: var(--c-text-muted); }
+.codex-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.codex-filter { font-size: 12px; padding: 4px; }
+.codex-filter[aria-pressed="true"] { border-color: var(--c-accent); color: var(--c-accent); }
+.codex-search { width: 100%; margin-top: 6px; padding: 0 8px; }
+.codex-count { margin: 6px 0 !important; color: var(--c-text-muted); }
+.codex-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+.codex-tile { display: flex; gap: 6px; align-items: center; min-height: 44px; padding: 5px; border-radius: 6px; background: var(--c-surface-raised); border: 1px solid transparent; cursor: default; }
+.codex-tile:hover, .codex-tile:focus-visible { border-color: var(--c-accent); outline: none; }
+.codex-tile-text { min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.codex-tile-tags { margin-top: 2px; }
+.codex-heading { margin: 14px 0 6px; font-size: 14px; }
+.recipe-scroll { overflow-x: auto; }
+.recipe-matrix { border-collapse: collapse; margin: 0 auto; }
+.recipe-matrix caption { caption-side: bottom; font-size: 11px; color: var(--c-text-muted); padding-top: 4px; }
+.recipe-matrix th, .recipe-matrix td { padding: 2px; text-align: center; }
+.recipe-matrix thead th, .recipe-matrix tbody th { background: var(--c-surface); }
+.recipe-matrix td { position: relative; }
+.recipe-matrix td.provisional .item-mark { outline: 2px solid #e6bc76; outline-offset: -2px; }
+.recipe-matrix td.declared::after { content: ''; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: #c47cff; }
+.recipe-matrix [data-item-def]:hover .item-mark { box-shadow: 0 0 0 2px var(--c-accent); }
+.item-popover { position: fixed; z-index: 50; padding: 10px; border-radius: 8px; background: #0b151f; border: 1px solid var(--c-border-strong); color: var(--c-text); box-shadow: 0 6px 24px #000a; pointer-events: none; font-size: 12px; line-height: 1.5; }
+.item-pop-head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.item-pop-head .item-name { font-size: 14px; font-weight: 700; margin-right: 4px; }
+.item-pop-meta { margin: 2px 0 !important; color: var(--c-text-muted); font-size: 11px !important; }
+.item-pop-recipe { margin: 4px 0 !important; }
+.item-pop-effects { margin: 4px 0; padding-left: 18px; }
+.item-pop-decl { margin: 4px 0 !important; }
+.item-pop-note { margin: 6px 0 0 !important; color: var(--c-text-faint); font-size: 11px !important; }
+/* Chromium's UA thead rule uses break-inside:if(media(overflow-block: paged)), which leaves a new
+   media-query node in the style engine on every recalc (M6-MEM-01). A static author rule keeps the
+   same screen (auto) / paged print (avoid) result, so no per-recalc query is created. */
+.recipe-matrix thead { break-inside: auto; }
+@media (overflow-block: paged) { .recipe-matrix thead { break-inside: avoid; } }
+.recipe-matrix [data-item-def]:focus-visible { outline: 3px solid #ffd782; outline-offset: -2px; }
+/* M8 U3 dynamic: equip/combine previews from the B5 queries, reserved and temporary slots. */
+.equipment-slots button.equip-ok { border-color: #5fd68a; box-shadow: inset 0 0 0 1px #5fd68a; }
+.equipment-slots button.equip-denied { border-color: #f08080; opacity: .75; }
+.equipment-slots button.equip-conflict { outline: 2px solid #ffb36b; outline-offset: -2px; }
+.equipment-slots button.slot-reserved { border-style: dashed; color: var(--c-text-muted); }
+.equipment-slots button.slot-temporary { border-style: dashed; border-color: #c9a8ff; }
+.equipment-slots button.slot-pending { border-style: dashed; border-color: #68ddd0; background: #10302e; }
+.equipment-slots button.slot-pending .item-mark { opacity: .6; }
+.equipment-slots .pending-tag { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; color: #68ddd0; letter-spacing: .5px; }
+.equip-loadout { margin: 6px 0 0 !important; font-size: 12px !important; color: #9ff0e4; }
+.equip-hint { margin: 6px 0 0 !important; font-size: 12px !important; }
+.equip-hint.ok { color: #9be8b4; }
+.equip-hint.denied { color: #ffb0a0; }
+.temporary-line { margin: 4px 0 0 !important; font-size: 12px !important; color: #d9c8ff; }
+
+/* Online mode (?mode=online): TFT-like three columns, traits/shop left, board centre, eight seats right. */
+body[data-online] #app { grid-template-columns: 360px minmax(0, 1fr) 232px; max-width: 1440px; }
+body[data-online] #panels-root { order: 0; }
+body[data-online] #board-frame { order: 1; }
+body[data-online] #online-sidebar { order: 2; }
+body[data-online] #lobby-root { grid-column: 1 / -1; }
+body[data-online] #save-root, body[data-online] #replay-root { display: none !important; }
+body[data-online] .secondary-controls, body[data-online] [data-debug="mobile:start-combat"], body[data-online] [data-debug="mobile:continue"], body[data-online] [data-debug="mobile:new-match"] { display: none !important; }
+body[data-online-mode="online-lobby"] #board-frame, body[data-online-mode="online-lobby"] #panels-root { display: none; }
+.online-lobby { display: grid; place-items: center; min-height: calc(100dvh - 24px); color: #e2eef1; }
+.lobby-card { width: min(520px, 100%); background: var(--c-surface, #14212c); border-radius: 12px; padding: 24px; display: grid; gap: 14px; }
+.lobby-card h1 { margin: 0; font-size: 22px; }
+.lobby-hint { margin: 0; color: var(--c-text-muted, #9aaeb9); font-size: 13px; }
+.lobby-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.lobby-form input { flex: 1 1 160px; padding: 0 12px; }
+.lobby-count { margin: 0; font-size: 14px; }
+.lobby-queue { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.queue-entry { display: flex; justify-content: space-between; background: #203440; border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+.queue-entry.me { outline: 1px solid #68ddd0; }
+.queue-kind { color: var(--c-text-muted, #9aaeb9); font-size: 12px; }
+.lobby-error { margin: 0; color: #f08080; font-weight: bold; }
+.lobby-start { width: 100%; font-size: 16px; }
+.lobby-connection { margin: 0; color: #e6bc76; font-size: 13px; }
+.online-sidebar { min-width: 0; color: #e2eef1; position: sticky; top: 12px; display: grid; gap: 10px; align-content: start; }
+.online-topbar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; background: var(--c-surface, #14212c); border-radius: 8px; padding: 10px 12px; }
+.online-connection { grid-column: 1 / -1; justify-self: start; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #4a3a1f; color: #e6bc76; }
+.online-connection[data-tone="ok"] { background: #1f4a33; color: #8fe0b0; }
+.online-phase { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #203440; color: #9aaeb9; }
+.online-phase[data-phase="preparation"] { background: #1f4a46; color: #68ddd0; }
+.online-phase[data-phase="combat"] { background: #4a2a2a; color: #f08080; }
+.online-phase[data-phase="choice"] { background: #3a2f5a; color: #b4a1f5; }
+.online-round { font-size: 14px; }
+.online-timer { font-size: 22px; font-weight: bold; min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
+.online-timer.urgent { color: #f08080; }
+.online-seats { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.online-seat { background: var(--c-surface, #14212c); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; border: 1px solid transparent; }
+.online-seat.me { border-color: #68ddd0; }
+.online-seat.opponent { border-color: #f08080; }
+.online-seat.eliminated { opacity: .45; }
+.seat-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.seat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat-kind { font-size: 11px; padding: 0 5px; border-radius: 4px; background: #203440; color: #9aaeb9; }
+.seat-kind.seat-bot { color: #b4a1f5; }
+.seat-kind.seat-takeover { color: #1b1f24; background: #e6bc76; font-weight: 600; }
+.seat-opponent { font-size: 11px; color: #f08080; }
+.seat-offline { font-size: 11px; color: #e6bc76; }
+.seat-bar { height: 8px; border-radius: 4px; background: #203440; overflow: hidden; }
+.seat-fill { height: 100%; background: linear-gradient(90deg, #68c087, #68ddd0); transition: width .4s ease; }
+.online-seat.opponent .seat-fill { background: linear-gradient(90deg, #f08080, #e6bc76); }
+.seat-foot { display: flex; justify-content: space-between; font-size: 12px; color: #9aaeb9; }
+.seat-hp { color: #e2eef1; font-weight: bold; }
+.ranking-overlay { position: fixed; inset: 0; background: rgba(6, 12, 18, .78); display: grid; place-items: center; z-index: 60; padding: 16px; }
+.ranking-card { width: min(480px, 100%); background: var(--c-surface, #14212c); color: #e2eef1; border-radius: 12px; padding: 24px; display: grid; gap: 14px; }
+.ranking-card h2 { margin: 0; }
+.ranking-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ranking-entry { display: grid; grid-template-columns: 2.5ch 1fr auto auto; gap: 10px; align-items: center; background: #203440; border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+.ranking-entry.me { outline: 1px solid #68ddd0; }
+.ranking-rank { font-weight: bold; color: #e6bc76; }
+.ranking-kind, .ranking-hp { color: #9aaeb9; font-size: 12px; }
+@media (max-width: 1100px) { body[data-online] #app { grid-template-columns: minmax(0, 1fr) 232px; } body[data-online] #panels-root { order: 3; grid-column: 1 / -1; } }
+
+/* C2: TFT layout online — big countdown above the board, shop dock (HUD chips, D/F/E/lock, five cards) below it,
+   left column keeps the phase title, encounter preview and the trait/item/deploy/build/record tabs. */
+body[data-online] { --online-countdown-h: 48px; --online-dock-h: 132px; --online-gap: 8px; }
+body[data-online] #board-frame { display: grid; grid-template-rows: var(--online-countdown-h) minmax(0, 1fr) var(--online-dock-h); gap: var(--online-gap); align-content: start; }
+/* C3: the board column is wider than the 480:520 canvas; size #board-root to the canvas ratio so FIT leaves no side bars.
+   Height-bound on tall columns, width-bound (cqw) on narrow ones. */
+body[data-online] { --online-board-h: min(calc(100dvh - 24px - var(--online-countdown-h) - var(--online-dock-h) - 2 * var(--online-gap)), 823px); }
+body[data-online] #board-frame { container-type: inline-size; }
+body[data-online] #board-root { height: min(max(var(--online-board-h), 360px), calc(100cqw * 520 / 480)); width: min(100%, calc(max(var(--online-board-h), 360px) * 480 / 520)); justify-self: center; }
+body[data-online] #feedback-root { top: calc(var(--online-countdown-h) + var(--online-gap)); bottom: calc(var(--online-dock-h) + var(--online-gap)); }
+.online-countdown { display: flex; align-items: center; justify-content: center; gap: 14px; height: var(--online-countdown-h); padding: 0 12px; border-radius: 8px; background: var(--c-surface, #14212c); color: #e2eef1; }
+.online-countdown .countdown-round { font-size: 15px; font-weight: 700; color: #9aaeb9; }
+.online-countdown[data-phase="preparation"] .countdown-round { color: #68ddd0; }
+.online-countdown[data-phase="combat"] .countdown-round { color: #f08080; }
+.online-countdown[data-phase="choice"] .countdown-round { color: #b4a1f5; }
+.online-countdown .online-timer { font-size: 34px; line-height: 1; min-width: 2.2ch; text-align: center; }
+.online-countdown .online-timer:empty { display: none; }
+.shop-dock { display: grid; grid-template-columns: 184px 150px minmax(0, 1fr); gap: var(--online-gap); align-items: stretch; height: var(--online-dock-h); padding: 6px 8px; border-radius: 8px; background: var(--c-surface, #14212c); color: #e2eef1; overflow: hidden; }
+.shop-dock:empty { visibility: hidden; }
+.shop-dock .hud-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: center; gap: 4px; }
+.shop-dock .hud-chip { padding: 4px 7px; }
+.shop-dock .hud-chip strong { font-size: 18px; }
+.shop-dock .mobile-controls { display: grid; grid-template-columns: repeat(2, minmax(44px, 1fr)) !important; grid-auto-rows: minmax(44px, 1fr); gap: 6px; align-content: center; }
+.shop-dock .mobile-controls button { padding: 4px 3px; }
+.shop-dock .shop-panel { padding: 0; min-width: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.shop-dock .touch-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.shop-dock .shop-card { min-height: 0; height: 100%; }
+.shop-dock .shop-odds { margin: 2px 0 0 !important; text-align: center; }
+body[data-online] #strategy-root .hud-bar { margin-bottom: var(--space-sm, 8px); }
+body[data-online] #strategy-root .action-bar:empty { display: none; }
+/* A room can end during a choice (every other seat eliminated): the ranking, not the stale choice, is what to show. */
+body[data-online-mode="online-ended"] .choice-overlay { display: none !important; }
+/* C3: once the room ended, the left column drops the per-round supply/income leftovers of my own seat (the ranking overlay is the result). */
+body[data-online-mode="online-ended"] #strategy-root .income-receipt, body[data-online-mode="online-ended"] #strategy-root .loot-panel,
+body[data-online-mode="online-ended"] #strategy-root .encounter-preview { display: none !important; }
+.ranking-fault { margin: 0 0 12px; padding: 10px 12px; border-radius: 8px; background: #4a2a2a; color: #f6b3b3; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+@media (max-width: 1100px) { body[data-online] #board-frame { position: relative; top: auto; } }
+/* C5: seat avatars, clickable seats and the read-only opponent board over the top of my board. */
+.online-seat[role="button"] { cursor: pointer; }
+.online-seat[role="button"]:hover { background: #1a2b38; }
+.online-seat[role="button"]:focus-visible { outline: 2px solid #68ddd0; outline-offset: 1px; }
+.online-seat.viewing { box-shadow: inset 0 0 0 2px #e6bc76; }
+.seat-avatar { flex: none; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; background: #203440; display: grid; place-items: center; }
+.seat-avatar img, .seat-avatar svg { width: 30px; height: 30px; display: block; object-fit: cover; }
+.seat-avatar-placeholder { font-size: 13px; font-weight: 700; color: #9aaeb9; }
+.online-spectate { grid-column: 1 / -1; justify-self: start; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #4a2a2a; color: #f6b3b3; }
+.online-countdown[data-spectating] .countdown-round { color: #f6b3b3; }
+.opponent-board { position: absolute; z-index: 30; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
+  width: min(430px, calc(100% - 16px)); max-height: calc(100% - var(--online-countdown-h, 48px) - 2 * var(--online-gap, 8px)); overflow: auto;
+  display: grid; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid #e6bc76; background: rgba(14, 24, 33, .96); color: #e2eef1; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
+.opponent-head { display: flex; align-items: center; gap: 10px; }
+.opponent-name { font-size: 15px; }
+.opponent-meta { flex: 1; font-size: 12px; color: #9aaeb9; }
+.opponent-close { padding: 4px 10px; font-size: 12px; }
+.opponent-grid { --cell: 50px; display: grid; gap: 2px; justify-content: center; }
+.opponent-row { display: grid; grid-template-columns: repeat(var(--cols, 7), var(--cell)); gap: 2px; }
+.opponent-row.odd { transform: translateX(calc(var(--cell) / 2)); }
+.opponent-row:nth-child(-n + 4) .opponent-cell { background: #24202a; }
+.opponent-cell { height: 44px; border-radius: 6px; background: #1a2c33; display: grid; place-items: center; }
+.opponent-unit { position: relative; width: 40px; height: 40px; display: grid; place-items: center; }
+.opponent-portrait { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid #7e95a4; display: grid; place-items: center; background: #203440; }
+.opponent-unit.cost-2 .opponent-portrait { border-color: #68c087; } .opponent-unit.cost-3 .opponent-portrait { border-color: #5aa0e6; }
+.opponent-unit.cost-4 .opponent-portrait { border-color: #b46be6; } .opponent-unit.cost-5 .opponent-portrait { border-color: #e6bc76; }
+.opponent-portrait img, .opponent-portrait svg { width: 36px; height: 36px; display: block; object-fit: cover; }
+.opponent-stars { position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-size: 10px; line-height: 1; color: #c9d4da; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.opponent-stars.star-2 { color: #e6e6e6; } .opponent-stars.star-3 { color: #ffd76a; }
+.opponent-items { position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); display: flex; gap: 1px; }
+.opponent-items .item-glyph { font-size: 7px; }
+.opponent-traits { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.opponent-trait { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #203440; color: #9aaeb9; }
+.opponent-trait.active { background: #1f4a46; color: #68ddd0; }
+.opponent-note { margin: 0; font-size: 11px; color: #7e95a4; }
+/* Eliminated (spectating): the dock and the left panel stay visible but read as disabled. */
+body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
+body[data-online-spectating] .choice-overlay { display: none !important; }
+
+/* C18-B: R3/R4 orbs and consumables (contract §18.4/§18.8). */
+.orb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.orb-card { padding: 6px 8px; background: #0f1a24; border-radius: 6px; border-left: 4px solid #8a97a2; }
+.orb-head { display: flex; align-items: center; gap: 8px; }
+.orb-head strong { flex: 1; font-size: 14px; }
+.orb-gem { width: 14px; height: 14px; border-radius: 50%; background: #8a97a2; box-shadow: 0 0 0 2px #0b151f, 0 0 6px currentColor; color: #8a97a2; }
+.orb-gray { border-left-color: #8a97a2; } .orb-gray .orb-gem { background: #8a97a2; color: #8a97a2; }
+.orb-blue { border-left-color: #4f9cff; } .orb-blue .orb-gem { background: #4f9cff; color: #4f9cff; }
+.orb-gold { border-left-color: #f2c14e; } .orb-gold .orb-gem { background: #f2c14e; color: #f2c14e; }
+.orb-prismatic { border-left-color: #c58bff; } .orb-prismatic .orb-gem { background: linear-gradient(135deg, #7ef0e0, #c58bff 50%, #ffb3d9); color: #c58bff; }
+.orb-status-forfeited { opacity: .7; }
+.orb-entries { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.orb-entry { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.orb-entry-name { flex: 1; }
+.orb-entry.loot-forfeited .orb-entry-name { text-decoration: line-through; color: var(--c-text-muted); }
+.loot-forfeited .loot-badge { background: #4a2626; }
+.consumable-shelf h4 { margin: 10px 0 6px; font-size: 13px; }
+.consumable-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.consumable-card { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; font-size: 12px; }
+.consumable-card.dragging { outline: 3px solid #ffd782; opacity: .65; }
+.consumable-card[aria-pressed="true"] { outline: 2px solid #68ddd0; outline-offset: -2px; }
+.consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
+.consumable-candidate { outline: 2px dashed #68ddd0 !important; outline-offset: -2px; }
+.consumable-hint { color: #9ff0e4 !important; }

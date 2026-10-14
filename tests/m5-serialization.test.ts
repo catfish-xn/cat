@@ -1,7 +1,7 @@
 import {describe,expect,it} from 'vitest';
-import {createMatch,startMatchCombat} from '../src/simulation/match';
+import {startMatchCombat} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
-import {accepted,readyMatch,finish} from './match-helpers';
+import {accepted,readyMatch,finish,reachRound} from './match-helpers';
 import type {MatchState} from '../src/simulation/match-types';
 const copy=(s:MatchState):any=>JSON.parse(JSON.stringify(s));
 describe('schema5 rejects corrupted domain state without replaying side effects',()=>{
@@ -17,9 +17,9 @@ describe('schema5 rejects corrupted domain state without replaying side effects'
   ['duplicate item',(s:any)=>{s.items.push(s.items[0]);}],['duplicate receipt',(s:any)=>{s.scheduleReceipts.push(s.scheduleReceipts[0]);}],
   ['invented acquisition gold',(s:any)=>{s.scheduleReceipts[0].gold=999;}],['unknown augment',(s:any)=>{s.augments[0].definitionId='__proto__';}],
  ] as const)('rejects %s',(_label,mutate)=>{
-  const original=readyMatch(),invalid=copy(original);mutate(invalid);expect(()=>restoreMatch(invalid)).toThrow();expect(restoreMatch(serializeMatch(original))).toEqual(original);
+  const original=reachRound('2-5'),invalid=copy(original);mutate(invalid);expect(()=>restoreMatch(invalid)).toThrow();expect(restoreMatch(serializeMatch(original))).toEqual(original);
  });
- it.each([['duplicate offers',(s:any)=>{s.pendingChoice.offers[1]=s.pendingChoice.offers[0];}],['invalid choice kind',(s:any)=>{s.pendingChoice.kind='surprise';}],['foreign offer',(s:any)=>{s.pendingChoice.offers[0]='deathblade';}],['stale choice',(s:any)=>{s.pendingChoice.generation=1;}] ] as const)('rejects %s',(_label,mutate)=>{const s=copy(createMatch());mutate(s);expect(()=>restoreMatch(s)).toThrow();});
+ it.each([['duplicate offers',(s:any)=>{s.pendingChoice.offers[1]=s.pendingChoice.offers[0];}],['invalid choice kind',(s:any)=>{s.pendingChoice.kind='surprise';}],['foreign offer',(s:any)=>{s.pendingChoice.offers[0]='deathblade';}],['stale choice',(s:any)=>{s.pendingChoice.generation=1;}] ] as const)('rejects %s',(_label,mutate)=>{const s=copy(reachRound('2-1',false));mutate(s);expect(()=>restoreMatch(s)).toThrow();});
  it('rejects forged early game over even if its finished battle and history are internally consistent',()=>{
   const settled=finish(accepted(startMatchCombat(readyMatch())));expect(settled.playerHp).toBeGreaterThan(0);
   expect(()=>restoreMatch({...settled,phase:'gameOver',outcome:'defeat'})).toThrow('terminal boundary');
@@ -31,6 +31,6 @@ describe('schema5 rejects corrupted domain state without replaying side effects'
   ['wrong RNG',(s:any)=>{s.combat.rngState=-1;}],['negative seq',(s:any)=>{s.combat.nextActionSeq=-1;}],
  ] as const)('rejects combat %s',(_label,mutate)=>{const s=copy(accepted(startMatchCombat(readyMatch())));mutate(s);expect(()=>restoreMatch(s)).toThrow();});
  it('makes an isolated restore and does not issue a new choice, RNG draw or receipt',()=>{
-  const original=createMatch(),restored=restoreMatch(serializeMatch(original));expect(restored).toEqual(original);expect(restored).not.toBe(original);expect(restored.pendingChoice).not.toBe(original.pendingChoice);
+  const original=reachRound('2-1',false),restored=restoreMatch(serializeMatch(original));expect(restored).toEqual(original);expect(restored).not.toBe(original);expect(restored.pendingChoice).not.toBe(original.pendingChoice);
  });
 });

@@ -1,0 +1,173 @@
+{
+  "node": "v22.23.3",
+  "excludesSelf": "docs/evidence/m8-b8/checkpoint-two/golden/file-manifest.json",
+  "totalEvidenceBytesExcludingSelf": 20598781,
+  "largestEvidenceFile": {
+    "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-sniper-caitlyn.json.gz",
+    "bytes": 2917060,
+    "sha256": "b2829a5428c126254f2ecd47ce4beab4f8b829e0182ce1cf43574feb56d2bed6"
+  },
+  "files": [
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/README.md",
+      "bytes": 11421,
+      "sha256": "21f2addb55fcbf5ff4e78b8e5bb335e7a206d2eec460806b680c26bf6f0e9c5f"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/apply.log",
+      "bytes": 403,
+      "sha256": "2430e434a1e47eabf621becab0ca4e2a122224922585312f9c78273590fc8a8e"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/audit.json",
+      "bytes": 24029,
+      "sha256": "f574c9ed982abd75668134921431efbe77c4d63c46bb1f45e583e709e32fe863"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/audit.log",
+      "bytes": 300,
+      "sha256": "9284e6b375e88c6949543fd0038d7ce8e6825d670dd617093fcf73af5970af67"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/compression-and-data-review.json",
+      "bytes": 5087,
+      "sha256": "14bcb71f3795c78f8afa6f87918db539c35d3570b57627d3614476d232262dd7"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/deterministic-replay.json",
+      "bytes": 1424,
+      "sha256": "ce71e45390a7df0009fc03995e29f3e5dde85837bada6f5340a2278a15eec333"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/diff-cannon.json.gz",
+      "bytes": 823339,
+      "sha256": "90e2475518114d50cf48e0a14167b81aa713c05f35ac5b1de2e31c07cc0d6843"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/diff-mage.json.gz",
+      "bytes": 648250,
+      "sha256": "9f802b0c61103c5c9cb27fa81c2bb4a82b1897d689ecef4f44662ac78adab7f4"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/diff-sniper-caitlyn.json.gz",
+      "bytes": 682247,
+      "sha256": "10c3802070dcee65cd4a4459e714945f12e881b26b217c384c610108b3f284e3"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/diff-sniper.json.gz",
+      "bytes": 673399,
+      "sha256": "eddf45f6ff6126417925bc44d01302970fd484c98329650023ee245b483b8d57"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/driver-decision-replay.log",
+      "bytes": 628,
+      "sha256": "837c820ec1541c705e0d460c4d1718b44700fc621aa6da82688ad555d32fd19b"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/guard-tests.log",
+      "bytes": 912,
+      "sha256": "e3f44c174fb9dd908633a352f1796e1ffe4c62c3f2f26b611c9bfd22d1b49fd9"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/independent-review.md",
+      "bytes": 3112,
+      "sha256": "47e05dbf81e198d67a7d0ca94dac08f465baecf0b9e9b9c73ee1bc377ce00993"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-cannon.json.gz",
+      "bytes": 2606288,
+      "sha256": "02c276e110241716b94ff009f78cd51871c06ba74dd75c92aa214b3136a147b2"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-capture-complete.json",
+      "bytes": 175,
+      "sha256": "0518efbfd36c13810d672000238a15e737c73472545310905e79765cd8e90f19"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-capture.log",
+      "bytes": 1985,
+      "sha256": "6a506bd0a3238e96fcf4c2d1a0ec73abd0002b83e2b673c25fc78506f741677a"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-mage.json.gz",
+      "bytes": 2631890,
+      "sha256": "67ad1a4556f290327d2c27e3c2f061598af9fcedb396fb3fa0e569fd10b658a2"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-manifest.json",
+      "bytes": 20053,
+      "sha256": "1bfd3ff2d4fc68ac070b0b7a5e89c69d19b78b2a92e29ad5d04760a80f329084"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-sniper-caitlyn.json.gz",
+      "bytes": 2917060,
+      "sha256": "b2829a5428c126254f2ecd47ce4beab4f8b829e0182ce1cf43574feb56d2bed6"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/new-sniper.json.gz",
+      "bytes": 2892303,
+      "sha256": "81d31c137d290be3db87df64f3dce7ce6a5e0a0640c94b75966f15df08a8ac8f"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/old-cannon.json.gz",
+      "bytes": 1416625,
+      "sha256": "a876660f8aa05502ff6a6f17bbbdc29e0affc65daf408379a914fbbadcbf4508"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/old-capture-complete.json",
+      "bytes": 174,
+      "sha256": "aa7c625c3b762f8e4aef18094605c81e21a6604a31ec6b68f0c9c35ca95b3a18"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/old-capture.log",
+      "bytes": 1992,
+      "sha256": "974431ed299b088f2cd5644bb20696b1ae2b80508ab36cbb75e65e4665f7550f"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/old-mage.json.gz",
+      "bytes": 1592003,
+      "sha256": "dff15bc68065c92488b9f8d8504433df91057b686bcb9df2653b2368e3c08b66"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/old-manifest.json",
+      "bytes": 19408,
+      "sha256": "c08c58ea503d5f0abfedecab2d863d1b668460956d12bf97eb0d2a7d25a34a41"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/old-sniper-caitlyn.json.gz",
+      "bytes": 1810279,
+      "sha256": "639c3f199fc044d1d98d6830d85cbdff9a2defc6748f1fdb4b7728f081a62be9"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/old-sniper.json.gz",
+      "bytes": 1807674,
+      "sha256": "da468f60efb167c0b85c008d3765fe99966d4e0d507e068447734c439caa39da"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/targeted-tests.log",
+      "bytes": 1304,
+      "sha256": "ec304fbbb24db8e1d8900cbc210911d19a39dc52b70c1e5fb8f575b798055286"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/typecheck.log",
+      "bytes": 324,
+      "sha256": "957378fe51b061946e092ef9d73cc2157703565fcc1fe2055e44ff3fccf2b9a5"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/verification-context.json",
+      "bytes": 1768,
+      "sha256": "f48be36b59bdbb5a07504722154193c70595b8a8579c07821782b062f4771071"
+    },
+    {
+      "path": "docs/evidence/m8-b8/checkpoint-two/golden/verify-driver-decisions.cjs",
+      "bytes": 2925,
+      "sha256": "db3eabb77bf2f339e2d2336e3a81c303becd99f69cd4dc0950bfcf7c295f2241"
+    }
+  ],
+  "ownedCodeAndFixturePaths": [
+    "scripts/update-m8-b8-golden.cjs",
+    "tests/m8-b8-golden-guard.test.mjs",
+    "tests/fixtures/m5/full-match-golden.json",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b8.json"
+  ]
+}

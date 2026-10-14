@@ -1,0 +1,899 @@
+{
+  "measuredSha": "5533c69ad418b6eacd068293fd895b8094bcc587",
+  "runUrl": "https://github.com/catfish-xn/cat/actions/runs/37556739835",
+  "environment": "GitHub hosted ubuntu-24.04; each job is a separate runner, not local dot hardware",
+  "artifactIds": {
+    "presentation": 11455376746,
+    "headless": 11455038970,
+    "input": 11456135859
+  },
+  "reports": {
+    "m7-budget/report.json": {
+      "jsGzipBytes": {
+        "base": 410859,
+        "current": 424763
+      },
+      "jsRatio": 1.0338412934851129,
+      "jsBudget": 1.1,
+      "interactiveMs": {
+        "base": [
+          382,
+          390,
+          389,
+          378,
+          401,
+          365,
+          377,
+          386,
+          379
+        ],
+        "current": [
+          410,
+          409,
+          415,
+          393,
+          418,
+          416,
+          414,
+          420,
+          424
+        ],
+        "baseMedian": 382,
+        "currentMedian": 415
+      },
+      "interactiveRatio": 1.0863874345549738,
+      "interactiveBudget": 1.2,
+      "passed": true
+    },
+    "m7-presentation/report.json": {
+      "url": "http://127.0.0.1:4173",
+      "checks": [
+        {
+          "name": "help-dialog",
+          "goldBefore": 10,
+          "goldAfterD": 8
+        },
+        {
+          "name": "reduced-motion-equivalence",
+          "result": "enemyWin",
+          "events": 606
+        },
+        {
+          "name": "continue-double-activation",
+          "mouseRound": 2,
+          "mousePhase": "preparation",
+          "touchPhase": "preparation"
+        },
+        {
+          "name": "replay-feedback",
+          "specs": 209,
+          "casts": 11,
+          "attacks": 76,
+          "expected": {
+            "attacks": 76,
+            "casts": 11
+          },
+          "maxFloats": 13
+        },
+        {
+          "name": "replay-identity",
+          "width": 960,
+          "colors": 305
+        },
+        {
+          "name": "help-over-reward-choice",
+          "round": 7,
+          "offers": [
+            "belt",
+            "bow",
+            "cloak",
+            "rod",
+            "sword",
+            "tear",
+            "vest"
+          ]
+        },
+        {
+          "name": "portrait-404-fallback",
+          "broken": 0,
+          "fallbacks": 3,
+          "darius": 3
+        }
+      ],
+      "passed": true
+    },
+    "m5-performance/manifest.json": {
+      "sha": "5533c69ad418b6eacd068293fd895b8094bcc587",
+      "status": "",
+      "diffHash": "12ae32cb1ec02d01eda3581b127c1fee3b0dc53572ed6baf239721a03d82e126",
+      "node": "v22.23.3",
+      "platform": "linux",
+      "cpu": "AMD EPYC 7763 64-Core Processor",
+      "memoryBytes": 16766414848,
+      "cpuCount": 4,
+      "loadAtStart": [
+        1.04,
+        1.2,
+        0.79
+      ],
+      "startedAt": "2026-10-07T01:32:07.802Z",
+      "sourceFingerprint": "5e1ead97425bebc7810f09ac8984e015bee427200f1b9d85ec2137e477b53ef4",
+      "routes": [
+        {
+          "repetition": 1,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.5480940000002192,
+            "p95": 0.9797280000002502,
+            "p99": 1.4218839999998636,
+            "max": 5.050777999999923
+          },
+          "build": "cannon",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 86,
+          "gold": 218,
+          "formedAt": 20,
+          "formedBattles": 14,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 8130,
+          "commands": 182,
+          "durationSeconds": 5.167,
+          "maxCombatLedgerBytes": 404504,
+          "rssBytesAfterRoute": 188084224,
+          "peakProcessRssBytes": 194703360,
+          "finalHash": "57260176452e996659ca0e0881863c0ac2af79aba75104f64ce0ddcff2e0252a"
+        },
+        {
+          "repetition": 1,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.5741520000001401,
+            "p95": 0.8833690000010392,
+            "p99": 1.1195800000004965,
+            "max": 1.6235610000003362
+          },
+          "build": "sniper",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 83,
+          "gold": 214,
+          "formedAt": 19,
+          "formedBattles": 15,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11742,
+          "commands": 178,
+          "durationSeconds": 6.988,
+          "maxCombatLedgerBytes": 895408,
+          "rssBytesAfterRoute": 222666752,
+          "peakProcessRssBytes": 222666752,
+          "finalHash": "db7f543cd704e423ef0c7b391e05d183814acb5f35c9099be3168b8603fa6d73"
+        },
+        {
+          "repetition": 1,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.5380150000000867,
+            "p95": 0.8721279999990657,
+            "p99": 1.0870490000015707,
+            "max": 1.832791000000725
+          },
+          "build": "mage",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 77,
+          "gold": 239,
+          "formedAt": 19,
+          "formedBattles": 15,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11822,
+          "commands": 172,
+          "durationSeconds": 6.803,
+          "maxCombatLedgerBytes": 690512,
+          "rssBytesAfterRoute": 250777600,
+          "peakProcessRssBytes": 264847360,
+          "finalHash": "4bc5ecf13f362ea54db8e18bce7c24f4b91c071c9439374e9f894cc4b6e6a61b"
+        },
+        {
+          "repetition": 1,
+          "caitlynBattles": 12,
+          "caitlynCasts": 23,
+          "tickTimingMs": {
+            "p50": 0.5535530000015569,
+            "p95": 0.8999199999998382,
+            "p99": 1.1451869999982591,
+            "max": 7.537599999999657
+          },
+          "build": "sniper-caitlyn",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 87,
+          "gold": 207,
+          "formedAt": 19,
+          "formedBattles": 3,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11362,
+          "commands": 182,
+          "durationSeconds": 6.701,
+          "maxCombatLedgerBytes": 900147,
+          "rssBytesAfterRoute": 256282624,
+          "peakProcessRssBytes": 264847360,
+          "finalHash": "3ddb01e74afdc98b9a09652f114d4ae614948d474902f3ca7d90da6b2b15b6a0"
+        },
+        {
+          "repetition": 2,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.4646570000004431,
+            "p95": 0.931378000001132,
+            "p99": 1.1330550000020594,
+            "max": 4.520849000000453
+          },
+          "build": "cannon",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 86,
+          "gold": 218,
+          "formedAt": 20,
+          "formedBattles": 14,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 8130,
+          "commands": 182,
+          "durationSeconds": 4.636,
+          "maxCombatLedgerBytes": 404504,
+          "rssBytesAfterRoute": 256569344,
+          "peakProcessRssBytes": 271278080,
+          "finalHash": "57260176452e996659ca0e0881863c0ac2af79aba75104f64ce0ddcff2e0252a"
+        },
+        {
+          "repetition": 2,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.5692029999991064,
+            "p95": 0.8866060000000289,
+            "p99": 1.1454779999985476,
+            "max": 1.7078909999981988
+          },
+          "build": "sniper",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 83,
+          "gold": 214,
+          "formedAt": 19,
+          "formedBattles": 15,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11742,
+          "commands": 178,
+          "durationSeconds": 6.932,
+          "maxCombatLedgerBytes": 895408,
+          "rssBytesAfterRoute": 261120000,
+          "peakProcessRssBytes": 271278080,
+          "finalHash": "db7f543cd704e423ef0c7b391e05d183814acb5f35c9099be3168b8603fa6d73"
+        },
+        {
+          "repetition": 2,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.533145000001241,
+            "p95": 0.8715869999941788,
+            "p99": 1.0434479999967152,
+            "max": 1.7464300000065123
+          },
+          "build": "mage",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 77,
+          "gold": 239,
+          "formedAt": 19,
+          "formedBattles": 15,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11822,
+          "commands": 172,
+          "durationSeconds": 6.749,
+          "maxCombatLedgerBytes": 690512,
+          "rssBytesAfterRoute": 258891776,
+          "peakProcessRssBytes": 274939904,
+          "finalHash": "4bc5ecf13f362ea54db8e18bce7c24f4b91c071c9439374e9f894cc4b6e6a61b"
+        },
+        {
+          "repetition": 2,
+          "caitlynBattles": 12,
+          "caitlynCasts": 23,
+          "tickTimingMs": {
+            "p50": 0.5573610000064946,
+            "p95": 0.8984669999990729,
+            "p99": 1.0689859999984037,
+            "max": 7.071681000001263
+          },
+          "build": "sniper-caitlyn",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 87,
+          "gold": 207,
+          "formedAt": 19,
+          "formedBattles": 3,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11362,
+          "commands": 182,
+          "durationSeconds": 6.681,
+          "maxCombatLedgerBytes": 900147,
+          "rssBytesAfterRoute": 261730304,
+          "peakProcessRssBytes": 274939904,
+          "finalHash": "3ddb01e74afdc98b9a09652f114d4ae614948d474902f3ca7d90da6b2b15b6a0"
+        },
+        {
+          "repetition": 3,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.4795750000048429,
+            "p95": 0.9222909999953117,
+            "p99": 1.1138300000020536,
+            "max": 1.8250369999950635
+          },
+          "build": "cannon",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 86,
+          "gold": 218,
+          "formedAt": 20,
+          "formedBattles": 14,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 8130,
+          "commands": 182,
+          "durationSeconds": 4.644,
+          "maxCombatLedgerBytes": 404504,
+          "rssBytesAfterRoute": 257921024,
+          "peakProcessRssBytes": 276725760,
+          "finalHash": "57260176452e996659ca0e0881863c0ac2af79aba75104f64ce0ddcff2e0252a"
+        },
+        {
+          "repetition": 3,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.5690830000021379,
+            "p95": 0.8790609999996377,
+            "p99": 1.0785329999998794,
+            "max": 1.8671360000007553
+          },
+          "build": "sniper",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 83,
+          "gold": 214,
+          "formedAt": 19,
+          "formedBattles": 15,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11742,
+          "commands": 178,
+          "durationSeconds": 6.905,
+          "maxCombatLedgerBytes": 895408,
+          "rssBytesAfterRoute": 262434816,
+          "peakProcessRssBytes": 276725760,
+          "finalHash": "db7f543cd704e423ef0c7b391e05d183814acb5f35c9099be3168b8603fa6d73"
+        },
+        {
+          "repetition": 3,
+          "caitlynBattles": 0,
+          "caitlynCasts": 0,
+          "tickTimingMs": {
+            "p50": 0.5331349999978556,
+            "p95": 0.8790810000064084,
+            "p99": 1.101196000003256,
+            "max": 3.4758680000013555
+          },
+          "build": "mage",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 77,
+          "gold": 239,
+          "formedAt": 19,
+          "formedBattles": 15,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11822,
+          "commands": 172,
+          "durationSeconds": 6.782,
+          "maxCombatLedgerBytes": 690512,
+          "rssBytesAfterRoute": 263032832,
+          "peakProcessRssBytes": 276725760,
+          "finalHash": "4bc5ecf13f362ea54db8e18bce7c24f4b91c071c9439374e9f894cc4b6e6a61b"
+        },
+        {
+          "repetition": 3,
+          "caitlynBattles": 12,
+          "caitlynCasts": 23,
+          "tickTimingMs": {
+            "p50": 0.5583020000049146,
+            "p95": 0.9008910000120522,
+            "p99": 1.128978000007919,
+            "max": 1.7453889999887906
+          },
+          "build": "sniper-caitlyn",
+          "seed": 42,
+          "outcome": "victory",
+          "round": 35,
+          "hp": 87,
+          "gold": 207,
+          "formedAt": 19,
+          "formedBattles": 3,
+          "boundBattles": 14,
+          "transitioned": true,
+          "ticks": 11362,
+          "commands": 182,
+          "durationSeconds": 6.707,
+          "maxCombatLedgerBytes": 900147,
+          "rssBytesAfterRoute": 265101312,
+          "peakProcessRssBytes": 276725760,
+          "finalHash": "3ddb01e74afdc98b9a09652f114d4ae614948d474902f3ca7d90da6b2b15b6a0"
+        }
+      ],
+      "passed": true,
+      "endedAt": "2026-10-07T01:33:24.745Z",
+      "finalSourceFingerprint": "5e1ead97425bebc7810f09ac8984e015bee427200f1b9d85ec2137e477b53ef4",
+      "loadAtEnd": [
+        1.01,
+        1.15,
+        0.81
+      ]
+    },
+    "m6-performance/manifest.json": {
+      "sha": "5533c69ad418b6eacd068293fd895b8094bcc587",
+      "dirty": "",
+      "sourceFingerprint": "5e1ead97425bebc7810f09ac8984e015bee427200f1b9d85ec2137e477b53ef4",
+      "scriptHash": "a10764d1b37950e202b71d2e94ca07bf5694cc77abc7b41d8e5ddd28aee244ca",
+      "node": "v22.23.3",
+      "cpu": "INTEL(R) XEON(R) PLATINUM 8573C",
+      "cpuCount": 4,
+      "memoryBytes": 16765378560,
+      "loadAtStart": [
+        4.18,
+        3.96,
+        2.83
+      ],
+      "startedAt": "2026-10-07T01:40:36.335Z",
+      "passed": true,
+      "method": "Production modules in unthrottled Chromium, no tracing; normal command-only seed42 four full routes plus same F1 9-player/8-enemy/15-equipment policy. Module lifecycle is separate from E full application/Phaser lifecycle.",
+      "fullLoadCoverage": [
+        {
+          "round": 33,
+          "players": 9,
+          "enemies": 8,
+          "equipped": 15
+        },
+        {
+          "round": 34,
+          "players": 9,
+          "enemies": 8,
+          "equipped": 15
+        },
+        {
+          "round": 35,
+          "players": 9,
+          "enemies": 1,
+          "equipped": 15
+        }
+      ],
+      "routes": [
+        {
+          "build": "cannon",
+          "bytes": 9880441,
+          "incrementalBytes": 690730,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.5076540000000023,
+              "p95": 0.9477340000003096,
+              "p99": 1.4718680000005406,
+              "max": 14.400752999999895
+            },
+            "build": "cannon",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 86,
+            "gold": 218,
+            "formedAt": 20,
+            "formedBattles": 14,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 8130,
+            "commands": 182,
+            "durationSeconds": 11.408
+          }
+        },
+        {
+          "build": "sniper",
+          "bytes": 13971120,
+          "incrementalBytes": 1163861,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.5559590000011667,
+              "p95": 0.868399999999383,
+              "p99": 1.5245319999994535,
+              "max": 2.1318280000014056
+            },
+            "build": "sniper",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 83,
+            "gold": 214,
+            "formedAt": 19,
+            "formedBattles": 15,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 11742,
+            "commands": 178,
+            "durationSeconds": 16.508
+          }
+        },
+        {
+          "build": "mage",
+          "bytes": 11917395,
+          "incrementalBytes": 947537,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.5182840000052238,
+              "p95": 0.8542650000017602,
+              "p99": 1.5170530000032159,
+              "max": 2.1423369999974966
+            },
+            "build": "mage",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 77,
+            "gold": 239,
+            "formedAt": 19,
+            "formedBattles": 15,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 11822,
+            "commands": 172,
+            "durationSeconds": 16.163
+          }
+        },
+        {
+          "build": "sniper-caitlyn",
+          "bytes": 13644345,
+          "incrementalBytes": 1159145,
+          "summary": {
+            "caitlynBattles": 12,
+            "caitlynCasts": 23,
+            "tickTimingMs": {
+              "p50": 0.5371180000001914,
+              "p95": 0.8743759999997565,
+              "p99": 1.5356299999984913,
+              "max": 2.4665699999968638
+            },
+            "build": "sniper-caitlyn",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 87,
+            "gold": 207,
+            "formedAt": 19,
+            "formedBattles": 3,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 11362,
+            "commands": 182,
+            "durationSeconds": 15.878
+          }
+        },
+        {
+          "build": "full-load",
+          "bytes": 11170148,
+          "incrementalBytes": 846017,
+          "summary": {
+            "caitlynBattles": 0,
+            "caitlynCasts": 0,
+            "tickTimingMs": {
+              "p50": 0.5352469999997993,
+              "p95": 0.9025410000031115,
+              "p99": 1.6736300000047777,
+              "max": 2.692670000004
+            },
+            "build": "cannon",
+            "seed": 42,
+            "outcome": "victory",
+            "round": 35,
+            "hp": 85,
+            "gold": 131,
+            "formedAt": null,
+            "formedBattles": 0,
+            "boundBattles": 14,
+            "transitioned": true,
+            "ticks": 10161,
+            "commands": 206,
+            "durationSeconds": 14.032
+          }
+        }
+      ],
+      "routeGenerationMs": 74959.946014,
+      "payload": {
+        "completeBytes": 13971120,
+        "incrementalBytes": 1163861,
+        "incrementalCombatId": "round-34",
+        "incrementalEvents": 3254,
+        "largestRecordBytes": 1027084,
+        "largestRecordCombatId": "round-30"
+      },
+      "browser": "153.0.8010.12",
+      "errors": [],
+      "measurements": {
+        "summary": {
+          "capture": {
+            "samples": [
+              15.600000000093132,
+              13.400000000139698,
+              20.5,
+              13.300000000046566,
+              14.399999999906868,
+              14,
+              13.600000000093132,
+              13.5,
+              13.5,
+              13.600000000093132,
+              14.5,
+              13.5
+            ],
+            "p95": 20.5,
+            "max": 20.5
+          },
+          "write": {
+            "samples": [
+              14.300000000046566,
+              8.199999999953434,
+              8.399999999906868,
+              8.300000000046566,
+              11.399999999906868,
+              8.399999999906868,
+              8.099999999860302,
+              9.199999999953434,
+              8.100000000093132,
+              8.099999999860302,
+              8.199999999953434,
+              8.099999999860302
+            ],
+            "p95": 14.300000000046566,
+            "max": 14.300000000046566
+          },
+          "fullCapture": {
+            "samples": [
+              64.30000000004657,
+              67,
+              74.5,
+              66.60000000009313,
+              69.5,
+              66.69999999995343,
+              68.39999999990687,
+              66.60000000009313,
+              68.69999999995343,
+              67,
+              68.10000000009313,
+              67.39999999990687
+            ],
+            "p95": 74.5,
+            "max": 74.5
+          },
+          "activation": {
+            "samples": [
+              167.30000000004657,
+              156.19999999995343,
+              202.60000000009313,
+              191.20000000018626,
+              152.0999999998603,
+              148.9000000001397,
+              152.89999999990687,
+              165.10000000009313,
+              155.5999999998603,
+              153.5,
+              151.69999999995343,
+              159.70000000018626
+            ],
+            "p95": 202.60000000009313,
+            "max": 202.60000000009313
+          },
+          "completeImport": {
+            "samples": [
+              5801.5,
+              6305.5,
+              5595.59999999986
+            ],
+            "p95": 6305.5,
+            "max": 6305.5
+          },
+          "firstSeek": {
+            "samples": [
+              764.6999999999534,
+              751.3999999999069,
+              753
+            ],
+            "p95": 764.6999999999534,
+            "max": 764.6999999999534
+          },
+          "cachedSeek": {
+            "samples": [
+              2.800000000046566,
+              6,
+              7.2999999998137355,
+              7.900000000139698,
+              8.800000000046566,
+              10.100000000093132,
+              11.599999999860302,
+              12.300000000046566,
+              13.600000000093132,
+              18.0999999998603,
+              16.4000000001397,
+              16.399999999906868
+            ],
+            "p95": 18.0999999998603,
+            "max": 18.0999999998603
+          },
+          "statsBatch": {
+            "samples": [
+              0.19999999995343387,
+              0.19999999995343387,
+              0,
+              0.10000000009313226,
+              0,
+              0.10000000009313226,
+              0,
+              0.09999999986030161,
+              0,
+              0,
+              0,
+              0.10000000009313226,
+              0,
+              0,
+              0
+            ],
+            "p95": 0.19999999995343387,
+            "max": 0.19999999995343387
+          }
+        },
+        "gates": [
+          {
+            "name": "capture",
+            "metric": "p95",
+            "actual": 20.5,
+            "ceiling": 50,
+            "passed": true
+          },
+          {
+            "name": "write",
+            "metric": "p95",
+            "actual": 14.300000000046566,
+            "ceiling": 250,
+            "passed": true
+          },
+          {
+            "name": "fullCapture",
+            "metric": "p95",
+            "actual": 74.5,
+            "ceiling": 500,
+            "passed": true
+          },
+          {
+            "name": "activation",
+            "metric": "max",
+            "actual": 202.60000000009313,
+            "ceiling": 1000,
+            "passed": true
+          },
+          {
+            "name": "completeImport",
+            "metric": "max",
+            "actual": 6305.5,
+            "ceiling": 30000,
+            "passed": true
+          },
+          {
+            "name": "firstSeek",
+            "metric": "max",
+            "actual": 764.6999999999534,
+            "ceiling": 2000,
+            "passed": true
+          },
+          {
+            "name": "cachedSeek",
+            "metric": "max",
+            "actual": 18.0999999998603,
+            "ceiling": 100,
+            "passed": true
+          },
+          {
+            "name": "statsBatch",
+            "metric": "max",
+            "actual": 0.19999999995343387,
+            "ceiling": 5,
+            "passed": true
+          }
+        ],
+        "fullLoadRoundTrip": {
+          "milliseconds": 5277,
+          "verified": true,
+          "battles": 30
+        },
+        "limits": {
+          "incrementalCaptureP95": 50,
+          "incrementalWriteP95": 250,
+          "fullCaptureP95": 500,
+          "activationWriteP95": 1000,
+          "completeImport": 30000,
+          "firstSeek": 2000,
+          "cachedSeek": 100,
+          "stats40TickBatch": 5
+        },
+        "completeBattleCount": 30,
+        "incrementalBattleCount": 28,
+        "completedHistoryWrittenOnIncrementalSave": 0,
+        "method": "capture includes actual capturePrefix digest/deepFreeze plus synchronous enqueue/repository cloning; write spans coordinator saving through transaction-complete saved; complete import includes actual file validation, candidate construction and activation"
+      },
+      "lifecycle": {
+        "cycles": 30,
+        "extraListeners": 0,
+        "remainingComponentRoots": 0,
+        "before": {
+          "usedSize": 3416316,
+          "totalSize": 4456448,
+          "embedderHeapUsedSize": 525624,
+          "backingStorageSize": 1048326
+        },
+        "after": {
+          "usedSize": 3559052,
+          "totalSize": 4456448,
+          "embedderHeapUsedSize": 524632,
+          "backingStorageSize": 1048326
+        },
+        "heapDeltaBytes": 142736,
+        "maxHeapGrowthBytes": 1048576,
+        "scope": "Real persistence/session/playback/DOM modules; does not assert full application one-Phaser-loop/tween cleanup (E owns that gate)."
+      },
+      "endedAt": "2026-10-07T01:42:41.959Z",
+      "durationMs": 125645.967365,
+      "finalSourceFingerprint": "5e1ead97425bebc7810f09ac8984e015bee427200f1b9d85ec2137e477b53ef4",
+      "peakProcessRssBytes": 1169567744,
+      "loadAtEnd": [
+        1.6,
+        3,
+        2.61
+      ]
+    }
+  }
+}

@@ -1,36 +1,27 @@
 import type { SaveEnvelope } from '../m6/contracts';
-import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE, MAX_SAVE_BYTES } from '../m6/limits';
-import { restoreMatch } from '../simulation/serialization';
+import type { CompatibilityView } from '../simulation/m8/ui-contracts';
+import { MAX_SAVE_BYTES } from '../m6/limits';
 import { SaveError } from './repository';
+import { rejectedView, routeSaveFile, type RejectedReason } from './compatibility';
 
 export type ValidateHistory = (envelope: SaveEnvelope) => void | Promise<void>;
-const KEYS = ['kind', 'saveFormatVersion', 'replayFormatVersion', 'runId', 'createdAt', 'match', 'battles', 'currentBattle'].sort();
 function reject(message: string): never { throw new SaveError('validation', `存档无效：${message}`); }
-function object(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype;
+const MESSAGES: Record<RejectedReason | 'new-match-required', string> = {
+  'unsupported-version': '不支持的文件版本', 'digest-mismatch': '内容摘要与当前版本不一致', 'invalid-data': '文件数据损坏或校验未通过',
+  'capacity-exceeded': '战斗档案数量超限', 'new-match-required': '旧版（M7/M8）对局只能原样保全导出，请开始新局',
+};
+/** A routed rejection keeps its CompatibilityView so the UI can explain it without re-deriving it. */
+export class CompatibilityError extends SaveError {
+  constructor(readonly view: CompatibilityView, detail?: string) { super('validation', `存档无效：${detail ?? MESSAGES[view.reason ?? 'invalid-data']}`); this.name = 'CompatibilityError'; }
 }
-/** Boundary validation precedes all domain/history reconstruction. Does not mutate input. */
+/** Version routing (compatibility.ts) precedes all domain/history reconstruction. Does not mutate input. */
 export async function validateEnvelope(input: unknown, validateHistory: ValidateHistory): Promise<SaveEnvelope> {
-  if (!object(input) || Object.keys(input).sort().join('|') !== KEYS.join('|')) reject('包装字段不匹配');
-  if (input.kind !== 'hex-autobattler-save' || input.saveFormatVersion !== 1 || input.replayFormatVersion !== 1) reject('不支持的文件版本');
-  if (typeof input.runId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(input.runId)) reject('对局身份不合法');
-  if (typeof input.createdAt !== 'string' || input.createdAt.length > 40 || !Number.isFinite(Date.parse(input.createdAt))) reject('创建时间不合法');
-  if (!Array.isArray(input.battles) || input.battles.length > MAX_BATTLE_RECORDS) reject('战斗档案数量超限');
-  if (input.currentBattle !== null && !object(input.currentBattle)) reject('当前战斗档案不合法');
-  const records = [...input.battles, ...(input.currentBattle === null ? [] : [input.currentBattle])];
-  if (records.length > MAX_BATTLE_RECORDS) reject('战斗档案数量超限');
-  for (const record of records) {
-    if (!object(record) || !Array.isArray(record.events) || record.events.length > MAX_EVENTS_PER_BATTLE) reject('战斗事件边界不合法');
-  }
-  // Only validated Match may be passed on to the isolated historical validator.
-  try {
-    const match = restoreMatch(input.match);
-    const envelope = structuredClone({ ...input, match }) as unknown as SaveEnvelope;
-    await validateHistory(envelope);
-    return envelope;
-  } catch (error) {
+  const routed = routeSaveFile(input);
+  if (routed.view) throw new CompatibilityError(routed.view, routed.detail);
+  try { await validateHistory(routed.envelope); return routed.envelope; }
+  catch (error) {
     if (error instanceof SaveError && error.reason === 'validation') throw error;
-    reject(error instanceof Error ? error.message : String(error));
+    throw new CompatibilityError(rejectedView('invalid-data', routed.envelope.match.rulesVersion), error instanceof Error ? error.message : String(error));
   }
 }
 export async function validateFile(file: Blob, validateHistory: ValidateHistory): Promise<SaveEnvelope> {

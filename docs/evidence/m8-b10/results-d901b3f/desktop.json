@@ -1,0 +1,166 @@
+{
+  "sha": "d901b3f33a9e210e69281ce141bcbbfdd4cdbb5f",
+  "dirty": false,
+  "node": "v22.23.3",
+  "sourceFingerprint": "b7872f7d275876249f436c8f74729c5be642fd145eb14d808bed8450d42080ec",
+  "checks": [
+    {
+      "name": "dev-1440x1000-opening-layout-search-and-double-continue",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1440x1000-help-over-live-reward-pointer-and-keyboard",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1440x1000-shortcuts-repeat-help-drag-cancel-and-refresh",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1440x1000-replay-seek-speed-return-read-only",
+      "passed": true,
+      "evidence": {
+        "battles": 8
+      }
+    },
+    {
+      "name": "dev-1440x600-opening-layout-search-and-double-continue",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1440x600-help-over-live-reward-pointer-and-keyboard",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1440x600-shortcuts-repeat-help-drag-cancel-and-refresh",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1440x600-replay-seek-speed-return-read-only",
+      "passed": true,
+      "evidence": {
+        "battles": 8
+      }
+    },
+    {
+      "name": "dev-1920x1080-opening-layout-search-and-double-continue",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1920x1080-help-over-live-reward-pointer-and-keyboard",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1920x1080-shortcuts-repeat-help-drag-cancel-and-refresh",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "dev-1920x1080-replay-seek-speed-return-read-only",
+      "passed": true,
+      "evidence": {
+        "battles": 8
+      }
+    },
+    {
+      "name": "dev-normal-reduced-identical-full-first-battle",
+      "passed": true,
+      "evidence": {
+        "events": 106
+      }
+    },
+    {
+      "name": "preview-1440x1000-opening-layout-search-and-double-continue",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1440x1000-help-over-live-reward-pointer-and-keyboard",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1440x1000-shortcuts-repeat-help-drag-cancel-and-refresh",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1440x1000-replay-seek-speed-return-read-only",
+      "passed": true,
+      "evidence": {
+        "battles": 8
+      }
+    },
+    {
+      "name": "preview-1440x600-opening-layout-search-and-double-continue",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1440x600-help-over-live-reward-pointer-and-keyboard",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1440x600-shortcuts-repeat-help-drag-cancel-and-refresh",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1440x600-replay-seek-speed-return-read-only",
+      "passed": true,
+      "evidence": {
+        "battles": 8
+      }
+    },
+    {
+      "name": "preview-1920x1080-opening-layout-search-and-double-continue",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1920x1080-help-over-live-reward-pointer-and-keyboard",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1920x1080-shortcuts-repeat-help-drag-cancel-and-refresh",
+      "passed": true,
+      "evidence": {}
+    },
+    {
+      "name": "preview-1920x1080-replay-seek-speed-return-read-only",
+      "passed": true,
+      "evidence": {
+        "battles": 8
+      }
+    },
+    {
+      "name": "preview-normal-reduced-identical-full-first-battle",
+      "passed": true,
+      "evidence": {
+        "events": 106
+      }
+    },
+    {
+      "name": "strict-pages-subpath-resources-refresh-neutral-placeholders",
+      "passed": true,
+      "evidence": {
+        "assets": 40,
+        "requests": 93
+      }
+    }
+  ],
+  "errors": [],
+  "passed": true,
+  "scope": "six desktop mode/viewport combinations; supplemental, not replacement for 33-battle CI journeys",
+  "browser": "151.0.7922.173"
+}

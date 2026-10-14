@@ -1,0 +1,11 @@
+{
+  "baselineSha": "15313a75c6e74beec739fe52a2875c104c55eae3",
+  "baselineLockSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f",
+  "gzipLevel": 9,
+  "baselineBytes": 424763,
+  "currentBytes": 465502,
+  "limitBytes": 467239.30000000005,
+  "remainingIntegerBytes": 1737,
+  "ratio": 1.09590995449227,
+  "scope": "Vite production .js assets only; same host, lockfile and Node zlib; final CI enforces same budget"
+}

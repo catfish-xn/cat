@@ -1,0 +1,2524 @@
+{
+  "schema": 1,
+  "scope": "B4 R3b full lifecycle review follow-up; H1/bundle optimization/Titan query timing excluded",
+  "baselineSha": "bfcd505a57e7053c01287182d81e4328b47d0c1f",
+  "runtimeCodeSha": "3f102514ce589cdc5302325fe02915a73140b561",
+  "branch": "feat/m8-b4",
+  "capturedAtUtc": "2026-10-08T08:56:17.544244+00:00",
+  "consumptionInvariant": {
+    "compiledSources": "maxPerCombat === 1 survival sources, canonical combat/owner/definition/instance/effect/parent/target/application identity; duplicate start/post-damage listeners share one source",
+    "unconsumedRepresentation": "mechanismState.unconsumedSurvivalKeys",
+    "consumedRepresentation": "mechanismState.runtimes (original finite receipts)",
+    "restore": "unique disjoint partition must cover the entire authoritative compiled source set, regardless live shields/statuses; reject missing/duplicate/foreign identities; no missing-as-consumed fallback",
+    "normalBehavior": "first-use qualification and consumption unchanged; no preallocated runtime, so lethal damage still creates no consumption; no equipment ID branch or new RNG"
+  },
+  "developmentSaveBoundary": {
+    "equipmentCatalogVersion": "s13-14.24b-m8-b4-v3",
+    "contentDigest": "fnv1a32-utf16:2b6a9a4b",
+    "previousV2": "rejected by existing content-digest version validation; no migration/relaxation"
+  },
+  "localValidation": {
+    "focusedCommand": "npm test -- tests/m8-b4-r3b-lifecycle.test.ts tests/m8-b4-audit-regressions.test.ts tests/m8-b4-trigger-ledger.test.ts tests/m8-b4-tear.test.ts tests/m8-b4-integration.test.ts tests/m8-b3-*.test.ts tests/m8-g*.test.ts --maxWorkers=2 --reporter=json",
+    "focused": {
+      "files": 26,
+      "tests": 201,
+      "passed": 201,
+      "failed": 0,
+      "fileResults": [
+        {
+          "file": "tests/m8-b3-audit.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-integration.test.ts",
+          "passed": 25,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-periodic-integration.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-restore.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-second-integration.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-third-audit.test.ts",
+          "passed": 14,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-audit-regressions.test.ts",
+          "passed": 14,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-integration.test.ts",
+          "passed": 16,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-tear.test.ts",
+          "passed": 9,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-trigger-ledger.test.ts",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g01.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g02.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g03.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g04.test.ts",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g05.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g06.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g07.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g08.test.ts",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g09-integration.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g09.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g10-integration.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g10.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g11.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g12-integration.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g12.test.ts",
+          "passed": 8,
+          "failed": 0
+        }
+      ]
+    },
+    "b3OriginalUnmodified": {
+      "files": 6,
+      "tests": 78,
+      "passed": 78,
+      "failed": 0,
+      "fileResults": [
+        {
+          "file": "tests/m8-b3-audit.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-integration.test.ts",
+          "passed": 25,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-periodic-integration.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-restore.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-second-integration.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-third-audit.test.ts",
+          "passed": 14,
+          "failed": 0
+        }
+      ]
+    },
+    "b3AndG01ToG12": {
+      "files": 21,
+      "tests": 156,
+      "passed": 156,
+      "failed": 0,
+      "fileResults": [
+        {
+          "file": "tests/m8-b3-audit.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-integration.test.ts",
+          "passed": 25,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-periodic-integration.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-restore.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-second-integration.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-third-audit.test.ts",
+          "passed": 14,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g01.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g02.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g03.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g04.test.ts",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g05.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g06.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g07.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g08.test.ts",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g09-integration.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g09.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g10-integration.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g10.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g11.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g12-integration.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g12.test.ts",
+          "passed": 8,
+          "failed": 0
+        }
+      ]
+    },
+    "previousAuditRegressions": {
+      "files": 4,
+      "tests": 41,
+      "passed": 41,
+      "failed": 0,
+      "fileResults": [
+        {
+          "file": "tests/m8-b4-audit-regressions.test.ts",
+          "passed": 14,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-integration.test.ts",
+          "passed": 16,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-tear.test.ts",
+          "passed": 9,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-trigger-ledger.test.ts",
+          "passed": 2,
+          "failed": 0
+        }
+      ]
+    },
+    "r3bFourTests": [
+      {
+        "name": "B4 R3b: compiled consumption partition survives the complete shield lifecycle untriggered legal object/JSON saves retain first use; missing/duplicate unconsumed identities are rejected",
+        "status": "passed"
+      },
+      {
+        "name": "B4 R3b: compiled consumption partition survives the complete shield lifecycle consumed source with an active shield rejects deletion of its receipt in both restore entries",
+        "status": "passed"
+      },
+      {
+        "name": "B4 R3b: compiled consumption partition survives the complete shield lifecycle consumed source after natural shield expiry/cleanup still rejects receipt deletion and never grants again",
+        "status": "passed"
+      },
+      {
+        "name": "B4 R3b: compiled consumption partition survives the complete shield lifecycle two equipment instances consume independently; one receipt cannot replace the other after both shields end",
+        "status": "passed"
+      }
+    ],
+    "fullCommand": "npm test -- --reporter=json --outputFile=<scratch-report>",
+    "full": {
+      "files": 94,
+      "tests": 1169,
+      "passed": 1169,
+      "failed": 0,
+      "fileResults": [
+        {
+          "file": "tests/board.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/combat-abilities.test.ts",
+          "passed": 27,
+          "failed": 0
+        },
+        {
+          "file": "tests/combat-contract.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/combat-damage.test.ts",
+          "passed": 12,
+          "failed": 0
+        },
+        {
+          "file": "tests/combat-mana.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/combat-simulation.test.ts",
+          "passed": 17,
+          "failed": 0
+        },
+        {
+          "file": "tests/combat-start.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/deployment.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/input-router.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/inventory.test.ts",
+          "passed": 45,
+          "failed": 0
+        },
+        {
+          "file": "tests/m4-effect-combat.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m4-effects.test.ts",
+          "passed": 21,
+          "failed": 0
+        },
+        {
+          "file": "tests/m4-ledger-bound.test.ts",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "file": "tests/m4-review-regressions.test.ts",
+          "passed": 15,
+          "failed": 0
+        },
+        {
+          "file": "tests/m4-strategy-snapshot.test.ts",
+          "passed": 10,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-acceptance.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-audit-boundaries.test.ts",
+          "passed": 20,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-combat.test.ts",
+          "passed": 47,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-command-phases.test.ts",
+          "passed": 12,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-content.test.ts",
+          "passed": 9,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-economy.test.ts",
+          "passed": 42,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-growth.test.ts",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-match-integration.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-neutral-timing.test.ts",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-regressions.test.ts",
+          "passed": 9,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-replay.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-route.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-runtime-import.test.ts",
+          "passed": 15,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-serialization.test.ts",
+          "passed": 33,
+          "failed": 0
+        },
+        {
+          "file": "tests/m5-strategy-numbers.test.ts",
+          "passed": 42,
+          "failed": 0
+        },
+        {
+          "file": "tests/m6-integration.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m6-persistence.test.ts",
+          "passed": 38,
+          "failed": 0
+        },
+        {
+          "file": "tests/m6-replay.test.ts",
+          "passed": 8,
+          "failed": 0
+        },
+        {
+          "file": "tests/m6-stats-oracle.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m7-fx-plan.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m7-hero-identity.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m7-layout.test.ts",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "file": "tests/m7-m6-save-compat.test.ts",
+          "passed": 8,
+          "failed": 0
+        },
+        {
+          "file": "tests/m7-preferences.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-ability-contracts.test.ts",
+          "passed": 21,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-audit-contracts.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-audit.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-integration.test.ts",
+          "passed": 25,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-periodic-integration.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-restore.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-second-integration.test.ts",
+          "passed": 13,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b3-third-audit.test.ts",
+          "passed": 14,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-audit-regressions.test.ts",
+          "passed": 14,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-belt.test.ts",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-bow.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-catalog.test.ts",
+          "passed": 84,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-cloak.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-gloves.test.ts",
+          "passed": 1,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-integration.test.ts",
+          "passed": 16,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-r3b-lifecycle.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-rod.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-sword.test.ts",
+          "passed": 8,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-tear.test.ts",
+          "passed": 9,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-trigger-ledger.test.ts",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-b4-vest.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-contracts.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-effect-policy-contracts.test.ts",
+          "passed": 20,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g01.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g02.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g03.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g04.test.ts",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g05.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g06.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g07.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g08.test.ts",
+          "passed": 5,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g09-integration.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g09.test.ts",
+          "passed": 4,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g10-integration.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g10.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g11.test.ts",
+          "passed": 6,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g12-integration.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-g12.test.ts",
+          "passed": 8,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-if-death.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-if-inputs.test.ts",
+          "passed": 3,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-if-open.test.ts",
+          "passed": 2,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-planning.test.ts",
+          "passed": 1,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-rereview-contracts.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/m8-target-order-contracts.test.ts",
+          "passed": 28,
+          "failed": 0
+        },
+        {
+          "file": "tests/match-contract.test.ts",
+          "passed": 12,
+          "failed": 0
+        },
+        {
+          "file": "tests/match-economy.test.ts",
+          "passed": 42,
+          "failed": 0
+        },
+        {
+          "file": "tests/match-lifecycle.test.ts",
+          "passed": 12,
+          "failed": 0
+        },
+        {
+          "file": "tests/match-session.test.ts",
+          "passed": 16,
+          "failed": 0
+        },
+        {
+          "file": "tests/progression.test.ts",
+          "passed": 26,
+          "failed": 0
+        },
+        {
+          "file": "tests/rng.test.ts",
+          "passed": 19,
+          "failed": 0
+        },
+        {
+          "file": "tests/round-enemies.test.ts",
+          "passed": 7,
+          "failed": 0
+        },
+        {
+          "file": "tests/shop.test.ts",
+          "passed": 22,
+          "failed": 0
+        },
+        {
+          "file": "tests/simulation.test.ts",
+          "passed": 9,
+          "failed": 0
+        },
+        {
+          "file": "tests/unit-stats.test.ts",
+          "passed": 42,
+          "failed": 0
+        },
+        {
+          "file": "tests/upgrades.test.ts",
+          "passed": 16,
+          "failed": 0
+        }
+      ]
+    },
+    "build": {
+      "command": "npm run build",
+      "passed": true,
+      "node": "v24.21.0",
+      "lockfileSha256": "3f10c2dd761075fc3806aa2ef1459d036ac1068d9a15ab3356f3f1fffe42379f"
+    }
+  },
+  "beforeFixCounterexample": {
+    "sha": "bfcd505a57e7053c01287182d81e4328b47d0c1f",
+    "method": "same new formal test copied into isolated baseline worktree; production stepMatch naturally expires/cleans shield, then only runtime removed",
+    "selectedTestCount": 1,
+    "failureCount": 1,
+    "failures": [
+      {
+        "name": "B4 R3b: compiled consumption partition survives the complete shield lifecycle consumed source after natural shield expiry/cleanup still rejects receipt deletion and never grants again",
+        "status": "failed",
+        "failure": "AssertionError: expected [Function] to throw an error"
+      }
+    ]
+  },
+  "golden": {
+    "generator": "scripts/update-m8-b4-audit-golden.cjs; independent economic/RNG oracle; requires complete commands and event hashes unchanged before writing",
+    "baselineSha": "bfcd505a57e7053c01287182d81e4328b47d0c1f",
+    "routes": [
+      {
+        "route": "cannon",
+        "commandCount": 182,
+        "battleCount": 30,
+        "allCommandsEqualToBaseline": true,
+        "allCompleteBattleEventHashesEqualToBaseline": true,
+        "stateHashesChangedByContentDigestAndConsumptionPartition": true
+      },
+      {
+        "route": "sniper",
+        "commandCount": 178,
+        "battleCount": 30,
+        "allCommandsEqualToBaseline": true,
+        "allCompleteBattleEventHashesEqualToBaseline": true,
+        "stateHashesChangedByContentDigestAndConsumptionPartition": true
+      },
+      {
+        "route": "mage",
+        "commandCount": 172,
+        "battleCount": 30,
+        "allCommandsEqualToBaseline": true,
+        "allCompleteBattleEventHashesEqualToBaseline": true,
+        "stateHashesChangedByContentDigestAndConsumptionPartition": true
+      },
+      {
+        "route": "sniper-caitlyn",
+        "commandCount": 182,
+        "battleCount": 30,
+        "allCommandsEqualToBaseline": true,
+        "allCompleteBattleEventHashesEqualToBaseline": true,
+        "stateHashesChangedByContentDigestAndConsumptionPartition": true
+      }
+    ]
+  },
+  "frozenContractsAndG12": [
+    {
+      "file": "src/simulation/m8/contracts.ts",
+      "sha256": "34c29e727416f9fcbe9f7144d5222e5418a2d89f554ff506024af6c7cc2ca9d3",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "src/simulation/m8/ui-contracts.ts",
+      "sha256": "6844fe0bda492129f0e2525e5827e4fead80222b398c8c4c73187ce6b77475c7",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "src/simulation/m8/equipment.ts",
+      "sha256": "df61f7e318ef0e1ddaba0d93c4e4690e486ea2fddd4ea135d1ec3dfd80651616",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "docs/M8_RULES.md",
+      "sha256": "3ab4c35efbbd573fc34f64eaada944668afc322555ce05acd36b7631ce68b6d3",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "docs/M8_UI_CONTRACT.md",
+      "sha256": "272ef7c5e8cea503f0f62b8814b10594f1b88047d7e72249fa8e0a94252a7cd3",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "tests/m8-g12.test.ts",
+      "sha256": "b7dfc7ce00761236af1381cdb6bbfd5304a5969b01e0e66401e2875ead34abbd",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "tests/m8-g12-integration.test.ts",
+      "sha256": "3a30fdb546fb43c05cf97bc2865ccacd0ed4834dd9d72ca5adb1af506cada9d6",
+      "unchangedFrom": "5dce5cd"
+    }
+  ],
+  "b3OriginalTestFileHashes": [
+    {
+      "file": "tests/m8-b3-audit.test.ts",
+      "sha256": "281c1903767540ce8d0da3698c7e732c04b36f000220240ab3fda31b53683f7f",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "tests/m8-b3-integration.test.ts",
+      "sha256": "aad8556f479c1ad7496d8fd8d779f0f9d025b72431cb8ed404250f2676832c9a",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "tests/m8-b3-periodic-integration.test.ts",
+      "sha256": "aa3ec0753d91dd77cef4d44d4c854a1fbcb5dd86d13b4b9240e7bfd8988bbd44",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "tests/m8-b3-restore.test.ts",
+      "sha256": "5d5e097e597a3584e2b5bffed54139ab68c7cd403b8cddf6d2c6a5a00fd79307",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "tests/m8-b3-second-integration.test.ts",
+      "sha256": "a26c60f56d1c4771e8dd74cb8b75939eb976fec769c12c2217e4fbca0905a8b2",
+      "unchangedFrom": "5dce5cd"
+    },
+    {
+      "file": "tests/m8-b3-third-audit.test.ts",
+      "sha256": "cb2f6ca4f9cd577143142386079066093520e0582eb7b958c6bc42e68e7997a6",
+      "unchangedFrom": "5dce5cd"
+    }
+  ],
+  "unchangedCIAndPreviousGenericFixes": [
+    {
+      "file": ".github/workflows/ci.yml",
+      "sha256": "0106d46ddafb1f07245e747cecb2c728948590f55c9c146c1a28114aeb0f37d3",
+      "unchangedFrom": "bfcd505a57e7053c01287182d81e4328b47d0c1f"
+    },
+    {
+      "file": "scripts/verify-m5-browser.cjs",
+      "sha256": "1a5e52defeb2c30fc9e524a1edf958a0f3a9de56b515ed7f738a2bf867356c05",
+      "unchangedFrom": "bfcd505a57e7053c01287182d81e4328b47d0c1f"
+    },
+    {
+      "file": "scripts/m7-budget.cjs",
+      "sha256": "6642eb0cb8d44d7df2a58d04e8884f49d38f31844013d49c58109930b1e7d012",
+      "unchangedFrom": "bfcd505a57e7053c01287182d81e4328b47d0c1f"
+    },
+    {
+      "file": "src/simulation/m8/status.ts",
+      "sha256": "05f2efbfd2bf20ab02ac0bcf7cdf4362dcd89a3d8054105b9856284af0415d28",
+      "unchangedFrom": "bfcd505a57e7053c01287182d81e4328b47d0c1f"
+    },
+    {
+      "file": "src/simulation/combat-s13.ts",
+      "sha256": "d5fea4610d98cf223f19d3870f29034ec7b4f34006f3bdda6e25ede6e886f196",
+      "unchangedFrom": "bfcd505a57e7053c01287182d81e4328b47d0c1f"
+    },
+    {
+      "file": "src/simulation/m8/triggers.ts",
+      "sha256": "4d19a13d8cd6fdda5eaeb63270458cad3fd424fe0f1c984eec41d8f5404b2242",
+      "unchangedFrom": "bfcd505a57e7053c01287182d81e4328b47d0c1f"
+    },
+    {
+      "file": "src/simulation/m8/restore.ts",
+      "sha256": "12d1dc1ae1446fd0eaba186bbdad6428d8ebad887a1c56eeb0d2da3b6b2d1635",
+      "unchangedFrom": "bfcd505a57e7053c01287182d81e4328b47d0c1f"
+    }
+  ],
+  "bundleMeasurement": {
+    "b4Only": {
+      "method": "sum gzipSync(level:9) per dist/assets/*.js; scripts/m7-budget.cjs:23 unchanged",
+      "baselineBytes": 424763,
+      "limitBytes": 467239,
+      "totalBytes": 466144,
+      "marginBytes": 1095,
+      "assets": [
+        {
+          "file": "index-D_Ad710i.js",
+          "bytes": 1635847,
+          "gzipLevel9Bytes": 466144,
+          "sha256": "9b7bfae7af49555e8f0b736d05988711bfce7e35c1b846737f8b2f5fd59319fd"
+        }
+      ]
+    },
+    "b4PlusPinnedU4": {
+      "u4Sha": "5778cab29fd02a5aeb002b1e12b16f1ac4dc39bf",
+      "scope": "detached worktree isolated integration build only; not merged into feat/m8-b4; no full functional CI claim",
+      "method": "sum gzipSync(level:9) per dist/assets/*.js",
+      "baselineBytes": 424763,
+      "limitBytes": 467239,
+      "totalBytes": 470088,
+      "marginBytes": -2849,
+      "assets": [
+        {
+          "file": "index-Bz7j2LlX.js",
+          "bytes": 1645911,
+          "gzipLevel9Bytes": 470088,
+          "sha256": "50278c14232663d3f1a5287b1a68821e4f28620ba70b93521031296d4123525e"
+        }
+      ]
+    },
+    "optimizationOrBudgetChange": false
+  },
+  "knownIssuesOnlyRegistered": {
+    "TitanExistingStackQuery": "status.ts:61–63, combat-s13.ts:55–64: refresh retains old activation tick but replaces magnitude; tick20 current query 104 vs expected102, actual attack102; preexisting; not fixed",
+    "H1": "heap stability and representative B4 program workloads remain independent; unchanged scripts,GC,warmup,thresholds",
+    "integrationBudget": "B4 + U4 exceeds existing limit; user decision deferred"
+  },
+  "runtimeCodeFullGithubCI": {
+    "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993",
+    "id": 37747928993,
+    "number": 95,
+    "headSha": "3f102514ce589cdc5302325fe02915a73140b561",
+    "attempt": 2,
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "success",
+    "createdAt": "2026-10-08T08:09:00Z",
+    "updatedAt": "2026-10-08T08:54:06Z",
+    "jobs": [
+      {
+        "name": "m6-retention",
+        "id": 113224115453,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224115453",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:04Z",
+        "completedAt": "2026-10-08T08:15:58Z"
+      },
+      {
+        "name": "test-and-build-sample1",
+        "id": 113224106325,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224106325",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:05Z",
+        "completedAt": "2026-10-08T08:19:40Z"
+      },
+      {
+        "name": "browser-preview-sniper-sample1",
+        "id": 113224109809,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224109809",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:04Z",
+        "completedAt": "2026-10-08T08:23:20Z"
+      },
+      {
+        "name": "browser-preview-cannon-sample1",
+        "id": 113224053919,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224053919",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:37:20Z",
+        "completedAt": "2026-10-08T08:53:47Z"
+      },
+      {
+        "name": "browser-dev-mage-sample1",
+        "id": 113224054092,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224054092",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:41Z",
+        "completedAt": "2026-10-08T08:24:36Z"
+      },
+      {
+        "name": "browser-dev-sniper-sample1",
+        "id": 113224054733,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224054733",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:05Z",
+        "completedAt": "2026-10-08T08:24:34Z"
+      },
+      {
+        "name": "m7-presentation-sample1",
+        "id": 113224053551,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224053551",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:05Z",
+        "completedAt": "2026-10-08T08:16:56Z"
+      },
+      {
+        "name": "input-dev-sample1",
+        "id": 113224091452,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224091452",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:05Z",
+        "completedAt": "2026-10-08T08:35:43Z"
+      },
+      {
+        "name": "browser-preview-mage-sample1",
+        "id": 113224054569,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224054569",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:05Z",
+        "completedAt": "2026-10-08T08:23:14Z"
+      },
+      {
+        "name": "browser-dev-cannon-sample1",
+        "id": 113224053133,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224053133",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:05Z",
+        "completedAt": "2026-10-08T08:23:34Z"
+      },
+      {
+        "name": "input-preview-sample1",
+        "id": 113224115061,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224115061",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:09:05Z",
+        "completedAt": "2026-10-08T08:27:22Z"
+      },
+      {
+        "name": "heap-diagnostics",
+        "id": 113224110970,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224110970",
+        "status": "completed",
+        "conclusion": "skipped",
+        "startedAt": "2026-10-08T08:37:26Z",
+        "completedAt": "2026-10-08T08:37:16Z"
+      },
+      {
+        "name": "warmup-experiment",
+        "id": 113224052720,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224052720",
+        "status": "completed",
+        "conclusion": "skipped",
+        "startedAt": "2026-10-08T08:37:16Z",
+        "completedAt": "2026-10-08T08:37:16Z"
+      },
+      {
+        "name": "compare-evidence-sample1",
+        "id": 113230191899,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113230191899",
+        "status": "completed",
+        "conclusion": "success",
+        "startedAt": "2026-10-08T08:53:50Z",
+        "completedAt": "2026-10-08T08:54:05Z"
+      }
+    ],
+    "jobNameNormalization": "The attempt1 skipped compare job retains a pre-expansion matrix.sample placeholder; it is the same default sample1 dependency later executed successfully. Raw names remain in attempt history.",
+    "jobAttemptHistory": [
+      {
+        "name": "m6-retention",
+        "id": 113213786254,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786254",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "test-and-build-sample1",
+        "id": 113213786306,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786306",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "browser-preview-sniper-sample1",
+        "id": 113213786308,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786308",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "browser-preview-cannon-sample1",
+        "id": 113213786367,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786367",
+        "conclusion": "failure",
+        "attempt": 1
+      },
+      {
+        "name": "browser-dev-mage-sample1",
+        "id": 113213786409,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786409",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "browser-dev-sniper-sample1",
+        "id": 113213786412,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786412",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "m7-presentation-sample1",
+        "id": 113213786418,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786418",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "input-dev-sample1",
+        "id": 113213786434,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786434",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "browser-preview-mage-sample1",
+        "id": 113213786463,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786463",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "browser-dev-cannon-sample1",
+        "id": 113213786470,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786470",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "input-preview-sample1",
+        "id": 113213786475,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786475",
+        "conclusion": "success",
+        "attempt": 1
+      },
+      {
+        "name": "heap-diagnostics",
+        "id": 113213787016,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213787016",
+        "conclusion": "skipped",
+        "attempt": 1
+      },
+      {
+        "name": "warmup-experiment",
+        "id": 113213787881,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213787881",
+        "conclusion": "skipped",
+        "attempt": 1
+      },
+      {
+        "name": "compare-evidence-sample${{ matrix.sample }}",
+        "id": 113223484050,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113223484050",
+        "conclusion": "skipped",
+        "attempt": 1
+      },
+      {
+        "name": "warmup-experiment",
+        "id": 113224052720,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224052720",
+        "conclusion": "skipped",
+        "attempt": 2
+      },
+      {
+        "name": "browser-dev-cannon-sample1",
+        "id": 113224053133,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224053133",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "m7-presentation-sample1",
+        "id": 113224053551,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224053551",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "browser-preview-cannon-sample1",
+        "id": 113224053919,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224053919",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "browser-dev-mage-sample1",
+        "id": 113224054092,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224054092",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "browser-preview-mage-sample1",
+        "id": 113224054569,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224054569",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "browser-dev-sniper-sample1",
+        "id": 113224054733,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224054733",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "input-dev-sample1",
+        "id": 113224091452,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224091452",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "test-and-build-sample1",
+        "id": 113224106325,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224106325",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "browser-preview-sniper-sample1",
+        "id": 113224109809,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224109809",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "heap-diagnostics",
+        "id": 113224110970,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224110970",
+        "conclusion": "skipped",
+        "attempt": 2
+      },
+      {
+        "name": "input-preview-sample1",
+        "id": 113224115061,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224115061",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "m6-retention",
+        "id": 113224115453,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113224115453",
+        "conclusion": "success",
+        "attempt": 2
+      },
+      {
+        "name": "compare-evidence-sample1",
+        "id": 113230191899,
+        "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113230191899",
+        "conclusion": "success",
+        "attempt": 2
+      }
+    ],
+    "testAndBuildLog": {
+      "jobId": 113213786306,
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786306",
+      "rawLogSha256": "75a2b95c53da03e00cc9a12d56a9e6e608a9999c87371c486448d4c244fb783c",
+      "testFilesPassed": 94,
+      "testsPassed": 1169,
+      "testDurationSeconds": 401.18
+    },
+    "budgetLog": {
+      "jobId": 113213786418,
+      "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786418",
+      "rawLogSha256": "452b90777f5e97c85675d9f91980689b950da1b73d03bf604bb8bf521d800403",
+      "jsGzipBytes": {
+        "base": 424763,
+        "current": 466144
+      },
+      "jsBudgetRatio": 1.1,
+      "limitBytes": 467239,
+      "marginBytes": 1095
+    },
+    "firstAttemptRun": {
+      "attempt": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "headSha": "3f102514ce589cdc5302325fe02915a73140b561",
+      "jobs": [
+        {
+          "name": "m6-retention",
+          "id": 113213786254,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786254",
+          "conclusion": "success"
+        },
+        {
+          "name": "test-and-build-sample1",
+          "id": 113213786306,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786306",
+          "conclusion": "success"
+        },
+        {
+          "name": "browser-preview-sniper-sample1",
+          "id": 113213786308,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786308",
+          "conclusion": "success"
+        },
+        {
+          "name": "browser-preview-cannon-sample1",
+          "id": 113213786367,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786367",
+          "conclusion": "failure"
+        },
+        {
+          "name": "browser-dev-mage-sample1",
+          "id": 113213786409,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786409",
+          "conclusion": "success"
+        },
+        {
+          "name": "browser-dev-sniper-sample1",
+          "id": 113213786412,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786412",
+          "conclusion": "success"
+        },
+        {
+          "name": "m7-presentation-sample1",
+          "id": 113213786418,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786418",
+          "conclusion": "success"
+        },
+        {
+          "name": "input-dev-sample1",
+          "id": 113213786434,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786434",
+          "conclusion": "success"
+        },
+        {
+          "name": "browser-preview-mage-sample1",
+          "id": 113213786463,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786463",
+          "conclusion": "success"
+        },
+        {
+          "name": "browser-dev-cannon-sample1",
+          "id": 113213786470,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786470",
+          "conclusion": "success"
+        },
+        {
+          "name": "input-preview-sample1",
+          "id": 113213786475,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786475",
+          "conclusion": "success"
+        },
+        {
+          "name": "heap-diagnostics",
+          "id": 113213787016,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213787016",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "warmup-experiment",
+          "id": 113213787881,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213787881",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "compare-evidence-sample${{ matrix.sample }}",
+          "id": 113223484050,
+          "url": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113223484050",
+          "conclusion": "skipped"
+        }
+      ]
+    },
+    "firstAttemptFailure": {
+      "attempt": 1,
+      "job": "browser-preview-cannon-sample1",
+      "jobId": 113213786367,
+      "logUrl": "https://github.com/catfish-xn/cat/actions/runs/37747928993/job/113213786367",
+      "failedStep": "Normal-time complete route",
+      "reason": "full application post-GC heap growth > 1048576 bytes (preview); H1 independent gate",
+      "artifactId": 11536836861,
+      "artifactUrl": "https://github.com/catfish-xn/cat/actions/runs/37747928993/artifacts/11536836861",
+      "rawLogSha256": "486bc4724aa335d9e942cbf0b60c7cc1c4e00467c8d5740d0903e464b138244d",
+      "lifecycleEvidence": {
+        "heapDiagnostics": false,
+        "warmupExperiment": false,
+        "warmupCycles": 2,
+        "cycles": 30,
+        "heapCeilingBytes": 1048576,
+        "beforeHeap": {
+          "usedSize": 14165944,
+          "totalSize": 17948672,
+          "embedderHeapUsedSize": 6885952,
+          "backingStorageSize": 6298912
+        },
+        "afterHeap": {
+          "usedSize": 15313244,
+          "totalSize": 19259392,
+          "embedderHeapUsedSize": 7561168,
+          "backingStorageSize": 6297009
+        },
+        "heapDelta": 1147300,
+        "beforeResources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        "afterResources": {
+          "listeners": 82,
+          "pendingRaf": 1
+        },
+        "rows": [
+          {
+            "cycle": 1,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "e4cc2a88-c941-4cbc-9c31-52a6f9250f64",
+                "revision": 52
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:11.291Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "e4cc2a88-c941-4cbc-9c31-52a6f9250f64",
+                  "revision": 52
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 2,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "c41d90d2-da77-4132-9613-4bef8e9d2cbe",
+                "revision": 57
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:17.597Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "c41d90d2-da77-4132-9613-4bef8e9d2cbe",
+                  "revision": 57
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 3,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "218227d3-4f74-44da-9e6d-4712fb2cfb51",
+                "revision": 62
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:24.126Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "218227d3-4f74-44da-9e6d-4712fb2cfb51",
+                  "revision": 62
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 4,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "385186b5-2a61-494b-9128-60bf3b49f656",
+                "revision": 67
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:30.501Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "385186b5-2a61-494b-9128-60bf3b49f656",
+                  "revision": 67
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 5,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "98ac564f-3991-48ab-afb0-bfae2aaabba5",
+                "revision": 72
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:36.939Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "98ac564f-3991-48ab-afb0-bfae2aaabba5",
+                  "revision": 72
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 6,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "d7637b5d-b4e9-4d1c-bf3d-b2053524719f",
+                "revision": 77
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:43.183Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "d7637b5d-b4e9-4d1c-bf3d-b2053524719f",
+                  "revision": 77
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 7,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "a2cf0698-ffa9-423c-8f88-9d62f5eda57f",
+                "revision": 82
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:49.514Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "a2cf0698-ffa9-423c-8f88-9d62f5eda57f",
+                  "revision": 82
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 8,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "d6ccc83c-c363-4d07-b357-be430f668226",
+                "revision": 87
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:12:55.899Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "d6ccc83c-c363-4d07-b357-be430f668226",
+                  "revision": 87
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 9,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "d8519416-b626-46fe-9c20-bbe023d27663",
+                "revision": 92
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:02.285Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "d8519416-b626-46fe-9c20-bbe023d27663",
+                  "revision": 92
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 10,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "28da0b03-8e53-4772-8767-44891ab7703c",
+                "revision": 97
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:08.523Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "28da0b03-8e53-4772-8767-44891ab7703c",
+                  "revision": 97
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 11,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "e5af14cc-7664-46e7-bdb7-940a3519f1b8",
+                "revision": 102
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:14.871Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "e5af14cc-7664-46e7-bdb7-940a3519f1b8",
+                  "revision": 102
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 12,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "796e910e-4312-4cd4-9043-23a503ff0764",
+                "revision": 107
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:21.211Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "796e910e-4312-4cd4-9043-23a503ff0764",
+                  "revision": 107
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 13,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "78dbed17-1c1f-4463-ace6-687b27a18d2c",
+                "revision": 112
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:27.585Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "78dbed17-1c1f-4463-ace6-687b27a18d2c",
+                  "revision": 112
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 14,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "9406bbf7-fae6-40ec-a7ec-495ce1ab084c",
+                "revision": 117
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:33.896Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "9406bbf7-fae6-40ec-a7ec-495ce1ab084c",
+                  "revision": 117
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 15,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "31f7e718-9cf8-42a9-840d-902248fc2b96",
+                "revision": 122
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:40.312Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "31f7e718-9cf8-42a9-840d-902248fc2b96",
+                  "revision": 122
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 16,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "9a6edfa7-97da-4b17-ac1e-5883deb6469d",
+                "revision": 127
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:46.704Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "9a6edfa7-97da-4b17-ac1e-5883deb6469d",
+                  "revision": 127
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 17,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "c8a5a446-d7bf-43e0-8545-45b0234f4138",
+                "revision": 132
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:53.111Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "c8a5a446-d7bf-43e0-8545-45b0234f4138",
+                  "revision": 132
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 18,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "93fdfa94-a905-4671-993c-2672457e30b8",
+                "revision": 137
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:13:59.656Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "93fdfa94-a905-4671-993c-2672457e30b8",
+                  "revision": 137
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 19,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "e627fc27-a2b6-4483-926d-8b0e31ca50ab",
+                "revision": 142
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:06.143Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "e627fc27-a2b6-4483-926d-8b0e31ca50ab",
+                  "revision": 142
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 20,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "8a5a5b34-09f6-4cc5-bbaa-0c6570769283",
+                "revision": 147
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:12.609Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "8a5a5b34-09f6-4cc5-bbaa-0c6570769283",
+                  "revision": 147
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 21,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "07ca0796-72ad-4405-91ec-7d4421aab554",
+                "revision": 152
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:19.139Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "07ca0796-72ad-4405-91ec-7d4421aab554",
+                  "revision": 152
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 22,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "83d89e3a-edb5-41cc-91c2-c99a1fd6fe5c",
+                "revision": 157
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:25.428Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "83d89e3a-edb5-41cc-91c2-c99a1fd6fe5c",
+                  "revision": 157
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 23,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "9d05f01a-508d-4b97-a729-d151748e9550",
+                "revision": 162
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:31.884Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "9d05f01a-508d-4b97-a729-d151748e9550",
+                  "revision": 162
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 24,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "e4461182-0798-41da-ae76-45c3ea1f56e6",
+                "revision": 167
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:38.233Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "e4461182-0798-41da-ae76-45c3ea1f56e6",
+                  "revision": 167
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 25,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "5287e911-d398-44d9-8a00-14b74d1c448d",
+                "revision": 172
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:44.545Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "5287e911-d398-44d9-8a00-14b74d1c448d",
+                  "revision": 172
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 26,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "e06b4230-d20c-4ee3-ae22-387d6277c98c",
+                "revision": 177
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:51.008Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "e06b4230-d20c-4ee3-ae22-387d6277c98c",
+                  "revision": 177
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 27,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "29523352-9fef-4c75-af12-11be0c75e044",
+                "revision": 182
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:14:57.401Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "29523352-9fef-4c75-af12-11be0c75e044",
+                  "revision": 182
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 28,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "b133e022-6c58-47f6-808c-e04d86cb956d",
+                "revision": 187
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:15:03.829Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "b133e022-6c58-47f6-808c-e04d86cb956d",
+                  "revision": 187
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 29,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "fbb82366-6035-4616-8f0c-65b4dfe373b8",
+                "revision": 192
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:15:10.129Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "fbb82366-6035-4616-8f0c-65b4dfe373b8",
+                  "revision": 192
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          },
+          {
+            "cycle": 30,
+            "m6": {
+              "mode": "active",
+              "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+              "token": {
+                "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                "activationEpoch": "45b2a48b-c9e0-444b-907f-1de95f8e0b12",
+                "revision": 197
+              },
+              "status": {
+                "kind": "saved",
+                "at": "2026-10-08T08:15:16.396Z",
+                "token": {
+                  "runId": "963da51e-299a-40f4-85f5-d1f796473246",
+                  "activationEpoch": "45b2a48b-c9e0-444b-907f-1de95f8e0b12",
+                  "revision": 197
+                }
+              },
+              "completedCount": 3,
+              "lifecycle": {
+                "applications": 1,
+                "sessions": 1,
+                "observers": 1
+              },
+              "paused": false,
+              "replay": null
+            },
+            "resources": {
+              "listeners": 82,
+              "pendingRaf": 1
+            }
+          }
+        ]
+      },
+      "retryPolicy": "same SHA, original workflow/GC/warmup/thresholds; retry failed job after first attempt completes; keep failure, do not infer H1 stable from retry pass"
+    }
+  },
+  "finalEvidenceCommitPolicy": "This JSON records completed full CI for the runtime code SHA. The subsequent documentation/evidence-only commit must also run full CI at its own exact head SHA; final acceptance report links that final run. Do not label run95 as CI for a different SHA."
+}

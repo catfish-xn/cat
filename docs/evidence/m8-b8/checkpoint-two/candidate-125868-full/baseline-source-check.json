@@ -1,0 +1,7 @@
+{
+  "baselineCommit": "2acb9acfe90ad7936083fa2c7018dd482b6b222f",
+  "baselineTree": "be883c3cfcaa0cfb691b500f8a1e874142176ab0",
+  "archiveRoot": "/tmp/b8-checkpoint-two-baseline",
+  "checkedBuildInputFiles": 163,
+  "mismatches": []
+}

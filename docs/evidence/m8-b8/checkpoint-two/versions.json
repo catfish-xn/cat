@@ -1,0 +1,7 @@
+{
+  "node": "v22.23.3",
+  "vite": "7.3.6",
+  "typescript": "5.9.3",
+  "vitest": "5.0.3",
+  "measurement": "individual emitted JS gzip level 9; sum"
+}

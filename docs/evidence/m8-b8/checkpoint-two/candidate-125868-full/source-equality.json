@@ -1,0 +1,18 @@
+{
+  "sourceBefore": [
+    "bfaff72030d3a25ecc862d3cbb923f4057788eeb",
+    "495d02bb42de698b5c18d4988bd8e7df615a2322",
+    "16568c527580d74caca79e988bb5e8a1d43a290b"
+  ],
+  "sourceAfter": [
+    "bfaff72030d3a25ecc862d3cbb923f4057788eeb",
+    "495d02bb42de698b5c18d4988bd8e7df615a2322",
+    "16568c527580d74caca79e988bb5e8a1d43a290b"
+  ],
+  "equal": true,
+  "toolchain": {
+    "node": "v22.23.3",
+    "npm": "11.9.0"
+  },
+  "metadataTextDifference": "npm warning process PID changes; original files preserved"
+}

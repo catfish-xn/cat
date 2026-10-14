@@ -2,37 +2,54 @@ import Phaser from 'phaser';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
-import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
-import { COMBAT_TICK_MS, type CombatEvent } from '../simulation/combat';
+import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
+import type { MatchEvent, MatchState } from '../simulation/match-types';
+import { COMBAT_TICK_MS } from '../simulation/combat';
+import type { LedgerCombatEvent } from '../simulation/combat-types';
+import type { DisplayCombat, SceneCombatEvent } from '../presentation/combat-display';
 import { HexLayout, type Point } from './hex-layout';
 import { BOARD_LAYOUT } from './layout-config';
 import { MatchSession } from './match-session';
 import { InputRouter } from './input-router';
-import { getStageRound, getRoundKind } from '../simulation/round-schedule';
+import { readRoundInfo } from '../simulation/round-selectors';
 import { StrategyPanel } from './strategy-panel';
 import { MatchApplication } from '../m6/application';
+import { createGameClient, isOnlineMode } from './online/mode';
+import { mountOnlineBoardFrame, type OnlineBoardMounts } from './app-shell';
+import { OnlineApplication, mergeNotice } from './online/online-application';
+import { REPLAY_OPENING_MS, RemoteSession } from './online/remote-session';
+import type { SceneApplication } from './online/scene-application';
 import { aggregateStats, appendStats, emptyStats, type BattleStats } from '../stats/aggregate';
 import { createStatsPanel, type StatsPanel } from '../stats/stats-panel';
 import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../stats/combat-feedback-renderer';
 import type { SessionChange } from '../m6/contracts';
 import { UnitView, type RingState } from '../presentation/unit-view';
+import { getHeroIdentity } from '../presentation/hero-identity';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
+import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, wornDefinitions } from '../presentation/equipment-feedback';
+import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
+import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
+import type { ConsumableTarget } from '../simulation/consumable-types';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
 }
 
 export class BoardScene extends Phaser.Scene {
-  private session = new MatchSession();
-  private application: MatchApplication | null = null;
+  private session: MatchSession = new MatchSession();
+  private application: SceneApplication | null = null;
+  private online = isOnlineMode();
   private statsPanel: StatsPanel | null = null;
   private feedback: CombatFeedbackRenderer | null = null;
   private activeStats: BattleStats | null = null;
+  /** C17: item icons of the battle on the board, as they stood when it was first shown (null when none is shown). */
+  private battleItems: { readonly combatId: string | undefined; readonly items: MatchState['items'] } | null = null;
   private lastStatsRender = -1;
   private lastReplaySeq = -1;
   private replayBattle = '';
@@ -50,6 +67,8 @@ export class BoardScene extends Phaser.Scene {
   private namedObjects = new Map<string, Phaser.GameObjects.Text | Phaser.GameObjects.Container>();
   private draggingId: string | null = null;
   private selectedId: string | null = null;
+  /** Enemy hovered in the encounter preview; presentation-only ring highlight. */
+  private previewHighlight: ReadonlySet<string> = new Set();
   private mouseClient: Point | null = null;
   private shopButtons: Phaser.GameObjects.Text[] = [];
   private shopFrames: Phaser.GameObjects.Graphics[] = [];
@@ -72,14 +91,20 @@ export class BoardScene extends Phaser.Scene {
   private timer!: Phaser.GameObjects.Text;
   private overlay!: Phaser.GameObjects.Graphics;
   private status!: Phaser.GameObjects.Text;
+  /** C18: "本场：X / 下场：Y" above a hovered fighting unit whose equipment changed during the battle. */
+  private loadoutTip!: Phaser.GameObjects.Text;
   private count!: Phaser.GameObjects.Text;
-  private recentCombatEvents: CombatEvent[] = [];
+  private recentCombatEvents: SceneCombatEvent[] = [];
   private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
   private renderedCastCount = 0;
   private renderedUpgradeCount = 0;
 
   constructor() { super('Board'); }
   create() {
+    const client = this.online ? createGameClient() : null;
+    // Online keeps the TFT layout: countdown above the board, shop dock below it. Offline leaves the shell untouched.
+    const mounts: OnlineBoardMounts | null = client ? mountOnlineBoardFrame() : null;
+    if (client && !(this.session instanceof RemoteSession)) { this.session.dispose(); this.session = new RemoteSession(client); }
     buildPortraitTextures(this);
     // Phaser reuses the Scene instance on restart but destroys its display list.
     // Keep the authoritative MatchSession; all cached display references must be new.
@@ -144,22 +169,29 @@ export class BoardScene extends Phaser.Scene {
     }
     this.overlay = this.add.graphics().setDepth(5);
     this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
+    this.loadoutTip = this.add.text(0, 0, '', { fontSize: '12px', color: '#9ff0e4', backgroundColor: '#0b151fe6', padding: { x: 5, y: 3 }, resolution: 2 })
+      .setOrigin(0.5, 1).setDepth(30).setVisible(false).setName('loadout-tip');
     this.help = new HelpPanel();
     this.strategyPanel = new StrategyPanel({
       help: () => this.help?.show(),
-      state: () => this.session.state, shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
+      // Stored only: the next frame's ring sync applies it. Never force layout during a panel rebuild.
+      highlight: ids => { this.previewHighlight = new Set(ids); },
+      state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), battleItems: () => this.frozenItems(), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
-      combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
-      equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效'),
+      combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成', true),
+      // C17: the success text is fixed when the command is sent; outside preparation it names the next battle.
+      // C18-B (§18.3): online the room forwards it to the rules' shared transaction; offline the session runs useConsumable.
+      useConsumable: (id: string, target: ConsumableTarget, success: string) => this.command(this.session.useConsumable(id, target), success),
+      equip: (item, unit, slot, combinedName) => this.command(this.session.equip(item, unit, slot), equipSuccessText(this.session.state.phase, combinedName ?? null), true),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
       buy: (slot, generation) => this.command(this.session.buy(slot, generation), '购买成功'),
-      deploy: (id, location) => this.command(this.session.deploy(id, location), '部署成功'),
+      deploy: (id, location) => { const swap = this.swapsWith(id, location); this.command(this.session.deploy(id, location), swap ? '互换成功' : '部署成功'); },
       control: name => this.panelControl(name),
-      unitAt: (x, y) => this.playerUnitAt(x, y), cancelGesture: () => this.clearDrag(),
+      unitAt: (x, y) => this.boardUnitAt(x, y), cancelGesture: () => this.clearDrag(),
       status: message => this.setStatus(message),
-    }, this.inputRouter);
+    }, this.inputRouter, mounts?.shopDock ?? null);
     this.input.dragDistanceThreshold = 6;
     this.installDragHandlers();
     this.installKeyboardHandlers();
@@ -169,7 +201,22 @@ export class BoardScene extends Phaser.Scene {
       this.selectedId = id; this.syncSelection(); this.renderActiveStats();
     });
     this.feedback = createCombatFeedbackRenderer(document.getElementById('feedback-root')!);
-    this.application = new MatchApplication(this.session, {
+    const refresh = () => {
+      this.clearCombatEffects(); this.selectedId = null; this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
+      // Online stats come from the replay's own events at render time (renderActiveStats); no ledger aggregate.
+      this.activeStats = null;
+      this.feedback?.reset(); this.sync(); this.renderActiveStats();
+    };
+    this.application = client ? new OnlineApplication(this.session as RemoteSession, client, {
+      refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
+      confirmed: commands => this.confirmed(commands.map(command => command.commandId), commands.flatMap(command => command.events)),
+      serverEvents: events => this.serverEvents(events),
+      refused: (commandId, reason, text) => {
+        this.pendingSuccess.delete(commandId);
+        const equipment = this.pendingEquipment.delete(commandId);
+        this.setStatus(text ?? (equipment ? this.equipmentFailure(reason ?? 'wrong-phase') : this.failureMessage(reason ?? 'wrong-phase')));
+      },
+    }, mounts) : new MatchApplication(this.session, {
       replace: session => {
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
         this.strategyPanel?.reset(); this.recentCombatEvents = []; this.renderedCastCount = 0; this.renderedUpgradeCount = 0;
@@ -210,7 +257,7 @@ export class BoardScene extends Phaser.Scene {
   private resetViewReferences() {
     this.views.clear(); this.tokens.clear(); this.renderedCells.clear(); this.effects.clear(); this.namedObjects.clear();
     this.shopButtons.length = 0; this.shopFrames.length = 0;
-    this.draggingId = null; this.selectedId = null; this.recentCombatEvents = [];
+    this.draggingId = null; this.selectedId = null; this.previewHighlight = new Set(); this.recentCombatEvents = [];
     this.inputRouter.cancel();
   }
 
@@ -291,14 +338,18 @@ export class BoardScene extends Phaser.Scene {
       else this.setStatus('请先在单位面板选择一个我方单位');
     }
   }
-  private playerUnitAt(x: number, y: number): string | undefined {
+  /**
+   * Item drop target: any visible piece under the pointer, either team. Ownership is not
+   * filtered here, so an enemy drop reaches previewEquip and shows its 'unknown-unit' reason.
+   * C17: a battle on the board may name my pieces by battle id (PvP replay, C15); the drop targets the unit it stands for.
+   */
+  private boardUnitAt(x: number, y: number): string | undefined {
     const rect = this.game.canvas.getBoundingClientRect();
     const px = (x - rect.left) * this.scale.gameSize.width / rect.width;
     const py = (y - rect.top) * this.scale.gameSize.height / rect.height;
-    return this.state.units.find(unit => unit.team === 'player' && (() => {
-      const token = this.tokens.get(unit.id);
-      return token?.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29;
-    })())?.id;
+    const session = this.session, ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
+    for (const [id, token] of this.tokens) if (token.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29) return ownerOf(id);
+    return undefined;
   }
 
   private button(name: string, x: number, y: number, width: number, height: number, text: string, onClick: () => void, size = 17) {
@@ -311,7 +362,8 @@ export class BoardScene extends Phaser.Scene {
 
   private installDragHandlers() {
     this.input.on('dragstart', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
-      if (this.session.phase !== 'preparation' || !this.tokens.has(token.getData('unitId'))) return;
+      const unit = this.state.units.find(candidate => candidate.id === token.getData('unitId'));
+      if (!unit || !this.canDrag(unit) || !this.tokens.has(unit.id)) return;
       const gesture = this.inputRouter.begin('unit', token.getData('unitId'), pointer.id);
       if (!gesture) return;
       token.setData('gesture', gesture);
@@ -319,7 +371,7 @@ export class BoardScene extends Phaser.Scene {
       token.setDepth(10).setScale(1.08); this.syncSelection();
     });
     this.input.on('drag', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
-      if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
+      if (!this.dragPhase() || this.draggingId !== token.getData('unitId')) return;
       if (!token.getData('gesture') || !this.inputRouter.owns(token.getData('gesture')) || pointer.id !== token.getData('gesture').pointerId) return;
       // Center the token on the pointer: Phaser's threshold-delayed drag offset
       // otherwise incorporates the first mouse move and can shift a whole hex.
@@ -327,25 +379,46 @@ export class BoardScene extends Phaser.Scene {
       token.setPosition(x, y); this.overlay.clear();
       const target = this.target({ x, y });
       if (target) {
-        const reason = validateMatchDeployment(this.session.state, token.getData('unitId'), target);
-        this.setStatus(reason ? this.failureMessage(reason) : '可放置 · 释放以确认部署');
+        // Outside preparation (online T10) only the bench is open; the server and the rules decide the move itself.
+        const reason = this.session.phase === 'preparation' ? validateMatchDeployment(this.session.state, token.getData('unitId'), target) : target.kind === 'board' ? 'wrong-phase' : undefined;
+        this.setStatus(reason ? this.failureMessage(reason) : this.swapsWith(token.getData('unitId'), target) ? '可互换 · 释放以交换两个单位的位置' : '可放置 · 释放以确认部署');
         this.overlay.lineStyle(3, reason ? 0xf08080 : 0x68ddd0);
         if (target.kind === 'board') this.overlay.strokePoints(this.layout.corners(target.cell), true);
         else { const p = this.benchCenter(target.slot); this.overlay.strokeRoundedRect(p.x - 26, p.y - 30, 52, 60, 10); }
       } else this.setStatus(this.failureMessage('invalid-location'));
     });
     this.input.on('dragend', (pointer: Phaser.Input.Pointer, token: Phaser.GameObjects.Container) => {
-      if (this.session.phase !== 'preparation' || this.draggingId !== token.getData('unitId')) return;
+      if (!this.dragPhase() || this.draggingId !== token.getData('unitId')) return;
       const gesture = token.getData('gesture');
       if (!gesture || pointer.id !== gesture.pointerId) return;
       if (pointer.wasCanceled) { this.clearDrag(); return; }
       if (!this.inputRouter.release(gesture)) return;
       // Read release coordinates directly, even if no final drag frame rendered.
       const target = this.target(pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2);
-      if (target) this.command(this.session.deploy(token.getData('unitId'), target), '放置成功 · 可点击选中单位出售');
+      // Read the occupant before deploying: a local swap has already moved it by the time the text is chosen.
+      const swap = !!target && this.swapsWith(token.getData('unitId'), target);
+      if (target && this.session.phase !== 'preparation' && target.kind === 'board') this.setStatus(this.failureMessage('wrong-phase'));
+      else if (target) this.command(this.session.deploy(token.getData('unitId'), target), swap ? '互换成功 · 两个单位已交换位置' : '放置成功 · 可点击选中单位出售');
       else this.setStatus(this.failureMessage('invalid-location'));
       this.clearDrag(); this.sync();
     });
+  }
+  /**
+   * Online (T10, contract §15.1): during my battle, the choice window and the settlement the shop, XP and my bench stay
+   * operable; board units stay where the battle froze them until the next preparation.
+   */
+  private benchOps(): boolean {
+    const session = this.session;
+    return this.online && session instanceof RemoteSession && !session.spectating && session.offline === null
+      && (session.phase === 'combat' || session.phase === 'choice' || session.phase === 'settlement');
+  }
+  private dragPhase(): boolean { return this.session.phase === 'preparation' || this.benchOps(); }
+  private canDrag(unit: Unit): boolean { return unit.team === 'player' && (this.session.phase === 'preparation' || (this.benchOps() && unit.location.kind === 'bench')); }
+  /** Display-only: an allied unit already at the target trades places with the dragged one (SR-C7-01); the rule itself is validateMatchDeployment. */
+  private swapsWith(unitId: string, target: UnitLocation): boolean {
+    return this.state.units.some(unit => unit.id !== unitId && unit.team === 'player' && (unit.location.kind === 'board' && target.kind === 'board'
+      ? unit.location.cell.col === target.cell.col && unit.location.cell.row === target.cell.row
+      : unit.location.kind === 'bench' && target.kind === 'bench' && unit.location.slot === target.slot));
   }
   private benchCenter(slot: number): Point { return { x: 27 + slot * 53.25, y: 480 }; }
   private position(location: UnitLocation): Point { return location.kind === 'board' ? this.layout.center(location.cell) : this.benchCenter(location.slot); }
@@ -356,37 +429,77 @@ export class BoardScene extends Phaser.Scene {
     return undefined;
   }
 
-  private failureMessage(reason: MatchFailure): string {
-    const messages: Record<MatchFailure, string> = {
-      'wrong-phase': this.session.phase === 'preparation' ? '当前为准备阶段 · 请布阵或开始战斗'
+  /** Online rooms can end while my own MatchState is still mid-round (every other seat eliminated). */
+  private onlineEnded(): boolean { return this.online && document.body.dataset.onlineMode === 'online-ended'; }
+  /** Settled round: single player waits for Continue; online the server moves on by itself. */
+  private settledText(): string { return this.online ? '本轮结果已结算 · 稍后自动进入下一回合' : '本轮结果已结算 · 点击 继续保留阵容并进入下一回合'; }
+  /** Game-over status: single player restarts locally; online the server publishes the ranking instead. */
+  private endText(): string {
+    return this.online ? '对局结束 · 查看排名' : `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`;
+  }
+  private failureMessage(reason: MatchFailure): string { return this.knownFailure(reason) ?? `操作被拒绝（${reason}）`; }
+  private knownFailure(reason: string): string | undefined {
+    const messages: Partial<Record<MatchFailure, string>> = {
+      'wrong-phase': this.benchOps() ? '战斗与结算期间只能操作商店和备战席 · 棋盘单位请在下个准备阶段调整'
+        : this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
         : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'
         : this.session.phase === 'combat' ? '正在战斗 · 请等待本轮结算'
-        : this.session.phase === 'settlement' ? '本轮已结算 · 点击 继续进入下一回合'
-        : 'Game Over · 点击 新局 开始新的一局',
+        : this.session.phase === 'settlement' ? (this.online ? '本轮已结算 · 稍后自动进入下一回合' : '本轮已结算 · 点击 继续进入下一回合')
+        : this.online ? '对局结束 · 查看排名' : 'Game Over · 点击 新局 开始新的一局',
       'unknown-unit': '未找到该单位', 'enemy-unit': '敌方单位不可操作或出售',
       'invalid-location': '请放置到棋盘或备战席内', 'outside-deployment-zone': '只能部署在我方区域，不能放入敌方区域',
-      'occupied': '该位置已有单位，请选择空位',
+      // Allied occupants swap since SR-C7-01; the code now only means a non-allied or stacked occupant.
+      'occupied': '该位置被其他单位占用，无法交换',
       'missing-player': '无法开始：请先将至少 1 个我方单位部署到棋盘',
       'missing-enemy': '无法开始：棋盘上至少需要 1 个敌方单位',
       'missing-both': '无法开始：棋盘上双方都至少需要 1 个单位',
       'invalid-slot': '商店槽位无效', 'stale-shop': '商店已更新，请选择当前商品', 'purchased-slot': '该商店槽位已经购买',
       'insufficient-gold': '金币不足', 'bench-full': '备战席已满 · 请先部署或出售单位',
-      'stale-round': '此回合已结束，请使用当前 Continue', 'unsettled-round': '当前回合尚未结算',
+      'stale-round': this.online ? '此回合已结束 · 请在当前回合重新操作' : '此回合已结束，请使用当前 Continue', 'unsettled-round': '当前回合尚未结算',
       'max-level': '已达最高等级 · 无需继续购买经验', 'population-cap': '人口已满 · 按 F 升级或先移回一个单位',
-      'unknown-item': '物品已不存在', 'item-not-inventory': '只能操作物品备战席中的装备',
-      'invalid-recipe': '请选择两件不同的组件实例合成', 'item-slot-occupied': '该装备槽已有物品',
+      // Equipment-only codes share the preview wording (U3 dynamic; replaces the B5 interim copy).
+      ...Object.fromEntries(EQUIPMENT_COMMAND_FAILURES.map(code => [code, EQUIPMENT_FAILURE_TEXT[code]])) as Record<typeof EQUIPMENT_COMMAND_FAILURES[number], string>,
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
-    return messages[reason];
+    // Online shared-pool refusals (pool-empty, empty-slot, ...) arrive through the same path but are not MatchFailures.
+    return (messages as Partial<Record<string, string>>)[reason] ?? POOL_REFUSAL_TEXT[reason] ?? (CONSUMABLE_FAILURE_TEXT as Partial<Record<string, string>>)[reason];
   }
-  private command(result: MatchCommandResult, success: string) {
-    if (!result.ok) { this.setStatus(this.failureMessage(result.reason)); return; }
+  /** Success text of each command still waiting for its server receipt (online WebSocket only). */
+  private pendingSuccess = new Map<number, string>();
+  /** Pending combine/equip commands: a refusal is named by the equipment wording table, like the previews. */
+  private pendingEquipment = new Set<number>();
+  /** Equipment refusal: the shared preview wording for every equipment code (unknown codes get its generic text). */
+  private equipmentFailure(reason: string): string {
+    return reason in EQUIPMENT_FAILURE_TEXT ? equipmentFailureText(reason) : this.knownFailure(reason) ?? equipmentFailureText(reason);
+  }
+  private confirmed(commandIds: readonly number[], events: readonly MatchEvent[]) {
+    const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '操作已确认';
+    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); }
+    if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
+    this.command({ ok: true, state: this.session.state, events }, success);
+  }
+  private command(result: MatchCommandResult, success: string, equipment = false) {
+    if (!result.ok) {
+      // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
+      const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
+      if (notice?.kind === 'pending') { this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); this.setStatus('待确认…'); return; }
+      this.setStatus(notice?.kind === 'offline' ? notice.text : equipment ? this.equipmentFailure(result.reason) : this.failureMessage(result.reason)); return;
+    }
     this.clearCombatEffects();
-    if (this.session.phase !== 'preparation') this.selectedId = null;
-    if (!this.session.combat) this.recentCombatEvents = [];
+    if (this.session.phase !== 'preparation' && !this.benchOps()) this.selectedId = null;
+    if (!this.session.combatView) this.recentCombatEvents = [];
     this.sync();
-    this.showEvents(result.events.filter((event): event is CombatEvent => 'tick' in event));
-    const upgrades = result.events.filter(event => event.type === 'unitUpgraded');
+    this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
+    this.strategyPanel?.recordOperations(result.events);
+    const upgrades = this.showUpgrades(result.events);
+    this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
+    if (this.session.phase === 'gameOver') this.setStatus(this.endText());
+    else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
+    else if (this.session.phase === 'settlement') this.setStatus(this.settledText());
+  }
+  /** Floating "N★ 升星" labels for the upgrades among `events`; returns them. */
+  private showUpgrades(events: readonly MatchEvent[]) {
+    const upgrades = events.filter(event => event.type === 'unitUpgraded');
     for (const event of upgrades) {
       const token = this.tokens.get(event.survivorId);
       // A cascade can consume an intermediate survivor in the same transaction.
@@ -397,14 +510,30 @@ export class BoardScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(20);
       this.fadeEffect(label, 1000); this.renderedUpgradeCount++;
     }
-    this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
-    if (this.session.phase === 'gameOver') this.setStatus(`${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`);
-    else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
-    else if (this.session.phase === 'settlement') this.setStatus('本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
+    return upgrades;
+  }
+  /** Online (T10): the server's own deadline deployment and post-battle merges arrive with its state push. */
+  private serverEvents(events: readonly MatchEvent[]) {
+    const deployed = events.filter(event => event.type === 'unitDeployed').length;
+    const merged = this.showUpgrades(events).length ? mergeNotice(events) : null;
+    if (merged) this.setStatus(merged);
+    else if (deployed) this.setStatus(`准备时间结束 · 已自动上场 ${deployed} 个单位`);
   }
 
   private reconcileTokens() {
-    const ids = new Set(this.state.units.map(unit => unit.id));
+    const view = this.session.combatView, fighting = new Set(view?.units.map(unit => unit.id));
+    // While a battle is shown it stands in for the board. A two-sided (PvP) replay names my units by their
+    // battle ids (contract §10.2; only my own unit mapping reaches the client, C15), so a board unit it does not name is shown
+    // by its combat unit only, never as a second token at its preparation cell (C10).
+    const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
+    const ids = new Set(units.map(unit => unit.id));
+    // Rewards can consume an old unit while its finished combat is still displayed.
+    // Keep that combat view until Continue clears it, including restored settlements.
+    for (const unit of view?.units ?? []) if (!ids.has(unit.id)) {
+      units.push({ id: unit.id, definitionId: unit.definitionId, team: unit.team,
+        starLevel: unit.starLevel, location: { kind: 'board', cell: unit.cell } });
+      ids.add(unit.id);
+    }
     for (const [id, token] of this.tokens) {
       if (ids.has(id)) continue;
       this.views.get(id)?.destroy(); if (token.active) token.destroy();
@@ -412,13 +541,30 @@ export class BoardScene extends Phaser.Scene {
       this.namedObjects.delete(`unit:${id}`);
       if (this.selectedId === id) this.selectedId = null;
     }
-    const items = this.session.state.items;
-    for (const unit of this.state.units) {
+    const items = this.session.state.items, frozen = this.frozenItems();
+    for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
-      const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
-        .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
-      this.views.get(unit.id)!.update(unit, equipped);
+      const owner = this.equipmentOwner(unit.id);
+      // C18: a fighting unit keeps its battle icons; what it wears now beyond them is tagged for the next battle.
+      const loadout = fighting.has(unit.id) ? battleLoadout(items, frozen, owner) : null;
+      const equipped = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
+      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? []);
     }
+  }
+  /**
+   * C17 (contract §17.2): a battle on the board shows the equipment it was fought with. Items equipped or combined
+   * while it is shown are for the next battle, so the item list is frozen when a battle first appears (null when none).
+   */
+  private frozenItems(): MatchState['items'] | null {
+    const view = this.session.combatView;
+    if (!view) this.battleItems = null;
+    else if (!this.battleItems || this.battleItems.combatId !== view.combatId) this.battleItems = { combatId: view.combatId, items: this.session.state.items };
+    return this.battleItems?.items ?? null;
+  }
+  /** C15: a PvP replay names my units by battle id; the server's own-unit mapping says whose items each one carries. */
+  private equipmentOwner(id: string): string {
+    const session = this.session;
+    return session instanceof RemoteSession ? session.equipmentOwnerId(id) : id;
   }
   private createToken(unit: Unit) {
     const p = this.position(unit.location);
@@ -439,6 +585,7 @@ export class BoardScene extends Phaser.Scene {
     this.strategyPanel?.render();
     if (this.session.phase !== 'preparation') {
       for (const token of this.tokens.values()) if (token.input) { this.input.setDraggable(token, false); token.disableInteractive(); }
+      if (this.benchOps()) this.syncOperable();
       this.syncCombat(); return;
     }
     for (const unit of this.state.units) {
@@ -448,75 +595,102 @@ export class BoardScene extends Phaser.Scene {
       if (token.input) { token.input.enabled = true; this.input.setDraggable(token, true); }
     }
   }
+  /**
+   * Online outside preparation: bench tokens sit on their slots, selectable and draggable (bench only). Without a battle
+   * on the board (choice, settlement) the whole lineup is laid out as the latest state has it, so post-battle merges show.
+   */
+  private syncOperable() {
+    const laidOut = !this.session.combatView;
+    for (const unit of this.state.units) {
+      const token = this.tokens.get(unit.id);
+      if (!token || unit.team !== 'player' || (!laidOut && unit.location.kind !== 'bench')) continue;
+      if (this.draggingId !== unit.id) { const p = this.position(unit.location); token.setPosition(p.x, p.y); }
+      token.setVisible(true).setAlpha(1).setScale(1).setDepth(0);
+      if (laidOut) { this.views.get(unit.id)?.resetMeters(); this.renderedCells.delete(unit.id); }
+      if (token.input) { token.input.enabled = true; this.input.setDraggable(token, unit.location.kind === 'bench'); }
+    }
+  }
   private syncHud() {
-    const match = this.session.state, ready = match.phase === 'preparation';
-    this.roundLabel.setText(`${getStageRound(match.round).stage}-${getStageRound(match.round).round}`); this.goldLabel.setText(`金币 ${match.gold}`);
+    const match = this.session.state, ready = match.phase === 'preparation', operable = ready || this.benchOps();
+    const round = readRoundInfo(match);
+    this.roundLabel.setText(round.displayName); this.goldLabel.setText(`金币 ${match.gold}`);
     this.hpLabel.setText(`生命 ${match.playerHp}`);
     this.levelLabel.setText(`等级 ${match.level}`);
     const threshold = getXpToNextLevel(match.level);
     this.xpLabel.setText(threshold === null ? '经验 已满' : `经验 ${match.xp} / ${threshold}`);
     this.oddsLabel.setText(`${match.level} 级搜牌概率 · ${getShopOdds(match.level).map((chance, index) => `${index + 1}费 ${chance}%`).join(' / ')}`);
     this.count.setText(`我方人口 ${getPlayerDeploymentCount(this.state)} / ${getDeploymentCap(match)}`);
-    this.startButton.setText(getRoundKind(match.round) === 'supply' ? '领取补给' : '开始战斗');
+    this.startButton.setText(round.kind === 'supply' ? '领取补给' : '开始战斗');
     this.startButton.setAlpha(this.session.startFailure ? 0.4 : 1).setBackgroundColor('#38695f');
-    this.continueButton.setData('round', match.round).setAlpha(match.phase === 'settlement' ? 1 : 0.4);
-    this.rerollButton.setAlpha(ready ? 1 : 0.4);
-    this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(ready && threshold !== null ? 1 : 0.4);
+    // Same authoritative verdict as the panel button: interactive only when LootView allows Continue.
+    const canContinue = readLootView(match).canContinue;
+    this.continueButton.setData('round', match.round).setAlpha(canContinue ? 1 : 0.4);
+    if (canContinue) this.continueButton.setInteractive({ useHandCursor: true }); else this.continueButton.disableInteractive();
+    this.rerollButton.setAlpha(operable ? 1 : 0.4);
+    this.xpButton.setText(threshold === null ? 'F · 已满级' : `F · ${MATCH_RULES.xpPurchaseCost} 金币 → ${MATCH_RULES.xpPurchaseAmount} 经验`).setAlpha(operable && threshold !== null ? 1 : 0.4);
     for (let slot = 0; slot < this.shopButtons.length; slot++) {
       const offer = match.shop.slots[slot], button = this.shopButtons[slot];
       const frame = this.shopFrames[slot].clear().setVisible(false);
       button.setData('generation', match.shop.generation);
-      if (offer.status === 'purchased') button.setText('已购买').setBackgroundColor('#1c2934').setAlpha(0.45);
+      if (offer.status === 'purchased') button.setText(isEmptyShopSlot(offer) ? '缺货' : '已购买').setBackgroundColor('#1c2934').setAlpha(0.45);
       else {
         const definition = UNIT_DEFINITIONS[offer.definitionId];
         const colors = ['#304653', '#245841', '#28517d', '#634786', '#846230'];
         const borders = [0x7b94a3, 0x68c087, 0x72b6ff, 0xba8bff, 0xffd675];
-        button.setText(`${definition.symbol} ${definition.name}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(ready ? 1 : 0.4);
-        frame.lineStyle(2, borders[definition.cost - 1], ready ? 1 : 0.4).strokeRect(204 + slot * 106, 567, 104, 54);
+        button.setText(`${definition.symbol} ${definition.name}\n购买 · ${definition.cost} 金币`).setBackgroundColor(colors[definition.cost - 1]).setAlpha(operable ? 1 : 0.4);
+        frame.lineStyle(2, borders[definition.cost - 1], operable ? 1 : 0.4).strokeRect(204 + slot * 106, 567, 104, 54);
       }
     }
     const failure = this.session.startFailure;
     this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与经验，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
-    this.phaseLabel.setText(ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
+    this.phaseLabel.setText(this.onlineEnded() ? this.endText() : ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
       : match.phase === 'choice' ? '构筑选择 · 完成组件 / 强化 / 异常 后继续'
-      : match.phase === 'combat' ? '自动战斗 · 积累法力 并施法，商店与部署已锁定'
-      : match.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开` : '回合结算 · 收入与经验 已到账，继续进入下一回合');
-    if (match.phase === 'settlement' || match.phase === 'gameOver') {
-      const labels = { playerWin: '胜利', enemyWin: '失败', draw: '平局', supply: '补给' }, result = match.roundResults.at(-1)!;
+      : match.phase === 'combat' ? (this.online ? '自动战斗 · 可购买 / 刷新 / 买经验，备战席可整理；装备以单位提示为准' : '自动战斗 · 积累法力 并施法，商店与部署已锁定')
+      : match.phase === 'gameOver' ? this.endText() : '回合结算 · 收入与经验 已到账，继续进入下一回合');
+    const result = match.roundResults.at(-1);
+    if ((match.phase === 'settlement' || match.phase === 'gameOver') && result) {
+      const labels = { playerWin: '胜利', enemyWin: '失败', draw: '平局', supply: '补给' };
       this.resultLabel.setText(match.phase === 'gameOver' ? (match.outcome === 'victory' ? '胜利' : '失败') : labels[result.result]);
       const reason = result.result === 'supply' ? '补给 · 无战斗' : result.result === 'playerWin' ? '胜利 · 不扣 HP' : result.result === 'draw' ? `平局 · 基础伤害 ${result.baseDamage}` : `败局 · 基础 ${result.baseDamage} + 存活 ${result.survivingEnemyCount}`;
       this.incomeLabel.setText(`第 ${result.round} 回合 · ${labels[result.result]}\n收入 +${result.income} 金币 / 经验 +${result.xpAwarded}\n等级 ${result.levelBefore} → ${result.levelAfter}\n生命 ${result.hpBefore} → ${result.hpAfter} (-${result.hpLost})\n${reason}`);
     } else { this.resultLabel.setText(''); this.incomeLabel.setText(''); }
-    if (!match.combat) this.timer.setText('');
+    if (!this.session.combatView) this.timer.setText('');
     this.syncSelection();
   }
   private syncSelection() {
     const selected = this.state.units.find(unit => unit.id === this.selectedId);
     if (!selected) this.selectedId = null;
     const displayId = this.draggingId ?? this.hoveredId() ?? this.selectedId;
-    const displayed = this.session.phase === 'preparation' ? this.state.units.find(unit => unit.id === displayId) : undefined;
+    const displayed = this.session.phase === 'preparation' || this.benchOps() ? this.state.units.find(unit => unit.id === displayId) : undefined;
     if (displayed) {
       const definition = getDefinition(displayed), stats = getUnitStats(displayed.definitionId, displayed.starLevel);
-      this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${definition.cost}费\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
+      this.selectionLabel.setText(`${definition.name} ${'★'.repeat(displayed.starLevel)} · ${getHeroIdentity(displayed.definitionId).neutral ? '野怪' : `${definition.cost}费`}\n生命 ${stats.health} / 攻击力 ${stats.attack}\n${displayed.team === 'enemy' ? '敌方 · 不可出售' : `E 售出 +${getUnitSellPrice(displayed)} 金币`}`);
     } else this.selectionLabel.setText('悬停按 E / 点击选择\n集齐三张同星棋子升星');
     this.sellButton.setText(this.selectedId && selected ? `E · 出售 · +${getUnitSellPrice(selected)} 金币` : 'E · 出售');
     this.sellButton.setAlpha(this.selectedId ? 1 : 0.4);
-    for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : 'normal', unit.team);
+    for (const unit of this.state.units) this.views.get(unit.id)?.setRing(unit.id === this.selectedId ? 'selected' : this.previewHighlight.has(unit.id) ? 'target' : 'normal', unit.team);
   }
+  /** Offline ledger aggregate per session change; floats are fed by showEvents for both paths. */
   private observeStats(change: SessionChange) {
+    if (this.session instanceof RemoteSession) { if (!this.session.combatView) this.feedback?.reset(); return; }
     const combat = change.after.combat;
     if (!combat) { this.activeStats = null; this.feedback?.reset(); return; }
     if (!this.activeStats || this.activeStats.combatId !== combat.combatId) {
       this.activeStats = emptyStats(this.application?.debug().runId ?? '', combat.combatId!); this.feedback?.reset();
     }
     this.activeStats = appendStats(this.activeStats, change.events);
-    this.feedback?.push(change.events, performance.now());
     if (combat.status === 'finished') this.renderActiveStats();
   }
   private renderActiveStats() {
-    document.getElementById('stats-root')!.hidden = !this.activeStats || !this.session.combat;
-    if (!this.activeStats || !this.session.combat) return;
-    this.statsPanel?.render({ stats: this.activeStats, combat: this.session.combat, events: this.session.combatEvents, selectedUnitId: this.selectedId });
+    const root = document.getElementById('stats-root')!, view = this.session.combatView, runtime = this.session.combatRuntime;
+    if (this.session instanceof RemoteSession) {
+      // Online (C6): the replay's view and its own events; the panel hides what the whitelist does not carry.
+      root.hidden = !view;
+      if (view) this.statsPanel?.render({ stats: null, runId: 'online', combat: view, events: this.session.displayLog, selectedUnitId: this.selectedId });
+    } else {
+      root.hidden = !this.activeStats || !runtime;
+      if (this.activeStats && runtime) this.statsPanel?.render({ stats: this.activeStats, combat: runtime, events: this.session.combatEvents, selectedUnitId: this.selectedId });
+    }
     this.lastStatsRender = performance.now();
   }
   /** Replay floats anchor to the replay canvas, which shares the board's 480×520 geometry. */
@@ -539,16 +713,28 @@ export class BoardScene extends Phaser.Scene {
   }
   update(_time: number, delta: number) {
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
-    this.renderFeedback();
+    this.renderFeedback(); this.syncLoadoutTip();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
-    const events = this.session.advance(delta);
+    if (this.session instanceof RemoteSession && this.session.takeOpening()) this.showOpening();
+    const events = this.session.advanceDisplay(delta);
+    // A settlement can grant new units before the frame renders its final combat.
+    if (this.session.phase !== 'combat') this.reconcileTokens();
     this.syncCombat(); this.showEvents(events); this.strategyPanel?.updateCombat();
     // Rewards may leave combat directly for a component choice (for example 2-7).
     // Render every phase exit, including choices, before waiting for more input.
     if (this.session.state.phase !== 'combat') {
-      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开` : '本轮结果已结算 · 点击 继续保留阵容并进入下一回合');
+      this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? this.endText() : this.settledText());
     }
+  }
+  /** C18: hovering a fighting unit names the battle's loadout and the next one, when an equip changed it mid-battle. */
+  private syncLoadoutTip() {
+    const view = this.session.combatView, id = view ? this.hoveredId() : undefined;
+    const token = id && view?.units.some(unit => unit.id === id) ? this.tokens.get(id) : undefined;
+    const loadout = token ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
+    if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); return; }
+    const text = battleLoadoutText(loadout, definitionId => ITEM_DEFINITIONS[definitionId]?.name ?? definitionId);
+    this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
   }
   private clearDrag() {
     this.inputRouter.cancel(); this.strategyPanel?.cancel();
@@ -567,17 +753,34 @@ export class BoardScene extends Phaser.Scene {
     for (const effect of this.effects) effect.destroy();
     this.effects.clear(); this.renderedCells.clear(); this.clearDrag();
   }
+  /** The "开战" transition (C6 item 4): shown while an online replay holds its initial view. */
+  private showOpening() {
+    const center = this.layout.center({ col: Math.floor(this.state.board.columns / 2), row: Math.floor(this.state.board.rows / 2) });
+    const banner = this.add.text(center.x, center.y, '开战', { fontSize: '44px', fontStyle: 'bold', color: '#ffe39b', backgroundColor: '#0b151fcc', padding: { x: 18, y: 6 }, resolution: 2 })
+      .setOrigin(0.5).setDepth(30).setName('combat-opening');
+    // An effect like any other: clearCombatEffects() removes it if the battle is cut short.
+    this.effects.add(banner);
+    this.tweens.add({ targets: banner, alpha: 0, delay: REPLAY_OPENING_MS * 0.6, duration: REPLAY_OPENING_MS * 0.6,
+      onComplete: () => { this.effects.delete(banner); banner.destroy(); } });
+  }
+  /**
+   * One drawing path for both modes. Online it draws the replay's CombatViewState; offline the engine units behind
+   * the same view (identical display fields, and the status strip needs the engine state).
+   */
   private syncCombat() {
-    const combat = this.session.combat;
-    if (!combat) return;
+    const view = this.session.combatView, runtime = this.session.combatRuntime;
+    if (!view) return;
+    const combat: DisplayCombat & { readonly tick: number; readonly maxTicks: number } = runtime ?? view;
     for (const unit of this.state.units) {
-      const token = this.tokens.get(unit.id)!;
-      if (token.input) { this.input.setDraggable(token, false); token.input.enabled = true; }
-      if (unit.location.kind === 'bench') token.setAlpha(0.35);
+      const token = this.tokens.get(unit.id);
+      if (!token) continue; // a board unit the battle shows under its battle id
+      const bench = unit.location.kind === 'bench', operable = bench && unit.team === 'player' && this.benchOps();
+      if (token.input) { this.input.setDraggable(token, operable); token.input.enabled = true; }
+      if (bench) token.setAlpha(operable ? 1 : 0.35);
     }
     const selectedTarget = combat.units.find(unit => unit.id === this.selectedId)?.targetId;
     for (const unit of combat.units) {
-      const ring: RingState = unit.id === selectedTarget ? 'target' : unit.id === this.selectedId ? 'selected' : 'normal';
+      const ring: RingState = unit.id === selectedTarget || this.previewHighlight.has(unit.id) ? 'target' : unit.id === this.selectedId ? 'selected' : 'normal';
       this.views.get(unit.id)?.setRing(ring, unit.team);
       const token = this.tokens.get(unit.id)!;
       token.setVisible(unit.alive);
@@ -589,19 +792,22 @@ export class BoardScene extends Phaser.Scene {
         else token.setPosition(p.x, p.y);
         this.renderedCells.set(unit.id, key);
       }
-      this.views.get(unit.id)?.drawCombat(unit);
+      this.views.get(unit.id)?.drawCombat(unit, runtime);
     }
     this.timer.setText(`${(combat.tick * COMBAT_TICK_MS / 1000).toFixed(1)}s / ${(combat.maxTicks * COMBAT_TICK_MS / 1000).toFixed(0)}s`);
   }
-  private showEvents(events: readonly CombatEvent[]) {
-    const combat = this.session.combat;
-    if (!combat) return;
+  /** Offline: the local ledger of the ticks just run. Online: the replay events just played. Same consumers. */
+  private showEvents(events: readonly SceneCombatEvent[]) {
+    const combat = this.session.combatView;
+    if (!combat || !events.length) return;
     this.strategyPanel?.observeEvents(events);
     this.recentCombatEvents.push(...structuredClone(events));
     if (this.recentCombatEvents.length > 200) this.recentCombatEvents.splice(0, this.recentCombatEvents.length - 200);
     const casts = this.fx.casts;
-    this.fx.show(events, combat);
+    // The engine state, when there is one, adds ability colors; positions and teams are the same as the view's.
+    this.fx.show(events, this.session.combatRuntime ?? combat);
     this.renderedCastCount += this.fx.casts - casts;
+    this.feedback?.push(events, performance.now());
   }
   private fadeEffect(effect: Phaser.GameObjects.Graphics | Phaser.GameObjects.Text | Phaser.GameObjects.Arc, duration: number) {
     this.effects.add(effect);
@@ -627,13 +833,16 @@ export class BoardScene extends Phaser.Scene {
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
-        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol })),
+        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip,
+        equipped: this.views.get(id)!.equipped, pendingEquipped: this.views.get(id)!.pendingEquipped, owner: this.equipmentOwner(id) })),
+      loadoutTip: this.loadoutTip?.visible ? this.loadoutTip.text : '',
       health: meters('hp'), mana: meters('mana'),
       shields: meters('shield').map(meter => ({ ...meter, text: this.views.get(meter.id)!.shieldLabel.text, labelVisible: this.views.get(meter.id)!.shieldLabel.visible })),
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,
         xp: this.xpLabel.text, population: this.count.text, odds: this.oddsLabel.text, result: this.resultLabel.text,
         settlement: this.incomeLabel.text, selection: this.selectionLabel.text, startHint: this.startHint.text },
-      recentCombatEvents: this.recentCombatEvents, combatEvents: this.session.combatEvents,
+      recentCombatEvents: this.recentCombatEvents, combatEvents: this.session.combatEvents, combatView: this.session.combatView,
+      replay: this.session instanceof RemoteSession ? this.session.playbackDebug() : null,
       gesture: this.inputRouter.current, gestureEpoch: this.inputRouter.gestureEpoch,
       renderedCastCount: this.renderedCastCount, renderedUpgradeCount: this.renderedUpgradeCount,
       effects: this.effects.size, tweens: this.tweens.getTweens().length, selectedId: this.selectedId, draggingId: this.draggingId,

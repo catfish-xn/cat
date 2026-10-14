@@ -1,0 +1,73 @@
+{
+  "checks": {
+    "routeCount35": true,
+    "definitionCount43": true,
+    "coverageMatchesPriorDefinitionPool": true,
+    "orderedSeedIndicesMatchPriorGreedy": true,
+    "allSeedAndChildPairsMatchPriorGreedy": true,
+    "allOpeningTickTriplesMatchOriginal37Routes": true,
+    "allRoutesRound2_5": true,
+    "shieldSeed123Crownguard": true,
+    "allOriginalAssertionsCompleted": true,
+    "all35MatchSeedsUnique": true,
+    "noSelectedMatchSeed42": true,
+    "allProductionAndHelperToolchainFilesUnchangedInMirror": true,
+    "all1282OriginalTrackedHashesUnchanged": true
+  },
+  "wallMs": 3022.232425,
+  "groups": {
+    "planning512AndSelect35": {
+      "ms": 18.610221999999226,
+      "percent": 0.6157773255972934
+    },
+    "publicEquippedPreparationIncludingHelperAssertions": {
+      "ms": 2327.3432780000007,
+      "percent": 77.00742202181887
+    },
+    "serialize71IncludingRawValidation": {
+      "ms": 297.9626660000016,
+      "percent": 9.859025518197912
+    },
+    "explicitRestore70StringPlus1RawShield": {
+      "ms": 214.51758600000016,
+      "percent": 7.097984398072897
+    },
+    "combatStart35AndTicks175": {
+      "ms": 88.86410600000193,
+      "percent": 2.940346522157439
+    },
+    "outsidePreparationAssertionsExclusive": {
+      "ms": 72.26660100000095,
+      "percent": 2.391166225410375
+    },
+    "shieldJsonParse": {
+      "ms": 0.2917600000000675,
+      "percent": 0.00965379093899661
+    },
+    "unclassifiedInstrumentationAndBookkeeping": {
+      "ms": 2.3762059999953635,
+      "percent": 0.07862419780620822
+    }
+  },
+  "openingBattleCount": 105,
+  "openingCombatTicks": 15969,
+  "assertionCalls": 705,
+  "canonicalOrderedSeedPairSha256": "a30bc378531c59f923e72b57fb65a312d64db5a570412bb3dfe2fac3340e49ab",
+  "mirrorUnchangedFileCount": 174,
+  "concurrentAdditionalTrackedDocFiles": [
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/README.md",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/check.log.gz",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/manifest.json",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/smoke.cjs.gz",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/smoke.exit.gz",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/smoke.log.gz",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/smoke.stderr.gz",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/validate.cjs.gz",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/validate.exit.gz",
+    "docs/evidence/m8-b8/checkpoint-two/browser-close-process-diagnostic/validate.log.gz"
+  ],
+  "notes": [
+    "No second effective test run. Two launcher failures occurred before Vitest could run; retained in prelaunch-* directories.",
+    "Remote commit object 3dc3dd2d634cc64e716630c9a1ff53d65953ff60 unavailable locally; no remote-tree equivalence claimed."
+  ]
+}

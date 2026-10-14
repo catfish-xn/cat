@@ -1,60 +1,32 @@
-/**
- * M7 G07: files exported by the signed-off M6 code (tests/fixtures/m6-saves, generated once
- * from the 631c131 tree) must still import, continue one legal step and replay.
+/** M8_RULES §10 D2-A (B9 flip): the seven original 631c131 M6/M7 exports and their hashes remain unchanged.
+ * They are now recognized by version routing as legacy-preserved (export only, new match required) instead of
+ * failing the digest check; they are never restored, replayed or migrated. The old M7 continuation assertions
+ * remain under tests/historical/m7; the physical legacy library is covered by scripts/verify-m8-b9-legacy.cjs.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { load, manifest as readManifest } from './fixtures/m6-saves/load.cjs';
-import { validateEnvelope } from '../src/persistence/format';
-import { BattleHistory, PlaybackSession, validateBattleCollection } from '../src/replay';
-import { MatchSession } from '../src/rendering/match-session';
+import { CompatibilityError, validateEnvelope } from '../src/persistence/format';
+import { readCompatibility } from '../src/persistence/compatibility';
+import { PlaybackSession } from '../src/replay';
+import { restoreMatch } from '../src/simulation/serialization';
 import type { SaveEnvelope } from '../src/m6/contracts';
 
 const manifest = readManifest();
-
-describe('M6 save files remain compatible', () => {
-  it('covers every required phase', () => {
+describe('M8 version routing preserves original M6/M7 files and refuses to run them', () => {
+  it('retains every historical phase without regenerating old exports', () => {
     expect(new Set(manifest.saves.map(save => save.phase))).toEqual(new Set(['choice', 'preparation', 'combat', 'settlement', 'gameOver']));
   });
-  for (const entry of manifest.saves) it(`${entry.file}: import, continue one step, replay`, async () => {
-    const envelope: SaveEnvelope = await validateEnvelope(load(entry.file), validateBattleCollection);
+  for (const entry of manifest.saves) it(`${entry.file}: legacy-preserved, never restored or replayed, without mutation`, async () => {
+    const envelope = load(entry.file) as SaveEnvelope, original = structuredClone(envelope);
+    const history = vi.fn();
     expect(envelope.match.phase).toBe(entry.phase);
     expect(envelope.battles).toHaveLength(entry.battles);
-    // Same construction as MatchApplication.replaceCandidate.
-    const ledger = envelope.currentBattle?.events ?? envelope.battles.find(record => record.combatId === envelope.match.combat?.combatId)?.events ?? [];
-    const session = new MatchSession(envelope.match, ledger);
-    const history = new BattleHistory(envelope.runId, envelope.battles, envelope.currentBattle);
-    expect(history.completedRecords).toHaveLength(entry.battles);
-    const before = structuredClone(session.state);
-    const state = session.state;
-    if (state.phase === 'choice') {
-      const choice = state.pendingChoice!;
-      const result = choice.step === 'target'
-        ? session.anomalyTarget(choice.choiceId, choice.generation, state.preparation.units.find(unit => unit.team === 'player')!.id)
-        : session.choose(choice.choiceId, choice.generation, choice.offers[0]);
-      expect(result.ok).toBe(true);
-    } else if (state.phase === 'preparation') {
-      expect(session.start().ok).toBe(true);
-      expect(session.state.phase).not.toBe('preparation');
-    } else if (state.phase === 'combat') {
-      const tick = state.combat!.tick;
-      session.advance(50);
-      expect(session.state.combat!.tick).toBe(tick + 1);
-      expect(session.combatEvents.length).toBeGreaterThanOrEqual(ledger.length);
-    } else if (state.phase === 'settlement') {
-      expect(session.continue(state.round).ok).toBe(true);
-      expect(session.state.round).toBe(state.round + 1);
-    } else {
-      expect(session.reroll().ok).toBe(false);
-      expect(session.state).toEqual(before);
-    }
-    const record = envelope.battles[0];
-    if (record) {
-      const playback = new PlaybackSession(record);
-      playback.seek(record.endTick);
-      expect(playback.read().tick).toBe(record.endTick);
-      expect(playback.read().events).toHaveLength(record.events.length);
-      playback.dispose();
-    }
-    session.dispose();
-  }, 120_000);
+    expect(readCompatibility(envelope)).toMatchObject({ status: 'legacy-preserved', fileRulesVersion: 'm5-14.24b-v1', canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' });
+    await expect(validateEnvelope(envelope, history)).rejects.toBeInstanceOf(CompatibilityError);
+    expect(history).not.toHaveBeenCalled();
+    expect(() => restoreMatch(envelope.match)).toThrow('unsupported-version');
+    for (const record of envelope.battles) expect(() => new PlaybackSession(record)).toThrow('记录版本');
+    expect(envelope).toEqual(original);
+    expect(load(entry.file)).toEqual(original);
+  });
 });
