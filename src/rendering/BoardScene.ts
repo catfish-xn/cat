@@ -3,7 +3,7 @@ import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
-import type { MatchEvent } from '../simulation/match-types';
+import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import type { DisplayCombat, SceneCombatEvent } from '../presentation/combat-display';
@@ -31,7 +31,7 @@ import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
-import { EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipmentFailureText } from '../presentation/equipment-feedback';
+import { EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 
 declare global {
@@ -45,6 +45,8 @@ export class BoardScene extends Phaser.Scene {
   private statsPanel: StatsPanel | null = null;
   private feedback: CombatFeedbackRenderer | null = null;
   private activeStats: BattleStats | null = null;
+  /** C17: item icons of the battle on the board, as they stood when it was first shown (null when none is shown). */
+  private battleItems: { readonly combatId: string | undefined; readonly items: MatchState['items'] } | null = null;
   private lastStatsRender = -1;
   private lastReplaySeq = -1;
   private replayBattle = '';
@@ -170,7 +172,8 @@ export class BoardScene extends Phaser.Scene {
       state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成', true),
-      equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效', true),
+      // C17: the success text is fixed when the command is sent; outside preparation it names the next battle.
+      equip: (item, unit, slot, combinedName) => this.command(this.session.equip(item, unit, slot), equipSuccessText(this.session.state.phase, combinedName ?? null), true),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
@@ -329,15 +332,15 @@ export class BoardScene extends Phaser.Scene {
   /**
    * Item drop target: any visible piece under the pointer, either team. Ownership is not
    * filtered here, so an enemy drop reaches previewEquip and shows its 'unknown-unit' reason.
+   * C17: a battle on the board may name my pieces by battle id (PvP replay, C15); the drop targets the unit it stands for.
    */
   private boardUnitAt(x: number, y: number): string | undefined {
     const rect = this.game.canvas.getBoundingClientRect();
     const px = (x - rect.left) * this.scale.gameSize.width / rect.width;
     const py = (y - rect.top) * this.scale.gameSize.height / rect.height;
-    return this.state.units.find(unit => (() => {
-      const token = this.tokens.get(unit.id);
-      return token?.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29;
-    })())?.id;
+    const session = this.session, ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
+    for (const [id, token] of this.tokens) if (token.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29) return ownerOf(id);
+    return undefined;
   }
 
   private button(name: string, x: number, y: number, width: number, height: number, text: string, onClick: () => void, size = 17) {
@@ -529,12 +532,17 @@ export class BoardScene extends Phaser.Scene {
       if (this.selectedId === id) this.selectedId = null;
     }
     const items = this.session.state.items, session = this.session;
+    // C17 (contract §17.2): a battle on the board shows the equipment it was fought with. Items equipped or combined
+    // while it is shown are for the next battle, so its units keep the icons they had when it first appeared.
+    if (!view) this.battleItems = null;
+    else if (!this.battleItems || this.battleItems.combatId !== view.combatId) this.battleItems = { combatId: view.combatId, items };
     // C15: a PvP replay names my units by battle id; the server's own-unit mapping says whose items each one carries.
     const ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
     for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
       const owner = ownerOf(unit.id);
-      const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === owner)
+      const shown = this.battleItems && fighting.has(unit.id) ? this.battleItems.items : items;
+      const equipped = shown.filter(item => item.location.kind === 'unit' && item.location.unitId === owner)
         .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
       this.views.get(unit.id)!.update(unit, equipped);
     }

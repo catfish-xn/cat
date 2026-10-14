@@ -27,7 +27,7 @@ import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
-import { equipmentFailureText, slotList, slotViews, temporaryItemText } from '../presentation/equipment-feedback';
+import { allowedPreviewText, combinationResult, equipmentFailureText, pickUnitDropSlot, slotList, slotViews, temporaryItemText } from '../presentation/equipment-feedback';
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
@@ -64,7 +64,8 @@ interface PanelActions {
   readonly selectedUnit: () => string | null;
   readonly selectUnit: (id: string) => void;
   readonly combine: (a: string, b: string) => void;
-  readonly equip: (item: string, unit: string, slot: number) => void;
+  /** `combinedName`: the finished item previewEquip says this equip creates in the slot (C17), for the success text. */
+  readonly equip: (item: string, unit: string, slot: number, combinedName?: string) => void;
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
@@ -93,6 +94,8 @@ const TERM: Readonly<Record<string,string>> = {
   ability:'技能', trait:'羁绊', item:'装备', augment:'强化', anomaly:'异常', enemyGrowth:'敌方成长',
 };
 const term = (value: string) => TERM[value] ?? value;
+/** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
+const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
 const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? TRAIT_DEFINITIONS[id]?.name ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
 export function describeEffect(effect: Effect): string {
   if (effect.kind === 'mechanic') {
@@ -152,7 +155,7 @@ export class StrategyPanel {
   private eventTexts: string[] = [];
   private eventCombatId: string | undefined;
   private pointerPosition: { x: number; y: number } | null = null;
-  private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement } | null = null;
+  private itemDrag: { gesture: Gesture; x: number; y: number; moved: boolean; element: HTMLElement; target?: string } | null = null;
   private choiceToken = '';
   private lifecycleGuard: { at: number; name: ControlName } | null = null;
   private dismissalTimer: number | null = null;
@@ -216,7 +219,13 @@ export class StrategyPanel {
       const drag = this.itemDrag;
       if (!drag || event.pointerId !== drag.gesture.pointerId || !this.router.owns(drag.gesture)) return;
       if (Math.hypot(event.clientX - drag.x, event.clientY - drag.y) >= 6) drag.moved = true;
-      if (drag.moved) { drag.element.classList.add('dragging'); this.actions.status('拖动物品到单位或空装备槽 · E 不会出售单位'); }
+      if (!drag.moved) return;
+      drag.element.classList.add('dragging');
+      // C17: over a unit or a slot, name what a drop there would do (previewEquip's answer); elsewhere the drag hint.
+      const target = this.dropTarget(event.clientX, event.clientY), key = target ? `${target.unitId}:${target.slot ?? '*'}` : '';
+      if (key === drag.target) return;
+      drag.target = key;
+      this.actions.status(target ? this.dropPreviewText(drag.gesture.id, target.unitId, target.slot) : '拖动物品到单位或空装备槽 · E 不会出售单位');
     };
     const release = (event: PointerEvent) => {
       const drag = this.itemDrag;
@@ -225,17 +234,13 @@ export class StrategyPanel {
       if (!this.router.release(drag.gesture)) return;
       if (drag.element.hasPointerCapture(event.pointerId)) drag.element.releasePointerCapture(event.pointerId);
       if (!drag.moved) { this.selectItem(drag.gesture.id); return; }
-      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-equip-unit]');
-      const unitId = target?.dataset.equipUnit ?? this.actions.unitAt(event.clientX, event.clientY);
-      if (!unitId) { this.actions.status('物品未装备 · 请放到我方单位或空装备槽'); return; }
-      const state = this.actions.state();
-      if (target) { this.equipAt(drag.gesture.id, unitId, Number(target.dataset.equipSlot)); return; }
-      // Dropped on a board piece: use the first slot the domain preview accepts (three-slot items reserve 1–3).
-      const previews = [0, 1, 2].map(slot => previewEquip(state, drag.gesture.id, unitId, slot));
-      const slot = previews.findIndex(preview => preview.allowed);
-      if (slot >= 0) { this.actions.equip(drag.gesture.id, unitId, slot); return; }
-      const main = previews.find(preview => !preview.allowed && preview.reason !== 'item-slot-occupied') ?? previews[0];
-      this.actions.status(main.allowed ? '' : main.reason === 'item-slot-occupied' ? '该单位的 3 个装备槽已满' : equipmentFailureText(main.reason));
+      const target = this.dropTarget(event.clientX, event.clientY);
+      if (!target) { this.actions.status('物品未装备 · 请放到我方单位或空装备槽'); return; }
+      if (target.slot !== null) { this.equipAt(drag.gesture.id, target.unitId, target.slot); return; }
+      // Dropped on a board piece: a slot whose preview combines wins (C17), else the first slot the domain accepts.
+      const previews = this.unitPreviews(drag.gesture.id, target.unitId), slot = pickUnitDropSlot(previews);
+      if (slot >= 0) { this.equipAt(drag.gesture.id, target.unitId, slot); return; }
+      this.actions.status(this.unitRefusalText(previews));
     };
     const cancel = () => this.actions.cancelGesture();
     const cancelPointer = (event: PointerEvent) => {
@@ -299,8 +304,34 @@ export class StrategyPanel {
   private itemsOpen(): boolean { return !isOnlineSpectating() && !isOnlineEnded(); }
   /** A chosen slot: send only what previewEquip accepts, otherwise name its reason. */
   private equipAt(itemId: string, unitId: string, slot: number): void {
-    const preview = previewEquip(this.actions.state(), itemId, unitId, slot);
-    if (preview.allowed) this.actions.equip(itemId, unitId, slot); else this.actions.status(equipmentFailureText(preview.reason));
+    const preview = previewEquip(this.actions.state(), itemId, unitId, slot), combined = combinationResult(preview);
+    if (preview.allowed) this.actions.equip(itemId, unitId, slot, combined ? itemDefinitionName(combined) : undefined);
+    else this.actions.status(equipmentFailureText(preview.reason));
+  }
+  /** Where an item drag points: a slot button of the equipment panel, or a piece on the board (slot chosen on drop). */
+  private dropTarget(x: number, y: number): { unitId: string; slot: number | null } | null {
+    const slot = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-equip-unit]');
+    if (slot?.dataset.equipUnit) return { unitId: slot.dataset.equipUnit, slot: Number(slot.dataset.equipSlot) };
+    const unitId = this.actions.unitAt(x, y);
+    return unitId ? { unitId, slot: null } : null;
+  }
+  private unitPreviews(itemId: string, unitId: string): EquipPreview[] {
+    const state = this.actions.state();
+    return [0, 1, 2].map(slot => previewEquip(state, itemId, unitId, slot));
+  }
+  /** Every slot refused: the most specific reason (an occupied slot is the least informative). */
+  private unitRefusalText(previews: readonly EquipPreview[]): string {
+    const main = previews.find(preview => !preview.allowed && preview.reason !== 'item-slot-occupied') ?? previews[0];
+    return main.allowed ? '' : main.reason === 'item-slot-occupied' ? '该单位的 3 个装备槽已满' : equipmentFailureText(main.reason);
+  }
+  /** What dropping the dragged item on this target would do, in previewEquip's words (C17). */
+  private dropPreviewText(itemId: string, unitId: string, slot: number | null): string {
+    if (slot !== null) {
+      const preview = previewEquip(this.actions.state(), itemId, unitId, slot);
+      return preview.allowed ? allowedPreviewText(preview, slot, itemDefinitionName) : equipmentFailureText(preview.reason);
+    }
+    const previews = this.unitPreviews(itemId, unitId), chosen = pickUnitDropSlot(previews), preview = previews[chosen];
+    return preview?.allowed ? allowedPreviewText(preview, chosen, itemDefinitionName) : this.unitRefusalText(previews);
   }
   private selectItem(id: string) {
     if (!this.itemsOpen()) return;
@@ -519,7 +550,8 @@ export class StrategyPanel {
         if (preview) {
           button.classList.add(preview.allowed ? 'equip-ok' : 'equip-denied');
           button.dataset.preview = preview.allowed ? 'allowed' : preview.reason;
-          button.title = preview.allowed ? `可装备${preview.occupiedSlots.length > 1 ? `，占用槽 ${slotList(preview.occupiedSlots)}` : ''}` : equipmentFailureText(preview.reason);
+          button.title = preview.allowed ? preview.combination ? allowedPreviewText(preview, slot, itemDefinitionName)
+            : `可装备${preview.occupiedSlots.length > 1 ? `，占用槽 ${slotList(preview.occupiedSlots)}` : ''}` : equipmentFailureText(preview.reason);
         }
         if (item && conflicts.has(item.id)) button.classList.add('equip-conflict');
         button.dataset.equipUnit = unit.id; button.dataset.equipSlot = String(slot); slots.append(button);
@@ -552,6 +584,12 @@ export class StrategyPanel {
   private equipHint(previews: readonly EquipPreview[], itemName: (id: string) => string): HTMLElement {
     const allowed = previews.flatMap((preview, slot) => preview.allowed ? [{ slot, preview }] : []);
     if (allowed.length) {
+      // C17: a slot where the component combines with the one already worn is named first, as a drop on the unit picks it.
+      const combining = allowed.find(entry => entry.preview.allowed && entry.preview.combination);
+      if (combining?.preview.allowed) {
+        const hint = element('p', allowedPreviewText(combining.preview, combining.slot, itemDefinitionName), 'equip-hint ok');
+        hint.dataset.preview = 'allowed'; return hint;
+      }
       const span = allowed[0].preview.allowed ? allowed[0].preview.occupiedSlots : [];
       const hint = element('p', span.length > 1 ? `可装备 · 将占用槽 ${slotList(span)}` : `可装备到槽 ${slotList(allowed.map(entry => entry.slot))}`, 'equip-hint ok');
       hint.dataset.preview = 'allowed'; return hint;

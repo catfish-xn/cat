@@ -4,7 +4,7 @@
  * plus display helpers for readUnitEquipment(). The domain decides every reason; this
  * module only names it and never re-checks recipes, uniqueness, slots or phases.
  */
-import type { EquipmentFailure, UnitEquipmentView } from '../simulation/m8/ui-contracts';
+import type { EquipmentFailure, EquipPreview, UnitEquipmentView } from '../simulation/m8/ui-contracts';
 import type { TemporaryEquipment } from '../simulation/m8/contracts';
 
 /** Equipment wording for the frozen EquipmentFailure codes (M8_UI_CONTRACT §2). */
@@ -35,6 +35,34 @@ export const equipmentFailureText = (reason: string): string =>
 
 const slotList = (slots: readonly number[]) => slots.map(slot => slot + 1).join('、');
 export { slotList };
+
+/**
+ * C17: which slot a drop on a whole unit uses, from previewEquip's answers for slots 0–2 in order. A slot whose
+ * preview carries `combination` (a component onto a worn component) wins; otherwise the first allowed slot; -1 when
+ * every slot refuses. Only picks among the domain's answers, never decides a recipe or a slot itself.
+ */
+export function pickUnitDropSlot(previews: readonly EquipPreview[]): number {
+  const combining = previews.findIndex(preview => preview.allowed && preview.combination !== undefined);
+  return combining >= 0 ? combining : previews.findIndex(preview => preview.allowed);
+}
+/** The finished item an allowed preview will create in its slot, or null for a plain equip. */
+export const combinationResult = (preview: EquipPreview): string | null =>
+  preview.allowed && preview.combination ? preview.combination.resultDefinitionId : null;
+/** Preview wording for one allowed slot: "将合成 ⟨成装名⟩" when the domain says the drop combines. */
+export function allowedPreviewText(preview: Extract<EquipPreview, { allowed: true }>, slot: number, name: (definitionId: string) => string): string {
+  if (preview.combination) return `将合成 ${name(preview.combination.resultDefinitionId)}（槽 ${slot + 1}）`;
+  return preview.occupiedSlots.length > 1 ? `可装备 · 将占用槽 ${slotList(preview.occupiedSlots)}` : `可装备到槽 ${slot + 1}`;
+}
+/**
+ * C17 (contract §17.2): equipment changed outside preparation enters the next battle, never the one in progress.
+ * The phase is the shown state's own (an online battle replay is shown in its combat phase).
+ */
+export const NEXT_BATTLE_TEXT = '下场生效';
+export const takesEffectNextBattle = (phase: string): boolean => phase === 'combat' || phase === 'choice' || phase === 'settlement';
+export function equipSuccessText(phase: string, combinedName: string | null): string {
+  const done = combinedName ? `已合成 ${combinedName}` : '装备已穿戴';
+  return takesEffectNextBattle(phase) ? `${done} · ${NEXT_BATTLE_TEXT}` : done;
+}
 
 /** Lifetime wording from the recorded round ids; the domain owns creation and removal. */
 export function temporaryLifetime(item: TemporaryEquipment): string {
