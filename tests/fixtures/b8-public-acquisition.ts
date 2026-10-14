@@ -10,14 +10,17 @@ function accepted(result: MatchCommandResult): MatchState {
 
 /** Acquire each requested permanent item from real component choices and recipes.
  * Returned IDs are selected from the public inventory / itemCombined event, never injected. */
-export function publicInventory(definitions: readonly string[], late = false): { state: MatchState; itemIds: string[] } {
+export function publicInventory(definitions: readonly string[], late = false, seed?: number): { state: MatchState; itemIds: string[] } {
   const components = definitions.flatMap(id => {
     const definition = ITEM_DEFINITIONS[id];
     if (!definition) throw new Error(`Unknown item ${id}`);
     return [...(definition.recipe ?? [id])];
   });
   if (late) while (components.length < 4) components.push('sword');
-  let state = publicEquipmentPreparation(components);
+  // Recursive nine-card purchase controls need the later seed-42 economy;
+  // the faster seed-38 glove route intentionally stops with less liquid gold.
+  let state = publicEquipmentPreparation(components,
+    seed !== undefined ? { seed } : late && components.filter(id => id === 'gloves').length === 2 ? { seed: 42 } : {});
   const available = [...state.items], itemIds: string[] = [];
   for (const id of definitions) {
     const definition = ITEM_DEFINITIONS[id];

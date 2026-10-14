@@ -13,7 +13,7 @@ import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '.
 import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
 import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
-import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ClientCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
 export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
@@ -213,8 +213,8 @@ export interface RoomState {
   readonly poolRevision: number;
 }
 
-/** A seat command is exactly the shared ClientCommand; the room dispatches it to src/simulation/match.ts. */
-export type SeatCommand = ClientCommand;
+/** A seat command is exactly the wire ClientCommand (useConsumable included since T13-B); the room dispatches it to the rules. */
+export type SeatCommand = WireCommand;
 
 /**
  * `seat-controlled`: a player command reached a human seat a bot took over (B6); `control-revoked`: a bot step

@@ -30,6 +30,10 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   // Real public income reaches 3-5. Nine paid Tristana cards create the same
   // three-star kill/growth control without relabelling the opening Irelia.
   let state=publicEquipmentPreparation(['sword','rod','sword','sword']);
+  // The random-loot acquisition route can leave a full reserve. Free it through
+  // real sales before buying nine new Tristana cards; their lineage stays separate.
+  for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))
+   state=accepted(api.sellUnit(state,unit.id));
   state=accepted(api.deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
   const unitId=`unit-${state.nextUnitSerial}`;
   for(let bought=0,rolls=0;bought<9;) {

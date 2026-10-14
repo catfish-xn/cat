@@ -8,6 +8,8 @@ import { previewCombine, previewEquip } from '../item-selectors';
  * no next shop, reward, choice, generated equipment or resulting resource is used to rank actions. */
 export function legal(state: MatchState, action: ClientCommand): boolean {
   switch (action.type) {
+    // Tool use is not part of the current bot policy; do not consume or preview RNG.
+    case 'useConsumable': return false;
     case 'deploy': return validateMatchDeployment(state, action.unitId, action.target) === undefined;
     case 'combine': return previewCombine(state, action.a, action.b).allowed;
     case 'equip': return previewEquip(state, action.itemId, action.unitId, action.slot).allowed;

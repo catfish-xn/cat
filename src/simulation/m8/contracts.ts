@@ -381,6 +381,7 @@ export interface RoundDefinition {
 }
 export type LootPayload =
   | { readonly kind: 'gold'; readonly quantity: number }
+  | { readonly kind: 'consumable'; readonly definitionId: import('../consumable-types').ConsumableDefinitionId; readonly quantity: number }
   | { readonly kind: 'item' | 'unit'; readonly definitionId: string; readonly quantity: number };
 export interface DropIdentity {
   readonly dropId: string;
@@ -395,6 +396,7 @@ export type DropState = DropIdentity & { readonly payload: LootPayload } & (
   | { readonly status: 'forfeited'; readonly receiptId: null }
 );
 export interface LootReceipt {
+  readonly grantedConsumableIds?: readonly string[];
   readonly receiptId: string;
   readonly dropId: string;
   readonly payload: LootPayload;
@@ -433,13 +435,13 @@ export interface M8CombatExtension {
 /** Frozen target identifiers. Current M7 constants deliberately remain unchanged. */
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
-  readonly schemaVersion: 6;
-  readonly rulesVersion: 'm8-14.24b-v1';
-  readonly contentVersion: 's13-14.24b-m8-v1';
+  readonly schemaVersion: 7;
+  readonly rulesVersion: 's13-rules-gap-v1';
+  readonly contentVersion: 's13-14.24b-rules-gap-v1';
   readonly contentDigest: string;
-  readonly saveFormatVersion: 2;
-  readonly replayFormatVersion: 2;
-  readonly commandProtocolVersion: 2;
+  readonly saveFormatVersion: 3;
+  readonly replayFormatVersion: 3;
+  readonly commandProtocolVersion: 3;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }

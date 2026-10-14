@@ -58,7 +58,7 @@ describe('B7 isolated approved content, not the enabled Match catalog', () => {
     for (const [roundId, encounterId, slots] of formations) {
       const result = compileNeutralEncounter(roundId);
       expect(result).toMatchObject({ roundId, encounterId, encounterRngDraws: 0,
-        catalogVersion: 'm8b-encounters-project-v1', policyVersion: 'm8b-pve-project-v1' });
+        catalogVersion: 'm8b-encounters-project-v1', policyVersion: 'm8b-pve-project-v2' });
       expect(result.deployment).toEqual(slots.map(([slotId, definitionId, col, row]) => ({
         id: JSON.stringify(['pve', roundId, encounterId, slotId]), definitionId, encounterId,
         team: 'enemy', starLevel: 1, location: { kind: 'board', cell: { col, row } },

@@ -88,7 +88,7 @@ interface SceneBridge {
 const sessions: MatchSession[] = [];
 afterEach(() => { for (const session of sessions.splice(0)) session.dispose(); display.created.length = 0; vi.restoreAllMocks(); });
 
-function makeScene(initial: MatchState = createMatch(42)) {
+function makeScene(initial: MatchState = createMatch(6240)) {
   const scene = new BoardScene() as unknown as SceneBridge;
   scene.session.dispose();
   scene.session = new MatchSession(initial);
@@ -129,20 +129,18 @@ function token(scene: SceneBridge, id: string): Token {
 }
 function creations(id: string) { return display.created.filter(view => view.token.getData('unitId') === id); }
 function prepareConsumedCombatUnit() {
-  const scene = makeScene(createMatch(1));
+  const scene = makeScene(createMatch(13));
   finish(scene);
   command(scene, scene.session.continue(1));
-  // The real seed-1 shop has Lux in slots 0 and 4. The 1-2 win pays the full 2G.
-  for (const slot of [0, 4]) command(scene, scene.session.buy(slot, scene.session.state.shop.generation));
+  // The real seed-13 shop has Lux in slots 2 and 3. The 1-2 win pays the full 2G.
+  for (const slot of [2, 3]) command(scene, scene.session.buy(slot, scene.session.state.shop.generation));
   command(scene, scene.session.deploy('unit-1', { kind: 'bench', slot: 3 }));
   command(scene, scene.session.deploy('unit-3', { kind: 'board', cell: { col: 2, row: 4 } }));
   command(scene, scene.session.deploy('unit-4', { kind: 'board', cell: { col: 3, row: 4 } }));
   return scene;
 }
 function resolveRewardAndContinue(scene: SceneBridge, beforeContinue?: () => void) {
-  const choice = scene.session.state.pendingChoice;
-  expect(choice).not.toBeNull();
-  command(scene, scene.session.choose(choice!.choiceId, choice!.generation, 'sword'));
+  expect(scene.session.state.pendingChoice).toBeNull(); // §18: PvE grants automatically.
   expect(scene.session.phase).toBe('settlement');
   beforeContinue?.();
   command(scene, scene.session.continue(scene.session.state.round));
@@ -151,7 +149,7 @@ function resolveRewardAndContinue(scene: SceneBridge, beforeContinue?: () => voi
 }
 
 describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser claim)', () => {
-  it('creates the actual seed-42 Maddie before final-frame syncCombat and keeps one selectable, non-draggable bench token', () => {
+  it('creates the actual seed-6240 Maddie before final-frame syncCombat and keeps one selectable, non-draggable bench token', () => {
     const scene = makeScene();
     const initialIds = [...scene.tokens.keys()];
     const calls: string[] = [];
@@ -175,7 +173,7 @@ describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser c
     expect(scene.session.phase).toBe('settlement');
     expect(calls).toEqual(['reconcile', 'syncCombat']);
     expect(scene.session.state.roundResults[0].result).toBe('playerWin');
-    expect(scene.session.state.m8.loot.receipts).toHaveLength(1);
+    expect(scene.session.state.m8.loot.receipts).toHaveLength(2);
     expect(scene.session.state.m8.loot.receipts[0]).toMatchObject({
       payload: { kind: 'unit', definitionId: 'maddie', quantity: 1 }, grantedUnitIds: ['unit-2'],
     });
@@ -212,13 +210,13 @@ describe('B8 real BoardScene reward-token lifecycle (display mocks, no browser c
     }
   });
 
-  it('retains an actually consumed Combat Lux through reward choice, then destroys every cached reference on Continue', () => {
+  it('retains an actually consumed Combat Lux through automatic reward settlement, then destroys every cached reference on Continue', () => {
     const scene = prepareConsumedCombatUnit();
     const consumed = token(scene, 'unit-4'), consumedView = scene.views.get('unit-4')!;
     finish(scene);
-    expect(scene.session.phase).toBe('choice');
+    expect(scene.session.phase).toBe('settlement');
     expect(scene.session.state.roundResults[1].result).toBe('playerWin');
-    expect(scene.session.state.m8.loot.receipts.at(-1)).toMatchObject({ payload: { kind: 'unit', definitionId: 'lux', quantity: 1 }, grantedUnitIds: ['unit-5'] });
+    expect(scene.session.state.m8.loot.receipts.find(r=>r.grantedUnitIds.includes('unit-5'))).toMatchObject({ payload: { kind: 'unit', definitionId: 'lux', quantity: 1 }, grantedUnitIds: ['unit-5'] });
     expect(scene.session.state.resourceProvenance.entries.find(entry => entry.kind === 'unit-upgraded')).toMatchObject({
       event: { survivorId: 'unit-3', consumedIds: ['unit-4', 'unit-5'], fromStar: 1, toStar: 2 },
     });

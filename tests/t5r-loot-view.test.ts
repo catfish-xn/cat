@@ -23,9 +23,9 @@ function withDrop(status: DirectLootProgress['status'], payload: LootPayload = {
 }
 function check(state: MatchState) {
   const before=JSON.stringify(state),view=toPrivateSeatView(freeze(state));
-  expect(view.revealedLoot).toEqual({roundId:state.roundDefinitionId,revealedDrops:readLootView(state).revealedDrops});
+  expect(view.revealedLoot).toEqual({roundId:state.roundDefinitionId,revealedDrops:readLootView(state).revealedDrops,revealedOrbs:readLootView(state).revealedOrbs});
   expect(view.m8).not.toHaveProperty('loot');
-  expect(Object.keys(view.revealedLoot!).sort()).toEqual(['revealedDrops','roundId']);
+  expect(Object.keys(view.revealedLoot!).sort()).toEqual(['revealedDrops','revealedOrbs','roundId']);
   expect(JSON.parse(JSON.stringify(view)).revealedLoot).toEqual(view.revealedLoot);
   expect(JSON.stringify(state)).toBe(before);
   return view.revealedLoot!;
@@ -66,18 +66,9 @@ describe('SR-C7-02 revealed loot whitelist',()=>{
     const drop=check(withDrop('granted',payload)).revealedDrops[0];expect(drop.payload).toEqual(payload);
     expect(Object.keys(drop.payload).sort()).toEqual(Object.keys(payload).sort());
   });
-  it('withholds unresolved choice/fallback and exposes a component only after its receipt',()=>{
-    const state=withDrop('forfeited'),choice=planOf(state).choices[0];expect(choice).toBeDefined();
-    const earned:MatchState={...state,m8:{...state.m8,loot:{...state.m8.loot,
-      choiceEligibility:state.m8.loot.choiceEligibility.map(c=>c.dropId===choice.dropId?{...c,status:'revealed'}:c)}}};
-    expect(check(earned).revealedDrops).toEqual([]);
-    const receiptId=lootReceiptId(choice.dropId),paid:MatchState={...earned,m8:{...earned.m8,loot:{...earned.m8.loot,
-      choiceResolutions:[{dropId:choice.dropId,receiptId,method:'player-choice'}],
-      receipts:[{dropId:choice.dropId,receiptId,payload:{kind:'item',definitionId:'sword',quantity:1},grantedItemIds:['private-item'],grantedUnitIds:[]}],
-    }}};
-    expect(check(paid).revealedDrops).toEqual([{dropId:choice.dropId,encounterId:choice.encounterId,sourceUnitId:choice.sourceUnitId,
-      roundId:'2-7',status:'granted',receiptId,payload:{kind:'item',definitionId:'sword',quantity:1},allowedActions:[]}]);
-    expect(JSON.stringify(toPrivateSeatView(paid).revealedLoot)).not.toMatch(/fallback|player-choice|private-item|slotOrdinal/);
+  it('never creates a PvE choice or exposes an unearned entry',()=>{
+    const state=withDrop('planned');expect(planOf(state).choices).toEqual([]);
+    expect(readLootView(state).pendingChoice).toBeNull();expect(check(state).revealedDrops).toEqual([]);
   });
   it('omits PvP/supply and mismatched round/encounter summaries, even with an old earned ledger',()=>{
     const state=withDrop('granted');
@@ -124,14 +115,15 @@ describe('SR-C7-02 revealed loot whitelist',()=>{
     detached(view);
   });
   it('shows real shared-pool shortage compensation from the paid receipt, not the frozen hero plan',()=>{
-    const {pool,states}=room({irelia:2,maddie:1}),first=fight(pool,states[0]),second=fight(first.pool,states[1]);
-    expect(check(first.state).revealedDrops[0].payload).toEqual({kind:'unit',definitionId:'maddie',quantity:1});
+    const {pool,states}=room({irelia:2,darius:1}),first=fight(pool,states[0]),second=fight(first.pool,states[1]);
+    expect(check(first.state).revealedDrops[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
     expect(check(second.state).revealedDrops[0].payload).toEqual({kind:'gold',quantity:1});
   });
-  it('shows a real pending-capacity reward and removes it when timeout forfeits the reserved copy',()=>{
+  it('shows a real pending-capacity reward and retains its timeout forfeiture',()=>{
     const full=fullBench(),pending=fight(full.pool,full.state);
     expect(check(pending.state).revealedDrops[0]).toMatchObject({status:'pending-capacity',reason:'bench-full'});
     const discarded=accept(runSharedMatchCommand(pending.pool,pending.state,{type:'claimLoot',round:pending.state.round}));
-    expect(check(discarded.state).revealedDrops).toEqual([]);
+    expect(check(discarded.state).revealedDrops[0]).toMatchObject({status:'forfeited',reason:'timeout-forfeited'});
+    expect(check(discarded.state).revealedDrops[1].payload.kind).toBe('consumable');
   });
 });

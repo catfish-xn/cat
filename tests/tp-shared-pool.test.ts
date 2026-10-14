@@ -1,3 +1,4 @@
+import { syntheticSharedRound } from './tp-helpers';
 import { describe, expect, it } from 'vitest';
 import { createMatch, createSharedPool, initializeSharedSeat, generateSharedShop, refreshSharedShops,
   buySharedUnit, rerollSharedShop, sellSharedUnit, setSharedShopLock, releaseSeatOnElimination,
@@ -96,8 +97,8 @@ describe('TP finite shop transactions',()=>{
     const foreign={...s,sharedPool:{...s.sharedPool!,poolId:'foreign'}};
     rejected(generateSharedShop(pool,foreign,0),pool,foreign,'invalid-seat-state');
     expect(()=>createSharedPool('x',0,{capacities:{unknown:1}})).toThrow();expect(()=>createSharedPool('x',0,{capacities:{caitlyn:10}})).toThrow();
-    const small=createSharedPool('small',1,{seatCount:2,capacities:{irelia:1}}),first=accept(initializeSharedSeat(small,createMatch(5),'A',0));
-    const second=createMatch(5);rejected(initializeSharedSeat(first.pool,second,'B',1),first.pool,second,'pool-empty');
+    const small=createSharedPool('small',1,{seatCount:2,capacities:{irelia:1}}),first=accept(initializeSharedSeat(small,createMatch(5, {mode:'shared-deferred'}),'A',0));
+    const second=createMatch(5, {mode:'shared-deferred'});rejected(initializeSharedSeat(first.pool,second,'B',1),first.pool,second,'pool-empty');
   });
 });
 
@@ -110,7 +111,7 @@ describe('TP whole-room natural refresh',()=>{
     const leaders:string[]=[];
     for(let round=2;round<=9;round++) {
       // Isolated shop-scheduler vectors; catalog/history advance is tested separately through public commands.
-      const prepared=states.map(s=>({...s,round}));const r=batch(refreshSharedShops(freeze(pool),freeze(prepared),round));
+      const prepared=syntheticSharedRound(pool,states,round);const r=batch(refreshSharedShops(freeze(prepared.pool),freeze(prepared.states),round));
       const order=r.poolEvents.find(e=>e.type==='sharedRefreshOrder');if(order?.type!=='sharedRefreshOrder')throw new Error('order');leaders.push(order.seatIds[0]);
       expect(r.pool.shops.filter(s=>s.seatId==='seat-0')).toEqual(held);expect(r.states[0].shop.generation).toBe(1);
       expect(r.states[0].rngState).toBe(locked.state.rngState);conserved(r.pool,r.states);pool=r.pool;states=[...r.states];
@@ -120,7 +121,7 @@ describe('TP whole-room natural refresh',()=>{
   });
   it('the first seat in a new round can draw the old last seat reservation (release barrier)',()=>{
     let {pool,states}=room({irelia:2,maddie:1});let r=batch(refreshSharedShops(pool,states,1));
-    const owner=r.pool.shops[0].seatId;r=batch(refreshSharedShops(r.pool,r.states.map(s=>({...s,round:2})),2));
+    const owner=r.pool.shops[0].seatId,prepared=syntheticSharedRound(r.pool,r.states,2);r=batch(refreshSharedShops(prepared.pool,prepared.states,2));
     expect(r.pool.shops[0].seatId).not.toBe(owner);expect(r.pool.available.maddie).toBe(0);conserved(r.pool,r.states);
   });
   it('missing seats and a late wrong-phase state reject the entire batch unchanged',()=>{

@@ -12,13 +12,14 @@ const deploymentBaseline = require('../tests/t1-deployment-baseline.json');
 const t10Baseline = require('../tests/t10-content-baseline.json');
 const t11Baseline = require('../tests/t11-content-baseline.json');
 const t12Baseline = require('../tests/t12-content-baseline.json');
-const t13aBaseline = require('../tests/t13-a-content-baseline.json');
+const t13Baseline = require('../tests/t13-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
   seed: state.seed, shop: state.rngState, choice: state.choiceRngState,
   reward: state.rewardRngState, battleSeed: state.battleSeedRngState,
-  equipment: state.equipmentState.equipment, loot: state.m8.loot.frozen.rng,
+  equipment: state.equipmentState.equipment, reforge: state.reforgeState,
+  layout: state.m8.loot.layoutBinding.mode === 'solo' ? state.m8.loot.layoutBinding.layout.rng : null, loot: state.m8.loot.frozen.rng,
   combat: state.combat ? { state: state.combat.rngState, draws: state.combat.rngDraws } : null,
 });
 
@@ -61,8 +62,9 @@ async function worker() {
     'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay', 'startCombatReplay',
     'applyCombatReplayTick', 'COMBAT_REPLAY_KEYFRAME_INTERVAL',
     'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',
-    'createMatch', 'deployMatchUnit', 'autoDeployToCap', 'lockMatchCombatRoster', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
+    'CONSUMABLE_DEFINITIONS', 'createMatch', 'deployMatchUnit', 'autoDeployToCap', 'lockMatchCombatRoster', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
     'startMatchCombat', 'stepMatch', 'nextRound', 'combineItems', 'equipItem',
+    'useConsumable', 'previewUseConsumable', 'createOrbLayout', 'freezeOrbLayoutThroughRound', 'freezeLootThroughRound', 'readComponentEquivalent',
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',
     'validateMatchDeployment', 'matchStartFailure', 'needsAnomalyRecruitment', 'serializeMatch', 'restoreMatch',
     'snapshotForBattle', 'restorePlayerBattleSnapshot', 'compileBattle', 'restoreBattleInput',
@@ -77,11 +79,12 @@ async function worker() {
   const actual = battle(api), expected = battle(reference);
   assert.equal(actual.steps.length, expected.steps.length);
   const traceHashes = {};
-  let originalStateTraceHash;
-  assert.equal(actual.initial.contentDigest, t13aBaseline.contentDigest);
-  assert.equal(t13aBaseline.previousContentDigest, t12Baseline.contentDigest);
+  const originalStateTraceHash = baseline.traceHashes.state;
+  assert.equal(actual.initial.contentDigest,t13Baseline.contentDigest);
+  assert.notEqual(actual.initial.contentDigest, t12Baseline.contentDigest);
   assert.equal(t12Baseline.previousContentDigest, t11Baseline.contentDigest);
-  assert.equal(actual.initial.m8.loot.frozen.replayDigest, t11Baseline.lootReplayDigest);
+  assert.equal(actual.initial.m8.loot.frozen.replayDigest,t13Baseline.lootReplayDigest);
+  assert.notEqual(actual.initial.m8.loot.frozen.replayDigest, t11Baseline.lootReplayDigest);
   assert.equal(t11Baseline.previousContentDigest, t10Baseline.contentDigest);
   assert.equal(t10Baseline.previousContentDigest, deploymentBaseline.contentDigest);
   for (const [key, project] of Object.entries({
@@ -92,26 +95,10 @@ async function worker() {
     const browserBytes = Buffer.from(JSON.stringify(expected.steps.map(project)));
     assert(nodeBytes.equals(browserBytes), `${key} trace differs from browser-target source bundle`);
     traceHashes[key] = sha256(nodeBytes);
-    if (key === 'state') {
-      assert.equal(traceHashes.state, t13aBaseline.stateTraceHash, 'state changed from the T13-A digest revision');
-      const t12Bytes = JSON.stringify(actual.steps.map(project), (name, value) =>
-        name === 'contentDigest' && value === t13aBaseline.contentDigest ? t12Baseline.contentDigest : value);
-      assert.equal(sha256(t12Bytes), t12Baseline.stateTraceHash, 'first battle changed beyond T13-A identity');
-      const t11Bytes = JSON.stringify(actual.steps.map(project), (name, value) =>
-        name === 'contentDigest' && value === t13aBaseline.contentDigest ? t11Baseline.contentDigest : value);
-      assert.equal(sha256(t11Bytes), t11Baseline.stateTraceHash, 'first battle changed beyond T13-A digest');
-      const t10Bytes = JSON.stringify(actual.steps.map(project), (name, value) =>
-        name === 'contentDigest' && value === t13aBaseline.contentDigest ? t10Baseline.contentDigest
-        : name === 'replayDigest' && value === t11Baseline.lootReplayDigest ? t11Baseline.previousLootReplayDigest : value);
-      assert.equal(sha256(t10Bytes), t10Baseline.stateTraceHash, 'first battle changed beyond T11 content/loot identity');
-      // Preserve the original T1 and T10 goldens. T11 changes content identity and the
-      // frozen loot replay identity; first-battle gameplay, events and RNG remain exact.
-      const originalBytes = JSON.stringify(actual.steps.map(project), (name, value) =>
-        name === 'contentDigest' && value === t13aBaseline.contentDigest ? deploymentBaseline.previousContentDigest
-        : name === 'replayDigest' && value === t11Baseline.lootReplayDigest ? t11Baseline.previousLootReplayDigest : value);
-      originalStateTraceHash = sha256(originalBytes);
-      assert.equal(originalStateTraceHash, baseline.traceHashes.state, 'first battle changed beyond deployment content identity');
-    } else assert.equal(traceHashes[key], baseline.traceHashes[key], `${key} changed from the pinned source baseline`);
+    assert.equal(traceHashes[key],t13Baseline.traceHashes[key],`pinned T13 ${key} trace`);
+    // T13 changes opening reward content, Match schema and random streams.
+    // Preserve prior baselines; do not normalize away actual gameplay differences.
+    assert.notEqual(traceHashes[key], baseline.traceHashes[key], `T13 ${key} must record the signed change`);
   }
   const combatEvents = actual.events.filter(event => 'tick' in event);
   const summary = { seed: baseline.seed, ticks: actual.state.combat.tick, events: combatEvents.length,
@@ -154,7 +141,7 @@ async function worker() {
   assert.equal(terminal.state, actual.state);
   assert.deepStrictEqual(terminal.events, []);
   fs.writeFileSync(path.join(out, 'node-terminal.json'), JSON.stringify({ state: actual.state, events: actual.events }));
-  return { ...summary, traceHashes, originalStateTraceHash, deploymentBaseline, t10Baseline, t11Baseline, t12Baseline, t13aBaseline, comparedStates: actual.steps.length, exports: expectedExports,
+  return { ...summary, traceHashes, originalStateTraceHash, t13Identity: {contentDigest:actual.initial.contentDigest,lootReplayDigest:actual.initial.m8.loot.frozen.replayDigest,rulesVersion:actual.initial.rulesVersion,schemaVersion:actual.initial.schemaVersion}, deploymentBaseline, t10Baseline, t11Baseline, t12Baseline, comparedStates: actual.steps.length, exports: expectedExports,
     unchangedFailures: ['stale-shop', 'insufficient-gold (buy/reroll/XP)', 'wrong-phase'],
     restoreTick: 40, restoreTextAndObject: true, rejectedBadDigestAndVersion: true,
     browserGlobalsAndImplicitClockAndRandomBlocked: true };

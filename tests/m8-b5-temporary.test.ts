@@ -7,24 +7,16 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { planTemporaryEquipment, validateMatchEquipment, TEMPORARY_EQUIPMENT_POOL } from '../src/simulation/temporary-equipment';
 import { generateRoundRolls, initializeStreams } from '../src/simulation/m8/equipment';
 import { accepted, emptyBoard, freeze } from './match-helpers';
-import { publicEquipmentPreparation, finishPublicEquipmentBattle, resolvePublicEquipmentChoices } from './fixtures/b8-public-equipment';
+import { publicGlovesInventory } from './fixtures/t13-public-gloves';
 
-const levelRounds: Readonly<Record<number, string>> = { 3: '2-1', 6: '2-5', 7: '2-7', 9: '4-2' };
-function inventoryAtRound(roundId = '2-1', seed = 42): MatchState {
-  let state = publicEquipmentPreparation(['gloves', 'gloves'], { seed });
-  state = accepted(combineItems(state, 'item-1', 'item-2'));
-  while (state.roundDefinitionId !== roundId) {
-    state = resolvePublicEquipmentChoices(state);
-    if (state.phase === 'preparation') state = finishPublicEquipmentBattle(state);
-    state = resolvePublicEquipmentChoices(state);
-    state = accepted(nextRound(state, state.round));
-  }
-  return resolvePublicEquipmentChoices(state);
-}
+// Level 3 is now a mechanism-only vector: two guaranteed gloves arrive at 3-5.
+// Its public control uses level 5, which has the identical <=6 equipment pool.
+const levelRounds: Readonly<Record<number, string>> = { 3: '3-5', 6: '3-5', 7: '3-5', 9: '4-2' };
+const inventoryAtRound = publicGlovesInventory;
 function inventory(level = 3, seed = 42): MatchState {
   let state = inventoryAtRound(levelRounds[level], seed);
-  while (state.level < level) state = accepted(buyXp(state));
-  expect(state.level).toBe(level);
+  while (state.level < Math.max(5, level)) state = accepted(buyXp(state));
+  expect(state.level).toBe(Math.max(5, level));
   return accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
 }
 function equipped(level = 3, seed = 42): MatchState { return accepted(equipItem(inventory(level, seed), 'item-3', 'unit-1', 0)); }
@@ -33,7 +25,7 @@ function equipped(level = 3, seed = 42): MatchState { return accepted(equipItem(
  */
 function mechanismInventory(level: number): MatchState {
   const state = inventory();
-  return { ...state, level, xp: 0 };
+  return { ...state, round: 4, roundDefinitionId: '2-1', roundResults: state.roundResults.slice(0, 3), level, xp: 0 };
 }
 const pair = (state: MatchState) => state.temporaryEquipment.map(i => i.definitionId);
 const otherRng = (state: MatchState) => [state.rngState, state.choiceRngState, state.rewardRngState, state.battleSeedRngState];
@@ -63,12 +55,13 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     // Keep the original round/level mechanism vector, but never claim the
     // synthetic 2-1 economy is a public Match route. The real control buys XP
     // at the earliest solvent preparation while TG is still in inventory.
-    const legal = inventory(level), legalResult = equipItem(freeze(legal), 'item-3', 'unit-1', 2);
+    const legal = inventory(level), legalParent = legal.items.find(item => item.definitionId === 'thiefs-gloves')!.id;
+    const legalResult = equipItem(freeze(legal), legalParent, 'unit-1', 2);
     const restoredControl = accepted(legalResult);
     expect(restoredControl.roundDefinitionId).toBe(levelRounds[level]);
     expect(pair(restoredControl)).toEqual(pair(next));
     expect(restoredControl.equipmentState.equipment).toEqual(next.equipmentState.equipment);
-    expect(restoredControl.equipmentState.rolls).toEqual([{ ...next.equipmentState.rolls[0], roundId: levelRounds[level] }]);
+    expect(restoredControl.equipmentState.rolls).toEqual([{ ...next.equipmentState.rolls[0], parentItemInstanceId: legalParent, roundId: levelRounds[level], playerLevelSnapshot: Math.max(5, level) }]);
     expect(otherRng(restoredControl)).toEqual(otherRng(legal));
     expect(restoredControl.nextItemSerial).toBe(legal.nextItemSerial);
     expect(restoredControl.items).toHaveLength(legal.items.length);
@@ -76,7 +69,7 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(restoredControl.scheduleReceipts).toEqual(legal.scheduleReceipts);
     expect(restoredControl.m8.loot).toEqual(legal.m8.loot);
     expect(restoredControl.temporaryEquipment.map(child => [child.temporaryId, child.parentItemInstanceId, child.slot, child.expiresAfterRoundId]))
-      .toEqual([1, 2].map(slot => [JSON.stringify(['item-3', levelRounds[level], slot]), 'item-3', slot, levelRounds[level]]));
+      .toEqual([1, 2].map(slot => [JSON.stringify([legalParent, levelRounds[level], slot]), legalParent, slot, levelRounds[level]]));
     if (!legalResult.ok) throw new Error(legalResult.reason);
     expect(legalResult.events.map(event => event.type)).toEqual(['itemEquipped', 'equipmentRolled', 'temporaryEquipmentChanged']);
     expect(restoreMatch(serializeMatch(restoredControl))).toEqual(restoredControl);
@@ -85,9 +78,10 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(() => restoreMatch(forged)).toThrow('Invalid equipment roll ledger');
   });
   it('F, sale, same-round re-equip and restore preserve the original level6 roll across level7', () => {
-    let state = inventoryAtRound('2-7');
-    while (state.level < 6 || state.xp < 34) state = accepted(buyXp(state));
-    expect([state.level, state.xp, state.gold]).toEqual([6, 34, 4]);
+    let state = inventoryAtRound('3-5');
+    while (state.level < 6 || state.xp < 32) state = accepted(buyXp(state));
+    expect([state.level, state.xp]).toEqual([6, 32]);
+    expect(state.gold).toBeGreaterThanOrEqual(4);
     state = accepted(equipItem(state, 'item-3', 'unit-1', 0));
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     const roll = structuredClone(state.equipmentState);
@@ -116,10 +110,10 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     expect(next.equipmentState.equipment).toEqual({ state: 2226054902, draws: 4 });
     expect(pair(next)).toEqual(['gargoyle', 'gloves']);
     expect(next.equipmentState.rolls).toHaveLength(2);
-    expect(next.temporaryEquipment.every(i => i.roundId === '2-2')).toBe(true);
+    expect(next.temporaryEquipment.every(i => i.roundId === '3-6')).toBe(true);
     if (!result.ok) throw new Error(result.reason);
     const change = result.events.find(e => e.type === 'temporaryEquipmentChanged');
-    expect(change?.type === 'temporaryEquipmentChanged' && change.removed.map(i => i.roundId)).toEqual(['2-1', '2-1']);
+    expect(change?.type === 'temporaryEquipmentChanged' && change.removed.map(i => i.roundId)).toEqual(['3-5', '3-5']);
     const repeated = nextRound(freeze(next), settled.round);
     expect(repeated.ok).toBe(false); expect(repeated.state).toBe(next);
     expect(restoreMatch(serializeMatch(next))).toEqual(next);
@@ -265,12 +259,12 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
     ['forged pair', 'Equipment roll does not match trusted initial stream', (s: any) => s.equipmentState.rolls[0].children[0] = 'deathblade'],
     ['missing ledger', 'Equipment stream mismatch', (s: any) => { s.equipmentState.rolls = []; s.equipmentState.equipment.draws = 0; }],
     ['unknown parent', 'Invalid equipment parent/round/level', (s: any) => s.equipmentState.rolls[0].parentItemInstanceId = 'item-29'],
-    ['future round', 'Invalid equipment parent/round/level', (s: any) => s.equipmentState.rolls[0].roundId = '2-2'],
+    ['future round', 'Invalid equipment parent/round/level', (s: any) => s.equipmentState.rolls[0].roundId = '3-6'],
     ['future level', 'Invalid equipment roll ledger', (s: any) => s.equipmentState.rolls[0].playerLevelSnapshot = 10],
     ['wrong holder', 'Invalid current temporary equipment projection', (s: any) => s.temporaryEquipment.forEach((c: any) => c.holderId = 'unit-2')],
     ['missing sibling', 'Missing temporary sibling', (s: any) => s.temporaryEquipment.pop()],
     ['missing projection', 'Invalid current temporary equipment projection', (s: any) => s.temporaryEquipment = []],
-    ['wrong expiry', 'Invalid temporary equipment binding/slots', (s: any) => s.temporaryEquipment[0].expiresAfterRoundId = '2-2'],
+    ['wrong expiry', 'Invalid temporary equipment binding/slots', (s: any) => s.temporaryEquipment[0].expiresAfterRoundId = '3-6'],
     ['inventory parent with children', 'Invalid current temporary equipment projection', (s: any) => s.items.find((i: any) => i.id === 'item-3').location = { kind: 'inventory' }],
     ['permanent child', 'Invalid Match save: item ID', (s: any) => s.items.push({ id: s.temporaryEquipment[0].temporaryId, definitionId: 'bramble-vest', location: { kind: 'inventory' } })],
   ])('restore rejects %s instead of rerolling or repairing', (_label, error, mutate) => {

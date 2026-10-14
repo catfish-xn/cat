@@ -10,7 +10,7 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     for(let i=0;i<10;i++)rng=(rng*1664525n+1013904223n)%4294967296n;
     expect(first).toEqual(createMatch(42));
     // B9 formal version switch (M8_RULES §10).
-    expect(first).toMatchObject({schemaVersion:6,rulesVersion:'m8-14.24b-v1',contentVersion:'s13-14.24b-m8-v1',commandProtocolVersion:2,
+    expect(first).toMatchObject({schemaVersion:7,rulesVersion:'s13-rules-gap-v1',contentVersion:'s13-14.24b-rules-gap-v1',commandProtocolVersion:3,
       phase:'preparation',round:1,gold:0,level:1,xp:0,playerHp:100,rngState:Number(rng),nextUnitSerial:2,combat:null,roundResults:[],pendingChoice:null});
     expect(first.shop.slots).toHaveLength(5);expect(first.preparation.benchSize).toBe(9);
     expect(first.preparation).not.toBe(createMatch().preparation);
@@ -21,13 +21,14 @@ describe('M5 public contract (M4 command invariants retained)', () => {
     expect(result.ok).toBe(true);if(!result.ok)throw Error(result.reason);
     // B8: an unearned 1-2 slot is explicitly forfeited between finish and settlement.
     const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']);
-    const dropId=JSON.stringify(['1-2','minions-a-v1',sourceUnitId,0]);
+    const orbId=JSON.stringify(['orb','1-2','minions-a-v1',sourceUnitId,0]);
+    const ids=[0,1].map(entry=>JSON.stringify([orbId,entry]));
     expect(result.events).toEqual([
       {type:'combatFinished',tick:0,result:'enemyWin',reason:'elimination',combatId:'round-1',domain:'combat',eventSeq:0},
-      {type:'lootForfeited',dropId,domain:'match',eventSeq:state.nextMatchEventSeq},
-      {type:'roundSettled',round:1,domain:'match',eventSeq:state.nextMatchEventSeq+1},
+      ...ids.map((dropId,index)=>({type:'lootForfeited',dropId,domain:'match',eventSeq:state.nextMatchEventSeq+index})),
+      {type:'roundSettled',round:1,domain:'match',eventSeq:state.nextMatchEventSeq+2},
     ]);
-    expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:[{dropId,status:'forfeited',receiptId:null}]});
+    expect(result.state.m8.loot).toEqual({...state.m8.loot,direct:ids.map(dropId=>({dropId,status:'forfeited',receiptId:null}))});
     expect(result.state.preparation).toEqual(state.preparation);
     expect(result.state.nextUnitSerial).toBe(2);expect(result.state.nextItemSerial).toBe(1);expect(result.state.items).toEqual([]);
     expect(result.state).toMatchObject({phase:'settlement',playerHp:97,gold:2,level:2,xp:0});

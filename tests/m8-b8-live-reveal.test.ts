@@ -36,7 +36,7 @@ const clone = (state: api.MatchState): api.MatchState => {
 };
 
 describe('B8 real simultaneous loot-source deaths', () => {
-  it('reveals three slots from two actual same-tick sources, then restores and grants each exactly once', () => {
+  it('reveals four orb entries while two neutral sources die on the same tick, then restores and grants each exactly once', () => {
     let state = accepted(api.startMatchCombat(clone(prefix)));
     while (state.phase === 'combat' && state.combat.tick < 51) state = api.stepMatch(state).state;
     expect(state.phase).toBe('combat');
@@ -47,7 +47,7 @@ describe('B8 real simultaneous loot-source deaths', () => {
     state = transition.state;
     expect(state.phase).toBe('combat');
     const revealed = transition.events.filter(event => event.type === 'lootRevealed');
-    expect(revealed).toHaveLength(3);
+    expect(revealed).toHaveLength(4);
     const plan = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '4-7')!;
     expect(revealed.map(event => event.dropId)).toEqual([
       ...plan.encounterPlan.drops.map(drop => drop.dropId), ...plan.choices.map(choice => choice.dropId),
@@ -55,11 +55,11 @@ describe('B8 real simultaneous loot-source deaths', () => {
     const deaths = state.combat!.neutralReceipts!.deaths;
     expect(deaths).toEqual([
       // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 158/159.
-      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 52, eventSeq: 132 },
-      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 52, eventSeq: 133 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r00"]', tick: 52, eventSeq: 449 },
+      { unitId: '["pve","4-7","razorbeaks-v1","r01"]', tick: 52, eventSeq: 450 },
     ]);
     expect(transition.events.filter(event => event.type === 'death').map(event => [event.type === 'death' && event.unitId, event.tick, event.eventSeq])).toEqual(deaths.map(death => [death.unitId, death.tick, death.eventSeq]));
-    expect(revealed.map(event => event.death.eventSeq)).toEqual([132, 132, 133]); // was 158/158/159 (replay2 eventSeq shift)
+    expect(revealed.map(event => event.death.eventSeq)).toEqual([449, 449, 449, 449]); // was 158/158/159 (replay2 eventSeq shift)
     for (const field of ['gold', 'items', 'preparation', 'persistentGrowth', 'nextUnitSerial', 'nextItemSerial',
       'resourceProvenance', 'rngState', 'choiceRngState', 'rewardRngState', 'equipmentState'] as const)
       expect(state[field]).toEqual(before[field]);
@@ -70,38 +70,30 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(duplicate).toEqual({ state: restoredReveal, events: [] });
     expect(duplicate.state).toBe(restoredReveal);
     const forged = JSON.parse(serializeMatch(state));
-    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 132; // r00's death eventSeq (was 158 before the replay2 shift)
-    expect(() => restoreMatch(forged)).toThrow(/duplicate death identity|current death evidence/);
+    forged.m8.loot.earnedEvidence.at(-1).death.eventSeq = 450; // r00's death eventSeq (was 158 before the replay2 shift)
+    expect(() => restoreMatch(forged)).toThrow('Invalid B8 Match: source death conflict');
     let resumed = restoredReveal;
     while (state.phase === 'combat') {
       const a = api.stepMatch(state), b = api.stepMatch(resumed);
       expect(b).toEqual(a); state = a.state; resumed = b.state;
     }
-    expect(state.phase).toBe('choice');
-    expect(clone(state)).toEqual(state);
-    const ids = new Set(plan.encounterPlan.drops.map(drop => drop.dropId));
-    expect(state.m8.loot.receipts.filter(receipt => ids.has(receipt.dropId))).toHaveLength(2);
-    rejected(state, () => api.nextRound(state, state.round), 'wrong-phase');
-    const choice = state.pendingChoice!;
-    const selected = api.selectChoice(state, choice.choiceId, choice.generation, 'tear');
-    expect(api.selectChoice(clone(state), choice.choiceId, choice.generation, 'tear')).toEqual(selected);
-    const settled = accepted(selected);
-    expect(clone(settled)).toEqual(settled);
-    expect(settled.m8.loot.receipts.filter(receipt => ids.has(receipt.dropId) || receipt.dropId === plan.choices[0].dropId)).toHaveLength(3);
-    unchangedStep(settled);
-    rejected(settled, () => api.selectChoice(settled, choice.choiceId, choice.generation, 'tear'), 'wrong-phase');
-    expect(api.nextRound(clone(settled), settled.round)).toEqual(api.nextRound(settled, settled.round));
+    expect(state.phase).toBe('settlement');
+    expect(state.pendingChoice).toBeNull();expect(clone(state)).toEqual(state);
+    const ids=new Set(plan.encounterPlan.drops.map(drop=>drop.dropId));
+    expect(state.m8.loot.receipts.filter(receipt=>ids.has(receipt.dropId))).toHaveLength(4);
+    unchangedStep(state);
+    rejected(state,()=>api.selectChoice(state,'obsolete-pve-choice',0,'tear'),'wrong-phase');
+    expect(api.nextRound(clone(state),state.round)).toEqual(api.nextRound(state,state.round));
   });
 
   it.each([
-    ['unit-10', 'r00', 344, 'settlement', 2],
-    ['unit-13', 'r01', 218, 'choice', 0],
+    ['unit-12', 'r00', 344, 'settlement', 4],
+    ['unit-16', 'r01', 218, 'settlement', 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
     let state = clone(prefix), slot = 0;
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.id !== survivor))
       state = accepted(api.deployMatchUnit(state, unit.id, { kind: 'bench', slot: slot++ }));
     state = clone(state);
-    const plan = state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '4-7')!;
     const beforeReceipts = state.m8.loot.receipts.length, beforeItemSerial = state.nextItemSerial;
     const unitSerial = state.nextUnitSerial, frozen = state.m8.loot.frozen;
     state = accepted(api.startMatchCombat(state));
@@ -122,23 +114,16 @@ describe('B8 real simultaneous loot-source deaths', () => {
     expect(state.phase).toBe(phase); expect(state.combat!.result).toBe('enemyWin');
     expect(state.combat!.neutralReceipts!.deaths).toHaveLength(1);
     expect(state.m8.loot.receipts).toHaveLength(beforeReceipts + directReceipts);
-    expect(state.m8.loot.direct.slice(-2).map(drop => drop.status)).toEqual(directReceipts ? ['granted', 'granted'] : ['forfeited', 'forfeited']);
-    expect(state.m8.loot.choiceEligibility.at(-1)!.status).toBe(directReceipts ? 'forfeited' : 'revealed');
+    expect(state.m8.loot.direct.slice(-4).map(drop => drop.status)).toEqual(directReceipts ? Array(4).fill('granted') : Array(4).fill('forfeited'));
+    expect(state.m8.loot.choiceEligibility).toEqual([]);
     expect(state.nextUnitSerial).toBe(unitSerial);
-    expect(state.nextItemSerial).toBe(beforeItemSerial + (directReceipts ? 1 : 0));
+    expect(state.nextItemSerial).toBe(beforeItemSerial + (directReceipts ? 2 : 0));
     expect(state.m8.loot.frozen).toBe(frozen);
     expect(clone(state)).toEqual(state);
     const forged = JSON.parse(serializeMatch(state));
-    if (directReceipts) forged.m8.loot.choiceEligibility.at(-1).status = 'revealed';
-    else forged.m8.loot.direct.at(-1).status = 'revealed';
+    forged.m8.loot.direct.at(-1).status = directReceipts ? 'forfeited' : 'revealed';
+    forged.m8.loot.direct.at(-1).receiptId = null;
     expect(() => restoreMatch(forged)).toThrow(/qualification evidence/);
-    if (state.phase === 'choice') {
-      const choice = state.pendingChoice!;
-      state = accepted(api.selectChoice(state, choice.choiceId, choice.generation, 'tear'));
-      expect(state.m8.loot.receipts.at(-1)!.dropId).toBe(plan.choices[0].dropId);
-      expect(state.nextItemSerial).toBe(beforeItemSerial + 1);
-      expect(clone(state)).toEqual(state);
-    }
     unchangedStep(state);
     expect(api.nextRound(clone(state), state.round)).toEqual(api.nextRound(state, state.round));
   });

@@ -12,8 +12,15 @@ export interface LootChoiceDescriptor extends DropIdentity {
 }
 export type FrozenDirectDrop = Extract<DropState, { readonly status:'planned' }> & {
   readonly sourceUnitId: string; readonly slotOrdinal: number; readonly revealCondition:'source-killed';
+  readonly orbId: string; readonly entryOrdinal: number;
 };
+export interface OrbPlan {
+  readonly orbId:string; readonly roundId:string; readonly encounterId:string; readonly sourceUnitId:string;
+  readonly slotOrdinal:number; readonly tier:import('./orb-layout').OrbTier; readonly templateId:string;
+  readonly entries:readonly FrozenDirectDrop[];
+}
 export interface FrozenLootRound {
+  readonly orbs:readonly OrbPlan[];
   readonly encounterPlan: EncounterPlan & { readonly drops: readonly FrozenDirectDrop[] };
   readonly choices: readonly LootChoiceDescriptor[];
 }
@@ -21,7 +28,7 @@ export interface FrozenLootRound {
  * One authoritative frozen plan per entered PvE. Never copy these into a second writable plan.
  */
 export interface FrozenLootLedger {
-  readonly version: 'm8-b8-loot-freeze-v1';
+  readonly version: 's13-orb-freeze-v1';
   readonly seed: number;
   readonly replayDigest: string;
   readonly throughRoundOrdinal: number;
@@ -44,6 +51,7 @@ export interface LootEarnedEvidence {
   readonly death: { readonly combatId: string; readonly tick: number; readonly eventSeq: number };
 }
 export interface MatchLootState {
+  readonly layoutBinding: import('./orb-layout').LootLayoutBinding;
   readonly frozen: FrozenLootLedger;
   readonly direct: readonly DirectLootProgress[];
   readonly choiceEligibility: readonly LootChoiceEligibility[];

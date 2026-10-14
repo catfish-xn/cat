@@ -5,6 +5,7 @@ export function context(state:api.MatchState,stepsTaken=0):api.BotContext {
 }
 export function execute(state:api.MatchState,a:ClientCommand):api.MatchCommandResult {
   switch(a.type) {
+    case 'useConsumable': return api.useConsumable(state,a.consumableId,a.target);
     case 'buy': return api.buyUnit(state,a.slot,a.generation);
     case 'sell': return api.sellUnit(state,a.unitId);
     case 'deploy': return api.deployMatchUnit(state,a.unitId,a.target);

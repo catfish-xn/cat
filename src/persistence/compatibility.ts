@@ -3,7 +3,7 @@ import type { CompatibilityView } from '../simulation/m8/ui-contracts';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
 import { CONTENT_DIGEST } from '../simulation/content';
 import { restoreMatch } from '../simulation/serialization';
-import { LEGACY_M7_VERSION, M8_VERSION } from '../simulation/m8/version';
+import { LEGACY_M7_VERSION, LEGACY_M8_VERSION, M8_VERSION } from '../simulation/m8/version';
 import { validateBattleCollectionSync } from '../replay/history';
 
 /** M8_UI_CONTRACT §6: format routing first, then the matching validator; a header alone is never a licence. */
@@ -17,8 +17,8 @@ const plain = (value: unknown): value is Record<string, unknown> =>
 
 export const currentView = (): CompatibilityView => ({ status: 'current', currentRulesVersion: M8_VERSION.rulesVersion,
   fileRulesVersion: M8_VERSION.rulesVersion, canResume: true, canReplay: true, canExportOriginal: true, reason: null });
-const legacyView = (): CompatibilityView => ({ status: 'legacy-preserved', currentRulesVersion: M8_VERSION.rulesVersion,
-  fileRulesVersion: LEGACY_M7_VERSION.rulesVersion, canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' });
+const legacyView = (version:typeof LEGACY_M7_VERSION|typeof LEGACY_M8_VERSION=LEGACY_M7_VERSION): CompatibilityView => ({ status: 'legacy-preserved', currentRulesVersion: M8_VERSION.rulesVersion,
+  fileRulesVersion: version.rulesVersion, canResume: false, canReplay: false, canExportOriginal: true, reason: 'new-match-required' });
 /** A parsed file holds no stored original bytes, so a rejected file is never offered for export here. */
 export const rejectedView = (reason: RejectedReason, fileRulesVersion: string | null): CompatibilityView => ({ status: 'rejected',
   currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion, canResume: false, canReplay: false, canExportOriginal: false, reason });
@@ -38,6 +38,12 @@ export function routeSaveFile(input: unknown): RoutedFile {
   if (input.saveFormatVersion === LEGACY_M7_VERSION.saveFormatVersion && input.replayFormatVersion === LEGACY_M7_VERSION.replayFormatVersion
     && fileRules === LEGACY_M7_VERSION.rulesVersion) {
     return legacyShape(input, match!) ? { view: legacyView(), envelope: null } : reject('invalid-data', fileRules);
+  }
+  if(input.saveFormatVersion===2&&input.replayFormatVersion===2&&fileRules===LEGACY_M8_VERSION.rulesVersion) {
+    const valid=Object.keys(input).sort().join('|')===KEYS&&typeof input.runId==='string'&&typeof input.createdAt==='string'
+      &&Array.isArray(input.battles)&&(input.currentBattle===null||plain(input.currentBattle))
+      &&match?.schemaVersion===6&&match.contentVersion===LEGACY_M8_VERSION.contentVersion;
+    return valid?{view:legacyView(LEGACY_M8_VERSION),envelope:null}:reject('invalid-data',fileRules);
   }
   if (input.saveFormatVersion !== M8_VERSION.saveFormatVersion || input.replayFormatVersion !== M8_VERSION.replayFormatVersion) return reject('unsupported-version', fileRules);
   if (Object.keys(input).sort().join('|') !== KEYS || !match) return reject('invalid-data', fileRules);

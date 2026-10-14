@@ -9,14 +9,14 @@ import { nextRandom } from '../src/simulation/rng';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 
 function preparation(): MatchState {
-  return deployMatchUnit(readyMatch(), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
+  return deployMatchUnit(readyMatch(6240), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
 }
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
 // Independent M8B_LOOT §2 opening transcription: no receipt or unit fields copied from the result.
 function openingHeroReceipt(roundId: '1-2' | '1-3') {
   const encounterId = roundId === '1-2' ? 'minions-a-v1' : 'minions-b-v1';
   const sourceUnitId = JSON.stringify(['pve', roundId, encounterId, 'm01']);
-  const dropId = JSON.stringify([roundId, encounterId, sourceUnitId, 0]);
+  const dropId = JSON.stringify([JSON.stringify(['orb', roundId, encounterId, sourceUnitId, 0]), 0]);
   return { receiptId: JSON.stringify([dropId, 'grant']), dropId,
     payload: { kind: 'unit', definitionId: roundId === '1-2' ? 'maddie' : 'lux', quantity: 1 },
     grantedItemIds: [], grantedUnitIds: [roundId === '1-2' ? 'unit-2' : 'unit-3'] };
@@ -79,7 +79,7 @@ describe('match session commands and fixed clock', () => {
     expect(session.combat?.units.some(unit => !unit.alive)).toBe(true);
     expect(session.combat?.units.some(unit => unit.hp < unit.maxHp)).toBe(true);
     expect(players(session.state)).toEqual(firstRoster);
-    expect(session.state.m8.loot.receipts).toEqual([openingHeroReceipt('1-2')]);expectOpeningHeroSource(session, '1-2');
+    expect(session.state.m8.loot.receipts.filter(r => r.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-2')]);expectOpeningHeroSource(session, '1-2');
     expect(session.state.nextUnitSerial).toBe(3);expect(session.state.combatInputBasis).toEqual(firstBasis);
     expect(session.combat?.units.filter(unit => unit.team === 'player').map(unit => unit.id)).toEqual(['unit-1']);
     expect(session.continue(1).ok).toBe(true);
@@ -88,7 +88,7 @@ describe('match session commands and fixed clock', () => {
     resolveSessionChoices(session);
     expect(session.phase).toBe('preparation'); expect(session.combat).toBeNull();
     expect(players(session.state)).toEqual(firstRoster);
-    expect(session.state.m8.loot.receipts).toEqual([openingHeroReceipt('1-2')]);expect(session.state.nextUnitSerial).toBe(3);
+    expect(session.state.m8.loot.receipts.filter(r => r.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-2')]);expect(session.state.nextUnitSerial).toBe(3);
     expect(session.advance(1000)).toEqual([]);
     expect(session.deploy('unit-1', { kind: 'board', cell: { col: 4, row: 6 } }).ok).toBe(true);
     const secondPreparation = session.state, secondBefore = structuredClone(secondPreparation);
@@ -105,27 +105,15 @@ describe('match session commands and fixed clock', () => {
     session.advance(60_000);
     const secondSettledRoster = [...secondRoster, { id: 'unit-3', definitionId: 'lux', team: 'player', starLevel: 1, location: { kind: 'bench', slot: 1 } }];
     expect(players(session.state)).toEqual(secondSettledRoster);expectOpeningHeroSource(session, '1-3');
-    expect(session.state.m8.loot.receipts).toEqual([openingHeroReceipt('1-2'), openingHeroReceipt('1-3')]);
+    expect(session.state.m8.loot.receipts.filter(r => r.payload.kind === 'unit')).toEqual([openingHeroReceipt('1-2'), openingHeroReceipt('1-3')]);
     expect(session.state.nextUnitSerial).toBe(4);expect(session.state.combatInputBasis).toEqual(secondBasis);
     expect(session.combat?.units.map(unit => unit.id)).toEqual(secondInitial.units.map(unit => unit.id));
-    const pending = session.state, pendingBefore = structuredClone(pending);expect(session.phase).toBe('choice');
-    rejected(session, session.continue(2), 'wrong-phase', pending);expect(pending).toEqual(pendingBefore);
-    const choiceSource = JSON.stringify(['pve', '1-3', 'minions-b-v1', 'r01']);
-    const choiceDropId = JSON.stringify(['1-3', 'minions-b-v1', choiceSource, 0]), choiceId = JSON.stringify(['m8b-loot-choice', choiceDropId]);
-    const choiceReceiptId = JSON.stringify([choiceDropId, 'grant']), choiceReceipt = { receiptId: choiceReceiptId, dropId: choiceDropId,
-      payload: { kind: 'item', definitionId: 'sword', quantity: 1 }, grantedItemIds: ['item-1'], grantedUnitIds: [] };
-    expect(pending.pendingChoice).toEqual({ kind: 'component', step: 'offer', choiceId, eventId: choiceId, generation: 0,
-      returnPhase: 'settlement', offers: ['sword', 'vest', 'belt', 'rod', 'cloak', 'bow', 'gloves', 'tear'], targetId: null, rerollCount: 0 });
-    const selected = session.choose(choiceId, 0, 'sword');expect(selected.ok).toBe(true);if (!selected.ok) throw Error(selected.reason);
-    expect(selected.events).toEqual([
-      { type: 'lootGranted', receipt: choiceReceipt, domain: 'match', eventSeq: pending.nextMatchEventSeq },
-      { type: 'lootChoiceResolved', dropId: choiceDropId, receiptId: choiceReceiptId, method: 'player-choice', domain: 'match', eventSeq: pending.nextMatchEventSeq + 1 },
-      { type: 'choiceSelected', choiceId, definitionId: 'sword', unitId: null, domain: 'match', eventSeq: pending.nextMatchEventSeq + 2 },
-    ]);
-    expect(session.phase).toBe('settlement');expect(pending).toEqual(pendingBefore);
-    expect(session.state.m8.loot.receipts).toEqual([openingHeroReceipt('1-2'), openingHeroReceipt('1-3'), choiceReceipt]);
-    expect(session.state.m8.loot.choiceResolutions).toEqual([{ dropId: choiceDropId, receiptId: choiceReceiptId, method: 'player-choice' }]);
-    expect(session.state.items).toEqual([{ id: 'item-1', definitionId: 'sword', location: { kind: 'inventory' } }]);
+    // §18: PvE components are automatic orb entries; only .4 supply opens a pick.
+    expect(session.phase).toBe('settlement');
+    expect(session.state.pendingChoice).toBeNull();
+    expect(session.state.m8.loot.choiceResolutions).toEqual([]);
+    expect(session.state.items).toEqual([{ id: 'item-1', definitionId: 'cloak', location: { kind: 'inventory' } }]);
+    expect(session.state.consumables).toHaveLength(2);
     expect(players(session.state)).toEqual(secondSettledRoster);
     const resolved = session.state, resolvedBefore = structuredClone(resolved);
     expect(session.continue(2).ok).toBe(true);
@@ -187,7 +175,7 @@ describe('match session commands and fixed clock', () => {
   });
 
   it('preserves the purchased player roster and unique results for five rounds', () => {
-    const session = new MatchSession(reachRound('1-3'));
+    const session = new MatchSession(reachRound('1-3',true,6240));
     expect(session.buy(0, session.state.shop.generation).ok).toBe(true);
     const owned = players(session.state);
     const stale = session.state; rejected(session, session.buy(0, 0), 'stale-shop', stale);
@@ -312,7 +300,7 @@ describe('rapid D/F/E commands without frame or animation waits', () => {
     expect(session.state.gold).toBe(1);
   });
   it('rejects thirty max-level F events without spending or advancing anything', () => {
-    const session = new MatchSession({ ...readyMatch(), level: 9, xp: 0 }), before = session.state;
+    const session = new MatchSession({ ...readyMatch(6240), level: 9, xp: 0 }), before = session.state;
     for (let i = 0; i < 30; i++) rejected(session, session.buyXp(), 'max-level', before);
   });
   it('replays all accepted/rejected mixed events and isolates other sessions', () => {

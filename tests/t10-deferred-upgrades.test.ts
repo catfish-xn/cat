@@ -1,3 +1,4 @@
+import { syntheticSharedRound } from './tp-helpers';
 import { describe, expect, it } from 'vitest';
 import { autoDeployToCap, buyUnit, buySharedUnit, buyXp, combineItems, deployMatchUnit, equipItem,
   generateSharedShop, rerollSharedShop, setSharedShopLock, sellSharedUnit, runSharedMatchCommand,
@@ -91,6 +92,7 @@ describe('t10-deferred-upgrades and shared-pool operations',()=>{
     r={...r,state:accepted(deployMatchUnit(r.state,'unit-2',board(2)))};
     // Contiguous synthetic history isolates the PvP receipt; this is not an offline save.
     r={...r,state:asPvp({...r.state,persistentGrowth:[{unitId:'unit-2',attackDamageBps:250}]})};
+    const bound=syntheticSharedRound(r.pool,[r.state],r.state.round);r={...r,pool:bound.pool,state:bound.states[0]};
     const snapshot=snapshotForBattle(r.state,r.state.multiplayer!.seatId),frozen=structuredClone(snapshot);
     r={...r,state:accepted(lockMatchCombatRoster(r.state))};
     expect(lockMatchCombatRoster(r.state).state).toBe(r.state);

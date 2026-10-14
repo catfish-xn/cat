@@ -85,6 +85,27 @@ export function seatPushEvents(seat: SeatState): readonly MatchEvent[] {
   return pushed.events.filter(event => PUSHED_EVENT_TYPES.has(event.type) && !('tick' in event));
 }
 
+/** Contract §18.8 03: the three seat operation events a `consumable-used` receipt may carry. */
+export type ConsumableDisplayEvent = Extract<MatchEvent, { readonly type: 'consumableUsed' | 'itemReforged' | 'itemsRemoved' }>;
+/**
+ * The receipt copy of a successful useConsumable (§18.8 03): only those three events, field by field (domain, eventSeq and
+ * the listed fields; a target keeps only its kind and id), in the rules' order. No provenance or RNG, nothing recomputed.
+ */
+export function consumableReceiptEvents(events: readonly MatchEvent[]): ConsumableDisplayEvent[] {
+  const meta = (event: ConsumableDisplayEvent) => ({ ...(event.domain ? { domain: event.domain } : {}), ...(event.eventSeq !== undefined ? { eventSeq: event.eventSeq } : {}) });
+  return events.flatMap((event): ConsumableDisplayEvent[] => {
+    switch (event.type) {
+      case 'itemsRemoved': return [{ type: event.type, unitId: event.unitId, itemIds: [...event.itemIds], ...meta(event) }];
+      case 'itemReforged': return [{ type: event.type, itemId: event.itemId, definitionId: event.definitionId, outputItemId: event.outputItemId,
+        outputDefinitionId: event.outputDefinitionId, consumableId: event.consumableId, ...meta(event) }];
+      case 'consumableUsed': return [{ type: event.type, consumableId: event.consumableId, definitionId: event.definitionId,
+        target: event.target.kind === 'unit' ? { kind: 'unit', unitId: event.target.unitId } : { kind: 'item', itemId: event.target.itemId },
+        effect: event.effect, affectedItemIds: [...event.affectedItemIds], outputItemId: event.outputItemId, ...meta(event) }];
+      default: return [];
+    }
+  });
+}
+
 /**
  * `unitIds` (C15): my own units of this battle, battle id → original id, from the rules' BattleIdMapping (`kind: 'unit'`,
  * my seatId only). Empty for a PvE battle, whose replay already names my units by their original ids.
