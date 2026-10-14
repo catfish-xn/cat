@@ -6,7 +6,7 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableTarget } from '../server-entry';
+import type { ConsumableFailure, ConsumableTarget } from '../server-entry';
 
 export const ROOM_CAPACITY = 8;
 export const ROOM_PROTOCOL_VERSION = 1;
@@ -101,17 +101,8 @@ export interface LobbyView {
 
 /* ---------------- commands a seat may send ---------------- */
 
-/**
- * R4 consumables, field names as in the DRAFT of MULTIPLAYER_CONTRACT §18.1/§18.3/§18.5.
- * TODO(T13-B, contract §18.1): import ConsumableTarget / ConsumableFailure from src/server-entry once exported and drop
- * these copies; the wire shape stays the same.
- */
-export type ConsumableTarget =
-  | { readonly kind: 'item'; readonly itemId: string }
-  | { readonly kind: 'unit'; readonly unitId: string };
-export type ConsumableFailure =
-  | 'wrong-phase' | 'unknown-consumable' | 'temporary-item' | 'unknown-item' | 'unknown-unit'
-  | 'invalid-consumable-target' | 'no-removable-items';
+/** R4 consumables (contract §18.1/§18.5): the rules' own target and failure types, re-exported for the client. */
+export type { ConsumableTarget, ConsumableFailure };
 
 /** Every command maps 1:1 to a public command of src/simulation/match.ts; the room adds nothing. */
 export type ClientCommand =
@@ -127,11 +118,7 @@ export type ClientCommand =
   | { readonly type: 'choose'; readonly choiceId: string; readonly generation: number; readonly definitionId: string }
   | { readonly type: 'anomalyTarget'; readonly choiceId: string; readonly generation: number; readonly unitId: string }
   | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
-/**
- * §18.3 draft: `consumableId` is the tool instance id, never a definition id or a count; the rules decide everything.
- * Kept out of ClientCommand for now: the rules-side switches over ClientCommand (bot preflight, T7 helpers) stay
- * exhaustive until T13-B adds this case there; then it folds into ClientCommand and WireCommand becomes an alias.
- */
-export type ConsumableCommand = { readonly type: 'useConsumable'; readonly consumableId: string; readonly target: ConsumableTarget };
-/** Every command a seat may send over the wire: the room's gate and dispatch take exactly these. */
-export type WireCommand = ClientCommand | ConsumableCommand;
+/** §18.3: `consumableId` is the tool instance id, never a definition id or a count; the rules decide everything. */
+export type ConsumableCommand = Extract<ClientCommand, { readonly type: 'useConsumable' }>;
+/** Every command a seat may send over the wire: the room's gate and dispatch take exactly these (alias since §18.3 folded useConsumable into ClientCommand). */
+export type WireCommand = ClientCommand;

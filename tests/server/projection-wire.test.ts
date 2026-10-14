@@ -242,8 +242,9 @@ describe('B7 compact replay', () => {
 
 describe('B7 overtime (§11.5)', () => {
   it('runs a match past 6-7 into overtime-N rounds and ends with a unique ranking', () => {
-    // Seed 12: idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7; decided in overtime-4.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 12 });
+    // Seed 2: idle seats (humans auto-deployed at each deadline, T10) leave two or more alive after 6-7; decided in overtime-4
+    // (T13-B random orbs changed the boards: seed 12, used before, now ends at 6-3).
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 2 });
     room.start();
     const names = new Map<number, string>();
     const ids = new Map<number, string>();

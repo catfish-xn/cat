@@ -97,17 +97,20 @@ describe('T10 settlement on the latest live seat (contract §15.2)', () => {
       expect(busy.settled.hp).toBe(idle.settled.hp);
       const record = busy.settled.match.roundResults.at(-1)!;
       expect(record.round).toBe(round);
-      // Settlement read the gold left after the operations, not the pre-battle gold.
+      // Settlement read the gold left after the operations, not the pre-battle gold. A PvE round grants its revealed
+      // loot first (T13-B random orbs may hold gold), the same frozen battle in both runs, so goldBefore = live + loot.
       expect(busy.spent).toBeGreaterThan(0);
-      expect(record.goldBefore).toBe(busy.live.gold);
+      const idleRecord = idle.settled.match.roundResults.at(-1)!;
+      const lootGold = idleRecord.goldBefore - idle.live.gold;
+      expect(lootGold).toBeGreaterThanOrEqual(0);
+      if (round !== 3) expect(lootGold).toBe(0);
+      expect(record.goldBefore).toBe(busy.live.gold + lootGold);
       expect(record.goldAfter).toBe(busy.settled.match.gold);
       expect(busy.settled.match.gold).toBe(busy.live.gold + record.income);
       expect(record.levelBefore).toBe(busy.live.level);
       // The bought unit is still owned (possibly merged), the shop is the rerolled one.
       expect(busy.bought).not.toBeNull();
-      const idleRecord = idle.settled.match.roundResults.at(-1)!;
       expect(busy.settled.match.shop.generation).toBe(idle.settled.match.shop.generation + 1);
-      expect(idleRecord.goldBefore).toBe(idle.live.gold);
       expect(own(busy.settled.match).length).toBeGreaterThan(own(idle.settled.match).length - 1);
     }, 120_000);
   }
@@ -170,19 +173,19 @@ describe('T10 deferred merge after the battle (contract §15.3)', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     runUntil(room, clock, state => state.round === 5 && state.phase === 'preparation');
-    const s4 = () => seat(room.state, 's4');
-    // Seat s4 (a bot seat: no auto-deployment) has irelia on the board and two irelia offers in its shop.
-    const definitionId = onBoard(s4().match)[0]!.definitionId;
-    const offers = s4().match.shop.slots.flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
+    const s5 = () => seat(room.state, 's5');
+    // Seat s5 (a bot seat: no auto-deployment) has irelia on the board and two irelia offers in its shop (T13-B random loot moved it from s4).
+    const definitionId = onBoard(s5().match)[0]!.definitionId;
+    const offers = s5().match.shop.slots.flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
     expect(offers.length).toBeGreaterThanOrEqual(2);
-    expect(room.handle('s4', { type: 'buy', slot: offers[0]!, generation: s4().match.shop.generation })).toMatchObject({ ok: true });
-    const copies = () => own(s4().match).filter(unit => unit.definitionId === definitionId);
+    expect(room.handle('s5', { type: 'buy', slot: offers[0]!, generation: s5().match.shop.generation })).toMatchObject({ ok: true });
+    const copies = () => own(s5().match).filter(unit => unit.definitionId === definitionId);
     expect(copies().map(unit => [unit.starLevel, unit.location.kind]).sort()).toEqual([[1, 'bench'], [1, 'board']]);
     const boardCopy = copies().find(unit => unit.location.kind === 'board')!;
     clock.runNext(); // deadline → battle
     expect(room.state.phase).toBe('battle');
-    const battle = room.state.battles.find(result => result.kind === 'two-sided' && result.participants.includes('s4'))!;
-    const bought = room.handle('s4', { type: 'buy', slot: offers[1]!, generation: s4().match.shop.generation });
+    const battle = room.state.battles.find(result => result.kind === 'two-sided' && result.participants.includes('s5'))!;
+    const bought = room.handle('s5', { type: 'buy', slot: offers[1]!, generation: s5().match.shop.generation });
     expect(bought).toMatchObject({ ok: true });
     if (!bought.ok) return;
     // During the battle the board copy does not take part: three one-star copies, no upgrade event.
@@ -193,7 +196,7 @@ describe('T10 deferred merge after the battle (contract §15.3)', () => {
     // After the settlement: one two-star copy, the board one survives where it stood; the battle itself is unchanged.
     expect(copies().map(unit => [unit.id, unit.starLevel, where(unit)])).toEqual([[boardCopy.id, 2, where(boardCopy)]]);
     expect(room.state.battles).toContain(battle);
-    const upgrades = seatPushEvents(s4()).filter(event => event.type === 'unitUpgraded');
+    const upgrades = seatPushEvents(s5()).filter(event => event.type === 'unitUpgraded');
     expect(upgrades).toHaveLength(1);
     expect(upgrades[0]).toMatchObject({ survivorId: boardCopy.id, fromStar: 1, toStar: 2 });
   }, 60_000);

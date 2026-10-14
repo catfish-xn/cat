@@ -13,7 +13,7 @@ describe('C9 revealed loot on the display state', () => {
   it('carries the private view summary through toDisplayMatch, by value', () => {
     const state = catalogPreparation('1-2');
     const view = toPrivateSeatView(freeze(state));
-    expect(view.revealedLoot).toEqual({ roundId: '1-2', revealedDrops: [] });
+    expect(view.revealedLoot).toEqual({ roundId: '1-2', revealedDrops: [], revealedOrbs: [] });
     const display = toDisplayMatch(view);
     expect(readRevealedLoot(display)).toEqual(view.revealedLoot);
     expect(readRevealedLoot(display)).toBe(view.revealedLoot);

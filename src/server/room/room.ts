@@ -17,11 +17,10 @@ import { readRoundInfo } from '../../simulation/round-selectors';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
   refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellSharedUnit, setSharedShopLock,
-  type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
+  type LootInitialization, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { useSeatConsumable } from './consumables';
-import type { ConsumableFailure } from '../protocol';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
 import { findPairing, planPairings } from './pairing';
@@ -89,13 +88,15 @@ export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatComma
   // The deadline, the automatic deployment and the freeze are one boundary no command may interleave with.
   frozen: new Set(), battle: new Set(OPS), 'awaiting-settlement': new Set(OPS), settlement: new Set(OPS), ended: new Set(),
 };
+/** §18.2: every seat, human or bot, is built for the shared pool; the pool binds and freezes its loot layout. */
+const SHARED_DEFERRED: LootInitialization = { mode: 'shared-deferred' };
 /** Upper bound of rules steps when the room finishes a live PvE battle itself (the engine stops at 1200 ticks). */
 const LIVE_COMBAT_MAX_STEPS = 5_000;
 
 /** One seat transaction: on success the pool and the seat state are published together; on failure both are the input references. */
 export type SeatCommandOutcome =
   | { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
-  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: SharedPoolFailure | ConsumableFailure };
+  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: SharedPoolFailure };
 
 /**
  * Pure dispatch to the rules; the room adds nothing. Shop commands and choices (which may award a unit) go through the
@@ -105,7 +106,6 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
   const plain = (result: MatchCommandResult): SeatCommandOutcome => result.ok
     ? { ok: true, pool, state: result.state, events: result.events } : { ok: false, pool, state: result.state, reason: result.reason };
   switch (command.type) {
-    case 'useConsumable': return runSharedMatchCommand(pool, state, command);
     case 'deploy': return plain(deployMatchUnit(state, command.unitId, command.target));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
     case 'sell': return sellSharedUnit(pool, state, command.unitId);
@@ -193,14 +193,15 @@ export class Room {
     validateSeed(options.seed);
     this.pvpMode = options.pvpMode ?? 'two-sided';
     this.checkConservation = options.assertPoolConservation ?? true;
-    // §12.2 opening, in order: create the pool → import eight unpublished `createMatch(seed)` openings by the fixed seat
-    // index 0–7 (this also enables the server mode of §11.1) → one fair first refresh → publish once. Any refusal
-    // throws before anything is published, so the whole proposal is discarded.
+    // §12.2 opening, in order: create the pool → import eight unpublished `createMatch(seed, { mode: 'shared-deferred' })`
+    // openings by the fixed seat index 0–7, bots included (this also enables the server mode of §11.1; §18.2: the loot
+    // stays unbound until the pool freezes its orb layout, never a solo opening re-bound) → one fair first refresh →
+    // publish once. Any refusal throws before anything is published, so the whole proposal is discarded.
     let rngState = options.seed >>> 0;
     let pool = createSharedPool(options.roomId, options.seed >>> 0, options.poolCapacities ? { capacities: options.poolCapacities } : {});
     const imported = seats.map((spec, index) => {
       const draw = nextRandom(rngState); rngState = draw.state;
-      const joined = initializeSharedSeat(pool, createMatch(draw.word), spec.seatId, index);
+      const joined = initializeSharedSeat(pool, createMatch(draw.word, SHARED_DEFERRED), spec.seatId, index);
       if (!joined.ok) throw new RangeError(`seat ${spec.seatId}: ${joined.reason}`);
       pool = joined.pool;
       return { spec, index, seed: draw.word, match: joined.state };
