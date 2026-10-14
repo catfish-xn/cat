@@ -94,7 +94,7 @@ describe('T12 in-place recipes and atomic failures', () => {
   it('also accepts every current ordinary recipe with a full final three-slot set', () => {
     for (const definition of Object.values(ITEM_DEFINITIONS).filter(d => d.recipe && d.slotCost !== 3)) {
       const state = { ...prepared(), nextItemSerial: 5, items: [stock('item-1', definition.recipe![0]),
-        held('item-2', definition.recipe![1], 'unit-1', 1), held('item-3','sword'), held('item-4','rod','unit-1',2)] };
+        held('item-2', definition.recipe![1], 'unit-1', 1), held('item-3','deathblade'), held('item-4','deathcap','unit-1',2)] };
       const next = accepted(equipItem(state, 'item-1', 'unit-1', 1));
       expect(next.items.find(i => i.id === 'item-5')).toEqual(held('item-5', definition.id, 'unit-1', 1));
       expect(next.items).toHaveLength(3);
@@ -160,7 +160,7 @@ describe('T12 real offline provenance and frozen combat', () => {
       restored(state);
       const start = accepted(startMatchCombat(state));
       expect(start.phase).toBe('combat');
-      const changed = accepted(equipItem(start, acquired.itemIds[1], 'unit-1', 2));
+      const changed = accepted(equipItem(start, acquired.itemIds[1], 'unit-1', 0));
       unchangedBattle(start, changed);
       expect(changed.items.some(item => item.id === acquired.itemIds[0])).toBe(false);
       expect(changed.combatInputBasis!.inputs.items.some(item => item.id === acquired.itemIds[0])).toBe(true);
@@ -240,7 +240,7 @@ describe('T12 public saves across equipment phases', () => {
       if (phase === 'settlement') state = resolvePublicEquipmentChoices(finishPublicEquipmentBattle(state));
       state = accepted(equipItem(state, acquired.itemIds[0], 'unit-1', 0));
       restored(state);
-      state = accepted(equipItem(state, acquired.itemIds[1], 'unit-1', 0));
+      state = accepted(equipItem(state, acquired.itemIds[1], 'unit-1', 1));
       const copy = restored(state);
       expect(phase === 'preparation' ? startMatchCombat(copy) : nextRound(copy, copy.round))
         .toEqual(phase === 'preparation' ? startMatchCombat(state) : nextRound(state, state.round));
@@ -266,7 +266,7 @@ describe('T12 public saves across equipment phases', () => {
       if (target === '2-1') {
         const choice = state.pendingChoice;
         state = accepted(equipItem(state,ids[0],'unit-1',0)); restored(state);
-        state = accepted(equipItem(state,ids[1],'unit-1',0)); restored(state);
+        state = accepted(equipItem(state,ids[1],'unit-1',1)); restored(state);
         expect(state.pendingChoice).toBe(choice);
       } else {
         // The existing completed item remains equipped through the supply choice.
@@ -286,7 +286,7 @@ describe('T12 public saves across equipment phases', () => {
     expect(state.phase).toBe('choice');
     const choice = state.pendingChoice;
     state = accepted(equipItem(state,acquired.itemIds[0],'unit-1',0)); restored(state);
-    state = accepted(equipItem(state,acquired.itemIds[1],'unit-1',0)); restored(state);
+    state = accepted(equipItem(state,acquired.itemIds[1],'unit-1',1)); restored(state);
     expect(state.pendingChoice).toBe(choice);
     expect(resolvePublicEquipmentChoices(restored(state))).toEqual(resolvePublicEquipmentChoices(state));
   });
@@ -364,7 +364,7 @@ it('T12 supply choice permits fresh component transactions and single-save conti
   while(state.roundDefinitionId!=='2-4')state=accepted(nextRound(resolvePublicEquipmentChoices(finishPublicEquipmentBattle(state)),state.round));
   expect(state.pendingChoice!.kind).toBe('component');
   state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));restored(state);
-  state=accepted(equipItem(state,acquired.itemIds[1],'unit-1',0));
+  state=accepted(equipItem(state,acquired.itemIds[1],'unit-1',1));
   expect(resolvePublicEquipmentChoices(restored(state))).toEqual(resolvePublicEquipmentChoices(state));
 });
 it('T12 an existing frozen glove roll and a new parent roll remain independent',()=>{

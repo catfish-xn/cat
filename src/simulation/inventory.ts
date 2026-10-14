@@ -70,7 +70,16 @@ export function validateEquip(
   if (!unit || unit.team !== 'player') return { allowed: false, reason: 'unknown-unit', conflictingItemIds: [] };
   if (item.location.kind !== 'inventory') return { allowed: false, reason: 'item-not-inventory', conflictingItemIds: [] };
   if (!Number.isInteger(slot) || slot < 0 || slot > 2) return { allowed: false, reason: 'invalid-slot', conflictingItemIds: [] };
-  const target = items.find(other => other.location.kind === 'unit' && other.location.unitId === unitId && other.location.slot === slot);
+  // Ordinary inventory components always combine with the first worn component.
+  // Slot order also makes old states with multiple components converge deterministically.
+  const component = ITEM_DEFINITIONS[item.definitionId]?.kind === 'component'
+    ? items.filter(other => other.location.kind === 'unit' && other.location.unitId === unitId
+      && ITEM_DEFINITIONS[other.definitionId]?.kind === 'component')
+      .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0)
+        - (b.location.kind === 'unit' ? b.location.slot : 0))[0]
+    : undefined;
+  if (component?.location.kind === 'unit') slot = component.location.slot;
+  const target = component ?? items.find(other => other.location.kind === 'unit' && other.location.unitId === unitId && other.location.slot === slot);
   if (target && ITEM_DEFINITIONS[target.definitionId]?.kind === 'component'
     && ITEM_DEFINITIONS[item.definitionId]?.kind === 'component') {
     // Reuse the recipe validator on detached inputs; neither preview nor failure allocates anything.
@@ -91,7 +100,7 @@ export function validateEquip(
   return checkEquipmentPlacement(items, item, unitId, slot);
 }
 
-/** Only an inventory component plus the target component may combine in place. */
+/** An inventory component combines at the first worn component's actual slot. */
 export function planEquip(
   items: readonly ItemInstance[], preparation: GameState, itemId: string, unitId: string, slot: number,
   nextItemSerial: number,

@@ -734,3 +734,7 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
   - 掉落来源名沿用 `readEncounterPreview` 的 `sourceUnitId → name` 映射。
 - 联机显示时机（界面决定，告知即可）：准备阶段和本席战斗回放播放期间隐藏（防止击杀前剧透），回放播完后显示，包括断线重连时服务器重新推送回放、并把状态覆盖成 combat 的情况。所以 `revealedLoot` 必须在本轮结算期间一直下发，重连后的首次推送也要带上。
 - 验收：重连 e2e（`tests/server/e2e/c18b-loot-preview.mjs` 换接真字段后）中，结算期刷新页面，回放播完后宝珠卡再次出现，内容与刷新前相同。
+
+## T13 对 Claude 的接线说明
+
+T13-A：界面不再需要自己选合成槽。将玩家请求的合法 slot 原样交给 equipItem；previewEquip 成功时按 occupiedSlots 高亮真实落槽，按原 combination 显示配方结果。单位身上已有散件时，拖到空槽或成装槽也会在原散件槽合成；旧状态多个散件优先最低槽。三槽父件仍按 occupiedSlots=[0,1,2] 显示。无需新命令或新失败码，四阶段及下场生效文案沿用 T12。

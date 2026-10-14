@@ -47,10 +47,11 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     const legal = publicInventory(['sword', 'sword', 'sword', 'sword']);
     let control = legal.state;
     for (let slot = 0; slot < 3; slot++) control = accepted(equipItem(control, legal.itemIds[slot], 'unit-1', slot));
-    // T12 permits the fourth inventory component to combine in any occupied component slot.
+    // T13 combines the first pair automatically; the fourth joins the remaining worn sword for any request slot.
     for (let slot = 0; slot < 3; slot++) {
       const combined = accepted(equipItem(control, legal.itemIds[3], 'unit-1', slot));
-      expect(combined.items).toHaveLength(3);
+      expect(combined.items).toHaveLength(2);
+      expect(combined.items.map(i=>i.definitionId)).toEqual(['deathblade','deathblade']);
       expect(restoreMatch(serializeMatch(combined))).toEqual(combined);
     }
     expect(restoreMatch(serializeMatch(control))).toEqual(control);

@@ -77,6 +77,7 @@ interface SceneBridge {
   syncSelection(): void;
   syncHud(): void;
   renderFeedback(): void;
+  syncLoadoutTip(): void;
   renderActiveStats(): void;
   showEvents(): void;
   setStatus(): void;
@@ -104,6 +105,8 @@ function makeScene(initial: MatchState = createMatch(42)) {
   // Selection and every method that creates, reconciles or synchronizes tokens remain real.
   scene.syncHud = () => scene.syncSelection();
   scene.renderFeedback = vi.fn(); scene.renderActiveStats = vi.fn();
+  // C18 hover tooltip is cosmetic; token reconciliation and selection stay real.
+  scene.syncLoadoutTip = vi.fn();
   scene.showEvents = vi.fn(); scene.setStatus = vi.fn(); scene.clearCombatEffects = vi.fn();
   scene.sync();
   return scene;

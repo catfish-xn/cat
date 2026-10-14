@@ -88,3 +88,9 @@ T1 首战没有互换命令。完整状态 trace SHA-256 因 Match 及 combatInp
 战中新装备下场生效，当前 combat/combatInputBasis、HP/护盾/数值/触发器/战斗随机流完全不变。冻结前缀保存已被运营合成消费的旧物品身份。结算使用 latest live state、只提交本场合法成长与唯一奖励，装备不得反向计入本场收益；战后合并迁移最新装备。
 
 单人四阶段 serializeMatch→restoreMatch→续算仍通过 b8-restore 与 resource-provenance，允许合法组合 suffix，保留出生/配方/所有权/序号/奖励顺序/冻结非装备数据约束。新 CONTENT_DIGEST `fnv1a32-utf16:44fe9c0e`；LOOT_REPLAY_DIGEST `fnv1a32-utf16:7b14bfba` 不变。旧 content digest 拒绝，不迁移或补账；外层格式不变。联机恢复仅采用用户已选 B 的冻结输入恢复与未中断席位结算，不新增联机存档合同。
+
+## T13-A 单位全槽自动合成
+
+库存普通组件装备到已有永久普通组件的己方单位时，无论请求空槽、散件槽或成装槽，均与最低槽号的散件合成。普通成装留在该槽；窃贼父件沿用三槽独占与 0 槽规范。旧状态有两件散件时也按最低槽号选取，每次只消耗一件已穿散件及一件库存组件。
+
+`equipItem`/`previewEquip` 签名、失败枚举、combination 字段不变；成功预览的 occupiedSlots 表示实际落槽。输入 slot 仍须合法。四阶段权限、失败原子性、仅一个新永久 ID、来源 fold 与冻结战斗恢复沿用 T12。按用户后续拆分决定，A 以独立 equipment v4 digest 先行发布，保持 schema6/save2/replay2；旧 digest 拒绝、不迁移，R3/R4 后续另发，见 MULTIPLAYER_CONTRACT §17.7。
