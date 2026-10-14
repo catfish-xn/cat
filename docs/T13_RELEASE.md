@@ -17,3 +17,10 @@ B8 验证额外发现并修复：灼烧刷新比较改用规范结构比较，�
 里程碑 1：领域回归诊断 2150 通过 / 150 失败 / 53 跳过（排除 tests/server，旧路线迁移中，不能当作全套通过）。后续两组迁移回归分别 124/127、127/128 通过。四条公共完整路线均胜利到 6-7，经独立账本审计，成型战斗 14/12/15/12；五个 Herald 原始存档均在导入恢复器前生成，并通过恢复及后续 15 ticks 对照。T1 早期候选已通过，加入灼烧余数修复后需要重新固定轨迹；本里程碑不可发布。
 
 SR-C18-01～04 已收到（multiplayer@9774682）：01 选择 A 权威投影；02 导出内容表；03 补 wire 回执、显示事件白名单和失败文案；04 确认回放结束/重连后的展示约定。里程碑 2 已实施（合同 §18.8）：typecheck 与 4 文件 / 42 用例通过，含四阶段投影/三工具/共享/白名单。内容表新增说明和 targetKind 纳入 digest 后，当前候选的 golden、Herald 与 T1 指纹须重生成并重新校验；现有旧候选报告不作为本提交全绿证据。
+
+
+里程碑 3：已整合先行 A（#80，1d62b52）与 multiplayer@8968c8a。A 最终全套 196 文件 / 2551 用例、typecheck、T1 均通过并已转正。
+
+B 当前 CONTENT_DIGEST=fnv1a32-utf16:bd9c3a8e、LOOT_REPLAY_DIGEST=fnv1a32-utf16:5cd0487c；四条完整公共路线经独立账本重新审核，五份 Herald 原始存档及后续 15 ticks 恢复通过，T1 Node/browser-target/CLI 165 状态对照及 tick40 恢复通过，报告已更新。本次还补 ClientCommand 的 useConsumable、bot legal 恒 false、测试 execute 真实调用，以及用户授权的 applySeatCommand 单行共享事务转发；C18-B 将用 useSeatConsumable 替换该行。未改 gate/onlyKeys/consumables.ts。
+
+本里程碑空闲机单跑 12 文件 / 162 用例通过（35.67s），typecheck 通过；B 仍是施工草稿，未宣称全套通过。历史旧 fixture 迁移及 Claude 的 shared-deferred 初始化/正式网络与 UI 接线仍待完成；前述早期全套/领域失败数保留为诊断记录，不代表本提交最终结果。

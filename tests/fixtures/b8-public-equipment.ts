@@ -4,6 +4,7 @@ import {
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simulation/match-types';
 import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
 import type { BattleHistory } from '../../src/replay';
+import { readLootView } from '../../src/simulation/loot-view';
 
 function accepted(result: MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Public B8 equipment fixture: ${result.reason}`);
@@ -113,7 +114,16 @@ export function publicEquipmentPreparation(components: readonly string[],
       }
       state=finishPublicEquipmentBattle(state,options.history);
     }
-    if(state.phase==='settlement')state=accepted(nextRound(state,state.round));
+    if(state.phase==='settlement'){
+      // Random hero bundles can fill the reserve before all requested components arrive.
+      // Use the public capacity recovery sale, retaining the original equipment holders.
+      while(readLootView(state).pendingClaims.length){
+        const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!['unit-1','unit-2','unit-3'].includes(u.id));
+        if(!reserve)throw Error('Public equipment route has no expendable capacity reserve');
+        state=accepted(sellUnit(state,reserve.id));
+      }
+      state=accepted(nextRound(state,state.round));
+    }
   }
   throw Error('Public equipment route budget');
 }

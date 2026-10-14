@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CONSUMABLE_DEFINITIONS, toPrivateSeatView } from '../src/server-entry';
+import { legal } from '../src/simulation/bot/preflight';
+import { execute } from './t7-helpers';
+import type { ClientCommand } from '../src/server/protocol';
 import { RULES_GAP_MANIFEST } from '../src/simulation/content/rules-manifest';
 import { digestContent } from '../src/simulation/content';
 import { previewUseConsumable } from '../src/simulation/consumables';
@@ -63,7 +66,12 @@ describe('SR-C18 authority-projected consumable targets', () => {
     expect(JSON.stringify(view.consumableTargets)).not.toContain(child.temporaryId);
     expect(row.targets.some(t => t.target.kind === 'unit' && t.target.unitId === enemy.id)).toBe(false);
     expect(JSON.stringify(state)).toBe(before); // includes every RNG, serial, receipt and revision
-    const spent = accepted(useConsumable(state, remover.consumableId, { kind: 'unit', unitId: holder.id }));
+    const command: ClientCommand = { type: 'useConsumable', consumableId: remover.consumableId, target: { kind: 'unit', unitId: holder.id } };
+    expect(legal(state, command)).toBe(false); // Current bots deliberately do not use tools.
+    expect(JSON.stringify(state)).toBe(before);
+    const result = execute(state, command);
+    expect(result).toEqual(useConsumable(state, remover.consumableId, command.target));
+    const spent = accepted(result);
     expect(toPrivateSeatView(spent).consumableTargets.some(t => t.consumableId === remover.consumableId)).toBe(false);
     expect(previewUseConsumable(spent, remover.consumableId, { kind: 'unit', unitId: holder.id }))
       .toEqual({ ok: false, reason: 'unknown-consumable' });

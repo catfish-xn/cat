@@ -12,7 +12,7 @@ async function main(){
  try {
   const api=await server.ssrLoadModule('/src/simulation/match.ts');
   const oldPath='tests/fixtures/m5/full-match-golden.t12.json',oldBytes=fs.readFileSync(oldPath),old=JSON.parse(oldBytes);
-  const golden={note:'T13 unified auto-combine + R3/R4 release. T12 remains historical; real random loot changes commands and battles. Independent literal-table oracle validates every step.',routes:{}};
+  const golden={note:'T13-B R3/R4 release after standalone T13-A. T12 remains historical; real random loot changes commands and battles. Independent literal-table oracle validates every step.',routes:{}};
   const audit={previousSha256:sha(oldBytes),driverSha256:sha(fs.readFileSync('scripts/generate-m5-route.cjs')),oracleSha256:sha(fs.readFileSync('tests/fixtures/m5/oracle.cjs')),builds:{}};
   for(const build of ['cannon','sniper','mage','sniper-caitlyn']) {
    const states=[];

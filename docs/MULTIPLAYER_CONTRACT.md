@@ -1445,3 +1445,8 @@ ConsumableFailure 完整枚举只有 §18.5 的七项（共享包装另有既有
 **04 只确认显示约定。** 按 revealedOrbs 顺序显示宝珠卡，仅取 entryDropIds 引用的可见条目；未引用的可见条目放“其他”。使用服务器聚合 status，不重新计算。forfeited 可划线；timeout-forfeited 表示操作窗口超时放弃，eliminated-forfeited 表示本席淘汰放弃。sourceUnitId → name 沿 readEncounterPreview 的本轮来源映射。
 
 准备与回放播放期间隐藏、回放结束显示由界面决定。权威 revealedLoot 在**整个当前 PvE 结算期**持续下发，重连首次投影也包含相同已揭示内容；重发回放或将显示层 phase 覆盖成 combat 不得清空它。toPrivateSeatView 不按 settlement/combat 展示阶段裁剪此字段；进入新轮后才按 §18.4 的本轮门槛更新/省略。Claude 的重连 e2e 应比较刷新前后回放播完的宝珠内容；不需要新增规则命令。
+
+
+SR-C18-03 穷举接线补充（multiplayer@8968c8a）：`ClientCommand` 已并入 `useConsumable`，目标类型直接引用 server-entry 导出的 ConsumableTarget。`src/simulation/bot/preflight.ts` 的 legal 暂对该动作恒返回 false，不改变现有机器人策略或消耗随机流；`tests/t7-helpers.ts` 的 execute 调用真实 useConsumable。四阶段用例确认预检无状态变化、执行与领域回执一致。
+
+经用户单行例外授权，当前 `src/server/room/room.ts` 的 applySeatCommand 增加 `case 'useConsumable': return runSharedMatchCommand(pool, state, command)`，只补穷举转发，未修改 gate/网络 onlyKeys/consumables.ts。Claude 的 claude/c18b-loot-ui 已有相应接线，C18-B 合入时由 Claude 用 useSeatConsumable 替换该行，并将其 WireCommand 收敛为 ClientCommand 别名；不保留两次分发或双重消费。

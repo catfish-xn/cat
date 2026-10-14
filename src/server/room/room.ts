@@ -103,6 +103,7 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
   const plain = (result: MatchCommandResult): SeatCommandOutcome => result.ok
     ? { ok: true, pool, state: result.state, events: result.events } : { ok: false, pool, state: result.state, reason: result.reason };
   switch (command.type) {
+    case 'useConsumable': return runSharedMatchCommand(pool, state, command);
     case 'deploy': return plain(deployMatchUnit(state, command.unitId, command.target));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
     case 'sell': return sellSharedUnit(pool, state, command.unitId);

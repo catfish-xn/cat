@@ -12,7 +12,9 @@ function triggerFirst(s: MatchState): MatchState {
   // Controlled valid HP fixture; only real incoming damage can consume the source.
   s = { ...s, combat: { ...s.combat, units: s.combat.units.map(u => u.id === 'unit-1' ? { ...u, hp: 280, cooldownTicks: 1000, mana: 0 } : u) } };
   for (let i = 0; i < 100 && s.phase === 'combat' && !holder(s).shield; i++) s = stepMatch(s).state;
-  expect(holder(s).shield).toBe(175 * receipts(s).length);
+  // Bloodthirster gives 25% max HP per independent instance; later public
+  // acquisition may include Bulky Buddies, so use the actual frozen max HP.
+  expect(holder(s).shield).toBe(Math.floor(holder(s).maxHp / 4) * receipts(s).length);
   expect(receipts(s).every(r => r.consumed && r.triggerCount === 1)).toBe(true);
   expect(receipts(s).length).toBeGreaterThan(0);
   return s;
@@ -77,7 +79,7 @@ describe('B4 R3b: compiled consumption partition survives the complete shield li
     const initial = itemMatch(['bloodthirster', 'bloodthirster']);
     expect(holder(initial).mechanismState!.unconsumedSurvivalKeys).toHaveLength(2);
     const fired = triggerFirst(restoreMatch(serializeMatch(initial)));
-    expect(holder(fired).shield).toBe(350); expect(holder(fired).shieldLayers).toHaveLength(2);
+    expect(holder(fired).shield).toBe(2 * Math.floor(holder(initial).maxHp / 4)); expect(holder(fired).shieldLayers).toHaveLength(2);
     expect(new Set(receipts(fired).map(r => r.source.instanceId)).size).toBe(2);
     expect(new Set(receipts(fired).map(r => r.key)).size).toBe(2);
     expect(holder(fired).mechanismState!.unconsumedSurvivalKeys).toEqual([]);

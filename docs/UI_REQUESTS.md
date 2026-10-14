@@ -762,3 +762,6 @@ D1–D8 已选 A；完整签名、阶段、失败码、投影见 MULTIPLAYER_CON
 - 04 已确认卡片分组/状态/来源/放弃原因及本轮结算重连期间持续下发；播放时的隐藏由界面处理。
 
 已放弃状态与工具名称为占位，由 Claude C18-B 正式接线。此次仅增加数据与合同，不改界面交互或布局。T13-A 先行 #80；R3/R4 在 codex/t13-loot 的 #81 按里程碑推送草稿，发布身份独立于 A。
+
+
+SR-C18-03（8968c8a）补充回应：ClientCommand 已纳入 useConsumable；Codex 的 legal() 暂恒拒绝此机器人动作，execute() 转发真实领域命令。用户另准许 applySeatCommand 一行直通 runSharedMatchCommand 以保持当前基线可编译；C18-B 合入时 Claude 将这行替换为 useSeatConsumable。gate、网络 onlyKeys、consumables.ts 均未改，继续使用 Claude 分支实现；不得两次消费同一命令。

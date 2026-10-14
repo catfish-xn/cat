@@ -60,7 +60,9 @@ describe('B10 eight encounters: actual public Match outcomes', () => {
     expect(api.stepMatch(state)).toEqual({ state, events: [] });
     if (roundId === '6-7') {
       expect(state.phase).toBe('gameOver');
-      expect(receipts.map(r => r.payload)).toEqual([{ kind: 'gold', quantity: 5 }]);
+      // D4: the terminal Herald package grants its one-time remover as well as 5G.
+      expect(receipts.map(r => r.payload)).toEqual([{ kind: 'gold', quantity: 5 },
+        { kind: 'consumable', definitionId: 'magnetic-remover', quantity: 1 }]);
     }
   });
 });

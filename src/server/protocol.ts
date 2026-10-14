@@ -6,6 +6,7 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
+import type { ConsumableTarget } from '../server-entry';
 
 export const ROOM_CAPACITY = 8;
 export const ROOM_PROTOCOL_VERSION = 1;
@@ -102,6 +103,7 @@ export interface LobbyView {
 
 /** Every command maps 1:1 to a public command of src/simulation/match.ts; the room adds nothing. */
 export type ClientCommand =
+  | { readonly type: 'useConsumable'; readonly consumableId: string; readonly target: ConsumableTarget }
   | { readonly type: 'deploy'; readonly unitId: string; readonly target: UnitLocation }
   | { readonly type: 'buy'; readonly slot: number; readonly generation: number }
   | { readonly type: 'sell'; readonly unitId: string }

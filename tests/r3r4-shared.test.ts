@@ -1,4 +1,5 @@
 import {describe,it,expect} from 'vitest';
+import {applySeatCommand} from '../src/server/room/room';
 import {nextSharedRound,refreshSharedShops,runSharedMatchCommand,createSharedPool,initializeSharedSeat} from '../src/simulation/shared-pool';
 import {createMatch,deployMatchUnit,equipItem} from '../src/simulation/match';
 import {toPrivateSeatView} from '../src/simulation/private-seat-view';
@@ -31,7 +32,9 @@ describe('D6 shared layout, transactions and D7 projections',()=>{
   const holder=state.preparation.units.find(u=>u.team==='player')!,item=state.items[0],tool=state.consumables[0];
   state=accepted(equipItem(state,item.id,holder.id,2));
   const before=JSON.stringify({available:pool.available,holdings:pool.holdings,shops:pool.shops,pending:pool.pending,rewards:pool.rewards,layout:pool.orbLayout});
-  const next=accept(runSharedMatchCommand(pool,state,{type:'useConsumable',consumableId:tool.consumableId,target:{kind:'unit',unitId:holder.id}}));
+  const command={type:'useConsumable',consumableId:tool.consumableId,target:{kind:'unit',unitId:holder.id}} as const;
+  const next=accept(runSharedMatchCommand(pool,state,command));
+  expect(applySeatCommand(pool,state,command)).toEqual(next);
   expect(next.pool.revision).toBe(pool.revision+1);expect(next.state.sharedPool!.revision).toBe(state.sharedPool!.revision+1);
   expect(next.poolEvents).toEqual([]);expect(next.state.combat).toBe(state.combat);expect(next.state.combatInputBasis).toBe(state.combatInputBasis);
   expect(JSON.stringify({available:next.pool.available,holdings:next.pool.holdings,shops:next.pool.shops,pending:next.pool.pending,rewards:next.pool.rewards,layout:next.pool.orbLayout})).toBe(before);
