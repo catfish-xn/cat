@@ -1,0 +1,198 @@
+{
+  "baselineCommit": "66395eb3eb9a215975baa70c37f49e3ef4c97811",
+  "baselineSimulationFilesVerified": 153,
+  "identityReplacements": [
+    [
+      "fnv1a32-utf16:bd9c3a8e",
+      "fnv1a32-utf16:77f80fec"
+    ],
+    [
+      "fnv1a32-utf16:5cd0487c",
+      "fnv1a32-utf16:b8d9d7ca"
+    ],
+    [
+      "s13-rules-gap-v1",
+      "s13-rules-gap-v2"
+    ],
+    [
+      "s13-14.24b-rules-gap-v1",
+      "s13-14.24b-rules-gap-v2"
+    ]
+  ],
+  "c19": {
+    "roundId": "6-1",
+    "battleSeed": 3706951144,
+    "oldFixtureSha256": "e33083871bb0e41b6ec81931c7a90fe62430075a76f633826c56c5620546d594",
+    "newFixtureSha256": "1db71e9cd53cb8af37a9a1a493f5a19bb096efc2ce38556a4145bf2638d89739",
+    "compiledComparison": {
+      "beforeSha256": "1b5f165c0d0e4efe13397856cd811209e346115c7837d25e17b8a0b3dda94210",
+      "afterSha256": "1b5f165c0d0e4efe13397856cd811209e346115c7837d25e17b8a0b3dda94210",
+      "bytes": 10934,
+      "byteEqual": true
+    },
+    "terminal": {
+      "beforeSha256": "548aa8f8bfba4b9f1d086f428f64063a1787c973c67a9c211fbc6e037efc6331",
+      "afterSha256": "548aa8f8bfba4b9f1d086f428f64063a1787c973c67a9c211fbc6e037efc6331",
+      "bytes": 23276,
+      "byteEqual": true
+    },
+    "events": {
+      "beforeSha256": "ce0a1cdad74d810a3a5063fed553a3016b886d3b90fc1433e0dc074402fa1748",
+      "afterSha256": "ce0a1cdad74d810a3a5063fed553a3016b886d3b90fc1433e0dc074402fa1748",
+      "bytes": 166434,
+      "byteEqual": true
+    },
+    "pulses": {
+      "beforeSha256": "501967ee9b7134ee37eccca0fddae0da9cf637f0902d6b7a814b3101691c9d40",
+      "afterSha256": "501967ee9b7134ee37eccca0fddae0da9cf637f0902d6b7a814b3101691c9d40",
+      "bytes": 14192,
+      "byteEqual": true
+    },
+    "terminalTick": 244,
+    "terminalResult": "enemyWin",
+    "eventCount": 208,
+    "pulseCount": 15,
+    "pulseCountsByTarget": {
+      "[\"t2\",\"s3\",\"unit\",\"unit-42\"]": 5,
+      "[\"t2\",\"s3\",\"unit\",\"unit-48\"]": 10
+    }
+  },
+  "herald": {
+    "recordingCommand": "node scripts/verify-m8-herald-fixtures.cjs --write",
+    "trajectory": {
+      "beforeSha256": "4b3b2f98f0467cf94ae3ab9876b25cb500af8e56a105de3fa9f125dcb3f09075",
+      "afterSha256": "4b3b2f98f0467cf94ae3ab9876b25cb500af8e56a105de3fa9f125dcb3f09075",
+      "bytes": 118965,
+      "byteEqual": true
+    },
+    "prefixBattles": 18,
+    "branchBattles": 70,
+    "cases": [
+      {
+        "name": "ionic-spark",
+        "raw": {
+          "beforeSha256": "0697df8f49101e2886e3789cae4c8f1902bf02077316386e7457d0eeb54f6f50",
+          "afterSha256": "0697df8f49101e2886e3789cae4c8f1902bf02077316386e7457d0eeb54f6f50",
+          "bytes": 111551,
+          "byteEqual": true
+        },
+        "start": {
+          "beforeSha256": "583e5aa0922097b0f19f9bd39b6ab8572656ba90193ef6c8609f47c7fe3d4e51",
+          "afterSha256": "583e5aa0922097b0f19f9bd39b6ab8572656ba90193ef6c8609f47c7fe3d4e51",
+          "bytes": 131903,
+          "byteEqual": true
+        },
+        "firstFifteenTicks": {
+          "beforeSha256": "d9bfa7bd45b3163cdc3efd92ffcadc5219381553368232789e5e8b3138ba8eb9",
+          "afterSha256": "d9bfa7bd45b3163cdc3efd92ffcadc5219381553368232789e5e8b3138ba8eb9",
+          "bytes": 2103870,
+          "byteEqual": true
+        },
+        "rawSha256": "4a3aa0232c7a11b6164ba7772dc39849ed166275a06ea3e0321329d8b221a679",
+        "commands": 59,
+        "battles": 14,
+        "ticks": 6088
+      },
+      {
+        "name": "evenshroud",
+        "raw": {
+          "beforeSha256": "e7cd79faa8ddf988df3a696df035664c2f26bc8550126789f8ffb2216ebf7903",
+          "afterSha256": "e7cd79faa8ddf988df3a696df035664c2f26bc8550126789f8ffb2216ebf7903",
+          "bytes": 111550,
+          "byteEqual": true
+        },
+        "start": {
+          "beforeSha256": "8afccb96e4fffb1a42a57c90eb81c9626e009367a6f752cc9ec2dcfedc82f244",
+          "afterSha256": "8afccb96e4fffb1a42a57c90eb81c9626e009367a6f752cc9ec2dcfedc82f244",
+          "bytes": 137447,
+          "byteEqual": true
+        },
+        "firstFifteenTicks": {
+          "beforeSha256": "c49331eda2919358834255ce3619229ecbf0da465571a00b45058255768bee2f",
+          "afterSha256": "c49331eda2919358834255ce3619229ecbf0da465571a00b45058255768bee2f",
+          "bytes": 2154338,
+          "byteEqual": true
+        },
+        "rawSha256": "6b4387f42fb2bca55cae9619cb8a702ba7b6801fe91a7b74da1ff399a0d4f167",
+        "commands": 59,
+        "battles": 14,
+        "ticks": 6088
+      },
+      {
+        "name": "ionic-spark--evenshroud",
+        "raw": {
+          "beforeSha256": "c94ac7c45b450efaa57fd818a7550ba0c7119e63e93a6f5d19dec98206effa53",
+          "afterSha256": "c94ac7c45b450efaa57fd818a7550ba0c7119e63e93a6f5d19dec98206effa53",
+          "bytes": 111675,
+          "byteEqual": true
+        },
+        "start": {
+          "beforeSha256": "9812cb5861cdc2485ac98233e900bfe2c47308c4178e6d2920af134132a9a078",
+          "afterSha256": "9812cb5861cdc2485ac98233e900bfe2c47308c4178e6d2920af134132a9a078",
+          "bytes": 145628,
+          "byteEqual": true
+        },
+        "firstFifteenTicks": {
+          "beforeSha256": "b3ea1df524228ba6221b773158ffacfb463fc849d589f562f0dbda161d498032",
+          "afterSha256": "b3ea1df524228ba6221b773158ffacfb463fc849d589f562f0dbda161d498032",
+          "bytes": 2331424,
+          "byteEqual": true
+        },
+        "rawSha256": "7e57f6ba823ad0ba13d8dbc05b06234fc1f14bb8811e685f0db938d27687975b",
+        "commands": 61,
+        "battles": 14,
+        "ticks": 6088
+      },
+      {
+        "name": "quicksilver",
+        "raw": {
+          "beforeSha256": "5c05385ee326e909d82863b1176a97bd49a0a2f7d1d25749a2c5c0c77cd09643",
+          "afterSha256": "5c05385ee326e909d82863b1176a97bd49a0a2f7d1d25749a2c5c0c77cd09643",
+          "bytes": 111554,
+          "byteEqual": true
+        },
+        "start": {
+          "beforeSha256": "457c5f5fe081b6f11015fe39f6ad94a745fe85829b494d82f468797c22714eec",
+          "afterSha256": "457c5f5fe081b6f11015fe39f6ad94a745fe85829b494d82f468797c22714eec",
+          "bytes": 133142,
+          "byteEqual": true
+        },
+        "firstFifteenTicks": {
+          "beforeSha256": "b72420d3341dfd3176a95bff89ca785dc72922752e50bc0902ac39bf4a3aa497",
+          "afterSha256": "b72420d3341dfd3176a95bff89ca785dc72922752e50bc0902ac39bf4a3aa497",
+          "bytes": 2026303,
+          "byteEqual": true
+        },
+        "rawSha256": "7a12c9e9fd79033960e485dddbc8d3e3c493a3ba606907844b77aa1f35224bbb",
+        "commands": 59,
+        "battles": 14,
+        "ticks": 6088
+      },
+      {
+        "name": "edge-of-night",
+        "raw": {
+          "beforeSha256": "741444dbbff836a4b43933e32c67efeccf9b20518285de7a85c6afbeee2b4ff0",
+          "afterSha256": "741444dbbff836a4b43933e32c67efeccf9b20518285de7a85c6afbeee2b4ff0",
+          "bytes": 111556,
+          "byteEqual": true
+        },
+        "start": {
+          "beforeSha256": "d1983e4db344b365a56709020890905d2b694b5d5ef3e5271bddd6dcd8ee4284",
+          "afterSha256": "d1983e4db344b365a56709020890905d2b694b5d5ef3e5271bddd6dcd8ee4284",
+          "bytes": 130623,
+          "byteEqual": true
+        },
+        "firstFifteenTicks": {
+          "beforeSha256": "884ac794ef0fa4f92760c163f2f143de169915dc774b0d5d0b743507f4e349f8",
+          "afterSha256": "884ac794ef0fa4f92760c163f2f143de169915dc774b0d5d0b743507f4e349f8",
+          "bytes": 2030351,
+          "byteEqual": true
+        },
+        "rawSha256": "de2e1558f470032039520f35fa982f03b93306c5c35c77992cfa047dc1e5a374",
+        "commands": 59,
+        "battles": 14,
+        "ticks": 6088
+      }
+    ]
+  }
+}
