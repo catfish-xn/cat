@@ -4,8 +4,10 @@
  *
  *   npm run build:game && node tests/server/e2e/c19-full-match.mjs
  *
- * The humans play like people (buy, deploy through the 部署 tab, put inventory items on board units, take the first offer
- * of every choice). Every check compares what the server projected to the page (my private state, the public view, the
+ * The humans play through the page's own controls (shop cards, D/F, the 部署 tab, item cards and slots, 合成, the first
+ * offer of every choice). What to do in a preparation is asked of the T7 bot policy (`decideBotAction` from
+ * src/server-entry), so they play at bot strength and live long enough for the late rounds; each preparation runs bots
+ * first, then 甲, then 乙, so a seed replays the same match. Every check compares what the server projected to the page (my private state, the public view, the
  * receipts) with what the page shows; nothing here computes a rule. Along the way, once each unless noted:
  *   ops      during one of 甲's battles: buy, reroll and buy XP through the docked shop; each receipt is applied, the
  *            replay keeps playing, and the gold/level chips and the shop cards show the pushed state.
@@ -29,13 +31,14 @@
  *   end      both pages show the ranking overlay: 8 entries, ranks 1..8 once each, in the order and with the names of the
  *            server's ranking.
  * A check the match did not offer the chance for (no tool dropped, no overtime) fails with the reason; C19_SEED picks
- * another room seed. Screenshots and report go to artifacts/c19/ (not committed). C19_VITE_PORT (5208) / C19_WS_PORT (8801).
+ * another room seed. Screenshots and report go to artifacts/c19/ (not committed; C19_OUT names another folder under artifacts/).
+ * C19_VITE_PORT (5208) / C19_WS_PORT (8801).
  */
 import { writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
 import { ROOT, click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, outDir, read, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
 
-const OUT = outDir('c19');
+const OUT = outDir(process.env.C19_OUT ?? 'c19');
 const VITE_PORT = Number(process.env.C19_VITE_PORT ?? 5208);
 const WS_PORT = Number(process.env.C19_WS_PORT ?? 8801);
 const SEED = process.env.C19_SEED ?? '20261012';
@@ -59,7 +62,7 @@ const screen = page => page.evaluate(() => {
   const chip = kind => document.querySelector(`.hud-${kind} strong`)?.textContent ?? null;
   return {
     gold: chip('gold'), level: chip('level'),
-    shop: all('[data-debug^="mobile:buy-"]').map(node => ({ slot: Number(node.dataset.debug.slice('mobile:buy-'.length)), name: node.querySelector('.shop-name')?.textContent ?? '', cost: node.dataset.cost ?? null })),
+    shop: all('[data-debug^="mobile:buy-"]').filter(node => /^mobile:buy-\d+$/.test(node.dataset.debug)).map(node => ({ slot: Number(node.dataset.debug.slice('mobile:buy-'.length)), name: node.querySelector('.shop-name')?.textContent ?? '', cost: node.dataset.cost ?? null })),
     inventory: all('.item-inventory [data-item-id]').map(node => ({ id: node.dataset.itemId, definitionId: node.dataset.itemDef })),
     tools: all('[data-debug^="consumable:"]').map(node => ({ id: node.dataset.debug.slice('consumable:'.length), definitionId: node.dataset.consumableDef })),
     slots: all('[data-equip-unit]').map(node => ({ unit: node.dataset.equipUnit, slot: Number(node.dataset.equipSlot), itemId: node.dataset.itemId ?? null, definitionId: node.dataset.itemDef ?? null, pending: node.dataset.pending ?? null, text: node.textContent, title: node.title })),
@@ -77,6 +80,7 @@ const screen = page => page.evaluate(() => {
     })(),
     round: document.querySelector('.online-round')?.textContent ?? null,
     countdown: document.querySelector('.countdown-round')?.textContent ?? null,
+    fault: (() => { const node = document.querySelector('[data-debug="online:fault"]'); return node && !node.hidden ? node.textContent : null; })(),
     ranking: (() => {
       const overlay = document.querySelector('#ranking-root');
       if (!overlay || overlay.hidden) return null;
@@ -91,11 +95,11 @@ const shownInventory = view => sorted(view.inventory.map(item => `${item.id}:${i
 const toolsOf = state => sorted((state.consumables ?? []).map(tool => `${tool.consumableId}:${tool.definitionId}`));
 const shownTools = view => sorted(view.tools.map(tool => `${tool.id}:${tool.definitionId}`));
 
-/** Display names straight from the content tables the page uses (never re-implemented here). */
+/** Display names from the content tables the page uses, and the T7 bot policy the humans consult (never re-implemented here). */
 async function loadTables() {
   const outfile = `${OUT}/tables.mjs`;
   await build({
-    stdin: { contents: "export { ITEM_DEFINITIONS } from './src/simulation/content/items.ts';\nexport { getHeroIdentity } from './src/presentation/hero-identity.ts';", resolveDir: ROOT, loader: 'ts' },
+    stdin: { contents: "export { ITEM_DEFINITIONS } from './src/simulation/content/items.ts';\nexport { getHeroIdentity } from './src/presentation/hero-identity.ts';\nexport { decideBotAction, BOT_MAX_STEPS } from './src/server-entry/index.ts';", resolveDir: ROOT, loader: 'ts' },
     bundle: true, format: 'esm', platform: 'node', outfile, logLevel: 'warning',
   });
   return import(`${outfile}?${Date.now()}`);
@@ -105,11 +109,13 @@ const report = { ops: null, autoCombine: null, pending: null, pendingNext: null,
 /** Global once-only tasks; a human claims one synchronously before awaiting anything. */
 const claimed = new Set();
 const claim = task => { if (claimed.has(task)) return false; claimed.add(task); return true; };
+/** Preparation turns: 甲 marks its round done so 乙 follows. */
+const turns = new Map();
 
 async function main() {
   const tables = await loadTables();
   const kindOf = definitionId => tables.ITEM_DEFINITIONS[definitionId]?.kind;
-  const wsPort = await startGameServer(WS_PORT, { CAT_SEED: SEED, CAT_PREP_SEC: '8', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '8', CAT_BOT_STEP_MS: '100', CAT_TAKEOVER_SEC: '600' });
+  const wsPort = await startGameServer(WS_PORT, { CAT_SEED: SEED, CAT_PREP_SEC: '16', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '18', CAT_BOT_STEP_MS: '50', CAT_TAKEOVER_SEC: '600' });
   const base = await startVite(VITE_PORT);
   const browser = await launchBrowser();
   const errors = [];
@@ -119,7 +125,7 @@ async function main() {
       const context = await browser.newContext({ viewport: { width: 1440, height: 2200 } });
       const page = await context.newPage();
       collectErrors(page, errors, name);
-      return { name, page, wire: trackCommands(page) };
+      return { name, page, wire: trackCommands(page), rng: name === '甲' ? 0x0c19a001 : 0x0c19a002 };
     };
     const jia = await open('甲'), yi = await open('乙');
     await joinOnline(jia.page, onlineUrl(base, wsPort), '甲', { startMatch: false });
@@ -150,7 +156,7 @@ async function main() {
     check(report.pending !== null && report.pendingNext !== null, `C18-A next-battle equipment ran and was followed into the next preparation (${report.pending?.roundId ?? 'none'} → ${report.pendingNext?.roundId ?? 'none'})`);
     check(Boolean(report.tools.remover), `a magnetic remover was used (${report.tools.remover ? `${report.tools.remover.human} ${report.tools.remover.roundId}` : 'no human held a remover and a unit wearing items'})`);
     check(Boolean(report.tools.reforger), `a reforger was used (${report.tools.reforger ? `${report.tools.reforger.human} ${report.tools.reforger.roundId} ${report.tools.reforger.definitionId}` : 'no human held a reforger with an allowed target'})`);
-    check(report.reload !== null, `乙 reloaded in a PvE settlement (${report.reload ? report.reload.roundId : 'never'})`);
+    check(report.reload !== null, `乙 reloaded in a PvE settlement and came back before it ended (${report.reload ? `${report.reload.roundId}, back after ${report.reload.backAfterMs} ms` : 'never'})`);
     check(report.overtime.length > 0 && report.overtime.every(entry => entry.ok), `overtime after 6-7 was played and shown (${report.overtime.map(entry => `${entry.roundName}${entry.ok ? '' : ' ✗'}`).join(', ') || 'the match ended before overtime'})`);
     check(errors.length === 0, `no page errors (${errors.slice(0, 3).join(' | ')})`);
   } finally {
@@ -166,6 +172,7 @@ async function play(human, tables, kindOf, role) {
   const { name, page, wire } = human;
   const answered = new Set(), settlementsSeen = new Set(), orbsSeen = new Set(), overtimeSeen = new Set();
   let pending = null, lastPrep = 0;
+  const reloadAttempts = [], prepSeen = new Map();
   const started = Date.now();
   const deadline = Date.now() + 75 * 60_000;
   const act = async (control, type) => {
@@ -210,10 +217,11 @@ async function play(human, tables, kindOf, role) {
     if (phase?.kind === 'ended') {
       const view = await pushed(x => x.m6.ranking !== null, 5_000) ?? s;
       await page.waitForTimeout(400);
-      const shown = (await screen(page)).ranking;
+      const ended = await screen(page), shown = ended.ranking;
       const ranking = view.m6.ranking ?? [];
       await page.screenshot({ path: `${OUT}/${name}-ranking.png` });
-      report.ranking[name] = { server: ranking.map(seat => ({ seatId: seat.seatId, name: seat.name, rank: seat.rank })), shown };
+      report.ranking[name] = { roundName: phase.roundName, server: ranking.map(seat => ({ seatId: seat.seatId, name: seat.name, rank: seat.rank })), shown, fault: ended.fault };
+      check(ended.fault === null, `${name}: the room ended normally (${ended.fault ?? 'no fault shown'}, last round ${phase.roundName})`);
       check(ranking.length === 8 && same(sorted(ranking.map(seat => seat.rank)), [1, 2, 3, 4, 5, 6, 7, 8]), `${name}: the server ranking has ranks 1..8 once each (${ranking.map(seat => `${seat.rank}:${seat.name}`).join(' ')})`);
       check(shown !== null && same(shown, ranking.map(seat => ({ rank: String(seat.rank), name: seat.name }))), `${name}: the ranking overlay shows that ranking in order (${JSON.stringify(shown)})`);
       return true;
@@ -273,24 +281,30 @@ async function play(human, tables, kindOf, role) {
           report.orbs.push({ human: name, roundId: loot.roundId, tiers: loot.revealedOrbs.map(orb => orb.tier), shown: view.orbs, ok });
           if (!ok) console.log(`${name} ${loot.roundId}: orb cards ${JSON.stringify(view.orbs)} vs ${JSON.stringify(expectedOrbs(loot))}`);
           // 乙 reloads once, right here: the same cards, inventory and tools must come back.
-          if (role.reload && claim('reload') && s.state.phase === 'settlement') {
+          if (role.reload && !report.reload && reloadAttempts.length < 4 && s.state.phase === 'settlement') {
             await items();
-            const before = await screen(page), state = (await read(page)).state;
+            const before = await screen(page), state = (await read(page)).state, reloadedAt = Date.now();
             await page.screenshot({ path: `${OUT}/reload-before.png` });
             await page.reload();
-            const back = await pushed(x => x.state.round === state.round && !x.replay?.playingBack && x.state.revealedLoot?.revealedOrbs?.length > 0, 25_000);
-            if (back) await items();
-            await page.waitForTimeout(300);
-            const after = back ? await screen(page) : null, now = back ? (await read(page)).state : null;
-            await page.screenshot({ path: `${OUT}/reload-after.png` });
-            report.reload = { roundId: loot.roundId, phaseAfter: now?.phase ?? null, before: { orbs: before.orbs, inventory: shownInventory(before), tools: shownTools(before) },
-              after: after && { orbs: after.orbs, inventory: shownInventory(after), tools: shownTools(after) } };
-            check(back !== null, `乙 ${loot.roundId}: the page reconnected to the same round after the reload`);
-            if (after) {
-              check(same(after.orbs, before.orbs) && same(after.orbs, expectedOrbs(now.revealedLoot)), `乙 ${loot.roundId}: the same orb cards are back, equal to the projection (${after.orbs?.length ?? 0} cards)`);
-              check(same(shownInventory(after), shownInventory(before)) && same(shownInventory(after), inventoryOf(now)), `乙 ${loot.roundId}: the same inventory cards are back, equal to the projection (${shownInventory(after).join(', ') || 'empty'})`);
-              check(same(shownTools(after), shownTools(before)) && same(shownTools(after), toolsOf(now)), `乙 ${loot.roundId}: the same tool shelf is back, equal to the projection (${shownTools(after).join(', ') || 'empty'})`);
+            // Back on the seat, then (when the room is still in this settlement) the battle replayed and the orbs shown.
+            const back = await pushed(x => x.m6?.mode === 'active' && x.state.round >= state.round, 25_000);
+            const again = back && await pushed(x => (x.state.round === state.round && !x.replay?.playingBack && x.state.revealedLoot?.revealedOrbs?.length > 0) || x.state.round > state.round, 25_000);
+            const attempt = { roundId: loot.roundId, backAfterMs: back ? Date.now() - reloadedAt : null, round: again?.state.round ?? null, phase: again?.m6.phase?.kind ?? null };
+            reloadAttempts.push(attempt);
+            console.log(`乙 reload in ${loot.roundId} settlement: ${JSON.stringify(attempt)}`);
+            if (!again || again.state.round !== state.round) return false; // the settlement ended first: try in a later PvE settlement
+            await items(); await page.waitForTimeout(300);
+            // The projection read on both sides of the screen read: a round change in between is a missed attempt, not a mismatch.
+            const now = (await read(page)).state, after = await screen(page), still = (await read(page)).state;
+            if (now.round !== state.round || fingerprint(still) !== fingerprint(now) || JSON.stringify(still.revealedLoot) !== JSON.stringify(now.revealedLoot)) {
+              attempt.late = true; console.log('乙 reload: the settlement ended while reading the page; trying in a later PvE settlement'); return false;
             }
+            await page.screenshot({ path: `${OUT}/reload-after.png` });
+            report.reload = { ...attempt, before: { orbs: before.orbs, inventory: shownInventory(before), tools: shownTools(before) }, after: { orbs: after.orbs, inventory: shownInventory(after), tools: shownTools(after) } };
+            const orbsBack = same(after.orbs, before.orbs) && same(after.orbs, expectedOrbs(now.revealedLoot));
+            check(orbsBack, `乙 ${loot.roundId}: after the reload the same orb cards are back, equal to the projection (${orbsBack ? `${after.orbs.length} cards` : `before ${JSON.stringify(before.orbs)}, after ${JSON.stringify(after.orbs)}, projected ${JSON.stringify(expectedOrbs(now.revealedLoot))}`})`);
+            check(same(shownInventory(after), shownInventory(before)) && same(shownInventory(after), inventoryOf(now)), `乙 ${loot.roundId}: the same inventory cards are back, equal to the projection (${shownInventory(after).join(', ') || 'empty'})`);
+            check(same(shownTools(after), shownTools(before)) && same(shownTools(after), toolsOf(now)), `乙 ${loot.roundId}: the same tool shelf is back, equal to the projection (${shownTools(after).join(', ') || 'empty'})`);
             return false;
           }
         }
@@ -312,14 +326,17 @@ async function play(human, tables, kindOf, role) {
 
     /* tools: a remover on a unit wearing items, a reforger on an allowed item (any phase the server allows) */
     const tools = s.state.consumables ?? [];
+    // A target the server allows; never the unit or item a pending C18-A check still follows.
+    const usable = (task, state, target) => target.allowed && (task === 'reforger' || wornBy(state, target.target.unitId).length > 0)
+      && !(pending && (target.target.unitId === pending.unitId || target.target.itemId === pending.itemId));
     const toolTask = tools.map(tool => ({ tool, task: tool.definitionId === 'magnetic-remover' ? 'remover' : 'reforger' })).find(entry => !claimed.has(entry.task)
-      && (s.state.consumableTargets ?? []).find(row => row.consumableId === entry.tool.consumableId)?.targets.some(target => target.allowed && (entry.task === 'reforger' || wornBy(s.state, target.target.unitId).length > 0)));
+      && (s.state.consumableTargets ?? []).find(row => row.consumableId === entry.tool.consumableId)?.targets.some(target => usable(entry.task, s.state, target)));
     if (toolTask && !s.replay?.playingBack && ['preparation', 'settlement'].includes(s.state.phase)) {
       await items();
       const now = await read(page);
       const tool = (now.state.consumables ?? []).find(entry => entry.consumableId === toolTask.tool.consumableId);
       const row = tool && now.state.consumableTargets.find(entry => entry.consumableId === tool.consumableId);
-      const target = row?.targets.find(entry => entry.allowed && (toolTask.task === 'reforger' || wornBy(now.state, entry.target.unitId).length > 0)
+      const target = row?.targets.find(entry => usable(toolTask.task, now.state, entry)
         && now.strategy.bounds[entry.target.kind === 'unit' ? `equipment:${entry.target.unitId}:0` : itemBoundsKey(now.state, entry.target.itemId)]);
       const from = tool && now.strategy.bounds[`consumable:${tool.consumableId}`];
       if (target && from && claim(toolTask.task)) {
@@ -408,9 +425,15 @@ async function play(human, tables, kindOf, role) {
 
     /* preparation: buy, deploy, equip (T13-A check on the first unit wearing one loose component) */
     if (inPreparation(s) && s.state.round !== lastPrep) {
+      // Bots act first (50 ms steps, done within ~3.5 s), then 甲, then 乙: the same order on every run of a seed.
+      if (!prepSeen.has(s.state.round)) prepSeen.set(s.state.round, Date.now());
+      const waited = Date.now() - prepSeen.get(s.state.round), jia = s.m6.seats.find(seat => seat.name === '甲');
+      const ready = name === '甲' ? waited > 3_500 : turns.get(s.state.round) === 'done' || !jia?.alive || waited > 10_000;
+      if (!ready) { await page.waitForTimeout(80); return false; }
       lastPrep = s.state.round;
-      await prepare(page, act, pushed);
-      await equipAll(human, tables, kindOf, act, pushed, items);
+      await autoCombineCheck(human, kindOf, pushed, items);
+      await policyTurn(human, tables, act, pushed, items);
+      if (name === '甲') turns.set(s.state.round, 'done');
       return false;
     }
     await page.waitForTimeout(80);
@@ -425,60 +448,93 @@ function itemBoundsKey(state, itemId) {
   return item.location.kind === 'unit' ? `equipment:${item.location.unitId}:${item.location.slot}` : `item:${itemId}`;
 }
 
-/** Buy what keeps the board filled (and some XP with spare gold), then deploy bench units up to the level through 部署. */
-async function prepare(page, act, pushed) {
-  let state = (await read(page)).state;
-  if (state.phase !== 'preparation') return;
-  if (state.gold >= 24 && state.level < 8) { await act('mobile:buy-xp', 'buyXp'); state = (await read(page)).state; }
-  const owned = new Set(mine(state).map(unit => unit.definitionId));
-  for (let slot = 0; slot < state.shop.slots.length; slot++) {
-    state = (await read(page)).state;
-    if (state.phase !== 'preparation') return;
-    const offer = state.shop.slots[slot], units = mine(state);
-    if (offer?.status !== 'available' || units.filter(unit => unit.location.kind === 'bench').length >= state.preparation.benchSize - 1) continue;
-    const wanted = owned.has(offer.definitionId) || units.filter(unit => unit.location.kind === 'board').length + units.filter(unit => unit.location.kind === 'bench').length < state.level + 1;
-    if (wanted && state.gold >= 12) { const count = units.length; if (await act(`mobile:buy-${slot}`, 'buy') === 'applied') await pushed(x => mine(x.state).length !== count, 3_000); }
+/**
+ * One preparation turn of a human: the T7 policy (`decideBotAction`, the bots' own brain from src/server-entry) names one
+ * intention at a time and the test carries it out through the page's controls (shop cards, D/F, 部署 tab, item cards
+ * and slots, 合成). A refused or unreachable intention ends the turn, as for a bot (contract §13.3). The humans thus play
+ * at bot strength and live long enough for the late checks; nothing here decides a rule.
+ */
+async function policyTurn(human, brain, act, pushed, items) {
+  const { name, page } = human;
+  let stepsTaken = 0, lastFailure;
+  for (;;) {
+    const s = await read(page);
+    if (!inPreparation(s)) return;
+    const self = s.m6.seats.find(seat => seat.name === name);
+    // The page's display copy fills the id serials the seat view does not carry with placeholders (seat-view-adapter);
+    // the policy's previews only need them past every id in use to name a candidate. The server picks the real ids.
+    const after = (ids, prefix) => Math.max(0, ...ids.filter(id => id.startsWith(prefix)).map(id => Number(id.slice(prefix.length)) || 0)) + 1;
+    const input = { ...s.state, nextUnitSerial: Math.max(s.state.nextUnitSerial, after(s.state.preparation.units.map(unit => unit.id), 'unit-')),
+      nextItemSerial: Math.max(s.state.nextItemSerial, after(s.state.items.map(item => item.id), 'item-')) };
+    let decision;
+    try { decision = brain.decideBotAction(input, { difficulty: 'basic', stepsTaken, maxSteps: brain.BOT_MAX_STEPS, self: { seatId: self.seatId, hp: s.state.playerHp, round: s.state.round }, ...(lastFailure ? { lastFailure } : {}) }, human.rng); }
+    catch (error) { console.log(`${name} ${s.state.roundDefinitionId}: the policy could not read the display state (${error.message}); turn ends`); return; }
+    human.rng = decision.rng;
+    const action = decision.action;
+    if (action === 'done') return;
+    stepsTaken++;
+    const before = fingerprint(s.state);
+    const outcome = await perform(human, action, act, items);
+    if (outcome !== 'applied') { lastFailure = { action, reason: outcome ?? 'no-receipt' }; continue; }
+    await pushed(x => fingerprint(x.state) !== before, 3_000);
   }
-  await click(page, 'panel:units');
-  for (let i = 0; i < 9; i++) {
-    state = (await read(page)).state;
-    if (state.phase !== 'preparation') return;
-    const units = mine(state), bench = units.filter(unit => unit.location.kind === 'bench');
-    if (!bench.length || units.length - bench.length >= state.level) break;
-    const taken = new Set(state.preparation.units.filter(unit => unit.location.kind === 'board').map(unit => cellKey(unit.location.cell)));
-    const zone = state.preparation.board.deploymentZones.player;
-    let cell = null;
-    for (let row = zone.firstRow; row <= zone.lastRow && !cell; row++) for (let col = 0; col < state.preparation.board.columns && !cell; col++) if (!taken.has(`${col},${row}`)) cell = `${col},${row}`;
-    if (!cell) break;
-    const placed = units.length - bench.length;
-    await click(page, `mobile:unit:${bench[0].id}`); await click(page, `deploy:${cell}`);
-    await pushed(x => mine(x.state).filter(unit => unit.location.kind === 'board').length > placed, 3_000);
+}
+/** What a command changes in my state; a push after an applied receipt changes it. */
+const fingerprint = state => JSON.stringify([state.gold, state.level, state.xp, state.shop, state.preparation.units.map(unit => [unit.id, unit.location, unit.starLevel]),
+  state.items.map(item => [item.id, item.location]), state.pendingChoice?.choiceId ?? null]);
+/** Carries out one policy intention through the page; the receipt kind, `refused:<reason>`, or 'disabled'/'unmapped'. */
+async function perform(human, action, act, items) {
+  const { page, wire } = human;
+  const units = async () => { await click(page, 'panel:units'); await page.waitForTimeout(80); };
+  /** A real click in the middle of a panel node (item cards select on pointer up, not on a synthetic click). */
+  const press = async key => { const box = (await read(page)).strategy.bounds[key]; if (!box) return false; await page.mouse.click(box.centerX, box.centerY); await page.waitForTimeout(80); return true; };
+  switch (action.type) {
+    case 'buy': return act(`mobile:buy-${action.slot}`, 'buy');
+    case 'reroll': return act('mobile:reroll', 'reroll');
+    case 'buyXp': return act('mobile:buy-xp', 'buyXp');
+    case 'shopLock': return act('shop-lock', 'shopLock');
+    case 'sell': await units(); if (!(await click(page, `mobile:unit:${action.unitId}`))) return 'disabled'; return act('mobile:sell', 'sell');
+    case 'deploy': {
+      await units();
+      if (!(await click(page, `mobile:unit:${action.unitId}`))) return 'disabled';
+      return act(action.target.kind === 'board' ? `deploy:${cellKey(action.target.cell)}` : `mobile:bench:${action.target.slot}`, 'deploy');
+    }
+    case 'combine': {
+      await items();
+      for (const id of [action.a, action.b]) if (!(await press(`item:${id}`))) return 'disabled';
+      return act('combine-items', 'combine');
+    }
+    case 'equip': {
+      await items();
+      const before = wire.mark();
+      if (!(await press(`item:${action.itemId}`)) || !(await press(`equipment:${action.unitId}:${action.slot}`))) return 'disabled';
+      return wire.receiptSince(before, 'equip');
+    }
+    default: return 'unmapped';
   }
 }
 
 /**
- * Puts inventory items on board units by clicking the card, then a slot (the C16 path). A component goes first to a unit
- * wearing one loose component, clicked on an EMPTY slot: the first time this is the T13-A check.
+ * T13-A, once: with two components at hand, one is put on a board unit wearing nothing, then the other is clicked onto an
+ * EMPTY slot of that unit (card, then slot: the C16 path). The policy turn does everything else.
  */
-async function equipAll(human, tables, kindOf, act, pushed, items) {
+async function autoCombineCheck(human, kindOf, pushed, items) {
   const { name, page, wire } = human;
+  if (report.autoCombine) return;
   await items();
-  for (let guard = 0; guard < 6; guard++) {
+  for (let guard = 0; guard < 3 && !report.autoCombine; guard++) {
     const now = await read(page);
     if (!inPreparation(now)) return;
     const board = mine(now.state).filter(unit => unit.location.kind === 'board');
     const loose = unit => wornBy(now.state, unit.id).filter(item => kindOf(item.definitionId) === 'component');
     const emptySlot = unit => [0, 1, 2].find(slot => !wornBy(now.state, unit.id).some(item => item.location.slot === slot) && now.strategy.bounds[`equipment:${unit.id}:${slot}`]);
-    const candidates = inventory(now.state).filter(entry => now.strategy.bounds[`item:${entry.id}`] && ['component', 'completed'].includes(kindOf(entry.definitionId)));
-    // Once T13-A ran, one item stays in the inventory until the C18-A check has put one on a fighting unit.
-    if (!candidates.length || (report.autoCombine && !claimed.has('pending') && inventory(now.state).length <= 1)) return;
-    const combining = board.some(entry => loose(entry).length === 1 && emptySlot(entry) !== undefined);
-    const item = (combining && candidates.find(entry => kindOf(entry.definitionId) === 'component')) || candidates[0];
-    const component = kindOf(item.definitionId) === 'component';
-    const unit = (component ? board.find(entry => loose(entry).length === 1 && emptySlot(entry) !== undefined) : undefined) ?? board.find(entry => wornBy(now.state, entry.id).length === 0 && emptySlot(entry) !== undefined)
-      ?? board.find(entry => !loose(entry).length && emptySlot(entry) !== undefined);
+    const components = inventory(now.state).filter(entry => now.strategy.bounds[`item:${entry.id}`] && kindOf(entry.definitionId) === 'component');
+    const wearer = board.find(entry => loose(entry).length === 1 && emptySlot(entry) !== undefined);
+    if (!components.length || (!wearer && components.length < 2)) return;
+    const item = components[0];
+    const unit = wearer ?? board.find(entry => wornBy(now.state, entry.id).length === 0 && emptySlot(entry) !== undefined);
     if (!unit) return;
-    const slot = emptySlot(unit), autoCombine = component && loose(unit).length === 1 && !report.autoCombine;
+    const slot = emptySlot(unit), autoCombine = Boolean(wearer);
     const looseBefore = loose(unit)[0];
     const before = wire.mark();
     const card = now.strategy.bounds[`item:${item.id}`];
