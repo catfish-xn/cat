@@ -8,7 +8,7 @@ import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatUnit } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
-  toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
+  startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
 } from '../../server-entry';
 import type { PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
 import { findPairing } from './pairing';
@@ -168,6 +168,40 @@ export function warmCombatReplays(battle: BattleResult, seatIds: Iterable<string
   for (const seatId of seatIds) {
     try { replayOf(battle, seatId); } catch { /* reported by the push */ }
   }
+}
+
+/** Sliced warm-up of one resolved battle's replays; `advance` is true once every wanted replay is cached (or failed). */
+export interface ReplayWarmup { advance(maxTicks: number): boolean }
+/**
+ * warmCombatReplays cut into slices (§19): one `startCombatReplay` task per replay the given seats will be pushed and
+ * the cache does not hold yet, advanced by at most `maxTicks` per call and never recreated; a finished replay goes into
+ * the same cache toCombatReplayFor reads. Side B's mirror is still derived from that replay, never re-run. A task that
+ * throws is dropped: nothing is cached and the push rebuilds and reports it as before.
+ */
+export function startReplayWarmup(battle: BattleResult, seatIds: Iterable<string>): ReplayWarmup {
+  const wanted = [...seatIds];
+  const pending: { readonly key: object; readonly input: CombatReplayInput; task: CombatReplayTask | null }[] = [];
+  if (battle.kind === 'placeholder') {
+    for (const outcome of battle.outcomes) if (wanted.includes(outcome.seatId) && outcome.combat && !replays.has(outcome)) pending.push({ key: outcome, input: outcome.combat, task: null });
+  } else if (battle.participants.some(seatId => wanted.includes(seatId)) && !replays.has(battle)) pending.push({ key: battle, input: battle.battle, task: null });
+  return {
+    advance(maxTicks: number): boolean {
+      const head = pending[0];
+      if (head) {
+        try {
+          head.task ??= startCombatReplay(head.input);
+          // The room passes Infinity when it does not slice; the rules take a positive safe integer.
+          const replay = head.task.advance(Number.isSafeInteger(maxTicks) ? maxTicks : Number.MAX_SAFE_INTEGER);
+          if (!replay) return false;
+          replays.set(head.key, replay);
+        } catch { /* reported by the push */ }
+        pending.shift();
+        if (pending.length) return false;
+      }
+      warmCombatReplays(battle, wanted);
+      return true;
+    },
+  };
 }
 
 /**

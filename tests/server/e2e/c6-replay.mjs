@@ -10,33 +10,14 @@
  *   3. Offline: one whole battle through the shared renderer; HP meters move, the stats panel renders.
  * Screenshots go to artifacts/c6/ (not committed). CHROMIUM overrides the browser path.
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { collectErrors, joinOnline, launchBrowser, onlineUrl, outDir, read, startGameServer, startVite, stopAll, strictCheck as check } from './harness.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
-const OUT = `${ROOT}artifacts/c6`;
+const OUT = outDir('c6');
 const VITE_PORT = 5198;
-const BASE = `http://127.0.0.1:${VITE_PORT}/`;
-const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const WS_PORT = 8787;
 const roundsArg = process.argv.slice(2).find(arg => arg.startsWith('--rounds='));
 const ROUNDS = roundsArg ? Number(roundsArg.split('=')[1]) : 3;
-mkdirSync(OUT, { recursive: true });
 
-const children = [];
-function start(command, args, env, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const check = (condition, message) => { if (!condition) throw new Error(`check failed: ${message}`); console.log(`ok  ${message}`); };
-const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
 async function waitRead(page, predicate, what, timeout = 60_000) {
   const deadline = Date.now() + timeout;
   for (;;) {
@@ -58,14 +39,18 @@ async function watchOnline(page, label, rounds) {
     const round = snapshot.m6.phase.round;
     if (round === seenRound) { await page.waitForTimeout(100); continue; }
     seenRound = round;
-    const texts = snapshot.texts.join(' ');
+    // The 开战 opening lives ~400 ms: look for it in every playback sample, not only the first one.
+    let opening = snapshot.texts.join(' ').includes('开战');
     const samples = new Set([hpKey(snapshot)]);
     let last = snapshot;
     const started = Date.now(); let lastTick = snapshot.replay.tick, terminalTick = snapshot.replay.terminalTick;
-    while (last.replay?.playingBack) { await page.waitForTimeout(120); last = await read(page); samples.add(hpKey(last)); if (last.replay?.tick != null) lastTick = last.replay.tick; }
+    while (last.replay?.playingBack) {
+      await page.waitForTimeout(opening ? 120 : 40); last = await read(page); samples.add(hpKey(last)); if (last.replay?.tick != null) lastTick = last.replay.tick;
+      opening ||= last.texts.join(' ').includes('开战');
+    }
     const view = last.combatView;
     console.log(`    ${label} round ${round}: reached tick ${lastTick}/${terminalTick} in ${Date.now() - started} ms (1x = ${terminalTick * 50} ms), superseded ${last.replay?.superseded}`);
-    battles.push({ round, opening: texts.includes('开战'), hpSamples: samples.size, units: view?.units.length ?? 0, terminalTick: view?.tick ?? -1, status: view?.status ?? null, played: last.replay?.played ?? 0 });
+    battles.push({ round, opening, hpSamples: samples.size, units: view?.units.length ?? 0, terminalTick: view?.tick ?? -1, status: view?.status ?? null, played: last.replay?.played ?? 0 });
     if (battles.length === 1) await page.screenshot({ path: `${OUT}/${label}-battle-end.png` });
     console.log(`    ${label} round ${round}: ${JSON.stringify(battles.at(-1))}`);
   }
@@ -74,12 +59,8 @@ async function watchOnline(page, label, rounds) {
 async function runOnline(browser, url, label, errors) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
-  page.on('pageerror', error => errors.push(`${label}: ${error.message}`));
-  page.on('console', message => { if (message.type() === 'error') errors.push(`${label} console: ${message.text()}`); });
-  await page.goto(url);
-  await page.waitForSelector('[data-debug="online:join"]');
-  await page.fill('[data-debug="online:name"]', label); await page.click('[data-debug="online:join"]');
-  await page.click('[data-debug="online:start"]');
+  collectErrors(page, errors, label);
+  await joinOnline(page, url, label);
   await waitRead(page, s => s.m6.mode === 'active', `${label}: match start`);
   const battles = await watchOnline(page, label, ROUNDS);
   check(battles.length > 0, `${label}: ${battles.length} battle(s) played from replays before round ${ROUNDS}`);
@@ -93,12 +74,11 @@ async function runOnline(browser, url, label, errors) {
   return battles;
 }
 /** Offline: seed 42, buy and deploy a unit, then play battles until one moves HP; the same renderer draws it. */
-async function runOffline(browser, errors) {
+async function runOffline(browser, base, errors) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
-  page.on('pageerror', error => errors.push(`offline: ${error.message}`));
-  page.on('console', message => { if (message.type() === 'error') errors.push(`offline console: ${message.text()}`); });
-  await page.goto(BASE);
+  collectErrors(page, errors, 'offline');
+  await page.goto(base);
   await page.waitForSelector('[data-debug="m6-fixed-start"]:not([disabled])');
   await page.fill('[data-debug="m6-seed-input"]', '42'); await page.click('[data-debug="m6-fixed-start"]');
   await waitRead(page, s => s.m6?.mode === 'active' && s.state.seed === 42, 'offline: seed 42 active');
@@ -143,14 +123,16 @@ async function runOffline(browser, errors) {
 }
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: '8787', CAT_PREP_SEC: '3', CAT_CHOICE_SEC: '2', CAT_SETTLE_SEC: '1' }, /listening on/);
-  await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
-  const browser = await chromium.launch({ executablePath });
+  // A 3 s settlement (both runs) leaves a client that plays a replay a little behind the room time to reach the terminal frame
+  // before the next round supersedes it (1 s did not on a loaded machine).
+  const wsPort = await startGameServer(WS_PORT, { CAT_PREP_SEC: '3', CAT_CHOICE_SEC: '2', CAT_SETTLE_SEC: '3' });
+  const base = await startVite(VITE_PORT);
+  const browser = await launchBrowser();
   const errors = [];
   try {
-    await runOffline(browser, errors);
-    await runOnline(browser, `${BASE}?mode=online&prep=3&choice=2&settle=1`, 'local', errors);
-    await runOnline(browser, `${BASE}?mode=online&server=ws`, 'ws', errors);
+    await runOffline(browser, base, errors);
+    await runOnline(browser, `${base}?mode=online&prep=3&choice=2&settle=3`, 'local', errors);
+    await runOnline(browser, onlineUrl(base, wsPort), 'ws', errors);
     check(errors.length === 0, `no page or console errors${errors.length ? `: ${errors.join(' | ')}` : ''}`);
   } finally { await browser.close(); stopAll(); }
 }

@@ -1,8 +1,8 @@
 /**
  * Real two-sided PvP through the rules' T2 entry (work order B3, contract §10.6).
  *
- * Per pairing the two frozen seats are snapshotted, compiled and run ONCE through
- * `resolveTwoSidedBattle`; `proposeSettlement` turns the result into two uncommitted
+ * Per pairing the two frozen seats are snapshotted, compiled and run ONCE as a resumable
+ * `startTwoSidedBattle` task (§19); `proposeSettlement` turns the result into two uncommitted
  * proposals. Nothing here settles anything: no HP, income, growth or round record moves.
  * The room parks the proposals until the rules' commit entry (T3) exists.
  *
@@ -13,10 +13,10 @@
  * PvE and supply rounds never reach this entry (§10.6 item 5); they go to the inner resolver.
  */
 import {
-  BattleValidationError, compileBattle, proposeSettlement, resolveTwoSidedBattle, snapshotForBattle,
-  type BattleIdentity, type PlayerBattleSnapshot, type SharedPoolState,
+  BattleValidationError, compileBattle, proposeSettlement, snapshotForBattle, startTwoSidedBattle,
+  type BattleIdentity, type BattleTask, type PlayerBattleSnapshot, type SharedPoolState,
 } from '../../server-entry';
-import { BattleResolveError, PlaceholderBattleResolver, jobOf, runSteps, startBattleJob, type BattleJob, type BattleResolver, type BattleSteps } from './battle-resolver';
+import { BattleResolveError, PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import type { BattleInput, BattleResult, BattleSeatInput, TwoSidedBattleResult } from './types';
 
 export class TwoSidedBattleResolver implements BattleResolver {
@@ -27,10 +27,10 @@ export class TwoSidedBattleResolver implements BattleResolver {
     if (input.roundKind !== 'pvp') return this.nonPvp.resolveBattle(input, pool);
     return resolveTwoSidedPvp(input);
   }
-  /** Sliced form (B8): the rules' battle and its proposals run in one slice each. */
+  /** Sliced form (B8, §19): the rules' battle task advances by the slice budget; the proposals follow in the slice that finishes it. */
   startBattle(input: BattleInput, pool: SharedPoolState): BattleJob {
     if (input.roundKind !== 'pvp') return startBattleJob(this.nonPvp, input, pool);
-    return jobOf(twoSidedSteps(input));
+    return twoSidedJob(input);
   }
 }
 
@@ -44,10 +44,40 @@ function asResolveError(subject: string, error: unknown): unknown {
 }
 
 /** §10.6 pseudo-code, verbatim in structure: snapshot both sides, compile with the explicit seed and identity, resolve once, propose. */
-export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult { return runSteps(twoSidedSteps(envelope)); }
+export function resolveTwoSidedPvp(envelope: BattleInput): TwoSidedBattleResult {
+  const job = twoSidedJob(envelope);
+  for (;;) { const result = job.advance(envelope.maxSteps); if (result) return result; }
+}
 
-/** resolveTwoSidedPvp as a step sequence: one `yield` after the rules' battle, before the proposals. */
-function* twoSidedSteps(envelope: BattleInput): BattleSteps<TwoSidedBattleResult> {
+/**
+ * resolveTwoSidedPvp as a job (§19): the envelope is checked, both sides snapshotted and compiled on the first advance,
+ * then one `startTwoSidedBattle` task advances by at most `maxTicks` per call and is never recreated. The envelope's
+ * `maxSteps` stays the battle's whole budget: a battle still running after it fails `step-limit-exceeded`, as the
+ * synchronous entry did. A refusal at any point throws; nothing partial is returned.
+ */
+function twoSidedJob(envelope: BattleInput): { advance(maxTicks: number): TwoSidedBattleResult | null } {
+  let task: BattleTask | null = null, used = 0;
+  return {
+    advance(maxTicks: number): TwoSidedBattleResult | null {
+      task ??= startTask(envelope);
+      // The room passes Infinity when it does not slice; the rules take a positive safe integer within the budget.
+      const budget = Math.min(maxTicks, envelope.maxSteps - used);
+      const battle = guarded(envelope.battleId, () => task!.advance(budget));
+      used += budget;
+      if (!battle) {
+        if (used >= envelope.maxSteps) throw new BattleResolveError(envelope.battleId, 'battle-validation:step-limit-exceeded');
+        return null;
+      }
+      const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
+      return {
+        kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
+        participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
+      };
+    },
+  };
+}
+
+function startTask(envelope: BattleInput): BattleTask {
   const [first, second] = envelope.seats;
   if (!first) throw new BattleResolveError(envelope.battleId, 'no-participant');
   const opponent: BattleSeatInput | undefined = envelope.mirrorOf ?? second;
@@ -64,12 +94,5 @@ function* twoSidedSteps(envelope: BattleInput): BattleSteps<TwoSidedBattleResult
   const b: PlayerBattleSnapshot = guarded(opponent.seatId, () => snapshotForBattle(opponent.state, opponent.seatId));
   const identity: BattleIdentity = envelope.mirrorOf === null ? { battleId: envelope.battleId } : { battleId: envelope.battleId, mirrorOfSeatId: envelope.mirrorOf.seatId };
   const frozen = guarded(envelope.battleId, () => compileBattle(a, b, envelope.battleSeed, identity));
-  const battle = guarded(envelope.battleId, () => resolveTwoSidedBattle(frozen, envelope.maxSteps));
-  yield;
-  const proposals = guarded(envelope.battleId, () => proposeSettlement(battle));
-  return {
-    kind: 'two-sided', battleId: envelope.battleId, round: envelope.round, roomRevision: envelope.roomRevision,
-    participants: envelope.seats.map(seat => seat.seatId), battle, proposals,
-  };
+  return guarded(envelope.battleId, () => startTwoSidedBattle(frozen));
 }
-
