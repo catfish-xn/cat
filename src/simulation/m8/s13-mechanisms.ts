@@ -61,17 +61,23 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
       clearMechanismTarget(ctx, enemy, actionSeq);
     }
   }
-  if (application.kind === 'burn') synchronizeBurnTask(target, identity.key);
+  if (application.kind === 'burn') synchronizeBurnTask(target, identity.key, ctx.tick);
 }
-function synchronizeBurnTask(target: S13Unit, key: string): void {
+function synchronizeBurnTask(target: S13Unit, key: string, appliedAtTick?: number): void {
   const group = target.mechanismState!.statuses.find(g => g.kind === 'burn' && g.contributions.some(c => c.key === key))!;
   const c = group.contributions.find(c => c.key === key)!;
   const program = { definitionId: JSON.stringify([c.source.definitionId, c.source.effectIndex, 'burn']), selector: selfSelector({ candidates: 'bound-target', relation: 'enemy', maxTargets: 1 }), targetSnapshot: 'once-per-pulse' as const,
     effects: [{ kind: 'damage', damageType: 'true', delivery: 'item-burn', critEligibility: 'never', amount: flatAmount(0, { maxHpBps: c.application.magnitudeBps, hpBasis: 'target', sample: 'each-pulse' }) } as const] };
   const old = target.mechanismState!.periodicTasks.find(t => t.key === key);
+  // This tick's burn winner was sampled before periodic programs can attach a
+  // new contribution. The group clock advances only after those programs, so a
+  // newly attached task must join its NEXT pulse, regardless of unit order.
+  // Existing tasks retain their due pulse (or their already advanced phase).
+  // Initialization has no application tick: it restores an existing clock.
+  const firstPulse = !old && group.nextPulseAtTick === appliedAtTick ? group.nextPulseAtTick + 20 : group.nextPulseAtTick!;
   // Save canonicalization may reorder object keys; a refresh must retain fractional damage.
   const same = old && canonicalContent(old.program) === canonicalContent(program);
-  const task: PeriodicTask = { key, source: c.source, targetId: target.id, nextPulseAtTick: Math.max(group.nextPulseAtTick!,old?.nextPulseAtTick ?? 0), periodTicks: 20, endsAtTick: c.expiresAtTick,
+  const task: PeriodicTask = { key, source: c.source, targetId: target.id, nextPulseAtTick: Math.max(firstPulse,old?.nextPulseAtTick ?? 0), periodTicks: 20, endsAtTick: c.expiresAtTick,
     pulseOrdinal: old?.pulseOrdinal ?? 0, pulseLimit: null, remainders: same ? old.remainders : [], finalPulse: 'before-expiry', onSourceDeath: 'persist-attached', onTargetDeath: 'cancel', program };
   target.mechanismState = { ...target.mechanismState!, periodicTasks: [...target.mechanismState!.periodicTasks.filter(t => t.key !== key), task] };
 }

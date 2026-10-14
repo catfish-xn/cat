@@ -10,8 +10,10 @@
  * `resolveTwoSidedBattle(input, 5000)` alone throws, then steps the combat tick by tick and prints the periodic task(s)
  * whose `nextPulseAtTick` is already behind the tick that throws. The compiled rules input is written to
  * artifacts/repro-missed-pulse/seed-<n>.json, enough for `resolveTwoSidedBattle` without any server code.
+ * A normal finish asserts a complete, unique eight-seat ranking; a resolver error makes the command fail.
  */
 import { writeFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { ROOT, outDir } from './harness.mjs';
 
@@ -48,7 +50,16 @@ for (const seed of seeds.length ? seeds : [9, 4, 11]) {
   bots.dispose();
   const state = room.state;
   console.log(`seed ${seed}: ended in ${state.roundId}, fault ${JSON.stringify(state.fault)}`);
-  if (!failing) continue;
+  if (!failing) {
+    assert.equal(state.phase, 'ended');
+    assert.equal(state.fault, null);
+    assert.equal(state.ranking?.length, 8);
+    assert.equal(new Set(state.ranking.map(entry => entry.seatId)).size, 8);
+    assert.deepEqual(state.ranking.map(entry => entry.rank).sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8]);
+    console.log(`  unique final ranking: ${JSON.stringify(state.ranking)}`);
+    continue;
+  }
+  process.exitCode = 1;
   const [first, second] = failing.seats, other = failing.mirrorOf ?? second;
   const input = rules.compileBattle(rules.snapshotForBattle(first.state, first.seatId), rules.snapshotForBattle(other.state, other.seatId), failing.battleSeed,
     failing.mirrorOf ? { battleId: failing.battleId, mirrorOfSeatId: failing.mirrorOf.seatId } : { battleId: failing.battleId });
