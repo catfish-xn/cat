@@ -1,5 +1,5 @@
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
-import { freezeContent } from './content/freeze';
+import { freezeContent, isFrozenContent } from './content/freeze';
 import { ITEM_DEFINITIONS } from './content/items';
 import { lootReceiptId, lootOrbId, lootEntryId } from './loot-identity';
 import { MATCH_RULES, OPENING_INITIAL_STATE, SHOP_CATALOG } from './match-rules';
@@ -110,7 +110,7 @@ export function appendResourceProvenance(
   const added = Array.isArray(facts) ? facts : [facts];
   plainJson(added);
   return freezeContent({ version: RESOURCE_PROVENANCE_VERSION,
-    entries: [...structuredClone(provenance.entries), ...added.map((fact, index) => ({
+    entries: [...(isFrozenContent(provenance.entries) ? provenance.entries : structuredClone(provenance.entries)), ...added.map((fact, index) => ({
       ...structuredClone(fact), sequence: provenance.entries.length + index, roundId,
     }))] });
 }

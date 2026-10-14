@@ -24,6 +24,13 @@ export type LootLayoutBinding = { readonly mode: 'solo'; readonly layout: OrbLay
   | { readonly mode: 'shared-deferred' }
   | { readonly mode: 'shared'; readonly poolId: string; readonly version: 's13-orb-layout-v1'; readonly throughRoundOrdinal: number };
 
+// Membership is granted only by the deterministic constructors below, never by
+// deserialization or by observing a frozen wrapper supplied by a caller.
+const generatedLayouts = new WeakSet<OrbLayoutLedger>();
+function generated(layout: OrbLayoutLedger): OrbLayoutLedger {
+  freezeContent(layout); generatedLayouts.add(layout); return layout;
+}
+
 /** Rejection words count as draws; all callers keep an explicit independent cursor. */
 export function drawIndex(rng: RngStream, size: number): { readonly index: number; readonly rng: RngStream } {
   validateSeed(rng.state);
@@ -39,7 +46,7 @@ export function drawIndex(rng: RngStream, size: number): { readonly index: numbe
 }
 export function createOrbLayout(seed: number): OrbLayoutLedger {
   validateSeed(seed);
-  return freezeContent({version: 's13-orb-layout-v1', seed, throughRoundOrdinal: 0,
+  return generated({version: 's13-orb-layout-v1', seed, throughRoundOrdinal: 0,
     rng: { state: (seed ^ ORB_RULES.layoutSeedXor) >>> 0, draws: 0 }, rounds: []});
 }
 function replay(seed: number, ordinal: number): OrbLayoutLedger {
@@ -64,11 +71,12 @@ function replay(seed: number, ordinal: number): OrbLayoutLedger {
     }).sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : a.sourceUnitId > b.sourceUnitId ? 1 : a.slotOrdinal-b.slotOrdinal);
     rounds.push({roundId:round.roundId, encounterId:round.encounterId!, orbs});
   }
-  return freezeContent({...layout, throughRoundOrdinal:ordinal, rng, rounds});
+  return generated({...layout, throughRoundOrdinal:ordinal, rng, rounds});
 }
 export function restoreOrbLayout(value: unknown): OrbLayoutLedger {
   if (!value || typeof value !== 'object') throw new RangeError('Invalid orb layout');
   const input = value as OrbLayoutLedger;
+  if (generatedLayouts.has(input)) return input;
   if (!Number.isSafeInteger(input.throughRoundOrdinal) || input.throughRoundOrdinal < 0 || input.throughRoundOrdinal > ROUND_CATALOG.length)
     throw new RangeError('Invalid orb layout');
   const expected = replay(input.seed, input.throughRoundOrdinal);

@@ -1,66 +1,16 @@
 /** B10 (M8_PLAN §7.4): a battle fought with Thief's Gloves temporary children is rebuilt by replay from its
  * recorded context alone, at 1×/2×/4× and by seek, and a forged child in the context is rejected.
- * Route: real seed-230 cannon commands through 3-4, then the same public branch as m8-b8-live-transfer
- * (gloves + gloves → Thief's Gloves on unit-24 at 4-7). No state is injected. */
+ * Route: real seed-4 cannon commands with the same public branch as m8-b8-live-transfer
+ * (gloves + gloves → Thief's Gloves on unit-25 at 4-7). No state is injected. */
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
-import type { MatchCommandResult, MatchState } from '../src/simulation/match';
+import type { MatchState } from '../src/simulation/match';
 import type { SessionChange } from '../src/m6/contracts';
 import { BattleHistory, validateBattleRecord } from '../src/replay/history';
 import { PlaybackSession } from '../src/replay/playback-session';
-import { run } from '../scripts/generate-m5-route.cjs';
+import { transferPreparation } from './fixtures/t13-loot-public';
 
-const SURVIVOR = 'unit-23', DONOR = 'unit-24', TG = 'item-9';
-function accepted(result: MatchCommandResult): MatchState {
-  if (!result.ok) throw new Error(`Public temporary-replay fixture: ${result.reason}`);
-  return result.state;
-}
-function choose(state: MatchState, definitionId: string): MatchState {
-  const choice = state.pendingChoice!;
-  return accepted(api.selectChoice(state, choice.choiceId, choice.generation, definitionId));
-}
-function finish(input: MatchState): MatchState {
-  let state = input;
-  while (state.phase === 'combat' && state.combat.tick < 1201) state = api.stepMatch(state).state;
-  if (state.phase === 'combat') throw new Error('Public battle exceeded its tick bound');
-  return state;
-}
-async function preparation(): Promise<MatchState> {
-  let prefix: MatchState | undefined;
-  const captured = new Error('Captured real 3-4 component choice');
-  try {
-    await run({ ...api, selectChoice(state: MatchState, ...args: [string, number, string]) {
-      if (state.roundDefinitionId === '3-4') { prefix = state; throw captured; }
-      return api.selectChoice(state, ...args);
-    } }, { build: 'cannon', seed: 230 });
-  } catch (error) { if (error !== captured) throw error; }
-  if (!prefix) throw new Error('Public route did not reach 3-4');
-  let state = accepted(api.nextRound(choose(prefix, 'gloves'), 14));
-  for (const id of ['unit-16', 'unit-2', 'unit-10']) state = accepted(api.sellUnit(state, id));
-  state = accepted(api.equipItem(state, 'item-3', 'unit-13', 0));
-  state = accepted(api.equipItem(state, 'item-7', 'unit-13', 1));
-  for (let count = 0; count < 8; count++) state = accepted(api.buyXp(state));
-  // T11 route reaches generation 22; generation 24 offers both one-star Ezreals.
-  for (let count = 0; count < 2; count++) state = accepted(api.rerollShop(state));
-  state = accepted(api.buyUnit(state, 2, 24));
-  state = accepted(api.buyUnit(state, 3, 24));
-  state = accepted(api.deployMatchUnit(state, SURVIVOR, { kind: 'board', cell: { col: 3, row: 7 } }));
-  state = accepted(api.deployMatchUnit(state, DONOR, { kind: 'board', cell: { col: 5, row: 7 } }));
-  state = accepted(api.combineItems(state, 'item-5', 'item-8'));
-  state = accepted(api.equipItem(state, TG, DONOR, 0));
-  while (state.roundDefinitionId !== '4-7') {
-    if (state.phase === 'choice') {
-      const choice = state.pendingChoice!;
-      if (choice.kind === 'anomaly' && choice.step === 'target') {
-        state = accepted(api.selectAnomalyTarget(state, choice.choiceId, choice.generation, DONOR));
-      } else state = choose(state, choice.kind === 'component' ? 'gloves'
-        : choice.kind === 'anomaly' ? 'mage-armor' : 'bulky-buddies-i');
-    } else if (state.phase === 'settlement') state = accepted(api.nextRound(state, state.round));
-    else if (state.phase === 'preparation') state = finish(accepted(api.startMatchCombat(state)));
-    else throw new Error(`Unexpected public phase: ${state.phase}`);
-  }
-  return state;
-}
+const SURVIVOR = 'unit-22', DONOR = 'unit-25', TG = 'item-9';
 /** Live battle observed exactly as the application records it (one SessionChange per committed step). */
 function recorded(prepared: MatchState) {
   const history = new BattleHistory('b10-temporary'), ticks = new Map<number, MatchState>();
@@ -80,7 +30,7 @@ function recorded(prepared: MatchState) {
 }
 
 describe('B10 temporary equipment replay rebuild', async () => {
-  const prepared = await preparation();
+  const prepared = await transferPreparation();
   const { record, ticks, terminal } = recorded(prepared);
 
   it('records the temporary children in the battle context and rebuilds the identical terminal', () => {

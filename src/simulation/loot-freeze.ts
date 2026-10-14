@@ -1,6 +1,6 @@
 import { RULES_GAP_MANIFEST } from './content/rules-manifest';
 import { canonicalContent, digestContent } from './content';
-import { freezeContent } from './content/freeze';
+import { freezeContent, isFrozenContent } from './content/freeze';
 import { LOOT_FREEZE_ALGORITHM, LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_HERO_POOL_VERSION, LOOT_POLICY_VERSION } from './content/loot';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
 import { ROUND_CATALOG } from './content/round-catalog';
@@ -27,6 +27,21 @@ export const LOOT_REPLAY_DIGEST = digestContent({
   encounters:{version:NEUTRAL_ENCOUNTER_CATALOG_VERSION,entries:NEUTRAL_ENCOUNTERS},
 });
 export const drawLootIndex=drawIndex;
+// Pair by layout identity as well as seat seed/boundary. Replacing either side
+// (including JSON restore or structuredClone) always takes the full check.
+const verifiedLedgers = new WeakMap<object, WeakSet<OrbLayoutLedger>>();
+export function matchesFrozenLootLedger(ledger: FrozenLootLedger, seed: number, ordinal: number, layout: OrbLayoutLedger): boolean {
+  if (ledger.seed !== seed || ledger.throughRoundOrdinal !== ordinal) return false;
+  if (verifiedLedgers.get(ledger)?.has(layout)) return true;
+  const expected = freezeLootThroughRound(seed, ordinal, layout);
+  if (canonicalContent(ledger) !== canonicalContent(expected)) return false;
+  if (isFrozenContent(ledger) && isFrozenContent(layout)) {
+    let layouts = verifiedLedgers.get(ledger);
+    if (!layouts) { layouts = new WeakSet(); verifiedLedgers.set(ledger, layouts); }
+    layouts.add(layout);
+  }
+  return true;
+}
 function validateOrdinal(ordinal:number):void {
   if(!Number.isSafeInteger(ordinal)||ordinal<0||ordinal>ROUND_CATALOG.length)throw new RangeError('Invalid loot preparation boundary');
 }

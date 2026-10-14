@@ -30,7 +30,9 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     rejected(state, s => equipItem(s, 'item-21', 'unit-1', 1), 'unique-conflict');
     const next = accepted(equipItem(state, 'item-21', 'unit-2', 2));
     expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid B8 Match: current resource fold');
-    const legal = publicInventory([definitionId, definitionId]);
+    // Seed 17 gives a real opening tear; three supply picks finish the two
+    // Blue Buff recipes without simulating an unrelated fifth-stage battle.
+    const legal = publicInventory([definitionId, definitionId], false, definitionId === 'blue-buff' ? 17 : undefined);
     const equipped = accepted(equipItem(legal.state, legal.itemIds[0], 'unit-1', 0));
     rejected(equipped, s => equipItem(s, legal.itemIds[1], 'unit-1', 1), 'unique-conflict');
     const control = accepted(equipItem(equipped, legal.itemIds[1], 'unit-2', 2));
@@ -43,7 +45,8 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     expect(() => restoreMatch(serializeMatch(state))).toThrow('Invalid B8 Match: current resource fold');
     // Keep the four-Deathblade capacity mechanism above. Four genuinely acquired
     // swords additionally prove T13 automatic combination without losing other drops.
-    const legal = publicInventory(['sword', 'sword', 'sword', 'sword']);
+    // Seed 4 supplies an opening sword, retaining all four real acquisitions.
+    const legal = publicInventory(['sword', 'sword', 'sword', 'sword'], false, 4);
     let control = legal.state;
     for (let slot = 0; slot < 3; slot++) control = accepted(equipItem(control, legal.itemIds[slot], 'unit-1', slot));
     // T13 combines the first pair automatically; the fourth joins the remaining worn sword for any request slot.

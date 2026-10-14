@@ -7776,5 +7776,8 @@
       ]
     }
   },
-  "candidateSha256": "b45aa9b5a046fffd7a5022a539982ffe4db50c59150e5f6483d07c2a37810e86"
+  "candidateSha256": "b45aa9b5a046fffd7a5022a539982ffe4db50c59150e5f6483d07c2a37810e86",
+  "recordedDriverPath": "docs/evidence/t13/golden-driver.cjs",
+  "currentDriverSha256": "0d4ab46fbbf109ee5538764f582e60d395c45f36fc8803ecfe596ea260b7f4f4",
+  "driverChange": "bbe2258 added configurable fixture routes; archived recording driver remains byte-identical to bbe2258^."
 }

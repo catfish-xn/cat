@@ -780,3 +780,11 @@ SR-C18-03（8968c8a）补充回应：ClientCommand 已纳入 useConsumable；Cod
 - 定位（CPU profile，seed 42 跑到第 12 轮共 13.4 s）：`canonicalContent` 自身约 6.3 s，`structuredClone` 约 1.8 s，`assertSharedPoolConservation` 约 0.9 s。调用链为 `runSharedMatchCommand → transact / active → assertSharedPoolConservation`。T13-B 在其中新增了逐席比对 `canonicalContent(state.m8.loot.frozen) === canonicalContent(freezeLootThroughRound(seed, ordinal, pool.orbLayout))`，即每笔共享事务（含 PvE 战斗中的每一步 `ownCombatSteps`）都要把每个席位的掉落从头重建并序列化一遍。
 - 需要：在不削弱恢复校验的前提下，把这项比对移到真正需要它的边界，例如初始化、换轮批事务、恢复入口，或改为增量/缓存比对。不能以放宽测试时间预算代替。
 - 验收：上述 3 条用例在原预算内通过；`assertSharedPoolConservation` 对掉落被篡改的席位仍报 `invalid-seat-state`（沿用现有篡改用例）。
+
+#### SR-C18-05 / SR-B8-03 窗口 1 实施（2026-10-14）
+
+`restoreOrbLayout` 只信任确定性构造器产生的深冻结布局；逐席掉落比较按 `(冻结账本对象, 布局对象)` 弱引用缓存，仍逐次核对席位 seed、轮次和绑定。初始化/新布局/换轮第一次比较建立缓存；外部 JSON 或可变副本不会进入缓存，恢复验证未删减。篡改后仍返回 `invalid-seat-state`，失败返回原 pool/state 且无事件。
+
+SR-B8-03 与 C18-05 重叠的是每 tick 共享事务的重复冻结重放，此路径同时受益；池资产总量、席位版本、商店/持有/待领奖励仍逐 tick 校验。来源账本 append 只共享已深冻结历史记录，新增事实仍复制冻结，可变输入仍复制；未改战斗 `structuredClone` 或引入“未终局跳检查”。因此不把更广的增量池事务或战斗克隆优化宣称为已完成。
+
+Blue Buff 超时走单人公共夹具，并不调用 shared-pool。为四泪/四剑向量分别选 seed 17/4 的真实开局组件，减少无关后期战斗，未注入物品或改变断言。所有时间预算保持原值；验收、冷热路径逐 tick 等价和篡改覆盖见 `docs/evidence/t13/WINDOW1.md`。
