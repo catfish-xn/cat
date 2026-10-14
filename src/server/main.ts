@@ -8,7 +8,9 @@
  *   CAT_PREP_SEC / CAT_CHOICE_SEC / CAT_SETTLE_SEC   phase lengths in seconds
  *   CAT_QUEUE_TIMEOUT_SEC    auto-start this long after the first join (unset: wait for "start")
  *   CAT_BOT_STEP_MS          delay between two bot steps of one seat (default 300)
- *   CAT_TAKEOVER_SEC         a disconnected player's seat is played by a bot after this long (default 60)
+ *   CAT_TAKEOVER             1/true/on: a bot plays a disconnected player's seat (B6). Default off (P2, like TFT:
+ *                            a disconnected seat does nothing, its board still fights)
+ *   CAT_TAKEOVER_SEC         with CAT_TAKEOVER on, the bot takes over after this long disconnected (default 60)
  *
  * TLS termination is the reverse proxy's job (T9); this process speaks plain ws://.
  */
@@ -26,9 +28,17 @@ const integer = (name: string, fallback: number): number => {
   return value;
 };
 const seconds = (name: string, fallbackMs: number): number => integer(name, fallbackMs / 1000) * 1000;
+const flag = (name: string, fallback: boolean): boolean => {
+  const raw = (env[name] ?? '').trim().toLowerCase();
+  if (raw === '') return fallback;
+  if (['1', 'true', 'on', 'yes'].includes(raw)) return true;
+  if (['0', 'false', 'off', 'no'].includes(raw)) return false;
+  throw new RangeError(`${name} must be 1/0, true/false, on/off or yes/no, got "${env[name]}"`);
+};
 
 const port = integer('PORT', integer('CAT_PORT', 8787));
 const host = env.CAT_HOST || '127.0.0.1';
+const takeover = flag('CAT_TAKEOVER', BOT_DRIVER_DEFAULTS.takeover);
 const queueTimeout = env.CAT_QUEUE_TIMEOUT_SEC ? seconds('CAT_QUEUE_TIMEOUT_SEC', 0) : null;
 // C6: battles leave only as compact replays; the per-tick frame transport and its switch are gone.
 if (env.CAT_COMBAT_TRANSPORT && env.CAT_COMBAT_TRANSPORT !== 'replay') console.warn(`[game] CAT_COMBAT_TRANSPORT=${env.CAT_COMBAT_TRANSPORT} ignored: battles are always sent as replay`);
@@ -42,10 +52,10 @@ createGameServer({
     settlementMs: seconds('CAT_SETTLE_SEC', ROOM_TIMING_DEFAULTS.settlementMs),
   },
   queueTimeoutMs: queueTimeout,
-  bots: { stepMs: integer('CAT_BOT_STEP_MS', BOT_DRIVER_DEFAULTS.stepMs) || BOT_DRIVER_DEFAULTS.stepMs, takeoverMs: seconds('CAT_TAKEOVER_SEC', BOT_DRIVER_DEFAULTS.takeoverMs) },
+  bots: { stepMs: integer('CAT_BOT_STEP_MS', BOT_DRIVER_DEFAULTS.stepMs) || BOT_DRIVER_DEFAULTS.stepMs, takeover, takeoverMs: seconds('CAT_TAKEOVER_SEC', BOT_DRIVER_DEFAULTS.takeoverMs) },
   log: line => console.log(`[game] ${line}`),
 }).then(server => {
-  console.log(`[game] listening on ws://${host}:${server.port} (prep ${seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs) / 1000}s)`);
+  console.log(`[game] listening on ws://${host}:${server.port} (prep ${seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs) / 1000}s, takeover ${takeover ? 'on' : 'off'})`);
   const shutdown = () => { console.log('[game] shutting down'); server.close().then(() => { clock.dispose(); process.exit(0); }); };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
