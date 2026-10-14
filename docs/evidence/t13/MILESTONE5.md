@@ -51,4 +51,14 @@ T5R 完整八席回放实测 64.27s（之前为 62.88s），原 60s 不足，局
 
 M6 同机单 worker 完整实测：cannon 82.99s、sniper 134.39s、mage 123.06s、sniper-caitlyn 130.34s，后三条仅超过原 120s 预算。四条逐 tick 回放局部预算改为 180s；四条完整 envelope 验收 13.07/21.63/17.81/19.94s，保留原 120s。没有改 M6 的路线、断言、采样或共享数据。T11 seed 0 真实 40 轮通过，42.70s。
 
-最终全套验收数据在完成固定树单跑后补齐。
+## 用户更新后的收尾验收
+
+用户明确要求立即停止串行全套，禁止再跑全套及 M5/M6，只单跑补修后的 B4，然后提交、推送并将 #81 转正。本次遵照该新指令；不声明全套全绿。
+
+- 全套已终止，无遗留测试进程。终止前 M6 9/9 通过；M5 cannon/mage/sniper-caitlyn 通过，sniper 完成全部断言但 243.49s 超过 240s。
+- M5 实测四路线 161.34/243.49/228.17/232.43s；按用户授权，后三条预算改为 360s，cannon 保留 180s。不改逐命令、逐 tick 或拒绝插入断言；预算修改后没有重跑 M5/M6。
+- B4 补修 seed42 的真实获取路线：随机 belt/vest，加 2-4 belt、3-4 bow，以及随机 2-7 rod/3-7 sword，真实合成 Warmog/Titan/Gunblade；保留二星 Irelia、配方所有权篡改拒绝、同动作双包伤害及逐 tick 恢复检查，不再依赖不存在的 4-7 自选。
+- 最后只运行 `npm test -- tests/m8-b4-audit-regressions.test.ts --maxWorkers=1 --no-file-parallelism --reporter=default --reporter=json --outputFile=../b4-final.json`：**14/14 通过，0 失败，0 跳过，18.08s**。
+- typecheck 在 `bbe2258` 通过；最后 B4/M5 收尾编辑后按指令仅单跑 B4。七个公共路线 SHA 已验证：`1742417b94d7f2b1155c0e70a5999710d1e051bf817cd390b642cc204ed0acae`（脚本 canonical JSON SHA）。
+- `tests/server` 的已观察失败标记为 **待 Claude §5.1**，不计本次验收。完整回归未完成，不能据部分日志推断总通过数。
+

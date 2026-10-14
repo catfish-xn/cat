@@ -4,10 +4,9 @@ import * as api from '../src/simulation/match';
 import {restoreMatch} from '../src/simulation/serialization';
 import {run,dispatch} from '../scripts/generate-m5-route.cjs';
 
-// T11/T12 seed-42 routes still restore every command/tick. The three longer routes
-// Before this adjustment they finish assertions in up to 193.292s alone (190.553s in the full run).
-// ceil(193.292 * 1.20 / 30) * 30 = 240s; only their execution deadline changes.
-// See docs/T11_T12_FIXTURE_REPAIR.md; cannon keeps its original 180s budget.
+// T13 random-loot idle single-worker measurements: cannon 161.34s, sniper 243.49s,
+// mage 228.17s, sniper-caitlyn 232.43s. User authorized 360s for the long routes.
+// Every command/tick, rejected insertion and field comparison remains unchanged.
 for(const build of ['cannon','sniper','mage','sniper-caitlyn'])it(`M5 ${build} restores every command and tick; rejected insertion preserves every field`,async()=>{
  const started=performance.now();
  console.log(`M5 replay ${build}: start`);
@@ -25,4 +24,4 @@ for(const build of ['cannon','sniper','mage','sniper-caitlyn'])it(`M5 ${build} r
  }});
  assert.equal(restored.phase,'gameOver');assert(commands>100);assert(ticks>1000);
  console.log(JSON.stringify({replay:build,commands,ticks,durationSeconds:(performance.now()-started)/1000,passed:true}));
-},build==='cannon'?180000:240000);
+},build==='cannon'?180000:360000);
