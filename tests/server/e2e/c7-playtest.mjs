@@ -158,7 +158,7 @@ async function main() {
       await click(page, 'combine-items');
       await page.waitForTimeout(1500);
       s = await read(page);
-      report.combine = { label, disabled, selection, receipts: receipts.slice(before), inventoryAfter: s.state.items.filter(i => i.location.kind === 'inventory').map(i => i.definitionId), status: await text(page, '.panel-status') };
+      report.combine = { label, disabled, selection, receipts: receipts.slice(before), inventoryBefore: inventory.map(i => i.definitionId), inventoryAfter: s.state.items.filter(i => i.location.kind === 'inventory').map(i => i.definitionId), status: await text(page, '.panel-status') };
       await page.screenshot({ path: `${OUT}/2-1-6-combine-after.png` });
     } else report.combine = { skipped: `inventory ${inventory.length}` };
     console.log(JSON.stringify(report.combine));
@@ -178,8 +178,8 @@ async function main() {
     const r13 = pve.find(entry => entry.roundId === '1-3');
     check(r13.lootPanel.includes('拉克丝') && r13.bench.includes('lux') && r13.choice?.kind === 'component', '1-3 lists the loot hero 拉克丝 (on the bench) and offered a component pick');
     // Item 3: two components in inventory combine on the real server.
-    check(report.combine.receipts?.some(entry => entry.receipt !== undefined && entry.ok && entry.kind === 'applied') && report.combine.inventoryAfter.length === 1,
-      `combine accepted by the server: ${JSON.stringify(report.combine.receipts)} → ${report.combine.inventoryAfter}`);
+    check(report.combine.receipts?.some(entry => entry.receipt !== undefined && entry.ok && entry.kind === 'applied') && report.combine.inventoryAfter.length === report.combine.inventoryBefore.length - 1,
+      `combine accepted by the server: ${JSON.stringify(report.combine.receipts)}, ${report.combine.inventoryBefore} → ${report.combine.inventoryAfter}`);
     check(report.swap, `swap checks ran online (round ${report.swap})`);
     check(errors.length === 0, `no page errors (${errors.join(' | ')})`);
   } finally { await browser.close(); }

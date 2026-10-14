@@ -113,7 +113,8 @@ async function main() {
         if (phase() !== 'combat' || !tool || !unit) { await sleep(150); continue; }
         const ids = worn(unit).map(item => item.id), tools = state.consumables.length;
         const receipt = await client.command({ type: 'useConsumable', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id } });
-        if (!receipt.ok && receipt.reason === 'wrong-phase') { await sleep(250); continue; } // the freeze boundary, shown as combat
+        // The freeze boundary shows as combat too; a state pushed while sending makes the envelope stale (§18.3: refresh, resend).
+        if (!receipt.ok && ['wrong-phase', 'seat-revision-mismatch', 'stale-round'].includes(receipt.reason)) { await sleep(250); continue; }
         check(receipt.ok && receipt.result.kind === 'consumable-used', `remover on ${unit.id} during my battle → ${receipt.ok ? receipt.result.kind : receipt.reason}`);
         if (receipt.ok) {
           const types = receipt.result.events.map(event => event.type);
