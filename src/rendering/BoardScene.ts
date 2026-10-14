@@ -430,7 +430,7 @@ export class BoardScene extends Phaser.Scene {
   }
   private failureMessage(reason: MatchFailure): string { return this.knownFailure(reason) ?? `操作被拒绝（${reason}）`; }
   private knownFailure(reason: string): string | undefined {
-    const messages: Record<MatchFailure, string> = {
+    const messages: Partial<Record<MatchFailure, string>> = {
       'wrong-phase': this.benchOps() ? '战斗与结算期间只能操作商店和备战席 · 棋盘单位请在下个准备阶段调整'
         : this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
         : this.session.phase === 'choice' ? '请先完成当前 Augment / Anomaly 选择'

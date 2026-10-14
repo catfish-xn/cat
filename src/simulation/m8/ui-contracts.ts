@@ -37,12 +37,15 @@ export interface EncounterPreview {
   readonly units: readonly { readonly unitId: string; readonly definitionId: string; readonly name: string; readonly starLevel: 1 | 2 | 3; readonly cell: HexCell; readonly unitKind: 'champion' | 'neutral'; readonly monsterFamily: MonsterFamily | null; readonly stats: Readonly<Record<'maxHp' | 'attackDamage' | 'armor' | 'magicResist' | 'attackRange' | 'attackIntervalTicks' | 'critChanceBps' | 'critMultiplierBps' | 'abilityPower' | 'mana' | 'maxMana', number>>; readonly abilityDescription: string }[];
   readonly rulesNote: string;
 }
-export type RevealedDropView = DropIdentity & { readonly payload: LootPayload } & (
+export type RevealedDropView = DropIdentity & { readonly orbId:string; readonly entryOrdinal:number; readonly payload: LootPayload } & (
   | { readonly status: 'granted'; readonly receiptId: string; readonly allowedActions: readonly [] }
   | { readonly status: 'revealed' | 'pending-capacity'; readonly receiptId: null; readonly allowedActions: readonly []; readonly reason: 'auto-grant-in-domain' | 'bench-full' }
+  | { readonly status:'forfeited';readonly receiptId:null;readonly allowedActions:readonly [];readonly reason:'timeout-forfeited'|'eliminated-forfeited' }
   | { readonly status: 'retained-terminal'; readonly receiptId: null; readonly allowedActions: readonly []; readonly reason: 'terminal-bench-full' }
 );
+export interface RevealedOrbView { readonly orbId:string; readonly tier:import('../orb-layout').OrbTier; readonly status:'revealed'|'partially-claimed'|'claimed'|'forfeited';readonly entryDropIds:readonly string[] }
 export interface LootView {
+  readonly revealedOrbs:readonly RevealedOrbView[];
   readonly roundId: string;
   readonly revealedDrops: readonly RevealedDropView[];
   readonly pendingClaims: readonly string[];
@@ -55,7 +58,7 @@ export interface LootView {
 }
 export type CompatibilityView =
   | { readonly status: 'current'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: M8Version['rulesVersion']; readonly canResume: true; readonly canReplay: true; readonly canExportOriginal: true; readonly reason: null }
-  | { readonly status: 'legacy-preserved'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: 'm5-14.24b-v1'; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: true; readonly reason: 'new-match-required' }
+  | { readonly status: 'legacy-preserved'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: 'm5-14.24b-v1'|'m8-14.24b-v1'; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: true; readonly reason: 'new-match-required' }
   | { readonly status: 'rejected'; readonly currentRulesVersion: M8Version['rulesVersion']; readonly fileRulesVersion: string | null; readonly canResume: false; readonly canReplay: false; readonly canExportOriginal: boolean; readonly reason: 'unsupported-version' | 'digest-mismatch' | 'invalid-data' | 'capacity-exceeded' };
 /** R3: domain-resolved current effects; UI never evaluates AbilityPlan. */
 export interface CombatStatusesView {
@@ -83,7 +86,7 @@ export interface M8Queries<Match, Combat, File> {
 
 /** A13: this boundary belongs to B9 storage, never to Match or a UI DB reader. */
 export interface LegacyRecordRef {
-  readonly namespace: 'hex-autobattler-m6';
+  readonly namespace: 'hex-autobattler-m6'|'hex-autobattler-m8';
   readonly runId: string;
   readonly fingerprint: string;
 }
@@ -93,16 +96,16 @@ export interface LegacyRecord {
   /** Informational only: old historical records did not retain the active-slot token. */
   readonly activeSlotRevision: number | null;
   readonly createdAt: string;
-  readonly rulesVersion: 'm5-14.24b-v1';
-  readonly schemaVersion: 5;
-  readonly saveFormatVersion: 1;
-  readonly replayFormatVersion: 1;
+  readonly rulesVersion: 'm5-14.24b-v1'|'m8-14.24b-v1';
+  readonly schemaVersion: 5|6;
+  readonly saveFormatVersion: 1|2;
+  readonly replayFormatVersion: 1|2;
   readonly canExportOriginal: boolean;
   readonly reason: 'invalid-record' | 'missing-history' | null;
 }
 export type LegacyListResult =
   | { readonly ok: true; readonly records: readonly LegacyRecord[] }
-  | { readonly ok: false; readonly namespace: 'hex-autobattler-m6'; readonly reason: 'unavailable' | 'read-failed' };
+  | { readonly ok: false; readonly namespace: 'hex-autobattler-m6'|'hex-autobattler-m8'; readonly reason: 'unavailable' | 'read-failed' };
 export interface LegacyExportRequest { readonly requestId: string; readonly recordRef: LegacyRecordRef }
 export type LegacyExportResult = LegacyExportRequest & (
   | { readonly ok: true; readonly fileName: string; readonly mediaType: 'application/json'; readonly bytes: Uint8Array }

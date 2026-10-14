@@ -1,7 +1,7 @@
 /** Pure rule boundary for Node callers. No scheduler, transport or browser adapters. */
 export {
   createMatch, deployMatchUnit, autoDeployToCap, lockMatchCombatRoster, buyUnit, sellUnit, setShopLock, rerollShop, buyXp,
-  startMatchCombat, stepMatch, nextRound, combineItems, equipItem,
+  startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,
   selectAnomalyTarget, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
   forfeitPendingChoice, claimOrDiscardLoot, advanceMultiplayerRound,
@@ -43,3 +43,10 @@ export { toPrivateSeatView } from '../simulation/private-seat-view';
 export type { PrivateSeatView } from '../simulation/private-seat-view';
 export { toCombatViewState, toCombatViewEvents, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
 export type { CombatViewState, CombatViewUnit, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayInput } from '../simulation/combat-replay-view';
+
+export { createOrbLayout, freezeOrbLayoutThroughRound } from '../simulation/orb-layout';
+export type { OrbLayoutLedger, OrbRoundLayout, OrbTier, LootInitialization, OrbLayoutResult, OrbLayoutFailure } from '../simulation/orb-layout';
+export { freezeLootThroughRound } from '../simulation/loot-freeze';
+export type { ConsumableDefinitionId, ConsumableInstance, ConsumableTarget, ConsumablePreview, ConsumableFailure } from '../simulation/consumable-types';
+
+export { readComponentEquivalent } from '../simulation/loot-view';

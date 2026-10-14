@@ -1,4 +1,6 @@
-# R3+R4 掉落系统：设计交付与实施计划（草案，未签字）
+# R3+R4 掉落系统：已签设计与实施计划
+
+> T13 签署记录：用户已选择 D1–D8 全部推荐 A；实现基线 origin/multiplayer@297143e，T12 已合入。下文保留设计形成时的历史背景和估算；正式接口/恢复边界由 MULTIPLAYER_CONTRACT §18 覆盖，最新验收见 T13_RELEASE.md。
 
 基线：origin/multiplayer@25dae94eb58108909a7b2cdc1d68ab0ee36d7561。分支：codex/r3r4-loot-design；PR 目标 multiplayer，标题 docs: R3+R4 loot system design draft。本任务仅改 docs/，不改 src/、tests/、运行版本常量或 digest，不实施、不部署。
 

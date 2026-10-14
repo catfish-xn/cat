@@ -2,7 +2,7 @@ import * as api from '../../../src/simulation/match';
 import { ITEM_DEFINITIONS } from '../../../src/simulation/content/items';
 
 /** Version the actual command recipe, independently of generated save bytes. */
-export const HERALD_RAW_GENERATION_VERSION = 'm8-herald-public-commands-v1';
+export const HERALD_RAW_GENERATION_VERSION = 't13-herald-public-commands-v2';
 export const HERALD_RAW_CASES = [
   { name: 'ionic-spark', definitions: ['ionic-spark'] },
   { name: 'evenshroud', definitions: ['evenshroud'] },
@@ -86,6 +86,12 @@ export function buildRawHeraldEquipment(initial: api.MatchState, definitions: re
     if (state.phase === 'choice') continue;
     if (state.phase !== 'settlement') throw new Error(`Equipment route stopped at ${state.roundDefinitionId}/${state.phase}`);
     state = accepted(commands.nextRound(state, state.round));
+  }
+  // The flexible T13 army may have used the original holder as its early tank.
+  // Strip that real equipment with an earned one-use remover before this isolated target scenario.
+  if(state.items.some(item=>item.location.kind==='unit'&&item.location.unitId==='unit-1')){
+    const remover=state.consumables.find(tool=>tool.definitionId==='magnetic-remover')!;
+    state=accepted(commands.useConsumable(state,remover.consumableId,{kind:'unit',unitId:'unit-1'}));
   }
   for (const [slot, definitionId] of definitions.entries()) {
     const available = [...inventory()];

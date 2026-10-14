@@ -80,6 +80,8 @@ describe('B10 every M8 equipment definition survives record, replay and save/res
       const at = ticks.get(Math.min(tick, terminal.tick - 1))!;
       const saved = serializeMatch(at);
       expect(restoreMatch(saved)).toEqual(at);
+      // In particular red-buff refreshes a fractional burn after canonical key sorting.
+      // Comparing the entire continuation prevents losing its saved remainder (one HP).
       expect(continueFrom(saved)).toEqual(settled);
     }
     expect(restoreMatch(serializeMatch(settled))).toEqual(settled);

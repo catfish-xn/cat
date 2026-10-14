@@ -1,7 +1,7 @@
 import type { MatchEvent, MatchState, Shop } from './match-types';
 import type { MultiplayerFailure } from './round-settlement';
 
-export const SHARED_POOL_VERSION = 'shared-pool-v1';
+export const SHARED_POOL_VERSION = 'shared-pool-v2';
 /** Riot 14.15 official patch notes, champion bag sizes: 30/25/18/10/9.
  * https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-15-notes/
  * Explicitly adopted by the project for its 19-hero S13 slice on 2026-10-12.
@@ -27,6 +27,7 @@ export interface PoolRewardReceipt extends RewardReservation {
   readonly resolution:'held'|'gold'|'forfeited'; readonly gold:number;
 }
 export interface SharedPoolState {
+  readonly orbLayout: import('./orb-layout').OrbLayoutLedger;
   readonly version:typeof SHARED_POOL_VERSION; readonly poolId:string; readonly seed:number;
   readonly seatCount:number; readonly revision:number;
   readonly initial:Readonly<Record<string,number>>; readonly available:Readonly<Record<string,number>>;
@@ -39,7 +40,7 @@ export interface SharedPoolState {
 }
 export type SharedPoolFailure = MultiplayerFailure | 'invalid-pool' | 'invalid-seat-state' | 'stale-seat'
   | 'pool-empty' | 'empty-slot' | 'already-generated' | 'duplicate-release' | 'incomplete-seats'
-  | 'stale-refresh' | 'not-eliminated' | 'invalid-command';
+  | 'stale-refresh' | 'not-eliminated' | 'invalid-command' | import('./orb-layout').OrbLayoutFailure;
 export type SharedPoolEvent =
   | { readonly type:'sharedShopGenerated'; readonly seatId:string; readonly generation:number; readonly rngDraws:number }
   | { readonly type:'sharedRewardReserved'; readonly seatId:string; readonly dropId:string }
@@ -54,6 +55,7 @@ export type SharedPoolBatchResult =
       readonly events:readonly {readonly seatId:string;readonly events:readonly MatchEvent[]}[]; readonly poolEvents:readonly SharedPoolEvent[] }
   | { readonly ok:false; readonly pool:SharedPoolState; readonly states:readonly MatchState[]; readonly reason:SharedPoolFailure };
 export type SharedMatchCommand =
+  | {readonly type:'useConsumable';readonly consumableId:string;readonly target:import('./consumable-types').ConsumableTarget}
   | {readonly type:'settleRound';readonly receipt:import('./round-settlement').RoundSettlementReceipt}
   | {readonly type:'startCombat'} | {readonly type:'step'}
   | {readonly type:'choose';readonly choiceId:string;readonly generation:number;readonly definitionId:string}

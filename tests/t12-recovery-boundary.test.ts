@@ -36,7 +36,7 @@ describe('T12 option B recovery boundary', () => {
   }
 
   it('a conserved shared opening is also outside the offline restore format', () => {
-    const result = initializeSharedSeat(createSharedPool('t12-baseline', 42), createMatch(42), 'A', 0);
+    const result = initializeSharedSeat(createSharedPool('t12-baseline', 42), createMatch(42, {mode:'shared-deferred'}), 'A', 0);
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.reason);
     assertSharedPoolConservation(result.pool, [result.state]);

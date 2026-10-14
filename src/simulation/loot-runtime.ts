@@ -1,3 +1,5 @@
+import { createOrbLayout, freezeOrbLayoutThroughRound, type LootInitialization, type OrbLayoutLedger, type LootLayoutBinding } from './orb-layout';
+import { LOOT_POLICY_VERSION } from './content/loot';
 import type { CombatState } from './combat-types';
 import { COMPONENT_POOL } from './component-pool';
 import { canonicalContent } from './content';
@@ -14,17 +16,27 @@ import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenan
 import type { UnitUpgradedEvent } from './unit-types';
 import { planUnitAcquisition } from './unit-acquisition';
 
-const counterKey = (roundId: string) => JSON.stringify(['m8b-loot-project-v1', roundId, 'components-granted']);
+const counterKey = (roundId: string) => JSON.stringify([LOOT_POLICY_VERSION, roundId, 'components-granted']);
 const currentPlan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId);
 const withLoot = (state: MatchState, loot: MatchLootState): MatchState => ({ ...state, m8: { ...state.m8, loot } });
 
 /** Preparation owns the sole frozen plan and RNG; runtime progress only references its IDs. */
-export function prepareMatchLoot(seed: number, round: number, previous?: MatchLootState): MatchLootState {
+export function prepareMatchLoot(seed: number, round: number, previous?: MatchLootState, layout?:OrbLayoutLedger, initialization?:LootInitialization): MatchLootState {
   if (previous && previous.frozen.seed !== seed) throw new RangeError('Loot seed mismatch');
-  const frozen = previous ? advanceFrozenLootLedger(previous.frozen, round) : freezeLootThroughRound(seed, round);
+  let layoutBinding:LootLayoutBinding=previous?.layoutBinding??(initialization?.mode==='shared-deferred'?{mode:'shared-deferred'}:{mode:'solo',layout:createOrbLayout(seed)});
+  if(layoutBinding.mode==='solo') {
+    const result=freezeOrbLayoutThroughRound(layoutBinding.layout,round);
+    if(!result.ok)throw new RangeError(result.reason);
+    layout=result.layout;layoutBinding={mode:'solo',layout};
+  } else if(layoutBinding.mode==='shared') {
+    if(!layout||layout.throughRoundOrdinal<round)throw new RangeError('Missing shared orb layout');
+    layoutBinding={...layoutBinding,throughRoundOrdinal:round};
+  }
+  const boundary=layoutBinding.mode==='shared-deferred'?0:round;
+  const frozen = previous ? advanceFrozenLootLedger(previous.frozen,boundary,layout) : freezeLootThroughRound(seed,boundary,layout);
   if (frozen === previous?.frozen) return previous;
   const added = frozen.rounds.slice(previous?.frozen.rounds.length ?? 0);
-  return { frozen,
+  return { frozen, layoutBinding,
     direct: [...previous?.direct ?? [], ...added.flatMap(value => value.encounterPlan.drops.map(drop => ({ dropId: drop.dropId, status: 'planned' as const, receiptId: null })))],
     choiceEligibility: [...previous?.choiceEligibility ?? [], ...added.flatMap(value => value.choices.map(choice => ({ dropId: choice.dropId, status: 'planned' as const })))],
     choiceResolutions: previous?.choiceResolutions ?? [], earnedEvidence: previous?.earnedEvidence ?? [], receipts: previous?.receipts ?? [],
@@ -74,9 +86,9 @@ function commitReceipt(state: MatchState, receipt: LootReceipt): MatchState {
   const loot = state.m8.loot;
   if (loot.receipts.some(value => value.receiptId === receipt.receiptId || value.dropId === receipt.dropId)) throw new RangeError('Duplicate loot receipt');
   let guaranteeCounters = loot.guaranteeCounters;
-  if (receipt.payload.kind === 'item' && ITEM_DEFINITIONS[receipt.payload.definitionId]?.kind === 'component') {
+  if (receipt.payload.kind === 'item' && ITEM_DEFINITIONS[receipt.payload.definitionId]) {
     const key = counterKey(state.roundDefinitionId);
-    const count = guaranteeCounters[key] + receipt.payload.quantity;
+    const count = guaranteeCounters[key] + receipt.payload.quantity * (ITEM_DEFINITIONS[receipt.payload.definitionId].kind==='completed'?2:1);
     if (!Number.isSafeInteger(count) || count < 1) throw new RangeError('Invalid loot counter');
     guaranteeCounters = { ...guaranteeCounters, [key]: count };
   }
@@ -95,7 +107,7 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
     if (progress?.status !== 'revealed' && progress?.status !== 'pending-capacity') continue;
     if (state.combat?.status !== 'finished') throw new RangeError('Loot grant before combat finish');
     const payload = drop.payload.kind === 'unit' && unitLootPolicy ? unitLootPolicy(drop) : drop.payload, receiptId = lootReceiptId(drop.dropId);
-    let grantedItemIds: readonly string[] = [], grantedUnitIds: readonly string[] = [];
+    let grantedItemIds: readonly string[] = [], grantedUnitIds: readonly string[] = [], grantedConsumableIds:readonly string[]|undefined;
     if (payload.kind === 'unit') {
       const purchase = planUnitAcquisition(state, payload.definitionId, { kind: 'loot', receiptId }, state.resourceProvenance.entries.length);
       if (!purchase.ok) {
@@ -110,12 +122,18 @@ export function grantDirectLoot(initial: MatchState, terminal: boolean, unitLoot
       upgradeEvents.push(...purchase.upgradeEvents); events.push(...purchase.events); grantedUnitIds = [purchase.unitId];
     } else if (payload.kind === 'item') {
       const grant = grantItem(state, payload.definitionId, receiptId); state = grant.state; grantedItemIds = grant.grantedItemIds;
+    } else if(payload.kind==='consumable') {
+      const serial=state.nextConsumableSerial;
+      if(!Number.isSafeInteger(serial+1)||serial<1)throw new RangeError('Invalid consumable serial');
+      const consumableId=`consumable-${serial}`;
+      grantedConsumableIds=[consumableId];
+      state={...state,nextConsumableSerial:serial+1,consumables:[...state.consumables,{consumableId,definitionId:payload.definitionId}]};
     } else {
       const gold = state.gold + payload.quantity;
       if (!Number.isSafeInteger(gold)) throw new RangeError('Loot gold overflow');
       state = { ...state, gold };
     }
-    const receipt = { receiptId, dropId: drop.dropId, payload, grantedItemIds, grantedUnitIds };
+    const receipt = { receiptId, dropId: drop.dropId, payload, grantedItemIds, grantedUnitIds, ...(grantedConsumableIds?{grantedConsumableIds}:{}) };
     state = commitReceipt(state, receipt);
     state = withLoot(state, { ...state.m8.loot, direct: state.m8.loot.direct.map(value => value.dropId === drop.dropId
       ? { dropId: value.dropId, status: 'granted', receiptId } : value) });

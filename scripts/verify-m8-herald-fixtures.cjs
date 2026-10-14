@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 // T11 keeps the B9 raw inputs as historical evidence; regenerate current-rule inputs separately.
-const directory = path.join(root, 'tests/fixtures/t12-herald-raw');
+const directory = path.join(root, 'tests/fixtures/t13-herald-raw');
 const args = process.argv.slice(2);
 const write = args.includes('--write');
 const baselineArgument = args.find(argument => argument.startsWith('--baseline-dir='));
@@ -33,12 +33,15 @@ async function main() {
       'tests/fixtures/m8-herald-raw/generate.ts', 'tests/fixtures/m8-neutral-public-route.ts',
       'tests/m8-b7-match-wiring.test.ts'].sort();
     const sources = Object.fromEntries(files.map(file => [file, sha256(fs.readFileSync(path.join(root, file)))]));
-    let rawPrefix;
+    const {Ledger}=require('../tests/fixtures/m5/oracle.cjs');
+    const observedLedger=new Ledger(api.createMatch(42));
+    let rawPrefix, prefixLedger;
     // Use the unchanged driver, including its independent economy/shop oracle.
     // No restored fixture or saved state is an input to this generation.
     const route = await require('./generate-m5-route.cjs').run(api, { build: 'sniper', seed: 42,
-      onStep(before) {
-        if (before.roundDefinitionId === '4-4' && before.phase === 'choice') rawPrefix ??= before;
+      onStep(before,result,command) {
+        if (!rawPrefix && before.roundDefinitionId === '4-4' && before.phase === 'choice') {rawPrefix=before;prefixLedger=structuredClone(observedLedger);}
+        observedLedger.apply(before,result.state,command,result.events);
       } });
     assert(rawPrefix && route.final.phase === 'gameOver' && route.final.roundDefinitionId === '6-7'
       && route.final.outcome === 'victory', 'Complete real public acquisition route');
@@ -57,9 +60,17 @@ async function main() {
     const generated = [];
     for (const entry of builder.HERALD_RAW_CASES) {
       const commands = [], battles = [];
+      const ledger=Object.assign(Object.create(Ledger.prototype),structuredClone(prefixLedger));
       let currentBattle;
       const observer = (before, result, operation, commandArgs) => {
-        assert.notEqual(result.ok, false, `Rejected public ${operation}`);
+        assert.notEqual(result.ok, false, `Rejected public ${operation}: ${result.reason}`);
+        const [a,b,c]=commandArgs;
+        const command=({startMatchCombat:{type:'start'},nextRound:{type:'continue',round:a},
+          selectChoice:{type:'select',choiceId:a,generation:b,definitionId:c},selectAnomalyTarget:{type:'target',choiceId:a,generation:b,unitId:c},
+          useConsumable:{type:'useConsumable',consumableId:a,target:b},buyXp:{type:'buyXp'},deployMatchUnit:{type:'deploy',id:a,target:b},sellUnit:{type:'sell',id:a},
+          combineItems:{type:'combine',ids:[a,b]},equipItem:{type:'equip',itemId:a,unitId:b,slot:c}})[operation];
+        assert(operation==='stepMatch'||command,`Missing independent oracle command ${operation}`);
+        ledger.apply(before,result.state,command,result.events);
         if (operation !== 'stepMatch') commands.push({ roundId: before.roundDefinitionId, operation,
           args: commandArgs, beforeSha256: canonicalHash(before), afterSha256: canonicalHash(result.state),
           eventsSha256: canonicalHash(result.events) });
@@ -85,11 +96,10 @@ async function main() {
       assert.equal(rawState.roundDefinitionId, '6-7');
       assert.equal(rawState.phase, 'preparation');
       assert.equal(battles.length, 14, 'Original 3 stage-four, 6 stage-five and 5 stage-six battles');
-      // T11 route evidence: extra opening XP changes later shop/level decisions and combat;
-      // independently audited command/economy trace, not a rule oracle for these totals.
-      assert.equal(battles.reduce((sum, battle) => sum + battle.ticks, 0), 5833, 'T11 full scenario ticks');
-      assert.equal(rawState.playerHp, 64); assert.equal(rawState.gold, 231);
-      assert.deepEqual(rawState.augmentProgress, { pumpingRounds: 19, investmentHp: 1056 });
+      // T13 changes loot and later army trajectories. The independent literal-table
+      // oracle above now verifies every branch transition, including HP/income/growth.
+      const scenarioTicks=battles.reduce((sum,battle)=>sum+battle.ticks,0);
+      assert(scenarioTicks>0&&scenarioTicks<=14*1200);
       // This is the raw exported input. Neither serializeMatch nor restoreMatch
       // participates in building it, ordering it, granting it or validating it.
       const rawBytes = canonicalContent(rawState) + '\n';
@@ -97,7 +107,7 @@ async function main() {
         rawStateSha256: sha256(rawBytes) };
       generated.push({ entry, rawState, rawBytes, trace });
       console.log(JSON.stringify({ phase: 'raw-exported', name: entry.name, battles: battles.length,
-        ticks: 5833, rawBytes: Buffer.byteLength(rawBytes), rawSha256: sha256(rawBytes),
+        ticks: scenarioTicks, rawBytes: Buffer.byteLength(rawBytes), rawSha256: sha256(rawBytes),
         generationMs: performance.now() - generationStarted }));
     }
     // Programmatic boundary: even module evaluation of the production restore

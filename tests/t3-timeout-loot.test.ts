@@ -3,7 +3,6 @@ import { createMatch, enableMultiplayerSettlement, claimOrDiscardLoot, nextRound
   type MatchState, type MultiplayerCommandResult } from '../src/server-entry';
 import { createCombat } from '../src/simulation/combat';
 import { prepareMatchLoot, revealMatchLoot, unresolvedLootChoices } from '../src/simulation/loot-runtime';
-import { makeLootPendingChoice } from '../src/simulation/loot-choice';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { createRoundEnemies } from '../src/simulation/round-enemies';
 import type { Unit } from '../src/simulation/unit-types';
@@ -33,31 +32,31 @@ function retry(next:MatchState) {
 describe('T3 earned loot timeout transaction',()=>{
   it('grants the earned hero once, with original lineage and zero gold spent',()=>{
     const state=fixture(),next=accept(claimOrDiscardLoot(freeze(state),state.round));
-    expect(next.gold).toBe(state.gold);expect(next.m8.loot.receipts).toHaveLength(1);
-    expect(next.m8.loot.receipts[0].payload).toEqual({kind:'unit',definitionId:'maddie',quantity:1});
-    expect(next.preparation.units.find(u=>u.id==='unit-2')).toMatchObject({definitionId:'maddie',location:{kind:'bench',slot:0}});
+    expect(next.gold).toBe(state.gold);expect(next.m8.loot.receipts).toHaveLength(2);expect(next.consumables).toHaveLength(1);
+    expect(next.m8.loot.receipts[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
+    expect(next.preparation.units.find(u=>u.id==='unit-2')).toMatchObject({definitionId:'darius',location:{kind:'bench',slot:0}});
     retry(next);
   });
   it('discards a capacity-blocked hero once, without allocating a unit or reward receipt',()=>{
     const state=fullBench(fixture()),next=accept(claimOrDiscardLoot(freeze(state),state.round));
-    expect(next.m8.loot.direct[0].status).toBe('forfeited');expect(next.m8.loot.receipts).toEqual([]);
+    expect(next.m8.loot.direct[0].status).toBe('forfeited');expect(next.m8.loot.receipts.map(r=>r.payload.kind)).toEqual(['consumable']);expect(next.consumables).toHaveLength(1);
     expect(next.preparation).toEqual(state.preparation);expect(next.nextUnitSerial).toBe(20);retry(next);
     // A real public settlement has the same blocker and can now advance.
     let live=accept(startMatchCombat(fullBench(accept(enableMultiplayerSettlement(createMatch(5),'A')))));
     while(live.phase==='combat') live=stepMatch(live).state;
     const cleared=accept(claimOrDiscardLoot(live,live.round));expect(nextRound(cleared,cleared.round).ok).toBe(true);
   });
-  it('claims earned gold and first component offers; never grants planned future drops',()=>{
-    const state=fixture('2-7'),descriptors=unresolvedLootChoices(state),first=makeLootPendingChoice(descriptors[0]);
-    if (state.phase!=='settlement') throw new Error('fixture phase');
-    const choice:MatchState={...state,phase:'choice',pendingChoice:first};
+  it('claims all earned orb entries without opening a PvE choice; never grants planned drops',()=>{
+    const state=fixture('2-7');
     const plan=state.m8.loot.frozen.rounds.find(r=>r.encounterPlan.roundId==='2-7')!;
+    expect(unresolvedLootChoices(state)).toEqual([]);
     const gold=plan.encounterPlan.drops.reduce((sum,d)=>sum+(d.payload.kind==='gold'?d.payload.quantity:0),0);
     expect(gold).toBeGreaterThan(0);
-    const next=accept(claimOrDiscardLoot(freeze(choice),choice.round));
+    const next=accept(claimOrDiscardLoot(freeze(state),state.round));
     expect(next.gold).toBe(state.gold+gold);
-    expect(next.items.some(i=>i.definitionId===first.offers[0])).toBe(true);
-    expect(next.pendingChoice).toBeNull();expect(next.m8.loot.choiceResolutions).toHaveLength(descriptors.length);
+    expect(next.items.map(i=>i.definitionId)).toEqual(plan.encounterPlan.drops.flatMap(d=>d.payload.kind==='item'?[d.payload.definitionId]:[]));
+    expect(next.m8.loot.receipts.map(r=>r.payload)).toEqual(plan.encounterPlan.drops.map(d=>d.payload));
+    expect(next.pendingChoice).toBeNull();expect(next.m8.loot.choiceResolutions).toEqual([]);
     expect(next.m8.loot.direct.filter(d=>d.status==='planned')).toEqual(state.m8.loot.direct.filter(d=>d.status==='planned'));
     retry(next);
   });

@@ -106,7 +106,7 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
   });
   it('rejects the forged historical level through full save-envelope validation without changing archived battles', async () => {
     const history = new BattleHistory('b5-r1'), state = roundEight(true, history);
-    const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 2, replayFormatVersion: 2,
+    const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3,
       runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: state, battles: history.completedRecords, currentBattle: null };
     expect(envelope.battles.map(battle => battle.context.roundDefinitionId))
       .toEqual(['1-2', '1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7']);

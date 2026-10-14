@@ -8,7 +8,7 @@ export type ValidateHistory = (envelope: SaveEnvelope) => void | Promise<void>;
 function reject(message: string): never { throw new SaveError('validation', `存档无效：${message}`); }
 const MESSAGES: Record<RejectedReason | 'new-match-required', string> = {
   'unsupported-version': '不支持的文件版本', 'digest-mismatch': '内容摘要与当前版本不一致', 'invalid-data': '文件数据损坏或校验未通过',
-  'capacity-exceeded': '战斗档案数量超限', 'new-match-required': '旧版（M7）对局只能原样保全导出，请开始新局',
+  'capacity-exceeded': '战斗档案数量超限', 'new-match-required': '旧版（M7/M8）对局只能原样保全导出，请开始新局',
 };
 /** A routed rejection keeps its CompatibilityView so the UI can explain it without re-deriving it. */
 export class CompatibilityError extends SaveError {

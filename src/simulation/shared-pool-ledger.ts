@@ -1,3 +1,5 @@
+import { restoreOrbLayout } from './orb-layout';
+import { freezeLootThroughRound } from './loot-freeze';
 import { canonicalContent } from './content';
 import { MATCH_RULES, SHOP_CATALOG } from './match-rules';
 import type { MatchState } from './match-types';
@@ -39,6 +41,7 @@ export function releaseShop(pool:PoolDraft,seatId:string):void {
 export function assertSharedPoolConservation(pool:SharedPoolState,states:readonly MatchState[]=[]):void {
   requirePool(pool.version===SHARED_POOL_VERSION && typeof pool.poolId==='string' && pool.poolId.length>0);
   validateSeed(pool.seed);
+  requirePool(restoreOrbLayout(pool.orbLayout).seed===pool.seed);
   requirePool(safe(pool.revision)&&safe(pool.naturalRound)&&safe(pool.seatCount,1)&&pool.seatCount<=8);
   requirePool(Object.keys(pool.initial).length===SHOP_CATALOG.length && Object.keys(pool.available).length===SHOP_CATALOG.length);
   const totals:Record<string,number>={};
@@ -88,6 +91,12 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   for(const id of SHOP_CATALOG) requirePool(totals[id]===pool.initial[id]);
   const provided=new Set<string>();
   for(const state of states) {
+    const layoutBinding=state.m8.loot.layoutBinding;
+    requirePool(layoutBinding.mode==='shared'&&layoutBinding.poolId===pool.poolId&&layoutBinding.version===pool.orbLayout.version,'invalid-seat-state');
+    requirePool(layoutBinding.throughRoundOrdinal === state.m8.loot.frozen.throughRoundOrdinal
+      && state.m8.loot.frozen.throughRoundOrdinal === Math.min(state.round,38)
+      && state.m8.loot.frozen.throughRoundOrdinal<=pool.orbLayout.throughRoundOrdinal,'invalid-seat-state');
+    requirePool(canonicalContent(state.m8.loot.frozen)===canonicalContent(freezeLootThroughRound(state.seed,state.m8.loot.frozen.throughRoundOrdinal,pool.orbLayout)),'invalid-seat-state');
     const binding=state.sharedPool;requirePool(binding&&binding.poolId===pool.poolId,'invalid-seat-state');
     requirePool(!provided.has(binding.seatId),'invalid-seat-state');provided.add(binding.seatId);
     const seat=pool.seats.find(s=>s.seatId===binding.seatId);requirePool(seat,'invalid-seat-state');

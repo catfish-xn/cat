@@ -11,18 +11,18 @@ import { hash } from '../scripts/m4-evidence.cjs';
  * evidence set is produced from public commands exactly as the input gate records it
  * (one artifact per interaction, manifest hashes, native mouse operations on the command's
  * controls); every tampering below must be rejected. The validator replays the route from
- * createMatch(42), so re-hashed forgeries and placeholder ledgers fail as well. */
+ * createMatch(14349), so re-hashed forgeries and placeholder ledgers fail as well. */
 const accepted = result => { if (!result.ok) throw new Error(result.reason); return result.state; };
 // The gate's recorded shape for one native mouse operation per control (pointer then compatibility mouse events).
 const clicks = targets => targets.flatMap((target, index) => [['pointerdown', 'mouse'], ['mousedown', null], ['pointerup', 'mouse'], ['mouseup', null], ['click', 'mouse']]
   .map(([type, pointerType], offset) => ({ type, time: 1000 + index * 100 + offset, trusted: true, pointerType, target })));
 function genuine() {
   const steps = [];
-  let state = api.createMatch(42); const picks = ['bow', 'rod'];
+  let state = api.createMatch(14349);
   while (state.roundDefinitionId !== '2-1' || state.phase !== 'preparation') {
     if (state.phase === 'preparation') { state = accepted(api.startMatchCombat(state)); while (state.phase === 'combat') state = api.stepMatch(state).state; }
     else if (state.phase === 'choice') {
-      const choice = state.pendingChoice, pick = choice.kind === 'component' ? picks.shift() : choice.offers.find(id => id !== 'placebo');
+      const choice = state.pendingChoice, pick = choice.offers.find(id => id !== 'placebo');
       const next = accepted(api.selectChoice(state, choice.choiceId, choice.generation, pick));
       steps.push({ name: `b8-opening-${choice.kind}-${pick}`, before: state, expected: next, targets: [`choice:${pick}`] }); state = next;
     } else state = accepted(api.nextRound(state, state.round));
@@ -102,7 +102,7 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
       /pointer operations hit the command's controls/],
     ['equip operations in the wrong order', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => { a.inputs = [...a.inputs.slice(5), ...a.inputs.slice(0, 5)]
       .map((input, index) => ({ ...input, time: 1000 + index })); }), /pointer operations hit the command's controls/],
-    ['touch input substituted for the mouse pick', (m, dir) => edit(dir, artifactOf(m, 'b8-opening-component-bow'), a => { a.inputs[0].type = 'touchstart'; }),
+    ['touch input substituted for the mouse pick', (m, dir) => edit(dir, artifactOf(m, base.manifest.interactions[0].name), a => { a.inputs[0].type = 'touchstart'; }),
       /input type touchstart is not a native mouse event/],
     ['committing click removed', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-recipe'), a => { a.inputs = a.inputs.filter(input => input.type !== 'click' || input.target !== 'combine-items'); }),
       /committing click on combine-items/],
@@ -117,14 +117,14 @@ describe('B8 Rageblade input evidence gate (audit P2-2)', () => {
       /extra committing click on mobile:reroll/],
     ['reroll click between two operations', (m, dir) => edit(dir, artifactOf(m, 'normal-opening-rageblade-equipped'), a => {
       a.inputs.splice(5, 0, { ...a.inputs[4], target: 'mobile:reroll' }); }), /extra committing click on mobile:reroll/],
-    ['missing mousedown', (m, dir) => edit(dir, artifactOf(m, 'b8-opening-component-bow'), a => { a.inputs = a.inputs.filter(input => input.type !== 'mousedown'); }),
-      /operation 1 on choice:bow: expected mousedown, got pointerup/],
-    ['duplicated release', (m, dir) => edit(dir, artifactOf(m, 'b8-opening-component-bow'), a => { a.inputs.splice(3, 0, { ...a.inputs[2] }); }),
-      /operation 1 on choice:bow: expected mouseup, got pointerup/],
+    ['missing mousedown', (m, dir) => edit(dir, artifactOf(m, base.manifest.interactions[0].name), a => { a.inputs = a.inputs.filter(input => input.type !== 'mousedown'); }),
+      /operation 1 on choice:[^:]+: expected mousedown, got pointerup/],
+    ['duplicated release', (m, dir) => edit(dir, artifactOf(m, base.manifest.interactions[0].name), a => { a.inputs.splice(3, 0, { ...a.inputs[2] }); }),
+      /operation 1 on choice:[^:]+: expected mouseup, got pointerup/],
     ['duplicated committing click', (m, dir) => edit(dir, combatArtifact(m), a => { a.inputs.push({ ...a.inputs.at(-1) }); }),
       /extra committing click on mobile:start-combat/],
-    ['release on another control', (m, dir) => edit(dir, artifactOf(m, 'b8-opening-component-bow'), a => { a.inputs[3].target = 'mobile:reroll'; }),
-      /operation 1 on choice:bow: expected mouseup, got mouseup on mobile:reroll/],
+    ['release on another control', (m, dir) => edit(dir, artifactOf(m, base.manifest.interactions[0].name), a => { a.inputs[3].target = 'mobile:reroll'; }),
+      /operation 1 on choice:[^:]+: expected mouseup, got mouseup on mobile:reroll/],
     ['inputs out of time order', (m, dir) => edit(dir, combatArtifact(m), a => { a.inputs[1].time = a.inputs[0].time - 1; }), /native time order/],
     ['re-hashed forged before state', (m, dir) => rehashed(m, dir, 'normal-opening-rageblade-recipe', a => { a.before.gold += 5; }),
       /recorded before state equals the trusted replay/],

@@ -3,7 +3,7 @@ import { freezeContent } from './freeze';
 
 /** Catalog policy labels only; these do not change the active content/rules version. */
 export const NEUTRAL_ENCOUNTER_CATALOG_VERSION = 'm8b-encounters-project-v1';
-export const NEUTRAL_ENCOUNTER_POLICY_VERSION = 'm8b-pve-project-v1';
+export const NEUTRAL_ENCOUNTER_POLICY_VERSION = 'm8b-pve-project-v2';
 export interface NeutralDeployment {
   readonly slotId: string;
   readonly definitionId: string;

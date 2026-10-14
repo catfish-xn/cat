@@ -150,12 +150,13 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     ['unique', ['blue-buff', 'blue-buff'], [0, 1], [0, 0], [1]],
     ['exclusive survivor', ['thiefs-gloves', 'sword'], [0, 1], [0, 0], [1]],
     ['exclusive incoming', ['sword', 'thiefs-gloves'], [0, 1], [0, 0], [1]],
-    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 0, 0, 1], [0, 1, 2, 0], [3]],
+    ['full ordinary', ['sword', 'rod', 'vest', 'cloak'], [0, 1, 2, 3], [0, 0, 0, 0], [1]],
   ] as const)('returns %s conflicts and preserves permanent IDs across the complete command', (_label, definitions, holders, slots, returned) => {
     const inventory = publicInventory(definitions, true), chain = publicRecursivePurchase(inventory.state);
     let equipped = chain.state;
-    for (const [index, id] of inventory.itemIds.entries()) equipped = accepted(equipItem(equipped, id, [chain.survivorId, chain.secondId][holders[index]], slots[index]));
+    for (const [index, id] of inventory.itemIds.entries()) equipped = accepted(equipItem(equipped, id, [chain.survivorId, chain.secondId, chain.incomingId, chain.purchaseIds[7]][holders[index]], slots[index]));
     const state = freeze(equipped), result = buyUnit(state, chain.slot, state.shop.generation), next = accepted(result);
+    // Codepoint order puts unit-10 before unit-7: the rod from unit-7 overflows last.
     for (const n of returned) expect(next.items.find(i => i.id === inventory.itemIds[n])?.location.kind).toBe('inventory');
     expect(next.items.map(i => i.id).sort()).toEqual(state.items.map(i => i.id).sort());
     expect(next.equipmentState).toEqual(state.equipmentState);
@@ -163,7 +164,7 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     expect(result.events.filter(event => event.type === 'unitUpgraded')).toHaveLength(2);
     expect(result.events.filter(event => event.type === 'itemsReturned').map(({ domain: _domain, eventSeq: _seq, ...event }) => event)).toEqual([{ type: 'itemsReturned', unitId: chain.secondId, itemIds: returned.map(index => inventory.itemIds[index]).sort() }]);
     expect(restoreMatch(serializeMatch(next))).toEqual(next);
-    const old = definitions.map((definition, index) => item(20 + index, definition, ['unit-1', 'unit-2'][holders[index]], slots[index]));
+    const old = definitions.map((definition, index) => item(20 + index, definition, ['unit-1', 'unit-2', 'unit-3', 'unit-4'][holders[index]], slots[index]));
     const forged = forgedChain(old);
     expect(() => restoreMatch(serializeMatch(forged))).toThrow('Invalid B8 Match: current resource fold');
     const forgedNext = accepted(buyUnit(forged, 0, forged.shop.generation));

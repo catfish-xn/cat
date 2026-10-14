@@ -1,3 +1,8 @@
+import { planConsumable } from './consumables';
+import { CONSUMABLE_RULES } from './content/consumables';
+import type { LootInitialization, OrbLayoutLedger } from './orb-layout';
+import type { ConsumableTarget } from './consumable-types';
+export { previewUseConsumable } from './consumables';
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canOperateMatch, isCombatRosterLocked } from './operation-policy';
 import type { UnitLootPolicy } from './loot-runtime';
@@ -107,17 +112,17 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
     combat: timing === 'after' ? state.combat : null, pendingChoice: null } as MatchState, events };
 }
 /** One preparation transaction freezes enemies and appends the complete authoritative loot plan. */
-function prepareRound(seed: number, round: number, previous?: MatchState['m8']['loot']): MatchState['m8'] {
+function prepareRound(seed: number, round: number, previous?: MatchState['m8']['loot'], layout?:OrbLayoutLedger, initialization?:LootInitialization): MatchState['m8'] {
   const definition = getCatalogRoundByOrdinal(round);
-  return freezeContent({round:definition,encounterPlan:null,loot:prepareMatchLoot(seed,round,previous),preparation:{
+  return freezeContent({round:definition,encounterPlan:null,loot:prepareMatchLoot(seed,round,previous,layout,initialization),preparation:{
     version:ROUND_PREPARATION_RULES.version,roundId:definition.roundId,encounterId:definition.encounterId,
     contentStatus:definition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',
     enemies:createRoundEnemies(round),
   }});
 }
-export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
+export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization = {mode:'solo'}): MatchState {
   validateSeed(seed); validateContent();
-  const m8 = prepareRound(seed,1);
+  const m8 = prepareRound(seed,1,undefined,undefined,loot);
   const initial: MatchState = { schemaVersion: M8_VERSION.schemaVersion, rulesVersion: M8_VERSION.rulesVersion, contentVersion: M8_VERSION.contentVersion,
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
@@ -125,6 +130,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED): MatchState {
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
     contentDigest: CONTENT_DIGEST, seed,
     equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
+    consumables: [], nextConsumableSerial: 1, reforgeState:{state:(seed^CONSUMABLE_RULES.seedXor)>>>0,draws:0},
     items: [], nextItemSerial: 1, augments: [], anomalyBinding: null, pendingChoice: null, scheduleReceipts: [],
     choiceRngState: (seed ^ 0x9e3779b9) >>> 0, rewardRngState: (seed ^ 0x85ebca6b) >>> 0, nextMatchEventSeq: 0,
     ...generateShop(seed, 1, MATCH_RULES.initialLevel), round: 1, gold: MATCH_RULES.initialGold,
@@ -256,6 +262,7 @@ export function buyXp(state: MatchState): MatchCommandResult {
   return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
+  if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
   if (state.phase !== 'preparation') return 'wrong-phase';
   if (state.multiplayer?.status === 'eliminated') return 'wrong-phase';
   if (state.multiplayer && state.m8.round.kind === 'pvp') return 'wrong-phase';
@@ -348,7 +355,7 @@ export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): M
   const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
 }
-export function nextRound(state: MatchState, expectedRound: number): MatchCommandResult {
+export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');
   if (state.phase !== 'settlement') return fail(state, 'wrong-phase');
   if (expectedRound !== state.round) return fail(state, 'stale-round');
@@ -356,7 +363,7 @@ export function nextRound(state: MatchState, expectedRound: number): MatchComman
   if (state.roundResults.length !== state.round || state.roundResults.at(-1)?.round !== state.round) return fail(state, 'unsettled-round');
   const definition = getNextCatalogRound(state.m8.round.roundId);
   if (!definition) return fail(state, 'wrong-phase');
-  const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot);
+  const round = definition.ordinal, m8 = prepareRound(state.seed,round,state.m8.loot,layout);
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
@@ -366,7 +373,7 @@ export function nextRound(state: MatchState, expectedRound: number): MatchComman
 }
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */
-export function advanceMultiplayerRound(state: MatchState, expectedRound: number): MultiplayerCommandResult {
+export function advanceMultiplayerRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MultiplayerCommandResult {
   if (!state.multiplayer) return multiplayerFail(state, 'multiplayer-required');
   if (state.multiplayer.status === 'eliminated') return multiplayerFail(state, 'seat-eliminated');
   if (state.sharedPool) return multiplayerFail(state, 'shared-pool-required');
@@ -378,7 +385,7 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
   try {
     const current = getMultiplayerRoundByOrdinal(state.round);
     if (current.roundId !== state.roundDefinitionId || current.roundId !== state.m8.round.roundId) return multiplayerFail(state, 'stale-round');
-    if (state.round < FINAL_ROUND) return nextRound(state, expectedRound);
+    if (state.round < FINAL_ROUND) return nextRound(state, expectedRound, layout);
     const definition = getMultiplayerRoundByOrdinal(state.round + 1);
     const m8: MatchState['m8'] = { ...state.m8, round: definition, encounterPlan: null,
       preparation: { version: ROUND_PREPARATION_RULES.version, roundId: definition.roundId,
@@ -391,6 +398,12 @@ export function advanceMultiplayerRound(state: MatchState, expectedRound: number
   } catch { return multiplayerFail(state, 'invalid-round'); }
 }
 
+export function useConsumable(state:MatchState,consumableId:string,target:ConsumableTarget):MatchCommandResult {
+  const plan=planConsumable(state,consumableId,target);
+  if(!plan.ok)return fail(state,plan.reason);
+  return acceptEquipment({...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
+    {kind:'consumable-used',record:plan.record})},plan.events);
+}
 export function combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult {
   const preview = previewCombine(state, aId, bId);
   if (!preview.allowed) return fail(state, preview.reason);

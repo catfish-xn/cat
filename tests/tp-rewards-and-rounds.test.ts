@@ -10,11 +10,11 @@ import { accept,batch,room,conserved,rejected,fight,fullBench } from './tp-helpe
 
 describe('TP opening and earned reward sources',()=>{
   it('frozen future rewards reserve nothing; earned hero competes for one last copy then compensates gold once',()=>{
-    const {pool,states}=room({irelia:2,maddie:1});expect(pool.pending).toEqual([]);expect(pool.available.maddie).toBe(1);
-    const a=fight(pool,states[0]);expect(a.pool.available.maddie).toBe(0);
-    expect(a.pool.rewards[0]).toMatchObject({seatId:'seat-0',definitionId:'maddie',resolution:'held',gold:0});
+    const {pool,states}=room({irelia:2,darius:1});expect(pool.pending).toEqual([]);expect(pool.available.darius).toBe(1);
+    const a=fight(pool,states[0]);expect(a.pool.available.darius).toBe(0);
+    expect(a.pool.rewards[0]).toMatchObject({seatId:'seat-0',definitionId:'darius',resolution:'held',gold:0});
     const b=fight(a.pool,states[1]);
-    expect(b.pool.rewards[1]).toMatchObject({seatId:'seat-1',definitionId:'maddie',resolution:'gold',gold:1});
+    expect(b.pool.rewards[1]).toMatchObject({seatId:'seat-1',definitionId:'darius',resolution:'gold',gold:1});
     expect(b.state.gold-a.state.gold).toBe(1); // same battle/economy, only shortage conversion differs
     expect(b.state.preparation.units.filter(u=>u.team==='player')).toHaveLength(1);
     expect(b.state.m8.loot.receipts[0].payload).toEqual({kind:'gold',quantity:1});
@@ -24,12 +24,12 @@ describe('TP opening and earned reward sources',()=>{
     conserved(b.pool,[a.state,b.state]);
   });
   it('full bench reserves earned hero, timeout discards once and returns that exact copy',()=>{
-    const full=fullBench(),available=full.pool.available.maddie;
+    const full=fullBench(),available=full.pool.available.darius;
     const pending=fight(full.pool,full.state);
-    expect(pending.pool.pending).toHaveLength(1);expect(pending.pool.available.maddie).toBe(available-1);
+    expect(pending.pool.pending).toHaveLength(1);expect(pending.pool.available.darius).toBe(available-1);
     expect(pending.state.m8.loot.direct[0].status).toBe('pending-capacity');
     const discard=accept(runSharedMatchCommand(freeze(pending.pool),freeze(pending.state),{type:'claimLoot',round:1}));
-    expect(discard.pool.pending).toEqual([]);expect(discard.pool.available.maddie).toBe(available);
+    expect(discard.pool.pending).toEqual([]);expect(discard.pool.available.darius).toBe(available);
     expect(discard.pool.rewards.at(-1)?.resolution).toBe('forfeited');
     const again=accept(runSharedMatchCommand(discard.pool,discard.state,{type:'claimLoot',round:1}));expect(again.pool).toBe(discard.pool);
     const next=batch(nextSharedRound(discard.pool,[discard.state],1));expect(next.states[0].round).toBe(2);conserved(next.pool,next.states);
@@ -39,9 +39,9 @@ describe('TP opening and earned reward sources',()=>{
     const unit=pending.state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;
     const sold=accept(sellSharedUnit(pending.pool,pending.state,unit.id));
     expect(sold.pool.pending).toEqual([]);expect(sold.pool.available[unit.definitionId]).toBe(pending.pool.available[unit.definitionId]+1);
-    expect(sold.pool.available.maddie).toBe(pending.pool.available.maddie);
+    expect(sold.pool.available.darius).toBe(pending.pool.available.darius);
     expect(sold.pool.rewards.at(-1)?.resolution).toBe('held');
-    expect(sold.pool.holdings.some(h=>h.definitionId==='maddie')).toBe(true);conserved(sold.pool,[sold.state]);
+    expect(sold.pool.holdings.some(h=>h.definitionId==='darius')).toBe(true);conserved(sold.pool,[sold.state]);
   });
   it('elimination returns pending, held and shop copies without granting sale gold; duplicate is inert',()=>{
     const full=fullBench(),pending=fight(full.pool,full.state);
@@ -52,15 +52,15 @@ describe('TP opening and earned reward sources',()=>{
     rejected(releaseSeatOnElimination(out.pool,out.state),out.pool,out.state,'duplicate-release');conserved(out.pool,[out.state]);
   });
   it('unit reward upgrade uses the same 3-source ownership ledger as a shop purchase',()=>{
-    const {pool,states}=room({irelia:1,maddie:3},1);let r=accept(generateSharedShop(pool,{...states[0],gold:20},0));
+    const {pool,states}=room({irelia:1,darius:3},1);let r=accept(generateSharedShop(pool,{...states[0],gold:20},0));
     for(let slot=0;slot<2;slot++)r=accept(buySharedUnit(r.pool,r.state,slot,1));
     // Release the third shop offer by elimination is not appropriate; sell one then acquire reward
     // from the returned copy while another card remains reserved in the shop.
-    const one=r.state.preparation.units.find(u=>u.definitionId==='maddie')!;
+    const one=r.state.preparation.units.find(u=>u.definitionId==='darius')!;
     const sold=accept(sellSharedUnit(r.pool,r.state,one.id));
     const bought=accept(buySharedUnit(sold.pool,sold.state,2,1));
-    expect(bought.pool.available.maddie).toBe(1);
-    const won=fight(bought.pool,bought.state),held=won.pool.holdings.find(h=>h.definitionId==='maddie')!;
+    expect(bought.pool.available.darius).toBe(1);
+    const won=fight(bought.pool,bought.state),held=won.pool.holdings.find(h=>h.definitionId==='darius')!;
     expect(held.sources).toHaveLength(3);expect(won.state.preparation.units.find(u=>u.id===held.unitId)?.starLevel).toBe(2);
     expect(won.pool.rewards.at(-1)?.resolution).toBe('held');conserved(won.pool,[won.state]);
   });
@@ -76,7 +76,7 @@ describe('TP opening and earned reward sources',()=>{
     expect(JSON.stringify([r.pool,state])).toBe(before);
   });
   it('unearned neutral drops never reserve or compensate; mirrors and combat summons never appear in holdings',()=>{
-    const {pool,states}=room({irelia:1,maddie:1},1);
+    const {pool,states}=room({irelia:1,darius:1},1);
     // A legitimate sale empties the real army, so the PvE concession kills no source.
     const sold=accept(sellSharedUnit(pool,states[0],'unit-1')),lost=fight(sold.pool,sold.state);
     expect(lost.pool.rewards).toEqual([]);expect(lost.pool.pending).toEqual([]);expect(lost.pool.available).toEqual(lost.pool.initial);

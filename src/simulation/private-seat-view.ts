@@ -1,6 +1,6 @@
 import type { MatchState } from './match-types';
 import type { RevealedDropView } from './m8/ui-contracts';
-import { readLootView } from './loot-view';
+import { readLootView, payloadView } from './loot-view';
 import { freezeContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
 
@@ -19,17 +19,17 @@ function revealedLootView(state: MatchState) {
   const revealedDrops = readLootView(state).revealedDrops
     .filter(drop => drop.roundId === round.roundId && drop.encounterId === round.encounterId)
     .map((drop): RevealedDropView => {
-      const payload = drop.payload.kind === 'gold' ? pick(drop.payload, ['kind', 'quantity'])
-        : pick(drop.payload, ['kind', 'definitionId', 'quantity']);
-      const identity = { ...pick(drop, ['dropId', 'encounterId', 'sourceUnitId', 'roundId']), payload };
+      const payload=payloadView(drop.payload);
+      const identity = { ...pick(drop, ['orbId','entryOrdinal','dropId', 'encounterId', 'sourceUnitId', 'roundId']), payload };
       switch (drop.status) {
+        case 'forfeited': return {...identity,status:drop.status,receiptId:null,allowedActions:[],reason:drop.reason};
         case 'granted': return { ...identity, status: drop.status, receiptId: drop.receiptId, allowedActions: [] };
         case 'revealed': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'auto-grant-in-domain' };
         case 'pending-capacity': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'bench-full' };
         case 'retained-terminal': return { ...identity, status: drop.status, receiptId: null, allowedActions: [], reason: 'terminal-bench-full' };
       }
     });
-  return { roundId: round.roundId, revealedDrops };
+  return { roundId: round.roundId, revealedDrops, revealedOrbs:readLootView(state).revealedOrbs.map(o=>({...pick(o,['orbId','tier','status']),entryDropIds:[...o.entryDropIds]})) };
 }
 
 /** A detached MatchState subset plus the revealedLoot display summary; never an authority/save. */
@@ -46,6 +46,7 @@ export function toPrivateSeatView(state: MatchState) {
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(revealedLoot ? { revealedLoot } : {}),
+    consumables:state.consumables.map(c=>pick(c,['consumableId','definitionId'])),
     streak: pick(state.streak, ['kind', 'count']),
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId']) : pick(slot, ['status', 'empty'])) },

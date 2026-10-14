@@ -689,3 +689,16 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 ## T13 对 Claude 的接线说明
 
 T13-A：界面不再需要自己选合成槽。将玩家请求的合法 slot 原样交给 equipItem；previewEquip 成功时按 occupiedSlots 高亮真实落槽，按原 combination 显示配方结果。单位身上已有散件时，拖到空槽或成装槽也会在原散件槽合成；旧状态多个散件优先最低槽。三槽父件仍按 occupiedSlots=[0,1,2] 显示。无需新命令或新失败码，四阶段及下场生效文案沿用 T12。
+
+
+### T13 对 Claude 的接线说明：R3/R4（C18-B）
+
+D1–D8 已选 A；完整签名、阶段、失败码、投影见 MULTIPLAYER_CONTRACT §18。T13-A 界面不再需要自己选合成槽，成功 preview.occupiedSlots 表示真实落槽。
+
+- 对局创建：先 createSharedPool(poolId, roomSeed)，逐席 createMatch(seatSeed, {mode:'shared-deferred'}) 后 initializeSharedSeat(pool, seat, seatId, index)，每次接住返回 pool/state；随后走既有共享商店初始化。禁止 createMatch(seed) 的 solo 状态传共享初始化。
+- 换轮只调 nextSharedRound(pool, latestSeats, expectedRound)，原子接住所有返回；pool.orbLayout 私有，界面不能计算或存储颜色。
+- ClientCommand 增加 useConsumable：consumableId 加 target={kind:'unit',unitId}（拆卸器）或 {kind:'item',itemId}（两重铸器）。服务器逐层 onlyKeys，沿原信封去重、round/revision 权限，转 runSharedMatchCommand。成功保存最新席位与 pool，不能覆写冻结战斗输入。
+- 新私有字段 consumables；revealedLoot 新 revealedOrbs，entry 新 orbId/entryOrdinal；payload 新 consumable。已授予英雄缺货时展示实际 receipt 的金币。已揭示后放弃仍显示，未揭示奖励仍隐藏。列表无点击开珠/领取入口。
+- 新失败文案建议：unknown-consumable「该工具已使用或不存在」；invalid-consumable-target「该工具不能用于此目标」；no-removable-items「该单位没有可拆卸装备」。wrong-phase/temporary-item/unknown-item/unknown-unit 沿现有码；layout 三失败属于服务器权威错误，不要求玩家挑颜色。
+- 已放弃状态与工具名称为占位，由 Claude C18-B 正式接线。已授权的 presentation/loot-view.ts、loot-preview/fixtures.ts 仅做最小兼容；未实现工具交互或宝珠布局。
+- 联合部署切换网络协议到 2，拒绝旧协议；旧格式 2 存档只读保全导出、新开局，不迁移。当前 src/server/ 未修改；其原 solo 初始化调用是 C18-B 必须处理的接线依赖。

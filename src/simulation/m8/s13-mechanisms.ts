@@ -1,4 +1,5 @@
 /** G04–G07 adapter: compiles legacy tags once and executes only finite frozen declarations. */
+import { canonicalContent } from '../content';
 import { emitMechanismSignal } from './s13-triggers';
 import { hexDistance, DEFAULT_BOARD } from '../board';
 import { selectTargets, startingRows, type TargetEnvironment } from './targeting';
@@ -68,7 +69,8 @@ function synchronizeBurnTask(target: S13Unit, key: string): void {
   const program = { definitionId: JSON.stringify([c.source.definitionId, c.source.effectIndex, 'burn']), selector: selfSelector({ candidates: 'bound-target', relation: 'enemy', maxTargets: 1 }), targetSnapshot: 'once-per-pulse' as const,
     effects: [{ kind: 'damage', damageType: 'true', delivery: 'item-burn', critEligibility: 'never', amount: flatAmount(0, { maxHpBps: c.application.magnitudeBps, hpBasis: 'target', sample: 'each-pulse' }) } as const] };
   const old = target.mechanismState!.periodicTasks.find(t => t.key === key);
-  const same = old && JSON.stringify(old.program) === JSON.stringify(program);
+  // Save canonicalization may reorder object keys; a refresh must retain fractional damage.
+  const same = old && canonicalContent(old.program) === canonicalContent(program);
   const task: PeriodicTask = { key, source: c.source, targetId: target.id, nextPulseAtTick: Math.max(group.nextPulseAtTick!,old?.nextPulseAtTick ?? 0), periodTicks: 20, endsAtTick: c.expiresAtTick,
     pulseOrdinal: old?.pulseOrdinal ?? 0, pulseLimit: null, remainders: same ? old.remainders : [], finalPulse: 'before-expiry', onSourceDeath: 'persist-attached', onTargetDeath: 'cancel', program };
   target.mechanismState = { ...target.mechanismState!, periodicTasks: [...target.mechanismState!.periodicTasks.filter(t => t.key !== key), task] };

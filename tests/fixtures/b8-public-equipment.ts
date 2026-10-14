@@ -1,5 +1,5 @@
 import {
-  createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch,
+  createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, rerollShop, selectAnomalyTarget, sellUnit,
 } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../src/simulation/match-types';
 import type { LedgerCombatEvent as CombatEvent } from '../../src/simulation/combat-types';
@@ -62,43 +62,58 @@ export function benchPublicEquipmentPlayers(input: MatchState): MatchState {
   return state;
 }
 
-function deployDrop(state: MatchState, definitionId: string, col: number): MatchState {
-  const unit = state.preparation.units.find(unit => unit.team === 'player' && unit.definitionId === definitionId);
-  if (!unit) throw new Error(`Public opening did not grant ${definitionId}`);
-  return accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col, row: 7 } }));
-}
-
 const preparations = new Map<string, MatchState>();
-/** All assets come from public opening kills and scheduled component choices.
- * One/two components return at 2-1; three/four return at 3-5. Items are still in
- * inventory and all players are benched. Cached snapshots are always detached.
- * Supplying history bypasses the cache so no opening event is omitted.
+/** T13: requested assets come from random PvE drops plus the five real supply choices.
+ * Extra drops are retained. Route timing and item IDs are discovered, never rewritten.
+ * Original Irelia/Lux stay one star for independent equipment stat assertions.
  */
 export function publicEquipmentPreparation(components: readonly string[],
   options: { seed?: number; history?: BattleHistory } = {}): MatchState {
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
-  const seed = options.seed ?? 42, key = JSON.stringify([seed, components]);
-  if (!options.history && preparations.has(key)) return structuredClone(preparations.get(key)!);
-  let state = finishPublicEquipmentBattle(createMatch(seed), options.history);
-  state = accepted(nextRound(state, state.round));
-  state = deployDrop(state, 'maddie', 3);
-  state = finishPublicEquipmentBattle(state, options.history);
-  state = choose(state, components[0]);
-  state = accepted(nextRound(state, state.round));
-  state = deployDrop(state, 'lux', 5);
-  state = finishPublicEquipmentBattle(state, options.history);
-  state = choose(state, components[1] ?? 'sword');
-  state = accepted(nextRound(state, state.round));
-  state = benchPublicEquipmentPlayers(resolvePublicEquipmentChoices(state));
-  if (components.length > 2) {
-    while (state.roundDefinitionId !== '3-5') {
-      if (state.phase === 'choice') state = resolvePublicEquipmentChoices(state,
-        state.roundDefinitionId === '2-4' ? components[2] : components[3] ?? 'sword');
-      if (state.phase === 'preparation') state = finishPublicEquipmentBattle(state, options.history);
-      if (state.phase !== 'settlement') throw new Error(`Cannot advance public fixture from ${state.roundDefinitionId}/${state.phase}`);
-      state = accepted(nextRound(state, state.round));
+  // Seed 38 supplies gloves in the opening and 3-7; the 2-4/3-4 picks
+  // complete four gloves by 4-1 without fabricating an early PvE choice.
+  const seed=options.seed??(components.filter(id=>id==='gloves').length>=3?38:42),key=JSON.stringify([seed,components]);
+  if(!options.history&&preparations.has(key))return structuredClone(preparations.get(key)!);
+  let state=createMatch(seed);
+  const missing=()=>{
+    const available=state.items.filter(i=>i.location.kind==='inventory').map(i=>i.definitionId);
+    return components.filter(id=>{const index=available.indexOf(id);if(index<0)return true;available.splice(index,1);return false;});
+  };
+  for(let budget=0;budget<80;budget++){
+    while(state.phase==='choice'){
+      const choice=state.pendingChoice!;
+      if(choice.kind==='anomaly'&&choice.step==='target'){
+        const unit=state.preparation.units.find(u=>u.team==='player'&&!['irelia','lux'].includes(u.definitionId))!;
+        state=accepted(selectAnomalyTarget(state,choice.choiceId,choice.generation,unit.id));continue;
+      }
+      const id=choice.kind==='component'?missing()[0]??'sword':choice.kind==='anomaly'?choice.offers[0]
+        :['bulky-buddies-i','manaflow-i','pumping-up-i'].find(id=>choice.offers.includes(id))??choice.offers[0];
+      state=choose(state,id);
     }
+    if(state.phase==='preparation'&&state.round>=4&&!missing().length){
+      while(state.preparation.units.filter(u=>u.team==='player').length>state.preparation.benchSize){
+        const excess=[...state.preparation.units].reverse().find(u=>u.team==='player'&&!['unit-1','unit-3'].includes(u.id))!;
+        state=accepted(sellUnit(state,excess.id));
+      }
+      state=benchPublicEquipmentPlayers(state);
+      if(!options.history)preparations.set(key,structuredClone(state));return state;
+    }
+    if(state.phase==='gameOver')throw Error(`Public equipment route ended before ${missing().join(',')}`);
+    if(state.phase==='preparation'){
+      if(state.round>3)for(let buys=0;buys<30&&state.gold>=3;buys++){
+        const slot:number=state.shop.slots.findIndex(o=>o.status==='available'&&['darius','maddie','zyra','leona','rell','vander'].includes(o.definitionId)
+          &&state.preparation.units.filter(u=>u.team==='player'&&u.definitionId===o.definitionId).reduce((n,u)=>n+3**(u.starLevel-1),0)<9);
+        const result:MatchCommandResult=slot<0?rerollShop(state):buyUnit(state,slot,state.shop.generation);
+        if(!result.ok)break;state=result.state;
+      }
+      for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench')){
+        const held=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(held.length>=state.level)break;
+        const col=[3,2,4,1,5,0,6].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;
+        state=accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col,row:7}}));
+      }
+      state=finishPublicEquipmentBattle(state,options.history);
+    }
+    if(state.phase==='settlement')state=accepted(nextRound(state,state.round));
   }
-  if (!options.history) preparations.set(key, structuredClone(state));
-  return state;
+  throw Error('Public equipment route budget');
 }

@@ -9,7 +9,7 @@ import { makeRoom, runUntil } from './server/helpers';
 // User-signed T11 oracle: 0 + 2 + 2 + 2 XP, thresholds 2 + 2 => level 3, 2/6.
 // Only start/continue and mandatory loot choices; no purchases, sales, rerolls or paid XP.
 describe('T11 signed opening economy', () => {
-  it('seed 42 single-player enters 2-1 with 3 levels, 2/6 XP and 10 gold, exactly once', () => {
+  it('seed 42 single-player enters 2-1 with 3 levels, 2/6 XP and 13 gold (T13 opening bonus), exactly once', () => {
     expect(XP_TO_NEXT_LEVEL).toEqual({ 1: 2, 2: 2, 3: 6, 4: 10, 5: 20, 6: 36, 7: 48, 8: 76 });
     let state = createMatch(42);
     for (const roundId of ['1-2', '1-3', '1-4']) {
@@ -23,7 +23,7 @@ describe('T11 signed opening economy', () => {
       state = accepted(nextRound(restored, round));
       expect(nextRound(state, round)).toEqual({ ok: false, state, reason: 'wrong-phase' });
     }
-    expect(state).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 10 });
+    expect(state).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 13 });
     expect(state.roundResults.map(r => r.xpRequested)).toEqual([2, 2, 2]);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
   });
@@ -35,7 +35,7 @@ describe('T11 signed opening economy', () => {
     expect(room.state.fault).toBeNull();
     expect(room.state.seats).toHaveLength(8);
     for (const seat of room.state.seats) {
-      expect(seat.match).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 10 });
+      expect(seat.match).toMatchObject({ roundDefinitionId: '2-1', phase: 'choice', level: 3, xp: 2, gold: 13 });
       expect(seat.match.roundResults.map(r => r.xpRequested)).toEqual([2, 2, 2]);
     }
   }, 30_000);

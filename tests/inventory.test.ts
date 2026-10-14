@@ -115,7 +115,8 @@ describe('equipment and sale return plans', () => {
       items = result.items;
     }
     for (const slot of [1, 2]) {
-      expect(planEquip(freeze(items), preparation, 'item-4', unitId, slot)).toEqual({ ok: false, reason: 'item-slot-occupied' });
+      expect(planEquip(freeze(items), preparation, 'item-4', unitId, slot)).toMatchObject({ ok:true, nextItemSerial:6,
+        events:[{type:'itemCombined',definitionId:'edge-of-night'},{type:'itemEquipped',slot:0}] });
     }
     expect(items.filter(value => value.location.kind === 'unit')).toHaveLength(3);
   });
@@ -134,7 +135,8 @@ describe('equipment and sale return plans', () => {
     expect(JSON.stringify(items)).toBe(before);
     const result = planEquip(items, preparation, 'item-1', 'board-unit', 0);
     if (!result.ok) throw new Error(result.reason);
-    expect(planEquip(freeze(result.items), preparation, 'item-1', 'board-unit', 0)).toEqual({ ok: false, reason: 'item-not-inventory' });
+    expect(planEquip(freeze(result.items), preparation, 'item-1', 'board-unit', 0)).toEqual({ ok: false, reason: 'unknown-item' });
+    expect(planEquip(freeze(result.items), preparation, 'item-5', 'board-unit', 0)).toEqual({ ok:false,reason:'item-not-inventory' });
   });
 
   it('returns all sold-unit equipment with stable IDs into an arbitrarily large inventory', () => {

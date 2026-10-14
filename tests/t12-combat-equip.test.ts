@@ -1,3 +1,4 @@
+import { syntheticSharedRound } from './tp-helpers';
 import { describe, expect, it } from 'vitest';
 import {
   combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch, nextRound,
@@ -151,7 +152,7 @@ function compareTicks(initial: MatchState, changed: MatchState) {
 }
 
 describe('T12 real offline provenance and frozen combat', () => {
-  for (const roundId of ['2-1','2-7']) for (const pair of [['sword','rod'],['gloves','gloves']]) {
+  for (const roundId of ['3-5','3-7']) for (const pair of [['sword','rod'],['gloves','gloves']]) {
     it(`${roundId} ${pair.join('+')}: consumed frozen component survives restoration; every tick is unchanged`, () => {
       const acquired = publicInventory(pair);
       let state = atRound(acquired.state, roundId);
@@ -233,7 +234,7 @@ describe('T12 shared wrappers and PvP frozen descriptors', () => {
 
 
 describe('T12 public saves across equipment phases', () => {
-  for (const roundId of ['2-1', '2-7']) for (const phase of ['preparation', 'settlement'] as const) {
+  for (const roundId of ['3-5', '3-7']) for (const phase of ['preparation', 'settlement'] as const) {
     it(`${roundId} ${phase}: equip and in-place combine restore and continue identically`, () => {
       const acquired = publicInventory(['gloves', 'gloves']);
       let state = atRound(acquired.state, roundId);
@@ -277,13 +278,12 @@ describe('T12 public saves across equipment phases', () => {
         .toEqual(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
     }
   });
-  it('PvE loot choice permits in-place combination and preserves grant order on restore', () => {
+  it('PvE settlement permits in-place combination and preserves direct grant order on restore', () => {
     const acquired = publicInventory(['sword','rod']);
-    let state = atRound(acquired.state,'2-7');
-    for (const [i,u] of state.preparation.units.filter(u=>u.team==='player').entries())
-      state = accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:i*2+1,row:7}}));
+    let state = atRound(acquired.state,'3-7');
+    state = accepted(deployMatchUnit(state,'unit-1',board(3)));
     state = finishPublicEquipmentBattle(state);
-    expect(state.phase).toBe('choice');
+    expect(state.phase).toBe('settlement');expect(state.pendingChoice).toBeNull();
     const choice = state.pendingChoice;
     state = accepted(equipItem(state,acquired.itemIds[0],'unit-1',0)); restored(state);
     state = accepted(equipItem(state,acquired.itemIds[1],'unit-1',0)); restored(state);
@@ -299,9 +299,9 @@ describe('T12 public saves across equipment phases', () => {
 describe('T12 latest assets survive death, settlement and upgrades', () => {
   it('a permanent unit killed in this combat can equip; next battle uses the new stats', () => {
     const acquired = publicInventory(['sword','sword']);
-    let state = atRound(acquired.state,'2-6');
-    for (const [i,u] of state.preparation.units.filter(u=>u.team==='player').entries())
-      state = accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:i*2+1,row:i===1?4:7}}));
+    let state = atRound(acquired.state,'3-6');
+    for (const [i,u] of state.preparation.units.filter(u=>u.team==='player').slice(0,state.level).entries())
+      state = accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col:i%7,row:i===0?4:7}}));
     state = accepted(startMatchCombat(state));
     let budget=1201;
     while(state.phase==='combat' && !state.combat!.units.some(u=>u.team==='player'&&u.hp===0) && budget-->0) state=stepMatch(state).state;
@@ -325,6 +325,7 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
         roundResults:Array.from({length:3},(_,i)=>({...r.state.roundResults[0],round:i+1})),
         preparation:{...r.state.preparation,units:r.state.preparation.units.filter(u=>u.team==='player')}}};
     }
+    const bound=syntheticSharedRound(r.pool,[r.state],r.state.round);r={...r,pool:bound.pool,state:bound.states[0]};
     const snap=snapshotForBattle(r.state,r.state.multiplayer!.seatId);
     const restoredSnap=restorePlayerBattleSnapshot(JSON.stringify(snap));
     expect(JSON.stringify(restoredSnap)).toBe(JSON.stringify(snap));
@@ -361,7 +362,7 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
 
 it('T12 supply choice permits fresh component transactions and single-save continuation',()=>{
   const acquired=publicInventory(['gloves','gloves']);let state=acquired.state;
-  while(state.roundDefinitionId!=='2-4')state=accepted(nextRound(resolvePublicEquipmentChoices(finishPublicEquipmentBattle(state)),state.round));
+  while(state.roundDefinitionId!=='4-4')state=accepted(nextRound(resolvePublicEquipmentChoices(finishPublicEquipmentBattle(resolvePublicEquipmentChoices(state))),state.round));
   expect(state.pendingChoice!.kind).toBe('component');
   state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));restored(state);
   state=accepted(equipItem(state,acquired.itemIds[1],'unit-1',0));
@@ -382,7 +383,7 @@ it('T12 an existing frozen glove roll and a new parent roll remain independent',
 });
 it('T12 online PvE restores the frozen player descriptor and keeps every live-seat combat tick unchanged',()=>{
   const acquired=publicInventory(['sword','rod']);
-  let prep=atRound(acquired.state,'2-7');
+  let prep=atRound(acquired.state,'3-7');
   prep=accepted(deployMatchUnit(prep,'unit-1',board(3)));
   prep=accepted(equipItem(prep,acquired.itemIds[0],'unit-1',0));
   prep=accepted(enableMultiplayerSettlement(prep,'A'));

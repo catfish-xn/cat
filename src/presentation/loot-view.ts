@@ -26,6 +26,7 @@ const itemName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
 
 /** Status wording mirrors the frozen semantics table; UI never infers a receipt from animation or gold. */
 const STATUS: Readonly<Record<RevealedDropView['status'], { label: string; note: string }>> = {
+  forfeited: { label: '已放弃', note: '奖励因超时或淘汰作废，不可领取' },
   granted: { label: '已入库', note: '奖励已实际发放' },
   // 'revealed' only exists between the source's death and the end-of-combat grant.
   revealed: { label: '已揭示', note: '战斗结束后自动入库，无需操作' },
@@ -44,6 +45,7 @@ export function continueBlockText(reason: NonNullable<LootView['reason']>): stri
 
 function payloadLabel(payload: Payload): { icon: string; text: string } {
   if (payload.kind === 'gold') return { icon: '<span class="loot-gold" aria-hidden="true">G</span>', text: `${payload.quantity} 金币` };
+  if (payload.kind === 'consumable') return { icon: '', text: ({ 'magnetic-remover': '拆卸器', 'component-reforger': '组件重铸器', 'completed-reforger': '成装重铸器' })[payload.definitionId] };
   const count = payload.quantity > 1 ? ` ×${payload.quantity}` : '';
   return payload.kind === 'item'
     ? { icon: itemMarkHtml(payload.definitionId, 26), text: `${itemName(payload.definitionId)}${count}` }
