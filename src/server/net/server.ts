@@ -14,7 +14,7 @@ import { startBattleJob, type BattleJob, type BattleResolver } from '../room/bat
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
 import { Lobby } from '../room/lobby';
-import { consumableReceiptEvents, seatPushEvents, toCombatReplayFor, toPlayerView, toSeatPrivateView, warmCombatReplays } from '../room/projection';
+import { consumableReceiptEvents, seatPushEvents, startReplayWarmup, toCombatReplayFor, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
 import type { RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
@@ -78,18 +78,22 @@ export interface ServerRetained {
 export const DEFAULT_SLICE_TICKS = 100;
 
 /**
- * Resolver wrapper (B8): once a battle's job finished, one more slice builds the replays its attended seats will be
- * pushed, so the re-execution behind a replay does not run inside the push of the whole round. The result is unchanged.
+ * Resolver wrapper (B8, §19): once a battle's job finished, the following slices build the replays its attended seats
+ * will be pushed, as resumable replay tasks advanced by the same tick budget, so the re-execution behind a replay never
+ * runs inside the push of the whole round nor in one long slice. The result is unchanged.
  */
 function withReplayWarmup(inner: BattleResolver, seats: () => Iterable<string>): BattleResolver {
   return {
     resolveBattle: (input, pool) => inner.resolveBattle(input, pool),
     startBattle(input, pool): BattleJob {
       const job = startBattleJob(inner, input, pool);
-      let finished: ReturnType<BattleJob['advance']> = null;
+      let finished: ReturnType<BattleJob['advance']> = null, warmup: ReplayWarmup | null = null;
       return {
         advance(maxTicks) {
-          if (finished) { warmCombatReplays(finished, seats()); return finished; }
+          if (finished) {
+            warmup ??= startReplayWarmup(finished, seats());
+            return warmup.advance(maxTicks) ? finished : null;
+          }
           finished = job.advance(maxTicks);
           return null;
         },

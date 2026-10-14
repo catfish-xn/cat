@@ -136,8 +136,11 @@ describe('B8 sliced resolution', () => {
     while (room.state.phase === 'frozen') { expect(clock.fireNext()).toBe(true); slices++; }
     expect(room.state.phase).toBe('battle');
     expect(room.state.battles).toHaveLength(4);
-    // One slice per PvP battle: the rules' two-sided entry is indivisible (SR-B8-02); PvE battles step per tick.
-    expect(slices).toBe(4);
+    // Since §19 (C19 item 3) a PvP battle is a resumable task: one slice per started 50-tick budget of each battle,
+    // the one that finishes it included (the old indivisible entry took exactly one slice per battle).
+    const ticks = room.state.battles.map(battle => battle.kind === 'two-sided' ? battle.battle.terminal.tick : 0);
+    expect(slices).toBe(ticks.reduce((sum, tick) => sum + Math.max(1, Math.ceil(tick / 50)), 0));
+    expect(slices).toBeGreaterThan(4);
   }, 60_000);
 
   it('stops resolving and publishes nothing once disposed in the middle of a frozen round', () => {

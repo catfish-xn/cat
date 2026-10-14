@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { BattleResolveError, PlaceholderBattleResolver, type BattleResolver } from '../../src/server/room/battle-resolver';
-import { toCombatReplayFor, toPlayerView } from '../../src/server/room/projection';
+import { mirrorCombatReplay, startReplayWarmup, toCombatReplayFor, toPlayerView } from '../../src/server/room/projection';
 import { toCombatReplay, toCombatViewState } from '../../src/server-entry';
 import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
 import { DEFAULT_BATTLE_MAX_STEPS, type BattleInput, type BattleResult, type SeatState } from '../../src/server/room/types';
@@ -146,4 +146,45 @@ describe('Room in pvpMode=two-sided', () => {
     expect(b.replay.initial.units.find(unit => unit.id.includes(`"${bId}"`))!.team).toBe('player');
     expect(toPlayerView(room.state, aId, clock.now()).opponentSeatId).toBe(bId);
   }, 20_000);
+});
+
+describe('§19 resumable PvP and replay tasks (C19 item 3)', () => {
+  const seats = pvpSeats();
+  const pool = makeRoom().room.state.pool;
+  const sliced = (job: { advance(maxTicks: number): unknown }, budget: number) => {
+    let slices = 0;
+    for (;;) { slices++; const result = job.advance(budget); if (result) return { result, slices }; }
+  };
+
+  it('a sliced PvP job returns byte for byte the one-shot result, over several slices for one task', () => {
+    const whole = resolveTwoSidedPvp(envelope(seats, 0, 1));
+    expect(whole.battle.terminal.tick).toBeGreaterThan(14);
+    const { result, slices } = sliced(new TwoSidedBattleResolver().startBattle(envelope(seats, 0, 1), pool), 7);
+    expect(JSON.stringify(result)).toBe(JSON.stringify(whole));
+    expect(slices).toBeGreaterThanOrEqual(Math.ceil(whole.battle.terminal.tick / 7));
+    // The room's unsliced default (Infinity) still finishes in one call.
+    expect(JSON.stringify(new TwoSidedBattleResolver().startBattle(envelope(seats, 0, 1), pool).advance(Number.POSITIVE_INFINITY))).toBe(JSON.stringify(whole));
+  });
+
+  it('keeps the envelope maxSteps as the whole budget across slices (step-limit-exceeded, as the one-shot entry)', () => {
+    const job = new TwoSidedBattleResolver().startBattle(envelope(seats, 0, 1, { maxSteps: 10 }), pool);
+    expect(job.advance(4)).toBeNull();
+    expect(job.advance(4)).toBeNull();
+    try { job.advance(4); expect.unreachable(); }
+    catch (error) { expect(error).toBeInstanceOf(BattleResolveError); expect((error as BattleResolveError).reason).toBe('battle-validation:step-limit-exceeded'); }
+  });
+
+  it('warms replays in slices into the cache: side A is byte for byte toCombatReplay, side B its mirror', () => {
+    const battle = resolveTwoSidedPvp(envelope(seats, 2, 3));
+    const warmup = startReplayWarmup(battle, ['s2', 's3']);
+    let slices = 1;
+    while (!warmup.advance(25)) slices++;
+    expect(slices).toBeGreaterThan(1);
+    const room = { battles: [battle] } as unknown as Parameters<typeof toCombatReplayFor>[0];
+    const a = toCombatReplayFor(room, 's2')!, b = toCombatReplayFor(room, 's3')!;
+    expect(JSON.stringify(a.replay)).toBe(JSON.stringify(toCombatReplay(battle.battle)));
+    expect(b.replay).toEqual(mirrorCombatReplay(a.replay));
+    // Cached: a later warm-up of the same battle has nothing left to build.
+    expect(startReplayWarmup(battle, ['s2', 's3']).advance(1)).toBe(true);
+  });
 });

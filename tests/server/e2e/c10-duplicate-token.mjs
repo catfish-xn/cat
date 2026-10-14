@@ -10,43 +10,14 @@
  *
  * Screenshots of the first mismatch and of each 2-x battle go to artifacts/c10/ (not committed).
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { writeFileSync } from 'node:fs';
+import { click, collectErrors, joinOnline, launchBrowser, onlineUrl, outDir, read, startGameServer, startVite, stopAll, strictCheck as check, waitRead } from './harness.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
-const OUT = `${ROOT}artifacts/c10`;
+const OUT = outDir('c10');
 const VITE_PORT = 5196;
 const WS_PORT = 8790;
-const BASE = `http://127.0.0.1:${VITE_PORT}/`;
 const LAST_ROUND = '2-2';
-const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-mkdirSync(OUT, { recursive: true });
 
-const children = [];
-function start(command, args, env, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const check = (condition, message) => { if (!condition) throw new Error(`check failed: ${message}`); console.log(`ok  ${message}`); };
-const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
-async function waitRead(page, predicate, what, timeout = 60_000) {
-  const deadline = Date.now() + timeout;
-  for (;;) {
-    const snapshot = await read(page).catch(() => null);
-    if (snapshot && predicate(snapshot)) return snapshot;
-    if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}: ${JSON.stringify(snapshot?.m6?.phase ?? null)} ${snapshot?.state?.phase}`);
-    await page.waitForTimeout(100);
-  }
-}
-const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
 const cellKey = cell => `${cell.col},${cell.row}`;
 
 /** One playback sample: visible tokens against alive combat units + my bench; strays are tokens neither explains. */
@@ -71,20 +42,16 @@ function sample(s) {
 }
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '12', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '3', CAT_BOT_STEP_MS: '200' }, /listening on/);
-  await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
-  const browser = await chromium.launch({ executablePath });
+  const wsPort = await startGameServer(WS_PORT, { CAT_PREP_SEC: '12', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '3', CAT_BOT_STEP_MS: '200' });
+  const base = await startVite(VITE_PORT);
+  const browser = await launchBrowser();
   const errors = [];
   const report = { battles: [] };
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
-    await page.goto(`${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${WS_PORT}`);
-    await page.waitForSelector('[data-debug="online:join"]');
-    await page.fill('[data-debug="online:name"]', '测试'); await page.click('[data-debug="online:join"]');
-    await page.click('[data-debug="online:start"]');
+    collectErrors(page, errors);
+    await joinOnline(page, onlineUrl(base, wsPort), '测试');
     await waitRead(page, s => s.m6.mode === 'active', 'match start');
 
     let lastRound = 0, shotMismatch = false;

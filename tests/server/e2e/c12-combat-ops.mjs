@@ -22,37 +22,17 @@
  * Screenshots and report go to artifacts/c12/ (not committed). CHROMIUM overrides the browser path; C12_VITE_PORT
  * (default 5202) and C12_WS_PORT (default 8793; segment D uses the next port) override the ports.
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { writeFileSync } from 'node:fs';
 import { dragUnit } from './swap-checks.mjs';
+import { click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, onWire, outDir, read, startGameServer, startVite, stopAll } from './harness.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
-const OUT = `${ROOT}artifacts/c12`;
-// Ports are configurable so parallel runs (or another e2e left running) do not collide; WS_PORT + 1 serves segment D.
+const OUT = outDir('c12');
+// Ports are configurable so parallel runs (or another e2e left running) do not collide; the main server's port + 1 serves segment D.
 const VITE_PORT = Number(process.env.C12_VITE_PORT ?? 5202);
 const WS_PORT = Number(process.env.C12_WS_PORT ?? 8793);
-const BASE = `http://127.0.0.1:${VITE_PORT}/`;
-const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const COLUMNS = [3, 2, 4, 1, 5, 0, 6], ROWS = [4, 5, 6, 7];
-mkdirSync(OUT, { recursive: true });
 
-const children = [];
-function start(command, args, env, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const failures = [];
-const check = (condition, message) => { if (condition) console.log(`ok  ${message}`); else { console.log(`FAIL ${message}`); failures.push(message); } };
-const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
-const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
+const { check, failures } = createChecks();
 async function waitRead(page, predicate, what, timeout = 10_000) {
   const deadline = Date.now() + timeout;
   for (;;) {
@@ -87,16 +67,15 @@ function expectedDeployment(prep) {
   return reserves.slice(0, count).map((unit, index) => [unit.id, free[index]]);
 }
 
-/** Opens a page on the server at `port`, joins as `name` and starts the match; `act` clicks a control and waits for its receipt. */
-async function openMatch(browser, port, name, errors) {
+/** Opens a page at `url`, joins as `name` and starts the match; `act` clicks a control and waits for its receipt. */
+async function openMatch(browser, url, name, errors) {
   const sent = new Map(), applied = new Map();
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
-  page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
-  page.on('websocket', socket => {
-    socket.on('framesent', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'command') sent.set(m.commandId, m.command.type); } catch { /* ignore */ } });
-    socket.on('framereceived', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'receipt' && sent.has(m.commandId)) applied.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); } catch { /* ignore */ } });
+  collectErrors(page, errors);
+  onWire(page, {
+    sent: m => { if (m.type === 'command') sent.set(m.commandId, m.command.type); },
+    received: m => { if (m.type === 'receipt' && sent.has(m.commandId)) applied.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); },
   });
   const act = async (control, type) => {
     const before = new Set(sent.keys());
@@ -109,17 +88,14 @@ async function openMatch(browser, port, name, errors) {
       await page.waitForTimeout(40);
     }
   };
-  await page.goto(`${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${port}`);
-  await page.waitForSelector('[data-debug="online:join"]');
-  await page.fill('[data-debug="online:name"]', name); await page.click('[data-debug="online:join"]');
-  await page.click('[data-debug="online:start"]');
+  await joinOnline(page, url, name);
   return { page, act, sent, applied };
 }
 
 /** D. Empty roster in a PvE round, operations while the rules have already settled the seat (P1 found by Codex). */
-async function emptyBoardRepro(browser, errors) {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT + 1), CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' }, /listening on/);
-  const { page, act } = await openMatch(browser, WS_PORT + 1, '卖空', errors);
+async function emptyBoardRepro(browser, base, mainPort, errors) {
+  const wsPort = await startGameServer(mainPort + 1, { CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' });
+  const { page, act } = await openMatch(browser, onlineUrl(base, wsPort), '卖空', errors);
   const answered = new Set();
   const until = async (predicate, what, timeout = 90_000) => {
     const deadline = Date.now() + timeout;
@@ -179,19 +155,18 @@ async function emptyBoardRepro(browser, errors) {
 const report = { autoDeploy: [], ops: null, merge: null, emptyBoard: null };
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '5', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' }, /listening on/);
-  await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
-  const browser = await chromium.launch({ executablePath });
+  const wsPort = await startGameServer(WS_PORT, { CAT_PREP_SEC: '5', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' });
+  const base = await startVite(VITE_PORT);
+  const browser = await launchBrowser();
   const errors = [];
   const sent = new Map(), applied = new Map();
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
-    page.on('websocket', socket => {
-      socket.on('framesent', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'command') sent.set(m.commandId, m.command.type); } catch { /* ignore */ } });
-      socket.on('framereceived', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'receipt' && sent.has(m.commandId)) applied.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); } catch { /* ignore */ } });
+    collectErrors(page, errors);
+    onWire(page, {
+      sent: m => { if (m.type === 'command') sent.set(m.commandId, m.command.type); },
+      received: m => { if (m.type === 'receipt' && sent.has(m.commandId)) applied.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); },
     });
     /** Clicks a docked control and waits for its receipt; returns the receipt kind ('applied' or 'refused:…') or null. */
     const act = async (name, type) => {
@@ -205,10 +180,7 @@ async function main() {
         await page.waitForTimeout(40);
       }
     };
-    await page.goto(`${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${WS_PORT}`);
-    await page.waitForSelector('[data-debug="online:join"]');
-    await page.fill('[data-debug="online:name"]', '战中运营'); await page.click('[data-debug="online:join"]');
-    await page.click('[data-debug="online:start"]');
+    await joinOnline(page, onlineUrl(base, wsPort), '战中运营');
 
     const answered = new Set();
     const prepByRound = new Map();
@@ -350,7 +322,7 @@ async function main() {
       }
       await page.waitForTimeout(80);
     }
-    await emptyBoardRepro(browser, errors);
+    await emptyBoardRepro(browser, base, wsPort, errors);
     check(errors.length === 0, `no page errors (${errors.join(' | ')})`);
     writeFileSync(`${OUT}/report.json`, JSON.stringify({ ...report, errors }, null, 2));
     if (failures.length) throw new Error(`${failures.length} check(s) failed:\n${failures.join('\n')}`);

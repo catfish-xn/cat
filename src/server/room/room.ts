@@ -590,7 +590,11 @@ export class Room {
     this.timer = clock.schedule(clock.now(), () => { this.timer = null; this.resolveSlice(); });
   }
 
-  /** One slice: advance the current battle by at most `sliceTicks`; the next slice is scheduled until every battle finished. */
+  /**
+   * One slice: advance the current battle by at most `sliceTicks`; the next slice is scheduled until every battle finished.
+   * A PvP job is one resumable `startTwoSidedBattle` task (§19, two-sided-resolver.ts) and the network server's wrapper
+   * then builds its replays as `startCombatReplay` tasks, both cut at this same budget.
+   */
   private resolveSlice(): void {
     const resolution = this.resolution;
     if (this.disposed || !resolution || this.current.phase !== 'frozen') return;

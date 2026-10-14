@@ -15,34 +15,14 @@
  * Fails on any page or console error. Screenshots go to artifacts/c15/ (not committed). CHROMIUM overrides the browser
  * path; C15_VITE_PORT (default 5204) and C15_WS_PORT (default 8796) override the ports.
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { writeFileSync } from 'node:fs';
+import { click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, onWire, outDir, read, startGameServer, startVite, stopAll } from './harness.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
-const OUT = `${ROOT}artifacts/c15`;
+const OUT = outDir('c15');
 const VITE_PORT = Number(process.env.C15_VITE_PORT ?? 5204);
 const WS_PORT = Number(process.env.C15_WS_PORT ?? 8796);
-const BASE = `http://127.0.0.1:${VITE_PORT}/`;
-const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-mkdirSync(OUT, { recursive: true });
 
-const children = [];
-function start(command, args, env, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const failures = [];
-const check = (condition, message) => { if (condition) console.log(`ok  ${message}`); else { console.log(`FAIL ${message}`); failures.push(message); } };
-const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
-const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
+const { check, failures } = createChecks();
 /** Item cards select on Enter (the same path as a click without drag), independent of where the panel is scrolled. */
 const selectItem = (page, itemId) => page.evaluate(id => {
   const node = document.querySelector(`[data-debug="item:${id}"]`);
@@ -64,18 +44,13 @@ const inPreparation = s => s?.m6?.phase?.kind === 'preparation' && s.state.phase
 const itemsOn = (state, unitId) => state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId)
   .sort((a, b) => a.location.slot - b.location.slot).map(item => item.definitionId);
 
-async function openPage(browser, name, errors) {
+async function openPage(browser, url, name, errors) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
   const replays = [];
-  page.on('pageerror', error => errors.push(`${name}: ${error.message}`));
-  page.on('console', message => { if (message.type() === 'error') errors.push(`${name} console: ${message.text()}`); });
-  page.on('websocket', socket => socket.on('framereceived', frame => {
-    try { const m = JSON.parse(String(frame.payload)); if (m.type === 'replay') replays.push({ round: m.round, battleId: m.battleId, unitIds: m.unitIds, at: Date.now() }); } catch { /* ignore */ }
-  }));
-  await page.goto(`${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${WS_PORT}`);
-  await page.waitForSelector('[data-debug="online:join"]');
-  await page.fill('[data-debug="online:name"]', name); await page.click('[data-debug="online:join"]');
+  collectErrors(page, errors, name);
+  onWire(page, { received: m => { if (m.type === 'replay') replays.push({ round: m.round, battleId: m.battleId, unitIds: m.unitIds, at: Date.now() }); } });
+  await joinOnline(page, url, name, { startMatch: false });
   return { name, page, context, replays };
 }
 
@@ -137,12 +112,13 @@ async function play({ name, page, replays }) {
 }
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '2', CAT_BOT_STEP_MS: '150' }, /listening on/);
-  await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
-  const browser = await chromium.launch({ executablePath });
+  const wsPort = await startGameServer(WS_PORT, { CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '2', CAT_BOT_STEP_MS: '150' });
+  const base = await startVite(VITE_PORT);
+  const browser = await launchBrowser();
   const errors = [];
   try {
-    const a = await openPage(browser, 'jia', errors), b = await openPage(browser, 'yi', errors);
+    const url = onlineUrl(base, wsPort);
+    const a = await openPage(browser, url, 'jia', errors), b = await openPage(browser, url, 'yi', errors);
     await a.page.waitForSelector('[data-debug="online:start"]');
     await a.page.click('[data-debug="online:start"]');
     const reports = await Promise.all([play(a), play(b)]);

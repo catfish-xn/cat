@@ -7,41 +7,12 @@
  * until the board is full at level ≥ 2 with two bench units, then runs the mouse-drag swap checks of
  * swap-checks.mjs. Screenshots go to artifacts/c8/single/ (not committed). CHROMIUM overrides the browser path.
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
-import { chromium } from 'playwright';
-import { readDebug as read, runSwapChecks, swapReady } from './swap-checks.mjs';
+import { click, collectErrors, launchBrowser, outDir, read, startVite, stopAll, strictCheck as check, waitRead } from './harness.mjs';
+import { runSwapChecks, swapReady } from './swap-checks.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
-const OUT = `${ROOT}artifacts/c8/single`;
+const OUT = outDir('c8/single');
 const VITE_PORT = 5198;
-const BASE = `http://127.0.0.1:${VITE_PORT}/`;
-const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-mkdirSync(OUT, { recursive: true });
 
-const children = [];
-function start(command, args, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const check = (condition, message) => { if (!condition) throw new Error(`check failed: ${message}`); console.log(`ok  ${message}`); };
-async function waitRead(page, predicate, what, timeout = 60_000) {
-  const deadline = Date.now() + timeout;
-  for (;;) {
-    const snapshot = await read(page).catch(() => null);
-    if (snapshot && predicate(snapshot)) return snapshot;
-    if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}: ${snapshot?.state?.phase}`);
-    await page.waitForTimeout(100);
-  }
-}
-const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
 const mine = state => state.preparation.units.filter(unit => unit.team === 'player');
 
 async function prepare(page) {
@@ -63,14 +34,13 @@ async function prepare(page) {
 }
 
 async function main() {
-  await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], /Local:/);
-  const browser = await chromium.launch({ executablePath });
+  const base = await startVite(VITE_PORT);
+  const browser = await launchBrowser();
   const errors = [];
   try {
     const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
-    await page.goto(BASE);
+    collectErrors(page, errors);
+    await page.goto(base);
     await waitRead(page, s => s.m6?.mode, 'single-player page');
     await page.locator('[data-debug="m6-seed-input"]').fill(process.env.SEED ?? '42');
     await page.locator('[data-debug="m6-fixed-start"]').click();
