@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { accepted, emptyBoard, finish, resolveM5Choices } from './match-helpers';
+import { accepted, emptyBoard, finish, resolveM5Choices, reachRound } from './match-helpers';
 
 const copy = <T>(value: T): T => structuredClone(value);
 function roundTrip(state: MatchState): MatchState {
@@ -15,7 +15,8 @@ function openingChoice(): MatchState {
   state = accepted(nextRound(state,state.round));
   state = accepted(deployMatchUnit(state,'unit-2',{kind:'board',cell:{col:3,row:4}}));
   state = finish(accepted(startMatchCombat(state)));
-  expect(state.phase).toBe('choice');
+  expect(state.phase).toBe('settlement');
+  expect(state.pendingChoice).toBeNull();
   return state;
 }
 function reject(state: MatchState, change: (value: any) => void): void {
@@ -34,11 +35,11 @@ describe('B8 default Match own restore', () => {
     expect(state.m8.loot.direct[0].status).toBe('granted');
     expect(state.combatInputBasis!.inputs.preparation.units.some(unit => unit.id === 'unit-2')).toBe(false);
     expect(state.preparation.units.some(unit => unit.id === 'unit-2')).toBe(true);
-    state = roundTrip(openingChoice());
+    state = roundTrip(reachRound('2-4', false));
     const choice = state.pendingChoice!;
     state = roundTrip(accepted(selectChoice(state,choice.choiceId,choice.generation,'sword')));
-    expect(state.m8.loot.receipts.at(-1)?.payload).toEqual({kind:'item',definitionId:'sword',quantity:1});
-    expect(state.scheduleReceipts).toEqual([]);
+    expect(state.scheduleReceipts.at(-1)).toMatchObject({kind:'component',definitionId:'sword'});
+    expect(state.m8.loot.choiceResolutions).toEqual([]);
     state = roundTrip(accepted(nextRound(state,state.round)));
     expect(state.combatInputBasis).toBeNull();
   });
@@ -103,17 +104,23 @@ describe('B8 default Match own restore', () => {
     roundTrip(state);
   });
   it('rejects an unearned choice, wrong offered state and forged post-settlement resources', () => {
-    const state = openingChoice();
+    const state = reachRound('2-4', false);
+    expect(state.pendingChoice?.returnPhase).toBe('settlement');
+    const augment = roundTrip(reachRound('2-1', false));
+    expect(augment.pendingChoice?.returnPhase).toBe('preparation');
+    reject(augment, s => { s.pendingChoice.returnPhase = 'settlement'; });
     for (const change of [
       (s:any) => { s.pendingChoice.generation++; },
       (s:any) => { s.pendingChoice.offers.reverse(); },
       (s:any) => { s.pendingChoice.returnPhase = 'preparation'; },
-      (s:any) => { s.m8.loot.choiceEligibility.at(-1).status = 'forfeited'; },
-      (s:any) => { s.gold++; },
-      (s:any) => { s.preparation.units.find((u:any) => u.team === 'player').location.cell.col++; },
+      (s:any) => { s.pendingChoice.eventId = 'round:3-4:supply'; },
+      (s:any) => { s.preparation.units.find((u:any) => u.team === 'player').definitionId = 'forged'; },
     ]) reject(state,change);
+    // Post-PvE settlement still binds gold to its combat basis; .4 opens a new preparation budget.
+    reject(openingChoice(), s => { s.gold++; });
     const resolved = resolveM5Choices(state);
-    reject(resolved,s => { s.m8.loot.choiceResolutions[0].method = 'terminal-fallback'; });
-    reject(resolved,s => { s.m8.loot.receipts.at(-1).payload.definitionId = 'not-a-component'; });
+    reject(resolved,s => { s.scheduleReceipts.at(-1).eventId = 'round:3-4:supply'; });
+    reject(resolved,s => { s.scheduleReceipts.at(-1).definitionId = 'not-a-component'; });
+    reject(openingChoice(),s => { s.m8.loot.receipts.at(-1).payload.definitionId = 'not-a-component'; });
   });
 });

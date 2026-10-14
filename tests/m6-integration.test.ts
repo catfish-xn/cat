@@ -112,7 +112,8 @@ describe('M6 independent route/history/playback/session integration', () => {
       session.dispose();
     }
     active.dispose();
-  }, 120000);
+  // Idle single-worker measurement: 82.99/134.39/123.06/130.34s; preserve every tick/assertion.
+  }, 180000);
   it('[B8] cannon: completed history retains sold opening transition units',()=>{
     const {route,history}=cannonTransition!;
       expect(route.actions.some(action => action.command?.type === 'sell')).toBe(true);

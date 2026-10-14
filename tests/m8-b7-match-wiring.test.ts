@@ -1,3 +1,4 @@
+import { lootPlan } from './fixtures/m5/oracle.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
@@ -168,7 +169,7 @@ describe('B7 installed encounters and trusted Match restore',()=>{
     for(let i=0;i<11;i++) s=api.stepMatch(s).state;
     roundTrip(s);expect(s.combat!.neutralReceipts!.controls[0]).toMatchObject({removedAtTick:12,removedReason:'expired'});
   });
-  it.each([0,1,42,0xffffffff])('stage-one combat baseline clears with approved one-star Irelia→Maddie→Lux, seed %i through actual B8 grants',seed=>{
+  it.each([0,1,42,0xffffffff])('stage-one combat clears with random one-star opening heroes, seed %i through actual orb grants',seed=>{
     let s=api.createMatch(seed);
     for(let i=0;i<3;i++) {
       s=accepted(api.startMatchCombat(s));
@@ -177,7 +178,9 @@ describe('B7 installed encounters and trusted Match restore',()=>{
       s=resolveM5Choices(s);roundTrip(s);
       s=accepted(api.nextRound(s,s.round));
       if(i<2) {
-        const id=`unit-${i+2}`,definitionId=i===0?'maddie':'lux';
+        const id=`unit-${i+2}`,payload=lootPlan(seed,3).rounds[i].encounterPlan.drops.find(d=>d.payload.kind==='unit')!.payload;
+        if(payload.kind!=='unit')throw Error('Missing opening unit');
+        const definitionId=payload.definitionId;
         expect(s.preparation.units.find(u=>u.id===id)).toMatchObject({definitionId,starLevel:1});
         expect(s.m8.loot.receipts.find(receipt=>receipt.grantedUnitIds.includes(id))).toMatchObject({
           payload:{kind:'unit',definitionId,quantity:1},grantedUnitIds:[id],
@@ -186,10 +189,12 @@ describe('B7 installed encounters and trusted Match restore',()=>{
         roundTrip(s);
       }
     }
-    expect(s).toMatchObject({roundDefinitionId:'2-1',gold:10,level:3,xp:2,playerHp:100});
-    expect(s.items.map(item=>item.definitionId)).toEqual(['sword','sword']);
+    const expected=lootPlan(seed,3).rounds.flatMap(r=>r.encounterPlan.drops.map(d=>d.payload));
+    const bonus=expected.filter(p=>p.kind==='gold').reduce((n,p)=>n+p.quantity,0);
+    expect(s).toMatchObject({roundDefinitionId:'2-1',gold:10+bonus,level:3,xp:2,playerHp:100});
+    expect(s.items.map(item=>item.definitionId)).toEqual(expected.flatMap(p=>p.kind==='item'?[p.definitionId]:[]));
     expect(s.m8.loot.receipts.filter(receipt=>receipt.payload.kind==='item').map(receipt=>receipt.payload))
-      .toEqual([{kind:'item',definitionId:'sword',quantity:1},{kind:'item',definitionId:'sword',quantity:1}]);
+      .toEqual(expected.filter(p=>p.kind==='item'));
     expect(s.scheduleReceipts).toEqual([]);
   });
   it('restores real bird next-tick reactions and rejects changed effects, death identity and missing consumption',()=>{
