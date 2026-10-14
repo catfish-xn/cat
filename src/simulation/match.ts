@@ -401,8 +401,13 @@ export function combineItems(state: MatchState, aId: string, bId: string): Match
 export function equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult {
   const preview = previewEquip(state, itemId, unitId, slot);
   if (!preview.allowed) return fail(state, preview.reason);
-  const plan = planEquip(state.items, state.preparation, itemId, unitId, slot);
-  return plan.ok ? acceptEquipment({ ...state, items: plan.items }, plan.events) : fail(state, plan.reason);
+  const plan = planEquip(state.items, state.preparation, itemId, unitId, slot, state.nextItemSerial);
+  if (!plan.ok) return fail(state, plan.reason);
+  const combined = plan.events.filter((event): event is Extract<import('./strategy-types').StrategyEvent, {type:'itemCombined'}> => event.type === 'itemCombined');
+  return acceptEquipment({ ...state, items: plan.items, nextItemSerial: plan.nextItemSerial,
+    resourceProvenance: combined.length ? appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
+      combined.map(event => ({ kind: 'item-combined' as const, event }))) : state.resourceProvenance,
+  }, plan.events);
 }
 function choiceFailure(state: MatchState, choiceId: string, generation: number): MatchFailure | undefined {
   if (state.phase !== 'choice' || isCombatRosterLocked(state)) return 'wrong-phase';

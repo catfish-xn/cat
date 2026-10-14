@@ -1,0 +1,4152 @@
+{
+  "note": "T12 digest-only revision; complete command/tick trace audited against T11. Historical goldens retained.",
+  "routes": {
+    "cannon": {
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:44fe9c0e",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "commands": [
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 1
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 2
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 3
+        },
+        {
+          "type": "sell",
+          "id": "unit-3"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 3
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-1:augment",
+          "generation": 0,
+          "definitionId": "investment-strategy-i"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 4
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-1",
+            "item-2"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-2",
+          "slot": 0
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 4
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 5
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 5
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 5
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "bench",
+            "slot": 3
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-8",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "lock",
+          "locked": true,
+          "generation": 5
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 5
+        },
+        {
+          "type": "lock",
+          "locked": false,
+          "generation": 5
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 6
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-4:supply",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 7
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 7
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 7
+        },
+        {
+          "type": "deploy",
+          "id": "unit-8",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-10",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 8
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 8
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-11",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 9
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"2-7\\\",\\\"krugs-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"2-7\\\\\\\",\\\\\\\"krugs-v1\\\\\\\",\\\\\\\"k02\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "tear"
+        },
+        {
+          "type": "continue",
+          "round": 10
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-4",
+            "item-6"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-2",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 11
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-2:augment",
+          "generation": 0,
+          "definitionId": "placebo"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 11
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 12
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 12
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 12
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 13
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 13
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 15
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 16
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 16
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 17
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 18
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "sell",
+          "id": "unit-2"
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-17",
+          "slot": 0
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-17",
+          "slot": 1
+        },
+        {
+          "type": "deploy",
+          "id": "unit-17",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-15",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 13
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 14
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 23
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 23
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 24
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-5",
+            "item-8"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-9",
+          "unitId": "unit-15",
+          "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "bench",
+            "slot": 2
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-22",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 0,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 15
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 16
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"3-7\\\",\\\"wolves-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"3-7\\\\\\\",\\\\\\\"wolves-v1\\\\\\\",\\\\\\\"w01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 17
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-11",
+            "item-10"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-12",
+          "unitId": "unit-17",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 18
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-2:augment",
+          "generation": 0,
+          "definitionId": "pumping-up-i"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 44
+        },
+        {
+          "type": "deploy",
+          "id": "unit-16",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 19
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 20
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-4:supply",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 21
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 53
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 22
+        },
+        {
+          "type": "target",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 0,
+          "unitId": "unit-17"
+        },
+        {
+          "type": "anomalyReroll",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 1
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 2,
+          "definitionId": "titanic-strikes"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 0,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 23
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 24
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-13",
+            "item-15"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-16",
+          "unitId": "unit-15",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 25
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 26
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 27
+        },
+        {
+          "type": "select",
+          "choiceId": "round:5-4:supply",
+          "generation": 0,
+          "definitionId": "vest"
+        },
+        {
+          "type": "continue",
+          "round": 28
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 29
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 30
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"5-7\\\",\\\"elder-dragon-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"5-7\\\\\\\",\\\\\\\"elder-dragon-v1\\\\\\\",\\\\\\\"d01\\\\\\\"]\\\",1]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 31
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-17",
+            "item-19"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-20",
+          "unitId": "unit-15",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 32
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 33
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 34
+        },
+        {
+          "type": "select",
+          "choiceId": "round:6-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 35
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 36
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 37
+        },
+        {
+          "type": "start"
+        }
+      ],
+      "rounds": [
+        {
+          "round": 1,
+          "stateHash": "2e023f9d159dc94ae33579795008bbc76e47fe53b40300b84f785e4d1022afda",
+          "eventsHash": "62a498ab6e50933e880606f85f9a0c1f00ec2e2685e95edb6a8fdd3c1f5bf7de"
+        },
+        {
+          "round": 2,
+          "stateHash": "5f5a35aeb00b0c3fc34cfcb977a228ad9b5f85a9c48bc96ea376919d72df7ae7",
+          "eventsHash": "49786df95b756bcacf5ff02ad3680c3cd4fbb77bd0b37ef6ac8931fda9e3d87d"
+        },
+        {
+          "round": 3,
+          "stateHash": "80648229e16452db22e337ef4b91920f78e2ecd12e5b9a3cbeadc8235e109361",
+          "eventsHash": "e8ee8d36c9fbb121bd439ffcba6e094b7f8fea118d7f649ade01dc733580db1e"
+        },
+        {
+          "round": 4,
+          "stateHash": "cdc33e23fb1a9ad6d4388a7fa07ca74e6370a7cba32c58f3dd3bf8f52bb0164e",
+          "eventsHash": "fc442dceb0d785897c23f24a47ee2b57cf535ffec42b6315c82b175487ae7d6a"
+        },
+        {
+          "round": 5,
+          "stateHash": "c0e84d717eb4c6cc85925fdde5f3fb0464eacf459bb6c266f321faf683f5b5fb",
+          "eventsHash": "1dff6f317a9d9e3eb5f9838363385fe8b7e6e9af1d860cf6f009990d59699352"
+        },
+        {
+          "round": 6,
+          "stateHash": "9fee4729558cbe3e0210292bc5fecf0554b1b7eafaf8608a9f999478828919ef",
+          "eventsHash": "afeb99c77d8226aa763ad16987938e9153dc660ce645e1aea1d5a1353f75d8d2"
+        },
+        {
+          "round": 8,
+          "stateHash": "e83a6491a93cd5e39d692012392fabf83b5da470e5aacd4167d22a71017d52df",
+          "eventsHash": "d98628e95f4f28300e35aaeea77478c05508f835078e7f2b26dc40f471ef6004"
+        },
+        {
+          "round": 9,
+          "stateHash": "bd57938689ffabdbf30d6476dc6e06dbd86a9436750a0a6a73e1263e6d106a05",
+          "eventsHash": "acc086edc79871eca4f02a18d0769700e84507ef9c1937d842a08e60866331e0"
+        },
+        {
+          "round": 10,
+          "stateHash": "a58063c8e8f2f49328cecffc2526329eade747d87a87c5de199c435be9ac4b1c",
+          "eventsHash": "8784298e690642ca77fe525fb9a9a55f565dd25b6685350e76f5a7231e9b76b8"
+        },
+        {
+          "round": 11,
+          "stateHash": "05c829fb72112b5d3c682fc228fa5aa97fa94802a9a2ce30405e22862bb507b4",
+          "eventsHash": "2a0c5502b19136af0cae6c06479aea8fc8ae57e4dedd1ca7cd58eefcca18b5cb"
+        },
+        {
+          "round": 12,
+          "stateHash": "8991bb7b7323ee8da4ee07405436727f42695c89a320e85fcc99d3054e64cde2",
+          "eventsHash": "276199e759a921e82ab468047e492c2f129d759a5c468f0174254d003ffc49ef"
+        },
+        {
+          "round": 13,
+          "stateHash": "37164d4e5e479834f46b409598b227c6a250c0ce815db1533887c659de1ed0d1",
+          "eventsHash": "94795ba0a17eda63806b2b8b7433c0dcd05839632201d96d8f6750601fbd19f5"
+        },
+        {
+          "round": 15,
+          "stateHash": "277bfdb8392adaef300cf001cc0b5e07ef2c59dffb574edff32f84f871a678ad",
+          "eventsHash": "2747bb5dd350b5db6ca6a109af09f34a65f377a1d0d9a178d0b28945b847b2c4"
+        },
+        {
+          "round": 16,
+          "stateHash": "e6abf088eadda91efa097db1d79da37e7c37eb03a35a889402d081ce954ac082",
+          "eventsHash": "a1447881e10af0d0eea5a8f9facf8793804bdd0b4a04a741acf532517bc0e26b"
+        },
+        {
+          "round": 17,
+          "stateHash": "7ba3eba82ebbaf9f92da866f94cf9d15369f479b9ab10750b746d910cc1d08cf",
+          "eventsHash": "7b2ed45ae2e610efa9e60e5a75e28114472aa4dcc9e930049ffa3c7223d72848"
+        },
+        {
+          "round": 18,
+          "stateHash": "7bb16de4ac137bb84b4b913b71a271d489891f630374ae7efad710b1ac712733",
+          "eventsHash": "c40a0f4df7d45bada9e90517a6094c1e49ad0b544d3f7e1665553596e899713b"
+        },
+        {
+          "round": 19,
+          "stateHash": "ab5609fed3ceb809373034aafd73b64311f867f722b448e076673d79f888dd84",
+          "eventsHash": "029978247a3cf5bb7c2fc63261ef90e90a1e551787dce7d0f7f419aeaec1dca3"
+        },
+        {
+          "round": 20,
+          "stateHash": "ecbbd8c0f14fa801fbc567cfacc72cd832acce8869ec353f9899aeea7338607a",
+          "eventsHash": "43ebf966a850f4fd79e3154ac26929c74f9a258a86aa8bc4464eee6f89930a99"
+        },
+        {
+          "round": 22,
+          "stateHash": "cbc3b0121d4a94284e475dafeeda089ec198418e85489003cc2132a49351dec6",
+          "eventsHash": "0629ca06bc0f947e47151602e97cc72d618155f27bc9b9b6767c877f0ded71dd"
+        },
+        {
+          "round": 23,
+          "stateHash": "4f01e626efba7c2962efd3c92d0703e23f2a5fc42f1711fafa6dcf90975ae2dd",
+          "eventsHash": "cd8961672e7835f29a902980057a1751af70613324306a3e529b61a13cb472bd"
+        },
+        {
+          "round": 24,
+          "stateHash": "f3b49fbc7b9c64f8785aa5d2cedc4b035724234760801ffc5aaf8cd658b07482",
+          "eventsHash": "568899d74422fc264d06dc875d9dc4d6307d988fe4094dcdcef7b985d9a29831"
+        },
+        {
+          "round": 25,
+          "stateHash": "49ed4c751fa000f7da1475608258e8f8140dd301558d10d84e7cfbbde7ea0ee7",
+          "eventsHash": "be8fb6d44d5cda4df77d105ba392f743e5f10fee24aa9f88c222a991be32a40b"
+        },
+        {
+          "round": 26,
+          "stateHash": "3f3beb1e6936967640dbefc04a71e078188f3c3eba1bbeffcb066e45b94ed3c1",
+          "eventsHash": "e041514308b2a8f1128b7aac7f7fa2b7c45d50ccee000cddc14da1e774925407"
+        },
+        {
+          "round": 27,
+          "stateHash": "56f3e16bfaafed93018cc34f33212020a7944d182af901eae952f8ce333f384c",
+          "eventsHash": "2d63aa83f16c1d39c3fc5b6faa1f06d0d4eeabd5e2aef149bb3584fa42ffc679"
+        },
+        {
+          "round": 29,
+          "stateHash": "0f2e8f33d316c4f115c6ef6a00bc0f568c98eff0f166762bfc108e3591e008b7",
+          "eventsHash": "dab64378d1171822bfc4135030cffeb735e453d4485ec4a2a1a565b334173d0e"
+        },
+        {
+          "round": 30,
+          "stateHash": "83e1f1ca8a5bcc450f36e21ab3e9dd9dafe89f8be199879343b07683271e0d89",
+          "eventsHash": "ce3f1b684a2850717e77c74d710f08d3e1d2d1627791a3f601b5402a07e9579c"
+        },
+        {
+          "round": 31,
+          "stateHash": "cbd141f83dbf5a6753fde6355f2a964ecef7752f8c09da1d5d118775870cee11",
+          "eventsHash": "4d873c9fa51466c1e760f2643d8afcc6afce2a5d155a5dc192b8c145b5101837"
+        },
+        {
+          "round": 32,
+          "stateHash": "3dfed8108282f9795c91a4a1c0e41a61485d80830b5f9245deb4debcc5ce960a",
+          "eventsHash": "0f3de08540625a7c6c0ef38da3d974999fd749717302ac955c6e21cdeee9577b"
+        },
+        {
+          "round": 33,
+          "stateHash": "efa509d56853eea35da892e3b4f719b32ca6450d5a43ba2ce30e2f53eac2d561",
+          "eventsHash": "0b3d0136952ff576fd3e5acc18730d2dbf795e979e3040a81880e8f36f77b86b"
+        },
+        {
+          "round": 34,
+          "stateHash": "25a01bc94bd504bd9a701d5f2baa79c945880ea400804a6ad36c8a3bee04e2b2",
+          "eventsHash": "7be5d02aef804e16e0e81666a6f4eeccb4722796012d545c00ddcacedc139161"
+        },
+        {
+          "round": 36,
+          "stateHash": "3095e88de5ab8b0eba34d9f29e9c3702eefcd5e22421b2f84de0bb37e519850b",
+          "eventsHash": "f5dba1f3d2f611658c7dc1f67c280941ef91e590cd3301371461f2dfe82994e0"
+        },
+        {
+          "round": 37,
+          "stateHash": "fca51a4b8caa2b54f066bb790b397958a1e8c91beff0a56ce22e4835bcb95400",
+          "eventsHash": "4c5f83795ca2769cc336a6a1f8a8fc32f2140546eb4c8ef14c803d148a855430"
+        },
+        {
+          "round": 38,
+          "stateHash": "0835274b37ff0061d41a9bd99ac99c95e85556c03e5bbf73901115f21b3d9c04",
+          "eventsHash": "e94cd3a10e22178234cd14564e766e4599b942041c3227d8b708a6957fa9a4ef"
+        }
+      ]
+    },
+    "sniper": {
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:44fe9c0e",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "commands": [
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 1
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 2
+        },
+        {
+          "type": "deploy",
+          "id": "unit-3",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "bow"
+        },
+        {
+          "type": "continue",
+          "round": 2
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 3
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 3
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 3
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "rod"
+        },
+        {
+          "type": "continue",
+          "round": 3
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-1:augment",
+          "generation": 0,
+          "definitionId": "investment-strategy-i"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 4
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 4
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 4
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 4
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-1",
+            "item-2"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-4",
+          "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "bench",
+            "slot": 3
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 4
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 5
+        },
+        {
+          "type": "lock",
+          "locked": true,
+          "generation": 5
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 5
+        },
+        {
+          "type": "lock",
+          "locked": false,
+          "generation": 5
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 6
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-4:supply",
+          "generation": 0,
+          "definitionId": "rod"
+        },
+        {
+          "type": "continue",
+          "round": 7
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 8
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 9
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 9
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 9
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 0,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"2-7\\\",\\\"krugs-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"2-7\\\\\\\",\\\\\\\"krugs-v1\\\\\\\",\\\\\\\"k02\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "tear"
+        },
+        {
+          "type": "continue",
+          "round": 10
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-4",
+            "item-6"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-4",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 11
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-2:augment",
+          "generation": 0,
+          "definitionId": "placebo"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 11
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 12
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 13
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 14
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 16
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 16
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 16
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 23
+        },
+        {
+          "type": "sell",
+          "id": "unit-4"
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-17",
+          "slot": 0
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-17",
+          "slot": 1
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-17",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-16",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 6,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 13
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 14
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 26
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 27
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-5",
+            "item-8"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-9",
+          "unitId": "unit-23",
+          "slot": 0
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 15
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 33
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 16
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 37
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "bench",
+            "slot": 2
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-23",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"3-7\\\",\\\"wolves-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"3-7\\\\\\\",\\\\\\\"wolves-v1\\\\\\\",\\\\\\\"w01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 17
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-11",
+            "item-10"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-12",
+          "unitId": "unit-17",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 18
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-2:augment",
+          "generation": 0,
+          "definitionId": "pumping-up-i"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 2,
+              "row": 5
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 19
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 20
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-4:supply",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 21
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 22
+        },
+        {
+          "type": "target",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 0,
+          "unitId": "unit-17"
+        },
+        {
+          "type": "anomalyReroll",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 1
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 2,
+          "definitionId": "titanic-strikes"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 23
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 24
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-13",
+            "item-15"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-16",
+          "unitId": "unit-23",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 25
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 26
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 27
+        },
+        {
+          "type": "select",
+          "choiceId": "round:5-4:supply",
+          "generation": 0,
+          "definitionId": "vest"
+        },
+        {
+          "type": "continue",
+          "round": 28
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 29
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 30
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"5-7\\\",\\\"elder-dragon-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"5-7\\\\\\\",\\\\\\\"elder-dragon-v1\\\\\\\",\\\\\\\"d01\\\\\\\"]\\\",1]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 31
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-17",
+            "item-19"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-20",
+          "unitId": "unit-23",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 32
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 33
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 34
+        },
+        {
+          "type": "select",
+          "choiceId": "round:6-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 35
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 36
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 37
+        },
+        {
+          "type": "start"
+        }
+      ],
+      "rounds": [
+        {
+          "round": 1,
+          "stateHash": "2e023f9d159dc94ae33579795008bbc76e47fe53b40300b84f785e4d1022afda",
+          "eventsHash": "62a498ab6e50933e880606f85f9a0c1f00ec2e2685e95edb6a8fdd3c1f5bf7de"
+        },
+        {
+          "round": 2,
+          "stateHash": "91ce7e4618970cce42b872591385ee359a90a61d6af23f3417ec16eac21edd1c",
+          "eventsHash": "08373f1dcdc8c7afad4d33f1f4f052500033210198fafbc0a87e576994ce6158"
+        },
+        {
+          "round": 3,
+          "stateHash": "749d194536451b837b9ae027bcb7739a0d2223936670de652383e57a2d279435",
+          "eventsHash": "931cdacea3552cdd5cc2204cf657668b18a35514ccffa19d8600e902e00c0039"
+        },
+        {
+          "round": 4,
+          "stateHash": "ea430abd68862c6cf0fef4e558ee0757d2168fe2e44f5c20f4a4af7d4420ad77",
+          "eventsHash": "f5ba45bd39535c740a902da96a76dcdee181a6bffa0c7e807640f1b25b5ef6a5"
+        },
+        {
+          "round": 5,
+          "stateHash": "834a2dbb304b2d478dccfb1d6e424adb447c155066523071b7086e810a26b515",
+          "eventsHash": "bf3ceae1af68a68a7d16ae1bb2bc265790f6ab79dcbc857c331c3a7300498810"
+        },
+        {
+          "round": 6,
+          "stateHash": "1347389c638fe2c921d159aebf7452abe09bbf020f0b53ed8d5a15375c8369df",
+          "eventsHash": "64665afc24c469d8e6f43ceb6b56f14d01af537b4edcb43b3e933f6a6ea16c0c"
+        },
+        {
+          "round": 8,
+          "stateHash": "58ea170d25469dc31b8f110570dfc7496673e0e2e5bf7c3f0b18e2b8c81073d4",
+          "eventsHash": "e8db043df13532a8b5da8ce979f059b7b386cc3d225ff1d3f7ff2415040c5099"
+        },
+        {
+          "round": 9,
+          "stateHash": "047224f7939d22e0427dacbf876a7ad5d79ea5218f39ae87d7b9afd5301be6c7",
+          "eventsHash": "f572bb2032ad156c78e274bc9cd6fa246eb142fb243d4b63cddf2a306ae5a516"
+        },
+        {
+          "round": 10,
+          "stateHash": "96c186a84cf638171027afb2ba6bd2fe82b586f11d6298730060e509d1649e7f",
+          "eventsHash": "b69c223289f921d221b9e598b3a1624de8ad56b2c78d11f2f386fea5ee7dab91"
+        },
+        {
+          "round": 11,
+          "stateHash": "1139eec4aa744882d5f0d6f9ecd4fba069208f66c4a3599bd95e03e0742992ba",
+          "eventsHash": "2d0044a774c7d493d97e51eddfe5f378139ef5917c387a9dbbdb246a0ce046a6"
+        },
+        {
+          "round": 12,
+          "stateHash": "1fd8abe76a1ff148c072f62bda0cf06df4a5720a41e964a11d249875b629050f",
+          "eventsHash": "b0289e7be7e75d8daebc657c3e71d9757efd17f4a9e25be9dcced968671eb386"
+        },
+        {
+          "round": 13,
+          "stateHash": "8d30eb8ad2c782866563b01110e13db79ffabedbe90d9107e9398de7afd45b73",
+          "eventsHash": "ea7cd3a645791be54e272197f2050c197832f8aca12e7ac525c234cd1717a540"
+        },
+        {
+          "round": 15,
+          "stateHash": "5bf6d7e73efb6fe9601b01aa0897208ebd02ab91115f7620c57ba62dfd154a5d",
+          "eventsHash": "ac5acf1a667781570eb7750ed56db8a379aa1f7da1e43c835acef8339df7f249"
+        },
+        {
+          "round": 16,
+          "stateHash": "bf9de35dc8cd015466e49f1263e13d3da1d2fa3a82d3436e453c17fbd5cec0ea",
+          "eventsHash": "b13e81604200eaf5f16ab83875c107ae69acd20e9b3da9027a15b821c9881f36"
+        },
+        {
+          "round": 17,
+          "stateHash": "b22daef0ce35fae6f275430a393e67248536d7163020082d135453655ecc6d04",
+          "eventsHash": "1cf2b31a6faec8e4164c1e0c0aca75b883613ad067eaeee81cc10033776a0ed7"
+        },
+        {
+          "round": 18,
+          "stateHash": "63fd6b2d65e2ca82faa9e7a2bb8e0d7fde9f4500ae478131e789df17e94720ef",
+          "eventsHash": "38f3c79babb00b1f0b4f5a6ad2b132cd150f428eaf8386c34ae41f73ad0a254a"
+        },
+        {
+          "round": 19,
+          "stateHash": "363a25d050d9a5dfba79c5c2018dae2f0f4b7a92306737226bc94ede59b3a8e3",
+          "eventsHash": "277f90fb1971701622a4a2c9089dba97f8dd1d8f2a54b817c2b87fd8fbd4d6ec"
+        },
+        {
+          "round": 20,
+          "stateHash": "7f249a2ba7bd00509f75a91106c5e28b0da839f590fe20e1a4ee7d2e45f48663",
+          "eventsHash": "d6a59ffec969d53219f614b598efc24d859ac4424e7e31931d3799fd7e339d50"
+        },
+        {
+          "round": 22,
+          "stateHash": "d580a66181403645710d68fd6a8943b0199d6eb97c786402c5789df07496268c",
+          "eventsHash": "c8c2dcfa5485bdd1a36c5a8c4f9c7f6d1e63733b82e03511a2eb80de6f573d3e"
+        },
+        {
+          "round": 23,
+          "stateHash": "cdf4e54f7b1a66b83332f6a655a8bee9f9f8526e5e8ca70aa94fa3157f97e33f",
+          "eventsHash": "a693f10309c736a2bee5177a2726d62d70046344734eff9ec8cf09afb6928ea7"
+        },
+        {
+          "round": 24,
+          "stateHash": "13fb4b38b8a532d410fd1fd8383f04be7275e39c4e8bc3a874199e14ca5f065c",
+          "eventsHash": "9c936259b52cad170e62bc6d946fc583a8f10b2696c4a96d90ec8dd4e26713bb"
+        },
+        {
+          "round": 25,
+          "stateHash": "9753db27b5b845d8e22a169fe8778c2e1073087c8bf359e63cae5d16e28e1909",
+          "eventsHash": "6af70cd16adb5b11d307725596ff839390491be6b4a73d23a720288d26ef591d"
+        },
+        {
+          "round": 26,
+          "stateHash": "de1fd38c1499ae9debcba8c2f06d66f54fe16b55459405f9aad9bc125b999ef0",
+          "eventsHash": "ad75587a4144742606bc12a8b29ff09bfca0e6738abf54015dc5e5015eb5e2d5"
+        },
+        {
+          "round": 27,
+          "stateHash": "fe6ef0714718a1b14c6d5f1b30ce4012471b2e773b37f25af79256acef1bd112",
+          "eventsHash": "f02e93e8ccfd9d5c1e1d0bd802a51653bc4c7f54cd8cf33f2be4919e1c7969c9"
+        },
+        {
+          "round": 29,
+          "stateHash": "e58df9111ec20db70c3144708ddb900a674b45e20d1241487e1308249aba3210",
+          "eventsHash": "c78dc7c37f8fa3e1b5ea6e3bd523a51a0f441762a6d676230f12955642ea186e"
+        },
+        {
+          "round": 30,
+          "stateHash": "9004c55866abe7ed32b16cfc22e7ab02cf74d3fd6c387f2ec72dad0c7d010540",
+          "eventsHash": "638a696af1148461a2731ef1df6f641687fecf08b9416403643df75cc6f0d1b3"
+        },
+        {
+          "round": 31,
+          "stateHash": "b1673c344184e17b2914f3bca9d961c34ccc58f51a629d506666c166ef0d6c03",
+          "eventsHash": "fdfa5de7438c52c7ab719e0dcfc8704ffdaa0232fb6a58c0d7e3a134b5c3e12e"
+        },
+        {
+          "round": 32,
+          "stateHash": "bc61b4fe888e5fe91e782c8f4ee3280d724efc793de5374ed5047b3ebdb8c236",
+          "eventsHash": "296507ba33867af081844af64766500e78db62bf56635196c49cb5d1bd9f489b"
+        },
+        {
+          "round": 33,
+          "stateHash": "5f17d98f461c07b5542828bff3cb291e0d55c3f636a7b9b3858a02efc16b2311",
+          "eventsHash": "2bd93f60be66455ef20ab71785eed8f676cbcf70b1f556bf61efd42ed79e80da"
+        },
+        {
+          "round": 34,
+          "stateHash": "1dfc96ffec268fb5621d786dbcddb6493531b4967c17a070c1ece68c7161afc0",
+          "eventsHash": "7bb284c8c184d0fda04e5cd6ef4640bc22244497cf8b50f12d100d75576378d8"
+        },
+        {
+          "round": 36,
+          "stateHash": "0ee50a0cde4ab0272b6a372773d2cf5b312d6faab26ab8e65c48dcab382fb275",
+          "eventsHash": "0721447f5b01116d2903b25b74dd3880ae85d467c00ae6434f62daa3e0331fc6"
+        },
+        {
+          "round": 37,
+          "stateHash": "2062bff9be77aa85694a20394d084e91c38f70601d4c8d2feff585be8f65ac79",
+          "eventsHash": "dd4c217d2a4eb91b4cfed3f49dd9dbcf225a7986ef047cbaaf720f6a29c00056"
+        },
+        {
+          "round": 38,
+          "stateHash": "3ea21faefe2e066a32d90a741ec78abfc15b51ac4b7f02e182bf864d6a907fdd",
+          "eventsHash": "beadb8fcc02a5593074913b9afef4544c3346d95d46b30bd34977a9407107b03"
+        }
+      ]
+    },
+    "mage": {
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:44fe9c0e",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "commands": [
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 1
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 2
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 2
+        },
+        {
+          "type": "deploy",
+          "id": "unit-3",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 2
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 3
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 3
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "tear"
+        },
+        {
+          "type": "continue",
+          "round": 3
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-1:augment",
+          "generation": 0,
+          "definitionId": "investment-strategy-i"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 4
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 4
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-1",
+            "item-2"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-2",
+          "slot": 0
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 4
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 5
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "bench",
+            "slot": 2
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-10",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "lock",
+          "locked": true,
+          "generation": 5
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 5
+        },
+        {
+          "type": "lock",
+          "locked": false,
+          "generation": 5
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 6
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-4:supply",
+          "generation": 0,
+          "definitionId": "rod"
+        },
+        {
+          "type": "continue",
+          "round": 7
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 7
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 7
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 8
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 9
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"2-7\\\",\\\"krugs-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"2-7\\\\\\\",\\\\\\\"krugs-v1\\\\\\\",\\\\\\\"k02\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "rod"
+        },
+        {
+          "type": "continue",
+          "round": 10
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 10
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-4",
+            "item-6"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-2",
+          "slot": 1
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "bench",
+            "slot": 2
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 11
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-2:augment",
+          "generation": 0,
+          "definitionId": "placebo"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 11
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 12
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 13
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 14
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 16
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 16
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 16
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 18
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 22
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 22
+        },
+        {
+          "type": "sell",
+          "id": "unit-2"
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-16",
+          "slot": 0
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-16",
+          "slot": 1
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "bench",
+            "slot": 2
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-16",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-15",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 13
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 14
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 26
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 27
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 28
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-5",
+            "item-8"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-9",
+          "unitId": "unit-15",
+          "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-3",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "bench",
+            "slot": 3
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-24",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 0,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 15
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 16
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"3-7\\\",\\\"wolves-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"3-7\\\\\\\",\\\\\\\"wolves-v1\\\\\\\",\\\\\\\"w01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 17
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-11",
+            "item-10"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-12",
+          "unitId": "unit-16",
+          "slot": 2
+        },
+        {
+          "type": "deploy",
+          "id": "unit-3",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 18
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-2:augment",
+          "generation": 0,
+          "definitionId": "pumping-up-i"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 19
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 20
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-4:supply",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 21
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 0,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 22
+        },
+        {
+          "type": "target",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 0,
+          "unitId": "unit-16"
+        },
+        {
+          "type": "anomalyReroll",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 1
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 2,
+          "definitionId": "titanic-strikes"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 23
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 24
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-13",
+            "item-15"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-16",
+          "unitId": "unit-15",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 25
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 26
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 27
+        },
+        {
+          "type": "select",
+          "choiceId": "round:5-4:supply",
+          "generation": 0,
+          "definitionId": "vest"
+        },
+        {
+          "type": "continue",
+          "round": 28
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 29
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 30
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"5-7\\\",\\\"elder-dragon-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"5-7\\\\\\\",\\\\\\\"elder-dragon-v1\\\\\\\",\\\\\\\"d01\\\\\\\"]\\\",1]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 31
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-17",
+            "item-19"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-20",
+          "unitId": "unit-15",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 32
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 33
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 34
+        },
+        {
+          "type": "select",
+          "choiceId": "round:6-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 35
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 36
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 37
+        },
+        {
+          "type": "start"
+        }
+      ],
+      "rounds": [
+        {
+          "round": 1,
+          "stateHash": "2e023f9d159dc94ae33579795008bbc76e47fe53b40300b84f785e4d1022afda",
+          "eventsHash": "62a498ab6e50933e880606f85f9a0c1f00ec2e2685e95edb6a8fdd3c1f5bf7de"
+        },
+        {
+          "round": 2,
+          "stateHash": "d231790b6415e135594f66b3264e7dc02cdd9798afa0cac3e7bf457a5ad6ba22",
+          "eventsHash": "38ff009b3d5f860d4e793ce7a3d523b6b9517c348dc43a39e14ad7beb1299a7e"
+        },
+        {
+          "round": 3,
+          "stateHash": "a85fad202cd2152421d6835eca8d66e6544ddbf3fb7dbfd4d43a94a902d138b8",
+          "eventsHash": "2fd36e0b2bca61c28ec89d20a5d4a2a0fce19e5bbd5e35a96c3774996bd09b20"
+        },
+        {
+          "round": 4,
+          "stateHash": "3cca51d7aa174148c98f8c179f47a1a0c850bdde9c2fb39959b791e2dec5c4aa",
+          "eventsHash": "f643717a9a16091ad034942cf38ee23eb72d4bfd307000439d74e80fe376897c"
+        },
+        {
+          "round": 5,
+          "stateHash": "e324f4a091e036a2269947c36d56755d71915e67dcdb2f3a7b5d7ab2eb85258d",
+          "eventsHash": "022998b83c72c2079cff469a9ba727e1eb0a24e28b3019108f17dac08457d6fe"
+        },
+        {
+          "round": 6,
+          "stateHash": "4b64c54e0ec90d830d246e5f92d8447afb43b5632f030ec2075ec084f924c4df",
+          "eventsHash": "dd19803919eee8a9f8b68d61974aeaf38e5311f6ed4090dc7e0dee234b444f43"
+        },
+        {
+          "round": 8,
+          "stateHash": "9f17def49ae868b4fab69f13240acc4169884d8b7c78670d7dd114e8c37ae477",
+          "eventsHash": "da5db39cf814e12c5df6ea4d6dda1f559da71dcec5bc60134c65e5b45dfbeb75"
+        },
+        {
+          "round": 9,
+          "stateHash": "06512401e93afc3d592c972b482392b0bc890bbc64308f6b6f34d61dde4f7db7",
+          "eventsHash": "2369b25bbdb2f1305a3e69151f9a6faee9b07d1352034fbdc1c2b65705843413"
+        },
+        {
+          "round": 10,
+          "stateHash": "28ec1c4f2bcfe4c323a9c1c7fa7f39428dcb8d719ab591d45ee27e67dfdf3a97",
+          "eventsHash": "213a69ac706aa2dadbc2715e22323d6570421b390beaf7078e14e0f3fe580791"
+        },
+        {
+          "round": 11,
+          "stateHash": "35e6a486116df9a69e8c8a492745013b01362149f16dfcb29ab1d169bf9ca6fb",
+          "eventsHash": "b6e994bb835f3601468dda98bf4fe1725a8d9fe38c39e782ab0a32c415941d6c"
+        },
+        {
+          "round": 12,
+          "stateHash": "63ae10424356b22bb6c171708dca0cf0be85193ccfb193a55f7bb2181c81da13",
+          "eventsHash": "fe24d809ab3acaaed8af6a94d0165e8d300f0779a854af84f81b99f5f895c9cb"
+        },
+        {
+          "round": 13,
+          "stateHash": "db4f9591f4b935df224f2eb0880315beedb827a4974f487610e2d6d7c6eefa5a",
+          "eventsHash": "a30b5ddec419206040d325ed56ea37871a55e6d6324ef221a3bdda123a8a3660"
+        },
+        {
+          "round": 15,
+          "stateHash": "a3c836d34087778d4cf2a2f4c72669970fc9373fcb8384215be4dcf841156ee5",
+          "eventsHash": "33b3469f09f9a6e50667095f322e6720cee5185405ce316dda8418e96c83bc16"
+        },
+        {
+          "round": 16,
+          "stateHash": "d26afa8ed951d6680e21cddb83fab4fc3e0165ed9df4c8715abe1f5ef33c87d9",
+          "eventsHash": "dfbe119afd5a609d4253011d6773f4309f26ecf062d9a31c1275b4c1b73c7e9b"
+        },
+        {
+          "round": 17,
+          "stateHash": "5dc724ec552e0261bf59516c49e547a69060a71e87cf9e172224d3d94c341d76",
+          "eventsHash": "d1806d3c9351d38cb65312579bc994cf7d3c6ce5872b0b7fe363c5cb7987d19c"
+        },
+        {
+          "round": 18,
+          "stateHash": "d4457f32e0287089799982a750a9e50a71c5103d6f04f29c0df03e660433650e",
+          "eventsHash": "6dd2a1480f24bcb2b41034b083de5c75fb9fb165ff3a3ed21ac8b7763a460eff"
+        },
+        {
+          "round": 19,
+          "stateHash": "a79246dd5e96ee6da5018be68d2e6c6ef1f8244cc266eff4f2db4281bebe16be",
+          "eventsHash": "7a18462e16b2ee3e0cab819ce2bc33de224573da45337f64ee9e43bb5aaa5723"
+        },
+        {
+          "round": 20,
+          "stateHash": "a8dd070680e56a25e35ad00cd3507f8bc91ca5b7922978050036bdfa28dbda88",
+          "eventsHash": "c379779eefe7ebc7188f68d58ed6389277c0021342534a6263fe34798b0564c9"
+        },
+        {
+          "round": 22,
+          "stateHash": "c1e1e4babc5e9cd0d38689abd20cb282f2c1f6a7a2d1a8e9cb638eae3f953915",
+          "eventsHash": "8371cc340f72c194800b3fc6b59b62735474c844a7d5ee7a61ba301ff12d6d5b"
+        },
+        {
+          "round": 23,
+          "stateHash": "2d1d9efc542bcdcb38dcd62090075cd2ec6c6e04c2d7e7aa03cffae8306296ae",
+          "eventsHash": "a0b707632588466945d864c414bbb2ee4984e1232bffb50300c0dde91b07e3b8"
+        },
+        {
+          "round": 24,
+          "stateHash": "5be475b1b24ae80b6bdc87d4dacbad00c10e08d2923afaa432b3d2f2762c013f",
+          "eventsHash": "98dff5fef64b6c17c975cf15293673228a9e62d5e6fd528d5a90f39eddb39848"
+        },
+        {
+          "round": 25,
+          "stateHash": "0bcded4c7c7e383b0107875dbbda1da158d2d23373522f228fd01953e45194c3",
+          "eventsHash": "78464ede6d894db0b140c8568b342d6200fc11eecd16b57cfb729045a58e62e3"
+        },
+        {
+          "round": 26,
+          "stateHash": "611b10234f1e317c215e240d0327f798eff0f0fa4fc459277debf08413874dc8",
+          "eventsHash": "07899132fdec14c5b2dd544489d338741c25554d87fb19e5b4cc8ba09a27c8a0"
+        },
+        {
+          "round": 27,
+          "stateHash": "e30cb5fc90da3191b6d98990c1a7cbee536bb15e8971e9771e233d403d39f5cc",
+          "eventsHash": "67197eb888311075bdeebd8ad3db510905c5365e222aca6a1fe3b330c6421fa3"
+        },
+        {
+          "round": 29,
+          "stateHash": "932888fd73269f92477d2c75f93ff82e78adb20a770bca3a116882c034454914",
+          "eventsHash": "91f07c41e54685cd72dbca84c0081468d9a2d0c23cfef5f038ac5e4073de77e5"
+        },
+        {
+          "round": 30,
+          "stateHash": "071f01d5becb1a1ce0c50088cc7e5e31e61ee507c3b96c11524034494cc151d4",
+          "eventsHash": "3d638c66a083059e25e542ee35251c9016b438cc0294cefa1ef902e4e8a37509"
+        },
+        {
+          "round": 31,
+          "stateHash": "da88ab133d15a6cfa55a5a15dce19b1cd012d2edbc13e5d0cbc850cfbdda898b",
+          "eventsHash": "2b7a6dbdd92db03f61ce0c2b5bdc87cef5c4b686633af9db267f59921e5a468a"
+        },
+        {
+          "round": 32,
+          "stateHash": "80b683628bd0f7df6d153900bc41500c6cea765d5d91db1c886f24fed38f76d7",
+          "eventsHash": "1a995eda01fd382b917a9b70bf68033eaef3bca40a84e9858c65797cb6fd863b"
+        },
+        {
+          "round": 33,
+          "stateHash": "fd263c9c0d61a1916a1ada2d91ff95ed6ff8fc9b1e8ee7753bf37635131b838f",
+          "eventsHash": "5c96c2bcd54eeb5456b0a181c9549d6d8bf6dc19352681dc81d628b986313e95"
+        },
+        {
+          "round": 34,
+          "stateHash": "92b26e638e9ab0c9e1a7817dbec3b20d01a7b5708a47057df2001b34e056ae49",
+          "eventsHash": "a13719bd059ba7065145d4e023d6fc307b8a015bfb51127c2529a190e4be85d8"
+        },
+        {
+          "round": 36,
+          "stateHash": "1df88404816c4d948a15588f1e5fd1ef2f15112ecff561d6514dd673ed45dbe7",
+          "eventsHash": "d95978d3e4b0eb697853aadc38d5c18d879982f1125e02df4abc34b0df55260a"
+        },
+        {
+          "round": 37,
+          "stateHash": "6e022cac26275d93de54ad835dbbaedb55d0b4c715cc4247cbb1ffb9d3a5d1c6",
+          "eventsHash": "3f5c709239bb176895b3af5affa885d0f59a38550fbbeacaa61dc93b1aa74411"
+        },
+        {
+          "round": 38,
+          "stateHash": "298570229edc5ae9e2cc336ec1a7cbee6771d1baf04f7a2eef1d310711f4b628",
+          "eventsHash": "e8899fd77e83e71b8a5d797f99161accc8b4ae755e6d0ee7d00a430498505a54"
+        }
+      ]
+    },
+    "sniper-caitlyn": {
+      "versions": {
+        "schemaVersion": 6,
+        "rulesVersion": "m8-14.24b-v1",
+        "contentVersion": "s13-14.24b-m8-v1",
+        "contentDigest": "fnv1a32-utf16:44fe9c0e",
+        "commandProtocolVersion": 2,
+        "rngAlgorithm": "lcg32-v1",
+        "tickMs": 50
+      },
+      "seed": 42,
+      "commands": [
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 1
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 2
+        },
+        {
+          "type": "deploy",
+          "id": "unit-3",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "bow"
+        },
+        {
+          "type": "continue",
+          "round": 2
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 3
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 3
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 3
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "rod"
+        },
+        {
+          "type": "continue",
+          "round": 3
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-1:augment",
+          "generation": 0,
+          "definitionId": "investment-strategy-i"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 4
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 4
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 4
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 4
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-1",
+            "item-2"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-4",
+          "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "bench",
+            "slot": 3
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 4
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 5
+        },
+        {
+          "type": "lock",
+          "locked": true,
+          "generation": 5
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 5
+        },
+        {
+          "type": "lock",
+          "locked": false,
+          "generation": 5
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 6
+        },
+        {
+          "type": "select",
+          "choiceId": "round:2-4:supply",
+          "generation": 0,
+          "definitionId": "rod"
+        },
+        {
+          "type": "continue",
+          "round": 7
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 8
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 9
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 9
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 9
+        },
+        {
+          "type": "deploy",
+          "id": "unit-4",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 0,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"2-7\\\",\\\"krugs-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"2-7\\\\\\\",\\\\\\\"krugs-v1\\\\\\\",\\\\\\\"k02\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "tear"
+        },
+        {
+          "type": "continue",
+          "round": 10
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-4",
+            "item-6"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-4",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 11
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-2:augment",
+          "generation": 0,
+          "definitionId": "placebo"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 11
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 12
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 13
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 14
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 16
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 16
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 16
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 23
+        },
+        {
+          "type": "sell",
+          "id": "unit-4"
+        },
+        {
+          "type": "equip",
+          "itemId": "item-3",
+          "unitId": "unit-17",
+          "slot": 0
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-17",
+          "slot": 1
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-17",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-16",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 6,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 13
+        },
+        {
+          "type": "select",
+          "choiceId": "round:3-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 14
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 26
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 27
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-5",
+            "item-8"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-9",
+          "unitId": "unit-23",
+          "slot": 0
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 15
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 33
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 16
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 37
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "bench",
+            "slot": 2
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-23",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"3-7\\\",\\\"wolves-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"3-7\\\\\\\",\\\\\\\"wolves-v1\\\\\\\",\\\\\\\"w01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "sword"
+        },
+        {
+          "type": "continue",
+          "round": 17
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-11",
+            "item-10"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-12",
+          "unitId": "unit-17",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 18
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-2:augment",
+          "generation": 0,
+          "definitionId": "pumping-up-i"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-7",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 2,
+              "row": 5
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 19
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 20
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-4:supply",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 21
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "buyXp"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 22
+        },
+        {
+          "type": "target",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 0,
+          "unitId": "unit-17"
+        },
+        {
+          "type": "anomalyReroll",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 1
+        },
+        {
+          "type": "select",
+          "choiceId": "round:4-6:anomaly",
+          "generation": 2,
+          "definitionId": "titanic-strikes"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 23
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 24
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 47
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-13",
+            "item-15"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-16",
+          "unitId": "unit-23",
+          "slot": 1
+        },
+        {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-26",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 25
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 26
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 27
+        },
+        {
+          "type": "select",
+          "choiceId": "round:5-4:supply",
+          "generation": 0,
+          "definitionId": "vest"
+        },
+        {
+          "type": "continue",
+          "round": 28
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 29
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 30
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "select",
+          "choiceId": "[\"m8b-loot-choice\",\"[\\\"5-7\\\",\\\"elder-dragon-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"5-7\\\\\\\",\\\\\\\"elder-dragon-v1\\\\\\\",\\\\\\\"d01\\\\\\\"]\\\",1]\"]",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 31
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-17",
+            "item-19"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-20",
+          "unitId": "unit-23",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 32
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 33
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 34
+        },
+        {
+          "type": "select",
+          "choiceId": "round:6-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 35
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 36
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 37
+        },
+        {
+          "type": "start"
+        }
+      ],
+      "rounds": [
+        {
+          "round": 1,
+          "stateHash": "2e023f9d159dc94ae33579795008bbc76e47fe53b40300b84f785e4d1022afda",
+          "eventsHash": "62a498ab6e50933e880606f85f9a0c1f00ec2e2685e95edb6a8fdd3c1f5bf7de"
+        },
+        {
+          "round": 2,
+          "stateHash": "91ce7e4618970cce42b872591385ee359a90a61d6af23f3417ec16eac21edd1c",
+          "eventsHash": "08373f1dcdc8c7afad4d33f1f4f052500033210198fafbc0a87e576994ce6158"
+        },
+        {
+          "round": 3,
+          "stateHash": "749d194536451b837b9ae027bcb7739a0d2223936670de652383e57a2d279435",
+          "eventsHash": "931cdacea3552cdd5cc2204cf657668b18a35514ccffa19d8600e902e00c0039"
+        },
+        {
+          "round": 4,
+          "stateHash": "ea430abd68862c6cf0fef4e558ee0757d2168fe2e44f5c20f4a4af7d4420ad77",
+          "eventsHash": "f5ba45bd39535c740a902da96a76dcdee181a6bffa0c7e807640f1b25b5ef6a5"
+        },
+        {
+          "round": 5,
+          "stateHash": "834a2dbb304b2d478dccfb1d6e424adb447c155066523071b7086e810a26b515",
+          "eventsHash": "bf3ceae1af68a68a7d16ae1bb2bc265790f6ab79dcbc857c331c3a7300498810"
+        },
+        {
+          "round": 6,
+          "stateHash": "1347389c638fe2c921d159aebf7452abe09bbf020f0b53ed8d5a15375c8369df",
+          "eventsHash": "64665afc24c469d8e6f43ceb6b56f14d01af537b4edcb43b3e933f6a6ea16c0c"
+        },
+        {
+          "round": 8,
+          "stateHash": "58ea170d25469dc31b8f110570dfc7496673e0e2e5bf7c3f0b18e2b8c81073d4",
+          "eventsHash": "e8db043df13532a8b5da8ce979f059b7b386cc3d225ff1d3f7ff2415040c5099"
+        },
+        {
+          "round": 9,
+          "stateHash": "047224f7939d22e0427dacbf876a7ad5d79ea5218f39ae87d7b9afd5301be6c7",
+          "eventsHash": "f572bb2032ad156c78e274bc9cd6fa246eb142fb243d4b63cddf2a306ae5a516"
+        },
+        {
+          "round": 10,
+          "stateHash": "96c186a84cf638171027afb2ba6bd2fe82b586f11d6298730060e509d1649e7f",
+          "eventsHash": "b69c223289f921d221b9e598b3a1624de8ad56b2c78d11f2f386fea5ee7dab91"
+        },
+        {
+          "round": 11,
+          "stateHash": "1139eec4aa744882d5f0d6f9ecd4fba069208f66c4a3599bd95e03e0742992ba",
+          "eventsHash": "2d0044a774c7d493d97e51eddfe5f378139ef5917c387a9dbbdb246a0ce046a6"
+        },
+        {
+          "round": 12,
+          "stateHash": "1fd8abe76a1ff148c072f62bda0cf06df4a5720a41e964a11d249875b629050f",
+          "eventsHash": "b0289e7be7e75d8daebc657c3e71d9757efd17f4a9e25be9dcced968671eb386"
+        },
+        {
+          "round": 13,
+          "stateHash": "8d30eb8ad2c782866563b01110e13db79ffabedbe90d9107e9398de7afd45b73",
+          "eventsHash": "ea7cd3a645791be54e272197f2050c197832f8aca12e7ac525c234cd1717a540"
+        },
+        {
+          "round": 15,
+          "stateHash": "5bf6d7e73efb6fe9601b01aa0897208ebd02ab91115f7620c57ba62dfd154a5d",
+          "eventsHash": "ac5acf1a667781570eb7750ed56db8a379aa1f7da1e43c835acef8339df7f249"
+        },
+        {
+          "round": 16,
+          "stateHash": "bf9de35dc8cd015466e49f1263e13d3da1d2fa3a82d3436e453c17fbd5cec0ea",
+          "eventsHash": "b13e81604200eaf5f16ab83875c107ae69acd20e9b3da9027a15b821c9881f36"
+        },
+        {
+          "round": 17,
+          "stateHash": "b22daef0ce35fae6f275430a393e67248536d7163020082d135453655ecc6d04",
+          "eventsHash": "1cf2b31a6faec8e4164c1e0c0aca75b883613ad067eaeee81cc10033776a0ed7"
+        },
+        {
+          "round": 18,
+          "stateHash": "63fd6b2d65e2ca82faa9e7a2bb8e0d7fde9f4500ae478131e789df17e94720ef",
+          "eventsHash": "38f3c79babb00b1f0b4f5a6ad2b132cd150f428eaf8386c34ae41f73ad0a254a"
+        },
+        {
+          "round": 19,
+          "stateHash": "363a25d050d9a5dfba79c5c2018dae2f0f4b7a92306737226bc94ede59b3a8e3",
+          "eventsHash": "277f90fb1971701622a4a2c9089dba97f8dd1d8f2a54b817c2b87fd8fbd4d6ec"
+        },
+        {
+          "round": 20,
+          "stateHash": "7f249a2ba7bd00509f75a91106c5e28b0da839f590fe20e1a4ee7d2e45f48663",
+          "eventsHash": "d6a59ffec969d53219f614b598efc24d859ac4424e7e31931d3799fd7e339d50"
+        },
+        {
+          "round": 22,
+          "stateHash": "d580a66181403645710d68fd6a8943b0199d6eb97c786402c5789df07496268c",
+          "eventsHash": "c8c2dcfa5485bdd1a36c5a8c4f9c7f6d1e63733b82e03511a2eb80de6f573d3e"
+        },
+        {
+          "round": 23,
+          "stateHash": "cdf4e54f7b1a66b83332f6a655a8bee9f9f8526e5e8ca70aa94fa3157f97e33f",
+          "eventsHash": "a693f10309c736a2bee5177a2726d62d70046344734eff9ec8cf09afb6928ea7"
+        },
+        {
+          "round": 24,
+          "stateHash": "13fb4b38b8a532d410fd1fd8383f04be7275e39c4e8bc3a874199e14ca5f065c",
+          "eventsHash": "9c936259b52cad170e62bc6d946fc583a8f10b2696c4a96d90ec8dd4e26713bb"
+        },
+        {
+          "round": 25,
+          "stateHash": "84e9661219b3f2437a2c7fbf7607bba745655c813e32a9a044b5768acf6dbfc6",
+          "eventsHash": "be5c20dcdc40f932bf8f942d162659e495696b5d99f77d58754bf1684b255f67"
+        },
+        {
+          "round": 26,
+          "stateHash": "ea6a1b8e0e564c56466484ed20d0d4f759841ceff72acfa677568762919dd7cf",
+          "eventsHash": "0d4adde5d0e628aa4b0ab506a8434d2f59f422b0abd4e89ff2fdd7a9d76bf300"
+        },
+        {
+          "round": 27,
+          "stateHash": "2831586c94f7254959f23e496e29e0bd279a3bf17ca3afe70a99dc0ce756dd53",
+          "eventsHash": "c9a87d4dd798210abd7796a73d962fc9e4704046820d6f39c88a306245b2140c"
+        },
+        {
+          "round": 29,
+          "stateHash": "3c0efef82ea6d2c846d24dece548d9530ce851363b755ca78d60a8083d2d87b9",
+          "eventsHash": "47dc62c138e54fc5cc79311ab87114256be2eb8ae272fedc2e660364737a7e8c"
+        },
+        {
+          "round": 30,
+          "stateHash": "d17e7a660d6c1242d2d942f559bde1dfed82b2c04b35c12e3ad6846f24891002",
+          "eventsHash": "cf865571ef74ee72ad308f4e3652bfa50f0c1be52b871376bd917f9769c73468"
+        },
+        {
+          "round": 31,
+          "stateHash": "2bf9050ea941c4041f5f50559ba8e126dfca9be74db6f656408e97de26d2f833",
+          "eventsHash": "8827f64a92a9e04423e18eef6c8d4a426b4a1c4d4ff9692ebb638e2a55779588"
+        },
+        {
+          "round": 32,
+          "stateHash": "f6df8efdd1406e669d54fc17cd2f1ad29cfe5f7d1581ad6c17c6a730462def66",
+          "eventsHash": "490f3396a72c73aa812438772cedf0d0d6f694f776066474b316385614d21465"
+        },
+        {
+          "round": 33,
+          "stateHash": "05c2db72688e5f14921bc8f3c3a24fa25aea847c76a80c88a840b35fe3f7a76f",
+          "eventsHash": "18fb4f0eb4fe7b336d1f1255b02d5c3fbbe6e3d0c721480e2d4b27a687596c45"
+        },
+        {
+          "round": 34,
+          "stateHash": "d3ab9760e6b4d413b28d118f11fa62c2c9b1707c607691b0f05ac7446e25f858",
+          "eventsHash": "335cfebd49e9e480baca1e15d344cd048d063d9e40a52c572a8f98af498f5c9b"
+        },
+        {
+          "round": 36,
+          "stateHash": "8f67fad1bb98a6219c1da5bf49ef19ecede499532211189f57da48922471f798",
+          "eventsHash": "03985d9161b53da19ac83e7dc984fdf04d1897ac6f8a89ae9305cc702267cc26"
+        },
+        {
+          "round": 37,
+          "stateHash": "6bd04dd8ee71f370428b38a1c10e883824daf545b97f6c4821a821c7bf38ad9c",
+          "eventsHash": "1c1e61ed635a686987609c50fad8dc54abc23e3f90c450f44dc22c5df3d6485d"
+        },
+        {
+          "round": 38,
+          "stateHash": "3655cd19c6f106f0e76a77a00f9a4134a3c28e1bd03e82a9e1a2f25d3c8a9729",
+          "eventsHash": "4f1bf578ccfe8d85ed5585bfa74f96126d99423b4fb3c58a086921497bb9df80"
+        }
+      ]
+    }
+  }
+}

@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_BOARD } from '../src/simulation/board';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import type { GameState } from '../src/simulation/game';
-import { planCombine, planEquip, returnUnitItems } from '../src/simulation/inventory';
+import { planCombine, planEquip as planEquipWithSerial, returnUnitItems } from '../src/simulation/inventory';
 import type { ItemInstance } from '../src/simulation/strategy-types';
 import type { Unit } from '../src/simulation/units';
+
+const planEquip = (items: readonly ItemInstance[], preparation: GameState, itemId: string, unitId: string, slot: number) =>
+  planEquipWithSerial(items, preparation, itemId, unitId, slot, 5);
 
 function freeze<T>(value: T): T {
   if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); }
@@ -111,7 +114,7 @@ describe('equipment and sale return plans', () => {
       expect(JSON.stringify(source)).toBe(before);
       items = result.items;
     }
-    for (const slot of [0, 1, 2]) {
+    for (const slot of [1, 2]) {
       expect(planEquip(freeze(items), preparation, 'item-4', unitId, slot)).toEqual({ ok: false, reason: 'item-slot-occupied' });
     }
     expect(items.filter(value => value.location.kind === 'unit')).toHaveLength(3);
@@ -127,7 +130,7 @@ describe('equipment and sale return plans', () => {
     expect(planEquip(items, preparation, 'item-1', 'missing', 0)).toEqual({ ok: false, reason: 'unknown-unit' });
     expect(planEquip(items, preparation, 'item-1', 'enemy-unit', 0)).toEqual({ ok: false, reason: 'unknown-unit' });
     expect(planEquip(items, preparation, 'item-2', 'bench-unit', 0)).toEqual({ ok: false, reason: 'item-not-inventory' });
-    expect(planEquip(items, preparation, 'item-1', 'board-unit', 1)).toEqual({ ok: false, reason: 'item-slot-occupied' });
+    expect(planEquip(items, preparation, 'item-1', 'board-unit', 1)).toMatchObject({ ok: true, nextItemSerial: 6 });
     expect(JSON.stringify(items)).toBe(before);
     const result = planEquip(items, preparation, 'item-1', 'board-unit', 0);
     if (!result.ok) throw new Error(result.reason);

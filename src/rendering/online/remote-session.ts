@@ -16,7 +16,7 @@ import type { UnitLocation } from '../../simulation/units';
 import { createMatch } from '../../simulation/match';
 import { applyCombatReplayTick, type CombatReplay, type CombatViewState, type DisplayCombatEvent } from '../../presentation/combat-display';
 import { MatchSession } from '../match-session';
-import type { ClientCommand, GameClient } from './protocol';
+import type { ClientCommand, GameClient, ReplayUnitId } from './protocol';
 
 /** Why the last intent did not change the local state although it was not refused by the rules. */
 export type IntentNotice = { readonly kind: 'pending'; readonly commandId: number } | { readonly kind: 'offline'; readonly text: string };
@@ -33,6 +33,8 @@ export class RemoteSession extends MatchSession {
   private view: CombatViewState | null = null;
   private played: DisplayCombatEvent[] = [];
   private openingPending = false;
+  /** C15: battle id → original id of my units in the replay on the board, as the server named them. */
+  private replayUnitIds: ReadonlyMap<string, string> = new Map();
   private notice: IntentNotice | null = null;
   /** Set while the connection is down or superseded: commands are not sent and the reason is shown instead. */
   offline: string | null = null;
@@ -61,6 +63,11 @@ export class RemoteSession extends MatchSession {
     const base = this.playbackBase;
     return base !== null && this.replay !== null && state.round === base.round && (state.phase === 'preparation' || state.phase === 'combat');
   }
+  /**
+   * The unit whose equipment a shown unit carries (C15): a battle id of mine in the replay on the board maps to my
+   * original unit id; any other id (preparation, PvE replay, an opponent's unit) is returned as it is and simply holds nothing.
+   */
+  equipmentOwnerId(id: string): string { return this.replayUnitIds.get(id) ?? id; }
   /** My battle of this round is on the board (playing or held on its terminal view until the settlement arrives). */
   get inBattle(): boolean { return this.replay !== null; }
   /** Server pushed my authoritative state; `events` are those of my commands it confirms and of its own deadline/settlement transactions. */
@@ -71,7 +78,7 @@ export class RemoteSession extends MatchSession {
       return;
     }
     if (this.playingBack) { this.superseded++; this.skipPlayback(); } // a newer state supersedes the battle still being played
-    this.replay = null; this.view = null; this.played = []; this.playbackBase = null; this.openingPending = false;
+    this.replay = null; this.view = null; this.played = []; this.playbackBase = null; this.openingPending = false; this.replayUnitIds = new Map();
     if (state === this.matchState) return;
     const before = this.matchState;
     if (state.round !== before.round) this.combatLedger = [];
@@ -79,8 +86,9 @@ export class RemoteSession extends MatchSession {
     this.notify(before, this.record(events), 'command');
   }
   /** Server finished my battle of this round: show `initial`, then play one tick record per 50 ms. */
-  receiveReplay(replay: CombatReplay): void {
+  receiveReplay(replay: CombatReplay, unitIds: readonly ReplayUnitId[] = []): void {
     if (!replay.ticks.length) return;
+    this.replayUnitIds = new Map(unitIds.map(entry => [entry.combatId, entry.originalId]));
     this.replay = replay; this.nextTick = 0; this.view = replay.initial; this.played = []; this.openingPending = true;
     // Tick 0 plays when the opening transition ends; every later record 50 ms after the previous one.
     this.accumulator = COMBAT_TICK_MS - REPLAY_OPENING_MS;

@@ -9,7 +9,7 @@ import type { TemporaryEquipment } from '../simulation/m8/contracts';
 
 /** Equipment wording for the frozen EquipmentFailure codes (M8_UI_CONTRACT §2). */
 export const EQUIPMENT_FAILURE_TEXT: Readonly<Record<EquipmentFailure, string>> = {
-  'wrong-phase': '只能在准备阶段合成或穿戴装备',
+  'wrong-phase': '当前阶段不能对该目标合成或穿戴装备',
   'unknown-item': '该物品已不存在，请重新选择',
   'unknown-unit': '未找到该单位，只能装备到我方单位',
   'same-item': '不能拿同一件物品与自己合成，请选两件不同的组件',
@@ -28,7 +28,10 @@ export const EQUIPMENT_FAILURE_TEXT: Readonly<Record<EquipmentFailure, string>> 
  */
 export const EQUIPMENT_COMMAND_FAILURES = ['unknown-item', 'item-not-inventory', 'invalid-recipe', 'item-slot-occupied',
   'same-item', 'unique-conflict', 'exclusive-slots', 'temporary-item'] as const satisfies readonly EquipmentFailure[];
-export const equipmentFailureText = (reason: EquipmentFailure): string => EQUIPMENT_FAILURE_TEXT[reason];
+/** Generic wording for a code this table does not name yet (a newer rules build may add codes). */
+export const EQUIPMENT_FAILURE_FALLBACK = '当前无法执行该装备操作';
+export const equipmentFailureText = (reason: string): string =>
+  (EQUIPMENT_FAILURE_TEXT as Readonly<Record<string, string>>)[reason] ?? EQUIPMENT_FAILURE_FALLBACK;
 
 const slotList = (slots: readonly number[]) => slots.map(slot => slot + 1).join('、');
 export { slotList };

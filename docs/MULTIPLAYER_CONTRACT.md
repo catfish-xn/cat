@@ -988,7 +988,7 @@ B4：接 §11.5 推进/失败处理；B5：用 nextSharedRound 全席批量推�
 
 ### 15.1 本席 (phase, command) 允许矩阵
 
-以下仅适用于 `multiplayer.status='active'` 的席位；preparation 一列指未锁定棋盘的准备态。单人阶段限制保持原样（包括既有 settlement 满备战区待领奖让位出售特例）。gameOver、淘汰席一律不能执行这些运营命令。接口签名沿用 §9.2/§12.2；`combine`、`equip` 是线上 ClientCommand 名称，分别调用 combineItems/equipItem。
+以下仅适用于 `multiplayer.status='active'` 的席位；preparation 一列指未锁定棋盘的准备态。T12 装备子矩阵同时适用于单人；其它单人阶段限制保持原样（包括既有 settlement 满备战区待领奖让位出售特例）。gameOver、淘汰席一律不能执行这些运营命令。接口签名沿用 §9.2/§12.2；`combine`、`equip` 是线上 ClientCommand 名称，分别调用 combineItems/equipItem。
 
 | 命令 / 目标 | preparation | combat（含下述 PvP 阵容锁） | choice | settlement |
 | --- | --- | --- | --- | --- |
@@ -998,8 +998,9 @@ B4：接 §11.5 推进/失败处理；B5：用 nextSharedRound 全席批量推�
 | deploy bench→bench 空槽移动 / 己方互换 | 允许 | 允许 | 允许 | 允许 |
 | deploy bench→board、board→bench、board→board（含互换） | 允许 | wrong-phase | wrong-phase | wrong-phase |
 | combine 两件库存组件 | 允许 | 允许 | 允许 | 允许 |
-| equip 库存装备给备战席单位 | 允许 | 允许 | 允许 | 允许 |
-| equip 给棋盘单位 | 允许 | wrong-phase | wrong-phase | wrong-phase |
+| equip 库存装备给己方备战席单位合法槽 | 允许 | 允许 | 允许 | 允许 |
+| equip 库存装备给己方棋盘单位合法槽 | 允许 | 允许 | 允许 | 允许 |
+| equip 库存组件 + 己方单位已穿永久组件，原子合成并穿戴 | 允许 | 允许 | 允许 | 允许 |
 | choose、anomalyTarget、anomalyReroll | wrong-phase | wrong-phase | 按现有 pendingChoice 校验 | wrong-phase |
 
 startCombat / step / timeoutChoice / claimLoot / settleRound / 推进下一轮仅属服务器调度，沿用对应入口阶段前提，不属于客户端新增白名单。
@@ -1017,7 +1018,7 @@ startCombat / step / timeoutChoice / claimLoot / settleRound / 推进下一轮�
 | preparation | OPS、CHOICES | 各席 choice/preparation 不同；规则继续验证本席阶段 |
 | choice | OPS、CHOICES | 非选择操作不关闭/跳过选择窗口 |
 | frozen | 无 | 这是截止、自动部署、快照冻结的不可交错原子边界，完成后进入 battle |
-| battle | OPS | 目标仍按 §15.1 限制为备战席；即使内部 PvP Match.phase 仍是 preparation 也必须锁定 |
+| battle | OPS | 出售/部署仍按 §15.1 限制为备战席；装备允许己方棋盘与备战席合法目标。即使内部 PvP Match.phase 仍是 preparation 也必须锁定阵容 |
 | awaiting-settlement | OPS | 使用本席仍有效的战斗锁，等待结果期间可运营；真正提交整轮事务时不允许命令插入 |
 | settlement | OPS | 按本席阶段校验；若本席尚有 choice，先进入既有 choice 窗口才接受 CHOICES |
 | waiting、ended，或 disposed | 无 | wrong-phase |
@@ -1035,9 +1036,9 @@ startCombat / step / timeoutChoice / claimLoot / settleRound / 推进下一轮�
 lockMatchCombatRoster(state: MatchState): MatchCommandResult;
 ```
 
-输入必须是 active 联机、PvP、preparation、pendingChoice=null；否则 `{ok:false,state,reason:'wrong-phase'}`。服务器先按 §15.4 完成部署并冻结两方/镜像快照，再对**live seat**调用本函数；冻结快照保留锁前独立对象。成功仅设置服务器私有 `multiplayer.combatRosterLocked?: true`，无事件、无资源/RNG/序号变化；重复锁定成功返回同一 state、空事件。它使棋盘出售/部署/装备拒绝、购买只做备战席升星，买刷经验等继续允许；`snapshotForBattle` 对已锁 live state 返回 `BattleValidationError('wrong-phase')`，防止拿运营后状态重编译当前战斗。此字段不下发，也不接受客户端指定。
+输入必须是 active 联机、PvP、preparation、pendingChoice=null；否则 `{ok:false,state,reason:'wrong-phase'}`。服务器先按 §15.4 完成部署并冻结两方/镜像快照，再对**live seat**调用本函数；冻结快照保留锁前独立对象。成功仅设置服务器私有 `multiplayer.combatRosterLocked?: true`，无事件、无资源/RNG/序号变化；重复锁定成功返回同一 state、空事件。它仅限制棋盘出售/部署和战中升星参与者（购买只做备战席升星），装备按 §17 允许，买刷经验等继续允许；`snapshotForBattle` 对已锁 live state 返回 `BattleValidationError('wrong-phase')`，防止拿运营后状态重编译当前战斗。此字段不下发，也不接受客户端指定。
 
-PvE 使用真实 combat 阶段，自带同等锁定语义。正常战后合并已接入 `stepMatch`/`startMatchCombat` 的战斗结束路径与 `applyRoundSettlement`：先提交本场合法成长，再按原升星保留顺序（棋盘优先、棋盘行列、备战席槽位、ID）递归合并。产生既有 `unitUpgraded` 与装备迁移事件，迁移 persistentGrowth/anomalyBinding/装备及三合一来源；不发新棋子、不消耗单位 ID、不再次扣池。装备临时子项沿原父实例 roll 复用。延迟合并不重跑本场战斗，冻结快照与 Combat 账本仍保留旧星级。PvP 合法结算原子移除 `combatRosterLocked`；重复收据仍 `duplicate-settlement`，不会再次合并/发资源。
+PvE 使用真实 combat 阶段，自带同等锁定语义。正常战后合并已接入 `stepMatch`/`startMatchCombat` 的战斗结束路径与 `applyRoundSettlement`：先提交本场合法成长，再按原升星保留顺序（棋盘优先、棋盘行列、备战席槽位、ID）递归合并。产生既有 `unitUpgraded` 与装备迁移事件，迁移 latest live seat 的 persistentGrowth/anomalyBinding/最新装备及三合一来源；不发新棋子、不消耗单位 ID、不再次扣池。装备临时子项沿原父实例 roll 复用。延迟合并不重跑本场战斗，冻结快照与 Combat 账本仍保留旧星级。PvP 合法结算原子移除 `combatRosterLocked`；重复收据仍 `duplicate-settlement`，不会再次合并/发资源。
 
 延迟合并新增私有来源事实 `{kind:'unit-upgraded-after-combat', event:UnitUpgradedEvent}`，不伪造新的购买 acquisitionSequence；共享池按真实 consumedIds 合并原有 sources。单人不生成此事实，旧单人恢复边界保持拒绝 multiplayer 状态。
 
@@ -1095,9 +1096,9 @@ Claude 准备截止时按以下顺序接入，客户端命令不能插入中间�
 | shopLock | invalid-choice（非 boolean）、stale-shop |
 | deploy | unknown-unit、enemy-unit、invalid-location、outside-deployment-zone、occupied、population-cap |
 | combine | temporary-item、unknown-item、same-item、item-not-inventory、invalid-recipe |
-| equip | temporary-item、unknown-item、unknown-unit、item-not-inventory、invalid-slot、item-slot-occupied、unique-conflict、exclusive-slots |
+| equip | temporary-item、unknown-item、unknown-unit、item-not-inventory、invalid-slot、item-slot-occupied、invalid-recipe、unique-conflict、exclusive-slots |
 
-阶段/棋盘限制先于资源校验，合法阶段内沿用既有校验顺序；未知单位继续由对应命令报告所属/身份错误。失败不变金币、商店、pool/seat revision、任何随机流、ID 或事件序号。原已消费商店格不是 bench-full；不能把其它失败统一翻译成容量失败。
+阶段限制先于资源校验；棋盘目标限制仅适用于出售/部署，equip 的组件目标成功时返回 itemCombined 后接 itemEquipped（详见 §17）。合法阶段内沿用身份/槽位/放置校验顺序；未知单位继续由对应命令报告所属/身份错误。失败不变金币、商店、pool/seat revision、任何随机流、ID 或事件序号。原已消费商店格不是 bench-full；不能把其它失败统一翻译成容量失败。
 
 沿用 SR-C7-01 的规则修订流程：固定 M8 schema6/rules/content/protocol 标识保持，新增细分规则版本并加入 `content/index.ts` 的 canonical digest：`multiplayer-combat-ops-v1`、`bench-during-combat-deferred-v1`、`front-center-left-first-v1`。digest 从 `fnv1a32-utf16:20b58a63` 更新为 **`fnv1a32-utf16:a0b38123`**；旧 digest 存档明确拒绝、不迁移。新证据保存于 `tests/t10-content-baseline.json`；T1 验证新 identity，替换**仅 digest**后必须逐字节匹配原离线战斗状态轨迹，原事件/RNG/战斗数值基线不改。
 
@@ -1117,11 +1118,62 @@ Claude 准备截止时按以下顺序接入，客户端命令不能插入中间�
 
 T11 固定身份：CONTENT_DIGEST `fnv1a32-utf16:b4a5c2e2`；LOOT_REPLAY_DIGEST `fnv1a32-utf16:7b14bfba`。变更与 golden 逐项说明见 [T11 审计](evidence/t11/README.md)。
 
-## 17. R3+R4 掉落系统合同草案，未签字
+
+## 17. T12：战斗中装备永不锁定（R2，2026-10-14）
+
+依据为用户已签 [S13_RULES_GAP §2.2–2.4](S13_RULES_GAP.md#22-拟替换-151-的装备子矩阵)，不是新的战斗数值或 TFT 历史行为还原。§15.1 装备四行适用于单人及 active 联机席位的 preparation/combat/choice/settlement，含 `combatRosterLocked`。己方目标指本席持有的永久单位，含本场已死亡而运营阵容仍存在的单位；不含敌方、镜像、召唤物或野怪。gameOver、淘汰、非本人资产拒绝；选择与报价不因穿戴而重开或重抽。买卖/部署/经验/刷新矩阵不变。
+
+### 17.1 导出、输入输出与失败
+
+```ts
+// src/simulation/match.ts；既有 src/server-entry/index.ts 导出，wire 形状不变
+combineItems(state: MatchState, aId: string, bId: string): MatchCommandResult;
+equipItem(state: MatchState, itemId: string, unitId: string, slot: number): MatchCommandResult;
+// src/simulation/item-selectors.ts；客户端读预览，无 ID、事件或 RNG 消耗
+previewCombine(state: Readonly<MatchState>, aId: string, bId: string): CombinePreview;
+previewEquip(state: Readonly<MatchState>, itemId: string, unitId: string, slot: number): EquipPreview;
+// src/simulation/operation-policy.ts；装备专用许可，独立于 canOperateMatch
+canOperateEquipment(state: Readonly<MatchState>): boolean;
+```
+
+`combineItems` 只接受两件库存组件。`equipItem` 空合法槽沿原穿戴；输入为库存普通组件且目标槽已穿永久普通组件时，原子合成并留在该槽。预览与执行共用 `validateEquip`：先按移除两组件后的最终槽位集合验证配方、唯一性和独占，再分配一个永久 ID，发 `itemCombined`、`itemEquipped`，最后规划临时装备。窃贼本体仍归一到槽 0 并独占三槽，仅新父实例本轮规划一次，沿独立 equipment RNG。预览成功额外可有 `combination: {resultDefinitionId, consumedItemIds: readonly [string,string]}`；其余 `allowed/reason/occupiedSlots/conflictingItemIds` 语义沿用原类型。该可选结果不是新增网络投影字段。
+
+成功 `{ok:true,state,events}`，Match 事件序号连续；普通 equip 不消耗永久 ID，合成恰消耗一个。失败 `{ok:false,state,reason}` 保留原引用且无 events，所有 RNG、ID、序号、共享池不变。失败枚举：
+
+- combine：`wrong-phase | temporary-item | unknown-item | same-item | item-not-inventory | invalid-recipe`。
+- equip：`wrong-phase | temporary-item | unknown-item | unknown-unit | item-not-inventory | invalid-slot | item-slot-occupied | invalid-recipe | unique-conflict | exclusive-slots`。
+
+非组件占槽仍拒绝 `item-slot-occupied`；组件目标不合法配方拒绝 `invalid-recipe`；其它永久装备占用时两拳套合成窃贼拒绝 `exclusive-slots`。不跨两个单位取装备、不免费拆卸、不替换成装、不把冲突物品暗中推回库存。内部纯 `planEquip(items,preparation,itemId,unitId,slot,nextItemSerial)` 成功增加返回 `nextItemSerial`；不是新的 wire 命令。
+
+### 17.2 冻结、结算、共享池与恢复边界
+
+只提交 latest live seat 的永久装备、合成来源、装备 roll/临时投影和 Match 事件。禁止改写 `combatInputBasis`、当前 Combat、两方 PlayerBattleSnapshot/BattleInput 或镜像来源；当前 HP/护盾/属性/触发器、战斗 RNG 与 battleSeed 不变，不重编译已锁 live seat。战中新装备下场生效，本场已消费的旧组件继续留在冻结来源前缀。本场成长/唯一奖励只按旧冻结战斗提交到最新席位；战后合并迁移最新装备，新物品不得追溯领取本场装备触发或计数收益。
+
+装备/合成不消费 loot/shop/battle RNG，不改变共享池资产。现有 room 的 plain Match 装备事务保持 pool 引用和 sharedPool 绑定；不额外新增 runSharedMatchCommand 分支。战后升星仍通过共享 start/step/settleRound 包装合并真实 sources 并检查守恒。冻结及整轮结算仍是不可交错事务，过期命令沿现有 revision/round 检查明确拒绝，不改参数重放。
+
+用户在 PR #71 选择 **B**：本次不新增联机完整存档恢复器，**§12.5 不变**。单人 PvE/PvP 在四阶段装备/单位身上合成后必须 serializeMatch→restoreMatch→同样续算；来源 fold 仍校验出生、配方、消费、序号、奖励顺序及成长。冻结按 `provenancePrefixLength` 和 `equipmentRollPrefixLength` 重建旧身份；只放开合法 item-combined suffix 和库存至合法槽的变化，冻结已穿装备不得无偿脱离，非装备输入仍精确检查。结算装备 roll 的等级上界包含真实 levelAfter，冻结本场 roll 仍受冻结等级约束。
+
+联机只恢复冻结描述并确定性重算：PlayerBattleSnapshot 可描述 PvE 玩家侧；PvE 配原已冻结目录遭遇重算，BattleInput/compileBattle 按现有合同仅适用于 PvP。PvP 双方/镜像用 restorePlayerBattleSnapshot/restoreBattleInput；随后在未中断的可信 latest live seat 上续算、结算、迁移。此证据不宣称联机进程重启恢复，restoreMatch 继续拒绝 multiplayer/sharedPool。
+
+### 17.3 版本、证据与 Claude 接线
+
+| 身份 | T11 基线 | T12 |
+| --- | --- | --- |
+| 装备操作细分版本 | 无 | equipment-ops-next-battle-v1 |
+| MULTIPLAYER_OPERATION_RULES.version | multiplayer-combat-ops-v1 | multiplayer-combat-ops-v2 |
+| EQUIPMENT_RULES_VERSION | m8-b5-instances-v2 | m8-b5-instances-v3 |
+| CONTENT_DIGEST | fnv1a32-utf16:b4a5c2e2 | **fnv1a32-utf16:44fe9c0e** |
+| LOOT_REPLAY_DIGEST | fnv1a32-utf16:7b14bfba | **fnv1a32-utf16:7b14bfba**（掉落规则未改） |
+
+三项细分身份进入 canonical digest。外层 schema6 / rules `m8-14.24b-v1` / content `s13-14.24b-m8-v1` / save2 / replay2 / commandProtocol2 / NET_PROTOCOL_VERSION=1 不变。旧 content digest 存档明确拒绝，不迁移、不补旧账、不重写已冻结战斗。
+
+独立依据、每个 golden 的原因和实际测试结果见 [T12 证据](evidence/t12/README.md)。T1 原事件/RNG/战斗数值锚点不变，只替换 T12 digest 后 165 个状态逐字节匹配 T11；继续历史归一化匹配原 T1。room 闸门已放行 equip/combine，Claude 只需按 [UI_REQUESTS 的 T12 说明](UI_REQUESTS.md#t12-对-claude-的接线说明2026-10-14) 调整预览、拖放目标与提示。不新增 §14 投影字段，不规定布局和视觉。
+
+## 18. R3+R4 掉落系统合同草案，未签字
 
 本节基于 origin/multiplayer@25dae94；与 T12（PR #71）并行出设计，**未导出、未接线、未生效**。签字且 T12 合入后，才按 [M8B_LOOT §11](M8B_LOOT.md#11-r3r4-修订草案未签字) 实施。现行 §12/§14/§15 保持；本节只是它们的候选修订。规则数值及来源均见 LOOT §11；本节新增序号、计数、版本和数据结构均为项目自定/P，旧边界为 L1/P。
 
-### 17.1 公共命令签名草案
+### 18.1 公共命令签名草案
 
 以下类型及函数拟从 simulation 对应模块与 src/server-entry/index.ts 导出；参数只接受服务器可信权威状态，禁止把 PrivateSeatView 传入命令。签名中的 MatchCommandResult/SharedPoolResult 沿用既有成功/失败形状，仅扩展状态、事件和失败联合。
 
@@ -1157,7 +1209,7 @@ function runSharedMatchCommand(pool: SharedPoolState, state: MatchState,
 
 既有 equipItem(state,itemId,unitId,slot)、combineItems(state,a,b) 和 wire equip/combine 不在 R4 改名：T12 负责身上合成及四阶段权限。R4 复用其 latest live seat、窃贼 roll 和冻结前缀合同。startMatchCombat/stepMatch/claimOrDiscardLoot 及共享 startCombat/step/claimLoot 负责自动按 entry 发奖，签名不因“开珠”增加客户端领取入口；.4 choose/timeoutChoice 保留。
 
-### 17.2 同局模板的权威入口与初始化草案
+### 18.2 同局模板的权威入口与初始化草案
 
 为避免每席在 createMatch 内先独立抽颜色再覆盖，本稿建议扩展初始化模式；以下均为拟议接口，不声称基线已存在：
 
@@ -1212,7 +1264,7 @@ freezeOrbLayoutThroughRound 只接收合法目录 ordinal 和可信 ledger；同
 
 上述变更是规则职责；Claude 只传可信状态并保存原子返回值，不在 room.ts 计算颜色或奖品。初始化、绑定、模板完整性也须进入 T12 最终恢复合同的扩展验收。
 
-### 17.3 ClientCommand 与阶段接线草案
+### 18.3 ClientCommand 与阶段接线草案
 
 ~~~ts
 type ClientCommand = /* 原有分支保留 */
@@ -1226,7 +1278,7 @@ type ClientCommand = /* 原有分支保留 */
 
 重复 commandId+同内容沿既有缓存回执，不调用领域第二次；同 ID 不同内容沿既有冲突规则拒绝。拿新 commandId 再用已消费工具得到 unknown-consumable。成功同时提交 pool+latest seat+事件，不能在 resolver 战前副本上执行或用它覆盖最新席位。客户端显示库存工具和可选目标；本节不规定布局、动画或颜色表现。
 
-### 17.4 revealedLoot 与工具投影草案
+### 18.4 revealedLoot 与工具投影草案
 
 toPrivateSeatView(state):PrivateSeatView、readLootView(state):LootView 签名不变；前者仍逐层白名单构造和递归冻结。下列 v2 投影拟替换 §14.1 的掉落子结构，需网络版本一起切换；不是旧客户端可无条件忽略的兼容字段：
 
@@ -1273,7 +1325,7 @@ revealedDrops 保留旧字段，新增 orbId/entryOrdinal、consumable 载荷和
 
 排序沿源代码点、数值 slot、数值 entry；slotOrdinal 仍不下发。entryOrdinal 仅用于包内稳定展示，不暴露未揭示珠数。consumables 按实例授予序号稳定排序，只复制 ID/定义，不下发来源或 nextSerial。readLootView 与 private revealedLoot 对应数组必须深相等。roomSeed、layout/未来颜色、未揭示内容、RNG/draws、完整 receipt/provenance、共享池精确余量及冻结输入仍私有；已揭示 drop 的 receiptId 延续旧白名单，不等于暴露收据内容。
 
-### 17.5 失败枚举与原子性草案
+### 18.5 失败枚举与原子性草案
 
 ~~~ts
 type ConsumableFailure =
@@ -1296,14 +1348,14 @@ MatchFailure 增加上述尚不存在的消耗品分支；SharedPoolFailure 继�
 | unknown-item / unknown-unit | 在本席资产和可识别临时记录中找不到目标；跨席 ID 同样不查别席 |
 | invalid-consumable-target（类别/所有权） | 找到目标但不是所需永久普通组件/成装，或可见单位是敌人/野怪/镜像/召唤物而非本席持有永久单位 |
 | no-removable-items | 合法本人单位身上没有永久装备；不能用临时子件冒充可拆目标 |
-| invalid-orb-layout / stale-orb-layout / invalid-orb-round | 模板入口的结构/版本/身份、边界倒退、轮次非法；业务含义见 §17.2 |
+| invalid-orb-layout / stale-orb-layout / invalid-orb-round | 模板入口的结构/版本/身份、边界倒退、轮次非法；业务含义见 §18.2 |
 | 既有 invalid-loot / invalid-receipt / duplicate-settlement 等 | 授予及唯一结算继续走原入口校验；不是工具命令新增返奖规则 |
 
 网络 invalid-message/unsupported-protocol、信封 stale-round/seat-revision-mismatch、room 的 room-phase/seat-controlled/control-revoked、凭证和 commandId 错误留在原层，不混入 ConsumableFailure；这些沿既有 wire/room 类型，不能新增同义错误。预览采用与直接 Match 相同的顺序；共享外层在执行时另检。
 
 失败没有 events/poolEvents 字段，返回输入原引用，金币/工具/装备/全部 RNG/ID/序号/收据/revision 均不变。事务后段失败也不得保留前段抽样或迁移。没有“失败也消耗工具”路径。工具类别/候选目录损坏应在内容装载校验中阻止启动，不临时删候选或退回原件。
 
-### 17.6 共享池与原子收据草案
+### 18.6 共享池与原子收据草案
 
 - 英雄池容量、商店占用和来源守恒沿 §12；工具/装备不是卡池份数。useConsumable 共享成功时 available/shops/holdings/pending/rewards、共享商店 RNG 全部不变；poolEvents=[]。因本席资产已变，pool.revision 与本席绑定 revision 沿既有事务各加一次【L1/P】，不可误把“无卡池转移”理解为无并发版本变化。
 - 开局刀妹占池不变；原固定麦迪/拉克丝改随机英雄后仍逐 entry 走 UnitLootPolicy。计划冻结/击杀揭示不预留；战后首次授予尝试才预留。有货但满席先预留并 pending；缺货直接按一星购买价补金币，无论是否满席。不按珠整体扣池，不让一个 pending 英雄阻断同珠工具/金币。
@@ -1312,4 +1364,4 @@ MatchFailure 增加上述尚不存在的消耗品分支；SharedPoolFailure 继�
 - 一珠部分领取是合法成功，不是半事务提交；本次可授予 entry、预留和 pending 进度一起原子提交。若校验真正失败，整个命令（全轮则整个未发布批次）回滚，包括 layout 与内容流。金币/工具无容量上限【项目自定/P】，不存在因英雄 bench-full 而丢弃同珠金币的路径。
 - 工具重铸/拆卸不触发英雄获取、返池、免费升星或旧轮收入。战后升级按 T12 搬迁最新装备，来源账本保留冻结战斗曾引用的旧物品。联机恢复须验证 pool.orbLayout、每席模板绑定、entry 收据、工具消费及 reforge 重演；以 T12 最终恢复边界为前置，不改写 PR #71 的决策。
 
-版本、受影响文件、测试与待签清单见 [R3R4_LOOT_DESIGN](R3R4_LOOT_DESIGN.md)。本节无已通过的运行验收；§17.1–17.6 全部是草案，不能按正文中的函数声明直接认为 Node 导出可用。
+版本、受影响文件、测试与待签清单见 [R3R4_LOOT_DESIGN](R3R4_LOOT_DESIGN.md)。本节无已通过的运行验收；§18.1–18.6 全部是草案，不能按正文中的函数声明直接认为 Node 导出可用。

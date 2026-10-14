@@ -68,7 +68,7 @@ T1 首战没有互换命令。完整状态 trace SHA-256 因 Match 及 combatInp
 
 ## T10 联机运营与截止自动部署（2026-10-13）
 
-联机 opt-in 覆盖上文普通命令只能 preparation 的限制，完整允许矩阵、失败原因、服务器调用顺序见 [MULTIPLAYER_CONTRACT §15](MULTIPLAYER_CONTRACT.md#15-t10战斗运营与准备截止自动上场2026-10-13)。combat/choice/settlement 允许买刷经验锁店、备战席出售/互换/装备与库存合成，禁止棋盘出售/部署/装备；冻结战斗不回写。战斗中三合一只使用备战席，涉及棋盘的合并在战后提交成长后自动执行。
+联机 opt-in 覆盖上文普通命令只能 preparation 的限制，完整允许矩阵、失败原因、服务器调用顺序见 [MULTIPLAYER_CONTRACT §15](MULTIPLAYER_CONTRACT.md#15-t10战斗运营与准备截止自动上场2026-10-13)。combat/choice/settlement 允许买刷经验锁店、备战席出售/互换/装备与库存合成，禁止棋盘出售/部署；T12 装备例外见下节，冻结战斗不回写。战斗中三合一只使用备战席，涉及棋盘的合并在战后提交成长后自动执行。
 
 新增 `autoDeployToCap(state): MatchCommandResult` 仅供服务器准备截止显式调用：最左备战槽依次上场，前排起逐行按列 `3,2,4,1,5,0,6` 找空格，不耗 RNG；线上普通与自动部署共用 `unitDeployed {unitId,from,to,domain,eventSeq}`，离线部署事件行为保持。PvP 冻结两方快照后用 `lockMatchCombatRoster` 锁 live seat，结算自动解锁；共享 PvP 用 `runSharedMatchCommand(pool,state,{type:'settleRound',receipt})` 原子迁移来源，不能只提交旧 Match。单人不调用自动上场，既有操作阶段和行为保持；新细分规则版本进入 digest，旧 digest 存档拒绝。
 
@@ -77,3 +77,14 @@ T1 首战没有互换命令。完整状态 trace SHA-256 因 Match 及 combatInp
 用户批准 [S13_RULES_GAP R1/R6](S13_RULES_GAP.md)：[OPENING §3.1](M8B_OPENING.md#31-基础收入与失败规则) 的 1-4 自然 XP 从 0 改为 2，开局政策升级 `m8b-opening-project-v2`。此前 B6 的 2/2/0 XP、进入 2-1 三级 0 XP 文字由本条覆盖；现在 2/2/2 XP，无经济操作的 seed 42 进入 2-1 强化前为 10G、三级 2/6 XP。XP 阈值不变，买 XP 按累计值推进，不强制回填基准。
 
 发放仍发生在唯一结算事务；重复 step/继续/恢复不重发。公共 API 签名、失败原因、外层 M8 格式和 RNG 算法均不改变。内容 digest 与掉落回放 digest 随开局版本改变；旧身份存档拒绝，不做迁移。联机接续及加时边界见 [联机合同 §16](MULTIPLAYER_CONTRACT.md#16-t11开局经验与自动接续2026-10-13)。本次不开放战中棋盘单位装备、不新增宝珠/消耗品，也不扩展野怪回血。
+
+
+## T12 单人装备权限与单位身上合成（2026-10-14）
+
+本节覆盖旧文中装备 preparation-only、choice 禁止普通装备命令的说法；当前 M8 身份见 [联机合同 §17](MULTIPLAYER_CONTRACT.md#17-t12战斗中装备永不锁定r22026-10-14)。单人和 active 联机相同：preparation/combat/choice/settlement 均可库存合成、装备己方永久棋盘/备战席单位合法槽，包括本场已经阵亡的永久单位。gameOver、淘汰、敌方/镜像/召唤物拒绝。独立 `canOperateEquipment` 不放宽单人 buy/sell/deploy/reroll/buyXp/shopLock；原 settlement 满备战区待领奖出售特例保留。
+
+既有 `equipItem(state,itemId,unitId,slot)` 输入库存组件、目标槽为永久组件时，按最终槽位校验后消费两件并生成一件新永久物品，顺序 `itemCombined → itemEquipped → 必需的临时装备规划`。窃贼独占三槽且父实例归一槽 0；不拆卸、不跨单位取件、不替换成装。失败原 state、无 events、无 ID/RNG/序号变化。预览可选 `combination`、全部导出签名和失败枚举见 §17.1。
+
+战中新装备下场生效，当前 combat/combatInputBasis、HP/护盾/数值/触发器/战斗随机流完全不变。冻结前缀保存已被运营合成消费的旧物品身份。结算使用 latest live state、只提交本场合法成长与唯一奖励，装备不得反向计入本场收益；战后合并迁移最新装备。
+
+单人四阶段 serializeMatch→restoreMatch→续算仍通过 b8-restore 与 resource-provenance，允许合法组合 suffix，保留出生/配方/所有权/序号/奖励顺序/冻结非装备数据约束。新 CONTENT_DIGEST `fnv1a32-utf16:44fe9c0e`；LOOT_REPLAY_DIGEST `fnv1a32-utf16:7b14bfba` 不变。旧 content digest 拒绝，不迁移或补账；外层格式不变。联机恢复仅采用用户已选 B 的冻结输入恢复与未中断席位结算，不新增联机存档合同。

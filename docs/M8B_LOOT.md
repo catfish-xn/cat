@@ -392,7 +392,7 @@ next=(1664525×state+1013904223) mod 2^32；U=4294967296，limit=floor(U/n)×n�
 | 每席 reforge | (seatMatchSeed XOR 0x52454647)>>>0；仅成功重铸依命令线性顺序消费。不得借 loot/equipment/shop/battle 流 |
 | equipment | 沿 T12 窃贼父实例与轮次的唯一 roll；新父件需要时才规划，读预览/重连不抽 |
 
-单人以 match seed 为 layout seed。多人 layout 属对局私有权威账本，席位只绑定同一模板身份，不靠各席内容 RNG 碰巧一致。恢复重演用于验证已存结果，不推进现存 draws。具体公开入口与首次初始化见 [联机合同 §17](MULTIPLAYER_CONTRACT.md#17-r3r4-掉落系统合同草案未签字)。
+单人以 match seed 为 layout seed。多人 layout 属对局私有权威账本，席位只绑定同一模板身份，不靠各席内容 RNG 碰巧一致。恢复重演用于验证已存结果，不推进现存 draws。具体公开入口与首次初始化见 [联机合同 §18](MULTIPLAYER_CONTRACT.md#18-r3r4-掉落系统合同草案未签字)。
 
 按 sourceUnitId 代码点 → slotOrdinal 数值 → entryOrdinal 数值冻结内容（不是上表展示顺序或击杀顺序）。每珠 entryOrdinal 从 0 开始，固定字段次序：灰珠「英雄/金币、拆卸器、可选重铸器」；单工具灰珠仅工具；蓝珠「组件 A、组件 B（如有）」；金珠「组件 A、组件 B、金币」；棱彩「成装、金币、组件重铸器、成装重铸器」。缺省 entry 不生成占位；工具类别 none 仍消费类别抽样词。灰珠先收益类别、再英雄（如有）、最后工具类别；固定项不抽。
 
@@ -433,6 +433,6 @@ gameOver、已淘汰、敌人/镜像/召唤物/野怪、非本人或已消费资
 
 窃贼父件拆卸/重铸会注销运营层临时子项；当前战斗继续使用冻结子项。拆卸后同父件同轮重穿复用已有 roll；重铸出的新父件首次需要时规划一次，不能把临时子件变永久掉落。旧装备历史保留给冻结输入引用。
 
-失败按 [联机合同 §17.5](MULTIPLAYER_CONTRACT.md#175-失败枚举与原子性草案)：wrong-phase、unknown-consumable、temporary-item、unknown-item、unknown-unit、invalid-consumable-target、no-removable-items；共享绑定/网络错误另列。先校验阶段/身份/目标和完整事务，后抽样及分配 ID。失败返回原 state/pool 引用，无事件、无 RNG/ID/revision 消耗【L1/P】。
+失败按 [联机合同 §18.5](MULTIPLAYER_CONTRACT.md#185-失败枚举与原子性草案)：wrong-phase、unknown-consumable、temporary-item、unknown-item、unknown-unit、invalid-consumable-target、no-removable-items；共享绑定/网络错误另列。先校验阶段/身份/目标和完整事务，后抽样及分配 ID。失败返回原 state/pool 引用，无事件、无 RNG/ID/revision 消耗【L1/P】。
 
 消费记录保存工具 ID、目标身份、旧/新定义、输出 ID、命令顺序和 reforge draws 前后；拆卸保存全部迁移项。重铸来源连回原装备与工具授予，不生成 LootReceipt。恢复分别验证冻结前缀和最新合法装备后缀、唯一消费及排除原定义的重演，不以删除来源校验解决 T12/R4 差异。联机恢复以 T12 最终签收合同为前置；不将单人恢复器剥离 sharedPool 后冒用。

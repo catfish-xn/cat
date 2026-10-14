@@ -31,7 +31,7 @@ import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
-import { EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT } from '../presentation/equipment-feedback';
+import { EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipmentFailureText } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 
 declare global {
@@ -169,8 +169,8 @@ export class BoardScene extends Phaser.Scene {
       highlight: ids => { this.previewHighlight = new Set(ids); },
       state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
-      combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成'),
-      equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效'),
+      combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成', true),
+      equip: (item, unit, slot) => this.command(this.session.equip(item, unit, slot), '装备已穿戴 · 将在下次战斗生效', true),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
       rerollAnomaly: (choice, generation) => this.command(this.session.anomalyReroll(choice, generation), '异常选项已刷新 · 扣除 1 金币'),
@@ -199,7 +199,11 @@ export class BoardScene extends Phaser.Scene {
       refresh, clearInput: () => this.clearCombatEffects(), status: message => this.setStatus(message), changed: change => this.observeStats(change),
       confirmed: commands => this.confirmed(commands.map(command => command.commandId), commands.flatMap(command => command.events)),
       serverEvents: events => this.serverEvents(events),
-      refused: (commandId, reason, text) => { this.pendingSuccess.delete(commandId); this.setStatus(text ?? this.failureMessage(reason ?? 'wrong-phase')); },
+      refused: (commandId, reason, text) => {
+        this.pendingSuccess.delete(commandId);
+        const equipment = this.pendingEquipment.delete(commandId);
+        this.setStatus(text ?? (equipment ? this.equipmentFailure(reason ?? 'wrong-phase') : this.failureMessage(reason ?? 'wrong-phase')));
+      },
     }, mounts) : new MatchApplication(this.session, {
       replace: session => {
         this.clearCombatEffects(); this.session = session; this.selectedId = null;
@@ -421,7 +425,8 @@ export class BoardScene extends Phaser.Scene {
   private endText(): string {
     return this.online ? '对局结束 · 查看排名' : `${this.session.state.outcome === 'victory' ? '胜利 · 最终挑战完成' : '失败 · 对局结束'}，点击 新局 重开`;
   }
-  private failureMessage(reason: MatchFailure): string {
+  private failureMessage(reason: MatchFailure): string { return this.knownFailure(reason) ?? `操作被拒绝（${reason}）`; }
+  private knownFailure(reason: string): string | undefined {
     const messages: Record<MatchFailure, string> = {
       'wrong-phase': this.benchOps() ? '战斗与结算期间只能操作商店和备战席 · 棋盘单位请在下个准备阶段调整'
         : this.session.phase === 'preparation' ? (this.online ? '当前不能执行该操作 · 倒计时结束自动开战' : '当前为准备阶段 · 请布阵或开始战斗')
@@ -445,22 +450,28 @@ export class BoardScene extends Phaser.Scene {
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
     // Online shared-pool refusals (pool-empty, empty-slot, ...) arrive through the same path but are not MatchFailures.
-    return messages[reason] ?? POOL_REFUSAL_TEXT[reason] ?? `操作被拒绝（${reason}）`;
+    return (messages as Partial<Record<string, string>>)[reason] ?? POOL_REFUSAL_TEXT[reason];
   }
   /** Success text of each command still waiting for its server receipt (online WebSocket only). */
   private pendingSuccess = new Map<number, string>();
+  /** Pending combine/equip commands: a refusal is named by the equipment wording table, like the previews. */
+  private pendingEquipment = new Set<number>();
+  /** Equipment refusal: the shared preview wording for every equipment code (unknown codes get its generic text). */
+  private equipmentFailure(reason: string): string {
+    return reason in EQUIPMENT_FAILURE_TEXT ? equipmentFailureText(reason) : this.knownFailure(reason) ?? equipmentFailureText(reason);
+  }
   private confirmed(commandIds: readonly number[], events: readonly MatchEvent[]) {
     const success = commandIds.map(id => this.pendingSuccess.get(id)).filter((text): text is string => !!text).at(-1) ?? '操作已确认';
-    for (const id of commandIds) this.pendingSuccess.delete(id);
+    for (const id of commandIds) { this.pendingSuccess.delete(id); this.pendingEquipment.delete(id); }
     if (this.selectedId !== null && !this.state.units.some(unit => unit.id === this.selectedId)) this.selectedId = null;
     this.command({ ok: true, state: this.session.state, events }, success);
   }
-  private command(result: MatchCommandResult, success: string) {
+  private command(result: MatchCommandResult, success: string, equipment = false) {
     if (!result.ok) {
       // Online over a socket the command is pending (or the connection is down): no local change, no rule failure.
       const notice = this.session instanceof RemoteSession ? this.session.takeNotice() : null;
-      if (notice?.kind === 'pending') { this.pendingSuccess.set(notice.commandId, success); this.setStatus('待确认…'); return; }
-      this.setStatus(notice?.kind === 'offline' ? notice.text : this.failureMessage(result.reason)); return;
+      if (notice?.kind === 'pending') { this.pendingSuccess.set(notice.commandId, success); if (equipment) this.pendingEquipment.add(notice.commandId); this.setStatus('待确认…'); return; }
+      this.setStatus(notice?.kind === 'offline' ? notice.text : equipment ? this.equipmentFailure(result.reason) : this.failureMessage(result.reason)); return;
     }
     this.clearCombatEffects();
     if (this.session.phase !== 'preparation' && !this.benchOps()) this.selectedId = null;
@@ -499,7 +510,7 @@ export class BoardScene extends Phaser.Scene {
   private reconcileTokens() {
     const view = this.session.combatView, fighting = new Set(view?.units.map(unit => unit.id));
     // While a battle is shown it stands in for the board. A two-sided (PvP) replay names my units by their
-    // battle ids (contract §13.5, mapping stays on the server), so a board unit it does not name is shown
+    // battle ids (contract §10.2; only my own unit mapping reaches the client, C15), so a board unit it does not name is shown
     // by its combat unit only, never as a second token at its preparation cell (C10).
     const units = this.state.units.filter(unit => !view || unit.location.kind !== 'board' || fighting.has(unit.id));
     const ids = new Set(units.map(unit => unit.id));
@@ -517,10 +528,13 @@ export class BoardScene extends Phaser.Scene {
       this.namedObjects.delete(`unit:${id}`);
       if (this.selectedId === id) this.selectedId = null;
     }
-    const items = this.session.state.items;
+    const items = this.session.state.items, session = this.session;
+    // C15: a PvP replay names my units by battle id; the server's own-unit mapping says whose items each one carries.
+    const ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
     for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
-      const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
+      const owner = ownerOf(unit.id);
+      const equipped = items.filter(item => item.location.kind === 'unit' && item.location.unitId === owner)
         .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
       this.views.get(unit.id)!.update(unit, equipped);
     }
@@ -604,7 +618,7 @@ export class BoardScene extends Phaser.Scene {
     this.startHint.setText(ready ? (failure ? this.failureMessage(failure) : getPlayerDeploymentCount(this.state) === 0 ? '空阵容出战：立即战败\n仍获收入与经验，但会扣 HP' : '阵容就绪，可以开始\n蓝条满后自动施法\n白色盾环吸收伤害') : '');
     this.phaseLabel.setText(this.onlineEnded() ? this.endText() : ready ? '准备阶段 · 购买 / 出售 / 布阵，再开始战斗。'
       : match.phase === 'choice' ? '构筑选择 · 完成组件 / 强化 / 异常 后继续'
-      : match.phase === 'combat' ? (this.online ? '自动战斗 · 可购买 / 刷新 / 买经验，备战席可整理；棋盘已锁定' : '自动战斗 · 积累法力 并施法，商店与部署已锁定')
+      : match.phase === 'combat' ? (this.online ? '自动战斗 · 可购买 / 刷新 / 买经验，备战席可整理；装备以单位提示为准' : '自动战斗 · 积累法力 并施法，商店与部署已锁定')
       : match.phase === 'gameOver' ? this.endText() : '回合结算 · 收入与经验 已到账，继续进入下一回合');
     const result = match.roundResults.at(-1);
     if ((match.phase === 'settlement' || match.phase === 'gameOver') && result) {
@@ -783,7 +797,8 @@ export class BoardScene extends Phaser.Scene {
       tokens: [...this.tokens].map(([id, token]) => ({ id, x: token.x, y: token.y, screenX: client(token).x, screenY: client(token).y,
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
-        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip })),
+        starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip,
+        equipped: this.views.get(id)!.equipped })),
       health: meters('hp'), mana: meters('mana'),
       shields: meters('shield').map(meter => ({ ...meter, text: this.views.get(meter.id)!.shieldLabel.text, labelVisible: this.views.get(meter.id)!.shieldLabel.visible })),
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,

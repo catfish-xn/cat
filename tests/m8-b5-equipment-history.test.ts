@@ -27,7 +27,8 @@ function roundEight(equipped = true, history?: BattleHistory): MatchState {
     expect(state.phase).toBe('settlement');
     state = choices(accepted(nextRound(state, state.round)));
   }
-  expect(state.level).toBe(4);
+  // T11: 6 opening XP + 7 * 2 XP = 20 = 2 + 2 + 6 + 10, level 5.
+  expect([state.level, state.xp]).toEqual([5, 0]);
   while (state.level < 7) state = accepted(buyXp(state));
   return state;
 }
@@ -58,25 +59,25 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
       const state = roundEight();
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
       const raw = structuredClone(state), roll = raw.equipmentState.rolls.find(r => r.roundId === roundId)!;
-      expect(raw.roundResults[getCatalogRoundById('2-3').ordinal-1]).toMatchObject({ levelBefore: 3, levelAfter: 4 });
-      expect(roll.playerLevelSnapshot).toBe(4);
+      expect(raw.roundResults[getCatalogRoundById('2-2').ordinal-1]).toMatchObject({ levelBefore: 3, levelAfter: 4 });
+      expect(roll.playerLevelSnapshot).toBe(roundId === '2-4' ? 4 : 5);
       Object.assign(roll, { playerLevelSnapshot: 3 }); // Same low-level pool, unchanged pair/words.
       expect(() => validateEquipmentState(raw.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(42).equipment)).not.toThrow();
       rejectWithoutRepair(raw);
     });
-  it('uses levelBefore rather than passive levelAfter as the settled-round upper bound', () => {
+  it('rejects a roll above even the T12 post-settlement levelAfter bound', () => {
     const state = roundEight();
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     const raw = structuredClone(state);
-    expect(raw.roundResults[getCatalogRoundById('2-3').ordinal-1]).toMatchObject({ levelBefore: 3, levelAfter: 4 });
-    Object.assign(raw.equipmentState.rolls.find(r => r.roundId === '2-3')!, { playerLevelSnapshot: 4 });
+    expect(raw.roundResults[getCatalogRoundById('2-2').ordinal-1]).toMatchObject({ levelBefore: 3, levelAfter: 4 });
+    Object.assign(raw.equipmentState.rolls.find(r => r.roundId === '2-2')!, { playerLevelSnapshot: 5 });
     expect(() => validateEquipmentState(raw.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(42).equipment)).not.toThrow();
     rejectWithoutRepair(raw);
   });
   it('preserves a legal pre-F roll through current, settled and historical save/restore', () => {
     let state = roundEight();
     const roll = structuredClone(state.equipmentState.rolls.find(r => r.roundId === '3-1')!);
-    expect(roll.playerLevelSnapshot).toBe(4); expect(state.level).toBe(7);
+    expect(roll.playerLevelSnapshot).toBe(5); expect(state.level).toBe(7);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     state = settle(state);
     expect(state.roundResults[getCatalogRoundById('3-1').ordinal-1]).toMatchObject({ levelBefore: 7, levelAfter: 7 });
@@ -90,7 +91,7 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
     let state = roundEight(false);
     expect(state.equipmentState.rolls).toEqual([]);
     state = accepted(equipItem(state, 'item-3', 'unit-1', 0));
-    expect(state.roundResults[getCatalogRoundById('2-7').ordinal-1].levelAfter).toBe(4);
+    expect(state.roundResults[getCatalogRoundById('2-7').ordinal-1].levelAfter).toBe(5);
     expect(state.equipmentState.rolls[0]).toMatchObject({ roundId: '3-1', playerLevelSnapshot: 7 });
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     state = settle(state);

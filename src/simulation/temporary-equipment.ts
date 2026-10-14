@@ -57,9 +57,10 @@ export function validateMatchEquipment(state: Readonly<MatchState>): void {
       || round < 0 || round < previousRound || roll.playerLevelSnapshot < MATCH_RULES.initialLevel || roll.playerLevelSnapshot > state.level) {
       throw new Error('Invalid equipment parent/round/level');
     }
-    // F may raise the level after the first roll; settlement XP occurs after all rolls in that round.
+    // T12 permits a new parent after settlement XP. Frozen combat parents are
+    // separately bounded by the start level in restoreCombatInput.
     const startingLevel = round === 0 ? MATCH_RULES.initialLevel : state.roundResults[round - 1].levelAfter;
-    const lastRollLevel = state.roundResults[round]?.levelBefore ?? state.level;
+    const lastRollLevel = state.roundResults[round]?.levelAfter ?? state.level;
     if (roll.playerLevelSnapshot < startingLevel || roll.playerLevelSnapshot > lastRollLevel) {
       throw new Error('Invalid equipment round level');
     }

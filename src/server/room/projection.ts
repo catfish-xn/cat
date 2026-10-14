@@ -10,7 +10,7 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
 } from '../../server-entry';
-import type { PublicBoard, PublicBoardUnit } from '../protocol';
+import type { PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -85,7 +85,11 @@ export function seatPushEvents(seat: SeatState): readonly MatchEvent[] {
   return pushed.events.filter(event => PUSHED_EVENT_TYPES.has(event.type) && !('tick' in event));
 }
 
-export interface SeatReplay { readonly battleId: string; readonly replay: CombatReplay }
+/**
+ * `unitIds` (C15): my own units of this battle, battle id → original id, from the rules' BattleIdMapping (`kind: 'unit'`,
+ * my seatId only). Empty for a PvE battle, whose replay already names my units by their original ids.
+ */
+export interface SeatReplay { readonly battleId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
 
 /**
  * One replay per battle, built on first request and kept with the (immutable) battle result it came from:
@@ -121,13 +125,18 @@ function replayOf(battle: BattleResult, seatId: string): SeatReplay | null | und
     if (!outcome) return undefined;
     const combat = outcome.combat;
     if (combat === null) return null;
-    return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(combat)) };
+    return { battleId: battle.battleId, replay: cached(replays, outcome, () => toCombatReplay(combat)), unitIds: [] };
   }
   if (!battle.participants.includes(seatId)) return undefined;
   const replay = cached(replays, battle, () => toCombatReplay(battle.battle));
-  if (battle.battle.a.seatId === seatId) return { battleId: battle.battleId, replay };
-  if (battle.battle.b.seatId === seatId) return { battleId: battle.battleId, replay: cached(mirroredReplays, battle, () => mirrorCombatReplay(replay)) };
+  if (battle.battle.a.seatId === seatId) return { battleId: battle.battleId, replay, unitIds: ownUnitIds(battle, seatId) };
+  if (battle.battle.b.seatId === seatId) return { battleId: battle.battleId, replay: cached(mirroredReplays, battle, () => mirrorCombatReplay(replay)), unitIds: ownUnitIds(battle, seatId) };
   return null;
+}
+/** C15: the rules' own mapping, filtered to this seat's units; read as given, never derived from the battle id string. */
+function ownUnitIds(battle: Extract<BattleResult, { kind: 'two-sided' }>, seatId: string): readonly ReplayUnitId[] {
+  return battle.battle.mapping.filter(entry => entry.kind === 'unit' && entry.seatId === seatId)
+    .map(entry => ({ combatId: entry.combatId, originalId: entry.originalId }));
 }
 /**
  * Builds and caches the replays of one freshly resolved battle for the given seats ahead of the push (B8), so the

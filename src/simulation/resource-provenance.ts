@@ -320,7 +320,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
     } else if (entry.kind === 'item-combined') {
       keys(entry, [...common, 'event']); keys(entry.event, ['type', 'consumedIds', 'itemId', 'definitionId']);
-      requireValue(round.kind !== 'supply' && !commits.has(entry.roundId), 'combination phase');
+      // T12 permits combinations before/after settlement and during supply choices.
+      // Input ownership, recipe, consumption and serial checks remain mandatory below.
       const event = entry.event; nonempty(event.definitionId);
       requireValue(event.type === 'itemCombined' && Array.isArray(event.consumedIds) && event.consumedIds.length === 2
         && compareCodePoints(event.consumedIds[0], event.consumedIds[1]) < 0, 'combination inputs');
@@ -340,7 +341,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(start <= index && Array.isArray(entry.sourceDeltas), 'combat start prefix');
       requireValue(start <= (firstLootBirth.get(entry.roundId) ?? index), 'loot before combat start');
       const suffix = entries.slice(start, index);
-      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind === 'unit-upgraded'
+      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind === 'item-combined' || fact.kind === 'unit-upgraded'
         || (fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'loot')), 'combat resource suffix');
       requireValue(start === entries.length || entries[start]?.kind !== 'unit-upgraded', 'combat start transaction boundary');
       const originalUnits = unitPrefixes.get(start)!;

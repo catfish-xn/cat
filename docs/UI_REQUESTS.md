@@ -664,3 +664,24 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 - 建议：A 先行；用户若仍嫌首轮空，再做 B。
 - **用户决定（2026-10-13）：选 A。** 规则不改，Codex 无需动作。Claude 在联机面板状态行的首个准备期（`view.phase.round === 1`）追加"首轮 0 金币，1-2 战后到账 2 金币"，只改 `src/rendering/online/online-application.ts`。若以后 P-O01 的 1-2 收入改动，需同步这句文案。
 - 验收（B）：seed 42 单人与八席各一局，1-2 准备期金币等于新约定，可买一张 1 费卡；进入 2-1 时无操作基准仍为 10G、3 级、0XP；合同、版本号与 digest 同步更新。
+
+## C15 PvP 回放中我方单位的装备图标（2026-10-13，Claude 流水线 B/C）
+
+### SR-C15-01 回放推送附带本席单位映射（已解决，服务器侧，无规则改动）
+
+- 状态：**已解决**（分支 `claude/c15-replay-equipment`，基线 `multiplayer@25dae94`）。只改 `src/server/`、`src/rendering/`、`src/presentation/`，不改 `src/simulation/`，不需要 Codex 动作。
+- 现象：PvP 回放的 `CombatViewState` 用战斗 ID（合同 §10.2：`JSON.stringify(['t2', seatId, kind, originalId])`）命名单位，客户端按它在本席 `items` 里查不到装备，我方回放单位不显示装备图标。合同要求查 `mapping`、不按字符串切割推断，客户端不解析战斗 ID。
+- 字段形状：`replay` 推送新增 `unitIds: readonly { combatId: string; originalId: string }[]`（类型 `ReplayUnitId`，`src/server/protocol.ts`）；同一字段在 `SeatReplay`（`toCombatReplayFor` 的返回值）上。
+  - 来源：`BattleResult.battle.mapping`（`BattleIdMapping`），只取 `kind === 'unit'` 且 `seatId` 为本席的条目，原样取 `combatId`/`originalId`。
+  - A 侧和镜像 B 侧都只拿自己的条目；镜像源席不是参与者，收不到这场回放。PvE（placeholder）回放本来就用原 ID，给空数组。
+  - 不下发对手条目，也不下发 item / temporary-item / augment / anomaly 条目。回放的 tick、事件、结果不变。
+- 客户端：`readReplayUnitIds`（`src/server/net/messages.ts`）做结构校验，只接受 `{combatId, originalId}` 非空字符串数组，缺失或格式错时返回 null，这时这一场回放不显示装备，战斗照常播放。`RemoteSession.equipmentOwnerId(id)` 把映射到的战斗 ID 换成原 ID，其他 ID 原样返回（查不到装备）；状态换到下一回合时映射随回放一起清空。`BoardScene` 按换出的原 ID 读本席 `items` 画装备。
+- 验收：`tests/server/c15-replay-unit-ids.test.ts`（A/B 侧各只拿到自己的单位映射、镜像战只给真实席、PvE 为空、对手及装备条目不出现、校验函数、RemoteSession 映射生命周期）；`projection-wire.test.ts` 核对线上 `unitIds` 与投影一致；`tests/server/e2e/c15-replay-equipment.mjs`：两名真人各给一个单位装一件装备进入 PvP，回放期间各自的战斗单位画出自己的装备，敌方单位不画。
+
+## T12 对 Claude 的接线说明（2026-10-14）
+
+规则与接口以 [MULTIPLAYER_CONTRACT §17](MULTIPLAYER_CONTRACT.md#17-t12战斗中装备永不锁定r22026-10-14) 为准。`src/server/room/room.ts` 的 `ROOM_COMMAND_GATE` 在 battle/awaiting-settlement/settlement 已放行 `equip`/`combine`，服务器不需改闸门；线上 equip 字段不变，继续在最新 live seat 提交事件，不覆盖冻结信封。
+
+界面改读 `previewEquip`：它在 preparation/combat/choice/settlement 均给出己方棋盘/备战席真实合法结果，含永久单位本场已阵亡的情况；组件对组件的成功预览可返回 `combination`，失败继续展示真实槽位/唯一/独占/配方原因。不要复用 deploy 的棋盘锁判断装备拖放。同步更新 `strategy-panel.ts` 两处“战斗中构筑/棋盘单位锁定”文案及拖放目标判断，清楚提示战中新装备下场生效。
+
+本场属性、血量、触发与回放继续读 CombatView；运营装备读现有 items/temporaryEquipment，不能把新装备加到本场伤害显示。未新增“本场使用装备 vs 运营装备”的权威投影字段，§14 白名单不变。无布局、颜色或视觉要求；买卖/部署的原锁定提示与规则保留。

@@ -39,6 +39,8 @@ export class UnitView {
   private portrait: Phaser.GameObjects.Image | null = null;
   private identity: HeroIdentity;
   private renderKey = '';
+  /** Item definition ids whose pips are drawn now, in slot order (debug/acceptance read). */
+  equipped: readonly string[] = [];
   ring: RingState = 'normal';
 
   constructor(private readonly scene: Phaser.Scene, unit: Unit, x: number, y: number) {
@@ -95,7 +97,7 @@ export class UnitView {
     // Monsters have no shop cost: no badge rather than the adapter's placeholder "1".
     this.costBadge.setFillStyle(toNumber(costColor(this.identity.cost))).setVisible(!this.identity.neutral);
     this.costText.setText(String(this.identity.cost)).setVisible(!this.identity.neutral);
-    this.items.clear();
+    this.items.clear(); this.equipped = [...equipped];
     equipped.forEach((definitionId, index) => {
       const completed = Boolean(ITEM_DEFINITIONS[definitionId]?.recipe);
       const x = -10 + index * 10;
