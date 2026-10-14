@@ -102,7 +102,11 @@ async function main() {
       const now = await read(page);
       const item = now.state.items.find(entry => entry.location.kind === 'inventory');
       const tokens = new Map(now.tokens.map(token => [token.id, token]));
-      const unit = mine(now.state).find(entry => entry.location.kind === 'board' && tokens.get(entry.id)?.visible);
+      // The healthiest unit still alive in the battle, so it is still standing when the drag ends (a unit that dies
+      // meanwhile hides its token and the drop finds no target).
+      const hp = new Map(now.combatView?.units.filter(entry => entry.alive).map(entry => [entry.id, entry.hp]));
+      const unit = mine(now.state).filter(entry => entry.location.kind === 'board' && tokens.get(entry.id)?.visible && hp.has(entry.id))
+        .sort((a, b) => hp.get(b.id) - hp.get(a.id))[0];
       const card = item && now.strategy?.bounds[`item:${item.id}`];
       if (!inBattle(now) || !item || !unit || !card) { await page.waitForTimeout(60); continue; }
 
@@ -138,9 +142,16 @@ async function main() {
       await page.mouse.move(from.centerX, from.centerY);
       await page.mouse.down();
       await page.mouse.move(to.screenX, to.screenY, { steps: 10 });
-      // The token walks during the battle: aim at where it stands now, then release at once.
-      const standing = (await read(page)).tokens.find(token => token.id === unit.id) ?? to;
-      await page.mouse.move(standing.screenX, standing.screenY);
+      // The token walks during the battle: aim at where it stands now until two reads agree, then release at once
+      // (the select/deselect clicks above take long enough for the replay to start moving it).
+      let standing = to;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const now = (await read(page)).tokens.find(token => token.id === unit.id) ?? standing;
+        await page.mouse.move(now.screenX, now.screenY);
+        const moved = Math.hypot(now.screenX - standing.screenX, now.screenY - standing.screenY) > 2;
+        standing = now;
+        if (!moved && attempt > 0) break;
+      }
       await page.mouse.up();
       const status = await page.evaluate(() => document.querySelector('.panel-status')?.textContent ?? '');
       const after = await read(page);
