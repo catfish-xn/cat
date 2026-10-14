@@ -1,14 +1,15 @@
 /**
- * C18-B server side of SR-C18-03 (contract §18.3 draft field names): the wire validator for `useConsumable`, the room
- * gate in the four operating phases, and the dispatch stub that refuses atomically until T13-B exports the rules entry.
- * When T13-B lands, only the dispatch body (src/server/room/consumables.ts) and the type imports change; these wire and
- * gate cases stay.
+ * C18-B server side of SR-C18-03 (contract §18.3/§18.8): the wire validator for `useConsumable`, the room gate in the
+ * four operating phases, the dispatch to the rules' shared transaction (atomic refusal, real success on the latest live
+ * seat) and the `consumable-used` receipt's event whitelist.
  */
 import { describe, expect, it } from 'vitest';
 import { NET_PROTOCOL_VERSION, parseClientMessage } from '../../src/server/net/messages';
 import { applySeatCommand, ROOM_COMMAND_GATE } from '../../src/server/room/room';
 import type { RoomPhase } from '../../src/server/room/types';
 import { makeRoom, runUntil } from './helpers';
+import { consumableReceiptEvents } from '../../src/server/room/projection';
+import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { RemoteSession } from '../../src/rendering/online/remote-session';
 import type { GameClient, WireCommand } from '../../src/rendering/online/protocol';
 import type { CombatReplay } from '../../src/server-entry';
@@ -48,7 +49,7 @@ describe('C18-B useConsumable room gate and dispatch', () => {
     const open: RoomPhase[] = ['preparation', 'choice', 'battle', 'awaiting-settlement', 'settlement'];
     for (const phase of Object.keys(ROOM_COMMAND_GATE) as RoomPhase[]) expect(ROOM_COMMAND_GATE[phase].has('useConsumable'), phase).toBe(open.includes(phase));
   });
-  it('dispatch refuses with unknown-consumable and hands back the input pool and state references', () => {
+  it('dispatch: a tool the seat does not hold is refused unknown-consumable with the input pool and state references', () => {
     const { room } = makeRoom();
     room.start();
     const seat = room.state.seats[0]!, pool = room.state.pool;
@@ -76,6 +77,46 @@ describe('C18-B useConsumable room gate and dispatch', () => {
     expect(room.handle('s0', { type: 'useConsumable', consumableId: 'tool-1', target: { kind: 'unit', unitId: 'unit-1' } })).toMatchObject({ ok: false, reason: 'wrong-phase' });
     expect(room.state).toBe(before);
   });
+});
+
+describe('C18-B useConsumable success through the room (§18.6)', () => {
+  it('a remover on a board unit wearing an item: applied on the live seat, items back with their ids, tool gone, pool shop untouched', () => {
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+    room.start();
+    // After the 1-4 battle a seat holds the gray orb's remover (§18 ORB_SLOTS); find one with an inventory item too.
+    const holder = () => room.state.seats.find(seat => seat.alive && seat.match.consumables.some(tool => tool.definitionId === 'magnetic-remover')
+      && seat.match.items.some(item => item.location.kind === 'inventory'));
+    runUntil(room, clock, state => state.phase === 'preparation' && holder() !== undefined, 4_000);
+    const seat = holder()!, seatId = seat.seatId;
+    const unit = seat.match.preparation.units.find(entry => entry.team === 'player' && entry.location.kind === 'board')!;
+    const item = seat.match.items.find(entry => entry.location.kind === 'inventory')!;
+    const equipped = room.handle(seatId, { type: 'equip', itemId: item.id, unitId: unit.id, slot: 0 });
+    expect(equipped).toMatchObject({ ok: true });
+    const live = () => room.state.seats.find(entry => entry.seatId === seatId)!;
+    const worn = live().match.items.filter(entry => entry.location.kind === 'unit' && entry.location.unitId === unit.id).map(entry => entry.id);
+    const tool = live().match.consumables.find(entry => entry.definitionId === 'magnetic-remover')!, tools = live().match.consumables.length;
+    const shopsBefore = room.state.pool.shops, availableBefore = room.state.pool.available, revision = live().seatRevision;
+    const used = room.handle(seatId, { type: 'useConsumable', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id } });
+    expect(used).toMatchObject({ ok: true });
+    if (!used.ok) return;
+    const after = live().match;
+    expect(worn.length).toBeGreaterThan(0);
+    for (const id of worn) expect(after.items.find(entry => entry.id === id)?.location).toEqual({ kind: 'inventory' });
+    expect(after.consumables).toHaveLength(tools - 1);
+    expect(after.consumables.some(entry => entry.consumableId === tool.consumableId)).toBe(false);
+    expect(live().seatRevision).toBe(revision + 1);
+    expect(room.state.pool.shops).toEqual(shopsBefore); expect(room.state.pool.available).toEqual(availableBefore);
+    // The receipt's events: only the whitelisted operation events, in the rules' order, no provenance or RNG.
+    const receipt = consumableReceiptEvents(used.events);
+    expect(receipt.map(event => event.type)).toEqual(['itemsRemoved', 'consumableUsed']);
+    expect(receipt[0]).toMatchObject({ type: 'itemsRemoved', unitId: unit.id, itemIds: worn });
+    expect(receipt[1]).toMatchObject({ type: 'consumableUsed', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id }, effect: 'remove-all', outputItemId: null });
+    for (const event of receipt) expect(Object.keys(event).filter(key => /rng|provenance|source/i.test(key))).toEqual([]);
+    // A new commandId with the used tool: unknown-consumable, nothing published.
+    const before = room.state;
+    expect(room.handle(seatId, { type: 'useConsumable', consumableId: tool.consumableId, target: { kind: 'unit', unitId: unit.id } })).toMatchObject({ ok: false, reason: 'unknown-consumable' });
+    expect(room.state).toBe(before);
+  }, 120_000);
 });
 
 describe('C18-B client send path', () => {

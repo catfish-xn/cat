@@ -84,7 +84,10 @@ export function lootRevealedSection(summary: RevealedLootSummary, labels: LootLa
 
 /** Settlement block: revealed rewards, the pending loot pick (identity only) and the domain's own Continue verdict. */
 export function lootPanelSection(view: LootView, labels: LootLabels): HTMLElement {
-  const section = lootRevealedSection(view, labels, !view.pendingChoice);
+  return appendLootStatus(lootRevealedSection(view, labels, !view.pendingChoice), view, labels);
+}
+/** The settlement block's status lines under any drop list (C18-B: also under the orb cards): pick, Continue verdict, pending claims. */
+export function appendLootStatus(section: HTMLElement, view: LootView, labels: LootLabels): HTMLElement {
   section.dataset.canContinue = String(view.canContinue);
   // The open pick is never displayed as an owned item: only its source, until a receipt exists.
   if (view.pendingChoice) {

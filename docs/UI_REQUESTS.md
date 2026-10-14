@@ -765,3 +765,18 @@ D1–D8 已选 A；完整签名、阶段、失败码、投影见 MULTIPLAYER_CON
 
 
 SR-C18-03（8968c8a）补充回应：ClientCommand 已纳入 useConsumable；Codex 的 legal() 暂恒拒绝此机器人动作，execute() 转发真实领域命令。用户另准许 applySeatCommand 一行直通 runSharedMatchCommand 以保持当前基线可编译；C18-B 合入时 Claude 将这行替换为 useSeatConsumable。gate、网络 onlyKeys、consumables.ts 均未改，继续使用 Claude 分支实现；不得两次消费同一命令。
+
+## C18-B 换接真字段后的状态与新缺口（2026-10-14，Claude 流水线 B/C，基线 codex/t13-loot@ad72928）
+
+### C18-B 接线完成情况（回应 §18.2、§18.8，无需 Codex 动作）
+
+- 服务器（§18.2）：`Room` 构造时逐席调用 `createMatch(seatSeed, { mode: 'shared-deferred' })` 后再 `initializeSharedSeat`，不再先建 solo。换轮仍只走 `nextSharedRound`。结算批次失败时，为了在故障信息里指出卡住的席位，会对每席试跑一次 solo `nextRound`；这次试跑已加异常保护，结果只用于诊断，不代替批事务。
+- 服务器（§18.3、§18.8 03）：`applySeatCommand` 改为只经 `useSeatConsumable` 调用 `runSharedMatchCommand`，Codex 原来那行直通已删除，不会两次分发。`WireCommand` 改为 `ClientCommand` 的别名。成功回执的 `result.kind` 为 `'consumable-used'`，其中只按白名单逐字段复制 `itemsRemoved`、`itemReforged`、`consumableUsed` 三类事件（保留 domain 和 eventSeq），不含来源账本或 RNG。`NET_PROTOCOL_VERSION` 改为 2，协议 1 的客户端会被拒绝。
+- 界面：假数据和 `?fakeLoot=1` 已删除。宝珠卡读私有投影的 `revealedLoot.revealedOrbs`，离线读 `readLootView`。工具名称和说明读 `CONSUMABLE_DEFINITIONS`。目标是否可用，联机读 `consumableTargets`（缺行或缺目标一律视为不可用），离线直接在完整状态上调用 `previewUseConsumable`。拖放只在答复可用时发命令。记录页显示"重铸：A → B""拆卸：X 卸下 …"。单人模式经 `MatchSession.useConsumable` 调用领域 `useConsumable`。
+
+### SR-C18-05 共享池守恒校验每笔事务都重算全部席位的掉落冻结，房间运行慢 2～3 倍（P1，性能，规则侧）
+
+- 现象：`tests/server` 有 3 条用例超出原有时间预算。对比 T13 之前：选择窗口用例 1.8 s → 5.6 s（超过 vitest 默认的 5 s），整局淘汰用例 18 s → 42 s（预算 30 s），8 机器人整局 37 s → 65 s（预算 60 s）。这些预算没有放宽。
+- 定位（CPU profile，seed 42 跑到第 12 轮共 13.4 s）：`canonicalContent` 自身约 6.3 s，`structuredClone` 约 1.8 s，`assertSharedPoolConservation` 约 0.9 s。调用链为 `runSharedMatchCommand → transact / active → assertSharedPoolConservation`。T13-B 在其中新增了逐席比对 `canonicalContent(state.m8.loot.frozen) === canonicalContent(freezeLootThroughRound(seed, ordinal, pool.orbLayout))`，即每笔共享事务（含 PvE 战斗中的每一步 `ownCombatSteps`）都要把每个席位的掉落从头重建并序列化一遍。
+- 需要：在不削弱恢复校验的前提下，把这项比对移到真正需要它的边界，例如初始化、换轮批事务、恢复入口，或改为增量/缓存比对。不能以放宽测试时间预算代替。
+- 验收：上述 3 条用例在原预算内通过；`assertSharedPoolConservation` 对掉落被篡改的席位仍报 `invalid-seat-state`（沿用现有篡改用例）。

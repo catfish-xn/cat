@@ -4,10 +4,11 @@ import { toCombatViewState, toDisplayEvents, type CombatViewState, type DisplayC
 import {
   buyUnit, buyXp, createMatch, deployMatchUnit, matchStartFailure, nextRound, rerollShop,
   sellUnit, startMatchCombat, stepMatch, type MatchCommandResult, type MatchState,
-  combineItems, equipItem, selectChoice, selectAnomalyTarget, rerollAnomaly, setShopLock,
+  combineItems, equipItem, useConsumable, selectChoice, selectAnomalyTarget, rerollAnomaly, setShopLock,
 } from '../simulation/match';
 import type { MatchEvent } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
+import type { ConsumableTarget } from '../simulation/consumable-types';
 import type { SessionChange } from '../m6/contracts';
 
 /** Frame time belongs to rendering. Every game rule and transition belongs to Match. */
@@ -87,6 +88,8 @@ export class MatchSession {
   continue(round: number) { return this.paused ? this.blocked() : this.commit(nextRound(this.matchState, round)); }
   combine(a: string, b: string) { return this.paused ? this.blocked() : this.commit(combineItems(this.matchState, a, b)); }
   equip(itemId: string, unitId: string, slot: number) { return this.paused ? this.blocked() : this.commit(equipItem(this.matchState, itemId, unitId, slot)); }
+  /** C18-B (§18.1): one tool instance on one target; the rules decide everything and commit atomically. */
+  useConsumable(consumableId: string, target: ConsumableTarget) { return this.paused ? this.blocked() : this.commit(useConsumable(this.matchState, consumableId, target)); }
   choose(choiceId: string, generation: number, definitionId: string) { return this.paused ? this.blocked() : this.commit(selectChoice(this.matchState, choiceId, generation, definitionId)); }
   anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.paused ? this.blocked() : this.commit(selectAnomalyTarget(this.matchState, choiceId, generation, unitId)); }
   anomalyReroll(choiceId: string, generation: number) { return this.paused ? this.blocked() : this.commit(rerollAnomaly(this.matchState, choiceId, generation)); }

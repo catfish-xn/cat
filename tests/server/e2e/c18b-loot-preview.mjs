@@ -1,13 +1,19 @@
 /**
- * Work order C18-B (pre-wiring, fake data): the R3/R4 orb panel and the consumable shelf, driven by the local sample
- * behind `?fakeLoot=1` until T13-B projects the real §18.4 fields. Real game server (`?server=ws`), one human + bots.
+ * Work order C18-B: the R3/R4 orb panel and the consumable shelf on real data (MULTIPLAYER_CONTRACT §18.4/§18.8).
+ * Real game server (`?server=ws`), one human + seven bots.
  *
  *   npm run build:game && node tests/server/e2e/c18b-loot-preview.mjs
  *
- * Checks: after my first PvE battle (choice/settlement) the orb panel shows one card per tier (gray/blue/gold/prismatic)
- * with their entries, forfeited entries carry their reason (timeout-forfeited / eliminated-forfeited), and the panel is
- * marked as fake data; after a page reload (reconnect) in the same settlement it is still there; on the item tab the
- * consumable shelf lists the three tools, picking one shows its target hint and clicking a slot sends no command.
+ * 1. Orbs: after my first PvE battle has played out, the orb panel shows one card per `revealedLoot.revealedOrbs` entry
+ *    of my private state, in its order, with the server's tier and aggregate status and one row per referenced entry.
+ * 2. Reconnect: a reload in the same round shows the same cards again once the replayed battle has played out.
+ * 3. Forfeited entries: the page's own presenter (src/presentation/orb-loot.ts, loaded through Vite) renders a summary
+ *    with both forfeit reasons as struck-through rows with their reason (no live match can force a forfeit on demand).
+ * 4. Tools: in a preparation with a magnetic remover and an inventory item, the item is put on a board unit; during my
+ *    next battle the remover is dragged onto that unit's token. Then: one useConsumable is sent and confirmed
+ *    (`consumable-used`), the unit's items are back in the inventory with their ids, the tool is gone, the token keeps
+ *    the icons it fights with, and the record page has a "拆卸：" line. Picking a tool outlines only the targets the
+ *    server's consumableTargets allow.
  * Screenshots and report go to artifacts/c18b/ (not committed). C18B_VITE_PORT (5207) / C18B_WS_PORT (8799).
  */
 import { spawn } from 'node:child_process';
@@ -18,7 +24,8 @@ const ROOT = new URL('../../../', import.meta.url).pathname;
 const OUT = `${ROOT}artifacts/c18b`;
 const VITE_PORT = Number(process.env.C18B_VITE_PORT ?? 5207);
 const WS_PORT = Number(process.env.C18B_WS_PORT ?? 8799);
-const URL_ = `http://127.0.0.1:${VITE_PORT}/?mode=online&server=ws&ws=ws://127.0.0.1:${WS_PORT}&fakeLoot=1`;
+const BASE = `http://127.0.0.1:${VITE_PORT}/`;
+const URL_ = `${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${WS_PORT}`;
 const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 mkdirSync(OUT, { recursive: true });
 
@@ -38,103 +45,153 @@ const failures = [];
 const check = (condition, message) => { if (condition) console.log(`ok  ${message}`); else { console.log(`FAIL ${message}`); failures.push(message); } };
 const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
 const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
+const status = page => page.evaluate(() => document.querySelector('.panel-status')?.textContent ?? '');
+const mine = state => state.preparation.units.filter(unit => unit.team === 'player');
+const inventory = state => state.items.filter(item => item.location.kind === 'inventory');
+const wornBy = (state, unitId) => state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId);
+const inBattle = s => s?.m6?.phase?.kind === 'combat' && s.state.phase === 'combat';
+const inPreparation = s => s?.m6?.phase?.kind === 'preparation' && s.state.phase === 'preparation';
 const orbPanel = page => page.evaluate(() => {
   const panel = document.querySelector('[data-debug="orb-loot"]');
   if (!panel) return null;
-  return { fake: Boolean(panel.querySelector('.fake-tag')),
-    orbs: Array.from(panel.querySelectorAll('[data-debug^="orb:"]')).map(card => ({ tier: card.dataset.tier ?? null, status: card.dataset.status ?? null,
-      entries: Array.from(card.querySelectorAll('.orb-entry')).map(entry => ({ status: entry.dataset.status, reason: entry.dataset.reason ?? null, title: entry.title })) })) };
+  return Array.from(panel.querySelectorAll('[data-debug^="orb:"]')).map(card => ({ orbId: card.dataset.debug.slice(4), tier: card.dataset.tier ?? null, status: card.dataset.status ?? null,
+    entries: Array.from(card.querySelectorAll('.orb-entry')).map(entry => ({ dropId: entry.dataset.debug.slice(10), status: entry.dataset.status, reason: entry.dataset.reason ?? null, title: entry.title })) }));
 });
+const expectedCards = loot => loot.revealedOrbs.map(orb => ({ orbId: orb.orbId, tier: orb.tier, status: orb.status, entries: orb.entryDropIds.filter(id => loot.revealedDrops.some(drop => drop.dropId === id)) }));
+const sameCards = (shown, loot) => JSON.stringify(shown?.filter(card => card.orbId !== 'other').map(card => ({ ...card, entries: card.entries.map(entry => entry.dropId) }))) === JSON.stringify(expectedCards(loot));
 
 const report = {};
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '30', CAT_BOT_STEP_MS: '150' }, /listening on/);
+  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '8', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '20', CAT_BOT_STEP_MS: '150' }, /listening on/);
   await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
   const browser = await chromium.launch({ executablePath });
-  const errors = [], sent = [];
+  const errors = [], sent = new Map(), receipts = new Map();
   try {
+    // Tall enough for the item bench, the equipment rows and the board together (see c16).
     const context = await browser.newContext({ viewport: { width: 1440, height: 2200 } });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
-    page.on('websocket', socket => socket.on('framesent', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'command') sent.push(m.command); } catch { /* ignore */ } }));
+    page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
+    page.on('websocket', socket => {
+      socket.on('framesent', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'command') sent.set(m.commandId, m.command); } catch { /* ignore */ } });
+      socket.on('framereceived', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'receipt' && sent.has(m.commandId)) receipts.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); } catch { /* ignore */ } });
+    });
     await page.goto(URL_);
     await page.waitForSelector('[data-debug="online:join"]');
-    await page.fill('[data-debug="online:name"]', '宝珠预览'); await page.click('[data-debug="online:join"]');
+    await page.fill('[data-debug="online:name"]', '宝珠'); await page.click('[data-debug="online:join"]');
     await page.click('[data-debug="online:start"]');
+    const answered = new Set();
+    async function answerChoice(s) {
+      const choice = s.state.phase === 'choice' ? s.state.pendingChoice : null;
+      if (choice && !answered.has(`${choice.choiceId}:${choice.generation ?? 0}`)) { answered.add(`${choice.choiceId}:${choice.generation ?? 0}`); await click(page, `choice:${choice.offers[0]}`); }
+    }
 
-    // 1. The first settlement (or choice) after a PvE battle shows the sample orb panel.
-    const deadline = Date.now() + 4 * 60_000;
-    let panel = null, state = null;
-    while (!panel) {
-      if (Date.now() > deadline) throw new Error('no settlement with the orb panel');
-      state = await read(page).catch(() => null);
-      if (state?.state && (state.state.phase === 'settlement' || state.state.phase === 'choice') && state.state.m8.round.kind === 'pve') panel = await orbPanel(page);
-      if (!panel) await page.waitForTimeout(100);
+    // 1. The first PvE round whose orbs are shown after the battle has played out.
+    let deadline = Date.now() + 5 * 60_000, shown = null, loot = null, round = null;
+    while (!shown) {
+      if (Date.now() > deadline) throw new Error('no PvE round with revealed orbs');
+      const s = await read(page).catch(() => null);
+      if (!s?.state) { await page.waitForTimeout(100); continue; }
+      await answerChoice(s);
+      const candidate = s.state.revealedLoot;
+      const played = !s.replay?.playingBack && !inPreparation(s);
+      if (played && candidate?.revealedOrbs?.length) { const panel = await orbPanel(page); if (panel?.length) { shown = panel; loot = candidate; round = s.state.round; } }
+      if (!shown) await page.waitForTimeout(100);
     }
     await page.screenshot({ path: `${OUT}/orb-panel.png` });
-    report.panel = panel;
-    check(panel.fake, 'the panel says it shows fake data');
-    check(JSON.stringify(panel.orbs.map(orb => orb.tier)) === JSON.stringify(['gray', 'blue', 'gold', 'prismatic']), `one card per tier (${panel.orbs.map(orb => orb.tier)})`);
-    const forfeited = panel.orbs.flatMap(orb => orb.entries).filter(entry => entry.status === 'forfeited');
-    check(forfeited.some(entry => entry.reason === 'timeout-forfeited' && entry.title.includes('超时')) && forfeited.some(entry => entry.reason === 'eliminated-forfeited' && entry.title.includes('淘汰')),
-      `forfeited entries show both reasons (${JSON.stringify(forfeited)})`);
+    report.orbs = { round, loot, shown };
+    check(sameCards(shown, loot), `round ${loot.roundId}: one card per revealed orb, in order, with the server's tier/status and entries (${shown.map(card => `${card.tier}:${card.status}:${card.entries.length}`).join(' ')})`);
 
-    // 2. Reconnect in the same settlement: the panel is shown again.
-    const round = state.state.round;
+    // 2. Reconnect in the same round: the same cards come back once the replayed battle has played out.
     await page.reload();
-    let again = null, last = null;
-    const reconnect = Date.now() + 25_000;
-    while (!again && Date.now() < reconnect) {
+    let again = null;
+    deadline = Date.now() + 25_000;
+    while (!again && Date.now() < deadline) {
       const s = await read(page).catch(() => null);
-      last = s?.state ? { round: s.state.round, phase: s.state.phase, mode: s.m6?.mode } : last;
-      // A reconnect replays my battle first; the panel returns once it has played out (C18-B).
-      if (s?.state?.round === round) again = await orbPanel(page);
+      if (s?.state?.round === round && !s.replay?.playingBack && s.state.revealedLoot?.revealedOrbs?.length) again = await orbPanel(page);
       if (!again) await page.waitForTimeout(100);
     }
-    report.reconnect = again ?? last;
-    check(again && again.orbs.length === 4, `after a reload in round ${round} the orb panel is back (${again?.orbs.length ?? JSON.stringify(last)})`);
+    report.reconnect = again;
+    check(again !== null && JSON.stringify(again) === JSON.stringify(shown), `after a reload in round ${round} the same orb cards are back (${again?.length ?? 'none'})`);
 
-    // 3. Item tab: the shelf; a real click picks a tool (hint + outlined targets); real drags onto a board piece and an
-    //    equipment row name the target and say the use is not wired yet; nothing is sent.
-    await click(page, 'panel:items'); await page.waitForTimeout(150);
-    const tools = await page.evaluate(() => Array.from(document.querySelectorAll('[data-debug^="consumable:"]')).map(node => node.dataset.consumableDef));
-    report.tools = tools;
-    check(JSON.stringify(tools) === JSON.stringify(['magnetic-remover', 'component-reforger', 'completed-reforger']), `the shelf lists the three tools (${tools})`);
-    const status = () => page.evaluate(() => document.querySelector('.panel-status')?.textContent ?? '');
-    const bounds = async name => (await read(page)).strategy.bounds[name];
-    const before = sent.length;
-    const remover = await bounds('consumable:fake-tool-1');
-    await page.mouse.click(remover.centerX, remover.centerY); await page.waitForTimeout(150);
-    const hint = await page.evaluate(() => document.querySelector('[data-debug="consumable-hint"]')?.textContent ?? '');
-    const candidates = await page.evaluate(() => document.querySelectorAll('.equipment-row.consumable-candidate').length);
-    check(hint.includes('拖到我方单位') && hint.includes('§18.1'), `clicking the remover picks it: hint names its target and the pending contract ("${hint}")`);
-    check(candidates > 0, `unit rows are outlined as remover targets (${candidates})`);
-    const slot = await page.evaluate(() => { const node = document.querySelector('[data-equip-unit]'); return node ? node.dataset.debug : null; });
-    if (slot) { const box = await bounds(slot); await page.mouse.click(box.centerX, box.centerY); await page.waitForTimeout(150); }
-    const slotStatus = await status();
-    check(slotStatus.includes('磁力拆卸器 →') && slotStatus.includes('待接线'), `a slot click with the remover picked names the target, sends nothing ("${slotStatus}")`);
-    await page.mouse.click(remover.centerX, remover.centerY); await page.waitForTimeout(150); // unpick
+    // 3. Forfeited rows from the page's own presenter.
+    const forfeited = await page.evaluate(async () => {
+      const { orbLootSection } = await import('/src/presentation/orb-loot.ts');
+      const drop = (entryOrdinal, payload, status, reason) => ({ orbId: 'o', entryOrdinal, dropId: `o:${entryOrdinal}`, encounterId: 'e', sourceUnitId: 's', roundId: '2-7', payload, status,
+        receiptId: status === 'granted' ? 'r' : null, allowedActions: [], ...(reason ? { reason } : {}) });
+      const loot = { roundId: '2-7', revealedDrops: [drop(0, { kind: 'gold', quantity: 4 }, 'granted'), drop(1, { kind: 'unit', definitionId: 'irelia', quantity: 1 }, 'forfeited', 'timeout-forfeited'),
+        drop(2, { kind: 'consumable', definitionId: 'completed-reforger', quantity: 1 }, 'forfeited', 'eliminated-forfeited')],
+        revealedOrbs: [{ orbId: 'o', tier: 'prismatic', status: 'partially-claimed', entryDropIds: ['o:0', 'o:1', 'o:2'] }] };
+      const section = orbLootSection(loot, { sourceName: () => '野怪' });
+      return Array.from(section.querySelectorAll('.orb-entry')).map(row => ({ status: row.dataset.status, reason: row.dataset.reason ?? null, title: row.title, text: row.textContent }));
+    });
+    report.forfeited = forfeited;
+    check(forfeited.length === 3 && forfeited[1].reason === 'timeout-forfeited' && forfeited[1].title.includes('超时') && forfeited[2].reason === 'eliminated-forfeited' && forfeited[2].title.includes('淘汰')
+      && forfeited[2].text.includes('成装重铸器'), `forfeited rows carry both reasons and the content table's tool name (${JSON.stringify(forfeited)})`);
 
-    async function dragTool(name, to) {
-      const from = await bounds(name);
+    // 4. Remover during my battle on a unit wearing an item.
+    let wearer = null, used = null;
+    deadline = Date.now() + 10 * 60_000;
+    while (!used) {
+      if (Date.now() > deadline) throw new Error(`timed out (${wearer ? 'no battle with the wearer standing' : 'no preparation with a remover and an inventory item'})`);
+      const s = await read(page).catch(() => null);
+      if (!s?.state) { await page.waitForTimeout(100); continue; }
+      await answerChoice(s);
+      const remover = (s.state.consumables ?? []).find(tool => tool.definitionId === 'magnetic-remover');
+      if (!remover) { await page.waitForTimeout(100); continue; }
+      if (!wearer || !s.state.items.some(item => item.location.kind === 'unit' && item.location.unitId === wearer)) {
+        if (!inPreparation(s)) { await page.waitForTimeout(100); continue; }
+        await click(page, 'panel:items'); await page.waitForTimeout(150);
+        const now = await read(page), item = inventory(now.state)[0];
+        const unit = mine(now.state).find(entry => entry.location.kind === 'board' && now.tokens.some(token => token.id === entry.id && token.visible));
+        if (!item || !unit || !now.strategy.bounds[`item:${item.id}`]) { await page.waitForTimeout(100); continue; }
+        // A click on the card selects it, a click on a slot equips it (C16 path).
+        const card = now.strategy.bounds[`item:${item.id}`]; await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(100);
+        const slot = (await read(page)).strategy.bounds[`equipment:${unit.id}:0`]; if (!slot) continue;
+        await page.mouse.click(slot.centerX, slot.centerY); await page.waitForTimeout(400);
+        if ((await read(page)).state.items.some(entry => entry.location.kind === 'unit' && entry.location.unitId === unit.id)) wearer = unit.id;
+        continue;
+      }
+      // My battle, early enough that the token still stands when the drag ends.
+      if (!(inBattle(s) && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 80 && (s.replay.tick ?? 0) < 30)) { await page.waitForTimeout(60); continue; }
+      await click(page, 'panel:items'); await page.waitForTimeout(150);
+      const now = await read(page), fighting = new Set(now.combatView?.units.map(unit => unit.id));
+      const token = now.tokens.find(entry => entry.owner === wearer && entry.visible && fighting.has(entry.id));
+      const card = now.strategy.bounds[`consumable:${remover.consumableId}`];
+      if (!token || !card) { await page.waitForTimeout(60); continue; }
+      // Picking the tool outlines exactly the units the server's consumableTargets allow.
+      await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(120);
+      const outlined = await page.evaluate(() => Array.from(document.querySelectorAll('.equipment-row.consumable-candidate')).map(row => row.dataset.unitId));
+      const allowed = now.state.consumableTargets.find(row => row.consumableId === remover.consumableId).targets.filter(entry => entry.allowed && entry.target.kind === 'unit').map(entry => entry.target.unitId);
+      await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(120); // unpick
+      const iconsBefore = token.equipped, items = wornBy(now.state, wearer).map(item => item.id), tools = now.state.consumables.length, before = new Set(sent.keys());
+      const from = (await read(page)).strategy.bounds[`consumable:${remover.consumableId}`];
       await page.mouse.move(from.centerX, from.centerY); await page.mouse.down();
-      await page.mouse.move(to.x, to.y, { steps: 8 }); await page.waitForTimeout(80);
-      const hover = await status();
-      await page.mouse.up(); await page.waitForTimeout(150);
-      return { hover, dropped: await status() };
+      await page.mouse.move(token.screenX, token.screenY, { steps: 8 });
+      const standing = (await read(page)).tokens.find(entry => entry.id === token.id) ?? token;
+      await page.mouse.move(standing.screenX, standing.screenY);
+      const hover = await status(page);
+      await page.mouse.up();
+      let receipt = null; const until = Date.now() + 5_000;
+      while (!receipt && Date.now() < until) { receipt = [...sent].filter(([id, command]) => !before.has(id) && command.type === 'useConsumable').map(([id]) => receipts.get(id)).find(Boolean) ?? null; if (!receipt) await page.waitForTimeout(50); }
+      await page.waitForTimeout(300);
+      const after = await read(page), tokenAfter = after.tokens.find(entry => entry.id === token.id);
+      await click(page, 'panel:events'); await page.waitForTimeout(150);
+      const record = await page.evaluate(() => document.querySelector('[data-debug="battle-record"]')?.textContent ?? '');
+      await page.screenshot({ path: `${OUT}/remover-in-battle.png` });
+      const commands = [...sent].filter(([id, command]) => !before.has(id) && command.type === 'useConsumable').map(([, command]) => command);
+      used = { round: now.state.roundDefinitionId, wearer, items, hover, receipt, commands, outlined, allowed, iconsBefore, iconsAfter: tokenAfter?.equipped, tools, toolsAfter: after.state.consumables.length, record: record.slice(0, 200) };
+      report.remover = used;
+      console.log(JSON.stringify(used));
+      check(JSON.stringify([...outlined].sort()) === JSON.stringify([...allowed].sort()), `picking the remover outlines exactly the allowed units (${outlined} vs ${allowed})`);
+      check(hover.includes('拆卸器 →') && hover.includes('将拆下') && !items.some(id => hover.includes(id)), `hovering the token names what will be removed, by item name ("${hover}")`);
+      check(commands.length === 1 && commands[0].consumableId === remover.consumableId && commands[0].target.kind === 'unit' && commands[0].target.unitId === wearer, `one useConsumable for ${wearer} (${JSON.stringify(commands)})`);
+      check(receipt === 'consumable-used', `the receipt is consumable-used (${receipt})`);
+      check(items.length > 0 && items.every(id => after.state.items.some(item => item.id === id && item.location.kind === 'inventory')), `the unit's items ${items.join(', ')} are back in the inventory with their ids`);
+      check(after.state.consumables.length === tools - 1, `the remover is used up (${tools} → ${after.state.consumables.length})`);
+      check(inBattle(after) && JSON.stringify(tokenAfter?.equipped) === JSON.stringify(iconsBefore), `the token keeps the icons it fights with (${iconsBefore} → ${tokenAfter?.equipped})`);
+      check(record.includes('拆卸：'), `the record page has a removal line ("${record.slice(0, 80)}")`);
     }
-    const snapshot = await read(page);
-    const mineIds = new Set(snapshot.state.preparation.units.filter(unit => unit.team === 'player').map(unit => unit.id));
-    const piece = snapshot.tokens.find(token => token.visible && mineIds.has(token.owner ?? token.id));
-    const onBoard = piece ? await dragTool('consumable:fake-tool-1', { x: piece.screenX, y: piece.screenY }) : null;
-    check(Boolean(onBoard?.hover.includes('磁力拆卸器 →') && onBoard.hover.includes('待接线')), `dragging the remover over my piece names it and says not wired ("${onBoard?.hover}")`);
-    check(Boolean(onBoard?.dropped.includes('未使用')), `dropping it uses nothing ("${onBoard?.dropped}")`);
-    const row = await page.evaluate(() => { const node = document.querySelector('.equipment-row'); if (!node) return null; const r = node.getBoundingClientRect(); return { x: r.left + 20, y: r.top + 10 }; });
-    const onRow = row ? await dragTool('consumable:fake-tool-2', row) : null;
-    check(Boolean(onRow?.hover.includes('组件重铸器 →') && onRow.hover.includes('待接线')), `dragging the reforger over a unit row names the target and leaves legality to the preview ("${onRow?.hover}")`);
-    await page.screenshot({ path: `${OUT}/consumable-drag.png` });
-    report.tool = { hint, candidates, slotStatus, onBoard, onRow };
-    check(sent.length === before, `no command was sent for any tool action (${JSON.stringify(sent.slice(before))})`);
     check(errors.length === 0, `no page errors (${errors.slice(0, 3).join(' | ')})`);
   } finally {
     writeFileSync(`${OUT}/report.json`, JSON.stringify({ ...report, failures }, null, 2));

@@ -13,7 +13,7 @@ import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '.
 import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
 import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
-import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type ConsumableFailure, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
 export { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION };
@@ -213,7 +213,7 @@ export interface RoomState {
   readonly poolRevision: number;
 }
 
-/** A seat command is any wire command (ClientCommand plus the draft useConsumable); the room dispatches it to the rules. */
+/** A seat command is exactly the wire ClientCommand (useConsumable included since T13-B); the room dispatches it to the rules. */
 export type SeatCommand = WireCommand;
 
 /**
@@ -224,5 +224,5 @@ export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 's
 export type RoomCommandResult =
   | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[]; readonly seatRevision: number; readonly roomRevision: number }
   /** `SharedPoolFailure` includes every MatchFailure plus the pool's own reasons (pool-empty, empty-slot, ...). */
-  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure | ConsumableFailure; readonly state: MatchState | null };
+  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure; readonly state: MatchState | null };
 export type { MatchCommandResult };

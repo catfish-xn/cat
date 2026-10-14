@@ -21,7 +21,6 @@ import {
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { useSeatConsumable } from './consumables';
-import type { ConsumableFailure } from '../protocol';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
 import { findPairing, planPairings } from './pairing';
@@ -95,7 +94,7 @@ const LIVE_COMBAT_MAX_STEPS = 5_000;
 /** One seat transaction: on success the pool and the seat state are published together; on failure both are the input references. */
 export type SeatCommandOutcome =
   | { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
-  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: SharedPoolFailure | ConsumableFailure };
+  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: SharedPoolFailure };
 
 /**
  * Pure dispatch to the rules; the room adds nothing. Shop commands and choices (which may award a unit) go through the
@@ -105,7 +104,6 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
   const plain = (result: MatchCommandResult): SeatCommandOutcome => result.ok
     ? { ok: true, pool, state: result.state, events: result.events } : { ok: false, pool, state: result.state, reason: result.reason };
   switch (command.type) {
-    case 'useConsumable': return runSharedMatchCommand(pool, state, command);
     case 'deploy': return plain(deployMatchUnit(state, command.unitId, command.target));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
     case 'sell': return sellSharedUnit(pool, state, command.unitId);
@@ -193,14 +191,15 @@ export class Room {
     validateSeed(options.seed);
     this.pvpMode = options.pvpMode ?? 'two-sided';
     this.checkConservation = options.assertPoolConservation ?? true;
-    // §12.2 opening, in order: create the pool → import eight unpublished `createMatch(seed)` openings by the fixed seat
-    // index 0–7 (this also enables the server mode of §11.1) → one fair first refresh → publish once. Any refusal
-    // throws before anything is published, so the whole proposal is discarded.
+    // §12.2 opening, in order: create the pool → import eight unpublished `createMatch(seed, shared-deferred)` openings by
+    // the fixed seat index 0–7 (this also enables the server mode of §11.1; §18.2: each seat is built shared-deferred,
+    // never solo-then-recoloured, and the first initializeSharedSeat freezes the room's orb layout in pool.orbLayout)
+    // → one fair first refresh → publish once. Any refusal throws before anything is published, so the whole proposal is discarded.
     let rngState = options.seed >>> 0;
     let pool = createSharedPool(options.roomId, options.seed >>> 0, options.poolCapacities ? { capacities: options.poolCapacities } : {});
     const imported = seats.map((spec, index) => {
       const draw = nextRandom(rngState); rngState = draw.state;
-      const joined = initializeSharedSeat(pool, createMatch(draw.word), spec.seatId, index);
+      const joined = initializeSharedSeat(pool, createMatch(draw.word, { mode: 'shared-deferred' }), spec.seatId, index);
       if (!joined.ok) throw new RangeError(`seat ${spec.seatId}: ${joined.reason}`);
       pool = joined.pool;
       return { spec, index, seed: draw.word, match: joined.state };
@@ -694,8 +693,10 @@ export class Room {
     const batch = nextSharedRound(this.current.pool, alive.map(seat => seat.match), alive[0]!.match.round);
     if (!batch.ok) {
       if (this.extensions < this.options.maxSettlementExtensions) { this.extensions++; return this.setPhase('settlement', this.options.settlementMs); }
-      // Name the seat the rules refuse to advance on its own (a dry run, nothing is published); the batch reason stays the rules' code.
-      const stuck = alive.find(seat => !nextRound(seat.match, seat.match.round).ok) ?? alive[0]!;
+      // Name the seat the rules refuse to advance on its own (a dry run, nothing is published, never used instead of the
+      // batch, §18.2); the batch reason stays the rules' code. A shared-bound seat may be refused or rejected outright here.
+      const refuses = (seat: SeatState) => { try { return !nextRound(seat.match, seat.match.round).ok; } catch { return true; } };
+      const stuck = alive.find(refuses) ?? alive[0]!;
       return this.fail({ kind: 'seat-stuck', seatId: stuck.seatId, reason: batch.reason });
     }
     const advanced = new Map(alive.map((seat, position) => [seat.seatId, batch.states[position]!] as const));

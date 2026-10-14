@@ -166,8 +166,8 @@ export class RemoteSession extends MatchSession {
   override continue(_round: number): MatchCommandResult { return this.blocked(); }
   override combine(a: string, b: string) { return this.intent({ type: 'combine', a, b }); }
   override equip(itemId: string, unitId: string, slot: number) { return this.intent({ type: 'equip', itemId, unitId, slot }); }
-  /** C18-B (§18.3 draft): online only; the server and the rules decide the result, nothing is applied locally. */
-  useConsumable(consumableId: string, target: ConsumableTarget) { return this.intent({ type: 'useConsumable', consumableId, target }); }
+  /** C18-B (§18.3): the server and the rules decide the result; nothing is applied locally before the receipt. */
+  override useConsumable(consumableId: string, target: ConsumableTarget) { return this.intent({ type: 'useConsumable', consumableId, target }); }
   override choose(choiceId: string, generation: number, definitionId: string) { return this.intent({ type: 'choose', choiceId, generation, definitionId }); }
   override anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.intent({ type: 'anomalyTarget', choiceId, generation, unitId }); }
   override anomalyReroll(choiceId: string, generation: number) { return this.intent({ type: 'anomalyReroll', choiceId, generation }); }

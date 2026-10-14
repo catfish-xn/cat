@@ -291,6 +291,7 @@ export class WsGameClient implements GameClient {
           this.setStatus(result.reclaimed ? { kind: 'online', reclaimed: true } : { kind: 'online' });
           break;
         case 'applied':
+        case 'consumable-used':
           this.appliedRevision = Math.max(this.appliedRevision, result.seatRevision);
           this.confirmed.push({ commandId: receipt.commandId, events: result.events, seatRevision: result.seatRevision });
           break;
