@@ -286,6 +286,10 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .equipment-slots button.equip-conflict { outline: 2px solid #ffb36b; outline-offset: -2px; }
 .equipment-slots button.slot-reserved { border-style: dashed; color: var(--c-text-muted); }
 .equipment-slots button.slot-temporary { border-style: dashed; border-color: #c9a8ff; }
+.equipment-slots button.slot-pending { border-style: dashed; border-color: #68ddd0; background: #10302e; }
+.equipment-slots button.slot-pending .item-mark { opacity: .6; }
+.equipment-slots .pending-tag { display: block; margin-top: 2px; font-size: 10px; font-weight: 700; color: #68ddd0; letter-spacing: .5px; }
+.equip-loadout { margin: 6px 0 0 !important; font-size: 12px !important; color: #9ff0e4; }
 .equip-hint { margin: 6px 0 0 !important; font-size: 12px !important; }
 .equip-hint.ok { color: #9be8b4; }
 .equip-hint.denied { color: #ffb0a0; }
