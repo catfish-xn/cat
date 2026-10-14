@@ -13,7 +13,7 @@ import type { MatchState } from '../../src/simulation/match-types';
 import type { Unit } from '../../src/simulation/units';
 import { makeRoom, runUntil } from './helpers';
 
-const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip'];
+const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
 const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll'];
 const seat = (state: RoomState, seatId: string): SeatState => state.seats.find(candidate => candidate.seatId === seatId)!;
 const own = (match: MatchState): Unit[] => match.preparation.units.filter(unit => unit.team === 'player');

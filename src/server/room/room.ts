@@ -20,6 +20,8 @@ import {
   type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
+import { useSeatConsumable } from './consumables';
+import type { ConsumableFailure } from '../protocol';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
 import { findPairing, planPairings } from './pairing';
@@ -80,7 +82,7 @@ interface Resolution {
 }
 
 /** Contract §15.2: operations and choices the room passes to the rules, by room phase; the rules then check the seat's own phase and target (§15.1). */
-const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip'];
+const OPS: readonly SeatCommand['type'][] = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
 const CHOICES: readonly SeatCommand['type'][] = ['choose', 'anomalyTarget', 'anomalyReroll'];
 export const ROOM_COMMAND_GATE: Readonly<Record<RoomPhase, ReadonlySet<SeatCommand['type']>>> = {
   waiting: new Set(), preparation: new Set([...OPS, ...CHOICES]), choice: new Set([...OPS, ...CHOICES]),
@@ -93,7 +95,7 @@ const LIVE_COMBAT_MAX_STEPS = 5_000;
 /** One seat transaction: on success the pool and the seat state are published together; on failure both are the input references. */
 export type SeatCommandOutcome =
   | { readonly ok: true; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
-  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: SharedPoolFailure };
+  | { readonly ok: false; readonly pool: SharedPoolState; readonly state: MatchState; readonly reason: SharedPoolFailure | ConsumableFailure };
 
 /**
  * Pure dispatch to the rules; the room adds nothing. Shop commands and choices (which may award a unit) go through the
@@ -116,6 +118,8 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'choose': return runSharedMatchCommand(pool, state, { type: 'choose', choiceId: command.choiceId, generation: command.generation, definitionId: command.definitionId });
     case 'anomalyTarget': return plain(selectAnomalyTarget(state, command.choiceId, command.generation, command.unitId));
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
+    // §18.3: the tool commands share the operations' four-phase gate; the rules decide everything (see consumables.ts).
+    case 'useConsumable': return useSeatConsumable(pool, state, command);
   }
 }
 

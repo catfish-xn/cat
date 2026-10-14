@@ -12,7 +12,7 @@
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
 import type { CombatReplay, PrivateSeatView } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ClientCommand, LobbyView, PlayerView, ReplayUnitId } from '../protocol';
+import type { ConsumableFailure, ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 
 export const NET_PROTOCOL_VERSION = 1;
@@ -41,7 +41,7 @@ export interface CommandMessage extends ClientEnvelope {
   readonly round: number;
   /** seatRevision the client last received; must equal the seat's current revision. */
   readonly seatRevision: number;
-  readonly command: ClientCommand;
+  readonly command: WireCommand;
 }
 export type ClientMessage = JoinMessage | LeaveQueueMessage | StartMessage | ResumeMessage | CommandMessage;
 export type ClientMessageType = ClientMessage['type'];
@@ -69,7 +69,7 @@ export type NetFailure =
   | 'rate-limited';
 export type LobbyFailure = 'full' | 'in-progress' | 'empty' | 'not-queued';
 /** SharedPoolFailure (B5) already contains every MatchFailure; MatchFailure stays listed for readers. */
-export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure | SharedPoolFailure;
+export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure | SharedPoolFailure | ConsumableFailure;
 
 export type ReceiptMessage =
   | { readonly type: 'receipt'; readonly commandId: number; readonly ok: true; readonly result: ReceiptResult }
@@ -147,8 +147,17 @@ function location(value: unknown, where: string): UnitLocation {
   }
 }
 
+/** §18.3: each target kind carries exactly its own id (onlyKeys per layer); anything else is invalid-message. */
+function consumableTarget(value: unknown, where: string): ConsumableTarget {
+  if (!isRecord(value)) return bad(`${where} must be an object`);
+  switch (value.kind) {
+    case 'item': onlyKeys(value, ['kind', 'itemId'], where); return { kind: 'item', itemId: str(value.itemId, `${where}.itemId`) };
+    case 'unit': onlyKeys(value, ['kind', 'unitId'], where); return { kind: 'unit', unitId: str(value.unitId, `${where}.unitId`) };
+    default: return bad(`${where}.kind must be "item" or "unit"`);
+  }
+}
 /** Rebuilds the command field by field: anything not in the union is refused. */
-export function validateClientCommand(value: unknown): ClientCommand {
+export function validateClientCommand(value: unknown): WireCommand {
   if (!isRecord(value)) return bad('command must be an object');
   const w = 'command';
   switch (value.type) {
@@ -159,6 +168,8 @@ export function validateClientCommand(value: unknown): ClientCommand {
     case 'reroll': onlyKeys(value, ['type'], w); return { type: 'reroll' };
     case 'buyXp': onlyKeys(value, ['type'], w); return { type: 'buyXp' };
     case 'combine': onlyKeys(value, ['type', 'a', 'b'], w); return { type: 'combine', a: str(value.a, `${w}.a`), b: str(value.b, `${w}.b`) };
+    case 'useConsumable': onlyKeys(value, ['type', 'consumableId', 'target'], w);
+      return { type: 'useConsumable', consumableId: str(value.consumableId, `${w}.consumableId`), target: consumableTarget(value.target, `${w}.target`) };
     case 'equip': onlyKeys(value, ['type', 'itemId', 'unitId', 'slot'], w); return { type: 'equip', itemId: str(value.itemId, `${w}.itemId`), unitId: str(value.unitId, `${w}.unitId`), slot: int(value.slot, `${w}.slot`, 0) };
     case 'choose': onlyKeys(value, ['type', 'choiceId', 'generation', 'definitionId'], w);
       return { type: 'choose', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), definitionId: str(value.definitionId, `${w}.definitionId`) };

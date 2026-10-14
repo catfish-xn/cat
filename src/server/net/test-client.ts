@@ -7,7 +7,7 @@
  * Run `npm run client:game -- ws://localhost:8787 名字` to play one idle match end to end.
  */
 import type { PrivateSeatView } from '../../server-entry';
-import type { ClientCommand, LobbyView, PlayerView } from '../protocol';
+import type { LobbyView, PlayerView, WireCommand } from '../protocol';
 import { NET_PROTOCOL_VERSION, type ClientMessage, type ReceiptMessage, type ServerMessage } from './messages';
 
 export type Receipt = ReceiptMessage;
@@ -96,7 +96,7 @@ export class TestClient {
   resume(token: string): Promise<Receipt> { return this.send({ type: 'resume', token }); }
 
   /** Sends a seat command against the latest view/state this client has seen unless overridden. */
-  command(command: ClientCommand, overrides: Partial<Pick<ClientMessage & { type: 'command' }, 'roomId' | 'round' | 'seatRevision'>> = {}, commandId?: number): Promise<Receipt> {
+  command(command: WireCommand, overrides: Partial<Pick<ClientMessage & { type: 'command' }, 'roomId' | 'round' | 'seatRevision'>> = {}, commandId?: number): Promise<Receipt> {
     const view = this.last('view');
     if (!view && (overrides.roomId === undefined || overrides.round === undefined)) throw new Error('no view received yet: pass roomId and round');
     return this.send({
