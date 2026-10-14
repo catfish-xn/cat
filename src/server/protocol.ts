@@ -6,7 +6,8 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableTarget } from '../server-entry';
+import type { ConsumableFailure, ConsumableTarget } from '../server-entry';
+export type { ConsumableFailure, ConsumableTarget };
 
 export const ROOM_CAPACITY = 8;
 export const ROOM_PROTOCOL_VERSION = 1;
@@ -101,7 +102,10 @@ export interface LobbyView {
 
 /* ---------------- commands a seat may send ---------------- */
 
-/** Every command maps 1:1 to a public command of src/simulation/match.ts; the room adds nothing. */
+/**
+ * Every command maps 1:1 to a public command of src/simulation/match.ts; the room adds nothing. `useConsumable`
+ * (contract §18.3): `consumableId` is the tool instance id, never a definition id or a count; the rules decide everything.
+ */
 export type ClientCommand =
   | { readonly type: 'useConsumable'; readonly consumableId: string; readonly target: ConsumableTarget }
   | { readonly type: 'deploy'; readonly unitId: string; readonly target: UnitLocation }
@@ -115,3 +119,6 @@ export type ClientCommand =
   | { readonly type: 'choose'; readonly choiceId: string; readonly generation: number; readonly definitionId: string }
   | { readonly type: 'anomalyTarget'; readonly choiceId: string; readonly generation: number; readonly unitId: string }
   | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
+export type ConsumableCommand = Extract<ClientCommand, { type: 'useConsumable' }>;
+/** Every command a seat may send over the wire (contract §18.8: an alias of ClientCommand since T13-B). */
+export type WireCommand = ClientCommand;

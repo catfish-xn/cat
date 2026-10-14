@@ -34,6 +34,8 @@ import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, wornDefinitions } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
+import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
+import type { ConsumableTarget } from '../simulation/consumable-types';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -178,6 +180,8 @@ export class BoardScene extends Phaser.Scene {
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成', true),
       // C17: the success text is fixed when the command is sent; outside preparation it names the next battle.
+      // C18-B (§18.3): online the room forwards it to the rules' shared transaction; offline the session runs useConsumable.
+      useConsumable: (id: string, target: ConsumableTarget, success: string) => this.command(this.session.useConsumable(id, target), success),
       equip: (item, unit, slot, combinedName) => this.command(this.session.equip(item, unit, slot), equipSuccessText(this.session.state.phase, combinedName ?? null), true),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
@@ -458,7 +462,7 @@ export class BoardScene extends Phaser.Scene {
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
     // Online shared-pool refusals (pool-empty, empty-slot, ...) arrive through the same path but are not MatchFailures.
-    return (messages as Partial<Record<string, string>>)[reason] ?? POOL_REFUSAL_TEXT[reason];
+    return (messages as Partial<Record<string, string>>)[reason] ?? POOL_REFUSAL_TEXT[reason] ?? (CONSUMABLE_FAILURE_TEXT as Partial<Record<string, string>>)[reason];
   }
   /** Success text of each command still waiting for its server receipt (online WebSocket only). */
   private pendingSuccess = new Map<number, string>();
@@ -486,6 +490,7 @@ export class BoardScene extends Phaser.Scene {
     if (!this.session.combatView) this.recentCombatEvents = [];
     this.sync();
     this.showEvents(result.events.filter((event): event is LedgerCombatEvent => 'tick' in event));
+    this.strategyPanel?.recordOperations(result.events);
     const upgrades = this.showUpgrades(result.events);
     this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
     if (this.session.phase === 'gameOver') this.setStatus(this.endText());

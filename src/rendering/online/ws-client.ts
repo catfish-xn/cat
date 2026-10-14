@@ -25,7 +25,7 @@ import {
   NET_PROTOCOL_VERSION, readReplayUnitIds, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
 } from '../../server/net/messages';
 import type {
-  ClientCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView,
+  WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView,
 } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 
@@ -137,7 +137,7 @@ export class WsGameClient implements GameClient {
   leaveQueue(): void { if (this.seatId !== null && this.roomId === null) this.post({ type: 'leaveQueue' }); }
   startMatch(): void { if (this.seatId !== null && this.roomId === null) this.post({ type: 'start' }); }
 
-  send(command: ClientCommand): ClientSendResult {
+  send(command: WireCommand): ClientSendResult {
     const refused = { ok: false as const, state: this.lastState ?? createMatch(), reason: 'wrong-phase' as const };
     if (!this.ready || this.roomId === null || this.stateRevision < 0) return refused;
     const ahead = [...this.inflight.values()].filter(entry => entry.type === 'command').length;
@@ -291,6 +291,7 @@ export class WsGameClient implements GameClient {
           this.setStatus(result.reclaimed ? { kind: 'online', reclaimed: true } : { kind: 'online' });
           break;
         case 'applied':
+        case 'consumable-used':
           this.appliedRevision = Math.max(this.appliedRevision, result.seatRevision);
           this.confirmed.push({ commandId: receipt.commandId, events: result.events, seatRevision: result.seatRevision });
           break;

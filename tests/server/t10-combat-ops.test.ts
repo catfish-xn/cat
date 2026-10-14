@@ -12,9 +12,13 @@ import type { BattleInput, BattleResult, RoomPhase, RoomState, SeatState, Shared
 import type { MatchState } from '../../src/simulation/match-types';
 import type { Unit } from '../../src/simulation/units';
 import { makeRoom, runUntil } from './helpers';
+import { readLootView } from '../../src/simulation/match';
 
-const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip'];
+const OPS = ['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable'];
 const CHOICES = ['choose', 'anomalyTarget', 'anomalyReroll'];
+/** Gold the rules granted from this round's revealed orbs (granted receipts only; 0 for PvP). */
+const lootGold = (match: MatchState, round: number) => match.round !== round ? 0 : readLootView(match).revealedDrops
+  .reduce((sum, drop) => sum + (drop.status === 'granted' && drop.payload.kind === 'gold' ? drop.payload.quantity : 0), 0);
 const seat = (state: RoomState, seatId: string): SeatState => state.seats.find(candidate => candidate.seatId === seatId)!;
 const own = (match: MatchState): Unit[] => match.preparation.units.filter(unit => unit.team === 'player');
 const onBoard = (match: MatchState) => own(match).filter(unit => unit.location.kind === 'board');
@@ -97,17 +101,18 @@ describe('T10 settlement on the latest live seat (contract §15.2)', () => {
       expect(busy.settled.hp).toBe(idle.settled.hp);
       const record = busy.settled.match.roundResults.at(-1)!;
       expect(record.round).toBe(round);
-      // Settlement read the gold left after the operations, not the pre-battle gold.
+      // Settlement read the gold left after the operations, not the pre-battle gold. T13-B: a PvE battle's orbs grant
+      // their gold when it ends, before the settlement (the rules' own granted receipts, read back here).
       expect(busy.spent).toBeGreaterThan(0);
-      expect(record.goldBefore).toBe(busy.live.gold);
+      expect(record.goldBefore).toBe(busy.live.gold + lootGold(busy.settled.match, round));
       expect(record.goldAfter).toBe(busy.settled.match.gold);
-      expect(busy.settled.match.gold).toBe(busy.live.gold + record.income);
+      expect(busy.settled.match.gold).toBe(record.goldBefore + record.income);
       expect(record.levelBefore).toBe(busy.live.level);
       // The bought unit is still owned (possibly merged), the shop is the rerolled one.
       expect(busy.bought).not.toBeNull();
       const idleRecord = idle.settled.match.roundResults.at(-1)!;
       expect(busy.settled.match.shop.generation).toBe(idle.settled.match.shop.generation + 1);
-      expect(idleRecord.goldBefore).toBe(idle.live.gold);
+      expect(idleRecord.goldBefore).toBe(idle.live.gold + lootGold(idle.settled.match, round));
       expect(own(busy.settled.match).length).toBeGreaterThan(own(idle.settled.match).length - 1);
     }, 120_000);
   }
@@ -170,19 +175,24 @@ describe('T10 deferred merge after the battle (contract §15.3)', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     room.start();
     runUntil(room, clock, state => state.round === 5 && state.phase === 'preparation');
-    const s4 = () => seat(room.state, 's4');
-    // Seat s4 (a bot seat: no auto-deployment) has irelia on the board and two irelia offers in its shop.
-    const definitionId = onBoard(s4().match)[0]!.definitionId;
-    const offers = s4().match.shop.slots.flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
+    // A bot seat (no auto-deployment) with a unit on the board and two offers of it in its shop. Which seat that is
+    // follows the seed's random openings (T13-B), so it is read from the state (seed 42: s5).
+    const offersOf = (seatId: string, definitionId: string) => seat(room.state, seatId).match.shop.slots
+      .flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
+    const seatId = ['s4', 's5', 's6', 's7'].find(id => onBoard(seat(room.state, id).match).some(unit => offersOf(id, unit.definitionId).length >= 2))!;
+    expect(seatId).toBeDefined();
+    const s4 = () => seat(room.state, seatId);
+    const definitionId = onBoard(s4().match).find(unit => offersOf(seatId, unit.definitionId).length >= 2)!.definitionId;
+    const offers = offersOf(seatId, definitionId);
     expect(offers.length).toBeGreaterThanOrEqual(2);
-    expect(room.handle('s4', { type: 'buy', slot: offers[0]!, generation: s4().match.shop.generation })).toMatchObject({ ok: true });
+    expect(room.handle(seatId, { type: 'buy', slot: offers[0]!, generation: s4().match.shop.generation })).toMatchObject({ ok: true });
     const copies = () => own(s4().match).filter(unit => unit.definitionId === definitionId);
     expect(copies().map(unit => [unit.starLevel, unit.location.kind]).sort()).toEqual([[1, 'bench'], [1, 'board']]);
     const boardCopy = copies().find(unit => unit.location.kind === 'board')!;
     clock.runNext(); // deadline → battle
     expect(room.state.phase).toBe('battle');
-    const battle = room.state.battles.find(result => result.kind === 'two-sided' && result.participants.includes('s4'))!;
-    const bought = room.handle('s4', { type: 'buy', slot: offers[1]!, generation: s4().match.shop.generation });
+    const battle = room.state.battles.find(result => result.kind === 'two-sided' && result.participants.includes(seatId))!;
+    const bought = room.handle(seatId, { type: 'buy', slot: offers[1]!, generation: s4().match.shop.generation });
     expect(bought).toMatchObject({ ok: true });
     if (!bought.ok) return;
     // During the battle the board copy does not take part: three one-star copies, no upgrade event.

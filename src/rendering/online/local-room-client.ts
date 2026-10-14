@@ -15,7 +15,7 @@ import {
   Lobby, PlaceholderBattleResolver, RealClock, TwoSidedBattleResolver, toCombatReplayFor, toPlayerView, toSeatPrivateView, seatPushEvents,
   type BattleInput, type BattleResolver, type BattleResult, type Clock, type JoinResult, type PvpMode, type Room, type RoomState, type RoomTimings, type SharedPoolState,
 } from '../../server/room';
-import type { ClientCommand, ClientListeners, GameClient, LobbyView, PlayerView } from './protocol';
+import type { ClientListeners, GameClient, LobbyView, PlayerView, WireCommand } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 
 export interface LocalRoomOptions {
@@ -123,7 +123,7 @@ export class LocalRoomClient implements GameClient {
   }
 
   /** Forwarded to the room unchanged; a refusal changes nothing. The state handed back is the projected display copy, as over the network. */
-  send(command: ClientCommand): MatchCommandResult {
+  send(command: WireCommand): MatchCommandResult {
     const room = this.room, seatId = this.mySeatId;
     if (!room || seatId === null) return { ok: false, state: this.emittedDisplay ?? createMatch(this.options.seed), reason: 'wrong-phase' };
     this.inCommand = true;

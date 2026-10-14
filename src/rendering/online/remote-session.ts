@@ -16,14 +16,14 @@ import type { UnitLocation } from '../../simulation/units';
 import { createMatch } from '../../simulation/match';
 import { applyCombatReplayTick, type CombatReplay, type CombatViewState, type DisplayCombatEvent } from '../../presentation/combat-display';
 import { MatchSession } from '../match-session';
-import type { ClientCommand, GameClient, ReplayUnitId } from './protocol';
+import type { ConsumableTarget, GameClient, ReplayUnitId, WireCommand } from './protocol';
 
 /** Why the last intent did not change the local state although it was not refused by the rules. */
 export type IntentNotice = { readonly kind: 'pending'; readonly commandId: number } | { readonly kind: 'offline'; readonly text: string };
 /** The "开战" transition: the initial view is held this long before tick 0 plays (inside the room's battle tail). */
 export const REPLAY_OPENING_MS = 400;
 /** Commands the room passes to the rules while a battle runs (contract §15.2 `OPS`). */
-const BATTLE_COMMANDS: ReadonlySet<ClientCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip']);
+const BATTLE_COMMANDS: ReadonlySet<WireCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable']);
 /** Playback behind wall time by more than this (dropped or stalled frames) catches up at once; 1x otherwise. */
 const CATCH_UP_MS = 250;
 
@@ -130,7 +130,7 @@ export class RemoteSession extends MatchSession {
     if (!this.playingBack) this.accumulator = 0;
     return events;
   }
-  private intent(command: ClientCommand): MatchCommandResult {
+  private intent(command: WireCommand): MatchCommandResult {
     this.notice = null;
     if (this.offline !== null) { this.notice = { kind: 'offline', text: this.offline }; return this.blocked(); }
     if (this.spectating) { this.notice = { kind: 'offline', text: '已淘汰 · 观战中，不能操作' }; return this.blocked(); }
@@ -166,6 +166,8 @@ export class RemoteSession extends MatchSession {
   override continue(_round: number): MatchCommandResult { return this.blocked(); }
   override combine(a: string, b: string) { return this.intent({ type: 'combine', a, b }); }
   override equip(itemId: string, unitId: string, slot: number) { return this.intent({ type: 'equip', itemId, unitId, slot }); }
+  /** C18-B (§18.3): the server and the rules decide the result; nothing is applied locally before the receipt. */
+  override useConsumable(consumableId: string, target: ConsumableTarget) { return this.intent({ type: 'useConsumable', consumableId, target }); }
   override choose(choiceId: string, generation: number, definitionId: string) { return this.intent({ type: 'choose', choiceId, generation, definitionId }); }
   override anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.intent({ type: 'anomalyTarget', choiceId, generation, unitId }); }
   override anomalyReroll(choiceId: string, generation: number) { return this.intent({ type: 'anomalyReroll', choiceId, generation }); }
