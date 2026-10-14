@@ -70,6 +70,8 @@ interface PanelActions {
   readonly combine: (a: string, b: string) => void;
   /** `combinedName`: the finished item previewEquip says this equip creates in the slot (C17), for the success text. */
   readonly equip: (item: string, unit: string, slot: number, combinedName?: string) => void;
+  /** C18-B (§18.3 draft): send useConsumable; online only, absent offline. The panel calls it only on a preview ok:true. */
+  readonly useConsumable?: (consumableId: string, target: DraftConsumableTarget, success: string) => void;
   readonly choose: (choice: string, generation: number, definition: string) => void;
   readonly target: (choice: string, generation: number, unit: string) => void;
   readonly rerollAnomaly: (choice: string, generation: number) => void;
@@ -250,8 +252,7 @@ export class StrategyPanel {
       if (drag.tool) {
         if (!drag.moved) { this.selectConsumable(drag.tool.consumableId); return; }
         const target = this.toolTarget(event.clientX, event.clientY);
-        // TODO(T13-B, contract §18.1/§18.3): send useConsumable here once previewConsumable answers ok:true.
-        this.actions.status(target ? `${this.toolDropText(drag.tool, target)} · 未使用（useConsumable 待接线）` : '消耗品未使用 · 请放到我方单位或装备上');
+        if (target) this.useTool(drag.tool, target); else this.actions.status('消耗品未使用 · 请放到我方单位或装备上');
         return;
       }
       if (!drag.moved) { this.selectItem(drag.gesture.id); return; }
@@ -369,6 +370,15 @@ export class StrategyPanel {
     const unitId = hit?.closest<HTMLElement>('[data-unit-id]')?.dataset.unitId ?? this.actions.unitAt(x, y);
     const unit = unitId ? state.preparation.units.find(entry => entry.id === unitId) : undefined;
     return unit ? { target: { kind: 'unit', unitId: unit.id }, label: displayUnitName(unit.definitionId) } : null;
+  }
+  /**
+   * A tool dropped (or clicked) on a target: sent only when the preview answers ok:true; otherwise its answer is shown.
+   * TODO(T13-B, contract §18.1): previewConsumable is a placeholder answering `pending`, so nothing is sent before then.
+   */
+  private useTool(tool: DraftConsumable, target: { target: DraftConsumableTarget; label: string }): void {
+    const preview = previewConsumable(this.actions.state(), tool.consumableId, target.target), text = this.toolDropText(tool, target);
+    if (preview.ok === true && this.actions.useConsumable) this.actions.useConsumable(tool.consumableId, target.target, text);
+    else this.actions.status(preview.ok === 'pending' ? `${text} · 未使用（useConsumable 待接线）` : text);
   }
   private toolDropText(tool: DraftConsumable, target: { target: DraftConsumableTarget; label: string }): string {
     const state = this.actions.state();
@@ -631,7 +641,7 @@ export class StrategyPanel {
           // TODO(T13-B, contract §18.1): send useConsumable once previewUseConsumable answers for this target.
           if (tool) {
             const target: DraftConsumableTarget = item ? { kind: 'item', itemId: item.id } : { kind: 'unit', unitId: unit.id };
-            this.actions.status(`${this.toolDropText(tool, { target, label: item ? ITEM_DEFINITIONS[item.definitionId].name : displayUnitName(unit.definitionId) })} · 未使用（useConsumable 待接线）`);
+            this.useTool(tool, { target, label: item ? ITEM_DEFINITIONS[item.definitionId].name : displayUnitName(unit.definitionId) });
             return;
           }
           if (chosen) this.equipAt(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');

@@ -6,7 +6,7 @@
  */
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
 import type { ReceiptFailure } from '../../server/net/messages';
-import type { ClientCommand, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
+import type { WireCommand, LobbyView, PlayerView, ReplayUnitId } from '../../server/protocol';
 import type { CombatReplay } from '../../server-entry';
 
 export * from '../../server/protocol';
@@ -58,7 +58,7 @@ export interface GameClient {
    * In-memory clients answer synchronously. A network client answers `pending`: the local state does
    * not change until the receipt and the state push that follows it (or a `refused` callback).
    */
-  send(command: ClientCommand): ClientSendResult;
+  send(command: WireCommand): ClientSendResult;
   /** Lobby again after a finished match. */
   reset(): void;
   dispose(): void;

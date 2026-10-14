@@ -34,6 +34,8 @@ import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
 import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, wornDefinitions } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
+import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
+import type { ConsumableTarget } from '../server/protocol';
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -178,6 +180,9 @@ export class BoardScene extends Phaser.Scene {
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成', true),
       // C17: the success text is fixed when the command is sent; outside preparation it names the next battle.
+      // C18-B: online only (the room forwards it to the rules); offline has no consumable command yet.
+      ...(this.session instanceof RemoteSession ? { useConsumable: (id: string, target: ConsumableTarget, success: string) =>
+        this.command((this.session as RemoteSession).useConsumable(id, target), success) } : {}),
       equip: (item, unit, slot, combinedName) => this.command(this.session.equip(item, unit, slot), equipSuccessText(this.session.state.phase, combinedName ?? null), true),
       choose: (choice, generation, definition) => this.command(this.session.choose(choice, generation, definition), '永久构筑已选择'),
       target: (choice, generation, unit) => this.command(this.session.anomalyTarget(choice, generation, unit), '异常目标已锁定'),
@@ -458,7 +463,7 @@ export class BoardScene extends Phaser.Scene {
       'stale-choice': '选项已更新，请使用当前卡片', 'invalid-choice': '当前选择无效', 'invalid-target': '请选择一个我方单位',
     };
     // Online shared-pool refusals (pool-empty, empty-slot, ...) arrive through the same path but are not MatchFailures.
-    return (messages as Partial<Record<string, string>>)[reason] ?? POOL_REFUSAL_TEXT[reason];
+    return (messages as Partial<Record<string, string>>)[reason] ?? POOL_REFUSAL_TEXT[reason] ?? (CONSUMABLE_FAILURE_TEXT as Partial<Record<string, string>>)[reason];
   }
   /** Success text of each command still waiting for its server receipt (online WebSocket only). */
   private pendingSuccess = new Map<number, string>();
