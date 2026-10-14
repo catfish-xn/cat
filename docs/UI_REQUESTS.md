@@ -811,3 +811,11 @@ PvE 使用原权威执行生成的 initial/terminal/events 创建同一种回放
 - **共同点**（三例相同）：抛错时一个**日炎斗篷（`sunfire-cape`）灼烧**周期任务挂在存活目标上，字段为 `pulseOrdinal 0`、`periodTicks 20`、`finalPulse 'before-expiry'`、`endsAtTick = nextPulseAtTick + 200`，`nextPulseAtTick` 为 T（80 / 160 / 200）。tick T 的脉冲没有被处理，推进到 T+1 时抛错。看起来像在 tick T 当拍新建或刷新的灼烧任务把首个脉冲定在 T，而这一拍的周期任务已经推进过了。根因与修法由 Codex 判断。
 - **复现**（纯进程内，无浏览器或网络，每个种子约 1 分钟）：`node tests/server/e2e/repro-missed-pulse.mjs 9`（不带参数时跑 9、4、11）。脚本用 `ManualClock` + 8 个 `BotDriver` + `TwoSidedBattleResolver` 打完整局。遇到 resolver-error 时用公共入口 `snapshotForBattle → compileBattle` 重新编译出错的配对，把规则输入写到 `artifacts/repro-missed-pulse/seed-<n>.json`，再单独调用 `resolveTwoSidedBattle(input, 5000)` 复现同一异常，最后逐 tick `stepCombat`，打印抛错的 tick 和滞后的周期任务。seed 9 的输出：`step to tick 161 throws … late task on irelia (alive true): item sunfire-cape …, nextPulseAtTick 160, period 20, ends 360, pulse 0, finalPulse before-expiry`。
 - **验收条件**：上述三个种子的规则输入 `resolveTwoSidedBattle` 不抛错；在 tick T 当拍新建（或刷新）、首脉冲在 T 的周期任务有单测，不补发、不漏发；`repro-missed-pulse.mjs` 三个种子都打到唯一排名，没有 fault；有内容或规则变化时按惯例同步 digest。服务器侧不做绕过（不吞异常、不跳过该场战斗）。
+
+### SR-C19-01 窗口 4 规则修复回应
+
+已定位为新贡献创建时的首跳对齐问题：tick 160 目标的旧 burn 已处理，后处理的日炎来源却读到尚未统一推进的组时钟 160，创建出 `pulseOrdinal=0` 的滞后任务。新贡献现在对齐 180；已有任务、刷新余数与组相位不变，`advancePeriodicTask` 的 never-backfill 抛错原样保留。周期入口冻结的本拍归因不被新来源替换，不增加当拍伤害。
+
+seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-minimal.json`，修复后 244 tick 完成；原始输入 355 tick 完成。新增 10 例涵盖两种单位顺序、首跳、刷新、200 tick 的 10 次含末跳付款、非到期拍相位以及真正漏拍的拒绝。既有 golden 与 digest 未改，玩法沿现有 B-01/B-08。
+
+指定目标集 16 文件 / 223 用例通过，typecheck 与 Node 入口通过（165 状态 / 106 事件）；整局三种子结果、数值依据与复现 SHA 见 [窗口 4 证据](evidence/c19/MISSED_PULSE.md)。不需要服务器绕过或新增字段，C19 可在本修复合入后按窗口 3 续单 rebase、完成界面整局验收。
