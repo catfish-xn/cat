@@ -99,3 +99,14 @@ T1 首战没有互换命令。完整状态 trace SHA-256 因 Match 及 combatInp
 ## T13 R3/R4 同步合同
 
 D1–D8 按推荐 A 签署；公共签名、失败枚举和 shared-deferred 调用时机以 MULTIPLAYER_CONTRACT §18 为准。PvE 按 M8B_LOOT §11 随机宝珠，五次 .4 自选保留；消耗品在 T12 四阶段操作，修改运营装备且下场生效，失败无事件且保留原 state/RNG/ID。单人完整恢复校验工具授予/消费时序与独立重铸流；联机沿 T12 B 冻结输入恢复，不支持完整 Match 存档恢复。T13-A 与 R3/R4 一次升级到 schema 7、save/replay 3；旧格式 2 仅保全导出、新开局，不迁移。
+
+
+## P3-A/P4-A/P5-A 合并规则发布（2026-10-14）
+
+普通 stage 2–6 的基础扣血 2/5/8/10/12 与存活敌人每个 1 保持。`selectPlayerBaseDamage(stage, roundKind, roundId?)` 是基础扣血唯一来源，版本 `s13-player-damage-overtime-v2`；`planRoundEconomy` 的计算输入可带 roundId，PvP `overtime-n` 从首场起基础 17，经济时点/日程 stage6 不变。proposal、唯一收据校验同源；重演恢复编译 BattleInput 后重新 proposal 用相同 selector。胜方零扣血、平局基础+存活数、镜像零结算、HP clamp 不变，禁止服务端/客户端单补 5。
+
+现表符合 14.24b，68 为 16.1 值，不开 10 级。`progression.test.ts` 的逐级阈值测试明确覆盖 8级75+1→9；`match-economy.test.ts` 的 “F preserves a valid old-generation offer and checks max-level before money” 检查满级买经验拒绝、原 state 身份与全部字段（资源/事件/RNG）无副作用。
+
+球数保持 1/2/3/2/2/2/2/1，开场 bonus 50/50、装备珠 90/9/1；仅采样改读冻结 ORB_RULES 权重表（项目政策 `s13-orbs-project-v2`，采样 `frozen-cumulative-weights-v1`）。同局各席同模板、部分击杀、重连/重复推进零额外 RNG 沿原契约。
+
+规则/内容版本改为 s13-rules-gap-v2 / s13-14.24b-rules-gap-v2；schema7/save3/replay3/command3、NET2 不变。CONTENT_DIGEST 与 LOOT_REPLAY_DIGEST 由共同 manifest 同批 canonical 计算；旧原档仅只读保全导出，拒绝旧 digest 续玩。普通阶段轨迹比较记录在 docs/evidence/p3p4p5/release-audit.json，T13 与全部历史原件保留。

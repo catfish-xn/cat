@@ -98,7 +98,7 @@ Riot 的 [14.15 官方更新说明](https://teamfighttactics.leagueoflegends.com
 
 单局区分队列等待、准备、选择、冻结、战斗、结算和终局。旧目录中的 PvE、补给及选择节点保留，PvP 节点改为席位之间对战。
 
-用户已选择 6-7 后继续 PvP 加时。加时不继续调用“6-7 自动胜利或失败”的单人终局路径。建议每轮只做 PvP，保留正常经济与共享商店，沿用最后阶段基础伤害，不额外产生新野怪、强化或奖励。
+用户已选择 6-7 后继续 PvP 加时。加时不继续调用“6-7 自动胜利或失败”的单人终局路径。建议每轮只做 PvP，保留正常经济与共享商店，PvP 加时从第一场起基础伤害为 17，不额外产生新野怪、强化或奖励。
 
 平局扣血、同时归零和名次破同分规则须在 T3/T4 有固定合同。可采用 v2 的扣血后未截断 HP、轮前 HP、固定席位顺序破同分，但不能把它冒称为已核对的官方规则。
 
@@ -344,7 +344,7 @@ interface SideProposal {
 
 ### 10.4 未提交的伤害和成长提案
 
-伤害直接取冻结基线 [match-rules.ts 第 24 行](../src/simulation/match-rules.ts#L24) 的 `STAGE_PLAYER_DAMAGE`：阶段 2/3/4/5/6 分别为 **2/5/8/10/12**。计算沿用 [economy.ts 第 71–74 行](../src/simulation/economy.ts#L71)：真实参战席位胜方 damage=0，败方或平局方 damage=本阶段基础值+对方存活单位数（不是星级之和）。真实双方空阵容各提案基础伤害；超时双方各按对方存活数计算。镜像方一律 damage=0、growth=[]、settlementEligible=false，详见10.8。damage 是未截断非负安全整数请求值，T2 不读取或修改席位 HP，不计算实际损失/淘汰/名次。
+伤害统一调用 `match-rules.ts::selectPlayerBaseDamage(stage, roundKind, roundId?)`，细分版本 `s13-player-damage-overtime-v2`：普通阶段 2/3/4/5/6 分别为 **2/5/8/10/12**；合法 PvP `overtime-n`（包括首场、stage 仍为 6）基础为 **17**。这是项目加时映射到标准 stage 7 的政策，不增 stage 8/150 或新日程。`economy.ts`、`proposeSettlement`、唯一收据验证与恢复战斗输入重演同源，服务器/客户端不得另补 5 点。计算沿用 `economy.ts`：真实参战席位胜方 damage=0，败方或平局方 damage=本阶段基础值+对方存活单位数（不是星级之和）。真实双方空阵容各提案基础伤害；超时双方各按对方存活数计算。镜像方一律 damage=0、growth=[]、settlementEligible=false，详见10.8。damage 是未截断非负安全整数请求值，T2 不读取或修改席位 HP，不计算实际损失/淘汰/名次。
 
 growth 只包含本场新获得的永久 AD 增量，包含已阵亡单位的合法增长，按 seatId 和原始 unitId 归属；开战前累计成长只参与属性，不再次发放。重复调用提案得到相同值且不改资产；**这不等于收据幂等提交已实现**。不发金币、经验、奖励，不推进轮次，T3 才将合法提案原子提交。
 
@@ -586,11 +586,11 @@ const result = applyRoundSettlement(originalSeat.match, r);
 
 ### 11.5 SR-B1-03 / SR-B4-01 加时、平局与排名（T5R 规则入口已交付）
 
-- 6-7 后若≥2席存活，进入 `overtime-1`，ordinal=`FINAL_ROUND+1`；之后 `overtime-N` 对应 `FINAL_ROUND+N`，严格递增，不重用6-1/6-7 ID。均为 PvP、沿用第6阶段基础伤害12。不开新野怪、补给、强化、异常或掉落计划；既有强化/异常/装备/成长继续生效。
+- 6-7 后若≥2席存活，进入 `overtime-1`，ordinal=`FINAL_ROUND+1`；之后 `overtime-N` 对应 `FINAL_ROUND+N`，严格递增，不重用6-1/6-7 ID。均为 PvP、从第一场起基础伤害17（日程 stage 保持6）。不开新野怪、补给、强化、异常或掉落计划；既有强化/异常/装备/成长继续生效。
 - 每轮仍按既有 PvP 收入、利息、连胜败、经验、强化成长提交；进入下一轮沿用自然刷新/锁店及临时装备生命周期，商店必须通过规则入口生成，TP 后仍受共享池约束。每个加时有独立 settlementId/battleId/roundResults，不能再执行末轮奖励。
 - **已导出的推进入口**：`advanceMultiplayerRound(state: MatchState, expectedRound: number): MultiplayerCommandResult`。要求已 enableMultiplayerSettlement、active、settlement、无 pendingChoice/待领取奖励且 roundResults 连续覆盖当前轮；目录内委托 nextRound，6-7 及之后生成加时准备态（`kind='pvp', isFinal=false, stage=6, subround=7+N, encounterId=null`）。返回 state/events 的既有成功形状；失败原 state 引用、无 events、无资源或 RNG 变化。失败枚举：`multiplayer-required`（未启用）、`seat-eliminated`（已淘汰）、`shared-pool-required`（已绑定共享池，应走下一段的批量入口）、`stale-round`（expectedRound 或当前轮 ID 不符）、`wrong-phase`（非 settlement）、`unsettled-round`（待选/待领或历史不连续）、`invalid-round`（非法序号、溢出或无法生成该轮），目录内亦透传 nextRound 的失败原因。
 - **B4/B5 接入**：无共享池时用上述入口替换 Room.advanceRound 中 nextRound；同时解除当前 Room.commitPending 在 overtimeRequired 时返回 overtime-unavailable 的依赖中断分支（B4 合入基线 bc35bac 仍存在），正常进入 settlement 再推进；有共享池时必须传全部未释放席给 `nextSharedRound(pool, states, expectedRound)`，它已支持加时：先暂存全部推进，再统一释放未锁商店占用、按原固定顺序轮换抽卡，原子提交池与席位，任一失败整批不变。锁店保留原占用，淘汰归还仍在下一轮前。不要逐席解除 sharedPool 后发布无限商店；解除仅是池事务内部的未发布暂存步骤。不能直接改 round/m8，不能调用旧 nextRound 推进加时；全局0/1席结束及≥2席继续仍由调度器决定。
-- T2 snapshot/restore/compile/resolve/propose 与 T3 apply 均识别规范 `overtime-N`（N 正安全整数，且 FINAL_ROUND+N 安全）；临时装备跨轮刷新，买/卖/合成来源账本可追加加时 ID，离线 restore/目录查询仍拒绝加时。加时经济直接调用既有 planRoundEconomy，第6阶段基础伤害12；不生成新掉落计划、选择或奖励。
+- T2 snapshot/restore/compile/resolve/propose 与 T3 apply 均识别规范 `overtime-N`（N 正安全整数，且 FINAL_ROUND+N 安全）；临时装备跨轮刷新，买/卖/合成来源账本可追加加时 ID，离线 restore/目录查询仍拒绝加时。加时经济调用 planRoundEconomy 并传入规范 roundId，由同源 selector 取基础伤害17；不生成新掉落计划、选择或奖励。
 - 平局（含双方空阵容、1200 tick 超时）：**每个真实席**扣12+对方存活数；普通配对双方各算自己的提案。胜方0、败方12+对方存活数；镜像 b 不扣、不提交，镜像来源真身在其实际配对独立结算。目录内平局用相应阶段基础伤害，规则相同。
 - 同轮归零排序沿用 B1 项目规则：比较 **未截断 HP=`hpBefore-damage` 降序 → hpBefore 降序 → 固定 seatIndex 升序**，先者名次更好。不能用截到0的 playerHp 破同分。seatIndex 从开局固定0–7，与断线/重连、数组重排无关。同轮淘汰者排在剩余存活者后，较晚淘汰优于早轮淘汰；如果最后所有席同轮归零，也按此键产生唯一冠军，不能继续等待无人存活的下一轮。
 - 有限终局：≥2席每完整加时至少有一场普通配对，该配对至少一个真实席被扣正伤害；总存活 HP 严格下降。无任何恢复玩家 HP 的规则，初始最多8×100 HP，因此加时最多800个已提交轮次即可结束（保守上界，空阵容连续平局通常远少于此）。T4 必测连续平局、双方空阵容、镜像及同轮多人归零的唯一排名；不能以单人 isFinal 或客户端倒计时直接定胜负。
@@ -1474,3 +1474,9 @@ toCombatReplay(input: CombatReplayInput): CombatReplay
 - 回放按 `initial.nextEventSeq` 区分开局与第一次 step 发出的 tick0 事件；单位差分、20 tick 关键帧、最后状态和动画事件序列校验沿 §14.2。分片不截断完整领域账本、不更改事件顺序，结果 `JSON.stringify` 与改动前同步入口逐字节一致。输入仍是可信规则结果，校验边界未扩展成任意存档恢复。
 - tick 预算不是毫秒预算：启动的校验/复制、单 tick、完成时的校验/冻结以及 GC 仍不可中断。50 ms 在目标机与约定阵容实测；本接口不承诺任意硬件/100 tick 分片都小于 50 ms。调度层可减小预算并在两次调用间让出事件循环，规则层不读取真实时钟。
 - 本节只增加续算入口；不改变玩法、digest、BattleResult/CombatReplay wire 形状或镜像语义。本次没有把回放嵌入权威执行，仍需一次可切片的回放重执行；同步调用旧 API 的服务器行为不会自动提速。
+
+## P3/P4/P5 一次发布（2026-10-14）
+
+`rulesVersion=s13-rules-gap-v2`、`contentVersion=s13-14.24b-rules-gap-v2`。共享 manifest 同批含扣血、经验政策、宝珠权重执行政策；最终摘要由 canonical 生成，见 `tests/p3p4p5-content-baseline.json`。schema7/save3/replay3/command3 与 NET_PROTOCOL 2 保持，未增加序列化或网络字段。
+
+P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/20/36/48/76，最高 9 级。P5-A：球数与品质表保持项目批准值，`s13-orbs-project-v2` / `frozen-cumulative-weights-v1` 从 ORB_RULES 的 openingWeights=[50,50]、equipmentWeights=[90,9,1] 按顺序累计选取，drawIndex 以权重总和无偏拒绝采样；不宣称完整历史掉落表还原。载体顺序、载荷、RNG 流与结构不变。旧 digest 只读保全/导出，拒绝续玩、不迁移重抽。联机完整 Match 仍拒绝 restore，沿既有冻结 BattleInput 恢复重演与服务器账本提交，不承诺新增恢复入口。

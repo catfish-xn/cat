@@ -7,7 +7,7 @@ import { toLedgerEvents } from './combat-ledger';
 import { effectKey } from './effects';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { validateSeed } from './rng';
-import { STAGE_PLAYER_DAMAGE } from './match-rules';
+import { selectPlayerBaseDamage } from './match-rules';
 import type { CombatStrategyInputs } from './combat-input';
 import type { EffectSource, SourcedEffect } from './strategy-types';
 import { restorePlayerBattleSnapshot } from './two-sided-snapshot';
@@ -166,7 +166,7 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
       || result.events.some((event,index)=>event.combatId !== result.battleId || event.eventSeq !== index)
       || canonicalContent(result.a) !== canonicalContent(sideResult(result.a.seatId,result.mapping,result.terminal))
       || canonicalContent(result.b) !== canonicalContent(sideResult(result.b.seatId,result.mapping,result.terminal,result.mirrorOfSeatId !== null))) throw new BattleValidationError('invalid-result');
-    const baseDamage = STAGE_PLAYER_DAMAGE[stage.stage];
+    const baseDamage = selectPlayerBaseDamage(stage.stage, stage.kind, result.roundId);
     if (baseDamage === undefined) throw new BattleValidationError('invalid-result');
     const side = (own: BattleSideResult, opponent: BattleSideResult): SideProposal => ({
       battleId:result.battleId,roundId:result.roundId,seatId:own.seatId,
