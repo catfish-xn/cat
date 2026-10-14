@@ -6,6 +6,7 @@ import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, s
   type MatchState, type LedgerCombatEvent, type CombatReplayInput } from '../src/server-entry';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { toLedgerEvents } from '../src/simulation/combat-ledger';
+import type { CombatState } from '../src/simulation/combat-types';
 import { catalogPreparation } from './t5r-helpers';
 
 function input(count = 9, mirror = false) {
@@ -22,7 +23,7 @@ function pve(): CombatReplayInput {
   const start = startMatchCombat(catalogPreparation('3-7'));
   if (!start.ok || !start.state.combat) throw new Error('start');
   const initial = start.state.combat;
-  let terminal = initial;
+  let terminal: CombatState = initial;
   const events = start.events.filter((e): e is LedgerCombatEvent => e.domain === 'combat');
   while (terminal.status === 'running') {
     const next = stepCombat(terminal); terminal = next.state; events.push(...toLedgerEvents(next.events));
