@@ -1450,3 +1450,27 @@ ConsumableFailure 完整枚举只有 §18.5 的七项（共享包装另有既有
 SR-C18-03 穷举接线补充（multiplayer@8968c8a）：`ClientCommand` 已并入 `useConsumable`，目标类型直接引用 server-entry 导出的 ConsumableTarget。`src/simulation/bot/preflight.ts` 的 legal 暂对该动作恒返回 false，不改变现有机器人策略或消耗随机流；`tests/t7-helpers.ts` 的 execute 调用真实 useConsumable。四阶段用例确认预检无状态变化、执行与领域回执一致。
 
 经用户单行例外授权，当前 `src/server/room/room.ts` 的 applySeatCommand 增加 `case 'useConsumable': return runSharedMatchCommand(pool, state, command)`，只补穷举转发，未修改 gate/网络 onlyKeys/consumables.ts。Claude 的 claude/c18b-loot-ui 已有相应接线，C18-B 合入时由 Claude 用 useSeatConsumable 替换该行，并将其 WireCommand 收敛为 ClientCommand 别名；不保留两次分发或双重消费。
+
+版本、受影响文件、测试与待签清单见 [R3R4_LOOT_DESIGN](R3R4_LOOT_DESIGN.md)。本节无已通过的运行验收；§18.1–18.6 全部是草案，不能按正文中的函数声明直接认为 Node 导出可用。
+
+## 19. SR-B8-02 可恢复战斗与回放任务
+
+从 `src/server-entry` 导出（纯规则，无时钟、调度器或 Match 结算）：
+
+```ts
+interface BattleTask { advance(maxTicks: number): BattleResult | null }
+startTwoSidedBattle(input: BattleInput): BattleTask
+interface CombatReplayTask { advance(maxTicks: number): CombatReplay | null }
+startCombatReplay(input: CombatReplayInput): CombatReplayTask
+// 原签名保留：
+resolveTwoSidedBattle(input: BattleInput, maxSteps: number): BattleResult
+toCombatReplay(input: CombatReplayInput): CombatReplay
+```
+
+- `startTwoSidedBattle` 校验并重编译输入、建立开战态与开局账本；`startCombatReplay` 复制输入，适用于 PvP 与 PvE 的 `{initial, terminal, events}`。任务不持有调用者可变引用；调用者切片间修改原输入不会改变任务结果。
+- 每次 `advance` 至多执行 `maxTicks` 次 `stepCombat`，未结束返回 `null`，可以继续原任务；终局返回深冻结结果，重复有效调用返回同一个结果引用，不重复 step、事件或结算。tick0 已终局时首个有效调用直接返回结果。任务仅为进程内续算，不是可序列化存档；取消时释放任务引用即可。
+- `maxTicks` 必须为正安全整数；非法值在推进前抛出 `invalid-budget`（终局后也检查），任务进度不变。无隐藏总步数预算，Combat 自身 tick 上限不变。同步 `resolveTwoSidedBattle` 是一次 `advance(maxSteps)` 的兼容包装，仍把总预算不足转换为 `step-limit-exceeded`；`toCombatReplay` 一次跑完有界回放任务。
+- 战斗启动保留 `restoreBattleInput` 的 `BattleValidationError.reason`：`snapshot-version`、`content-digest`、`invalid-snapshot`、`wrong-phase`、`seat-collision`、`round-mismatch`、`round-kind`、`invalid-seed`、`invalid-battle-id`、`invalid-mirror`、`battle-input`；推进的 `invalid-budget`、结果构造的 `invalid-result` 类型同前。回放启动沿用 `RangeError('invalid-replay-input')`，推进沿用 `RangeError('replay-divergence')`，新增 `RangeError('invalid-budget')`。除非法预算可修正后重试外，发生校验错误应丢弃任务，不发布部分结果。
+- 回放按 `initial.nextEventSeq` 区分开局与第一次 step 发出的 tick0 事件；单位差分、20 tick 关键帧、最后状态和动画事件序列校验沿 §14.2。分片不截断完整领域账本、不更改事件顺序，结果 `JSON.stringify` 与改动前同步入口逐字节一致。输入仍是可信规则结果，校验边界未扩展成任意存档恢复。
+- tick 预算不是毫秒预算：启动的校验/复制、单 tick、完成时的校验/冻结以及 GC 仍不可中断。50 ms 在目标机与约定阵容实测；本接口不承诺任意硬件/100 tick 分片都小于 50 ms。调度层可减小预算并在两次调用间让出事件循环，规则层不读取真实时钟。
+- 本节只增加续算入口；不改变玩法、digest、BattleResult/CombatReplay wire 形状或镜像语义。本次没有把回放嵌入权威执行，仍需一次可切片的回放重执行；同步调用旧 API 的服务器行为不会自动提速。

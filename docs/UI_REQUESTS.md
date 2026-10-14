@@ -788,3 +788,17 @@ SR-C18-03（8968c8a）补充回应：ClientCommand 已纳入 useConsumable；Cod
 SR-B8-03 与 C18-05 重叠的是每 tick 共享事务的重复冻结重放，此路径同时受益；池资产总量、席位版本、商店/持有/待领奖励仍逐 tick 校验。来源账本 append 只共享已深冻结历史记录，新增事实仍复制冻结，可变输入仍复制；未改战斗 `structuredClone` 或引入“未终局跳检查”。因此不把更广的增量池事务或战斗克隆优化宣称为已完成。
 
 Blue Buff 超时走单人公共夹具，并不调用 shared-pool。为四泪/四剑向量分别选 seed 17/4 的真实开局组件，减少无关后期战斗，未注入物品或改变断言。所有时间预算保持原值；验收、冷热路径逐 tick 等价和篡改覆盖见 `docs/evidence/t13/WINDOW1.md`。
+
+## SR-B8-02 交付接线说明（窗口 2）
+
+正式签名、失败及预算语义见 `MULTIPLAYER_CONTRACT.md` §19。Node 入口新增 `startTwoSidedBattle` / `BattleTask` 与 `startCombatReplay` / `CombatReplayTask`，原同步入口兼容。
+
+Claude 在 `room.ts` / resolver 为每场保存一个任务：冻结输入后创建 `startTwoSidedBattle(input)`，每次 `resolveSlice` 调 `advance(100)`；返回 null 时保留同一任务并让出事件循环，下一片继续，不能每片重新创建任务。返回 BattleResult 后沿原路径生成结算提案；不要对 null 进行结算。回放阶段同样只创建一次 `startCombatReplay(result)`，每片 `advance(100)`，直到得到完整回放才发布。若目标机100 tick 超过约50ms，可调小 tick 预算，勿在同一片 while 跑完任务。
+
+PvE 使用原权威执行生成的 initial/terminal/events 创建同一种回放任务；不要从最后状态推测开局账本。双方共用原回放缓存，B 侧镜像继续只转换视角，不创建第二个回放任务。重复终局调用不产生新结果；房间取消/过期代次清理任务，异常沿现有 resolver-error 处理。服务器权限和镜像缓存键均不变。
+
+本次未修改 `src/server/`，调度接线仍由窗口 3 完成。权威执行时直接记录回放留作后续独立工作：需同时覆盖 PvE、tick0、初末态与事件校验，不以仅 PvP 的缓存旁路替代本次合同。
+
+窗口 2 验证（`e82afa5` 基线，Node v24.21.0，Intel Xeon Skylake，单 worker）：指定 two-sided-resolver、replay-client、t5r*、m8-b7* 与新增 `b8-resumable-battle` 合计15文件201用例通过。新增15例包含改动前实现采集的0/1/9单位阵容战斗/回放JSON SHA-256、1/7/100/1201切片、镜像、PvE狼群tick0、非法预算、终局幂等及可变输入隔离。9v9、889 tick、预算1的实测：战斗启动4.90ms/最长advance 5.74ms，回放启动9.41ms/最长advance 17.91ms；50ms断言未放宽。该采样不替代目标部署机的满装备/完整房间RTT验收。
+
+`npm run test:server-entry` 通过（首次沙箱 spawnSync EPERM，沙箱外同命令通过）：165个起始/逐tick状态比较、106事件，T1 state/event指纹保持 `acf238a8` / `966105d6`，Node入口新增导出白名单同步；未跑全套、未修改既有预算。

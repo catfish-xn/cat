@@ -71,8 +71,13 @@ export function toCombatViewEvents(events: readonly LedgerCombatEvent[]): Combat
   });
 }
 
-/** Trusted complete battle only. One bounded pure re-execution; never commits Match settlement. */
-export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
+export interface CombatReplayTask {
+  advance(maxTicks: number): CombatReplay | null;
+}
+
+/** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
+export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
+  const battle = structuredClone(input);
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
     || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
   const initial = toCombatViewState(battle.initial), terminal = toCombatViewState(battle.terminal);
@@ -82,28 +87,42 @@ export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
   const ticks: CombatReplayTick[] = [{ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) }];
   let state = battle.initial, previous = initial;
   const generated: LedgerCombatEvent[] = [];
-  while (state.status === 'running' && state.tick < battle.terminal.tick) {
-    const next = stepCombat(state);
-    if (next.state.tick !== state.tick + 1) throw new RangeError('replay-divergence');
-    state = next.state;
-    const ledger = toLedgerEvents(next.events); generated.push(...ledger);
-    const view = toCombatViewState(state), events: CombatViewEvent[] = toCombatViewEvents(ledger);
-    if (view.units.length !== previous.units.length || view.units.some((u, i) => u.id !== previous.units[i].id)) throw new RangeError('replay-divergence');
-    for (let i = 0; i < view.units.length; i++) {
-      const unit = view.units[i], before = previous.units[i];
-      const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
-        && JSON.stringify(value) !== JSON.stringify(before[key as keyof CombatViewUnit])));
-      if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
+  let result: CombatReplay | null = null;
+  return { advance(maxTicks) {
+    if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new RangeError('invalid-budget');
+    if (result) return result;
+    let steps = 0;
+    while (steps < maxTicks && state.status === 'running' && state.tick < battle.terminal.tick) {
+      const next = stepCombat(state);
+      if (next.state.tick !== state.tick + 1) throw new RangeError('replay-divergence');
+      state = next.state;
+      const ledger = toLedgerEvents(next.events); generated.push(...ledger);
+      const view = toCombatViewState(state), events: CombatViewEvent[] = toCombatViewEvents(ledger);
+      if (view.units.length !== previous.units.length || view.units.some((u, i) => u.id !== previous.units[i].id)) throw new RangeError('replay-divergence');
+      for (let i = 0; i < view.units.length; i++) {
+        const unit = view.units[i], before = previous.units[i];
+        const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
+          && JSON.stringify(value) !== JSON.stringify(before[key as keyof CombatViewUnit])));
+        if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
+      }
+      ticks.push({ tick: state.tick, events,
+        ...(state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) });
+      previous = view;
+      steps++;
     }
-    ticks.push({ tick: state.tick, events,
-      ...(state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) });
-    previous = view;
-  }
-  if (canonicalContent(previous) !== canonicalContent(terminal)
-    || canonicalContent(toCombatViewEvents(generated)) !== canonicalContent(toCombatViewEvents(battle.events.filter(event => event.eventSeq >= firstStepEventSeq)))) {
-    throw new RangeError('replay-divergence');
-  }
-  return freezeContent({ initial, ticks, terminal });
+    if (state.status === 'running' && state.tick < battle.terminal.tick) return null;
+    if (canonicalContent(previous) !== canonicalContent(terminal)
+      || canonicalContent(toCombatViewEvents(generated)) !== canonicalContent(toCombatViewEvents(battle.events.filter(event => event.eventSeq >= firstStepEventSeq)))) {
+      throw new RangeError('replay-divergence');
+    }
+    result = freezeContent({ initial, ticks, terminal });
+    return result;
+  } };
+}
+
+/** Synchronous compatibility wrapper over the bounded replay task. */
+export function toCombatReplay(battle: CombatReplayInput): CombatReplay {
+  return startCombatReplay(battle).advance(1201)!;
 }
 
 /** Display reducer: animation facts never apply damage/mana twice. Keyframes replace after events. */
