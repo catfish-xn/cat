@@ -727,9 +727,9 @@ export class BoardScene extends Phaser.Scene {
     const view = this.session.combatView, id = view ? this.hoveredId() : undefined;
     const token = id && view?.units.some(unit => unit.id === id) ? this.tokens.get(id) : undefined;
     const loadout = token ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
-    if (!token || !loadout?.changed) { if (this.loadoutTip.visible) this.loadoutTip.setVisible(false); return; }
+    if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); return; }
     const text = battleLoadoutText(loadout, definitionId => ITEM_DEFINITIONS[definitionId]?.name ?? definitionId);
-    this.loadoutTip.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
+    this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
   }
   private clearDrag() {
     this.inputRouter.cancel(); this.strategyPanel?.cancel();
@@ -830,7 +830,7 @@ export class BoardScene extends Phaser.Scene {
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
         starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip,
         equipped: this.views.get(id)!.equipped, pendingEquipped: this.views.get(id)!.pendingEquipped, owner: this.equipmentOwner(id) })),
-      loadoutTip: this.loadoutTip.visible ? this.loadoutTip.text : '',
+      loadoutTip: this.loadoutTip?.visible ? this.loadoutTip.text : '',
       health: meters('hp'), mana: meters('mana'),
       shields: meters('shield').map(meter => ({ ...meter, text: this.views.get(meter.id)!.shieldLabel.text, labelVisible: this.views.get(meter.id)!.shieldLabel.visible })),
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,
