@@ -802,3 +802,12 @@ PvE 使用原权威执行生成的 initial/terminal/events 创建同一种回放
 窗口 2 验证（`e82afa5` 基线，Node v24.21.0，Intel Xeon Skylake，单 worker）：指定 two-sided-resolver、replay-client、t5r*、m8-b7* 与新增 `b8-resumable-battle` 合计15文件201用例通过。新增15例包含改动前实现采集的0/1/9单位阵容战斗/回放JSON SHA-256、1/7/100/1201切片、镜像、PvE狼群tick0、非法预算、终局幂等及可变输入隔离。9v9、889 tick、预算1的实测：战斗启动4.90ms/最长advance 5.74ms，回放启动9.41ms/最长advance 17.91ms；50ms断言未放宽。该采样不替代目标部署机的满装备/完整房间RTT验收。
 
 `npm run test:server-entry` 通过（首次沙箱 spawnSync EPERM，沙箱外同命令通过）：165个起始/逐tick状态比较、106事件，T1 state/event指纹保持 `acf238a8` / `966105d6`，Node入口新增导出白名单同步；未跑全套、未修改既有预算。
+
+## C19 窗口 3 发现的规则缺口（2026-10-14，Claude 流水线 B，基线 `multiplayer@fa36a27`）
+
+### SR-C19-01 日炎斗篷灼烧漏掉一次周期脉冲，整局以 resolver-error 中断（P0，阻塞整局，规则侧）
+
+- **现象**：房间以 `fault = { kind: 'resolver-error', message: 'Missed periodic pulse; never backfill' }` 异常结束，没有排名。报错来自 `src/simulation/m8/periodic.ts:33` `advancePeriodicTask`。都发生在第 6 阶段的 PvP 战斗（seed 4：6-1 `r32:b1`；seed 9：6-1 `r32:b0`；seed 11：6-2 `r33:b0`）。另外 C19 e2e 用 seed 12（2 真人 + 6 机器人）时在 5-1 同样异常结束。8 机器人的进程内整局抽查 16 个种子，有 3 个出现（约 1/5），会直接卡住 T9 真机整局。
+- **共同点**（三例相同）：抛错时一个**日炎斗篷（`sunfire-cape`）灼烧**周期任务挂在存活目标上，字段为 `pulseOrdinal 0`、`periodTicks 20`、`finalPulse 'before-expiry'`、`endsAtTick = nextPulseAtTick + 200`，`nextPulseAtTick` 为 T（80 / 160 / 200）。tick T 的脉冲没有被处理，推进到 T+1 时抛错。看起来像在 tick T 当拍新建或刷新的灼烧任务把首个脉冲定在 T，而这一拍的周期任务已经推进过了。根因与修法由 Codex 判断。
+- **复现**（纯进程内，无浏览器或网络，每个种子约 1 分钟）：`node tests/server/e2e/repro-missed-pulse.mjs 9`（不带参数时跑 9、4、11）。脚本用 `ManualClock` + 8 个 `BotDriver` + `TwoSidedBattleResolver` 打完整局。遇到 resolver-error 时用公共入口 `snapshotForBattle → compileBattle` 重新编译出错的配对，把规则输入写到 `artifacts/repro-missed-pulse/seed-<n>.json`，再单独调用 `resolveTwoSidedBattle(input, 5000)` 复现同一异常，最后逐 tick `stepCombat`，打印抛错的 tick 和滞后的周期任务。seed 9 的输出：`step to tick 161 throws … late task on irelia (alive true): item sunfire-cape …, nextPulseAtTick 160, period 20, ends 360, pulse 0, finalPulse before-expiry`。
+- **验收条件**：上述三个种子的规则输入 `resolveTwoSidedBattle` 不抛错；在 tick T 当拍新建（或刷新）、首脉冲在 T 的周期任务有单测，不补发、不漏发；`repro-missed-pulse.mjs` 三个种子都打到唯一排名，没有 fault；有内容或规则变化时按惯例同步 digest。服务器侧不做绕过（不吞异常、不跳过该场战斗）。
