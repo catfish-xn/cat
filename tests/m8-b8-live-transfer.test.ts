@@ -6,7 +6,7 @@ import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { run } from '../scripts/generate-m5-route.cjs';
 import type { FrozenDirectDrop } from '../src/simulation/loot-types';
 
-const SURVIVOR = 'unit-21', DONOR = 'unit-22', REWARD = 'unit-24', TG = 'item-9';
+const SURVIVOR = 'unit-23', DONOR = 'unit-24', REWARD = 'unit-26', TG = 'item-9';
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
 function accepted(result: MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Public transfer fixture: ${result.reason}`);
@@ -52,9 +52,10 @@ async function preparation(): Promise<MatchState> {
   state = accepted(api.equipItem(state, 'item-3', 'unit-13', 0));
   state = accepted(api.equipItem(state, 'item-7', 'unit-13', 1));
   for (let count = 0; count < 8; count++) state = accepted(api.buyXp(state));
-  state = accepted(api.buyUnit(state, 0, 20));
-  for (let count = 0; count < 4; count++) state = accepted(api.rerollShop(state));
+  // T11 route reaches generation 22; generation 24 offers both one-star Ezreals.
+  for (let count = 0; count < 2; count++) state = accepted(api.rerollShop(state));
   state = accepted(api.buyUnit(state, 2, 24));
+  state = accepted(api.buyUnit(state, 3, 24));
   state = accepted(api.deployMatchUnit(state, SURVIVOR, { kind: 'board', cell: { col: 3, row: 7 } }));
   state = accepted(api.deployMatchUnit(state, DONOR, { kind: 'board', cell: { col: 5, row: 7 } }));
   // item-5 is the actual 2-7 direct gloves; item-8 is the actual 3-4 supply choice.
@@ -105,7 +106,7 @@ function assertOriginalInput(live: ReturnType<typeof battle>): void {
   expect(basis.inputs.anomalyBinding).toEqual(prepared.anomalyBinding);
   expect(basis.inputs.temporaryEquipment).toEqual(prepared.temporaryEquipment);
   expect(basis.equipmentRollPrefixLength).toBe(10);
-  expect(basis.provenancePrefixLength).toBe(64);
+  expect(basis.provenancePrefixLength).toBe(67);
   expect(basis.inputs.items.find(item => item.id === TG)?.location).toEqual({ kind: 'unit', unitId: DONOR, slot: 0 });
   expect(basis.inputs.anomalyBinding?.unitId).toBe(DONOR);
   expect(ended.combat!.strategy).toEqual(buildStrategySnapshot(basis.inputs));
@@ -129,14 +130,14 @@ function assertOriginalInput(live: ReturnType<typeof battle>): void {
 
 describe('B8 live reward upgrade with equipment, anomaly and G12 transfer', () => {
   it('pins actual purchases, component births, anomaly target and the 4-7 reward candidate', () => {
-    expect(prepared).toMatchObject({ roundDefinitionId: '4-7', phase: 'preparation', playerHp: 81, gold: 118, level: 7,
-      nextUnitSerial: 24, nextItemSerial: 13 });
+    expect(prepared).toMatchObject({ roundDefinitionId: '4-7', phase: 'preparation', playerHp: 81, gold: 122, level: 7,
+      nextUnitSerial: 26, nextItemSerial: 13 });
     expect(players(prepared).filter(unit => unit.definitionId === 'ezreal').map(({ id, starLevel, location }) => ({ id, starLevel, location })))
       .toEqual([{ id: SURVIVOR, starLevel: 1, location: { kind: 'board', cell: { col: 3, row: 7 } } },
         { id: DONOR, starLevel: 1, location: { kind: 'board', cell: { col: 5, row: 7 } } }]);
     expect(prepared.resourceProvenance.entries.filter(entry => entry.kind === 'unit-acquired' && [SURVIVOR, DONOR].includes(entry.unitId)))
-      .toEqual([expect.objectContaining({ unitId: SURVIVOR, source: { kind: 'shop', generation: 20, slotIndex: 0, definitionId: 'ezreal' } }),
-        expect.objectContaining({ unitId: DONOR, source: { kind: 'shop', generation: 24, slotIndex: 2, definitionId: 'ezreal' } })]);
+      .toEqual([expect.objectContaining({ unitId: SURVIVOR, source: { kind: 'shop', generation: 24, slotIndex: 2, definitionId: 'ezreal' } }),
+        expect.objectContaining({ unitId: DONOR, source: { kind: 'shop', generation: 24, slotIndex: 3, definitionId: 'ezreal' } })]);
     expect(prepared.resourceProvenance.entries.find(entry => entry.kind === 'unit-sold' && entry.unitId === 'unit-16'))
       .toMatchObject({ roundId: '3-5', context: 'preparation', goldGranted: 8 });
     expect(prepared.m8.loot.receipts.find(receipt => receipt.grantedItemIds.includes('item-5'))?.payload)
@@ -177,10 +178,10 @@ describe('B8 live reward upgrade with equipment, anomaly and G12 transfer', () =
     const receipt = ended.m8.loot.receipts.find(value => value.grantedUnitIds.includes(REWARD))!;
     expect(receipt.payload).toEqual({ kind: 'unit', definitionId: 'ezreal', quantity: 1 });
     expect(receipt.grantedUnitIds).toEqual([REWARD]);
-    const suffix = ended.resourceProvenance.entries.slice(64);
+    const suffix = ended.resourceProvenance.entries.slice(67);
     expect(suffix.map(entry => entry.kind)).toEqual(['item-acquired', 'unit-acquired', 'unit-upgraded', 'combat-growth-committed']);
-    expect(suffix[1]).toEqual({ kind: 'unit-acquired', unitId: REWARD, source: { kind: 'loot', receiptId: receipt.receiptId }, sequence: 65, roundId: '4-7' });
-    expect(suffix[2]).toEqual({ kind: 'unit-upgraded', acquisitionSequence: 65, sequence: 66, roundId: '4-7', event: {
+    expect(suffix[1]).toEqual({ kind: 'unit-acquired', unitId: REWARD, source: { kind: 'loot', receiptId: receipt.receiptId }, sequence: 68, roundId: '4-7' });
+    expect(suffix[2]).toEqual({ kind: 'unit-upgraded', acquisitionSequence: 68, sequence: 69, roundId: '4-7', event: {
       type: 'unitUpgraded', survivorId: SURVIVOR, consumedIds: [DONOR, REWARD], definitionId: 'ezreal', fromStar: 1, toStar: 2,
       location: { kind: 'board', cell: { col: 3, row: 7 } },
     } });
@@ -197,7 +198,7 @@ describe('B8 live reward upgrade with equipment, anomaly and G12 transfer', () =
         applied: returned ? [] : prepared.temporaryEquipment.map(child => ({ ...child, holderId: SURVIVOR })) }),
     ]);
     expect(events.some(event => event.type === 'equipmentRolled')).toBe(false);
-    expect(ended.nextUnitSerial).toBe(25); expect(ended.nextItemSerial).toBe(14);
+    expect(ended.nextUnitSerial).toBe(27); expect(ended.nextItemSerial).toBe(14);
     expect(ended.m8.loot.receipts.length).toBe(prepared.m8.loot.receipts.length + 2);
     expect(ended.scheduleReceipts).toEqual(prepared.scheduleReceipts);
     expect(ended.items.filter(item => item.id === TG)).toHaveLength(1);
@@ -227,7 +228,7 @@ describe('B8 live reward upgrade with equipment, anomaly and G12 transfer', () =
     expect(live.selected.combatInputBasis).toEqual(live.ended.combatInputBasis);
     expect(live.selected.equipmentState).toEqual(live.ended.equipmentState);
     expect(live.selected.m8.loot.receipts.length).toBe(prepared.m8.loot.receipts.length + 3);
-    expect(live.selected.nextItemSerial).toBe(15); expect(live.selected.nextUnitSerial).toBe(25);
+    expect(live.selected.nextItemSerial).toBe(15); expect(live.selected.nextUnitSerial).toBe(27);
     expect(live.selected.scheduleReceipts).toEqual(prepared.scheduleReceipts);
     const continued = api.nextRound(live.selected, 24);
     expect(api.nextRound(roundTrip(live.selected), 24)).toEqual(continued);
@@ -235,7 +236,7 @@ describe('B8 live reward upgrade with equipment, anomaly and G12 transfer', () =
     expect(next.roundDefinitionId).toBe('5-1'); expect(next.combatInputBasis).toBeNull();
     expect(next.resourceProvenance).toEqual(live.selected.resourceProvenance);
     expect(next.m8.loot.receipts).toEqual(live.selected.m8.loot.receipts);
-    expect(next.nextUnitSerial).toBe(25); expect(next.nextItemSerial).toBe(15);
+    expect(next.nextUnitSerial).toBe(27); expect(next.nextItemSerial).toBe(15);
     // A legitimately equipped parent rolls once for the new round, never again for restore/retry.
     expect(next.equipmentState.rolls.length).toBe(returned ? 10 : 11);
     expect(next.equipmentState.equipment.draws).toBe(returned ? 20 : 22);

@@ -116,6 +116,8 @@ const PREFIX: readonly PrefixCommand[] = [
   ["bench", 7, 0],
   ["board", 17, 3, 7],
   ["board", 19, 0, 7],
+  // Bench Corki from 3-3 so both Tristana copies earn stock in the later public battles.
+  ["bench", 19, 0],
   ["fight"],
   ["continue"],
   // Round 14.
@@ -133,7 +135,7 @@ const PREFIX: readonly PrefixCommand[] = [
   ["reroll"],
   ["combine", 6, 8],
   ["equip", 9, 11, 0],
-  ["bench", 6, 1],
+  // T11: the third Urgot already consumed unit-6 in the round-15 merge.
   ["board", 7, 3, 4],
   ["fight"],
   ["continue"],
@@ -149,7 +151,9 @@ const PREFIX: readonly PrefixCommand[] = [
   ["xp"],
   ["xp"],
   ["xp"],
-  ['bench', 19, 0], // A public deployment leaves Tristana time to gain a real 3-7 delta.
+  // Bench Irelia/Ezreal for 3-7 so the consumed Tristana earns a real current delta.
+  ['bench', 1, 7],
+  ['bench', 7, 8],
 ];
 
 function command(state: MatchState, action: PrefixCommand): MatchCommandResult {
@@ -224,8 +228,8 @@ const currentCommit = (state: MatchState) => state.resourceProvenance.entries.fi
   (entry): entry is Extract<ResourceProvenanceEntry, {kind:'combat-growth-committed'}> =>
     entry.kind === 'combat-growth-committed' && entry.combatId === 'round-17')!;
 
-// Unlike the algebra-only 1000 and runtime-only 1750 vectors, this route yields a live 500:
-// unit-13 stock 250 + unit-17 stock 125 + unit-17 current delta 125, then reward unit-25 is consumed.
+// Unlike the algebra-only 1000 and runtime-only 1750 vectors, this route yields a live 625:
+// unit-13 stock 375 + unit-17 stock 125 + unit-17 current delta 125, then reward unit-25 is consumed.
 describe('B8 live growth plus immediate loot merge, with strict restoration', () => {
   it('pins seed 49 freeze and proves prior stock and this-combat delta from actual public battles', () => {
     const frozen = freezeLootThroughRound(49,17).rounds.at(-1)!;
@@ -238,12 +242,13 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
     expect(frozen.choices[0]).toMatchObject({sourceUnitId:'["pve","3-7","wolves-v1","w01"]',terminalFallbackDefinitionId:'sword'});
     expect(live.prepared.m8.loot.frozen.rounds.at(-1)).toEqual(frozen);
     expect(live.priorGrowth).toEqual([
-      {roundId:'3-2',unitId:'unit-13',amountBps:125},
       {roundId:'3-5',unitId:'unit-17',amountBps:125},
+      {roundId:'3-5',unitId:'unit-13',amountBps:125},
+      {roundId:'3-6',unitId:'unit-13',amountBps:125},
       {roundId:'3-6',unitId:'unit-13',amountBps:125},
     ]);
     expect(live.prepared.persistentGrowth).toEqual([
-      {unitId:'unit-13',attackDamageBps:250}, {unitId:'unit-17',attackDamageBps:125},
+      {unitId:'unit-13',attackDamageBps:375}, {unitId:'unit-17',attackDamageBps:125},
     ]);
     expect(live.prepared.preparation.units.filter(unit => unit.team === 'player' && unit.definitionId === 'tristana')
       .map(({id,starLevel,location}) => ({id,starLevel,location}))).toEqual([
@@ -259,13 +264,13 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
       attackDamageBps:live.ended.combat!.units.find(unit => unit.id === id)!.runtime!.permanentAdBps}));
     expect(originalDeltas).toEqual([{sourceUnitId:'unit-13',attackDamageBps:0},{sourceUnitId:'unit-17',attackDamageBps:125}]);
     expect(live.events.filter(event => event.type === 'growth')).toEqual([
-      // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 131.
-      {type:'growth',tick:74,unitId:'unit-17',amountBps:125,totalBps:125,domain:'combat',combatId:'round-17',eventSeq:110},
+      // Re-recorded T11 route: the donor's spell kill earns 125 Bps at tick 219.
+      {type:'growth',tick:219,unitId:'unit-17',amountBps:125,totalBps:125,domain:'combat',combatId:'round-17',eventSeq:215},
     ]);
     // Deliberately sum by original source ID without the production merge/fold helper.
     const stock = sourceIds.reduce((total,id) => total + live.prepared.persistentGrowth.find(value => value.unitId === id)!.attackDamageBps,0);
     const delta = originalDeltas.reduce((total,value) => total + value.attackDamageBps,0);
-    expect({stock,delta,total:stock+delta}).toEqual({stock:375,delta:125,total:500});
+    expect({stock,delta,total:stock+delta}).toEqual({stock:500,delta:125,total:625});
     expect(live.ended.persistentGrowth).toEqual([{unitId:'unit-13',attackDamageBps:stock+delta}]);
     expect(currentCommit(live.ended).sourceDeltas).toEqual([{sourceUnitId:'unit-17',attackDamageBps:125}]);
   });
@@ -305,7 +310,7 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
 
   it('strictly restores preparation, start, live reveal, pre-final tick, settlement choice and selected settlement', () => {
     for (const state of [live.prepared,live.started,live.revealed,live.beforeFinal,live.ended,live.selected]) roundTrip(state);
-    expect(live.revealed.combat!.tick).toBe(74);
+    expect(live.revealed.combat!.tick).toBe(122);
     expect(live.revealed.phase).toBe('combat');
     expect(live.revealed.persistentGrowth).toEqual(live.prepared.persistentGrowth);
     expect(live.revealed.preparation).toEqual(live.prepared.preparation);
@@ -314,8 +319,8 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
     expect(live.revealed.m8.loot.receipts).toEqual(live.prepared.m8.loot.receipts);
     expect(live.revealed.pendingChoice).toBeNull();
     expect(currentCommit(live.revealed)).toBeUndefined();
-    expect(live.beforeFinal.combat!.tick).toBe(165);
-    expect(live.ended.combat!.tick).toBe(166);
+    expect(live.beforeFinal.combat!.tick).toBe(242);
+    expect(live.ended.combat!.tick).toBe(243);
     expect(live.selected.phase).toBe('settlement');
   });
 
@@ -347,7 +352,7 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
     const nextPrepared = accepted(next);
     expect(nextPrepared.roundDefinitionId).toBe('4-1');
     expect(nextPrepared.combatInputBasis).toBeNull();
-    expect(nextPrepared.persistentGrowth).toEqual([{unitId:'unit-13',attackDamageBps:500}]);
+    expect(nextPrepared.persistentGrowth).toEqual([{unitId:'unit-13',attackDamageBps:625}]);
     roundTrip(nextPrepared);
   });
 
@@ -381,10 +386,10 @@ describe('B8 live growth plus immediate loot merge, with strict restoration', ()
     const plan = live.ended.m8.loot.frozen.rounds.at(-1)!;
     const evidence = plan.encounterPlan.drops.map(drop => live.ended.m8.loot.earnedEvidence.find(value => value.dropId === drop.dropId)!);
     expect(evidence.map(value => value.death)).toEqual([
-      {combatId:'round-17',tick:166,eventSeq:286}, {combatId:'round-17',tick:166,eventSeq:286},
+      {combatId:'round-17',tick:198,eventSeq:202}, {combatId:'round-17',tick:198,eventSeq:202},
     ]);
-    // replay2 (M8_B9_U7_PLAN §2): removing the aggregate damage event and splitting mana per request shifts eventSeq only; was 340. The reference still resolves to that natural death.
-    expect(live.events.find(event => event.domain === 'combat' && event.combatId === 'round-17' && event.eventSeq === 286)).toMatchObject({ type: 'death', tick: 166 });
+    // The two reward slots still reference the same natural w00 death in the re-recorded route.
+    expect(live.events.find(event => event.domain === 'combat' && event.combatId === 'round-17' && event.eventSeq === 202)).toMatchObject({ type: 'death', tick: 198 });
     expect(live.ended.combat!.neutralReceipts!.deaths.filter(death => death.unitId === plan.encounterPlan.drops[0].sourceUnitId)).toHaveLength(1);
     const relevant = new Set(plan.encounterPlan.drops.map(drop => drop.dropId));
     expect(live.events.filter(event => event.type === 'lootRevealed' && relevant.has(event.dropId))
@@ -424,10 +429,10 @@ const tamperings: readonly [string, (state:MutableMatch) => void, string][] = [
     badCommit(state).sourceDeltas[0].sourceUnitId = 'unit-13';
   }, 'Invalid B8 Match: original combat growth deltas'],
   ['missing delta with a matching forged final stock', state => {
-    badCommit(state).sourceDeltas = []; state.persistentGrowth[0].attackDamageBps = 375;
+    badCommit(state).sourceDeltas = []; state.persistentGrowth[0].attackDamageBps = 500;
   }, 'Invalid B8 Match: original combat growth deltas'],
   ['inflated delta with a matching forged final stock', state => {
-    badCommit(state).sourceDeltas[0].attackDamageBps = 250; state.persistentGrowth[0].attackDamageBps = 625;
+    badCommit(state).sourceDeltas[0].attackDamageBps = 250; state.persistentGrowth[0].attackDamageBps = 750;
   }, 'Invalid B8 Match: original combat growth deltas'],
   ['delta attributed to the new reward outside the original combat prefix', state => {
     badCommit(state).sourceDeltas[0].sourceUnitId = 'unit-25';
@@ -436,7 +441,7 @@ const tamperings: readonly [string, (state:MutableMatch) => void, string][] = [
     badCommit(state).sourceDeltas.push(copy(badCommit(state).sourceDeltas[0]));
   }, 'Invalid resource provenance: combat growth source/step'],
   ['final growth resurrected under consumed source', state => {
-    state.persistentGrowth = [{unitId:'unit-13',attackDamageBps:375},{unitId:'unit-17',attackDamageBps:125}];
+    state.persistentGrowth = [{unitId:'unit-13',attackDamageBps:500},{unitId:'unit-17',attackDamageBps:125}];
   }, 'Invalid Match save: persistent growth'],
   ['birth bound to the component receipt', state => {
     const receipt = state.m8.loot.receipts.find(value => value.grantedItemIds.includes('item-10'))!;
