@@ -738,3 +738,17 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 ## T13 对 Claude 的接线说明
 
 T13-A：界面不再需要自己选合成槽。将玩家请求的合法 slot 原样交给 equipItem；previewEquip 成功时按 occupiedSlots 高亮真实落槽，按原 combination 显示配方结果。单位身上已有散件时，拖到空槽或成装槽也会在原散件槽合成；旧状态多个散件优先最低槽。三槽父件仍按 occupiedSlots=[0,1,2] 显示。无需新命令或新失败码，四阶段及下场生效文案沿用 T12。
+
+## SR-B8-02 交付接线说明（窗口 2）
+
+正式签名、失败及预算语义见 `MULTIPLAYER_CONTRACT.md` §19。Node 入口新增 `startTwoSidedBattle` / `BattleTask` 与 `startCombatReplay` / `CombatReplayTask`，原同步入口兼容。
+
+Claude 在 `room.ts` / resolver 为每场保存一个任务：冻结输入后创建 `startTwoSidedBattle(input)`，每次 `resolveSlice` 调 `advance(100)`；返回 null 时保留同一任务并让出事件循环，下一片继续，不能每片重新创建任务。返回 BattleResult 后沿原路径生成结算提案；不要对 null 进行结算。回放阶段同样只创建一次 `startCombatReplay(result)`，每片 `advance(100)`，直到得到完整回放才发布。若目标机100 tick 超过约50ms，可调小 tick 预算，勿在同一片 while 跑完任务。
+
+PvE 使用原权威执行生成的 initial/terminal/events 创建同一种回放任务；不要从最后状态推测开局账本。双方共用原回放缓存，B 侧镜像继续只转换视角，不创建第二个回放任务。重复终局调用不产生新结果；房间取消/过期代次清理任务，异常沿现有 resolver-error 处理。服务器权限和镜像缓存键均不变。
+
+本次未修改 `src/server/`，调度接线仍由窗口 3 完成。权威执行时直接记录回放留作后续独立工作：需同时覆盖 PvE、tick0、初末态与事件校验，不以仅 PvP 的缓存旁路替代本次合同。
+
+窗口 2 验证（`e82afa5` 基线，Node v24.21.0，Intel Xeon Skylake，单 worker）：指定 two-sided-resolver、replay-client、t5r*、m8-b7* 与新增 `b8-resumable-battle` 合计15文件201用例通过。新增15例包含改动前实现采集的0/1/9单位阵容战斗/回放JSON SHA-256、1/7/100/1201切片、镜像、PvE狼群tick0、非法预算、终局幂等及可变输入隔离。9v9、889 tick、预算1的实测：战斗启动4.90ms/最长advance 5.74ms，回放启动9.41ms/最长advance 17.91ms；50ms断言未放宽。该采样不替代目标部署机的满装备/完整房间RTT验收。
+
+`npm run test:server-entry` 通过（首次沙箱 spawnSync EPERM，沙箱外同命令通过）：165个起始/逐tick状态比较、106事件，T1 state/event指纹保持 `acf238a8` / `966105d6`，Node入口新增导出白名单同步；未跑全套、未修改既有预算。

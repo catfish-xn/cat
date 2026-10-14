@@ -58,7 +58,7 @@ async function worker() {
   const api = await load(path.join(root, 'dist-server/index.mjs'));
   const reference = await load(path.join(out, 'browser-reference.mjs'));
   const expectedExports = [
-    'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay',
+    'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay', 'startCombatReplay',
     'applyCombatReplayTick', 'COMBAT_REPLAY_KEYFRAME_INTERVAL',
     'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',
     'createMatch', 'deployMatchUnit', 'autoDeployToCap', 'lockMatchCombatRoster', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
@@ -66,7 +66,7 @@ async function worker() {
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',
     'validateMatchDeployment', 'matchStartFailure', 'needsAnomalyRecruitment', 'serializeMatch', 'restoreMatch',
     'snapshotForBattle', 'restorePlayerBattleSnapshot', 'compileBattle', 'restoreBattleInput',
-    'startTwoSidedCombat', 'startTwoSidedCombatWithEvents', 'resolveTwoSidedBattle', 'proposeSettlement',
+    'startTwoSidedBattle', 'startTwoSidedCombat', 'startTwoSidedCombatWithEvents', 'resolveTwoSidedBattle', 'proposeSettlement',
     'stepCombat', 'PLAYER_BATTLE_SNAPSHOT_VERSION', 'TWO_SIDED_BATTLE_VERSION', 'BattleValidationError',
     'createSharedPool', 'initializeSharedSeat', 'generateSharedShop', 'buySharedUnit', 'rerollSharedShop',
     'setSharedShopLock', 'sellSharedUnit', 'releaseSeatOnElimination', 'refreshSharedShops', 'nextSharedRound',

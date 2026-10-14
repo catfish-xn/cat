@@ -118,21 +118,39 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
   };
 }
 
-/** Runs exactly one Combat. Budget exhaustion is a fault, never a fabricated draw. */
-export function resolveTwoSidedBattle(input: BattleInput, maxSteps: number): BattleResult {
-  if (!Number.isSafeInteger(maxSteps) || maxSteps < 1) throw new BattleValidationError('invalid-budget');
+export interface BattleTask {
+  advance(maxTicks: number): BattleResult | null;
+}
+
+/** In-memory continuation. A slice budget never changes the Combat's own tick limit. */
+export function startTwoSidedBattle(input: BattleInput): BattleTask {
   const checked = restoreBattleInput(input);
   const start = createCombatWithEvents(checked.preparation,checked.strategy,checked.battleId,checked.battleSeed);
   const events = [...toLedgerEvents(start.events)];
-  let terminal = start.state, steps = 0;
-  while (terminal.status === 'running' && steps < maxSteps) {
-    const next = stepCombat(terminal); terminal = next.state; events.push(...toLedgerEvents(next.events)); steps++;
-  }
-  if (terminal.status !== 'finished') throw new BattleValidationError('step-limit-exceeded');
-  return freezeContent({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
-    winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
-    a:sideResult(checked.a.seatId,checked.mapping,terminal), b:sideResult(checked.b.seatId,checked.mapping,terminal,checked.mirrorOfSeatId !== null),
-    mapping:checked.mapping,initial:start.state,terminal,events});
+  let terminal = start.state;
+  let result: BattleResult | null = null;
+  return { advance(maxTicks) {
+    if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new BattleValidationError('invalid-budget');
+    if (result) return result;
+    let steps = 0;
+    while (terminal.status === 'running' && steps < maxTicks) {
+      const next = stepCombat(terminal); terminal = next.state; events.push(...toLedgerEvents(next.events)); steps++;
+    }
+    if (terminal.status !== 'finished') return null;
+    result = freezeContent({version:TWO_SIDED_BATTLE_VERSION,battleId:checked.battleId,roundId:checked.a.roundId,battleSeed:checked.battleSeed,mirrorOfSeatId:checked.mirrorOfSeatId,
+      winnerSeatId:terminal.result === 'draw' ? null : terminal.result === 'playerWin' ? checked.a.seatId : checked.b.seatId,
+      a:sideResult(checked.a.seatId,checked.mapping,terminal), b:sideResult(checked.b.seatId,checked.mapping,terminal,checked.mirrorOfSeatId !== null),
+      mapping:checked.mapping,initial:start.state,terminal,events});
+    return result;
+  } };
+}
+
+/** Compatibility: exhausting the total budget remains a fault, never a draw. */
+export function resolveTwoSidedBattle(input: BattleInput, maxSteps: number): BattleResult {
+  if (!Number.isSafeInteger(maxSteps) || maxSteps < 1) throw new BattleValidationError('invalid-budget');
+  const result = startTwoSidedBattle(input).advance(maxSteps);
+  if (!result) throw new BattleValidationError('step-limit-exceeded');
+  return result;
 }
 
 /** Trusted rules output only. No Match mutation, HP clamp, income, receipt or elimination. */
