@@ -53,6 +53,12 @@ export interface PublicBoardUnit {
   readonly items: readonly string[];
 }
 export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
+/**
+ * C15: one of MY units in my battle replay. The replay names units by their battle ids (contract §10.2); this pair
+ * says which of my own units a battle id stands for, so the client can show that unit's equipment without
+ * parsing the id. Only my seat's `unit` entries are sent; the opponent's ids and every item/augment/anomaly entry stay on the server.
+ */
+export interface ReplayUnitId { readonly combatId: string; readonly originalId: string }
 /** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. */
 export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'combat' | 'settlement' | 'ended';
 export interface PlayerViewPhase {
