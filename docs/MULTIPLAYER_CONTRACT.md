@@ -1168,3 +1168,200 @@ canOperateEquipment(state: Readonly<MatchState>): boolean;
 三项细分身份进入 canonical digest。外层 schema6 / rules `m8-14.24b-v1` / content `s13-14.24b-m8-v1` / save2 / replay2 / commandProtocol2 / NET_PROTOCOL_VERSION=1 不变。旧 content digest 存档明确拒绝，不迁移、不补旧账、不重写已冻结战斗。
 
 独立依据、每个 golden 的原因和实际测试结果见 [T12 证据](evidence/t12/README.md)。T1 原事件/RNG/战斗数值锚点不变，只替换 T12 digest 后 165 个状态逐字节匹配 T11；继续历史归一化匹配原 T1。room 闸门已放行 equip/combine，Claude 只需按 [UI_REQUESTS 的 T12 说明](UI_REQUESTS.md#t12-对-claude-的接线说明2026-10-14) 调整预览、拖放目标与提示。不新增 §14 投影字段，不规定布局和视觉。
+
+## 18. R3+R4 掉落系统合同草案，未签字
+
+本节基于 origin/multiplayer@25dae94；与 T12（PR #71）并行出设计，**未导出、未接线、未生效**。签字且 T12 合入后，才按 [M8B_LOOT §11](M8B_LOOT.md#11-r3r4-修订草案未签字) 实施。现行 §12/§14/§15 保持；本节只是它们的候选修订。规则数值及来源均见 LOOT §11；本节新增序号、计数、版本和数据结构均为项目自定/P，旧边界为 L1/P。
+
+### 18.1 公共命令签名草案
+
+以下类型及函数拟从 simulation 对应模块与 src/server-entry/index.ts 导出；参数只接受服务器可信权威状态，禁止把 PrivateSeatView 传入命令。签名中的 MatchCommandResult/SharedPoolResult 沿用既有成功/失败形状，仅扩展状态、事件和失败联合。
+
+~~~ts
+type ConsumableDefinitionId =
+  | 'magnetic-remover' | 'component-reforger' | 'completed-reforger';
+type ConsumableTarget =
+  | { readonly kind:'item'; readonly itemId:string }
+  | { readonly kind:'unit'; readonly unitId:string };
+
+function useConsumable(state: MatchState, consumableId: string,
+  target: ConsumableTarget): MatchCommandResult;
+
+type ConsumablePreview =
+  | { readonly ok:true; readonly effect:'remove-all'|'reforge-component'|'reforge-completed';
+      readonly affectedItemIds:readonly string[];
+      readonly destination:'inventory'; readonly affectsCurrentBattle:false }
+  | { readonly ok:false; readonly reason:ConsumableFailure };
+function previewUseConsumable(state: Readonly<MatchState>, consumableId:string,
+  target:ConsumableTarget): ConsumablePreview;
+
+// 扩展 §12.4 / §15.3，不新增另一套共享池提交函数。
+type SharedMatchCommand = /* 原有所有分支保留 */
+  | { readonly type:'useConsumable'; readonly consumableId:string;
+      readonly target:ConsumableTarget };
+function runSharedMatchCommand(pool: SharedPoolState, state: MatchState,
+  command: SharedMatchCommand): SharedPoolResult;
+~~~
+
+输入 consumableId 是实例 ID，不是 definitionId 或数量；客户端不能提供重铸结果、seed、候选池或输出 ID。成功重铸给新永久物品 ID，产物进库存；拆卸保留原物品 ID。preview 与执行共用合法性校验，但不抽结果、不扣资源、不分配 ID；不得从预览泄漏下一次重铸结果。客户端只据服务器回执确认成功，不能在残缺私有投影上运行这个权威预览。
+
+成功事件拟新增 consumableUsed（consumableId/definitionId/target/effect/affectedItemIds/outputItemId|null）、itemReforged（旧新物品 ID/定义、消耗工具 ID）、itemsRemoved（unitId、原 itemIds）。沿现有 Match 事件序号记录；失败无事件。消费来源与 RNG 前后值只入私有 provenance，不进入显示事件。装备移除/重铸之后的完整结果必须一次提交；事件不构成第二个发奖入口。
+
+既有 equipItem(state,itemId,unitId,slot)、combineItems(state,a,b) 和 wire equip/combine 不在 R4 改名：T12 负责身上合成及四阶段权限。R4 复用其 latest live seat、窃贼 roll 和冻结前缀合同。startMatchCombat/stepMatch/claimOrDiscardLoot 及共享 startCombat/step/claimLoot 负责自动按 entry 发奖，签名不因“开珠”增加客户端领取入口；.4 choose/timeoutChoice 保留。
+
+### 18.2 同局模板的权威入口与初始化草案
+
+为避免每席在 createMatch 内先独立抽颜色再覆盖，本稿建议扩展初始化模式；以下均为拟议接口，不声称基线已存在：
+
+~~~ts
+type LootInitialization =
+  | { readonly mode:'solo' }
+  | { readonly mode:'shared-deferred' };
+function createMatch(seed?:number, loot?:LootInitialization):MatchState;
+
+interface OrbRoundLayout {
+  readonly roundId:string;
+  readonly encounterId:string;
+  readonly orbs:readonly {
+    readonly sourceUnitId:string; readonly slotOrdinal:number;
+    readonly tier:'gray'|'blue'|'gold'|'prismatic'; readonly templateId:string;
+  }[];
+}
+interface OrbLayoutLedger {
+  readonly version:'s13-orb-layout-v1';
+  readonly seed:number;
+  readonly throughRoundOrdinal:number;
+  readonly rng:{readonly state:number;readonly draws:number};
+  readonly rounds:readonly OrbRoundLayout[];
+}
+type OrbLayoutResult =
+  | {readonly ok:true;readonly layout:OrbLayoutLedger}
+  | {readonly ok:false;readonly layout:OrbLayoutLedger;readonly reason:OrbLayoutFailure};
+function createOrbLayout(roomSeed:number):OrbLayoutLedger;
+function freezeOrbLayoutThroughRound(layout:OrbLayoutLedger,
+  throughRoundOrdinal:number):OrbLayoutResult;
+
+// 现行函数增加明确 layout 输入；只读、确定性重建本席内容，不修改 layout。
+function freezeLootThroughRound(seed:number, throughRoundOrdinal:number,
+  layout:OrbLayoutLedger):FrozenLootLedger;
+
+// 签名沿用，内部按以下规则绑定/推进 pool.orbLayout。
+function createSharedPool(poolId:string, seed:number,
+  options?:{seatCount?:number;capacities?:Readonly<Record<string,number>>}):SharedPoolState;
+function initializeSharedSeat(pool:SharedPoolState, state:MatchState,
+  seatId:string, seatIndex:number):SharedPoolResult;
+function nextSharedRound(pool:SharedPoolState, states:readonly MatchState[],
+  expectedRound:number):SharedPoolBatchResult;
+~~~
+
+poolId 保留既有对局池 ID 语义，options 沿 §12.2，仅夹具可覆盖容量，不引入房间产品。solo 默认保持旧调用形式，在创建/换轮事务内冻结自己的 layout，layout seed 等于 match seed；shared-deferred 只供共享初始化，暂不冻结首轮 loot、不消费 loot/layout RNG，未绑定状态不得 start/step/serialize 为可玩存档。initializeSharedSeat 仅接受该原始未绑定模式，沿既有原始开场校验；拒绝把已有 solo 掉落或进行中的局改绑。
+
+SharedPoolState 拟新增私有 orbLayout，createSharedPool 只建其初态，首次 initializeSharedSeat 进入当前 PvE 时冻结首轮模板，后续席复用。绑定保存 poolId/layout 版本及当前模板身份；每席只冻结内容，保留自己的 loot RNG。solo 席在私有状态保留自身 layout；多人以 pool.orbLayout 为唯一模板权威，不保存可各自推进的副本。
+
+nextSharedRound 在原未发布批事务中推进 layout 到目标轮、给所有未释放席冻结该轮内容，再执行既有轮次/商店流程；若中间涉及无战斗供给轮，遵循实际进入的 catalog 边界，不跳到未来 PvE。任一席失败连同 layout、pool 和 states 全部回滚。初始化及跨轮成功的 revision 仍按 §12.1，每笔事务只增加一次【L1/P】，不因增加模板再额外加一次。
+
+freezeOrbLayoutThroughRound 只接收合法目录 ordinal 和可信 ledger；同边界重试返回原 layout，不补抽；较早边界拒绝 stale-orb-layout，超过目录/非法 ordinal 拒绝 invalid-orb-round，版本/RNG/已有模板身份非法拒绝 invalid-orb-layout。PvP/supply 只推进边界、不新增珠或 draws；加时不调用目录外冻结、不额外生成奖励。createOrbLayout 对非法 uint32 seed 抛 RangeError（同既有 seed 构造校验）；freezeLootThroughRound 在恢复验证路径遇到缺失/错位模板抛验证错误，绝不静默按席 seed 补抽颜色。重建函数的局部 draws 用于验证，不提交第二份 RNG 消耗。
+
+上述变更是规则职责；Claude 只传可信状态并保存原子返回值，不在 room.ts 计算颜色或奖品。初始化、绑定、模板完整性也须进入 T12 最终恢复合同的扩展验收。
+
+### 18.3 ClientCommand 与阶段接线草案
+
+~~~ts
+type ClientCommand = /* 原有分支保留 */
+  | { readonly type:'useConsumable'; readonly consumableId:string;
+      readonly target:ConsumableTarget };
+~~~
+
+沿既有 command 信封：protocolVersion、commandId、roomId、round、seatRevision、command；不增加可由客户端指定的 seatId。wire validator 对联合类型逐层 onlyKeys：item 目标仅 kind/itemId，unit 目标仅 kind/unitId；拒绝额外字段、空 ID 或不合类型值。ID 长度使用现有限制【L1/P】，不另给工具特殊上限。
+
+在 preparation、battle、awaiting-settlement、settlement 及对应 choice 中转发工具命令。领域按 R2 四阶段判断，PvP combatRosterLocked 也允许修改运营装备；frozen/整轮结算提交是不可交错边界，先后由单写队列线性化。边界后仍校验原 round/seatRevision，过期拒绝并刷新，不改参数重放。
+
+重复 commandId+同内容沿既有缓存回执，不调用领域第二次；同 ID 不同内容沿既有冲突规则拒绝。拿新 commandId 再用已消费工具得到 unknown-consumable。成功同时提交 pool+latest seat+事件，不能在 resolver 战前副本上执行或用它覆盖最新席位。客户端显示库存工具和可选目标；本节不规定布局、动画或颜色表现。
+
+### 18.4 revealedLoot 与工具投影草案
+
+toPrivateSeatView(state):PrivateSeatView、readLootView(state):LootView 签名不变；前者仍逐层白名单构造和递归冻结。下列 v2 投影拟替换 §14.1 的掉落子结构，需网络版本一起切换；不是旧客户端可无条件忽略的兼容字段：
+
+~~~ts
+type OrbTier = 'gray'|'blue'|'gold'|'prismatic';
+type LootPayloadView =
+  | {readonly kind:'gold';readonly quantity:number}
+  | {readonly kind:'unit'|'item';readonly definitionId:string;readonly quantity:number}
+  | {readonly kind:'consumable';readonly definitionId:ConsumableDefinitionId;
+     readonly quantity:number};
+type OrbDropView = {
+  readonly orbId:string; readonly entryOrdinal:number;
+  readonly dropId:string; readonly encounterId:string;
+  readonly sourceUnitId:string; readonly roundId:string;
+  readonly payload:LootPayloadView;
+  readonly status:'revealed'|'pending-capacity'|'retained-terminal'|'granted'|'forfeited';
+  readonly receiptId:string|null; readonly allowedActions:readonly [];
+  readonly reason?:'auto-grant-in-domain'|'bench-full'|'terminal-bench-full'
+    |'timeout-forfeited'|'eliminated-forfeited';
+};
+type RevealedOrbView = {
+  readonly orbId:string; readonly tier:OrbTier;
+  readonly status:'revealed'|'partially-claimed'|'claimed'|'forfeited';
+  readonly entryDropIds:readonly string[];
+};
+// PrivateSeatView 的候选字段：
+revealedLoot?: {
+  readonly roundId:string;
+  readonly revealedDrops:readonly OrbDropView[];
+  readonly revealedOrbs:readonly RevealedOrbView[];
+};
+consumables:readonly {
+  readonly consumableId:string;readonly definitionId:ConsumableDefinitionId;
+}[];
+~~~
+
+revealedLoot 的出现门槛保持 §14.1：本席当前 PvE、roundId/ordinal/encounterId/计划一致。合法尚未揭示时两个数组均为空；PvP、supply、加时、元数据错位或缺计划时省略整个字段。consumables 为本席当前未消费工具实例（跨轮保留），空库存为空数组；终态只读显示，不代表仍能使用。
+
+revealedDrops 保留旧字段，新增 orbId/entryOrdinal、consumable 载荷和已揭示后的 forfeited 状态。revealedOrbs 只按已揭示 entry 组装，一珠一行；entryDropIds 只引用同珠可见条目，不构成另一份奖励来源。组件/成装均 kind:item，品质来自父珠，不能从装备名称推断。已授予 payload 必须读实际 receipt；共享缺货英雄显示实际金币，不能显示为获得英雄。grant 后 receiptId 非空；其他状态为空。allowedActions 仍固定空数组，没有点击开珠/领取命令。
+
+**明确修订旧 forfeited 隐藏政策（项目自定，待决 D7）**：推荐保留“已揭示、后因超时/淘汰放弃”的 entry，并给对应 reason；未击杀/未揭示而作废的珠及 entry 始终省略。这样部分打开后重连可解释剩余英雄去向。单人 retained-terminal 仍显示且不算已领取；这些终局项不会阻塞终局。
+
+珠聚合状态（不保存独立可写 claimed 标记）：全部 entry granted→claimed；全部 entry forfeited→forfeited；存在 granted 且未全 granted→partially-claimed；其余已揭示→revealed。granted+forfeited 组合仍 partially-claimed，但全部已处置，不再 pending；客户端判断等待必须看 entry 状态而非珠名。只展示本轮，旧轮收据不混入。
+
+排序沿源代码点、数值 slot、数值 entry；slotOrdinal 仍不下发。entryOrdinal 仅用于包内稳定展示，不暴露未揭示珠数。consumables 按实例授予序号稳定排序，只复制 ID/定义，不下发来源或 nextSerial。readLootView 与 private revealedLoot 对应数组必须深相等。roomSeed、layout/未来颜色、未揭示内容、RNG/draws、完整 receipt/provenance、共享池精确余量及冻结输入仍私有；已揭示 drop 的 receiptId 延续旧白名单，不等于暴露收据内容。
+
+### 18.5 失败枚举与原子性草案
+
+~~~ts
+type ConsumableFailure =
+  | 'wrong-phase' | 'unknown-consumable' | 'temporary-item'
+  | 'unknown-item' | 'unknown-unit'
+  | 'invalid-consumable-target' | 'no-removable-items';
+type OrbLayoutFailure =
+  | 'invalid-orb-layout' | 'stale-orb-layout' | 'invalid-orb-round';
+~~~
+
+MatchFailure 增加上述尚不存在的消耗品分支；SharedPoolFailure 继承 MatchFailure，另纳入 OrbLayoutFailure。对合法输入不返回表外泛化错误来掩盖业务原因。
+
+| 校验顺序 / reason | 精确定义 |
+| --- | --- |
+| 共享外层：invalid-pool / invalid-seat-state / stale-seat / seat-eliminated | 先校验池结构、席绑定与持有来源、revision、释放/淘汰；沿 §12.5，返回原 pool/state |
+| wrong-phase | 非允许运营阶段、gameOver 或直接 Match 路径淘汰；不以 combat/PvP 锁本身拒绝 |
+| unknown-consumable | 本席未持有该实例，含已消费、其他席实例；不泄漏别席持有信息 |
+| invalid-consumable-target（结构） | 工具和目标 kind 不匹配；magnetic-remover 只认 unit，两种 reforger 只认 item |
+| temporary-item | 目标为窃贼临时子件，包括可由历史 roll 识别的过期临时 ID |
+| unknown-item / unknown-unit | 在本席资产和可识别临时记录中找不到目标；跨席 ID 同样不查别席 |
+| invalid-consumable-target（类别/所有权） | 找到目标但不是所需永久普通组件/成装，或可见单位是敌人/野怪/镜像/召唤物而非本席持有永久单位 |
+| no-removable-items | 合法本人单位身上没有永久装备；不能用临时子件冒充可拆目标 |
+| invalid-orb-layout / stale-orb-layout / invalid-orb-round | 模板入口的结构/版本/身份、边界倒退、轮次非法；业务含义见 §18.2 |
+| 既有 invalid-loot / invalid-receipt / duplicate-settlement 等 | 授予及唯一结算继续走原入口校验；不是工具命令新增返奖规则 |
+
+网络 invalid-message/unsupported-protocol、信封 stale-round/seat-revision-mismatch、room 的 room-phase/seat-controlled/control-revoked、凭证和 commandId 错误留在原层，不混入 ConsumableFailure；这些沿既有 wire/room 类型，不能新增同义错误。预览采用与直接 Match 相同的顺序；共享外层在执行时另检。
+
+失败没有 events/poolEvents 字段，返回输入原引用，金币/工具/装备/全部 RNG/ID/序号/收据/revision 均不变。事务后段失败也不得保留前段抽样或迁移。没有“失败也消耗工具”路径。工具类别/候选目录损坏应在内容装载校验中阻止启动，不临时删候选或退回原件。
+
+### 18.6 共享池与原子收据草案
+
+- 英雄池容量、商店占用和来源守恒沿 §12；工具/装备不是卡池份数。useConsumable 共享成功时 available/shops/holdings/pending/rewards、共享商店 RNG 全部不变；poolEvents=[]。因本席资产已变，pool.revision 与本席绑定 revision 沿既有事务各加一次【L1/P】，不可误把“无卡池转移”理解为无并发版本变化。
+- 开局刀妹占池不变；原固定麦迪/拉克丝改随机英雄后仍逐 entry 走 UnitLootPolicy。计划冻结/击杀揭示不预留；战后首次授予尝试才预留。有货但满席先预留并 pending；缺货直接按一星购买价补金币，无论是否满席。不按珠整体扣池，不让一个 pending 英雄阻断同珠工具/金币。
+- 每个 entry 使用唯一 dropId/receiptId，卡池来源继续以 JSON 元组带 seatId。重试不重复预留/补偿；已预留后来入库转 holdings，不再扣池；超时/淘汰归还一次。未赚到的 entry 不预留、不补偿。断线不释放，淘汰按原整轮排序释放。
+- 首次授予可能竞争最后一份英雄；仍按现有全轮稳定席序串接最新 pool，不能按消息到达顺序各自从旧池发奖后合并。颜色数量公平不承诺英雄库存竞争也同结果。
+- 一珠部分领取是合法成功，不是半事务提交；本次可授予 entry、预留和 pending 进度一起原子提交。若校验真正失败，整个命令（全轮则整个未发布批次）回滚，包括 layout 与内容流。金币/工具无容量上限【项目自定/P】，不存在因英雄 bench-full 而丢弃同珠金币的路径。
+- 工具重铸/拆卸不触发英雄获取、返池、免费升星或旧轮收入。战后升级按 T12 搬迁最新装备，来源账本保留冻结战斗曾引用的旧物品。联机恢复须验证 pool.orbLayout、每席模板绑定、entry 收据、工具消费及 reforge 重演；以 T12 最终恢复边界为前置，不改写 PR #71 的决策。
+
+版本、受影响文件、测试与待签清单见 [R3R4_LOOT_DESIGN](R3R4_LOOT_DESIGN.md)。本节无已通过的运行验收；§18.1–18.6 全部是草案，不能按正文中的函数声明直接认为 Node 导出可用。
