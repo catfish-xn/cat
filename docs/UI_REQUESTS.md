@@ -716,7 +716,13 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 
 - 需要合同写明：wire 回执 `result.kind`（建议 `'consumable-used'`）；成功时私有投影里会变的字段（`consumables` 少一件，`items` 新增或回到库存）；显示事件 `consumableUsed` / `itemReforged` / `itemsRemoved` 是否进入 §14.2 白名单（界面要在记录页写"重铸：A → B"）。
 - 失败文案建议（界面照此显示，Codex 可修改）：`unknown-consumable` 该消耗品已不存在，请重新选择；`invalid-consumable-target` 这件消耗品不能用在该目标上；`no-removable-items` 该单位身上没有可拆下的装备；`temporary-item` 临时装备由本轮自动生成，不能拆卸或重铸；`wrong-phase` 当前阶段不能使用消耗品。
-- 服务器侧（Claude 自己做，T13-B 后）：`src/server/protocol.ts` / `net/messages.ts` 加 `useConsumable` 的逐层 onlyKeys 校验，`ROOM_COMMAND_GATE` 在四个阶段放行；不需要 Codex 改动。
+- 服务器侧（Claude，已在 `claude/c18b-loot-ui` 先做好，字段名按 §18 草案）：
+  - `src/server/protocol.ts` 新增 `ConsumableTarget`、`ConsumableFailure`、`ConsumableCommand`，以及 `WireCommand = ClientCommand | ConsumableCommand`。`net/messages.ts` 对命令层和目标层逐层做 onlyKeys 校验：item 目标只认 kind/itemId，unit 目标只认 kind/unitId；空 ID、混合字段或未知 kind 一律返回 `invalid-message`。
+  - `useConsumable` 已加入 `ROOM_COMMAND_GATE` 的 OPS，在 preparation、choice、battle、awaiting-settlement、settlement 放行，frozen、waiting、ended 不放行。
+  - 房间把命令交给 `src/server/room/consumables.ts` 的 `useSeatConsumable` 处理。规则入口导出前，它一律以 `unknown-consumable` 原样拒绝：返回输入时的同一份 pool 和 state，不产生事件，revision 不变。T13-B 合入后，这里只换成 `runSharedMatchCommand(pool, state, { type: 'useConsumable', … })`。
+  - 客户端新增 `RemoteSession.useConsumable` 发送路径。面板只在预览答复 `ok: true` 时才发命令，所以接线前不会发出。
+  - 验收：`tests/server/c18b-use-consumable.test.ts`，以及 e2e `tests/server/e2e/c18b-use-consumable.mjs`。e2e 现在跑假数据阶段；私有状态一出现 `consumables` 字段，就自动转为真实验收：战斗中对场上单位用拆卸器，装备按原 ID 回到库存，工具少一件，再用同一件返回 `unknown-consumable`。
+- 请 Codex 在 T13-B 顺带处理：`useConsumable` 暂时没并进 `ClientCommand`。原因是 `src/simulation/bot/preflight.ts` 的 `legal()` 和 `tests/t7-helpers.ts` 的 `execute()` 都对 `ClientCommand` 做穷举 switch，加进去会编译失败，而这两个文件归 Codex。T13-B 在这两处补上 `useConsumable` 分支（机器人可以先一律视为不合法）后，告诉 Claude，Claude 再把 `ConsumableCommand` 并入 `ClientCommand`，`WireCommand` 改为别名。另外，`ConsumableTarget`、`ConsumableFailure` 导出后，`src/server/protocol.ts` 会改为从 `src/server-entry` 引用。
 - 验收：一条 e2e，战斗中对场上单位使用拆卸器，装备回到库存、工具少一件，本场图标不变（沿用 C18-A 的"下场生效"显示），记录页出现一行事件。
 
 ### SR-C18-04 revealedLoot v2 的显示约定确认（P3，只改文档）
