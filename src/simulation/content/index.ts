@@ -1,4 +1,4 @@
-import { MULTIPLAYER_OPERATION_RULES } from '../operation-policy';
+import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../operation-policy';
 import { M8_VERSION } from '../m8/version';
 import { LOOT_RUNTIME_REVISION, LOOT_FREEZE_ALGORITHM, LOOT_POLICY_VERSION, LOOT_HERO_POOL_VERSION, LOOT_HERO_POOLS, LOOT_SLOTS, LOOT_CATEGORIES } from './loot';
 import { NEUTRAL_RUNTIME_VERSION } from '../neutral-receipts';
@@ -62,7 +62,8 @@ export const CONTENT_DIGEST = digestContent({
   deploymentRulesVersion:DEPLOYMENT_RULES_VERSION, multiplayerOperations:MULTIPLAYER_OPERATION_RULES,
   roundRulesVersion:ROUND_RULES_VERSION, roundCatalog:ROUND_CATALOG, roundSemanticNodes:ROUND_SEMANTIC_NODES,
   roundPreparation:ROUND_PREPARATION_RULES, opening:{initial:OPENING_INITIAL_STATE,economy:OPENING_ECONOMY_RULES}, finalRound:FINAL_ROUND,
-  equipmentRulesVersion: EQUIPMENT_RULES_VERSION, temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
+  equipmentRulesVersion: EQUIPMENT_RULES_VERSION, equipmentOperations: EQUIPMENT_OPERATION_RULES_VERSION,
+  temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
   units: M5_UNIT_DEFINITIONS, neutralUnits: NEUTRAL_UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, s13Abilities: S13_ABILITY_DATA, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
   augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
   shopCatalog: SHOP_CATALOG_BY_COST, shopOdds: SHOP_ODDS,

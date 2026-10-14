@@ -14,7 +14,7 @@ const preparationCommands:Record<string,(s:MatchState)=>MatchCommandResult>={
  buy:s=>api.buyUnit(s,0,s.shop.generation),sell:s=>api.sellUnit(s,'unit-1'),
  reroll:api.rerollShop,xp:api.buyXp,lock:s=>api.setShopLock(s,true,s.shop.generation),
  deploy:s=>api.deployMatchUnit(s,'unit-1',{kind:'bench',slot:0}),
- combine:s=>api.combineItems(s,'item-1','item-2'),equip:s=>api.equipItem(s,'item-1','unit-1',0),start:api.startMatchCombat,
+ start:api.startMatchCombat,
 };
 function rejectUnchanged(state:MatchState,command:(s:MatchState)=>MatchCommandResult){
  const before=JSON.stringify(state),result=command(state);
@@ -22,6 +22,10 @@ function rejectUnchanged(state:MatchState,command:(s:MatchState)=>MatchCommandRe
  expect(JSON.stringify(state)).toBe(before);expect('events' in result).toBe(false);
 }
 describe('all phase-restricted commands preserve the entire rejected domain',()=>{
+ it('T12 equipment still rejects gameOver',()=>{
+  rejectUnchanged(states.gameOver,s=>api.combineItems(s,'item-1','item-2'));
+  rejectUnchanged(states.gameOver,s=>api.equipItem(s,'item-1','unit-1',0));
+ });
  it.each(['choice','combat','settlement','gameOver'] as const)('%s rejects every preparation command',phase=>{
   for(const command of Object.values(preparationCommands))rejectUnchanged(states[phase],command);
  });

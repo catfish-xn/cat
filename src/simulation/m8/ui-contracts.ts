@@ -24,7 +24,8 @@ export type CombinePreview =
   | { readonly allowed: true; readonly reason: null; readonly resultDefinitionId: string; readonly consumedItemIds: readonly [string, string] }
   | { readonly allowed: false; readonly reason: EquipmentFailure };
 export type EquipPreview =
-  | { readonly allowed: true; readonly reason: null; readonly occupiedSlots: readonly (0 | 1 | 2)[]; readonly conflictingItemIds: readonly [] }
+  | { readonly allowed: true; readonly reason: null; readonly occupiedSlots: readonly (0 | 1 | 2)[]; readonly conflictingItemIds: readonly [];
+      readonly combination?: { readonly resultDefinitionId: string; readonly consumedItemIds: readonly [string, string] } }
   | { readonly allowed: false; readonly reason: EquipmentFailure; readonly conflictingItemIds: readonly string[] };
 export interface UnitEquipmentView {
   readonly unitId: string;

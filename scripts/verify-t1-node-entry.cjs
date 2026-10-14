@@ -11,6 +11,7 @@ const baseline = require('../tests/t1-probe-baseline.json');
 const deploymentBaseline = require('../tests/t1-deployment-baseline.json');
 const t10Baseline = require('../tests/t10-content-baseline.json');
 const t11Baseline = require('../tests/t11-content-baseline.json');
+const t12Baseline = require('../tests/t12-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
@@ -76,7 +77,8 @@ async function worker() {
   assert.equal(actual.steps.length, expected.steps.length);
   const traceHashes = {};
   let originalStateTraceHash;
-  assert.equal(actual.initial.contentDigest, t11Baseline.contentDigest);
+  assert.equal(actual.initial.contentDigest, t12Baseline.contentDigest);
+  assert.equal(t12Baseline.previousContentDigest, t11Baseline.contentDigest);
   assert.equal(actual.initial.m8.loot.frozen.replayDigest, t11Baseline.lootReplayDigest);
   assert.equal(t11Baseline.previousContentDigest, t10Baseline.contentDigest);
   assert.equal(t10Baseline.previousContentDigest, deploymentBaseline.contentDigest);
@@ -89,15 +91,18 @@ async function worker() {
     assert(nodeBytes.equals(browserBytes), `${key} trace differs from browser-target source bundle`);
     traceHashes[key] = sha256(nodeBytes);
     if (key === 'state') {
-      assert.equal(traceHashes.state, t11Baseline.stateTraceHash, 'state changed from the T11 opening revision baseline');
+      assert.equal(traceHashes.state, t12Baseline.stateTraceHash, 'state changed from the T12 digest revision');
+      const t11Bytes = JSON.stringify(actual.steps.map(project), (name, value) =>
+        name === 'contentDigest' && value === t12Baseline.contentDigest ? t11Baseline.contentDigest : value);
+      assert.equal(sha256(t11Bytes), t11Baseline.stateTraceHash, 'first battle changed beyond T12 digest');
       const t10Bytes = JSON.stringify(actual.steps.map(project), (name, value) =>
-        name === 'contentDigest' && value === t11Baseline.contentDigest ? t10Baseline.contentDigest
+        name === 'contentDigest' && value === t12Baseline.contentDigest ? t10Baseline.contentDigest
         : name === 'replayDigest' && value === t11Baseline.lootReplayDigest ? t11Baseline.previousLootReplayDigest : value);
       assert.equal(sha256(t10Bytes), t10Baseline.stateTraceHash, 'first battle changed beyond T11 content/loot identity');
       // Preserve the original T1 and T10 goldens. T11 changes content identity and the
       // frozen loot replay identity; first-battle gameplay, events and RNG remain exact.
       const originalBytes = JSON.stringify(actual.steps.map(project), (name, value) =>
-        name === 'contentDigest' && value === t11Baseline.contentDigest ? deploymentBaseline.previousContentDigest
+        name === 'contentDigest' && value === t12Baseline.contentDigest ? deploymentBaseline.previousContentDigest
         : name === 'replayDigest' && value === t11Baseline.lootReplayDigest ? t11Baseline.previousLootReplayDigest : value);
       originalStateTraceHash = sha256(originalBytes);
       assert.equal(originalStateTraceHash, baseline.traceHashes.state, 'first battle changed beyond deployment content identity');
@@ -144,7 +149,7 @@ async function worker() {
   assert.equal(terminal.state, actual.state);
   assert.deepStrictEqual(terminal.events, []);
   fs.writeFileSync(path.join(out, 'node-terminal.json'), JSON.stringify({ state: actual.state, events: actual.events }));
-  return { ...summary, traceHashes, originalStateTraceHash, deploymentBaseline, t10Baseline, t11Baseline, comparedStates: actual.steps.length, exports: expectedExports,
+  return { ...summary, traceHashes, originalStateTraceHash, deploymentBaseline, t10Baseline, t11Baseline, t12Baseline, comparedStates: actual.steps.length, exports: expectedExports,
     unchangedFailures: ['stale-shop', 'insufficient-gold (buy/reroll/XP)', 'wrong-phase'],
     restoreTick: 40, restoreTextAndObject: true, rejectedBadDigestAndVersion: true,
     browserGlobalsAndImplicitClockAndRandomBlocked: true };

@@ -11,6 +11,9 @@ import { getUnitSellPrice } from './unit-stats';
 import type { MatchState } from './match-types';
 import type { LootChoiceDescriptor, FrozenDirectDrop } from './loot-types';
 import type { LootReceipt } from './m8/contracts';
+import { planCombine, planEquip } from './inventory';
+import type { ItemInstance } from './strategy-types';
+import type { GameState } from './game';
 
 function check(condition: unknown, message: string): asserts condition {
   if (!condition) throw new RangeError(`Invalid B8 Match: ${message}`);
@@ -24,6 +27,33 @@ function keys(value: unknown, names: readonly string[]): void {
 function integer(value: unknown, min = 0): void { check(Number.isSafeInteger(value) && (value as number) >= min, 'integer'); }
 const sorted = <T extends { readonly id: string }>(values: readonly T[]): T[] => [...values].sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 const allChoices = (state: MatchState) => state.m8.loot.frozen.rounds.flatMap(round => round.choices);
+
+/** Replay only the legal inventory/in-place combination. Frozen equipped inputs
+ * cannot be freely detached or borrowed from another unit during restoration. */
+function replayCombination(items: readonly ItemInstance[], preparation: GameState, nextItemSerial: number,
+  fact: Extract<ResourceFact, { kind: 'item-combined' }>) {
+  const inputs = fact.event.consumedIds.map(id => items.find(item => item.id === id));
+  check(inputs.length === 2 && inputs.every(item => item), 'combination ownership');
+  const held = inputs.filter(item => item!.location.kind === 'unit');
+  check(held.length <= 1, 'combination requires inventory input');
+  const target = held[0], incoming = inputs.find(item => item!.location.kind === 'inventory')!;
+  const plan = target?.location.kind === 'unit'
+    ? planEquip(items, preparation, incoming.id, target.location.unitId, target.location.slot, nextItemSerial)
+    : planCombine(items, nextItemSerial, inputs[0]!.id, inputs[1]!.id);
+  check(plan.ok && equal(plan.events.find(event => event.type === 'itemCombined'), fact.event), 'combination transaction');
+  return plan;
+}
+
+/** Survivors of frozen equipment keep their exact position. Items still in
+ * inventory in the replay may have been legally equipped since the freeze.
+ * Final ownership/slots/unique/exclusive constraints are checked by restoreMatch. */
+function equipmentContinuation(expected: readonly ItemInstance[], actual: readonly ItemInstance[]): boolean {
+  return expected.length === actual.length && expected.every(item => {
+    const current = actual.find(other => other.id === item.id);
+    return current?.definitionId === item.definitionId
+      && (item.location.kind === 'inventory' || equal(item.location, current.location));
+  });
+}
 
 /** Pure ledger validation. Historical deaths have bounded evidence, not independent replay authentication. */
 export function validateB8Loot(state: MatchState): boolean {
@@ -130,16 +160,34 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(combat.status === 'finished' ? commits.length === 1 : commits.length === 0, 'current growth commit count');
   const commit = commits[0];
   check(!commit || commit.kind === 'combat-growth-committed', 'growth commit');
-  const prefixLength = commit?.combatStartProvenancePrefixLength ?? entries.length;
+  const candidate = state.combatInputBasis;
+  check(candidate, 'missing input basis');
+  const prefixLength = commit?.combatStartProvenancePrefixLength ?? candidate.provenancePrefixLength;
+  integer(prefixLength, 1); check(prefixLength <= entries.length, 'combat prefix bounds');
+  check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
+  const rollPrefix = candidate.equipmentRollPrefixLength;
+  integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
   const basis = restoreCombatInput(state.combatInputBasis,{seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
     resources:parsedJsonInput && prefixLength === entries.length ? current : foldResourceProvenance(state.resourceProvenance,{...context,prefixLength}),equipmentRolls:state.equipmentState.rolls,
-    equipmentRollPrefixLength:state.equipmentState.rolls.length,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults});
+    equipmentRollPrefixLength:rollPrefix,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults});
+  check(state.equipmentState.rolls.slice(rollPrefix).every(roll => roll.roundId === state.roundDefinitionId
+    && !basis.inputs.items.some(item => item.id === roll.parentItemInstanceId && item.location.kind === 'unit')), 'post-freeze equipment rolls');
   check(state.battleSeedRngState === basis.battleSeed, 'battle seed cursor');
   if (combat.status === 'running') {
-    check(equal(readCombatStrategyInputs(state),basis.inputs), 'running input mutation'); return {basis,saleGold:0};
+    const { items: _items, temporaryEquipment: _children, ...live } = readCombatStrategyInputs(state);
+    const { items: originalItems, temporaryEquipment: _frozenChildren, ...frozenInputs } = basis.inputs;
+    check(equal(live, frozenInputs), 'running input mutation');
+    let items = originalItems, serial = basis.nextItemSerial;
+    for (const fact of entries.slice(prefixLength)) {
+      check(fact.kind === 'item-combined' && fact.roundId === state.roundDefinitionId, 'running resource suffix');
+      const plan = replayCombination(items, state.preparation, serial, fact);
+      items = plan.items; serial = plan.nextItemSerial;
+    }
+    check(equipmentContinuation(items, state.items) && serial === state.nextItemSerial, 'running equipment projection');
+    return {basis,saleGold:0};
   }
   const deltas = combat.units.filter(unit => unit.team === 'player' && (unit.runtime?.permanentAdBps ?? 0) > 0)
     .map(unit => ({sourceUnitId:unit.id,attackDamageBps:unit.runtime!.permanentAdBps})).sort((a,b) => a.sourceUnitId < b.sourceUnitId ? -1 : 1);
@@ -156,14 +204,40 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   const actualReceiptOrder: string[] = [], expectedProgress = new Map<string,string>();
   let preparation = structuredClone(basis.inputs.preparation), items = structuredClone(basis.inputs.items), binding = structuredClone(basis.inputs.anomalyBinding);
   let nextUnit = basis.nextUnitSerial, nextItem = basis.nextItemSerial, cursor = basis.provenancePrefixLength, saleGold = 0;
+  let committed = false;
   const take = (fact: ResourceFact) => {
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
+  };
+  const combinations = () => {
+    while (entries[cursor]?.kind === 'item-combined') {
+      check(!committed || state.phase !== 'gameOver', 'terminal equipment operation');
+      const fact = entries[cursor] as Extract<ResourceFact, { kind: 'item-combined' }>;
+      const plan = replayCombination(items, preparation, nextItem, fact);
+      take({ kind: 'item-combined', event: fact.event });
+      items = plan.items; nextItem = plan.nextItemSerial;
+    }
+  };
+  // Plain equip has no birth/consumption fact. Before a loot-driven upgrade,
+  // replay surviving inventory items at their final legal positions when the
+  // holder already exists. This preserves the latest survivor's occupied slots
+  // (including exclusive parents) when frozen donor equipment is transferred.
+  // Never detach a frozen item or synthesize an unrecorded combination.
+  const survivingPlacements = () => {
+    for (const actual of state.items) {
+      const location = actual.location;
+      if (location.kind !== 'unit') continue;
+      const item = items.find(candidate => candidate.id === actual.id);
+      if (item?.location.kind !== 'inventory' || !preparation.units.some(unit => unit.id === location.unitId)) continue;
+      const plan = planEquip(items, preparation, item.id, location.unitId, location.slot, nextItem);
+      if (plan.ok && plan.nextItemSerial === nextItem) items = plan.items;
+    }
   };
   const grant = (slot: FrozenDirectDrop | LootChoiceDescriptor, definitionId?: string): boolean => {
     const payload = 'payload' in slot ? slot.payload : {kind:'item' as const,definitionId:definitionId!,quantity:1};
     const receipt = receipts.get(slot.dropId);
     let itemIds: string[] = [], unitIds: string[] = [];
     if (payload.kind === 'unit') {
+      survivingPlacements();
       const plan = planUnitAcquisition({preparation,items,anomalyBinding:binding,nextUnitSerial:nextUnit},
         payload.definitionId,{kind:'loot',receiptId:lootReceiptId(slot.dropId)},cursor);
       if (!plan.ok) return false;
@@ -178,6 +252,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     check(equal(receipt,{receiptId:lootReceiptId(slot.dropId),dropId:slot.dropId,payload,grantedItemIds:itemIds,grantedUnitIds:unitIds}), 'actual grant receipt');
     actualReceiptOrder.push(slot.dropId); return true;
   };
+  combinations(); // Commands during combat precede the atomic terminal grants/commit.
   for (const slot of direct) expectedProgress.set(slot.dropId,!earned.has(slot.dropId) ? 'forfeited'
     : grant(slot) ? 'granted' : state.phase === 'gameOver' ? 'retained-terminal' : 'pending-capacity');
   const earnedChoices = choices.filter(choice => earned.has(choice.dropId));
@@ -190,12 +265,16 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
   const commit = entries[cursor]; check(commit?.kind === 'combat-growth-committed', 'growth transaction order');
   take({kind:'combat-growth-committed',combatId:basis.combatId,settlementId:`round-${state.round}-settled`,
     combatStartProvenancePrefixLength:basis.provenancePrefixLength,sourceDeltas:commit.sourceDeltas});
+  committed = true;
   let resolvedChoices = 0;
   if (state.phase !== 'gameOver') for (const choice of earnedChoices) {
+    combinations(); // Between user choices, never inside a grant transaction.
     if (!loot.choiceResolutions.some(value => value.dropId === choice.dropId)) break;
     resolve(choice); resolvedChoices++;
   }
   while (cursor < entries.length) {
+    combinations();
+    if (cursor === entries.length) break;
     const sale = entries[cursor];
     check(state.phase !== 'gameOver' && resolvedChoices === earnedChoices.length
       && [...expectedProgress.values()].includes('pending-capacity') && sale.kind === 'unit-sold'
@@ -209,7 +288,7 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     if (binding?.unitId === sale.unitId) binding = null;
     for (const slot of direct) if (expectedProgress.get(slot.dropId) === 'pending-capacity' && grant(slot)) expectedProgress.set(slot.dropId,'granted');
   }
-  check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equal(sorted(items),sorted(state.items))
+  check(equal(sorted(preparation.units),sorted(state.preparation.units)) && equipmentContinuation(items,state.items)
     && equal(binding,state.anomalyBinding) && equal(basis.inputs.augments,state.augments), 'finished resource projection');
   check(nextUnit === state.nextUnitSerial && nextItem === state.nextItemSerial, 'finished serial projection');
   check(equal(actualReceiptOrder,loot.receipts.filter(receipt => direct.some(slot => slot.dropId === receipt.dropId)

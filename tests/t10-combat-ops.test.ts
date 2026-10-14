@@ -26,24 +26,25 @@ describe('t10-combat-ops phase whitelist',()=>{
       if(_name==='buy')expect(next.preparation.units.find(u=>u.id==='unit-10')?.location.kind).toBe('bench');
       if(_name==='bench swap')expect(next.preparation.units.find(u=>u.id==='unit-3')?.location).toEqual(bench(0));
     });
-    it(`${phase} forbids every direct board operation, including bench-to-occupied-board swaps`,()=>{
+    it(`${phase} forbids board sale/deployment, including bench-to-occupied-board swaps`,()=>{
       const state=operating(phase), unit=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;
       rejected(state,s=>sellUnit(s,unit.id),'wrong-phase');
       rejected(state,s=>deployMatchUnit(s,unit.id,bench(0)),'wrong-phase');
       rejected(state,s=>deployMatchUnit(s,unit.id,board(1)),'wrong-phase');
       rejected(state,s=>deployMatchUnit(s,'unit-2',unit.location),'wrong-phase');
       rejected(state,s=>deployMatchUnit(s,'unit-2',board(1)),'wrong-phase');
-      rejected(state,s=>equipItem(s,'item-1',unit.id,0),'wrong-phase');
+      expect(equipItem(state,'item-1',unit.id,0).ok).toBe(true);
       rejected(state,startMatchCombat,'wrong-phase');
-      expect(previewEquip(state,'item-1',unit.id,0)).toMatchObject({allowed:false,reason:'wrong-phase'});
+      expect(previewEquip(state,'item-1',unit.id,0)).toMatchObject({allowed:true});
       expect(validateMatchDeployment(state,'unit-2',unit.location)).toBe('wrong-phase');
       expect(previewEquip(state,'item-1','unit-2',0).allowed).toBe(true);
       expect(previewCombine(state,'item-1','item-2').allowed).toBe(true);
     });
     it(`${phase} retains offline restrictions and rejects eliminated seats`,()=>{
       const base=operating(phase), {multiplayer:_online,...offline}=base;
-      for (const [,command] of commands) {
-        rejected(offline,command,'wrong-phase');
+      for (const [name,command] of commands) {
+        if (name === 'equip' || name === 'combine') expect(command(offline).ok).toBe(true);
+        else rejected(offline,command,'wrong-phase');
         rejected({...base,multiplayer:{...base.multiplayer!,status:'eliminated'}},command,'wrong-phase');
         rejected({...base,phase:'gameOver',combat:null},command,'wrong-phase');
       }

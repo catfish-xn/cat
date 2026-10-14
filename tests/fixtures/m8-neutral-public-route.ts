@@ -1,8 +1,8 @@
-import ionicRaw from './t11-herald-raw/ionic-spark.json?raw';
-import evenshroudRaw from './t11-herald-raw/evenshroud.json?raw';
-import dualRaw from './t11-herald-raw/ionic-spark--evenshroud.json?raw';
-import quicksilverRaw from './t11-herald-raw/quicksilver.json?raw';
-import edgeRaw from './t11-herald-raw/edge-of-night.json?raw';
+import ionicRaw from './t12-herald-raw/ionic-spark.json?raw';
+import evenshroudRaw from './t12-herald-raw/evenshroud.json?raw';
+import dualRaw from './t12-herald-raw/ionic-spark--evenshroud.json?raw';
+import quicksilverRaw from './t12-herald-raw/quicksilver.json?raw';
+import edgeRaw from './t12-herald-raw/edge-of-night.json?raw';
 import * as api from '../../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../../src/simulation/serialization';
 import { buildRawHeraldEquipment, fieldHeraldTarget, HERALD_RAW_CASES } from './m8-herald-raw/generate';

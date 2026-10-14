@@ -65,12 +65,12 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
       expect(() => validateEquipmentState(raw.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(42).equipment)).not.toThrow();
       rejectWithoutRepair(raw);
     });
-  it('uses levelBefore rather than passive levelAfter as the settled-round upper bound', () => {
+  it('rejects a roll above even the T12 post-settlement levelAfter bound', () => {
     const state = roundEight();
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     const raw = structuredClone(state);
     expect(raw.roundResults[getCatalogRoundById('2-2').ordinal-1]).toMatchObject({ levelBefore: 3, levelAfter: 4 });
-    Object.assign(raw.equipmentState.rolls.find(r => r.roundId === '2-2')!, { playerLevelSnapshot: 4 });
+    Object.assign(raw.equipmentState.rolls.find(r => r.roundId === '2-2')!, { playerLevelSnapshot: 5 });
     expect(() => validateEquipmentState(raw.equipmentState, TEMPORARY_EQUIPMENT_POOL, initializeStreams(42).equipment)).not.toThrow();
     rejectWithoutRepair(raw);
   });

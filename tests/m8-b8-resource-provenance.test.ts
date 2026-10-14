@@ -370,24 +370,24 @@ describe('B8 provenance known historical operation boundaries', () => {
     expect(foldResourceProvenance(appendResourceProvenance(provenance, '1-3', shop(2)), ctx).units).toHaveLength(2);
   });
 
-  it('rejects a combination after settlement even in a historical round', () => {
+  it('T12 accepts an owned legal combination after historical settlement', () => {
     const { provenance, ctx } = itemFixture();
     const beforeCombine = { ...provenance, entries: provenance.entries.slice(0, 3) };
     const settled = appendResourceProvenance(beforeCombine, '3-5', commit(15, 3, []));
     const combined = provenance.entries[3];
     if (combined.kind !== 'item-combined') throw new Error('Fixture');
-    expect(() => foldResourceProvenance(appendResourceProvenance(settled, '3-5', {
+    expect(foldResourceProvenance(appendResourceProvenance(settled, '3-5', {
       kind: 'item-combined', event: combined.event,
-    }), { ...ctx, combatSettlements: [settlement('3-5', 15)] })).toThrow();
+    }), { ...ctx, combatSettlements: [settlement('3-5', 15)] }).items).toEqual([{id:combined.event.itemId,definitionId:combined.event.definitionId}]);
   });
 
-  it('rejects purchases, sales and combinations in supply rounds', () => {
+  it('T12 permits supply combinations while purchases and sales remain rejected', () => {
     expect(() => foldResourceProvenance(appendResourceProvenance(opening(), '2-4', shop(2)), context())).toThrow();
     expect(() => foldResourceProvenance(appendResourceProvenance(opening(), '2-4', {
       kind: 'unit-sold', unitId: 'unit-1', context: 'preparation', goldGranted: 1,
     }), context())).toThrow();
     const { provenance, ctx } = itemFixture();
-    expect(() => foldResourceProvenance(mutateEntry(provenance, 3, { roundId: '3-4' }), ctx)).toThrow();
+    expect(foldResourceProvenance(mutateEntry(provenance, 3, { roundId: '3-4' }), ctx)).toEqual(foldResourceProvenance(provenance, ctx));
   });
 
   it('permits a same-round capacity receipt only after its real candidate birth', () => {
