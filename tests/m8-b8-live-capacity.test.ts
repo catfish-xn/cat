@@ -67,9 +67,9 @@ async function publicPrefix(roundId: string, accumulateLosses = false): Promise<
   if (!prefix) throw new Error(`Public route did not reach ${roundId}`);
   return prefix;
 }
-// 2-7 prefix: 37 public commands, 8 actual combats, 2,889 ticks.
+// Public cannon prefix through 2-7 preparation.
 const capacityPrefix = await publicPrefix('2-7');
-// 4-7 prefix: 188 driver commands + 58 public bench deployments, 20 combats, 2,020 ticks.
+// The terminal branch accumulates its 97 HP loss entirely through public bench deployments.
 const terminalPrefix = await publicPrefix('4-7', true);
 
 function capacityPreparation(): MatchState {
@@ -82,13 +82,16 @@ function capacityPreparation(): MatchState {
   }
   expect(bench(state)).toHaveLength(9);
   expect(players(state).filter(unit => unit.definitionId === 'maddie' && unit.starLevel === 1)).toHaveLength(1);
-  expect(state.gold).toBe(19);
+  expect(state.gold).toBe(26);
   return roundTrip(state);
 }
 function terminalPreparation(keep: readonly string[]): MatchState {
   let state = reserveExcept(roundTrip(terminalPrefix), keep);
-  // The real generation-43 Nami/Urgot offers fill the newly available bench slots.
-  for (const slot of keep.length === 2 ? [2, 3] : [2]) state = accepted(api.buyUnit(state, slot, 43));
+  // Keep Ezreal aimed at the choice source after the T11 route moved its formation.
+  if (keep.length === 1 && keep[0] === 'unit-14')
+    state = accepted(api.deployMatchUnit(state, 'unit-14', { kind: 'board', cell: { col: 3, row: 7 } }));
+  // The real generation-46 Maddie/Vander offers fill the newly available bench slots.
+  for (const slot of keep.length === 2 ? [2, 3] : [2]) state = accepted(api.buyUnit(state, slot, 46));
   expect(bench(state)).toHaveLength(9);
   expect(players(state).filter(unit => unit.definitionId === 'ezreal' && unit.starLevel === 1)).toHaveLength(0);
   expect(state.playerHp).toBe(3);
@@ -167,9 +170,9 @@ describe('B8 live full-bench settlement and exact command resumption', () => {
     expect(command(waiting, state => api.nextRound(state, state.round))).toMatchObject({ ok: false, reason: 'unsettled-round' });
     const { unit, result } = sellCapacityUnit(waiting), sold = accepted(result);
     expect(getUnitSellPrice(unit)).toBe(4);
-    expect(settled).toMatchObject({ interestBasis: 19, incomeBreakdown: { interest: 1 }, goldAfter: 25 });
-    expect(Math.floor((settled.interestBasis + 4) / 10)).toBe(2); // A forbidden recomputation would add interest.
-    expect(sold.gold).toBe(29);
+    expect(settled).toMatchObject({ interestBasis: 26, incomeBreakdown: { interest: 2 }, goldAfter: 33 });
+    expect(Math.floor((settled.interestBasis + 4) / 10)).toBe(3); // A forbidden recomputation would add interest.
+    expect(sold.gold).toBe(37);
     expect(sold.augments.some(augment => augment.definitionId === 'investment-strategy-i')).toBe(true);
     for (const field of ['roundResults', 'augmentProgress', 'persistentGrowth', 'level', 'xp', 'combat', 'combatInputBasis',
       'scheduleReceipts', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState', 'equipmentState'] as const)
@@ -232,7 +235,7 @@ describe('B8 live full-bench settlement and exact command resumption', () => {
 
 describe('B8 live lethal PvE, earned fallback and retained terminal capacity', () => {
   it.each([
-    { name: 'both sources', keep: ['unit-11', 'unit-6'], tick: 849, direct: ['granted', 'retained-terminal'], earned: true, components: 2 },
+    { name: 'both sources', keep: ['unit-11', 'unit-6'], tick: 922, direct: ['granted', 'retained-terminal'], earned: true, components: 2 },
     { name: 'only direct source', keep: ['unit-16'], tick: 448, direct: ['granted', 'retained-terminal'], earned: false, components: 1 },
     { name: 'only choice source', keep: ['unit-14'], tick: 309, direct: ['forfeited', 'forfeited'], earned: true, components: 1 },
   ])('$name: restores real lethal settlement without resurrecting unearned loot', scenario => {

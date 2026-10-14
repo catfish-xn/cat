@@ -21,11 +21,18 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   expect(next.roundResults).toBe(settled.roundResults);expect(players(next)).toEqual(players(before));expect({shop:next.shop,rngState:next.rngState}).toEqual(shop(settled.rngState,2,settled.level));
   expect(nextRound(next,1)).toEqual({ok:false,state:next,reason:'wrong-phase'});
  });
- it('natural XP crosses a level once and refresh uses the resulting odds',()=>{
-  const prep=accepted(buyXp(emptyBoard(reachRound('2-1')))),settled=accepted(startMatchCombat(prep));
-  expect(settled).toMatchObject({phase:'settlement',level:4,xp:0,gold:11,playerHp:86});
-  expect(settled.roundResults.at(-1)).toMatchObject({xpRequested:2,xpAwarded:2,levelBefore:3,levelAfter:4,xpBefore:4,xpAfter:0});
+ it('opening XP makes the purchase cross a level; settlement awards two more XP and refresh uses level four',()=>{
+  const opening=emptyBoard(reachRound('2-1'));expect(opening).toMatchObject({level:3,xp:2});
+  const prep=accepted(buyXp(opening));expect(prep).toMatchObject({level:4,xp:0});
+  const settled=accepted(startMatchCombat(prep));
+  expect(settled).toMatchObject({phase:'settlement',level:4,xp:2,gold:11,playerHp:86});
+  expect(settled.roundResults.at(-1)).toMatchObject({xpRequested:2,xpAwarded:2,levelBefore:4,levelAfter:4,xpBefore:0,xpAfter:2});
   const next=accepted(nextRound(settled,settled.round));expect({shop:next.shop,rngState:next.rngState}).toEqual(shop(settled.rngState,settled.shop.generation+1,4));
+  // Keep the original natural-level-crossing coverage, now reached without buying XP.
+  const natural=accepted(startMatchCombat(emptyBoard(reachRound('2-2'))));
+  expect(natural.roundResults.at(-1)).toMatchObject({xpRequested:2,xpAwarded:2,levelBefore:3,levelAfter:4,xpBefore:4,xpAfter:0});
+  const afterNatural=accepted(nextRound(natural,natural.round));
+  expect({shop:afterNatural.shop,rngState:afterNatural.rngState}).toEqual(shop(natural.rngState,natural.shop.generation+1,4));
  });
  it('caps XP and records requested versus applied',()=>{
   for(const[level,xp,applied]of[[8,75,1],[9,0,0]]){const end=accepted(startMatchCombat({...emptyBoard(),level,xp}));expect(end).toMatchObject({level:9,xp:0});expect(end.roundResults[0]).toMatchObject({xpRequested:2,xpAwarded:applied});}

@@ -225,7 +225,7 @@ describe('match session commands and fixed clock', () => {
     const capped=session.state;rejected(session,session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}),'population-cap',capped);
     const shop=structuredClone(session.state.shop),rng=session.state.rngState,gold=session.state.gold;
     expect(session.buyXp().ok).toBe(true);
-    expect(session.state).toMatchObject({level:4,xp:0,gold:gold-4,rngState:rng,shop});
+    expect(session.state).toMatchObject({level:4,xp:2,gold:gold-4,rngState:rng,shop});
     expect(session.deploy('unit-4',{kind:'board',cell:{col:4,row:7}}).ok).toBe(true);
   });
 

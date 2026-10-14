@@ -168,7 +168,10 @@ describe('B8 readLootView over real public routes', () => {
     { name: 'only choice source', keep: ['unit-14'], fallback: true },
   ])('terminal $name: retained hero is read-only, earned fallback only via its receipt, nothing forfeited shown', scenario => {
     let start = reserveExcept(terminalPrefix, scenario.keep);
-    for (const slot of scenario.keep.length === 2 ? [2, 3] : [2]) start = accepted(api.buyUnit(start, slot, 43));
+    // Aim the current Ezreal formation at the choice source only.
+    if (scenario.keep.length === 1 && scenario.keep[0] === 'unit-14')
+      start = accepted(api.deployMatchUnit(start, 'unit-14', { kind: 'board', cell: { col: 3, row: 7 } }));
+    for (const slot of scenario.keep.length === 2 ? [2, 3] : [2]) start = accepted(api.buyUnit(start, slot, 46));
     const state = finish(accepted(api.startMatchCombat(start))).state, result = view(state), round = plan(state);
     expect(state.phase).toBe('gameOver');
     const statuses = Object.fromEntries(state.m8.loot.direct.filter(drop => round.encounterPlan.drops.some(d => d.dropId === drop.dropId))

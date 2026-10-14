@@ -1,8 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
-/** Every recorded before/after/final Match state of a docs/evidence/m8-b9/golden new-<build> route (gzip JSON). */
+/** Public-route before/after/final states re-recorded after T11/T12; historical B9 evidence stays archived. */
 exports.goldenStates = build => {
-  const route = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(__dirname, '../../docs/evidence/m8-b9/golden', `new-${build}.json.gz`))).toString('utf8'));
-  return [...route.rounds.flatMap(round => [round.before, round.after]), route.final];
+  const recording = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(__dirname, 't12-recorded-states', `${build}.json.gz`))).toString('utf8'));
+  return recording.states;
 };

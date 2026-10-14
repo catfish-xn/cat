@@ -1,7 +1,7 @@
 /** B10 (M8_PLAN §7.4): a battle fought with Thief's Gloves temporary children is rebuilt by replay from its
  * recorded context alone, at 1×/2×/4× and by seek, and a forged child in the context is rejected.
  * Route: real seed-230 cannon commands through 3-4, then the same public branch as m8-b8-live-transfer
- * (gloves + gloves → Thief's Gloves on unit-22 at 4-7). No state is injected. */
+ * (gloves + gloves → Thief's Gloves on unit-24 at 4-7). No state is injected. */
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchCommandResult, MatchState } from '../src/simulation/match';
@@ -10,7 +10,7 @@ import { BattleHistory, validateBattleRecord } from '../src/replay/history';
 import { PlaybackSession } from '../src/replay/playback-session';
 import { run } from '../scripts/generate-m5-route.cjs';
 
-const SURVIVOR = 'unit-21', DONOR = 'unit-22', TG = 'item-9';
+const SURVIVOR = 'unit-23', DONOR = 'unit-24', TG = 'item-9';
 function accepted(result: MatchCommandResult): MatchState {
   if (!result.ok) throw new Error(`Public temporary-replay fixture: ${result.reason}`);
   return result.state;
@@ -40,9 +40,10 @@ async function preparation(): Promise<MatchState> {
   state = accepted(api.equipItem(state, 'item-3', 'unit-13', 0));
   state = accepted(api.equipItem(state, 'item-7', 'unit-13', 1));
   for (let count = 0; count < 8; count++) state = accepted(api.buyXp(state));
-  state = accepted(api.buyUnit(state, 0, 20));
-  for (let count = 0; count < 4; count++) state = accepted(api.rerollShop(state));
+  // T11 route reaches generation 22; generation 24 offers both one-star Ezreals.
+  for (let count = 0; count < 2; count++) state = accepted(api.rerollShop(state));
   state = accepted(api.buyUnit(state, 2, 24));
+  state = accepted(api.buyUnit(state, 3, 24));
   state = accepted(api.deployMatchUnit(state, SURVIVOR, { kind: 'board', cell: { col: 3, row: 7 } }));
   state = accepted(api.deployMatchUnit(state, DONOR, { kind: 'board', cell: { col: 5, row: 7 } }));
   state = accepted(api.combineItems(state, 'item-5', 'item-8'));
