@@ -182,7 +182,7 @@ export class LocalRoomClient implements GameClient {
       let replay: ReturnType<typeof toCombatReplayFor> = null;
       try { replay = toCombatReplayFor(state, this.mySeatId); }
       catch (error) { console.error('[local-room] replay failed', error); }
-      if (replay) listeners.replay(replay.replay);
+      if (replay) listeners.replay(replay.replay, replay.unitIds);
     }
     listeners.view(this.view(state));
   }

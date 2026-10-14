@@ -665,6 +665,18 @@ SR-C7-02 验证：实际 Node v22.23.3 / npm 10.9.9；8 文件 110 个不同用�
 - **用户决定（2026-10-13）：选 A。** 规则不改，Codex 无需动作。Claude 在联机面板状态行的首个准备期（`view.phase.round === 1`）追加"首轮 0 金币，1-2 战后到账 2 金币"，只改 `src/rendering/online/online-application.ts`。若以后 P-O01 的 1-2 收入改动，需同步这句文案。
 - 验收（B）：seed 42 单人与八席各一局，1-2 准备期金币等于新约定，可买一张 1 费卡；进入 2-1 时无操作基准仍为 10G、3 级、0XP；合同、版本号与 digest 同步更新。
 
+## C15 PvP 回放中我方单位的装备图标（2026-10-13，Claude 流水线 B/C）
+
+### SR-C15-01 回放推送附带本席单位映射（已解决，服务器侧，无规则改动）
+
+- 状态：**已解决**（分支 `claude/c15-replay-equipment`，基线 `multiplayer@25dae94`）。只改 `src/server/`、`src/rendering/`、`src/presentation/`，不改 `src/simulation/`，不需要 Codex 动作。
+- 现象：PvP 回放的 `CombatViewState` 用战斗 ID（合同 §10.2：`JSON.stringify(['t2', seatId, kind, originalId])`）命名单位，客户端按它在本席 `items` 里查不到装备，我方回放单位不显示装备图标。合同要求查 `mapping`、不按字符串切割推断，客户端不解析战斗 ID。
+- 字段形状：`replay` 推送新增 `unitIds: readonly { combatId: string; originalId: string }[]`（类型 `ReplayUnitId`，`src/server/protocol.ts`）；同一字段在 `SeatReplay`（`toCombatReplayFor` 的返回值）上。
+  - 来源：`BattleResult.battle.mapping`（`BattleIdMapping`），只取 `kind === 'unit'` 且 `seatId` 为本席的条目，原样取 `combatId`/`originalId`。
+  - A 侧和镜像 B 侧都只拿自己的条目；镜像源席不是参与者，收不到这场回放。PvE（placeholder）回放本来就用原 ID，给空数组。
+  - 不下发对手条目，也不下发 item / temporary-item / augment / anomaly 条目。回放的 tick、事件、结果不变。
+- 客户端：`readReplayUnitIds`（`src/server/net/messages.ts`）做结构校验，只接受 `{combatId, originalId}` 非空字符串数组，缺失或格式错时返回 null，这时这一场回放不显示装备，战斗照常播放。`RemoteSession.equipmentOwnerId(id)` 把映射到的战斗 ID 换成原 ID，其他 ID 原样返回（查不到装备）；状态换到下一回合时映射随回放一起清空。`BoardScene` 按换出的原 ID 读本席 `items` 画装备。
+- 验收：`tests/server/c15-replay-unit-ids.test.ts`（A/B 侧各只拿到自己的单位映射、镜像战只给真实席、PvE 为空、对手及装备条目不出现、校验函数、RemoteSession 映射生命周期）；`projection-wire.test.ts` 核对线上 `unitIds` 与投影一致；`tests/server/e2e/c15-replay-equipment.mjs`：两名真人各给一个单位装一件装备进入 PvP，回放期间各自的战斗单位画出自己的装备，敌方单位不画。
 
 ## T12 对 Claude 的接线说明（2026-10-14）
 

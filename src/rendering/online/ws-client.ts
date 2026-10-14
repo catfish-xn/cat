@@ -22,7 +22,7 @@ import { createMatch } from '../../simulation/match';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { PrivateSeatView } from '../../server-entry';
 import {
-  NET_PROTOCOL_VERSION, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
+  NET_PROTOCOL_VERSION, readReplayUnitIds, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
 } from '../../server/net/messages';
 import type {
   ClientCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView,
@@ -270,7 +270,8 @@ export class WsGameClient implements GameClient {
     const key = `${message.roomId}:${message.round}:${message.battleId}`;
     if (key === this.lastReplayKey) return;
     this.lastReplayKey = key;
-    this.listeners?.replay(message.replay);
+    // A missing or malformed id list only costs the equipment icons of this replay (C15), never the battle.
+    this.listeners?.replay(message.replay, readReplayUnitIds((message as { unitIds?: unknown }).unitIds) ?? []);
   }
   private onReceipt(receipt: ReceiptMessage): void {
     const entry = this.inflight.get(receipt.commandId);

@@ -232,6 +232,8 @@ describe('B7 compact replay', () => {
     expect(message.battleId).toBe(expected.battleId);
     // The replay on the wire is the room's own replay for this seat.
     expect(message.replay).toEqual(JSON.parse(JSON.stringify(expected.replay)));
+    // C15: my own unit ids of this battle ride along, exactly as the projection built them.
+    expect(message.unitIds).toEqual(JSON.parse(JSON.stringify(expected.unitIds)));
     await flush();
     expect(a.inbox.filter(candidate => candidate.type === 'replay' && candidate.battleId === expected.battleId)).toHaveLength(1);
     expect(a.inbox.some(candidate => (candidate as { type: string }).type === 'combat')).toBe(false);
