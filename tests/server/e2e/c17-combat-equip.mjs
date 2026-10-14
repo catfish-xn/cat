@@ -21,36 +21,16 @@
  * Screenshots and report go to artifacts/c17/ (not committed). CHROMIUM overrides the browser path; C17_VITE_PORT
  * (default 5205) and C17_WS_PORT (default 8797) override the ports.
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { build } from 'esbuild';
-import { chromium } from 'playwright';
+import { ROOT, click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, onWire, outDir, read, startGameServer, startVite, stopAll } from './harness.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
-const OUT = `${ROOT}artifacts/c17`;
+const OUT = outDir('c17');
 const VITE_PORT = Number(process.env.C17_VITE_PORT ?? 5205);
 const WS_PORT = Number(process.env.C17_WS_PORT ?? 8797);
-const BASE = `http://127.0.0.1:${VITE_PORT}/`;
-const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const NEXT_BATTLE = '下场生效';
-mkdirSync(OUT, { recursive: true });
 
-const children = [];
-function start(command, args, env, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const failures = [];
-const check = (condition, message) => { if (condition) console.log(`ok  ${message}`); else { console.log(`FAIL ${message}`); failures.push(message); } };
-const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
-const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
+const { check, failures, finish } = createChecks();
 const panelStatus = page => page.evaluate(() => document.querySelector('.panel-status')?.textContent ?? '');
 const mine = state => state.preparation.units.filter(unit => unit.team === 'player');
 const inBattle = s => s?.m6?.phase?.kind === 'combat' && s.state.phase === 'combat';
@@ -73,25 +53,21 @@ const report = { preparation: null, combat: null };
 async function main() {
   const rules = await loadRules();
   const isComponent = item => rules.ITEM_DEFINITIONS[item.definitionId]?.kind === 'component';
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '8', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' }, /listening on/);
-  await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
-  const browser = await chromium.launch({ executablePath });
+  const wsPort = await startGameServer(WS_PORT, { CAT_PREP_SEC: '8', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '150' });
+  const base = await startVite(VITE_PORT);
+  const browser = await launchBrowser();
   const errors = [];
   const sent = new Map(), applied = new Map();
   try {
     // Tall enough that the item card and the board token are on screen together (see c16).
     const context = await browser.newContext({ viewport: { width: 1440, height: 1600 } });
     const page = await context.newPage();
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
-    page.on('websocket', socket => {
-      socket.on('framesent', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'command') sent.set(m.commandId, m.command); } catch { /* ignore */ } });
-      socket.on('framereceived', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'receipt' && sent.has(m.commandId)) applied.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); } catch { /* ignore */ } });
+    collectErrors(page, errors);
+    onWire(page, {
+      sent: m => { if (m.type === 'command') sent.set(m.commandId, m.command); },
+      received: m => { if (m.type === 'receipt' && sent.has(m.commandId)) applied.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); },
     });
-    await page.goto(`${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${WS_PORT}`);
-    await page.waitForSelector('[data-debug="online:join"]');
-    await page.fill('[data-debug="online:name"]', '战中合成'); await page.click('[data-debug="online:join"]');
-    await page.click('[data-debug="online:start"]');
+    await joinOnline(page, onlineUrl(base, wsPort), '战中合成');
 
     /** One real mouse drag from the item card to the token; returns the status shown while hovering the token. */
     async function drag(itemId, tokenId) {
@@ -218,8 +194,7 @@ async function main() {
     await browser.close().catch(() => {});
     stopAll();
   }
-  if (failures.length) { console.log(`\n${failures.length} check(s) failed`); process.exitCode = 1; }
-  else console.log('\nall C17 checks passed');
+  finish('C17');
 }
 
 main().catch(error => { console.error(error); stopAll(); process.exit(1); });

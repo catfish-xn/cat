@@ -16,32 +16,16 @@
  * second use of the same tool instance is `unknown-consumable`. Icons and the record line: c18b-loot-preview.
  * C18B_WS_PORT (default 8800) overrides the port.
  */
-import { spawn } from 'node:child_process';
 import { TestClient } from '../../../dist-server/game/test-client.mjs';
+import { createChecks, sleep, startGameServer, stopAll } from './harness.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
 const WS_PORT = Number(process.env.C18B_WS_PORT ?? 8800);
-const URL_ = `ws://127.0.0.1:${WS_PORT}`;
 
-const children = [];
-function start(command, args, env, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const failures = [];
-const check = (condition, message) => { if (condition) console.log(`ok  ${message}`); else { console.log(`FAIL ${message}`); failures.push(message); } };
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const { check, failures, finish } = createChecks();
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '4', CAT_SETTLE_SEC: '6', CAT_BOT_STEP_MS: '150' }, /listening on/);
-  const client = await TestClient.connect(URL_, 8_000);
+  const wsPort = await startGameServer(WS_PORT, { CAT_PREP_SEC: '6', CAT_CHOICE_SEC: '4', CAT_SETTLE_SEC: '6', CAT_BOT_STEP_MS: '150' });
+  const client = await TestClient.connect(`ws://127.0.0.1:${wsPort}`, 8_000);
   try {
     await client.join('消耗品'); await client.start();
     await client.waitFor(message => message.type === 'state', 15_000);
@@ -136,7 +120,6 @@ async function main() {
     client.close?.();
     stopAll();
   }
-  if (failures.length) { console.log(`\n${failures.length} check(s) failed`); process.exitCode = 1; }
-  else console.log('\nall C18-B useConsumable wire checks passed');
+  finish('C18-B useConsumable wire');
 }
 main().catch(error => { console.error(error); stopAll(); process.exit(1); });

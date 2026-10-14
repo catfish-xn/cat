@@ -10,65 +10,30 @@
  * checks of swap-checks.mjs against the server (screenshots swap-*.png).
  * Screenshots go to artifacts/c7/ (not committed). CHROMIUM overrides the browser path.
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { chromium } from 'playwright';
+import { writeFileSync } from 'node:fs';
+import { click, collectErrors, joinOnline, launchBrowser, onWire, onlineUrl, outDir, read, startGameServer, startVite, stopAll, strictCheck as check, text, waitRead } from './harness.mjs';
 import { runSwapChecks, swapReady } from './swap-checks.mjs';
 
-const ROOT = new URL('../../../', import.meta.url).pathname;
-const OUT = `${ROOT}artifacts/c7`;
+const OUT = outDir('c7');
 const VITE_PORT = 5197;
 const WS_PORT = 8789;
-const BASE = `http://127.0.0.1:${VITE_PORT}/`;
-const executablePath = process.env.CHROMIUM ?? '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
-mkdirSync(OUT, { recursive: true });
-
-const children = [];
-function start(command, args, env, ready) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
-    children.push(child);
-    const timer = setTimeout(() => reject(new Error(`${command} did not become ready`)), 30_000);
-    const onData = data => { const text = String(data); if (process.env.VERBOSE) process.stdout.write(text); if (ready.test(text)) { clearTimeout(timer); resolve(child); } };
-    child.stdout.on('data', onData); child.stderr.on('data', onData);
-    child.once('exit', code => { clearTimeout(timer); reject(new Error(`${command} exited with ${code}`)); });
-  });
-}
-const stopAll = () => { for (const child of children) child.kill('SIGTERM'); };
-const check = (condition, message) => { if (!condition) throw new Error(`check failed: ${message}`); console.log(`ok  ${message}`); };
-const read = page => page.evaluate(() => window.__CAT_DEBUG__?.read() ?? null);
-async function waitRead(page, predicate, what, timeout = 60_000) {
-  const deadline = Date.now() + timeout;
-  for (;;) {
-    const snapshot = await read(page).catch(() => null);
-    if (snapshot && predicate(snapshot)) return snapshot;
-    if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}: ${JSON.stringify(snapshot?.m6?.phase ?? null)} ${snapshot?.state?.phase}`);
-    await page.waitForTimeout(100);
-  }
-}
-const click = (page, name) => page.evaluate(debug => { const node = document.querySelector(`[data-debug="${debug}"]`); if (node && !node.disabled) { node.click(); return true; } return false; }, name);
-const text = (page, selector) => page.evaluate(sel => document.querySelector(sel)?.textContent ?? null, selector);
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: String(WS_PORT), CAT_PREP_SEC: '25', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '200' }, /listening on/);
-  await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
-  const browser = await chromium.launch({ executablePath });
+  const wsPort = await startGameServer(WS_PORT, { CAT_PREP_SEC: '25', CAT_CHOICE_SEC: '6', CAT_SETTLE_SEC: '4', CAT_BOT_STEP_MS: '200' });
+  const base = await startVite(VITE_PORT);
+  const browser = await launchBrowser();
   const errors = [];
   const receipts = [];
   const report = { rounds: [], combine: null, swap: null };
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
-    page.on('websocket', socket => {
-      socket.on('framesent', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'command') receipts.push({ sent: m.commandId, command: m.command }); } catch { /* binary */ } });
-      socket.on('framereceived', frame => { try { const m = JSON.parse(String(frame.payload)); if (m.type === 'receipt') receipts.push({ receipt: m.commandId, ok: m.ok, reason: m.reason ?? null, kind: m.result?.kind ?? null }); } catch { /* binary */ } });
+    collectErrors(page, errors);
+    onWire(page, {
+      sent: m => { if (m.type === 'command') receipts.push({ sent: m.commandId, command: m.command }); },
+      received: m => { if (m.type === 'receipt') receipts.push({ receipt: m.commandId, ok: m.ok, reason: m.reason ?? null, kind: m.result?.kind ?? null }); },
     });
-    await page.goto(`${BASE}?mode=online&server=ws&ws=ws://127.0.0.1:${WS_PORT}`);
-    await page.waitForSelector('[data-debug="online:join"]');
-    await page.fill('[data-debug="online:name"]', '测试'); await page.click('[data-debug="online:join"]');
-    await page.click('[data-debug="online:start"]');
+    await joinOnline(page, onlineUrl(base, wsPort), '测试');
     await waitRead(page, s => s.m6.mode === 'active', 'match start');
 
     let lastRound = 0;
