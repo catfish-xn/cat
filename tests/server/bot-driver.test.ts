@@ -165,9 +165,33 @@ describe('BotDriver: scheduling', () => {
   }, 30_000);
 });
 
-describe('BotDriver: disconnect takeover (§13.3 item 1)', () => {
+describe('BotDriver: no takeover by default (P2, TFT behaviour)', () => {
+  it('leaves a disconnected human seat alone: no takeover timer, no bot step, the seat stays human and its board still fights', () => {
+    const ctx = botRoom(SEATS, { stepMs: 300 });
+    const { room, clock, bots, log } = ctx;
+    room.start();
+    runUntil(room, clock, state => state.phase === 'preparation');
+    const seat = () => room.state.seats.find(candidate => candidate.seatId === 's0')!;
+    expect(room.setConnected('s0', false)).toBe(true);
+    expect(bots.inspect('s0')!.takeoverPending).toBe(false);
+    // Far beyond the old 60 s takeover delay, across rounds: still human-controlled, never driven by a bot.
+    const round = room.state.round;
+    runUntil(room, clock, state => state.round >= round + 2 && state.phase === 'preparation', 20_000);
+    expect(seat()).toMatchObject({ controller: 'human', controlEpoch: 0, connected: false });
+    expect(bots.inspect('s0')!.takeoverPending).toBe(false);
+    expect(log.some(record => record.seatId === 's0')).toBe(false);
+    // Fill-in bots still play; the disconnected seat's board took part in the battles.
+    expect(log.some(record => record.seatId === 's4' && record.ok === true)).toBe(true);
+    expect(room.state.fault).toBeNull();
+    // Coming back is a plain reconnect: same controller, same generation.
+    expect(room.setConnected('s0', true)).toBe(true);
+    expect(seat()).toMatchObject({ controller: 'human', controlEpoch: 0, connected: true });
+  });
+});
+
+describe('BotDriver: disconnect takeover when switched on (§13.3 item 1)', () => {
   const firstPreparation = () => {
-    const ctx = botRoom(SEATS, { takeoverMs: 5_000, stepMs: 300 });
+    const ctx = botRoom(SEATS, { takeover: true, takeoverMs: 5_000, stepMs: 300 });
     ctx.room.start();
     runUntil(ctx.room, ctx.clock, state => state.phase === 'preparation');
     return ctx;
@@ -224,7 +248,7 @@ describe('BotDriver: disconnect takeover (§13.3 item 1)', () => {
 
   it('refuses a step that was already queued when the player resumed (control generation)', () => {
     const tasks: (() => void)[] = [];
-    const ctx = botRoom(SEATS, { takeoverMs: 1_000, stepMs: 300, enqueue: task => tasks.push(task) });
+    const ctx = botRoom(SEATS, { takeover: true, takeoverMs: 1_000, stepMs: 300, enqueue: task => tasks.push(task) });
     const { room, clock, log } = ctx;
     const drain = () => { while (tasks.length) tasks.shift()!(); };
     room.start();

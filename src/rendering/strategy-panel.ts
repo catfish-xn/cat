@@ -35,7 +35,7 @@ import { readEncounterPreview, readLootView } from '../simulation/match';
 import { appendLootStatus, continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
 import { isEmptyShopSlot } from './online/pool-feedback';
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
-import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection } from '../presentation/orb-loot';
+import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
@@ -366,16 +366,26 @@ export class StrategyPanel {
   }
   /**
    * C18-B: what a consumable drag points at, as a §18.1 ConsumableTarget: an item card or a worn item's slot (item), an
-   * equipment row or a board piece of mine (unit). Only names the target; whether the tool fits it is the preview's call.
+   * equipment row or a board/bench piece of mine (unit; for an item tool, routed to an item it wears). Same in every phase;
+   * whether the tool fits the target is the preview's call.
    */
-  private toolTarget(tool: { readonly definitionId: string }, x: number, y: number): { target: ConsumableTarget; label: string } | null {
+  private toolTarget(tool: ConsumableInstance, x: number, y: number): { target: ConsumableTarget; label: string } | null {
     const state = this.actions.state(), hit = document.elementFromPoint(x, y);
     // A unit tool (the remover) names the unit from any of its slots, also one wearing an item.
     const itemId = unitTool(tool) ? undefined : hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
     if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : itemId }; }
     const unitId = hit?.closest<HTMLElement>('[data-unit-id]')?.dataset.unitId ?? this.actions.unitAt(x, y);
     const unit = unitId ? state.preparation.units.find(entry => entry.id === unitId) : undefined;
-    return unit ? { target: { kind: 'unit', unitId: unit.id }, label: displayUnitName(unit.definitionId) } : null;
+    if (!unit) return null;
+    // P1: an item tool on a whole unit (board or bench token, equipment row) goes to an item it wears, in any phase.
+    if (!unitTool(tool)) {
+      const worn = state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unit.id)
+        .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0));
+      const routed = routeToolUnitDrop(worn.map(item => item.id), id => previewConsumable(state, tool.consumableId, { kind: 'item', itemId: id }).ok);
+      const item = routed ? worn.find(entry => entry.id === routed) : undefined;
+      if (item) return { target: { kind: 'item', itemId: item.id }, label: `${displayUnitName(unit.definitionId)} · ${itemDefinitionName(item.definitionId)}` };
+    }
+    return { target: { kind: 'unit', unitId: unit.id }, label: displayUnitName(unit.definitionId) };
   }
   /**
    * A tool dropped (or clicked) on a target: sent only when the target answer is ok (§18.8 01); otherwise its reason is

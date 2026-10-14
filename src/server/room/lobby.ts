@@ -2,7 +2,8 @@
  * The single match queue (user decision 2–3): no rooms, no invite codes, no host. Any
  * queued player may start; a queue timeout may start too; the ninth join is refused and
  * empty seats are filled with bots. Every room the lobby opens gets one BotDriver (B6): it plays
- * the fill-in bots and takes over human seats whose player stays disconnected.
+ * the fill-in bots and, only with its `takeover` switch on (off by default, P2), takes over human
+ * seats whose player stays disconnected.
  */
 import type { BattleResolver } from './battle-resolver';
 import { BotDriver, type BotDriverOptions } from './bot-driver';
