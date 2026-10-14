@@ -127,10 +127,10 @@ async function main() {
         entry.result = last ? { result: last.result, hp: `${last.hpBefore}->${last.hpAfter}`, gold: `${last.goldBefore}->${last.goldAfter}`, income: last.income } : null;
         entry.inventory = settle.state.items.filter(i => i.location.kind === 'inventory').map(i => i.definitionId);
         entry.bench = settle.state.preparation.units.filter(u => u.team === 'player').map(u => u.definitionId);
-        entry.lootPanel = await text(page, '[data-debug="loot-panel"]');
-        // C9: the rows are the server's revealed-loot summary (contract §14.1 SR-C7-02), not a snapshot diff.
-        entry.lootRows = await page.evaluate(() => [...document.querySelectorAll('[data-debug^="loot-drop:"]')].map(row => ({
-          status: row.dataset.status, receipt: row.dataset.receipt ?? null, text: row.querySelector('strong')?.textContent ?? '' })));
+        entry.lootPanel = await text(page, '[data-debug="orb-loot"]');
+        // C9/C18-B: the rows are the server's revealed-loot summary (contract §18.4 v2, orb cards), not a snapshot diff.
+        entry.lootRows = await page.evaluate(() => [...document.querySelectorAll('[data-debug^="orb-entry:"]')].map(row => ({
+          dropId: row.dataset.debug.slice('orb-entry:'.length), status: row.dataset.status, receipt: row.dataset.receipt ?? null, text: row.querySelector('.orb-entry-name')?.textContent ?? '' })));
         entry.revealedLoot = settle.state.revealedLoot ?? null;
         await page.screenshot({ path: `${OUT}/${roundId}-4-settlement.png` });
       }
@@ -168,15 +168,16 @@ async function main() {
     check(pve.length === 3 && pve.every(entry => entry.kind === 'pve' && entry.enemiesOnBoard.length > 0 && entry.enemyTokens === entry.enemiesOnBoard.length),
       `1-2/1-3/1-4 preparation boards show monsters: ${pve.map(entry => `${entry.roundId}×${entry.enemyTokens}`).join(' ')}`);
     check(pve.every(entry => entry.battleTeams?.some(team => team.startsWith('enemy:pve-'))), 'every 1-x battle is fought against those monsters');
-    // Item 2 (C9): the settlement lists the server's authoritative drops of the round, one row per granted receipt.
-    check(pve.every(entry => entry.revealedLoot?.roundId === entry.roundId && entry.lootPanel?.startsWith(`${entry.roundId} 奖励`)),
+    // Item 2 (C9, §18.4 v2 since C18-B): the settlement lists the server's authoritative drops of the round on orb cards.
+    check(pve.every(entry => entry.revealedLoot?.roundId === entry.roundId && entry.lootPanel?.startsWith(`${entry.roundId} 宝珠`)),
       `settlement shows the revealedLoot summary of the round: ${pve.map(entry => `${entry.roundId} ${entry.lootPanel}`).join(' | ')}`);
     check(pve.every(entry => entry.lootRows.length === entry.revealedLoot.revealedDrops.length
-      && entry.lootRows.every((row, index) => row.status === entry.revealedLoot.revealedDrops[index].status && row.receipt === entry.revealedLoot.revealedDrops[index].receiptId)),
+      && entry.revealedLoot.revealedDrops.every(drop => entry.lootRows.some(row => row.dropId === drop.dropId && row.status === drop.status && row.receipt === drop.receiptId))),
       `loot rows match the revealedDrops entries: ${pve.map(entry => `${entry.roundId} ${JSON.stringify(entry.lootRows)}`).join(' | ')}`);
     check(pve.every(entry => entry.revealedLoot.revealedDrops.length > 0), 'every 1-x round revealed at least one drop by settlement');
-    const r13 = pve.find(entry => entry.roundId === '1-3');
-    check(r13.lootPanel.includes('拉克丝') && r13.bench.includes('lux') && r13.choice?.kind === 'component', '1-3 lists the loot hero 拉克丝 (on the bench) and offered a component pick');
+    // T13-B: the fixed 1-3 Lux and component pick became random orbs; every hero the server granted is now mine.
+    const heroes = pve.flatMap(entry => entry.revealedLoot.revealedDrops.filter(drop => drop.status === 'granted' && drop.payload.kind === 'unit').map(drop => [entry, drop.payload.definitionId]));
+    check(heroes.every(([entry, hero]) => entry.bench.includes(hero)), `every granted loot hero is among my units: ${heroes.map(([entry, hero]) => `${entry.roundId} ${hero}`).join(', ') || 'none granted'}`);
     // Item 3: two components in inventory combine on the real server.
     check(report.combine.receipts?.some(entry => entry.receipt !== undefined && entry.ok && entry.kind === 'applied') && report.combine.inventoryAfter.length === report.combine.inventoryBefore.length - 1,
       `combine accepted by the server: ${JSON.stringify(report.combine.receipts)}, ${report.combine.inventoryBefore} → ${report.combine.inventoryAfter}`);

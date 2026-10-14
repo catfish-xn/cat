@@ -10,7 +10,7 @@
  * 3. Forfeited entries: the page's own presenter (src/presentation/orb-loot.ts, loaded through Vite) renders a summary
  *    with both forfeit reasons as struck-through rows with their reason (no live match can force a forfeit on demand).
  * 4. Tools: in a preparation with a magnetic remover and an inventory item, the item is put on a board unit; during my
- *    next battle the remover is dragged onto that unit's token. Then: one useConsumable is sent and confirmed
+ *    next battle the remover is dragged onto that unit's equipment row (the token moves while the battle plays). Then: one useConsumable is sent and confirmed
  *    (`consumable-used`), the unit's items are back in the inventory with their ids, the tool is gone, the token keeps
  *    the icons it fights with, and the record page has a "拆卸：" line. Picking a tool outlines only the targets the
  *    server's consumableTargets allow.
@@ -157,8 +157,8 @@ async function main() {
       await click(page, 'panel:items'); await page.waitForTimeout(150);
       const now = await read(page), fighting = new Set(now.combatView?.units.map(unit => unit.id));
       const token = now.tokens.find(entry => entry.owner === wearer && entry.visible && fighting.has(entry.id));
-      const card = now.strategy.bounds[`consumable:${remover.consumableId}`];
-      if (!token || !card) { await page.waitForTimeout(60); continue; }
+      const card = now.strategy.bounds[`consumable:${remover.consumableId}`], row = now.strategy.bounds[`equipment:${wearer}:0`];
+      if (!token || !card || !row) { await page.waitForTimeout(60); continue; }
       // Picking the tool outlines exactly the units the server's consumableTargets allow.
       await page.mouse.click(card.centerX, card.centerY); await page.waitForTimeout(120);
       const outlined = await page.evaluate(() => Array.from(document.querySelectorAll('.equipment-row.consumable-candidate')).map(row => row.dataset.unitId));
@@ -167,9 +167,7 @@ async function main() {
       const iconsBefore = token.equipped, items = wornBy(now.state, wearer).map(item => item.id), tools = now.state.consumables.length, before = new Set(sent.keys());
       const from = (await read(page)).strategy.bounds[`consumable:${remover.consumableId}`];
       await page.mouse.move(from.centerX, from.centerY); await page.mouse.down();
-      await page.mouse.move(token.screenX, token.screenY, { steps: 8 });
-      const standing = (await read(page)).tokens.find(entry => entry.id === token.id) ?? token;
-      await page.mouse.move(standing.screenX, standing.screenY);
+      await page.mouse.move(row.centerX, row.centerY, { steps: 8 }); await page.waitForTimeout(80);
       const hover = await status(page);
       await page.mouse.up();
       let receipt = null; const until = Date.now() + 5_000;
@@ -184,7 +182,7 @@ async function main() {
       report.remover = used;
       console.log(JSON.stringify(used));
       check(JSON.stringify([...outlined].sort()) === JSON.stringify([...allowed].sort()), `picking the remover outlines exactly the allowed units (${outlined} vs ${allowed})`);
-      check(hover.includes('拆卸器 →') && hover.includes('将拆下') && !items.some(id => hover.includes(id)), `hovering the token names what will be removed, by item name ("${hover}")`);
+      check(hover.includes('拆卸器 →') && hover.includes('将拆下') && !items.some(id => hover.includes(id)), `hovering its equipment row names what will be removed, by item name ("${hover}")`);
       check(commands.length === 1 && commands[0].consumableId === remover.consumableId && commands[0].target.kind === 'unit' && commands[0].target.unitId === wearer, `one useConsumable for ${wearer} (${JSON.stringify(commands)})`);
       check(receipt === 'consumable-used', `the receipt is consumable-used (${receipt})`);
       check(items.length > 0 && items.every(id => after.state.items.some(item => item.id === id && item.location.kind === 'inventory')), `the unit's items ${items.join(', ')} are back in the inventory with their ids`);

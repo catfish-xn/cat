@@ -3,6 +3,8 @@ export { displayUnitName } from './display-names';
 import { readRoundInfo } from '../simulation/round-selectors';
 import { encounterPreviewSection } from '../presentation/encounter-preview';
 import { UNIT_DEFINITIONS } from '../simulation/units';
+import { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
+import type { ConsumableDefinitionId } from '../simulation/consumable-types';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { readRevealedLoot } from './online/seat-view-adapter';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
@@ -103,6 +105,8 @@ const TERM: Readonly<Record<string,string>> = {
 const term = (value: string) => TERM[value] ?? value;
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
 const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
+/** C18-B: a tool whose content-table target kind is a unit (the remover). */
+const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
 const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? TRAIT_DEFINITIONS[id]?.name ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
 export function describeEffect(effect: Effect): string {
   if (effect.kind === 'mechanic') {
@@ -232,7 +236,7 @@ export class StrategyPanel {
       if (!drag.moved) return;
       drag.element.classList.add('dragging');
       if (drag.tool) {
-        const target = this.toolTarget(event.clientX, event.clientY), key = target ? JSON.stringify(target.target) : '';
+        const target = this.toolTarget(drag.tool, event.clientX, event.clientY), key = target ? JSON.stringify(target.target) : '';
         if (key === drag.target) return;
         drag.target = key;
         this.actions.status(target ? this.toolDropText(drag.tool, target) : `拖动${consumableName(drag.tool.definitionId)}到我方单位或装备上`);
@@ -252,7 +256,7 @@ export class StrategyPanel {
       if (drag.element.hasPointerCapture(event.pointerId)) drag.element.releasePointerCapture(event.pointerId);
       if (drag.tool) {
         if (!drag.moved) { this.selectConsumable(drag.tool.consumableId); return; }
-        const target = this.toolTarget(event.clientX, event.clientY);
+        const target = this.toolTarget(drag.tool, event.clientX, event.clientY);
         if (target) this.useTool(drag.tool, target); else this.actions.status('消耗品未使用 · 请放到我方单位或装备上');
         return;
       }
@@ -364,9 +368,10 @@ export class StrategyPanel {
    * C18-B: what a consumable drag points at, as a §18.1 ConsumableTarget: an item card or a worn item's slot (item), an
    * equipment row or a board piece of mine (unit). Only names the target; whether the tool fits it is the preview's call.
    */
-  private toolTarget(x: number, y: number): { target: ConsumableTarget; label: string } | null {
+  private toolTarget(tool: { readonly definitionId: string }, x: number, y: number): { target: ConsumableTarget; label: string } | null {
     const state = this.actions.state(), hit = document.elementFromPoint(x, y);
-    const itemId = hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
+    // A unit tool (the remover) names the unit from any of its slots, also one wearing an item.
+    const itemId = unitTool(tool) ? undefined : hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
     if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : itemId }; }
     const unitId = hit?.closest<HTMLElement>('[data-unit-id]')?.dataset.unitId ?? this.actions.unitAt(x, y);
     const unit = unitId ? state.preparation.units.find(entry => entry.id === unitId) : undefined;
@@ -648,8 +653,9 @@ export class StrategyPanel {
         const button = this.button(`equipment:${unit.id}:${slot}`, label, () => {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
           if (tool) {
-            const target: ConsumableTarget = item ? { kind: 'item', itemId: item.id } : { kind: 'unit', unitId: unit.id };
-            this.useTool(tool, { target, label: item ? ITEM_DEFINITIONS[item.definitionId].name : displayUnitName(unit.definitionId) });
+            const onItem = item && !unitTool(tool) ? item : undefined;
+            const target: ConsumableTarget = onItem ? { kind: 'item', itemId: onItem.id } : { kind: 'unit', unitId: unit.id };
+            this.useTool(tool, { target, label: onItem ? ITEM_DEFINITIONS[onItem.definitionId].name : displayUnitName(unit.definitionId) });
             return;
           }
           if (chosen) this.equipAt(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
