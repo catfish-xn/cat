@@ -48,8 +48,8 @@ export interface GameServerOptions {
   readonly timings?: Partial<RoomTimings>;
   readonly queueTimeoutMs?: number | null;
   readonly limits?: Partial<ConnectionLimits>;
-  /** Bot steps spacing and takeover delay (B6); steps always run as tasks of the server's write queue. */
-  readonly bots?: { readonly stepMs?: number; readonly takeoverMs?: number };
+  /** Bot steps spacing, disconnect takeover switch (off by default, P2) and delay (B6); steps always run as tasks of the server's write queue. */
+  readonly bots?: { readonly stepMs?: number; readonly takeover?: boolean; readonly takeoverMs?: number };
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
   readonly sliceTicks?: number;

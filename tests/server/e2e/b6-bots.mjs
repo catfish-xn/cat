@@ -5,7 +5,7 @@
  *
  * 1. Local room (`?mode=online`, default bots): within a few rounds the seven bots buy, deploy and level; the right
  *    column shows their deployed units as avatars and their levels; no bot is marked 接管中.
- * 2. Real server (`?server=ws`, CAT_TAKEOVER_SEC=5), two contexts: A leaves the page; after the takeover delay B's
+ * 2. Real server (`?server=ws`, CAT_TAKEOVER=1, CAT_TAKEOVER_SEC=5), two contexts: A leaves the page; after the takeover delay B's
  *    right column shows A as 机 + 接管中 and A's board changes under the bot; A comes back (same tab, token in
  *    sessionStorage), the status line says 已接回席位 and B sees A as a human again.
  * Screenshots go to artifacts/b6/ (not committed). CHROMIUM overrides the browser path.
@@ -52,7 +52,7 @@ const seatRow = (page, seatId) => page.evaluate(seat => {
 }, seatId);
 
 async function main() {
-  await start('node', ['dist-server/game/main.mjs'], { PORT: '8788', CAT_PREP_SEC: '20', CAT_CHOICE_SEC: '5', CAT_SETTLE_SEC: '2', CAT_TAKEOVER_SEC: '5', CAT_BOT_STEP_MS: '200' }, /listening on/);
+  await start('node', ['dist-server/game/main.mjs'], { PORT: '8788', CAT_PREP_SEC: '20', CAT_CHOICE_SEC: '5', CAT_SETTLE_SEC: '2', CAT_TAKEOVER: '1', CAT_TAKEOVER_SEC: '5', CAT_BOT_STEP_MS: '200' }, /listening on/);
   await start('node', ['node_modules/vite/bin/vite.js', '--port', String(VITE_PORT), '--strictPort', '--host', '127.0.0.1'], {}, /Local:/);
   const browser = await chromium.launch({ executablePath });
   const errors = [];

@@ -1,8 +1,9 @@
 /**
  * Bot scheduler (pipeline B, work order B6, contract §13.3). Drives every bot-controlled seat of one Room:
- * fill-in bots (`controller: 'bot'`) for the whole match and human seats a bot took over after their player
- * stayed disconnected for `takeoverMs` (`controller: 'takeover'`, revoked by the room the moment the player
- * resumes).
+ * fill-in bots (`controller: 'bot'`) for the whole match and, only when `takeover` is on, human seats a bot took
+ * over after their player stayed disconnected for `takeoverMs` (`controller: 'takeover'`, revoked by the room the
+ * moment the player resumes). By default (P2, TFT behaviour) a disconnected seat does nothing: no bot plays it,
+ * its board still fights with whatever it had.
  *
  * The driver decides nothing about the game. Each step reads the seat's committed MatchState, asks the T7
  * policy `decideBotAction` for exactly one intention and hands it to `Room.handleBot`, which runs the same
@@ -22,7 +23,12 @@ import { ROOM_CAPACITY, type ClientCommand, type RoomFailure, type RoomState, ty
 export interface BotDriverOptions {
   /** Delay between two steps of one seat (ms of the room clock). */
   readonly stepMs: number;
-  /** How long a human seat stays disconnected before a bot takes it over. */
+  /**
+   * Whether a bot takes over a human seat whose player stays disconnected (B6). Off by default (P2): like TFT, a
+   * disconnected seat does nothing and its board still fights. The B6 takeover path only runs when this is true.
+   */
+  readonly takeover: boolean;
+  /** How long a human seat stays disconnected before a bot takes it over (only when `takeover` is on). */
   readonly takeoverMs: number;
   /** Per-seat, per-round attempt budget handed to the policy; capped by BOT_MAX_STEPS. */
   readonly maxSteps: number;
@@ -31,7 +37,7 @@ export interface BotDriverOptions {
   /** Observation hook (tests, logs): one record per executed intention or `done`. */
   readonly onStep?: (record: BotStepRecord) => void;
 }
-export const BOT_DRIVER_DEFAULTS: BotDriverOptions = { stepMs: 300, takeoverMs: 60_000, maxSteps: BOT_MAX_STEPS };
+export const BOT_DRIVER_DEFAULTS: BotDriverOptions = { stepMs: 300, takeover: false, takeoverMs: 60_000, maxSteps: BOT_MAX_STEPS };
 
 export interface BotStepRecord {
   readonly seatId: string;
@@ -156,7 +162,7 @@ export class BotDriver {
   }
 
   private syncTakeover(state: RoomState, seat: SeatState, brain: SeatBrain): void {
-    const due = running(state) && seat.kind === 'human' && seat.alive && !seat.connected && seat.controller === 'human';
+    const due = this.options.takeover && running(state) && seat.kind === 'human' && seat.alive && !seat.connected && seat.controller === 'human';
     if (!due) { this.cancelTakeover(brain); return; }
     if (brain.takeover !== null) return;
     const seatId = seat.seatId;

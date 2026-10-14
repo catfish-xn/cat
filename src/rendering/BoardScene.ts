@@ -495,7 +495,9 @@ export class BoardScene extends Phaser.Scene {
     this.setStatus(upgrades.length ? upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId].name} → ${event.toStar}★`).join(' · ') + ' · 自动升星成功' : success);
     if (this.session.phase === 'gameOver') this.setStatus(this.endText());
     else if (this.session.phase === 'choice') this.setStatus('完成当前三选一后继续运营');
-    else if (this.session.phase === 'settlement') this.setStatus(this.settledText());
+    // P1: online, an operation confirmed during the settlement (shop, bench, items, tools) keeps its own success text;
+    // offline the settlement line still says how to continue.
+    else if (this.session.phase === 'settlement' && !this.online) this.setStatus(this.settledText());
   }
   /** Floating "N★ 升星" labels for the upgrades among `events`; returns them. */
   private showUpgrades(events: readonly MatchEvent[]) {

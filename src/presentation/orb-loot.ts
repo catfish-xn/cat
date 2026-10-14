@@ -147,6 +147,15 @@ export function consumableShelf(consumables: readonly ConsumableInstance[], sele
 }
 
 /**
+ * P1: an item tool (a reforger) dropped on a whole unit (a board or bench token, an equipment row) uses one of the items
+ * that unit wears, given in slot order: the first whose target answer is ok, else the first worn item so that its own
+ * refusal is shown; null when the unit wears nothing. Picks among the answers only (same idea as pickUnitDropSlot).
+ */
+export function routeToolUnitDrop(wornItemIds: readonly string[], allowed: (itemId: string) => boolean): string | null {
+  return wornItemIds.find(allowed) ?? wornItemIds[0] ?? null;
+}
+
+/**
  * What dropping `tool` on a target would do, in the preview's words (§18.8 01: `affectedItemIds` names what is removed
  * or reforged; the reforge result is random and never guessed). `phase` is the shown state's: outside preparation the
  * change enters the next battle.

@@ -7,9 +7,27 @@ let harness: NetHarness | null = null;
 const LONG = { ...TIMINGS, preparationMs: 120_000, choiceMs: 120_000 };
 afterEach(async () => { await harness?.close(); harness = null; });
 
-describe('game server: bot takeover of a disconnected seat (B6)', () => {
+describe('game server: no takeover by default (P2)', () => {
+  it('keeps a disconnected seat human-controlled long after the old takeover delay; resume is a plain reconnect', async () => {
+    harness = await startServer({ timings: LONG });
+    const [a, b] = await seatTwo(harness);
+    const seatA = a.seatId!, token = a.token!;
+    await a.close();
+    await b.waitForView(view => view.seats.find(seat => seat.seatId === seatA)!.connected === false);
+    harness.clock.advance(90_000);
+    await flush();
+    expect(b.view!.seats.find(seat => seat.seatId === seatA)!.controller).toBe('human');
+    expect(harness.server.room!.state.seats.find(seat => seat.seatId === seatA)!.controller).toBe('human');
+    const a2 = await harness.connect();
+    const resumed = await a2.resume(token);
+    expect(resumed.ok).toBe(true);
+    expect(resumed.ok && resumed.result.kind === 'resumed' && 'reclaimed' in resumed.result).toBe(false);
+  });
+});
+
+describe('game server: bot takeover of a disconnected seat when switched on (B6)', () => {
   it('shows the takeover to everyone after takeoverMs and hands the seat back on resume with reclaimed=true', async () => {
-    harness = await startServer({ bots: { takeoverMs: 5_000 }, timings: LONG });
+    harness = await startServer({ bots: { takeover: true, takeoverMs: 5_000 }, timings: LONG });
     const [a, b] = await seatTwo(harness);
     const room = harness.server.room!;
     const seatA = a.seatId!, token = a.token!;
@@ -38,7 +56,7 @@ describe('game server: bot takeover of a disconnected seat (B6)', () => {
   });
 
   it('a resume before takeoverMs is a plain reconnect: no takeover, no reclaimed flag', async () => {
-    harness = await startServer({ bots: { takeoverMs: 5_000 }, timings: LONG });
+    harness = await startServer({ bots: { takeover: true, takeoverMs: 5_000 }, timings: LONG });
     const [a, b] = await seatTwo(harness);
     const seatA = a.seatId!, token = a.token!;
     await a.close();
