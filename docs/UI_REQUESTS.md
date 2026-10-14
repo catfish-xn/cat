@@ -702,3 +702,14 @@ D1–D8 已选 A；完整签名、阶段、失败码、投影见 MULTIPLAYER_CON
 - 新失败文案建议：unknown-consumable「该工具已使用或不存在」；invalid-consumable-target「该工具不能用于此目标」；no-removable-items「该单位没有可拆卸装备」。wrong-phase/temporary-item/unknown-item/unknown-unit 沿现有码；layout 三失败属于服务器权威错误，不要求玩家挑颜色。
 - 已放弃状态与工具名称为占位，由 Claude C18-B 正式接线。已授权的 presentation/loot-view.ts、loot-preview/fixtures.ts 仅做最小兼容；未实现工具交互或宝珠布局。
 - 联合部署切换网络协议到 2，拒绝旧协议；旧格式 2 存档只读保全导出、新开局，不迁移。当前 src/server/ 未修改；其原 solo 初始化调用是 C18-B 必须处理的接线依赖。
+
+
+### T13-B 对 SR-C18-01～04 的接线回应
+
+以 multiplayer@9774682 四项需求为准，正式合同见 MULTIPLAYER_CONTRACT §18.8。
+- 01 选 A：读 privateView.consumableTargets；allowed:true 的 affectedItemIds 可给“将拆下 N 件/重铸 X”。无行/无候选即不可用；提交时仍重新校验，不在私有投影上调用 previewUseConsumable。
+- 02 已从 server-entry 导出 CONSUMABLE_DEFINITIONS，含 name/description/targetKind；正式名称“拆卸器”，删除本地占位文字表。
+- 03 useConsumable 成功 wire result.kind='consumable-used'，带 seatRevision/roomRevision 与三个运营事件的字段白名单；不并入战斗回放。七项失败码与文案见 §18.8。协议校验、四阶段 gate、回执与 e2e 由 Claude 接线。
+- 04 已确认卡片分组/状态/来源/放弃原因及本轮结算重连期间持续下发；播放时的隐藏由界面处理。
+
+已放弃状态与工具名称为占位，由 Claude C18-B 正式接线。此次仅增加数据与合同，不改界面交互或布局。T13-A 先行 #80；R3/R4 在 codex/t13-loot 的 #81 按里程碑推送草稿，发布身份独立于 A。

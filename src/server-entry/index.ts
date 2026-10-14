@@ -50,3 +50,5 @@ export { freezeLootThroughRound } from '../simulation/loot-freeze';
 export type { ConsumableDefinitionId, ConsumableInstance, ConsumableTarget, ConsumablePreview, ConsumableFailure } from '../simulation/consumable-types';
 
 export { readComponentEquivalent } from '../simulation/loot-view';
+
+export { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';

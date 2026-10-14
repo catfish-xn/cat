@@ -62,7 +62,7 @@ async function worker() {
     'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay',
     'applyCombatReplayTick', 'COMBAT_REPLAY_KEYFRAME_INTERVAL',
     'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',
-    'createMatch', 'deployMatchUnit', 'autoDeployToCap', 'lockMatchCombatRoster', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
+    'CONSUMABLE_DEFINITIONS', 'createMatch', 'deployMatchUnit', 'autoDeployToCap', 'lockMatchCombatRoster', 'buyUnit', 'sellUnit', 'setShopLock', 'rerollShop', 'buyXp',
     'startMatchCombat', 'stepMatch', 'nextRound', 'combineItems', 'equipItem',
     'useConsumable', 'previewUseConsumable', 'createOrbLayout', 'freezeOrbLayoutThroughRound', 'freezeLootThroughRound', 'readComponentEquivalent',
     'selectAnomalyTarget', 'rerollAnomaly', 'selectChoice', 'getDeploymentCap',

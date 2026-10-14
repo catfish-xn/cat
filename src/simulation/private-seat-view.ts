@@ -1,6 +1,8 @@
 import type { MatchState } from './match-types';
 import type { RevealedDropView } from './m8/ui-contracts';
 import { readLootView, payloadView } from './loot-view';
+import { previewUseConsumable } from './consumables';
+import type { ConsumableTarget, ConsumableFailure } from './consumable-types';
 import { freezeContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
 
@@ -32,6 +34,10 @@ function revealedLootView(state: MatchState) {
   return { roundId: round.roundId, revealedDrops, revealedOrbs:readLootView(state).revealedOrbs.map(o=>({...pick(o,['orbId','tier','status']),entryDropIds:[...o.entryDropIds]})) };
 }
 
+export type ConsumableTargetView =
+  | { readonly target: ConsumableTarget; readonly allowed: true; readonly affectedItemIds: readonly string[] }
+  | { readonly target: ConsumableTarget; readonly allowed: false; readonly reason: ConsumableFailure };
+
 /** A detached MatchState subset plus the revealedLoot display summary; never an authority/save. */
 export function toPrivateSeatView(state: MatchState) {
   const units = state.preparation.units.filter(unit => unit.team === 'player');
@@ -42,11 +48,26 @@ export function toPrivateSeatView(state: MatchState) {
   const enemies = preview ? preview.enemies.filter(unit => unit.team === 'enemy' && unit.location.kind === 'board') : [];
   const items = state.items.filter(item => item.location.kind === 'inventory' || ids.has(item.location.unitId));
   const revealedLoot = revealedLootView(state);
+  // Candidate ownership is filtered before authority preview; never reveal foreign targets or rolls.
+  const candidates: ConsumableTarget[] = [
+    ...units.map(unit => ({ kind: 'unit' as const, unitId: unit.id })),
+    ...items.map(item => ({ kind: 'item' as const, itemId: item.id })),
+  ];
+  const consumableTargets = state.consumables.map(tool => ({
+    consumableId: tool.consumableId,
+    targets: candidates.map((target): ConsumableTargetView => {
+      const preview = previewUseConsumable(state, tool.consumableId, target);
+      return preview.ok
+        ? { target: { ...target }, allowed: true, affectedItemIds: [...preview.affectedItemIds] }
+        : { target: { ...target }, allowed: false, reason: preview.reason };
+    }),
+  }));
   return freezeContent({
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(revealedLoot ? { revealedLoot } : {}),
     consumables:state.consumables.map(c=>pick(c,['consumableId','definitionId'])),
+    consumableTargets,
     streak: pick(state.streak, ['kind', 'count']),
     shop: { ...pick(state.shop, ['generation', 'locked']), slots: state.shop.slots.map(slot => slot.status === 'available'
       ? pick(slot, ['status', 'definitionId']) : pick(slot, ['status', 'empty'])) },
