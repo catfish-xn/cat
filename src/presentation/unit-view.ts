@@ -36,11 +36,15 @@ export class UnitView {
   private readonly costBadge: Phaser.GameObjects.Arc;
   private readonly costText: Phaser.GameObjects.Text;
   private readonly items: Phaser.GameObjects.Graphics;
+  /** C18: corner tag for items worn now that enter the next battle, not the one shown (hidden when none). */
+  private readonly pendingTag: Phaser.GameObjects.Text;
   private portrait: Phaser.GameObjects.Image | null = null;
   private identity: HeroIdentity;
   private renderKey = '';
   /** Item definition ids whose pips are drawn now, in slot order (debug/acceptance read). */
   equipped: readonly string[] = [];
+  /** Item definition ids worn for the next battle only (C18 tag; debug/acceptance read). */
+  pendingEquipped: readonly string[] = [];
   ring: RingState = 'normal';
 
   constructor(private readonly scene: Phaser.Scene, unit: Unit, x: number, y: number) {
@@ -53,13 +57,14 @@ export class UnitView {
     this.costBadge = add.circle(-20, 18, 8, toNumber(costColor(1))).setStrokeStyle(2, 0x0b151f);
     this.costText = add.text(-20, 18, '', { fontSize: '11px', fontStyle: 'bold', color: '#0b151f', resolution: 2 }).setOrigin(0.5);
     this.items = add.graphics();
+    this.pendingTag = add.text(21, -19, '', { fontSize: '10px', fontStyle: 'bold', color: '#0b151f', backgroundColor: '#68ddd0', padding: { x: 2, y: 1 }, resolution: 2 }).setOrigin(0.5).setVisible(false);
     this.hp = add.graphics().setVisible(false);
     this.mana = add.graphics().setVisible(false);
     this.shield = add.graphics().setVisible(false);
     this.harmfulBadges = add.text(-1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#ffb0a0', backgroundColor: '#3a1218e6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(1, 0.5).setVisible(false);
     this.beneficialBadges = add.text(1, 10, '', { fontSize: '10px', fontStyle: 'bold', color: '#9ff0e4', backgroundColor: '#0f2e2ae6', padding: { x: 2, y: 0 }, resolution: 2 }).setOrigin(0, 0.5).setVisible(false);
     this.shieldLabel = add.text(0, 40, '', { fontSize: '11px', color: C.shield, backgroundColor: '#182b38', resolution: 2 }).setOrigin(0.5).setVisible(false);
-    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.harmfulBadges, this.beneficialBadges];
+    const children: Phaser.GameObjects.GameObject[] = [this.disc, this.emblem, this.label, this.star, this.costBadge, this.costText, this.items, this.hp, this.mana, this.shield, this.shieldLabel, this.harmfulBadges, this.beneficialBadges, this.pendingTag];
     if (unit.team === 'enemy') {
       children.push(add.circle(20, -19, 9, toNumber(C.enemy)).setStrokeStyle(2, 0x0b151f));
       children.push(add.text(20, -19, '敌', { fontSize: '11px', color: '#ffffff', fontStyle: 'bold', resolution: 2 }).setOrigin(0.5));
@@ -75,9 +80,12 @@ export class UnitView {
   get name(): string { return this.identity.name; }
   get symbol(): string { return this.label.text; }
 
-  /** Preparation identity: hero, star level, cost and equipped item pips. */
-  update(unit: Unit, equipped: readonly string[]): void {
-    const key = `${unit.definitionId}|${unit.starLevel}|${equipped.join(',')}|${unit.team}`;
+  /**
+   * Preparation identity: hero, star level, cost and equipped item pips. `pending` (C18): items worn now that enter the
+   * next battle while `equipped` shows the battle on the board; drawn as a separate corner tag, never as a pip.
+   */
+  update(unit: Unit, equipped: readonly string[], pending: readonly string[] = []): void {
+    const key = `${unit.definitionId}|${unit.starLevel}|${equipped.join(',')}|${pending.join(',')}|${unit.team}`;
     if (key === this.renderKey) return;
     this.renderKey = key;
     this.identity = getHeroIdentity(unit.definitionId);
@@ -103,6 +111,8 @@ export class UnitView {
       const x = -10 + index * 10;
       this.items.fillStyle(completed ? toNumber(C.gold) : 0x9fb4c2).lineStyle(1.5, 0x0b151f).fillRect(x - 4, 22, 8, 8).strokeRect(x - 4, 22, 8, 8);
     });
+    this.pendingEquipped = [...pending];
+    this.pendingTag.setText(pending.length ? `下场+${pending.length}` : '').setVisible(pending.length > 0);
     this.token.setData({ definitionId: unit.definitionId, starLevel: unit.starLevel, cost: this.identity.cost });
     this.applyRing(unit.team);
   }

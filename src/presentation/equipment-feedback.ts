@@ -6,6 +6,7 @@
  */
 import type { EquipmentFailure, EquipPreview, UnitEquipmentView } from '../simulation/m8/ui-contracts';
 import type { TemporaryEquipment } from '../simulation/m8/contracts';
+import type { MatchState } from '../simulation/match-types';
 
 /** Equipment wording for the frozen EquipmentFailure codes (M8_UI_CONTRACT §2). */
 export const EQUIPMENT_FAILURE_TEXT: Readonly<Record<EquipmentFailure, string>> = {
@@ -45,6 +46,15 @@ export function pickUnitDropSlot(previews: readonly EquipPreview[]): number {
   const combining = previews.findIndex(preview => preview.allowed && preview.combination !== undefined);
   return combining >= 0 ? combining : previews.findIndex(preview => preview.allowed);
 }
+/**
+ * C18 (Bug 1, UI side until T13-A lands): the slot a drop on one slot button actually uses. When the domain says some
+ * slot of this unit combines the component (previews for slots 0–2), that slot wins whichever button was hit, so a
+ * second component never sits loose beside the first; otherwise the requested slot. Picks among the domain's answers only.
+ */
+export function routeSlotDrop(previews: readonly EquipPreview[], requested: number): number {
+  const combining = previews.findIndex(preview => preview.allowed && preview.combination !== undefined);
+  return combining >= 0 ? combining : requested;
+}
 /** The finished item an allowed preview will create in its slot, or null for a plain equip. */
 export const combinationResult = (preview: EquipPreview): string | null =>
   preview.allowed && preview.combination ? preview.combination.resultDefinitionId : null;
@@ -62,6 +72,44 @@ export const takesEffectNextBattle = (phase: string): boolean => phase === 'comb
 export function equipSuccessText(phase: string, combinedName: string | null): string {
   const done = combinedName ? `已合成 ${combinedName}` : '装备已穿戴';
   return takesEffectNextBattle(phase) ? `${done} · ${NEXT_BATTLE_TEXT}` : done;
+}
+
+/**
+ * C18 (Bug 2): one unit's equipment in the battle on the board versus now. `frozen` is the item list as it stood when
+ * that battle was first shown (BoardScene's battle snapshot), `live` the current state's; both name the owner by the
+ * same permanent unit id. An item worn now that the unit did not wear in the snapshot is pending: it was equipped (or
+ * combined) during the battle and enters the next one. A plain comparison of two item lists, no rule is decided here.
+ */
+export interface BattleLoadout {
+  /** Definition ids the unit fights this battle with, in slot order. */
+  readonly thisBattle: readonly string[];
+  /** Definition ids the unit wears now (next battle), in slot order. */
+  readonly nextBattle: readonly string[];
+  /** Permanent ids worn now that were not worn in the snapshot. */
+  readonly pendingIds: ReadonlySet<string>;
+  /** Definition ids of the pending items, in slot order. */
+  readonly pending: readonly string[];
+  /** The two loadouts differ (something added, combined away or removed). */
+  readonly changed: boolean;
+}
+type Item = MatchState['items'][number];
+const wornBy = (items: readonly Item[], unitId: string) => items
+  .filter((item): item is Item & { location: { kind: 'unit'; unitId: string; slot: number } } => item.location.kind === 'unit' && item.location.unitId === unitId)
+  .sort((a, b) => a.location.slot - b.location.slot);
+/** Definition ids a unit wears in `items`, in slot order. */
+export const wornDefinitions = (items: readonly Item[], unitId: string): string[] => wornBy(items, unitId).map(item => item.definitionId);
+export function battleLoadout(live: readonly Item[], frozen: readonly Item[] | null, unitId: string): BattleLoadout | null {
+  if (!frozen) return null;
+  const now = wornBy(live, unitId), then = wornBy(frozen, unitId), thenIds = new Set(then.map(item => item.id));
+  const pendingItems = now.filter(item => !thenIds.has(item.id));
+  return { thisBattle: then.map(item => item.definitionId), nextBattle: now.map(item => item.definitionId),
+    pendingIds: new Set(pendingItems.map(item => item.id)), pending: pendingItems.map(item => item.definitionId),
+    changed: pendingItems.length > 0 || then.length !== now.length };
+}
+/** "本场：X / 下场：Y" for a hover, from one BattleLoadout. */
+export function battleLoadoutText(loadout: BattleLoadout, name: (definitionId: string) => string): string {
+  const list = (ids: readonly string[]) => ids.length ? ids.map(name).join('、') : '无';
+  return `本场：${list(loadout.thisBattle)} / 下场：${list(loadout.nextBattle)}`;
 }
 
 /** Lifetime wording from the recorded round ids; the domain owns creation and removal. */
