@@ -40,7 +40,7 @@ export { decideBotAction, BOT_POLICY_VERSION, BOT_MAX_STEPS } from '../simulatio
 export type { BotContext, BotDecision } from '../simulation/bot';
 
 export { toPrivateSeatView } from '../simulation/private-seat-view';
-export type { PrivateSeatView } from '../simulation/private-seat-view';
+export type { PrivateSeatView, ConsumableTargetView } from '../simulation/private-seat-view';
 export { toCombatViewState, toCombatViewEvents, toCombatReplay, applyCombatReplayTick, COMBAT_REPLAY_KEYFRAME_INTERVAL } from '../simulation/combat-replay-view';
 export type { CombatViewState, CombatViewUnit, CombatAnimationEvent, CombatViewEvent, CombatReplayTick, CombatReplay, CombatReplayInput } from '../simulation/combat-replay-view';
 

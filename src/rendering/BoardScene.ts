@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
+import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
@@ -31,7 +32,7 @@ import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadS13Portraits } from '../presentation/s13-assets';
 import { HelpPanel } from '../presentation/help-panel';
 import { reducedMotion } from '../presentation/preferences';
-import { EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText } from '../presentation/equipment-feedback';
+import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, wornDefinitions } from '../presentation/equipment-feedback';
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 
 declare global {
@@ -88,6 +89,8 @@ export class BoardScene extends Phaser.Scene {
   private timer!: Phaser.GameObjects.Text;
   private overlay!: Phaser.GameObjects.Graphics;
   private status!: Phaser.GameObjects.Text;
+  /** C18: "本场：X / 下场：Y" above a hovered fighting unit whose equipment changed during the battle. */
+  private loadoutTip!: Phaser.GameObjects.Text;
   private count!: Phaser.GameObjects.Text;
   private recentCombatEvents: SceneCombatEvent[] = [];
   private fx = new CombatFx({ scene: this, center: cell => this.layout.center(cell), view: id => this.views.get(id), fade: (effect, duration) => this.fadeEffect(effect, duration) });
@@ -164,12 +167,14 @@ export class BoardScene extends Phaser.Scene {
     }
     this.overlay = this.add.graphics().setDepth(5);
     this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
+    this.loadoutTip = this.add.text(0, 0, '', { fontSize: '12px', color: '#9ff0e4', backgroundColor: '#0b151fe6', padding: { x: 5, y: 3 }, resolution: 2 })
+      .setOrigin(0.5, 1).setDepth(30).setVisible(false).setName('loadout-tip');
     this.help = new HelpPanel();
     this.strategyPanel = new StrategyPanel({
       help: () => this.help?.show(),
       // Stored only: the next frame's ring sync applies it. Never force layout during a panel rebuild.
       highlight: ids => { this.previewHighlight = new Set(ids); },
-      state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
+      state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), battleItems: () => this.frozenItems(), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
       selectUnit: id => { this.selectedId = id; this.syncSelection(); },
       combine: (a, b) => this.command(this.session.combine(a, b), '组件已合成', true),
       // C17: the success text is fixed when the command is sent; outside preparation it names the next battle.
@@ -531,21 +536,30 @@ export class BoardScene extends Phaser.Scene {
       this.namedObjects.delete(`unit:${id}`);
       if (this.selectedId === id) this.selectedId = null;
     }
-    const items = this.session.state.items, session = this.session;
-    // C17 (contract §17.2): a battle on the board shows the equipment it was fought with. Items equipped or combined
-    // while it is shown are for the next battle, so its units keep the icons they had when it first appeared.
-    if (!view) this.battleItems = null;
-    else if (!this.battleItems || this.battleItems.combatId !== view.combatId) this.battleItems = { combatId: view.combatId, items };
-    // C15: a PvP replay names my units by battle id; the server's own-unit mapping says whose items each one carries.
-    const ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
+    const items = this.session.state.items, frozen = this.frozenItems();
     for (const unit of units) {
       if (!this.tokens.has(unit.id)) this.createToken(unit);
-      const owner = ownerOf(unit.id);
-      const shown = this.battleItems && fighting.has(unit.id) ? this.battleItems.items : items;
-      const equipped = shown.filter(item => item.location.kind === 'unit' && item.location.unitId === owner)
-        .sort((a, b) => (a.location.kind === 'unit' ? a.location.slot : 0) - (b.location.kind === 'unit' ? b.location.slot : 0)).map(item => item.definitionId);
-      this.views.get(unit.id)!.update(unit, equipped);
+      const owner = this.equipmentOwner(unit.id);
+      // C18: a fighting unit keeps its battle icons; what it wears now beyond them is tagged for the next battle.
+      const loadout = fighting.has(unit.id) ? battleLoadout(items, frozen, owner) : null;
+      const equipped = loadout ? loadout.thisBattle : wornDefinitions(items, owner);
+      this.views.get(unit.id)!.update(unit, equipped, loadout?.pending ?? []);
     }
+  }
+  /**
+   * C17 (contract §17.2): a battle on the board shows the equipment it was fought with. Items equipped or combined
+   * while it is shown are for the next battle, so the item list is frozen when a battle first appears (null when none).
+   */
+  private frozenItems(): MatchState['items'] | null {
+    const view = this.session.combatView;
+    if (!view) this.battleItems = null;
+    else if (!this.battleItems || this.battleItems.combatId !== view.combatId) this.battleItems = { combatId: view.combatId, items: this.session.state.items };
+    return this.battleItems?.items ?? null;
+  }
+  /** C15: a PvP replay names my units by battle id; the server's own-unit mapping says whose items each one carries. */
+  private equipmentOwner(id: string): string {
+    const session = this.session;
+    return session instanceof RemoteSession ? session.equipmentOwnerId(id) : id;
   }
   private createToken(unit: Unit) {
     const p = this.position(unit.location);
@@ -694,7 +708,7 @@ export class BoardScene extends Phaser.Scene {
   }
   update(_time: number, delta: number) {
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
-    this.renderFeedback();
+    this.renderFeedback(); this.syncLoadoutTip();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
     if (this.session instanceof RemoteSession && this.session.takeOpening()) this.showOpening();
@@ -707,6 +721,15 @@ export class BoardScene extends Phaser.Scene {
     if (this.session.state.phase !== 'combat') {
       this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? this.endText() : this.settledText());
     }
+  }
+  /** C18: hovering a fighting unit names the battle's loadout and the next one, when an equip changed it mid-battle. */
+  private syncLoadoutTip() {
+    const view = this.session.combatView, id = view ? this.hoveredId() : undefined;
+    const token = id && view?.units.some(unit => unit.id === id) ? this.tokens.get(id) : undefined;
+    const loadout = token ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
+    if (!token || !loadout?.changed) { if (this.loadoutTip.visible) this.loadoutTip.setVisible(false); return; }
+    const text = battleLoadoutText(loadout, definitionId => ITEM_DEFINITIONS[definitionId]?.name ?? definitionId);
+    this.loadoutTip.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
   }
   private clearDrag() {
     this.inputRouter.cancel(); this.strategyPanel?.cancel();
@@ -806,7 +829,8 @@ export class BoardScene extends Phaser.Scene {
         visible: token.visible, alpha: token.alpha, draggable: Boolean(token.input?.enabled && token.input.draggable),
         definitionId: token.getData('definitionId'), starLevel: token.getData('starLevel'), cost: token.getData('cost'),
         starLabel: this.views.get(id)!.star.text, name: this.views.get(id)!.name, symbol: this.views.get(id)!.symbol, statusStrip: this.views.get(id)!.statusStrip,
-        equipped: this.views.get(id)!.equipped })),
+        equipped: this.views.get(id)!.equipped, pendingEquipped: this.views.get(id)!.pendingEquipped, owner: this.equipmentOwner(id) })),
+      loadoutTip: this.loadoutTip.visible ? this.loadoutTip.text : '',
       health: meters('hp'), mana: meters('mana'),
       shields: meters('shield').map(meter => ({ ...meter, text: this.views.get(meter.id)!.shieldLabel.text, labelVisible: this.views.get(meter.id)!.shieldLabel.visible })),
       hud: { round: this.roundLabel.text, gold: this.goldLabel.text, playerHp: this.hpLabel.text, level: this.levelLabel.text,

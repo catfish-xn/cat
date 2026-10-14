@@ -7,13 +7,13 @@ const assert = require('node:assert/strict');
 const generate = require('../../scripts/generate-m5-route.cjs');
 
 async function record() {
-  const folder = path.join(__dirname, 't12-recorded-states');
+  const folder = path.join(__dirname, 't13-recorded-states');
   fs.mkdirSync(folder, { recursive: true });
   for (const build of ['cannon', 'sniper']) {
     const route = await generate({ build, seed: 42, retainStates: true });
     const states = [...route.rounds.flatMap(round => [round.before, round.after]), route.final];
-    assert(states.every(state => state.contentDigest === 'fnv1a32-utf16:44fe9c0e'));
-    const recording = { build, seed: 42, contentDigest: 'fnv1a32-utf16:44fe9c0e', actions: route.actions, states };
+    assert(states.every(state => state.contentDigest === require('../t13-content-baseline.json').contentDigest));
+    const recording = { build, seed: 42, contentDigest: require('../t13-content-baseline.json').contentDigest, actions: route.actions, states };
     fs.writeFileSync(path.join(folder, `${build}.json.gz`), zlib.gzipSync(JSON.stringify(recording), { level: 9 }));
     console.log(`${build}: ${states.length} states, ${route.actions.length} commands, ${route.final.outcome}`);
   }

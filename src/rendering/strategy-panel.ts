@@ -27,7 +27,7 @@ import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
-import { allowedPreviewText, combinationResult, equipmentFailureText, pickUnitDropSlot, slotList, slotViews, temporaryItemText } from '../presentation/equipment-feedback';
+import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
 import type { EquipPreview } from '../simulation/m8/ui-contracts';
 import { readEncounterPreview, readLootView } from '../simulation/match';
 import { continueBlockText, lootPanelSection, lootRevealedSection, lootTerminalSummary } from '../presentation/loot-view';
@@ -60,6 +60,8 @@ interface PanelActions {
   readonly state: () => MatchState;
   /** C6: the battle on the board (offline and online) and, offline only, the engine state behind it. */
   readonly combat: () => { readonly view: CombatViewState | null; readonly runtime: CombatState | null };
+  /** C18: the item list as it stood when the battle on the board was first shown (null when none is shown). */
+  readonly battleItems: () => MatchState['items'] | null;
   readonly shopLock: (locked: boolean, generation: number) => void;
   readonly selectedUnit: () => string | null;
   readonly selectUnit: (id: string) => void;
@@ -302,10 +304,14 @@ export class StrategyPanel {
    * combines, and which unit and slot it fits, in any phase, is previewCombine / previewEquip's answer alone.
    */
   private itemsOpen(): boolean { return !isOnlineSpectating() && !isOnlineEnded(); }
-  /** A chosen slot: send only what previewEquip accepts, otherwise name its reason. */
+  /**
+   * A chosen slot: send only what previewEquip accepts, otherwise name its reason. C18: when the domain says another
+   * slot of this unit combines the component, the drop goes there (routeSlotDrop), whichever slot button was hit.
+   */
   private equipAt(itemId: string, unitId: string, slot: number): void {
-    const preview = previewEquip(this.actions.state(), itemId, unitId, slot), combined = combinationResult(preview);
-    if (preview.allowed) this.actions.equip(itemId, unitId, slot, combined ? itemDefinitionName(combined) : undefined);
+    const previews = this.unitPreviews(itemId, unitId), target = routeSlotDrop(previews, slot);
+    const preview = previews[target], combined = combinationResult(preview);
+    if (preview.allowed) this.actions.equip(itemId, unitId, target, combined ? itemDefinitionName(combined) : undefined);
     else this.actions.status(equipmentFailureText(preview.reason));
   }
   /** Where an item drag points: a slot button of the equipment panel, or a piece on the board (slot chosen on drop). */
@@ -327,8 +333,8 @@ export class StrategyPanel {
   /** What dropping the dragged item on this target would do, in previewEquip's words (C17). */
   private dropPreviewText(itemId: string, unitId: string, slot: number | null): string {
     if (slot !== null) {
-      const preview = previewEquip(this.actions.state(), itemId, unitId, slot);
-      return preview.allowed ? allowedPreviewText(preview, slot, itemDefinitionName) : equipmentFailureText(preview.reason);
+      const previews = this.unitPreviews(itemId, unitId), target = routeSlotDrop(previews, slot), preview = previews[target];
+      return preview.allowed ? allowedPreviewText(preview, target, itemDefinitionName) : equipmentFailureText(preview.reason);
     }
     const previews = this.unitPreviews(itemId, unitId), chosen = pickUnitDropSlot(previews), preview = previews[chosen];
     return preview?.allowed ? allowedPreviewText(preview, chosen, itemDefinitionName) : this.unitRefusalText(previews);
@@ -525,9 +531,14 @@ export class StrategyPanel {
     }, !open || !combine?.allowed));
     section.append(element('h3', '单位装备 · 每单位 3 槽'));
     const chosen = open ? this.selectedItems.filter(id => state.items.some(item => item.id === id)).at(-1) : undefined;
+    const frozen = this.actions.battleItems();
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const row = element('article', '', 'equipment-row');
-      row.append(element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`));
+      const heading = element('strong', `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)}${state.anomalyBinding?.unitId === unit.id ? ' ◈ 异常' : ''}`);
+      // C18: during a shown battle, items worn now but not in that battle's snapshot are marked "下场生效".
+      const loadout = battleLoadout(state.items, frozen, unit.id), loadoutText = loadout?.changed ? battleLoadoutText(loadout, itemDefinitionName) : '';
+      if (loadoutText) { heading.title = loadoutText; row.classList.add('has-pending'); }
+      row.append(heading);
       const view = readUnitEquipment(state, unit.id);
       const previews: EquipPreview[] | null = chosen ? [0, 1, 2].map(slot => previewEquip(state, chosen, unit.id, slot)) : null;
       const conflicts = new Set(previews?.flatMap(preview => preview.allowed ? [] : preview.conflictingItemIds) ?? []);
@@ -546,23 +557,34 @@ export class StrategyPanel {
         else if (entry.temporary) { button.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.temporary.definitionId, 22)); button.dataset.itemDef = entry.temporary.definitionId; }
         if (reserved) { button.classList.add('slot-reserved'); button.dataset.reservedBy = entry.reservedByItemInstanceId!; }
         if (entry.temporary) { button.classList.add('slot-temporary'); button.dataset.temporaryId = entry.temporary.temporaryId; }
-        const preview = previews?.[slot];
+        if (item && loadout?.pendingIds.has(item.id)) this.markPending(button, loadout);
+        else if (loadoutText) button.title = loadoutText;
+        const routed = previews ? routeSlotDrop(previews, slot) : slot, preview = previews?.[routed];
         if (preview) {
           button.classList.add(preview.allowed ? 'equip-ok' : 'equip-denied');
           button.dataset.preview = preview.allowed ? 'allowed' : preview.reason;
-          button.title = preview.allowed ? preview.combination ? allowedPreviewText(preview, slot, itemDefinitionName)
+          if (routed !== slot) button.dataset.routedSlot = String(routed);
+          const previewText = preview.allowed ? preview.combination ? allowedPreviewText(preview, routed, itemDefinitionName)
             : `可装备${preview.occupiedSlots.length > 1 ? `，占用槽 ${slotList(preview.occupiedSlots)}` : ''}` : equipmentFailureText(preview.reason);
+          button.title = button.title ? `${previewText}\n${button.title}` : previewText;
         }
         if (item && conflicts.has(item.id)) button.classList.add('equip-conflict');
         button.dataset.equipUnit = unit.id; button.dataset.equipSlot = String(slot); slots.append(button);
       }
       row.append(slots);
+      if (loadoutText) { const line = element('p', loadoutText, 'equip-loadout'); line.dataset.debug = `equip-loadout:${unit.id}`; row.append(line); }
       if (previews) row.append(this.equipHint(previews, itemName));
       for (const temporary of view?.temporaryItems ?? []) row.append(element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, itemName(temporary.parentItemInstanceId)), 'temporary-line'));
       section.append(row);
     }
     section.append(this.codex ??= createItemCodex());
     this.root.append(section);
+  }
+  /** C18: a slot whose item is worn now but not in the battle on the board says so, with both loadouts on hover. */
+  private markPending(button: HTMLButtonElement, loadout: BattleLoadout): void {
+    button.classList.add('slot-pending'); button.dataset.pending = 'next-battle';
+    button.append(element('span', NEXT_BATTLE_TEXT, 'pending-tag'));
+    button.title = `${NEXT_BATTLE_TEXT} · 本场战斗不带此装备\n${battleLoadoutText(loadout, itemDefinitionName)}`;
   }
   /** Unit detail: slots and temporary children from readUnitEquipment(); temporaries are read-only. */
   private appendEquipmentDetail(node: HTMLElement, state: MatchState, unitId: string): void {
@@ -575,6 +597,8 @@ export class StrategyPanel {
       : entry.reservedByItemInstanceId ? `（${name(entry.reservedByItemInstanceId) ?? '独占装备'}占用）` : '空');
     const line = element('p', `装备槽：${slots.map((text, slot) => `${slot + 1} ${text}`).join(' · ')}`, 'unit-equipment'); line.dataset.debug = `unit-equipment:${unitId}`;
     node.append(line);
+    const loadout = battleLoadout(state.items, this.actions.battleItems(), unitId);
+    if (loadout?.changed) { const text = element('p', battleLoadoutText(loadout, itemDefinitionName), 'equip-loadout'); text.dataset.debug = `unit-loadout:${unitId}`; node.append(text); }
     for (const temporary of view.temporaryItems) {
       const item = element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, name(temporary.parentItemInstanceId) ?? '已移除的装备'), 'temporary-line');
       item.dataset.itemDef = temporary.definitionId; item.tabIndex = 0; node.append(item);

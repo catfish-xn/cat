@@ -1179,7 +1179,7 @@ canOperateEquipment(state: Readonly<MatchState>): boolean;
 
 配方、唯一性及独占冲突沿用 invalid-recipe / unique-conflict / exclusive-slots 等现有码。失败保留原状态、无事件、无资源/RNG/ID 消耗；成功合成仅分配一个永久 item ID。窃贼 roll、B8 来源 fold 和 T12 四阶段/冻结战斗边界全部沿用。
 
-本变更属于玩法变化；按 2026-10-14 用户后续拆分决定，T13-A 独立先行，EQUIPMENT_RULES_VERSION 升为 m8-b5-instances-v4 并更新 CONTENT_DIGEST；R3/R4 后续另用新身份发布。A 保持 schema6/save2/replay2，不读取 T12 旧 digest，不迁移、不补账。T1 相同冻结 BattleInput 的战斗事件/RNG应保持；包含新增自动合成命令的运营轨迹会改变物品 ID、装备及后续战斗，不得仅归一化 digest 声称无行为差异。既有四条不触发新分支的路线另与 297143e 做完整状态/事件/命令轨迹比对，证据见 T13_A_RELEASE.md。
+本变更属于玩法变化；按 2026-10-14 用户后续拆分决定，T13-A 独立先行，EQUIPMENT_RULES_VERSION 升为 m8-b5-instances-v4 ，CONTENT_DIGEST 为 fnv1a32-utf16:96c9126d（原 44fe9c0e）；LOOT_REPLAY_DIGEST 保持 7b14bfba。R3/R4 后续另用新身份发布。A 保持 schema6/save2/replay2，不读取 T12 旧 digest，不迁移、不补账。T1 相同冻结 BattleInput 的战斗事件/RNG应保持；包含新增自动合成命令的运营轨迹会改变物品 ID、装备及后续战斗，不得仅归一化 digest 声称无行为差异。既有四条不触发新分支的路线另与 297143e 做完整状态/事件/命令轨迹比对，证据见 T13_A_RELEASE.md。
 
 ## 18. T13 R3+R4 掉落系统正式合同（D1–D8：A）
 
