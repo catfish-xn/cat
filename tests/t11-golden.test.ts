@@ -17,7 +17,7 @@ it('T11 binds regenerated route/probe evidence to the reviewed audit and current
   expect(sha('tests/t11-content-baseline.json')).toBe(audit.baselineSha256);
   expect(sha('scripts/update-t11-golden.cjs')).toBe(audit.updaterSha256);
   expect(t12.previousContentDigest).toBe(baseline.contentDigest);
-  expect(CONTENT_DIGEST).toBe(t12.contentDigest);
+  expect(CONTENT_DIGEST).not.toBe(t12.contentDigest);
   expect(LOOT_REPLAY_DIGEST).toBe(baseline.lootReplayDigest);
   expect(OPENING_ECONOMY_RULES.version).toBe(baseline.openingRulesVersion);
 });
