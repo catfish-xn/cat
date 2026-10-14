@@ -593,7 +593,7 @@ export class Room {
   /**
    * One slice: advance the current battle by at most `sliceTicks`; the next slice is scheduled until every battle finished.
    * TODO(C19 item 3, SR-B8-02): a PvP pairing still runs `resolveTwoSidedBattle` in one slice (two-sided-resolver.ts) and
-   * replays it a second time for the client. When window 2's resumable battle task (`startTwoSidedBattle(input) →
+   * replays it a second time for the client. When the resumable battle task of SR-B8-02 (`startTwoSidedBattle(input) →
    * { advance(maxTicks) }`, the MULTIPLAYER_CONTRACT section codex/b8-resumable-battle adds) is on `multiplayer`, start it
    * from TwoSidedBattleResolver.startBattle so this loop cuts PvP at the same `sliceTicks` (100 by default) and keeps the
    * mirror (`mirrorOfSeatId`) and replay-cache semantics; this method itself stays as is.

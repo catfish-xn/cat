@@ -41,7 +41,8 @@ import { ROOT, click, collectErrors, createChecks, joinOnline, launchBrowser, on
 const OUT = outDir(process.env.C19_OUT ?? 'c19');
 const VITE_PORT = Number(process.env.C19_VITE_PORT ?? 5208);
 const WS_PORT = Number(process.env.C19_WS_PORT ?? 8801);
-const SEED = process.env.C19_SEED ?? '20261012';
+// Seed 1 reached overtime with these humans and dropped a reforger to 乙 at 2-7 (see the report); others may not.
+const SEED = process.env.C19_SEED ?? '1';
 const NEXT_BATTLE = '下场生效';
 const TIERS = ['gray', 'blue', 'gold', 'prismatic'];
 
@@ -88,6 +89,8 @@ const screen = page => page.evaluate(() => {
     })(),
   };
 });
+/** Whole seconds left on the phase countdown the page shows (0 when none). */
+const secondsLeft = page => page.evaluate(() => Number(document.querySelector('[data-debug="online:timer"]')?.textContent) || 0);
 /** One card per revealed orb, in order, with the server's tier, status and revealed entries. */
 const expectedOrbs = loot => loot.revealedOrbs.map(orb => ({ orbId: orb.orbId, tier: orb.tier, status: orb.status, entries: orb.entryDropIds.filter(id => loot.revealedDrops.some(drop => drop.dropId === id)) }));
 const inventoryOf = state => sorted(inventory(state).map(item => `${item.id}:${item.definitionId}`));
@@ -331,7 +334,7 @@ async function play(human, tables, kindOf, role) {
       && !(pending && (target.target.unitId === pending.unitId || target.target.itemId === pending.itemId));
     const toolTask = tools.map(tool => ({ tool, task: tool.definitionId === 'magnetic-remover' ? 'remover' : 'reforger' })).find(entry => !claimed.has(entry.task)
       && (s.state.consumableTargets ?? []).find(row => row.consumableId === entry.tool.consumableId)?.targets.some(target => usable(entry.task, s.state, target)));
-    if (toolTask && !s.replay?.playingBack && ['preparation', 'settlement'].includes(s.state.phase)) {
+    if (toolTask && !s.replay?.playingBack && ['preparation', 'settlement'].includes(s.state.phase) && await secondsLeft(page) >= 4) {
       await items();
       const now = await read(page);
       const tool = (now.state.consumables ?? []).find(entry => entry.consumableId === toolTask.tool.consumableId);
@@ -346,6 +349,8 @@ async function play(human, tables, kindOf, role) {
         await page.mouse.move(from.centerX, from.centerY); await page.mouse.down();
         await page.mouse.move(to.centerX, to.centerY, { steps: 8 }); await page.waitForTimeout(60); await page.mouse.up();
         const receipt = await wire.receiptSince(before, 'useConsumable');
+        // The phase ended between the read and the drop (the deadline freeze takes no command): use it later.
+        if (receipt === 'refused:wrong-phase') { claimed.delete(toolTask.task); console.log(`${name} ${tool.definitionId}: refused at a phase boundary, retrying later`); return false; }
         const after = await pushed(x => !(x.state.consumables ?? []).some(entry => entry.consumableId === tool.consumableId));
         await page.waitForTimeout(200);
         const shown = await screen(page), state = (await read(page)).state;
@@ -368,15 +373,19 @@ async function play(human, tables, kindOf, role) {
       const state = s.state;
       const slot = state.shop.slots.findIndex(offer => offer.status === 'available');
       const benchFree = mine(state).filter(unit => unit.location.kind === 'bench').length < state.preparation.benchSize;
-      if (slot >= 0 && benchFree && state.gold >= 12 && claim('ops')) {
+      if (slot >= 0 && benchFree && state.gold >= 12 && state.level < 9 && claim('ops')) {
         const superseded = s.replay.superseded;
-        const units0 = mine(state).length, gen0 = state.shop.generation, level0 = state.level * 1000 + state.xp;
-        const buy = await act(`mobile:buy-${slot}`, 'buy');
-        const afterBuy = await pushed(x => mine(x.state).length > units0);
-        const reroll = await act('mobile:reroll', 'reroll');
-        const afterReroll = await pushed(x => x.state.shop.generation > gen0);
-        const xp = await act('mobile:buy-xp', 'buyXp');
-        const afterXp = await pushed(x => x.state.level * 1000 + x.state.xp > level0);
+        // Each applied receipt is followed by its state push: wait for the state to change before the next control.
+        let print = fingerprint(state);
+        const step = async (control, type) => {
+          const receipt = await act(control, type), before = print;
+          const after = receipt === 'applied' ? await pushed(x => fingerprint(x.state) !== before) : null;
+          if (after) print = fingerprint(after.state);
+          return [receipt, after];
+        };
+        const [buy, afterBuy] = await step(`mobile:buy-${slot}`, 'buy');
+        const [reroll, afterReroll] = await step('mobile:reroll', 'reroll');
+        const [xp, afterXp] = await step('mobile:buy-xp', 'buyXp');
         await page.waitForTimeout(200);
         const now = await read(page), view = await screen(page);
         const names = now.state.shop.slots.map(offer => offer.status === 'available' ? tables.getHeroIdentity(offer.definitionId).name : null);
