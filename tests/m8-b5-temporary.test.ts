@@ -86,8 +86,8 @@ describe('B5 Match TG-01 lifecycle and save validation', () => {
   });
   it('F, sale, same-round re-equip and restore preserve the original level6 roll across level7', () => {
     let state = inventoryAtRound('2-7');
-    while (state.level < 6 || state.xp < 32) state = accepted(buyXp(state));
-    expect([state.level, state.xp, state.gold]).toEqual([6, 32, 4]);
+    while (state.level < 6 || state.xp < 34) state = accepted(buyXp(state));
+    expect([state.level, state.xp, state.gold]).toEqual([6, 34, 4]);
     state = accepted(equipItem(state, 'item-3', 'unit-1', 0));
     expect(restoreMatch(serializeMatch(state))).toEqual(state);
     const roll = structuredClone(state.equipmentState);
