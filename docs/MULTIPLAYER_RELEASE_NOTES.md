@@ -383,3 +383,13 @@ GC 后 RSS 为245,587,968 / 238,657,536 / 245,084,160字节，非单向增长，
 - 旧单机存档作废：存档/回放格式 2→3，CONTENT_DIGEST 今天改为 `fnv1a32-utf16:bd9c3a8e`；旧档只能原字节导出、新开局，不迁移续玩。
 - 掉线接管：用户决定按云顶"掉线不接管"。`bot-driver` 已加 `takeover` 开关且默认关，部署无需再把 `CAT_TAKEOVER_SEC` 调大；需要接管时设 `CAT_TAKEOVER=1`（见 §3.2）。启动日志末尾显示 `takeover on/off`。
 - 真机反馈 backlog 见 `SESSION_HANDOVER.md` §0.0.6。
+
+## P3/P4/P5 单批发布：旧档作废原因（2026-10-14）
+
+P3-A 从首场PvP加时起基础扣血12→17，普通stage2–6和每个存活敌人1保持；P4-A保持76升9、最高9级（68为16.1值，不开10级）；P5-A保持球数/50-50/90-9-1，采样执行改读冻结权重。三项一包，身份一次冻结/切换/重录。
+
+最终CONTENT_DIGEST **fnv1a32-utf16:bd9c3a8e → fnv1a32-utf16:77f80fec**，LOOT_REPLAY_DIGEST **fnv1a32-utf16:5cd0487c → fnv1a32-utf16:b8d9d7ca**；两者由共同manifest的canonical输入同批生成。rules/content升为s13-rules-gap-v2 / s13-14.24b-rules-gap-v2；schema7/save3/replay3/command3、NET2保持。
+
+旧档作废指旧digest不能续玩，不删除原文件：加时扣血会影响HP/淘汰/配对，且旧loot摘要没有签入新共享manifest与权重执行规则，不能把旧seed按新身份重抽或仅替换hash伪装迁移。原档只读保全/导出，活动局按旧身份完成后再切新版本，新开局使用本包。T13及历史golden/录制原件原字节保留，新录制独立存放。
+
+首次差异示例：overtime-1空对空tick0平局，旧基础/扣血12、HP100→88，新基础/扣血17、HP100→83；战斗事件/terminal/收入/XP/RNG相同。普通阶段四条完整路线命令及132场回合事件不变，134个录制状态仅发布身份改变；详见 [P3P4P5_RELEASE](P3P4P5_RELEASE.md)。单PR验收目标集与三问见 [PR正文](PR_P3P4P5.md)，不执行全套或部署。

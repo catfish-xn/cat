@@ -1,6 +1,7 @@
 /* Single canonical identity freeze, public-route recording, and explicit legacy trajectory comparison. */
 const fs=require('node:fs'),assert=require('node:assert/strict'),{createHash}=require('node:crypto'),zlib=require('node:zlib');
 const {run}=require('./generate-m5-route.cjs');
+const record=(file,data)=>{if(process.argv.includes('--check'))assert.deepEqual(fs.readFileSync(file),Buffer.from(data),`release artifact differs: ${file}`);else fs.writeFileSync(file,data);};
 const sha=x=>createHash('sha256').update(typeof x==='string'||Buffer.isBuffer(x)?x:JSON.stringify(x)).digest('hex');
 const randomState=state=>({seed:state.seed,shop:state.rngState,choice:state.choiceRngState,reward:state.rewardRngState,battleSeed:state.battleSeedRngState,equipment:state.equipmentState.equipment,reforge:state.reforgeState,layout:state.m8.loot.layoutBinding.mode==='solo'?state.m8.loot.layoutBinding.layout.rng:null,loot:state.m8.loot.frozen.rng,combat:state.combat?{state:state.combat.rngState,draws:state.combat.rngDraws}:null});
 async function main(){
@@ -17,7 +18,7 @@ async function main(){
  assert.equal(traceHashes.events,previous.traceHashes.events);assert.equal(traceHashes.rng,previous.traceHashes.rng);
  assert.throws(()=>ser.restoreMatch({...initial,contentDigest:previous.contentDigest}));
  const baseline={contentDigest:CONTENT_DIGEST,lootReplayDigest:LOOT_REPLAY_DIGEST,rulesVersion:initial.rulesVersion,schemaVersion:7,previousContentDigest:previous.contentDigest,previousLootReplayDigest:previous.lootReplayDigest,traceHashes,reason:'P3-A overtime17; P4-A nine levels unchanged; P5-A frozen cumulative weights unchanged. Same serialization/protocol; old digest export-only.'};
- fs.writeFileSync('tests/p3p4p5-content-baseline.json',JSON.stringify(baseline,null,2)+'\n');
+ record('tests/p3p4p5-content-baseline.json',JSON.stringify(baseline,null,2)+'\n');
  const oldPath='tests/fixtures/m5/full-match-golden.t13.json',oldBytes=fs.readFileSync(oldPath),old=JSON.parse(oldBytes);
  const golden={note:'P3/P4/P5 combined release. Public commands rerun; ordinary route gameplay and all recorded states equal T13 after four explicit identity replacements.',routes:{}};
  const audit={baseline,identityReplacements:identities,previousGoldenSha256:sha(oldBytes),driverSha256:sha(fs.readFileSync('scripts/generate-m5-route.cjs')),oracleSha256:sha(fs.readFileSync('tests/fixtures/m5/oracle.cjs')),builds:{}};
@@ -32,15 +33,15 @@ async function main(){
    assert.equal(states.length,67);assert.deepEqual(states,normalize(prior),'every state field except explicit release identity');
    comparedStates=states.length;previousRecordingSha256=sha(bytes);
    for(const s of states)assert.deepEqual(ser.restoreMatch(ser.serializeMatch(s)),s);
-   fs.mkdirSync('tests/fixtures/p3p4p5-recorded-states',{recursive:true});fs.writeFileSync(`tests/fixtures/p3p4p5-recorded-states/${build}.json.gz`,zlib.gzipSync(JSON.stringify({states})));
+   fs.mkdirSync('tests/fixtures/p3p4p5-recorded-states',{recursive:true});record(`tests/fixtures/p3p4p5-recorded-states/${build}.json.gz`,zlib.gzipSync(JSON.stringify({states})));
   }
   golden.routes[build]={versions:Object.fromEntries(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','rngAlgorithm','tickMs'].map(k=>[k,route.initial[k]])),seed:42,commands:route.actions.map(a=>a.command),rounds:route.rounds.map(r=>({round:r.round,stateHash:r.stateHash,eventsHash:r.eventsHash}))};
   const summary={...route.summary};delete summary.tickTimingMs;delete summary.durationSeconds;
   audit.builds[build]={summary,comparedStates,previousRecordingSha256,commandsUnchanged:true,allRoundEventsUnchanged:true,ledger:route.ledger};console.log(JSON.stringify({build,comparedStates,commands:route.actions.length,rounds:route.rounds.length}));
  }
  assert.equal(sha(fs.readFileSync(oldPath)),audit.previousGoldenSha256);
- const output=JSON.stringify(golden,null,2)+'\n';audit.candidateSha256=sha(output);fs.writeFileSync('tests/fixtures/m5/full-match-golden.p3p4p5.json',output);
- fs.mkdirSync('docs/evidence/p3p4p5',{recursive:true});fs.writeFileSync('docs/evidence/p3p4p5/release-audit.json',JSON.stringify(audit,null,2)+'\n');
+ const output=JSON.stringify(golden,null,2)+'\n';audit.candidateSha256=sha(output);record('tests/fixtures/m5/full-match-golden.p3p4p5.json',output);
+ fs.mkdirSync('docs/evidence/p3p4p5',{recursive:true});record('docs/evidence/p3p4p5/release-audit.json',JSON.stringify(audit,null,2)+'\n');
  console.log(JSON.stringify(baseline));
  }finally{await server.close();}
 }main().catch(e=>{console.error(e);process.exitCode=1;});
