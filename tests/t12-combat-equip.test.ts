@@ -1,5 +1,6 @@
+import { deepStrictEqual } from 'node:assert';
 import { syntheticSharedRound } from './tp-helpers';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch, nextRound,
   buyUnit, buyXp, rerollShop, sellUnit, setShopLock,
@@ -23,7 +24,7 @@ const held = (id: string, definitionId: string, unitId = 'unit-1', slot = 0) =>
   ({ id, definitionId, location: { kind: 'unit' as const, unitId, slot } });
 function rejected(state: MatchState, call: (s: MatchState) => MatchCommandResult, reason: string) {
   const bytes = JSON.stringify(state), result = call(freeze(state));
-  expect(result).toEqual({ ok: false, state, reason });
+  deepStrictEqual(result, { ok: false, state, reason });
   expect(result.state).toBe(state); expect('events' in result).toBe(false);
   expect(JSON.stringify(state)).toBe(bytes); // RNG, IDs, event sequence and every resource.
 }
@@ -49,8 +50,8 @@ describe('T12 equipment matrix (permission vectors, not saved fixtures)', () => 
           const equipped = accepted(equipItem(freeze(state), 'item-1', unitId, 0));
           unchangedBattle(state, equipped);
           const combined = equipItem(equipped, 'item-2', unitId, 0), result = accepted(combined);
-          expect(combined.ok && combined.events.map(e => e.type)).toEqual(['itemCombined', 'itemEquipped']);
-          expect(result.items).toEqual([held('item-3', 'giant-slayer', unitId)]);
+          deepStrictEqual(combined.ok && combined.events.map(e => e.type), ['itemCombined', 'itemEquipped']);
+          deepStrictEqual(result.items, [held('item-3', 'giant-slayer', unitId)]);
           expect(result.nextItemSerial).toBe(4); unchangedBattle(equipped, result);
         }
         expect(previewCombine(state, 'item-1', 'item-2').allowed).toBe(true);
@@ -82,13 +83,13 @@ describe('T12 in-place recipes and atomic failures', () => {
     const preview = previewEquip(freeze(state), 'item-1', 'unit-1', 2);
     expect(preview).toMatchObject({ allowed: true, combination: { resultDefinitionId: resultId } });
     const command = equipItem(state, 'item-1', 'unit-1', 2), next = accepted(command);
-    expect(next.items).toEqual([held('item-3', resultId, 'unit-1', resultId === 'thiefs-gloves' ? 0 : 2)]);
-    expect(command.ok && command.events.slice(0, 2).map(e => e.type)).toEqual(['itemCombined','itemEquipped']);
+    deepStrictEqual(next.items, [held('item-3', resultId, 'unit-1', resultId === 'thiefs-gloves' ? 0 : 2)]);
+    deepStrictEqual(command.ok && command.events.slice(0, 2).map(e => e.type), ['itemCombined','itemEquipped']);
     expect(next.nextItemSerial).toBe(state.nextItemSerial + 1);
     expect(next.nextMatchEventSeq).toBe(state.nextMatchEventSeq + (command.ok ? command.events.length : 0));
     if (resultId === 'thiefs-gloves') {
       expect(next.equipmentState.rolls).toHaveLength(1); expect(next.temporaryEquipment).toHaveLength(2);
-      expect(command.ok && command.events.map(e => e.type)).toEqual(['itemCombined','itemEquipped','equipmentRolled','temporaryEquipmentChanged']);
+      deepStrictEqual(command.ok && command.events.map(e => e.type), ['itemCombined','itemEquipped','equipmentRolled','temporaryEquipmentChanged']);
     } else expect(next.equipmentState).toBe(state.equipmentState);
     unchangedBattle(state, next);
   });
@@ -97,7 +98,7 @@ describe('T12 in-place recipes and atomic failures', () => {
       const state = { ...prepared(), nextItemSerial: 5, items: [stock('item-1', definition.recipe![0]),
         held('item-2', definition.recipe![1], 'unit-1', 1), held('item-3','deathblade'), held('item-4','deathcap','unit-1',2)] };
       const next = accepted(equipItem(state, 'item-1', 'unit-1', 1));
-      expect(next.items.find(i => i.id === 'item-5')).toEqual(held('item-5', definition.id, 'unit-1', 1));
+      deepStrictEqual(next.items.find(i => i.id === 'item-5'), held('item-5', definition.id, 'unit-1', 1));
       expect(next.items).toHaveLength(3);
     }
   });
@@ -124,8 +125,16 @@ describe('T12 in-place recipes and atomic failures', () => {
   });
 });
 
+// Cache independent public setup; the case still executes all combat/restore assertions.
+const roundFixtures = new Map<string, MatchState>();
+for (const roundId of ['3-5', '3-7']) for (const pair of [['sword', 'rod'], ['gloves', 'gloves']]) {
+  beforeAll(() => { atRound(publicInventory(pair).state, roundId); });
+}
+beforeAll(() => { atRound(publicInventory(['sword', 'sword']).state, '3-6'); });
+beforeAll(() => { publicInventory(['thiefs-gloves', 'gloves', 'gloves']); });
 function atRound(input: MatchState, roundId: string): MatchState {
-  let state = input;
+  const key = JSON.stringify([input, roundId]);
+  let state = roundFixtures.get(key) ?? input;
   for (let budget = 0; state.roundDefinitionId !== roundId && budget < 40; budget++) {
     state = resolvePublicEquipmentChoices(state);
     if (state.phase === 'preparation') state = finishPublicEquipmentBattle(state);
@@ -133,19 +142,21 @@ function atRound(input: MatchState, roundId: string): MatchState {
     state = accepted(nextRound(state, state.round));
   }
   expect(state.roundDefinitionId).toBe(roundId);
-  return resolvePublicEquipmentChoices(state);
+  state = resolvePublicEquipmentChoices(state);
+  roundFixtures.set(key, freeze(state));
+  return state;
 }
 function restored(state: MatchState): MatchState {
   const value = restoreMatch(serializeMatch(freeze(state)));
-  expect(value).toEqual(state); return value;
+  deepStrictEqual(value, state); return value;
 }
 function compareTicks(initial: MatchState, changed: MatchState) {
   let a = initial, b = changed, resume = restored(changed), budget = 1201;
   while (a.phase === 'combat' && budget-- > 0) {
     const x = stepMatch(a), y = stepMatch(b), z = stepMatch(resume);
-    expect(z).toEqual(y);
+    deepStrictEqual(z, y);
     expect(JSON.stringify(y.state.combat)).toBe(JSON.stringify(x.state.combat));
-    expect(y.events.filter(e => e.domain === 'combat')).toEqual(x.events.filter(e => e.domain === 'combat'));
+    deepStrictEqual(y.events.filter(e => e.domain === 'combat'), x.events.filter(e => e.domain === 'combat'));
     a = x.state; b = y.state; resume = z.state;
   }
   expect(budget).toBeGreaterThan(0); restored(b); return b;
@@ -204,13 +215,13 @@ describe('T12 shared wrappers and PvP frozen descriptors', () => {
     result = {...result,state:command.state,events:command.events};
     expect(result.state.combatInputBasis).toBe(state.combatInputBasis);
     expect(result.state.combat).toBe(state.combat);
-    expect(result.pool.available).toEqual(poolBefore.available);
-    expect(result.pool.holdings).toEqual(poolBefore.holdings);
-    expect(result.pool.shops).toEqual(poolBefore.shops); expect(result.pool.pending).toEqual(poolBefore.pending);
-    expect(result.events.map(e=>e.type)).toEqual(['itemCombined','itemEquipped','equipmentRolled','temporaryEquipmentChanged']);
+    deepStrictEqual(result.pool.available, poolBefore.available);
+    deepStrictEqual(result.pool.holdings, poolBefore.holdings);
+    deepStrictEqual(result.pool.shops, poolBefore.shops); deepStrictEqual(result.pool.pending, poolBefore.pending);
+    deepStrictEqual(result.events.map(e=>e.type), ['itemCombined','itemEquipped','equipmentRolled','temporaryEquipmentChanged']);
     conserved(result.pool,[result.state]);
     rejected(result.state,s=>equipItem(s,'missing','unit-1',0),'unknown-item');
-    expect(result.pool).toEqual(poolBefore);
+    deepStrictEqual(result.pool, poolBefore);
   });
   it('locked live-seat in-place combination preserves both sides and mirror frozen result byte-for-byte', () => {
     const acquired = publicInventory(['gloves','gloves']);
@@ -226,7 +237,7 @@ describe('T12 shared wrappers and PvP frozen descriptors', () => {
     live = accepted(equipItem(live,acquired.itemIds[1],'unit-1',0));
     expect(()=>snapshotForBattle(live,'A')).toThrow(/wrong-phase/);
     expect(JSON.stringify({a,b})).toBe(original);
-    expect(restorePlayerBattleSnapshot(JSON.stringify(a))).toEqual(a);
+    deepStrictEqual(restorePlayerBattleSnapshot(JSON.stringify(a)), a);
     inputs.forEach((input,i)=>expect(JSON.stringify(resolveTwoSidedBattle(restoreBattleInput(JSON.stringify(input)),1201))).toBe(expected[i]));
     expect(live.items.some(i=>i.definitionId==='thiefs-gloves')).toBe(true);
   });
@@ -243,8 +254,7 @@ describe('T12 public saves across equipment phases', () => {
       restored(state);
       state = accepted(equipItem(state, acquired.itemIds[1], 'unit-1', 1));
       const copy = restored(state);
-      expect(phase === 'preparation' ? startMatchCombat(copy) : nextRound(copy, copy.round))
-        .toEqual(phase === 'preparation' ? startMatchCombat(state) : nextRound(state, state.round));
+      deepStrictEqual(phase === 'preparation' ? startMatchCombat(copy) : nextRound(copy, copy.round), phase === 'preparation' ? startMatchCombat(state) : nextRound(state, state.round));
     });
   }
   it('augment choice and supply choice retain offers while equipment saves resume', () => {
@@ -274,8 +284,7 @@ describe('T12 public saves across equipment phases', () => {
         restored(state);
       }
       const c = state.pendingChoice!;
-      expect(selectChoice(restored(state),c.choiceId,c.generation,c.offers[0]))
-        .toEqual(selectChoice(state,c.choiceId,c.generation,c.offers[0]));
+      deepStrictEqual(selectChoice(restored(state),c.choiceId,c.generation,c.offers[0]), selectChoice(state,c.choiceId,c.generation,c.offers[0]));
     }
   });
   it('PvE settlement permits in-place combination and preserves direct grant order on restore', () => {
@@ -288,7 +297,7 @@ describe('T12 public saves across equipment phases', () => {
     state = accepted(equipItem(state,acquired.itemIds[0],'unit-1',0)); restored(state);
     state = accepted(equipItem(state,acquired.itemIds[1],'unit-1',1)); restored(state);
     expect(state.pendingChoice).toBe(choice);
-    expect(resolvePublicEquipmentChoices(restored(state))).toEqual(resolvePublicEquipmentChoices(state));
+    deepStrictEqual(resolvePublicEquipmentChoices(restored(state)), resolvePublicEquipmentChoices(state));
   });
   it('rejects the T11 digest without migration', () => {
     expect(()=>restoreMatch({...createMatch(42),contentDigest:'fnv1a32-utf16:b4a5c2e2'})).toThrow(/content-digest/);
@@ -338,23 +347,23 @@ describe('T12 latest assets survive death, settlement and upgrades', () => {
     r={...r,state:accepted(equipItem(r.state,'item-2','unit-2',0))};
     r={...r,state:accepted(equipItem(r.state,'item-3','unit-1',1))};
     expect(r.state.combat).toBe(frozenCombat);expect(r.state.combatInputBasis).toBe(frozenBasis);
-    expect(restorePlayerBattleSnapshot(JSON.stringify(snap))).toEqual(snap);
+    deepStrictEqual(restorePlayerBattleSnapshot(JSON.stringify(snap)), snap);
     if(result){
-      expect(resolveTwoSidedBattle(restoreBattleInput(JSON.stringify(input)),1201)).toEqual(result);
+      deepStrictEqual(resolveTwoSidedBattle(restoreBattleInput(JSON.stringify(input)),1201), result);
       const {events: _events,...proposal}=proposeSettlement(result).a;
       const receipt: RoundSettlementReceipt={...proposal,version:ROUND_SETTLEMENT_VERSION,settlementId:'t12:settle',battleId:result.battleId,
         round:4,roundId:'2-1',combatTicks:result.terminal.tick,combatEventCount:result.events.length};
       r=accept(runSharedMatchCommand(r.pool,r.state,{type:'settleRound',receipt}));
-      expect(applyRoundSettlement(r.state,receipt)).toEqual({ok:false,state:r.state,reason:'duplicate-settlement'});
+      deepStrictEqual(applyRoundSettlement(r.state,receipt), {ok:false,state:r.state,reason:'duplicate-settlement'});
     } else {
       let budget=1201;
       while(r.state.phase==='combat'&&budget-->0) r=accept(runSharedMatchCommand(r.pool,r.state,{type:'step'}));
       expect(budget).toBeGreaterThan(0);
-      expect(stepMatch(r.state)).toEqual({state:r.state,events:[]});
+      deepStrictEqual(stepMatch(r.state), {state:r.state,events:[]});
     }
     expect(r.state.preparation.units.find(u=>u.id==='unit-1')!.starLevel).toBe(2);
-    expect(r.state.items.find(i=>i.definitionId==='gunblade')!.location).toEqual({kind:'unit',unitId:'unit-1',slot:0});
-    expect(r.state.items.find(i=>i.id==='item-3')!.location).toEqual({kind:'unit',unitId:'unit-1',slot:1});
+    deepStrictEqual(r.state.items.find(i=>i.definitionId==='gunblade')!.location, {kind:'unit',unitId:'unit-1',slot:0});
+    deepStrictEqual(r.state.items.find(i=>i.id==='item-3')!.location, {kind:'unit',unitId:'unit-1',slot:1});
     conserved(r.pool,[r.state]);
   });
 });
@@ -366,7 +375,7 @@ it('T12 supply choice permits fresh component transactions and single-save conti
   expect(state.pendingChoice!.kind).toBe('component');
   state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));restored(state);
   state=accepted(equipItem(state,acquired.itemIds[1],'unit-1',1));
-  expect(resolvePublicEquipmentChoices(restored(state))).toEqual(resolvePublicEquipmentChoices(state));
+  deepStrictEqual(resolvePublicEquipmentChoices(restored(state)), resolvePublicEquipmentChoices(state));
 });
 it('T12 an existing frozen glove roll and a new parent roll remain independent',()=>{
   const acquired=publicInventory(['thiefs-gloves','gloves','gloves']);
@@ -376,7 +385,7 @@ it('T12 an existing frozen glove roll and a new parent roll remain independent',
   let changed=accepted(equipItem(start,acquired.itemIds[1],'unit-2',0));
   changed=accepted(equipItem(changed,acquired.itemIds[2],'unit-2',0));
   expect(changed.equipmentState.rolls).toHaveLength(start.equipmentState.rolls.length+1);
-  expect(changed.equipmentState.rolls[start.equipmentState.rolls.length-1]).toEqual(roll);
+  deepStrictEqual(changed.equipmentState.rolls[start.equipmentState.rolls.length-1], roll);
   const before=JSON.stringify(changed);
   for(let n=0;n<3;n++){previewEquip(changed,changed.items[0].id,'unit-1',0);restored(changed);}
   expect(JSON.stringify(changed)).toBe(before);compareTicks(start,changed);
@@ -393,16 +402,16 @@ it('T12 online PvE restores the frozen player descriptor and keeps every live-se
     preparation:{...prep.preparation,units:prep.preparation.units.map(u=>frozen.units.find(x=>x.id===u.id)??u)}};
   let control=accepted(startMatchCombat(prep));
   const rebuilt=accepted(startMatchCombat(frozenPrep));
-  expect(rebuilt.combat).toEqual(control.combat);
+  deepStrictEqual(rebuilt.combat, control.combat);
   let changed=accepted(equipItem(control,acquired.itemIds[1],'unit-1',0));
   let budget=1201;
   while(control.phase==='combat'&&budget-->0){
     const x=stepMatch(control),y=stepMatch(changed);
     expect(JSON.stringify(y.state.combat)).toBe(JSON.stringify(x.state.combat));
-    expect(y.events.filter(e=>e.domain==='combat')).toEqual(x.events.filter(e=>e.domain==='combat'));control=x.state;changed=y.state;
+    deepStrictEqual(y.events.filter(e=>e.domain==='combat'), x.events.filter(e=>e.domain==='combat'));control=x.state;changed=y.state;
   }
   expect(budget).toBeGreaterThan(0);expect(changed.items.some(i=>i.definitionId==='gunblade')).toBe(true);
-  expect(changed.roundResults).toEqual(control.roundResults);
+  deepStrictEqual(changed.roundResults, control.roundResults);
 });
 
 it('T12 restore rejects a fabricated cross-unit recipe although births and recipe are valid',()=>{
