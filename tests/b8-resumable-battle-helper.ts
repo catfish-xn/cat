@@ -37,11 +37,20 @@ function pve(): CombatReplayInput {
   }
   return pveSource = freeze({ initial, terminal, events });
 }
+const controlBattles = new Map<boolean, ReturnType<typeof resolveTwoSidedBattle>>();
+function controlBattle(mirror = false) {
+  let battle = controlBattles.get(mirror);
+  if (!battle) { battle = freeze(resolveTwoSidedBattle(input(9, mirror), 1201)); controlBattles.set(mirror, battle); }
+  return battle;
+}
 const sha = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const invalid = [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1];
 
 export function registerB8(mode: 'fast' | 'timing'): void {
-if (mode === 'fast') beforeAll(() => { pve(); });
+if (mode === 'fast') {
+  beforeAll(() => { pve(); });
+  for (const mirror of [false, true]) beforeAll(() => { controlBattle(mirror); });
+}
 describe('SR-B8-02 resumable pure tasks', () => {
   if (mode === 'fast') { it.each([0, 1, 9])('pre-change byte fingerprint: %s units per side', count => {
     const battle = resolveTwoSidedBattle(input(count), 1201);
@@ -56,7 +65,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
   if (mode === 'fast') { it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {
       const source = input(9, mirror), before = JSON.stringify(source);
-      const expected = resolveTwoSidedBattle(source, 1201), task = startTwoSidedBattle(source);
+      const expected = controlBattle(mirror), task = startTwoSidedBattle(source);
       let result = null, calls = 0;
       while (!result && calls++ < 1201) result = task.advance(budget);
       expect(JSON.stringify(result)).toBe(JSON.stringify(expected));
@@ -66,7 +75,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
     }
   }); }
   if (mode === 'fast') { it.each([1, 13, 100, 1201])('PvP/PvE replay bytes and deferred tick0 at slice %s', budget => {
-    for (const source of [resolveTwoSidedBattle(input(), 1201), pve()]) {
+    for (const source of [controlBattle(), pve()]) {
       const expected = toCombatReplay(source), task = startCombatReplay(source);
       let result = null, calls = 0;
       while (!result && calls++ < 1201) result = task.advance(budget);
@@ -76,7 +85,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
     }
   }); }
   if (mode === 'fast') { it('invalid budgets never consume a slice, including after completion; old total cap still faults', () => {
-    const source = input(), battle = resolveTwoSidedBattle(source, 1201);
+    const source = input(), battle = controlBattle();
     const tasks = [startTwoSidedBattle(source), startCombatReplay(battle)];
     for (const task of tasks) {
       for (const budget of invalid) expect(() => task.advance(budget)).toThrow('invalid-budget');
@@ -93,7 +102,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
     expect(view.ticks).toHaveLength(1); expect(replay.advance(1)).toBe(view);
   }); }
   if (mode === 'fast') { it('owns mutable input through pauses and retains replay divergence validation', () => {
-    const source = structuredClone(resolveTwoSidedBattle(input(), 1201));
+    const source = structuredClone(controlBattle());
     const expected = toCombatReplay(source), task = startCombatReplay(source);
     expect(task.advance(1)).toBeNull(); Object.assign(source, { events: [] });
     expect(task.advance(1201)).toEqual(expected);

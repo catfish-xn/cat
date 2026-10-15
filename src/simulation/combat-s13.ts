@@ -1,4 +1,4 @@
-import { sharedCombatDeclarations } from './combat-static';
+import { freezeCombatDeclarations, sharedCombatDeclarations } from './combat-static';
 import { startingRows } from './m8/targeting';
 import { planOpening, commitOpening, advanceOpeningTasks } from './m8/opening';
 import { targetUnit } from './m8/s13-targeting';
@@ -104,6 +104,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: undefined } : {}),
       ...(unit.mechanismState ? { mechanismState: undefined } : {}),
       ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) });
+    // A mutable checkpoint is copied first. Only our new declarations freeze;
+    // the caller retains its independent mutable input. Later ticks can share.
+    freezeCombatDeclarations(copy);
     // The native clone is fresh and has not escaped. Assign the overrides to it
     // instead of spreading the entire detached unit into a second large object.
     return Object.assign(copy, { ...shared,

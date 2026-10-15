@@ -28,6 +28,7 @@ export { COMPONENT_IDS } from './items';
 // `var` is intentional: content helpers are called while cyclic content imports
 // initialize. The lazily allocated cache must be available before this module's body.
 var frozenCanonical: WeakMap<object, string> | undefined;
+var frozenDigests: WeakMap<object, string> | undefined;
 function rememberFrozen(value: object, text: string, keys: readonly string[]): string {
   // A frozen wrapper alone does not make children or getter results immutable.
   if (Object.isFrozen(value) && keys.every(key => {
@@ -84,10 +85,15 @@ export function assertParsedContent(value: unknown): void {
 }
 /** FNV-1a over UTF-16 code units: deterministic in both browsers and Node; no platform API. */
 export function digestContent(value: unknown): string {
+  const cached = value !== null && typeof value === 'object' ? frozenDigests?.get(value) : undefined;
+  if (cached !== undefined) return cached;
   let hash = 0x811c9dc5;
   const text = canonicalContent(value);
   for (let i = 0; i < text.length; i++) hash = Math.imul(hash ^ text.charCodeAt(i), 0x01000193) >>> 0;
-  return `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
+  const digest = `fnv1a32-utf16:${hash.toString(16).padStart(8, '0')}`;
+  // canonicalContent certifies the entire frozen data graph, including children.
+  if (value !== null && typeof value === 'object' && frozenCanonical?.has(value)) (frozenDigests ??= new WeakMap()).set(value, digest);
+  return digest;
 }
 import { ORB_RULES, ORB_SLOTS } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';

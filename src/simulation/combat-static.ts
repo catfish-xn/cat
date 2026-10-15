@@ -1,7 +1,7 @@
 import { isImmutableJson, shareGeneratedDeclaration, shareParsedDeclaration } from './immutable-json';
 import type { CombatUnit } from './combat-types';
 
-const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', 'companionDefinitions', 'attackCone'] as const;
+const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', 'companionDefinitions', 'attackCone', 'mechanismDefinitions'] as const;
 /** Declarations are read-only; every dynamic runtime field still belongs to its tick. */
 export function freezeCombatDeclarations(unit: CombatUnit, parsed = false): CombatUnit {
   for (const key of fields) {

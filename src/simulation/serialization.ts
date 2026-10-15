@@ -1,5 +1,5 @@
 import { freezeCombatDeclarations } from './combat-static';
-import { shareParsedJson } from './immutable-json';
+import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
@@ -32,6 +32,18 @@ import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
+
+// Reuse the pure default-catalog compilation, never any candidate validation.
+// Only local, already authenticated JSON basis inputs enter this byte-keyed map.
+const restoredStrategies = new Map<string, ReturnType<typeof buildStrategySnapshot>>();
+function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean) {
+  if (!admittedJson) return buildStrategySnapshot(inputs);
+  const key = JSON.stringify(inputs), cached = restoredStrategies.get(key);
+  if (cached) return cached;
+  const compiled = freezeContent(buildStrategySnapshot(inputs));
+  if (restoredStrategies.size >= 16) restoredStrategies.delete(restoredStrategies.keys().next().value!);
+  restoredStrategies.set(key, compiled); return compiled;
+}
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
 const inputValidation = createInputValidation(requireValue);
@@ -208,7 +220,7 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
-    const expectedStrategy = buildStrategySnapshot(basis.inputs);
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
     const combatPreparation = basis.inputs.preparation, combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
@@ -236,7 +248,7 @@ export function restoreMatch(input: unknown): MatchState {
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
-      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses);
+      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string');
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
       validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
@@ -267,7 +279,10 @@ export function restoreMatch(input: unknown): MatchState {
       return { ...basis, inputs: { ...basis.inputs, preparation: { ...basis.inputs.preparation } } };
     })() : null,
   } : detached;
-  if (typeof input === 'string' && !input.includes('-0')) restored.combat?.units.forEach(unit => freezeCombatDeclarations(unit, true));
+  if (typeof input === 'string' && !input.includes('-0') && restored.combat) {
+    restored.combat.units.forEach(unit => freezeCombatDeclarations(unit, true));
+    if (restored.combat.strategy) Object.assign(restored.combat, { strategy: shareParsedDeclaration(restored.combat.strategy) });
+  }
   freezeContent(restored.m8);
   if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
   freezeContent(restored.resourceProvenance);

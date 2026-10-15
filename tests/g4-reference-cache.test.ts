@@ -1,6 +1,8 @@
+import { createMatch, startMatchCombat } from '../src/simulation/match';
+import { stepCombat } from '../src/simulation/combat';
 import { isImmutableJson, shareGeneratedJson } from '../src/simulation/immutable-json';
 import { describe, expect, it } from 'vitest';
-import { canonicalContent, equalValidatedContent } from '../src/simulation/content';
+import { canonicalContent, digestContent, equalValidatedContent } from '../src/simulation/content';
 import { freezeLootThroughRound, restoreFrozenLootLedger } from '../src/simulation/loot-freeze';
 import { createOrbLayout, freezeOrbLayoutThroughRound, restoreOrbLayout } from '../src/simulation/orb-layout';
 
@@ -44,8 +46,8 @@ describe('G4 deterministic reference cache boundaries', () => {
   });
   it('validated JSON comparison preserves canonical equality, object key order and array order', () => {
     const child = { n: 1 }, wrapper = Object.freeze({ child });
-    const before = canonicalContent(wrapper); child.n++;
-    expect(canonicalContent(wrapper)).not.toBe(before);
+    const before = canonicalContent(wrapper), beforeDigest = digestContent(wrapper); child.n++;
+    expect(canonicalContent(wrapper)).not.toBe(before); expect(digestContent(wrapper)).not.toBe(beforeDigest);
     let n = 1; const getter = Object.freeze({ get n() { return n; } });
     expect(canonicalContent(getter)).toBe('{"n":1}'); n++;
     expect(canonicalContent(getter)).toBe('{"n":2}');
@@ -66,4 +68,16 @@ it('admits detached deep-frozen checkpoints without freezing shallow children or
   expect(isImmutableJson(accessor)).toBe(false); expect(reads).toBe(0);
   const unusual = Object.freeze(Object.setPrototypeOf([1], { toJSON: () => 'changed' }));
   expect(isImmutableJson(unusual)).toBe(false);
+});
+
+it('detaches mutable checkpoint declarations before sharing later combat ticks', () => {
+  const started = startMatchCombat(createMatch(42));
+  if (!started.ok || !started.state.combat) throw Error('start');
+  const checkpoint = structuredClone(started.state.combat), before = JSON.stringify(checkpoint);
+  const advanced = stepCombat(checkpoint), after = JSON.stringify(advanced);
+  expect(JSON.stringify(checkpoint)).toBe(before);
+  expect(Object.isFrozen(checkpoint.units[0].ability)).toBe(false);
+  Object.assign(checkpoint.units[0].ability, { id: 'caller-mutated' });
+  expect(JSON.stringify(advanced)).toBe(after);
+  expect(stepCombat(advanced.state)).toEqual(stepCombat(structuredClone(advanced.state)));
 });
