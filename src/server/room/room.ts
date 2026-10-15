@@ -23,7 +23,7 @@ import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver
 import { useSeatConsumable } from './consumables';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
-import { findPairing, planPairings } from './pairing';
+import { DEFAULT_PAIRING_POLICY, findPairing, planCandidates, planPairings, recordPairings, type PairingPolicy } from './pairing';
 import {
   DEFAULT_BATTLE_MAX_STEPS, ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type BattleInput, type BattleResult, type PvpMode, type RankEntry,
   type RoomCommandResult, type RoomFault, type RoomPhase, type RoomState, type RoundSettlement, type SeatCommand, type SeatSpec, type SeatState, type SettledSeat,
@@ -57,6 +57,8 @@ export interface RoomOptions extends RoomTimings {
    * scheduled on the room clock, so a server can serve other messages in between; default: one slice per battle.
    */
   readonly sliceTicks?: number;
+  /** G1-P6: how recent opponents are avoided; DEFAULT_PAIRING_POLICY (placeholder, S13_RULES_GAP §10) when omitted. */
+  readonly pairingPolicy?: PairingPolicy;
 }
 export const ROOM_TIMING_DEFAULTS: RoomTimings = { preparationMs: 30_000, choiceMs: 30_000, settlementMs: 6_000, battleTailMs: 800, maxSettlementExtensions: 3 };
 
@@ -184,6 +186,7 @@ export class Room {
   private readonly listeners = new Set<(state: RoomState) => void>();
   private readonly pvpMode: PvpMode;
   private readonly checkConservation: boolean;
+  private readonly pairingPolicy: PairingPolicy;
 
   constructor(seats: readonly SeatSpec[], private readonly options: RoomOptions) {
     if (seats.length !== ROOM_CAPACITY) throw new RangeError(`a room has exactly ${ROOM_CAPACITY} seats`);
@@ -191,6 +194,7 @@ export class Room {
     validateSeed(options.seed);
     this.pvpMode = options.pvpMode ?? 'two-sided';
     this.checkConservation = options.assertPoolConservation ?? true;
+    this.pairingPolicy = options.pairingPolicy ?? DEFAULT_PAIRING_POLICY;
     // §12.2 opening, in order: create the pool → import eight unpublished `createMatch(seed, shared-deferred)` openings by
     // the fixed seat index 0–7 (this also enables the server mode of §11.1; §18.2: each seat is built shared-deferred,
     // never solo-then-recoloured, and the first initializeSharedSeat freezes the room's orb layout in pool.orbLayout)
@@ -212,7 +216,7 @@ export class Room {
         alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
-      deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState,
+      deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, pairingHistory: {}, opponentCandidates: {}, battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState,
       pool: opened.pool, poolRevision: opened.pool.revision };
     this.assertConserved(initial);
     this.current = initial;
@@ -475,21 +479,36 @@ export class Room {
 
   private aliveSeats(): readonly SeatState[] { return this.current.seats.filter(seat => seat.alive); }
 
+  /**
+   * Round entry. G1-P6: a PvP round only publishes each seat's possible opponents here (from the pairing history);
+   * the real pairings and every battle seed are drawn at the freeze (`drawRound`), inside those candidates.
+   */
   private enterRound(): void {
     const alive = this.aliveSeats();
     const info = readRoundInfo(alive[0]!.match);
     const state = this.current;
-    const pvp = info.kind === 'pvp';
-    const plan = pvp ? planPairings(alive.map(seat => seat.seatId), state.rngState, `${state.roomId}:r${info.ordinal}`) : { pairings: [], rngState: state.rngState };
-    // One explicit combat seed per battle, frozen with the pairings: a resolver retry reuses it (§10.6 item 1).
-    const battleIds = plan.pairings.length > 0 ? [...new Set(plan.pairings.map(pairing => pairing.battleId))] : alive.map(seat => `${state.roomId}:r${info.ordinal}:${seat.seatId}`);
+    const opponentCandidates = info.kind === 'pvp' ? planCandidates(alive.map(seat => seat.seatId), state.pairingHistory, this.pairingPolicy) : {};
+    this.extensions = 0; this.releaseRound();
+    this.replace({ ...state, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind, pairings: [], battleSeeds: {}, opponentCandidates, battles: [] });
+    if (alive.some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
+    else this.afterChoiceWindow();
+  }
+
+  /**
+   * At the freeze, before any input is built: PvP pairings (inside the candidates shown since round entry) and one
+   * explicit combat seed per battle, all from the room rng in that order; a resolver retry reuses the seeds (§10.6
+   * item 1). The pairings join the history (PvE and supply rounds add nothing). Published once, inside `frozen`.
+   */
+  private drawRound(): void {
+    const state = this.current;
+    const alive = this.aliveSeats();
+    const prefix = `${state.roomId}:r${state.round}`;
+    const plan = state.roundKind === 'pvp' ? planPairings(alive.map(seat => seat.seatId), state.rngState, prefix, state.pairingHistory, this.pairingPolicy) : { pairings: [], rngState: state.rngState };
+    const battleIds = plan.pairings.length > 0 ? [...new Set(plan.pairings.map(pairing => pairing.battleId))] : alive.map(seat => `${prefix}:${seat.seatId}`);
     let rngState = plan.rngState;
     const battleSeeds: Record<string, number> = {};
     for (const battleId of battleIds) { const draw = nextRandom(rngState); rngState = draw.state; battleSeeds[battleId] = draw.word >>> 0; }
-    this.extensions = 0; this.releaseRound();
-    this.replace({ ...state, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind, pairings: plan.pairings, rngState, battleSeeds, battles: [] });
-    if (alive.some(seat => seat.match.phase === 'choice')) this.setPhase('choice', this.options.choiceMs);
-    else this.afterChoiceWindow();
+    this.replace({ ...state, pairings: plan.pairings, battleSeeds, rngState, pairingHistory: recordPairings(state.pairingHistory, plan.pairings) });
   }
 
   /** Every alive seat has left the choice phase: decide what the round needs next. */
@@ -527,6 +546,7 @@ export class Room {
     const deployed = this.autoDeploy();
     if (!deployed) return;
     this.deployed = deployed;
+    this.drawRound();
     this.frozenInputs = this.buildInputs(deployed);
     // §12.4: one unpublished proposal for the whole round; a battle that awards a unit hands its pool to the next battle.
     this.resolution = { results: [], pool: this.current.pool, job: null };

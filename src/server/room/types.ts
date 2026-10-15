@@ -13,6 +13,7 @@ import type { MatchCommandResult, MatchEvent, MatchFailure, MatchState } from '.
 import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
 import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
+import type { CandidateMap, PairingHistory } from './pairing';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
@@ -190,10 +191,17 @@ export interface RoomState {
   /** Room clock time at which the current phase ends; null when nothing is scheduled. */
   readonly deadlineAt: number | null;
   readonly seats: readonly SeatState[];
-  /** PvP pairings of the current round, decided at round entry. */
+  /** PvP pairings of the current round, drawn at the freeze (G1-P6); empty during choice/preparation. */
   readonly pairings: readonly Pairing[];
-  /** Combat seeds of the current round by battleId, drawn with the pairings; a retry reuses them. */
+  /** Combat seeds of the current round by battleId, drawn with the pairings at the freeze; a retry reuses them. */
   readonly battleSeeds: Readonly<Record<string, number>>;
+  /**
+   * G1-P6: every seat's past PvP opponents, oldest first (mirror battles under their source). Part of the room state, so
+   * a reconnecting seat (V2 D8) sees the same candidates; PvE and supply rounds add nothing.
+   */
+  readonly pairingHistory: PairingHistory;
+  /** G1-P6: possible opponents of each alive seat this PvP round, set at round entry from `pairingHistory`; empty otherwise. */
+  readonly opponentCandidates: CandidateMap;
   /** Results of the current round; cleared on round entry. */
   readonly battles: readonly BattleResult[];
   /** settlementIds already committed, in order. */

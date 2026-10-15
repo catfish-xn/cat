@@ -10,7 +10,7 @@ describe('toPlayerView', () => {
     const { room, clock } = makeRoom(new DamageResolver(() => 0));
     room.start();
     const view = toPlayerView(room.state, 's1', clock.now());
-    expect(Object.keys(view).sort()).toEqual(['fault', 'mySeatId', 'opponentSeatId', 'phase', 'ranking', 'seats']);
+    expect(Object.keys(view).sort()).toEqual(['fault', 'mySeatId', 'opponentCandidates', 'opponentSeatId', 'phase', 'ranking', 'seats']);
     expect(view.fault).toBeNull();
     expect(view.phase).toEqual({ kind: 'preparation', round: 1, roundName: '1-2', endsAt: 1_000, serverNow: 0 });
     expect(view.seats).toHaveLength(8);
@@ -20,6 +20,7 @@ describe('toPlayerView', () => {
     for (const forbidden of ['rngState', 'seed', 'shop', 'units', 'gold', 'pendingChoice']) expect(serialized).not.toContain(forbidden);
     for (const forbidden of ['rngState', 'seed', 'shop', 'gold', 'pendingChoice', 'bench', 'xp', 'location', 'unit-']) expect(JSON.stringify(view.seats.map(seat => seat.publicBoard))).not.toContain(forbidden);
     expect(view.opponentSeatId).toBeNull(); expect(view.ranking).toBeNull();
+    expect(view.opponentCandidates).toEqual([]); // 1-2 is a PvE round
     expect(() => toPlayerView(room.state, 'ghost', 0)).toThrow(RangeError);
   });
   it('maps room phases to client phases and names the pvp opponent', () => {
@@ -27,12 +28,17 @@ describe('toPlayerView', () => {
     expect(toPlayerView(room.state, 's0', 0).phase.kind).toBe('lobby');
     room.start();
     runUntil(room, clock, current => current.round === 4 && current.phase === 'preparation');
+    // G1-P6: preparation names the candidates (seat order, alive, never me) and no opponent yet.
+    const preparation = toPlayerView(room.state, 's0', clock.now());
+    expect(preparation.opponentSeatId).toBeNull();
+    expect(preparation.opponentCandidates).toEqual(['s1', 's2', 's3', 's4', 's5', 's6', 's7']);
+    clock.runNext();
     const view = toPlayerView(room.state, 's0', clock.now());
-    expect(view.opponentSeatId).not.toBeNull(); expect(view.opponentSeatId).not.toBe('s0');
+    expect(view.phase.kind).toBe('combat');
+    expect(view.opponentSeatId).not.toBeNull(); expect(preparation.opponentCandidates).toContain(view.opponentSeatId);
+    expect(view.opponentCandidates).toEqual([]);
     const back = toPlayerView(room.state, view.opponentSeatId!, clock.now());
     expect(back.opponentSeatId).toBe('s0');
-    clock.runNext();
-    expect(toPlayerView(room.state, 's0', clock.now()).phase.kind).toBe('combat');
     const replay = toCombatReplayFor(room.state, 's0');
     expect(replay).not.toBeNull();
     expect(replay!.replay.ticks.length).toBe(replay!.replay.terminal.tick + 1);
