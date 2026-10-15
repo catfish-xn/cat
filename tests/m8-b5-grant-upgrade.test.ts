@@ -131,8 +131,8 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     expect(JSON.stringify(state)).toBe(before);
     if (!result.ok) throw new Error(result.reason);
     expect(result.events.filter(e => e.type === 'unitUpgraded').map(({ domain: _domain, eventSeq: _seq, ...event }) => event)).toEqual([
-      { type: 'unitUpgraded', survivorId: chain.incomingId, consumedIds: [chain.purchaseIds[7], nextId].sort(), definitionId: 'irelia', fromStar: 1, toStar: 2, location: state.preparation.units.find(u => u.id === chain.incomingId)!.location },
-      { type: 'unitUpgraded', survivorId: chain.survivorId, consumedIds: [chain.secondId, chain.incomingId].sort(), definitionId: 'irelia', fromStar: 2, toStar: 3, location: state.preparation.units.find(u => u.id === chain.survivorId)!.location },
+      { type: 'unitUpgraded', survivorId: chain.incomingId, consumedIds: [chain.purchaseIds[7], nextId].sort(), definitionId: chain.definitionId, fromStar: 1, toStar: 2, location: state.preparation.units.find(u => u.id === chain.incomingId)!.location },
+      { type: 'unitUpgraded', survivorId: chain.survivorId, consumedIds: [chain.secondId, chain.incomingId].sort(), definitionId: chain.definitionId, fromStar: 2, toStar: 3, location: state.preparation.units.find(u => u.id === chain.survivorId)!.location },
     ]);
     expect(result.events.some(e => e.type === 'equipmentRolled')).toBe(false);
     expect(result.events.filter(e => e.type === 'itemsReturned')).toEqual([expect.objectContaining({ unitId: returnedHolder, itemIds: [returned] })]);
@@ -179,7 +179,7 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     let input = accepted(equipItem(chain.state, inventory.itemIds[0], chain.secondId, 0));
     while (input.gold >= 2) input = accepted(rerollShop(input));
     // A real unaffordable offer suffices; no gold, RNG, offer or receipt is injected.
-    const slot = input.shop.slots.findIndex(offer => offer.status === 'available' && !['darius', 'irelia', 'lux', 'maddie', 'zyra'].includes(offer.definitionId));
+    const slot = input.shop.slots.findIndex(offer => offer.status === 'available' && !['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'].includes(offer.definitionId));
     if (slot < 0 && input.gold !== 0) throw new Error('Expected an unaffordable public offer');
     const state = freeze(input), before = JSON.stringify(state), result = buyUnit(state, slot < 0 ? 0 : slot, state.shop.generation);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);

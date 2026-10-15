@@ -6,17 +6,17 @@ import {getUnitSellPrice} from '../src/simulation/unit-stats';
 import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation} from './fixtures/t13-loot-public';
 const prepared=fillBench(await publicPrefix('3-7',36),['tristana']),live=battle(prepared),waiting=live.ended;
 const hero=plan(prepared).encounterPlan.drops.find(d=>d.payload.kind==='unit')!;
-const soldUnit=bench(waiting).find(u=>u.definitionId==='lux')!;
+const soldUnit=bench(waiting).find(u=>u.definitionId==='zyra')!;
 function roundTrip(s:MatchState){const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 function command(s:MatchState,f:(s:MatchState)=>api.MatchCommandResult){const saved=serializeMatch(s),a=f(s),b=f(roundTrip(s));expect(b).toEqual(a);expect(serializeMatch(s)).toBe(saved);if(!a.ok)expect(a.state).toBe(s);return a;}
 function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=serializeMatch(s),bad=JSON.parse(saved);change(bad);expect(()=>restoreMatch(bad)).toThrow(message);expect(serializeMatch(s)).toBe(saved);}
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
-  expect(prepared.gold).toBe(23);expect(bench(prepared)).toHaveLength(9);
+  expect(prepared.gold).toBe(15);expect(bench(prepared)).toHaveLength(9);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'tristana',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(76);expect(waiting.combat!.tick).toBe(83);
+  expect(live.revealed!.combat!.tick).toBe(74);expect(waiting.combat!.tick).toBe(110);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);
@@ -58,7 +58,7 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
  });
 });
 describe('B8 live lethal PvE with randomized orbs',()=>{
- it.each([{name:'two killed carriers',keep:'unit-12',col:1,deaths:2,earned:true},{name:'only orb carrier killed',keep:'unit-11',col:1,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
+ it.each([{name:'two killed carriers',keep:'unit-7',col:1,deaths:2,earned:true},{name:'only orb carrier killed',keep:'unit-6',col:1,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
   const preparation=await terminalPreparation(scenario.keep,scenario.col),l=battle(preparation),s=l.ended;
   expect(preparation.playerHp).toBe(3);expect(preparation.roundResults.reduce((n,r)=>n+r.hpLost,0)).toBe(97);
   expect(s.phase).toBe('gameOver');expect(s.outcome).toBe('defeat');expect(s.playerHp).toBe(0);

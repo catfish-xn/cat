@@ -2,8 +2,8 @@
   "patch": "14.24",
   "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",
   "command": "node scripts/fetch-s13-assets.cjs --g2-1",
-  "downloadDirectory": "/tmp/g2-1-assets",
-  "publicAssetsCommitted": false,
+  "downloadDirectory": "public/assets/s13",
+  "publicAssetsCommitted": true,
   "expected": 81,
   "downloaded": 81,
   "assets": [

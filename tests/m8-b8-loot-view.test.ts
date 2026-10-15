@@ -34,13 +34,13 @@ describe('B8 readLootView over real randomized public routes',()=>{
   expect(v.revealedOrbs.some(o=>o.status==='partially-claimed')).toBe(true);
  });
  it('one real sale grants the hero and unblocks Continue, while the next round clears the view',()=>{
-  const s=accepted(api.sellUnit(live.ended,bench(live.ended).find(u=>u.definitionId==='lux')!.id)),v=view(s);
+  const s=accepted(api.sellUnit(live.ended,bench(live.ended).find(u=>u.definitionId==='zyra')!.id)),v=view(s);
   expect(v).toMatchObject({canContinue:true,reason:null,pendingClaims:[],pendingChoice:null});
   expect(v.revealedDrops.map(d=>d.status)).toEqual(Array(4).fill('granted'));
   const ids=new Set(frozen.encounterPlan.drops.map(d=>d.dropId));expect(v.revealedDrops.map(d=>d.receiptId).sort()).toEqual(s.m8.loot.receipts.filter(r=>ids.has(r.dropId)).map(r=>r.receiptId).sort());
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
- it.each([{name:'two source deaths',keep:'unit-12',earned:true},{name:'only orb carrier',keep:'unit-11',earned:true},{name:'no carrier',keep:null,earned:false}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,earned})=>{
+ it.each([{name:'two source deaths',keep:'unit-7',earned:true},{name:'only orb carrier',keep:'unit-6',earned:true},{name:'no carrier',keep:null,earned:false}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,earned})=>{
   const s=battle(await terminalPreparation(keep)).ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});
   expect(v.revealedDrops.map(d=>d.status)).toEqual(earned?['granted','granted','retained-terminal','granted']:[]);

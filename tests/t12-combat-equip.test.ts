@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { syntheticSharedRound } from './tp-helpers';
 import { describe, expect, it } from 'vitest';
 import {
@@ -143,7 +144,8 @@ function compareTicks(initial: MatchState, changed: MatchState) {
   let a = initial, b = changed, resume = restored(changed), budget = 1201;
   while (a.phase === 'combat' && budget-- > 0) {
     const x = stepMatch(a), y = stepMatch(b), z = stepMatch(resume);
-    expect(z).toEqual(y);
+    // Native strict comparison retains every tick/field and ignores object key order.
+    assert.deepStrictEqual(z, y);
     expect(JSON.stringify(y.state.combat)).toBe(JSON.stringify(x.state.combat));
     expect(y.events.filter(e => e.domain === 'combat')).toEqual(x.events.filter(e => e.domain === 'combat'));
     a = x.state; b = y.state; resume = z.state;
@@ -411,7 +413,7 @@ it('T12 restore rejects a fabricated cross-unit recipe although births and recip
   const base=accepted(deployMatchUnit(first,'unit-1',board(3)));
   const stockStart=accepted(startMatchCombat(base));
   const legal=accepted(equipItem(stockStart,acquired.itemIds[1],'unit-1',0));
-  const heldStart=accepted(startMatchCombat(accepted(equipItem(base,acquired.itemIds[1],'unit-2',0))));
+  const heldStart=accepted(startMatchCombat(accepted(equipItem(base,acquired.itemIds[1],base.preparation.units.find(u=>u.team==='player'&&u.id!=='unit-1')!.id,0))));
   const forged={...legal,combat:heldStart.combat,combatInputBasis:heldStart.combatInputBasis};
   expect(()=>restoreMatch(forged)).toThrow(/combination requires inventory input/);
 });

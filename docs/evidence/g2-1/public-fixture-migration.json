@@ -1,0 +1,399 @@
+{
+  "baseline": "a159fbbde10b9e113cae5b74c1369f4cc5ea041a",
+  "baselineSimulationFilesVerified": 153,
+  "cases": {
+    "transfer": {
+      "prepared": {
+        "previousBytes": 86905,
+        "currentBytes": 87036,
+        "previousSha256": "7ca0b7d9fe3e9931e6735169e4750e42f10ac53b663ae88a4b43b2e8aeecb385",
+        "currentSha256": "688db91ca55ec6c03b22abb7fa543ecfc09fb2b84a7671625cb0a98dbecb67b0",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      },
+      "events": {
+        "previousBytes": 229570,
+        "currentBytes": 220313,
+        "previousSha256": "c0bc4d63babeab0225f0e98e4adbca110270a47de7d0d6cfc10a8012d4c05abd",
+        "currentSha256": "95f933eea02520440f8dd129644f174d8e79cbdecb0a7e26f93833870abb5895",
+        "byteEqual": false,
+        "firstByteOffset": 195,
+        "firstDifference": {
+          "path": "$.1.type",
+          "previous": "movement",
+          "current": "targetChanged"
+        },
+        "firstGameplayDifference": {
+          "path": "$.1.type",
+          "previous": "movement",
+          "current": "targetChanged"
+        }
+      },
+      "ended": {
+        "previousBytes": 208220,
+        "currentBytes": 210773,
+        "previousSha256": "e0db8cfd31f930554d27f1b25cc61cc6a5026b10a0d182c93db1afc779e5f5e3",
+        "currentSha256": "edc16b01ac528f2c75d5b7e7adccf717d205cee5c498b7a4bd313eadc562e664",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      }
+    },
+    "growth": {
+      "prepared": {
+        "previousBytes": 67311,
+        "currentBytes": 65676,
+        "previousSha256": "239084221bf8fcf8b9cac2b71948dce4de06517879b734a7076093e49c0e20e9",
+        "currentSha256": "f3aa5d37208de74f2f428ec58e741fc4fef7e3fb39bc6b9a65460df52e5b6ecd",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.seed",
+          "previous": 74,
+          "current": 48
+        }
+      },
+      "events": {
+        "previousBytes": 139457,
+        "currentBytes": 578743,
+        "previousSha256": "1fc868acd988efad213e4358679c3006a05b798e9a1b37ee0228d928dffd58c7",
+        "currentSha256": "99d983596580fa15fc14888d9b5282f171e30b504de8b72e38e232b37b2703b8",
+        "byteEqual": false,
+        "firstByteOffset": 10,
+        "firstDifference": {
+          "path": "$.0.type",
+          "previous": "movement",
+          "current": "statusChanged"
+        },
+        "firstGameplayDifference": {
+          "path": "$.0.type",
+          "previous": "movement",
+          "current": "statusChanged"
+        }
+      },
+      "ended": {
+        "previousBytes": 142752,
+        "currentBytes": 139290,
+        "previousSha256": "3519781eb4011e311895484a33b3cba40b096e621e1f1c510c049d52f5fff8c8",
+        "currentSha256": "b6171e6ee719fa2f9e7a0673aa2de4659f13e63d9235aeae3a20dc2f5a17e5b1",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.seed",
+          "previous": 74,
+          "current": 48
+        }
+      }
+    },
+    "capacity": {
+      "prepared": {
+        "previousBytes": 66596,
+        "currentBytes": 67128,
+        "previousSha256": "a860bb513221b2b2673ea7afa3f911285a8749770aada0ed44bd8a5d0fc33a29",
+        "currentSha256": "810176e402f2298764b87e6393c0d4ec038d5e219f73a7981267f2af3ab18cb9",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      },
+      "events": {
+        "previousBytes": 132379,
+        "currentBytes": 90863,
+        "previousSha256": "68d8c6284b5974f18a8ac03d4187751e35d085a8c9ed78d2e25ab74dba10b439",
+        "currentSha256": "b3dc937aa22eb83ad4b1eb68ba5c85783b18da45b69190d28dc49388c7e6bc8f",
+        "byteEqual": false,
+        "firstByteOffset": 117,
+        "firstDifference": {
+          "path": "$.0.to.col",
+          "previous": 0,
+          "current": 4
+        },
+        "firstGameplayDifference": {
+          "path": "$.0.to.col",
+          "previous": 0,
+          "current": 4
+        }
+      },
+      "ended": {
+        "previousBytes": 136429,
+        "currentBytes": 134199,
+        "previousSha256": "f62832b792e40cb58c9f1109f5546bf630081329f8881bef22f05ca079b6e28a",
+        "currentSha256": "a24643f9fe29d5236c33f2d70ffa879abd76c685daf81f904b9713c42d186b3b",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      }
+    },
+    "terminalTwoCarriers": {
+      "prepared": {
+        "previousBytes": 66113,
+        "currentBytes": 65649,
+        "previousSha256": "4a87b22612cbabbbd73a2badd41ee8c4fb6f1d89d1ebeb15b4b91bfeb73d56a5",
+        "currentSha256": "68fc473906a810db5472f519c5beabe9742b5b1eb03d2951f4ad4af2a982ab90",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      },
+      "events": {
+        "previousBytes": 269503,
+        "currentBytes": 273486,
+        "previousSha256": "198682a16e775fe9156a0a3b65607ba7c0c36d3ed5841e86fd5191a10ffea274",
+        "currentSha256": "50260e8d41ef5d5755bb5497bbdf068ebc87e29f52f61c87ad232cc3f4a5736c",
+        "byteEqual": false,
+        "firstByteOffset": 1154,
+        "firstDifference": {
+          "path": "$.6.unitId",
+          "previous": "unit-12",
+          "current": "unit-7"
+        },
+        "firstGameplayDifference": {
+          "path": "$.6.unitId",
+          "previous": "unit-12",
+          "current": "unit-7"
+        }
+      },
+      "ended": {
+        "previousBytes": 113985,
+        "currentBytes": 114126,
+        "previousSha256": "46bc3a4b127fd4074b710c311c2725b04f4f3e56836028d636a6fd908d76ae15",
+        "currentSha256": "e51b7ee42b138e9252fdc66173b468d5ead72b0f7c6ca074c1cb1daa06e4cb8f",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      }
+    },
+    "terminalOneCarrier": {
+      "prepared": {
+        "previousBytes": 66113,
+        "currentBytes": 65649,
+        "previousSha256": "598f7246db86d775e24cb804fd323a76e74ee8777460a6fc6bcea13bcb9d495a",
+        "currentSha256": "8adaea1e9f5c08e3dc7905b4639a04299f66a9a2ed5ed944b4a7ac4f83ba7e03",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      },
+      "events": {
+        "previousBytes": 206176,
+        "currentBytes": 211532,
+        "previousSha256": "ce0baaa795388616b67038330d2a9bbbb0c1ff63b67c09c2ecd9fc7c41f2e02d",
+        "currentSha256": "9622fedfe599d9d2d033a876376e71981dde4fea7b8d15abc0ee219928015906",
+        "byteEqual": false,
+        "firstByteOffset": 1154,
+        "firstDifference": {
+          "path": "$.6.unitId",
+          "previous": "unit-11",
+          "current": "unit-6"
+        },
+        "firstGameplayDifference": {
+          "path": "$.6.unitId",
+          "previous": "unit-11",
+          "current": "unit-6"
+        }
+      },
+      "ended": {
+        "previousBytes": 107884,
+        "currentBytes": 108039,
+        "previousSha256": "de8037a6f6a269f26c5eaf9a14b8a42bf2c169d2a3171391af9864a793fd2f26",
+        "currentSha256": "cc3e246b5ca8bf2e6261b5c7150df8336acd0336f4ba7dda184f948688bd4560",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      }
+    },
+    "partialCarrier": {
+      "prepared": {
+        "previousBytes": 82644,
+        "currentBytes": 82646,
+        "previousSha256": "8dd4df899dc500e2d9b7d8c3f702ae8fc1ce84f3532294f4195a822e7c13988a",
+        "currentSha256": "5690a70d87d291c3ec40e042a8d3d4c525c1f92fb2e7c23bc5ac0316ca95b0d5",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      },
+      "events": {
+        "previousBytes": 223300,
+        "currentBytes": 216709,
+        "previousSha256": "fbfb4498b1a76fca2080533317404765ce6accb6693ee2d7b0eb92261c9a7edc",
+        "currentSha256": "819f647c8713af9cc4f05f9db0acf0772d703480d7fa4c300c050bf3e04e4dfd",
+        "byteEqual": false,
+        "firstByteOffset": 1043,
+        "firstDifference": {
+          "path": "$.5.after",
+          "previous": "unit-12",
+          "current": "unit-11"
+        },
+        "firstGameplayDifference": {
+          "path": "$.5.after",
+          "previous": "unit-12",
+          "current": "unit-11"
+        }
+      },
+      "ended": {
+        "previousBytes": 125348,
+        "currentBytes": 125955,
+        "previousSha256": "bd00ebc4b8471c9bcd4550dbd6fc83e73ac5ea85f2fd78e4b2c5edad41d63fb1",
+        "currentSha256": "7adc23e6b50f44e4ca5395fc8f459247008f0602e2abd0a9b92f85ffd0230c4a",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      }
+    },
+    "partialNonCarrier": {
+      "prepared": {
+        "previousBytes": 82644,
+        "currentBytes": 82646,
+        "previousSha256": "dc924321f8d2a9cc62eb9f3ef4d8851c90757d4d8e3a9f9a2ff00181415de0d4",
+        "currentSha256": "ef9833c83110e233759a8bfe2a53f618638e20aa1e0ebfd228daf626eea09d28",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      },
+      "events": {
+        "previousBytes": 139820,
+        "currentBytes": 123606,
+        "previousSha256": "657297e2022de4377f2657b2e0ebd021f86df0a2ef6c14a0a4b57b05503b8f01",
+        "currentSha256": "904bdd9fd0d86abcad2ee236d58243077be536623498cb117ab598f2d9e90026",
+        "byteEqual": false,
+        "firstByteOffset": 861,
+        "firstDifference": {
+          "path": "$.4.to.col",
+          "previous": 4,
+          "current": 5
+        },
+        "firstGameplayDifference": {
+          "path": "$.4.to.col",
+          "previous": 4,
+          "current": 5
+        }
+      },
+      "ended": {
+        "previousBytes": 119995,
+        "currentBytes": 120599,
+        "previousSha256": "d31ce29ea1fd4371abaa1ec35dd65fbf5b84338e5c088f69de7f48d3b9b46350",
+        "currentSha256": "85580ee182a47ff264b096d821a8d7f957343d0f685a692afd24372a36aefcc0",
+        "byteEqual": false,
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.m8.loot.frozen.replayDigest",
+          "previous": "fnv1a32-utf16:b8d9d7ca",
+          "current": "fnv1a32-utf16:65a85ecd"
+        }
+      }
+    }
+  },
+  "recordingCommand": "node scripts/record-g2-1-public-fixtures.cjs --baseline-root=<a159fbb-export> --write"
+}

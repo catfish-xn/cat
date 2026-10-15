@@ -1,6 +1,6 @@
 # G2-1 source reconciliation
 
-Candidate inventory: 33 admitted heroes (14 new), 8 traits (3 new), 8 ordinary components and36 completed items already present at base. Swain remains blocked. This candidate does not satisfy the full requested inventory.
+Candidate inventory: 33 admitted heroes (14 new), 8 traits (3 new), 8 ordinary components and36 completed items already present at base. Dispatch eighth-batch scope accepts this inventory: Swain is deferred to G2-2 pending form evidence; Spatula and emblems are excluded from G2-1/G2-2.
 
 The frozen gzip is the only numerical source; `import-m8-source.py --g2-1` validates the decompressed SHA256 before extraction. `reconciliation.json` includes every raw attribute, all three-star skill coefficients, source trait names, runtime records, JSON pointers and canonical record hashes. Existing item conventions are preserved.
 
@@ -55,7 +55,7 @@ Selected origins share existing KogMaw/Scar/Vander and complete Automata/Firelig
 
 ## Components and completed items
 
-No new recipes were required: base already contains every unordered pair of the eight ordinary components (8×9/2=36). A ninth ordinary component does not exist in the locked source policy. Adding Spatula/Spatula-like emblems requires a scope decision.
+No new recipes were required: base already contains every unordered pair of the eight ordinary components (8×9/2=36). A ninth ordinary component does not exist in the locked source policy. Dispatch explicitly excludes Spatula and emblems from G2-1/G2-2.
 
 | Runtime / API | Recipe | Source effects | Runtime conventions |
 |---|---|---|---|
@@ -106,6 +106,6 @@ No new recipes were required: base already contains every unordered pair of the 
 
 ## Review and evidence
 
-The hidden Amumu cooldown, Illaoi bonus-health drain modifier and unproved form attributes are substantive limitations, not source-equivalence claims. HERO augment variables and Rumble unique-trait upgrades remain captured but inactive. Public icons are not committed; assets-manifest.json records81 downloaded source/hash/size entries (includes blocked Swain). Old content identities are rejected by restore and original historical recordings remain preserved for read-only export.
+The hidden Amumu cooldown, Illaoi bonus-health drain modifier and unproved form attributes are substantive limitations, not source-equivalence claims. HERO augment variables and Rumble unique-trait upgrades remain captured but inactive. All81 icons are committed under public/assets/s13; assets-manifest.json records their source/hash/size (includes the deferred Swain icon only). Old content identities are rejected by restore and original historical recordings remain preserved for read-only export.
 
 Rebuild: `python3 scripts/import-m8-source.py --g2-1 --check`; `python3 scripts/generate-g2-content.py --check`; `node scripts/generate-g2-audit.cjs --check`. Release: `node scripts/record-g2-1-release.cjs` (or `--check`).

@@ -1,3 +1,4 @@
+import currentFingerprints from './fixtures/g2-1-b8-fingerprints.json';
 import { describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
@@ -36,13 +37,9 @@ const invalid = [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1];
 describe('SR-B8-02 resumable pure tasks', () => {
   it.each([0, 1, 9])('pre-change byte fingerprint: %s units per side', count => {
     const battle = resolveTwoSidedBattle(input(count), 1201);
-    // Captured by running the e82afa5 implementations, before the task refactor.
-    const fingerprints: Record<number, readonly string[]> = {
-      0: ['f2ffe4e9f010ead620813e0da4c7245a0d90debe89e5e84cd977253b6d1d7c1a', 'd84878cea067bbfa366ac0e4d46cb96e9dfdd39b191f65bb3315559503a25e7e'],
-      1: ['c9a99265768f73ffcd928a75f18b54b38229ff74b9c6c4af2d699f5a3104a0a3', 'd276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8'],
-      9: ['76432cb53ba5a16ad53225d70db61b474111893d97413fedc8bce49f64b50697', 'abcc86b6bf109fec71b1dd245b4623f606cfb043a4312e3a7bcb0b827e9ccac8'],
-    };
-    expect([sha(battle), sha(toCombatReplay(battle))]).toEqual(fingerprints[count]);
+    // Recompiled in both real engines; byte differences are audited in g2-1/fixture-migration.json.
+    const fingerprints = currentFingerprints;
+    expect([sha(battle), sha(toCombatReplay(battle))]).toEqual(fingerprints[String(count) as keyof typeof fingerprints]);
   });
   it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {

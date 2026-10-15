@@ -3,9 +3,9 @@ import { buyUnit, buyXp, deployMatchUnit, nextRound, rerollShop, sellUnit, start
   type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import type { Unit, UnitLocation } from '../src/simulation/units';
 import { accepted, battle, finish, freeze, readyMatch, emptyBoard, reachRound } from './match-helpers';
-import { cardValue, expectedCommand, type LedgerCommand } from './fixtures/m5/command-oracle.cjs';
+import { cardValue, expectedCommand, type LedgerCommand } from './fixtures/m5/command-oracle.g2.cjs';
 import { generateShop } from '../src/simulation/shop';
-import { COST, shop as expectedShop } from './fixtures/m5/oracle.cjs';
+import { COST, shop as expectedShop } from './fixtures/m5/oracle.g2.cjs';
 
 /** Explicit command-unit fixture: a fixed funded level-3/three-holder input.
  * This preserves the independent command arithmetic vectors, not new-match or B8 acquisition evidence.
@@ -59,7 +59,7 @@ describe('M5 atomic economy and independent ledger', () => {
     expect({ shop: state.shop, rngState: state.rngState }).toEqual(expectedShop(42, 1, 3));
     const next = ledger(state, { type: 'buy', slot: 4, generation: 1 });
     expect(next.gold).toBe(8); expect(next.nextUnitSerial).toBe(5);
-    expect(next.preparation.units.find(u => u.id === 'unit-4')).toEqual(fixtureUnit('unit-4', 'vander', { kind: 'bench', slot: 0 }));
+    expect(next.preparation.units.find(u => u.id === 'unit-4')).toEqual(fixtureUnit('unit-4', 'zeri', { kind: 'bench', slot: 0 }));
     expect(next.rngState).toBe(state.rngState);
   });
   it('fills holes by slot number independently of array order and never reuses a sold ID', () => {
@@ -144,7 +144,7 @@ describe('M5 atomic economy and independent ledger', () => {
     expect([state.level, state.xp, state.gold]).toEqual([4, 2, 2]);
     expect(state.shop).toBe(before.shop); expect(state.rngState).toBe(before.rngState);
     state = ledger(state, { type: 'reroll' });
-    expect(state.shop.slots).toEqual(['loris', 'vander', 'leona', 'zyra', 'scar'].map(definitionId => ({ status: 'available', definitionId })));
+    expect(state.shop.slots).toEqual(['kogmaw', 'vladimir', 'leona', 'zyra', 'scar'].map(definitionId => ({ status: 'available', definitionId })));
     rejects(state, buyXp, 'insufficient-gold');
   });
   it('F preserves a valid old-generation offer and checks max-level before money', () => {

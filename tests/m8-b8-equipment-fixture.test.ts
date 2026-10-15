@@ -51,7 +51,7 @@ describe('B8 public equipment fixture provenance', () => {
     ]);
     expect(state.items.map(item => [item.id, item.definitionId])).toEqual([['item-2','rod'],['item-3','gloves'],['item-5','bow'],['item-8','bloodthirster'],['item-9','bloodthirster']]);
     expect(state.augments.map(augment => augment.definitionId)).toEqual(['investment-strategy-i','bulky-buddies-i']);
-    expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 756]]);
+    expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 716]]);
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));
