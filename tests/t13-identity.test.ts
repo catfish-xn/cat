@@ -10,12 +10,13 @@ import {CONTENT_DIGEST} from '../src/simulation/content';
 import {LOOT_REPLAY_DIGEST} from '../src/simulation/loot-freeze';
 import {M8_VERSION} from '../src/simulation/m8/version';
 import baseline from './p3p4p5-content-baseline.json';
+import currentBaseline from './p7-content-baseline.json';
 import old from './t13-content-baseline.json';
 import live from './g2-1-content-baseline.json';
 import expansionAudit from '../docs/evidence/g2-1/release-audit.json';
 import expansionGolden from './fixtures/m5/full-match-golden.g2-1.json';
 it('G2 advances the combined release and preserves P3/P4/P5 and T13 as export-only baselines',()=>{
- expect(CONTENT_DIGEST).toBe(live.contentDigest);expect(LOOT_REPLAY_DIGEST).toBe(live.lootReplayDigest);
+ expect(CONTENT_DIGEST).toBe(currentBaseline.contentDigest);expect(currentBaseline.previousContentDigest).toBe(live.contentDigest);expect(LOOT_REPLAY_DIGEST).toBe(live.lootReplayDigest);
  expect(live.previousContentDigest).toBe(baseline.contentDigest);expect(live.previousLootReplayDigest).toBe(baseline.lootReplayDigest);
  expect(baseline.previousContentDigest).toBe(old.contentDigest);expect(baseline.previousLootReplayDigest).toBe(old.lootReplayDigest);
  expect(M8_VERSION).toMatchObject({schemaVersion:7,saveFormatVersion:3,replayFormatVersion:3,commandProtocolVersion:3});
@@ -52,7 +53,7 @@ it('pins G2 public-command byte evidence while preserving #90 recording bytes',(
   const prior=JSON.parse(gunzipSync(bytes(`tests/fixtures/p3p4p5-recorded-states/${build}.json.gz`)).toString());expect(()=>restoreMatch(prior.states[0])).toThrow();
  }
  for(const build of ['cannon','sniper','mage','sniper-caitlyn'] as const){
-  expect(expansionGolden.routes[build].versions.contentDigest).toBe(CONTENT_DIGEST);
+  expect(expansionGolden.routes[build].versions.contentDigest).toBe(live.contentDigest);
   expect(expansionAudit.builds[build].firstCommandDifference).not.toBeNull();
   expect(expansionAudit.builds[build].summary.outcome).toBe('victory');
  }

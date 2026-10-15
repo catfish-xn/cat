@@ -1494,13 +1494,13 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 配对规则实现属于服务器 G1；此设计 PR 不触及 simulation、不更新 CONTENT/LOOT_REPLAY digest。G1 对房间 RNG 时序变化须按原脚本重录受影响夹具，不能把文档向量当历史 14.24b 精确还原证据。
 
 
-## 21. P7 共享选秀接线（2026-10-15；合同 PR，规则尚未实现）
+## 21. P7 共享选秀接线（2026-10-15）
 
-数值及来源等级见 [S13_RULES_GAP §11](S13_RULES_GAP.md#11-p7共享选秀合同提案2026-10-15合同先行未实施)，完整拟导出签名、状态和失败枚举见 [MATCH_CONTRACT P7](MATCH_CONTRACT.md#p7-共享选秀规则-api合同提案2026-10-15尚未实现)。后者是规则唯一权威，服务器不自算费用、装备、选取或共享池扣减；以下为窗口 2 可依赖的目标接口，不能声称已上线。
+数值及来源等级见 [S13_RULES_GAP §11](S13_RULES_GAP.md#11-p7共享选秀规则2026-10-15)，完整导出签名、状态和失败枚举见 [MATCH_CONTRACT P7](MATCH_CONTRACT.md#p7-共享选秀规则-api2026-10-15)。后者是规则唯一权威，服务器不自算费用、装备、选取或共享池扣减；以下规则接口已实现并导出，房间/网络接线由 G1 完成。
 
 ### 21.1 阶段、公开投影与命令
 
-新增 room phase `carousel`：1-1 为开局前奏，x-4 替换旧 supply；`roundId` 不重新编号。单局一个权威 CarouselState，使用服务器冻结存活 Match 集合调用 `prepareCarouselParticipants`，再 `createCarousel(pool,roundId,rng)`；共享池和创建收据必须一次发布。在 carousel 期间冻结其他共享池及本席资产写命令，准备/战斗命令返回现有 `wrong-phase`，不另开第二套供给领取路径。
+新增 room phase `carousel`：1-1 为开局前奏，x-4 替换旧 supply；`roundId` 不重新编号。单次选秀一个权威 CarouselState，使用服务器冻结存活 Match 集合调用 `prepareCarouselParticipants`，再 `createCarousel(pool,roundId,rng)`；共享池和创建收据必须一次发布。在 carousel 期间冻结其他共享池及本席资产写命令，准备/战斗命令返回现有 `wrong-phase`，不另开第二套供给领取路径。
 
 新增 `ClientCommand {type:'carousel-pick'; carouselId:string; revision:number; slot:number}`。seatId 取连接凭证，不能取客户端字段。服务器校验 carouselId/revision（不一致 `stale-carousel`）、整数 slot，推进已到期逻辑时间/自动选取，再调用 `pickFromCarousel` 和 `grantCarouselPick` 原子发布；若 grant 失败，**整个 pick 事务回滚**，不留下已占槽但未发布的网络半事务。机器人与离线玩家调用 `autoPickFromCarousel`，不在 server 重写评分算法。失败沿现行 command-result 带规则 reason；身份/协议失败沿现行边界，领域枚举完整转发，不改成泛化 success。
 
@@ -1510,10 +1510,46 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 
 服务器只将 clock 经过值作为 `advanceCarousel(state,elapsedMs)` 的整数单调输入；规则不读取 Date.now。放行计划在创建时冻结，后续不随 HP/重连排序。每个时刻先处理到期放行；deadline 先按冻结 releaseOrder 对所有未选存活席调用自动函数并 grant，再拒绝同刻/迟到人工请求 `carousel-closed`。deadline 前同槽竞争按服务器命令序号先到先得，不使用客户端时间戳；锁席不能提前缓存点击待放行执行。早已放行的未选席继续可选，不被后组挤出。机器人在放行即自动；离线真人在截止兜底；重连仍用原状态和截止时间。
 
-全部选完后规则关闭并返还未选槽，服务器等待 2000ms 离场后进入下一准备期；一次性推进收据防止双刷新/双收入。1-1 → 1-2 不发选秀收入/XP，单位自动部署；x-4 原本自然轮经济/刷新恰一次，旧 supply 不再发。规则逻辑状态与池、所有席 Match、receipt、elapsedMs、deadline 和阶段推进收据一起持久化；恢复安装剩余计时器，不重新 create、pick 或 grant，已过截止则按相同冻结顺序补执行尚未提交者。保存中存在内部 reserved 收据时按同一原子 grant 事务完成，严禁发过的 granted 再发；损坏恢复拒绝，不靠重新随机修补。
+到达固定 deadline 且全部选完后规则关闭并返还未选槽，服务器等待 2000ms 离场后进入下一准备期；一次性推进收据防止双刷新/双收入。1-1 → 1-2 不发选秀收入/XP，单位自动部署；x-4 原本自然轮经济/刷新恰一次，旧 supply 不再发。规则逻辑状态与池、所有席 Match、receipt、elapsedMs、deadline 和阶段推进收据一起持久化；恢复安装剩余计时器，不重新 create、pick 或 grant，已过截止则按相同冻结顺序补执行尚未提交者。保存中存在内部 reserved 收据时按同一原子 grant 事务完成，严禁发过的 granted 再发；损坏恢复拒绝，不靠重新随机修补。
 
 ### 21.3 验收和交付边界
 
 规则实现由 Codex 在合同合入后交付；房间与网络接线由窗口 2 在 src/server 完成。客户端只显示公开槽、锁定/放行、倒计时与本人结果，不自己随机或结算。pendingCarouselUnits 应明确投影给本席，满备战席不能使全房卡住。
 
-必测：同 seed/pool/round 完全相同；9 槽创建、每次 pick/grant/close/淘汰/卖出守恒；同席重选/抢同槽拒绝且无消费；1-1 同时放行与 HP 两席分组、奇数席、平血；每个时间边界及同刻截止；机器人/断线兜底确定性；满备战席队列；断线/恢复与阶段重试不重发；旧 supply 与开局 Irelia 不双发。作者跑全套清零贴通过数、typecheck、test:server-entry。规则/content digest 仅实现发布时更新一次；网络版本由接线方依实际字段变更更新，不能用合同文档修改冒充运行时兼容。此合同 PR 不改任何 golden。
+必测：同 seed/pool/round 完全相同；9 槽创建、每次 pick/grant/close/淘汰/卖出守恒；同席重选/抢同槽拒绝且无消费；含 1-1 的 HP 两席分组、奇数席、平血；每个时间边界及同刻截止；机器人/断线兜底确定性；满备战席队列；断线/恢复与阶段重试不重发；旧 supply 与开局 Irelia 不双发。作者跑全套清零贴通过数、typecheck、test:server-entry。规则/content digest 仅实现发布时更新一次；网络版本由接线方依实际字段变更更新，不能用合同文档修改冒充运行时兼容。此合同 PR 不改任何 golden。
+
+### 21.4 SR-G1-02 逐项答复（方案 B，2026-10-15）
+
+用户明确选择方案 B：**含 1-1 在内都每批 2 人，按 HP 升序、平血 seatIndex 升序；不得提前关闭，截止才自动补选并关闭。** `schedule(roundId)` 对六个合法 ID 均返回 `{firstBatchMs:6000,batchIntervalMs:6000,tailMs:6000}`；首批 t=6000，八席后续 t=12000/18000/24000，deadline=30000；奇数最后一批仅一席，deadline=firstBatchMs+(ceil(alive/2)-1)*batchIntervalMs+tailMs。离场仍 2000ms。此处时序已同步至 §11 正文。
+
+| SR-G1-02 项 | 权威答复/端口 |
+| --- | --- |
+| 1-1 回合行 | **不加 catalog 行，不移动既有 ordinal**。使用 `createCarouselMatch(seed)` 初始化空玩家阵容、0 金币/0 组件/nextUnitSerial=1，再按旧入口 initializeSharedSeat。`carousel.openingPending=true` 表示 1-1 前奏；实际 Match 仍准备 1-2，`opensCarousel(state)` 据前奏标记返回 true。授予后进入现有 1-2，没有额外自然经济或 XP。旧 `createMatch` 为离线与旧测试入口；新联机必须调用新入口，不能先发免费 Irelia 再选秀。 |
+| x-4 补给 | **不保留旧 supply 的组件选择/领取**。共享选秀替换该轮组件，经济和免费商店刷新仍恰一次。规则接入将屏蔽该轮 component schedule choice；服务器不得在选秀之后再走旧补给领取。 |
+| 满备战席 | 单位进入本席 `carousel.pendingUnits`，已扣池并计 holdings；物品照常入栏。队列不参战，不自动卖出。规则入口搬入空位或显式出售；服务器不补造临时第 10 格。 |
+| 池守恒 | `assertSharedPoolConservation(pool, states?)` **无需另传盘面**，pool v3 自带 carouselReservations/Receipts/Rounds；可传 Match 状态额外核对持有与排队单位。create 时扣 available→预留，pick 不二次扣减，grant 转 holdings，关闭只归还剩余未选槽。 |
+| 创建 | `prepareCarouselParticipants(pool, [{seatId,state}])` → pool；再 `createCarousel(pool,roundId,{algorithm:'lcg32-v1',state:rngState})` → `{ok:true,state:CarouselState,events}`。新池=`state.pool`，新房间随机状态=`state.rngAfter.state`；不得额外抽随机数。 |
+| 玩家原子选取 | 核心 `pickFromCarousel(carousel,seatId,slot)` 绑定槽；`grantCarouselPick(carousel,match,seatId)` 发资产。服务器推荐直接 `pickCarouselForSeat(pool,carousel,match,seatId,slot)`，返回 `{ok:true,pool,carousel,state:MatchState,events}`；任一失败整笔原对象返回。 |
+| 自动选取 | 核心 `autoPickFromCarousel(carousel,seatId,match)`；推荐原子 `autoPickCarouselForSeat(pool,carousel,match,seatId,reason)`，reason=`bot/disconnected/timeout`，输出同上，全部调用同一纯评分。 |
+| 公共槽列表 | `listCarouselSlots(carousel)` → `[{slot,definitionId,starLevel:1,items:[itemId],pickedBy}]`，返回独立容器。 |
+| 逻辑时间/关闭 | `advanceCarousel(carousel,elapsedMs)`；全选也保持 open 到 deadline。截止先 advance，再依 releaseOrder 为尚未选席 autoPick+grant；最后一笔补选使盘关闭。全已选时 advance 到 deadline 关闭。人工在截止后由房间拒绝。 |
+| 失败占位替换 | `carousel-slot-taken→slot-taken`，`carousel-already-picked→already-picked`，`carousel-unknown-slot→invalid-slot`，`carousel-not-participant→unknown-seat`，`carousel-closed→carousel-closed`；尚未放行为 `seat-locked`。其余完整枚举见 MATCH P7；不得把领域失败变 success。 |
+
+以上端口在规则实现完成时统一加入 server-entry 白名单；服务端只编排，不在绑定层算费用、选择、概率或池守恒。`restoreCarousel(serialized)` 校验盘/池/收据后返回独立状态，不发奖励、不消费 RNG；Match 资产与它一起恢复，已 granted 的 grant 重试为成功无事件。
+
+
+### 21.5 P7 规则实现补充端口
+
+`CarouselState.initialAvailable` 固定记录创建前的可用数量，恢复据此逐槽重算 27 词的费用/单位/装备；后续淘汰归还不会改变建盘依据。它与当前 pool 一起保存，不能只恢复显示槽。
+
+- `completeCarouselForSeat(carousel,match,seatId)` → `{ok:true,state:CarouselState,match,events}`，或 `{ok:false,state,match,reason,events:[]}`。仅 fixed deadline 关闭后接受；1-1 不发收入，x-4 执行既有 supply 的自然经济结算一次并进入 settlement。下一轮使用原 nextSharedRound；服务器不得自己发收入。状态改变同步更新 pool/seat revision，必须发布返回的盘和 Match。
+- `resolvePendingCarouselUnits(pool,match)` → SharedPoolResult：准备期依 receiptId 将排队单位搬入合法空位，或调用现有合成规则合并；已拥有单位不另记出生、不推进单位序列。返回 pool/state/events 必须同事务发布。服务器在进入 preparation 及腾出空位后调用；其他阶段不自动清空队列。
+- `sellPendingCarouselUnit(pool,match,unitId)` → SharedPoolResult：准备期显式出售队列单位，按现有 1 星售价发金、池归还一次，组件/成装已在物品栏，保留。普通阵容单位仍走 sellSharedUnit。
+- `releaseCarouselSeat(carousel,seatId)` → CarouselResult：只释放当前盘未授予的预留，不用于已经发到 Match 的资产。淘汰使用原子 `releaseCarouselParticipant(carousel,match,seatId)` → `{ok:true,state:CarouselState,match,events}` 或同原输入失败；要求权威 Match 已标 eliminated/HP=0，组合池淘汰释放和盘收据，重复为成功零事件。存在活动盘时，不得绕过它直接释放该参与席。
+- `listCarouselSlots` 各项和 `toPrivateSeatView.pendingCarouselUnits` 均为新容器；公开槽不带池、随机流或其他席备战席。后者仅在已启用 P7 的本席视图出现。
+
+新联机初始化顺序：八席 createCarouselMatch → initializeSharedSeat（空阵容，不扣免费 Irelia）→ prepareCarouselParticipants → createCarousel(1-1) → 分批 pick/grant → deadline 关闭 → generateSharedShop/refreshSharedShops → 1-2 准备。禁止在首轮选秀之前生成初始商店（否则 naturalRound 已前进，create 返回 invalid-round）。
+
+恢复调用：先 `restoreCarousel(serializedCarousel)`，再逐席 `restoreCarouselSeat(carousel,serializedMatch)`，全部成功后原子安装；不在恢复路径发奖。该席位端口是可信服务器持久化的 P7 资产一致性检查，其他房间/经济/战斗恢复边界沿原有实现；不接收客户端上传 Match。
+
+网络命令允许 G1 按 SR-G1-02 使用 `{type:'carouselPick',slot}`，carouselId/revision 由既有服务器命令信封校验；不要求将此服务器编排命令加进普通 `ClientCommand`。§21.1 的 `carousel-pick` 为旧提案命名，以本行和 G1 实际协议为准。公开槽投影使用 `listCarouselSlots` 的 starLevel/items，不能发送原始 CarouselState。

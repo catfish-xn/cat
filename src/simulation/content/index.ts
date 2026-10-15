@@ -1,3 +1,4 @@
+import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../carousel-policy';
 import { RULES_GAP_MANIFEST } from './rules-manifest';
 import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../operation-policy';
 import { M8_VERSION } from '../m8/version';
@@ -129,6 +130,7 @@ import { ORB_RULES, ORB_SLOTS } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
 export const CONTENT_DIGEST = digestContent({
   rulesManifest: RULES_GAP_MANIFEST,
+  carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},
   // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.
   versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},
   orbs:{rules:ORB_RULES,slots:ORB_SLOTS},

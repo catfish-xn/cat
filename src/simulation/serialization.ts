@@ -74,7 +74,7 @@ export function restoreMatch(input: unknown): MatchState {
   const same = typeof input === 'string' ? equalValidatedContent
     : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   record(raw);
-  requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool'), 'multiplayer-state');
+  requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
   requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
