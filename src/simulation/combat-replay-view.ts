@@ -1,3 +1,4 @@
+import { freezeCombatDeclarations } from './combat-static';
 import type { CombatState, CombatUnit, LedgerCombatEvent } from './combat-types';
 import { stepCombat } from './combat';
 import { toLedgerEvents } from './combat-ledger';
@@ -78,6 +79,7 @@ export interface CombatReplayTask {
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   const battle = structuredClone(input);
+  battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
     || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
   const initial = toCombatViewState(battle.initial), terminal = toCombatViewState(battle.terminal);

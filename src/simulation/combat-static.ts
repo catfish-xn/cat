@@ -1,4 +1,4 @@
-import { isImmutableJson, shareGeneratedJson, shareParsedJson } from './immutable-json';
+import { isImmutableJson, shareGeneratedDeclaration, shareParsedDeclaration } from './immutable-json';
 import type { CombatUnit } from './combat-types';
 
 const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', 'companionDefinitions', 'attackCone'] as const;
@@ -6,7 +6,7 @@ const fields = ['ability', 'sources', 'triggers', 'mechanics', 'itemPrograms', '
 export function freezeCombatDeclarations(unit: CombatUnit, parsed = false): CombatUnit {
   for (const key of fields) {
     const value = unit[key];
-    if (value && typeof value === 'object') Object.assign(unit, { [key]: parsed ? shareParsedJson(value) : shareGeneratedJson(value) });
+    if (value && typeof value === 'object') Object.assign(unit, { [key]: parsed ? shareParsedDeclaration(value) : shareGeneratedDeclaration(value) });
   }
   return unit;
 }

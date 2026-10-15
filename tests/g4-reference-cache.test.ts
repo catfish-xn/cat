@@ -1,4 +1,4 @@
-import { shareGeneratedJson } from '../src/simulation/immutable-json';
+import { isImmutableJson, shareGeneratedJson } from '../src/simulation/immutable-json';
 import { describe, expect, it } from 'vitest';
 import { canonicalContent, equalValidatedContent } from '../src/simulation/content';
 import { freezeLootThroughRound, restoreFrozenLootLedger } from '../src/simulation/loot-freeze';
@@ -53,4 +53,17 @@ describe('G4 deterministic reference cache boundaries', () => {
     for (const left of values) for (const right of values)
       expect(equalValidatedContent(left, right)).toBe(canonicalContent(left) === canonicalContent(right));
   });
+});
+
+it('admits detached deep-frozen checkpoints without freezing shallow children or executing getters', () => {
+  const child = { hp: 1 }, shallow = Object.freeze({ child });
+  expect(isImmutableJson(shallow)).toBe(false);
+  child.hp++; expect(child.hp).toBe(2); expect(Object.isFrozen(child)).toBe(false);
+  const checkpoint = Object.freeze({ child: Object.freeze({ hp: 2 }) });
+  expect(isImmutableJson(checkpoint)).toBe(true);
+  let reads = 0;
+  const accessor = Object.freeze({ get child() { reads++; return checkpoint.child; } });
+  expect(isImmutableJson(accessor)).toBe(false); expect(reads).toBe(0);
+  const unusual = Object.freeze(Object.setPrototypeOf([1], { toJSON: () => 'changed' }));
+  expect(isImmutableJson(unusual)).toBe(false);
 });
