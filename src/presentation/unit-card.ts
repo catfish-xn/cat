@@ -7,6 +7,7 @@ import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { getUnitStats } from '../simulation/unit-stats';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { abilityText } from './ability-text';
+import type { RankTotals, UnitBattleStats } from './battle-ranking';
 import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from './hero-identity';
 import { attachHoverCards, unitHoverCard } from './hover-card';
 import { heroPortraitHtml } from './s13-assets';
@@ -24,8 +25,32 @@ export function unitTraitLabels(definitionId: string): { name: string; open: boo
   return (UNIT_DEFINITIONS[definitionId]?.traits ?? []).map(id => ({ name: TRAIT_DEFINITIONS[id]?.name ?? id, open: Object.hasOwn(TRAIT_DEFINITIONS, id) }));
 }
 
-/** Card body for a unit definition at a star level; `null` when the definition is unknown to the content. */
-export function unitCardBody(definitionId: string, starLevel: number): HTMLElement | null {
+/** Cache key part of a battle stats line: equal stats draw the same card. */
+export function unitBattleStatsKey(stats: UnitBattleStats | null | undefined): string {
+  const part = (row: RankTotals | null) => row ? `${row.damageDealt}/${row.damageTaken}/${row.healingDone}/${row.healingReceived}` : '-';
+  return stats && (stats.battle || stats.match) ? `${part(stats.battle)}|${part(stats.match)}` : '';
+}
+/**
+ * G5: one line of the unit's damage / damage taken / healing done in my last battle (本场) and its kind's match total
+ * (累计), the ranking panel's own numbers (battle-ranking `unitBattleStats`); healing received is in the line's title.
+ */
+function battleLine(stats: UnitBattleStats): HTMLElement {
+  const line = el('p', '', 'unit-card-battle'); line.dataset.debug = 'unit-card:battle';
+  const part = (label: string, row: RankTotals | null) => row ? `${label} ${row.damageDealt}/${row.damageTaken}/${row.healingDone}` : `${label} —`;
+  line.append(el('span', '伤害/承伤/治疗', 'unit-card-label'), el('span', ` ${part('本场', stats.battle)} · ${part('累计', stats.match)}`));
+  line.title = [stats.battle && `本场受治疗 ${stats.battle.healingReceived} · 击杀 ${stats.battle.kills}`,
+    stats.match && `累计 ${stats.match.battles} 场 · 受治疗 ${stats.match.healingReceived} · 击杀 ${stats.match.kills}`].filter(Boolean).join('\n');
+  for (const [key, row] of [['battle', stats.battle], ['match', stats.match]] as const) {
+    if (row) Object.assign(line.dataset, { [`${key}Dealt`]: String(row.damageDealt), [`${key}Taken`]: String(row.damageTaken), [`${key}Healed`]: String(row.healingDone), [`${key}Received`]: String(row.healingReceived) });
+  }
+  return line;
+}
+
+/**
+ * Card body for a unit definition at a star level; `null` when the definition is unknown to the content. `battle` (online)
+ * adds the G5 battle stats line when the unit or its kind has fought this match.
+ */
+export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null): HTMLElement | null {
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
   if (!definition) return null;
   const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
@@ -56,6 +81,7 @@ export function unitCardBody(definitionId: string, starLevel: number): HTMLEleme
     grid.append(el('dt', label), el('dd', String(value)));
   }
   body.append(grid);
+  if (battle && (battle.battle || battle.match)) body.append(battleLine(battle));
   return body;
 }
 
