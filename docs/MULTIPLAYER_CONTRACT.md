@@ -1480,3 +1480,15 @@ toCombatReplay(input: CombatReplayInput): CombatReplay
 `rulesVersion=s13-rules-gap-v2`、`contentVersion=s13-14.24b-rules-gap-v2`。共享 manifest 同批含扣血、经验政策、宝珠权重执行政策；最终摘要由 canonical 生成，见 `tests/p3p4p5-content-baseline.json`。schema7/save3/replay3/command3 与 NET_PROTOCOL 2 保持，未增加序列化或网络字段。
 
 P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/20/36/48/76，最高 9 级。P5-A：球数与品质表保持项目批准值，`s13-orbs-project-v2` / `frozen-cumulative-weights-v1` 从 ORB_RULES 的 openingWeights=[50,50]、equipmentWeights=[90,9,1] 按顺序累计选取，drawIndex 以权重总和无偏拒绝采样；不宣称完整历史掉落表还原。载体顺序、载荷、RNG 流与结构不变。旧 digest 只读保全/导出，拒绝续玩、不迁移重抽。联机完整 Match 仍拒绝 restore，沿既有冻结 BattleInput 恢复重演与服务器账本提交，不承诺新增恢复入口。
+
+
+## 20. P6 配对候选交接合同（2026-10-15；服务器实现由 G1 交付）
+
+来源、历史 U 与项目 P 的区分及向量见 [S13_RULES_GAP §10](S13_RULES_GAP.md#10-p6准备期可能的对手与开战配对2026-10-15)。本节定义新增投影契约；没有在本文 PR 中实现或改变网络版本。G1 按协议现有兼容规则决定 NET_PROTOCOL_VERSION 并记录依据。
+
+- `opponentCandidates: string[]`：每次投影独立复制；稳定代码点升序、去重，仅存活席位、不含自己。PvP 准备期为 §10 的全局可行级别下本席候选保守集合；PvE/淘汰/终局为 `[]`。准备期 `opponentSeatId: null`，不得泄漏预抽的唯一对手。
+- 推荐项目 policy 为 `{ avoidRecentRounds: 2, fallbackOrder: [2, 1, 0] }`。按最近 PvP 历史过滤；非空但全房无法配对时也必须全局放宽，普通配对双向受约束，奇数镜像只检查接收方候选。冻结前先公布任何放宽结果，保证开战的 opponentSeatId 属于最后公布候选。候选不是概率表，也不承诺候选中的每条边均可独立选取。
+- 开战后 `opponentSeatId` 为真实对手或镜像 sourceSeatId，`opponentCandidates=[]`，镜像沿既有标记区分。每轮配对和 battleSeeds 只在准备截止后的冻结边界抽取一次；恢复复用冻结值。历史在全轮唯一提交后各席追加一次；镜像仅给接收方记源，源方不因借镜像多记一轮。PvE 不记，跨 stage 保留，淘汰不重置。
+- 重连准备期按同份 alive/history/policy 重建相同候选，读取投影不推进 RNG。仅向客户端公开候选与已冻结的对手，不发送其他席的私有历史或随机状态。
+
+配对规则实现属于服务器 G1；此设计 PR 不触及 simulation、不更新 CONTENT/LOOT_REPLAY digest。G1 对房间 RNG 时序变化须按原脚本重录受影响夹具，不能把文档向量当历史 14.24b 精确还原证据。
