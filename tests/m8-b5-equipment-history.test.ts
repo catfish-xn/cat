@@ -110,19 +110,25 @@ describe('B5 audit R1: equipment roll level belongs to its round history', () =>
     Object.assign(raw.roundResults[getCatalogRoundById('2-1').ordinal-1], { levelAfter: 4 });
     expect(() => restoreMatch(raw)).toThrow(/history XP/);
   });
-  it('rejects the forged historical level through full save-envelope validation without changing archived battles', async () => {
-    const history = archiveHistory, state = archivedState;
-    const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3,
-      runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: state, battles: history.completedRecords, currentBattle: null };
-    expect(envelope.battles.map(battle => battle.context.roundDefinitionId))
-      .toEqual(['1-2', '1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-5', '3-6', '3-7', '4-1', '4-2', '4-3']);
-    expect(envelope.battles.slice(0, 3).every(battle => battle.endTick > 0 && battle.events.length > 0)).toBe(true);
-    await expect(validateEnvelope(envelope, validateBattleCollection)).resolves.toEqual(envelope);
-    expect(envelope.battles.find(b=>b.context.roundDefinitionId==='3-5')!.context.equipmentState.rolls[0].playerLevelSnapshot).toBe(5);
-    const raw = structuredClone(envelope);
-    Object.assign(raw.match.equipmentState.rolls[0], { playerLevelSnapshot: 7, children: ['bramble-vest', 'adaptive-helm'] });
-    const before = JSON.stringify(raw);
-    await expect(validateEnvelope(raw, validateBattleCollection)).rejects.toThrow(/equipment.*level/);
-    expect(JSON.stringify(raw)).toBe(before);
+  describe('archived save envelope', () => {
+    let envelope: SaveEnvelope;
+    beforeAll(async () => {
+      envelope = { kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3,
+        runId: 'b5-r1', createdAt: '2026-10-09T00:00:00.000Z', match: archivedState,
+        battles: archiveHistory.completedRecords, currentBattle: null };
+      // Fully validate the shared control before exercising the forged copy.
+      await expect(validateEnvelope(envelope, validateBattleCollection)).resolves.toEqual(envelope);
+    });
+    it('rejects the forged historical level through full save-envelope validation without changing archived battles', async () => {
+      expect(envelope.battles.map(battle => battle.context.roundDefinitionId))
+        .toEqual(['1-2', '1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-5', '3-6', '3-7', '4-1', '4-2', '4-3']);
+      expect(envelope.battles.slice(0, 3).every(battle => battle.endTick > 0 && battle.events.length > 0)).toBe(true);
+      expect(envelope.battles.find(b=>b.context.roundDefinitionId==='3-5')!.context.equipmentState.rolls[0].playerLevelSnapshot).toBe(5);
+      const raw = structuredClone(envelope);
+      Object.assign(raw.match.equipmentState.rolls[0], { playerLevelSnapshot: 7, children: ['bramble-vest', 'adaptive-helm'] });
+      const before = JSON.stringify(raw);
+      await expect(validateEnvelope(raw, validateBattleCollection)).rejects.toThrow(/equipment.*level/);
+      expect(JSON.stringify(raw)).toBe(before);
+    });
   });
 });

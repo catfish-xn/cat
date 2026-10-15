@@ -61,7 +61,19 @@ describe('SR-B8-02 resumable pure tasks', () => {
       1: ['c9a99265768f73ffcd928a75f18b54b38229ff74b9c6c4af2d699f5a3104a0a3', 'd276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8'],
       9: ['76432cb53ba5a16ad53225d70db61b474111893d97413fedc8bce49f64b50697', 'abcc86b6bf109fec71b1dd245b4623f606cfb043a4312e3a7bcb0b827e9ccac8'],
     };
-    deepStrictEqual([sha(battle), sha(toCombatReplay(battle))], fingerprints[count]);
+    const replay = toCombatReplay(battle);
+    // G5 adds only heal.shares. Retain the original byte anchor for every prior field,
+    // and independently check every newly exposed share against the complete ledger.
+    const legacyReplay = { ...replay, ticks: replay.ticks.map(frame => ({ ...frame,
+      events: frame.events.map(event => {
+        if (event.type !== 'heal') return event;
+        const { shares: _shares, ...legacy } = event; return legacy;
+      }) })) };
+    deepStrictEqual([sha(battle), sha(legacyReplay)], fingerprints[count]);
+    deepStrictEqual(replay.ticks.flatMap(frame => frame.events).filter(event => event.type === 'heal')
+      .map(event => ({ eventSeq: event.eventSeq, shares: event.shares })),
+    battle.events.filter(event => event.type === 'heal').map(event => ({ eventSeq: event.eventSeq,
+      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) })));
   }); }
   if (mode === 'fast') { it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {
