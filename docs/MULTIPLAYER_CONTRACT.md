@@ -1492,3 +1492,28 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 - 重连准备期按同份 alive/history/policy 重建相同候选，读取投影不推进 RNG。仅向客户端公开候选与已冻结的对手，不发送其他席的私有历史或随机状态。
 
 配对规则实现属于服务器 G1；此设计 PR 不触及 simulation、不更新 CONTENT/LOOT_REPLAY digest。G1 对房间 RNG 时序变化须按原脚本重录受影响夹具，不能把文档向量当历史 14.24b 精确还原证据。
+
+
+## 21. P7 共享选秀接线（2026-10-15；合同 PR，规则尚未实现）
+
+数值及来源等级见 [S13_RULES_GAP §11](S13_RULES_GAP.md#11-p7共享选秀合同提案2026-10-15合同先行未实施)，完整拟导出签名、状态和失败枚举见 [MATCH_CONTRACT P7](MATCH_CONTRACT.md#p7-共享选秀规则-api合同提案2026-10-15尚未实现)。后者是规则唯一权威，服务器不自算费用、装备、选取或共享池扣减；以下为窗口 2 可依赖的目标接口，不能声称已上线。
+
+### 21.1 阶段、公开投影与命令
+
+新增 room phase `carousel`：1-1 为开局前奏，x-4 替换旧 supply；`roundId` 不重新编号。单局一个权威 CarouselState，使用服务器冻结存活 Match 集合调用 `prepareCarouselParticipants`，再 `createCarousel(pool,roundId,rng)`；共享池和创建收据必须一次发布。在 carousel 期间冻结其他共享池及本席资产写命令，准备/战斗命令返回现有 `wrong-phase`，不另开第二套供给领取路径。
+
+新增 `ClientCommand {type:'carousel-pick'; carouselId:string; revision:number; slot:number}`。seatId 取连接凭证，不能取客户端字段。服务器校验 carouselId/revision（不一致 `stale-carousel`）、整数 slot，推进已到期逻辑时间/自动选取，再调用 `pickFromCarousel` 和 `grantCarouselPick` 原子发布；若 grant 失败，**整个 pick 事务回滚**，不留下已占槽但未发布的网络半事务。机器人与离线玩家调用 `autoPickFromCarousel`，不在 server 重写评分算法。失败沿现行 command-result 带规则 reason；身份/协议失败沿现行边界，领域枚举完整转发，不改成泛化 success。
+
+公共 `carousel` 投影为 null 或 `{id,roundId,revision,status,slots:[{slot,definitionId,itemId,pickedBy}],releaseOrder,releaseAtMs,elapsedMs,deadlineMs}`；所有席看到同一槽与放行计划，本席额外 `{eligible,pickedSlot,receiptId,pendingCarouselUnits}`。不发送 pool.available、其他席私有资产、RNG、完整收据或种子。公开 HP 本已公开，不能用 carousel 投影扩大私有权限。字段由规则状态派生，每次投影独立复制，不能因 UI 拉取而消耗 RNG 或触发自动选取。
+
+### 21.2 权威时钟、同时动作与恢复
+
+服务器只将 clock 经过值作为 `advanceCarousel(state,elapsedMs)` 的整数单调输入；规则不读取 Date.now。放行计划在创建时冻结，后续不随 HP/重连排序。每个时刻先处理到期放行；deadline 先按冻结 releaseOrder 对所有未选存活席调用自动函数并 grant，再拒绝同刻/迟到人工请求 `carousel-closed`。deadline 前同槽竞争按服务器命令序号先到先得，不使用客户端时间戳；锁席不能提前缓存点击待放行执行。早已放行的未选席继续可选，不被后组挤出。机器人在放行即自动；离线真人在截止兜底；重连仍用原状态和截止时间。
+
+全部选完后规则关闭并返还未选槽，服务器等待 2000ms 离场后进入下一准备期；一次性推进收据防止双刷新/双收入。1-1 → 1-2 不发选秀收入/XP，单位自动部署；x-4 原本自然轮经济/刷新恰一次，旧 supply 不再发。规则逻辑状态与池、所有席 Match、receipt、elapsedMs、deadline 和阶段推进收据一起持久化；恢复安装剩余计时器，不重新 create、pick 或 grant，已过截止则按相同冻结顺序补执行尚未提交者。保存中存在内部 reserved 收据时按同一原子 grant 事务完成，严禁发过的 granted 再发；损坏恢复拒绝，不靠重新随机修补。
+
+### 21.3 验收和交付边界
+
+规则实现由 Codex 在合同合入后交付；房间与网络接线由窗口 2 在 src/server 完成。客户端只显示公开槽、锁定/放行、倒计时与本人结果，不自己随机或结算。pendingCarouselUnits 应明确投影给本席，满备战席不能使全房卡住。
+
+必测：同 seed/pool/round 完全相同；9 槽创建、每次 pick/grant/close/淘汰/卖出守恒；同席重选/抢同槽拒绝且无消费；1-1 同时放行与 HP 两席分组、奇数席、平血；每个时间边界及同刻截止；机器人/断线兜底确定性；满备战席队列；断线/恢复与阶段重试不重发；旧 supply 与开局 Irelia 不双发。作者跑全套清零贴通过数、typecheck、test:server-entry。规则/content digest 仅实现发布时更新一次；网络版本由接线方依实际字段变更更新，不能用合同文档修改冒充运行时兼容。此合同 PR 不改任何 golden。
