@@ -1,3 +1,4 @@
+import { shareGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound } from './orb-layout';
 import { FINAL_ROUND } from './round-schedule';
 import { prepareMatchLoot } from './loot-runtime';
@@ -38,9 +39,10 @@ const reasonOf=(error:unknown):SharedPoolFailure=>error instanceof PoolError?err
 const stamp=(state:MatchState):{state:MatchState;events:readonly MatchEvent[]}=>({state,events:[]});
 function finish(pool:PoolDraft,state:MatchState,bumpPool=true):MatchState {
   const seatId=state.sharedPool!.seatId,seat=pool.seats.find(s=>s.seatId===seatId)!;
+  const shop=shareGeneratedJson(state.shop);
   const revision=seat.revision+1;requirePool(safe(revision)&&safe(pool.revision+1));
-  pool.seats=pool.seats.map(s=>s===seat?{...seat,revision,shop:state.shop}:s);if(bumpPool) pool.revision++;
-  return {...state,sharedPool:{poolId:pool.poolId,seatId,revision}};
+  pool.seats=pool.seats.map(s=>s===seat?{...seat,revision,shop}:s);if(bumpPool) pool.revision++;
+  return {...state,shop,sharedPool:{poolId:pool.poolId,seatId,revision}};
 }
 function active(pool:SharedPoolState,state:MatchState):void {
   assertSharedPoolConservation(pool,[state]);

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test": "vitest run",
+    "test": "vitest run --project fast",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && vite build",
     "build:server": "node scripts/build-server.cjs",
@@ -22,7 +22,8 @@
     "test:input:preview": "node scripts/verify-m5-input.cjs --preview",
     "test:retention": "node scripts/verify-m6-retention.cjs",
     "test:compare": "node scripts/compare-m5-evidence.cjs",
-    "test:performance": "node scripts/verify-m5-headless.cjs --repeat=3"
+    "test:performance": "node scripts/verify-m5-headless.cjs --repeat=3",
+    "test:timing": "vitest run --project timing --no-file-parallelism"
   },
   "dependencies": {
     "phaser": "^3.90.0",

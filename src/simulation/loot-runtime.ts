@@ -1,3 +1,4 @@
+import { shareGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound, type LootInitialization, type OrbLayoutLedger, type LootLayoutBinding } from './orb-layout';
 import { LOOT_POLICY_VERSION } from './content/loot';
 import type { CombatState } from './combat-types';
@@ -18,7 +19,7 @@ import { planUnitAcquisition } from './unit-acquisition';
 
 const counterKey = (roundId: string) => JSON.stringify([LOOT_POLICY_VERSION, roundId, 'components-granted']);
 const currentPlan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId);
-const withLoot = (state: MatchState, loot: MatchLootState): MatchState => ({ ...state, m8: { ...state.m8, loot } });
+const withLoot = (state: MatchState, loot: MatchLootState): MatchState => ({ ...state, m8: shareGeneratedJson({ ...state.m8, loot }) });
 
 /** Preparation owns the sole frozen plan and RNG; runtime progress only references its IDs. */
 export function prepareMatchLoot(seed: number, round: number, previous?: MatchLootState, layout?:OrbLayoutLedger, initialization?:LootInitialization): MatchLootState {

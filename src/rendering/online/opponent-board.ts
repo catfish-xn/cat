@@ -12,19 +12,30 @@ import { deriveTraits } from '../../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS, type Unit } from '../../simulation/units';
 import { getHeroIdentity, heroEmblemSvg } from '../../presentation/hero-identity';
 import { itemMarkHtml } from '../../presentation/item-codex';
-import { heroPortraitHtml, s13IconHtml } from '../../presentation/s13-assets';
+import { heroPortraitHtml } from '../../presentation/s13-assets';
+import { attachItemPopover } from '../../presentation/item-codex';
+import { traitHoverCard } from '../../presentation/hover-card';
+import { attachUnitCards } from '../../presentation/unit-card';
+import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
 import type { PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
 
-/** Traits a public board activates; deriveTraits only reads definition ids and board locations. */
-export function publicTraits(board: PublicBoard, layout: Board): { traitId: string; name: string; count: number; tier: number }[] {
-  const preparation: GameState = { board: layout, benchSize: 0, units: board.units.map((unit, index) => ({
+/** The public board as a preparation state for the rules' trait selector (definition ids and board cells only). */
+function publicPreparation(board: PublicBoard, layout: Board): GameState {
+  return { board: layout, benchSize: 0, units: board.units.map((unit, index) => ({
     id: `public-${index}`, definitionId: unit.definitionId, team: 'player', starLevel: unit.starLevel as Unit['starLevel'], location: { kind: 'board', cell: unit.cell },
   })) };
-  return deriveTraits(preparation, 'player').filter(trait => trait.count > 0)
+}
+/** G2: the trait column rows of a public board (same rows and order as my own column). */
+export function publicTraitRows(board: PublicBoard, layout: Board): TraitRow[] {
+  try { return traitRows(deriveTraits(publicPreparation(board, layout), 'player')); } catch { return []; }
+}
+/** Traits a public board activates; deriveTraits only reads definition ids and board locations. */
+export function publicTraits(board: PublicBoard, layout: Board): { traitId: string; name: string; count: number; tier: number }[] {
+  return deriveTraits(publicPreparation(board, layout), 'player').filter(trait => trait.count > 0)
     .map(trait => ({ traitId: trait.traitId, name: TRAIT_DEFINITIONS[trait.traitId]?.name ?? trait.traitId, count: trait.count, tier: trait.tier }))
     .sort((a, b) => b.tier - a.tier || b.count - a.count || a.name.localeCompare(b.name, 'zh'));
 }
@@ -42,11 +53,16 @@ export function avatarUnit(board: PublicBoard | undefined): PublicBoardUnit | nu
 export class OpponentBoardPanel {
   readonly root: HTMLElement;
   private seatId: string | null = null;
+  private rows: readonly TraitRow[] = [];
+  private readonly detach: (() => void)[] = [];
   constructor(host: HTMLElement, private readonly layout: () => Board, private readonly onClose: () => void) {
     this.root = element('section', '', 'opponent-board'); this.root.id = 'opponent-board'; this.root.hidden = true;
     this.root.dataset.debug = 'online:opponent-board'; this.root.setAttribute('role', 'dialog'); this.root.setAttribute('aria-label', '对方阵容');
     host.append(this.root);
     document.addEventListener('keydown', this.onKey);
+    // G2: the same trait, unit and item descriptions as on my own side; read-only.
+    this.detach.push(attachTraitCards(this.root, traitHoverCard(), traitId => this.rows.find(row => row.traitId === traitId)?.members ?? []),
+      attachUnitCards(this.root), attachItemPopover(this.root, 'item-popover-scout'));
   }
   get openSeatId(): string | null { return this.seatId; }
   /** Opens this seat, or closes the panel when it is already showing it. */
@@ -65,7 +81,7 @@ export class OpponentBoardPanel {
     if (this.seatId === null) return;
     this.seatId = null; this.root.hidden = true; this.root.replaceChildren(); this.onClose();
   }
-  dispose(): void { document.removeEventListener('keydown', this.onKey); this.root.remove(); }
+  dispose(): void { document.removeEventListener('keydown', this.onKey); this.detach.forEach(dispose => dispose()); this.root.remove(); }
   private onKey = (event: KeyboardEvent) => { if (event.key === 'Escape' && this.seatId !== null) { event.stopPropagation(); this.close(); } };
 
   private render(seat: SeatPublic, mine: boolean): void {
@@ -93,14 +109,11 @@ export class OpponentBoardPanel {
       }
       grid.append(line);
     }
-    const traits = element('ul', '', 'opponent-traits'); traits.dataset.debug = 'online:opponent-traits';
-    for (const trait of publicTraits(board, layout)) {
-      const item = element('li', '', `opponent-trait${trait.tier > 0 ? ' active' : ''}`); item.dataset.trait = trait.traitId;
-      item.insertAdjacentHTML('afterbegin', s13IconHtml('trait', trait.traitId, 16, 'trait-icon'));
-      item.append(element('span', `${trait.name} ${trait.count}`));
-      traits.append(item);
-    }
-    if (!traits.childElementCount) traits.append(element('li', board.units.length ? '无羁绊' : '场上暂无单位', 'opponent-trait empty'));
+    // G2: the opponent's trait column, same rows, breakpoints and hover as mine.
+    this.rows = publicTraitRows(board, layout);
+    const traits = renderTraitRows(this.rows, 'online:opponent-traits', board.units.length ? '无羁绊' : '场上暂无单位');
+    traits.classList.add('opponent-traits');
+    for (const row of Array.from(traits.children)) row.classList.add('opponent-trait');
     traits.title = '只读 · 仅显示场上单位与装备（不含备战席、商店、金币）';
     this.root.replaceChildren(head, grid, traits);
   }
@@ -109,12 +122,15 @@ export class OpponentBoardPanel {
     const chip = element('div', '', `opponent-unit cost-${UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0}`);
     chip.dataset.debug = `online:opponent-unit:${unit.cell.col},${unit.cell.row}`;
     chip.dataset.definition = unit.definitionId; chip.dataset.star = String(unit.starLevel);
+    chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(unit.starLevel);
     chip.title = `${identity.name} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => ITEM_DEFINITIONS[id]?.name ?? id).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
     chip.append(element('span', '★'.repeat(unit.starLevel), `opponent-stars star-${unit.starLevel}`), portrait);
     if (unit.items.length) {
       const items = element('span', '', 'opponent-items');
-      for (const id of unit.items) items.insertAdjacentHTML('beforeend', itemMarkHtml(id, 13));
+      for (const id of unit.items) {
+        const mark = element('span', '', 'opponent-item'); mark.dataset.itemDef = id; mark.insertAdjacentHTML('afterbegin', itemMarkHtml(id, 13)); items.append(mark);
+      }
       chip.append(items);
     }
     return chip;

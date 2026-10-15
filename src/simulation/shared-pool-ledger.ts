@@ -1,3 +1,4 @@
+import { isImmutableJson } from './immutable-json';
 import { restoreOrbLayout } from './orb-layout';
 import { matchesFrozenLootLedger } from './loot-freeze';
 import { canonicalContent } from './content';
@@ -49,6 +50,16 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     requirePool(Object.hasOwn(pool.initial,id)&&Object.hasOwn(pool.available,id)&&safe(pool.initial[id])&&pool.initial[id]<=POOL_CAPACITY_BY_COST[UNIT_DEFINITIONS[id].cost]&&safe(pool.available[id]));
     totals[id]=pool.available[id];
   }
+  // Index once per validation; never cache mutable caller-owned pool/state data.
+  const reservations = new Map<string, Map<number, ShopReservation[]>>();
+  for (const reservation of pool.shops) {
+    let slots = reservations.get(reservation.seatId);
+    if (!slots) { slots = new Map(); reservations.set(reservation.seatId, slots); }
+    const group = slots.get(reservation.slot);
+    if (group) group.push(reservation); else slots.set(reservation.slot, [reservation]);
+  }
+  const seats = new Map(pool.seats.map(seat => [seat.seatId, seat]));
+  const pendingRewards = new Set(pool.pending.map(rewardSource));
   const seatIds=new Set<string>(),indices=new Set<number>();
   requirePool(pool.seats.length<=pool.seatCount);
   for(const seat of pool.seats) {
@@ -58,8 +69,8 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     requirePool(seat.shop.slots.length===MATCH_RULES.shopSize);
     for(const [slot,offer] of seat.shop.slots.entries()) {
       requirePool(['available','purchased'].includes(offer.status));
-      const reserved=pool.shops.filter(r=>r.seatId===seat.seatId&&r.generation===seat.shop.generation&&r.slot===slot);
-      requirePool(offer.status==='available'?reserved.length===1&&reserved[0].definitionId===offer.definitionId:reserved.length===0);
+      const reserved=(reservations.get(seat.seatId)?.get(slot) ?? []);
+      requirePool(offer.status==='available'?reserved.length===1&&reserved[0].generation===seat.shop.generation&&reserved[0].definitionId===offer.definitionId:reserved.length===0);
     }
     if(seat.released) requirePool(!pool.holdings.some(h=>h.seatId===seat.seatId)&&!pool.pending.some(p=>p.seatId===seat.seatId)&&!pool.shops.some(r=>r.seatId===seat.seatId));
   }
@@ -71,7 +82,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     totals[definitionId]+=keys.length;
   };
   for(const r of pool.shops) {
-    const seat=pool.seats.find(s=>s.seatId===r.seatId);
+    const seat=seats.get(r.seatId);
     requirePool(seat && !seat.released && r.generation===seat.shop.generation&&safe(r.slot)&&r.slot<MATCH_RULES.shopSize);
     count(r.seatId,r.definitionId,[shopSource(r)]);
   }
@@ -86,7 +97,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     const key=rewardSource(r);requirePool(!rewards.has(key)&&seatIds.has(r.seatId)&&Object.hasOwn(totals,r.definitionId)
       &&r.receiptId===lootReceiptId(r.dropId)&&['held','gold','forfeited'].includes(r.resolution)
       &&r.gold===(r.resolution==='gold'?UNIT_DEFINITIONS[r.definitionId].cost:0)
-      &&!pool.pending.some(p=>rewardSource(p)===key));rewards.add(key);
+      &&!pendingRewards.has(key));rewards.add(key);
   }
   for(const id of SHOP_CATALOG) requirePool(totals[id]===pool.initial[id]);
   const provided=new Set<string>();
@@ -99,9 +110,9 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     requirePool(matchesFrozenLootLedger(state.m8.loot.frozen,state.seed,state.m8.loot.frozen.throughRoundOrdinal,pool.orbLayout),'invalid-seat-state');
     const binding=state.sharedPool;requirePool(binding&&binding.poolId===pool.poolId,'invalid-seat-state');
     requirePool(!provided.has(binding.seatId),'invalid-seat-state');provided.add(binding.seatId);
-    const seat=pool.seats.find(s=>s.seatId===binding.seatId);requirePool(seat,'invalid-seat-state');
+    const seat=seats.get(binding.seatId);requirePool(seat,'invalid-seat-state');
     requirePool(binding.revision===seat.revision,'stale-seat');
-    requirePool(state.multiplayer?.seatId===seat.seatId&&canonicalContent(state.shop)===canonicalContent(seat.shop),'invalid-seat-state');
+    requirePool(state.multiplayer?.seatId===seat.seatId&&((state.shop===seat.shop&&isImmutableJson(state.shop))||canonicalContent(state.shop)===canonicalContent(seat.shop)),'invalid-seat-state');
     const roster=state.preparation.units.filter(u=>u.team==='player'),held=pool.holdings.filter(h=>h.seatId===seat.seatId);
     if(seat.released) {requirePool(state.multiplayer?.status==='eliminated'&&state.playerHp===0,'invalid-seat-state');continue;}
     requirePool(roster.length===held.length,'invalid-seat-state');

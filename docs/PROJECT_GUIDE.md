@@ -201,7 +201,7 @@ npm run preview
 ```
 
 - `dev`：Vite 开发服务器，默认端口通常为 5173，以终端实际输出为准。
-- `typecheck`：`tsc --noEmit`；`test`：`vitest run`，不是 watch 模式。
+- `typecheck`：`tsc --noEmit`；`test`：`vitest run --project fast`（并行）；`test:timing`：`vitest run --project timing --no-file-parallelism`（单 worker、文件串行）。完整验收依次跑两步；裸 `npx vitest run` 会选择两个 project，时间预算验收使用上述隔离命令。毫秒断言和 cannon 的 180 秒回放预算归 timing，预算保持不变。
 - `build`：先 typecheck，再 `vite build`，产物为 `dist/`；不自动执行测试。
 - `preview`：预览现有 `dist/`，默认端口通常为 4173；不自动 build，也不是生产托管服务。
 - main 的 dev/preview 分别为 `vite`、`vite preview`，默认本机监听；需要明确固定 IPv4 时运行 `npm run dev -- --host 127.0.0.1` 或 `npm run preview -- --host 127.0.0.1`。分享 Pages 地址不要求暴露本机服务。

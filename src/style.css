@@ -462,3 +462,86 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .build-badge { position: fixed; right: 6px; bottom: 4px; z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; pointer-events: none;
   font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #8fa3b0; opacity: .6; text-shadow: 0 1px 2px #000; }
 .build-badge.mismatch { color: #f0a070; opacity: 1; }
+
+/* G5: battle ranking (this battle / match totals) in the right column, economy hint above the board. */
+.battle-summary { display: grid; gap: 6px; padding: 8px 10px; border-radius: 8px; background: var(--c-surface, #14212c); color: #e2eef1; }
+.summary-head { display: flex; align-items: center; gap: 6px; }
+.summary-title { flex: 1; font-size: 13px; }
+.summary-result { font-size: 12px; color: #9aaeb9; }
+.summary-result[data-result="playerWin"] { color: #68ddd0; } .summary-result[data-result="enemyWin"] { color: #f08080; }
+.summary-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.summary-scopes { grid-template-columns: repeat(2, 1fr); }
+.summary-tab { padding: 2px 0; min-height: 32px; font-size: 12px; background: #203440; color: #9aaeb9; }
+.summary-tab.active { background: #1f4a46; color: #68ddd0; }
+.summary-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; max-height: 176px; overflow-y: auto; }
+body[data-online] .online-sidebar { max-height: calc(100dvh - 24px); overflow-y: auto; }
+.online-sidebar:has(.battle-summary:not([hidden])) .online-seats { gap: 4px; }
+.online-sidebar:has(.battle-summary:not([hidden])) .online-seat { padding: 4px 10px; gap: 2px; }
+.summary-row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; grid-template-rows: auto 4px; column-gap: 6px; align-items: center; cursor: pointer;
+  padding: 2px 4px; border-radius: 5px; border-left: 3px solid #68ddd0; background: #172633; font-size: 12px; }
+.summary-row.team-enemy { border-left-color: #f08080; }
+.summary-row.dead { opacity: .7; }
+.summary-row:hover { background: #1d3140; }
+.summary-portrait { grid-row: 1 / span 2; width: 22px; height: 22px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #203440; }
+.summary-portrait img, .summary-portrait svg { width: 22px; height: 22px; display: block; object-fit: cover; }
+.summary-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-value { font-variant-numeric: tabular-nums; font-weight: 700; }
+.summary-bar { grid-column: 2 / span 2; height: 4px; border-radius: 2px; background: #0f1a24; overflow: hidden; }
+.summary-bar { display: flex; }
+.summary-fill { display: block; height: 100%; background: #68ddd0; }
+.summary-fill-shield { background: #c9d4da !important; }
+.summary-shield { font-weight: 400; color: #9aaeb9; }
+.summary-row.team-enemy .summary-fill { background: #f08080; }
+.battle-summary[data-metric="healingReceived"] .summary-fill { background: #8fe0b0; }
+.economy-hint { display: flex; gap: 6px; align-items: center; }
+.economy-chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #203440; color: #e6bc76; white-space: nowrap; }
+.economy-streak[data-kind="win"] { color: #68ddd0; } .economy-streak[data-kind="loss"] { color: #f08080; } .economy-streak[data-kind="none"] { color: #9aaeb9; }
+.economy-bonus { color: #9ff0e4; }
+/* G2: trait column (TFT left column) and the shared unit / trait hover cards. */
+.trait-column { padding: 10px 12px; margin-bottom: 12px; background: #14212c; border-radius: 8px; color: #e2eef1; }
+.trait-column-title { margin: 0 0 6px; font-size: 13px; color: #9aaeb9; font-weight: 600; }
+.trait-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.trait-row { display: grid; grid-template-columns: 22px 1.6em minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 3px 8px 3px 4px;
+  border-radius: 6px; background: #1a2c36; font-size: 13px; cursor: default; }
+.trait-row.active { background: linear-gradient(90deg, #1f4a46, #1a2c36 70%); }
+.trait-row.inactive { color: #7e95a4; }
+.trait-row.inactive .trait-icon, .trait-row.inactive .trait-letter { filter: grayscale(1); opacity: .55; }
+.trait-row.empty { display: block; color: #7e95a4; background: transparent; }
+.trait-row:focus-visible { outline: 2px solid #68ddd0; outline-offset: 1px; }
+.trait-count { font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; }
+.trait-row.active .trait-count { color: #68ddd0; }
+.trait-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trait-steps { display: inline-flex; gap: 2px; font-size: 11px; color: #5d7280; font-variant-numeric: tabular-nums; }
+.trait-step.reached { color: #9aaeb9; }
+.trait-step.current { color: #0b151f; background: #e6bc76; border-radius: 3px; padding: 0 3px; font-weight: 700; }
+.trait-sep { opacity: .5; }
+.trait-letter { display: inline-grid; place-items: center; border-radius: 50%; background: #34505f; color: #e2eef1; font-size: 12px; font-weight: 700; line-height: 1; }
+.opponent-traits.trait-rows { display: grid; gap: 3px; }
+.opponent-traits .opponent-trait { display: grid; padding: 2px 8px 2px 4px; border-radius: 6px; }
+.opponent-traits .opponent-trait.active { color: #e2eef1; }
+.hover-card { position: fixed; z-index: 80; pointer-events: none; padding: 10px 12px; border-radius: 10px; border: 1px solid #34505f;
+  background: rgba(11, 21, 31, .97); color: #e2eef1; box-shadow: 0 12px 32px rgba(0, 0, 0, .5); font-size: 13px; line-height: 1.45; }
+.unit-card, .trait-card { display: grid; gap: 8px; }
+.unit-card-head, .trait-card-head { display: flex; align-items: center; gap: 10px; }
+.unit-card-portrait { width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden; border: 2px solid #7e95a4; display: grid; place-items: center; background: #203440; }
+.unit-card-portrait img, .unit-card-portrait svg { width: 40px; height: 40px; display: block; object-fit: cover; }
+.unit-card-portrait.cost-2 { border-color: #68c087; } .unit-card-portrait.cost-3 { border-color: #5aa0e6; }
+.unit-card-portrait.cost-4 { border-color: #b46be6; } .unit-card-portrait.cost-5 { border-color: #e6bc76; }
+.unit-card-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+.unit-card-name { font-size: 15px; }
+.unit-card-stars { color: #c9d4da; font-size: 12px; } .unit-card-stars.star-3 { color: #ffd76a; }
+.unit-card-cost { font-size: 12px; color: #e6bc76; }
+.unit-card-traits { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
+.unit-card-traits span { padding: 1px 7px; border-radius: 999px; background: #203440; }
+.unit-card-traits .trait-open { color: #68ddd0; } .unit-card-traits .trait-closed { color: #7e95a4; }
+.unit-card-label { font-size: 12px; color: #b4a1f5; }
+.unit-card-text { margin: 2px 0 0; white-space: pre-line; color: #c9d4da; font-size: 12px; }
+.unit-card-stats { display: grid; grid-template-columns: repeat(3, auto 1fr); gap: 2px 6px; margin: 0; font-size: 12px; }
+.unit-card-stats dt { color: #7e95a4; } .unit-card-stats dd { margin: 0; font-variant-numeric: tabular-nums; }
+.trait-card-meta { font-size: 12px; color: #9aaeb9; }
+.trait-card-tiers { margin: 0; padding-left: 16px; display: grid; gap: 3px; font-size: 12px; color: #7e95a4; }
+.trait-card-tiers li.reached { color: #e2eef1; }
+.trait-card-members { display: flex; flex-wrap: wrap; gap: 4px; font-size: 12px; }
+.trait-card-members .member { padding: 1px 7px; border-radius: 999px; background: #203440; color: #7e95a4; }
+.trait-card-members .member.on-board { color: #e2eef1; box-shadow: inset 0 0 0 1px #68ddd0; }
+.opponent-item { display: inline-flex; }

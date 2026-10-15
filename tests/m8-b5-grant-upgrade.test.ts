@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { planPermanentItemGrant } from '../src/simulation/item-grants';
 import { readItemInventory } from '../src/simulation/item-selectors';
 import { buyUnit, combineItems, equipItem, selectChoice, sellUnit, rerollShop } from '../src/simulation/match';
@@ -109,6 +109,12 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
 });
 
 describe('B5 real purchase recursive upgrades and equipment returns', () => {
+  // Match #98's public-fixture setup: warm the exact paid acquisition routes,
+  // while every upgrade/restore assertion and its original timeout stays in the case.
+  for (const definitions of [
+    ['blue-buff', 'blue-buff'], ['thiefs-gloves', 'sword'],
+    ['sword', 'thiefs-gloves'], ['sword', 'rod', 'vest', 'cloak'],
+  ]) beforeAll(() => { publicInventory(definitions, true); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
     const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves']);
     const chain = publicRecursivePurchase(inventory.state), [retained, returned] = inventory.itemIds;

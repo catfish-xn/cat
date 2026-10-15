@@ -1,3 +1,5 @@
+import { freezeCombatDeclarations } from './combat-static';
+import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
@@ -8,7 +10,7 @@ import { asSource } from './m8/s13-definitions';
 import { validateComponentCandidates } from './component-pool';
 import { compileItemCrit } from './m8/item-program';
 import type { MatchState } from './match-types';
-import { CONTENT_DIGEST, assertParsedContent, canonicalContent } from './content';
+import { CONTENT_DIGEST, assertParsedContent, canonicalContent, equalValidatedContent } from './content';
 import { UNIT_DEFINITIONS } from './units';
 import { ITEM_DEFINITIONS } from './content/items';
 import { AUGMENT_DEFINITIONS } from './content/augments';
@@ -30,6 +32,18 @@ import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
+
+// Reuse the pure default-catalog compilation, never any candidate validation.
+// Only local, already authenticated JSON basis inputs enter this byte-keyed map.
+const restoredStrategies = new Map<string, ReturnType<typeof buildStrategySnapshot>>();
+function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean) {
+  if (!admittedJson) return buildStrategySnapshot(inputs);
+  const key = JSON.stringify(inputs), cached = restoredStrategies.get(key);
+  if (cached) return cached;
+  const compiled = freezeContent(buildStrategySnapshot(inputs));
+  if (restoredStrategies.size >= 16) restoredStrategies.delete(restoredStrategies.keys().next().value!);
+  restoredStrategies.set(key, compiled); return compiled;
+}
 
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
 const inputValidation = createInputValidation(requireValue);
@@ -57,6 +71,8 @@ export function restoreMatch(input: unknown): MatchState {
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
   if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
+  const same = typeof input === 'string' ? equalValidatedContent
+    : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   record(raw);
   requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool'), 'multiplayer-state');
   requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
@@ -72,9 +88,9 @@ export function restoreMatch(input: unknown): MatchState {
   const enemyProjection = readRoundEnemyProjection(state.round);
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
-  requireValue(canonicalContent(state.m8.round) === canonicalContent(roundDefinition), 'm8 round identity');
+  requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
-  requireValue(canonicalContent(state.m8.preparation) === canonicalContent({
+  requireValue(same(state.m8.preparation, {
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
@@ -120,7 +136,7 @@ export function restoreMatch(input: unknown): MatchState {
   }
   for (const augment of state.augments) requireValue(receipts.get(augment.choiceId)?.definitionId === augment.definitionId && receipts.get(augment.choiceId)?.round === augment.acquiredRound, 'augment missing receipt');
   if (state.anomalyBinding) requireValue(receipts.get(state.anomalyBinding.choiceId)?.definitionId === state.anomalyBinding.definitionId && receipts.get(state.anomalyBinding.choiceId)?.round === state.anomalyBinding.boundRound, 'binding missing receipt');
-  const lootChoice = validateB8Loot(state);
+  const lootChoice = validateB8Loot(state, typeof input === 'string');
   if (state.phase === 'choice' && !lootChoice) {
     record(state.pendingChoice); const choice = state.pendingChoice;
     id(choice.choiceId); id(choice.eventId); nullableString(choice.targetId); requireValue(choice.choiceId === choice.eventId, 'choice event ID');
@@ -143,7 +159,7 @@ export function restoreMatch(input: unknown): MatchState {
   const receiptOrder = state.scheduleReceipts.map(receipt => receipt.eventId);
   const expectedReceiptOrder: string[] = [];
   for (let round=1;round<=state.round;round++) for (const event of getRoundSchedule(round)) if (receipts.has(event.id)) expectedReceiptOrder.push(event.id);
-  requireValue(canonicalContent(receiptOrder) === canonicalContent(expectedReceiptOrder), 'receipt order');
+  requireValue(same(receiptOrder, expectedReceiptOrder), 'receipt order');
   let stopped = false;
   for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
     if (state.pendingChoice?.eventId === event.id) stopped = true;
@@ -164,19 +180,19 @@ export function restoreMatch(input: unknown): MatchState {
     record(result); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
-    requireValue(canonicalContent(result.streakBefore) === canonicalContent(streak), 'history streak before');
+    requireValue(same(result.streakBefore, streak), 'history streak before');
     requireValue(validPreparationExperience(experienceAfter,result.levelBefore,result.xpBefore), 'history XP preparation chain');
     const expected = planCatalogRoundEconomy({ roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
     requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
     requireValue(result.baseDamage === expected.baseDamage && result.playerDamage === expected.playerDamage && result.hpAfter === expected.hpAfter && result.hpLost === expected.hpLost, 'history damage');
-    requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && canonicalContent(result.incomeBreakdown) === canonicalContent(expected.incomeBreakdown), 'history income');
-    requireValue(canonicalContent(result.streakAfter) === canonicalContent(expected.streakAfter), 'history streak'); streak = expected.streakAfter;
+    requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && same(result.incomeBreakdown, expected.incomeBreakdown), 'history income');
+    requireValue(same(result.streakAfter, expected.streakAfter), 'history streak'); streak = expected.streakAfter;
     experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
     requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
   }
-  requireValue(canonicalContent(state.streak) === canonicalContent(streak), 'current streak');
+  requireValue(same(state.streak, streak), 'current streak');
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
   requireValue(state.phase === 'gameOver' ? state.outcome === (roundDefinition.isFinal && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');
   record(state.augmentProgress); integer(state.augmentProgress.pumpingRounds); integer(state.augmentProgress.investmentHp);
@@ -204,12 +220,12 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
-    const expectedStrategy = buildStrategySnapshot(basis.inputs);
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
     const combatPreparation = basis.inputs.preparation, combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
-    requireValue(canonicalContent(combat.strategy) === canonicalContent(expectedStrategy), 'resolved strategy');
-    requireValue(canonicalContent(combat.board) === canonicalContent(combatPreparation.board), 'combat board');
+    requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
+    requireValue(same(combat.board, combatPreparation.board), 'combat board');
     const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
-    requireValue(canonicalContent(combat.units.map(unit => unit.id).sort()) === canonicalContent(expectedIds), 'combat roster');
+    requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
     if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>unit.alive&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
@@ -217,13 +233,13 @@ export function restoreMatch(input: unknown): MatchState {
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
-      if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(canonicalContent(unit.mechanics) === canonicalContent(resolved.mechanics), 'resolved mechanics'); requireValue(canonicalContent(unit.itemPrograms ?? []) === canonicalContent(resolved.itemPrograms ?? []), 'resolved item programs'); }
+      if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       const { stats } = resolved;
       if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
       for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
-      requireValue(canonicalContent(unit.ability) === canonicalContent(resolved.ability), 'resolved ability');
-      requireValue(canonicalContent(unit.sources) === canonicalContent(resolved.sources) && canonicalContent(unit.triggers) === canonicalContent(resolved.triggers), 'resolved effect source/trigger');
+      requireValue(same(unit.ability, resolved.ability), 'resolved ability');
+      requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
       requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || champion(unit) === 'amumu' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
@@ -232,9 +248,9 @@ export function restoreMatch(input: unknown): MatchState {
       if (unit.alive) { const key = `${unit.cell.col}:${unit.cell.row}`; requireValue(!cells.has(key), 'combat occupancy'); cells.add(key); }
       requireValue(unit.shield === 0 ? unit.shieldExpiresAtTick === null : Number.isSafeInteger(unit.shieldExpiresAtTick) && unit.shieldExpiresAtTick! > combat.tick, 'shield expiry');
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
-      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses);
+      if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string');
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
-      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses);
+      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
       const sourceKeys = new Set<string>();
       for (const source of unit.sources) { requireValue(source.key === effectKey(source.source) && source.source.ownerId === unit.id && !sourceKeys.has(source.key), 'source key'); sourceKeys.add(source.key); cloneEffect(source.effect); }
@@ -250,7 +266,23 @@ export function restoreMatch(input: unknown): MatchState {
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
-  const restored=typeof input === 'string' ? state : structuredClone(state);
+  const detached=typeof input === 'string' ? state : structuredClone(state);
+  // Exact JSON bytes (including property order) key immutable metadata sharing.
+  // Object inputs retain their independent clone. '-0' conservatively disables
+  // sharing for text inputs because JSON.stringify normalizes its numeric sign.
+  const restored=typeof input === 'string' && !input.includes('-0') ? {
+    ...detached, m8: shareParsedJson(detached.m8),
+    resourceProvenance: shareParsedJson(detached.resourceProvenance),
+    combatInputBasis: detached.combatInputBasis ? (() => {
+      const basis = shareParsedJson(detached.combatInputBasis);
+      // Preserve each restore's independent basis/preparation containers.
+      return { ...basis, inputs: { ...basis.inputs, preparation: { ...basis.inputs.preparation } } };
+    })() : null,
+  } : detached;
+  if (typeof input === 'string' && !input.includes('-0') && restored.combat) {
+    restored.combat.units.forEach(unit => freezeCombatDeclarations(unit, true));
+    if (restored.combat.strategy) Object.assign(restored.combat, { strategy: shareParsedDeclaration(restored.combat.strategy) });
+  }
   freezeContent(restored.m8);
   if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
   freezeContent(restored.resourceProvenance);
@@ -259,13 +291,13 @@ export function restoreMatch(input: unknown): MatchState {
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them. */
-function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>): void {
+function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean): void {
   if (unit.ability.kind !== 's13') return;
   requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');
   if (unit.spellCrit !== undefined) {
     record(unit.spellCrit); list(unit.spellCrit.itemSources); list(unit.spellCrit.nonItemSources);
     validateSpellCrit(unit.spellCrit);
-    requireValue(canonicalContent(unit.spellCrit) === canonicalContent(compileItemCrit(unit)), 'uncompiled spell critical sources');
+    requireValue(same(unit.spellCrit, compileItemCrit(unit)), 'uncompiled spell critical sources');
   }
   integer(unit.attackDamageBase); integer(unit.attackDamagePercentBps); integer(unit.abilityPower); integer(unit.baseAttackSpeedBps, 1); integer(unit.attackSpeedBonusBps);
   record(unit.runtime);
