@@ -393,3 +393,11 @@ P3-A 从首场PvP加时起基础扣血12→17，普通stage2–6和每个存活�
 旧档作废指旧digest不能续玩，不删除原文件：加时扣血会影响HP/淘汰/配对，且旧loot摘要没有签入新共享manifest与权重执行规则，不能把旧seed按新身份重抽或仅替换hash伪装迁移。原档只读保全/导出，活动局按旧身份完成后再切新版本，新开局使用本包。T13及历史golden/录制原件原字节保留，新录制独立存放。
 
 首次差异示例：overtime-1空对空tick0平局，旧基础/扣血12、HP100→88，新基础/扣血17、HP100→83；战斗事件/terminal/收入/XP/RNG相同。普通阶段四条完整路线命令及132场回合事件不变，134个录制状态仅发布身份改变；详见 [P3P4P5_RELEASE](P3P4P5_RELEASE.md)。单PR验收目标集与三问见 [PR正文](PR_P3P4P5.md)，不执行全套或部署。
+
+## G2-1 candidate (codex/g2-1-content; not inventory-complete)
+
+- `s13-g2-1-v1` / `s13-14.24b-g2-1-v1`; content `fnv1a32-utf16:77f80fec` → `fnv1a32-utf16:70a355f3`, loot replay `fnv1a32-utf16:b8d9d7ca` → `fnv1a32-utf16:65a85ecd`. Schema/save/replay/protocol versions stay7/3/3/3.
+- Admitted14 new heroes, Automata/Firelight/Family, expanded33-species shop/pool (674 copies). Frozen source also contains Swain, whose form template has null MR; this candidate excludes him pending evidence. Thus existing five classes are not yet complete.
+- Baseline already contains8 ordinary components and36 completed items. No fictitious ninth ordinary component or emblem is added. This discrepancy with the dispatch remains a scope decision.
+- Prior #90 state/golden bytes remain intact; old identities cannot resume/replay and remain available for original-file read-only export. New public-command recordings and source/runtime/approximation tables: [G2-1 evidence](evidence/g2-1/RECONCILIATION.md), [byte audit](evidence/g2-1/release-audit.json).
+- Source fields not modeled, finite geometry conventions and inaccessible emblem tiers are explicitly listed in the reconciliation. Icon manifest only; no `public/assets/` changes. Candidate remains draft until the inventory and numerical limitations are resolved/reviewed.

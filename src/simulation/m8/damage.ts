@@ -26,6 +26,7 @@ export interface DamageSample extends AmountSample {
   readonly critical: boolean;
   readonly critMultiplierBps: number;
   readonly burnCap?: number;
+  readonly flatReduction?: number;
   readonly counters?: StatSample['counters'];
   readonly enemiesTargetingHolder?: readonly string[];
 }
@@ -72,6 +73,7 @@ export function prepareDamage(request: DamageRequest, sample: DamageSample): Pic
     // Retain the M5 combined amplification/reduction floor after the resistance floor.
     value = safeNumber(BigInt(value) * (10000n + integer(amp, -10000)) * (10000n - integer(reduction)) / 100000000n);
     if (raw > 0 && context.delivery !== 'item-burn') value = Math.max(1, value);
+    if (sample.flatReduction) value = Math.max(0, value - safeNumber(integer(sample.flatReduction)));
     if (context.delivery === 'item-burn' && sample.burnCap !== undefined) value = Math.min(value, safeNumber(integer(sample.burnCap)));
   }
   const prevented = sample.prevention ? value : 0;

@@ -92,7 +92,12 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));
     const base = getUnitStats(unit.definitionId, unit.starLevel);
-    const resolved = resolveEffects(base, resolveAbility(base.abilityId, unit.starLevel), sources);
+    let resolved = resolveEffects(base, resolveAbility(base.abilityId, unit.starLevel), sources);
+    const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
+    if (family) {
+      const maxMana = Math.floor(resolved.stats.maxMana * (10000 - family.values.manaReductionBps) / 10000);
+      resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana) } };
+    }
     const mechanics = (resolved.mechanics ?? []).map(mechanic => {
       if (mechanic.mechanic !== 'bulkyBuddies') return mechanic;
       const buddy = boardUnits.find(other => other.team === unit.team && other.id !== unit.id && other.location.kind === 'board' && unit.location.kind === 'board' && hexDistance(other.location.cell, unit.location.cell) === 1);

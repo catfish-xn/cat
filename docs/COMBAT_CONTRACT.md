@@ -22,3 +22,11 @@ Match freezes `buildStrategySnapshot` before creating Combat. `combat-types.ts`,
 
 
 M5审计修订：alreadyMitigated伤害仍允许一次洛里斯分担；redirected实际分担直接在吸收阶段结算，不进入递归或弹射触发。恢复校验按来源/tick/计数验证动态字段和运算上界，schema5死亡单位周期AP只接受有限可达累计值，不声称重建未存储的死亡时刻。
+
+## G2-1 candidate finite extensions
+
+The existing `stepCombat(state) → { state, events }` interface and explicit `lcg32-v1` stream remain unchanged. Optional detached `CombatUnit.expansion` stores cumulative damage, Automata crystals, empowered attacks, chain cast/kills, cooldowns and target IDs. These values and the six `g2*` task kinds are JSON, copied by stepping and range-checked on restore. Amumu is a zero-max-mana passive champion; Zeri never casts. No wall clock or external lookup enters combat.
+
+Every cast coefficient and star rank comes from `content/g2-abilities.ts`, generated from hash-gated normalized records. Twitch draws one random target per enhanced attack and one shared crit result per piercing bolt; secondary Zeri packets follow the existing non-critical extra-attack convention. LeBlanc initial kills scale subsequent empowered attacks. Attached Malzahar infections continue after caster death and transfer from dead targets; other non-attached tasks require a living owner. Trait blast, chain share and retaliation packets resolve on the following tick to avoid recursive same-tick damage.
+
+Source/runtime tables and explicit limitations are in [G2-1 reconciliation](evidence/g2-1/RECONCILIATION.md). This is a candidate with33 heroes; Swain and source/emblem tiers not reachable from this inventory remain outside runtime. This section does not assert full14.24b equivalence.
