@@ -1,0 +1,68 @@
+{
+  "baseline": "cf75fbc2cb0330044e4382c862684973385461f3",
+  "previousHead": "1ee195622deb051cbee07319f664ed18b47b3041",
+  "testedHead": "78ffec284be311c4706917fc106657e6fd2ac1a4",
+  "testedTree": "74446bd98738523f5d03a8e8e8ea0b9d9def03c6",
+  "typecheckServerEntryLocalCommit": "8d91843fd339695fb6ad7a5683137162f50c67e9",
+  "typecheckServerEntryTree": "74446bd98738523f5d03a8e8e8ea0b9d9def03c6",
+  "node": "v24.19.0",
+  "npm": "11.9.0",
+  "visibleCpus": 9,
+  "memoryBytes": 10451464192,
+  "typecheck": {
+    "exit": 0,
+    "wallSeconds": 8.383
+  },
+  "serverEntry": {
+    "exit": 0,
+    "wallSeconds": 1.848
+  },
+  "targeted": [
+    {
+      "file": "tests/g5-economy-preview.test.ts",
+      "passed": 66,
+      "wallSeconds": 2.499
+    },
+    {
+      "file": "tests/g5-combat-summary.test.ts",
+      "passed": 9,
+      "wallSeconds": 6.135
+    },
+    {
+      "file": "tests/b8-resumable-battle.test.ts",
+      "passed": 15,
+      "wallSeconds": 15.809
+    },
+    {
+      "file": "tests/m8-b5-equipment-history.test.ts",
+      "passed": 8,
+      "wallSeconds": 6.021
+    },
+    {
+      "file": "tests/server/g5-battle-ranking.test.ts",
+      "passed": 5,
+      "wallSeconds": 3.642
+    }
+  ],
+  "full": {
+    "command": "npm test",
+    "exit": 0,
+    "project": "fast",
+    "filesPassed": 223,
+    "testsPassed": 2800,
+    "failed": 0,
+    "vitestSeconds": 219.36,
+    "wallSeconds": 219.876,
+    "runs": 1
+  },
+  "timing": "not run; outside requested standard npm test",
+  "timeoutReruns": [],
+  "contentDigest": "fnv1a32-utf16:70a355f3",
+  "rulesVersion": "s13-g2-1-v1",
+  "contentVersion": "s13-14.24b-g2-1-v1",
+  "schemaVersion": 7,
+  "saveFormatVersion": 3,
+  "replayFormatVersion": 3,
+  "commandProtocolVersion": 3,
+  "scope": "No new gameplay change. G2 content/version changes inherited unchanged from multiplayer; G5 only adds projection/statistics fields. No production fix during this integration."
+}

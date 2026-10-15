@@ -836,6 +836,64 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **需要**：`docs/S13_RULES_GAP.md` §10 给出 14.24b 的定义与推荐值；若 14.24b 的放宽顺序不是"全体逐轮减 1"，或奇数镜像应受约束/计入来源席历史，请在合同写明，服务器按合同改 `pairing.ts`。
 - **验收**：§10 的 6–8 组向量能直接写成 `tests/server/pairing.test.ts` 的用例并通过。
 
+
+## SR-G1-02 规则侧逐项答复（P7，2026-10-15）
+
+正式接口和失败全集见 MATCH_CONTRACT P7，逐项映射表及初始化顺序见 MULTIPLAYER_CONTRACT §21.4–21.5；server-entry 同名导出已补齐。
+- opensCarousel / schedule / prepareCarouselParticipants / createCarousel 均由规则提供；六轮时间均 6000/6000/6000ms，每批 2 人、HP 低先、平血座位先，含 1-1；全选也等固定截止，未选者自动选。
+- 服务器选取用 pickCarouselForSeat，自动选用 autoPickCarouselForSeat，单事务返回 pool/carousel/state/events；底层 pickFromCarousel、grantCarouselPick、autoPickFromCarousel 亦导出。机器人优先同名可升级，再高费用、低 slot，不额外耗 RNG。
+- 公开列表 listCarouselSlots；1-1 不加 catalog 行/不移动 ordinal，使用 createCarouselMatch 空阵容与 0 金币/0 组件开局，选秀给一单位一组件；之后才生成首店。
+- x-4 不保留旧组件 supply 选择；completeCarouselForSeat 在固定截止后结算一次自然经济，nextSharedRound 接续。
+- 满备战席进入本席 pendingUnits（计 holdings）；resolvePendingCarouselUnits 归位/合法合成，sellPendingCarouselUnit 显式出售，不自动卖出。
+- 池 v3 内含预留/收据，assertSharedPoolConservation 无需盘面参数；可传 states 核对单位与队列。淘汰用 releaseCarouselParticipant。
+- 占位失败映射：carousel-slot-taken→slot-taken，carousel-already-picked→already-picked，carousel-unknown-slot→invalid-slot，carousel-not-participant→unknown-seat；carousel-closed 同名，未放行 seat-locked，过期池 stale-pool。完整枚举见 MATCH P7。
+- 恢复先 restoreCarousel 后 restoreCarouselSeat（可信服务器快照边界），不重建、不发奖；网络 carouselPick 可由服务器绑定层沿现有信封适配。
+
+本分支只交付规则/合同/测试，未修改 src/server 或界面；G1 的八席 1-1/2-4 e2e 由其接线后验收。
+
+## G5 战后统计与经济提示（2026-10-15，Claude 流水线 C，分支 `claude/g5-stats-replay`）
+
+### 已交付（纯界面，无需 Codex 动作即可运行）
+
+- 战后排行（本场）：我的战斗结束（结算期）起，右侧玩家列表下方显示该场双方全部单位的 伤害 / 承伤 / 治疗 排行，每回合刷新，持续到下一场战斗开始。数据只来自服务器推送的 `replay`（合同 §14.2）事件本身：伤害 = `packetDamage.hpDamage + absorbed` 按 `sourceId`（护盾吸收算伤害，与云顶伤害统计一致），承伤 = 同一和按 `targetId` 并单列其中护盾部分，治疗 = `heal.actual` 按 `targetId`。聚合在 `src/presentation/battle-ranking.ts`，不算任何规则。
+- 本局累计：同一面板的"本局累计"页签按 阵营 + `definitionId` + 星级 把本局每一场（每回合一场，客户端内存里已收到的回放）逐场相加，并给出出场场数；之后出售或被淘汰的单位保留记录。断线重连或刷新页面后，只累计重连后收到的回放。
+- 经济提示：准备期倒计时条右侧显示 利息 / 连胜连败计数 / 上轮连胜败金币。金币、`streak`、上轮 `incomeBreakdown.streak` 均为私有席位视图已有字段；利息预估沿用 HUD"预计利息"已在用的规则只读选择器 `getInterestGold(gold)`。
+- "回看"按用户决定删除（云顶无此功能）。
+
+### SR-G5-01 §14.2 `heal` 事件不带治疗来源（P3，可选）
+
+- **现状**：`combat-replay-view.ts` 的 `heal` 只白名单了 `targetId` 与 `actual`，没有施加者。联机排行的"治疗"因此只能是"单位受到的治疗量"，不能像 TFT 那样按治疗者统计。
+- **需要（可选）**：`heal` 视图事件增加 `sourceId`（`outcome.shares[0].source.ownerId` 或按份额拆分的施加者列表，按合同选定），不暴露执行计划。
+- **用途**：排行"治疗"页改为按治疗者统计；受治疗量保留在悬停提示。
+- **验收**：同一场战斗中按 `sourceId` 汇总的治疗总和等于按 `targetId` 汇总的总和；镜像回放两侧对称；`replay-divergence` 校验不变。
+
+**Codex G5 交付回应**：heal 保留单条 targetId/actual/tick/eventSeq，新增 `shares: {sourceId, actual}[]`，逐份额复制权威实际治疗，不传执行计划。`summarizeBattle(replay: CombatReplay): readonly UnitBattleSummary[]` 从 simulation/combat-summary 与 server-entry 导出；每行含 unitId/definitionId/team/starLevel、damageDealt（hpDamage+absorbed）、damageTaken（同口径）、shieldAbsorbed、healingDone（份额 sourceId）、healingReceived（targetId）、kills（kill.sourceId）、alive（terminal）。`src/presentation/battle-ranking.ts` 请改用此函数，主治疗列使用 healingDone；B 视角只换 team，ID/统计量不变。完整合同见 MULTIPLAYER_CONTRACT §14.2；服务器与界面接入由 Claude 完成。
+
+### SR-G5-02 准备期经济预估投影（P2）
+
+- **现状**：私有席位视图没有"本回合结算预估"。界面的利息只能用 `getInterestGold(当前金币)`，它不含胜利金币对计息基数的影响，也不知道开局回合（1-x 走 `OPENING_ECONOMY_RULES`，利息 0）与加时轮；下回合连胜/连败金币需要知道胜负后的连胜规则，界面不能自己推（`planCatalogRoundEconomy`/加时分支的选择属于规则）。
+- **需要**：`toPrivateSeatView` 在准备期（及 PvP 战斗进行中）增加只读字段，例如
+  `economyPreview: { roundId, gold, ifWin: { interest, win, streakGold, streakAfter }, ifLoss: { interest, win, streakGold, streakAfter } } | null`
+  （补给轮可为 null 或只给一组），由与结算相同的规划函数按当前金币、连胜计算；不含 RNG、敌方信息或掉落。
+- **用途**：经济提示直接显示"利息 +N（胜 +M）· 连败 2 · 再败 +1 金币"，替换 `getInterestGold` 估算。
+- **验收**：对 1-2、2-1、加时轮和一组跨 10 金币边界的胜/负，`economyPreview.ifWin/ifLoss` 与随后结算的 `roundResults[].incomeBreakdown`（金币未再变化时）逐项相等；G5 e2e 改为逐项比对。
+**Codex G5 交付回应**：`previewRoundEconomy(state: MatchState): RoundEconomyPreview | null` 从 simulation/economy-preview 与 server-entry 导出。返回 `{roundId,gold,ifWin:{interest,win,streakGold,streakAfter},ifLoss:{...}}`；preparation/combat 使用当前己方资源，补给/其他阶段/已淘汰席返回 null。与结算共用 resolveRoundEconomy → planCatalogRoundEconomy/加时规划，含开局利息 0；不读 RNG/敌方信息，不预测掉落。请由 Claude 接入私有投影；签名、空值及精确比较条件见 MULTIPLAYER_CONTRACT §14.4。
+
+## G2 前置界面：羁绊面板与技能/装备说明（2026-10-15，Claude 流水线 C，分支 `claude/g5-traits-tooltips`）
+
+### 已交付（纯展示，只读 content 公开导出）
+
+- 左栏顶部常驻羁绊列（`src/rendering/trait-column.ts`）：行数、人数、档位来自规则的 `deriveTraits`（与羁绊页签、侦察面板同一选择器），激活行在前，断点高亮当前档，未激活灰显；hover 显示每档效果（`describeTraitTier`，已移到 `src/presentation/effect-text.ts`）与该羁绊全部英雄（场上者标出）。侦察面板改用同一组件渲染对方羁绊列。
+- 单位说明卡（`src/presentation/unit-card.ts`）：商店卡、部署页名册、棋盘/备战席上的棋子、侦察面板单位都可 hover；内容为费用、羁绊、技能（`S13_ABILITY_DATA.description` 按星级把 `@Var@`/`@Var*N@` 换成 `variables` 中的值，去掉 Riot 标签）、法力与 `getUnitStats` 的星级属性。
+- 装备说明：沿用 `item-codex` 的说明弹层（效果 + 配方/可用于配方），新增挂到侦察面板。
+- 缺图标：羁绊用名称首字作占位；英雄沿用 `symbol` 首字母徽标，新英雄无需改代码。
+
+### SR-G2-01 技能说明缺两类展示数据（P2，界面已按"原样显示"处理）
+
+- **技能名**：content 公开导出里没有技能名（只在 `source/s13-14.24.json` 原档的 `ability.name`）。请在 `S13_ABILITY_DATA` 增加 `name`（最好再给中文名），界面直接显示。
+- **计算后的数值**：模板里的 `@ModifiedShield@`、`@ModifiedDamage@`、`@TotalDamage@` 等是规则按法强/攻击力换算的总值，`variables` 里没有，目前原样显示。请导出只读选择器，例如 `abilityDisplayValues(definitionId, starLevel): Record<string, number>`（按基础法强/攻击力，不含装备与羁绊），界面用它补全这些占位。
+- **验收**：19 名现有英雄 1–3 星的说明文字里不再出现 `@...@`；界面不自行换算。
+
 ## G1-P7 选秀：服务器与界面预接线（2026-10-15，Claude 流水线 B/C，分支 `claude/g1-carousel-y1zxfu`）
 
 ### 已交付（不依赖合同，合同合入后只写绑定层）

@@ -1,0 +1,114 @@
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast
+
+
+ RUN  v5.0.3 /workspace/cat
+
+ ❯ |fast| tests/m6-integration-sniper-caitlyn.test.ts (2 tests | 1 failed) 249903ms
+   ❯ M6 independent route/history/playback/session integration (2)
+     × sniper-caitlyn: every completed battle has exact original state/events and isolated playback 218009ms
+ ❯ |fast| tests/m8-b7-audit-vectors.test.ts (14 tests | 1 failed) 43243ms
+   ❯ B7 audit: Match save/restore of real encounters (7)
+     × 5-7: restoring at every opening and mechanism tick reproduces the continuous run 22617ms
+ ❯ |fast| tests/server/room.test.ts (13 tests | 1 failed) 40923ms
+   ❯ Room: choice window and stuck seats (2)
+     × opens a choice window at a round with a pending choice and moves on as soon as every seat chose 5370ms
+ ❯ |fast| tests/m8-b5-equipment-history.test.ts (8 tests | 1 failed) 15776ms
+   ❯ B5 audit R1: equipment roll level belongs to its round history (8)
+     × rejects the forged historical level through full save-envelope validation without changing archived battles 5433ms
+ ❯ |fast| tests/m8-content-equivalence.test.ts (4 tests | 2 failed) 17011ms
+   ❯ restoreMatch text fast path is exact (4)
+     × recorded cannon states: restore from text equals restore from the parsed object 6954ms
+     × recorded sniper states: restore from text equals restore from the parsed object 7392ms
+ ❯ |fast| tests/server/g5-battle-ranking.test.ts (5 tests | 1 failed) 6170ms
+   ❯ G5 battle ranking (3)
+     × has one row per unit of both sides; damage dealt and taken are HP damage plus shield absorbed 6158ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/m6-integration-sniper-caitlyn.test.ts > M6 independent route/history/playback/session integration > sniper-caitlyn: every completed battle has exact original state/events and isolated playback
+Error: Test timed out in 180000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m6-integration-helper.ts:23:31
+     21| let cannonTransition:{route:RetainedRoute;history:BattleHistory}|undef…
+     22| describe('M6 independent route/history/playback/session integration', …
+     23|   for (const build of builds) it(`${build}: every completed battle has…
+       |                               ^
+     24|     const runId = `independent-${build}`, history = new BattleHistory(…
+     25|     const trajectories = new Map<string, Map<number, string>>();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |fast| tests/m8-b5-equipment-history.test.ts > B5 audit R1: equipment roll level belongs to its round history > rejects the forged historical level through full save-envelope validation without changing archived battles
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b5-equipment-history.test.ts:113:3
+    111|     expect(() => restoreMatch(raw)).toThrow(/history XP/);
+    112|   });
+    113|   it('rejects the forged historical level through full save-envelope v…
+       |   ^
+    114|     const history = archiveHistory, state = archivedState;
+    115|     const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', sav…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |fast| tests/m8-b7-audit-vectors.test.ts > B7 audit: Match save/restore of real encounters > 5-7: restoring at every opening and mechanism tick reproduces the continuous run
+Error: Test timed out in 20000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-b7-audit-vectors.test.ts:123:46
+    121|
+    122| describe('B7 audit: Match save/restore of real encounters', () => {
+    123|   it.each(['2-7', '3-7', '4-7', '5-7', '6-7'])('%s: restoring at every…
+       |                                              ^
+    124|     let continuous = accepted(api.startMatchCombat(encounterArmy(prepa…
+    125|     expect(continuous.combat!.tick).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |fast| tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded cannon states: restore from text equals restore from the parsed object
+ FAIL  |fast| tests/m8-content-equivalence.test.ts > restoreMatch text fast path is exact > recorded sniper states: restore from text equals restore from the parsed object
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/m8-content-equivalence.test.ts:31:40
+     29|     expect(rejected).toBeGreaterThan(2000); expect(rejected).toBeLessT…
+     30|   });
+     31|   it.each(['cannon', 'sniper'] as const)('recorded %s states: restore …
+       |                                        ^
+     32|     expect(states.length).toBeGreaterThan(100);
+     33|     expect(byBuild[build]).toHaveLength(67); // 33 public-route combat…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |fast| tests/server/g5-battle-ranking.test.ts > G5 battle ranking > has one row per unit of both sides; damage dealt and taken are HP damage plus shield absorbed
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/server/g5-battle-ranking.test.ts:37:3
+     35|
+     36| describe('G5 battle ranking', () => {
+     37|   it('has one row per unit of both sides; damage dealt and taken are H…
+       |   ^
+     38|     const { state, pvp } = battles();
+     39|     const { replay } = toCombatReplayFor(state, pvp.battle.a.seatId)!;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  |fast| tests/server/room.test.ts > Room: choice window and stuck seats > opens a choice window at a round with a pending choice and moves on as soon as every seat chose
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/server/room.test.ts:177:3
+    175|
+    176| describe('Room: choice window and stuck seats', () => {
+    177|   it('opens a choice window at a round with a pending choice and moves…
+       |   ^
+    178|     const { room, clock } = makeRoom(new PlaceholderBattleResolver());
+    179|     room.start();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+
+ Test Files  6 failed | 218 passed (224)
+      Tests  7 failed | 2740 passed (2747)
+   Start at  11:00:36
+   Duration  839.94s (tests 94%, import 6%, transform 1%)
+

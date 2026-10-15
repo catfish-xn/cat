@@ -1,0 +1,75 @@
+{
+  "base": "4d4cc73",
+  "node": "v22.23.3",
+  "fixtures": [
+    {
+      "name": "1v1",
+      "before": {
+        "ticks": 262,
+        "jsonBytes": 38624,
+        "gzipBytes": 2678,
+        "replaySha256": "672ac6321742189465d6a18f2671f937f4f04294c63a5e3b3b026e5f5b8a7061",
+        "initialSha256": "48453a7f4f98f4ec891f3df70cbc4fee7b3663feb70e991eead8ba4294bc3715",
+        "terminalSha256": "f92df7854286213571c917435984026a8075ed3e975646b3c79cca1b8ca4cdb2",
+        "eventsSha256": "d35bedd697b99c8e9c08a3de48318e61ee4948e97b808020aa415e34284394d6"
+      },
+      "after": {
+        "ticks": 262,
+        "jsonBytes": 38624,
+        "gzipBytes": 2678,
+        "replaySha256": "672ac6321742189465d6a18f2671f937f4f04294c63a5e3b3b026e5f5b8a7061",
+        "initialSha256": "48453a7f4f98f4ec891f3df70cbc4fee7b3663feb70e991eead8ba4294bc3715",
+        "terminalSha256": "f92df7854286213571c917435984026a8075ed3e975646b3c79cca1b8ca4cdb2",
+        "eventsSha256": "d35bedd697b99c8e9c08a3de48318e61ee4948e97b808020aa415e34284394d6"
+      },
+      "battleUnchanged": true,
+      "onlyAddedHealShares": true
+    },
+    {
+      "name": "6v6",
+      "before": {
+        "ticks": 585,
+        "jsonBytes": 403090,
+        "gzipBytes": 19443,
+        "replaySha256": "c56dff27bd5a267c89e9723bd2c1d4f642154577410b0b20320ff43dd1e2af63",
+        "initialSha256": "1528ac1da8b005667d9275cdb70b645be0c28b5a61fe30567a18668e43284faa",
+        "terminalSha256": "5f7c3298328c4046c7574ad7982d3a59d24626c3a6ec191abcd30567e0811144",
+        "eventsSha256": "44a61bad72deacab218232b0787239e481119a7bf4e1d4fab87cd01a6a4eea06"
+      },
+      "after": {
+        "ticks": 585,
+        "jsonBytes": 404608,
+        "gzipBytes": 19583,
+        "replaySha256": "e146f9bcf23f0866377766fe7b461533130e3b71538ab90db752d95d394a9886",
+        "initialSha256": "1528ac1da8b005667d9275cdb70b645be0c28b5a61fe30567a18668e43284faa",
+        "terminalSha256": "5f7c3298328c4046c7574ad7982d3a59d24626c3a6ec191abcd30567e0811144",
+        "eventsSha256": "44a61bad72deacab218232b0787239e481119a7bf4e1d4fab87cd01a6a4eea06"
+      },
+      "battleUnchanged": true,
+      "onlyAddedHealShares": true
+    },
+    {
+      "name": "9v9",
+      "before": {
+        "ticks": 889,
+        "jsonBytes": 870641,
+        "gzipBytes": 40032,
+        "replaySha256": "abcc86b6bf109fec71b1dd245b4623f606cfb043a4312e3a7bcb0b827e9ccac8",
+        "initialSha256": "ace8acc33225704979ff43cd501234692edb1c886dc8502dca18ee51c578ec81",
+        "terminalSha256": "7a6fe0102464a121b921dc49bd6d32339544395fd5bbf52d526089cf45710264",
+        "eventsSha256": "3ca603cd301a7c6202617da5f01058b9f2009655b965ab088e5e60392b902456"
+      },
+      "after": {
+        "ticks": 889,
+        "jsonBytes": 870937,
+        "gzipBytes": 40087,
+        "replaySha256": "498ab272ddd9be267cc9257d200af332e37b6da4845fbb52800aabf3f59a21f9",
+        "initialSha256": "ace8acc33225704979ff43cd501234692edb1c886dc8502dca18ee51c578ec81",
+        "terminalSha256": "7a6fe0102464a121b921dc49bd6d32339544395fd5bbf52d526089cf45710264",
+        "eventsSha256": "3ca603cd301a7c6202617da5f01058b9f2009655b965ab088e5e60392b902456"
+      },
+      "battleUnchanged": true,
+      "onlyAddedHealShares": true
+    }
+  ]
+}

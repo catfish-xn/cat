@@ -1,4 +1,4 @@
-import {describe,expect,it} from 'vitest';
+import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
@@ -11,6 +11,8 @@ function view(s:MatchState){const saved=serializeMatch(s),v=api.readLootView(s);
  for(const d of v.revealedDrops)expect(Object.keys(d).filter(k=>!['orbId','entryOrdinal','dropId','encounterId','sourceUnitId','roundId','payload','status','receiptId','allowedActions','reason'].includes(k))).toEqual([]);
  expect(api.nextRound(s,s.round).ok).toBe(v.canContinue);return v;}
 function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.parse(serializeMatch(s));mutate(raw);expect(api.readLootView(raw)).toEqual(api.readLootView(s));}
+beforeAll(async () => { await terminalPreparation('unit-7', 1); });
+beforeAll(async () => { await terminalPreparation('unit-6', 1); });
 describe('B8 readLootView over real randomized public routes',()=>{
  it('exposes no future orb content and hidden payloads cannot leak before a death',()=>{
   const v=view(prepared);expect(v).toEqual({roundId:'3-7',revealedDrops:[],revealedOrbs:[],pendingClaims:[],canContinue:false,reason:'unsettled-round',pendingChoice:null});
@@ -34,13 +36,13 @@ describe('B8 readLootView over real randomized public routes',()=>{
   expect(v.revealedOrbs.some(o=>o.status==='partially-claimed')).toBe(true);
  });
  it('one real sale grants the hero and unblocks Continue, while the next round clears the view',()=>{
-  const s=accepted(api.sellUnit(live.ended,bench(live.ended).find(u=>u.definitionId==='lux')!.id)),v=view(s);
+  const s=accepted(api.sellUnit(live.ended,bench(live.ended).find(u=>u.definitionId==='zyra')!.id)),v=view(s);
   expect(v).toMatchObject({canContinue:true,reason:null,pendingClaims:[],pendingChoice:null});
   expect(v.revealedDrops.map(d=>d.status)).toEqual(Array(4).fill('granted'));
   const ids=new Set(frozen.encounterPlan.drops.map(d=>d.dropId));expect(v.revealedDrops.map(d=>d.receiptId).sort()).toEqual(s.m8.loot.receipts.filter(r=>ids.has(r.dropId)).map(r=>r.receiptId).sort());
   const next=accepted(api.nextRound(s,17));expect(view(next).revealedDrops).toEqual([]);expect(view(next).revealedOrbs).toEqual([]);
  });
- it.each([{name:'two source deaths',keep:'unit-12',earned:true},{name:'only orb carrier',keep:'unit-11',earned:true},{name:'no carrier',keep:null,earned:false}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,earned})=>{
+ it.each([{name:'two source deaths',keep:'unit-7',earned:true},{name:'only orb carrier',keep:'unit-6',earned:true},{name:'no carrier',keep:null,earned:false}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,earned})=>{
   const s=battle(await terminalPreparation(keep)).ended,v=view(s);expect(s.phase).toBe('gameOver');
   expect(v).toMatchObject({canContinue:false,reason:'game-over',pendingClaims:[],pendingChoice:null});
   expect(v.revealedDrops.map(d=>d.status)).toEqual(earned?['granted','granted','retained-terminal','granted']:[]);

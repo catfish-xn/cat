@@ -1,0 +1,159 @@
+{
+  "baseline": "a159fbbde10b9e113cae5b74c1369f4cc5ea041a",
+  "builds": {
+    "cannon": {
+      "commands": {
+        "previousBytes": 148,
+        "currentBytes": 217,
+        "previousSha256": "544082db3184323c103cbd9f8b3354198747c44c275ac4341ab92da3871e30df",
+        "currentSha256": "276e266add9705e9a6cd3e619c680157dc20f97c7a1c7bae1daec9a8bb01f1eb",
+        "firstByteOffset": 57,
+        "firstDifference": {
+          "path": "$.2.type",
+          "previous": "deploy",
+          "current": "buy"
+        }
+      },
+      "events": {
+        "previousBytes": 28210,
+        "currentBytes": 66201,
+        "previousSha256": "b1e98302b70c4d3c25dcd7dc09f539cb08c511cfbbba1ce9f9cc864d70d10413",
+        "currentSha256": "14a07781dfe756751ecf414668ab14354f6024e25a93afe7277a28a01f792a8b",
+        "firstByteOffset": 77,
+        "firstDifference": {
+          "path": "$.0.unitId",
+          "previous": "[\"pve\",\"1-3\",\"minions-b-v1\",\"m02\"]",
+          "current": "[\"pve\",\"1-3\",\"minions-b-v1\",\"m01\"]"
+        }
+      },
+      "terminal": {
+        "previousBytes": 33561,
+        "currentBytes": 34468,
+        "previousSha256": "6ddfc88ebc0dc1a8dc8819b9d29257a327582b2cc17c9758e0621f65708bf1be",
+        "currentSha256": "a2d4f1e847fbd052f7c4e6e08e1def50f5ebf47c4b125719322e22b4f85b1dd4",
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        }
+      }
+    },
+    "sniper": {
+      "commands": {
+        "previousBytes": 226,
+        "currentBytes": 187,
+        "previousSha256": "7f0a54a30db64107f67979aa923a0f32f8477cabb4903c075cb9fdfde44c7b7b",
+        "currentSha256": "6c93459dcbe8326037da4fcd2dec2afed2168d8731fafc35c08eab5a380819ee",
+        "firstByteOffset": 96,
+        "firstDifference": {
+          "path": "$.3.type",
+          "previous": "buy",
+          "current": "deploy"
+        }
+      },
+      "events": {
+        "previousBytes": 28210,
+        "currentBytes": 28210,
+        "previousSha256": "d2c427d3e9c52e77cf7ccc7b3600ce50661ef2d6d363f1868ea096ab22beb69d",
+        "currentSha256": "76a882103c5396d7aef9c2d1265185dbb0907b033dae542050cfb6a39421a202",
+        "firstByteOffset": 26804,
+        "firstDifference": {
+          "path": "$.69.receipt.grantedUnitIds.0",
+          "previous": "unit-5",
+          "current": "unit-4"
+        }
+      },
+      "terminal": {
+        "previousBytes": 34235,
+        "currentBytes": 34502,
+        "previousSha256": "37d6f81f2fcda08d849602873a5ab92e910a63e53976f306c87de449f35b8518",
+        "currentSha256": "f2b3eecbe411fc005d4081497ba8cb2333566ea163173c3c0183a576be5785bd",
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        }
+      }
+    },
+    "mage": {
+      "commands": {
+        "previousBytes": 256,
+        "currentBytes": 256,
+        "previousSha256": "f2d350550d72bf30394dd9d8806efee9b07c32e37fb4181215e241c255061a12",
+        "currentSha256": "e37ff05b3fa2a472d621ae74ffa0cc974384d29f52d0bd23144b5d66621321b3",
+        "firstByteOffset": 108,
+        "firstDifference": {
+          "path": "$.3.slot",
+          "previous": 1,
+          "current": 3
+        }
+      },
+      "events": {
+        "previousBytes": 69408,
+        "currentBytes": 46174,
+        "previousSha256": "1a7c7babd924f9cebbc95c5122617efc787e8a5f6d354728d91003e97ad766fb",
+        "currentSha256": "5a0921f896ad3d7805ccdddc77339f2d1ed093d78805f060c938c8e6c4e447af",
+        "firstByteOffset": 1753,
+        "firstDifference": {
+          "path": "$.10.unitId",
+          "previous": "unit-3",
+          "current": "unit-4"
+        }
+      },
+      "terminal": {
+        "previousBytes": 34081,
+        "currentBytes": 34705,
+        "previousSha256": "94433509f71c1f156e1c658521d95f6f7927bf13f8a6c1a50483f2b4ed49f5b6",
+        "currentSha256": "91dba08fc5721e470c453b0e285dc791feb9459d4f6dc6eb5819853b98a95755",
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        }
+      }
+    },
+    "sniper-caitlyn": {
+      "commands": {
+        "previousBytes": 226,
+        "currentBytes": 187,
+        "previousSha256": "7f0a54a30db64107f67979aa923a0f32f8477cabb4903c075cb9fdfde44c7b7b",
+        "currentSha256": "6c93459dcbe8326037da4fcd2dec2afed2168d8731fafc35c08eab5a380819ee",
+        "firstByteOffset": 96,
+        "firstDifference": {
+          "path": "$.3.type",
+          "previous": "buy",
+          "current": "deploy"
+        }
+      },
+      "events": {
+        "previousBytes": 28210,
+        "currentBytes": 28210,
+        "previousSha256": "d2c427d3e9c52e77cf7ccc7b3600ce50661ef2d6d363f1868ea096ab22beb69d",
+        "currentSha256": "76a882103c5396d7aef9c2d1265185dbb0907b033dae542050cfb6a39421a202",
+        "firstByteOffset": 26804,
+        "firstDifference": {
+          "path": "$.69.receipt.grantedUnitIds.0",
+          "previous": "unit-5",
+          "current": "unit-4"
+        }
+      },
+      "terminal": {
+        "previousBytes": 34235,
+        "currentBytes": 34502,
+        "previousSha256": "37d6f81f2fcda08d849602873a5ab92e910a63e53976f306c87de449f35b8518",
+        "currentSha256": "f2b3eecbe411fc005d4081497ba8cb2333566ea163173c3c0183a576be5785bd",
+        "firstByteOffset": 39,
+        "firstDifference": {
+          "path": "$.rulesVersion",
+          "previous": "s13-rules-gap-v2",
+          "current": "s13-g2-1-v1"
+        }
+      }
+    }
+  },
+  "previousDriverSha256": "0d4ab46fbbf109ee5538764f582e60d395c45f36fc8803ecfe596ea260b7f4f4",
+  "currentDriverSha256": "b35315d6e3b2c5d6b3c51e2c828d583585ac0782900369472ac32619d30fd619"
+}

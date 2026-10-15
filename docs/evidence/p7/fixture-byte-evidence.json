@@ -1,0 +1,74 @@
+{
+  "baseline": "multiplayer@cf75fbc",
+  "contentDigest": "fnv1a32-utf16:1ce135cf",
+  "previousContentDigest": "fnv1a32-utf16:70a355f3",
+  "lootReplayDigest": "fnv1a32-utf16:65a85ecd",
+  "files": [
+    {
+      "beforePath": "tests/fixtures/c19-seed-9-minimal.json",
+      "afterPath": "tests/fixtures/p7-c19-seed-9-minimal.json",
+      "previousBytes": 21354,
+      "currentBytes": 21354,
+      "previousSha256": "45e3a1d3ceb3a917e3909e967499f34a697c8ef192acfbca95f93144b6a86b37",
+      "currentSha256": "08169a7a141403dd6a1615a289ae64e6874dc2aff0e9f869a62487109e3b2ebd",
+      "byteEqual": false,
+      "firstByteOffset": 207,
+      "equalAfterExplicitIdentityReplacement": true
+    },
+    {
+      "beforePath": "tests/fixtures/g2-1-herald-raw/ionic-spark.json",
+      "afterPath": "tests/fixtures/p7-herald-raw/ionic-spark.json",
+      "previousBytes": 111486,
+      "currentBytes": 111486,
+      "previousSha256": "6160a348be31cd94e0d76425f23a550b69778e477a482b48c210cd1ab967792c",
+      "currentSha256": "aafc65865ffa32401abf60103823d94915ea38bca80501439847e5ca0a7b3cd9",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "equalAfterExplicitIdentityReplacement": true
+    },
+    {
+      "beforePath": "tests/fixtures/g2-1-herald-raw/evenshroud.json",
+      "afterPath": "tests/fixtures/p7-herald-raw/evenshroud.json",
+      "previousBytes": 111485,
+      "currentBytes": 111485,
+      "previousSha256": "55681bbbb6eebe83a16e86015576cd56407f34b6b1a9e218dd124a3071c3e4d6",
+      "currentSha256": "76ac51640121c026c1b60cbfce12887fa8f7260a4efb1eb7433421b80ebe10cc",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "equalAfterExplicitIdentityReplacement": true
+    },
+    {
+      "beforePath": "tests/fixtures/g2-1-herald-raw/ionic-spark--evenshroud.json",
+      "afterPath": "tests/fixtures/p7-herald-raw/ionic-spark--evenshroud.json",
+      "previousBytes": 111610,
+      "currentBytes": 111610,
+      "previousSha256": "81be3d98346c6b0870243259f676c2e4f402751996b61e03b8c7c06daa97e83e",
+      "currentSha256": "83759494abd9a4b4e2a899c8257f285065180aeacdad42976121165ef86afa66",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "equalAfterExplicitIdentityReplacement": true
+    },
+    {
+      "beforePath": "tests/fixtures/g2-1-herald-raw/quicksilver.json",
+      "afterPath": "tests/fixtures/p7-herald-raw/quicksilver.json",
+      "previousBytes": 111489,
+      "currentBytes": 111489,
+      "previousSha256": "af891f2a152c58b5a513ae95536ab136407ee28455024f66241527e0254d19e2",
+      "currentSha256": "3f966041c48119f8252ec9c66af9b1582fe5dd9e16b642564a14d92306a3a261",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "equalAfterExplicitIdentityReplacement": true
+    },
+    {
+      "beforePath": "tests/fixtures/g2-1-herald-raw/edge-of-night.json",
+      "afterPath": "tests/fixtures/p7-herald-raw/edge-of-night.json",
+      "previousBytes": 111491,
+      "currentBytes": 111491,
+      "previousSha256": "590602fe905cccd1313f5ea2e0488a7768bfee731dbadf1d9c3639e9d798f491",
+      "currentSha256": "8ed8cc1abd426c318383d1bbc85c19c5f369149742d128b548a659ea736aef3e",
+      "byteEqual": false,
+      "firstByteOffset": 1003,
+      "equalAfterExplicitIdentityReplacement": true
+    }
+  ]
+}

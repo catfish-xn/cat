@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { combineItems, equipItem, startMatchCombat } from '../src/simulation/match';
 import { previewCombine, previewEquip, readUnitEquipment, readItemCatalog } from '../src/simulation/item-selectors';
 import type { MatchState } from '../src/simulation/match-types';
@@ -7,6 +7,10 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { planTemporaryEquipment } from '../src/simulation/temporary-equipment';
 import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-helpers';
 import { publicInventory } from './fixtures/b8-public-acquisition';
+
+// Acquire public-route fixtures once, outside the query/constraint case timers.
+beforeAll(() => { publicInventory(['thiefs-gloves', 'sword']); });
+beforeAll(() => { publicInventory(['blue-buff', 'vest']); });
 
 const item = (n: number, definitionId: string, unitId?: string, slot = 0): ItemInstance => ({
   id: `item-${n}`, definitionId, location: unitId ? { kind: 'unit', unitId, slot } : { kind: 'inventory' },

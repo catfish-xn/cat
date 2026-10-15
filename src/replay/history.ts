@@ -1,3 +1,4 @@
+import { snapshotData } from './snapshot';
 import type { BattleRecord, BattleRecordVersion, SaveEnvelope, SessionChange } from '../m6/contracts';
 import { M8_VERSION } from '../simulation/m8/version';
 import { MAX_BATTLE_RECORDS, MAX_EVENTS_PER_BATTLE } from '../m6/limits';
@@ -87,7 +88,16 @@ export function admitArchives(envelopes: readonly unknown[], route: (file: unkno
   return { records, quarantined };
 }
 /** Full deterministic validation; never reads an active session. */
-export function validateBattleRecord(record: BattleRecord): VerifiedReplay { return validatorFor(record)(record); }
+const verifiedRecords = new WeakMap<BattleRecord, VerifiedReplay>();
+export function validateBattleRecord(record: BattleRecord): VerifiedReplay {
+  const cached = verifiedRecords.get(record);
+  if (cached) return structuredClone(cached);
+  const verified = validatorFor(record)(record);
+  // Only recorder-owned, detached immutable records qualify, after full replay.
+  // Keep a private independent snapshot; callers can mutate their result freely.
+  if (isOwnedBattleRecord(record)) verifiedRecords.set(record, deepFreeze(structuredClone(verified)));
+  return verified;
+}
 function validateM8Record(record: BattleRecord): VerifiedReplay {
   checkShape(record);
   let state = restoreMatch(record.context);
@@ -176,11 +186,11 @@ export class BattleHistory {
     const combat = change.after.combat;
     if (!combat) return;
     if (!change.before.combat && combat) {
-      const initial = deepFreeze(structuredClone(combat));
+      const initial = deepFreeze(snapshotData(combat));
       this.current = { context: deepFreeze(structuredClone(change.before)), initial, terminal: initial,
         events: change.events.map(event => deepFreeze(structuredClone(event))) };
     } else if (this.current && combat.combatId === this.current.terminal.combatId) {
-      this.current.terminal = structuredClone(combat);
+      this.current.terminal = snapshotData(combat);
       this.current.events.push(...change.events.map(event => deepFreeze(structuredClone(event))));
     }
     if (combat.status === 'finished' && this.current) {

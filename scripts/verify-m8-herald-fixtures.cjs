@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 // T11 keeps the B9 raw inputs as historical evidence; regenerate current-rule inputs separately.
-const directory = path.join(root, 'tests/fixtures/t13-herald-raw');
+const directory = path.join(root, 'tests/fixtures/p7-herald-raw');
 const args = process.argv.slice(2);
 const write = args.includes('--write');
 const baselineArgument = args.find(argument => argument.startsWith('--baseline-dir='));
@@ -29,11 +29,11 @@ async function main() {
     const builder = await server.ssrLoadModule('/tests/fixtures/m8-herald-raw/generate.ts');
     const canonicalHash = value => sha256(canonicalContent(value));
     const files = [...sourceFiles('src/simulation'), 'scripts/verify-m8-herald-fixtures.cjs',
-      'scripts/generate-m5-route.cjs', 'scripts/m4-evidence.cjs', 'tests/fixtures/m5/oracle.cjs',
+      'scripts/generate-m5-route.cjs', 'scripts/m4-evidence.cjs', 'tests/fixtures/m5/oracle.g2.cjs',
       'tests/fixtures/m8-herald-raw/generate.ts', 'tests/fixtures/m8-neutral-public-route.ts',
       'tests/m8-b7-match-wiring.test.ts'].sort();
     const sources = Object.fromEntries(files.map(file => [file, sha256(fs.readFileSync(path.join(root, file)))]));
-    const {Ledger}=require('../tests/fixtures/m5/oracle.cjs');
+    const {Ledger}=require('../tests/fixtures/m5/oracle.g2.cjs');
     const observedLedger=new Ledger(api.createMatch(42));
     let rawPrefix, prefixLedger;
     // Use the unchanged driver, including its independent economy/shop oracle.

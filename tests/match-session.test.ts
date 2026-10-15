@@ -4,7 +4,7 @@ import { MatchSession } from '../src/rendering/match-session';
 import { createCombatWithEvents, type CombatEvent } from '../src/simulation/combat';
 import { createMatch, deployMatchUnit, nextRound, startMatchCombat, type MatchCommandResult, type MatchState } from '../src/simulation/match';
 import { readyMatch, emptyBoard, accepted, reachRound, purchasedThreeHeroMatch } from './match-helpers';
-import { settlement } from './fixtures/m5/oracle.cjs';
+import { settlement } from './fixtures/m5/oracle.g2.cjs';
 import { nextRandom } from '../src/simulation/rng';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 
@@ -246,8 +246,7 @@ describe('match session commands and fixed clock', () => {
 
 describe('rapid D/F/E commands without frame or animation waits', () => {
   const odds: Record<number, number[]> = { 1:[100,0,0,0,0], 2:[100,0,0,0,0], 3: [75,25,0,0,0], 4: [55,30,15,0,0], 5: [45,33,20,2,0] };
-  const catalogs = [['darius','irelia','lux','maddie','zyra'], ['leona','rell','tristana','urgot','vander'],
-    ['ezreal','kogmaw','loris','nami','scar'], ['corki','garen','zoe'], ['caitlyn']];
+  const catalogs = [['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'], ['leona','nocturne','rell','tristana','urgot','vander','vladimir','zeri'], ['blitzcrank','ezreal','kogmaw','loris','nami','scar'], ['corki','ekko','garen','illaoi','twitch','zoe'], ['caitlyn','leblanc','malzahar','rumble']];
   function referenceShop(initialState: number, level: number) {
     let state = BigInt(initialState);
     const draw = () => (state = (state * 1664525n + 1013904223n) % 4294967296n);

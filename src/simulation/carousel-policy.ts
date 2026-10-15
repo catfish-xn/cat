@@ -1,0 +1,4 @@
+import { freezeContent } from './content/freeze';
+/** P7 approved project policy, not an assertion of unpublished Riot 14.24b odds. */
+export const CAROUSEL_RULES = freezeContent({ version: 'carousel-v1', sharedPoolVersion: 'shared-pool-v3', batchSize: 2, firstBatchMs: 6000, batchIntervalMs: 6000, tailMs: 6000, departureMs: 2000, seedXor: 0x4341524f, slots: 9, opening: { gold: 0, level: 1, xp: 0, hp: 100, units: 0, components: 0 }, openingMode: 'multiplayer-prelude', itemPolicy: 'eight-components-through-4-4-then-36-completed-v1', autoPolicy: 'upgrade-then-cost-then-slot-v1' } as const);
+export const CAROUSEL_COST_ODDS = freezeContent({ '1-1': [10000, 0, 0, 0, 0], '2-4': [2000, 8000, 0, 0, 0], '3-4': [0, 2000, 8000, 0, 0], '4-4': [0, 0, 2000, 8000, 0], '5-4': [0, 0, 0, 7000, 3000], '6-4': [0, 0, 0, 0, 10000] } as const);

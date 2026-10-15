@@ -1,3 +1,5 @@
+import { shareGeneratedDeclaration } from './immutable-json';
+import { freezeCombatDeclarations } from './combat-static';
 import { recordNeutralReceipts } from './neutral-receipts';
 import { COMPILED_NEUTRAL_ENCOUNTERS, readNeutralCombatUnit } from './neutral-encounter-compiler';
 import { compileCombatInitialInputs } from './combat-initialization';
@@ -52,13 +54,14 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
           nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
+  units.forEach(unit => freezeCombatDeclarations(unit, false, true));
   const result = eliminationResult(units);
   return {
     board: { ...preparationState.board, deploymentZones: {
       player: { ...preparationState.board.deploymentZones.player },
       enemy: { ...preparationState.board.deploymentZones.enemy },
     } },
-    ...(strategy ? { strategy: structuredClone(strategy), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
+    ...(strategy ? { strategy: shareGeneratedDeclaration(structuredClone(strategy)), combatId, nextEventSeq: 0, startEffectsApplied: false } : {}),
     ...(units.some(u=>u.unitKind==='neutral') ? {...(strategy ? {neutralReceipts:{deaths:[],controls:[]}} : {}),openingDefinitions:structuredClone(COMPILED_NEUTRAL_ENCOUNTERS.flatMap(e=>e.openingDefinitions).filter(d=>units.some(u=>u.id===d.source.ownerId)))} : {}),
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
@@ -66,7 +69,10 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
 }
 export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState); }
 export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42): CombatStep {
-  return applyCombatStart(snapshotCombat(preparation, strategy, combatId, rngState));
+  const started = applyCombatStart(snapshotCombat(preparation, strategy, combatId, rngState));
+  for (const unit of started.state.units) if (unit.mechanismDefinitions)
+    Object.assign(unit, { mechanismDefinitions: shareGeneratedDeclaration(structuredClone(unit.mechanismDefinitions)) });
+  return started;
 }
 export function stepCombat(state: CombatState): CombatStep {
   if (state.status === 'finished') return { state, events: [] };

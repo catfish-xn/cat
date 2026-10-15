@@ -65,6 +65,7 @@ export function toPrivateSeatView(state: MatchState) {
   return freezeContent({
     ...pick(state, ['schemaVersion', 'rulesVersion', 'contentVersion', 'contentDigest', 'commandProtocolVersion',
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
+    ...(state.carousel?{pendingCarouselUnits:state.carousel.pendingUnits.map(u=>pick(u,['receiptId','unitId','definitionId']))}:{}),
     ...(revealedLoot ? { revealedLoot } : {}),
     consumables:state.consumables.map(c=>pick(c,['consumableId','definitionId'])),
     consumableTargets,

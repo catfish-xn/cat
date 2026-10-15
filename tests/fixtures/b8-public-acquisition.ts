@@ -1,3 +1,4 @@
+import { shop as independentShop, COST } from './m5/oracle.g2.cjs';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import { buyUnit, combineItems, deployMatchUnit, rerollShop, sellUnit } from '../../src/simulation/match';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
@@ -17,10 +18,11 @@ export function publicInventory(definitions: readonly string[], late = false, se
     return [...(definition.recipe ?? [id])];
   });
   if (late) while (components.length < 4) components.push('sword');
-  // Recursive nine-card purchase controls need the later seed-42 economy;
+  // Recursive nine-card purchase controls need the later seeded economy;
   // the faster seed-38 glove route intentionally stops with less liquid gold.
-  let state = publicEquipmentPreparation(components,
-    seed !== undefined ? { seed } : late && components.filter(id => id === 'gloves').length === 2 ? { seed: 42 } : {});
+  const routeSeed = seed ?? (late ? (components.filter(id => id === 'gloves').length >= 3 ? 38 : 9)
+    : components.length === 4 && components.every(id => id === 'tear') ? 9 : undefined);
+  let state = publicEquipmentPreparation(components, routeSeed === undefined ? {} : { seed: routeSeed });
   const available = [...state.items], itemIds: string[] = [];
   for (const id of definitions) {
     const definition = ITEM_DEFINITIONS[id];
@@ -40,17 +42,36 @@ export function publicInventory(definitions: readonly string[], late = false, se
   return { state, itemIds };
 }
 
-/** Nine paid one-star Irelia purchases: stop at eight with a real ninth offer ready.
+/** Nine paid one-star one-cost purchases: stop at eight with a real ninth offer ready.
  * The opening/drop roster is sold first so no starting card counts as a purchase. */
 export function publicRecursivePurchase(state: MatchState): {
-  state: MatchState; slot: number; survivorId: string; secondId: string; incomingId: string; purchaseIds: string[];
+  state: MatchState; slot: number; definitionId: string; survivorId: string; secondId: string; incomingId: string; purchaseIds: string[];
 } {
   for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) state = accepted(sellUnit(state, unit.id));
+  // Expanded bags make nine fixed Irelias unaffordable. Select the cheapest
+  // nine-card paid route using the independent shop oracle; never grant gold,
+  // rewrite RNG or edit offers. All actual operations below remain public.
+  const candidates = ['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'];
+  const routeCost = (id: string) => {
+    let count = 0, spent = 0, shop = state.shop, rng = state.rngState;
+    for (let rolls = 0; rolls < 1000; rolls++) {
+      for (const offer of shop.slots) if (offer.status === 'available' && offer.definitionId === id) {
+        spent++; if (++count === 9) return spent;
+      }
+      spent += 2; const next = independentShop(rng, shop.generation + 1, state.level);
+      rng = next.rngState; shop = next.shop;
+    }
+    throw Error('Nine-card public route search exhausted');
+  };
+  const costs = new Map(candidates.map(id => [id, routeCost(id)]));
+  const definitionId = candidates.sort((a,b) => costs.get(a)! - costs.get(b)! || a.localeCompare(b))[0];
+  if (costs.get(definitionId)! > state.gold) throw Error('No affordable nine-card public route');
+  if (COST[definitionId] !== 1) throw Error('Recursive fixture requires a one-cost hero');
   const purchaseIds: string[] = [];
   while (true) {
-    const slot = state.shop.slots.findIndex(offer => offer.status === 'available' && offer.definitionId === 'irelia');
+    const slot = state.shop.slots.findIndex(offer => offer.status === 'available' && offer.definitionId === definitionId);
     if (slot < 0) { state = accepted(rerollShop(state)); continue; }
-    if (purchaseIds.length === 8) return { state, slot, survivorId: purchaseIds[0], secondId: purchaseIds[3], incomingId: purchaseIds[6], purchaseIds };
+    if (purchaseIds.length === 8) return { state, slot, definitionId, survivorId: purchaseIds[0], secondId: purchaseIds[3], incomingId: purchaseIds[6], purchaseIds };
     const id = `unit-${state.nextUnitSerial}`;
     state = accepted(buyUnit(state, slot, state.shop.generation));
     purchaseIds.push(id);
