@@ -311,7 +311,7 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
 }
 /** A single public transaction for the server: a failed grant rolls back the slot too. */
 export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, slot: number) {
-    const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly MatchEvent[] });
+    const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[] });
     if (!equal(pool, carousel.pool))
         return bad('stale-pool');
     const picked = pickFromCarousel(carousel, seatId, slot);
@@ -320,12 +320,12 @@ export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselSta
     const granted = grantCarouselPick(picked.state, match, seatId);
     if (!granted.ok)
         return bad(granted.reason);
-    return { ok: true as const, pool: granted.state.pool, carousel: granted.state, state: granted.match, events: granted.events };
+    return { ok: true as const, pool: granted.state.pool, carousel: granted.state, state: granted.match, events: [...picked.events, ...granted.events] };
 }
 export function autoPickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, _reason: 'bot' | 'disconnected' | 'timeout') {
     const picked = autoPickFromCarousel(carousel, seatId, match);
     if (!picked.ok)
-        return { ok: false as const, pool, carousel, state: match, reason: picked.reason, events: [] as readonly MatchEvent[] };
+        return { ok: false as const, pool, carousel, state: match, reason: picked.reason, events: [] as readonly (MatchEvent | CarouselEvent)[] };
     const slot = picked.state.receipts.find(r => r.seatId === seatId)!.slot;
     return pickCarouselForSeat(pool, carousel, match, seatId, slot);
 }
@@ -431,7 +431,7 @@ export function releaseCarouselSeat(state: CarouselState, seatId: string): Carou
 }
 /** One elimination transaction updates both the frozen carousel and the real pool/Match. */
 export function releaseCarouselParticipant(state: CarouselState, match: MatchState, seatId: string) {
-    const bad = (reason: CarouselFailure) => ({ ok: false as const, state, match, reason, events: [] as readonly MatchEvent[] });
+    const bad = (reason: CarouselFailure) => ({ ok: false as const, state, match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[], poolEvents: [] as readonly SharedPoolEvent[] });
     try {
         validateCarousel(state);
         assertSharedPoolConservation(state.pool, [match]);
@@ -442,7 +442,7 @@ export function releaseCarouselParticipant(state: CarouselState, match: MatchSta
     if (match.sharedPool?.seatId !== seatId || match.multiplayer?.status !== 'eliminated' || match.playerHp !== 0)
         return bad('invalid-match');
     if (state.pool.seats.find(s => s.seatId === seatId)?.released)
-        return { ok: true as const, state, match, events: [] as readonly MatchEvent[] };
+        return { ok: true as const, state, match, events: [] as readonly (MatchEvent | CarouselEvent)[], poolEvents: [] as readonly SharedPoolEvent[] };
     const receipt = state.receipts.find(r => r.seatId === seatId);
     let staged = state;
     if (receipt?.status !== 'granted') {
@@ -466,7 +466,7 @@ export function releaseCarouselParticipant(state: CarouselState, match: MatchSta
     catch {
         return bad('invalid-carousel');
     }
-    return { ok: true as const, state: nextState, match: released.state, events: released.events };
+    return { ok: true as const, state: nextState, match: released.state, events: [...released.events, {type:'carousel-seat-released' as const,carouselId:state.id,seatId}], poolEvents: released.poolEvents };
 }
 export function grantCarouselPick(state: CarouselState, match: MatchState, seatId: string): ReturnType<typeof planGrantCarouselPick> {
     try {

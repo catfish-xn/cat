@@ -200,8 +200,8 @@ P7 实现端口补充（SR-G1-02）：完整原子 wrapper 签名、初始化顺
 
 ```ts
 type CarouselSeatResult =
-  | {ok:true;pool:SharedPoolState;carousel:CarouselState;state:MatchState;events:readonly MatchEvent[]}
-  | {ok:false;pool:SharedPoolState;carousel:CarouselState;state:MatchState;reason:CarouselFailure;events:readonly MatchEvent[]};
+  | {ok:true;pool:SharedPoolState;carousel:CarouselState;state:MatchState;events:readonly (MatchEvent|CarouselEvent)[]}
+  | {ok:false;pool:SharedPoolState;carousel:CarouselState;state:MatchState;reason:CarouselFailure;events:readonly (MatchEvent|CarouselEvent)[]};
 createCarouselMatch(seed?:number):MatchState;
 opensCarousel(state:MatchState):boolean;
 schedule(roundId:string):{firstBatchMs:number;batchIntervalMs:number;tailMs:number};
@@ -215,3 +215,7 @@ sellPendingCarouselUnit(pool:SharedPoolState,match:MatchState,unitId:string):Sha
 ```
 
 `completeCarouselForSeat` 和 `releaseCarouselParticipant` 均为 `(state:CarouselState,match:MatchState,seatId:string)`，返回 `{ok:true,state:CarouselState,match:MatchState,events:readonly MatchEvent[]}` 或 `{ok:false,state:原盘,match:原席,reason:CarouselFailure,events:[]}`。`releaseCarouselSeat(state:CarouselState,seatId:string):CarouselResult` 只处理尚未授予的预留。`validateCarousel(state:CarouselState):void` 为抛错的只读校验。队列两个 SharedPoolResult 入口沿已有共享池失败枚举，阶段不合法时 resolve 返回 invalid-seat-state，sell 返回 unknown-unit；不会借此开放战斗期出售。
+
+原子 pick/autoPick wrapper 的 events 按顺序包含完整 CarouselEvent（picked、可能的 closed）及带 Match 序号的发奖事件，不丢弃底层关闭/池返还事件；服务器同时保存这些事件和返回状态。complete/release 的返回仍按上文声明。
+
+`releaseCarouselParticipant` 另返回 `poolEvents:readonly SharedPoolEvent[]`，events 为 `readonly (MatchEvent|CarouselEvent)[]`，保留 sharedSeatReleased 和 carousel-seat-released；重复淘汰返回两个空事件数组。失败也返回空 poolEvents。

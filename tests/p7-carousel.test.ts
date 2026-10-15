@@ -100,6 +100,9 @@ describe('P7 carousel rule transactions', () => {
         for (const seatId of state.releaseOrder) {
             const i = Number(seatId.slice(1)), r = must(autoPickCarouselForSeat(state.pool, state, a.states[i], seatId, 'timeout'));
             state = r.carousel;
+            expect(r.events.some(e=>e.type==='carousel-picked')).toBe(true);
+            expect(r.events.some(e=>e.type==='carouselGranted')).toBe(true);
+            if (i===7) expect(r.events.some(e=>e.type==='carousel-closed')).toBe(true);
             a.states[i] = r.state;
             assertSharedPoolConservation(state.pool, a.states);
             validateB8Resources(r.state);
@@ -286,6 +289,8 @@ it('atomically releases granted and unpicked eliminated seats; repeated eliminat
     state = released.state;
     assertSharedPoolConservation(state.pool, [released.match]);
     expect(state.receipts[0].status).toBe('released');
+    expect(released.events.some(e=>e.type==='carousel-seat-released')).toBe(true);
+    expect(released.poolEvents.some(e=>e.type==='sharedSeatReleased')).toBe(true);
     expect(()=>restoreCarouselSeat(state,released.match)).not.toThrow();
     const repeated = must(releaseCarouselParticipant(state, released.match, 's0'));
     expect(repeated.state).toBe(state);
