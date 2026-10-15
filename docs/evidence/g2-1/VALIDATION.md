@@ -2,13 +2,9 @@
 
 分支 `codex/g2-1-content`；合入 `multiplayer@bdf50bb`（含指挥基线 a159fbb）。范围按 DISPATCH 第八批窗口3：33英雄/8羁绊，斯维因留G2-2；8普通组件/36成装不变，金铲铲和转职排除。旧版存档身份不兼容，原始录制保留。
 
-## 最终验收状态（移交另一台 8c16g 机器）
+## 最新合并验收
 
-此前启动后又修改了测试/夹具的全套结果已作废，不作为本 PR 的通过数。最终全套必须在冻结代码、没有其他测试任务的情况下串行运行；期间不修改代码、不做其他工作。仅 b8 / m5-replay 超时允许补单跑证明，不继续优化测试代码。
-
-本次已逐文件通过 b8-resumable-battle（15例）、m5-acceptance、m5-content、m5-economy、m5-growth；M6 也已单文件通过全部9例（578.54秒），随后结束调度器，未启动下一文件。用户最新要求：当前全部改动先提交并推送，在另一台 8c16g 机器执行验收；本机不再启动测试。完整命令见 [REMOTE_VALIDATION.md](REMOTE_VALIDATION.md)。等待用户贴回结果后填写 PR 并取消草稿，最终通过数与 c7 结果尚待补录。
-
-此前 typecheck、test:server-entry 和 c7 已通过；c7 证明机器人取得并上场 Nocturne / Zeri，详见 c7-validation.json。它们与待执行的最终冻结验收分开记录，不冒充最终结果。
+2026-10-15 已将 `multiplayer@9a9adb2` 及随后合入 #105 的 `multiplayer@4d4cc73` 合入本分支。最新结果和未解决门禁见 [MERGE_VALIDATION.md](MERGE_VALIDATION.md) 与 [BACKLOG.md](BACKLOG.md)。下文保留内容扩展的来源、重录和目录授权说明；旧的“等待另一台机器执行”交接不再代表当前执行状态。
 
 ## 回归归因与重录
 
