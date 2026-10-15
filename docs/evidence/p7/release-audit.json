@@ -1,42 +1,72 @@
 {
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:f95bdcf8",
-    "lootReplayDigest": "fnv1a32-utf16:b8d9d7ca",
-    "rulesVersion": "s13-rules-gap-v2",
+    "contentDigest": "fnv1a32-utf16:1ce135cf",
+    "lootReplayDigest": "fnv1a32-utf16:65a85ecd",
+    "rulesVersion": "s13-g2-1-v1",
+    "contentVersion": "s13-14.24b-g2-1-v1",
     "schemaVersion": 7,
-    "previousContentDigest": "fnv1a32-utf16:77f80fec",
-    "previousLootReplayDigest": "fnv1a32-utf16:b8d9d7ca",
+    "firstBattle": {
+      "seed": 42,
+      "ticks": 164,
+      "events": 106,
+      "result": "playerWin",
+      "stateHash": "fnv1a32-utf16:8070e205",
+      "eventHash": "fnv1a32-utf16:966105d6"
+    },
+    "previousContentDigest": "fnv1a32-utf16:70a355f3",
+    "previousLootReplayDigest": "fnv1a32-utf16:65a85ecd",
     "traceHashes": {
-      "state": "2ab70b6aff0967fc0fe9d9255d5c3266f354618a0fa5af34de45e350f1a7587c",
+      "state": "5ea54a05d1d09423a9ba4cce61160a1686c66c06bb4ced3edd925df87fd8bc5d",
       "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
       "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
     },
-    "reason": "P7 carousel-v1/shared-pool-v3; one digest update. Offline routes unchanged except content identity; previous baselines archived."
+    "reason": "P7 carousel-v1/shared-pool-v3; merged G2 baseline, one digest update. Offline routes unchanged except content identity; previous baselines archived."
   },
-  "previousGoldenSha256": "e5397017e626b068dbf1acf45f2e2c2ee353fef1b9f7ff43f2d15fe75ca8871e",
+  "previousGoldenSha256": "2d2c18fe87ae02e396c25a6b55d26ed91fc6b2f69ddb62802355fb0fe73fd6db",
   "identityReplacements": [
     [
-      "fnv1a32-utf16:77f80fec",
-      "fnv1a32-utf16:f95bdcf8"
+      "fnv1a32-utf16:70a355f3",
+      "fnv1a32-utf16:1ce135cf"
     ]
   ],
   "builds": {
     "cannon": {
       "comparedStates": 67,
+      "recording": {
+        "previousBytes": 7476249,
+        "currentBytes": 7476249,
+        "previousSha256": "8c93262a4ac85398f28dad7ec4ce2ad96b9aac56603487c7b606ab8a03d0dc59",
+        "currentSha256": "ebd457f8d21ce1977f0afd3e9db75de9f0e3a8341144fb2855c6903f31698108",
+        "byteEqual": false,
+        "firstByteOffset": 5446,
+        "normalizedBytesEqual": true,
+        "textAndObjectRestoreEqual": true
+      },
       "commandsUnchanged": true,
       "eventsUnchanged": true,
       "recordedRounds": 33,
-      "previousRecordingSha256": "3f5fe64f85d1050d3865415460a9a96af9289ef90f05f50e9722619eae84597a"
+      "previousRecordingSha256": "19757f6f312f50ed06a93f1c6ebb602ea18c066307ee216d48bdb50856af0557"
     },
     "sniper": {
       "comparedStates": 67,
+      "recording": {
+        "previousBytes": 7660760,
+        "currentBytes": 7660760,
+        "previousSha256": "0a662d77365c83ca9c01026233cc8d0184e3e5814319ab44e1e782a54beb1321",
+        "currentSha256": "01669eaa386a404cf855a98abfbe91c7cf55442b8efeeef51aa743d4ed63d663",
+        "byteEqual": false,
+        "firstByteOffset": 5446,
+        "normalizedBytesEqual": true,
+        "textAndObjectRestoreEqual": true
+      },
       "commandsUnchanged": true,
       "eventsUnchanged": true,
       "recordedRounds": 33,
-      "previousRecordingSha256": "36bc804d0e04c5aea4d6950aeb793588d638394e3dc7ba587d98c8f2ea8af783"
+      "previousRecordingSha256": "083a8c7bcad9bf53b9f2403341e06147cb4a99a0b6829697d245b3200f0371e8"
     },
     "mage": {
       "comparedStates": 0,
+      "recording": null,
       "commandsUnchanged": true,
       "eventsUnchanged": true,
       "recordedRounds": 33,
@@ -44,11 +74,20 @@
     },
     "sniper-caitlyn": {
       "comparedStates": 0,
+      "recording": null,
       "commandsUnchanged": true,
       "eventsUnchanged": true,
       "recordedRounds": 33,
       "previousRecordingSha256": null
     }
   },
-  "candidateSha256": "a92ea9e2d2d2d85fa345e65335223a04b0c809bd5bb02e6c8e8d8398b06640ed"
+  "goldenBytes": {
+    "previousBytes": 97179,
+    "currentBytes": 97238,
+    "previousSha256": "2d2c18fe87ae02e396c25a6b55d26ed91fc6b2f69ddb62802355fb0fe73fd6db",
+    "currentSha256": "b3b8d3a80181cbc85f5dabdcf2c3af4563495717e97e419850b02a1c23a2a4c0",
+    "byteEqual": false,
+    "firstByteOffset": 13
+  },
+  "candidateSha256": "b3b8d3a80181cbc85f5dabdcf2c3af4563495717e97e419850b02a1c23a2a4c0"
 }

@@ -23,7 +23,7 @@ import { nextRandom, validateSeed } from './rng';
 import { DEFAULT_BOARD, sameCell } from './board';
 import { planCatalogRoundEconomy, OPENING_INITIAL_STATE } from './opening-economy';
 import { getCatalogRoundByOrdinal, getNextCatalogRound } from './round-selectors';
-import { freezeContent } from './content/freeze';
+import { shareGeneratedJson } from './immutable-json';
 import { COMPONENT_IDS } from './content/items';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
@@ -115,7 +115,7 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
 /** One preparation transaction freezes enemies and appends the complete authoritative loot plan. */
 function prepareRound(seed: number, round: number, previous?: MatchState['m8']['loot'], layout?:OrbLayoutLedger, initialization?:LootInitialization): MatchState['m8'] {
   const definition = getCatalogRoundByOrdinal(round);
-  return freezeContent({round:definition,encounterPlan:null,loot:prepareMatchLoot(seed,round,previous,layout,initialization),preparation:{
+  return shareGeneratedJson({round:definition,encounterPlan:null,loot:prepareMatchLoot(seed,round,previous,layout,initialization),preparation:{
     version:ROUND_PREPARATION_RULES.version,roundId:definition.roundId,encounterId:definition.encounterId,
     contentStatus:definition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',
     enemies:createRoundEnemies(round),

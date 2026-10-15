@@ -10,7 +10,13 @@
 - SR-G1-02 每个端口与待明确项均在 MULTIPLAYER_CONTRACT §21.4–21.5 / MATCH_CONTRACT P7 / UI_REQUESTS 回答。房间/网络与界面由 G1 接线，本实现未修改 src/server 或界面。
 - restoreCarouselSeat 检查可信服务器快照的 P7 池/收据/资产一致性；并非面向客户端上传的完整 Match 认证入口。其余房间恢复仍沿原服务器边界。
 
-## 一次发布身份与历史夹具
+## 当前合并验收
+
+已合入 `multiplayer@cf75fbc`（包含 G2-1 #94、G4 #98/#105）。本轮结果以 [MERGE_VALIDATION.md](MERGE_VALIDATION.md) 为准。下文旧验收环境与旧 digest 仅为历史记录，不代表当前 head；本轮不执行单 worker 全套或对照轮。
+
+当前 CONTENT_DIGEST：`fnv1a32-utf16:1ce135cf`，以合并后的 G2 基线 `70a355f3` 重新计算；LOOT_REPLAY_DIGEST 保持 G2 已发布的 `fnv1a32-utf16:65a85ecd`。P7 独立夹具已改为对 G2 原档核验，历史 G2/P3/T13 文件不改。重复恢复缓存补丁已移除，使用 #98 的实现。
+
+## 历史：初版发布身份与夹具
 
 CONTENT_DIGEST 仅一次从 `fnv1a32-utf16:77f80fec` 改为 `fnv1a32-utf16:f95bdcf8`，manifest 加入 carousel-v1/shared-pool-v3。LOOT_REPLAY_DIGEST 保持 `fnv1a32-utf16:b8d9d7ca`；schema7/save3/replay3/command3 保持。旧 digest 拒绝续玩，不迁移、不补发。
 
@@ -18,7 +24,7 @@ CONTENT_DIGEST 仅一次从 `fnv1a32-utf16:77f80fec` 改为 `fnv1a32-utf16:f95bd
 
 Herald 五条 raw 通过原公共命令生成器从真实对局导出，在加载 restore 之前写出原始状态，然后验证生产恢复和开战/15 tick 往返。使用新的 p7-herald-raw 目录，manifest 记录最终源码 hash。T13/P3 与更早 golden/录制原件保持原字节；消费者改用新 P7 夹具，未删除或放宽任何断言/时间预算。
 
-## 作者验收
+## 历史：合并前作者验收
 
 完整套件使用环境默认 Node v24.21.0，单 worker；typecheck / server-entry 另在 Node v22.23.3 验证。详细最终全套结果在本节验收完成后填入，不以局部绿代替全套清零。
 

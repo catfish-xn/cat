@@ -1,2 +1,2 @@
-/** Archived S13 14.24 client records (read-only oracle for presentation mappings). */
-exports.champions = () => require('../../src/simulation/content/source/s13-14.24.json').champions;
+/** Independent frozen source records for every admitted G2 hero. */
+exports.champions = () => Object.fromEntries(require('../../src/simulation/content/source/s13-14.24b/normalized/g2-1-champions.json').champions.filter(c => c.status !== 'blocked-on-form-stats').map(c => [c.id, c.record]));

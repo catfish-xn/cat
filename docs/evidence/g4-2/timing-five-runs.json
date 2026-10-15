@@ -1,0 +1,419 @@
+{
+  "base": "52c6a52",
+  "testedHead": "317887117790f6243f39a7f950dbbd48ff60a6c9",
+  "node": "v22.23.3",
+  "warmupsPerKind": 1,
+  "samplesPerKind": 5,
+  "thresholdMsExclusive": 50,
+  "runs": [
+    {
+      "run": 1,
+      "files": 6,
+      "passed": 32,
+      "failed": 0,
+      "pending": 0,
+      "times": {
+        "real": 228.23,
+        "user": 277.97,
+        "sys": 12.23
+      },
+      "measurements": [
+        {
+          "name": "battle",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 9.70338199999992,
+              "longestMs": 5.3446409999999105,
+              "calls": 889
+            },
+            {
+              "startupMs": 15.521836000000349,
+              "longestMs": 10.90635199999997,
+              "calls": 889
+            },
+            {
+              "startupMs": 7.006057999999939,
+              "longestMs": 12.281694000000243,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.568136999999751,
+              "longestMs": 4.447301999999581,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.658932000000277,
+              "longestMs": 10.133612999999968,
+              "calls": 889
+            }
+          ],
+          "startupMs": 7.006057999999939,
+          "longestMs": 10.133612999999968
+        },
+        {
+          "name": "replay",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 12.657725999999457,
+              "longestMs": 116.06062899999961,
+              "calls": 889
+            },
+            {
+              "startupMs": 16.282280000001265,
+              "longestMs": 17.686396999999488,
+              "calls": 889
+            },
+            {
+              "startupMs": 12.036404999998922,
+              "longestMs": 24.91175999999905,
+              "calls": 889
+            },
+            {
+              "startupMs": 12.101219000000128,
+              "longestMs": 18.05432699999983,
+              "calls": 889
+            },
+            {
+              "startupMs": 13.982778999999937,
+              "longestMs": 43.073365000000194,
+              "calls": 889
+            }
+          ],
+          "startupMs": 12.657725999999457,
+          "longestMs": 24.91175999999905
+        }
+      ],
+      "reportSha256": "723c875e8d818c1cbd3f3d944c083baa8d0c43fd70677e074d0e2099304899fb"
+    },
+    {
+      "run": 2,
+      "files": 6,
+      "passed": 32,
+      "failed": 0,
+      "pending": 0,
+      "times": {
+        "real": 235.47,
+        "user": 284.56,
+        "sys": 13.13
+      },
+      "measurements": [
+        {
+          "name": "battle",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 10.406791999999996,
+              "longestMs": 6.677488000000267,
+              "calls": 889
+            },
+            {
+              "startupMs": 11.73687000000018,
+              "longestMs": 12.575258000000304,
+              "calls": 889
+            },
+            {
+              "startupMs": 7.075870000000123,
+              "longestMs": 17.913170000000264,
+              "calls": 889
+            },
+            {
+              "startupMs": 8.312916999999288,
+              "longestMs": 11.449399000000085,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.745231999999305,
+              "longestMs": 15.094331000000238,
+              "calls": 889
+            }
+          ],
+          "startupMs": 8.312916999999288,
+          "longestMs": 12.575258000000304
+        },
+        {
+          "name": "replay",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 13.005486000000019,
+              "longestMs": 115.14463000000069,
+              "calls": 889
+            },
+            {
+              "startupMs": 12.305385999999999,
+              "longestMs": 22.432247999999163,
+              "calls": 889
+            },
+            {
+              "startupMs": 11.701109999999971,
+              "longestMs": 28.350131000001056,
+              "calls": 889
+            },
+            {
+              "startupMs": 12.248113999999987,
+              "longestMs": 25.26980200000071,
+              "calls": 889
+            },
+            {
+              "startupMs": 13.710613999999623,
+              "longestMs": 25.523748999999953,
+              "calls": 889
+            }
+          ],
+          "startupMs": 12.305385999999999,
+          "longestMs": 25.523748999999953
+        }
+      ],
+      "reportSha256": "d37b4ca00656d44b9706453ceb2426792547727e40c396ae9d62a26409699816"
+    },
+    {
+      "run": 3,
+      "files": 6,
+      "passed": 32,
+      "failed": 0,
+      "pending": 0,
+      "times": {
+        "real": 250.83,
+        "user": 303.94,
+        "sys": 14.14
+      },
+      "measurements": [
+        {
+          "name": "battle",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 13.212181999999984,
+              "longestMs": 14.66350199999988,
+              "calls": 889
+            },
+            {
+              "startupMs": 6.547004999999899,
+              "longestMs": 14.964102000000366,
+              "calls": 889
+            },
+            {
+              "startupMs": 13.819528999999875,
+              "longestMs": 6.41626000000042,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.3395730000002,
+              "longestMs": 3.939097999999831,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.7133679999997184,
+              "longestMs": 13.37896499999988,
+              "calls": 889
+            }
+          ],
+          "startupMs": 6.547004999999899,
+          "longestMs": 13.37896499999988
+        },
+        {
+          "name": "replay",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 14.631094999999732,
+              "longestMs": 128.99064699999872,
+              "calls": 889
+            },
+            {
+              "startupMs": 11.952508000000307,
+              "longestMs": 21.22307699999874,
+              "calls": 889
+            },
+            {
+              "startupMs": 12.005866999999853,
+              "longestMs": 26.218746000000465,
+              "calls": 889
+            },
+            {
+              "startupMs": 12.68054200000006,
+              "longestMs": 21.09624200000144,
+              "calls": 889
+            },
+            {
+              "startupMs": 14.277412999999797,
+              "longestMs": 32.43916699999863,
+              "calls": 889
+            }
+          ],
+          "startupMs": 12.68054200000006,
+          "longestMs": 26.218746000000465
+        }
+      ],
+      "reportSha256": "25590b52dbb3b2f7cd3b4d28e6ec9a2ddede235681c990b85ae2597eb415541d"
+    },
+    {
+      "run": 4,
+      "files": 6,
+      "passed": 32,
+      "failed": 0,
+      "pending": 0,
+      "times": {
+        "real": 249.53,
+        "user": 301.02,
+        "sys": 14.48
+      },
+      "measurements": [
+        {
+          "name": "battle",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 9.35268700000006,
+              "longestMs": 6.553698000000168,
+              "calls": 889
+            },
+            {
+              "startupMs": 7.281731000000036,
+              "longestMs": 8.348359000000073,
+              "calls": 889
+            },
+            {
+              "startupMs": 6.2869009999999435,
+              "longestMs": 6.430495999999948,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.651058999999805,
+              "longestMs": 13.393468000000212,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.4297990000004575,
+              "longestMs": 12.876077999999325,
+              "calls": 889
+            }
+          ],
+          "startupMs": 6.2869009999999435,
+          "longestMs": 8.348359000000073
+        },
+        {
+          "name": "replay",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 13.742118999999548,
+              "longestMs": 98.43117699999948,
+              "calls": 889
+            },
+            {
+              "startupMs": 13.005145999999513,
+              "longestMs": 16.747003000000404,
+              "calls": 889
+            },
+            {
+              "startupMs": 13.918959000000541,
+              "longestMs": 113.19298700000036,
+              "calls": 889
+            },
+            {
+              "startupMs": 11.467783000000054,
+              "longestMs": 18.546691999999894,
+              "calls": 889
+            },
+            {
+              "startupMs": 10.49977200000103,
+              "longestMs": 34.87631799999872,
+              "calls": 889
+            }
+          ],
+          "startupMs": 13.005145999999513,
+          "longestMs": 34.87631799999872
+        }
+      ],
+      "reportSha256": "512db59d05fd80c84c912504a7832c0fb9af42c3674ceaf5f5a72dab058cf87d"
+    },
+    {
+      "run": 5,
+      "files": 6,
+      "passed": 32,
+      "failed": 0,
+      "pending": 0,
+      "times": {
+        "real": 254.61,
+        "user": 305.43,
+        "sys": 15.0
+      },
+      "measurements": [
+        {
+          "name": "battle",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 9.119684000000007,
+              "longestMs": 10.318731000000298,
+              "calls": 889
+            },
+            {
+              "startupMs": 8.85540200000014,
+              "longestMs": 15.799089999999978,
+              "calls": 889
+            },
+            {
+              "startupMs": 6.0094819999999345,
+              "longestMs": 10.52183100000002,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.589312000000064,
+              "longestMs": 4.090783000000556,
+              "calls": 889
+            },
+            {
+              "startupMs": 5.301005000000259,
+              "longestMs": 14.14523200000076,
+              "calls": 889
+            }
+          ],
+          "startupMs": 6.0094819999999345,
+          "longestMs": 10.52183100000002
+        },
+        {
+          "name": "replay",
+          "warmups": 1,
+          "samples": [
+            {
+              "startupMs": 21.555185000000165,
+              "longestMs": 144.07027500000004,
+              "calls": 889
+            },
+            {
+              "startupMs": 19.328063999999358,
+              "longestMs": 28.758404999998675,
+              "calls": 889
+            },
+            {
+              "startupMs": 15.48591800000031,
+              "longestMs": 25.124667000000045,
+              "calls": 889
+            },
+            {
+              "startupMs": 15.829819000000498,
+              "longestMs": 33.49201299999913,
+              "calls": 889
+            },
+            {
+              "startupMs": 27.160420999998678,
+              "longestMs": 28.4924460000002,
+              "calls": 889
+            }
+          ],
+          "startupMs": 19.328063999999358,
+          "longestMs": 28.758404999998675
+        }
+      ],
+      "reportSha256": "e80fd2717f8f00705e973fa215c3c156d18adb446c90d37fe9f82a869eb593d4"
+    }
+  ],
+  "typecheck": {
+    "passed": true,
+    "time": "real 16.95\nuser 29.77\nsys 1.85"
+  }
+}

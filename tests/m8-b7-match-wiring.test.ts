@@ -1,4 +1,4 @@
-import { lootPlan } from './fixtures/m5/oracle.cjs';
+import { lootPlan } from './fixtures/m5/oracle.g2.cjs';
 import { describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';

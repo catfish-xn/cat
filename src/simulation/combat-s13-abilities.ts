@@ -1,3 +1,4 @@
+import { planG2Cast, planG2Attack, executeG2Task } from './combat-g2';
 import { chooseRandomCenter, selectAbilityTargets, selectConeTargets } from './m8/targeting';
 import { targetingEnvironment } from './m8/s13-targeting';
 import { integer, safeNumber } from './m8/stats';
@@ -168,6 +169,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
         hit(next, mag('Damage')); seen.add(next.id); hit(target, mag('Damage'));
       } break;
     }
+    default: return planG2Cast(ctx, unit, target, seq);
     case 'caitlyn': {
       const total = v('TotalShots', 4), ticks = duration('RaidDuration', 5);
       for (let n = 0; n < total; n++) addTask(unit, 'caitlyn', tick + Math.floor(n * ticks / total), null,
@@ -178,6 +180,7 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   return targets;
 }
 export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
+  if (task.kind.startsWith('g2')) { executeG2Task(ctx, unit, task); return; }
   if (task.kind === 'tristanaBounce' && !task.inherited) throw new RangeError('Missing inherited Tristana receipt');
   const opponents = enemies(unit, ctx.units), target = (task.attachedDot || task.inherited ? areaEnemies(unit, ctx.units) : opponents).find(u => u.id === task.targetId);
   const emit = (u: S13Unit, value: number, type: 'physical' | 'magic' = 'physical', ordinal = task.ordinal) => {
@@ -223,8 +226,9 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
   }
 }
 export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Unit, seq: number): void {
+  const replacement = planG2Attack(ctx, unit, target, seq);
   const source = { ...origin(unit), sourceKind: 'attack' as const }, base = unit.runtime.nextAttackPhysical || ad(unit);
-  ctx.packets.push({ source, targetId: target.id, raw: base, damageType: 'physical',
+  if (!replacement) ctx.packets.push({ source, targetId: target.id, raw: base, damageType: 'physical',
     actionSeq: seq, ordinal: 0, delivery: 'basic-attack', critEligibility: 'basic', area: false, triggeringCastActionSeq: null });
   if (unit.attackCone) {
     const ids = selectConeTargets(targetingEnvironment(ctx.board, ctx.units, unit, ctx.tick, { primaryId: target.id }));

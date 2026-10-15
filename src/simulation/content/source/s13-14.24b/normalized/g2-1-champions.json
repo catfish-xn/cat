@@ -1,0 +1,5964 @@
+{
+  "champions": [
+    {
+      "ability": {
+        "championId": "amumu",
+        "description": "<spellPassive>Passive:</spellPassive> Reduce all incoming damage by <scaleLevel>@FlatDamageReduction@</scaleLevel>. Every second, emit sparks that deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent&nbsp;enemies.",
+        "id": "amumu-ability",
+        "variables": {
+          "Damage": [
+            10.0,
+            15.0,
+            25.0
+          ],
+          "DamageRefreshDuration": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "FlatDRCooldownPerAttacker": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "FlatDamageReduction": [
+            12.0,
+            15.0,
+            25.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Amumu",
+      "cost": 1,
+      "id": "amumu",
+      "name": "Amumu",
+      "record": {
+        "ability": {
+          "desc": "<spellPassive>Passive:</spellPassive> Reduce all incoming damage by <scaleLevel>@FlatDamageReduction@</scaleLevel>. Every second, emit sparks that deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent&nbsp;enemies.",
+          "icon": "ASSETS/Characters/TFT13_Amumu/HUD/Icons2D/Amumu_W.TFT_Set13.tex",
+          "name": "Obsolete Technology",
+          "variables": [
+            {
+              "name": "FlatDamageReduction",
+              "value": [
+                7.0,
+                12.0,
+                15.0,
+                25.0,
+                35.0,
+                10.0,
+                10.0
+              ]
+            },
+            {
+              "name": "Damage",
+              "value": [
+                20.0,
+                10.0,
+                15.0,
+                25.0,
+                35.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "DamageRefreshDuration",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            },
+            {
+              "name": "FlatDRCooldownPerAttacker",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Amumu",
+        "characterName": "TFT13_Amumu",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Amumu/Skins/Base/Images/TFT13_Amumu.TFT_Set13.tex",
+        "name": "Amumu",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Amumu/Skins/Base/Images/TFT13_Amumu_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 35.0,
+          "attackSpeed": 0.6000000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 45.0,
+          "hp": 600.0,
+          "initialMana": 0,
+          "magicResist": 35.0,
+          "mana": 0.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Amumu/HUD/TFT13_Amumu_Square.TFT_Set13.tex",
+        "traits": [
+          "Automata",
+          "Watcher"
+        ]
+      },
+      "runtimeTraits": [
+        "automata",
+        "watcher"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/19",
+        "recordCanonicalSha256": "9d23ffa40de26925b551a0f8dc6153ed31074abf65127f855a2c95c9c35a489e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Automata",
+        "Watcher"
+      ],
+      "stats": {
+        "armor": 35.0,
+        "attack": 45.0,
+        "attackIntervalTicks": 34,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6000,
+        "health": 600.0,
+        "initialMana": 0,
+        "magicResist": 35.0,
+        "maxMana": 0.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "blitzcrank",
+        "description": "<spellPassive>Passive:</spellPassive> After surviving damage, deal <magicDamage>@PassiveDamagePercent*100@%</magicDamage> of the damage absorbed as magic damage to&nbsp;target.<br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Shock the nearest @NumEnemies@ enemies for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and reduce their damage by @DamageReduction*100@% for @ShieldDuration@&nbsp;seconds.",
+        "id": "blitzcrank-ability",
+        "variables": {
+          "BaseDamage": [
+            40.0,
+            60.0,
+            100.0
+          ],
+          "DamageReduction": [
+            0.1,
+            0.1,
+            0.1
+          ],
+          "NumEnemies": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "PassiveCooldownSeconds": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "PassiveDamagePercent": [
+            0.03,
+            0.03,
+            0.03
+          ],
+          "Shield": [
+            470.0,
+            500.0,
+            550.0
+          ],
+          "ShieldDuration": [
+            4.0,
+            4.0,
+            4.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Blitzcrank",
+      "cost": 3,
+      "id": "blitzcrank",
+      "name": "Blitzcrank",
+      "record": {
+        "ability": {
+          "desc": "<spellPassive>Passive:</spellPassive> After surviving damage, deal <magicDamage>@PassiveDamagePercent*100@%</magicDamage> of the damage absorbed as magic damage to&nbsp;target.<br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Shock the nearest @NumEnemies@ enemies for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and reduce their damage by @DamageReduction*100@% for @ShieldDuration@&nbsp;seconds.",
+          "icon": "ASSETS/Characters/TFT13_Blitzcrank/HUD/Icons2D/BlitzcrankQ.TFT_Set13.tex",
+          "name": "Static Field",
+          "variables": [
+            {
+              "name": "Shield",
+              "value": [
+                400.0,
+                470.0,
+                500.0,
+                550.0,
+                600.0,
+                400.0,
+                400.0
+              ]
+            },
+            {
+              "name": "ShieldDuration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "BaseDamage",
+              "value": [
+                80.0,
+                40.0,
+                60.0,
+                100.0,
+                200.0,
+                80.0,
+                80.0
+              ]
+            },
+            {
+              "name": "PassiveDamagePercent",
+              "value": [
+                0.029999999329447746,
+                0.029999999329447746,
+                0.029999999329447746,
+                0.029999999329447746,
+                0.029999999329447746,
+                0.029999999329447746,
+                0.029999999329447746
+              ]
+            },
+            {
+              "name": "PassiveCooldownSeconds",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            },
+            {
+              "name": "DamageReduction",
+              "value": [
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612
+              ]
+            },
+            {
+              "name": "NumEnemies",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Blitzcrank",
+        "characterName": "TFT13_Blitzcrank",
+        "cost": 3,
+        "icon": "ASSETS/Characters/TFT13_Blitzcrank/Skins/Base/Images/TFT13_Blitzcrank.TFT_Set13.tex",
+        "name": "Blitzcrank",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Blitzcrank/Skins/Base/Images/TFT13_Blitzcrank_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 50.0,
+          "attackSpeed": 0.6000000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 60.0,
+          "hp": 850.0,
+          "initialMana": 20.0,
+          "magicResist": 50.0,
+          "mana": 70.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Blitzcrank/HUD/TFT13_Blitzcrank_Square.TFT_Set13.tex",
+        "traits": [
+          "Automata",
+          "Dominator"
+        ]
+      },
+      "runtimeTraits": [
+        "automata"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/15",
+        "recordCanonicalSha256": "ece6bc27b77bc3bb3d5bfb9eb966aa02bde21768749d57598d441e9aa321e3a3",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Automata",
+        "Dominator"
+      ],
+      "stats": {
+        "armor": 50.0,
+        "attack": 60.0,
+        "attackIntervalTicks": 34,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6000,
+        "health": 850.0,
+        "initialMana": 20.0,
+        "magicResist": 50.0,
+        "maxMana": 70.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "caitlyn",
+        "description": "Enter a sniper's stance and call in an airship that circles the battlefield for @RaidDuration@ seconds, dropping @TotalShots@ bombs at a random cluster of enemies over the duration. Bombs deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%&nbsp;%i:scaleAP%)</physicalDamage> physical damage in a one-hex&nbsp;circle.<br><br>Whenever an enemy is caught in the epicenter of an Air Raid blast, reduce their Armor and Magic Resist by @ResistReduction@ and fire a shot towards them, dealing <physicalDamage>@HeadshotDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical&nbsp;damage.",
+        "id": "caitlyn-ability",
+        "variables": {
+          "APDamage": [
+            20.0,
+            30.0,
+            100.0
+          ],
+          "BonusSearchRange": [
+            630.0,
+            630.0,
+            630.0
+          ],
+          "HeadshotPercentAD": [
+            2.8,
+            2.8,
+            13.5
+          ],
+          "PercentAttackDamage": [
+            1.8,
+            1.8,
+            7.5
+          ],
+          "PercentShotsFocusedOnFrontline": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "RaidDuration": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "ResistReduction": [
+            20.0,
+            20.0,
+            20.0
+          ],
+          "TotalShots": [
+            4.0,
+            4.0,
+            20.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Caitlyn",
+      "cost": 5,
+      "id": "caitlyn",
+      "name": "Caitlyn",
+      "record": {
+        "ability": {
+          "desc": "Enter a sniper's stance and call in an airship that circles the battlefield for @RaidDuration@ seconds, dropping @TotalShots@ bombs at a random cluster of enemies over the duration. Bombs deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%&nbsp;%i:scaleAP%)</physicalDamage> physical damage in a one-hex&nbsp;circle.<br><br>Whenever an enemy is caught in the epicenter of an Air Raid blast, reduce their Armor and Magic Resist by @ResistReduction@ and fire a shot towards them, dealing <physicalDamage>@HeadshotDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical&nbsp;damage.",
+          "icon": "ASSETS/Characters/TFT13_Caitlyn/HUD/Icons2D/Caitlyn_Headshot.TFT_Set13.tex",
+          "name": "Air Raid",
+          "variables": [
+            {
+              "name": "RaidDuration",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "TotalShots",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                20.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                2.0,
+                1.7999999523162842,
+                1.7999999523162842,
+                7.5,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                80.0,
+                20.0,
+                30.0,
+                100.0,
+                200.0,
+                80.0,
+                80.0
+              ]
+            },
+            {
+              "name": "HeadshotPercentAD",
+              "value": [
+                2.0,
+                2.799999952316284,
+                2.799999952316284,
+                13.5,
+                13.5,
+                2.4000000953674316,
+                2.4000000953674316
+              ]
+            },
+            {
+              "name": "BonusSearchRange",
+              "value": [
+                630.0,
+                630.0,
+                630.0,
+                630.0,
+                630.0,
+                630.0,
+                630.0
+              ]
+            },
+            {
+              "name": "PercentShotsFocusedOnFrontline",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "ResistReduction",
+              "value": [
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Caitlyn",
+        "characterName": "TFT13_Caitlyn",
+        "cost": 5,
+        "icon": "ASSETS/Characters/TFT13_Caitlyn/Skins/Base/Images/TFT13_Caitlyn.TFT_Set13.tex",
+        "name": "Caitlyn",
+        "role": "ADCaster",
+        "squareIcon": "ASSETS/Characters/TFT13_Caitlyn/Skins/Base/Images/TFT13_Caitlyn_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 40.0,
+          "attackSpeed": 0.550000011920929,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 82.0,
+          "hp": 900.0,
+          "initialMana": 0,
+          "magicResist": 40.0,
+          "mana": 50.0,
+          "range": 13.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Caitlyn/HUD/TFT13_Caitlyn_Square.TFT_Set13.tex",
+        "traits": [
+          "Enforcer",
+          "Sniper"
+        ]
+      },
+      "runtimeTraits": [
+        "sniper"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/17",
+        "recordCanonicalSha256": "1b7d3fe9dc909b783e17fa07b3f396d402526a2ded6df8cfadcdc3c8868a63e0",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Enforcer",
+        "Sniper"
+      ],
+      "stats": {
+        "armor": 40.0,
+        "attack": 82.0,
+        "attackIntervalTicks": 37,
+        "attackRange": 13.0,
+        "attackSpeedBps": 5500,
+        "health": 900.0,
+        "initialMana": 0,
+        "magicResist": 40.0,
+        "maxMana": 50.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "corki",
+        "description": "Lock onto target and strafe to a nearby position, unleashing <scaleLevel>@BaseMissiles@</scaleLevel> missiles split between the target and all enemies within two hexes. Each missile deals <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and reduces Armor by&nbsp;@FlatArmorShred@.<br><br>Every @SpecialMissileNum@th missile deals <physicalDamage>@ModifiedSpecialDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and reduces Armor by&nbsp;@SpecialMissileArmorReduction@.",
+        "id": "corki-ability",
+        "variables": {
+          "BaseMissiles": [
+            21.0,
+            21.0,
+            35.0
+          ],
+          "FlatArmorShred": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "FlatDamagePerMissile": [
+            6.0,
+            9.0,
+            36.0
+          ],
+          "MissilesPerLaunchAttack": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "PercentAD": [
+            0.35,
+            0.35,
+            0.6
+          ],
+          "SpecialMissileMult": [
+            7.0,
+            7.0,
+            7.0
+          ],
+          "SpecialMissileNum": [
+            7.0,
+            7.0,
+            7.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Corki",
+      "cost": 4,
+      "id": "corki",
+      "name": "Corki",
+      "record": {
+        "ability": {
+          "desc": "Lock onto target and strafe to a nearby position, unleashing <scaleLevel>@BaseMissiles@</scaleLevel> missiles split between the target and all enemies within two hexes. Each missile deals <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and reduces Armor by&nbsp;@FlatArmorShred@.<br><br>Every @SpecialMissileNum@th missile deals <physicalDamage>@ModifiedSpecialDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage and reduces Armor by&nbsp;@SpecialMissileArmorReduction@.",
+          "icon": "ASSETS/Characters/TFT13_Corki/HUD/Icons2D/Corki_RapidReload.TFT_Set13.tex",
+          "name": "Broadside Barrage",
+          "variables": [
+            {
+              "name": "BaseMissiles",
+              "value": [
+                21.0,
+                21.0,
+                21.0,
+                35.0,
+                35.0,
+                21.0,
+                21.0
+              ]
+            },
+            {
+              "name": "PercentAD",
+              "value": [
+                0.4000000059604645,
+                0.3499999940395355,
+                0.3499999940395355,
+                0.6000000238418579,
+                0.699999988079071,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "FlatArmorShred",
+              "value": [
+                2.0,
+                1.0,
+                1.0,
+                1.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "SpecialMissileNum",
+              "value": [
+                7.0,
+                7.0,
+                7.0,
+                7.0,
+                7.0,
+                7.0,
+                7.0
+              ]
+            },
+            {
+              "name": "SpecialMissileMult",
+              "value": [
+                7.0,
+                7.0,
+                7.0,
+                7.0,
+                7.0,
+                7.0,
+                7.0
+              ]
+            },
+            {
+              "name": "MissilesPerLaunchAttack",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "FlatDamagePerMissile",
+              "value": [
+                0.0,
+                6.0,
+                9.0,
+                36.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Corki",
+        "characterName": "TFT13_Corki",
+        "cost": 4,
+        "icon": "ASSETS/Characters/TFT13_Corki/Skins/Base/Images/TFT13_Corki.TFT_Set13.tex",
+        "name": "Corki",
+        "role": "ADCaster",
+        "squareIcon": "ASSETS/Characters/TFT13_Corki/Skins/Base/Images/TFT13_Corki_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 30.0,
+          "attackSpeed": 0.75,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 65.0,
+          "hp": 850.0,
+          "initialMana": 0,
+          "magicResist": 30.0,
+          "mana": 60.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Corki/HUD/TFT13_Corki_Square.TFT_Set13.tex",
+        "traits": [
+          "Scrap",
+          "Artillerist"
+        ]
+      },
+      "runtimeTraits": [
+        "artillerist"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/52",
+        "recordCanonicalSha256": "2a6191428bda3efaffbada5b510959b11d8a03aab090d92ecae0682b11a8ae12",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Scrap",
+        "Artillerist"
+      ],
+      "stats": {
+        "armor": 30.0,
+        "attack": 65.0,
+        "attackIntervalTicks": 27,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7500,
+        "health": 850.0,
+        "initialMana": 0,
+        "magicResist": 30.0,
+        "maxMana": 60.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "darius",
+        "description": "Spin, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to adjacent enemies and healing <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth>. Apply a <physicalDamage>@ModifiedBleedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage bleed to target over @BleedDuration@&nbsp;seconds.",
+        "id": "darius-ability",
+        "variables": {
+          "BleedDuration": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "BleedPercentAttackDamage": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "Heal": [
+            150.0,
+            175.0,
+            200.0
+          ],
+          "PercentAttackDamage": [
+            2.4,
+            2.4,
+            2.4
+          ]
+        }
+      },
+      "apiName": "TFT13_Darius",
+      "cost": 1,
+      "id": "darius",
+      "name": "Darius",
+      "record": {
+        "ability": {
+          "desc": "Spin, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to adjacent enemies and healing <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth>. Apply a <physicalDamage>@ModifiedBleedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage bleed to target over @BleedDuration@&nbsp;seconds.",
+          "icon": "ASSETS/Characters/TFT13_Darius/HUD/Darius_Icon_Decimate.TFT_Set13.tex",
+          "name": "Decimate",
+          "variables": [
+            {
+              "name": "BleedDuration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316
+              ]
+            },
+            {
+              "name": "Heal",
+              "value": [
+                0.0,
+                150.0,
+                175.0,
+                200.0,
+                225.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "BleedPercentAttackDamage",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Darius",
+        "characterName": "TFT13_Darius",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Darius/Skins/Base/Images/TFT13_Darius.TFT_Set13.tex",
+        "name": "Darius",
+        "role": "ADFighter",
+        "squareIcon": "ASSETS/Characters/TFT13_Darius/Skins/Base/Images/TFT13_Darius_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 40.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 55.0,
+          "hp": 600.0,
+          "initialMana": 30.0,
+          "magicResist": 40.0,
+          "mana": 70.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Darius/HUD/TFT13_Darius_Square.TFT_Set13.tex",
+        "traits": [
+          "Conqueror",
+          "Watcher"
+        ]
+      },
+      "runtimeTraits": [
+        "watcher"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/58",
+        "recordCanonicalSha256": "3769edddbd921896b5b314da27fab93effea5e028c770f4f1cc3b9468704492a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Conqueror",
+        "Watcher"
+      ],
+      "stats": {
+        "armor": 40.0,
+        "attack": 55.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 1.0,
+        "attackSpeedBps": 7000,
+        "health": 600.0,
+        "initialMana": 30.0,
+        "magicResist": 40.0,
+        "maxMana": 70.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "ekko",
+        "description": "Summon an assault of afterimages that deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the target and <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to <scaleLevel>@NumBonusEnemies@</scaleLevel> other nearby&nbsp;enemies. Afterimages reduce their target's Magic Resist by @ShredAmount@ for the rest of combat.",
+        "id": "ekko-ability",
+        "variables": {
+          "NumAfterimages": [
+            12.0,
+            12.0,
+            25.0
+          ],
+          "NumBonusEnemies": [
+            2.0,
+            2.0,
+            4.0
+          ],
+          "SecondaryDamage": [
+            145.0,
+            215.0,
+            450.0
+          ],
+          "ShredAmount": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "SpellTime": [
+            1.5,
+            1.5,
+            1.5
+          ],
+          "TargetDamage": [
+            290.0,
+            435.0,
+            1200.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Ekko",
+      "cost": 4,
+      "id": "ekko",
+      "name": "Ekko",
+      "record": {
+        "ability": {
+          "desc": "Summon an assault of afterimages that deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the target and <magicDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to <scaleLevel>@NumBonusEnemies@</scaleLevel> other nearby&nbsp;enemies. Afterimages reduce their target's Magic Resist by @ShredAmount@ for the rest of combat.",
+          "icon": "ASSETS/Characters/TFT13_Ekko/HUD/Icons2D/EkkoSpell.TFT_Set13.tex",
+          "name": "Splitting Seconds",
+          "variables": [
+            {
+              "name": "NumAfterimages",
+              "value": [
+                12.0,
+                12.0,
+                12.0,
+                25.0,
+                25.0,
+                12.0,
+                12.0
+              ]
+            },
+            {
+              "name": "NumBonusEnemies",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                4.0,
+                4.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "TargetDamage",
+              "value": [
+                0.0,
+                290.0,
+                435.0,
+                1200.0,
+                2000.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "SecondaryDamage",
+              "value": [
+                0.0,
+                145.0,
+                215.0,
+                450.0,
+                600.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "SpellTime",
+              "value": [
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5,
+                1.5
+              ]
+            },
+            {
+              "name": "ShredAmount",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Ekko",
+        "characterName": "TFT13_Ekko",
+        "cost": 4,
+        "icon": "ASSETS/Characters/TFT13_Ekko/Skins/Base/Images/TFT13_Ekko.TFT_Set13.tex",
+        "name": "Ekko",
+        "role": "APReaper",
+        "squareIcon": "ASSETS/Characters/TFT13_Ekko/Skins/Base/Images/TFT13_Ekko_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 60.0,
+          "attackSpeed": 0.8500000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 1100.0,
+          "initialMana": 0,
+          "magicResist": 60.0,
+          "mana": 60.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Ekko/HUD/TFT13_Ekko_Square.TFT_Set13.tex",
+        "traits": [
+          "Firelight",
+          "Scrap",
+          "Ambusher"
+        ]
+      },
+      "runtimeTraits": [
+        "firelight"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/18",
+        "recordCanonicalSha256": "55f0823165c55ebf71b974cd7b4896735345b9096ff5b9a146f4a32fb421f832",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Firelight",
+        "Scrap",
+        "Ambusher"
+      ],
+      "stats": {
+        "armor": 60.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 24,
+        "attackRange": 1.0,
+        "attackSpeedBps": 8500,
+        "health": 1100.0,
+        "initialMana": 0,
+        "magicResist": 60.0,
+        "maxMana": 60.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "ezreal",
+        "description": "Fire a shot towards current target that deals <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to all enemies within 1 hex. Then, deal <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to the unit in the center of the&nbsp;blast.<br><br><br>",
+        "id": "ezreal-ability",
+        "variables": {
+          "APDamage": [
+            20.0,
+            30.0,
+            50.0
+          ],
+          "PercentAttackDamage": [
+            1.35,
+            1.35,
+            1.35
+          ],
+          "PercentCenterDamage": [
+            2.7,
+            2.7,
+            2.7
+          ]
+        }
+      },
+      "apiName": "TFT13_Ezreal",
+      "cost": 3,
+      "id": "ezreal",
+      "name": "Ezreal",
+      "record": {
+        "ability": {
+          "desc": "Fire a shot towards current target that deals <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to all enemies within 1 hex. Then, deal <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to the unit in the center of the&nbsp;blast.<br><br><br>",
+          "icon": "ASSETS/Characters/TFT13_Ezreal/HUD/Icons2D/Ezreal_Spell.TFT_Set13.tex",
+          "name": "Essence Flux",
+          "variables": [
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                0.0,
+                20.0,
+                30.0,
+                50.0,
+                70.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "PercentCenterDamage",
+              "value": [
+                2.700000047683716,
+                2.700000047683716,
+                2.700000047683716,
+                2.700000047683716,
+                2.700000047683716,
+                2.700000047683716,
+                2.700000047683716
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Ezreal",
+        "characterName": "TFT13_Ezreal",
+        "cost": 3,
+        "icon": "ASSETS/Characters/TFT13_Ezreal/Skins/Base/Images/TFT13_Ezreal.TFT_Set13.tex",
+        "name": "Ezreal",
+        "role": "ADCasterMana",
+        "squareIcon": "ASSETS/Characters/TFT13_Ezreal/Skins/Base/Images/TFT13_Ezreal_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 25.0,
+          "attackSpeed": 0.75,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 60.0,
+          "hp": 700.0,
+          "initialMana": 0,
+          "magicResist": 25.0,
+          "mana": 60.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Ezreal/HUD/TFT13_Ezreal_Square.TFT_Set13.tex",
+        "traits": [
+          "Academy",
+          "Rebel",
+          "Artillerist"
+        ]
+      },
+      "runtimeTraits": [
+        "artillerist"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/25",
+        "recordCanonicalSha256": "9f22b8e01b2cc8b91859d40f53f16d1f16cfa8658d9f5677bb9bccc389f789c1",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Academy",
+        "Rebel",
+        "Artillerist"
+      ],
+      "stats": {
+        "armor": 25.0,
+        "attack": 60.0,
+        "attackIntervalTicks": 27,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7500,
+        "health": 700.0,
+        "initialMana": 0,
+        "magicResist": 25.0,
+        "maxMana": 60.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "garen",
+        "description": "<spellPassive>Passive:</spellPassive> After dealing damage, heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleHealth%).</scaleHealth><br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleHealth%%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Slam a massive sword on target, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to them and <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to enemies within 2&nbsp;hexes. ",
+        "id": "garen-ability",
+        "variables": {
+          "ADRatio": [
+            2.5,
+            2.5,
+            15.0
+          ],
+          "APShield": [
+            200.0,
+            220.0,
+            1500.0
+          ],
+          "HealPercentHealth": [
+            0.015,
+            0.015,
+            0.05
+          ],
+          "PercentHealthShield": [
+            0.15,
+            0.15,
+            0.15
+          ],
+          "SecondaryADRatio": [
+            1.25,
+            1.25,
+            7.5
+          ],
+          "ShieldDuration": [
+            4.0,
+            4.0,
+            4.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Garen",
+      "cost": 4,
+      "id": "garen",
+      "name": "Garen",
+      "record": {
+        "ability": {
+          "desc": "<spellPassive>Passive:</spellPassive> After dealing damage, heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleHealth%).</scaleHealth><br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleHealth%%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Slam a massive sword on target, dealing <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to them and <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to enemies within 2&nbsp;hexes. ",
+          "icon": "ASSETS/Characters/TFT13_Garen/HUD/Icons2D/TFT13_Garen_SpellIcon.TFT_Set13.tex",
+          "name": "Demacian Justice",
+          "variables": [
+            {
+              "name": "APShield",
+              "value": [
+                100.0,
+                200.0,
+                220.0,
+                1500.0,
+                2000.0,
+                100.0,
+                100.0
+              ]
+            },
+            {
+              "name": "PercentHealthShield",
+              "value": [
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448
+              ]
+            },
+            {
+              "name": "ShieldDuration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "ADRatio",
+              "value": [
+                6.0,
+                2.5,
+                2.5,
+                15.0,
+                25.0,
+                6.0,
+                6.0
+              ]
+            },
+            {
+              "name": "SecondaryADRatio",
+              "value": [
+                3.0,
+                1.25,
+                1.25,
+                7.5,
+                12.5,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "HealPercentHealth",
+              "value": [
+                0.014999999664723873,
+                0.014999999664723873,
+                0.014999999664723873,
+                0.05000000074505806,
+                0.07999999821186066,
+                0.014999999664723873,
+                0.014999999664723873
+              ]
+            },
+            {
+              "name": "PassiveDamagePercent",
+              "value": null
+            }
+          ]
+        },
+        "apiName": "TFT13_Garen",
+        "characterName": "TFT13_Garen",
+        "cost": 4,
+        "icon": "ASSETS/Characters/TFT13_Garen/Skins/Base/Images/TFT13_Garen.TFT_Set13.tex",
+        "name": "Garen",
+        "role": "ADTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Garen/Skins/Base/Images/TFT13_Garen_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 60.0,
+          "attackSpeed": 0.6000000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 65.0,
+          "hp": 1000.0,
+          "initialMana": 60.0,
+          "magicResist": 60.0,
+          "mana": 125.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Garen/HUD/TFT13_Garen_Square.TFT_Set13.tex",
+        "traits": [
+          "Emissary",
+          "Watcher"
+        ]
+      },
+      "runtimeTraits": [
+        "watcher"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/55",
+        "recordCanonicalSha256": "72dbc8aa890ed0dc77b97138aa31131f9193991422b97dfcbda79d2ec8c89c55",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Emissary",
+        "Watcher"
+      ],
+      "stats": {
+        "armor": 60.0,
+        "attack": 65.0,
+        "attackIntervalTicks": 34,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6000,
+        "health": 1000.0,
+        "initialMana": 60.0,
+        "magicResist": 60.0,
+        "maxMana": 125.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "illaoi",
+        "description": "Gain <TFTBonus>@DR*100@%</TFTBonus> Durability for @SpellDuration@ seconds. Over the duration, drain <trueDamage>@ModifiedHealthSteal@&nbsp;(%i:scaleAP%)</trueDamage> Health from the nearest <scaleLevel>@NumEnemies@</scaleLevel> enemies. Then slam down, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleArmor%%i:scaleMR%)</magicDamage> magic damage to all enemies within 2&nbsp;hexes.",
+        "id": "illaoi-ability",
+        "variables": {
+          "DR": [
+            0.5,
+            0.5,
+            0.9
+          ],
+          "DamageResistRatio": [
+            0.6,
+            0.9,
+            7.0
+          ],
+          "HealthSteal": [
+            50.0,
+            75.0,
+            225.0
+          ],
+          "NumEnemies": [
+            4.0,
+            4.0,
+            10.0
+          ],
+          "PercentBonusHealthSteal": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "SpellDuration": [
+            3.0,
+            3.0,
+            3.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Illaoi",
+      "cost": 4,
+      "id": "illaoi",
+      "name": "Illaoi",
+      "record": {
+        "ability": {
+          "desc": "Gain <TFTBonus>@DR*100@%</TFTBonus> Durability for @SpellDuration@ seconds. Over the duration, drain <trueDamage>@ModifiedHealthSteal@&nbsp;(%i:scaleAP%)</trueDamage> Health from the nearest <scaleLevel>@NumEnemies@</scaleLevel> enemies. Then slam down, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleArmor%%i:scaleMR%)</magicDamage> magic damage to all enemies within 2&nbsp;hexes.",
+          "icon": "ASSETS/Characters/TFT13_Illaoi/HUD/Icons2D/Illaoi_E_Debuff.TFT_Set13.tex",
+          "name": "Test of Spirit",
+          "variables": [
+            {
+              "name": "SpellDuration",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "HealthSteal",
+              "value": [
+                200.0,
+                50.0,
+                75.0,
+                225.0,
+                225.0,
+                200.0,
+                200.0
+              ]
+            },
+            {
+              "name": "NumEnemies",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                10.0,
+                10.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "PercentBonusHealthSteal",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "DR",
+              "value": [
+                0.4000000059604645,
+                0.5,
+                0.5,
+                0.8999999761581421,
+                0.8999999761581421,
+                0.4000000059604645,
+                0.4000000059604645
+              ]
+            },
+            {
+              "name": "DamageResistRatio",
+              "value": [
+                0.0,
+                0.6000000238418579,
+                0.8999999761581421,
+                7.0,
+                10.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Illaoi",
+        "characterName": "TFT13_Illaoi",
+        "cost": 4,
+        "icon": "ASSETS/Characters/TFT13_Illaoi/Skins/Base/Images/TFT13_Illaoi.TFT_Set13.tex",
+        "name": "Illaoi",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Illaoi/Skins/Base/Images/TFT13_Illaoi_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 60.0,
+          "attackSpeed": 0.6499999761581421,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 70.0,
+          "hp": 1100.0,
+          "initialMana": 65.0,
+          "magicResist": 60.0,
+          "mana": 125.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Illaoi/HUD/TFT13_Illaoi_Square.TFT_Set13.tex",
+        "traits": [
+          "Rebel",
+          "Sentinel"
+        ]
+      },
+      "runtimeTraits": [
+        "sentinel"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/26",
+        "recordCanonicalSha256": "1de4bf54d936d8cc348777509fce9156f58989a0515d6962215075741753e437",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Rebel",
+        "Sentinel"
+      ],
+      "stats": {
+        "armor": 60.0,
+        "attack": 70.0,
+        "attackIntervalTicks": 31,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6500,
+        "health": 1100.0,
+        "initialMana": 65.0,
+        "magicResist": 60.0,
+        "maxMana": 125.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "irelia",
+        "description": "Enter a defensive stance and gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield that rapidly decays over @ShieldDuration@ seconds. When it expires, deal <magicDamage>@ModifiedBaseStrikeDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage + <magicDamage>@PercentShieldDamage*100@%</magicDamage> of the damage absorbed to enemies around and in front of&nbsp;Irelia.",
+        "id": "irelia-ability",
+        "variables": {
+          "HEROAttackSpeed": [
+            0.4,
+            0.4,
+            0.4
+          ],
+          "HEROBaseDashDamage": [
+            3.35,
+            3.35,
+            3.45
+          ],
+          "HERODashNum": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "HEROSpellAPBase": [
+            40.0,
+            60.0,
+            90.0
+          ],
+          "PercentShieldDamage": [
+            0.3,
+            0.3,
+            0.3
+          ],
+          "ShieldDuration": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "ShieldHealth": [
+            400.0,
+            475.0,
+            575.0
+          ],
+          "StrikeBaseDamage": [
+            70.0,
+            100.0,
+            150.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Irelia",
+      "cost": 1,
+      "id": "irelia",
+      "name": "Irelia",
+      "record": {
+        "ability": {
+          "desc": "Enter a defensive stance and gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield that rapidly decays over @ShieldDuration@ seconds. When it expires, deal <magicDamage>@ModifiedBaseStrikeDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage + <magicDamage>@PercentShieldDamage*100@%</magicDamage> of the damage absorbed to enemies around and in front of&nbsp;Irelia.",
+          "icon": "ASSETS/Characters/TFT13_Irelia/HUD/Icons2D/IreliaSpell.TFT_Set13.tex",
+          "name": "Defiant Dance",
+          "variables": [
+            {
+              "name": "ShieldDuration",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "ShieldHealth",
+              "value": [
+                200.0,
+                400.0,
+                475.0,
+                575.0,
+                675.0,
+                1200.0,
+                1400.0
+              ]
+            },
+            {
+              "name": "StrikeBaseDamage",
+              "value": [
+                50.0,
+                70.0,
+                100.0,
+                150.0,
+                200.0,
+                300.0,
+                350.0
+              ]
+            },
+            {
+              "name": "PercentShieldDamage",
+              "value": [
+                0.30000001192092896,
+                0.30000001192092896,
+                0.30000001192092896,
+                0.30000001192092896,
+                0.30000001192092896,
+                0.30000001192092896,
+                0.30000001192092896
+              ]
+            },
+            {
+              "name": "HERODashNum",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "HEROBaseDashDamage",
+              "value": [
+                0.0,
+                3.3499999046325684,
+                3.3499999046325684,
+                3.450000047683716,
+                3.450000047683716,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "HEROAttackSpeed",
+              "value": [
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645
+              ]
+            },
+            {
+              "name": "HEROSpellAPBase",
+              "value": [
+                0.0,
+                40.0,
+                60.0,
+                90.0,
+                120.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Irelia",
+        "characterName": "TFT13_Irelia",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Irelia/Skins/Base/Images/TFT13_Irelia.TFT_Set13.tex",
+        "name": "Irelia",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Irelia/Skins/Base/Images/TFT13_Irelia_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 40.0,
+          "attackSpeed": 0.6000000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 45.0,
+          "hp": 700.0,
+          "initialMana": 30.0,
+          "magicResist": 40.0,
+          "mana": 70.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Irelia/HUD/TFT13_Irelia_Square.TFT_Set13.tex",
+        "traits": [
+          "Rebel",
+          "Sentinel"
+        ]
+      },
+      "runtimeTraits": [
+        "sentinel"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/59",
+        "recordCanonicalSha256": "2e9832b858ad19ee3401eb34cf4101996c80dc0b2ce80f192c7feae4ecce5486",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Rebel",
+        "Sentinel"
+      ],
+      "stats": {
+        "armor": 40.0,
+        "attack": 45.0,
+        "attackIntervalTicks": 34,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6000,
+        "health": 700.0,
+        "initialMana": 30.0,
+        "magicResist": 40.0,
+        "maxMana": 70.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "kogmaw",
+        "description": "<spellPassive>Passive:</spellPassive> Attacks deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic&nbsp;damage.<br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@AttackSpeed*100@%</TFTBonus> stacking Attack Speed for the rest of combat. After every @RangeIncreaseNumAttacks@ casts, gain&nbsp;+1&nbsp;Range.",
+        "id": "kogmaw-ability",
+        "variables": {
+          "AttackSpeed": [
+            0.25,
+            0.25,
+            0.25
+          ],
+          "DamageOnAttack": [
+            48.0,
+            72.0,
+            120.0
+          ],
+          "Duration": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "MaxAS": [
+            20.0,
+            20.0,
+            20.0
+          ],
+          "RangeIncreaseNumAttacks": [
+            3.0,
+            3.0,
+            3.0
+          ]
+        }
+      },
+      "apiName": "TFT13_KogMaw",
+      "cost": 3,
+      "id": "kogmaw",
+      "name": "Kog'Maw",
+      "record": {
+        "ability": {
+          "desc": "<spellPassive>Passive:</spellPassive> Attacks deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic&nbsp;damage.<br><br><spellActive>Active:</spellActive> Gain <TFTBonus>@AttackSpeed*100@%</TFTBonus> stacking Attack Speed for the rest of combat. After every @RangeIncreaseNumAttacks@ casts, gain&nbsp;+1&nbsp;Range.",
+          "icon": "ASSETS/Characters/TFT13_KogMaw/HUD/Icons2D/TFT13_KogMaw_BioArcaneBarrage.TFT_Set13.tex",
+          "name": "Upgrading Barrage Module",
+          "variables": [
+            {
+              "name": "MaxAS",
+              "value": [
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0
+              ]
+            },
+            {
+              "name": "AttackSpeed",
+              "value": [
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            },
+            {
+              "name": "Duration",
+              "value": [
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0
+              ]
+            },
+            {
+              "name": "DamageOnAttack",
+              "value": [
+                0.0,
+                48.0,
+                72.0,
+                120.0,
+                210.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "RangeIncreaseNumAttacks",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_KogMaw",
+        "characterName": "TFT13_KogMaw",
+        "cost": 3,
+        "icon": "ASSETS/Characters/TFT13_KogMaw/Skins/Base/Images/TFT13_KogMaw.TFT_Set13.tex",
+        "name": "Kog'Maw",
+        "role": "APCarry",
+        "squareIcon": "ASSETS/Characters/TFT13_KogMaw/Skins/Base/Images/TFT13_KogMaw_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 25.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 15.0,
+          "hp": 650.0,
+          "initialMana": 0,
+          "magicResist": 25.0,
+          "mana": 40.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_KogMaw/HUD/TFT13_KogMaw_Square.TFT_Set13.tex",
+        "traits": [
+          "Automata",
+          "Sniper"
+        ]
+      },
+      "runtimeTraits": [
+        "automata",
+        "sniper"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/67",
+        "recordCanonicalSha256": "c8d39c638090f7e1375e8066023d704b5f8a9d9b6fea9fb27a95820f347fbae0",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Automata",
+        "Sniper"
+      ],
+      "stats": {
+        "armor": 25.0,
+        "attack": 15.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7000,
+        "health": 650.0,
+        "initialMana": 0,
+        "magicResist": 25.0,
+        "maxMana": 40.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "leblanc",
+        "description": "Chain together the nearest @ChainTargets@ enemies for @ChainDuration@ seconds, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage split between them. When one takes damage, <TFTBonus>@DamageShare*100@%</TFTBonus> of the amount is split as bonus true damage to the&nbsp;others.<br><br>LeBlanc's next @NumAttacks@ attacks deal <magicDamage>@ModifiedAutoDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic damage, increased by <TFTBonus>@AutoKillBonus*100@%</TFTBonus> for each enemy killed by the initial damage.",
+        "id": "leblanc-ability",
+        "variables": {
+          "AutoDamage": [
+            160.0,
+            240.0,
+            900.0
+          ],
+          "AutoKillBonus": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "ChainDuration": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "ChainTargets": [
+            4.0,
+            4.0,
+            20.0
+          ],
+          "Damage": [
+            650.0,
+            975.0,
+            5000.0
+          ],
+          "DamageShare": [
+            0.18,
+            0.25,
+            1.0
+          ],
+          "NumAttacks": [
+            3.0,
+            3.0,
+            3.0
+          ]
+        }
+      },
+      "apiName": "TFT13_LeBlanc",
+      "cost": 5,
+      "id": "leblanc",
+      "name": "LeBlanc",
+      "record": {
+        "ability": {
+          "desc": "Chain together the nearest @ChainTargets@ enemies for @ChainDuration@ seconds, dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage split between them. When one takes damage, <TFTBonus>@DamageShare*100@%</TFTBonus> of the amount is split as bonus true damage to the&nbsp;others.<br><br>LeBlanc's next @NumAttacks@ attacks deal <magicDamage>@ModifiedAutoDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic damage, increased by <TFTBonus>@AutoKillBonus*100@%</TFTBonus> for each enemy killed by the initial damage.",
+          "icon": "ASSETS/Characters/TFT13_LeBlanc/HUD/Icons2D/LeBlancE.TFT_Set13.tex",
+          "name": "The Chains of Fate",
+          "variables": [
+            {
+              "name": "ChainTargets",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                20.0,
+                20.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "ChainDuration",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "Damage",
+              "value": [
+                500.0,
+                650.0,
+                975.0,
+                5000.0,
+                9002.0,
+                200.0,
+                200.0
+              ]
+            },
+            {
+              "name": "AutoDamage",
+              "value": [
+                250.0,
+                160.0,
+                240.0,
+                900.0,
+                900.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "DamageShare",
+              "value": [
+                0.15000000596046448,
+                0.18000000715255737,
+                0.25,
+                1.0,
+                1.0,
+                0.20000000298023224,
+                0.20000000298023224
+              ]
+            },
+            {
+              "name": "NumAttacks",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "AutoKillBonus",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_LeBlanc",
+        "characterName": "TFT13_LeBlanc",
+        "cost": 5,
+        "icon": "ASSETS/Characters/TFT13_LeBlanc/Skins/Base/Images/TFT13_LeBlanc.TFT_Set13.tex",
+        "name": "LeBlanc",
+        "role": "APCasterHighMana",
+        "squareIcon": "ASSETS/Characters/TFT13_LeBlanc/Skins/Base/Images/TFT13_LeBlanc_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 40.0,
+          "attackSpeed": 0.800000011920929,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 900.0,
+          "initialMana": 45.0,
+          "magicResist": 40.0,
+          "mana": 90.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_LeBlanc/HUD/TFT13_LeBlanc_Square.TFT_Set13.tex",
+        "traits": [
+          "Black Rose",
+          "Sorcerer"
+        ]
+      },
+      "runtimeTraits": [
+        "sorcerer"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/32",
+        "recordCanonicalSha256": "a90bde400bd72766b8ce2fbd01137459eeefd9e3b19e88b5a65fc74b586879f1",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Black Rose",
+        "Sorcerer"
+      ],
+      "stats": {
+        "armor": 40.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 25,
+        "attackRange": 4.0,
+        "attackSpeedBps": 8000,
+        "health": 900.0,
+        "initialMana": 45.0,
+        "magicResist": 40.0,
+        "maxMana": 90.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "leona",
+        "description": "Fortify for @Duration@ seconds, gaining <TFTBonus>@ModifiedDurability@&nbsp;(%i:scaleAP%)</TFTBonus> Durability. Afterwards, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent enemies.",
+        "id": "leona-ability",
+        "variables": {
+          "DR": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "Damage": [
+            115.0,
+            175.0,
+            270.0
+          ],
+          "Duration": [
+            3.0,
+            3.0,
+            3.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Leona",
+      "cost": 2,
+      "id": "leona",
+      "name": "Leona",
+      "record": {
+        "ability": {
+          "desc": "Fortify for @Duration@ seconds, gaining <TFTBonus>@ModifiedDurability@&nbsp;(%i:scaleAP%)</TFTBonus> Durability. Afterwards, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent enemies.",
+          "icon": "ASSETS/Characters/TFT13_Leona/HUD/Icons2D/TFT13_LeonaSolarBarrier.TFT_Set13.tex",
+          "name": "Eclipse",
+          "variables": [
+            {
+              "name": "Duration",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                115.0,
+                175.0,
+                270.0,
+                365.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "DR",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Leona",
+        "characterName": "TFT13_Leona",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Leona/Skins/Base/Images/TFT13_Leona.TFT_Set13.tex",
+        "name": "Leona",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Leona/Skins/Base/Images/TFT13_Leona_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 50.0,
+          "attackSpeed": 0.6000000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 55.0,
+          "hp": 800.0,
+          "initialMana": 50.0,
+          "magicResist": 50.0,
+          "mana": 90.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Leona/HUD/TFT13_Leona_Square.TFT_Set13.tex",
+        "traits": [
+          "Academy",
+          "Sentinel"
+        ]
+      },
+      "runtimeTraits": [
+        "sentinel"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/66",
+        "recordCanonicalSha256": "0b0c0817ddef2c2c3ccbc5350a5ae6dcfacde6f7a778ccc771434f50c756f5b9",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Academy",
+        "Sentinel"
+      ],
+      "stats": {
+        "armor": 50.0,
+        "attack": 55.0,
+        "attackIntervalTicks": 34,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6000,
+        "health": 800.0,
+        "initialMana": 50.0,
+        "magicResist": 50.0,
+        "maxMana": 90.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "loris",
+        "description": "Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @Duration@ seconds. It redirects <TFTBonus>@PercentDamageRedirect*100@%</TFTBonus> of damage taken by adjacent allies. When it expires, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage in a&nbsp;cone.",
+        "id": "loris-ability",
+        "variables": {
+          "Damage": [
+            150.0,
+            225.0,
+            360.0
+          ],
+          "Duration": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "PercentDamageRedirect": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "Shield": [
+            525.0,
+            600.0,
+            700.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Beardy",
+      "cost": 3,
+      "id": "loris",
+      "name": "Loris",
+      "record": {
+        "ability": {
+          "desc": "Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @Duration@ seconds. It redirects <TFTBonus>@PercentDamageRedirect*100@%</TFTBonus> of damage taken by adjacent allies. When it expires, deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage in a&nbsp;cone.",
+          "icon": "ASSETS/Characters/TFT13_Beardy/HUD/Icons2D/Beardy_Spell.TFT_Set13.tex",
+          "name": "Piltover Bulwark",
+          "variables": [
+            {
+              "name": "Shield",
+              "value": [
+                0.0,
+                525.0,
+                600.0,
+                700.0,
+                800.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                150.0,
+                225.0,
+                360.0,
+                495.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "PercentDamageRedirect",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "Duration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Beardy",
+        "characterName": "TFT13_Beardy",
+        "cost": 3,
+        "icon": "ASSETS/Characters/TFT13_Beardy/Skins/Base/Images/TFT13_Beardy.TFT_Set13.tex",
+        "name": "Loris",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Beardy/Skins/Base/Images/TFT13_Beardy_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 50.0,
+          "attackSpeed": 0.6499999761581421,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 850.0,
+          "initialMana": 50.0,
+          "magicResist": 50.0,
+          "mana": 90.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Beardy/HUD/TFT13_Beardy_Square.TFT_Set13.tex",
+        "traits": [
+          "Enforcer",
+          "Sentinel"
+        ]
+      },
+      "runtimeTraits": [
+        "sentinel"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/41",
+        "recordCanonicalSha256": "d6ef6bcd7e4e135b3f39eb5fe84f3347c5231467d9c4a0ad2a67dfab591e38ed",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Enforcer",
+        "Sentinel"
+      ],
+      "stats": {
+        "armor": 50.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 31,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6500,
+        "health": 850.0,
+        "initialMana": 50.0,
+        "magicResist": 50.0,
+        "maxMana": 90.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "lux",
+        "description": "Grant <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield to the lowest current Health ally. Lux's next attack deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic&nbsp;damage.",
+        "id": "lux-ability",
+        "variables": {
+          "Damage": [
+            360.0,
+            540.0,
+            900.0
+          ],
+          "DamageReduction": [
+            0.35,
+            0.35,
+            0.35
+          ],
+          "Shield": [
+            160.0,
+            180.0,
+            240.0
+          ],
+          "ShieldDuration": [
+            4.0,
+            4.0,
+            4.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Lux",
+      "cost": 1,
+      "id": "lux",
+      "name": "Lux",
+      "record": {
+        "ability": {
+          "desc": "Grant <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield to the lowest current Health ally. Lux's next attack deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> bonus magic&nbsp;damage.",
+          "icon": "ASSETS/Characters/TFT13_Lux/HUD/Icons2D/TFT13_LuxPrismaWrap.TFT_Set13.tex",
+          "name": "Prismatic Barrier",
+          "variables": [
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                360.0,
+                540.0,
+                900.0,
+                1260.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "Shield",
+              "value": [
+                0.0,
+                160.0,
+                180.0,
+                240.0,
+                300.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "ShieldDuration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "DamageReduction",
+              "value": [
+                0.3499999940395355,
+                0.3499999940395355,
+                0.3499999940395355,
+                0.3499999940395355,
+                0.3499999940395355,
+                0.3499999940395355,
+                0.3499999940395355
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Lux",
+        "characterName": "TFT13_Lux",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Lux/Skins/Base/Images/TFT13_Lux.TFT_Set13.tex",
+        "name": "Lux",
+        "role": "APCaster",
+        "squareIcon": "ASSETS/Characters/TFT13_Lux/Skins/Base/Images/TFT13_Lux_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 20.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 30.0,
+          "hp": 500.0,
+          "initialMana": 0,
+          "magicResist": 20.0,
+          "mana": 50.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Lux/HUD/TFT13_Lux_Square.TFT_Set13.tex",
+        "traits": [
+          "Academy",
+          "Sorcerer"
+        ]
+      },
+      "runtimeTraits": [
+        "sorcerer"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/69",
+        "recordCanonicalSha256": "3080e7858f1b211976bad058db1263764ee8a4b5540b8dea399cd87d4eaae9b3",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Academy",
+        "Sorcerer"
+      ],
+      "stats": {
+        "armor": 20.0,
+        "attack": 30.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7000,
+        "health": 500.0,
+        "initialMana": 0,
+        "magicResist": 20.0,
+        "maxMana": 50.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "maddie",
+        "description": "Fire @NumOfShots@ shots towards the farthest enemy that deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to the first enemy they&nbsp;hit.",
+        "id": "maddie-ability",
+        "variables": {
+          "APDamage": [
+            10.0,
+            15.0,
+            25.0
+          ],
+          "NumOfShots": [
+            6.0,
+            6.0,
+            6.0
+          ],
+          "PercentAttackDamage": [
+            1.25,
+            1.25,
+            1.4
+          ],
+          "ShotsPerSimulatedLaunchAttack": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "TotalSpellTime": [
+            1.15,
+            1.15,
+            1.15
+          ]
+        }
+      },
+      "apiName": "TFT13_Shooter",
+      "cost": 1,
+      "id": "maddie",
+      "name": "Maddie",
+      "record": {
+        "ability": {
+          "desc": "Fire @NumOfShots@ shots towards the farthest enemy that deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to the first enemy they&nbsp;hit.",
+          "icon": "ASSETS/Characters/TFT13_Shooter/HUD/Icons2D/ShooterSpellIcon.TFT_Set13.tex",
+          "name": "Fan the Hammer",
+          "variables": [
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                1.350000023841858,
+                1.25,
+                1.25,
+                1.399999976158142,
+                1.399999976158142,
+                1.350000023841858,
+                1.350000023841858
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                0.0,
+                10.0,
+                15.0,
+                25.0,
+                35.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "NumOfShots",
+              "value": [
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0
+              ]
+            },
+            {
+              "name": "TotalSpellTime",
+              "value": [
+                1.149999976158142,
+                1.149999976158142,
+                1.149999976158142,
+                1.149999976158142,
+                1.149999976158142,
+                1.149999976158142,
+                1.149999976158142
+              ]
+            },
+            {
+              "name": "ShotsPerSimulatedLaunchAttack",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Shooter",
+        "characterName": "TFT13_Shooter",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Shooter/Skins/Base/Images/TFT13_Shooter.TFT_Set13.tex",
+        "name": "Maddie",
+        "role": "ADCaster",
+        "squareIcon": "ASSETS/Characters/TFT13_Shooter/Skins/Base/Images/TFT13_Shooter_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 15.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 500.0,
+          "initialMana": 20.0,
+          "magicResist": 15.0,
+          "mana": 120.0,
+          "range": 6.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Shooter/HUD/TFT13_Shooter_Square.TFT_Set13.tex",
+        "traits": [
+          "Enforcer",
+          "Sniper"
+        ]
+      },
+      "runtimeTraits": [
+        "sniper"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/43",
+        "recordCanonicalSha256": "9abdb26ca643c9621cf3b34a8c8c90caca50e68632a5fc9037eddaf0988a02ba",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Enforcer",
+        "Sniper"
+      ],
+      "stats": {
+        "armor": 15.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 6.0,
+        "attackSpeedBps": 7000,
+        "health": 500.0,
+        "initialMana": 20.0,
+        "magicResist": 15.0,
+        "maxMana": 120.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "malzahar",
+        "description": "Summon a gate in a 5-hex line across target. Enemies hit take <magicDamage>@ModifiedDamage@ (%i:scaleAP%)</magicDamage> magic damage and are 20% <TFTKeyword>Shredded</TFTKeyword> for @ShredDuration@ seconds. Malzahar spreads 5 stacks of infection between enemies hit.<br><br>Infection deals <magicDamage>@ModifiedInfectionDamage@ (%i:scaleAP%)</magicDamage> magic damage per second for the rest of combat. This effect can stack infinitely. When an infected target dies, they spread their stacks to nearby enemies.<br><br><rules><tftbold>Shred:</tftbold> Reduce Magic Resist</rules>",
+        "id": "malzahar-ability",
+        "variables": {
+          "Damage": [
+            80.0,
+            120.0,
+            1000.0
+          ],
+          "DamageTicksPerSecond": [
+            0.75,
+            0.75,
+            0.75
+          ],
+          "InfectionDamage": [
+            14.0,
+            21.0,
+            400.0
+          ],
+          "ShredDuration": [
+            4.0,
+            4.0,
+            4.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Malzahar",
+      "cost": 5,
+      "id": "malzahar",
+      "name": "Malzahar",
+      "record": {
+        "ability": {
+          "desc": "Summon a gate in a 5-hex line across target. Enemies hit take <magicDamage>@ModifiedDamage@ (%i:scaleAP%)</magicDamage> magic damage and are 20% <TFTKeyword>Shredded</TFTKeyword> for @ShredDuration@ seconds. Malzahar spreads 5 stacks of infection between enemies hit.<br><br>Infection deals <magicDamage>@ModifiedInfectionDamage@ (%i:scaleAP%)</magicDamage> magic damage per second for the rest of combat. This effect can stack infinitely. When an infected target dies, they spread their stacks to nearby enemies.<br><br><rules><tftbold>Shred:</tftbold> Reduce Magic Resist</rules>",
+          "icon": "ASSETS/Characters/TFT13_Malzahar/HUD/Icons2D/TFT13_MalzaharSpellIcon.TFT_Set13.tex",
+          "name": "Call of the Machine",
+          "variables": [
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                80.0,
+                120.0,
+                1000.0,
+                1500.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "InfectionDamage",
+              "value": [
+                0.0,
+                14.0,
+                21.0,
+                400.0,
+                1000.0,
+                2.5,
+                2.5
+              ]
+            },
+            {
+              "name": "DamageTicksPerSecond",
+              "value": [
+                0.75,
+                0.75,
+                0.75,
+                0.75,
+                0.75,
+                0.75,
+                0.75
+              ]
+            },
+            {
+              "name": "ShredDuration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Malzahar",
+        "characterName": "TFT13_Malzahar",
+        "cost": 5,
+        "icon": "ASSETS/Characters/TFT13_Malzahar/Skins/Base/Images/TFT13_Malzahar.TFT_Set13.tex",
+        "name": "Malzahar",
+        "role": "APCasterHighMana",
+        "squareIcon": "ASSETS/Characters/TFT13_Malzahar/Skins/Base/Images/TFT13_Malzahar_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 40.0,
+          "attackSpeed": 0.800000011920929,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 45.0,
+          "hp": 950.0,
+          "initialMana": 30.0,
+          "magicResist": 40.0,
+          "mana": 95.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Malzahar/HUD/TFT13_Malzahar_Square.TFT_Set13.tex",
+        "traits": [
+          "Automata",
+          "Visionary"
+        ]
+      },
+      "runtimeTraits": [
+        "automata"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/20",
+        "recordCanonicalSha256": "ffcacdc97a57eefcea69361135e268faa342da311bedcaab7b362e7bf56f2a4f",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Automata",
+        "Visionary"
+      ],
+      "stats": {
+        "armor": 40.0,
+        "attack": 45.0,
+        "attackIntervalTicks": 25,
+        "attackRange": 4.0,
+        "attackSpeedBps": 8000,
+        "health": 950.0,
+        "initialMana": 30.0,
+        "magicResist": 40.0,
+        "maxMana": 95.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "nami",
+        "description": "Launch a wave at target that bounces @NumBounces@ times to enemies within @SearchRange@ hexes and deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage.",
+        "id": "nami-ability",
+        "variables": {
+          "Damage": [
+            120.0,
+            180.0,
+            290.0
+          ],
+          "NumBounces": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "SearchRange": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "TimesHitTarget": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Nami",
+      "cost": 3,
+      "id": "nami",
+      "name": "Nami",
+      "record": {
+        "ability": {
+          "desc": "Launch a wave at target that bounces @NumBounces@ times to enemies within @SearchRange@ hexes and deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage.",
+          "icon": "ASSETS/Characters/TFT13_Nami/HUD/Icons2D/NamiW.TFT_Set13.tex",
+          "name": "Ocean's Ebb",
+          "variables": [
+            {
+              "name": "NumBounces",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "Damage",
+              "value": [
+                75.0,
+                120.0,
+                180.0,
+                290.0,
+                400.0,
+                150.0,
+                150.0
+              ]
+            },
+            {
+              "name": "SearchRange",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "TimesHitTarget",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Nami",
+        "characterName": "TFT13_Nami",
+        "cost": 3,
+        "icon": "ASSETS/Characters/TFT13_Nami/Skins/Base/Images/TFT13_Nami.TFT_Set13.tex",
+        "name": "Nami",
+        "role": "APCaster",
+        "squareIcon": "ASSETS/Characters/TFT13_Nami/Skins/Base/Images/TFT13_Nami_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 25.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 40.0,
+          "hp": 700.0,
+          "initialMana": 0,
+          "magicResist": 25.0,
+          "mana": 60.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Nami/HUD/TFT13_Nami_Square.TFT_Set13.tex",
+        "traits": [
+          "Emissary",
+          "Sorcerer"
+        ]
+      },
+      "runtimeTraits": [
+        "sorcerer"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/51",
+        "recordCanonicalSha256": "3a6ba1e2cc361643322873ff14724d9473b30059edc3775b04b30eee11dfd658",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Emissary",
+        "Sorcerer"
+      ],
+      "stats": {
+        "armor": 25.0,
+        "attack": 40.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7000,
+        "health": 700.0,
+        "initialMana": 0,
+        "magicResist": 25.0,
+        "maxMana": 60.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "nocturne",
+        "description": "For @Duration@ seconds, attacks also cause adjacent enemies to bleed for <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage over @BleedDuration@&nbsp;second.",
+        "id": "nocturne-ability",
+        "variables": {
+          "ADPercent": [
+            1.2,
+            1.2,
+            1.4
+          ],
+          "BaseDamage": [
+            15.0,
+            25.0,
+            40.0
+          ],
+          "BleedDuration": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "BleedTicksRate": [
+            0.25,
+            0.25,
+            0.25
+          ],
+          "Duration": [
+            6.0,
+            6.0,
+            6.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Nocturne",
+      "cost": 2,
+      "id": "nocturne",
+      "name": "Nocturne",
+      "record": {
+        "ability": {
+          "desc": "For @Duration@ seconds, attacks also cause adjacent enemies to bleed for <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage over @BleedDuration@&nbsp;second.",
+          "icon": "ASSETS/Characters/TFT13_Nocturne/HUD/Icons2D/TFT13_Nocturne_EyeOfTheStorm.TFT_Set13.tex",
+          "name": "Overdrive Blades",
+          "variables": [
+            {
+              "name": "ADPercent",
+              "value": [
+                0.0,
+                1.2000000476837158,
+                1.2000000476837158,
+                1.399999976158142,
+                1.399999976158142,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "Duration",
+              "value": [
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0
+              ]
+            },
+            {
+              "name": "BaseDamage",
+              "value": [
+                0.0,
+                15.0,
+                25.0,
+                40.0,
+                55.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "BleedDuration",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            },
+            {
+              "name": "BleedTicksRate",
+              "value": [
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Nocturne",
+        "characterName": "TFT13_Nocturne",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Nocturne/Skins/Base/Images/TFT13_Nocturne.TFT_Set13.tex",
+        "name": "Nocturne",
+        "role": "ADReaper",
+        "squareIcon": "ASSETS/Characters/TFT13_Nocturne/Skins/Base/Images/TFT13_Nocturne_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 45.0,
+          "attackSpeed": 0.800000011920929,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 65.0,
+          "hp": 700.0,
+          "initialMana": 0,
+          "magicResist": 45.0,
+          "mana": 40.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Nocturne/HUD/TFT13_Nocturne_Square.TFT_Set13.tex",
+        "traits": [
+          "Automata",
+          "Quickstriker"
+        ]
+      },
+      "runtimeTraits": [
+        "automata"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/57",
+        "recordCanonicalSha256": "6900c2287ec020545dfce8d946ff1183c92bf6614c023af83585d9778e62cee8",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Automata",
+        "Quickstriker"
+      ],
+      "stats": {
+        "armor": 45.0,
+        "attack": 65.0,
+        "attackIntervalTicks": 25,
+        "attackRange": 1.0,
+        "attackSpeedBps": 8000,
+        "health": 700.0,
+        "initialMana": 0,
+        "magicResist": 45.0,
+        "maxMana": 40.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "powder",
+        "description": "Send a monkey towards the largest group of enemies, causing a 2-hex radius explosion on impact. Enemies hit take <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage, reduced by @FalloffPercent*100@% for each hex they are away from the epicenter. <TFTKeyword>Wound</TFTKeyword> and 1% <TFTKeyword>Burn</TFTKeyword> applied for @IgniteDuration@&nbsp;seconds to all enemies hit.<br><br><rules>Burn: Deal a percent of the target's max Health as true damage every second<br>Wound: Reduce healing received by 33%<br></rules>",
+        "id": "powder-ability",
+        "variables": {
+          "Damage": [
+            350.0,
+            500.0,
+            700.0
+          ],
+          "FalloffPercent": [
+            0.3,
+            0.3,
+            0.25
+          ],
+          "HERODamage": [
+            350.0,
+            500.0,
+            700.0
+          ],
+          "HEROFalloffPercent": [
+            0.2,
+            0.2,
+            0.2
+          ],
+          "HEROFriendlyFire": [
+            0.6,
+            0.6,
+            0.6
+          ],
+          "HeroBigFalloffPerc": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "IgniteDuration": [
+            5.0,
+            5.0,
+            5.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Blue",
+      "cost": 1,
+      "id": "powder",
+      "name": "Powder",
+      "record": {
+        "ability": {
+          "desc": "Send a monkey towards the largest group of enemies, causing a 2-hex radius explosion on impact. Enemies hit take <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage, reduced by @FalloffPercent*100@% for each hex they are away from the epicenter. <TFTKeyword>Wound</TFTKeyword> and 1% <TFTKeyword>Burn</TFTKeyword> applied for @IgniteDuration@&nbsp;seconds to all enemies hit.<br><br><rules>Burn: Deal a percent of the target's max Health as true damage every second<br>Wound: Reduce healing received by 33%<br></rules>",
+          "icon": "ASSETS/Characters/TFT13_Blue/HUD/Icons2D/Blue_Spell.TFT_Set13.tex",
+          "name": "Misfit Toy",
+          "variables": [
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                350.0,
+                500.0,
+                700.0,
+                900.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "IgniteDuration",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "FalloffPercent",
+              "value": [
+                0.33000001311302185,
+                0.30000001192092896,
+                0.30000001192092896,
+                0.25,
+                0.25,
+                0.33000001311302185,
+                0.33000001311302185
+              ]
+            },
+            {
+              "name": "HERODamage",
+              "value": [
+                240.0,
+                350.0,
+                500.0,
+                700.0,
+                900.0,
+                240.0,
+                240.0
+              ]
+            },
+            {
+              "name": "HEROFalloffPercent",
+              "value": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+              ]
+            },
+            {
+              "name": "HEROFriendlyFire",
+              "value": [
+                0.6000000238418579,
+                0.6000000238418579,
+                0.6000000238418579,
+                0.6000000238418579,
+                0.6000000238418579,
+                0.6000000238418579,
+                0.6000000238418579
+              ]
+            },
+            {
+              "name": "HeroBigFalloffPerc",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Blue",
+        "characterName": "TFT13_Blue",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Blue/Skins/Base/Images/TFT13_Blue.TFT_Set13.tex",
+        "name": "Powder",
+        "role": "APCasterHighMana",
+        "squareIcon": "ASSETS/Characters/TFT13_Blue/Skins/Base/Images/TFT13_Blue_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 15.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 35.0,
+          "hp": 500.0,
+          "initialMana": 40.0,
+          "magicResist": 15.0,
+          "mana": 120.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Blue/HUD/TFT13_Blue_Square.TFT_Set13.tex",
+        "traits": [
+          "Family",
+          "Scrap",
+          "Ambusher"
+        ]
+      },
+      "runtimeTraits": [
+        "family"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/44",
+        "recordCanonicalSha256": "2838df99a30bbc194e4a7aee00b747a10a233eb2a052a467f30047d2e8d5904a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Family",
+        "Scrap",
+        "Ambusher"
+      ],
+      "stats": {
+        "armor": 15.0,
+        "attack": 35.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7000,
+        "health": 500.0,
+        "initialMana": 40.0,
+        "magicResist": 15.0,
+        "maxMana": 120.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "rell",
+        "description": "Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Lance enemies in a line for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and steal <TFTBonus>@DefensesSteal@</TFTBonus> Armor and Magic Resist from enemies&nbsp;hit.",
+        "id": "rell-ability",
+        "variables": {
+          "DefenseStealDuration": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "DefensesSteal": [
+            10.0,
+            12.0,
+            15.0
+          ],
+          "Shield": [
+            300.0,
+            350.0,
+            400.0
+          ],
+          "ShieldDuration": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "StabDamage": [
+            120.0,
+            180.0,
+            270.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Rell",
+      "cost": 2,
+      "id": "rell",
+      "name": "Rell",
+      "record": {
+        "ability": {
+          "desc": "Gain <TFTBonus>@ModifiedShield@&nbsp;(%i:scaleAP%)</TFTBonus> Shield for @ShieldDuration@ seconds. Lance enemies in a line for <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage and steal <TFTBonus>@DefensesSteal@</TFTBonus> Armor and Magic Resist from enemies&nbsp;hit.",
+          "icon": "ASSETS/Characters/TFT13_Rell/HUD/Icons2D/RellSpell.TFT_Set13.tex",
+          "name": "Shattering Strike",
+          "variables": [
+            {
+              "name": "StabDamage",
+              "value": [
+                0.0,
+                120.0,
+                180.0,
+                270.0,
+                360.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "DefenseStealDuration",
+              "value": [
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0
+              ]
+            },
+            {
+              "name": "DefensesSteal",
+              "value": [
+                10.0,
+                10.0,
+                12.0,
+                15.0,
+                18.0,
+                10.0,
+                10.0
+              ]
+            },
+            {
+              "name": "ShieldDuration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "Shield",
+              "value": [
+                0.0,
+                300.0,
+                350.0,
+                400.0,
+                540.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Rell",
+        "characterName": "TFT13_Rell",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Rell/Skins/Base/Images/TFT13_Rell.TFT_Set13.tex",
+        "name": "Rell",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Rell/Skins/Base/Images/TFT13_Rell_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 45.0,
+          "attackSpeed": 0.6000000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 60.0,
+          "hp": 800.0,
+          "initialMana": 40.0,
+          "magicResist": 45.0,
+          "mana": 90.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Rell/HUD/TFT13_Rell_Square.TFT_Set13.tex",
+        "traits": [
+          "Conqueror",
+          "Sentinel",
+          "Visionary"
+        ]
+      },
+      "runtimeTraits": [
+        "sentinel"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/28",
+        "recordCanonicalSha256": "f406d583449f624cbfb32b046d61dfc55f41a119e70cdbb524442be0217f1637",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Conqueror",
+        "Sentinel",
+        "Visionary"
+      ],
+      "stats": {
+        "armor": 45.0,
+        "attack": 60.0,
+        "attackIntervalTicks": 34,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6000,
+        "health": 800.0,
+        "initialMana": 40.0,
+        "magicResist": 45.0,
+        "maxMana": 90.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "rumble",
+        "description": "Call down a rain of @NumMissile@ missiles on target's row that each deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage, <TFTKeyword>Wound</TFTKeyword>, and 1% <TFTKeyword>Burn</TFTKeyword> units hit for @WoundDuration@ seconds. For each missile that doesn't hit an enemy, restore @ManaPerMissile@&nbsp;Mana.<br><br>If there's only 1 enemy left, fire all of the missiles at&nbsp;them.<br><br><rules>Burn: Deal a percent of the target's max Health as true damage every second<br>Wound: Reduce healing received by 33%</rules><br><br>@TFTUnitProperty.:TFT13_JunkerKing_UpgradeTRAKeyWrapper@<br>",
+        "id": "rumble-ability",
+        "variables": {
+          "Damage": [
+            500.0,
+            750.0,
+            4000.0
+          ],
+          "Flamethrower_Damage_Level1": [
+            30.0,
+            30.0,
+            30.0
+          ],
+          "Flamethrower_Damage_Level2": [
+            45.0,
+            45.0,
+            45.0
+          ],
+          "Flamethrower_Damage_Level3": [
+            600.0,
+            600.0,
+            600.0
+          ],
+          "Flamethrower_TicksPerSecond": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "ManaPerMissile": [
+            20.0,
+            20.0,
+            20.0
+          ],
+          "NumMissile": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "PetriciteRod_APDamage_Level1": [
+            350.0,
+            350.0,
+            350.0
+          ],
+          "PetriciteRod_APDamage_Level2": [
+            525.0,
+            525.0,
+            525.0
+          ],
+          "PetriciteRod_APDamage_Level3": [
+            6000.0,
+            6000.0,
+            6000.0
+          ],
+          "PetriciteRod_DOTDuration": [
+            15.0,
+            15.0,
+            15.0
+          ],
+          "PetriciteRod_RefreshDuration": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "RepairingMicrobots_RefreshDuration": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "ReparingMicrobots_MaxHealthHeal_Level1": [
+            0.06,
+            0.06,
+            0.06
+          ],
+          "ReparingMicrobots_MaxHealthHeal_Level2": [
+            0.06,
+            0.06,
+            0.06
+          ],
+          "ReparingMicrobots_MaxHealthHeal_Level3": [
+            0.4,
+            0.4,
+            0.4
+          ],
+          "SelfDestruct_HexRadius": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "SelfDestruct_ResistDamage_Level1": [
+            1.6,
+            1.6,
+            1.6
+          ],
+          "SelfDestruct_ResistDamage_Level2": [
+            2.4,
+            2.4,
+            2.4
+          ],
+          "SelfDestruct_ResistDamage_Level3": [
+            20.0,
+            20.0,
+            20.0
+          ],
+          "SelfDestruct_ResistGainIncrease": [
+            0.25,
+            0.25,
+            0.25
+          ],
+          "Tankbuster_APDamage_Level1": [
+            100.0,
+            100.0,
+            100.0
+          ],
+          "Tankbuster_APDamage_Level2": [
+            150.0,
+            150.0,
+            150.0
+          ],
+          "Tankbuster_APDamage_Level3": [
+            1600.0,
+            1600.0,
+            1600.0
+          ],
+          "Tankbuster_RefreshDuration": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "WoundDuration": [
+            5.0,
+            5.0,
+            5.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Rumble",
+      "cost": 5,
+      "id": "rumble",
+      "name": "Rumble",
+      "record": {
+        "ability": {
+          "desc": "Call down a rain of @NumMissile@ missiles on target's row that each deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage, <TFTKeyword>Wound</TFTKeyword>, and 1% <TFTKeyword>Burn</TFTKeyword> units hit for @WoundDuration@ seconds. For each missile that doesn't hit an enemy, restore @ManaPerMissile@&nbsp;Mana.<br><br>If there's only 1 enemy left, fire all of the missiles at&nbsp;them.<br><br><rules>Burn: Deal a percent of the target's max Health as true damage every second<br>Wound: Reduce healing received by 33%</rules><br><br>@TFTUnitProperty.:TFT13_JunkerKing_UpgradeTRAKeyWrapper@<br>",
+          "icon": "ASSETS/Characters/TFT13_Rumble/HUD/Icons2D/Rumble_R.TFT_Set13.tex",
+          "name": "The Equalizer",
+          "variables": [
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                500.0,
+                750.0,
+                4000.0,
+                9999.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "NumMissile",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "WoundDuration",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "ManaPerMissile",
+              "value": [
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0
+              ]
+            },
+            {
+              "name": "Tankbuster_RefreshDuration",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "Tankbuster_APDamage_Level1",
+              "value": [
+                100.0,
+                100.0,
+                100.0,
+                100.0,
+                100.0,
+                100.0,
+                100.0
+              ]
+            },
+            {
+              "name": "Tankbuster_APDamage_Level2",
+              "value": [
+                150.0,
+                150.0,
+                150.0,
+                150.0,
+                150.0,
+                150.0,
+                150.0
+              ]
+            },
+            {
+              "name": "Tankbuster_APDamage_Level3",
+              "value": [
+                1600.0,
+                1600.0,
+                1600.0,
+                1600.0,
+                1600.0,
+                1600.0,
+                1600.0
+              ]
+            },
+            {
+              "name": "SelfDestruct_ResistGainIncrease",
+              "value": [
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            },
+            {
+              "name": "SelfDestruct_ResistDamage_Level1",
+              "value": [
+                1.600000023841858,
+                1.600000023841858,
+                1.600000023841858,
+                1.600000023841858,
+                1.600000023841858,
+                1.600000023841858,
+                1.600000023841858
+              ]
+            },
+            {
+              "name": "SelfDestruct_ResistDamage_Level2",
+              "value": [
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316,
+                2.4000000953674316
+              ]
+            },
+            {
+              "name": "SelfDestruct_ResistDamage_Level3",
+              "value": [
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0,
+                20.0
+              ]
+            },
+            {
+              "name": "SelfDestruct_HexRadius",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "Flamethrower_Damage_Level1",
+              "value": [
+                30.0,
+                30.0,
+                30.0,
+                30.0,
+                30.0,
+                30.0,
+                30.0
+              ]
+            },
+            {
+              "name": "Flamethrower_Damage_Level2",
+              "value": [
+                45.0,
+                45.0,
+                45.0,
+                45.0,
+                45.0,
+                45.0,
+                45.0
+              ]
+            },
+            {
+              "name": "Flamethrower_Damage_Level3",
+              "value": [
+                600.0,
+                600.0,
+                600.0,
+                600.0,
+                600.0,
+                600.0,
+                600.0
+              ]
+            },
+            {
+              "name": "Flamethrower_TicksPerSecond",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "RepairingMicrobots_RefreshDuration",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "ReparingMicrobots_MaxHealthHeal_Level1",
+              "value": [
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549
+              ]
+            },
+            {
+              "name": "ReparingMicrobots_MaxHealthHeal_Level2",
+              "value": [
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549,
+                0.05999999865889549
+              ]
+            },
+            {
+              "name": "ReparingMicrobots_MaxHealthHeal_Level3",
+              "value": [
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.4000000059604645
+              ]
+            },
+            {
+              "name": "PetriciteRod_RefreshDuration",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "PetriciteRod_APDamage_Level1",
+              "value": [
+                350.0,
+                350.0,
+                350.0,
+                350.0,
+                350.0,
+                350.0,
+                350.0
+              ]
+            },
+            {
+              "name": "PetriciteRod_APDamage_Level2",
+              "value": [
+                525.0,
+                525.0,
+                525.0,
+                525.0,
+                525.0,
+                525.0,
+                525.0
+              ]
+            },
+            {
+              "name": "PetriciteRod_APDamage_Level3",
+              "value": [
+                6000.0,
+                6000.0,
+                6000.0,
+                6000.0,
+                6000.0,
+                6000.0,
+                6000.0
+              ]
+            },
+            {
+              "name": "PetriciteRod_DOTDuration",
+              "value": [
+                15.0,
+                15.0,
+                15.0,
+                15.0,
+                15.0,
+                15.0,
+                15.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Rumble",
+        "characterName": "TFT13_Rumble",
+        "cost": 5,
+        "icon": "ASSETS/Characters/TFT13_Rumble/Skins/Base/Images/TFT13_Rumble.TFT_Set13.tex",
+        "name": "Rumble",
+        "role": "APFighter",
+        "squareIcon": "ASSETS/Characters/TFT13_Rumble/Skins/Base/Images/TFT13_Rumble_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 70.0,
+          "attackSpeed": 0.800000011920929,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 60.0,
+          "hp": 1200.0,
+          "initialMana": 40.0,
+          "magicResist": 70.0,
+          "mana": 120.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Rumble/HUD/TFT13_Rumble_Square.TFT_Set13.tex",
+        "traits": [
+          "Junker King",
+          "Scrap",
+          "Sentinel"
+        ]
+      },
+      "runtimeTraits": [
+        "sentinel"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/37",
+        "recordCanonicalSha256": "71851242b8523edfbb52970b66dba559c4270369ae48fc5e5d3e65bd84c365d8",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Junker King",
+        "Scrap",
+        "Sentinel"
+      ],
+      "stats": {
+        "armor": 70.0,
+        "attack": 60.0,
+        "attackIntervalTicks": 25,
+        "attackRange": 1.0,
+        "attackSpeedBps": 8000,
+        "health": 1200.0,
+        "initialMana": 40.0,
+        "magicResist": 70.0,
+        "maxMana": 120.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "scar",
+        "description": "Lob bombs at the nearest @NumEnemies@ enemies, Stunning them for <scaleLevel>@StunDuration@</scaleLevel> seconds and dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to each. Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth>.",
+        "id": "scar-ability",
+        "variables": {
+          "Damage": [
+            80.0,
+            120.0,
+            180.0
+          ],
+          "Heal": [
+            220.0,
+            240.0,
+            270.0
+          ],
+          "NumEnemies": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "StunDuration": [
+            1.5,
+            1.5,
+            1.75
+          ]
+        }
+      },
+      "apiName": "TFT13_FlyGuy",
+      "cost": 3,
+      "id": "scar",
+      "name": "Scar",
+      "record": {
+        "ability": {
+          "desc": "Lob bombs at the nearest @NumEnemies@ enemies, Stunning them for <scaleLevel>@StunDuration@</scaleLevel> seconds and dealing <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to each. Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth>.",
+          "icon": "ASSETS/Characters/TFT13_FlyGuy/HUD/Icons2D/FlyGuy_Spell.TFT_Set13.tex",
+          "name": "Sumpsnipe Surprise",
+          "variables": [
+            {
+              "name": "Heal",
+              "value": [
+                0.029999999329447746,
+                220.0,
+                240.0,
+                270.0,
+                330.0,
+                0.029999999329447746,
+                0.029999999329447746
+              ]
+            },
+            {
+              "name": "NumEnemies",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "StunDuration",
+              "value": [
+                1.5,
+                1.5,
+                1.5,
+                1.75,
+                1.75,
+                1.5,
+                1.5
+              ]
+            },
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                80.0,
+                120.0,
+                180.0,
+                240.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_FlyGuy",
+        "characterName": "TFT13_FlyGuy",
+        "cost": 3,
+        "icon": "ASSETS/Characters/TFT13_FlyGuy/Skins/Base/Images/TFT13_Flyguy.TFT_Set13.tex",
+        "name": "Scar",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_FlyGuy/Skins/Base/Images/TFT13_Flyguy_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 50.0,
+          "attackSpeed": 0.6499999761581421,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 800.0,
+          "initialMana": 80.0,
+          "magicResist": 50.0,
+          "mana": 170.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_FlyGuy/HUD/TFT13_FlyGuy_Square.TFT_Set13.tex",
+        "traits": [
+          "Firelight",
+          "Watcher"
+        ]
+      },
+      "runtimeTraits": [
+        "firelight",
+        "watcher"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/46",
+        "recordCanonicalSha256": "4fbfef1c21d82a425badc21f5e7d86b0f6753e4ddc847b4177a77700307055fd",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Firelight",
+        "Watcher"
+      ],
+      "stats": {
+        "armor": 50.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 31,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6500,
+        "health": 800.0,
+        "initialMana": 80.0,
+        "magicResist": 50.0,
+        "maxMana": 170.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "singed",
+        "description": "Gain <TFTBonus>@ModifiedDurability@&nbsp;(%i:scaleAP%)</TFTBonus>&nbsp;Durability and grant the ally who has dealt the most damage this round <scaleLevel>@AttackSpeed@%</scaleLevel> Attack Speed, decaying over @Duration@&nbsp;seconds. ",
+        "id": "singed-ability",
+        "variables": {
+          "AttackSpeed": [
+            100.0,
+            120.0,
+            160.0
+          ],
+          "DR": [
+            0.5,
+            0.5,
+            0.6
+          ],
+          "Duration": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "HEROCloudDuration": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "HERODuration": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "HEROMoveSpeed": [
+            250.0,
+            250.0,
+            250.0
+          ],
+          "HEROOmnivamp": [
+            0.2,
+            0.2,
+            0.2
+          ],
+          "HEROSpellBaseDamage": [
+            140.0,
+            210.0,
+            315.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Singed",
+      "cost": 1,
+      "id": "singed",
+      "name": "Singed",
+      "record": {
+        "ability": {
+          "desc": "Gain <TFTBonus>@ModifiedDurability@&nbsp;(%i:scaleAP%)</TFTBonus>&nbsp;Durability and grant the ally who has dealt the most damage this round <scaleLevel>@AttackSpeed@%</scaleLevel> Attack Speed, decaying over @Duration@&nbsp;seconds. ",
+          "icon": "ASSETS/Characters/TFT13_Singed/HUD/Icons2D/Singed_R.TFT_Set13.tex",
+          "name": "Dangerous Mutations",
+          "variables": [
+            {
+              "name": "AttackSpeed",
+              "value": [
+                1.0,
+                100.0,
+                120.0,
+                160.0,
+                200.0,
+                1.0,
+                1.0
+              ]
+            },
+            {
+              "name": "Duration",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "DR",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.6000000238418579,
+                0.699999988079071,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "HEROSpellBaseDamage",
+              "value": [
+                0.0,
+                140.0,
+                210.0,
+                315.0,
+                420.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "HEROOmnivamp",
+              "value": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+              ]
+            },
+            {
+              "name": "HERODuration",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "HEROCloudDuration",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "HEROMoveSpeed",
+              "value": [
+                250.0,
+                250.0,
+                250.0,
+                250.0,
+                250.0,
+                250.0,
+                250.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Singed",
+        "characterName": "TFT13_Singed",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Singed/Skins/Base/Images/TFT13_Singed.TFT_Set13.tex",
+        "name": "Singed",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Singed/Skins/Base/Images/TFT13_Singed_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 40.0,
+          "attackSpeed": 0.6000000238418579,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 55.0,
+          "hp": 650.0,
+          "initialMana": 0,
+          "magicResist": 40.0,
+          "mana": 50.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Singed/HUD/TFT13_Singed_Square.TFT_Set13.tex",
+        "traits": [
+          "Chem-Baron",
+          "Sentinel"
+        ]
+      },
+      "runtimeTraits": [
+        "sentinel"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/11",
+        "recordCanonicalSha256": "c2fd5b6561af6423312fd720521d757744bea7e6bfaead22e0b69da2817c05d8",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Chem-Baron",
+        "Sentinel"
+      ],
+      "stats": {
+        "armor": 40.0,
+        "attack": 55.0,
+        "attackIntervalTicks": 34,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6000,
+        "health": 650.0,
+        "initialMana": 0,
+        "magicResist": 40.0,
+        "maxMana": 50.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "swain",
+        "description": "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and ascend for @Duration@ seconds. While ascended, heal <scaleHealth>@ModifiedHealPerSecond@&nbsp;(%i:scaleAP%)</scaleHealth> and deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent enemies every second. On takedown, the ascension's duration is extended by @BonusDuration@&nbsp;seconds.",
+        "id": "swain-ability",
+        "variables": {
+          "BonusDuration": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "DamagePerSecond": [
+            40.0,
+            60.0,
+            95.0
+          ],
+          "Duration": [
+            6.0,
+            6.0,
+            6.0
+          ],
+          "Heal": [
+            240.0,
+            300.0,
+            380.0
+          ],
+          "HealPerSecond": [
+            70.0,
+            90.0,
+            125.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Swain",
+      "cost": 3,
+      "id": "swain",
+      "name": "Swain",
+      "record": {
+        "ability": {
+          "desc": "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and ascend for @Duration@ seconds. While ascended, heal <scaleHealth>@ModifiedHealPerSecond@&nbsp;(%i:scaleAP%)</scaleHealth> and deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to adjacent enemies every second. On takedown, the ascension's duration is extended by @BonusDuration@&nbsp;seconds.",
+          "icon": "ASSETS/Characters/TFT13_Swain/HUD/Swain_Melee.TFT_Set13.tex",
+          "name": "Demonic Ascension",
+          "variables": [
+            {
+              "name": "Heal",
+              "value": [
+                0.0,
+                240.0,
+                300.0,
+                380.0,
+                460.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "HealPerSecond",
+              "value": [
+                0.0,
+                70.0,
+                90.0,
+                125.0,
+                130.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "DamagePerSecond",
+              "value": [
+                0.0,
+                40.0,
+                60.0,
+                95.0,
+                130.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "Duration",
+              "value": [
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0
+              ]
+            },
+            {
+              "name": "BonusDuration",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Swain",
+        "characterName": "TFT13_Swain",
+        "cost": 3,
+        "icon": "ASSETS/Characters/TFT13_Swain/Skins/Base/Images/TFT13_Swain.TFT_Set13.tex",
+        "name": "Swain",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Swain/Skins/Base/Images/TFT13_Swain_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 0.0,
+          "attackSpeed": 0.5,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 650.0,
+          "initialMana": 0,
+          "magicResist": null,
+          "mana": 10.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Swain/HUD/TFT13_Swain_Square.TFT_Set13.tex",
+        "traits": [
+          "Conqueror",
+          "Form Swapper",
+          "Sorcerer"
+        ]
+      },
+      "runtimeTraits": [
+        "sorcerer"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/73",
+        "recordCanonicalSha256": "fd082e4bb8b26b847e2b0ee0f61042cbda34f68346ca31914b3453d7bf69479c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Conqueror",
+        "Form Swapper",
+        "Sorcerer"
+      ],
+      "stats": {
+        "armor": 0.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 40,
+        "attackRange": 1.0,
+        "attackSpeedBps": 5000,
+        "health": 650.0,
+        "initialMana": 0,
+        "magicResist": null,
+        "maxMana": 10.0
+      },
+      "status": "blocked-on-form-stats"
+    },
+    {
+      "ability": {
+        "championId": "tristana",
+        "description": "Fire a cannonball at target, dealing <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage. If they die, the cannonball ricochets to the nearest enemy, dealing the overkill damage. When it does, permanently gain <TFTBonus>@TFTUnitProperty.:TFT13_TristanaASPerStack@%</TFTBonus>&nbsp;Attack Damage.<br><br><TFTTrackerLabel>(Current Bonus:&nbsp;@TFTUnitProperty.:TFT13_TristanaASGain@% %i:scaleAD%) </TFTTrackerLabel> ",
+        "id": "tristana-ability",
+        "variables": {
+          "APDamage": [
+            50.0,
+            75.0,
+            115.0
+          ],
+          "ASKillGain": [
+            1.25,
+            1.25,
+            1.25
+          ],
+          "ASKillGainHyperroll": [
+            2.5,
+            2.5,
+            2.5
+          ],
+          "PercentAttackDamage": [
+            5.25,
+            5.25,
+            5.25
+          ]
+        }
+      },
+      "apiName": "TFT13_Tristana",
+      "cost": 2,
+      "id": "tristana",
+      "name": "Tristana",
+      "record": {
+        "ability": {
+          "desc": "Fire a cannonball at target, dealing <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage. If they die, the cannonball ricochets to the nearest enemy, dealing the overkill damage. When it does, permanently gain <TFTBonus>@TFTUnitProperty.:TFT13_TristanaASPerStack@%</TFTBonus>&nbsp;Attack Damage.<br><br><TFTTrackerLabel>(Current Bonus:&nbsp;@TFTUnitProperty.:TFT13_TristanaASGain@% %i:scaleAD%) </TFTTrackerLabel> ",
+          "icon": "ASSETS/Characters/TFT13_Tristana/HUD/Icons2D/TFT13_Tristana_Passive.TFT_Set13.tex",
+          "name": "Draw a Bead",
+          "variables": [
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                5.25,
+                5.25,
+                5.25,
+                5.25,
+                5.25,
+                5.25,
+                5.25
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                0.0,
+                50.0,
+                75.0,
+                115.0,
+                155.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "ASKillGain",
+              "value": [
+                1.25,
+                1.25,
+                1.25,
+                1.25,
+                1.25,
+                1.25,
+                1.25
+              ]
+            },
+            {
+              "name": "ASKillGainHyperroll",
+              "value": [
+                2.5,
+                2.5,
+                2.5,
+                2.5,
+                2.5,
+                2.5,
+                2.5
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Tristana",
+        "characterName": "TFT13_Tristana",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Tristana/Skins/Base/Images/TFT13_Tristana.TFT_Set13.tex",
+        "name": "Tristana",
+        "role": "ADCaster",
+        "squareIcon": "ASSETS/Characters/TFT13_Tristana/Skins/Base/Images/TFT13_Tristana_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 20.0,
+          "attackSpeed": 0.75,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 42.0,
+          "hp": 550.0,
+          "initialMana": 20.0,
+          "magicResist": 20.0,
+          "mana": 60.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Tristana/HUD/TFT13_Tristana_Square.TFT_Set13.tex",
+        "traits": [
+          "Emissary",
+          "Artillerist"
+        ]
+      },
+      "runtimeTraits": [
+        "artillerist"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/72",
+        "recordCanonicalSha256": "ed1b0010d9465ffd92b71d410da71f64447a640a6b7be8be3656ed34d1584c89",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Emissary",
+        "Artillerist"
+      ],
+      "stats": {
+        "armor": 20.0,
+        "attack": 42.0,
+        "attackIntervalTicks": 27,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7500,
+        "health": 550.0,
+        "initialMana": 20.0,
+        "magicResist": 20.0,
+        "maxMana": 60.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "twitch",
+        "description": "For the next @TotalAttacks@ attacks, gain <TFTBonus>@AttackSpeed*100@%</TFTBonus> Attack Speed, infinite range, and replace attacks with a piercing bolt that targets random enemies. Bolts deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage, reduced by @DamageReduction*100@% for each enemy they pass&nbsp;through.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus: <TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus>After every <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@ExperimentDamageTicks@</TFTBonus> attacks, deal physical damage to the nearest enemy equal to <physicalDamage enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_TwitchCurrentExperimentBonus@%</physicalDamage> of their max&nbsp;Health.</spellActive>",
+        "id": "twitch-ability",
+        "variables": {
+          "APDamage": [
+            18.0,
+            25.0,
+            120.0
+          ],
+          "AttackSpeed": [
+            0.85,
+            0.85,
+            0.85
+          ],
+          "DamageReduction": [
+            0.4,
+            0.4,
+            0.2
+          ],
+          "ExperimentDamageTicks": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "ExperimentMaxHealthDamage": [
+            0.15,
+            0.15,
+            0.15
+          ],
+          "PercentAttackDamage": [
+            1.4,
+            1.4,
+            3.0
+          ],
+          "TotalAttacks": [
+            8.0,
+            8.0,
+            8.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Twitch",
+      "cost": 4,
+      "id": "twitch",
+      "name": "Twitch",
+      "record": {
+        "ability": {
+          "desc": "For the next @TotalAttacks@ attacks, gain <TFTBonus>@AttackSpeed*100@%</TFTBonus> Attack Speed, infinite range, and replace attacks with a piercing bolt that targets random enemies. Bolts deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage, reduced by @DamageReduction*100@% for each enemy they pass&nbsp;through.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus: <TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus>After every <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@ExperimentDamageTicks@</TFTBonus> attacks, deal physical damage to the nearest enemy equal to <physicalDamage enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_TwitchCurrentExperimentBonus@%</physicalDamage> of their max&nbsp;Health.</spellActive>",
+          "icon": "ASSETS/Characters/TFT13_Twitch/HUD/Icons_2D/Twitch_R.TFT_Set13.tex",
+          "name": "Spray and Pray",
+          "variables": [
+            {
+              "name": "TotalAttacks",
+              "value": [
+                8.0,
+                8.0,
+                8.0,
+                8.0,
+                8.0,
+                8.0,
+                8.0
+              ]
+            },
+            {
+              "name": "AttackSpeed",
+              "value": [
+                0.8500000238418579,
+                0.8500000238418579,
+                0.8500000238418579,
+                0.8500000238418579,
+                0.8500000238418579,
+                0.8500000238418579,
+                0.8500000238418579
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                4.0,
+                18.0,
+                25.0,
+                120.0,
+                200.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                1.5,
+                1.399999976158142,
+                1.399999976158142,
+                3.0,
+                4.0,
+                1.5,
+                1.5
+              ]
+            },
+            {
+              "name": "DamageReduction",
+              "value": [
+                0.6000000238418579,
+                0.4000000059604645,
+                0.4000000059604645,
+                0.20000000298023224,
+                0.10000000149011612,
+                0.6000000238418579,
+                0.6000000238418579
+              ]
+            },
+            {
+              "name": "ExperimentDamageTicks",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            },
+            {
+              "name": "ExperimentMaxHealthDamage",
+              "value": [
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448,
+                0.15000000596046448
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Twitch",
+        "characterName": "TFT13_Twitch",
+        "cost": 4,
+        "icon": "ASSETS/Characters/TFT13_Twitch/Skins/Base/Images/TFT13_Twitch.TFT_Set13.tex",
+        "name": "Twitch",
+        "role": "ADCarry",
+        "squareIcon": "ASSETS/Characters/TFT13_Twitch/Skins/Base/Images/TFT13_Twitch__Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 30.0,
+          "attackSpeed": 0.75,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 70.0,
+          "hp": 800.0,
+          "initialMana": 0,
+          "magicResist": 30.0,
+          "mana": 60.0,
+          "range": 6.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Twitch/HUD/TFT13_Twitch_Square.TFT_Set13.tex",
+        "traits": [
+          "Experiment",
+          "Sniper"
+        ]
+      },
+      "runtimeTraits": [
+        "sniper"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/22",
+        "recordCanonicalSha256": "c8a767819c1230486789127f1fd99897e29cf4c9962e2f0a4fe64c93a1697866",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Experiment",
+        "Sniper"
+      ],
+      "stats": {
+        "armor": 30.0,
+        "attack": 70.0,
+        "attackIntervalTicks": 27,
+        "attackRange": 6.0,
+        "attackSpeedBps": 7500,
+        "health": 800.0,
+        "initialMana": 0,
+        "magicResist": 30.0,
+        "maxMana": 60.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "urgot",
+        "description": "Fire an explosive charge, dealing <physicalDamage>@ModifiedPrimaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to target and <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to adjacent enemies. 20% <TFTKeyword>Sunder</TFTKeyword> all enemies hit for @Duration@&nbsp;seconds.<br><br><rules><tftbold>Sunder:</tftbold> Reduce Armor</rules><br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus:<TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus> Dash to targets. On cast, gain <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusShield@%</TFTBonus> max Health Shield and <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusAS@%</TFTBonus>&nbsp;Attack Speed for @ExperimentDuration@&nbsp;seconds.</spellActive>",
+        "id": "urgot-ability",
+        "variables": {
+          "APDamage": [
+            35.0,
+            50.0,
+            75.0
+          ],
+          "Duration": [
+            6.0,
+            6.0,
+            6.0
+          ],
+          "ExperimentAttackSpeed": [
+            0.2,
+            0.2,
+            0.2
+          ],
+          "ExperimentDuration": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "ExperimentPercentHealthShield": [
+            0.08,
+            0.08,
+            0.08
+          ],
+          "PrimaryDamage": [
+            3.0,
+            3.0,
+            3.3
+          ],
+          "SecondaryDamage": [
+            1.5,
+            1.5,
+            1.65
+          ]
+        }
+      },
+      "apiName": "TFT13_Urgot",
+      "cost": 2,
+      "id": "urgot",
+      "name": "Urgot",
+      "record": {
+        "ability": {
+          "desc": "Fire an explosive charge, dealing <physicalDamage>@ModifiedPrimaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to target and <physicalDamage>@ModifiedSecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to adjacent enemies. 20% <TFTKeyword>Sunder</TFTKeyword> all enemies hit for @Duration@&nbsp;seconds.<br><br><rules><tftbold>Sunder:</tftbold> Reduce Armor</rules><br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus:<TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus> Dash to targets. On cast, gain <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusShield@%</TFTBonus> max Health Shield and <TFTBonus enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusAS@%</TFTBonus>&nbsp;Attack Speed for @ExperimentDuration@&nbsp;seconds.</spellActive>",
+          "icon": "ASSETS/Characters/TFT13_Urgot/HUD/Icons2D/TFT13_Urgot_Q.TFT_Set13.tex",
+          "name": "Corrosive Charge",
+          "variables": [
+            {
+              "name": "PrimaryDamage",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.299999952316284,
+                3.299999952316284,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "SecondaryDamage",
+              "value": [
+                1.5,
+                1.5,
+                1.5,
+                1.649999976158142,
+                1.649999976158142,
+                1.5,
+                1.5
+              ]
+            },
+            {
+              "name": "Duration",
+              "value": [
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0,
+                6.0
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                0.0,
+                35.0,
+                50.0,
+                75.0,
+                100.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "ExperimentPercentHealthShield",
+              "value": [
+                0.07999999821186066,
+                0.07999999821186066,
+                0.07999999821186066,
+                0.07999999821186066,
+                0.07999999821186066,
+                0.07999999821186066,
+                0.07999999821186066
+              ]
+            },
+            {
+              "name": "ExperimentAttackSpeed",
+              "value": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224,
+                0.20000000298023224
+              ]
+            },
+            {
+              "name": "ExperimentDuration",
+              "value": [
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0,
+                5.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Urgot",
+        "characterName": "TFT13_Urgot",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Urgot/Skins/Base/Images/TFT13_Urgot.TFT_Set13.tex",
+        "name": "Urgot",
+        "role": "ADFighter",
+        "squareIcon": "ASSETS/Characters/TFT13_Urgot/Skins/Base/Images/TFT13_Urgot_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 45.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 700.0,
+          "initialMana": 20.0,
+          "magicResist": 45.0,
+          "mana": 70.0,
+          "range": 2.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Urgot/HUD/TFT13_Urgot_Square.TFT_Set13.tex",
+        "traits": [
+          "Experiment",
+          "Pit Fighter",
+          "Artillerist"
+        ]
+      },
+      "runtimeTraits": [
+        "artillerist"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/75",
+        "recordCanonicalSha256": "ab95fc050a995ab6477cddc487e13f8844f168a996000fb7c3a8ed9b927592d6",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Experiment",
+        "Pit Fighter",
+        "Artillerist"
+      ],
+      "stats": {
+        "armor": 45.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 2.0,
+        "attackSpeedBps": 7000,
+        "health": 700.0,
+        "initialMana": 20.0,
+        "magicResist": 45.0,
+        "maxMana": 70.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "vander",
+        "description": "Stop attacking and brace for @TauntDuration@ seconds, gaining <TFTBonus>@ModifiedDefenses@&nbsp;(%i:scaleAP%)</TFTBonus> Armor and Magic Resist. Vander's next attack is replaced with a strike that deals <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage, increased by <physicalDamage>@ModifiedBonusDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage for each 1 or 2 cost champion on your&nbsp;team. ",
+        "id": "vander-ability",
+        "variables": {
+          "BonusDamageADRatio": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "HEROBonusDamage": [
+            1.85,
+            1.85,
+            1.85
+          ],
+          "HEROManaIncrease": [
+            60.0,
+            60.0,
+            60.0
+          ],
+          "HEROSpellDuration": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "HEROSplashPerc": [
+            0.25,
+            0.25,
+            0.25
+          ],
+          "HEROStunDuration": [
+            0.75,
+            0.75,
+            0.75
+          ],
+          "PercentAttackDamage": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "Resists": [
+            100.0,
+            125.0,
+            150.0
+          ],
+          "TauntDuration": [
+            2.5,
+            2.5,
+            2.5
+          ]
+        }
+      },
+      "apiName": "TFT13_Prime",
+      "cost": 2,
+      "id": "vander",
+      "name": "Vander",
+      "record": {
+        "ability": {
+          "desc": "Stop attacking and brace for @TauntDuration@ seconds, gaining <TFTBonus>@ModifiedDefenses@&nbsp;(%i:scaleAP%)</TFTBonus> Armor and Magic Resist. Vander's next attack is replaced with a strike that deals <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage, increased by <physicalDamage>@ModifiedBonusDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage for each 1 or 2 cost champion on your&nbsp;team. ",
+          "icon": "ASSETS/Characters/TFT13_Prime/HUD/Icons2D/PrimeSpell.TFT_Set13.tex",
+          "name": "Hound of the Underground",
+          "variables": [
+            {
+              "name": "TauntDuration",
+              "value": [
+                2.5,
+                2.5,
+                2.5,
+                2.5,
+                2.5,
+                2.5,
+                2.5
+              ]
+            },
+            {
+              "name": "Resists",
+              "value": [
+                90.0,
+                100.0,
+                125.0,
+                150.0,
+                175.0,
+                90.0,
+                90.0
+              ]
+            },
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            },
+            {
+              "name": "BonusDamageADRatio",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            },
+            {
+              "name": "HEROSpellDuration",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "HEROBonusDamage",
+              "value": [
+                1.850000023841858,
+                1.850000023841858,
+                1.850000023841858,
+                1.850000023841858,
+                1.850000023841858,
+                1.850000023841858,
+                1.850000023841858
+              ]
+            },
+            {
+              "name": "HEROSplashPerc",
+              "value": [
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            },
+            {
+              "name": "HEROStunDuration",
+              "value": [
+                0.75,
+                0.75,
+                0.75,
+                0.75,
+                0.75,
+                0.75,
+                0.75
+              ]
+            },
+            {
+              "name": "HEROManaIncrease",
+              "value": [
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0,
+                60.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Prime",
+        "characterName": "TFT13_Prime",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Prime/Skins/Base/Images/TFT13_Prime.TFT_Set13.tex",
+        "name": "Vander",
+        "role": "ADTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Prime/Skins/Base/Images/TFT13_Prime_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 45.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 800.0,
+          "initialMana": 0,
+          "magicResist": 45.0,
+          "mana": 50.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Prime/HUD/TFT13_Prime_Square.TFT_Set13.tex",
+        "traits": [
+          "Family",
+          "Watcher"
+        ]
+      },
+      "runtimeTraits": [
+        "family",
+        "watcher"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/45",
+        "recordCanonicalSha256": "ea12701bb3175068e0e0a72a4fb66a624a45847a306dfe1039d0c2fd6d78a3d6",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Family",
+        "Watcher"
+      ],
+      "stats": {
+        "armor": 45.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 1.0,
+        "attackSpeedBps": 7000,
+        "health": 800.0,
+        "initialMana": 0,
+        "magicResist": 45.0,
+        "maxMana": 50.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "violet",
+        "description": "Jab target @NumStrikes@ times for <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage each. Then uppercut them, dealing <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%%i:scaleAP%)</physicalDamage> physical damage and briefly knocking them&nbsp;up.",
+        "id": "violet-ability",
+        "variables": {
+          "APDamage": [
+            20.0,
+            30.0,
+            45.0
+          ],
+          "NumStrikes": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "PercentAttackDamage": [
+            1.35,
+            1.35,
+            1.35
+          ],
+          "PercentIncreasedAttackDamage": [
+            3.3,
+            3.3,
+            3.3
+          ],
+          "StunDuration": [
+            0.25,
+            0.25,
+            0.25
+          ]
+        }
+      },
+      "apiName": "TFT13_Red",
+      "cost": 1,
+      "id": "violet",
+      "name": "Violet",
+      "record": {
+        "ability": {
+          "desc": "Jab target @NumStrikes@ times for <physicalDamage>@ModifiedDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage each. Then uppercut them, dealing <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%%i:scaleAP%)</physicalDamage> physical damage and briefly knocking them&nbsp;up.",
+          "icon": "ASSETS/Characters/TFT13_Red/HUD/TFT13_Red_Ability.TFT_Set13.tex",
+          "name": "1-2-3 Combo",
+          "variables": [
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858,
+                1.350000023841858
+              ]
+            },
+            {
+              "name": "StunDuration",
+              "value": [
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                0.0,
+                20.0,
+                30.0,
+                45.0,
+                60.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "PercentIncreasedAttackDamage",
+              "value": [
+                3.299999952316284,
+                3.299999952316284,
+                3.299999952316284,
+                3.299999952316284,
+                3.299999952316284,
+                3.299999952316284,
+                3.299999952316284
+              ]
+            },
+            {
+              "name": "NumStrikes",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Red",
+        "characterName": "TFT13_Red",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Red/Skins/Base/Images/TFT13_Red.TFT_Set13.tex",
+        "name": "Violet",
+        "role": "ADFighter",
+        "squareIcon": "ASSETS/Characters/TFT13_Red/Skins/Base/Images/TFT13_Red_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 40.0,
+          "attackSpeed": 0.800000011920929,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 50.0,
+          "hp": 650.0,
+          "initialMana": 20.0,
+          "magicResist": 40.0,
+          "mana": 65.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Red/HUD/TFT13_Red_Square.TFT_Set13.tex",
+        "traits": [
+          "Family",
+          "Pit Fighter"
+        ]
+      },
+      "runtimeTraits": [
+        "family"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/50",
+        "recordCanonicalSha256": "bce93074e139903147a048dc1716cbc36b3bf448c9078b7f1273818c97c86022",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Family",
+        "Pit Fighter"
+      ],
+      "stats": {
+        "armor": 40.0,
+        "attack": 50.0,
+        "attackIntervalTicks": 25,
+        "attackRange": 1.0,
+        "attackSpeedBps": 8000,
+        "health": 650.0,
+        "initialMana": 20.0,
+        "magicResist": 40.0,
+        "maxMana": 65.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "vladimir",
+        "description": "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the&nbsp;target.",
+        "id": "vladimir-ability",
+        "variables": {
+          "Damage": [
+            140.0,
+            210.0,
+            325.0
+          ],
+          "HEROAmpPerCast": [
+            0.1,
+            0.1,
+            0.1
+          ],
+          "HEROBonusDamage": [
+            1.8,
+            1.8,
+            1.8
+          ],
+          "HEROOverkillBaseDamage": [
+            90.0,
+            135.0,
+            205.0
+          ],
+          "HEROOverkillNum": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "HEROOverkillPerc": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "Heal": [
+            200.0,
+            240.0,
+            300.0
+          ],
+          "TOOLTIPONLYMana": [
+            3.0,
+            3.0,
+            3.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Vladimir",
+      "cost": 2,
+      "id": "vladimir",
+      "name": "Vladimir",
+      "record": {
+        "ability": {
+          "desc": "Heal <scaleHealth>@ModifiedHeal@&nbsp;(%i:scaleAP%)</scaleHealth> and deal <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to the&nbsp;target.",
+          "icon": "ASSETS/Characters/TFT13_Vladimir/HUD/VladimirQ.tex",
+          "name": "Transfusion",
+          "variables": [
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                140.0,
+                210.0,
+                325.0,
+                380.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "Heal",
+              "value": [
+                0.10000000149011612,
+                200.0,
+                240.0,
+                300.0,
+                330.0,
+                0.10000000149011612,
+                0.10000000149011612
+              ]
+            },
+            {
+              "name": "HEROBonusDamage",
+              "value": [
+                1.7999999523162842,
+                1.7999999523162842,
+                1.7999999523162842,
+                1.7999999523162842,
+                1.7999999523162842,
+                1.7999999523162842,
+                1.7999999523162842
+              ]
+            },
+            {
+              "name": "HEROOverkillPerc",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "HEROOverkillNum",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            },
+            {
+              "name": "HEROOverkillBaseDamage",
+              "value": [
+                0.0,
+                90.0,
+                135.0,
+                205.0,
+                275.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "TOOLTIPONLYMana",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "HEROAmpPerCast",
+              "value": [
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612,
+                0.10000000149011612
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Vladimir",
+        "characterName": "TFT13_Vladimir",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Vladimir/Skins/Base/Images/TFT12_Vladimir.TFT_Set13.tex",
+        "name": "Vladimir",
+        "role": "APTank",
+        "squareIcon": "ASSETS/Characters/TFT13_Vladimir/Skins/Base/Images/TFT13_Vladimir_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 45.0,
+          "attackSpeed": 0.6499999761581421,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 45.0,
+          "hp": 800.0,
+          "initialMana": 0,
+          "magicResist": 45.0,
+          "mana": 65.0,
+          "range": 1.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Vladimir/HUD/TFT13_Vladimir_Square.TFT_Set13.tex",
+        "traits": [
+          "Black Rose",
+          "Watcher",
+          "Sorcerer"
+        ]
+      },
+      "runtimeTraits": [
+        "watcher",
+        "sorcerer"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/30",
+        "recordCanonicalSha256": "63ca003ec8c6d17504b5b5f4f1a10f64af392397641653c4fd967c8a7a7e664e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Black Rose",
+        "Watcher",
+        "Sorcerer"
+      ],
+      "stats": {
+        "armor": 45.0,
+        "attack": 45.0,
+        "attackIntervalTicks": 31,
+        "attackRange": 1.0,
+        "attackSpeedBps": 6500,
+        "health": 800.0,
+        "initialMana": 0,
+        "magicResist": 45.0,
+        "maxMana": 65.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "zeri",
+        "description": "<spellPassive>Passive:</spellPassive> Every @NumOfAttacks@rd attack is replaced with a spark that deals <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to target and <physicalDamage>@SecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to @NumOfBounces@ nearby enemies.",
+        "id": "zeri-ability",
+        "variables": {
+          "APDamage": [
+            10.0,
+            15.0,
+            20.0
+          ],
+          "NumOfAttacks": [
+            3.0,
+            3.0,
+            3.0
+          ],
+          "NumOfBounces": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "PercentAttackDamage": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "PercentDealtToBouncedEnemies": [
+            0.5,
+            0.5,
+            0.5
+          ]
+        }
+      },
+      "apiName": "TFT13_Zeri",
+      "cost": 2,
+      "id": "zeri",
+      "name": "Zeri",
+      "record": {
+        "ability": {
+          "desc": "<spellPassive>Passive:</spellPassive> Every @NumOfAttacks@rd attack is replaced with a spark that deals <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to target and <physicalDamage>@SecondaryDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical damage to @NumOfBounces@ nearby enemies.",
+          "icon": "ASSETS/Characters/TFT13_Zeri/HUD/Icons2D/Zeri_P.TFT_Set13.tex",
+          "name": "Living Battery",
+          "variables": [
+            {
+              "name": "NumOfAttacks",
+              "value": [
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0,
+                3.0
+              ]
+            },
+            {
+              "name": "NumOfBounces",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "PercentAttackDamage",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "APDamage",
+              "value": [
+                0.0,
+                10.0,
+                15.0,
+                20.0,
+                25.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "PercentDealtToBouncedEnemies",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Zeri",
+        "characterName": "TFT13_Zeri",
+        "cost": 2,
+        "icon": "ASSETS/Characters/TFT13_Zeri/Skins/Base/Images/TFT13_Zeri.TFT_Set13.tex",
+        "name": "Zeri",
+        "role": "ADCarry",
+        "squareIcon": "ASSETS/Characters/TFT13_Zeri/Skins/Base/Images/TFT13_Zeri_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 20.0,
+          "attackSpeed": 0.75,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 45.0,
+          "hp": 600.0,
+          "initialMana": 0,
+          "magicResist": 20.0,
+          "mana": 3.0,
+          "range": 6.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Zeri/HUD/TFT13_Zeri_Square.TFT_Set13.tex",
+        "traits": [
+          "Firelight",
+          "Sniper"
+        ]
+      },
+      "runtimeTraits": [
+        "firelight",
+        "sniper"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/49",
+        "recordCanonicalSha256": "baead09f1b90aa07f85f08dc1dbca591092637161171e9807ef66ca509b7005c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Firelight",
+        "Sniper"
+      ],
+      "stats": {
+        "armor": 20.0,
+        "attack": 45.0,
+        "attackIntervalTicks": 27,
+        "attackRange": 6.0,
+        "attackSpeedBps": 7500,
+        "health": 600.0,
+        "initialMana": 0,
+        "magicResist": 20.0,
+        "maxMana": 3.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "zoe",
+        "description": "Launch a star at target that deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage. It bounces to the farthest enemy within @HexLimiter@ hexes, then bounces back to the target. This effect repeats @NumRepeats@ times, hitting a different enemy each&nbsp;time.",
+        "id": "zoe-ability",
+        "variables": {
+          "Damage": [
+            140.0,
+            210.0,
+            450.0
+          ],
+          "HexLimiter": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "NumRepeats": [
+            2.0,
+            2.0,
+            4.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Zoe",
+      "cost": 4,
+      "id": "zoe",
+      "name": "Zoe",
+      "record": {
+        "ability": {
+          "desc": "Launch a star at target that deals <magicDamage>@ModifiedDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage. It bounces to the farthest enemy within @HexLimiter@ hexes, then bounces back to the target. This effect repeats @NumRepeats@ times, hitting a different enemy each&nbsp;time.",
+          "icon": "ASSETS/Characters/TFT13_Zoe/HUD/Icons2D/TFT13_Zoe_Q2.TFT_Set13.tex",
+          "name": "Paddle Star!",
+          "variables": [
+            {
+              "name": "Damage",
+              "value": [
+                0.0,
+                140.0,
+                210.0,
+                450.0,
+                700.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "NumRepeats",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                4.0,
+                4.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "HexLimiter",
+              "value": [
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0,
+                4.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Zoe",
+        "characterName": "TFT13_Zoe",
+        "cost": 4,
+        "icon": "ASSETS/Characters/TFT13_Zoe/Skins/Base/Images/TFT13_Zoe.TFT_Set13.tex",
+        "name": "Zoe",
+        "role": "APCasterHighMana",
+        "squareIcon": "ASSETS/Characters/TFT13_Zoe/Skins/Base/Images/TFT13_Zoe_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 30.0,
+          "attackSpeed": 0.75,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 40.0,
+          "hp": 800.0,
+          "initialMana": 20.0,
+          "magicResist": 30.0,
+          "mana": 80.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Zoe/HUD/TFT13_Zoe_Square.TFT_Set13.tex",
+        "traits": [
+          "Rebel",
+          "Sorcerer"
+        ]
+      },
+      "runtimeTraits": [
+        "sorcerer"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/76",
+        "recordCanonicalSha256": "23fd1634ccca8d44ff6474b14cbbeab720d77c21baddd44a998c82c55ad1f168",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Rebel",
+        "Sorcerer"
+      ],
+      "stats": {
+        "armor": 30.0,
+        "attack": 40.0,
+        "attackIntervalTicks": 27,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7500,
+        "health": 800.0,
+        "initialMana": 20.0,
+        "magicResist": 30.0,
+        "maxMana": 80.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    },
+    {
+      "ability": {
+        "championId": "zyra",
+        "description": "Send vines towards the current target, Stunning them for @StunDuration@ second and dealing <magicDamage>@ModifiedTargetDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage. Then smaller vines seek out the @NumSmallerVines@ nearest enemies and deal <magicDamage>@ModifiedAOEDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to them.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus:<TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus> Ability damage bleeds enemies for <trueDamage enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_ZyraCurrentExperimentBonus@%</trueDamage> bonus true damage over @ExperimentDuration@&nbsp;seconds.</spellActive>",
+        "id": "zyra-ability",
+        "variables": {
+          "AOEDamage": [
+            95.0,
+            140.0,
+            215.0
+          ],
+          "ExperimentDuration": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "ExperimentTrueDamage": [
+            0.5,
+            0.5,
+            0.5
+          ],
+          "NumSmallerVines": [
+            2.0,
+            2.0,
+            2.0
+          ],
+          "StunDuration": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "TargetDamage": [
+            260.0,
+            390.0,
+            585.0
+          ]
+        }
+      },
+      "apiName": "TFT13_Zyra",
+      "cost": 1,
+      "id": "zyra",
+      "name": "Zyra",
+      "record": {
+        "ability": {
+          "desc": "Send vines towards the current target, Stunning them for @StunDuration@ second and dealing <magicDamage>@ModifiedTargetDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic&nbsp;damage. Then smaller vines seek out the @NumSmallerVines@ nearest enemies and deal <magicDamage>@ModifiedAOEDamage@&nbsp;(%i:scaleAP%)</magicDamage> magic damage to them.<br><br><spellActive enabled=TFT13_ExperimentActive alternate=rules>Experiment Bonus:<TFTBonus><ShowIfNot.TFT13_ExperimentActive></ShowIfNot.TFT13_ExperimentActive><ShowIf.TFT13_ExperimentActive></ShowIf.TFT13_ExperimentActive></TFTBonus> Ability damage bleeds enemies for <trueDamage enabled=TFT13_ExperimentActive alternate=rules>@TFTUnitProperty.:TFT13_ZyraCurrentExperimentBonus@%</trueDamage> bonus true damage over @ExperimentDuration@&nbsp;seconds.</spellActive>",
+          "icon": "ASSETS/Characters/TFT13_Zyra/HUD/Icons2D/TFT13_ZyraSpellIcon.TFT_Set13.tex",
+          "name": "Grasping Roots",
+          "variables": [
+            {
+              "name": "TargetDamage",
+              "value": [
+                0.0,
+                260.0,
+                390.0,
+                585.0,
+                780.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "StunDuration",
+              "value": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ]
+            },
+            {
+              "name": "AOEDamage",
+              "value": [
+                0.0,
+                95.0,
+                140.0,
+                215.0,
+                290.0,
+                0.0,
+                0.0
+              ]
+            },
+            {
+              "name": "ExperimentTrueDamage",
+              "value": [
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5,
+                0.5
+              ]
+            },
+            {
+              "name": "ExperimentDuration",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            },
+            {
+              "name": "NumSmallerVines",
+              "value": [
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0,
+                2.0
+              ]
+            }
+          ]
+        },
+        "apiName": "TFT13_Zyra",
+        "characterName": "TFT13_Zyra",
+        "cost": 1,
+        "icon": "ASSETS/Characters/TFT13_Zyra/Skins/Base/Images/TFT13_Zyra.TFT_Set13.tex",
+        "name": "Zyra",
+        "role": "APCasterHighMana",
+        "squareIcon": "ASSETS/Characters/TFT13_Zyra/Skins/Base/Images/TFT13_Zyra_Mobile.TFT_Set13.tex",
+        "stats": {
+          "armor": 20.0,
+          "attackSpeed": 0.699999988079071,
+          "critChance": 0.25,
+          "critMultiplier": 1.399999976158142,
+          "damage": 30.0,
+          "hp": 500.0,
+          "initialMana": 10.0,
+          "magicResist": 20.0,
+          "mana": 60.0,
+          "range": 4.0
+        },
+        "tileIcon": "ASSETS/Characters/TFT13_Zyra/HUD/TFT13_Zyra_Square.TFT_Set13.tex",
+        "traits": [
+          "Experiment",
+          "Sorcerer"
+        ]
+      },
+      "runtimeTraits": [
+        "sorcerer"
+      ],
+      "source": {
+        "jsonPointer": "/setData/1/champions/63",
+        "recordCanonicalSha256": "4e065ef99a8180815794b12dae41ff73199df633713db9a8604722c4184901dd",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      },
+      "sourceTraits": [
+        "Experiment",
+        "Sorcerer"
+      ],
+      "stats": {
+        "armor": 20.0,
+        "attack": 30.0,
+        "attackIntervalTicks": 29,
+        "attackRange": 4.0,
+        "attackSpeedBps": 7000,
+        "health": 500.0,
+        "initialMana": 10.0,
+        "magicResist": 20.0,
+        "maxMana": 60.0
+      },
+      "status": "source-extracted-needs-runtime-oracle"
+    }
+  ],
+  "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+}

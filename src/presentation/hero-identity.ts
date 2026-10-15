@@ -27,7 +27,7 @@ export const TRAIT_SHAPES: Readonly<Record<string, EmblemShape>> = Object.freeze
   sentinel: 'shield', artillerist: 'burst', sniper: 'reticle', watcher: 'lens', sorcerer: 'hexstar',
 });
 
-/** The 19 purchasable S13 heroes. Colors are checked for pairwise distinctness in tests. */
+/** The 33 purchasable S13 heroes. Colors are checked for pairwise distinctness in tests. */
 export const HERO_STYLE: Readonly<Record<string, { short: string; color: string }>> = Object.freeze({
   irelia: { short: '艾瑞', color: '#7fb3e0' }, maddie: { short: '麦迪', color: '#e07fa8' }, darius: { short: '德莱', color: '#c0504d' },
   lux: { short: '拉克', color: '#fff4b0' }, zyra: { short: '婕拉', color: '#6fbf5a' }, tristana: { short: '崔丝', color: '#ff9f40' },
@@ -36,6 +36,20 @@ export const HERO_STYLE: Readonly<Record<string, { short: string; color: string 
   ezreal: { short: '伊泽', color: '#5aa9ff' }, loris: { short: '洛里', color: '#7d86b8' }, nami: { short: '娜美', color: '#2fa3d6' },
   corki: { short: '库奇', color: '#e0703a' }, garen: { short: '盖伦', color: '#4f6fd0' }, zoe: { short: '佐伊', color: '#d58cff' },
   caitlyn: { short: '凯特', color: '#c99a6b' },
+  amumu: { short: '阿木', color: '#232323' },
+  blitzcrank: { short: '布里', color: '#9e23f0' },
+  ekko: { short: '艾克', color: '#23f023' },
+  illaoi: { short: '俄洛', color: '#237575' },
+  leblanc: { short: '乐芙', color: '#752375' },
+  malzahar: { short: '玛尔', color: '#f0239e' },
+  nocturne: { short: '魔腾', color: '#2323f0' },
+  powder: { short: '爆爆', color: '#23f0f0' },
+  rumble: { short: '兰博', color: '#232375' },
+  singed: { short: '辛吉', color: '#237523' },
+  twitch: { short: '图奇', color: '#752323' },
+  violet: { short: '蔚奥', color: '#f023f0' },
+  vladimir: { short: '弗拉', color: '#75f023' },
+  zeri: { short: '泽丽', color: '#9ef09e' },
 });
 
 const luminance = (hex: string) => {
@@ -68,8 +82,8 @@ export function getHeroIdentity(definitionId: string): HeroIdentity {
 
 /**
  * Full S13 trait list per hero from the archived 14.24 client data
- * (src/simulation/content/source/s13-14.24.json). Only the five classes are playable in
- * this slice; origins and other classes are shown for identity and marked unopened.
+ * (source/s13-14.24.json plus source/s13-14.24b/normalized/g2-1-champions.json).
+ * Five classes and three admitted origins are playable; remaining traits are marked unopened.
  */
 export const HERO_S13_TRAITS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   irelia: ['Rebel', 'Sentinel'], maddie: ['Enforcer', 'Sniper'], darius: ['Conqueror', 'Watcher'], lux: ['Academy', 'Sorcerer'],
@@ -77,6 +91,20 @@ export const HERO_S13_TRAITS: Readonly<Record<string, readonly string[]>> = Obje
   rell: ['Conqueror', 'Sentinel', 'Visionary'], leona: ['Academy', 'Sentinel'], vander: ['Family', 'Watcher'], kogmaw: ['Automata', 'Sniper'],
   scar: ['Firelight', 'Watcher'], ezreal: ['Academy', 'Rebel', 'Artillerist'], loris: ['Enforcer', 'Sentinel'], nami: ['Emissary', 'Sorcerer'],
   corki: ['Scrap', 'Artillerist'], garen: ['Emissary', 'Watcher'], zoe: ['Rebel', 'Sorcerer'], caitlyn: ['Enforcer', 'Sniper'],
+  amumu: ["Automata", "Watcher"],
+  blitzcrank: ["Automata", "Dominator"],
+  ekko: ["Firelight", "Scrap", "Ambusher"],
+  illaoi: ["Rebel", "Sentinel"],
+  leblanc: ["Black Rose", "Sorcerer"],
+  malzahar: ["Automata", "Visionary"],
+  nocturne: ["Automata", "Quickstriker"],
+  powder: ["Family", "Scrap", "Ambusher"],
+  rumble: ["Junker King", "Scrap", "Sentinel"],
+  singed: ["Chem-Baron", "Sentinel"],
+  twitch: ["Experiment", "Sniper"],
+  violet: ["Family", "Pit Fighter"],
+  vladimir: ["Black Rose", "Watcher", "Sorcerer"],
+  zeri: ["Firelight", "Sniper"],
 });
 /**
  * Chinese client names for S13 双城之战2. Checked 2026-10-06 against the official 国服 14.23/14.24
@@ -86,9 +114,9 @@ export const HERO_S13_TRAITS: Readonly<Record<string, readonly string[]>> = Obje
 export const S13_TRAIT_ZH: Readonly<Record<string, string>> = Object.freeze({
   Sentinel: '哨兵', Artillerist: '炮手', Sniper: '狙神', Watcher: '监察', Sorcerer: '法师',
   Academy: '皮城学院', Automata: '海克斯机械', Conqueror: '铁血征服者', Emissary: '外交官', Enforcer: '执法官', Experiment: '试验品',
-  Family: '家人', Firelight: '野火帮', Rebel: '蓝发小队', Scrap: '极客', 'Pit Fighter': '搏击手', Visionary: '先知',
+  Family: '家人', Firelight: '野火帮', Rebel: '蓝发小队', Scrap: '极客', 'Pit Fighter': '搏击手', Visionary: '先知', Ambusher: '伏击专家', 'Chem-Baron': '炼金男爵', Dominator: '统领', 'Black Rose': '黑色玫瑰', Bruiser: '格斗家', 'Junker King': '机械公敌', Quickstriker: '迅击战士',
 });
-const OPEN_TRAITS = new Set(['Sentinel', 'Artillerist', 'Sniper', 'Watcher', 'Sorcerer']);
+const OPEN_TRAITS = new Set(['Sentinel', 'Artillerist', 'Sniper', 'Watcher', 'Sorcerer', 'Automata', 'Family', 'Firelight']);
 export interface HeroTraitLabel { readonly name: string; readonly open: boolean }
 /** Origin first, then classes, as in the TFT shop; unopened traits flagged. */
 export function heroTraitLabels(definitionId: string): HeroTraitLabel[] {

@@ -129,11 +129,11 @@ function token(scene: SceneBridge, id: string): Token {
 }
 function creations(id: string) { return display.created.filter(view => view.token.getData('unitId') === id); }
 function prepareConsumedCombatUnit() {
-  const scene = makeScene(createMatch(13));
+  const scene = makeScene(createMatch(11));
   finish(scene);
   command(scene, scene.session.continue(1));
-  // The real seed-13 shop has Lux in slots 2 and 3. The 1-2 win pays the full 2G.
-  for (const slot of [2, 3]) command(scene, scene.session.buy(slot, scene.session.state.shop.generation));
+  // The real seed-11 shop has Lux in slots 1 and 4. The 1-2 win pays the full 2G.
+  for (const slot of [1, 4]) command(scene, scene.session.buy(slot, scene.session.state.shop.generation));
   command(scene, scene.session.deploy('unit-1', { kind: 'bench', slot: 3 }));
   command(scene, scene.session.deploy('unit-3', { kind: 'board', cell: { col: 2, row: 4 } }));
   command(scene, scene.session.deploy('unit-4', { kind: 'board', cell: { col: 3, row: 4 } }));

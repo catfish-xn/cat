@@ -1,0 +1,142 @@
+{
+  "command": "npm run build:game && CHROMIUM=<installed-chromium> node tests/server/e2e/c7-playtest.mjs",
+  "passed": true,
+  "reportSha256": "98208c52cd544e217503be0faea5946de54f65d8247f70c4db75ffcacf45427e",
+  "roundIds": [
+    "1-2",
+    "1-3",
+    "1-4"
+  ],
+  "swap": "1-3",
+  "pairing": {
+    "candidates": [
+      "bot-1",
+      "bot-2",
+      "bot-3",
+      "bot-4",
+      "bot-5",
+      "bot-6",
+      "bot-7"
+    ],
+    "preparationMarks": [
+      "bot-1:candidate",
+      "bot-2:candidate",
+      "bot-3:candidate",
+      "bot-4:candidate",
+      "bot-5:candidate",
+      "bot-6:candidate",
+      "bot-7:candidate"
+    ],
+    "opponent": "bot-5"
+  },
+  "combine": {
+    "label": "合成 巨人杀手",
+    "disabled": false,
+    "selection": "选择：反曲之弓 + 暴风大剑 → 巨人杀手",
+    "receipts": [
+      {
+        "sent": 17,
+        "command": {
+          "type": "combine",
+          "a": "item-1",
+          "b": "item-2"
+        }
+      },
+      {
+        "receipt": 17,
+        "ok": true,
+        "reason": null,
+        "kind": "applied"
+      }
+    ],
+    "inventoryBefore": [
+      "bow",
+      "sword",
+      "tear"
+    ],
+    "inventoryAfter": [
+      "tear",
+      "giant-slayer"
+    ],
+    "status": "组件已合成"
+  },
+  "g2Bots": [
+    {
+      "seatId": "bot-1",
+      "definitionId": "nocturne",
+      "round": 3
+    },
+    {
+      "seatId": "bot-3",
+      "definitionId": "zeri",
+      "round": 3
+    },
+    {
+      "seatId": "bot-6",
+      "definitionId": "zeri",
+      "round": 3
+    },
+    {
+      "seatId": "bot-4",
+      "definitionId": "zeri",
+      "round": 3
+    },
+    {
+      "seatId": "bot-7",
+      "definitionId": "nocturne",
+      "round": 3
+    },
+    {
+      "seatId": "bot-5",
+      "definitionId": "nocturne",
+      "round": 3
+    },
+    {
+      "seatId": "bot-1",
+      "definitionId": "nocturne",
+      "round": 4
+    },
+    {
+      "seatId": "bot-3",
+      "definitionId": "zeri",
+      "round": 4
+    },
+    {
+      "seatId": "bot-4",
+      "definitionId": "zeri",
+      "round": 4
+    },
+    {
+      "seatId": "bot-5",
+      "definitionId": "nocturne",
+      "round": 4
+    },
+    {
+      "seatId": "bot-6",
+      "definitionId": "zeri",
+      "round": 4
+    },
+    {
+      "seatId": "bot-7",
+      "definitionId": "nocturne",
+      "round": 4
+    },
+    {
+      "seatId": "bot-7",
+      "definitionId": "zeri",
+      "round": 4
+    },
+    {
+      "seatId": "bot-2",
+      "definitionId": "zeri",
+      "round": 4
+    },
+    {
+      "seatId": "bot-3",
+      "definitionId": "nocturne",
+      "round": 4
+    }
+  ],
+  "errors": [],
+  "purchaseEvidence": "New admitted heroes appear on bot publicBoard; opening roster and fixed LOOT_HERO_POOLS exclude these IDs. Bot shop buys and deploys through public commands."
+}

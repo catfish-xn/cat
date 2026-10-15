@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { planPermanentItemGrant } from '../src/simulation/item-grants';
 import { readItemInventory } from '../src/simulation/item-selectors';
 import { buyUnit, combineItems, equipItem, selectChoice, sellUnit, rerollShop } from '../src/simulation/match';
@@ -109,6 +109,12 @@ describe('B5 IF-GRANT and atomic permanent inventory queries', () => {
 });
 
 describe('B5 real purchase recursive upgrades and equipment returns', () => {
+  // Match #98's public-fixture setup: warm the exact paid acquisition routes,
+  // while every upgrade/restore assertion and its original timeout stays in the case.
+  for (const definitions of [
+    ['blue-buff', 'blue-buff'], ['thiefs-gloves', 'sword'],
+    ['sword', 'thiefs-gloves'], ['sword', 'rod', 'vest', 'cloak'],
+  ]) beforeAll(() => { publicInventory(definitions, true); });
   it('chains to three stars, retaining one TG and returning conflicting parent without splitting or rerolling', () => {
     const inventory = publicInventory(['thiefs-gloves', 'thiefs-gloves']);
     const chain = publicRecursivePurchase(inventory.state), [retained, returned] = inventory.itemIds;
@@ -131,8 +137,8 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     expect(JSON.stringify(state)).toBe(before);
     if (!result.ok) throw new Error(result.reason);
     expect(result.events.filter(e => e.type === 'unitUpgraded').map(({ domain: _domain, eventSeq: _seq, ...event }) => event)).toEqual([
-      { type: 'unitUpgraded', survivorId: chain.incomingId, consumedIds: [chain.purchaseIds[7], nextId].sort(), definitionId: 'irelia', fromStar: 1, toStar: 2, location: state.preparation.units.find(u => u.id === chain.incomingId)!.location },
-      { type: 'unitUpgraded', survivorId: chain.survivorId, consumedIds: [chain.secondId, chain.incomingId].sort(), definitionId: 'irelia', fromStar: 2, toStar: 3, location: state.preparation.units.find(u => u.id === chain.survivorId)!.location },
+      { type: 'unitUpgraded', survivorId: chain.incomingId, consumedIds: [chain.purchaseIds[7], nextId].sort(), definitionId: chain.definitionId, fromStar: 1, toStar: 2, location: state.preparation.units.find(u => u.id === chain.incomingId)!.location },
+      { type: 'unitUpgraded', survivorId: chain.survivorId, consumedIds: [chain.secondId, chain.incomingId].sort(), definitionId: chain.definitionId, fromStar: 2, toStar: 3, location: state.preparation.units.find(u => u.id === chain.survivorId)!.location },
     ]);
     expect(result.events.some(e => e.type === 'equipmentRolled')).toBe(false);
     expect(result.events.filter(e => e.type === 'itemsReturned')).toEqual([expect.objectContaining({ unitId: returnedHolder, itemIds: [returned] })]);
@@ -179,7 +185,7 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     let input = accepted(equipItem(chain.state, inventory.itemIds[0], chain.secondId, 0));
     while (input.gold >= 2) input = accepted(rerollShop(input));
     // A real unaffordable offer suffices; no gold, RNG, offer or receipt is injected.
-    const slot = input.shop.slots.findIndex(offer => offer.status === 'available' && !['darius', 'irelia', 'lux', 'maddie', 'zyra'].includes(offer.definitionId));
+    const slot = input.shop.slots.findIndex(offer => offer.status === 'available' && !['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'].includes(offer.definitionId));
     if (slot < 0 && input.gold !== 0) throw new Error('Expected an unaffordable public offer');
     const state = freeze(input), before = JSON.stringify(state), result = buyUnit(state, slot < 0 ? 0 : slot, state.shop.generation);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);

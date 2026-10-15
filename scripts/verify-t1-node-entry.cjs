@@ -96,7 +96,7 @@ async function worker() {
     const browserBytes = Buffer.from(JSON.stringify(expected.steps.map(project)));
     assert(nodeBytes.equals(browserBytes), `${key} trace differs from browser-target source bundle`);
     traceHashes[key] = sha256(nodeBytes);
-    assert.equal(traceHashes[key],t13Baseline.traceHashes[key],`pinned T13 ${key} trace`);
+    assert.equal(traceHashes[key],t13Baseline.traceHashes[key],`pinned G2-1 ${key} trace`);
     // T13 changes opening reward content, Match schema and random streams.
     // Preserve prior baselines; do not normalize away actual gameplay differences.
     assert.notEqual(traceHashes[key], baseline.traceHashes[key], `T13 ${key} must record the signed change`);
@@ -107,7 +107,8 @@ async function worker() {
     eventHash: reference.digestContent(combatEvents) };
   const probe = JSON.parse(fs.readFileSync(path.join(root, 'artifacts/server-authority-audit/report.json'), 'utf8'));
   for (const [key, value] of Object.entries(summary)) {
-    assert.equal(value, baseline[key], `pinned original probe: ${key}`);
+    assert.equal(value, t13Baseline.firstBattle[key], `pinned G2 first battle: ${key}`);
+    if(key !== 'stateHash') assert.equal(value, baseline[key], `unchanged original probe: ${key}`);
     assert.equal(value, probe[key], `unmodified probe rerun: ${key}`);
   }
 

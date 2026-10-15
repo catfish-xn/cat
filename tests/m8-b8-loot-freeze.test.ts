@@ -1,4 +1,4 @@
-import { lootPlan } from './fixtures/m5/oracle.cjs';
+import { lootPlan } from './fixtures/m5/oracle.g2.cjs';
 import { describe, expect, it } from 'vitest';
 import archivedHeroes from '../src/simulation/content/source/s13-14.24.json';
 import archivedItems from '../src/simulation/content/source/s13-14.24b/normalized/items.json';
