@@ -11,6 +11,8 @@ const timing = [
   // Publishing-watchdog executes a real PvE round within its original 5 s
   // timeout; isolate the existing suite from parallel route CPU contention.
   'tests/server/g3-ops.test.ts',
+  // Network replay/resume traverses real battles and has a 5 s wall timeout.
+  'tests/server/ws-client.test.ts',
 ];
 // Tiny route wrappers contain the longest workloads. Start them first even on
 // a clean checkout, when Vitest has no duration cache and sorts by source size.
