@@ -53,8 +53,8 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
   return {
     mySeatId: seatId,
     seats,
-    // G1-P7: the opening prelude runs before 1-2 (catalog ordinals stay); its name is the carousel's own round, 1-1.
-    phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.phase === 'carousel' && room.carousel ? room.carousel.state.roundId : room.roundName, endsAt: room.deadlineAt, serverNow },
+    // P7-1: a carousel runs inside its own x-4 round, so the round's name is also the carousel's.
+    phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.roundName, endsAt: room.deadlineAt, serverNow },
     opponentSeatId,
     opponentCandidates: toOpponentCandidates(room, seatId),
     carousel: toCarouselView(room, seatId),

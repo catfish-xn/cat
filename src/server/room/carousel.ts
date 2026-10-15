@@ -15,7 +15,7 @@
 import {
   advanceCarousel, autoPickCarouselForSeat, completeCarouselForSeat, createCarousel, createCarouselMatch, listCarouselSlots, opensCarousel,
   pickCarouselForSeat, prepareCarouselParticipants, releaseCarouselParticipant, resolvePendingCarouselUnits, sellPendingCarouselUnit,
-  type CarouselEvent, type CarouselFailure as RulesCarouselFailure, type CarouselRoundId, type CarouselState,
+  type CarouselEvent, type CarouselFailure as RulesCarouselFailure, type CarouselRoundId, type CarouselState, type HeldCarouselUnit,
 } from '../../server-entry';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 
@@ -51,11 +51,18 @@ export interface RoomCarousel {
   readonly auto: Readonly<Record<string, CarouselAutoCause>>;
 }
 
-/** The carousel a seat's state opens at this round entry, or null (`opensCarousel`; the opening prelude is '1-1'). */
+/**
+ * The carousel a seat's state opens at this round entry, or null. Only the rules' `opensCarousel` decides (P7-1: the five
+ * x-4 rounds, MATCH_CONTRACT "P7-1 正式修订"); the carousel then runs on the seat's own round.
+ */
 export function carouselRoundOf(rules: CarouselRules, state: MatchState): CarouselRoundId | null {
-  if (!rules.opensCarousel(state)) return null;
-  return state.carousel?.openingPending ? '1-1' : state.roundDefinitionId as CarouselRoundId;
+  return rules.opensCarousel(state) ? state.roundDefinitionId as CarouselRoundId : null;
 }
+/**
+ * P7-1 holding slot (临时位): the units of this seat the rules keep without a place because its bench and board were both
+ * full (`carousel.heldCarouselUnits`, the canonical field; MULTIPLAYER_CONTRACT §21.6). Empty without carousel metadata.
+ */
+export function heldCarouselUnits(state: MatchState): readonly HeldCarouselUnit[] { return state.carousel?.heldCarouselUnits ?? []; }
 /** Whether the rules' schedule has released this seat at the carousel's current logical time. */
 export function carouselReleased(state: CarouselState, seatId: string): boolean {
   const at = state.releaseAtMs[seatId];

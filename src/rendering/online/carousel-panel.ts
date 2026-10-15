@@ -246,16 +246,15 @@ export class CarouselPanel {
 }
 
 /**
- * One unit a carousel pick could not place (MULTIPLAYER_CONTRACT §21.5). Today the server sends these as
- * `PrivateSeatView.pendingCarouselUnits` (bench full); P7-1 rules turn them into a holding slot for "bench and board both
- * full" (DISPATCH_2026-10-14 真机反馈 P7-1 item 2). Only `readHeldCarouselUnits` reads the wire, so the new field replaces
- * the source there and nothing else changes.
+ * One unit in the carousel holding slot (临时位): a pick the rules could not place because my bench and my board were both
+ * full (MULTIPLAYER_CONTRACT §21.6). The server sends them as `PrivateSeatView.heldCarouselUnits`, copied from the rules'
+ * `carousel.heldCarouselUnits`; only `readHeldCarouselUnits` reads the wire.
  */
 export interface HeldCarouselUnitView { readonly receiptId: string; readonly unitId: string; readonly definitionId: string }
-/** The held units of my seat view; empty when the server sent none. */
+/** The held units of my seat view (or its display copy); empty when the server sent none. */
 export function readHeldCarouselUnits(state: object): readonly HeldCarouselUnitView[] {
-  const pending = (state as { readonly pendingCarouselUnits?: unknown }).pendingCarouselUnits;
-  return Array.isArray(pending) ? pending as HeldCarouselUnitView[] : [];
+  const held = (state as { readonly heldCarouselUnits?: unknown }).heldCarouselUnits;
+  return Array.isArray(held) ? held as HeldCarouselUnitView[] : [];
 }
 
 /**

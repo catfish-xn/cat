@@ -21,7 +21,7 @@ import {
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { useSeatConsumable } from './consumables';
-import { carouselReleased, carouselRoundOf, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
+import { carouselReleased, carouselRoundOf, heldCarouselUnits, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
 import type { CarouselPickCommand } from '../protocol';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
@@ -63,9 +63,9 @@ export interface RoomOptions extends RoomTimings {
   readonly pairingPolicy?: PairingPolicy;
   /**
    * G1-P7: the rules' shared carousel (`CAROUSEL_RULES_BINDING`). When given, the seats open with `createCarouselMatch`
-   * (no free opening unit, 0 gold, 0 components; MULTIPLAYER_CONTRACT §21.4), the match starts with the 1-1 carousel and
-   * every x-4 carousel replaces the old component supply. Omitted, the room opens and runs as before P7 (offline-style
-   * opening unit, supply choice), which the pre-P7 room tests keep using.
+   * (P7-1: the free Irelia and the usual opening economy, MULTIPLAYER_CONTRACT §21.5–21.6) and every carousel the rules
+   * open (`opensCarousel`: the five x-4 rounds) replaces the old component supply. Omitted, the room opens and runs as
+   * before P7 (supply choice), which the pre-P7 room tests keep using.
    */
   readonly carousel?: CarouselRules;
 }
@@ -119,8 +119,8 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
   switch (command.type) {
     case 'deploy': return plain(deployMatchUnit(state, command.unitId, command.target));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
-    // G1-P7: a unit queued by a carousel grant on a full bench (`pendingCarouselUnits`) is sold through the rules' own entry.
-    case 'sell': return state.carousel?.pendingUnits.some(unit => unit.unitId === command.unitId)
+    // P7-1: a unit in the carousel holding slot (`carousel.heldCarouselUnits`) is sold through the rules' own entry.
+    case 'sell': return heldCarouselUnits(state).some(unit => unit.unitId === command.unitId)
       ? sellPendingCarouselUnit(pool, state, command.unitId) : sellSharedUnit(pool, state, command.unitId);
     case 'shopLock': return setSharedShopLock(pool, state, command.locked, command.generation);
     // The wire command has no generation (protocol unchanged); under the single-writer queue the seat's current shop is the expected one.
@@ -214,8 +214,8 @@ export class Room {
     // the fixed seat index 0–7 (this also enables the server mode of §11.1; §18.2: each seat is built shared-deferred,
     // never solo-then-recoloured, and the first initializeSharedSeat freezes the room's orb layout in pool.orbLayout)
     // → one fair first refresh → publish once. Any refusal throws before anything is published, so the whole proposal is discarded.
-    // G1-P7 (§21.5 order): with the carousel each seat is a `createCarouselMatch` opening and no shop is drawn before the
-    // 1-1 carousel closed (the first refresh would move the pool's natural round); `finishCarousel` draws it.
+    // P7-1 (§21.5 order): with the carousel each seat is a `createCarouselMatch` opening (the free Irelia), joined and
+    // refreshed exactly like the plain opening; no carousel is created here, the first one is the rules' 2-4.
     const carousel = options.carousel;
     let rngState = options.seed >>> 0;
     let pool = createSharedPool(options.roomId, options.seed >>> 0, options.poolCapacities ? { capacities: options.poolCapacities } : {});
@@ -227,7 +227,7 @@ export class Room {
       pool = joined.pool;
       return { spec, index, seed: draw.word, match: joined.state };
     });
-    const opened = carousel ? { ok: true as const, pool, states: imported.map(seat => seat.match) } : refreshSharedShops(pool, imported.map(seat => seat.match), 1);
+    const opened = refreshSharedShops(pool, imported.map(seat => seat.match), 1);
     if (!opened.ok) throw new RangeError(`shared pool opening: ${opened.reason}`);
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
@@ -309,7 +309,8 @@ export class Room {
     const applied = applySeatCommand(this.current.pool, seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
     if (!applied.ok) return { ok: false, reason: applied.reason, state: applied.state };
-    // G1-P7: a command that freed a bench slot lets the rules move queued carousel units in, in the same publication.
+    // P7-1: a command that may have freed a bench slot or a board place (sell, deploy, buyXp, …) lets the rules move held
+    // carousel units in, in the same publication.
     const result = this.withPendingResolved(applied);
     const seatRevision = seat.seatRevision + 1;
     this.commitSeat(seatId, result.state, result.pool);
@@ -607,8 +608,8 @@ export class Room {
   }
   /**
    * End of the departure (§21.5): every seat's `completeCarouselForSeat` (x-4: the supply round's natural economy once, the
-   * seat goes to settlement; 1-1: nothing), then after the 1-1 prelude the first fair shop refresh, then the queued units
-   * the rules can place. One publication; the round goes on from the seats' own phases.
+   * seat goes to settlement). One publication; the round goes on from the seats' own phases. Units held by the carousel are
+   * placed and merged by the rules at the next preparation (`nextSharedRound`, §21.6), never here.
    */
   private finishCarousel(): void {
     const rules = this.options.carousel;
@@ -627,18 +628,7 @@ export class Room {
       carousel = done.state; matches.set(seat.seatId, done.match); events.set(seat.seatId, [...done.events]);
       if (done.events.length > 0) ledger.push({ carouselId: carousel.id, seatId: seat.seatId, events: done.events });
     }
-    let pool = carousel.pool;
-    const alive = this.aliveSeats();
-    if (carousel.roundId === '1-1') {
-      const opened = refreshSharedShops(pool, alive.map(seat => matches.get(seat.seatId)!), alive[0]!.match.round);
-      if (!opened.ok) return this.fail({ kind: 'carousel-error', reason: `first-shop:${opened.reason}` });
-      pool = opened.pool;
-      alive.forEach((seat, position) => matches.set(seat.seatId, opened.states[position]!));
-    }
-    for (const seat of alive) {
-      const resolved = this.withPendingResolved({ pool, state: matches.get(seat.seatId)!, events: events.get(seat.seatId)! });
-      pool = resolved.pool; matches.set(seat.seatId, resolved.state); events.set(seat.seatId, [...resolved.events]);
-    }
+    const pool = carousel.pool;
     this.replace({ ...this.current, pool, poolRevision: pool.revision, carousel: null, carouselLedger: [...this.current.carouselLedger, ...ledger],
       seats: this.current.seats.map(seat => {
         const match = matches.get(seat.seatId);
@@ -685,7 +675,11 @@ export class Room {
         return { ...candidate, match: granted.match, seatRevision, serverEvents: { seatRevision, events: matchEvents } };
       }) });
   }
-  /** §21.5 "进入 preparation 时": each seat with queued carousel units gets the rules' placement, one seat transaction each. */
+  /**
+   * §21.5–21.6 "进入 preparation 时": each seat still holding carousel units gets the rules' placement, one seat transaction
+   * each (`nextSharedRound` already placed what it could at the round entry; this covers a seat that reached preparation
+   * through its choice phase).
+   */
   private resolvePendingOnEntry(): void {
     for (const seat of this.aliveSeats()) {
       const resolved = this.withPendingResolved({ pool: this.current.pool, state: seat.match, events: [] as readonly MatchEvent[] });
@@ -696,12 +690,13 @@ export class Room {
     }
   }
   /**
-   * §21.5: in preparation, units a full bench queued are moved in (or merged) by the rules whenever a slot is free; the
-   * room only asks. A refusal or nothing to move leaves the transaction as it was.
+   * §21.6: in preparation, units in the holding slot are moved to the bench or the board (and merged) by the rules'
+   * `resolvePendingCarouselUnits` whenever the seat may have room; the room only asks, never decides where a unit goes
+   * or whether it merges. A refusal (e.g. a locked combat roster) or nothing to move leaves the transaction as it was.
    */
   private withPendingResolved<T extends { readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }>(result: T): T {
     const rules = this.options.carousel;
-    if (!rules || !result.state.carousel?.pendingUnits.length || result.state.phase !== 'preparation') return result;
+    if (!rules || heldCarouselUnits(result.state).length === 0 || result.state.phase !== 'preparation') return result;
     const resolved = rules.resolvePendingCarouselUnits(result.pool, result.state);
     if (!resolved.ok || resolved.state === result.state) return result;
     return { ...result, pool: resolved.pool, state: resolved.state, events: [...result.events, ...resolved.events] };
@@ -937,8 +932,15 @@ export class Room {
       return this.fail({ kind: 'seat-stuck', seatId: stuck.seatId, reason: batch.reason });
     }
     const advanced = new Map(alive.map((seat, position) => [seat.seatId, batch.states[position]!] as const));
+    // P7-1 (§21.6): the round entry may place and merge carousel units; its events are published with the seats they produced.
+    const entered = new Map(batch.events.map(entry => [entry.seatId, entry.events] as const));
     this.replace({ ...this.current, pool: batch.pool, poolRevision: batch.pool.revision,
-      seats: this.current.seats.map(seat => { const match = advanced.get(seat.seatId); return match ? { ...seat, match, seatRevision: seat.seatRevision + 1 } : seat; }) });
+      seats: this.current.seats.map(seat => {
+        const match = advanced.get(seat.seatId);
+        if (!match) return seat;
+        const seatRevision = seat.seatRevision + 1;
+        return { ...seat, match, seatRevision, serverEvents: { seatRevision, events: entered.get(seat.seatId) ?? [] } };
+      }) });
     this.enterRound();
   }
 

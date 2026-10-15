@@ -25,9 +25,11 @@ import type { ConsumableDisplayEvent } from '../room/projection';
  * until the freeze only means an older client highlights the opponent from the battle on.
  * 3 since G1-P7: the client may send `carousel-pick` (MULTIPLAYER_CONTRACT §21.1), a new command a protocol 2 server would refuse;
  * its receipts carry the rules' CarouselFailure reasons plus `stale-carousel`. A protocol 2 client could not take part either:
- * the match now opens on the `carousel` phase with no unit (it could not pick and would sit through 1-1 not knowing why).
+ * the match then opened on the `carousel` phase with no unit (it could not pick and would sit through 1-1 not knowing why).
  * `PlayerView.carousel` and the `carousel` phase kind alone would have been additive. A protocol 2 client is refused at its
  * first message with `unsupported-protocol` ("protocolVersion must be 3").
+ * P7-1 stays at 3: the 1-1 carousel is gone (the match opens on 1-2 preparation with the free unit) and the seat view's
+ * `pendingCarouselUnits` became `heldCarouselUnits`; no client message or receipt changed, a held unit is sold with `sell`.
  */
 export const NET_PROTOCOL_VERSION = 3;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
