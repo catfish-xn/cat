@@ -208,6 +208,34 @@ describe('game server: disconnect and resume', () => {
     const stranger = await harness.connect();
     expect(await stranger.resume('nope')).toMatchObject({ ok: false, reason: 'invalid-token' });
   });
+  it('G1-P6: a resumed seat gets the same opponent candidates in preparation and fights one of them', async () => {
+    harness = await startServer({}, new TwoSidedBattleResolver());
+    const [a] = await seatTwo(harness);
+    const room = harness.server.room!;
+    const seatA = a.seatId!, token = a.token!;
+    // Second PvP preparation: the history already narrows the candidates.
+    let pvpPreparations = 0, lastRound = -1, guard = 0;
+    while (guard++ < 2_000) {
+      const state = room.state;
+      if (state.phase === 'preparation' && state.roundKind === 'pvp' && state.round !== lastRound) { lastRound = state.round; if (++pvpPreparations === 2) break; }
+      if (!harness.clock.runNext()) break;
+    }
+    expect(pvpPreparations).toBe(2);
+    const before = await a.waitForView(view => view.phase.kind === 'preparation' && view.phase.round === room.state.round);
+    expect(before.opponentSeatId).toBeNull();
+    expect(before.opponentCandidates!.length).toBeGreaterThan(0);
+    await a.close();
+    const a2 = await harness.connect();
+    expectOk(await a2.resume(token));
+    const resumed = await a2.waitForView(view => view.mySeatId === seatA);
+    expect(resumed.opponentCandidates).toEqual(before.opponentCandidates);
+    expect(resumed.opponentSeatId).toBeNull();
+    // Bot steps share the clock: fire timers until the preparation deadline froze the round.
+    for (let fired = 0; room.state.pairings.length === 0 && fired < 500; fired++) harness.clock.runNext();
+    const fought = await a2.waitForView(view => view.opponentSeatId !== null);
+    expect(before.opponentCandidates).toContain(fought.opponentSeatId);
+    expect(fought.opponentCandidates).toEqual([]);
+  }, 60_000);
   it('drops a queued player that disconnects before the match and frees the seat', async () => {
     harness = await startServer();
     const a = await harness.connect(), b = await harness.connect();

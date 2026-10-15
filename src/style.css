@@ -333,6 +333,7 @@ body[data-online-mode="online-lobby"] #board-frame, body[data-online-mode="onlin
 .online-seat { background: var(--c-surface, #14212c); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; border: 1px solid transparent; }
 .online-seat.me { border-color: #68ddd0; }
 .online-seat.opponent { border-color: #f08080; }
+.online-seat.candidate { border-color: rgba(240, 128, 128, .45); border-style: dashed; }
 .online-seat.eliminated { opacity: .45; }
 .seat-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .seat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -340,6 +341,7 @@ body[data-online-mode="online-lobby"] #board-frame, body[data-online-mode="onlin
 .seat-kind.seat-bot { color: #b4a1f5; }
 .seat-kind.seat-takeover { color: #1b1f24; background: #e6bc76; font-weight: 600; }
 .seat-opponent { font-size: 11px; color: #f08080; }
+.seat-candidate { font-size: 11px; color: rgba(240, 128, 128, .7); }
 .seat-offline { font-size: 11px; color: #e6bc76; }
 .seat-bar { height: 8px; border-radius: 4px; background: #203440; overflow: hidden; }
 .seat-fill { height: 100%; background: linear-gradient(90deg, #68c087, #68ddd0); transition: width .4s ease; }
@@ -405,7 +407,7 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .online-countdown[data-spectating] .countdown-round { color: #f6b3b3; }
 .opponent-board { position: absolute; z-index: 30; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
   width: min(430px, calc(100% - 16px)); max-height: calc(100% - var(--online-countdown-h, 48px) - 2 * var(--online-gap, 8px)); overflow: auto;
-  display: grid; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid #e6bc76; background: rgba(14, 24, 33, .96); color: #e2eef1; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
+  display: grid; gap: 6px; padding: 8px 12px; border-radius: 10px; border: 1px solid #e6bc76; background: rgba(14, 24, 33, .96); color: #e2eef1; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
 .opponent-head { display: flex; align-items: center; gap: 10px; }
 .opponent-name { font-size: 15px; }
 .opponent-meta { flex: 1; font-size: 12px; color: #9aaeb9; }
@@ -413,8 +415,7 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .opponent-grid { --cell: 50px; display: grid; gap: 2px; justify-content: center; }
 .opponent-row { display: grid; grid-template-columns: repeat(var(--cols, 7), var(--cell)); gap: 2px; }
 .opponent-row.odd { transform: translateX(calc(var(--cell) / 2)); }
-.opponent-row:nth-child(-n + 4) .opponent-cell { background: #24202a; }
-.opponent-cell { height: 44px; border-radius: 6px; background: #1a2c33; display: grid; place-items: center; }
+.opponent-cell { height: 42px; border-radius: 6px; background: #1a2c33; display: grid; place-items: center; }
 .opponent-unit { position: relative; width: 40px; height: 40px; display: grid; place-items: center; }
 .opponent-portrait { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; border: 2px solid #7e95a4; display: grid; place-items: center; background: #203440; }
 .opponent-unit.cost-2 .opponent-portrait { border-color: #68c087; } .opponent-unit.cost-3 .opponent-portrait { border-color: #5aa0e6; }
@@ -456,3 +457,8 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
 .consumable-candidate { outline: 2px dashed #68ddd0 !important; outline-offset: -2px; }
 .consumable-hint { color: #9ff0e4 !important; }
+
+/* G3: build / digest label, bottom-right, never in the way of input. */
+.build-badge { position: fixed; right: 6px; bottom: 4px; z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; pointer-events: none;
+  font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #8fa3b0; opacity: .6; text-shadow: 0 1px 2px #000; }
+.build-badge.mismatch { color: #f0a070; opacity: 1; }

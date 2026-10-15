@@ -7,7 +7,7 @@ export { ManualClock, type Clock, type ClockHandle } from './clock';
 export { RealClock } from './real-clock';
 export { PlaceholderBattleResolver, BattleResolveError, type BattleResolver } from './battle-resolver';
 export { TwoSidedBattleResolver, resolveTwoSidedPvp } from './two-sided-resolver';
-export { planPairings, findPairing, type PairingPlan } from './pairing';
+export { candidateOpponents, planCandidates, planPairings, recordPairings, findPairing, DEFAULT_PAIRING_POLICY, PAIRING_HISTORY_LIMIT, type CandidateMap, type PairingHistory, type PairingPlan, type PairingPolicy } from './pairing';
 export { Room, ROOM_TIMING_DEFAULTS, applySeatCommand, type RoomOptions, type RoomTimings, type CommitResult, type CommitFailure, type PlanResult } from './room';
 export {
   toPlayerView, toSeatPublic, toPlayerFault, toSeatPrivateView, seatPushEvents, toCombatReplayFor, mirrorCombatReplay,

@@ -13,9 +13,11 @@
 
 以下 shell 命令在目标机终端执行；看到错误应先停下处理，不能跳过构建或把缺失文件当成成功。
 
-## 2 安装 Node 22 与构建候选
+## 2 按脚本部署（G3，推荐；约 10 分钟）
 
-### 2.1 安装 Node 22（独立安装目录，供 systemd 使用）
+2026-10-15 起部署由仓库内 `deploy/` 完成：`deploy/deploy.sh <SHA>` 按提交拉取、`npm ci`、`build:game`、前端 `build`、在新目录里构建完再**原子切换** `/srv/cat/current`、重启 systemd 服务、轮询 `/healthz` 直到报告的 `sha` 等于这次的提交；健康检查失败**自动切回上一个版本目录**并重启。第 3 节的手工步骤和第 5 节的手工切换保留作备用与原理说明，日常不再需要。
+
+### 2.1 安装 Node 22（一次性；独立安装目录，供 systemd 与部署脚本使用）
 
 ```bash
 set -e
@@ -42,7 +44,73 @@ npm --version
 
 `node --version` 必须显示 `v22.*`（仓库最低 22.12），记录实际输出。已有 nvm/fnm 的构建机也可以 `nvm install 22 && nvm use 22`；不要为本项目切换到 24。systemd 不会读取交互终端的 nvm 配置，因此生产服务用 `/opt/node22/bin/node` 的绝对路径。
 
-### 2.2 构建（这一阶段需要开发依赖）
+### 2.2 首次准备（只做一次）
+
+```bash
+set -e
+# 运行服务的系统账户（只读访问发布目录）
+id catgame >/dev/null 2>&1 || sudo useradd --system --user-group --home-dir /srv/cat --shell /usr/sbin/nologin catgame
+# 发布根目录归执行部署的管理员账号；构建不用 root
+sudo mkdir -p /srv/cat && sudo chown "$USER": /srv/cat
+# 取一份部署脚本（之后每次部署都用目标 SHA 自带的同一份也可以）
+git clone https://github.com/catfish-xn/cat.git "$HOME/cat-deploy" && cd "$HOME/cat-deploy"
+git fetch origin multiplayer && git checkout --detach 填入已批准的完整提交SHA
+# 运行配置：内容见 3.2 的表格；至少写 NODE_ENV/CAT_HOST/PORT
+sudo mkdir -p /etc/cat && sudo nano /etc/cat/game.env
+# systemd 单元（多读一份 current/release.env，里面是该版本的 CAT_GIT_SHA）
+sudo cp deploy/cat-game.service /etc/systemd/system/cat-game.service
+sudo systemctl daemon-reload
+sudo systemctl enable cat-game
+```
+
+单元文件与第 3.3 节相同，只多了 `EnvironmentFile=-/srv/cat/current/release.env`。若 Node 不在 `/opt/node22/bin`，同时改单元的 `ExecStart` 与部署时的 `CAT_NODE_BIN`。Caddy 按第 4 节配置（注意 `/ws*` 也转发 `/ws/healthz`）。
+
+### 2.3 部署一个提交
+
+```bash
+cd "$HOME/cat-deploy"
+git fetch origin && git checkout --detach 填入已批准的完整提交SHA     # 让脚本本身也是这个版本
+deploy/deploy.sh 填入已批准的完整提交SHA
+```
+
+脚本按顺序：
+1. 在 `/srv/cat/source`（裸仓库缓存）`git fetch`，确认提交存在，解析成完整 SHA。
+2. `git archive` 导出到 `/srv/cat/releases/<SHA>.tmp-*`，检查 Node 22.12+，`npm ci` → `npm run build:game` → `VITE_CAT_SHA=<SHA> npm run build`（含 typecheck）→ `node --check` → `npm prune --omit=dev`，写 `release.env`（`CAT_GIT_SHA=<SHA>`）与 `.release-ok`，最后 rename 成 `/srv/cat/releases/<SHA>`。任何一步失败：删除临时目录，current 不动，退出 1。已有完整目录时直接复用。
+3. 读当前 `/healthz`：**有真人在线的对局进行中就拒绝切换**（重启会中断对局），等 `room.phase` 为 `ended` 或无房间再来；确需中断加 `--force`。
+4. `ln -sfn` + `mv -T` 原子切换 `current`，旧目标记为 `previous`；`sudo systemctl restart cat-game`。
+5. 在 `CAT_HEALTH_TIMEOUT`（默认 40 秒）内轮询 `http://127.0.0.1:8787/healthz`，`sha` 等于新提交即成功，打印 /healthz，并只保留最近 `CAT_KEEP_RELEASES`（默认 5）个版本目录（current、previous 总保留）。
+6. 超时或服务起不来：自动把 `current` 切回上一个目录、重启、确认旧 `sha` 健康，然后以“已自动回滚”退出 1；失败的新目录留着供排查（`journalctl -u cat-game -n 100`）。
+
+可调环境变量：`CAT_ROOT`（/srv/cat）、`CAT_REPO`、`CAT_NODE_BIN`（/opt/node22/bin）、`CAT_HEALTH_URL`、`CAT_HEALTH_TIMEOUT`、`CAT_RESTART_CMD`（`sudo systemctl restart cat-game`）、`CAT_KEEP_RELEASES`。
+
+其他命令：`deploy/deploy.sh status`（current/previous 与 /healthz）；`deploy/deploy.sh rollback`（不构建，切回 previous 并检查）。同一时间只允许一个部署（`/srv/cat/.deploy.lock`）。
+
+### 2.4 部署后确认
+
+```bash
+curl -s http://127.0.0.1:8787/healthz; echo
+sudo journalctl -u cat-game -n 20 -o cat
+```
+
+`/healthz` 返回 JSON：`sha`、`contentDigest`、`lootReplayDigest`、`netProtocol`、`roomProtocol`、`room`（`roomId/phase/round/roundName/fault/humans/humansConnected/alive`，开服后未开局为 null）、`seatsOnline`（凭证绑在在线连接上的席位数，含排队）、`queue`、`capacity`、`connections`、`uptimeSec`、`rssBytes`。不含玩家名、凭证或棋盘状态。经 Caddy 访问为 `https://域名/ws/healthz`。
+
+打开 `https://域名/?mode=online&server=ws`，页面**右下角**两行小字：`页面 <SHA 前 7 位> · 内容 <digest>` 与 `服务器 <SHA 前 7 位> · 内容 <digest>`。两行 SHA 与 digest 都应等于本次提交；出现“版本不一致，请刷新”说明浏览器还在用旧前端，强制刷新即可。
+
+日志是每行一个 JSON（`ts/level/event/roomId/seatId` + 事件字段），级别由 `/etc/cat/game.env` 的 `CAT_LOG_LEVEL`（debug/info/warn/error，默认 info）控制。只记录阶段切换、入队/开局/重连、对局结束原因与错误，不含凭证或逐帧状态。例：`journalctl -u cat-game -o cat | grep '"event":"room.ended"'`。
+
+### 2.5 清旧存档提醒（每次内容 digest 变化时）
+
+- **服务器没有存档**：对局只在内存里，部署重启后旧局和旧座位凭证全部失效，玩家刷新页面会提示“席位已失效 · 请重新匹配”，浏览器里 `hex-online-seat:*` 的旧凭证随之作废，无需手动清。
+- **单机存档在玩家浏览器的 IndexedDB**（`hex-autobattler-s13-rules-gap-v1`）。`contentDigest`/`lootReplayDigest` 与上次部署不同（看 `/healthz` 或第 11/12 节与 P3P4P5 节的记录）时，旧 digest 的存档**不能续玩**，只能原字节导出；提醒玩家先在“开始与继续”里“导出当前局”留档，再“随机新局”。不要替玩家改存档头部冒充新版本。确实要清空，可在浏览器开发者工具 → Application → IndexedDB 删除该库（会丢掉未导出的旧局）。
+- 对外公告前，用 `/healthz` 的两个 digest 与上一版比对，写进本次发布记录。
+
+### 2.6 对局异常时（无需重启）
+
+房间结算出错（`resolver-error` 等）、卡死（`CAT_STALL_SEC`，默认 120：阶段截止后这么久没有任何发布）、全员掉线（`CAT_ABANDON_SEC`，默认 90：所有真人席都断线这么久）三种情况，服务器会把该局结束为异常（`/healthz` 的 `room.phase=ended`、`room.fault` 写原因），释放该局所有座位凭证，**匹配队列立刻重新开放**，进程不重启。玩家页面显示原因与“返回匹配”。两项设为 0 可分别关闭检查。`CAT_FAULT_INJECT_ROUND` 只供 e2e 注入异常，生产 `/etc/cat/game.env` 不得设置。
+
+### 2.7 手工构建（备用）
+
+部署脚本不可用时，按原手工方式在构建机执行，然后按第 3.1 节复制、第 5 节切换：
 
 ```bash
 export PATH="/opt/node22/bin:$PATH"
@@ -55,17 +123,15 @@ CAT_RELEASE_COMMIT=填入已批准的完整提交SHA
 git checkout --detach "$CAT_RELEASE_COMMIT"
 npm ci
 npm run build:game
-npm run build
+VITE_CAT_SHA="$CAT_RELEASE_COMMIT" npm run build
 node --check dist-server/game/main.mjs
 ```
 
-第一次 clone 后，后续发布复用 `source` 目录，从 fetch 开始。`npm run build:game` 生成 `dist-server/game/main.mjs` 与 Node 测试客户端；`npm run build` 生成 `dist/` 静态前端。不要使用 Pages 的构建模式部署到本说明的域名根路径。
+**构建顺序不能颠倒：** esbuild、TypeScript、Vite 是 devDependencies；先执行 `npm ci --omit=dev` 会让 build:game/build 缺工具。生产启动使用已构建文件，不运行 `npm run serve:game`（它会重新调用 esbuild）。手工安装的版本目录还需写入 `release.env`（`CAT_GIT_SHA=<SHA>`），否则 `/healthz` 报 `sha: "unknown"`。
 
-**构建顺序不能颠倒：** esbuild、TypeScript、Vite 是 devDependencies；先执行 `npm ci --omit=dev` 会让 build:game/build 缺工具。生产启动使用已构建文件，不运行 `npm run serve:game`（它会重新调用 esbuild）。
+Node 服务构建的外部运行包为 **ws**，其余是 Node 内置模块；Phaser 只用于前端构建/静态包。仓库 package.json 同时将 `ws` 和 `phaser` 列为 dependencies，所以 `npm ci --omit=dev` / `npm prune --omit=dev` **仍会保留 Phaser**；它不会被服务器入口加载。
 
-Node 服务构建的外部运行包为 **ws**，其余是 Node 内置模块；Phaser 只用于前端构建/静态包。仓库 package.json 同时将 `ws` 和 `phaser` 列为 dependencies，所以用根锁文件执行 `npm ci --omit=dev` **仍会安装 Phaser**，不能说它只安装 ws。保留这份锁文件可复现安装，不在本任务拆分部署专用 package.json；安装的 Phaser 不会被服务器入口加载。
-
-## 3 安装发布目录与 systemd 服务
+## 3 安装发布目录与 systemd 服务（手工备用；第 2 节脚本已包含）
 
 ### 3.1 创建账户、复制已构建候选
 
@@ -119,6 +185,11 @@ CAT_SETTLE_SEC=6
 | CAT_QUEUE_TIMEOUT_SEC | 不设置时等待任意排队玩家点开始；设置后首位入队开始倒计时 |
 | CAT_TAKEOVER | 不设置（默认关）：按云顶"掉线不接管"，掉线席位什么都不做、棋盘照常参战，重连后继续操作；设为 `1`/`true`/`on`/`yes` 才让机器人接管掉线席位（B6），`0`/`false`/`off`/`no` 显式关闭，其他值启动报错 |
 | CAT_TAKEOVER_SEC | 60；仅在 CAT_TAKEOVER 打开时生效，掉线多少秒后由机器人接管 |
+| CAT_STALL_SEC | 120；G3 看门狗：阶段截止后这么多秒没有任何状态发布即判卡死、异常收局、重开队列；0 关闭 |
+| CAT_ABANDON_SEC | 90；G3 看门狗：所有真人席都断线这么多秒即收局、重开队列；0 关闭 |
+| CAT_LOG_LEVEL | info；debug/info/warn/error，每行一个 JSON 日志 |
+| CAT_GIT_SHA | 不在此文件设置：由版本目录的 `release.env` 提供，`/healthz` 与页面右下角显示 |
+| CAT_FAULT_INJECT_ROUND | **仅测试**：该回合第一场战斗抛错一次；生产不得设置 |
 | NODE_ENV | production；常规进程环境，不改变规则数值 |
 
 生产入口要求非负整数秒，不能照抄压测的 0.25 秒。战斗播放时间根据战斗 tick 数再加尾部等待确定，不属于这三个配置。浏览器 URL 上的 `prep/choice/settle/seed` 只作用于 local-room 调试模式，不能改变 WS 服务器配置。
@@ -165,7 +236,7 @@ sudo systemctl status cat-game --no-pager
 sudo journalctl -u cat-game -n 50 --no-pager
 ```
 
-看到 `listening on ws://127.0.0.1:8787` 表示服务已监听。日志在 journald：`sudo journalctl -u cat-game -f` 实时查看。服务器不提供 HTTP /health；不要把 HTTP curl 返回空响应当成联机成功，接下来用网页或 Node WebSocket 客户端验证。
+日志首条 `"event":"server.listening"`（其 `msg` 含 `listening on ws://127.0.0.1:8787`）表示服务已监听。日志在 journald：`sudo journalctl -u cat-game -f -o cat` 实时查看（每行一个 JSON）。`curl -s http://127.0.0.1:8787/healthz` 返回版本与房间状态（见 2.4）；它只说明进程在服务，联机是否成功仍用网页或 Node WebSocket 客户端验证。
 
 ## 4 Caddy：静态前端、HTTPS 和 /ws
 
@@ -178,7 +249,7 @@ sudo nano /etc/caddy/Caddyfile
 
 ```caddyfile
 play.example.com {
-    handle /ws {
+    handle /ws* {
         reverse_proxy 127.0.0.1:8787
     }
     handle {
@@ -204,7 +275,7 @@ Caddy 自动处理 WebSocket Upgrade 与 TLS 证书；后端仍是本机明文 w
 
 用两台电脑打开上述 URL，确认看到同一队列和相同战局。单台浏览器的动画顺畅不等于八席服务器压测通过，反过来也一样。准入控制由用户在网页入口另行部署；本仓库没有账户、登录或邀请机制，此 Caddy 示例本身不增加这些功能。
 
-## 5 停止、更新与回滚
+## 5 停止、更新与回滚（手工备用；日常用 `deploy/deploy.sh <SHA>` 与 `deploy/deploy.sh rollback`）
 
 正常更新先停止新的准入，等当前对局结束，再停止服务：
 
