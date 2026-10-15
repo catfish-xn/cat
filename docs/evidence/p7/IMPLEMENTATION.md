@@ -12,7 +12,7 @@
 
 ## 当前合并验收
 
-已合入 `multiplayer@cf75fbc`（包含 G2-1 #94、G4 #98/#105）。本轮结果以 [MERGE_VALIDATION.md](MERGE_VALIDATION.md) 为准。下文旧验收环境与旧 digest 仅为历史记录，不代表当前 head；本轮不执行单 worker 全套或对照轮。
+已合入 `multiplayer@cf75fbc`（包含 G2-1 #94、G4 #98/#105）。本轮 typecheck / server-entry 通过；fast 2740 通过、7 超时失败（839.94 s）；timing 32/32 通过（224.97 s），仍保持 Draft。本轮结果以 [MERGE_VALIDATION.md](MERGE_VALIDATION.md) 为准。下文旧验收环境与旧 digest 仅为历史记录，不代表当前 head；本轮不执行单 worker 全套或对照轮。
 
 当前 CONTENT_DIGEST：`fnv1a32-utf16:1ce135cf`，以合并后的 G2 基线 `70a355f3` 重新计算；LOOT_REPLAY_DIGEST 保持 G2 已发布的 `fnv1a32-utf16:65a85ecd`。P7 独立夹具已改为对 G2 原档核验，历史 G2/P3/T13 文件不改。重复恢复缓存补丁已移除，使用 #98 的实现。
 
