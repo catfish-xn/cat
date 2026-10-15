@@ -5,7 +5,7 @@ import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
 import {nextRandom} from '../src/simulation/rng';
 import {buyUnit,buyXp,deployMatchUnit,nextRound,rerollShop,sellUnit,startMatchCombat,stepMatch,type MatchState,type MatchEvent} from '../src/simulation/match';
 import {accepted,battle,deployed,finish,freeze,readyMatch,emptyBoard,resolveM5Choices,reachRound} from './match-helpers';
-import {settlement,shop} from './fixtures/m5/oracle.cjs';
+import {settlement,shop} from './fixtures/m5/oracle.g2.cjs';
 const players=(s:MatchState)=>s.preparation.units.filter(u=>u.team==='player');
 describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
  it.each(['playerWin','enemyWin','draw'] as const)('atomically settles %s and rejects replayed transitions',result=>{

@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:70a355f3",
+  "lootReplayDigest": "fnv1a32-utf16:65a85ecd",
+  "rulesVersion": "s13-g2-1-v1",
+  "contentVersion": "s13-14.24b-g2-1-v1",
+  "schemaVersion": 7,
+  "previousContentDigest": "fnv1a32-utf16:77f80fec",
+  "previousLootReplayDigest": "fnv1a32-utf16:b8d9d7ca",
+  "traceHashes": {
+    "state": "77f7ae941458272ddd482ab423106e820e4a1e48d7f94abfe712ec91de4f39ef",
+    "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
+    "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+  },
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:8070e205",
+    "eventHash": "fnv1a32-utf16:966105d6"
+  },
+  "reason": "G2-1: 14 admitted heroes and three origins; Swain source form attributes unresolved; expanded shop changes command/event trajectories."
+}

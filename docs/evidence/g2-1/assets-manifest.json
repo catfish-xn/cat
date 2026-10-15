@@ -1,0 +1,740 @@
+{
+  "patch": "14.24",
+  "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",
+  "command": "node scripts/fetch-s13-assets.cjs --g2-1",
+  "downloadDirectory": "public/assets/s13",
+  "publicAssetsCommitted": true,
+  "expected": 81,
+  "downloaded": 81,
+  "assets": [
+    {
+      "apiName": "TFT13_Amumu",
+      "kind": "champion",
+      "id": "amumu",
+      "path": "assets/s13/champions/amumu.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_amumu/hud/tft13_amumu_square.tft_set13.png",
+      "bytes": 24239,
+      "sha256": "e522d6609963e032df730a6e0f1f21e230b5f8b408e6c2ba12a40dd71ad2f0ff"
+    },
+    {
+      "apiName": "TFT13_Blitzcrank",
+      "kind": "champion",
+      "id": "blitzcrank",
+      "path": "assets/s13/champions/blitzcrank.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_blitzcrank/hud/tft13_blitzcrank_square.tft_set13.png",
+      "bytes": 20549,
+      "sha256": "f22323f4dbe184c0fd9fd96d16fdc5f09badb42fba040c708812b60519faf2c9"
+    },
+    {
+      "apiName": "TFT13_Caitlyn",
+      "kind": "champion",
+      "id": "caitlyn",
+      "path": "assets/s13/champions/caitlyn.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_caitlyn/hud/tft13_caitlyn_square.tft_set13.png",
+      "bytes": 21661,
+      "sha256": "abfa09b160aeee6295bf5f42901eea37c1d7209fb95b8f0a6649878239b86b73"
+    },
+    {
+      "apiName": "TFT13_Corki",
+      "kind": "champion",
+      "id": "corki",
+      "path": "assets/s13/champions/corki.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_corki/hud/tft13_corki_square.tft_set13.png",
+      "bytes": 26016,
+      "sha256": "2de6c4044c928f3f206c4a99d40d29c7e15c0947ea1d4fbd4f5b815fb848fff6"
+    },
+    {
+      "apiName": "TFT13_Darius",
+      "kind": "champion",
+      "id": "darius",
+      "path": "assets/s13/champions/darius.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_darius/hud/tft13_darius_square.tft_set13.png",
+      "bytes": 24352,
+      "sha256": "8f144afc7dfa08aaa7c275ecb545ffcbd9d160135a88441f9aface6085bdbfbe"
+    },
+    {
+      "apiName": "TFT13_Ekko",
+      "kind": "champion",
+      "id": "ekko",
+      "path": "assets/s13/champions/ekko.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ekko/hud/tft13_ekko_square.tft_set13.png",
+      "bytes": 27003,
+      "sha256": "45da45bfc46c5fb7b0a4af38f7aa8eda22d9d0a2d84a6edf0b2260a9e2ca2041"
+    },
+    {
+      "apiName": "TFT13_Ezreal",
+      "kind": "champion",
+      "id": "ezreal",
+      "path": "assets/s13/champions/ezreal.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ezreal/hud/tft13_ezreal_square.tft_set13.png",
+      "bytes": 24696,
+      "sha256": "8a6785eb80058498c425d9174b73d4110b6e0e61a8d0f7d5f404316e8f206c4e"
+    },
+    {
+      "apiName": "TFT13_Garen",
+      "kind": "champion",
+      "id": "garen",
+      "path": "assets/s13/champions/garen.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_garen/hud/tft13_garen_square.tft_set13.png",
+      "bytes": 24472,
+      "sha256": "b37f8ae796304cbda1a47b76772f7b44e4c6aa19849c483bf0c025f33b407e08"
+    },
+    {
+      "apiName": "TFT13_Illaoi",
+      "kind": "champion",
+      "id": "illaoi",
+      "path": "assets/s13/champions/illaoi.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_illaoi/hud/tft13_illaoi_square.tft_set13.png",
+      "bytes": 24491,
+      "sha256": "fc8e30f2cead9bf84722faf544371785a056bad902f566f943a1587d6dbbe4bc"
+    },
+    {
+      "apiName": "TFT13_Irelia",
+      "kind": "champion",
+      "id": "irelia",
+      "path": "assets/s13/champions/irelia.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_irelia/hud/tft13_irelia_square.tft_set13.png",
+      "bytes": 25944,
+      "sha256": "dbb4536e2116e1f72e2f241eaa30efd2a59d323a7f6144606077488dbdcb35ad"
+    },
+    {
+      "apiName": "TFT13_KogMaw",
+      "kind": "champion",
+      "id": "kogmaw",
+      "path": "assets/s13/champions/kogmaw.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_kogmaw/hud/tft13_kogmaw_square.tft_set13.png",
+      "bytes": 24684,
+      "sha256": "54632ba89e0e035ed5f785caca0dd04ea026390fa29906f9adbd4493562d01aa"
+    },
+    {
+      "apiName": "TFT13_LeBlanc",
+      "kind": "champion",
+      "id": "leblanc",
+      "path": "assets/s13/champions/leblanc.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_leblanc/hud/tft13_leblanc_square.tft_set13.png",
+      "bytes": 24580,
+      "sha256": "eb580f5044e1be5aa17d6cb1f7d4e46f2a0e860b5c1ef479411a86f1e6029527"
+    },
+    {
+      "apiName": "TFT13_Leona",
+      "kind": "champion",
+      "id": "leona",
+      "path": "assets/s13/champions/leona.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_leona/hud/tft13_leona_square.tft_set13.png",
+      "bytes": 25870,
+      "sha256": "6189d496987a51288e405f33ecb279e9deb7576583fd550b6fd38443919ac84f"
+    },
+    {
+      "apiName": "TFT13_Beardy",
+      "kind": "champion",
+      "id": "loris",
+      "path": "assets/s13/champions/loris.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_beardy/hud/tft13_beardy_square.tft_set13.png",
+      "bytes": 23426,
+      "sha256": "f4c8ed57183ae04025be3be2533738931014db92b5b6b5b6ccb81ae9664c9c66"
+    },
+    {
+      "apiName": "TFT13_Lux",
+      "kind": "champion",
+      "id": "lux",
+      "path": "assets/s13/champions/lux.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_lux/hud/tft13_lux_square.tft_set13.png",
+      "bytes": 23020,
+      "sha256": "7434af8b6ce7fada72b620adab3c8b0a92eb5638fb6d97edd884ec4a83f483ba"
+    },
+    {
+      "apiName": "TFT13_Shooter",
+      "kind": "champion",
+      "id": "maddie",
+      "path": "assets/s13/champions/maddie.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_shooter/hud/tft13_shooter_square.tft_set13.png",
+      "bytes": 22360,
+      "sha256": "7bf031a32a73be2189d2de5a220a542c1dd04c89f30c3fa40d194cb676dcfdc8"
+    },
+    {
+      "apiName": "TFT13_Malzahar",
+      "kind": "champion",
+      "id": "malzahar",
+      "path": "assets/s13/champions/malzahar.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_malzahar/hud/tft13_malzahar_square.tft_set13.png",
+      "bytes": 19021,
+      "sha256": "3fb0e71c02ab9d30462da14fc102742b239bc3c54ec9e46c517f0925e2f6b1c2"
+    },
+    {
+      "apiName": "TFT13_Nami",
+      "kind": "champion",
+      "id": "nami",
+      "path": "assets/s13/champions/nami.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_nami/hud/tft13_nami_square.tft_set13.png",
+      "bytes": 25758,
+      "sha256": "3369e7d376b32a8ca5f73bc699ecffd1f1fc7aa0de32998113bd0051c4af11a8"
+    },
+    {
+      "apiName": "TFT13_Nocturne",
+      "kind": "champion",
+      "id": "nocturne",
+      "path": "assets/s13/champions/nocturne.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_nocturne/hud/tft13_nocturne_square.tft_set13.png",
+      "bytes": 23732,
+      "sha256": "ddd2152e2e61a80af3268ae91ec4e8a1d9c3260351b1bf7122bdf6a7cd5b7148"
+    },
+    {
+      "apiName": "TFT13_Blue",
+      "kind": "champion",
+      "id": "powder",
+      "path": "assets/s13/champions/powder.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_blue/hud/tft13_blue_square.tft_set13.png",
+      "bytes": 22570,
+      "sha256": "be69ac1341cd19106b8fe4d0eceefcbc39343fa510c80fa5d6acdcf448a2b424"
+    },
+    {
+      "apiName": "TFT13_Rell",
+      "kind": "champion",
+      "id": "rell",
+      "path": "assets/s13/champions/rell.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_rell/hud/tft13_rell_square.tft_set13.png",
+      "bytes": 25980,
+      "sha256": "039d1f8e3a7e9bfaaa5436771e3df351f9a3412a25b078016bbd26c722df4a9d"
+    },
+    {
+      "apiName": "TFT13_Rumble",
+      "kind": "champion",
+      "id": "rumble",
+      "path": "assets/s13/champions/rumble.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_rumble/hud/tft13_rumble_square.tft_set13.png",
+      "bytes": 23715,
+      "sha256": "ec6ad15046994cae83d53c79995d493dd0d888b81ea80e51779aae2d53461aad"
+    },
+    {
+      "apiName": "TFT13_FlyGuy",
+      "kind": "champion",
+      "id": "scar",
+      "path": "assets/s13/champions/scar.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_flyguy/hud/tft13_flyguy_square.tft_set13.png",
+      "bytes": 22579,
+      "sha256": "d0d938a69eed87201de60b4bb4c5877d3d2cb9cda50f1f4e883269cb5ca73d75"
+    },
+    {
+      "apiName": "TFT13_Singed",
+      "kind": "champion",
+      "id": "singed",
+      "path": "assets/s13/champions/singed.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_singed/hud/tft13_singed_square.tft_set13.png",
+      "bytes": 23500,
+      "sha256": "18a0592df0ab41d8f61181dee76ccf95b8dcc5191c88dfd5ac6410b05039a76b"
+    },
+    {
+      "apiName": "TFT13_Swain",
+      "kind": "champion",
+      "id": "swain",
+      "path": "assets/s13/champions/swain.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_swain/hud/tft13_swain_square.tft_set13.png",
+      "bytes": 19106,
+      "sha256": "5063dcf4aadbfe6c0b8f62048ee8239d6754f012b77599ad9edd8f7d229032fd"
+    },
+    {
+      "apiName": "TFT13_Tristana",
+      "kind": "champion",
+      "id": "tristana",
+      "path": "assets/s13/champions/tristana.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_tristana/hud/tft13_tristana_square.tft_set13.png",
+      "bytes": 24485,
+      "sha256": "8711e710b1efec94a880dec1f3f7e7cd8c7bedb829cdec46c108d18cc6a0e20e"
+    },
+    {
+      "apiName": "TFT13_Twitch",
+      "kind": "champion",
+      "id": "twitch",
+      "path": "assets/s13/champions/twitch.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_twitch/hud/tft13_twitch_square.tft_set13.png",
+      "bytes": 23714,
+      "sha256": "6a5d17b526483c5716973ab17264713613542ed6606f6c476de977c4280f9952"
+    },
+    {
+      "apiName": "TFT13_Urgot",
+      "kind": "champion",
+      "id": "urgot",
+      "path": "assets/s13/champions/urgot.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_urgot/hud/tft13_urgot_square.tft_set13.png",
+      "bytes": 23776,
+      "sha256": "0d072a1227887f114e68ebac15297d1c669897d8dc62e8021e8a020413e601f9"
+    },
+    {
+      "apiName": "TFT13_Prime",
+      "kind": "champion",
+      "id": "vander",
+      "path": "assets/s13/champions/vander.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_prime/hud/tft13_prime_square.tft_set13.png",
+      "bytes": 20403,
+      "sha256": "4cd4547fc863b1f481bdb936f019a1c18072bff4c5140d44c3e77c9f25a0682a"
+    },
+    {
+      "apiName": "TFT13_Red",
+      "kind": "champion",
+      "id": "violet",
+      "path": "assets/s13/champions/violet.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_red/hud/tft13_red_square.tft_set13.png",
+      "bytes": 22833,
+      "sha256": "7a9ab9b06efaa37512a0b93e628f00b4f77d60610c93568a77ae88bfc1cd47bf"
+    },
+    {
+      "apiName": "TFT13_Vladimir",
+      "kind": "champion",
+      "id": "vladimir",
+      "path": "assets/s13/champions/vladimir.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vladimir/hud/tft13_vladimir_square.tft_set13.png",
+      "bytes": 22656,
+      "sha256": "374bc22a7b36710bdbda9bc907623013386d13bd2aee41d07e1aef621e39403e"
+    },
+    {
+      "apiName": "TFT13_Zeri",
+      "kind": "champion",
+      "id": "zeri",
+      "path": "assets/s13/champions/zeri.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_zeri/hud/tft13_zeri_square.tft_set13.png",
+      "bytes": 24782,
+      "sha256": "749f2e6a80e22d7668f061ec01d538d123001fc24e66a75b7a823ba7b6d2642f"
+    },
+    {
+      "apiName": "TFT13_Zoe",
+      "kind": "champion",
+      "id": "zoe",
+      "path": "assets/s13/champions/zoe.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_zoe/hud/tft13_zoe_square.tft_set13.png",
+      "bytes": 22202,
+      "sha256": "99948fa86ba326fb264303139e2e8f221dc7d764bde37978c31c016b2aa5213e"
+    },
+    {
+      "apiName": "TFT13_Zyra",
+      "kind": "champion",
+      "id": "zyra",
+      "path": "assets/s13/champions/zyra.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_zyra/hud/tft13_zyra_square.tft_set13.png",
+      "bytes": 23277,
+      "sha256": "2d2729f7d10edadfbc84b60750025c836c00a3f04c4b26a3ca8d81d85738c037"
+    },
+    {
+      "apiName": "TFT13_Hextech",
+      "kind": "trait",
+      "id": "automata",
+      "path": "assets/s13/traits/automata.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_automata.tft_set13.png",
+      "bytes": 514,
+      "sha256": "fe82a93b4c769ac9990d1d5d4a83af6aec6a1558df7d65565c3d96fbabedfd79"
+    },
+    {
+      "apiName": "TFT13_Family",
+      "kind": "trait",
+      "id": "family",
+      "path": "assets/s13/traits/family.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_family.tft_set13.png",
+      "bytes": 539,
+      "sha256": "20b447102d8fc38ef7650c9a6f3fdeca5f1a189e973f333935ee80345ae5673a"
+    },
+    {
+      "apiName": "TFT13_Hoverboard",
+      "kind": "trait",
+      "id": "firelight",
+      "path": "assets/s13/traits/firelight.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_hoverboard.tft_set13.png",
+      "bytes": 448,
+      "sha256": "b10a395c554cfd369722fe857ccab8271a9d68fea24127ed0ffc903a584a33ea"
+    },
+    {
+      "apiName": "TFT_Item_BFSword",
+      "kind": "item",
+      "id": "sword",
+      "path": "assets/s13/items/sword.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_bfsword.tft_set13.png",
+      "bytes": 18426,
+      "sha256": "b84723913cbeafed158b6bad6a370ca87d0147d3cbb07edeec5dc6080d7514ac"
+    },
+    {
+      "apiName": "TFT_Item_ChainVest",
+      "kind": "item",
+      "id": "vest",
+      "path": "assets/s13/items/vest.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_chainvest.tft_set13.png",
+      "bytes": 17561,
+      "sha256": "b98dd2e3e19c5c278c81ee6174c64d6bf7fc3106e334f5af94de780064a8bfce"
+    },
+    {
+      "apiName": "TFT_Item_GiantsBelt",
+      "kind": "item",
+      "id": "belt",
+      "path": "assets/s13/items/belt.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_giantsbelt.tft_set13.png",
+      "bytes": 18233,
+      "sha256": "8b921cd3fe04f5e526096a0701f40fe71a1a7d1ca36e8157a997023f6400e7a9"
+    },
+    {
+      "apiName": "TFT_Item_NeedlesslyLargeRod",
+      "kind": "item",
+      "id": "rod",
+      "path": "assets/s13/items/rod.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_needlesslylargerod.tft_set13.png",
+      "bytes": 22182,
+      "sha256": "7ea14e098939ef5fa9a0e60c30485f83c258e3f91cd9a4ad45137224af483364"
+    },
+    {
+      "apiName": "TFT_Item_NegatronCloak",
+      "kind": "item",
+      "id": "cloak",
+      "path": "assets/s13/items/cloak.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_negatroncloak.tft_set13.png",
+      "bytes": 21315,
+      "sha256": "21ae8f1d8b45baf30e068d408b52e268e7a180e1f517bd30001731cd734fd94b"
+    },
+    {
+      "apiName": "TFT_Item_RecurveBow",
+      "kind": "item",
+      "id": "bow",
+      "path": "assets/s13/items/bow.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_recurvebow.tft_set13.png",
+      "bytes": 16982,
+      "sha256": "847ab5d93b186ee656ca48669fecd0c289a631a3c8a5b3175e5595f317dea3b2"
+    },
+    {
+      "apiName": "TFT_Item_SparringGloves",
+      "kind": "item",
+      "id": "gloves",
+      "path": "assets/s13/items/gloves.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_sparringgloves.tft_set13.png",
+      "bytes": 16547,
+      "sha256": "f53c57bb57a26c1b692991a33cc162e67e21107a7dbdde96df3622d47baf0cf6"
+    },
+    {
+      "apiName": "TFT_Item_TearOfTheGoddess",
+      "kind": "item",
+      "id": "tear",
+      "path": "assets/s13/items/tear.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_tearofthegoddess.tft_set13.png",
+      "bytes": 15827,
+      "sha256": "088e955d26146772cd95273554bcbd58cee28ac6c50e044c574e4121725978f7"
+    },
+    {
+      "apiName": "TFT_Item_Bloodthirster",
+      "kind": "item",
+      "id": "bloodthirster",
+      "path": "assets/s13/items/bloodthirster.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_bloodthirster.tft_set13.png",
+      "bytes": 20645,
+      "sha256": "bd981da4e3d5dd64680d7f1470a424f0528580a4db7d0c08183df39b9c442176"
+    },
+    {
+      "apiName": "TFT_Item_GuardianAngel",
+      "kind": "item",
+      "id": "edge-of-night",
+      "path": "assets/s13/items/edge-of-night.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_guardianangel.tft_set13.png",
+      "bytes": 21807,
+      "sha256": "e29f76aef690dacb6ff85c8d171cd279c411619deae8e0014f94ee7e05a3d875"
+    },
+    {
+      "apiName": "TFT_Item_InfinityEdge",
+      "kind": "item",
+      "id": "infinity-edge",
+      "path": "assets/s13/items/infinity-edge.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_infinityedge.tft_set13.png",
+      "bytes": 21363,
+      "sha256": "1acbfa52c460f7daffb92f9741ce40867575245c7614cedf86a2a9ed6e706209"
+    },
+    {
+      "apiName": "TFT_Item_MadredsBloodrazor",
+      "kind": "item",
+      "id": "giant-slayer",
+      "path": "assets/s13/items/giant-slayer.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_madredsbloodrazor.tft_set13.png",
+      "bytes": 20659,
+      "sha256": "87265986adc457cf1950ead5a2c4a0c87e1bdb650b44e98a8f464325971712c0"
+    },
+    {
+      "apiName": "TFT_Item_SteraksGage",
+      "kind": "item",
+      "id": "steraks-gage",
+      "path": "assets/s13/items/steraks-gage.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_steraksgage.tft_set13.png",
+      "bytes": 24098,
+      "sha256": "7f9561ca17f47b2892fb3ed41213ead3951398fb9f54c05dfb6ac6167211aeb7"
+    },
+    {
+      "apiName": "TFT_Item_LastWhisper",
+      "kind": "item",
+      "id": "last-whisper",
+      "path": "assets/s13/items/last-whisper.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_lastwhisper.tft_set13.png",
+      "bytes": 17632,
+      "sha256": "393f340ff4cca9ab9372d9ee97801db4b403d658b54792132bbe46a264117940"
+    },
+    {
+      "apiName": "TFT_Item_Leviathan",
+      "kind": "item",
+      "id": "nashors-tooth",
+      "path": "assets/s13/items/nashors-tooth.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_leviathan.tft_set13.png",
+      "bytes": 21685,
+      "sha256": "47a6fa2b8f01b410bfec372d09079842662668b3b50e27d9e7b2ae5e753e2979"
+    },
+    {
+      "apiName": "TFT_Item_RapidFireCannon",
+      "kind": "item",
+      "id": "red-buff",
+      "path": "assets/s13/items/red-buff.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_rapidfirecannon.tft_set13.png",
+      "bytes": 17186,
+      "sha256": "f227d31817b2b8537291fa66ac476fc26ec2777c46785b1a9cade5e5b88e486c"
+    },
+    {
+      "apiName": "TFT_Item_RunaansHurricane",
+      "kind": "item",
+      "id": "runaans-hurricane",
+      "path": "assets/s13/items/runaans-hurricane.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_runaanshurricane.tft_set13.png",
+      "bytes": 20667,
+      "sha256": "e0d8c9c64376ed81462133d1eea393008092aaa956d397e23327bb76b824f561"
+    },
+    {
+      "apiName": "TFT_Item_StatikkShiv",
+      "kind": "item",
+      "id": "statikk-shiv",
+      "path": "assets/s13/items/statikk-shiv.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_statikkshiv.tft_set13.png",
+      "bytes": 23744,
+      "sha256": "8524aa048221164f641f2405221e9a482e431a691edb118524d0000160eff409"
+    },
+    {
+      "apiName": "TFT_Item_TitansResolve",
+      "kind": "item",
+      "id": "titans-resolve",
+      "path": "assets/s13/items/titans-resolve.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_titansresolve.tft_set13.png",
+      "bytes": 23384,
+      "sha256": "b7304d528f5562bdabcc11071ad6d4b7d062cec5de6d3c00cc0e3c5f169a2881"
+    },
+    {
+      "apiName": "TFT_Item_Crownguard",
+      "kind": "item",
+      "id": "crownguard",
+      "path": "assets/s13/items/crownguard.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_crownguard.tft_set13.png",
+      "bytes": 19714,
+      "sha256": "bb8f434619b26094bcde1f6648e64b881c47c8cf2ac8bf2d618c70cea2cfc400"
+    },
+    {
+      "apiName": "TFT_Item_IonicSpark",
+      "kind": "item",
+      "id": "ionic-spark",
+      "path": "assets/s13/items/ionic-spark.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_ionicspark.tft_set13.png",
+      "bytes": 20731,
+      "sha256": "2dbb46ae012a6b4107b1fc4fd5fb67540f04df4eef3eb76ae397ba6ef3be62dd"
+    },
+    {
+      "apiName": "TFT_Item_JeweledGauntlet",
+      "kind": "item",
+      "id": "jeweled-gauntlet",
+      "path": "assets/s13/items/jeweled-gauntlet.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_jeweledgauntlet.tft_set13.png",
+      "bytes": 19308,
+      "sha256": "8ae75745fab00ff2d66daa9a8e2250e061348f81d106949162030bd36fcab4b1"
+    },
+    {
+      "apiName": "TFT_Item_Morellonomicon",
+      "kind": "item",
+      "id": "morellonomicon",
+      "path": "assets/s13/items/morellonomicon.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_morellonomicon.tft_set13.png",
+      "bytes": 23643,
+      "sha256": "93803dd78c1e30b7cdc8c81461444fe038ec0b66eaae8b1a0b801b8a076b2dec"
+    },
+    {
+      "apiName": "TFT_Item_AdaptiveHelm",
+      "kind": "item",
+      "id": "adaptive-helm",
+      "path": "assets/s13/items/adaptive-helm.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_adaptivehelm.tft_set13.png",
+      "bytes": 21871,
+      "sha256": "ce63536225157dacffe7e81f7759f38c47dbe88f950cfd6b7750a1c03e511ef2"
+    },
+    {
+      "apiName": "TFT_Item_BlueBuff",
+      "kind": "item",
+      "id": "blue-buff",
+      "path": "assets/s13/items/blue-buff.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_bluebuff.tft_set13.png",
+      "bytes": 18397,
+      "sha256": "dd5f2ae7085a06695b14614da7ff6315f4a07a40b7684e6b9aa977bc8bc0529a"
+    },
+    {
+      "apiName": "TFT_Item_FrozenHeart",
+      "kind": "item",
+      "id": "protectors-vow",
+      "path": "assets/s13/items/protectors-vow.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_frozenheart.tft_set13.png",
+      "bytes": 21312,
+      "sha256": "34234953bdf35471464651cd308028176afa9c3d07d5b8dec8caeefbac46ab63"
+    },
+    {
+      "apiName": "TFT_Item_Redemption",
+      "kind": "item",
+      "id": "redemption",
+      "path": "assets/s13/items/redemption.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_redemption.tft_set13.png",
+      "bytes": 22343,
+      "sha256": "5f4176b36d2b394a35fd473c2e7e5aa319b26484d7ec3ff1651432f27cdfece6"
+    },
+    {
+      "apiName": "TFT_Item_UnstableConcoction",
+      "kind": "item",
+      "id": "hand-of-justice",
+      "path": "assets/s13/items/hand-of-justice.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_unstableconcoction.tft_set13.png",
+      "bytes": 19461,
+      "sha256": "024e050ff175720dc82426755ae11ff84946e9021c7ac0a2c0daf2447b255bdd"
+    },
+    {
+      "apiName": "TFT_Item_BrambleVest",
+      "kind": "item",
+      "id": "bramble-vest",
+      "path": "assets/s13/items/bramble-vest.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_bramblevest.tft_set13.png",
+      "bytes": 22567,
+      "sha256": "a3648ee759d8c8d545ce2dee38537fef98141ad69edb3b251653de82cc065c7d"
+    },
+    {
+      "apiName": "TFT_Item_NightHarvester",
+      "kind": "item",
+      "id": "steadfast-heart",
+      "path": "assets/s13/items/steadfast-heart.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_nightharvester.tft_set13.png",
+      "bytes": 25569,
+      "sha256": "f099d884945d3fe7a82cf2cc6218263b4cdc7ac6aa403056daa87d821ee82a1a"
+    },
+    {
+      "apiName": "TFT_Item_RedBuff",
+      "kind": "item",
+      "id": "sunfire-cape",
+      "path": "assets/s13/items/sunfire-cape.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_redbuff.tft_set13.png",
+      "bytes": 23033,
+      "sha256": "ab1fdc335700cf2b1a094a27f436062bd3faeec6918badea800c9916fbedc9ee"
+    },
+    {
+      "apiName": "TFT_Item_Quicksilver",
+      "kind": "item",
+      "id": "quicksilver",
+      "path": "assets/s13/items/quicksilver.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_quicksilver.tft_set13.png",
+      "bytes": 19853,
+      "sha256": "e2a84eeb698a219c2e147089482447e8db5a8fb0f41e5ab325fcc9a464f9a221"
+    },
+    {
+      "apiName": "TFT_Item_SpectralGauntlet",
+      "kind": "item",
+      "id": "evenshroud",
+      "path": "assets/s13/items/evenshroud.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_spectralgauntlet.tft_set13.png",
+      "bytes": 19739,
+      "sha256": "aeecbc20ff5b3a04523470c5153d14cda8eb7a72fadddbe1424ddf9c204f030b"
+    },
+    {
+      "apiName": "TFT_Item_PowerGauntlet",
+      "kind": "item",
+      "id": "guardbreaker",
+      "path": "assets/s13/items/guardbreaker.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_powergauntlet.tft_set13.png",
+      "bytes": 23984,
+      "sha256": "fbdc72a1f64e2a9e3b80fc99170f160c728eecd175498885241550c6efaf820d"
+    },
+    {
+      "apiName": "TFT_Item_ThiefsGloves",
+      "kind": "item",
+      "id": "thiefs-gloves",
+      "path": "assets/s13/items/thiefs-gloves.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_thiefsgloves.tft_set13.png",
+      "bytes": 18466,
+      "sha256": "181e9eeabef80f740a7d06d5e0d743fe20895244895672793ea11ccedb4a26fb"
+    },
+    {
+      "apiName": "TFT_Item_GuinsoosRageblade",
+      "kind": "item",
+      "id": "rageblade",
+      "path": "assets/s13/items/rageblade.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_guinsoosrageblade.tft_set13.png",
+      "bytes": 19689,
+      "sha256": "771624630c945e068e12aa090c8b8479b893c0d459353009710cb65a780d99cc"
+    },
+    {
+      "apiName": "TFT_Item_Deathblade",
+      "kind": "item",
+      "id": "deathblade",
+      "path": "assets/s13/items/deathblade.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_deathblade.tft_set13.png",
+      "bytes": 18508,
+      "sha256": "b1b8d4503da7ae0797c4a8e28577ca36c34437d1791b1040470ae1a1cb007018"
+    },
+    {
+      "apiName": "TFT_Item_SpearOfShojin",
+      "kind": "item",
+      "id": "shojin",
+      "path": "assets/s13/items/shojin.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_spearofshojin.tft_set13.png",
+      "bytes": 19586,
+      "sha256": "c309fbf39033b53d718d0052178d3e2c8613791083e6502e3d70290c0b782bd8"
+    },
+    {
+      "apiName": "TFT_Item_ArchangelsStaff",
+      "kind": "item",
+      "id": "archangel",
+      "path": "assets/s13/items/archangel.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_archangelsstaff.tft_set13.png",
+      "bytes": 19362,
+      "sha256": "36cef8f64c1e169bd512461db1fb41fb269f8853da9b4d2cf1fb60638c1be32d"
+    },
+    {
+      "apiName": "TFT_Item_RabadonsDeathcap",
+      "kind": "item",
+      "id": "deathcap",
+      "path": "assets/s13/items/deathcap.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_rabadonsdeathcap.tft_set13.png",
+      "bytes": 22158,
+      "sha256": "d6843a1b08168988f53bbc6a11919ee461ea25649649334ae8cb657dce85d142"
+    },
+    {
+      "apiName": "TFT_Item_WarmogsArmor",
+      "kind": "item",
+      "id": "warmog",
+      "path": "assets/s13/items/warmog.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_warmogsarmor.tft_set13.png",
+      "bytes": 25296,
+      "sha256": "0131e1ac31099ddf776bb4dd02ac7cf04050f520849cd88fab7e8a9dd9f77b38"
+    },
+    {
+      "apiName": "TFT_Item_DragonsClaw",
+      "kind": "item",
+      "id": "dragons-claw",
+      "path": "assets/s13/items/dragons-claw.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_dragonsclaw.tft_set13.png",
+      "bytes": 19316,
+      "sha256": "b60a7144c4789f400840c8d9aac55c1e43394beb0960b94a393b1cc3c488d341"
+    },
+    {
+      "apiName": "TFT_Item_GargoyleStoneplate",
+      "kind": "item",
+      "id": "gargoyle",
+      "path": "assets/s13/items/gargoyle.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_gargoylestoneplate.tft_set13.png",
+      "bytes": 20423,
+      "sha256": "e0415c612ec42909e6138f651f4a99290008bff6706d89d4c61384e4db6dd624"
+    },
+    {
+      "apiName": "TFT_Item_HextechGunblade",
+      "kind": "item",
+      "id": "gunblade",
+      "path": "assets/s13/items/gunblade.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_hextechgunblade.tft_set13.png",
+      "bytes": 23051,
+      "sha256": "d824cb0a7eae2142a6c06ffeb9572302ffd4042d6e0bde2c8b1caf1fa22e752d"
+    }
+  ]
+}

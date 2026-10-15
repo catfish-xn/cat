@@ -1,14 +1,17 @@
 import { reachRound } from './match-helpers';
-import { describe,it,expect } from 'vitest';
+import { beforeAll,describe,it,expect } from 'vitest';
 import frozen from '../src/simulation/content/source/s13-14.24b/normalized/items.json';
 import { ITEM_DEFINITIONS,COMPONENT_IDS } from '../src/simulation/content/items';
 import { validateContent } from '../src/simulation/validate-content';
 import { validateComponentPool,validateComponentCandidates,COMPONENT_POOL } from '../src/simulation/component-pool';
 import { selectChoice,stepMatch } from '../src/simulation/match';
-import { itemMatch } from './fixtures/m8-b4-match';
+import { itemMatch, publicEquipmentPreparation } from './fixtures/m8-b4-match';
 import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { stepCombat } from '../src/simulation/combat';
 import { wearing,run,enemy } from './fixtures/m8-b4-items';
+// Warm the exact public acquisition routes, as in #98; keep combat/restore in each case.
+for (const item of Object.values(ITEM_DEFINITIONS))
+ beforeAll(() => { publicEquipmentPreparation(item.recipe ? [...item.recipe] : [item.id]); });
 describe('B4 catalogue and IF-POOL',()=>{
  it('44 B1 identities/compositions/unique map one-to-one;every unordered recipe exists',()=>{
   validateContent();expect(Object.values(ITEM_DEFINITIONS)).toHaveLength(44);

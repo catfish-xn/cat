@@ -1,6 +1,8 @@
+import { G2_TRAIT_DEFINITIONS } from './g2-traits';
 import type { TraitDefinition } from '../strategy-types';
 import { freezeContent } from './freeze';
 export const TRAIT_DEFINITIONS: Readonly<Record<string,TraitDefinition>> = freezeContent({
+  ...G2_TRAIT_DEFINITIONS,
   "sentinel": {
     "id": "sentinel",
     "name": "哨兵",

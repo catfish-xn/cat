@@ -24,14 +24,25 @@ async function main() {
   const browser = await launchBrowser();
   const errors = [];
   const receipts = [];
-  const report = { rounds: [], combine: null, swap: null, pairing: null };
+  const report = { rounds: [], combine: null, swap: null, pairing: null, g2Bots: [] };
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     collectErrors(page, errors);
     onWire(page, {
       sent: m => { if (m.type === 'command') receipts.push({ sent: m.commandId, command: m.command }); },
-      received: m => { if (m.type === 'receipt') receipts.push({ receipt: m.commandId, ok: m.ok, reason: m.reason ?? null, kind: m.result?.kind ?? null }); },
+      received: m => {
+        if (m.type === 'view') {
+          const admitted = new Set(['amumu','powder','singed','violet','nocturne','vladimir','zeri','blitzcrank','ekko','illaoi','twitch','leblanc','malzahar','rumble']);
+          for (const seat of m.view.seats ?? []) if (seat.kind === 'bot') {
+            for (const unit of seat.publicBoard?.units ?? []) if (admitted.has(unit.definitionId)) {
+              const observation = { seatId: seat.seatId, definitionId: unit.definitionId, round: m.view.phase.round };
+              if (!report.g2Bots.some(row => row.seatId === observation.seatId && row.definitionId === observation.definitionId && row.round === observation.round)) report.g2Bots.push(observation);
+            }
+          }
+        }
+        if (m.type === 'receipt') receipts.push({ receipt: m.commandId, ok: m.ok, reason: m.reason ?? null, kind: m.result?.kind ?? null });
+      },
     });
     await joinOnline(page, onlineUrl(base, wsPort), '测试');
     await waitRead(page, s => s.m6.mode === 'active', 'match start');
@@ -130,6 +141,7 @@ async function main() {
 
     /* ---------------- G1-P6: 2-1 shows possible opponents; the battle names one of them ---------------- */
     const marks = () => page.evaluate(() => [...document.querySelectorAll('.online-seat[data-pairing]')].map(node => `${node.dataset.debug.replace('online:seat:', '')}:${node.dataset.pairing}`).sort());
+    check(report.g2Bots.length > 0, 'G2-1: bots bought and deployed an admitted new hero (opening/PvE loot contain only historical heroes)');
     const prep21 = await read(page), candidates = prep21.m6.opponentCandidates ?? [];
     const shownMarks = await marks();
     report.pairing = { candidates, preparationMarks: shownMarks };
