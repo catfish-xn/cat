@@ -113,7 +113,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
     expect(() => invalidTask.advance(1201)).toThrow('replay-divergence');
   }); }
   if (mode === 'timing') {
-    for (const name of ['battle', 'replay'] as const) describe.sequential(name, () => {
+    for (const name of ['battle', 'replay'] as const) describe(name, { concurrent: false, shuffle: false }, () => {
       let factory: () => ReturnType<typeof startTwoSidedBattle> | ReturnType<typeof startCombatReplay>;
       const measure = () => {
         let begin = performance.now(); const task = factory(); const startupMs = performance.now() - begin;
