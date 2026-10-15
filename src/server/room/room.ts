@@ -243,6 +243,16 @@ export class Room {
   }
 
   /**
+   * Ends a running room with `fault` (G3: the lobby's watchdog closes a stalled or abandoned match). Same path as any
+   * other fault: the round in progress is dropped, nothing is settled or ranked. False when the room is not running.
+   */
+  abort(fault: RoomFault): boolean {
+    if (this.disposed || this.current.phase === 'waiting' || this.current.phase === 'ended') return false;
+    this.fail(fault);
+    return true;
+  }
+
+  /**
    * Phase and seat gate only; the rules decide everything else and a refusal changes nothing. A human seat a bot took
    * over refuses its player's commands until the player resumes (one controller at a time, B6). Fill-in bot seats have
    * no session, so no player command reaches them; server-side callers may still drive them here directly.

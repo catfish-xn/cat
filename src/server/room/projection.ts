@@ -65,6 +65,8 @@ export function toPlayerFault(fault: RoomFault): PlayerViewFault {
     case 'invalid-results': return { kind: fault.kind, detail: `结算结果无效：${fault.detail}` };
     case 'seat-stuck': return { kind: fault.kind, detail: `席位 ${fault.seatId} 无法推进：${fault.reason}` };
     case 'phase-mismatch': return { kind: fault.kind, detail: `阶段不一致：${fault.detail}` };
+    case 'stalled': return { kind: fault.kind, detail: `对局卡在 ${fault.phase} 阶段 ${Math.round(fault.idleMs / 1000)} 秒无进展，已关闭` };
+    case 'abandoned': return { kind: fault.kind, detail: `所有玩家掉线 ${Math.round(fault.idleMs / 1000)} 秒，对局已关闭` };
   }
 }
 

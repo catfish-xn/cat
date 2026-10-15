@@ -177,7 +177,11 @@ export type RoomFault =
   | { readonly kind: 'resolver-error'; readonly battleId: string; readonly message: string; readonly reason?: string }
   | { readonly kind: 'invalid-results'; readonly detail: string }
   | { readonly kind: 'seat-stuck'; readonly seatId: string; readonly reason: string }
-  | { readonly kind: 'phase-mismatch'; readonly detail: string };
+  | { readonly kind: 'phase-mismatch'; readonly detail: string }
+  /** G3 watchdog: nothing was published for `idleMs` past the phase's own deadline (a task died or a slice never came back). */
+  | { readonly kind: 'stalled'; readonly phase: RoomPhase; readonly idleMs: number }
+  /** G3 watchdog: no human seat held a connection for `idleMs`; the match is closed so the queue opens again. */
+  | { readonly kind: 'abandoned'; readonly idleMs: number };
 
 export interface RoomState {
   readonly roomId: string;
