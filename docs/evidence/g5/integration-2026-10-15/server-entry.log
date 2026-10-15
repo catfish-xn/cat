@@ -1,0 +1,89 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 test:server-entry
+> npm run build:server && node scripts/verify-t1-node-entry.cjs
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> hex-autobattler@0.1.0 build:server
+> node scripts/build-server.cjs
+
+
+  dist-server/chunks/chunk-5RBPJQ2L.mjs  749.4kb
+  dist-server/index.mjs                    3.2kb
+  dist-server/run-battle.mjs               1.7kb
+
+⚡ Done in 47ms
+Server ESM built: 137 inputs; Node >=22.12; dist-server/index.mjs, dist-server/run-battle.mjs
+{
+  "passed": true,
+  "node": "v24.19.0",
+  "seed": 42,
+  "ticks": 164,
+  "events": 106,
+  "result": "playerWin",
+  "stateHash": "fnv1a32-utf16:8070e205",
+  "eventHash": "fnv1a32-utf16:966105d6",
+  "traceHashes": {
+    "state": "77f7ae941458272ddd482ab423106e820e4a1e48d7f94abfe712ec91de4f39ef",
+    "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
+    "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+  },
+  "originalStateTraceHash": "2750307d4dea28641853737163d3621a6b3cce3901cfd184a0dc8c4178689167",
+  "t13Identity": {
+    "contentDigest": "fnv1a32-utf16:70a355f3",
+    "lootReplayDigest": "fnv1a32-utf16:65a85ecd",
+    "rulesVersion": "s13-g2-1-v1",
+    "schemaVersion": 7
+  },
+  "deploymentBaseline": {
+    "deploymentRulesVersion": "preparation-swap-v1",
+    "previousContentDigest": "fnv1a32-utf16:c7ac9b0c",
+    "contentDigest": "fnv1a32-utf16:20b58a63",
+    "stateTraceHash": "05d9283c62258433146e564bb0d7a78b22d9d51baf49fa652f59094d7ef4cb1f"
+  },
+  "t10Baseline": {
+    "operationRulesVersion": "multiplayer-combat-ops-v1",
+    "autoDeploymentVersion": "front-center-left-first-v1",
+    "upgradeVersion": "bench-during-combat-deferred-v1",
+    "previousContentDigest": "fnv1a32-utf16:20b58a63",
+    "contentDigest": "fnv1a32-utf16:a0b38123",
+    "stateTraceHash": "6f1bd3b1c9694c33331a390ec698d5c0dc0c2b59dd4b0eb1da73ce7e919b2b94"
+  },
+  "t11Baseline": {
+    "openingRulesVersion": "m8b-opening-project-v2",
+    "previousContentDigest": "fnv1a32-utf16:a0b38123",
+    "contentDigest": "fnv1a32-utf16:b4a5c2e2",
+    "previousLootReplayDigest": "fnv1a32-utf16:d03edab3",
+    "lootReplayDigest": "fnv1a32-utf16:7b14bfba",
+    "stateTraceHash": "5eef930e6e9672117cf15ba84fd61b9228769bf4c4e4fa45bdd2110a65dbb89a"
+  },
+  "t12Baseline": {
+    "equipmentOperationsVersion": "equipment-ops-next-battle-v1",
+    "previousContentDigest": "fnv1a32-utf16:b4a5c2e2",
+    "contentDigest": "fnv1a32-utf16:44fe9c0e",
+    "lootReplayDigest": "fnv1a32-utf16:7b14bfba",
+    "stateTraceHash": "bf4da979eab5889734e1b61c03a33c268d08ca58f7413844aaacc1c17c1b504c",
+    "previousStateTraceHash": "5eef930e6e9672117cf15ba84fd61b9228769bf4c4e4fa45bdd2110a65dbb89a"
+  },
+  "comparedStates": 165,
+  "unchangedFailures": [
+    "stale-shop",
+    "insufficient-gold (buy/reroll/XP)",
+    "wrong-phase"
+  ],
+  "restoreTick": 40,
+  "restoreTextAndObject": true,
+  "rejectedBadDigestAndVersion": true,
+  "browserGlobalsAndImplicitClockAndRandomBlocked": true,
+  "cliSnapshotMatches": true,
+  "cliBudgetEnforced": true,
+  "inputCount": 137,
+  "comparison": "UTF-8 Buffer.equals of all start/tick states, event batches and RNG; pinned probe FNV hashes; deepStrictEqual on every restored continuation step",
+  "scope": "seed 42 existing first battle; browser-target bundle executed in ordinary Node, not a live browser or multiplayer acceptance",
+  "report": "artifacts/t1-node-entry/report.json"
+}
+
+real	0m1.848s
+user	0m1.853s
+sys	0m0.266s

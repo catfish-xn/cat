@@ -1,4 +1,34 @@
-# G5 数据侧验收
+# G5 数据侧验收（2026-10-15 集成收尾）
+
+- 最新集成基线：`multiplayer@cf75fbc2cb0330044e4382c862684973385461f3`（已包含 #94）。
+- 起始 PR HEAD：`1ee195622deb051cbee07319f664ed18b47b3041`。
+- 实际远端合并/受测代码：`78ffec284be311c4706917fc106657e6fd2ac1a4`；父提交为上述起点及集成基线，tree `74446bd98738523f5d03a8e8e8ea0b9d9def03c6`。
+- Git CLI 推送凭证未配置，使用已连接 GitHub 的原生 tree/多父 commit/ref API 发布，非 force。重新 fetch 验证完整 tree 和双父历史。本地 `8d91843fd339695fb6ad7a5683137162f50c67e9` 与远端受测 tree 完全相同；typecheck/server-entry 在此等价本地提交上执行，定向及标准全套在上述远端 SHA 上执行。之后仅追加文档/日志，不改变受测实现。
+- 环境：Node v24.19.0 / npm 11.9.0，9 个可见逻辑 CPU、10,451,464,192 B 内存。不是前一会话的 4 CPU 环境；不把两机器耗时差解读为代码加速。
+
+## 本轮结果
+
+- `npm ci`：通过。首次默认 cache 不可写，改为 `/tmp/g5-npm-cache` 后通过；锁文件未改，两个安装日志均保留。
+- `npm run typecheck`：通过，8.383 s。
+- `npm run test:server-entry`：通过，1.848 s；白名单含两个新增导出，状态/事件/RNG及恢复比较通过。
+- 五个文件逐个 `npm test -- <file>`：全部通过，103 用例。economy-preview 66 / 2.499 s；combat-summary 9 / 6.135 s；b8-resumable-battle 15 / 15.809 s；m8-b5-equipment-history 8 / 6.021 s；server/g5-battle-ranking 5 / 3.642 s。
+- **唯一一轮标准 `npm test`：223 文件、2800 用例全部通过，0 失败。Vitest 219.36 s，墙钟 219.876 s。** 没有传 pool/maxWorkers/isolate 参数，没有第二轮或对照轮；没有超时项需要重跑。
+- 当前 package.json 的 `npm test` 是 `vitest run --project fast`。独立 timing project 本轮未运行，不将 fast 结果描述成包含 timing 的验收。
+- 结构化结果及完整日志：[integration-2026-10-15/acceptance.json](integration-2026-10-15/acceptance.json)、[全套日志](integration-2026-10-15/full.log)。本轮为本机实测，不冒称 GitHub CI 结果。
+
+## 合并与边界
+
+唯一人工冲突为 `tests/b8-resumable-battle-helper.ts`：保留 #94 的 `g2-1-b8-fingerprints.json` 权威指纹，同时保留 #106 剥离新增 `heal.shares` 后的旧回放 SHA 检查，以及新增 shares 与完整账本逐条相等断言；没有更新指纹数值或删断言。`combat-replay-view.ts` 保留基线增量验证实现及 G5 治疗来源份额，两者定向验证通过。
+
+相对新基线，无 content 或版本定义差异；实际序列化内容 digest 为 `fnv1a32-utf16:70a355f3`，rulesVersion `s13-g2-1-v1`，contentVersion `s13-14.24b-g2-1-v1`，schema 7，save/replay/command 3。G2 的内容和版本变化通过同步继承，不是 G5 新改动。没有玩法改动、生产代码修复或超时放宽。
+
+相对新基线的实现差异仍限制在 simulation、server-entry、tests、scripts 与 docs；没有新增修改 server、rendering、presentation 或 assets。合并带来的这些目录文件均原样来自已合入的 #94。PR 转 Ready 不代表已被独立审查签收或已合并。
+
+下文与原 acceptance.json/replay-bytes.json 保留为 G2 集成前的历史证据，不当作本轮 SHA 的重测数据。
+
+---
+
+# 历史：G2 集成前的 G5 数据侧验收
 
 基线 `origin/multiplayer@4d4cc73`；测试源码 `d0ea874818e2ab8fc06e3b80a809f1d9c4c383bc`；Node v22.23.3。
 
