@@ -33,7 +33,8 @@ export default defineConfig({
     sequence: { sequencer: RouteFirstSequencer },
     projects: [
       { test: { name: 'fast', pool: 'threads', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], globalSetup: ['./tests/fixtures/g4-global-setup.ts'], maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
-      { test: { name: 'timing', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], include: timing, maxWorkers: 1, fileParallelism: false } },
+      // Keep long-route heap/module state out of later wall-clock measurements.
+      { test: { name: 'timing', isolate: true, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], include: timing, maxWorkers: 1, fileParallelism: false } },
     ],
   },
 });
