@@ -1,0 +1,190 @@
+{
+  "status": "candidate inventory; no new icons committed",
+  "sourceSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",
+  "assets": [
+    {
+      "id": "camille",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_camille/hud/tft13_camille_square.tft_set13.png",
+      "path": "public/assets/s13/champions/camille.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "vi",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vi/hud/tft13_vi_square.tft_set13.png",
+      "path": "public/assets/s13/champions/vi.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "akali",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_akali/hud/tft13_akali_square.tft_set13.png",
+      "path": "public/assets/s13/champions/akali.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "sett",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_sett/hud/tft13_sett_square.tft_set13.png",
+      "path": "public/assets/s13/champions/sett.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "draven",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_draven/hud/tft13_draven_square.tft_set13.png",
+      "path": "public/assets/s13/champions/draven.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "heimerdinger",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_heimerdinger/hud/tft13_heimerdinger_square.tft_set13.png",
+      "path": "public/assets/s13/champions/heimerdinger.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "jayce",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_jayce/hud/tft13_jayce_square.tft_set13.png",
+      "path": "public/assets/s13/champions/jayce.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "trundle",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_trundle/hud/tft13_trundle_square.tft_set13.png",
+      "path": "public/assets/s13/champions/trundle.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "ziggs",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ziggs/hud/tft13_ziggs_square.tft_set13.png",
+      "path": "public/assets/s13/champions/ziggs.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "steb",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_fish/hud/tft13_fish_square.tft_set13.png",
+      "path": "public/assets/s13/champions/steb.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "jinx",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_jinx/hud/tft13_jinx_square.tft_set13.png",
+      "path": "public/assets/s13/champions/jinx.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "vex",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vex/hud/tft13_vex_square.tft_set13.png",
+      "path": "public/assets/s13/champions/vex.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "ambessa",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ambessa/hud/tft13_ambessa_square.tft_set13.png",
+      "path": "public/assets/s13/champions/ambessa.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "gangplank",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_gangplank/hud/tft13_gangplank_square.tft_set13.png",
+      "path": "public/assets/s13/champions/gangplank.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "twistedfate",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_twistedfate/hud/tft13_twistedfate_square.tft_set13.png",
+      "path": "public/assets/s13/champions/twistedfate.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "mordekaiser",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_mordekaiser/hud/tft13_mordekaiser_square.tft_set13.png",
+      "path": "public/assets/s13/champions/mordekaiser.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "scrap",
+      "kind": "trait",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_6_scrap.png",
+      "path": "public/assets/s13/traits/scrap.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "emissary",
+      "kind": "trait",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_diplomat.tft_set13.png",
+      "path": "public/assets/s13/traits/emissary.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "conqueror",
+      "kind": "trait",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_conqueror.tft_set13.png",
+      "path": "public/assets/s13/traits/conqueror.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "academy",
+      "kind": "trait",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_academy.tft_set13.png",
+      "path": "public/assets/s13/traits/academy.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "rebel",
+      "kind": "trait",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_rebel.tft_set13.png",
+      "path": "public/assets/s13/traits/rebel.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "enforcer",
+      "kind": "trait",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_squad.tft_set13.png",
+      "path": "public/assets/s13/traits/enforcer.png",
+      "sha256": null,
+      "status": "not-downloaded"
+    },
+    {
+      "id": "swain",
+      "kind": "champion",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_swain/hud/tft13_swain_square.tft_set13.png",
+      "path": "public/assets/s13/champions/swain.png",
+      "sha256": "5063dcf4aadbfe6c0b8f62048ee8239d6754f012b77599ad9edd8f7d229032fd",
+      "status": "existing"
+    }
+  ]
+}
