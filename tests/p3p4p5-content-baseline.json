@@ -1,0 +1,14 @@
+{
+  "contentDigest": "fnv1a32-utf16:77f80fec",
+  "lootReplayDigest": "fnv1a32-utf16:b8d9d7ca",
+  "rulesVersion": "s13-rules-gap-v2",
+  "schemaVersion": 7,
+  "previousContentDigest": "fnv1a32-utf16:bd9c3a8e",
+  "previousLootReplayDigest": "fnv1a32-utf16:5cd0487c",
+  "traceHashes": {
+    "state": "6f1e4603f62103194a03181322654af66f999fea193efe67d508335c267764be",
+    "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
+    "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+  },
+  "reason": "P3-A overtime17; P4-A nine levels unchanged; P5-A frozen cumulative weights unchanged. Same serialization/protocol; old digest export-only."
+}

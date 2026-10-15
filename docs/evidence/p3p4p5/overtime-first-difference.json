@@ -1,0 +1,163 @@
+{
+  "oldCommit": "99d9eff",
+  "command": "node scripts/record-p3p4p5-overtime.cjs <read-only-T13-worktree>",
+  "firstGameplayDifference": "overtime-1 proposal.baseDamage 12→17; damage 12→17; settlement HP 88→83. Same tick0 empty-v-empty draw, combat events, terminal, income, XP, shops and RNG.",
+  "old": {
+    "contentDigest": "fnv1a32-utf16:bd9c3a8e",
+    "roundId": "overtime-1",
+    "combatEventsSha256": "808c80df93926eed2e0caa44fb88d23c08ad8400ca0564ce7d290ea5e83e361b",
+    "terminalSha256": "f9b86fd7046001dadfeec78b1c946217050972fd450be277815d6411d75e81eb",
+    "proposal": {
+      "battleId": "p3-first-overtime",
+      "roundId": "overtime-1",
+      "seatId": "A",
+      "settlementEligible": true,
+      "result": "draw",
+      "baseDamage": 12,
+      "opposingSurvivors": 0,
+      "damage": 12,
+      "growth": [],
+      "events": [
+        {
+          "type": "combatFinished",
+          "tick": 0,
+          "result": "draw",
+          "reason": "elimination",
+          "domain": "combat",
+          "combatId": "p3-first-overtime",
+          "eventSeq": 0
+        }
+      ]
+    },
+    "record": {
+      "round": 39,
+      "roundId": "overtime-1",
+      "settlementId": "p3-first-overtime:A",
+      "roundKind": "pvp",
+      "result": "draw",
+      "combatTicks": 0,
+      "combatEventCount": 1,
+      "income": 6,
+      "incomeBreakdown": {
+        "base": 5,
+        "win": 0,
+        "interest": 1,
+        "streak": 0
+      },
+      "interestBasis": 19,
+      "streakBefore": {
+        "kind": null,
+        "count": 0
+      },
+      "streakAfter": {
+        "kind": "loss",
+        "count": 1
+      },
+      "goldBefore": 19,
+      "goldAfter": 25,
+      "xpRequested": 2,
+      "xpAwarded": 2,
+      "levelBefore": 8,
+      "levelAfter": 8,
+      "xpBefore": 0,
+      "xpAfter": 2,
+      "hpBefore": 100,
+      "hpAfter": 88,
+      "baseDamage": 12,
+      "survivingEnemyCount": 0,
+      "playerDamage": 12,
+      "hpLost": 12
+    },
+    "rng": {
+      "before": [
+        337507225,
+        2246822510,
+        2654435772
+      ],
+      "after": [
+        337507225,
+        2246822510,
+        2654435772
+      ]
+    }
+  },
+  "current": {
+    "contentDigest": "fnv1a32-utf16:77f80fec",
+    "roundId": "overtime-1",
+    "combatEventsSha256": "808c80df93926eed2e0caa44fb88d23c08ad8400ca0564ce7d290ea5e83e361b",
+    "terminalSha256": "f9b86fd7046001dadfeec78b1c946217050972fd450be277815d6411d75e81eb",
+    "proposal": {
+      "battleId": "p3-first-overtime",
+      "roundId": "overtime-1",
+      "seatId": "A",
+      "settlementEligible": true,
+      "result": "draw",
+      "baseDamage": 17,
+      "opposingSurvivors": 0,
+      "damage": 17,
+      "growth": [],
+      "events": [
+        {
+          "type": "combatFinished",
+          "tick": 0,
+          "result": "draw",
+          "reason": "elimination",
+          "domain": "combat",
+          "combatId": "p3-first-overtime",
+          "eventSeq": 0
+        }
+      ]
+    },
+    "record": {
+      "round": 39,
+      "roundId": "overtime-1",
+      "settlementId": "p3-first-overtime:A",
+      "roundKind": "pvp",
+      "result": "draw",
+      "combatTicks": 0,
+      "combatEventCount": 1,
+      "income": 6,
+      "incomeBreakdown": {
+        "base": 5,
+        "win": 0,
+        "interest": 1,
+        "streak": 0
+      },
+      "interestBasis": 19,
+      "streakBefore": {
+        "kind": null,
+        "count": 0
+      },
+      "streakAfter": {
+        "kind": "loss",
+        "count": 1
+      },
+      "goldBefore": 19,
+      "goldAfter": 25,
+      "xpRequested": 2,
+      "xpAwarded": 2,
+      "levelBefore": 8,
+      "levelAfter": 8,
+      "xpBefore": 0,
+      "xpAfter": 2,
+      "hpBefore": 100,
+      "hpAfter": 83,
+      "baseDamage": 17,
+      "survivingEnemyCount": 0,
+      "playerDamage": 17,
+      "hpLost": 17
+    },
+    "rng": {
+      "before": [
+        337507225,
+        2246822510,
+        2654435772
+      ],
+      "after": [
+        337507225,
+        2246822510,
+        2654435772
+      ]
+    }
+  }
+}

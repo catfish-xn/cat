@@ -49,6 +49,20 @@ export function createOrbLayout(seed: number): OrbLayoutLedger {
   return generated({version: 's13-orb-layout-v1', seed, throughRoundOrdinal: 0,
     rng: { state: (seed ^ ORB_RULES.layoutSeedXor) >>> 0, draws: 0 }, rounds: []});
 }
+/** Index is drawn over the sum of the frozen weights; order is part of the release identity. */
+export function sampleOrbTemplate(kind: 'opening-bonus' | 'equipment', index: number): { templateId: string; tier: OrbTier } {
+  const weights = kind === 'opening-bonus' ? ORB_RULES.openingWeights : ORB_RULES.equipmentWeights;
+  const choices: readonly {templateId: string; tier: OrbTier}[] = kind === 'opening-bonus'
+    ? [{templateId:'component',tier:'blue'}, {templateId:'opening-gold',tier:'gray'}]
+    : [{templateId:'blue-pair',tier:'blue'}, {templateId:'gold-pair',tier:'gold'}, {templateId:'prismatic-standard',tier:'prismatic'}];
+  if (!Number.isSafeInteger(index) || index < 0) throw new RangeError('Invalid orb weight index');
+  let boundary = 0;
+  for (let i = 0; i < weights.length; i++) {
+    boundary += weights[i];
+    if (index < boundary) return choices[i];
+  }
+  throw new RangeError('Invalid orb weight index');
+}
 function replay(seed: number, ordinal: number): OrbLayoutLedger {
   let layout = createOrbLayout(seed), rng = layout.rng;
   const rounds: OrbRoundLayout[] = [];
@@ -58,13 +72,10 @@ function replay(seed: number, ordinal: number): OrbLayoutLedger {
     const orbs = ORB_SLOTS[round.roundId].map(slot => {
       let templateId = slot.templateId, tier: OrbTier = slot.tier;
       if (templateId === 'opening-bonus' || templateId === 'equipment') {
-        const draw = drawIndex(rng, 100); rng = draw.rng;
-        if (templateId === 'opening-bonus') {
-          templateId = draw.index < 50 ? 'component' : 'opening-gold'; tier = draw.index < 50 ? 'blue' : 'gray';
-        } else {
-          templateId = draw.index < 90 ? 'blue-pair' : draw.index < 99 ? 'gold-pair' : 'prismatic-standard';
-          tier = draw.index < 90 ? 'blue' : draw.index < 99 ? 'gold' : 'prismatic';
-        }
+        const weights = templateId === 'opening-bonus' ? ORB_RULES.openingWeights : ORB_RULES.equipmentWeights;
+        const draw = drawIndex(rng, weights.reduce((sum, weight) => sum + weight, 0)); rng = draw.rng;
+        const selected = sampleOrbTemplate(templateId, draw.index);
+        templateId = selected.templateId; tier = selected.tier;
       }
       return {sourceUnitId: JSON.stringify(['pve', round.roundId, round.encounterId, slot.sourceSlotId]),
         slotOrdinal: slot.slotOrdinal, tier, templateId};

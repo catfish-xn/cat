@@ -13,7 +13,8 @@ it('T13 records independent full-route audits while preserving the T12 golden by
  expect(sha('tests/fixtures/m5/oracle.cjs')).toBe(audit.oracleSha256);
  for(const [build,route] of Object.entries(golden.routes)){
   const result=audit.builds[build as keyof typeof audit.builds];
-  expect(route.versions.contentDigest).toBe(CONTENT_DIGEST);
+  expect(route.versions.contentDigest).toBe('fnv1a32-utf16:bd9c3a8e');
+  expect(route.versions.contentDigest).not.toBe(CONTENT_DIGEST);
   expect(result.summary).toMatchObject({outcome:'victory',round:38});
   expect(result.summary.formedBattles).toBeGreaterThanOrEqual(3);
   expect(result.ledger.rounds).toHaveLength(38);expect(route.rounds).toHaveLength(33);

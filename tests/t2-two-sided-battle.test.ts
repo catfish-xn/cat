@@ -62,6 +62,18 @@ describe('T2 true two-sided combat', () => {
       }
     });
 
+  it.each([1,3,9])('P3 counts %i mixed-cost/star survivors once in stage6 and first/later overtime, on either side', count => {
+    const definitions=['maddie','leona','kogmaw','ezreal','zoe','caitlyn','irelia','lux','tristana'];
+    const units=definitions.slice(0,count).map((id,i)=>hero(id,`unit-${i+1}`,(i%3+1) as 1|2|3,i%7,4+Math.floor(i/7)));
+    for(const roundId of ['6-1','overtime-1','overtime-5'])for(const swapped of [false,true]) {
+      const a={...snap(swapped?units:[],'A'),roundId},b={...snap(swapped?[]:units,'B'),roundId};
+      const result=run(a,b),proposal=proposeSettlement(result),baseDamage=roundId==='6-1'?12:17;
+      expect((swapped?result.a:result.b).survivors).toHaveLength(count);
+      expect(swapped?proposal.b:proposal.a).toMatchObject({baseDamage,opposingSurvivors:count,damage:baseDamage+count});
+      expect(swapped?proposal.a:proposal.b).toMatchObject({baseDamage,damage:0});
+    }
+  });
+
   it('descriptor permutations are canonical and only the explicit seed initializes combat RNG', () => {
     const a = snap([hero('maddie','unit-1'),hero('irelia','unit-2',1,2,4)],'A');
     const b = snap([hero('maddie')],'B');
