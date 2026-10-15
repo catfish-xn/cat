@@ -6,7 +6,7 @@
 
 - `npm test` 选择 fast，保留 Vitest 原始 include/exclude 扩展名范围。
 - `npm run test:timing` 选择 timing，`maxWorkers: 1`、`fileParallelism: false`，命令另传 `--no-file-parallelism`。
-- timing 文件：B8（50 ms startup/advance）、M5 cannon（180000 ms）、bot-driver（60000 ms 两条整局断言）、round-commit（30 s 整局断言）。各 timing wrapper 仅注册指定用例，其余回归留在 fast；LocalRoomClient 只有 60000 ms 用例超时，没有 elapsed-ms 断言，保留在 fast。
+- timing 文件：B8（50 ms startup/advance）、M5 cannon（180000 ms）、bot-driver（60000 ms 两条整局断言）、round-commit（30 s 整局断言），第八批最终交付另加入完整 g3-ops suite（原 5000 ms publishing-watchdog 超时）及 ws-client suite（原 5000 ms 网络回放/恢复超时）。各 timing wrapper 仅注册指定用例，其余回归留在 fast；LocalRoomClient 只有 60000 ms 用例超时，没有 elapsed-ms 断言，保留在 fast。
 - 其余三条 M5 回放分到独立 fast 文件；M6 四条独立整局历史路线也拆为独立文件并保留各自容量/历史断言；四条路线共用原始逐命令/逐 tick 验证函数，原断言及 180000/360000 ms 预算不变。
 - CI 同一个 job 先 fast 后 timing，二者都是必需步骤。两组覆盖原测试的并集，每条原用例只运行一次。
 - 夹具复用：B8 的已冻结编译输入按人数/镜像缓存；装备公共路线的已编译战斗按请求/持有人缓存且向调用者返回独立副本；不同装备请求的相同公共路线前缀按完整准备态缓存战斗末态（最多 128 个），需要录制 history 的调用仍执行每一 tick；T5R catalog/wolves 的相同轮次/seed 使用冻结战斗源。需要验证重复执行确定性的解析器调用仍重复执行。
@@ -29,7 +29,7 @@ node --expose-gc scripts/loadtest-room.cjs --seats 2 --rounds 3 --warmup 1 --see
 node scripts/benchmark-g4-pve.cjs /path/to/worktree > pve.json
 npm run typecheck
 npm test
-npm run test:timing  # 空闲机连续运行 3 次
+npm run test:timing  # 本轮独占运行一次；连续三次目标转入 G4-2
 npm run test:server-entry
 ```
 
@@ -86,8 +86,8 @@ npm run test:server-entry
 
 - 原始全套：1942.63 s，211 文件 / 2635 用例，17 个时间相关失败。此数字含原 timing 用例，不冒充拆分后的 fast 基线。
 - replay 优化前的 fast：744.29 s，217 文件 / 2637 用例，2634 通过、3 失败及空 suite；之后修复 ability 引用/getter 顺序、6v6 夹具准备与空 suite。此轮不是全绿基线。
-- 当前 fast：**610.14 s**（user 2077.75 / sys 70.15），218 文件 / **2642 全通过**，仍超过 480 s。
-- 当前 timing：**203.86 s**（user 231.90 / sys 9.68），4 文件 / **5 全通过**，仍超过 180 s；尚未取得连续三次达标成绩。
+- 当时 fast：**610.14 s**（user 2077.75 / sys 70.15），218 文件 / **2642 全通过**，仍超过 480 s。
+- 当时 timing：**203.86 s**（user 231.90 / sys 9.68），4 文件 / **5 全通过**，仍超过 180 s；尚未取得连续三次达标成绩。
 - fast+timing 按完整用例名核对原 2635 用例的多重集，各保留一次；另增 12 条边界回归。详见 metrics.json。
 - typecheck、test:server-entry 已通过；第八批要求更新至 bdf50bb 后将补做验证。上述全套为 9e3d203 基线上的阶段成绩。
 - PR 先作为草稿交付可审查成果，**G4 未完成**；按第八批用户优先级，提 PR 后先交付 P7 合同。
@@ -98,4 +98,51 @@ npm run test:server-entry
 
 ### 第八批基线更新
 
-已 merge `origin/multiplayer@bdf50bb`（merge `820796b`）；上游 round-commit 的配对延迟断言原样移入 helper。合并后 typecheck、test:server-entry 通过；6 文件目标集 48/49 通过，新增上游 `g3-ops` 的 publishing-watchdog 用例在并行时 5840 ms 超过原 5000 ms timeout。未改预算、未删断言，待 G4 后续修复；尚未运行合并后的完整 fast/timing，前面的 2647 全绿不能当作此 merge 的全套成绩。
+已 merge `origin/multiplayer@bdf50bb`（merge `820796b`）；上游 round-commit 的配对延迟断言原样移入 helper。合并后 typecheck、test:server-entry 通过；6 文件目标集 48/49 通过，新增上游 `g3-ops` 的 publishing-watchdog 用例在并行时 5840 ms 超过原 5000 ms timeout。未改预算、未删断言，待 G4 后续修复；随后该基线的一轮 fast 在同机并发负载下为 1311.37 s，2582 通过、23 失败、63 跳过（beforeAll 超时使后续用例未执行），不能计为清零；前面的 2647 全绿也不能当作此 merge 的成绩。最终独占验收见下节。
+
+
+## 第八批调整后的交付范围
+
+用户于 2026-10-15 调整顺序：G4 先按现状交付，P7 冻结在 `7efc367f426f80f7fc06d619c238d03a47e420aa`，等 #98 合入通知后再 rebase。G4 已合入 `origin/multiplayer@ee8a6a7`（含 #99 / b484a28），本轮不新增性能优化。验收改为独占机器依次运行 typecheck、server-entry、默认并行 fast 一次、串行 timing 一次，全部通过即可；480/180 s 与连续三次指标转入 G4-2。
+
+`tests/server/g3-ops.test.ts` 整个文件加入 timing，两组仍互补。publishing-watchdog 使用 ManualClock 推进三轮真实战斗，原 5000 ms 的 Vitest 超时衡量的却是机器实际运行时间；先前并行时为 5840 ms。通过串行隔离 CPU 竞争处理，保留所有原始测试、watchdog 数值和 timeout，不更改服务器实现。
+
+本轮首次独占 fast 为 649.02 s，219 文件 / 2660 用例，2659 通过、1 失败、0 跳过。唯一失败是 ws-client 的重复恢复快照不重发 replay 用例，5026.48 ms 超过原 5000 ms timeout；它实际推进真实战斗、网络收发与重连，移整个 `tests/server/ws-client.test.ts` 至 timing，保持测试内容和预算。未修改任何生产源码。调整后重新运行四项验收，已全部通过，见最终独占验收。
+
+### 本 PR 源码改动清单
+
+- `src/simulation/shared-pool.ts`、`shared-pool-ledger.ts`：一次校验内复用席位/商店预留/奖励来源索引，减少重复扫描，保留完整守恒与失败原子性检查。
+- `orb-layout.ts`、`loot-freeze.ts`、`loot-runtime.ts`：有界缓存确定性参考及冻结参考的 canonical 文本，每次重新认证外部候选布局与账本。
+- `content/index.ts`、`immutable-json.ts`：完整不可变 JSON 图证明、冻结内容 canonical/digest 复用、已验证解析 JSON 的等价比较；getter、浅冻结和外部可变输入保留原路径。
+- `combat-static.ts`、`combat.ts`、`combat-s13.ts`、`combat-input.ts`、`match.ts`：共享已经复制并认证的不可变声明/元数据，动态战斗状态仍独立复制。
+- `serialization.ts`、`b8-restore.ts`、`m8/restore.ts`、`resource-provenance.ts`：已验证解析 JSON 的结构比较、相同完整 basis 的纯策略编译缓存，保留逐次资源/策略/运行时验证。
+- `combat-replay-view.ts`：读取其他单位的防御关联字段，避免为每个投影单位复制整队 runtime，整数计算公式保持原值。
+- `src/replay/snapshot.ts`：只共享完整证明不可变的子图，复制动态对象并保留别名/循环；特殊对象与访问器使用原 structuredClone。
+- `src/replay/history.ts`：录制快照复用不可变声明；仅 recorder 私有 ownership 的不可变记录在首次完整重放验证后缓存独立结果，命中仍返回独立副本。
+- `src/replay/playback-session.ts`：私有不可变记录与检查点复用声明，逐 tick 事件比较、seek 和公开快照校验保持。
+
+### G4-2（本 PR 不实现）
+
+保留全部现有工作负载时，四核 fast ≤480 s 暂不能承诺。此前全绿 fast 的 CPU 为 user 2077.75 + sys 70.15 = 2147.90 s，即使理想四核满载，下界也约 537 s，已高于 480 s；要达标至少减少约 10.6% CPU 工作，按实际 wall 610.14 s 则需减少约 21.3% 耗时，且新上游还增加用例。最终本轮 fast 为 631.61 s，CPU 2197.79 + 72.13 = 2269.92 s，四核理想下界 567.48 s；需至少减少 15.4% CPU 工作，按实测 wall 则需 24.0% 改善。
+
+建议由指挥决定是否新增 `test:long`：把 M5/M6 整局逐命令恢复、全历史/回放/存档验收移入独立的必需 CI 步骤，保留全部断言、预算、用例与每次 CI 覆盖；普通 fast 保留局部规则及集成回归。旧全绿样本中这七个 fast 文件占累计文件耗时 1137.29 / 2089.52 s（54.4%），拆分后 fast 估算约 300–450 s，可望进入 480 s；最终本轮相应占比为 1209.20 / 2235.64 s（54.1%），与旧样本接近。该估算不是测量承诺，也不会减少 CI 总工作量。cannon 的原 180 s 毫秒预算仍需独占执行；timing ≤180 s 总量与连续三次稳定性另行验收。本 PR 不新增 test:long，不调整任何目标或预算常量。
+
+
+## 最终独占验收（本次交付）
+
+运行源码提交 `c3eb2ae93c12a7c06bd4df14c034d7e2f4ed3446`，之后只补文档/证据。Node 22.23.3 / 四核；确认 G2 worker 已退出、主进程已为 zombie 后开跑，期间无其他测试任务并发。P7 无存活测试且分支未改、未推送。本轮按以下顺序完整执行：
+
+| 命令 | real 秒 | 结果 |
+| --- | ---: | --- |
+| `npm run typecheck` | 17.73 | 通过 |
+| `npm run test:server-entry` | 3.15 | 通过，165 状态 / 106 事件对照 |
+| `npm test`（fast，默认四 worker 并行） | **631.61** | **218 文件 / 2652 用例通过，0 失败、0 跳过** |
+| `npm run test:timing`（单 worker、串行文件） | **212.80** | **6 文件 / 21 用例通过，0 失败、0 跳过** |
+
+两组测试命令只附加 default/json reporter 与 outputFile，未传 name filter、exclude、worker 覆盖或 timeout。合计 **224 文件 / 2673 用例全通过**。将原始完整 JSON 报告的 2635 条 `fullName` 多重集与本轮两组结果逐项比较：每条原用例及其重名次数完全保留、各执行一次，无缺失/重复；两组文件交集为空。另有 G4 新增 12 条边界回归与上游新增 26 条，合计新增 38 条，全部执行通过。
+
+75 个原始 JSON/gzip golden/录制文件逐字节一致，修改数 0；时间预算没有放宽。server-entry 最终 state/event FNV 仍为 `acf238a8 / 966105d6`，trace SHA-256 state/events/RNG 亦与固定基线一致；contentDigest `77f80fec`、lootReplayDigest `b8d9d7ca` 不变。三 seed PvE 的独立 state/event 指纹证据仍见 metrics.json。
+
+原始基线 **1942.63 s / 17 个时间相关失败** 保留；本轮 fast/timing 完整通过才是最终交付成绩，不把失败或跳过的历史轮次混入通过数。机器汇总、原用例核对、38 条新增名称、两组最慢文件、报告 SHA-256、指纹与命令见 `final-acceptance.json`。本轮 cannon 为 117.731 s；publishing-watchdog 为 3123 ms；ws-client 全文件约 1.106 s，原预算全部通过。
+
+**未达标转 G4-2：fast 631.61 >480 s，timing 212.80 >180 s；未执行连续三次达标验收。** 按本次用户调整，这些不阻塞 #98 取消草稿；本 PR 没有实施 test:long 或任何新增性能优化。等待指挥决定 G4-2 方案，且收到 #98 已合入通知前不开始 P7 rebase。
