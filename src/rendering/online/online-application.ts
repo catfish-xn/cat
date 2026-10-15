@@ -170,14 +170,15 @@ export class OnlineApplication implements SceneApplication {
   private lastPhase = '';
   /**
    * G5: the ranking of my last battle (and the match totals) shows from its end (settlement) through the next
-   * preparation, until my next battle starts. The economy hint shows in preparation.
+   * preparation, until my next battle starts. The economy hint shows whenever the server sends a preview (preparation
+   * and my battle).
    */
   private syncBattleViews() {
     const state = this.session.state, playing = this.mode === 'active' && !this.spectating;
     const battle = this.session.lastBattle;
     const show = playing && battle !== null && !this.session.inBattle && state.phase !== 'combat' && (state.round === battle.round || state.round === battle.round + 1);
     this.summary.show(this.session.battleHistory, show);
-    this.economy.render(state, playing && !this.session.inBattle);
+    this.economy.render(state, playing);
   }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {

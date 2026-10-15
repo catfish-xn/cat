@@ -855,9 +855,9 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 
 ### 已交付（纯界面，无需 Codex 动作即可运行）
 
-- 战后排行（本场）：我的战斗结束（结算期）起，右侧玩家列表下方显示该场双方全部单位的 伤害 / 承伤 / 治疗 排行，每回合刷新，持续到下一场战斗开始。数据只来自服务器推送的 `replay`（合同 §14.2）事件本身：伤害 = `packetDamage.hpDamage + absorbed` 按 `sourceId`（护盾吸收算伤害，与云顶伤害统计一致），承伤 = 同一和按 `targetId` 并单列其中护盾部分，治疗 = `heal.actual` 按 `targetId`。聚合在 `src/presentation/battle-ranking.ts`，不算任何规则。
+- 战后排行（本场）：我的战斗结束（结算期）起，右侧玩家列表下方显示该场双方全部单位的 伤害 / 承伤 / 治疗 排行，每回合刷新，持续到下一场战斗开始。~~数据由界面按事件自行聚合~~（G5 接线后改为规则的 `summarizeBattle(replay)`，见下方"G5 数据接线"）。
 - 本局累计：同一面板的"本局累计"页签按 阵营 + `definitionId` + 星级 把本局每一场（每回合一场，客户端内存里已收到的回放）逐场相加，并给出出场场数；之后出售或被淘汰的单位保留记录。断线重连或刷新页面后，只累计重连后收到的回放。
-- 经济提示：准备期倒计时条右侧显示 利息 / 连胜连败计数 / 上轮连胜败金币。金币、`streak`、上轮 `incomeBreakdown.streak` 均为私有席位视图已有字段；利息预估沿用 HUD"预计利息"已在用的规则只读选择器 `getInterestGold(gold)`。
+- 经济提示：~~准备期显示 利息（`getInterestGold` 估算）/ 连胜连败计数 / 上轮连胜败金币~~（G5 接线后改读 `economyPreview`，见下方）。
 - "回看"按用户决定删除（云顶无此功能）。
 
 ### SR-G5-01 §14.2 `heal` 事件不带治疗来源（P3，可选）
@@ -878,6 +878,14 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **用途**：经济提示直接显示"利息 +N（胜 +M）· 连败 2 · 再败 +1 金币"，替换 `getInterestGold` 估算。
 - **验收**：对 1-2、2-1、加时轮和一组跨 10 金币边界的胜/负，`economyPreview.ifWin/ifLoss` 与随后结算的 `roundResults[].incomeBreakdown`（金币未再变化时）逐项相等；G5 e2e 改为逐项比对。
 **Codex G5 交付回应**：`previewRoundEconomy(state: MatchState): RoundEconomyPreview | null` 从 simulation/economy-preview 与 server-entry 导出。返回 `{roundId,gold,ifWin:{interest,win,streakGold,streakAfter},ifLoss:{...}}`；preparation/combat 使用当前己方资源，补给/其他阶段/已淘汰席返回 null。与结算共用 resolveRoundEconomy → planCatalogRoundEconomy/加时规划，含开局利息 0；不读 RNG/敌方信息，不预测掉落。请由 Claude 接入私有投影；签名、空值及精确比较条件见 MULTIPLAYER_CONTRACT §14.4。
+
+### G5 数据接线（2026-10-15，Claude，分支 `claude/g5-data-wiring-4rm9vm`）
+
+- **服务器**：网络 `state` 消息与本地房间的私有席位视图改为 `SeatStateView = PrivateSeatView & { economyPreview }`（`src/server/protocol.ts`、`src/server/room/projection.ts` 的 `toSeatPrivateView`）。`economyPreview` 原样取 `previewRoundEconomy(match)`：准备期与本席战斗中（PvP 席在阵容锁下仍为 preparation，PvE 席为 combat）有值，选择/结算/补给/已淘汰/结束为 null。服务器不做任何经济计算；wire 版本不变（只增字段）。
+- **经济提示**：倒计时条显示"利息 +N（胜 +M）· 连胜/连败 X · 再胜/再败 +Y"。N = `ifLoss.interest`，M = `ifWin.interest`，Y = 当前连胜取 `ifWin.streakGold`、连败取 `ifLoss.streakGold`（无连胜/连败时不显示）；X 为私有视图 `streak`。悬停给出两分支完整拆分。准备期与战斗中显示，删除 `getInterestGold` 估算。
+- **排行**：`src/presentation/battle-ranking.ts` 只调 `summarizeBattle`，自算聚合已删除；"治疗"页按 `healingDone`（治疗者），悬停行显示受治疗 `healingReceived` 与击杀；本局累计按 阵营+definitionId+星级 对同一口径逐场相加。
+- **单位悬停卡**（联机棋盘/备战席/战斗中单位）：新增一行"伤害/承伤/治疗 · 本场 a/b/c · 累计 x/y/z"，取自同一 `summarizeBattle` 行与累计行；正在回放的这一场在播完前不计入，避免提前剧透。
+- **验收**：`tests/server/g5-economy-preview.test.ts` 跑完整一局（含 1-2、2-1、加时、10/20 金币两侧，胜负两分支），每席结算前最后一次投影的 `economyPreview` 与结算 `incomeBreakdown.interest/win/streak` 及 `streakAfter` 逐项相等（金币与 streak 未变时）；`tests/server/e2e/g5-stats-economy.mjs` 改为逐项比对并独立按 `heal.shares` 校验治疗。
 
 ## G2 前置界面：羁绊面板与技能/装备说明（2026-10-15，Claude 流水线 C，分支 `claude/g5-traits-tooltips`）
 

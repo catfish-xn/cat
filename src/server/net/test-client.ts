@@ -6,8 +6,7 @@
  *
  * Run `npm run client:game -- ws://localhost:8787 名字` to play one idle match end to end.
  */
-import type { PrivateSeatView } from '../../server-entry';
-import type { LobbyView, PlayerView, WireCommand } from '../protocol';
+import type { LobbyView, PlayerView, SeatStateView, WireCommand } from '../protocol';
 import { NET_PROTOCOL_VERSION, type ClientMessage, type ReceiptMessage, type ServerMessage } from './messages';
 
 export type Receipt = ReceiptMessage;
@@ -47,7 +46,7 @@ export class TestClient {
   get isOpen(): boolean { return this.socket.readyState === WebSocket.OPEN; }
   get lobby(): LobbyView | null { return this.last('lobby')?.view ?? null; }
   get view(): PlayerView | null { return this.last('view')?.view ?? null; }
-  get state(): PrivateSeatView | null { return this.last('state')?.state ?? null; }
+  get state(): SeatStateView | null { return this.last('state')?.state ?? null; }
   get stateRevision(): number { return this.last('state')?.seatRevision ?? -1; }
   /** Starts the next commandId at this value (tests reuse ids on purpose). */
   set commandCounter(value: number) { this.nextCommandId = value; }
