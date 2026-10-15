@@ -26,8 +26,9 @@ class RouteFirstSequencer extends BaseSequencer {
 }
 export default defineConfig({
   test: {
+    sequence: { sequencer: RouteFirstSequencer },
     projects: [
-      { test: { name: 'fast', globalSetup: ['./tests/fixtures/g4-global-setup.ts'], sequence: { sequencer: RouteFirstSequencer }, maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
+      { test: { name: 'fast', globalSetup: ['./tests/fixtures/g4-global-setup.ts'], maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
       { test: { name: 'timing', include: timing, maxWorkers: 1, fileParallelism: false } },
     ],
   },
