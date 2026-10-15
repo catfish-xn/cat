@@ -1,5 +1,5 @@
 import { canonicalContent } from './content';
-import { freezeContent } from './content/freeze';
+import { shareGeneratedJson } from './immutable-json';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { ORB_SLOTS, ORB_RULES } from './content/orbs';
 import { nextRandom, validateSeed } from './rng';
@@ -35,7 +35,7 @@ function canonicalReference(value: object): string {
 }
 const generatedLayouts = new WeakSet<OrbLayoutLedger>();
 function generated(layout: OrbLayoutLedger): OrbLayoutLedger {
-  freezeContent(layout); generatedLayouts.add(layout); return layout;
+  layout = shareGeneratedJson(layout); generatedLayouts.add(layout); return layout;
 }
 
 /** Rejection words count as draws; all callers keep an explicit independent cursor. */

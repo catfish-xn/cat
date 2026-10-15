@@ -1,3 +1,4 @@
+import { shareGeneratedJson } from './immutable-json';
 import type { MatchBase, PersistentGrowth, RoundResult } from './match-types';
 import type { Unit } from './unit-types';
 import type { ItemInstance, ScheduleReceipt } from './strategy-types';
@@ -48,7 +49,7 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs): CombatStr
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
-  return freezeContent(structuredClone({ version: COMBAT_INPUT_VERSION, combatId: `round-${state.round}`,
+  return shareGeneratedJson(structuredClone({ version: COMBAT_INPUT_VERSION, combatId: `round-${state.round}`,
     roundId: state.roundDefinitionId, contentDigest: state.contentDigest, battleSeed, playerLevel: state.level,
     nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial,
     equipmentRollPrefixLength: state.equipmentState.rolls.length, provenancePrefixLength,

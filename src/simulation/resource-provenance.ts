@@ -1,3 +1,4 @@
+import { shareGeneratedJson } from './immutable-json';
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
 import { freezeContent, isFrozenContent } from './content/freeze';
 import { ITEM_DEFINITIONS } from './content/items';
@@ -109,7 +110,7 @@ export function appendResourceProvenance(
   requireValue(!provenance.entries.length || getMultiplayerRoundById(provenance.entries.at(-1)!.roundId).ordinal <= round.ordinal, 'round order');
   const added = Array.isArray(facts) ? facts : [facts];
   plainJson(added);
-  return freezeContent({ version: RESOURCE_PROVENANCE_VERSION,
+  return shareGeneratedJson({ version: RESOURCE_PROVENANCE_VERSION,
     entries: [...(isFrozenContent(provenance.entries) ? provenance.entries : structuredClone(provenance.entries)), ...added.map((fact, index) => ({
       ...structuredClone(fact), sequence: provenance.entries.length + index, roundId,
     }))] });

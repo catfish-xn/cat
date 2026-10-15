@@ -25,16 +25,35 @@ import { ANOMALY_DEFINITIONS } from './anomalies';
 export { TRAIT_DEFINITIONS, ITEM_DEFINITIONS, AUGMENT_DEFINITIONS, ANOMALY_DEFINITIONS };
 export { COMPONENT_IDS } from './items';
 
+// `var` is intentional: content helpers are called while cyclic content imports
+// initialize. The lazily allocated cache must be available before this module's body.
+var frozenCanonical: WeakMap<object, string> | undefined;
+function rememberFrozen(value: object, text: string, keys: readonly string[]): string {
+  // A frozen wrapper alone does not make children or getter results immutable.
+  if (Object.isFrozen(value) && keys.every(key => {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !('value' in descriptor)) return false;
+    const child: unknown = descriptor.value;
+    return child === null || typeof child !== 'object' || frozenCanonical!.has(child);
+  })) frozenCanonical!.set(value, text);
+  return text;
+}
 /** JSON canonicalization preserves semantic array order and sorts object keys by ASCII. */
 export function canonicalContent(value: unknown): string {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
   if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+  if (value !== null && typeof value === 'object') {
+    const cached = (frozenCanonical ??= new WeakMap()).get(value);
+    if (cached !== undefined) return cached;
+  }
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i++) if (!Object.hasOwn(value, i)) throw new TypeError('Content cannot contain sparse arrays');
-    return `[${value.map(canonicalContent).join(',')}]`;
+    const text = `[${value.map(canonicalContent).join(',')}]`;
+    return !Object.isFrozen(value) || Object.hasOwn(value, 'map') ? text : rememberFrozen(value, text, Array.from({ length: value.length }, (_, i) => String(i)));
   }
   if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`).join(',')}}`;
+    const keys = Object.keys(value).sort();
+    return rememberFrozen(value, `{${keys.map(key => `${JSON.stringify(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`).join(',')}}`, keys);
   }
   throw new TypeError('Content must be finite plain JSON data');
 }

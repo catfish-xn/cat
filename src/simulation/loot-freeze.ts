@@ -1,3 +1,4 @@
+import { shareGeneratedJson } from './immutable-json';
 import { RULES_GAP_MANIFEST } from './content/rules-manifest';
 import { canonicalContent, digestContent } from './content';
 import { freezeContent, isFrozenContent } from './content/freeze';
@@ -117,7 +118,7 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
     }
     rounds.push({encounterPlan:{roundId:round.roundId,encounterId:round.encounterId!,policyVersion:NEUTRAL_ENCOUNTER_POLICY_VERSION,drops},choices:[],orbs});
   }
-  const ledger: FrozenLootLedger = freezeContent({version:LOOT_FREEZE_VERSION,seed,replayDigest:LOOT_REPLAY_DIGEST,throughRoundOrdinal,rng,rounds});
+  const ledger: FrozenLootLedger = shareGeneratedJson({version:LOOT_FREEZE_VERSION,seed,replayDigest:LOOT_REPLAY_DIGEST,throughRoundOrdinal,rng,rounds});
   let references = replayedLoot.get(layout);
   if (!references) { references = new Map(); replayedLoot.set(layout, references); }
   // Bound seats/seeds per live layout as well as the layout reference cache.

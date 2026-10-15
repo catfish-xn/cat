@@ -1,3 +1,4 @@
+import { shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
 import { declaredEffects, abilityPowerCandidates, attackDamageCandidates } from './m8/item-restore';
@@ -252,7 +253,15 @@ export function restoreMatch(input: unknown): MatchState {
   }
   // JSON.parse already owns an independent graph. Object callers still receive
   // a detached copy; all validation above is identical for both inputs.
-  const restored=typeof input === 'string' ? state : structuredClone(state);
+  const detached=typeof input === 'string' ? state : structuredClone(state);
+  // Exact JSON bytes (including property order) key immutable metadata sharing.
+  // Object inputs retain their independent clone. '-0' conservatively disables
+  // sharing for text inputs because JSON.stringify normalizes its numeric sign.
+  const restored=typeof input === 'string' && !input.includes('-0') ? {
+    ...detached, m8: shareParsedJson(detached.m8),
+    resourceProvenance: shareParsedJson(detached.resourceProvenance),
+    combatInputBasis: detached.combatInputBasis ? shareParsedJson(detached.combatInputBasis) : null,
+  } : detached;
   freezeContent(restored.m8);
   if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
   freezeContent(restored.resourceProvenance);

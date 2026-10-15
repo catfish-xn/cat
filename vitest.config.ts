@@ -3,10 +3,10 @@ import { configDefaults, defineConfig } from 'vitest/config';
 // Wall-clock assertions must run without competing test workers. Keep the lists
 // complementary so every test is selected exactly once by CI's two commands.
 const timing = [
-  'tests/b8-resumable-battle.test.ts',
+  'tests/b8-resumable-battle-timing.test.ts',
   'tests/m5-replay-cannon.test.ts',
-  'tests/server/bot-driver.test.ts',
-  'tests/server/round-commit.test.ts',
+  'tests/server/bot-driver-timing.test.ts',
+  'tests/server/round-commit-timing.test.ts',
 ];
 export default defineConfig({
   test: {
