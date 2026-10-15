@@ -1,0 +1,93 @@
+{
+  "base": "4d4cc73",
+  "testedHead": "d0ea874818e2ab8fc06e3b80a809f1d9c4c383bc",
+  "node": "v22.23.3",
+  "targeted": [
+    {
+      "file": "g5-economy-preview",
+      "passed": 66,
+      "realSeconds": 4.41
+    },
+    {
+      "file": "g5-combat-summary",
+      "passed": 9,
+      "realSeconds": 11.52
+    },
+    {
+      "file": "m5-economy",
+      "passed": 42,
+      "realSeconds": 1.24
+    },
+    {
+      "file": "m5-economy-p3-selector",
+      "passed": 1,
+      "realSeconds": 1.08
+    },
+    {
+      "file": "m8-b6-opening-economy",
+      "passed": 27,
+      "realSeconds": 1.26
+    },
+    {
+      "file": "m8-b8-live-economy",
+      "passed": 3,
+      "realSeconds": 4.52
+    },
+    {
+      "file": "match-economy",
+      "passed": 42,
+      "realSeconds": 3.24
+    },
+    {
+      "file": "t3-round-settlement",
+      "passed": 10,
+      "realSeconds": 5.53
+    },
+    {
+      "file": "t2-two-sided-battle",
+      "passed": 21,
+      "realSeconds": 4.78
+    },
+    {
+      "file": "t5r-combat-replay",
+      "passed": 46,
+      "realSeconds": 17.93
+    },
+    {
+      "file": "t5r-overtime",
+      "passed": 5,
+      "realSeconds": 4.08
+    },
+    {
+      "file": "server-g5-battle-ranking",
+      "passed": 5,
+      "realSeconds": 7.16
+    }
+  ],
+  "fast": {
+    "command": "npm test -- --maxWorkers=2",
+    "workers": 2,
+    "defaultParallelAccepted": false,
+    "files": 221,
+    "passed": 2732,
+    "failed": 0,
+    "skipped": 0,
+    "realSeconds": 1118.36,
+    "reportSha256": "cccb2863161d9850425a4439519fa8494eacea8258775e018851a2cd7e65291b"
+  },
+  "typecheck": {
+    "passed": true,
+    "time": "real 18.96\nuser 31.80\nsys 2.56"
+  },
+  "fixTargeted": {
+    "files": 3,
+    "passed": 27,
+    "failed": 0,
+    "vitestSeconds": 26.95
+  },
+  "serverEntry": {
+    "passed": true,
+    "time": "real 3.08\nuser 2.82\nsys 0.63"
+  },
+  "targetedSourceHead": "6130e807f77301925ff4e7d9da195affb1a5e036"
+}

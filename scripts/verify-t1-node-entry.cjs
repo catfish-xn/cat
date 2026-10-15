@@ -60,6 +60,7 @@ async function worker() {
   const reference = await load(path.join(out, 'browser-reference.mjs'));
   const expectedExports = [
     'releaseCarouselParticipant','completeCarouselForSeat','releaseCarouselSeat','resolvePendingCarouselUnits','sellPendingCarouselUnit','createCarouselMatch','opensCarousel','schedule','prepareCarouselParticipants','createCarousel','pickFromCarousel','autoPickFromCarousel','advanceCarousel','grantCarouselPick','pickCarouselForSeat','autoPickCarouselForSeat','listCarouselSlots','restoreCarouselSeat','restoreCarousel','validateCarousel','CAROUSEL_RULES','CAROUSEL_COST_ODDS',
+    'previewRoundEconomy', 'summarizeBattle',
     'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay', 'startCombatReplay',
     'applyCombatReplayTick', 'COMBAT_REPLAY_KEYFRAME_INTERVAL',
     'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',

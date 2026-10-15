@@ -58,7 +58,19 @@ describe('SR-B8-02 resumable pure tasks', () => {
     const battle = resolveTwoSidedBattle(input(count), 1201);
     // G2 bytes audited in docs/evidence/g2-1/fixture-migration.json.
     const fingerprints: Record<number, readonly string[]> = currentFingerprints;
-    deepStrictEqual([sha(battle), sha(toCombatReplay(battle))], fingerprints[count]);
+    const replay = toCombatReplay(battle);
+    // G5 adds only heal.shares. Retain the original byte anchor for every prior field,
+    // and independently check every newly exposed share against the complete ledger.
+    const legacyReplay = { ...replay, ticks: replay.ticks.map(frame => ({ ...frame,
+      events: frame.events.map(event => {
+        if (event.type !== 'heal') return event;
+        const { shares: _shares, ...legacy } = event; return legacy;
+      }) })) };
+    deepStrictEqual([sha(battle), sha(legacyReplay)], fingerprints[count]);
+    deepStrictEqual(replay.ticks.flatMap(frame => frame.events).filter(event => event.type === 'heal')
+      .map(event => ({ eventSeq: event.eventSeq, shares: event.shares })),
+    battle.events.filter(event => event.type === 'heal').map(event => ({ eventSeq: event.eventSeq,
+      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) })));
   }); }
   if (mode === 'fast') { it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {

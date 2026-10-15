@@ -3,7 +3,7 @@
  * numbers up: damage = HP damage + shield absorbed (TFT's damage chart), healing = healing received. The match
  * totals add every battle's rows up by team, definition and star level. Display only.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { toCombatReplayFor } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { RoomState, TwoSidedBattleResult } from '../../src/server/room/types';
@@ -31,6 +31,8 @@ function battles() {
   cache = { state, pvp, pve };
   return cache;
 }
+// Shared room/replay setup is independent of the ranking assertions.
+beforeAll(() => { battles(); });
 const sum = (rows: readonly RankTotals[], key: keyof RankTotals) => rows.reduce((total, row) => total + row[key], 0);
 
 describe('G5 battle ranking', () => {
