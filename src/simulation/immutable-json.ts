@@ -36,8 +36,12 @@ function reuse<T extends object>(value: T, owned: readonly object[] = []): T {
 }
 /** Constructor-owned data only; accessors, extra array fields and -0 never intern. */
 export function shareGeneratedJson<T extends object>(value: T): T {
+  if (dataObjects.has(value)) return value;
   const owned: object[] = [];
   return plainData(value, new Set(), owned) ? reuse(value, owned) : freezeContent(value);
 }
 /** Locally parsed, fully validated JSON with no negative-zero token. No external object inputs. */
 export function shareParsedJson<T extends object>(value: T): T { return reuse(value); }
+
+/** A complete finite JSON data graph frozen by this module, with no accessors. */
+export const isImmutableJson = (value: object): boolean => dataObjects.has(value);

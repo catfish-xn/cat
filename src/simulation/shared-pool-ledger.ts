@@ -1,3 +1,4 @@
+import { isImmutableJson } from './immutable-json';
 import { restoreOrbLayout } from './orb-layout';
 import { matchesFrozenLootLedger } from './loot-freeze';
 import { canonicalContent } from './content';
@@ -50,10 +51,12 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     totals[id]=pool.available[id];
   }
   // Index once per validation; never cache mutable caller-owned pool/state data.
-  const reservations = new Map<string, ShopReservation[]>();
+  const reservations = new Map<string, Map<number, ShopReservation[]>>();
   for (const reservation of pool.shops) {
-    const key = shopSource(reservation), group = reservations.get(key);
-    if (group) group.push(reservation); else reservations.set(key, [reservation]);
+    let slots = reservations.get(reservation.seatId);
+    if (!slots) { slots = new Map(); reservations.set(reservation.seatId, slots); }
+    const group = slots.get(reservation.slot);
+    if (group) group.push(reservation); else slots.set(reservation.slot, [reservation]);
   }
   const seats = new Map(pool.seats.map(seat => [seat.seatId, seat]));
   const pendingRewards = new Set(pool.pending.map(rewardSource));
@@ -66,8 +69,8 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     requirePool(seat.shop.slots.length===MATCH_RULES.shopSize);
     for(const [slot,offer] of seat.shop.slots.entries()) {
       requirePool(['available','purchased'].includes(offer.status));
-      const reserved=(reservations.get(sourceKey('shop',seat.seatId,seat.shop.generation,slot)) ?? []);
-      requirePool(offer.status==='available'?reserved.length===1&&reserved[0].definitionId===offer.definitionId:reserved.length===0);
+      const reserved=(reservations.get(seat.seatId)?.get(slot) ?? []);
+      requirePool(offer.status==='available'?reserved.length===1&&reserved[0].generation===seat.shop.generation&&reserved[0].definitionId===offer.definitionId:reserved.length===0);
     }
     if(seat.released) requirePool(!pool.holdings.some(h=>h.seatId===seat.seatId)&&!pool.pending.some(p=>p.seatId===seat.seatId)&&!pool.shops.some(r=>r.seatId===seat.seatId));
   }
@@ -109,7 +112,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     requirePool(!provided.has(binding.seatId),'invalid-seat-state');provided.add(binding.seatId);
     const seat=seats.get(binding.seatId);requirePool(seat,'invalid-seat-state');
     requirePool(binding.revision===seat.revision,'stale-seat');
-    requirePool(state.multiplayer?.seatId===seat.seatId&&canonicalContent(state.shop)===canonicalContent(seat.shop),'invalid-seat-state');
+    requirePool(state.multiplayer?.seatId===seat.seatId&&((state.shop===seat.shop&&isImmutableJson(state.shop))||canonicalContent(state.shop)===canonicalContent(seat.shop)),'invalid-seat-state');
     const roster=state.preparation.units.filter(u=>u.team==='player'),held=pool.holdings.filter(h=>h.seatId===seat.seatId);
     if(seat.released) {requirePool(state.multiplayer?.status==='eliminated'&&state.playerHp===0,'invalid-seat-state');continue;}
     requirePool(roster.length===held.length,'invalid-seat-state');

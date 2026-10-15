@@ -22,6 +22,21 @@ describe('shared loot validation cache boundaries', () => {
     expect(awarded).toBe(true);
   });
 
+  it('does not trust mutable or shallow-frozen identical shop references after warming', () => {
+    const source = room(undefined, 1);
+    const live = accept(generateSharedShop(source.pool, source.states[0], 0));
+    assertSharedPoolConservation(live.pool, [live.state]);
+    for (const freeze of [(value: object) => value, Object.freeze]) {
+      const cold = structuredClone(live) as any;
+      cold.state.shop.untrusted = NaN;
+      cold.pool.seats[0].shop = freeze(cold.state.shop);
+      const result = runSharedMatchCommand(cold.pool, cold.state, { type: 'startCombat' });
+      expect(result).toEqual({ ok: false, pool: cold.pool, state: cold.state, reason: 'invalid-pool' });
+      expect(result.pool).toBe(cold.pool); expect(result.state).toBe(cold.state);
+      expect(Number.isNaN(cold.state.shop.untrusted)).toBe(true);
+    }
+  });
+
   it('rejects replaced, shallow-frozen and deep-frozen forged ledgers after warming the cache', () => {
     const { pool, states: [state] } = room(undefined, 1);
     assertSharedPoolConservation(pool, [state]);
