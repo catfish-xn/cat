@@ -237,9 +237,7 @@ export type SeatCommand = WireCommand;
  * `seat-controlled`: a player command reached a human seat a bot took over (B6); `control-revoked`: a bot step
  * decided under an older control generation (the player resumed in between, or the seat is not bot-controlled).
  */
-export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 'seat-controlled' | 'control-revoked'
-  /** G1-P7: a carousel pick before this seat's batch opened (the release schedule is the room's). */
-  | 'carousel-not-released';
+export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 'seat-controlled' | 'control-revoked';
 export type RoomCommandResult =
   | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[]; readonly seatRevision: number; readonly roomRevision: number }
   /** `SharedPoolFailure` includes every MatchFailure plus the pool's own reasons (pool-empty, empty-slot, ...). */

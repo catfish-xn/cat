@@ -13,7 +13,7 @@ import { DemoCarousel } from './carousel-demo';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
-import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
+import type { CarouselView, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
 import { RankingOverlay } from './ranking';
 import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
@@ -45,9 +45,9 @@ const NON_RULE_REFUSALS: Partial<Record<ReceiptFailure, string>> = {
   'no-room': '对局已不存在', 'wrong-room': '对局已更换，请刷新页面', 'not-authenticated': '连接未绑定席位 · 正在恢复',
   'rate-limited': '操作过快 · 请稍后再试', 'invalid-message': '客户端发送了无效命令（请刷新页面）', 'commandId-conflict': '命令编号冲突（请刷新页面）',
   'unsupported-protocol': '客户端版本过旧，请刷新页面',
-  'carousel-not-released': '还没轮到你选秀 · 生命越低越先放行', 'carousel-slot-taken': '这个单位已被选走 · 请换一个',
-  'carousel-already-picked': '你已经选过了', 'carousel-unknown-slot': '选秀位置无效 · 请重新选择', 'carousel-not-participant': '你不在本轮选秀中',
-  'carousel-closed': '选秀已结束',
+  // G1-P7 (MATCH_CONTRACT P7 CarouselFailure and §21.1 stale-carousel): what a player can run into when clicking a slot.
+  'stale-carousel': '选秀画面已更新 · 请重新选择', 'seat-locked': '还没轮到你选秀 · 生命越低越先放行', 'slot-taken': '这个单位已被选走 · 请换一个',
+  'already-picked': '你已经选过了', 'invalid-slot': '选秀位置无效 · 请重新选择', 'carousel-closed': '选秀已结束 · 服务器已代选',
 };
 const RECONNECTING = '连接中断，重连中…';
 const SUPERSEDED = '已在别处打开此席位 · 本页停止操作';
@@ -83,7 +83,7 @@ export class OnlineApplication implements SceneApplication {
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
-    this.carousel = new CarouselPanel(frame, slot => this.pickCarousel(slot));
+    this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view));
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => this.hooks.changed?.(change));
@@ -193,9 +193,9 @@ export class OnlineApplication implements SceneApplication {
   private syncCarouselMode() {
     if (this.carousel.open) document.body.dataset.onlineCarousel = 'true'; else delete document.body.dataset.onlineCarousel;
   }
-  private pickCarousel(slot: number) {
+  private pickCarousel(slot: number, view: CarouselView) {
     if (this.demo) { if (!this.demo.pick(slot, performance.now())) this.carousel.clearPending(); this.renderDemo(); return; }
-    const result = this.session.carouselPick(slot);
+    const result = this.session.carouselPick(view.id, view.revision, slot);
     if (result.ok) return;
     const notice = this.session.takeNotice();
     if (notice?.kind === 'pending') return; // the receipt and the next view answer it

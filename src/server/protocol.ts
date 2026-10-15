@@ -64,42 +64,44 @@ export interface ReplayUnitId { readonly combatId: string; readonly originalId: 
 /** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. G1-P7 adds `carousel`. */
 export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'carousel' | 'combat' | 'settlement' | 'ended';
 
-/* ---------------- G1-P7 shared carousel (选秀) ---------------- */
+/* ---------------- G1-P7 shared carousel (选秀), MULTIPLAYER_CONTRACT §21.1 ---------------- */
 
-/** One unit standing on the carousel, with the items it carries (definition ids, in the rules' order). */
+/** One unit standing on the carousel with the item it carries; the same for every seat. */
 export interface CarouselSlotView {
-  /** Slot index the rules gave it; the `carouselPick` command names it. */
+  /** Slot index (0–8); the `carousel-pick` command names it. */
   readonly slot: number;
   readonly definitionId: string;
-  readonly starLevel: number;
-  readonly items: readonly string[];
-  /** Seat that took it (shown to everyone, as on the TFT carousel); null while it still stands. */
+  /** Item definition id the unit carries (a component or a completed item). */
+  readonly itemId: string;
+  /** Seat that took it; null while it still stands. */
   readonly pickedBy: string | null;
 }
-/** One release group: the seats it frees (lowest HP first, as the rules ordered them) and when it opens. */
-export interface CarouselBatchView {
-  readonly seatIds: readonly string[];
-  /** Server clock (ms) at which this batch may pick. */
-  readonly opensAt: number;
-}
 /**
- * The carousel of the current round, the same for every seat apart from `canPick`/`myPick`. Everything here is copied
- * from the rules' carousel state and the room's schedule; the client decides nothing (who is released, what is left).
+ * The carousel of the current round (§21.1 public projection) plus this seat's own part. Every field is copied from the
+ * rules' carousel state; times are the rules' logical milliseconds since the carousel opened, `startedAt` is the server
+ * clock at logical 0 so the client can count down. The client decides nothing (who is released, what is left).
  */
 export interface CarouselView {
-  readonly carouselId: string;
+  readonly id: string;
+  readonly roundId: string;
   readonly roundName: string;
+  readonly revision: number;
+  readonly status: 'open' | 'closed';
   readonly slots: readonly CarouselSlotView[];
-  /** Release order, first batch first. */
-  readonly batches: readonly CarouselBatchView[];
-  /** Batches released so far (0 before the first opens). */
-  readonly openBatches: number;
-  /** Server clock (ms) at which the carousel closes and every seat without a unit gets one automatically. */
-  readonly endsAt: number;
+  /** Release order frozen at creation (lowest HP first, seat index on a tie). */
+  readonly releaseOrder: readonly string[];
+  /** Logical ms at which each seat may pick. */
+  readonly releaseAtMs: Readonly<Record<string, number>>;
+  readonly elapsedMs: number;
+  /** Logical ms at which every seat still without a unit is picked for; the phase ends there (option B). */
+  readonly deadlineMs: number;
+  /** Server clock (ms) at logical 0. */
+  readonly startedAt: number;
   /** My seat is released, alive and has not picked yet. */
-  readonly canPick: boolean;
+  readonly eligible: boolean;
   /** Slot my seat took (by hand or automatically); null until then. */
-  readonly myPick: number | null;
+  readonly pickedSlot: number | null;
+  readonly receiptId: string | null;
 }
 export interface PlayerViewPhase {
   readonly kind: PlayerViewPhaseKind;
@@ -170,10 +172,11 @@ export type ClientCommand =
   | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
 export type ConsumableCommand = Extract<ClientCommand, { type: 'useConsumable' }>;
 /**
- * G1-P7: take the unit on carousel slot `slot`. Not a seat command of match.ts: the room hands it to the rules' shared
- * carousel pick, which decides everything (release, slot still free, the unit and its items). Kept out of ClientCommand so
- * the bot policy and its helpers, which map ClientCommand 1:1 to match.ts, are unchanged.
+ * G1-P7 (MULTIPLAYER_CONTRACT §21.1): take the unit on carousel slot `slot` of carousel `carouselId` as seen at `revision`
+ * (another id or revision is `stale-carousel`). The seat is the connection's. Not a match.ts seat command: the room hands it
+ * to the rules' pick and grant, which decide everything. Kept out of ClientCommand so the bot policy and its helpers,
+ * which map ClientCommand 1:1 to match.ts, are unchanged.
  */
-export interface CarouselPickCommand { readonly type: 'carouselPick'; readonly slot: number }
+export interface CarouselPickCommand { readonly type: 'carousel-pick'; readonly carouselId: string; readonly revision: number; readonly slot: number }
 /** Every command a seat may send over the wire: the match.ts commands (§18.8) plus the carousel pick (G1-P7). */
 export type WireCommand = ClientCommand | CarouselPickCommand;

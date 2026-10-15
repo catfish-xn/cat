@@ -11,7 +11,7 @@ import {
   startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
 } from '../../server-entry';
 import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
-import { carouselReleased } from './carousel';
+import { carouselPickedSlot, carouselReleased } from './carousel';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -74,20 +74,22 @@ export function toOpponentCandidates(room: RoomState, seatId: string): string[] 
 }
 
 /**
- * G1-P7: the carousel as this seat sees it, field by field; the rules' own carousel state never leaves the room. Every seat
- * sees the same units, items, takers and release order; only `canPick`/`myPick` are its own. Null outside the carousel phase.
+ * G1-P7 (MULTIPLAYER_CONTRACT §21.1): the public part of the rules' carousel, field by field and copied for every view, plus
+ * this seat's own `eligible`/`pickedSlot`/`receiptId`. No pool, RNG, full receipts or other seats' assets. Null outside the
+ * carousel phase. Reading it never advances the carousel.
  */
 export function toCarouselView(room: RoomState, seatId: string): CarouselView | null {
   const carousel = room.carousel;
   if (room.phase !== 'carousel' || carousel === null) return null;
+  const { view } = carousel;
   const seat = room.seats.find(candidate => candidate.seatId === seatId);
-  const myPick = carousel.picks[seatId] ?? null;
+  const pickedSlot = carouselPickedSlot(view, seatId);
   return {
-    carouselId: carousel.carouselId, roundName: room.roundName,
-    slots: carousel.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel, items: [...slot.items], pickedBy: slot.pickedBy })),
-    batches: carousel.batches.map(batch => ({ seatIds: [...batch.seatIds], opensAt: batch.opensAt })),
-    openBatches: carousel.openBatches, endsAt: carousel.endsAt,
-    canPick: seat !== undefined && seat.alive && myPick === null && carouselReleased(carousel, seatId), myPick,
+    id: view.id, roundId: view.roundId, roundName: view.roundId, revision: view.revision, status: view.status,
+    slots: view.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, itemId: slot.itemId, pickedBy: slot.pickedBy })),
+    releaseOrder: [...view.releaseOrder], releaseAtMs: { ...view.releaseAtMs }, elapsedMs: view.elapsedMs, deadlineMs: view.deadlineMs, startedAt: carousel.startedAt,
+    eligible: seat !== undefined && seat.alive && view.status === 'open' && pickedSlot === null && view.elapsedMs < view.deadlineMs && carouselReleased(view, seatId),
+    pickedSlot, receiptId: carousel.receipts[seatId] ?? null,
   };
 }
 

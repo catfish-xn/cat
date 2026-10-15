@@ -172,6 +172,6 @@ export class RemoteSession extends MatchSession {
   override anomalyTarget(choiceId: string, generation: number, unitId: string) { return this.intent({ type: 'anomalyTarget', choiceId, generation, unitId }); }
   override anomalyReroll(choiceId: string, generation: number) { return this.intent({ type: 'anomalyReroll', choiceId, generation }); }
   /** G1-P7: a carousel pick; the room and the rules' carousel decide whether and what this seat takes. */
-  carouselPick(slot: number) { return this.intent({ type: 'carouselPick', slot }); }
+  carouselPick(carouselId: string, revision: number, slot: number) { return this.intent({ type: 'carousel-pick', carouselId, revision, slot }); }
   override newMatch(): void { /* the server owns match lifecycle */ }
 }

@@ -13,62 +13,59 @@ export interface DemoCarouselOptions {
   readonly tailMs: number;
   readonly slots: number;
 }
-export const DEMO_CAROUSEL_DEFAULTS: DemoCarouselOptions = { batchSize: 2, batchMs: 4_000, tailMs: 4_000, slots: 9 };
+export const DEMO_CAROUSEL_DEFAULTS: DemoCarouselOptions = { batchSize: 2, batchMs: 4_000, tailMs: 6_000, slots: 9 };
 
 export class DemoCarousel {
   private readonly slots: CarouselSlotView[];
-  private readonly batches: { readonly seatIds: readonly string[]; readonly opensAt: number }[];
-  private readonly endsAt: number;
-  constructor(seats: readonly SeatPublic[], private readonly mySeatId: string, start: number, options: DemoCarouselOptions = DEMO_CAROUSEL_DEFAULTS) {
+  private readonly releaseOrder: readonly string[];
+  private readonly releaseAtMs: Readonly<Record<string, number>>;
+  private readonly deadlineMs: number;
+  private revision = 0;
+  constructor(seats: readonly SeatPublic[], private readonly mySeatId: string, private readonly startedAt: number, options: DemoCarouselOptions = DEMO_CAROUSEL_DEFAULTS) {
     this.slots = Array.from({ length: options.slots }, (_, slot) => ({
-      slot, definitionId: SHOP_CATALOG[(slot * 5 + 3) % SHOP_CATALOG.length]!, starLevel: 1,
-      items: [COMPONENT_IDS[slot % COMPONENT_IDS.length]!], pickedBy: null,
+      slot, definitionId: SHOP_CATALOG[(slot * 5 + 3) % SHOP_CATALOG.length]!, itemId: COMPONENT_IDS[slot % COMPONENT_IDS.length]!, pickedBy: null,
     }));
-    // Lowest HP first, seat order on a tie; eliminated seats are not on the carousel.
-    const order = seats.map((seat, index) => ({ seat, index })).filter(entry => entry.seat.alive)
+    // Lowest HP first, seat order on a tie, in pairs (option B); eliminated seats are not on the carousel.
+    this.releaseOrder = seats.map((seat, index) => ({ seat, index })).filter(entry => entry.seat.alive)
       .sort((a, b) => a.seat.hp - b.seat.hp || a.index - b.index).map(entry => entry.seat.seatId);
-    this.batches = [];
-    for (let at = 0; at < order.length; at += options.batchSize) {
-      this.batches.push({ seatIds: order.slice(at, at + options.batchSize), opensAt: start + this.batches.length * options.batchMs });
-    }
-    this.endsAt = start + this.batches.length * options.batchMs + options.tailMs;
+    this.releaseAtMs = Object.fromEntries(this.releaseOrder.map((seatId, index) => [seatId, Math.floor(index / options.batchSize) * options.batchMs]));
+    this.deadlineMs = Math.ceil(this.releaseOrder.length / options.batchSize) * options.batchMs + options.tailMs - options.batchMs;
   }
   get finished(): boolean { return this.closed; }
   private closed = false;
-  private openBatches(now: number): number { return this.batches.filter(batch => batch.opensAt <= now).length; }
-  private released(seatId: string, now: number): boolean {
-    return this.batches.slice(0, this.openBatches(now)).some(batch => batch.seatIds.includes(seatId));
-  }
+  private elapsed(now: number): number { return Math.min(this.deadlineMs, Math.max(0, now - this.startedAt)); }
+  private released(seatId: string, now: number): boolean { return (this.releaseAtMs[seatId] ?? Infinity) <= this.elapsed(now); }
   private holds(seatId: string): boolean { return this.slots.some(slot => slot.pickedBy === seatId); }
   /** My click; refused unless released, still without a unit and the slot still stands. */
   pick(slot: number, now: number): boolean {
     const target = this.slots.find(candidate => candidate.slot === slot);
-    if (!target || target.pickedBy !== null || this.holds(this.mySeatId) || !this.released(this.mySeatId, now) || now >= this.endsAt) return false;
+    if (!target || target.pickedBy !== null || this.holds(this.mySeatId) || !this.released(this.mySeatId, now) || this.elapsed(now) >= this.deadlineMs) return false;
     this.take(slot, this.mySeatId); return true;
   }
   private take(slot: number, seatId: string) {
     const index = this.slots.findIndex(candidate => candidate.slot === slot);
-    this.slots[index] = { ...this.slots[index]!, pickedBy: seatId };
+    this.slots[index] = { ...this.slots[index]!, pickedBy: seatId }; this.revision++;
   }
-  /** The other seats take the first free slot a second after their batch opens; at the end every seat left gets one. */
+  /** The other seats take the first free slot a second after their release; at the deadline every seat left gets one. */
   private advance(now: number) {
-    for (const batch of this.batches) {
-      for (const seatId of batch.seatIds) {
-        if (this.holds(seatId)) continue;
-        const due = now >= this.endsAt || (seatId !== this.mySeatId && now >= batch.opensAt + 1_000);
-        const free = this.slots.find(slot => slot.pickedBy === null);
-        if (due && free) this.take(free.slot, seatId);
-      }
+    const elapsed = this.elapsed(now), atDeadline = elapsed >= this.deadlineMs;
+    for (const seatId of this.releaseOrder) {
+      if (this.holds(seatId)) continue;
+      const due = atDeadline || (seatId !== this.mySeatId && elapsed >= this.releaseAtMs[seatId]! + 1_000);
+      const free = this.slots.find(slot => slot.pickedBy === null);
+      if (due && free) this.take(free.slot, seatId);
     }
-    if (now >= this.endsAt) this.closed = true;
+    // Option B: the panel stays until the deadline (plus a short departure), even when everyone has picked.
+    if (now - this.startedAt >= this.deadlineMs + 2_000) this.closed = true;
   }
   view(now: number): CarouselView {
     this.advance(now);
     const mine = this.slots.find(slot => slot.pickedBy === this.mySeatId);
+    const elapsedMs = this.elapsed(now);
     return {
-      carouselId: 'demo', roundName: '演示数据', slots: this.slots.map(slot => ({ ...slot })), batches: this.batches.map(batch => ({ ...batch })),
-      openBatches: this.openBatches(now), endsAt: this.endsAt,
-      canPick: !mine && this.released(this.mySeatId, now) && now < this.endsAt, myPick: mine?.slot ?? null,
+      id: 'demo', roundId: 'demo', roundName: '演示数据', revision: this.revision, status: elapsedMs >= this.deadlineMs ? 'closed' : 'open',
+      slots: this.slots.map(slot => ({ ...slot })), releaseOrder: [...this.releaseOrder], releaseAtMs: { ...this.releaseAtMs }, elapsedMs, deadlineMs: this.deadlineMs,
+      startedAt: this.startedAt, eligible: !mine && this.released(this.mySeatId, now) && elapsedMs < this.deadlineMs, pickedSlot: mine?.slot ?? null, receiptId: null,
     };
   }
 }

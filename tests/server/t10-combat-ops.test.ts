@@ -34,7 +34,7 @@ function recording(inner: BattleResolver = new TwoSidedBattleResolver()) {
 describe('T10 room gate (contract §15.2)', () => {
   it('passes exactly OPS and CHOICES per room phase', () => {
     const expected: Record<RoomPhase, readonly string[]> = {
-      waiting: [], carousel: ['carouselPick'], preparation: [...OPS, ...CHOICES], choice: [...OPS, ...CHOICES], frozen: [],
+      waiting: [], carousel: ['carousel-pick'], preparation: [...OPS, ...CHOICES], choice: [...OPS, ...CHOICES], frozen: [],
       battle: OPS, 'awaiting-settlement': OPS, settlement: OPS, ended: [],
     };
     for (const phase of Object.keys(expected) as RoomPhase[]) expect([...ROOM_COMMAND_GATE[phase]].sort()).toEqual([...expected[phase]].sort());

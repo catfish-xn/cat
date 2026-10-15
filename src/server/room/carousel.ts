@@ -1,91 +1,94 @@
 /**
- * G1-P7 shared carousel (选秀): what the room needs from the rules, and the room's own release schedule.
+ * G1-P7 shared carousel (选秀): the boundary between the room and the rules' carousel (MATCH_CONTRACT "P7 共享选秀规则 API",
+ * MULTIPLAYER_CONTRACT §21, S13_RULES_GAP §11).
  *
- * The rules own the carousel itself (S13_RULES_GAP §11, MATCH_CONTRACT / MULTIPLAYER_CONTRACT): which units and items
- * stand on it, the shared-pool deduction, the pick and its unique receipt, the automatic pick and every refusal. The
- * room only orchestrates: when a carousel opens, who is released when (HP low to high, in batches), which seats are
- * picked for automatically (bots, a bot-controlled or disconnected seat when its batch opens, everyone left at the end).
- * `CarouselRules` is that boundary; the room never looks inside the rules' carousel state (`unknown` here).
+ * The rules own everything about the carousel: the units and items on its slots, the shared-pool reservations, the release
+ * order and release times (`releaseOrder`, `releaseAtMs`, `deadlineMs`), whether a seat may pick, the pick and its grant,
+ * the automatic pick and every refusal. The room only orchestrates: it opens the carousel at round entry, turns its clock
+ * into the rules' logical `elapsedMs`, asks for automatic picks at the contract's moments (a bot-controlled seat when it is
+ * released, every seat still without a unit at the deadline, in `releaseOrder`), and keeps the phase until the deadline
+ * (user decision, option B). `CarouselRules` is implemented by the binding over the contract exports; the room never looks
+ * inside the rules' state (`unknown`).
  */
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import type { SharedPoolState } from '../../server-entry';
-import type { CarouselBatchView, CarouselSlotView } from '../protocol';
+import type { CarouselSlotView } from '../protocol';
 
 /**
- * Refusals of the rules' carousel pick, passed to the client verbatim. Placeholder until the contract's failure enum
- * lands (S13_RULES_GAP §11); the binding then re-exports that enum here.
+ * The contract's failure enum (MATCH_CONTRACT P7 `CarouselFailure`), forwarded verbatim, plus the room's `stale-carousel`
+ * (MULTIPLAYER_CONTRACT §21.1: the command named another carouselId or revision). Re-exported from the rules once implemented.
  */
-export type CarouselFailure = 'carousel-slot-taken' | 'carousel-already-picked' | 'carousel-unknown-slot' | 'carousel-not-participant' | 'carousel-closed';
-/** Why the room asks for an automatic pick; the rules may pick differently per cause (contract bot strategy). */
+export type CarouselFailure =
+  | 'invalid-pool' | 'invalid-round' | 'invalid-rng'
+  | 'invalid-participants' | 'pool-exhausted' | 'carousel-exists'
+  | 'invalid-carousel' | 'carousel-closed' | 'unknown-seat'
+  | 'seat-eliminated' | 'seat-locked' | 'already-picked'
+  | 'invalid-slot' | 'slot-taken' | 'invalid-time'
+  | 'receipt-mismatch' | 'stale-pool' | 'invalid-match'
+  | 'stale-carousel';
+
+/** Why the room asks for an automatic pick (logs and tests; the rules' auto pick takes no cause). */
 export type CarouselAutoCause = 'bot' | 'disconnected' | 'timeout';
-export type CarouselTransaction =
-  | { readonly ok: true; readonly pool: SharedPoolState; readonly carousel: unknown; readonly state: MatchState; readonly events: readonly MatchEvent[] }
-  | { readonly ok: false; readonly reason: CarouselFailure };
-export type CarouselCreation =
-  | { readonly ok: true; readonly pool: SharedPoolState; readonly carousel: unknown; readonly rngState: number }
-  | { readonly ok: false; readonly reason: string };
-/** One unit standing on the carousel as the rules list it; copied verbatim into the view. */
-export type CarouselSlot = Omit<CarouselSlotView, 'pickedBy'> & { readonly pickedBy: string | null };
 
-/**
- * Seats freed together. User decision (2026-10-15, G1-P7 option B): the two lowest-HP seats first, then the next two and
- * so on, on every carousel including 1-1; the carousel then stays open until its deadline even when everyone has a unit.
- */
-export const CAROUSEL_BATCH_SIZE = 2;
-/** Release timing of one carousel (the rules' numbers); durations in room-clock milliseconds. */
-export interface CarouselSchedule {
-  /** From the carousel opening to the first batch. */
-  readonly firstBatchMs: number;
-  /** Between two batches. */
-  readonly batchIntervalMs: number;
-  /** From the last batch to the close, when every seat still without a unit gets one automatically. */
-  readonly tailMs: number;
+/** The public part of the rules' carousel state (§21.1), copied field by field into every view. */
+export interface CarouselPublic {
+  readonly id: string;
+  readonly roundId: string;
+  readonly revision: number;
+  readonly status: 'open' | 'closed';
+  readonly slots: readonly CarouselSlotView[];
+  readonly releaseOrder: readonly string[];
+  readonly releaseAtMs: Readonly<Record<string, number>>;
+  readonly elapsedMs: number;
+  readonly deadlineMs: number;
 }
+
+/** One committed rules transaction: the carousel, the pool it carries and (for a pick) the seat that received the grant. */
+export type CarouselStep =
+  | { readonly ok: true; readonly carousel: unknown; readonly pool: SharedPoolState }
+  | { readonly ok: false; readonly reason: CarouselFailure };
+export type CarouselGrant =
+  | { readonly ok: true; readonly carousel: unknown; readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }
+  | { readonly ok: false; readonly reason: CarouselFailure };
 
 export interface CarouselRules {
-  /** Whether this round opens with a shared carousel, read from a seat's state at round entry (all alive seats agree). */
-  opensCarousel(state: MatchState): boolean;
-  /** Release timing of the carousel of `roundId`. */
-  schedule(roundId: string): CarouselSchedule;
-  /** Builds the round's carousel from the shared pool and the room rng; nothing is published on a refusal. */
-  create(input: { readonly pool: SharedPoolState; readonly roundId: string; readonly rngState: number; readonly seats: readonly MatchState[] }): CarouselCreation;
-  /** A seat takes the unit on `slot`; the rules check the slot, the seat and the receipt. */
-  pick(input: { readonly pool: SharedPoolState; readonly carousel: unknown; readonly state: MatchState; readonly seatId: string; readonly slot: number }): CarouselTransaction;
-  /** The rules choose for the seat (bot strategy, disconnection, the close). */
-  autoPick(input: { readonly pool: SharedPoolState; readonly carousel: unknown; readonly state: MatchState; readonly seatId: string; readonly cause: CarouselAutoCause }): CarouselTransaction;
-  /** The units standing on the carousel, in slot order, with the seat that took each. */
-  slots(carousel: unknown): readonly CarouselSlot[];
+  /**
+   * The carousel this round entry opens, or null: '1-1' at the first round entry (the opening marker), '2-4'…'6-4' at those
+   * rounds. Read from a seat's state; the room asks every alive seat and opens only when all agree.
+   */
+  carouselRound(state: MatchState): string | null;
+  /** `prepareCarouselParticipants` on the alive seats, then `createCarousel(pool, roundId, rng)`; one publication. */
+  create(input: { readonly pool: SharedPoolState; readonly roundId: string; readonly roomSeed: number; readonly seats: readonly { readonly seatId: string; readonly state: MatchState }[] }): CarouselStep;
+  /** `advanceCarousel(state, elapsedMs)`: monotone logical time from the room clock. */
+  advance(carousel: unknown, elapsedMs: number): CarouselStep;
+  /** `pickFromCarousel` then `grantCarouselPick` for this seat as one transaction; a failed grant discards the pick. */
+  pick(input: { readonly carousel: unknown; readonly state: MatchState; readonly seatId: string; readonly slot: number }): CarouselGrant;
+  /** `autoPickFromCarousel` then `grantCarouselPick`, same transaction rule. */
+  autoPick(input: { readonly carousel: unknown; readonly state: MatchState; readonly seatId: string }): CarouselGrant;
+  /** Public part of the state (§21.1). */
+  view(carousel: unknown): CarouselPublic;
+  /** This seat's own receipt id once it picked; null before. */
+  receiptId(carousel: unknown, seatId: string): string | null;
 }
 
-/** The carousel of the current round as the room keeps it; everything a view needs is already copied out of the rules' state. */
+/** The carousel of the current round as the room keeps it. */
 export interface RoomCarousel {
-  readonly carouselId: string;
-  readonly roundId: string;
-  /** The rules' own carousel state; opaque to the room. */
+  /** The rules' own state; opaque to the room. */
   readonly rules: unknown;
-  readonly slots: readonly CarouselSlot[];
-  readonly batches: readonly CarouselBatchView[];
-  readonly openBatches: number;
-  readonly endsAt: number;
-  /** Seats that hold their carousel unit, by seat id → slot. */
-  readonly picks: Readonly<Record<string, number>>;
+  /** Public copy of it after the last transaction. */
+  readonly view: CarouselPublic;
+  /** Room clock at logical time 0: `elapsedMs` is `now - startedAt`. */
+  readonly startedAt: number;
+  /** Receipt id of each seat that holds its carousel unit. */
+  readonly receipts: Readonly<Record<string, string>>;
 }
 
-/**
- * Release order (room-owned, V2: lowest HP picks first): alive seats by authoritative HP ascending, fixed seat index on a
- * tie, cut into pairs (CAROUSEL_BATCH_SIZE) opening `batchIntervalMs` apart after `firstBatchMs`. Pure.
- */
-export function planCarouselBatches(seats: readonly { readonly seatId: string; readonly index: number; readonly hp: number }[], schedule: CarouselSchedule, openedAt: number):
-  { readonly batches: readonly CarouselBatchView[]; readonly endsAt: number } {
-  const order = [...seats].sort((a, b) => a.hp - b.hp || a.index - b.index).map(seat => seat.seatId);
-  const size = CAROUSEL_BATCH_SIZE;
-  const batches: CarouselBatchView[] = [];
-  for (let at = 0; at < order.length; at += size) batches.push({ seatIds: order.slice(at, at + size), opensAt: openedAt + schedule.firstBatchMs + batches.length * schedule.batchIntervalMs });
-  const last = batches.at(-1)?.opensAt ?? openedAt + schedule.firstBatchMs;
-  return { batches, endsAt: last + schedule.tailMs };
+/** The slot this seat took, from the public slots; null before it picked. */
+export function carouselPickedSlot(view: CarouselPublic, seatId: string): number | null {
+  return view.slots.find(slot => slot.pickedBy === seatId)?.slot ?? null;
 }
-
-/** Whether `seatId` is in a batch that already opened. */
-export function carouselReleased(carousel: RoomCarousel, seatId: string): boolean {
-  return carousel.batches.slice(0, carousel.openBatches).some(batch => batch.seatIds.includes(seatId));
+/** Whether the rules' schedule has released this seat at the carousel's current logical time. */
+export function carouselReleased(view: CarouselPublic, seatId: string): boolean {
+  const at = view.releaseAtMs[seatId];
+  return at !== undefined && at <= view.elapsedMs;
 }
