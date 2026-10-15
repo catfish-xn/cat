@@ -836,13 +836,14 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **需要**：`docs/S13_RULES_GAP.md` §10 给出 14.24b 的定义与推荐值；若 14.24b 的放宽顺序不是"全体逐轮减 1"，或奇数镜像应受约束/计入来源席历史，请在合同写明，服务器按合同改 `pairing.ts`。
 - **验收**：§10 的 6–8 组向量能直接写成 `tests/server/pairing.test.ts` 的用例并通过。
 
-## G5 战后统计、回看与经济提示（2026-10-15，Claude 流水线 C，分支 `claude/g5-stats-replay`）
+## G5 战后统计与经济提示（2026-10-15，Claude 流水线 C，分支 `claude/g5-stats-replay`）
 
 ### 已交付（纯界面，无需 Codex 动作即可运行）
 
-- 战后排行：我的战斗结束（结算期）起，右侧玩家列表下方显示上一场双方全部单位的 伤害 / 承伤 / 治疗 排行，持续到下一场战斗开始。数据只来自服务器推送的 `replay`（合同 §14.2）事件本身：伤害 = `packetDamage.hpDamage` 按 `sourceId`，承伤 = 同一字段按 `targetId`（护盾吸收 `absorbed` 另列在提示里），治疗 = `heal.actual` 按 `targetId`。聚合在 `src/presentation/battle-ranking.ts`，不算任何规则。
-- 回看：排行上的"回看"在棋盘上方（敌方半场，与侦察面板同位、互斥）用离线回放画布 `ReplayView` 重放该场 `CombatReplay`，可暂停、1×/2×/4×、拖动进度、Esc 关闭；不碰会话与棋盘，倒计时照走，备战席与部署区照常拖放。
+- 战后排行（本场）：我的战斗结束（结算期）起，右侧玩家列表下方显示该场双方全部单位的 伤害 / 承伤 / 治疗 排行，每回合刷新，持续到下一场战斗开始。数据只来自服务器推送的 `replay`（合同 §14.2）事件本身：伤害 = `packetDamage.hpDamage + absorbed` 按 `sourceId`（护盾吸收算伤害，与云顶伤害统计一致），承伤 = 同一和按 `targetId` 并单列其中护盾部分，治疗 = `heal.actual` 按 `targetId`。聚合在 `src/presentation/battle-ranking.ts`，不算任何规则。
+- 本局累计：同一面板的"本局累计"页签按 阵营 + `definitionId` + 星级 把本局每一场（每回合一场，客户端内存里已收到的回放）逐场相加，并给出出场场数；之后出售或被淘汰的单位保留记录。断线重连或刷新页面后，只累计重连后收到的回放。
 - 经济提示：准备期倒计时条右侧显示 利息 / 连胜连败计数 / 上轮连胜败金币。金币、`streak`、上轮 `incomeBreakdown.streak` 均为私有席位视图已有字段；利息预估沿用 HUD"预计利息"已在用的规则只读选择器 `getInterestGold(gold)`。
+- "回看"按用户决定删除（云顶无此功能）。
 
 ### SR-G5-01 §14.2 `heal` 事件不带治疗来源（P3，可选）
 
