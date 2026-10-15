@@ -3,9 +3,9 @@ import { abilityDisplayName, abilityDisplayValues } from '../src/simulation/abil
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { getUnitStats } from '../src/simulation/unit-stats';
 import type { StarLevel } from '../src/simulation/unit-types';
-const original = 'irelia maddie darius lux zyra tristana urgot rell leona vander kogmaw scar ezreal loris nami corki garen zoe caitlyn'.split(' ');
+
 describe('SR-G2-01 base display', () => {
-  it.each(original)('%s resolves every original tooltip token at all three stars', id => {
+  it.each(Object.keys(S13_ABILITY_DATA).map(id=>id.replace(/-ability$/, '')).filter(id=>id!=='rumble'))('%s resolves every original tooltip token at all three stars', id => {
     for (const star of [1, 2, 3] as StarLevel[]) {
       const values = abilityDisplayValues(id, star);
       const template = S13_ABILITY_DATA[`${id}-ability`].description;

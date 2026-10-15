@@ -1,190 +1,632 @@
 {
-  "status": "candidate inventory; no new icons committed",
-  "sourceSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",
+  "patch": "14.24",
+  "command": "node scripts/fetch-s13-assets.cjs --g2-2",
+  "expected": 21,
+  "downloaded": 21,
   "assets": [
     {
-      "id": "camille",
+      "apiName": "TFT13_Akali",
       "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_camille/hud/tft13_camille_square.tft_set13.png",
-      "path": "public/assets/s13/champions/camille.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "vi",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vi/hud/tft13_vi_square.tft_set13.png",
-      "path": "public/assets/s13/champions/vi.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
       "id": "akali",
-      "kind": "champion",
+      "path": "assets/s13/champions/akali.png",
       "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_akali/hud/tft13_akali_square.tft_set13.png",
-      "path": "public/assets/s13/champions/akali.png",
-      "sha256": null,
-      "status": "not-downloaded"
+      "bytes": 26121,
+      "sha256": "2dfdef3f26ebeafa7e2029a937cf7570f5b075035572ef63d91f57099166b187"
     },
     {
-      "id": "sett",
+      "apiName": "TFT13_Ambessa",
       "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_sett/hud/tft13_sett_square.tft_set13.png",
-      "path": "public/assets/s13/champions/sett.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "draven",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_draven/hud/tft13_draven_square.tft_set13.png",
-      "path": "public/assets/s13/champions/draven.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "heimerdinger",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_heimerdinger/hud/tft13_heimerdinger_square.tft_set13.png",
-      "path": "public/assets/s13/champions/heimerdinger.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "jayce",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_jayce/hud/tft13_jayce_square.tft_set13.png",
-      "path": "public/assets/s13/champions/jayce.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "trundle",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_trundle/hud/tft13_trundle_square.tft_set13.png",
-      "path": "public/assets/s13/champions/trundle.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "ziggs",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ziggs/hud/tft13_ziggs_square.tft_set13.png",
-      "path": "public/assets/s13/champions/ziggs.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "steb",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_fish/hud/tft13_fish_square.tft_set13.png",
-      "path": "public/assets/s13/champions/steb.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "jinx",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_jinx/hud/tft13_jinx_square.tft_set13.png",
-      "path": "public/assets/s13/champions/jinx.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "vex",
-      "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vex/hud/tft13_vex_square.tft_set13.png",
-      "path": "public/assets/s13/champions/vex.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
       "id": "ambessa",
-      "kind": "champion",
+      "path": "assets/s13/champions/ambessa.png",
       "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ambessa/hud/tft13_ambessa_square.tft_set13.png",
-      "path": "public/assets/s13/champions/ambessa.png",
-      "sha256": null,
-      "status": "not-downloaded"
+      "bytes": 24606,
+      "sha256": "5c05edaf7349712bfc5b0a13b606a1f6e34b493ba90bd535559b9f9014fc72b1"
     },
     {
-      "id": "gangplank",
+      "apiName": "TFT13_Camille",
       "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_gangplank/hud/tft13_gangplank_square.tft_set13.png",
-      "path": "public/assets/s13/champions/gangplank.png",
-      "sha256": null,
-      "status": "not-downloaded"
+      "id": "camille",
+      "path": "assets/s13/champions/camille.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_camille/hud/tft13_camille_square.tft_set13.png",
+      "bytes": 21340,
+      "sha256": "dfc460d563038dace3b9f323c5f58f3b06c7892bf74f60904ce43401ea84d676"
     },
     {
-      "id": "twistedfate",
+      "apiName": "TFT13_Draven",
       "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_twistedfate/hud/tft13_twistedfate_square.tft_set13.png",
-      "path": "public/assets/s13/champions/twistedfate.png",
-      "sha256": null,
-      "status": "not-downloaded"
+      "id": "draven",
+      "path": "assets/s13/champions/draven.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_draven/hud/tft13_draven_square.tft_set13.png",
+      "bytes": 24937,
+      "sha256": "e11ec8527ace9df7550672c20f48c5b64d684011f391f40580ef31959885e202"
     },
     {
+      "apiName": "TFT13_Heimerdinger",
+      "kind": "champion",
+      "id": "heimerdinger",
+      "path": "assets/s13/champions/heimerdinger.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_heimerdinger/hud/tft13_heimerdinger_square.tft_set13.png",
+      "bytes": 25549,
+      "sha256": "b3c7bb5798d2ca950825af6c9c181b95bd7b6281b4127043ef16644096bfcdad"
+    },
+    {
+      "apiName": "TFT13_Jinx",
+      "kind": "champion",
+      "id": "jinx",
+      "path": "assets/s13/champions/jinx.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_jinx/hud/tft13_jinx_square.tft_set13.png",
+      "bytes": 22750,
+      "sha256": "3f3f8dae8ad3f68727f230ab563d6750495d86410d45316e5f884da80c6a2472"
+    },
+    {
+      "apiName": "TFT13_Mordekaiser",
+      "kind": "champion",
       "id": "mordekaiser",
-      "kind": "champion",
+      "path": "assets/s13/champions/mordekaiser.png",
       "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_mordekaiser/hud/tft13_mordekaiser_square.tft_set13.png",
-      "path": "public/assets/s13/champions/mordekaiser.png",
-      "sha256": null,
-      "status": "not-downloaded"
+      "bytes": 21362,
+      "sha256": "b662959f4da97d1b6b4c5e23d2641ec386efa14a39b9e593b58b8071479a6f20"
     },
     {
-      "id": "scrap",
-      "kind": "trait",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_6_scrap.png",
-      "path": "public/assets/s13/traits/scrap.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "emissary",
-      "kind": "trait",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_diplomat.tft_set13.png",
-      "path": "public/assets/s13/traits/emissary.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "conqueror",
-      "kind": "trait",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_conqueror.tft_set13.png",
-      "path": "public/assets/s13/traits/conqueror.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "academy",
-      "kind": "trait",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_academy.tft_set13.png",
-      "path": "public/assets/s13/traits/academy.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "rebel",
-      "kind": "trait",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_rebel.tft_set13.png",
-      "path": "public/assets/s13/traits/rebel.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "enforcer",
-      "kind": "trait",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_squad.tft_set13.png",
-      "path": "public/assets/s13/traits/enforcer.png",
-      "sha256": null,
-      "status": "not-downloaded"
-    },
-    {
-      "id": "swain",
+      "apiName": "TFT13_Morgana",
       "kind": "champion",
-      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_swain/hud/tft13_swain_square.tft_set13.png",
-      "path": "public/assets/s13/champions/swain.png",
-      "sha256": "5063dcf4aadbfe6c0b8f62048ee8239d6754f012b77599ad9edd8f7d229032fd",
-      "status": "existing"
+      "id": "morgana",
+      "path": "assets/s13/champions/morgana.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_morgana/hud/tft13_morgana_square.tft_set13.png",
+      "bytes": 23651,
+      "sha256": "85c8b4b4596cd076760c14fc55b11698e266107eb12b342524ec8852de4f5f54"
+    },
+    {
+      "apiName": "TFT13_Sett",
+      "kind": "champion",
+      "id": "sett",
+      "path": "assets/s13/champions/sett.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_sett/hud/tft13_sett_square.tft_set13.png",
+      "bytes": 27174,
+      "sha256": "0b8ea6f170035b9492d359b97f99a5c7fe68409156dd87625d1da37268214333"
+    },
+    {
+      "apiName": "TFT13_Fish",
+      "kind": "champion",
+      "id": "steb",
+      "path": "assets/s13/champions/steb.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_fish/hud/tft13_fish_square.tft_set13.png",
+      "bytes": 21929,
+      "sha256": "2b40c7c1ed9e1c60946d5bab3fadc6aadc5f9df7a26e3c5e21469aa66f21a0a2"
+    },
+    {
+      "apiName": "TFT13_Trundle",
+      "kind": "champion",
+      "id": "trundle",
+      "path": "assets/s13/champions/trundle.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_trundle/hud/tft13_trundle_square.tft_set13.png",
+      "bytes": 25482,
+      "sha256": "ec93ebe4c50c07780f6c715c51613813b716ce5aec0cb6f64d97019f6d2e91b7"
+    },
+    {
+      "apiName": "TFT13_TwistedFate",
+      "kind": "champion",
+      "id": "twistedfate",
+      "path": "assets/s13/champions/twistedfate.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_twistedfate/hud/tft13_twistedfate_square.tft_set13.png",
+      "bytes": 23329,
+      "sha256": "b6b53a8de091177203e80983b49b821397b4ac2ddb0e510c0f928691cdaab11c"
+    },
+    {
+      "apiName": "TFT13_Vex",
+      "kind": "champion",
+      "id": "vex",
+      "path": "assets/s13/champions/vex.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vex/hud/tft13_vex_square.tft_set13.png",
+      "bytes": 26870,
+      "sha256": "3c36b8ee4d1c229aabc821e468f6737916fd4d8cacafd4f93d6e21e6a0988c82"
+    },
+    {
+      "apiName": "TFT13_Vi",
+      "kind": "champion",
+      "id": "vi",
+      "path": "assets/s13/champions/vi.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vi/hud/tft13_vi_square.tft_set13.png",
+      "bytes": 19847,
+      "sha256": "a5b091ae9fd6de1cc675d38d0c7f94934f146cff3d24cfe2eb88d0b756fecfe1"
+    },
+    {
+      "apiName": "TFT13_Ziggs",
+      "kind": "champion",
+      "id": "ziggs",
+      "path": "assets/s13/champions/ziggs.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ziggs/hud/tft13_ziggs_square.tft_set13.png",
+      "bytes": 24809,
+      "sha256": "a4cf9379b417a19a15f1ec0b52b9986cb46505fe2b1d2bf4522e414586bb83b1"
+    },
+    {
+      "apiName": "TFT13_Scrap",
+      "kind": "trait",
+      "id": "scrap",
+      "path": "assets/s13/traits/scrap.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_6_scrap.png",
+      "bytes": 356,
+      "sha256": "d0213e423e395f7f94b992bc8d5aeb1b0af5a75b96a04074d11eb00a2f3e7d34"
+    },
+    {
+      "apiName": "TFT13_Ambassador",
+      "kind": "trait",
+      "id": "emissary",
+      "path": "assets/s13/traits/emissary.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_diplomat.tft_set13.png",
+      "bytes": 510,
+      "sha256": "2e806b322d70fe5fef1e3cd4c5845c660840ae7ad22e72a9c69f89ef32ab72fa"
+    },
+    {
+      "apiName": "TFT13_Warband",
+      "kind": "trait",
+      "id": "conqueror",
+      "path": "assets/s13/traits/conqueror.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_conqueror.tft_set13.png",
+      "bytes": 399,
+      "sha256": "f03333b0e8a8f201f1cad4ffc34b7c23edc8ce198c857bc233de48644f1bccd3"
+    },
+    {
+      "apiName": "TFT13_Academy",
+      "kind": "trait",
+      "id": "academy",
+      "path": "assets/s13/traits/academy.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_academy.tft_set13.png",
+      "bytes": 511,
+      "sha256": "5d5c24d41ff36d398b41f54aa61bae815864ea77d231ae2a695868086c77faee"
+    },
+    {
+      "apiName": "TFT13_Rebel",
+      "kind": "trait",
+      "id": "rebel",
+      "path": "assets/s13/traits/rebel.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_rebel.tft_set13.png",
+      "bytes": 605,
+      "sha256": "5eb7385eb7da8bef4316ce86e80280759d49e422a6a307d550722ad5fa7b5876"
+    },
+    {
+      "apiName": "TFT13_Squad",
+      "kind": "trait",
+      "id": "enforcer",
+      "path": "assets/s13/traits/enforcer.png",
+      "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_squad.tft_set13.png",
+      "bytes": 552,
+      "sha256": "495f15588c9ed6e3b28cbe92616058ebe2547da2a687145142cd863c6e45e1da"
     }
-  ]
+  ],
+  "failures": [],
+  "inventoryCommand": "node scripts/audit-g2-2-assets.cjs --check",
+  "existingAssets": [
+    {
+      "path": "public/assets/s13/champions/amumu.png",
+      "bytes": 24239,
+      "sha256": "e522d6609963e032df730a6e0f1f21e230b5f8b408e6c2ba12a40dd71ad2f0ff"
+    },
+    {
+      "path": "public/assets/s13/champions/blitzcrank.png",
+      "bytes": 20549,
+      "sha256": "f22323f4dbe184c0fd9fd96d16fdc5f09badb42fba040c708812b60519faf2c9"
+    },
+    {
+      "path": "public/assets/s13/champions/caitlyn.png",
+      "bytes": 21661,
+      "sha256": "abfa09b160aeee6295bf5f42901eea37c1d7209fb95b8f0a6649878239b86b73"
+    },
+    {
+      "path": "public/assets/s13/champions/corki.png",
+      "bytes": 26016,
+      "sha256": "2de6c4044c928f3f206c4a99d40d29c7e15c0947ea1d4fbd4f5b815fb848fff6"
+    },
+    {
+      "path": "public/assets/s13/champions/darius.png",
+      "bytes": 24352,
+      "sha256": "8f144afc7dfa08aaa7c275ecb545ffcbd9d160135a88441f9aface6085bdbfbe"
+    },
+    {
+      "path": "public/assets/s13/champions/ekko.png",
+      "bytes": 27003,
+      "sha256": "45da45bfc46c5fb7b0a4af38f7aa8eda22d9d0a2d84a6edf0b2260a9e2ca2041"
+    },
+    {
+      "path": "public/assets/s13/champions/ezreal.png",
+      "bytes": 24696,
+      "sha256": "8a6785eb80058498c425d9174b73d4110b6e0e61a8d0f7d5f404316e8f206c4e"
+    },
+    {
+      "path": "public/assets/s13/champions/garen.png",
+      "bytes": 24472,
+      "sha256": "b37f8ae796304cbda1a47b76772f7b44e4c6aa19849c483bf0c025f33b407e08"
+    },
+    {
+      "path": "public/assets/s13/champions/illaoi.png",
+      "bytes": 24491,
+      "sha256": "fc8e30f2cead9bf84722faf544371785a056bad902f566f943a1587d6dbbe4bc"
+    },
+    {
+      "path": "public/assets/s13/champions/irelia.png",
+      "bytes": 25944,
+      "sha256": "dbb4536e2116e1f72e2f241eaa30efd2a59d323a7f6144606077488dbdcb35ad"
+    },
+    {
+      "path": "public/assets/s13/champions/kogmaw.png",
+      "bytes": 24684,
+      "sha256": "54632ba89e0e035ed5f785caca0dd04ea026390fa29906f9adbd4493562d01aa"
+    },
+    {
+      "path": "public/assets/s13/champions/leblanc.png",
+      "bytes": 24580,
+      "sha256": "eb580f5044e1be5aa17d6cb1f7d4e46f2a0e860b5c1ef479411a86f1e6029527"
+    },
+    {
+      "path": "public/assets/s13/champions/leona.png",
+      "bytes": 25870,
+      "sha256": "6189d496987a51288e405f33ecb279e9deb7576583fd550b6fd38443919ac84f"
+    },
+    {
+      "path": "public/assets/s13/champions/loris.png",
+      "bytes": 23426,
+      "sha256": "f4c8ed57183ae04025be3be2533738931014db92b5b6b5b6ccb81ae9664c9c66"
+    },
+    {
+      "path": "public/assets/s13/champions/lux.png",
+      "bytes": 23020,
+      "sha256": "7434af8b6ce7fada72b620adab3c8b0a92eb5638fb6d97edd884ec4a83f483ba"
+    },
+    {
+      "path": "public/assets/s13/champions/maddie.png",
+      "bytes": 22360,
+      "sha256": "7bf031a32a73be2189d2de5a220a542c1dd04c89f30c3fa40d194cb676dcfdc8"
+    },
+    {
+      "path": "public/assets/s13/champions/malzahar.png",
+      "bytes": 19021,
+      "sha256": "3fb0e71c02ab9d30462da14fc102742b239bc3c54ec9e46c517f0925e2f6b1c2"
+    },
+    {
+      "path": "public/assets/s13/champions/nami.png",
+      "bytes": 25758,
+      "sha256": "3369e7d376b32a8ca5f73bc699ecffd1f1fc7aa0de32998113bd0051c4af11a8"
+    },
+    {
+      "path": "public/assets/s13/champions/nocturne.png",
+      "bytes": 23732,
+      "sha256": "ddd2152e2e61a80af3268ae91ec4e8a1d9c3260351b1bf7122bdf6a7cd5b7148"
+    },
+    {
+      "path": "public/assets/s13/champions/powder.png",
+      "bytes": 22570,
+      "sha256": "be69ac1341cd19106b8fe4d0eceefcbc39343fa510c80fa5d6acdcf448a2b424"
+    },
+    {
+      "path": "public/assets/s13/champions/rell.png",
+      "bytes": 25980,
+      "sha256": "039d1f8e3a7e9bfaaa5436771e3df351f9a3412a25b078016bbd26c722df4a9d"
+    },
+    {
+      "path": "public/assets/s13/champions/rumble.png",
+      "bytes": 23715,
+      "sha256": "ec6ad15046994cae83d53c79995d493dd0d888b81ea80e51779aae2d53461aad"
+    },
+    {
+      "path": "public/assets/s13/champions/scar.png",
+      "bytes": 22579,
+      "sha256": "d0d938a69eed87201de60b4bb4c5877d3d2cb9cda50f1f4e883269cb5ca73d75"
+    },
+    {
+      "path": "public/assets/s13/champions/singed.png",
+      "bytes": 23500,
+      "sha256": "18a0592df0ab41d8f61181dee76ccf95b8dcc5191c88dfd5ac6410b05039a76b"
+    },
+    {
+      "path": "public/assets/s13/champions/swain.png",
+      "bytes": 19106,
+      "sha256": "5063dcf4aadbfe6c0b8f62048ee8239d6754f012b77599ad9edd8f7d229032fd"
+    },
+    {
+      "path": "public/assets/s13/champions/tristana.png",
+      "bytes": 24485,
+      "sha256": "8711e710b1efec94a880dec1f3f7e7cd8c7bedb829cdec46c108d18cc6a0e20e"
+    },
+    {
+      "path": "public/assets/s13/champions/twitch.png",
+      "bytes": 23714,
+      "sha256": "6a5d17b526483c5716973ab17264713613542ed6606f6c476de977c4280f9952"
+    },
+    {
+      "path": "public/assets/s13/champions/urgot.png",
+      "bytes": 23776,
+      "sha256": "0d072a1227887f114e68ebac15297d1c669897d8dc62e8021e8a020413e601f9"
+    },
+    {
+      "path": "public/assets/s13/champions/vander.png",
+      "bytes": 20403,
+      "sha256": "4cd4547fc863b1f481bdb936f019a1c18072bff4c5140d44c3e77c9f25a0682a"
+    },
+    {
+      "path": "public/assets/s13/champions/violet.png",
+      "bytes": 22833,
+      "sha256": "7a9ab9b06efaa37512a0b93e628f00b4f77d60610c93568a77ae88bfc1cd47bf"
+    },
+    {
+      "path": "public/assets/s13/champions/vladimir.png",
+      "bytes": 22656,
+      "sha256": "374bc22a7b36710bdbda9bc907623013386d13bd2aee41d07e1aef621e39403e"
+    },
+    {
+      "path": "public/assets/s13/champions/zeri.png",
+      "bytes": 24782,
+      "sha256": "749f2e6a80e22d7668f061ec01d538d123001fc24e66a75b7a823ba7b6d2642f"
+    },
+    {
+      "path": "public/assets/s13/champions/zoe.png",
+      "bytes": 22202,
+      "sha256": "99948fa86ba326fb264303139e2e8f221dc7d764bde37978c31c016b2aa5213e"
+    },
+    {
+      "path": "public/assets/s13/champions/zyra.png",
+      "bytes": 23277,
+      "sha256": "2d2729f7d10edadfbc84b60750025c836c00a3f04c4b26a3ca8d81d85738c037"
+    },
+    {
+      "path": "public/assets/s13/items/adaptive-helm.png",
+      "bytes": 21871,
+      "sha256": "ce63536225157dacffe7e81f7759f38c47dbe88f950cfd6b7750a1c03e511ef2"
+    },
+    {
+      "path": "public/assets/s13/items/archangel.png",
+      "bytes": 19362,
+      "sha256": "36cef8f64c1e169bd512461db1fb41fb269f8853da9b4d2cf1fb60638c1be32d"
+    },
+    {
+      "path": "public/assets/s13/items/belt.png",
+      "bytes": 18233,
+      "sha256": "8b921cd3fe04f5e526096a0701f40fe71a1a7d1ca36e8157a997023f6400e7a9"
+    },
+    {
+      "path": "public/assets/s13/items/bloodthirster.png",
+      "bytes": 20645,
+      "sha256": "bd981da4e3d5dd64680d7f1470a424f0528580a4db7d0c08183df39b9c442176"
+    },
+    {
+      "path": "public/assets/s13/items/blue-buff.png",
+      "bytes": 18397,
+      "sha256": "dd5f2ae7085a06695b14614da7ff6315f4a07a40b7684e6b9aa977bc8bc0529a"
+    },
+    {
+      "path": "public/assets/s13/items/bow.png",
+      "bytes": 16982,
+      "sha256": "847ab5d93b186ee656ca48669fecd0c289a631a3c8a5b3175e5595f317dea3b2"
+    },
+    {
+      "path": "public/assets/s13/items/bramble-vest.png",
+      "bytes": 22567,
+      "sha256": "a3648ee759d8c8d545ce2dee38537fef98141ad69edb3b251653de82cc065c7d"
+    },
+    {
+      "path": "public/assets/s13/items/cloak.png",
+      "bytes": 21315,
+      "sha256": "21ae8f1d8b45baf30e068d408b52e268e7a180e1f517bd30001731cd734fd94b"
+    },
+    {
+      "path": "public/assets/s13/items/crownguard.png",
+      "bytes": 19714,
+      "sha256": "bb8f434619b26094bcde1f6648e64b881c47c8cf2ac8bf2d618c70cea2cfc400"
+    },
+    {
+      "path": "public/assets/s13/items/deathblade.png",
+      "bytes": 18508,
+      "sha256": "b1b8d4503da7ae0797c4a8e28577ca36c34437d1791b1040470ae1a1cb007018"
+    },
+    {
+      "path": "public/assets/s13/items/deathcap.png",
+      "bytes": 22158,
+      "sha256": "d6843a1b08168988f53bbc6a11919ee461ea25649649334ae8cb657dce85d142"
+    },
+    {
+      "path": "public/assets/s13/items/dragons-claw.png",
+      "bytes": 19316,
+      "sha256": "b60a7144c4789f400840c8d9aac55c1e43394beb0960b94a393b1cc3c488d341"
+    },
+    {
+      "path": "public/assets/s13/items/edge-of-night.png",
+      "bytes": 21807,
+      "sha256": "e29f76aef690dacb6ff85c8d171cd279c411619deae8e0014f94ee7e05a3d875"
+    },
+    {
+      "path": "public/assets/s13/items/evenshroud.png",
+      "bytes": 19739,
+      "sha256": "aeecbc20ff5b3a04523470c5153d14cda8eb7a72fadddbe1424ddf9c204f030b"
+    },
+    {
+      "path": "public/assets/s13/items/gargoyle.png",
+      "bytes": 20423,
+      "sha256": "e0415c612ec42909e6138f651f4a99290008bff6706d89d4c61384e4db6dd624"
+    },
+    {
+      "path": "public/assets/s13/items/giant-slayer.png",
+      "bytes": 20659,
+      "sha256": "87265986adc457cf1950ead5a2c4a0c87e1bdb650b44e98a8f464325971712c0"
+    },
+    {
+      "path": "public/assets/s13/items/gloves.png",
+      "bytes": 16547,
+      "sha256": "f53c57bb57a26c1b692991a33cc162e67e21107a7dbdde96df3622d47baf0cf6"
+    },
+    {
+      "path": "public/assets/s13/items/guardbreaker.png",
+      "bytes": 23984,
+      "sha256": "fbdc72a1f64e2a9e3b80fc99170f160c728eecd175498885241550c6efaf820d"
+    },
+    {
+      "path": "public/assets/s13/items/gunblade.png",
+      "bytes": 23051,
+      "sha256": "d824cb0a7eae2142a6c06ffeb9572302ffd4042d6e0bde2c8b1caf1fa22e752d"
+    },
+    {
+      "path": "public/assets/s13/items/hand-of-justice.png",
+      "bytes": 19461,
+      "sha256": "024e050ff175720dc82426755ae11ff84946e9021c7ac0a2c0daf2447b255bdd"
+    },
+    {
+      "path": "public/assets/s13/items/infinity-edge.png",
+      "bytes": 21363,
+      "sha256": "1acbfa52c460f7daffb92f9741ce40867575245c7614cedf86a2a9ed6e706209"
+    },
+    {
+      "path": "public/assets/s13/items/ionic-spark.png",
+      "bytes": 20731,
+      "sha256": "2dbb46ae012a6b4107b1fc4fd5fb67540f04df4eef3eb76ae397ba6ef3be62dd"
+    },
+    {
+      "path": "public/assets/s13/items/jeweled-gauntlet.png",
+      "bytes": 19308,
+      "sha256": "8ae75745fab00ff2d66daa9a8e2250e061348f81d106949162030bd36fcab4b1"
+    },
+    {
+      "path": "public/assets/s13/items/last-whisper.png",
+      "bytes": 17632,
+      "sha256": "393f340ff4cca9ab9372d9ee97801db4b403d658b54792132bbe46a264117940"
+    },
+    {
+      "path": "public/assets/s13/items/morellonomicon.png",
+      "bytes": 23643,
+      "sha256": "93803dd78c1e30b7cdc8c81461444fe038ec0b66eaae8b1a0b801b8a076b2dec"
+    },
+    {
+      "path": "public/assets/s13/items/nashors-tooth.png",
+      "bytes": 21685,
+      "sha256": "47a6fa2b8f01b410bfec372d09079842662668b3b50e27d9e7b2ae5e753e2979"
+    },
+    {
+      "path": "public/assets/s13/items/protectors-vow.png",
+      "bytes": 21312,
+      "sha256": "34234953bdf35471464651cd308028176afa9c3d07d5b8dec8caeefbac46ab63"
+    },
+    {
+      "path": "public/assets/s13/items/quicksilver.png",
+      "bytes": 19853,
+      "sha256": "e2a84eeb698a219c2e147089482447e8db5a8fb0f41e5ab325fcc9a464f9a221"
+    },
+    {
+      "path": "public/assets/s13/items/rageblade.png",
+      "bytes": 19689,
+      "sha256": "771624630c945e068e12aa090c8b8479b893c0d459353009710cb65a780d99cc"
+    },
+    {
+      "path": "public/assets/s13/items/red-buff.png",
+      "bytes": 17186,
+      "sha256": "f227d31817b2b8537291fa66ac476fc26ec2777c46785b1a9cade5e5b88e486c"
+    },
+    {
+      "path": "public/assets/s13/items/redemption.png",
+      "bytes": 22343,
+      "sha256": "5f4176b36d2b394a35fd473c2e7e5aa319b26484d7ec3ff1651432f27cdfece6"
+    },
+    {
+      "path": "public/assets/s13/items/rod.png",
+      "bytes": 22182,
+      "sha256": "7ea14e098939ef5fa9a0e60c30485f83c258e3f91cd9a4ad45137224af483364"
+    },
+    {
+      "path": "public/assets/s13/items/runaans-hurricane.png",
+      "bytes": 20667,
+      "sha256": "e0d8c9c64376ed81462133d1eea393008092aaa956d397e23327bb76b824f561"
+    },
+    {
+      "path": "public/assets/s13/items/shojin.png",
+      "bytes": 19586,
+      "sha256": "c309fbf39033b53d718d0052178d3e2c8613791083e6502e3d70290c0b782bd8"
+    },
+    {
+      "path": "public/assets/s13/items/statikk-shiv.png",
+      "bytes": 23744,
+      "sha256": "8524aa048221164f641f2405221e9a482e431a691edb118524d0000160eff409"
+    },
+    {
+      "path": "public/assets/s13/items/steadfast-heart.png",
+      "bytes": 25569,
+      "sha256": "f099d884945d3fe7a82cf2cc6218263b4cdc7ac6aa403056daa87d821ee82a1a"
+    },
+    {
+      "path": "public/assets/s13/items/steraks-gage.png",
+      "bytes": 24098,
+      "sha256": "7f9561ca17f47b2892fb3ed41213ead3951398fb9f54c05dfb6ac6167211aeb7"
+    },
+    {
+      "path": "public/assets/s13/items/sunfire-cape.png",
+      "bytes": 23033,
+      "sha256": "ab1fdc335700cf2b1a094a27f436062bd3faeec6918badea800c9916fbedc9ee"
+    },
+    {
+      "path": "public/assets/s13/items/sword.png",
+      "bytes": 18426,
+      "sha256": "b84723913cbeafed158b6bad6a370ca87d0147d3cbb07edeec5dc6080d7514ac"
+    },
+    {
+      "path": "public/assets/s13/items/tear.png",
+      "bytes": 15827,
+      "sha256": "088e955d26146772cd95273554bcbd58cee28ac6c50e044c574e4121725978f7"
+    },
+    {
+      "path": "public/assets/s13/items/thiefs-gloves.png",
+      "bytes": 18466,
+      "sha256": "181e9eeabef80f740a7d06d5e0d743fe20895244895672793ea11ccedb4a26fb"
+    },
+    {
+      "path": "public/assets/s13/items/titans-resolve.png",
+      "bytes": 23384,
+      "sha256": "b7304d528f5562bdabcc11071ad6d4b7d062cec5de6d3c00cc0e3c5f169a2881"
+    },
+    {
+      "path": "public/assets/s13/items/vest.png",
+      "bytes": 17561,
+      "sha256": "b98dd2e3e19c5c278c81ee6174c64d6bf7fc3106e334f5af94de780064a8bfce"
+    },
+    {
+      "path": "public/assets/s13/items/warmog.png",
+      "bytes": 25296,
+      "sha256": "0131e1ac31099ddf776bb4dd02ac7cf04050f520849cd88fab7e8a9dd9f77b38"
+    },
+    {
+      "path": "public/assets/s13/traits/TFT13_Martialist.png",
+      "bytes": 368,
+      "sha256": "744a020922253695aeb2436e6679c6f95a3f68b88ffc7855e4082947491510d7"
+    },
+    {
+      "path": "public/assets/s13/traits/TFT13_Sniper.png",
+      "bytes": 637,
+      "sha256": "defb5ffd06359fcc672ebf0085b37f90e4de81a500260dd6e14cba2c0266caea"
+    },
+    {
+      "path": "public/assets/s13/traits/TFT13_Sorcerer.png",
+      "bytes": 524,
+      "sha256": "dcc69e29f96b8e197eefb2de26015fbf259c6d14652a6693e87b362b16d899c9"
+    },
+    {
+      "path": "public/assets/s13/traits/TFT13_Titan.png",
+      "bytes": 448,
+      "sha256": "940e0a1b85120eb27254e652f7072569a1dcdbfbb4dc7f89ba41a725b1cde7bc"
+    },
+    {
+      "path": "public/assets/s13/traits/TFT13_Watcher.png",
+      "bytes": 370,
+      "sha256": "9b8eee935673fc971e5fba18516191481bddf14be0d161b2b8fd1fb6be6cff6b"
+    },
+    {
+      "path": "public/assets/s13/traits/automata.png",
+      "bytes": 514,
+      "sha256": "fe82a93b4c769ac9990d1d5d4a83af6aec6a1558df7d65565c3d96fbabedfd79"
+    },
+    {
+      "path": "public/assets/s13/traits/family.png",
+      "bytes": 539,
+      "sha256": "20b447102d8fc38ef7650c9a6f3fdeca5f1a189e973f333935ee80345ae5673a"
+    },
+    {
+      "path": "public/assets/s13/traits/firelight.png",
+      "bytes": 448,
+      "sha256": "b10a395c554cfd369722fe857ccab8271a9d68fea24127ed0ffc903a584a33ea"
+    }
+  ],
+  "note": "21 G2-2 targets fetched by coordinator on 2026-10-15 (network allowed); existingAssets inventory carried over from the Codex audit."
 }

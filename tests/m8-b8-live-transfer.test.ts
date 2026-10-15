@@ -4,7 +4,7 @@ import type { MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, transferPreparation, players, plan } from './fixtures/t13-loot-public';
-const SURVIVOR='unit-16',DONOR='unit-10',REWARD='unit-29',TG='item-9';
+const SURVIVOR='unit-9',DONOR='unit-7',REWARD='unit-28',TG='item-9';
 const prepared=await transferPreparation();
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
 const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-6',SURVIVOR,0)));
@@ -17,8 +17,8 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   expect(prepared.items.find(i=>i.id===TG)).toEqual({id:TG,definitionId:'thiefs-gloves',location:{kind:'unit',unitId:DONOR,slot:0}});
   expect(prepared.anomalyBinding).toEqual({definitionId:'mage-armor',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
   expect(prepared.equipmentState.rolls).toHaveLength(10);
-  expect(prepared.resourceProvenance.entries).toHaveLength(71);
-  expect(prepared.nextUnitSerial).toBe(29);
+  expect(prepared.resourceProvenance.entries).toHaveLength(70);
+  expect(prepared.nextUnitSerial).toBe(28);
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'cloak',quantity:1},{kind:'item',definitionId:'rod',quantity:1},{kind:'gold',quantity:4},{kind:'unit',definitionId:'ezreal',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
  });
  it.each(scenarios)('$name: preserves original Combat and atomically migrates the current projection',({live,returned})=>{
@@ -29,7 +29,7 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   expect(ended.combat!.strategy).not.toEqual(buildStrategySnapshot(ended));
   expect(ended.combat!.units.filter(u=>[SURVIVOR,DONOR].includes(u.id)).map(u=>u.starLevel)).toEqual([1,1]);
   expect(ended.combat!.units.some(u=>u.id===REWARD)).toBe(false);
-  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:SURVIVOR,consumedIds:[DONOR,REWARD],fromStar:1,toStar:2})]);
+  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:SURVIVOR,consumedIds:[REWARD,DONOR],fromStar:1,toStar:2})]);
   expect(ended.items.find(i=>i.id===TG)!.location).toEqual(returned?{kind:'inventory'}:{kind:'unit',unitId:SURVIVOR,slot:0});
   expect(ended.anomalyBinding).toEqual({...prepared.anomalyBinding,unitId:SURVIVOR});
   expect(ended.temporaryEquipment).toEqual(returned?[]:prepared.temporaryEquipment.map(c=>({...c,holderId:SURVIVOR})));
@@ -40,7 +40,7 @@ describe('B8 live randomized reward upgrade with equipment, anomaly and G12 tran
   const receipt=ended.m8.loot.receipts.find(r=>r.grantedUnitIds.includes(REWARD))!;
   const birth=ended.resourceProvenance.entries.find(e=>e.kind==='unit-acquired'&&e.unitId===REWARD)!;
   expect(birth).toMatchObject({source:{kind:'loot',receiptId:receipt.receiptId}});
-  const upgrade=ended.resourceProvenance.entries.find(e=>e.kind==='unit-upgraded'&&e.roundId==='4-7')!;
+  const upgrade=ended.resourceProvenance.entries.find(e=>e.kind==='unit-upgraded'&&e.event.consumedIds.includes(REWARD))!;
   expect(upgrade).toMatchObject({sequence:birth.sequence+1,acquisitionSequence:birth.sequence});
  });
  it.each(scenarios)('$name: restores every boundary and compares full resumed state/events through Continue',({live,returned})=>{
@@ -100,7 +100,7 @@ const corruptions: readonly [string, (state: MutableMatch) => void, string][] = 
     state.m8.loot.receipts.find(receipt => receipt.grantedUnitIds.includes(REWARD))!.grantedUnitIds = [SURVIVOR];
   }, 'Invalid resource provenance: receipt birth binding'],
   ['neutral death identity rewritten', state => { state.combat!.neutralReceipts!.deaths[0].eventSeq++; },
-    'Invalid Match save: neutral death event identity'],
+    'Invalid Match save: neutral receipt event'],
 ];
 describe('B8 strict live transfer corruption boundaries', () => {
   it.each(corruptions)('rejects %s without changing the live route', (_label, change, message) => {

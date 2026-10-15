@@ -914,3 +914,11 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 ### 说明（无需动作）
 
 - `releaseCarouselParticipant` 已绑定但房间当前没有调用点：淘汰只在战斗结算提交时发生，而选秀阶段只在回合进入时开、截止+2 秒后关，二者不重叠；盘关闭后的淘汰沿用 `releaseSeatOnElimination`（八席整局单测与 e2e 跑到终局无守恒错误）。若规则侧认为关闭后的盘仍需经它释放，请在合同写明。
+
+### SR-G2-01 G2-2 完整回应
+
+`S13_ABILITY_DATA[abilityId].name` 已有锁定源英文技能名；`src/simulation/ability-display.ts` 的 `abilityDisplayName(definitionId)` 与 `abilityDisplayValues(definitionId, starLevel, stats?)` 均为纯函数。默认基础星级AD、100AP，返回冻结的数值键映射；支持48名英雄，47名全模板三档星级覆盖，Rumble唯一升级字符串分支由界面隐藏未启用项。完整签名/失败语义见 MATCH_CONTRACT 的 SR-G2-01 节。6新增阵营和15英雄的源名/数值已供内容选择器读取；新增英雄视觉身份与六阵营已开放标签映射请界面负责人接入。图标下载受环境代理403阻断，见 evidence/g2-2/assets-manifest.json。
+
+### G2-2 联机外交官胜场历史缺口（有限实现清单）
+
+规则编译器可读 `CombatStrategyInputs.roundResults` 中此前 PvP 胜场，用于 Ambessa 外交官双抗；当前联机冻结输入没有这段历史，因此该项按 0 处理。后续服务器应在冻结战斗输入时提供经过权威账本验证的胜场历史（双方分别绑定），不能由客户端推算。当前有限版本不阻塞；更改须补联机数值与冻结/恢复测试。完整近似清单见 `evidence/g2-2/RECONCILIATION.md`。

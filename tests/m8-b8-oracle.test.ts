@@ -72,12 +72,12 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     const transition = timeline.find(t => t.after.roundDefinitionId==='3-7' && t.events.some(e => e.type === 'unitUpgraded'))!;
     expect(transition).toBeDefined();
     const receipt = transition.after.m8.loot.receipts.find(r => r.payload.kind === 'unit' && r.payload.definitionId === 'tristana')!;
-    expect(receipt.grantedUnitIds).toEqual(['unit-27']);
-    expect(transition.after.preparation.units.some(u => u.id === 'unit-27')).toBe(false);
-    expect(transition.after.preparation.units.find(u => u.id === 'unit-5')?.starLevel).toBe(2);
+    expect(receipt.grantedUnitIds).toEqual(['unit-25']);
+    expect(transition.after.preparation.units.some(u => u.id === 'unit-25')).toBe(false);
+    expect(transition.after.preparation.units.find(u => u.id === 'unit-14')?.starLevel).toBe(2);
     expect(prefixLedger().cards).toBe(transition.after.preparation.units.filter(u=>u.team==='player').reduce((n,u)=>n+3**(u.starLevel-1),0));
     const invalid = copy(transition.after);
-    invalid.m8.loot.receipts.find(r=>r.grantedUnitIds.includes('unit-27'))!.grantedUnitIds = ['unit-5'];
+    invalid.m8.loot.receipts.find(r=>r.grantedUnitIds.includes('unit-25'))!.grantedUnitIds = ['unit-14'];
     const events = copy(transition.events);
     events.filter(e=>e.type==='lootGranted').find(e=>e.receipt.payload.kind==='unit')!.receipt = invalid.m8.loot.receipts.find(r=>r.payload.kind==='unit'&&r.payload.definitionId==='tristana')!;
     expect(() => prefixLedger(timeline.indexOf(transition)).apply(transition.before, invalid, transition.command, events)).toThrow('true loot candidate serial');

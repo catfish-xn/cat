@@ -6,13 +6,14 @@ import { THEME, costColor } from '../src/presentation/theme';
 import { heroPortraitHtml, s13AssetUrl } from '../src/presentation/s13-assets';
 import { S13_ASSETS } from '../src/presentation/s13-asset-manifest';
 
-const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => !definition.id.startsWith('neutral'));
+// Presentation ownership remains Claude's: preserve the 33 authored styles and test fallback for the new content.
+const heroes = Object.values(M5_UNIT_DEFINITIONS).filter(definition => Object.hasOwn(HERO_STYLE, definition.id));
 const rgb = (hex: string) => [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16));
 const lum = (hex: string) => { const [r, g, b] = rgb(hex).map(v => v / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
 const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 
 describe('M7 hero identity (G01)', () => {
-  it('covers exactly the 33 purchasable S13 heroes', () => {
+  it('preserves the 33 authored presentation styles', () => {
     expect(heroes).toHaveLength(33);
     expect(Object.keys(HERO_STYLE).sort()).toEqual(heroes.map(hero => hero.id).sort());
   });
@@ -50,11 +51,11 @@ describe('M7 hero identity (G01)', () => {
       expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
       const open = heroTraitLabels(hero.id).filter(label => label.open).map(label => label.name);
-      expect(open.sort()).toEqual(hero.traits.map(id => ({sentinel:'哨兵',artillerist:'炮手',sniper:'狙神',watcher:'监察',sorcerer:'法师',automata:'海克斯机械',family:'家人',firelight:'野火帮'}[id])).sort());
+      expect(open.sort()).toEqual(hero.traits.filter(id => ['sentinel','artillerist','sniper','watcher','sorcerer','automata','family','firelight'].includes(id)).map(id => ({sentinel:'哨兵',artillerist:'炮手',sniper:'狙神',watcher:'监察',sorcerer:'法师',automata:'海克斯机械',family:'家人',firelight:'野火帮',rebel:'蓝发小队',academy:'皮城学院',enforcer:'执法官',conqueror:'征服者',scrap:'极客',emissary:'外交官'}[id])).sort());
     }
   });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
-    for (const hero of heroes) {
+    for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
       const bundled = S13_ASSETS.some(asset => asset.kind === 'champion' && asset.id === hero.id);
       expect(s13AssetUrl('champion', hero.id) !== null).toBe(bundled);
       const html = heroPortraitHtml(hero.id, 34, heroEmblemSvg(hero.id, 34));

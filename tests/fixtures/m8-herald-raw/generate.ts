@@ -2,7 +2,7 @@ import * as api from '../../../src/simulation/match';
 import { ITEM_DEFINITIONS } from '../../../src/simulation/content/items';
 
 /** Version the actual command recipe, independently of generated save bytes. */
-export const HERALD_RAW_GENERATION_VERSION = 't13-herald-public-commands-v2';
+export const HERALD_RAW_GENERATION_VERSION = 'g2-2-herald-public-commands-v3';
 export const HERALD_RAW_CASES = [
   { name: 'ionic-spark', definitions: ['ionic-spark'] },
   { name: 'evenshroud', definitions: ['evenshroud'] },
@@ -75,7 +75,7 @@ export function buildRawHeraldEquipment(initial: api.MatchState, definitions: re
       while (state.level < 8 && state.gold >= 4) state = accepted(commands.buyXp(state));
       for (const unit of state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench')) {
         if (state.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length >= state.level) break;
-        const free = [{ col: 3, row: 4 }, { col: 5, row: 4 }, { col: 0, row: 4 }, { col: 6, row: 4 }, { col: 3, row: 7 }]
+        const free = [{ col: 3, row: 4 }, { col: 5, row: 4 }, { col: 0, row: 4 }, { col: 6, row: 4 }, { col: 3, row: 7 }, ...Array.from({length:28},(_,i)=>({col:i%7,row:4+Math.floor(i/7)}))]
           .find(cell => !state.preparation.units.some(u => u.location.kind === 'board' && u.location.cell.col === cell.col && u.location.cell.row === cell.row));
         if (!free) throw new Error('No public deployment cell');
         state = accepted(commands.deployMatchUnit(state, unit.id, { kind: 'board', cell: free }));

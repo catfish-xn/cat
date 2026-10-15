@@ -6,8 +6,8 @@
  RUN  v5.0.3 /workspace/cat
 
 
- Test Files  227 passed (227)
-      Tests  2845 passed (2845)
-   Start at  12:20:56
-   Duration  362.49s (tests 93%, import 6%, transform 1%)
+ Test Files  232 passed (232)
+      Tests  2930 passed (2930)
+   Start at  14:47:47
+   Duration  366.64s (tests 94%, import 5%, transform 1%)
 

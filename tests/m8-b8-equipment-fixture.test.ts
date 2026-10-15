@@ -11,7 +11,7 @@ describe('B8 public equipment fixture provenance', () => {
       ['1-2', 'playerWin'], ['1-3', 'playerWin'], ['1-4', 'playerWin'],
     ]);
     expect(state.preparation.units.filter(unit => ['unit-1','unit-2','unit-3'].includes(unit.id)).map(unit => [unit.id, unit.definitionId, unit.starLevel])).toEqual([
-      ['unit-1', 'irelia', 1], ['unit-2', 'maddie', 1], ['unit-3', 'lux', 1],
+      ['unit-1', 'irelia', 1], ['unit-2', 'maddie', 2], ['unit-3', 'lux', 1],
     ]);
     expect(state.resourceProvenance.entries.filter(entry => entry.kind === 'unit-acquired').filter(entry => ['unit-1','unit-2','unit-3'].includes(entry.unitId)).map(entry => [entry.roundId, entry.unitId, entry.source.kind])).toEqual([
       ['1-2', 'unit-1', 'opening'], ['1-2', 'unit-2', 'loot'], ['1-3', 'unit-3', 'loot'],
@@ -51,7 +51,7 @@ describe('B8 public equipment fixture provenance', () => {
     ]);
     expect(state.items.map(item => [item.id, item.definitionId])).toEqual([['item-2','rod'],['item-3','gloves'],['item-5','bow'],['item-8','bloodthirster'],['item-9','bloodthirster']]);
     expect(state.augments.map(augment => augment.definitionId)).toEqual(['investment-strategy-i','bulky-buddies-i']);
-    expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 716]]);
+    expect(state.combat!.units.filter(unit => unit.team === 'player').map(unit => [unit.id, unit.maxHp])).toEqual([['unit-1', 708]]);
     const restored = restoreMatch(serializeMatch(state));
     expect(restored).toEqual(state);
     expect(stepMatch(restored)).toEqual(stepMatch(state));

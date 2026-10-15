@@ -1,3 +1,4 @@
+import { COST } from './fixtures/m5/oracle.g2.cjs';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
@@ -65,8 +66,8 @@ beforeAll(async () => {
     for (let n = 0; n < 100; n++) { const r = api.rerollShop(s); if (!r.ok) { expect(r.state).toBe(s); break; } s = r.state; }
     for (let n = 0; n < 100; n++) { const r = api.buyXp(s); if (!r.ok) { expect(r.state).toBe(s); break; } s = r.state; }
     const slot = s.shop.slots.findIndex(o => o.status === 'available' &&
-      // Costs are independently fixed by the original S13 tier list.
-      (['darius','irelia','lux','maddie','zyra'].includes(o.definitionId) ? 1 : ['leona','rell','tristana','urgot','vander'].includes(o.definitionId) ? 2 : ['ezreal','kogmaw','loris','nami','scar'].includes(o.definitionId) ? 3 : o.definitionId === 'caitlyn' ? 5 : 4) <= s.gold);
+      // Frozen independent G2-2 catalog, including all new tiers.
+      COST[o.definitionId] <= s.gold);
     expect(slot).toBeGreaterThanOrEqual(0); expect(api.buyUnit(s, slot, s.shop.generation).ok).toBe(true);
   });
   it.each([0, 1, 42, 0xffffffff])('maps one complete random word at each draw and revisits all offers, seed %i', seed => {

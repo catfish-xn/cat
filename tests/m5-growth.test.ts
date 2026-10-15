@@ -2,7 +2,7 @@ import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch} from '../src/simulation/serialization';
 import {accepted,readyMatch} from './match-helpers';
-import {finishPublicEquipmentBattle,publicEquipmentPreparation} from './fixtures/b8-public-equipment';
+import {finishPublicEquipmentBattle,publicEquipmentPreparation,resolvePublicEquipmentChoices} from './fixtures/b8-public-equipment';
 import type {MatchState} from '../src/simulation/match-types';
 
 beforeAll(() => { publicEquipmentPreparation(['sword','rod','sword','sword']); });
@@ -29,12 +29,12 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
   expect(state.persistentGrowth).toEqual([{unitId:'unit-4',attackDamageBps:250},{unitId:'unit-5',attackDamageBps:375}]);
  });
  it('commits actual battle growth once and never regrants it on restore, duplicate step or Continue',()=>{
-  // Real public income reaches 3-7 (seed 21). Nine paid Tristana cards create the same
+  // Real public income reaches 4-2 (G2-2 seed 8). Nine paid Tristana cards create the same
   // three-star kill/growth control without relabelling the opening Irelia.
-  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:21});
-  // The preparation route benches its army. Pay HP for two real loss rounds;
+  let state=publicEquipmentPreparation(['sword','rod','sword','sword'],{seed:8});
+  // The preparation route benches its army. Pay HP for four real loss rounds;
   // their ordinary income/XP and free shop refreshes fund nine paid cards.
-  for(let round=0;round<2;round++)state=accepted(api.nextRound(finishPublicEquipmentBattle(state),state.round));
+  for(let round=0;round<4;round++)state=resolvePublicEquipmentChoices(accepted(api.nextRound(finishPublicEquipmentBattle(state),state.round)));
   // The random-loot acquisition route can leave a full reserve. Free it through
   // real sales before buying nine new Tristana cards; their lineage stays separate.
   for(const unit of state.preparation.units.filter(u=>u.team==='player'))
@@ -44,7 +44,7 @@ describe('permanent Tristana growth is a conserved Match resource',()=>{
    const slot=state.shop.slots.findIndex(offer=>offer.status==='available'&&offer.definitionId==='tristana');
    if(slot<0){expect(rolls++).toBeLessThan(100);state=accepted(api.rerollShop(state));continue;}
    state=accepted(api.buyUnit(state,slot,state.shop.generation));
-   if(bought++===0)state=accepted(api.deployMatchUnit(state,unitId,{kind:'board',cell:{col:3,row:7}}));
+   if(bought++===0)state=accepted(api.deployMatchUnit(state,unitId,{kind:'board',cell:{col:4,row:4}}));
   }
   for(const [slot,pair] of [['sword','rod'],['sword','sword']].entries()) {
    const a=state.items.find(item=>item.definitionId===pair[0])!;

@@ -67,13 +67,13 @@ it('has the real eight ordinary components and every one of their 36 unordered r
 
 it('freezes the expanded shop species count and bag capacity at every cost', () => {
   const pool = createSharedPool('g2-test', 42, {seatCount:8});
-  const counts = [9, 8, 6, 6, 4], capacities = [270, 200, 108, 60, 36];
+  const counts = [14, 12, 7, 9, 6], capacities = [420, 300, 126, 90, 54];
   for (const [n, cost] of ([1, 2, 3, 4, 5] as const).entries()) {
     expect(SHOP_CATALOG_BY_COST[cost]).toHaveLength(counts[n]);
     expect(SHOP_CATALOG_BY_COST[cost].reduce((sum, id) => sum + pool.initial[id], 0)).toBe(capacities[n]);
     for (const id of SHOP_CATALOG_BY_COST[cost]) expect(pool.initial[id]).toBe(POOL_CAPACITY_BY_COST[cost]);
   }
-  expect(Object.keys(pool.initial)).toHaveLength(33); expect(Object.values(pool.initial).reduce((s, n) => s + n)).toBe(674);
+  expect(Object.keys(pool.initial)).toHaveLength(48); expect(Object.values(pool.initial).reduce((s, n) => s + n)).toBe(990);
 });
 
 describe('G2 factions: source breakpoints and effective tiers', () => {

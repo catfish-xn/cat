@@ -1,8 +1,9 @@
+import { G22_ABILITIES, G22_ABILITY_NAMES } from './g2-2-abilities';
 import { G2_ABILITY_DATA } from './g2-abilities';
 import { freezeContent } from './freeze';
 /** Historical coefficients: three entries are 1/2/3-star. Ratios are fractions (1.25 = 125%); durations are seconds; amounts scale with AP/100 as described in source. Runtime must convert ratios to integer basis points before arithmetic. */
-export interface S13AbilityData { readonly id: string; readonly championId: string; readonly variables: Readonly<Record<string, readonly [number,number,number]>>; readonly description: string }
-export const S13_ABILITY_DATA: Readonly<Record<string,S13AbilityData>> = freezeContent({
+export interface S13AbilityData { readonly name: string; readonly id: string; readonly championId: string; readonly variables: Readonly<Record<string, readonly [number,number,number]>>; readonly description: string }
+const ORIGINAL_ABILITY_DATA: Readonly<Record<string,Omit<S13AbilityData, 'name'>>> = freezeContent({
   ...G2_ABILITY_DATA,
   "irelia-ability": {
     "id": "irelia-ability",
@@ -558,3 +559,5 @@ export const S13_ABILITY_DATA: Readonly<Record<string,S13AbilityData>> = freezeC
     "description": "Enter a sniper's stance and call in an airship that circles the battlefield for @RaidDuration@ seconds, dropping @TotalShots@ bombs at a random cluster of enemies over the duration. Bombs deal <physicalDamage>@TotalDamage@&nbsp;(%i:scaleAD%&nbsp;%i:scaleAP%)</physicalDamage> physical damage in a one-hex&nbsp;circle.<br><br>Whenever an enemy is caught in the epicenter of an Air Raid blast, reduce their Armor and Magic Resist by @ResistReduction@ and fire a shot towards them, dealing <physicalDamage>@HeadshotDamage@&nbsp;(%i:scaleAD%)</physicalDamage> physical&nbsp;damage."
   }
 });
+
+export const S13_ABILITY_DATA: Readonly<Record<string,S13AbilityData>> = freezeContent(Object.fromEntries(Object.entries({...ORIGINAL_ABILITY_DATA,...G22_ABILITIES}).map(([id,a])=>[id,{...a,name:G22_ABILITY_NAMES[id]}])));

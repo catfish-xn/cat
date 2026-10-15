@@ -304,6 +304,16 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   for (const field of ['attackCount','castCount','attackSpeedBps','abilityPowerFlat','rangeBonus','nextAttackMagic','nextAttackPhysical','permanentAdBps']) integer(unit.runtime[field as keyof typeof unit.runtime]);
   requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick && unit.runtime.permanentAdBps % 125 === 0, 'combat runtime');
   if (unit.definitionId !== 'tristana') requireValue(unit.runtime.permanentAdBps === 0, 'growth owner');
+  if (unit.g22 !== undefined) {
+    record(unit.g22); const g = unit.g22;
+    requireValue(typeof g.initialized === 'boolean' && typeof g.rebelTriggered === 'boolean', 'G22 flags');
+    for (const key of ['wantedDeaths','mordeUntilTick','reaveUntilTick','reaveBps','exposureFromTick','exposureUntilTick','exposureBps'] as const) integer(g[key]);
+    list(g.wanted);
+    requireValue(new Set(g.wanted).size === g.wanted.length && g.wanted.length <= mechanic(unit,'enforcer','wanted') && g.wanted.every(id => combatUnits.some(u=>u.id===id && u.team!==unit.team)), 'G22 wanted');
+    requireValue(g.wantedDeaths <= g.wanted.length && g.reaveBps <= 10000 && g.exposureBps <= 10000 && g.exposureFromTick <= tick+1 && g.exposureUntilTick <= tick+81 && g.reaveUntilTick <= tick+200 && g.mordeUntilTick <= tick+200, 'G22 bounds');
+    requireValue(champion(unit)==='mordekaiser' || g.mordeUntilTick===0, 'G22 empowered owner');
+    requireValue(!g.rebelTriggered || mechanic(unit,'rebel','thresholdBps')>0, 'G22 rebel owner');
+  }
   if (unit.expansion !== undefined) {
     record(unit.expansion);
     for (const field of ['damageDealt','damageTaken','crystals','crystalDamage','attacksRemaining','buffUntilTick','lastRetaliationTick','chainUntilTick','chainCastSeq','chainKills'] as const) {
@@ -392,14 +402,16 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse'].includes(task.kind), 'task kind');
     if (task.kind.startsWith('g2')) {
-      const expected = ({g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed'} as Record<string,string>)[task.kind];
+      const expected = ({g22Vex:'vex',g22Curse:'morgana',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && !task.cancellable, 'G2 task owner');
       if(expected) requireValue(champion(owner) === expected && task.source.sourceKind === 'ability' && task.source.definitionId === expected + '-ability', 'G2 skill task');
       if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
       if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');
     }
+    if (task.kind === 'g22Vex') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8, 'G22 zone cell'); }
+    else requireValue(task.cell === undefined, 'Unexpected task zone');
     if (task.kind === 'tristanaBounce') {
       record(task.inherited); id(task.inherited.parentPacketId); integer(task.inherited.resolvedAtTick);
       requireValue(task.inherited.portion === 'overkill' && typeof task.inherited.critical === 'boolean'

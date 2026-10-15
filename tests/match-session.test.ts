@@ -1,3 +1,4 @@
+import { G2_CATALOG } from './fixtures/g2-roster';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';
@@ -246,7 +247,7 @@ describe('match session commands and fixed clock', () => {
 
 describe('rapid D/F/E commands without frame or animation waits', () => {
   const odds: Record<number, number[]> = { 1:[100,0,0,0,0], 2:[100,0,0,0,0], 3: [75,25,0,0,0], 4: [55,30,15,0,0], 5: [45,33,20,2,0] };
-  const catalogs = [['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'], ['leona','nocturne','rell','tristana','urgot','vander','vladimir','zeri'], ['blitzcrank','ezreal','kogmaw','loris','nami','scar'], ['corki','ekko','garen','illaoi','twitch','zoe'], ['caitlyn','leblanc','malzahar','rumble']];
+  const catalogs = Object.values(G2_CATALOG);
   function referenceShop(initialState: number, level: number) {
     let state = BigInt(initialState);
     const draw = () => (state = (state * 1664525n + 1013904223n) % 4294967296n);
@@ -268,7 +269,7 @@ describe('rapid D/F/E commands without frame or animation waits', () => {
     }
     function reroll() { reference = referenceShop(reference.rngState, level); generation++; gold -= 2; check(session.reroll()); }
     function buyDeploySell(slot: number) {
-      const offer = reference.slots[slot], cost = catalogs.findIndex(catalog => catalog.includes(offer.definitionId)) + 1, id = `unit-${serial++}`;
+      const offer = reference.slots[slot], cost = catalogs.findIndex(catalog => (catalog as readonly string[]).includes(offer.definitionId)) + 1, id = `unit-${serial++}`;
       reference.slots[slot] = { status: 'purchased' } as typeof offer;
       gold -= cost; check(session.buy(slot, generation));
       expect(players(session.state)[0]).toMatchObject({ id, location: { kind: 'bench', slot: 0 }, starLevel: 1 });

@@ -1,3 +1,4 @@
+import { G22_CONVENTIONS } from './g2-2-traits';
 import { PLAYER_DAMAGE_RULES, XP_TO_NEXT_LEVEL, MATCH_RULES } from '../match-rules';
 import { freezeContent } from './freeze';
 import { ORB_RULES, ORB_SLOTS } from './orbs';
@@ -8,9 +9,10 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
-  release: 'g2-1-v1',
-  expansion: { inventory: '33-units-8-traits-8-components-36-completed',
-    blocked: ['swain-form-stats'], source: 'c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3',
+  release: 'g2-2-v1',
+  finiteExpansion: G22_CONVENTIONS,
+  expansion: { inventory: '48-units-14-traits-8-components-36-completed',
+    blocked: ['swain-form-stats','jayce-form-stats','gangplank-form-stats'], source: 'c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3',
     geometry: 'g2-finite-targeting-v1', tasks: 'g2-attached-infection-v1',
     twitchCrit: 'one-roll-per-piercing-attack', chain: 'initial-kill-empower-v1',
     unreachable: ['automata-6','firelight-4','family-4','family-5'] },

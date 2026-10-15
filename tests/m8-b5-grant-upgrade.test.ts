@@ -1,3 +1,4 @@
+import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { planPermanentItemGrant } from '../src/simulation/item-grants';
 import { readItemInventory } from '../src/simulation/item-selectors';
@@ -185,7 +186,7 @@ describe('B5 real purchase recursive upgrades and equipment returns', () => {
     let input = accepted(equipItem(chain.state, inventory.itemIds[0], chain.secondId, 0));
     while (input.gold >= 2) input = accepted(rerollShop(input));
     // A real unaffordable offer suffices; no gold, RNG, offer or receipt is injected.
-    const slot = input.shop.slots.findIndex(offer => offer.status === 'available' && !['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'].includes(offer.definitionId));
+    const slot = input.shop.slots.findIndex(offer => offer.status === 'available' && M5_UNIT_DEFINITIONS[offer.definitionId].cost > 1);
     if (slot < 0 && input.gold !== 0) throw new Error('Expected an unaffordable public offer');
     const state = freeze(input), before = JSON.stringify(state), result = buyUnit(state, slot < 0 ? 0 : slot, state.shop.generation);
     expect(restoreMatch(serializeMatch(state))).toEqual(state);

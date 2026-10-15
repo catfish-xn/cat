@@ -1,3 +1,4 @@
+if(process.argv.includes('--g2-2')) { require('./generate-g2-2-audit.cjs'); } else {
 /* Rebuild reviewable source/runtime tables; raw field records stay in hash-gated normalized data. */
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..'),tmp=fs.mkdtempSync(path.join(os.tmpdir(),'g2-audit-'));
@@ -31,3 +32,5 @@ try{
  md+='\n## Review and evidence\n\nThe hidden Amumu cooldown, Illaoi bonus-health drain modifier and unproved form attributes are substantive limitations, not source-equivalence claims. HERO augment variables and Rumble unique-trait upgrades remain captured but inactive. All81 icons are committed under public/assets/s13; assets-manifest.json records their source/hash/size (includes the deferred Swain icon only). Old content identities are rejected by restore and original historical recordings remain preserved for read-only export.\n\nRebuild: `python3 scripts/import-m8-source.py --g2-1 --check`; `python3 scripts/generate-g2-content.py --check`; `node scripts/generate-g2-audit.cjs --check`. Release: `node scripts/record-g2-1-release.cjs` (or `--check`).\n';
  for(const [file,data] of [['reconciliation.json',JSON.stringify(audit,null,2)+'\n'],['RECONCILIATION.md',md]]){const p=path.join(root,'docs/evidence/g2-1',file);if(process.argv.includes('--check'))assert.equal(fs.readFileSync(p,'utf8'),data);else fs.writeFileSync(p,data);}
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+
+}
