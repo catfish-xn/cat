@@ -1,3 +1,5 @@
+import { modifier, stat } from '../content/item-programs';
+import { asSource } from './s13-definitions';
 /** Source-bound validation for newly enabled catalogue declarations. */
 import type { CombatUnit } from '../combat-types';
 import type { Effect, Source, StatusApplication } from './contracts';
@@ -19,6 +21,14 @@ export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;
  for(const d of compiled.eventTriggers ?? [])collect(d.source,d.effects);
  for(const d of compiled.survivalTriggers)collect(d.source,d.effects,d.source);
  for(const p of compiled.periodicTasks)collect(p.source,p.program.effects);
+ for(const m of unit.mechanics??[]) {
+  const source=asSource(m.source);
+  if(m.mechanic==='rebel') {
+   for(const effect of [stat(modifier('attackDamage',m.values.adApBps,'bps')),stat(modifier('abilityPower',m.values.adApBps/100)),stat(modifier('attackSpeed',m.values.attackSpeedBps,'bps'),m.values.durationTicks)])result.push({source,effect});
+   if(m.values.bonusHpBps)result.push({source,effect:{kind:'change-max-hp',bonusBps:m.values.bonusHpBps,currentHp:'add-max-delta',countsAsHeal:false}});
+  }
+  if(m.mechanic==='enforcer')for(let n=1;n<=m.values.wanted;n++)result.push({source,effect:stat(modifier('attackSpeed',n*m.values.attackSpeedBps,'bps'))});
+ }
  return result;
 }
 export function statusDeclaration(effect:Effect,owner:CombatUnit,source:Source):StatusApplication|null {
@@ -71,7 +81,7 @@ export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,
  const bonuses=unit.itemPrograms?.length?declaredEffects(unit,combatId).filter(d=>d.effect.kind==='change-max-hp'):[];
  const uniqueBonuses=new Map(bonuses.map(d=>[canonicalSource(d.source),d]));
  const expectedBonus=[...uniqueBonuses.values()].reduce((n,d)=>n+(d.effect.kind==='change-max-hp'&&state.runtimes.some(r=>r.source.definitionId===d.source.definitionId&&r.source.instanceId===d.source.instanceId&&r.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<r.source.effectIndex+32)?d.effect.bonusBps:0),0);
- if(basis.bonusBps!==expectedBonus)throw new Error('Invalid Match save: item max HP consumption');
+ if(basis.bonusBps!==expectedBonus+(unit.g22?.rebelTriggered?(unit.mechanics??[]).find(m=>m.mechanic==='rebel')?.values.bonusHpBps??0:0))throw new Error('Invalid Match save: item max HP consumption');
  const maximum=resolveStat('maxHp',basis.base,[{stat:'maxHp',unit:'flat',value:{kind:'constant',amount:basis.flat},condition:{kind:'always'},damageFilter:null},{stat:'maxHp',unit:'bps',value:{kind:'constant',amount:basis.bps+basis.bonusBps},condition:{kind:'always'},damageFilter:null}],{holder:unit});
  if(unit.maxHp!==maximum)throw new Error('Invalid Match save: current max HP');
 }
@@ -80,7 +90,7 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  for(const d of declaredEffects(unit,combatId)){
   const key=canonicalSource(d.source);
   if(d.effect.kind!=='change-max-hp'||seen.has(key))continue;seen.add(key);
-  if(unit.mechanismState!.runtimes.some(r=>r.source.definitionId===d.source.definitionId&&r.source.instanceId===d.source.instanceId&&r.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<r.source.effectIndex+32&&r.startsAtTick<=at)){
+  if(d.source.sourceKind==='trait'&&d.source.definitionId==='rebel'&&unit.g22?.rebelTriggered || unit.mechanismState!.runtimes.some(r=>r.source.definitionId===d.source.definitionId&&r.source.instanceId===d.source.instanceId&&r.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<r.source.effectIndex+32&&r.startsAtTick<=at)){
    const bonus=d.effect.bonusBps;bonuses=new Set([...bonuses].flatMap(n=>[n,n+bonus]));
   }
  }
@@ -90,7 +100,7 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
  const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
- if(!unit.itemPrograms?.length)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
+ if(!unit.itemPrograms?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
  let values=[{flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
   if(d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;

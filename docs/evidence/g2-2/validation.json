@@ -1,25 +1,61 @@
 {
-  "status": "partial G2-2; no runtime content or identity changes; not a release rerecording",
-  "contentDigest": "fnv1a32-utf16:1ce135cf",
-  "rulesVersion": "s13-g2-1-v1",
-  "sourceCommit": "422e2da",
-  "mergedHead": "3d99a0e094416e317bdf641290c7cd86468ce768",
-  "mergedBase": "295fd0f5ea45c2b0e51c6c37c6e234ed60015f2f",
-  "mergeDifference": "dispatch documentation only; git diff 422e2da HEAD -- src tests scripts is empty",
+  "status": "G2-2 finite content release; all required checks passed; 21 new icon downloads blocked by HTTP 403",
+  "branch": "codex/g2-2-content",
+  "target": "multiplayer",
+  "mergedBase": "998315868a59b6794a5dec2898361fc7ba198734",
+  "contentDigest": "fnv1a32-utf16:22f31569",
+  "previousContentDigest": "fnv1a32-utf16:1ce135cf",
+  "digestChanges": 1,
+  "lootReplayDigest": "fnv1a32-utf16:028e5593",
+  "rulesVersion": "s13-g2-2-v1",
+  "contentVersion": "s13-14.24b-g2-2-v1",
+  "heroes": 48,
+  "traits": 14,
   "checks": {
     "npm test": {
-      "files": 227,
-      "passed": 2845,
-      "failed": 0
+      "files": 231,
+      "passed": 2922,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 368.92
     },
     "npm run test:timing": {
       "files": 6,
       "passed": 32,
-      "failed": 0
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 140.8
     },
-    "npm run test:server-entry": "passed",
-    "npm run typecheck": "passed"
+    "npm run typecheck": "passed",
+    "npm run test:server-entry": "passed"
   },
+  "verification": "Commands ran separately on this PR working tree atop mergedBase; no worker/pool/isolate overrides or timeout/budget changes. Only documentation/log evidence was updated after final checks.",
+  "sourceChecks": [
+    "python3 scripts/import-m8-source.py --g2-2 --check",
+    "python3 scripts/generate-g2-content.py --g2-2 --check",
+    "python3 scripts/audit-g2-2-source.py --check",
+    "node scripts/generate-g2-audit.cjs --g2-2 --check",
+    "node scripts/audit-g2-2-assets.cjs --check",
+    "node scripts/audit-g2-2-fixture-bytes.cjs --check"
+  ],
+  "logs": [
+    {
+      "path": "docs/evidence/g2-2/npm-test.txt",
+      "sha256": "9e1ca0e6ae8fc503410911d9025c9a8896098954fc3cba4e3f0e53ef863590cd"
+    },
+    {
+      "path": "docs/evidence/g2-2/test-timing.txt",
+      "sha256": "42939ef5ab22a0b7087b91148b5fa9c5a9cc3e5ed6357e0a73aa968dc20725af"
+    },
+    {
+      "path": "docs/evidence/g2-2/typecheck.txt",
+      "sha256": "4a0b9d63c8dc0781d84fe590fb615962af85bbc020795a0b0e87689bdf3a54b0"
+    },
+    {
+      "path": "docs/evidence/g2-2/test-server-entry.txt",
+      "sha256": "186355769a726791d62453f652b5a84eb5de39ae3bf9845c7a378fadb475a265"
+    }
+  ],
   "unchangedHistoricalFixtureBytes": [
     {
       "path": "tests/fixtures/m5/full-match-golden.g2-1.json",
@@ -37,22 +73,28 @@
       "bytes": 597436
     }
   ],
-  "logs": [
+  "evidence": [
     {
-      "path": "docs/evidence/g2-2/npm-test.txt",
-      "sha256": "bdca8c793bf3168ed03c4b6f2f3245c5e550a95a5860ea18bd2b221e685f912a"
+      "path": "docs/evidence/g2-2/release-audit.json",
+      "sha256": "189caff35b520a05a0f8bc1515cc15d0edd276f9f39276d7fbe8053d03faae8a"
     },
     {
-      "path": "docs/evidence/g2-2/test-timing.txt",
-      "sha256": "ede38f14762b0fbe4af4fcf32798ca9ae9c5aa25d5dcb6063cb9ae468244f561"
+      "path": "docs/evidence/g2-2/fixture-byte-evidence.json",
+      "sha256": "2ef61c4c13115daa1d2a943f3ee4be3f646200313b1eb6d9b389356f98c8d53a"
     },
     {
-      "path": "docs/evidence/g2-2/test-server-entry.txt",
-      "sha256": "3da20d9ccc778d30e9f3811fc392bca48efddd876855d8045a641516ad2c2725"
+      "path": "docs/evidence/g2-2/battle-byte-evidence.json",
+      "sha256": "f3f9080d1acf8b373673ba2e00a24083d005d72a5fb9908277f607116b6dbb95"
     },
     {
-      "path": "docs/evidence/g2-2/typecheck.txt",
-      "sha256": "4a0b9d63c8dc0781d84fe590fb615962af85bbc020795a0b0e87689bdf3a54b0"
+      "path": "docs/evidence/g2-2/assets-manifest.json",
+      "sha256": "f20417bc6ca288c46e6fcd78d3cc039be17ea7085d0482604bbb372f49499855"
     }
+  ],
+  "limitations": [
+    "Conqueror/Academy finite implementation and other project conventions are enumerated in RECONCILIATION.md, per user authorization.",
+    "Swain/Jayce/Gangplank not admitted because source stats are incomplete; 15 complete-stat alternatives admitted.",
+    "21 new icon downloads blocked by HTTP 403; 86 existing assets have SHA256 evidence.",
+    "Multiplayer Ambessa prior-PvP-win resistance is zero until authoritative win history is supplied; UI_REQUESTS records the integration gap."
   ]
 }

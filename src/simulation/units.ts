@@ -1,3 +1,4 @@
+import { G22_UNITS, G22_MEMBERSHIP } from './content/g2-2-units';
 import { G2_UNIT_DEFINITIONS, G2_EXISTING_TRAITS } from './content/g2-units';
 import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
 import { attackInterval } from './m8/stats';
@@ -486,10 +487,12 @@ const HISTORICAL_M5_UNITS: Readonly<Record<string,UnitDefinition>> = freezeConte
     ]
   }
 });
-export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = freezeContent({
+const G21_AND_G22_UNITS: Readonly<Record<string, UnitDefinition>> = freezeContent({
   ...Object.fromEntries(Object.entries(HISTORICAL_M5_UNITS).map(([id, unit]) => [id, G2_EXISTING_TRAITS[id] ? { ...unit, traits: G2_EXISTING_TRAITS[id] } : unit])),
   ...G2_UNIT_DEFINITIONS,
+  ...G22_UNITS,
 });
+export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = Object.freeze(Object.fromEntries(Object.entries(G21_AND_G22_UNITS).map(([id,u])=>[id, Object.freeze({...u, traits:G22_MEMBERSHIP[id] ?? u.traits})])));
 
 export const NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = freezeContent({
   "neutral-stage-2": {

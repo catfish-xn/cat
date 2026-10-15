@@ -172,14 +172,15 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
 
 describe('T10 deferred merge after the battle (contract §15.3)', () => {
   it('board A + bench A + a third A bought during the battle merges only after the settlement, onto the board copy', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), {seed:23});
     room.start();
     runUntil(room, clock, state => state.round === 5 && state.phase === 'preparation');
     // A bot seat (no auto-deployment) with a unit on the board and two offers of it in its shop. Which seat that is
-    // follows the seed's random openings (T13-B), so it is read from the state (seed 42: s5).
+    // follows the seed's random openings (T13-B), so it is read from the state (G2-2 seed 23: s4).
     const offersOf = (seatId: string, definitionId: string) => seat(room.state, seatId).match.shop.slots
       .flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
-    const seatId = ['s4', 's5', 's6', 's7'].find(id => onBoard(seat(room.state, id).match).some(unit => offersOf(id, unit.definitionId).length >= 2))!;
+    const botIds = ['s4', 's5', 's6', 's7'];
+    const seatId = botIds.find(id => onBoard(seat(room.state, id).match).some(unit => offersOf(id, unit.definitionId).length >= 2))!;
     expect(seatId).toBeDefined();
     const s4 = () => seat(room.state, seatId);
     const definitionId = onBoard(s4().match).find(unit => offersOf(seatId, unit.definitionId).length >= 2)!.definitionId;

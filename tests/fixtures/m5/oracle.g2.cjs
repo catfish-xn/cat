@@ -1,6 +1,6 @@
 /* Independent M5_RULES R3/R4 and approved M8B_OPENING/LOOT/ADDENDUM arithmetic. No production imports. */
 const assert = require('node:assert/strict');
-const CATALOG = [[], ['amumu','darius','irelia','lux','maddie','powder','singed','violet','zyra'], ['leona','nocturne','rell','tristana','urgot','vander','vladimir','zeri'], ['blitzcrank','ezreal','kogmaw','loris','nami','scar'], ['corki','ekko','garen','illaoi','twitch','zoe'], ['caitlyn','leblanc','malzahar','rumble']];
+const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "ezreal", "kogmaw", "loris", "nami", "scar", "twistedfate"], ["ambessa", "corki", "ekko", "garen", "heimerdinger", "illaoi", "twitch", "vi", "zoe"], ["caitlyn", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble"]];
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10]};
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76};

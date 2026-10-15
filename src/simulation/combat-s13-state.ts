@@ -89,7 +89,7 @@ export function ad(unit: S13Unit): number {
     [constantModifier('attackDamage', unit.attackDamagePercentBps ?? 0, 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
 }
 export function range(unit: S13Unit): number {
-  return resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus, 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  return resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
 }
 /** Historical floats are normalized to integer coefficient basis points before arithmetic. */
 export function amount(unit: S13Unit, tick: number, coefficients: { flat?: number; ad?: number; ap?: number; hp?: number }): number {
@@ -104,7 +104,7 @@ export function interval(unit: S13Unit, tick: number): number {
   // R7 neutral definitions author exact integer periods; they have no speed
   // modifiers in this slice. Inverting a rounded speed adds a spurious tick.
   if (champion(unit) === 'neutral' && unit.unitKind !== 'neutral') return unit.attackIntervalTicks;
-  const speedBps = (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  const speedBps = (champion(unit) === 'ambessa' && unit.runtime.castCount > 0 && unit.runtime.castCount % 2 === 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? Math.round(variable(unit, 'AttackSpeed') * 10000) : 0) + (unit.attackSpeedBonusBps ?? 0) + unit.runtime.attackSpeedBps + active(unit, tick, 'attackSpeed').filter(s => !s.contributionKeys).reduce((n, s) => n + s.amount, 0) + resolveStat('attackSpeed', 0, statusModifiers(unit, 'attackSpeed', tick), { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
   const base = unit.baseAttackSpeedBps ?? Math.round(200000 / unit.attackIntervalTicks);
   return attackInterval(base, speedBps);
 }
@@ -129,6 +129,7 @@ export function grantShield(unit: S13Unit, source: CombatOrigin, value: number, 
   events: CombatEvent[], decay = false): void {
   ensureMechanisms(unit, tick);
   const key = sourceKey(source), old = unit.shieldLayers.find(s => s.key === key);
+  value = Math.floor(value * (10000 - ((unit.g22?.reaveUntilTick ?? 0) > tick ? unit.g22!.reaveBps : 0)) / 10000);
   const definition: Extract<Effect, { kind: 'grant-shield' }> = { kind: 'grant-shield', amount: flatAmount(value), durationTicks: expiresAtTick - tick,
     decay: decay ? { kind: 'linear-initial-grant' } : { kind: 'none' }, onEnd: [], endTiming: decay ? 'next-action-planning' : 'post-damage', endTargeting: { kind: 'fixed', targetIds: [unit.id], ifMissing: 'skip' }, endEffects: [] };
   const state = grantShieldState(effectIdentity(unit.mechanismState!.combatId, asSource(source), unit.id), value, definition, tick, old ? frozenShield(old, unit) : undefined);

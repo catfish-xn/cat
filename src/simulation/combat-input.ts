@@ -18,7 +18,7 @@ import { nextRandom, validateSeed } from './rng';
 export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 /** Exactly the inputs consumed by the single strategy compiler; never its answer. */
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
-  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress'>;
+  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress'> & { readonly roundResults?: readonly RoundResult[] };
 export interface CombatInputBasis {
   readonly version: typeof COMBAT_INPUT_VERSION;
   readonly combatId: string; readonly roundId: string; readonly contentDigest: string;
@@ -44,8 +44,8 @@ export interface CombatInputAuthority {
   readonly roundResults: readonly RoundResult[];
 }
 export function readCombatStrategyInputs(state: CombatStrategyInputs): CombatStrategyInputs {
-  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress } = state;
-  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress };
+  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [] } = state;
+  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
@@ -72,6 +72,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   requireBasis(round && round.kind !== 'supply' && basis.version === COMBAT_INPUT_VERSION
     && basis.combatId === `round-${authority.round}` && basis.roundId === round.roundId
     && basis.contentDigest === authority.contentDigest && input.round === authority.round);
+  requireBasis(equal(input.roundResults ?? [], authority.roundResults.filter(r => r.round < input.round)));
   validateSeed(authority.seed); validateSeed(basis.battleSeed);
   let battleSeed = (authority.seed ^ 0x9e3779b9) >>> 0;
   for (const entry of ROUND_CATALOG) {

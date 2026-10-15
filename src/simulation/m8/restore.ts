@@ -32,7 +32,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(Array.isArray(legacy.contributionKeys) && legacy.contributionKeys.length > 0, 'missing status contribution projection');
     for (const key of legacy.contributionKeys) {
       const c = contributions.find(c => c.key === key);
-      if(c && (neutralStatuses.has(c.key) || c.source.sourceKind==='item' && isDeclaredStatus(c.source,c.application,units,combatId))) {
+      if(c && (neutralStatuses.has(c.key) || (c.source.sourceKind==='item'||c.source.sourceKind==='trait'&&['rebel','enforcer'].includes(c.source.definitionId)) && isDeclaredStatus(c.source,c.application,units,combatId))) {
         check(!covered.has(key) && c.targetId===unit.id && same(c.source,asSource(legacy.source)) && legacy.key===c.key && c.appliedAtTick===legacy.startsAtTick && (c.expiresAtTick ?? 1201)===legacy.expiresAtTick, 'item status source/timing projection');
         const app=c.application;
         const kind=app.kind==='stun'?'stun':app.kind==='sunder'?'armorReduction':'resistanceFlat';

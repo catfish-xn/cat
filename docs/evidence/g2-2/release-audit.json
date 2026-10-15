@@ -1,0 +1,6181 @@
+{
+  "baseline": {
+    "contentDigest": "fnv1a32-utf16:22f31569",
+    "lootReplayDigest": "fnv1a32-utf16:028e5593",
+    "rulesVersion": "s13-g2-2-v1",
+    "contentVersion": "s13-14.24b-g2-2-v1",
+    "schemaVersion": 7,
+    "previousContentDigest": "fnv1a32-utf16:1ce135cf",
+    "previousLootReplayDigest": "fnv1a32-utf16:65a85ecd",
+    "traceHashes": {
+      "state": "2d94593d0ecce1ef188f58cb6beaea63ed547d72bf3a66872c87f4c18475c7b6",
+      "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
+      "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+    },
+    "firstBattle": {
+      "seed": 42,
+      "ticks": 164,
+      "events": 106,
+      "result": "playerWin",
+      "stateHash": "fnv1a32-utf16:1541a026",
+      "eventHash": "fnv1a32-utf16:966105d6"
+    },
+    "reason": "G2-2: 15 admitted heroes and six origins; Swain source form attributes unresolved; expanded shop changes command/event trajectories."
+  },
+  "previousGoldenSha256": "b3b8d3a80181cbc85f5dabdcf2c3af4563495717e97e419850b02a1c23a2a4c0",
+  "driverSha256": "e919d15ec1a1ddfacd8a2149d5181a6508330acfdfd5def667ecea11ecc85e42",
+  "oracleSha256": "31bf2e5a3c0b9f0e93e5d3ec82dcf66fd0742829cda1c348cdc944584aea4d66",
+  "builds": {
+    "cannon": {
+      "summary": {
+        "caitlynBattles": 0,
+        "caitlynCasts": 0,
+        "build": "cannon",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 75,
+        "gold": 189,
+        "formedAt": 26,
+        "formedBattles": 11,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 9889,
+        "commands": 207
+      },
+      "recording": {
+        "states": 67,
+        "gzipSha256": "85ee1ce7f9bafa78f4cf0e47fac46e8ca70bbeda4dc5558023c6055eb5dd6b38",
+        "stateUtf8Sha256": "8b3ed80a6923bf9d3d6e7cdb7c991ef58ee75269a9c68923285b155a5a8df8ec",
+        "textAndObjectRestoreBytesEqual": true,
+        "previousGzipSha256": "aff5a8308e8490b8a63c07c50736c508c60a92d312f544b6e14f53742a9b0b99"
+      },
+      "firstCommandDifference": {
+        "index": 2,
+        "previous": {
+          "type": "buy",
+          "slot": 0,
+          "generation": 2
+        },
+        "current": {
+          "type": "deploy",
+          "id": "unit-2",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 4
+            }
+          }
+        }
+      },
+      "firstEventDifference": {
+        "round": 2,
+        "previous": "42ad2711662d0c8df0ab5de63d6b506efca49a84809acb1911afc48764463c90",
+        "current": "fb37eeceac5e3d24c6a42133829b12b72f94b360d291fd6d66ef456bf1ca5244"
+      },
+      "ledger": {
+        "costs": {
+          "purchases": 59,
+          "sales": 5,
+          "saleLoss": 0,
+          "rerolls": 84,
+          "xp": 80,
+          "anomaly": 1,
+          "income": 382,
+          "rewards": 26
+        },
+        "rounds": [
+          {
+            "round": 1,
+            "roundId": "1-2",
+            "result": "playerWin",
+            "combatTicks": 164,
+            "combatEventCount": 106,
+            "settlementId": "round-1-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 2,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 0,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 2,
+            "goldBefore": 0,
+            "goldAfter": 2,
+            "xpAwarded": 2,
+            "levelBefore": 1,
+            "levelAfter": 2,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 2,
+            "roundId": "1-3",
+            "result": "playerWin",
+            "combatTicks": 89,
+            "combatEventCount": 66,
+            "settlementId": "round-2-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 3,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 2,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 3,
+            "goldBefore": 2,
+            "goldAfter": 5,
+            "xpAwarded": 2,
+            "levelBefore": 2,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 3,
+            "roundId": "1-4",
+            "result": "playerWin",
+            "combatTicks": 172,
+            "combatEventCount": 171,
+            "settlementId": "round-3-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 8,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 5,
+            "goldBefore": 8,
+            "goldAfter": 13,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 4,
+            "roundId": "2-1",
+            "result": "enemyWin",
+            "combatTicks": 362,
+            "combatEventCount": 429,
+            "settlementId": "round-4-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 13,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 13,
+            "goldAfter": 19,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 100,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 3,
+            "playerDamage": 5,
+            "hpLost": 5
+          },
+          {
+            "round": 5,
+            "roundId": "2-2",
+            "result": "playerWin",
+            "combatTicks": 531,
+            "combatEventCount": 685,
+            "settlementId": "round-5-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 16,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 15,
+            "goldAfter": 22,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 0,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 6,
+            "roundId": "2-3",
+            "result": "playerWin",
+            "combatTicks": 466,
+            "combatEventCount": 607,
+            "settlementId": "round-6-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 1
+            },
+            "interestBasis": 23,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 22,
+            "goldAfter": 31,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 7,
+            "roundId": "2-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-7-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 31,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 31,
+            "goldAfter": 39,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 8,
+            "roundId": "2-5",
+            "result": "playerWin",
+            "combatTicks": 582,
+            "combatEventCount": 798,
+            "settlementId": "round-8-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 1
+            },
+            "interestBasis": 40,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 3
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 39,
+            "goldAfter": 50,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 9,
+            "roundId": "2-6",
+            "result": "playerWin",
+            "combatTicks": 410,
+            "combatEventCount": 685,
+            "settlementId": "round-9-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 2
+            },
+            "interestBasis": 46,
+            "streakBefore": {
+              "kind": "win",
+              "count": 3
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 45,
+            "goldAfter": 57,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 10,
+            "roundId": "2-7",
+            "result": "playerWin",
+            "combatTicks": 181,
+            "combatEventCount": 241,
+            "settlementId": "round-10-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 58,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 58,
+            "goldAfter": 68,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 11,
+            "roundId": "3-1",
+            "result": "enemyWin",
+            "combatTicks": 650,
+            "combatEventCount": 1334,
+            "settlementId": "round-11-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 67,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 67,
+            "goldAfter": 77,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 95,
+            "hpAfter": 85,
+            "baseDamage": 5,
+            "survivingEnemyCount": 5,
+            "playerDamage": 10,
+            "hpLost": 10
+          },
+          {
+            "round": 12,
+            "roundId": "3-2",
+            "result": "enemyWin",
+            "combatTicks": 634,
+            "combatEventCount": 1269,
+            "settlementId": "round-12-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 1
+            },
+            "interestBasis": 85,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 85,
+            "goldAfter": 96,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 85,
+            "hpAfter": 75,
+            "baseDamage": 5,
+            "survivingEnemyCount": 5,
+            "playerDamage": 10,
+            "hpLost": 10
+          },
+          {
+            "round": 13,
+            "roundId": "3-3",
+            "result": "playerWin",
+            "combatTicks": 432,
+            "combatEventCount": 984,
+            "settlementId": "round-13-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 33,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 32,
+            "goldAfter": 41,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 14,
+            "roundId": "3-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-14-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 41,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 41,
+            "goldAfter": 50,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 15,
+            "roundId": "3-5",
+            "result": "playerWin",
+            "combatTicks": 291,
+            "combatEventCount": 660,
+            "settlementId": "round-15-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 1
+            },
+            "interestBasis": 34,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 33,
+            "goldAfter": 43,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 16,
+            "roundId": "3-6",
+            "result": "playerWin",
+            "combatTicks": 267,
+            "combatEventCount": 627,
+            "settlementId": "round-16-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 1
+            },
+            "interestBasis": 34,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 3
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 33,
+            "goldAfter": 43,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 17,
+            "roundId": "3-7",
+            "result": "playerWin",
+            "combatTicks": 97,
+            "combatEventCount": 193,
+            "settlementId": "round-17-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 33,
+            "streakBefore": {
+              "kind": "win",
+              "count": 3
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 3
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 33,
+            "goldAfter": 41,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 20,
+            "xpAfter": 22,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 18,
+            "roundId": "4-1",
+            "result": "playerWin",
+            "combatTicks": 523,
+            "combatEventCount": 1252,
+            "settlementId": "round-18-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 2
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 3
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 31,
+            "goldAfter": 42,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 30,
+            "xpAfter": 32,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 19,
+            "roundId": "4-2",
+            "result": "playerWin",
+            "combatTicks": 348,
+            "combatEventCount": 960,
+            "settlementId": "round-19-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 2
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 5
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 34,
+            "goldAfter": 45,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 20,
+            "roundId": "4-3",
+            "result": "playerWin",
+            "combatTicks": 316,
+            "combatEventCount": 941,
+            "settlementId": "round-20-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 34,
+            "streakBefore": {
+              "kind": "win",
+              "count": 5
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 6
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 33,
+            "goldAfter": 45,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 21,
+            "roundId": "4-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-21-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 45,
+            "streakBefore": {
+              "kind": "win",
+              "count": 6
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 6
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 45,
+            "goldAfter": 54,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 22,
+            "roundId": "4-5",
+            "result": "playerWin",
+            "combatTicks": 418,
+            "combatEventCount": 1133,
+            "settlementId": "round-22-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 19,
+            "streakBefore": {
+              "kind": "win",
+              "count": 6
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 7
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 18,
+            "goldAfter": 28,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 42,
+            "xpAfter": 44,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 23,
+            "roundId": "4-6",
+            "result": "playerWin",
+            "combatTicks": 255,
+            "combatEventCount": 903,
+            "settlementId": "round-23-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 3
+            },
+            "interestBasis": 20,
+            "streakBefore": {
+              "kind": "win",
+              "count": 7
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 8
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 19,
+            "goldAfter": 30,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 24,
+            "roundId": "4-7",
+            "result": "playerWin",
+            "combatTicks": 102,
+            "combatEventCount": 334,
+            "settlementId": "round-24-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 2,
+              "streak": 0
+            },
+            "interestBasis": 24,
+            "streakBefore": {
+              "kind": "win",
+              "count": 8
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 8
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 24,
+            "goldAfter": 31,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 25,
+            "roundId": "5-1",
+            "result": "playerWin",
+            "combatTicks": 254,
+            "combatEventCount": 2394,
+            "settlementId": "round-25-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 3
+            },
+            "interestBasis": 20,
+            "streakBefore": {
+              "kind": "win",
+              "count": 8
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 9
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 19,
+            "goldAfter": 30,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 26,
+            "roundId": "5-2",
+            "result": "playerWin",
+            "combatTicks": 254,
+            "combatEventCount": 2473,
+            "settlementId": "round-26-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 3
+            },
+            "interestBasis": 21,
+            "streakBefore": {
+              "kind": "win",
+              "count": 9
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 10
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 20,
+            "goldAfter": 31,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 27,
+            "roundId": "5-3",
+            "result": "playerWin",
+            "combatTicks": 244,
+            "combatEventCount": 2107,
+            "settlementId": "round-27-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 10
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 11
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 31,
+            "goldAfter": 43,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 8,
+            "xpAfter": 10,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 28,
+            "roundId": "5-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-28-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 43,
+            "streakBefore": {
+              "kind": "win",
+              "count": 11
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 11
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 43,
+            "goldAfter": 52,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 10,
+            "xpAfter": 12,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 29,
+            "roundId": "5-5",
+            "result": "playerWin",
+            "combatTicks": 223,
+            "combatEventCount": 2134,
+            "settlementId": "round-29-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 53,
+            "streakBefore": {
+              "kind": "win",
+              "count": 11
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 12
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 52,
+            "goldAfter": 66,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 12,
+            "xpAfter": 14,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 30,
+            "roundId": "5-6",
+            "result": "playerWin",
+            "combatTicks": 254,
+            "combatEventCount": 2499,
+            "settlementId": "round-30-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 67,
+            "streakBefore": {
+              "kind": "win",
+              "count": 12
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 13
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 66,
+            "goldAfter": 80,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 14,
+            "xpAfter": 16,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 31,
+            "roundId": "5-7",
+            "result": "playerWin",
+            "combatTicks": 112,
+            "combatEventCount": 482,
+            "settlementId": "round-31-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 84,
+            "streakBefore": {
+              "kind": "win",
+              "count": 13
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 13
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 84,
+            "goldAfter": 94,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 16,
+            "xpAfter": 18,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 32,
+            "roundId": "6-1",
+            "result": "playerWin",
+            "combatTicks": 234,
+            "combatEventCount": 2082,
+            "settlementId": "round-32-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 95,
+            "streakBefore": {
+              "kind": "win",
+              "count": 13
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 14
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 94,
+            "goldAfter": 108,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 18,
+            "xpAfter": 20,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 33,
+            "roundId": "6-2",
+            "result": "playerWin",
+            "combatTicks": 227,
+            "combatEventCount": 2431,
+            "settlementId": "round-33-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 109,
+            "streakBefore": {
+              "kind": "win",
+              "count": 14
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 15
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 108,
+            "goldAfter": 122,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 20,
+            "xpAfter": 22,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 34,
+            "roundId": "6-3",
+            "result": "playerWin",
+            "combatTicks": 238,
+            "combatEventCount": 2427,
+            "settlementId": "round-34-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 123,
+            "streakBefore": {
+              "kind": "win",
+              "count": 15
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 16
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 122,
+            "goldAfter": 136,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 22,
+            "xpAfter": 24,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 35,
+            "roundId": "6-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-35-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 136,
+            "streakBefore": {
+              "kind": "win",
+              "count": 16
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 16
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 136,
+            "goldAfter": 146,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 24,
+            "xpAfter": 26,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 36,
+            "roundId": "6-5",
+            "result": "playerWin",
+            "combatTicks": 228,
+            "combatEventCount": 2121,
+            "settlementId": "round-36-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 147,
+            "streakBefore": {
+              "kind": "win",
+              "count": 16
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 17
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 146,
+            "goldAfter": 160,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 26,
+            "xpAfter": 28,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 37,
+            "roundId": "6-6",
+            "result": "playerWin",
+            "combatTicks": 226,
+            "combatEventCount": 2414,
+            "settlementId": "round-37-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 161,
+            "streakBefore": {
+              "kind": "win",
+              "count": 17
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 18
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 160,
+            "goldAfter": 174,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 28,
+            "xpAfter": 30,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 38,
+            "roundId": "6-7",
+            "result": "playerWin",
+            "combatTicks": 105,
+            "combatEventCount": 526,
+            "settlementId": "round-38-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 179,
+            "streakBefore": {
+              "kind": "win",
+              "count": 18
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 18
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 179,
+            "goldAfter": 189,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 30,
+            "xpAfter": 32,
+            "hpBefore": 75,
+            "hpAfter": 75,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          }
+        ]
+      }
+    },
+    "sniper": {
+      "summary": {
+        "caitlynBattles": 0,
+        "caitlynCasts": 0,
+        "build": "sniper",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 58,
+        "gold": 180,
+        "formedAt": 25,
+        "formedBattles": 12,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 12569,
+        "commands": 206
+      },
+      "recording": {
+        "states": 67,
+        "gzipSha256": "75ebed977bd56981a72962a2af12cd9e573660fc62a80469493573711534f9ec",
+        "stateUtf8Sha256": "0547762d9cc51596f40ad3b6d0f73cfbd6fb3fe03e86134f6abf7fee2650cab2",
+        "textAndObjectRestoreBytesEqual": true,
+        "previousGzipSha256": "e98974dc802d772e00e90504c5df69dbfd3b224f948de44292af187cb72d3e84"
+      },
+      "firstCommandDifference": {
+        "index": 2,
+        "previous": {
+          "type": "buy",
+          "slot": 0,
+          "generation": 2
+        },
+        "current": {
+          "type": "buy",
+          "slot": 2,
+          "generation": 2
+        }
+      },
+      "firstEventDifference": {
+        "round": 3,
+        "previous": "2779d0974cd3c2c92041253b5a7070de568a476cee376d17832a8468047ecd1c",
+        "current": "f78ce251d8c00344bb5a3d0228b9f555b9503c7118b337028e3d154f0f96dec1"
+      },
+      "ledger": {
+        "costs": {
+          "purchases": 54,
+          "sales": 3,
+          "saleLoss": 0,
+          "rerolls": 96,
+          "xp": 80,
+          "anomaly": 1,
+          "income": 382,
+          "rewards": 26
+        },
+        "rounds": [
+          {
+            "round": 1,
+            "roundId": "1-2",
+            "result": "playerWin",
+            "combatTicks": 164,
+            "combatEventCount": 106,
+            "settlementId": "round-1-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 2,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 0,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 2,
+            "goldBefore": 0,
+            "goldAfter": 2,
+            "xpAwarded": 2,
+            "levelBefore": 1,
+            "levelAfter": 2,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 2,
+            "roundId": "1-3",
+            "result": "playerWin",
+            "combatTicks": 89,
+            "combatEventCount": 66,
+            "settlementId": "round-2-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 3,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 1,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 3,
+            "goldBefore": 1,
+            "goldAfter": 4,
+            "xpAwarded": 2,
+            "levelBefore": 2,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 3,
+            "roundId": "1-4",
+            "result": "playerWin",
+            "combatTicks": 172,
+            "combatEventCount": 172,
+            "settlementId": "round-3-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 7,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 5,
+            "goldBefore": 7,
+            "goldAfter": 12,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 4,
+            "roundId": "2-1",
+            "result": "enemyWin",
+            "combatTicks": 654,
+            "combatEventCount": 679,
+            "settlementId": "round-4-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 11,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 11,
+            "goldAfter": 17,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 100,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 1,
+            "playerDamage": 3,
+            "hpLost": 3
+          },
+          {
+            "round": 5,
+            "roundId": "2-2",
+            "result": "playerWin",
+            "combatTicks": 351,
+            "combatEventCount": 504,
+            "settlementId": "round-5-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 17,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 16,
+            "goldAfter": 23,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 0,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 6,
+            "roundId": "2-3",
+            "result": "playerWin",
+            "combatTicks": 409,
+            "combatEventCount": 534,
+            "settlementId": "round-6-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 1
+            },
+            "interestBasis": 24,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 23,
+            "goldAfter": 32,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 7,
+            "roundId": "2-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-7-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 32,
+            "goldAfter": 40,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 8,
+            "roundId": "2-5",
+            "result": "playerWin",
+            "combatTicks": 383,
+            "combatEventCount": 693,
+            "settlementId": "round-8-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 1
+            },
+            "interestBasis": 40,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 3
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 39,
+            "goldAfter": 50,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 9,
+            "roundId": "2-6",
+            "result": "playerWin",
+            "combatTicks": 281,
+            "combatEventCount": 515,
+            "settlementId": "round-9-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 2
+            },
+            "interestBasis": 44,
+            "streakBefore": {
+              "kind": "win",
+              "count": 3
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 43,
+            "goldAfter": 55,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 10,
+            "roundId": "2-7",
+            "result": "playerWin",
+            "combatTicks": 138,
+            "combatEventCount": 201,
+            "settlementId": "round-10-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 53,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 53,
+            "goldAfter": 63,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 11,
+            "roundId": "3-1",
+            "result": "playerWin",
+            "combatTicks": 786,
+            "combatEventCount": 1365,
+            "settlementId": "round-11-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 2
+            },
+            "interestBasis": 60,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 5
+            },
+            "xpRequested": 2,
+            "income": 13,
+            "goldBefore": 59,
+            "goldAfter": 72,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 12,
+            "roundId": "3-2",
+            "result": "playerWin",
+            "combatTicks": 634,
+            "combatEventCount": 1217,
+            "settlementId": "round-12-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 80,
+            "streakBefore": {
+              "kind": "win",
+              "count": 5
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 6
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 79,
+            "goldAfter": 93,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 13,
+            "roundId": "3-3",
+            "result": "playerWin",
+            "combatTicks": 438,
+            "combatEventCount": 926,
+            "settlementId": "round-13-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 6
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 7
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 14,
+            "roundId": "3-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-14-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 46,
+            "streakBefore": {
+              "kind": "win",
+              "count": 7
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 7
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 46,
+            "goldAfter": 55,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 15,
+            "roundId": "3-5",
+            "result": "playerWin",
+            "combatTicks": 377,
+            "combatEventCount": 2354,
+            "settlementId": "round-15-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 7
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 8
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 16,
+            "roundId": "3-6",
+            "result": "playerWin",
+            "combatTicks": 376,
+            "combatEventCount": 2263,
+            "settlementId": "round-16-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 8
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 9
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 17,
+            "roundId": "3-7",
+            "result": "playerWin",
+            "combatTicks": 156,
+            "combatEventCount": 779,
+            "settlementId": "round-17-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 9
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 9
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 32,
+            "goldAfter": 40,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 24,
+            "xpAfter": 26,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 18,
+            "roundId": "4-1",
+            "result": "playerWin",
+            "combatTicks": 548,
+            "combatEventCount": 4315,
+            "settlementId": "round-18-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 33,
+            "streakBefore": {
+              "kind": "win",
+              "count": 9
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 10
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 32,
+            "goldAfter": 44,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 7,
+            "xpBefore": 34,
+            "xpAfter": 0,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 19,
+            "roundId": "4-2",
+            "result": "playerWin",
+            "combatTicks": 345,
+            "combatEventCount": 2146,
+            "settlementId": "round-19-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 10
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 11
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 20,
+            "roundId": "4-3",
+            "result": "playerWin",
+            "combatTicks": 326,
+            "combatEventCount": 2682,
+            "settlementId": "round-20-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 11
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 12
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 21,
+            "roundId": "4-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-21-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 46,
+            "streakBefore": {
+              "kind": "win",
+              "count": 12
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 12
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 46,
+            "goldAfter": 55,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 22,
+            "roundId": "4-5",
+            "result": "playerWin",
+            "combatTicks": 413,
+            "combatEventCount": 3249,
+            "settlementId": "round-22-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 16,
+            "streakBefore": {
+              "kind": "win",
+              "count": 12
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 13
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 15,
+            "goldAfter": 25,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 8,
+            "xpBefore": 46,
+            "xpAfter": 0,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 23,
+            "roundId": "4-6",
+            "result": "playerWin",
+            "combatTicks": 324,
+            "combatEventCount": 2220,
+            "settlementId": "round-23-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 19,
+            "streakBefore": {
+              "kind": "win",
+              "count": 13
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 14
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 18,
+            "goldAfter": 28,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 24,
+            "roundId": "4-7",
+            "result": "playerWin",
+            "combatTicks": 158,
+            "combatEventCount": 1273,
+            "settlementId": "round-24-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 2,
+              "streak": 0
+            },
+            "interestBasis": 21,
+            "streakBefore": {
+              "kind": "win",
+              "count": 14
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 14
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 21,
+            "goldAfter": 28,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 25,
+            "roundId": "5-1",
+            "result": "playerWin",
+            "combatTicks": 411,
+            "combatEventCount": 2445,
+            "settlementId": "round-25-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 15,
+            "streakBefore": {
+              "kind": "win",
+              "count": 14
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 15
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 14,
+            "goldAfter": 24,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 26,
+            "roundId": "5-2",
+            "result": "playerWin",
+            "combatTicks": 482,
+            "combatEventCount": 3691,
+            "settlementId": "round-26-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 3
+            },
+            "interestBasis": 25,
+            "streakBefore": {
+              "kind": "win",
+              "count": 15
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 16
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 24,
+            "goldAfter": 35,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 27,
+            "roundId": "5-3",
+            "result": "playerWin",
+            "combatTicks": 407,
+            "combatEventCount": 2914,
+            "settlementId": "round-27-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 36,
+            "streakBefore": {
+              "kind": "win",
+              "count": 16
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 17
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 35,
+            "goldAfter": 47,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 8,
+            "xpAfter": 10,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 28,
+            "roundId": "5-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-28-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 47,
+            "streakBefore": {
+              "kind": "win",
+              "count": 17
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 17
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 47,
+            "goldAfter": 56,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 10,
+            "xpAfter": 12,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 29,
+            "roundId": "5-5",
+            "result": "playerWin",
+            "combatTicks": 430,
+            "combatEventCount": 2601,
+            "settlementId": "round-29-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 57,
+            "streakBefore": {
+              "kind": "win",
+              "count": 17
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 18
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 56,
+            "goldAfter": 70,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 12,
+            "xpAfter": 14,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 30,
+            "roundId": "5-6",
+            "result": "playerWin",
+            "combatTicks": 453,
+            "combatEventCount": 3459,
+            "settlementId": "round-30-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 71,
+            "streakBefore": {
+              "kind": "win",
+              "count": 18
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 19
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 70,
+            "goldAfter": 84,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 14,
+            "xpAfter": 16,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 31,
+            "roundId": "5-7",
+            "result": "playerWin",
+            "combatTicks": 178,
+            "combatEventCount": 752,
+            "settlementId": "round-31-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 88,
+            "streakBefore": {
+              "kind": "win",
+              "count": 19
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 19
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 88,
+            "goldAfter": 98,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 16,
+            "xpAfter": 18,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 32,
+            "roundId": "6-1",
+            "result": "playerWin",
+            "combatTicks": 504,
+            "combatEventCount": 3806,
+            "settlementId": "round-32-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 99,
+            "streakBefore": {
+              "kind": "win",
+              "count": 19
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 20
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 98,
+            "goldAfter": 112,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 18,
+            "xpAfter": 20,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 33,
+            "roundId": "6-2",
+            "result": "enemyWin",
+            "combatTicks": 416,
+            "combatEventCount": 3895,
+            "settlementId": "round-33-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 112,
+            "streakBefore": {
+              "kind": "win",
+              "count": 20
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 112,
+            "goldAfter": 122,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 20,
+            "xpAfter": 22,
+            "hpBefore": 97,
+            "hpAfter": 77,
+            "baseDamage": 12,
+            "survivingEnemyCount": 8,
+            "playerDamage": 20,
+            "hpLost": 20
+          },
+          {
+            "round": 34,
+            "roundId": "6-3",
+            "result": "playerWin",
+            "combatTicks": 528,
+            "combatEventCount": 4501,
+            "settlementId": "round-34-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 123,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 122,
+            "goldAfter": 133,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 22,
+            "xpAfter": 24,
+            "hpBefore": 77,
+            "hpAfter": 77,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 35,
+            "roundId": "6-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-35-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 133,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 133,
+            "goldAfter": 143,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 24,
+            "xpAfter": 26,
+            "hpBefore": 77,
+            "hpAfter": 77,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 36,
+            "roundId": "6-5",
+            "result": "playerWin",
+            "combatTicks": 484,
+            "combatEventCount": 3709,
+            "settlementId": "round-36-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 1
+            },
+            "interestBasis": 144,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 143,
+            "goldAfter": 155,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 26,
+            "xpAfter": 28,
+            "hpBefore": 77,
+            "hpAfter": 77,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 37,
+            "roundId": "6-6",
+            "result": "enemyWin",
+            "combatTicks": 509,
+            "combatEventCount": 4246,
+            "settlementId": "round-37-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 155,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 155,
+            "goldAfter": 165,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 28,
+            "xpAfter": 30,
+            "hpBefore": 77,
+            "hpAfter": 58,
+            "baseDamage": 12,
+            "survivingEnemyCount": 7,
+            "playerDamage": 19,
+            "hpLost": 19
+          },
+          {
+            "round": 38,
+            "roundId": "6-7",
+            "result": "playerWin",
+            "combatTicks": 245,
+            "combatEventCount": 1023,
+            "settlementId": "round-38-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 170,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 170,
+            "goldAfter": 180,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 30,
+            "xpAfter": 32,
+            "hpBefore": 58,
+            "hpAfter": 58,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          }
+        ]
+      }
+    },
+    "mage": {
+      "summary": {
+        "caitlynBattles": 0,
+        "caitlynCasts": 0,
+        "build": "mage",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 63,
+        "gold": 217,
+        "formedAt": 23,
+        "formedBattles": 14,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 12528,
+        "commands": 197
+      },
+      "recording": null,
+      "firstCommandDifference": {
+        "index": 2,
+        "previous": {
+          "type": "buy",
+          "slot": 0,
+          "generation": 2
+        },
+        "current": {
+          "type": "buy",
+          "slot": 3,
+          "generation": 2
+        }
+      },
+      "firstEventDifference": {
+        "round": 2,
+        "previous": "7beebe47c1b082c559c1a5c3f0e312d387eacc4c28af8928e0348fd12a88ad57",
+        "current": "b28a2c990f9e24cfc223abe991bef22fa73924b83f444a998ae3a472b7972a25"
+      },
+      "ledger": {
+        "costs": {
+          "purchases": 52,
+          "sales": 4,
+          "saleLoss": 0,
+          "rerolls": 72,
+          "xp": 80,
+          "anomaly": 1,
+          "income": 392,
+          "rewards": 26
+        },
+        "rounds": [
+          {
+            "round": 1,
+            "roundId": "1-2",
+            "result": "playerWin",
+            "combatTicks": 164,
+            "combatEventCount": 106,
+            "settlementId": "round-1-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 2,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 0,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 2,
+            "goldBefore": 0,
+            "goldAfter": 2,
+            "xpAwarded": 2,
+            "levelBefore": 1,
+            "levelAfter": 2,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 2,
+            "roundId": "1-3",
+            "result": "playerWin",
+            "combatTicks": 118,
+            "combatEventCount": 92,
+            "settlementId": "round-2-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 3,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 2,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 3,
+            "goldBefore": 2,
+            "goldAfter": 5,
+            "xpAwarded": 2,
+            "levelBefore": 2,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 3,
+            "roundId": "1-4",
+            "result": "playerWin",
+            "combatTicks": 172,
+            "combatEventCount": 171,
+            "settlementId": "round-3-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 7,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 5,
+            "goldBefore": 7,
+            "goldAfter": 12,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 4,
+            "roundId": "2-1",
+            "result": "enemyWin",
+            "combatTicks": 479,
+            "combatEventCount": 646,
+            "settlementId": "round-4-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 11,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 11,
+            "goldAfter": 17,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 100,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 3,
+            "playerDamage": 5,
+            "hpLost": 5
+          },
+          {
+            "round": 5,
+            "roundId": "2-2",
+            "result": "playerWin",
+            "combatTicks": 540,
+            "combatEventCount": 677,
+            "settlementId": "round-5-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 16,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 15,
+            "goldAfter": 22,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 0,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 6,
+            "roundId": "2-3",
+            "result": "playerWin",
+            "combatTicks": 479,
+            "combatEventCount": 616,
+            "settlementId": "round-6-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 1
+            },
+            "interestBasis": 23,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 22,
+            "goldAfter": 31,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 7,
+            "roundId": "2-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-7-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 31,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 31,
+            "goldAfter": 39,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 8,
+            "roundId": "2-5",
+            "result": "playerWin",
+            "combatTicks": 450,
+            "combatEventCount": 659,
+            "settlementId": "round-8-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 1
+            },
+            "interestBasis": 38,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 3
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 37,
+            "goldAfter": 47,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 9,
+            "roundId": "2-6",
+            "result": "playerWin",
+            "combatTicks": 293,
+            "combatEventCount": 506,
+            "settlementId": "round-9-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 2
+            },
+            "interestBasis": 43,
+            "streakBefore": {
+              "kind": "win",
+              "count": 3
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 42,
+            "goldAfter": 54,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 10,
+            "roundId": "2-7",
+            "result": "playerWin",
+            "combatTicks": 147,
+            "combatEventCount": 221,
+            "settlementId": "round-10-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 55,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 55,
+            "goldAfter": 65,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 11,
+            "roundId": "3-1",
+            "result": "playerWin",
+            "combatTicks": 664,
+            "combatEventCount": 1383,
+            "settlementId": "round-11-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 2
+            },
+            "interestBasis": 65,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 5
+            },
+            "xpRequested": 2,
+            "income": 13,
+            "goldBefore": 64,
+            "goldAfter": 77,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 12,
+            "roundId": "3-2",
+            "result": "playerWin",
+            "combatTicks": 664,
+            "combatEventCount": 1347,
+            "settlementId": "round-12-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 85,
+            "streakBefore": {
+              "kind": "win",
+              "count": 5
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 6
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 84,
+            "goldAfter": 98,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 13,
+            "roundId": "3-3",
+            "result": "playerWin",
+            "combatTicks": 456,
+            "combatEventCount": 900,
+            "settlementId": "round-13-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 38,
+            "streakBefore": {
+              "kind": "win",
+              "count": 6
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 7
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 37,
+            "goldAfter": 49,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 14,
+            "roundId": "3-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-14-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 49,
+            "streakBefore": {
+              "kind": "win",
+              "count": 7
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 7
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 49,
+            "goldAfter": 58,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 15,
+            "roundId": "3-5",
+            "result": "playerWin",
+            "combatTicks": 437,
+            "combatEventCount": 1024,
+            "settlementId": "round-15-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 7
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 8
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 31,
+            "goldAfter": 43,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 16,
+            "roundId": "3-6",
+            "result": "playerWin",
+            "combatTicks": 439,
+            "combatEventCount": 1052,
+            "settlementId": "round-16-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 34,
+            "streakBefore": {
+              "kind": "win",
+              "count": 8
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 9
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 33,
+            "goldAfter": 45,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 17,
+            "roundId": "3-7",
+            "result": "playerWin",
+            "combatTicks": 147,
+            "combatEventCount": 293,
+            "settlementId": "round-17-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 9
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 9
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 32,
+            "goldAfter": 40,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 20,
+            "xpAfter": 22,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 18,
+            "roundId": "4-1",
+            "result": "playerWin",
+            "combatTicks": 720,
+            "combatEventCount": 1723,
+            "settlementId": "round-18-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 33,
+            "streakBefore": {
+              "kind": "win",
+              "count": 9
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 10
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 32,
+            "goldAfter": 44,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 30,
+            "xpAfter": 32,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 19,
+            "roundId": "4-2",
+            "result": "playerWin",
+            "combatTicks": 409,
+            "combatEventCount": 1119,
+            "settlementId": "round-19-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 10
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 11
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 20,
+            "roundId": "4-3",
+            "result": "playerWin",
+            "combatTicks": 354,
+            "combatEventCount": 971,
+            "settlementId": "round-20-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 31,
+            "streakBefore": {
+              "kind": "win",
+              "count": 11
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 12
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 30,
+            "goldAfter": 42,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 21,
+            "roundId": "4-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-21-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 42,
+            "streakBefore": {
+              "kind": "win",
+              "count": 12
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 12
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 42,
+            "goldAfter": 51,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 22,
+            "roundId": "4-5",
+            "result": "playerWin",
+            "combatTicks": 420,
+            "combatEventCount": 2587,
+            "settlementId": "round-22-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 16,
+            "streakBefore": {
+              "kind": "win",
+              "count": 12
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 13
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 15,
+            "goldAfter": 25,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 42,
+            "xpAfter": 44,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 23,
+            "roundId": "4-6",
+            "result": "playerWin",
+            "combatTicks": 244,
+            "combatEventCount": 1966,
+            "settlementId": "round-23-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 3
+            },
+            "interestBasis": 21,
+            "streakBefore": {
+              "kind": "win",
+              "count": 13
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 14
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 20,
+            "goldAfter": 31,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 24,
+            "roundId": "4-7",
+            "result": "playerWin",
+            "combatTicks": 120,
+            "combatEventCount": 924,
+            "settlementId": "round-24-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 34,
+            "streakBefore": {
+              "kind": "win",
+              "count": 14
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 14
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 34,
+            "goldAfter": 42,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 25,
+            "roundId": "5-1",
+            "result": "playerWin",
+            "combatTicks": 344,
+            "combatEventCount": 2693,
+            "settlementId": "round-25-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 3
+            },
+            "interestBasis": 43,
+            "streakBefore": {
+              "kind": "win",
+              "count": 14
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 15
+            },
+            "xpRequested": 2,
+            "income": 13,
+            "goldBefore": 42,
+            "goldAfter": 55,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 26,
+            "roundId": "5-2",
+            "result": "playerWin",
+            "combatTicks": 419,
+            "combatEventCount": 3175,
+            "settlementId": "round-26-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 56,
+            "streakBefore": {
+              "kind": "win",
+              "count": 15
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 16
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 55,
+            "goldAfter": 69,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 27,
+            "roundId": "5-3",
+            "result": "playerWin",
+            "combatTicks": 360,
+            "combatEventCount": 2979,
+            "settlementId": "round-27-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 70,
+            "streakBefore": {
+              "kind": "win",
+              "count": 16
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 17
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 69,
+            "goldAfter": 83,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 8,
+            "xpAfter": 10,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 28,
+            "roundId": "5-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-28-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 83,
+            "streakBefore": {
+              "kind": "win",
+              "count": 17
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 17
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 83,
+            "goldAfter": 93,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 10,
+            "xpAfter": 12,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 29,
+            "roundId": "5-5",
+            "result": "playerWin",
+            "combatTicks": 333,
+            "combatEventCount": 2687,
+            "settlementId": "round-29-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 94,
+            "streakBefore": {
+              "kind": "win",
+              "count": 17
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 18
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 93,
+            "goldAfter": 107,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 12,
+            "xpAfter": 14,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 30,
+            "roundId": "5-6",
+            "result": "playerWin",
+            "combatTicks": 435,
+            "combatEventCount": 3223,
+            "settlementId": "round-30-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 108,
+            "streakBefore": {
+              "kind": "win",
+              "count": 18
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 19
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 107,
+            "goldAfter": 121,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 14,
+            "xpAfter": 16,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 31,
+            "roundId": "5-7",
+            "result": "playerWin",
+            "combatTicks": 171,
+            "combatEventCount": 701,
+            "settlementId": "round-31-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 125,
+            "streakBefore": {
+              "kind": "win",
+              "count": 19
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 19
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 125,
+            "goldAfter": 135,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 16,
+            "xpAfter": 18,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 32,
+            "roundId": "6-1",
+            "result": "playerWin",
+            "combatTicks": 431,
+            "combatEventCount": 3558,
+            "settlementId": "round-32-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 136,
+            "streakBefore": {
+              "kind": "win",
+              "count": 19
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 20
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 135,
+            "goldAfter": 149,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 18,
+            "xpAfter": 20,
+            "hpBefore": 95,
+            "hpAfter": 95,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 33,
+            "roundId": "6-2",
+            "result": "enemyWin",
+            "combatTicks": 438,
+            "combatEventCount": 3018,
+            "settlementId": "round-33-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 149,
+            "streakBefore": {
+              "kind": "win",
+              "count": 20
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 149,
+            "goldAfter": 159,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 20,
+            "xpAfter": 22,
+            "hpBefore": 95,
+            "hpAfter": 78,
+            "baseDamage": 12,
+            "survivingEnemyCount": 5,
+            "playerDamage": 17,
+            "hpLost": 17
+          },
+          {
+            "round": 34,
+            "roundId": "6-3",
+            "result": "playerWin",
+            "combatTicks": 527,
+            "combatEventCount": 4192,
+            "settlementId": "round-34-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 160,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 159,
+            "goldAfter": 170,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 22,
+            "xpAfter": 24,
+            "hpBefore": 78,
+            "hpAfter": 78,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 35,
+            "roundId": "6-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-35-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 170,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 170,
+            "goldAfter": 180,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 24,
+            "xpAfter": 26,
+            "hpBefore": 78,
+            "hpAfter": 78,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 36,
+            "roundId": "6-5",
+            "result": "playerWin",
+            "combatTicks": 437,
+            "combatEventCount": 3557,
+            "settlementId": "round-36-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 1
+            },
+            "interestBasis": 181,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 180,
+            "goldAfter": 192,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 26,
+            "xpAfter": 28,
+            "hpBefore": 78,
+            "hpAfter": 78,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 37,
+            "roundId": "6-6",
+            "result": "enemyWin",
+            "combatTicks": 464,
+            "combatEventCount": 3264,
+            "settlementId": "round-37-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 192,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 192,
+            "goldAfter": 202,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 28,
+            "xpAfter": 30,
+            "hpBefore": 78,
+            "hpAfter": 63,
+            "baseDamage": 12,
+            "survivingEnemyCount": 3,
+            "playerDamage": 15,
+            "hpLost": 15
+          },
+          {
+            "round": 38,
+            "roundId": "6-7",
+            "result": "playerWin",
+            "combatTicks": 253,
+            "combatEventCount": 983,
+            "settlementId": "round-38-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 207,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 207,
+            "goldAfter": 217,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 30,
+            "xpAfter": 32,
+            "hpBefore": 63,
+            "hpAfter": 63,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          }
+        ]
+      }
+    },
+    "sniper-caitlyn": {
+      "summary": {
+        "caitlynBattles": 3,
+        "caitlynCasts": 5,
+        "build": "sniper-caitlyn",
+        "seed": 42,
+        "outcome": "victory",
+        "round": 38,
+        "hp": 57,
+        "gold": 30,
+        "formedAt": 25,
+        "formedBattles": 12,
+        "boundBattles": 14,
+        "transitioned": true,
+        "ticks": 12374,
+        "commands": 255
+      },
+      "recording": null,
+      "firstCommandDifference": {
+        "index": 2,
+        "previous": {
+          "type": "buy",
+          "slot": 0,
+          "generation": 2
+        },
+        "current": {
+          "type": "buy",
+          "slot": 2,
+          "generation": 2
+        }
+      },
+      "firstEventDifference": {
+        "round": 3,
+        "previous": "2779d0974cd3c2c92041253b5a7070de568a476cee376d17832a8468047ecd1c",
+        "current": "f78ce251d8c00344bb5a3d0228b9f555b9503c7118b337028e3d154f0f96dec1"
+      },
+      "ledger": {
+        "costs": {
+          "purchases": 59,
+          "sales": 3,
+          "saleLoss": 0,
+          "rerolls": 188,
+          "xp": 80,
+          "anomaly": 1,
+          "income": 329,
+          "rewards": 26
+        },
+        "rounds": [
+          {
+            "round": 1,
+            "roundId": "1-2",
+            "result": "playerWin",
+            "combatTicks": 164,
+            "combatEventCount": 106,
+            "settlementId": "round-1-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 2,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 0,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 2,
+            "goldBefore": 0,
+            "goldAfter": 2,
+            "xpAwarded": 2,
+            "levelBefore": 1,
+            "levelAfter": 2,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 2,
+            "roundId": "1-3",
+            "result": "playerWin",
+            "combatTicks": 89,
+            "combatEventCount": 66,
+            "settlementId": "round-2-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 3,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 1,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 3,
+            "goldBefore": 1,
+            "goldAfter": 4,
+            "xpAwarded": 2,
+            "levelBefore": 2,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 0,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 3,
+            "roundId": "1-4",
+            "result": "playerWin",
+            "combatTicks": 172,
+            "combatEventCount": 172,
+            "settlementId": "round-3-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 7,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": null,
+              "count": 0
+            },
+            "xpRequested": 2,
+            "income": 5,
+            "goldBefore": 7,
+            "goldAfter": 12,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 100,
+            "hpAfter": 100,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 4,
+            "roundId": "2-1",
+            "result": "enemyWin",
+            "combatTicks": 654,
+            "combatEventCount": 679,
+            "settlementId": "round-4-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 11,
+            "streakBefore": {
+              "kind": null,
+              "count": 0
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 11,
+            "goldAfter": 17,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 3,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 100,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 1,
+            "playerDamage": 3,
+            "hpLost": 3
+          },
+          {
+            "round": 5,
+            "roundId": "2-2",
+            "result": "playerWin",
+            "combatTicks": 351,
+            "combatEventCount": 504,
+            "settlementId": "round-5-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 17,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 16,
+            "goldAfter": 23,
+            "xpAwarded": 2,
+            "levelBefore": 3,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 0,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 6,
+            "roundId": "2-3",
+            "result": "playerWin",
+            "combatTicks": 409,
+            "combatEventCount": 534,
+            "settlementId": "round-6-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 2,
+              "streak": 1
+            },
+            "interestBasis": 24,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 23,
+            "goldAfter": 32,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 7,
+            "roundId": "2-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-7-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 32,
+            "goldAfter": 40,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 8,
+            "roundId": "2-5",
+            "result": "playerWin",
+            "combatTicks": 383,
+            "combatEventCount": 693,
+            "settlementId": "round-8-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 1
+            },
+            "interestBasis": 40,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 3
+            },
+            "xpRequested": 2,
+            "income": 11,
+            "goldBefore": 39,
+            "goldAfter": 50,
+            "xpAwarded": 2,
+            "levelBefore": 4,
+            "levelAfter": 4,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 9,
+            "roundId": "2-6",
+            "result": "playerWin",
+            "combatTicks": 281,
+            "combatEventCount": 515,
+            "settlementId": "round-9-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 4,
+              "streak": 2
+            },
+            "interestBasis": 44,
+            "streakBefore": {
+              "kind": "win",
+              "count": 3
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 43,
+            "goldAfter": 55,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 2,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 10,
+            "roundId": "2-7",
+            "result": "playerWin",
+            "combatTicks": 138,
+            "combatEventCount": 201,
+            "settlementId": "round-10-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 5,
+              "streak": 0
+            },
+            "interestBasis": 53,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 4
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 53,
+            "goldAfter": 63,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 11,
+            "roundId": "3-1",
+            "result": "playerWin",
+            "combatTicks": 786,
+            "combatEventCount": 1365,
+            "settlementId": "round-11-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 2
+            },
+            "interestBasis": 60,
+            "streakBefore": {
+              "kind": "win",
+              "count": 4
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 5
+            },
+            "xpRequested": 2,
+            "income": 13,
+            "goldBefore": 59,
+            "goldAfter": 72,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 12,
+            "roundId": "3-2",
+            "result": "playerWin",
+            "combatTicks": 634,
+            "combatEventCount": 1217,
+            "settlementId": "round-12-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 5,
+              "streak": 3
+            },
+            "interestBasis": 80,
+            "streakBefore": {
+              "kind": "win",
+              "count": 5
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 6
+            },
+            "xpRequested": 2,
+            "income": 14,
+            "goldBefore": 79,
+            "goldAfter": 93,
+            "xpAwarded": 2,
+            "levelBefore": 5,
+            "levelAfter": 5,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 13,
+            "roundId": "3-3",
+            "result": "playerWin",
+            "combatTicks": 438,
+            "combatEventCount": 926,
+            "settlementId": "round-13-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 6
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 7
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 14,
+            "roundId": "3-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-14-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 46,
+            "streakBefore": {
+              "kind": "win",
+              "count": 7
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 7
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 46,
+            "goldAfter": 55,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 15,
+            "roundId": "3-5",
+            "result": "playerWin",
+            "combatTicks": 377,
+            "combatEventCount": 2354,
+            "settlementId": "round-15-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 7
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 8
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 16,
+            "roundId": "3-6",
+            "result": "playerWin",
+            "combatTicks": 376,
+            "combatEventCount": 2263,
+            "settlementId": "round-16-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 8
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 9
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 5,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 17,
+            "roundId": "3-7",
+            "result": "playerWin",
+            "combatTicks": 156,
+            "combatEventCount": 779,
+            "settlementId": "round-17-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 3,
+              "streak": 0
+            },
+            "interestBasis": 32,
+            "streakBefore": {
+              "kind": "win",
+              "count": 9
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 9
+            },
+            "xpRequested": 2,
+            "income": 8,
+            "goldBefore": 32,
+            "goldAfter": 40,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 6,
+            "xpBefore": 24,
+            "xpAfter": 26,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 18,
+            "roundId": "4-1",
+            "result": "playerWin",
+            "combatTicks": 548,
+            "combatEventCount": 4315,
+            "settlementId": "round-18-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 33,
+            "streakBefore": {
+              "kind": "win",
+              "count": 9
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 10
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 32,
+            "goldAfter": 44,
+            "xpAwarded": 2,
+            "levelBefore": 6,
+            "levelAfter": 7,
+            "xpBefore": 34,
+            "xpAfter": 0,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 19,
+            "roundId": "4-2",
+            "result": "playerWin",
+            "combatTicks": 345,
+            "combatEventCount": 2146,
+            "settlementId": "round-19-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 10
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 11
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 20,
+            "roundId": "4-3",
+            "result": "playerWin",
+            "combatTicks": 326,
+            "combatEventCount": 2682,
+            "settlementId": "round-20-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 3,
+              "streak": 3
+            },
+            "interestBasis": 35,
+            "streakBefore": {
+              "kind": "win",
+              "count": 11
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 12
+            },
+            "xpRequested": 2,
+            "income": 12,
+            "goldBefore": 34,
+            "goldAfter": 46,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 21,
+            "roundId": "4-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-21-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 4,
+              "streak": 0
+            },
+            "interestBasis": 46,
+            "streakBefore": {
+              "kind": "win",
+              "count": 12
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 12
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 46,
+            "goldAfter": 55,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 7,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 22,
+            "roundId": "4-5",
+            "result": "playerWin",
+            "combatTicks": 413,
+            "combatEventCount": 3249,
+            "settlementId": "round-22-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 16,
+            "streakBefore": {
+              "kind": "win",
+              "count": 12
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 13
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 15,
+            "goldAfter": 25,
+            "xpAwarded": 2,
+            "levelBefore": 7,
+            "levelAfter": 8,
+            "xpBefore": 46,
+            "xpAfter": 0,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 23,
+            "roundId": "4-6",
+            "result": "playerWin",
+            "combatTicks": 324,
+            "combatEventCount": 2220,
+            "settlementId": "round-23-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 19,
+            "streakBefore": {
+              "kind": "win",
+              "count": 13
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 14
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 18,
+            "goldAfter": 28,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 0,
+            "xpAfter": 2,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 8,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 24,
+            "roundId": "4-7",
+            "result": "playerWin",
+            "combatTicks": 158,
+            "combatEventCount": 1273,
+            "settlementId": "round-24-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 2,
+              "streak": 0
+            },
+            "interestBasis": 21,
+            "streakBefore": {
+              "kind": "win",
+              "count": 14
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 14
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 21,
+            "goldAfter": 28,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 2,
+            "xpAfter": 4,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 25,
+            "roundId": "5-1",
+            "result": "playerWin",
+            "combatTicks": 411,
+            "combatEventCount": 2445,
+            "settlementId": "round-25-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 15,
+            "streakBefore": {
+              "kind": "win",
+              "count": 14
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 15
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 14,
+            "goldAfter": 24,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 4,
+            "xpAfter": 6,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 26,
+            "roundId": "5-2",
+            "result": "playerWin",
+            "combatTicks": 482,
+            "combatEventCount": 3691,
+            "settlementId": "round-26-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 1,
+              "streak": 3
+            },
+            "interestBasis": 19,
+            "streakBefore": {
+              "kind": "win",
+              "count": 15
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 16
+            },
+            "xpRequested": 2,
+            "income": 10,
+            "goldBefore": 18,
+            "goldAfter": 28,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 6,
+            "xpAfter": 8,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 27,
+            "roundId": "5-3",
+            "result": "playerWin",
+            "combatTicks": 407,
+            "combatEventCount": 2914,
+            "settlementId": "round-27-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 0,
+              "streak": 3
+            },
+            "interestBasis": 5,
+            "streakBefore": {
+              "kind": "win",
+              "count": 16
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 17
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 4,
+            "goldAfter": 13,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 8,
+            "xpAfter": 10,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 28,
+            "roundId": "5-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-28-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 13,
+            "streakBefore": {
+              "kind": "win",
+              "count": 17
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 17
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 13,
+            "goldAfter": 19,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 10,
+            "xpAfter": 12,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 29,
+            "roundId": "5-5",
+            "result": "playerWin",
+            "combatTicks": 430,
+            "combatEventCount": 2606,
+            "settlementId": "round-29-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 0,
+              "streak": 3
+            },
+            "interestBasis": 4,
+            "streakBefore": {
+              "kind": "win",
+              "count": 17
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 18
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 3,
+            "goldAfter": 12,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 12,
+            "xpAfter": 14,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 30,
+            "roundId": "5-6",
+            "result": "playerWin",
+            "combatTicks": 453,
+            "combatEventCount": 3459,
+            "settlementId": "round-30-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 0,
+              "streak": 3
+            },
+            "interestBasis": 5,
+            "streakBefore": {
+              "kind": "win",
+              "count": 18
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 19
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 4,
+            "goldAfter": 13,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 14,
+            "xpAfter": 16,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 10,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 31,
+            "roundId": "5-7",
+            "result": "playerWin",
+            "combatTicks": 178,
+            "combatEventCount": 752,
+            "settlementId": "round-31-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 7,
+            "streakBefore": {
+              "kind": "win",
+              "count": 19
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 19
+            },
+            "xpRequested": 2,
+            "income": 5,
+            "goldBefore": 7,
+            "goldAfter": 12,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 16,
+            "xpAfter": 18,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 32,
+            "roundId": "6-1",
+            "result": "playerWin",
+            "combatTicks": 525,
+            "combatEventCount": 4057,
+            "settlementId": "round-32-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 0,
+              "streak": 3
+            },
+            "interestBasis": 5,
+            "streakBefore": {
+              "kind": "win",
+              "count": 19
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 20
+            },
+            "xpRequested": 2,
+            "income": 9,
+            "goldBefore": 4,
+            "goldAfter": 13,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 18,
+            "xpAfter": 20,
+            "hpBefore": 97,
+            "hpAfter": 97,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 33,
+            "roundId": "6-2",
+            "result": "enemyWin",
+            "combatTicks": 386,
+            "combatEventCount": 3696,
+            "settlementId": "round-33-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 3,
+            "streakBefore": {
+              "kind": "win",
+              "count": 20
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 5,
+            "goldBefore": 3,
+            "goldAfter": 8,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 20,
+            "xpAfter": 22,
+            "hpBefore": 97,
+            "hpAfter": 77,
+            "baseDamage": 12,
+            "survivingEnemyCount": 8,
+            "playerDamage": 20,
+            "hpLost": 20
+          },
+          {
+            "round": 34,
+            "roundId": "6-3",
+            "result": "playerWin",
+            "combatTicks": 516,
+            "combatEventCount": 4404,
+            "settlementId": "round-34-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 0,
+              "streak": 0
+            },
+            "interestBasis": 5,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 4,
+            "goldAfter": 10,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 22,
+            "xpAfter": 24,
+            "hpBefore": 77,
+            "hpAfter": 77,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 35,
+            "roundId": "6-4",
+            "result": "supply",
+            "combatTicks": 0,
+            "combatEventCount": 0,
+            "settlementId": "round-35-settled",
+            "roundKind": "supply",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 10,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 10,
+            "goldAfter": 16,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 24,
+            "xpAfter": 26,
+            "hpBefore": 77,
+            "hpAfter": 77,
+            "baseDamage": 0,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 36,
+            "roundId": "6-5",
+            "result": "playerWin",
+            "combatTicks": 461,
+            "combatEventCount": 3583,
+            "settlementId": "round-36-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 1,
+              "interest": 0,
+              "streak": 1
+            },
+            "interestBasis": 6,
+            "streakBefore": {
+              "kind": "win",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "win",
+              "count": 2
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 5,
+            "goldAfter": 12,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 26,
+            "xpAfter": 28,
+            "hpBefore": 77,
+            "hpAfter": 77,
+            "baseDamage": 12,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          },
+          {
+            "round": 37,
+            "roundId": "6-6",
+            "result": "enemyWin",
+            "combatTicks": 398,
+            "combatEventCount": 3555,
+            "settlementId": "round-37-settled",
+            "roundKind": "pvp",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 1,
+              "streak": 0
+            },
+            "interestBasis": 12,
+            "streakBefore": {
+              "kind": "win",
+              "count": 2
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 6,
+            "goldBefore": 12,
+            "goldAfter": 18,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 28,
+            "xpAfter": 30,
+            "hpBefore": 77,
+            "hpAfter": 57,
+            "baseDamage": 12,
+            "survivingEnemyCount": 8,
+            "playerDamage": 20,
+            "hpLost": 20
+          },
+          {
+            "round": 38,
+            "roundId": "6-7",
+            "result": "playerWin",
+            "combatTicks": 205,
+            "combatEventCount": 872,
+            "settlementId": "round-38-settled",
+            "roundKind": "pve",
+            "incomeBreakdown": {
+              "base": 5,
+              "win": 0,
+              "interest": 2,
+              "streak": 0
+            },
+            "interestBasis": 23,
+            "streakBefore": {
+              "kind": "loss",
+              "count": 1
+            },
+            "streakAfter": {
+              "kind": "loss",
+              "count": 1
+            },
+            "xpRequested": 2,
+            "income": 7,
+            "goldBefore": 23,
+            "goldAfter": 30,
+            "xpAwarded": 2,
+            "levelBefore": 8,
+            "levelAfter": 8,
+            "xpBefore": 30,
+            "xpAfter": 32,
+            "hpBefore": 57,
+            "hpAfter": 57,
+            "baseDamage": 3,
+            "survivingEnemyCount": 0,
+            "playerDamage": 0,
+            "hpLost": 0
+          }
+        ]
+      }
+    }
+  },
+  "candidateSha256": "b623b030883b07960bbc6b0005fdb1fde00adabf3d016aa467336f40d3bd9f15"
+}

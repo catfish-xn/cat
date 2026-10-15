@@ -1,0 +1,390 @@
+{
+  "traits": [
+    {
+      "record": {
+        "apiName": "TFT13_Scrap",
+        "desc": "Combat start: Components held by Scrap units temporarily turn into full items. Scrap units gain Shield for @ShieldDuration@ seconds for each component held by your team, including those that make up a full item.<br><br><row>(@MinUnits@) @NumComponents@ component, @HPShieldAmount@ Shield</row><br><row>(@MinUnits@) @NumComponents@ components, @HPShieldAmount@ Shield</row><br><row>(@MinUnits@) All components, and full items become lucky! @HPShieldAmount@ Shield</row><br><row>(@MinUnits@) Generate Radiant items! @HPShieldAmount@ Shield</row><br><br><rules>Shield Amount:&nbsp;@TFTUnitProperty.:TFT13_Trait_Scrap_ShieldTotal@ </rules> <br>",
+        "effects": [
+          {
+            "maxUnits": 3,
+            "minUnits": 2,
+            "style": 1,
+            "variables": {
+              "HPShieldAmount": 25.0,
+              "NumComponents": 1.0,
+              "ShieldDuration": 20.0,
+              "{659aef8d}": null,
+              "{7e2474c8}": null
+            }
+          },
+          {
+            "maxUnits": 5,
+            "minUnits": 4,
+            "style": 3,
+            "variables": {
+              "HPShieldAmount": 35.0,
+              "NumComponents": 3.0,
+              "ShieldDuration": 20.0,
+              "{659aef8d}": null,
+              "{7e2474c8}": null
+            }
+          },
+          {
+            "maxUnits": 8,
+            "minUnits": 6,
+            "style": 5,
+            "variables": {
+              "HPShieldAmount": 50.0,
+              "NumComponents": 20.0,
+              "ShieldDuration": 20.0,
+              "{659aef8d}": 1.0,
+              "{7e2474c8}": null
+            }
+          },
+          {
+            "maxUnits": 25000,
+            "minUnits": 9,
+            "style": 5,
+            "variables": {
+              "HPShieldAmount": 60.0,
+              "NumComponents": 20.0,
+              "ShieldDuration": 20.0,
+              "{659aef8d}": 1.0,
+              "{7e2474c8}": 1.0
+            }
+          }
+        ],
+        "icon": "ASSETS/UX/TraitIcons/Trait_Icon_6_Scrap.tex",
+        "name": "Scrap"
+      },
+      "source": {
+        "jsonPointer": "/setData/1/traits/3",
+        "recordCanonicalSha256": "90d73c499e7b86decdb4712c3f2842c1a30605a0e46a23b74d1638692c479c47",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT13_Ambassador",
+        "desc": "This trait is active only when you have exactly 1 or 4 unique Emissaries. <br><br><row>(@MinUnits@) Gain that Emissary's bonus</row><br><row>(@MinUnits@) Gain all bonuses. Emissaries gain @BonusHealth@&nbsp;%i:scaleHealth% and @SelfishDamageAmp*100@%&nbsp;%i:scaleDA%</row><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveDomina alternate=TFTGuildInactive>Ambessa: Allies gain @AmbessaArmor@ Armor and Magic Resist for each opponent defeated. (@TFTUnitProperty.trait:TFT13_Ambassador_PlayersDefeated@/7)</TFTGuildActive><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveJarvan alternate=TFTGuildInactive>Garen: On Combat Start, Garen and allies to his left and right gain @GarenHealthPercent*100@% of his max Health.</TFTGuildActive><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveNami alternate=TFTGuildInactive>Nami: Allies' attacks grant @NamiMana@ bonus Mana.</TFTGuildActive><br><br><TFTGuildActive enabled=TFT13_Trait_Ambassador_ActiveTristana alternate=TFTGuildInactive>Tristana: Allies gain @StarAS*100@% Attack Speed per star level.</TFTGuildActive>",
+        "effects": [
+          {
+            "maxUnits": 1,
+            "minUnits": 1,
+            "style": 1,
+            "variables": {
+              "AmbessaArmor": 2.0,
+              "AmbessaArmor_PVE": 4.0,
+              "BonusAS": null,
+              "BonusHealth": 200.0,
+              "CCImmuneDuration": 8.0,
+              "GarenHealthPercent": 0.11999999731779099,
+              "NamiMana": 2.0,
+              "SelfishDamageAmp": 0.20000000298023224,
+              "StarAS": 0.05999999865889549,
+              "{3854f478}": 2.0,
+              "{4b20f990}": null,
+              "{845be53a}": 4.0
+            }
+          },
+          {
+            "maxUnits": 4,
+            "minUnits": 4,
+            "style": 5,
+            "variables": {
+              "AmbessaArmor": 2.0,
+              "AmbessaArmor_PVE": 4.0,
+              "BonusAS": null,
+              "BonusHealth": 200.0,
+              "CCImmuneDuration": 8.0,
+              "GarenHealthPercent": 0.11999999731779099,
+              "NamiMana": 2.0,
+              "SelfishDamageAmp": 0.20000000298023224,
+              "StarAS": 0.05999999865889549,
+              "{3854f478}": 2.0,
+              "{4b20f990}": null,
+              "{845be53a}": 4.0
+            }
+          }
+        ],
+        "icon": "ASSETS/UX/TraitIcons/Trait_Icon_13_Diplomat.TFT_Set13.tex",
+        "name": "Emissary"
+      },
+      "source": {
+        "jsonPointer": "/setData/1/traits/6",
+        "recordCanonicalSha256": "41cfa4eaa2dc19627d9337e03e9ebc37b740ff1d3f12e9667959b2b6ed4aae02",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT13_Warband",
+        "desc": "Conquerors' takedowns grant stacks of Conquest. After gaining enough Conquest, open War Chests full of loot!<br><br>Conquerors gain Attack Damage and Ability Power, increased by @PercentIncreasePerChest*100@% for each War Chest opened.<br><br><expandRow>(@MinUnits@) @ADAPBase*100@%&nbsp;%i:scaleAD%%i:scaleAP%; @StacksPerKill@x&nbsp;Conquest</expandRow><br><br><rules>War Chests Opened: @TFTUnitProperty.trait:TFT13_Warband_ChestsCompleted@</rules><br><rules>Current Stats: @TFTUnitProperty.trait:TFT13_Warband_CurrentADAP@%&nbsp;%i:scaleAD%%i:scaleAP%</rules><br>",
+        "effects": [
+          {
+            "maxUnits": 3,
+            "minUnits": 2,
+            "style": 1,
+            "variables": {
+              "ADAPBase": 0.18000000715255737,
+              "PercentIncreasePerChest": 0.029999999329447746,
+              "StacksPerKill": 1.0
+            }
+          },
+          {
+            "maxUnits": 5,
+            "minUnits": 4,
+            "style": 3,
+            "variables": {
+              "ADAPBase": 0.25,
+              "PercentIncreasePerChest": 0.029999999329447746,
+              "StacksPerKill": 3.0
+            }
+          },
+          {
+            "maxUnits": 8,
+            "minUnits": 6,
+            "style": 5,
+            "variables": {
+              "ADAPBase": 0.4000000059604645,
+              "PercentIncreasePerChest": 0.029999999329447746,
+              "StacksPerKill": 6.0
+            }
+          },
+          {
+            "maxUnits": 25000,
+            "minUnits": 9,
+            "style": 6,
+            "variables": {
+              "ADAPBase": 1.0,
+              "PercentIncreasePerChest": 0.029999999329447746,
+              "StacksPerKill": 20.0
+            }
+          }
+        ],
+        "icon": "ASSETS/UX/TraitIcons/Trait_Icon_13_Conqueror.TFT_Set13.tex",
+        "name": "Conqueror"
+      },
+      "source": {
+        "jsonPointer": "/setData/1/traits/15",
+        "recordCanonicalSha256": "f301b1b00489d55fcde28879a5034c6a54fe22e9c0bfebb7a550b53d502a6255",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT13_Academy",
+        "desc": "The Academy sponsors 3 items each game.<br><br>Copies of sponsored items grant bonus max Health and Damage Amp. Academy units holding sponsored items gain double the amount, plus an additional @BaseValues*100@% Health and Damage Amp.<br><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%;<br>gain 1 sponsored item.</row><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%;<br>gain 1 sponsored item.</row><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%;<br>gain 1 sponsored item.</row><br><row>(@MinUnits@) @PercentIncreaseSponsored*100@% %i:scaleHealth% %i:scaleDA%</row>",
+        "effects": [
+          {
+            "maxUnits": 3,
+            "minUnits": 3,
+            "style": 1,
+            "variables": {
+              "BaseValues": 0.05000000074505806,
+              "NumOfItems": 1.0,
+              "PercentIncreaseSponsored": 0.019999999552965164
+            }
+          },
+          {
+            "maxUnits": 4,
+            "minUnits": 4,
+            "style": 3,
+            "variables": {
+              "BaseValues": 0.05000000074505806,
+              "NumOfItems": 2.0,
+              "PercentIncreaseSponsored": 0.029999999329447746
+            }
+          },
+          {
+            "maxUnits": 5,
+            "minUnits": 5,
+            "style": 5,
+            "variables": {
+              "BaseValues": 0.05000000074505806,
+              "NumOfItems": 3.0,
+              "PercentIncreaseSponsored": 0.05000000074505806
+            }
+          },
+          {
+            "maxUnits": 25000,
+            "minUnits": 6,
+            "style": 5,
+            "variables": {
+              "BaseValues": 0.05000000074505806,
+              "NumOfItems": 3.0,
+              "PercentIncreaseSponsored": 0.09000000357627869
+            }
+          }
+        ],
+        "icon": "ASSETS/UX/TraitIcons/Trait_Icon_13_Academy.TFT_Set13.tex",
+        "name": "Academy"
+      },
+      "source": {
+        "jsonPointer": "/setData/1/traits/17",
+        "recordCanonicalSha256": "4092b745bafe109288b183140999eacd5072d308148d0854c7cb58ce9ba24421",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT13_Rebel",
+        "desc": "Rebels gain @MaxHealthIncrease*100@% max Health.<br><br>After your team loses @PercentHealthTrigger*100@% of their Health, a smoke signal appears, granting Rebels @BurstAS*100@% Attack Speed for @BurstDuration@ seconds and extra power for the rest of&nbsp;combat.<br><br><row>(@MinUnits@) @ADAP*100@%&nbsp;%i:scaleAD%%i:scaleAP%</row><br><row>(@MinUnits@) @ADAP*100@%&nbsp;%i:scaleAD%%i:scaleAP%, @PercentMaxHealthBonus*100@%&nbsp;%i:scaleHealth%</row><br><row>(@MinUnits@) @ADAP*100@%&nbsp;%i:scaleAD%%i:scaleAP%, @PercentMaxHealthBonus*100@%&nbsp;%i:scaleHealth%, and Stun all enemies for @StunDuration@&nbsp;seconds</row><br><row>(@MinUnits@) The smoke signal triggers at Combat Start and every @ForceDuration@&nbsp;seconds.</row>",
+        "effects": [
+          {
+            "maxUnits": 4,
+            "minUnits": 3,
+            "style": 1,
+            "variables": {
+              "ADAP": 0.20000000298023224,
+              "BurstAS": 0.6000000238418579,
+              "BurstDuration": 5.0,
+              "ForceDuration": null,
+              "MaxHealthIncrease": 0.11999999731779099,
+              "PercentHealthTrigger": 0.25,
+              "PercentMaxHealthBonus": null,
+              "StunDuration": null,
+              "{1ec59053}": null
+            }
+          },
+          {
+            "maxUnits": 6,
+            "minUnits": 5,
+            "style": 3,
+            "variables": {
+              "ADAP": 0.4000000059604645,
+              "BurstAS": 0.6000000238418579,
+              "BurstDuration": 5.0,
+              "ForceDuration": null,
+              "MaxHealthIncrease": 0.11999999731779099,
+              "PercentHealthTrigger": 0.25,
+              "PercentMaxHealthBonus": 0.11999999731779099,
+              "StunDuration": null,
+              "{1ec59053}": null
+            }
+          },
+          {
+            "maxUnits": 9,
+            "minUnits": 7,
+            "style": 5,
+            "variables": {
+              "ADAP": 0.44999998807907104,
+              "BurstAS": 0.6000000238418579,
+              "BurstDuration": 5.0,
+              "ForceDuration": null,
+              "MaxHealthIncrease": 0.11999999731779099,
+              "PercentHealthTrigger": 0.25,
+              "PercentMaxHealthBonus": 0.15000000596046448,
+              "StunDuration": 2.0,
+              "{1ec59053}": null
+            }
+          },
+          {
+            "maxUnits": 25000,
+            "minUnits": 10,
+            "style": 6,
+            "variables": {
+              "ADAP": 0.5,
+              "BurstAS": 0.6000000238418579,
+              "BurstDuration": 5.0,
+              "ForceDuration": 12.0,
+              "MaxHealthIncrease": 0.11999999731779099,
+              "PercentHealthTrigger": 0.25,
+              "PercentMaxHealthBonus": 0.30000001192092896,
+              "StunDuration": 2.0,
+              "{1ec59053}": 1.0
+            }
+          }
+        ],
+        "icon": "ASSETS/UX/TraitIcons/Trait_Icon_13_Rebel.TFT_Set13.tex",
+        "name": "Rebel"
+      },
+      "source": {
+        "jsonPointer": "/setData/1/traits/19",
+        "recordCanonicalSha256": "897d8f5748f0214b5dff96cd8f0e10ecd27debe636d4b59f924d60f86741fad9",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT13_Squad",
+        "desc": "Combat Start: Enforcers gain Shield and Damage Amp. The highest Health enemy units become <i>WANTED!</i> <br><br>When a Wanted enemy dies, Enforcers gain @AttackSpeedPerWantedKill*100@% Attack Speed.<br><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;unit; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;units; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;units; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) @NumOfWantedEnemies@&nbsp;units; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%,&nbsp;@BaseDA*100@%&nbsp;%i:scaleDA%</row><br><row>(@MinUnits@) ALL enemies; @PercentMaxHealthShield*100*100@%&nbsp;%i:scaleHealth%, @BaseDA*100@%&nbsp;%i:scaleDA%; Combat Start: Confiscate all enemy&nbsp;items!</row>",
+        "effects": [
+          {
+            "maxUnits": 3,
+            "minUnits": 2,
+            "style": 1,
+            "variables": {
+              "AttackSpeedPerWantedKill": 0.30000001192092896,
+              "BaseDA": 0.11999999731779099,
+              "NumOfWantedEnemies": 1.0,
+              "PercentMaxHealthShield": 0.11999999731779099,
+              "{36b1550f}": null,
+              "{9edd4912}": null
+            }
+          },
+          {
+            "maxUnits": 5,
+            "minUnits": 4,
+            "style": 3,
+            "variables": {
+              "AttackSpeedPerWantedKill": 0.30000001192092896,
+              "BaseDA": 0.20000000298023224,
+              "NumOfWantedEnemies": 2.0,
+              "PercentMaxHealthShield": 0.20000000298023224,
+              "{36b1550f}": null,
+              "{9edd4912}": null
+            }
+          },
+          {
+            "maxUnits": 7,
+            "minUnits": 6,
+            "style": 5,
+            "variables": {
+              "AttackSpeedPerWantedKill": 0.30000001192092896,
+              "BaseDA": 0.33000001311302185,
+              "NumOfWantedEnemies": 4.0,
+              "PercentMaxHealthShield": 0.30000001192092896,
+              "{36b1550f}": null,
+              "{9edd4912}": null
+            }
+          },
+          {
+            "maxUnits": 9,
+            "minUnits": 8,
+            "style": 5,
+            "variables": {
+              "AttackSpeedPerWantedKill": 0.30000001192092896,
+              "BaseDA": 0.5,
+              "NumOfWantedEnemies": 5.0,
+              "PercentMaxHealthShield": 0.4000000059604645,
+              "{36b1550f}": null,
+              "{9edd4912}": null
+            }
+          },
+          {
+            "maxUnits": 25000,
+            "minUnits": 10,
+            "style": 6,
+            "variables": {
+              "AttackSpeedPerWantedKill": 0.30000001192092896,
+              "BaseDA": 1.5,
+              "NumOfWantedEnemies": 99.0,
+              "PercentMaxHealthShield": 1.0,
+              "{36b1550f}": null,
+              "{9edd4912}": 1.0
+            }
+          }
+        ],
+        "icon": "ASSETS/UX/TraitIcons/Trait_Icon_13_Squad.TFT_Set13.tex",
+        "name": "Enforcer"
+      },
+      "source": {
+        "jsonPointer": "/setData/1/traits/23",
+        "recordCanonicalSha256": "014de0cfd8af1496b5e1f5e7523863ec90d467881c4eda9f992f6ac10bb657bf",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    }
+  ],
+  "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+}

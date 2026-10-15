@@ -1,3 +1,4 @@
+import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
 import { getNeighbors, hexDistance } from './board';
 import type { CombatTask, ExpansionState } from './combat-types';
@@ -104,10 +105,11 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       break;
     }
   }
-  return ids;
+  return ids.length ? ids : planG22Cast(ctx, unit, target, seq);
 }
 /** Passive attack replacements return true when they already emitted the basic packet. */
 export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Unit, seq: number): boolean {
+  if (planG22Attack(ctx, unit, initial, seq)) return true;
   const name = champion(unit);
   if (!['twitch', 'zeri', 'leblanc', 'nocturne'].includes(name)) return false;
   const v = (k: string) => variable(unit, k), state = expansion(unit);
@@ -137,6 +139,7 @@ export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Uni
   return false;
 }
 export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask): void {
+  if (t.kind.startsWith('g22')) { executeG22Task(ctx, unit, t); return; }
   const target = ctx.units.find(u => u.id === t.targetId && u.alive && u.hp > 0);
   if (t.kind === 'g2SingedSpeed') {
     if (target) applyStatus(target, t.source, 'attackSpeed', Math.floor(t.amount * (t.total - t.ordinal) / t.total), 1, ctx.tick, ctx.events, true);

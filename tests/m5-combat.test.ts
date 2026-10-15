@@ -40,7 +40,7 @@ function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redir
 
 describe('M5 independent finite combat rules', () => {
   it('resolves all admitted abilities as integer-only isolated snapshots', () => {
-    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(33);
+    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(48);
     for (const id of Object.keys(S13_ABILITY_DATA)) for (const star of [1, 2, 3] as const) {
       const ability = resolveAbility(id, star);
       expect(ability.kind).toBe('s13');

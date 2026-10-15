@@ -121,11 +121,12 @@ describe('B7 installed encounters and trusted Match restore',()=>{
 
   it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud']])('restores Herald action identity after earlier tick-one aura maintenance: %j',(...ids)=>{
     const items=ids as string[];
+    // Empty equipment branch retains a real Sunfire aura in G2-2 (one earlier action).
     // Only the five approved nonempty saves use generated raw input. Independent parsing and the full production restore stay inside this case.
     let s=items.length ? restoreMatch(publicHeraldRawInput(items)) : publicHeraldEquipment(items);
     s=accepted(api.startMatchCombat(s));roundTrip(s);s=api.stepMatch(s).state;roundTrip(s);
     const c=s.combat!.units.find(u=>u.id==='unit-1')!.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.source.definitionId==='void-charge-project-v1')!;
-    expect(c).toBeDefined();expect(JSON.parse(JSON.parse(c.key)[8])).toEqual([items.length,1]);
+    expect(c).toBeDefined();expect(JSON.parse(JSON.parse(c.key)[8])).toEqual([items.length || 1,1]);
     corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');target.maxMana=0;target.mana=0;});
     corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');const status=target.mechanismState.statuses.flatMap((g:any)=>g.contributions).find((c:any)=>c.source.definitionId==='void-charge-project-v1');status.source.effectIndex=2;});
   });

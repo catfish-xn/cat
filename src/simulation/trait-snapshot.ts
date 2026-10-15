@@ -24,7 +24,7 @@ export function deriveTraits(preparation: GameState, team: Team,
     const members = boardUnits.filter(unit => UNIT_DEFINITIONS[unit.definitionId].traits.includes(traitId));
     const memberDefinitionIds = [...new Set(members.map(unit => unit.definitionId))].sort(ascii);
     const count = memberDefinitionIds.length;
-    const tier = definition.tiers.reduce((highest, candidate) =>
+    const tier = traitId === 'emissary' && count !== 1 && count !== 4 ? 0 : definition.tiers.reduce((highest, candidate) =>
       candidate.threshold <= count ? Math.max(highest, candidate.threshold) : highest, 0);
     const targets = definition.target === 'team' ? boardUnits : members;
     return { team, traitId, count, tier, memberDefinitionIds, targetUnitIds: tier === 0 ? [] : targets.map(unit => unit.id) };

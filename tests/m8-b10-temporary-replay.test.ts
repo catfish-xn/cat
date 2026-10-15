@@ -10,7 +10,7 @@ import { BattleHistory, validateBattleRecord } from '../src/replay/history';
 import { PlaybackSession } from '../src/replay/playback-session';
 import { transferPreparation } from './fixtures/t13-loot-public';
 
-const SURVIVOR = 'unit-16', DONOR = 'unit-10', TG = 'item-9';
+const SURVIVOR = 'unit-9', DONOR = 'unit-7', TG = 'item-9';
 /** Live battle observed exactly as the application records it (one SessionChange per committed step). */
 function recorded(prepared: MatchState) {
   const history = new BattleHistory('b10-temporary'), ticks = new Map<number, MatchState>();

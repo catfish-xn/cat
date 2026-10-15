@@ -901,3 +901,11 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **技能名**：content 公开导出里没有技能名（只在 `source/s13-14.24.json` 原档的 `ability.name`）。请在 `S13_ABILITY_DATA` 增加 `name`（最好再给中文名），界面直接显示。
 - **计算后的数值**：模板里的 `@ModifiedShield@`、`@ModifiedDamage@`、`@TotalDamage@` 等是规则按法强/攻击力换算的总值，`variables` 里没有，目前原样显示。请导出只读选择器，例如 `abilityDisplayValues(definitionId, starLevel): Record<string, number>`（按基础法强/攻击力，不含装备与羁绊），界面用它补全这些占位。
 - **验收**：19 名现有英雄 1–3 星的说明文字里不再出现 `@...@`；界面不自行换算。
+
+### SR-G2-01 G2-2 完整回应
+
+`S13_ABILITY_DATA[abilityId].name` 已有锁定源英文技能名；`src/simulation/ability-display.ts` 的 `abilityDisplayName(definitionId)` 与 `abilityDisplayValues(definitionId, starLevel, stats?)` 均为纯函数。默认基础星级AD、100AP，返回冻结的数值键映射；支持48名英雄，47名全模板三档星级覆盖，Rumble唯一升级字符串分支由界面隐藏未启用项。完整签名/失败语义见 MATCH_CONTRACT 的 SR-G2-01 节。6新增阵营和15英雄的源名/数值已供内容选择器读取；新增英雄视觉身份与六阵营已开放标签映射请界面负责人接入。图标下载受环境代理403阻断，见 evidence/g2-2/assets-manifest.json。
+
+### G2-2 联机外交官胜场历史缺口（有限实现清单）
+
+规则编译器可读 `CombatStrategyInputs.roundResults` 中此前 PvP 胜场，用于 Ambessa 外交官双抗；当前联机冻结输入没有这段历史，因此该项按 0 处理。后续服务器应在冻结战斗输入时提供经过权威账本验证的胜场历史（双方分别绑定），不能由客户端推算。当前有限版本不阻塞；更改须补联机数值与冻结/恢复测试。完整近似清单见 `evidence/g2-2/RECONCILIATION.md`。
