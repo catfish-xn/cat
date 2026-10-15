@@ -11,7 +11,7 @@
   dist-server/index.mjs                    4.2kb
   dist-server/run-battle.mjs               1.7kb
 
-⚡ Done in 96ms
+⚡ Done in 82ms
 Server ESM built: 144 inputs; Node >=22.12; dist-server/index.mjs, dist-server/run-battle.mjs
 {
   "passed": true,

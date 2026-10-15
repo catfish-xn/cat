@@ -2,7 +2,7 @@
   "status": "G2-2 finite content release; all required checks passed; 21 new icon downloads blocked by HTTP 403",
   "branch": "codex/g2-2-content",
   "target": "multiplayer",
-  "mergedBase": "998315868a59b6794a5dec2898361fc7ba198734",
+  "mergedBase": "17a2ce8f9f3d5324e0ffb65c8618aec1834480c7",
   "contentDigest": "fnv1a32-utf16:22f31569",
   "previousContentDigest": "fnv1a32-utf16:1ce135cf",
   "digestChanges": 1,
@@ -13,18 +13,18 @@
   "traits": 14,
   "checks": {
     "npm test": {
-      "files": 231,
-      "passed": 2922,
+      "files": 232,
+      "passed": 2930,
       "failed": 0,
       "skipped": 0,
-      "seconds": 368.92
+      "seconds": 366.64
     },
     "npm run test:timing": {
       "files": 6,
       "passed": 32,
       "failed": 0,
       "skipped": 0,
-      "seconds": 140.8
+      "seconds": 147.01
     },
     "npm run typecheck": "passed",
     "npm run test:server-entry": "passed"
@@ -41,11 +41,11 @@
   "logs": [
     {
       "path": "docs/evidence/g2-2/npm-test.txt",
-      "sha256": "9e1ca0e6ae8fc503410911d9025c9a8896098954fc3cba4e3f0e53ef863590cd"
+      "sha256": "79b69abb177df1015882a8a6c6e5c9c0d8ce808b0672bdb718814967844cd002"
     },
     {
       "path": "docs/evidence/g2-2/test-timing.txt",
-      "sha256": "42939ef5ab22a0b7087b91148b5fa9c5a9cc3e5ed6357e0a73aa968dc20725af"
+      "sha256": "b993d3374a3d10487c5eb6e18f2678a034f82b726d8d18066f10fc31dfffc982"
     },
     {
       "path": "docs/evidence/g2-2/typecheck.txt",
@@ -53,7 +53,7 @@
     },
     {
       "path": "docs/evidence/g2-2/test-server-entry.txt",
-      "sha256": "186355769a726791d62453f652b5a84eb5de39ae3bf9845c7a378fadb475a265"
+      "sha256": "ffff1d7ca4cedef10f57b1161273c88b8fe0992166ed7807a6216d97f4026c0e"
     }
   ],
   "unchangedHistoricalFixtureBytes": [
@@ -96,5 +96,7 @@
     "Swain/Jayce/Gangplank not admitted because source stats are incomplete; 15 complete-stat alternatives admitted.",
     "21 new icon downloads blocked by HTTP 403; 86 existing assets have SHA256 evidence.",
     "Multiplayer Ambessa prior-PvP-win resistance is zero until authoritative win history is supplied; UI_REQUESTS records the integration gap."
-  ]
+  ],
+  "recordingBase": "998315868a59b6794a5dec2898361fc7ba198734",
+  "testedCodeCommit": "c3589db1c5c5aed46b519129a7fb188be579db47"
 }

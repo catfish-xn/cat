@@ -1,6 +1,6 @@
 # G2-2 回归与夹具迁移
 
-合并基线：`998315868a59b6794a5dec2898361fc7ba198734`（含 #108 技能显示接口与 #109 界面工作）。本次仅修改 simulation、tests、scripts、docs；不改 server/presentation。
+内容重录基线：`998315868a59b6794a5dec2898361fc7ba198734`（含 #108 技能显示接口与 #109 界面工作）。最终验证又合入 `17a2ce8f9f3d5324e0ffb65c8618aec1834480c7`（含 #110 G1-P7 选秀服务器/界面接线）；该次上游合并不改 simulation、重录驱动或历史输入，因此保留已重录内容字节。本次仅修改 simulation、tests、scripts、docs；不改 server/presentation。
 
 ## 轨迹变化
 
