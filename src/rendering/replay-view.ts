@@ -1,5 +1,5 @@
 import type { CombatState } from '../simulation/combat-types';
-import type { LedgerCombatEvent } from '../simulation/combat-types';
+import type { CombatViewState, SceneCombatEvent } from '../presentation/combat-display';
 import { planFx, type FxSpec } from '../presentation/fx-plan';
 import { reducedMotion } from '../presentation/preferences';
 import { HexLayout } from './hex-layout';
@@ -15,6 +15,8 @@ const STAR_COLORS = ['#d39a6a', '#dfe6ec', '#ffd34d'];
 const SCALE = 2;
 /** Shared, bounded (one per hero) portrait cache; images load once per page. */
 const portraits = new Map<string, HTMLImageElement>();
+/** A saved replay's engine state, or an online replay's CombatViewState (G5 review): the board reads the same fields of both. */
+export type ReplayBoardState = CombatState | CombatViewState;
 
 /**
  * A presentation-only canvas over isolated playback snapshots. Uses the same hero identity
@@ -23,7 +25,7 @@ const portraits = new Map<string, HTMLImageElement>();
  */
 export class ReplayView {
   readonly canvas = document.createElement('canvas');
-  private last: { state: CombatState; selected: string | null } | null = null;
+  private last: { state: ReplayBoardState; selected: string | null } | null = null;
   private effects: { spec: FxSpec; start: number; rect?: LabelRect | null }[] = [];
   private consumed = 0;
   private combatId: string | undefined;
@@ -55,7 +57,7 @@ export class ReplayView {
    * events only; seek backwards, large jumps and battle switches drop old effects instead of
    * replaying the whole history at once.
    */
-  private consume(state: CombatState, events: readonly LedgerCombatEvent[] | undefined, now: number): void {
+  private consume(state: ReplayBoardState, events: readonly SceneCombatEvent[] | undefined, now: number): void {
     if (!events) return;
     if (state.combatId !== this.combatId || events.length < this.consumed || events.length - this.consumed > 400) {
       this.combatId = state.combatId; this.effects = []; this.consumed = events.length; return;
@@ -68,7 +70,7 @@ export class ReplayView {
     }
     if (this.effects.length > 120) this.effects.splice(0, this.effects.length - 120);
   }
-  render(state: CombatState, selected: string | null = null, events?: readonly LedgerCombatEvent[]) {
+  render(state: ReplayBoardState, selected: string | null = null, events?: readonly SceneCombatEvent[]) {
     const now = performance.now();
     this.consume(state, events, now);
     this.last = { state, selected };
@@ -114,8 +116,8 @@ export class ReplayView {
         if (unit.shield > 0) { ctx.fillStyle = C.shield; ctx.fillRect(left + 52 * hp, p.y - 44, Math.max(2, Math.min(52 - 52 * hp, 52 * shield)), 6); }
         ctx.fillStyle = unit.mana === unit.maxMana ? C.manaFull : C.mana; ctx.fillRect(left, p.y - 35, 52 * mana, 3);
         if (unit.shield > 0) { ctx.beginPath(); ctx.arc(p.x, p.y, radius + 3, 0, Math.PI * 2); ctx.strokeStyle = C.shield; ctx.lineWidth = 3; ctx.stroke(); }
-        // Same status strip as the live piece, read from this snapshot's own mechanism store.
-        const badges = statusBadges(state, unit.id);
+        // Same status strip as the live piece, read from this snapshot's own mechanism store (a §14.2 view unit carries none: empty strip).
+        const badges = statusBadges(state as CombatState, unit.id);
         ctx.font = 'bold 10px system-ui, sans-serif';
         for (const [text, align, fg, bg] of [[badges.harmful, -1, '#ffb0a0', '#3a1218e6'], [badges.beneficial, 1, '#9ff0e4', '#0f2e2ae6']] as const) {
           if (!text) continue;
@@ -128,7 +130,7 @@ export class ReplayView {
     ctx.globalAlpha = 1;
     this.drawEffects(ctx, layout, state, now);
   }
-  private drawEffects(ctx: CanvasRenderingContext2D, layout: HexLayout, state: CombatState, now: number) {
+  private drawEffects(ctx: CanvasRenderingContext2D, layout: HexLayout, state: ReplayBoardState, now: number) {
     const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
     this.effects = this.effects.filter(({ spec, start }) => now - start < ('duration' in spec ? spec.duration : 160));
     // Each label takes a free slot on its first frame and keeps it until it fades (same rule as the live board).

@@ -8,11 +8,14 @@ import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import { UNIT_DEFINITIONS } from '../../simulation/units';
 import type { ReplaySnapshot } from '../../replay';
+import { BattleSummaryPanel } from './battle-summary';
+import { EconomyHint } from './economy-hint';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
 import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
 import { RankingOverlay } from './ranking';
+import { ReplayReviewPanel } from './replay-review';
 import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
 import type { OnlineBoardMounts } from '../app-shell';
@@ -56,6 +59,10 @@ export class OnlineApplication implements SceneApplication {
   private lobby: Lobby;
   private sidebar: PlayersSidebar;
   private opponentBoard: OpponentBoardPanel;
+  /** G5: last battle's ranking (right column), its review over the board, and the preparation economy hint. */
+  private summary: BattleSummaryPanel;
+  private review: ReplayReviewPanel;
+  private economy: EconomyHint;
   /** My seat is eliminated while the match goes on: watch only (TFT keeps the screen, the ranking comes at the end). */
   private spectating = false;
   private ranking: RankingOverlay;
@@ -74,9 +81,12 @@ export class OnlineApplication implements SceneApplication {
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
+    this.review = new ReplayReviewPanel(frame, () => {});
+    this.summary = new BattleSummaryPanel(this.sidebar.root, battle => this.openReview(battle), unitId => this.review.select(unitId));
+    this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.session.pause('lobby');
-    this.unsubscribe = this.session.subscribe(change => this.hooks.changed?.(change));
+    this.unsubscribe = this.session.subscribe(change => { this.hooks.changed?.(change); this.syncBattleViews(); });
     document.addEventListener('visibilitychange', this.visibility);
     this.unlisten = client.listen({
       lobby: view => this.onLobby(view),
@@ -146,6 +156,7 @@ export class OnlineApplication implements SceneApplication {
   private onView(view: PlayerView) {
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
     this.syncSpectating(view);
+    this.syncBattleViews();
     if (view.phase.kind === 'ended') {
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
@@ -160,10 +171,29 @@ export class OnlineApplication implements SceneApplication {
     this.syncStatus(view);
   }
   private lastPhase = '';
+  /**
+   * G5: the ranking of my last battle shows from its end (settlement) through the next preparation, until my next
+   * battle starts; an open review closes once a newer battle replaces it. The economy hint shows in preparation.
+   */
+  private syncBattleViews() {
+    const state = this.session.state, playing = this.mode === 'active' && !this.spectating;
+    const battle = playing ? this.session.lastBattle : null;
+    const show = battle !== null && !this.session.inBattle && state.phase !== 'combat' && (state.round === battle.round || state.round === battle.round + 1);
+    this.summary.show(show ? battle : null);
+    const open = this.review.openBattle;
+    if (open && (!playing || open !== this.session.lastBattle)) this.review.close();
+    this.economy.render(state, playing && !this.session.inBattle);
+  }
+  /** Review and scouting share the space over the enemy half of my board: one at a time. */
+  private openReview(battle: NonNullable<RemoteSession['lastBattle']>) {
+    this.opponentBoard.close();
+    this.review.open(battle);
+  }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {
     const view = this.view, seat = view?.seats.find(candidate => candidate.seatId === seatId);
     if (!view || !seat) return;
+    this.review.close();
     this.opponentBoard.toggle(seat, seatId === view.mySeatId);
     this.sidebar.setViewing(this.opponentBoard.openSeatId);
   }
@@ -199,6 +229,7 @@ export class OnlineApplication implements SceneApplication {
   private backToLobby() {
     this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
+    this.review.close(); this.session.forgetBattle();
     this.session.skipPlayback(); this.session.resume('ended'); this.session.pause('lobby'); this.hooks.clearInput(); this.syncMode();
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
@@ -206,6 +237,7 @@ export class OnlineApplication implements SceneApplication {
     this.sidebar.tick();
     if (this.ignoreNextDelta) { this.ignoreNextDelta = false; return false; }
     if (delta > 1000) return false; // a long stall: let the next frame continue from the current state
+    this.review.frame(delta);
     return this.isActive;
   }
   private visibility = () => {
@@ -224,10 +256,12 @@ export class OnlineApplication implements SceneApplication {
     if (this.mounts) { this.mounts.shopDock.inert = !playing; this.mounts.countdown.hidden = !inGame; }
     const stats = document.getElementById('stats-root'); if (stats) stats.inert = !inGame;
     const canvas = document.querySelector<HTMLCanvasElement>('#board-root canvas'); if (canvas) canvas.style.pointerEvents = playing ? '' : 'none';
+    this.syncBattleViews();
   }
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
   debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
+    battleSummary: this.summary.debug(), review: this.review.debug(), economy: this.economy.debug(),
     opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
@@ -235,7 +269,7 @@ export class OnlineApplication implements SceneApplication {
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.ranking.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.review.dispose(); this.summary.dispose(); this.economy.dispose(); this.ranking.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

@@ -24,6 +24,8 @@ export type IntentNotice = { readonly kind: 'pending'; readonly commandId: numbe
 export const REPLAY_OPENING_MS = 400;
 /** Commands the room passes to the rules while a battle runs (contract §15.2 `OPS`). */
 const BATTLE_COMMANDS: ReadonlySet<WireCommand['type']> = new Set(['buy', 'sell', 'reroll', 'buyXp', 'shopLock', 'deploy', 'combine', 'equip', 'useConsumable']);
+/** G5: my last finished battle of a round, kept after the settlement took it off the board (summary and review). */
+export interface FinishedBattle { readonly round: number; readonly roundId: string; readonly replay: CombatReplay; readonly unitIds: readonly ReplayUnitId[] }
 /** Playback behind wall time by more than this (dropped or stalled frames) catches up at once; 1x otherwise. */
 const CATCH_UP_MS = 250;
 
@@ -35,6 +37,7 @@ export class RemoteSession extends MatchSession {
   private openingPending = false;
   /** C15: battle id → original id of my units in the replay on the board, as the server named them. */
   private replayUnitIds: ReadonlyMap<string, string> = new Map();
+  private finished: FinishedBattle | null = null;
   private notice: IntentNotice | null = null;
   /** Set while the connection is down or superseded: commands are not sent and the reason is shown instead. */
   offline: string | null = null;
@@ -68,6 +71,10 @@ export class RemoteSession extends MatchSession {
    * original unit id; any other id (preparation, PvE replay, an opponent's unit) is returned as it is and simply holds nothing.
    */
   equipmentOwnerId(id: string): string { return this.replayUnitIds.get(id) ?? id; }
+  /** G5: the last battle a replay was received for, until a newer replay or a reset; `round`/`roundId` say which round it was fought in. */
+  get lastBattle(): FinishedBattle | null { return this.finished; }
+  /** Forgets the last battle (back to the lobby). */
+  forgetBattle(): void { this.finished = null; }
   /** My battle of this round is on the board (playing or held on its terminal view until the settlement arrives). */
   get inBattle(): boolean { return this.replay !== null; }
   /** Server pushed my authoritative state; `events` are those of my commands it confirms and of its own deadline/settlement transactions. */
@@ -94,6 +101,7 @@ export class RemoteSession extends MatchSession {
     this.accumulator = COMBAT_TICK_MS - REPLAY_OPENING_MS;
     this.replayStartedAt = this.clock(); this.replayElapsed = 0;
     const before = this.matchState; this.playbackBase = this.playbackBase ?? before; this.matchState = this.overlay();
+    this.finished = { round: this.playbackBase.round, roundId: this.playbackBase.roundDefinitionId, replay, unitIds: [...unitIds] };
     this.notify(before, [], 'command');
   }
   /** Display-only: my last authoritative state in the combat phase; the combat itself is `combatView`. */
