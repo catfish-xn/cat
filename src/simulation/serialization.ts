@@ -31,6 +31,35 @@ import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
 
+// Full finite-JSON admission still runs first. Compare parsed data with exactly
+// canonicalContent equality semantics (including its 0/-0 equivalence), without
+// allocating sorted strings. External object inputs retain canonicalContent.
+function equalParsedData(a: unknown, b: unknown): boolean {
+  if (a === b) return a !== undefined;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a)) return Array.isArray(b) && a.length === b.length
+    && a.every((value, index) => equalParsedData(value, b[index]));
+  if (Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length
+    && keys.every(key => Object.hasOwn(right, key) && equalParsedData(left[key], right[key]));
+}
+
+// Cache only the pure default-catalog compilation of locally parsed, validated
+// basis inputs. Candidate strategy/runtime/resource validation still runs on every
+// restore. External objects and negative-zero text retain the original path.
+const restoredStrategies = new Map<string, ReturnType<typeof buildStrategySnapshot>>();
+function compileRestoredStrategy(inputs: Parameters<typeof buildStrategySnapshot>[0], admittedJson: boolean) {
+  if (!admittedJson) return buildStrategySnapshot(inputs);
+  const key = JSON.stringify(inputs), cached = restoredStrategies.get(key);
+  if (cached) return cached;
+  const compiled = freezeContent(buildStrategySnapshot(inputs));
+  if (restoredStrategies.size >= 16) restoredStrategies.delete(restoredStrategies.keys().next().value!);
+  restoredStrategies.set(key, compiled);
+  return compiled;
+}
+
 function requireValue(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Invalid Match save: ${message}`); }
 const inputValidation = createInputValidation(requireValue);
 const integer: InputValidation['integer'] = inputValidation.integer;
@@ -57,6 +86,8 @@ export function restoreMatch(input: unknown): MatchState {
   // Reject functions, undefined, nonfinite values and non-plain containers. Parsed text can only hold a nonfinite number
   // (e.g. 1e400), so it takes the equivalent walk that skips building the canonical text; other input keeps the original.
   if (typeof input === 'string') assertParsedContent(raw); else canonicalContent(raw);
+  const same = typeof input === 'string' ? equalParsedData
+    : (a: unknown,b: unknown) => canonicalContent(a) === canonicalContent(b);
   record(raw);
   requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
   requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
@@ -72,9 +103,9 @@ export function restoreMatch(input: unknown): MatchState {
   const enemyProjection = readRoundEnemyProjection(state.round);
   const units = validateInputAssets(state, { playerLevel: state.level, nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial }, enemyProjection.units, inputValidation);
   record(state.m8); record(state.m8.round); record(state.m8.preparation);
-  requireValue(canonicalContent(state.m8.round) === canonicalContent(roundDefinition), 'm8 round identity');
+  requireValue(same(state.m8.round, roundDefinition), 'm8 round identity');
   requireValue(state.m8.encounterPlan === null, 'independent encounter plan authority');
-  requireValue(canonicalContent(state.m8.preparation) === canonicalContent({
+  requireValue(same(state.m8.preparation, {
     version:ROUND_PREPARATION_RULES.version,roundId:roundDefinition.roundId,encounterId:roundDefinition.encounterId,
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
@@ -143,7 +174,7 @@ export function restoreMatch(input: unknown): MatchState {
   const receiptOrder = state.scheduleReceipts.map(receipt => receipt.eventId);
   const expectedReceiptOrder: string[] = [];
   for (let round=1;round<=state.round;round++) for (const event of getRoundSchedule(round)) if (receipts.has(event.id)) expectedReceiptOrder.push(event.id);
-  requireValue(canonicalContent(receiptOrder) === canonicalContent(expectedReceiptOrder), 'receipt order');
+  requireValue(same(receiptOrder, expectedReceiptOrder), 'receipt order');
   let stopped = false;
   for (let round = 1; round <= state.round; round++) for (const event of getRoundSchedule(round)) {
     if (state.pendingChoice?.eventId === event.id) stopped = true;
@@ -164,19 +195,19 @@ export function restoreMatch(input: unknown): MatchState {
     record(result); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
-    requireValue(canonicalContent(result.streakBefore) === canonicalContent(streak), 'history streak before');
+    requireValue(same(result.streakBefore, streak), 'history streak before');
     requireValue(validPreparationExperience(experienceAfter,result.levelBefore,result.xpBefore), 'history XP preparation chain');
     const expected = planCatalogRoundEconomy({ roundId: result.roundId,
       result: result.result === 'supply' ? null : result.result, gold: result.goldBefore, hp: result.hpBefore,
       level: result.levelBefore, xp: result.xpBefore, streak, enemySurvivors: result.survivingEnemyCount });
     requireValue(result.levelAfter === expected.progression.level && result.xpAfter === expected.progression.xp && result.xpAwarded === expected.progression.xpApplied && result.xpRequested === expected.progression.xpRequested, 'history XP');
     requireValue(result.baseDamage === expected.baseDamage && result.playerDamage === expected.playerDamage && result.hpAfter === expected.hpAfter && result.hpLost === expected.hpLost, 'history damage');
-    requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && canonicalContent(result.incomeBreakdown) === canonicalContent(expected.incomeBreakdown), 'history income');
-    requireValue(canonicalContent(result.streakAfter) === canonicalContent(expected.streakAfter), 'history streak'); streak = expected.streakAfter;
+    requireValue(result.income === expected.income && result.goldAfter === expected.goldAfter && result.interestBasis === expected.interestBasis && same(result.incomeBreakdown, expected.incomeBreakdown), 'history income');
+    requireValue(same(result.streakAfter, expected.streakAfter), 'history streak'); streak = expected.streakAfter;
     experienceAfter=totalExperience(result.levelAfter,result.xpAfter);
     requireValue(result.combatTicks <= 1200 && (result.roundKind !== 'supply' || result.combatTicks === 0 && result.combatEventCount === 0), 'history ticks');
   }
-  requireValue(canonicalContent(state.streak) === canonicalContent(streak), 'current streak');
+  requireValue(same(state.streak, streak), 'current streak');
   requireValue(state.roundDefinitionId === roundDefinition.roundId, 'round definition');
   requireValue(state.phase === 'gameOver' ? state.outcome === (roundDefinition.isFinal && state.playerHp > 0 && state.roundResults.at(-1)?.result === 'playerWin' ? 'victory' : 'defeat') : state.outcome === null, 'outcome');
   record(state.augmentProgress); integer(state.augmentProgress.pumpingRounds); integer(state.augmentProgress.investmentHp);
@@ -204,12 +235,12 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(combat.status === 'running' ? combat.result === null : ['playerWin','enemyWin','draw'].includes(combat.result!), 'combat result');
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
-    const expectedStrategy = buildStrategySnapshot(basis.inputs);
+    const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
     const combatPreparation = basis.inputs.preparation, combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
-    requireValue(canonicalContent(combat.strategy) === canonicalContent(expectedStrategy), 'resolved strategy');
-    requireValue(canonicalContent(combat.board) === canonicalContent(combatPreparation.board), 'combat board');
+    requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
+    requireValue(same(combat.board, combatPreparation.board), 'combat board');
     const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
-    requireValue(canonicalContent(combat.units.map(unit => unit.id).sort()) === canonicalContent(expectedIds), 'combat roster');
+    requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
     if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>unit.alive&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
@@ -217,13 +248,13 @@ export function restoreMatch(input: unknown): MatchState {
     for (const unit of combat.units) {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
-      if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(canonicalContent(unit.mechanics) === canonicalContent(resolved.mechanics), 'resolved mechanics'); requireValue(canonicalContent(unit.itemPrograms ?? []) === canonicalContent(resolved.itemPrograms ?? []), 'resolved item programs'); }
+      if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       const { stats } = resolved;
       if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
       for (const [field, value] of Object.entries({ attackDamage: stats.attack, armor: stats.armor, magicResist: stats.magicResist, maxMana: stats.maxMana, attackIntervalTicks: stats.attackIntervalTicks, attackRange: stats.attackRange })) requireValue(unit[field as keyof typeof unit] === value, 'resolved combat stat');
-      requireValue(canonicalContent(unit.ability) === canonicalContent(resolved.ability), 'resolved ability');
-      requireValue(canonicalContent(unit.sources) === canonicalContent(resolved.sources) && canonicalContent(unit.triggers) === canonicalContent(resolved.triggers), 'resolved effect source/trigger');
+      requireValue(same(unit.ability, resolved.ability), 'resolved ability');
+      requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
       requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
