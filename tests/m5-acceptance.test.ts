@@ -3,7 +3,7 @@ import {createMatch} from '../src/simulation/match';
 import {planRoundEconomy} from '../src/simulation/economy';
 import {getUnitSellPrice} from '../src/simulation/unit-stats';
 import {generateShop} from '../src/simulation/shop';
-import {shop,SELL} from './fixtures/m5/oracle.cjs';
+import {shop,SELL} from './fixtures/m5/oracle.g2.cjs';
 
 describe('M5 independent frozen numerical acceptance answers',()=>{
  it.each([

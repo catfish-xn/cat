@@ -74,7 +74,7 @@ export function restoreMatch(input: unknown): MatchState {
   const same = typeof input === 'string' ? equalValidatedContent
     : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   record(raw);
-  requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool'), 'multiplayer-state');
+  requireValue(!Object.hasOwn(raw, 'multiplayer') && !Object.hasOwn(raw, 'sharedPool') && !Object.hasOwn(raw,'carousel'), 'multiplayer-state');
   requireValue(raw.schemaVersion === M8_VERSION.schemaVersion && raw.rulesVersion === M8_VERSION.rulesVersion && raw.contentVersion === M8_VERSION.contentVersion && raw.commandProtocolVersion === M8_VERSION.commandProtocolVersion && raw.rngAlgorithm === M8_VERSION.rngAlgorithm && raw.tickMs === M8_VERSION.tickMs, 'unsupported-version');
   requireValue(raw.contentDigest === CONTENT_DIGEST, 'content-digest');
   for (const name of ['seed', 'rngState', 'choiceRngState', 'rewardRngState', 'battleSeedRngState']) validateSeed(raw[name] as number);
@@ -241,7 +241,7 @@ export function restoreMatch(input: unknown): MatchState {
       requireValue(same(unit.ability, resolved.ability), 'resolved ability');
       requireValue(same(unit.sources, resolved.sources) && same(unit.triggers, resolved.triggers), 'resolved effect source/trigger');
       for (const field of ['hp','maxHp','attackDamage','armor','magicResist','mana','maxMana','shield','cooldownTicks','moveCooldownTicks','attackIntervalTicks','attackRange']) integer(unit[field as keyof typeof unit]);
-      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
+      requireValue(unit.maxHp >= 1 && unit.maxMana >= (unit.unitKind === 'neutral' || champion(unit) === 'amumu' ? 0 : 1) && unit.attackIntervalTicks >= 1 && unit.hp <= unit.maxHp && unit.mana <= unit.maxMana, 'combat stats');
       requireValue(unit.alive === (unit.hp > 0), 'alive flag'); nullableString(unit.targetId); if (unit.targetId) requireValue(combatIds.has(unit.targetId) && combat.units.find(other=>other.id===unit.targetId)?.team !== unit.team, 'target reference');
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
@@ -304,6 +304,20 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   for (const field of ['attackCount','castCount','attackSpeedBps','abilityPowerFlat','rangeBonus','nextAttackMagic','nextAttackPhysical','permanentAdBps']) integer(unit.runtime[field as keyof typeof unit.runtime]);
   requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick && unit.runtime.permanentAdBps % 125 === 0, 'combat runtime');
   if (unit.definitionId !== 'tristana') requireValue(unit.runtime.permanentAdBps === 0, 'growth owner');
+  if (unit.expansion !== undefined) {
+    record(unit.expansion);
+    for (const field of ['damageDealt','damageTaken','crystals','crystalDamage','attacksRemaining','buffUntilTick','lastRetaliationTick','chainUntilTick','chainCastSeq','chainKills'] as const) {
+      integer(unit.expansion[field]); requireValue(unit.expansion[field] <= 100000000, 'G2 counter bound');
+    }
+    requireValue(unit.expansion.crystals < (mechanic(unit, 'automata', 'crystals') || 1), 'G2 crystals');
+    requireValue(unit.expansion.attacksRemaining <= (champion(unit) === 'twitch' ? variable(unit, 'TotalAttacks') : champion(unit) === 'leblanc' ? variable(unit, 'NumAttacks') : 0), 'G2 empowered attack count');
+    requireValue(unit.expansion.lastRetaliationTick <= tick && unit.expansion.buffUntilTick <= tick + 120 && unit.expansion.chainUntilTick <= tick + 100, 'G2 clock bounds');
+    requireValue((champion(unit) === 'nocturne' || unit.expansion.buffUntilTick === 0) && (champion(unit) === 'blitzcrank' || unit.expansion.lastRetaliationTick === 0), 'G2 passive owner');
+    requireValue(champion(unit) === 'leblanc' || unit.expansion.chainCastSeq === 0 && unit.expansion.chainKills === 0, 'G2 chain owner');
+    list(unit.expansion.chainTargets);
+    requireValue(unit.expansion.chainKills <= unit.expansion.chainTargets.length, 'G2 initial kill bound');
+    requireValue(new Set(unit.expansion.chainTargets).size === unit.expansion.chainTargets.length && unit.expansion.chainTargets.every(id => combatUnits.some(u => u.id === id && u.team !== unit.team)) && unit.expansion.chainTargets.length <= (champion(unit) === 'leblanc' ? variable(unit, 'ChainTargets') : 0), 'G2 chain targets');
+  }
   const runtime = unit.runtime, isKog = champion(unit) === 'kogmaw';
   requireValue(runtime.attackCount + runtime.castCount <= tick, 'action count bound');
   const itemSpeedAt=(at:number)=>(unit.mechanismDefinitions?.periodicTasks ?? []).reduce((n,t)=>n+t.program.effects.reduce((total,e)=>total+(e.kind==='modify-stat'&&e.modifier.stat==='attackSpeed'&&e.modifier.value.kind==='constant'&&e.duration.kind==='combat'&&e.stackPolicy.kind==='add-stacks'?e.modifier.value.amount*Math.max(0,Math.floor((Math.min(at,t.endsAtTick ?? at)-t.nextPulseAtTick)/t.periodTicks)+1):0),0),0);
@@ -363,7 +377,7 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     record(status); origin(status.source, neutralStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
     requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
     requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
-    requireValue(status.kind !== 'abilityPower' && status.kind !== 'attackSpeed', 'unsupported dynamic status source');
+    requireValue(status.kind !== 'abilityPower' && (status.kind !== 'attackSpeed' || status.source.definitionId === 'singed-ability' || status.source.definitionId === 'firelight'), 'unsupported dynamic status source');
     requireValue(Math.abs(status.amount) <= 1000000, 'status arithmetic bound');
     if (['damageReduction','armorReduction','redirect'].includes(status.kind)) requireValue(status.amount <= 10000, 'status bps');
     requireValue(status.key.startsWith(sourceKey(status.source)) || status.contributionKeys?.includes(status.key) && unit.mechanismState!.statuses.some(g=>g.contributions.some(c=>c.key===status.key&&canonicalSource(c.source)===canonicalSource(asSource(status.source)))), 'status key/source'); statusKeys.add(status.key);
@@ -371,14 +385,21 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
   list(unit.tasks); const taskKeys = new Set<string>();
   for (const task of unit.tasks) {
     record(task); origin(task.source); id(task.key); integer(task.executeAtTick); integer(task.amount); integer(task.ordinal); integer(task.total,1); integer(task.actionSeq);
-    requireValue(task.attachedDot === (task.kind === 'bleed' ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
+    requireValue(task.attachedDot === (['bleed', 'g2Infection'].includes(task.kind) ? true : undefined) && task.shieldEndKey === (task.kind === 'ireliaEnd' ? sourceKey(task.source) : undefined), 'task mechanism binding');
     const owner = combatUnits.find(value => value.id === task.source.ownerId)!;
     const maximumAmp = mechanic(owner, 'damageAmp', 'bps') + mechanic(owner, 'glassCannon', 'damageAmpBps')
       + mechanic(owner, 'sniper', 'damageBpsPerHex') * (DEFAULT_BOARD.columns + DEFAULT_BOARD.rows);
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation'].includes(task.kind), 'task kind');
+    if (task.kind.startsWith('g2')) {
+      const expected = ({g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed'} as Record<string,string>)[task.kind];
+      requireValue(task.source.ownerId === unit.id && !task.cancellable, 'G2 task owner');
+      if(expected) requireValue(champion(owner) === expected && task.source.sourceKind === 'ability' && task.source.definitionId === expected + '-ability', 'G2 skill task');
+      if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
+      if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');
+    }
     if (task.kind === 'tristanaBounce') {
       record(task.inherited); id(task.inherited.parentPacketId); integer(task.inherited.resolvedAtTick);
       requireValue(task.inherited.portion === 'overkill' && typeof task.inherited.critical === 'boolean'

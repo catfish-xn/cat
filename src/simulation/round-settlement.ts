@@ -1,7 +1,6 @@
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canonicalContent } from './content';
-import { planCatalogRoundEconomy } from './opening-economy';
-import { planRoundEconomy } from './economy';
+import { resolveRoundEconomy } from './round-economy';
 import { getMultiplayerRoundById } from './multiplayer-round';
 import { FINAL_ROUND, getRoundSchedule } from './round-schedule';
 import type { MatchState, MatchEvent, MatchFailure, PersistentGrowth, RoundResult } from './match-types';
@@ -85,8 +84,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
     const result = r.result === 'win' ? 'playerWin' : r.result === 'loss' ? 'enemyWin' : 'draw';
     const economyInput = {result,gold:state.gold,streak:state.streak,
       level:state.level,xp:state.xp,hp:state.playerHp,enemySurvivors:r.opposingSurvivors} as const;
-    const plan = round.ordinal <= FINAL_ROUND ? planCatalogRoundEconomy({roundId:r.roundId,...economyInput})
-      : planRoundEconomy({stage:round.stage,roundKind:'pvp',roundId:r.roundId,...economyInput});
+    const plan = resolveRoundEconomy({roundId:r.roundId,...economyInput});
     // Damage is forwarded verbatim, but reject mismatched/edited proposals at the rules boundary.
     if (r.baseDamage !== plan.baseDamage || r.damage !== plan.playerDamage) return fail(state,'invalid-receipt');
     const growth = new Map(state.persistentGrowth.map(g => [g.unitId,g.attackDamageBps]));

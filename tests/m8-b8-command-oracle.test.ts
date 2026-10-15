@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MatchState } from '../src/simulation/match';
 import type { Unit, UnitLocation } from '../src/simulation/units';
-import { expectedCommand } from './fixtures/m5/command-oracle.cjs';
+import { expectedCommand } from './fixtures/m5/command-oracle.g2.cjs';
 import { accepted, freeze, readyMatch } from './match-helpers';
 
 const opening = { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening' }, sequence: 0, roundId: '1-2' };

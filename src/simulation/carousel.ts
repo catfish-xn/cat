@@ -1,0 +1,519 @@
+import { canonicalContent, CONTENT_DIGEST } from './content';
+import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
+import { SHOP_CATALOG_BY_COST } from './match-rules';
+import { nextRandom, validateSeed } from './rng';
+import { getCatalogRoundById } from './round-selectors';
+import { assertSharedPoolConservation } from './shared-pool-ledger';
+import type { SharedPoolState } from './shared-pool-types';
+import type { MatchState } from './match-types';
+import type { CostTier } from './unit-types';
+import type { CarouselRoundId, CarouselRng, CarouselParticipant, CarouselSlot, CarouselReceipt, CarouselState, CarouselFailure, CarouselEvent, CarouselResult } from './carousel-types';
+import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from './carousel-policy';
+import { UNIT_DEFINITIONS } from './units';
+import { releaseSeatOnElimination } from './shared-pool';
+import { planUnitAcquisition } from './unit-acquisition';
+import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
+import { createCarouselMatch, finishCarouselSupply } from './match';
+import type { MatchEvent } from './match-types';
+import { planPurchase, transferUpgradeResources } from './upgrades';
+import { draftPool, returnHolding } from './shared-pool-ledger';
+import type { SharedPoolResult, SharedPoolEvent } from './shared-pool-types';
+export type * from './carousel-types';
+export { CAROUSEL_RULES, CAROUSEL_COST_ODDS };
+const rounds: readonly CarouselRoundId[] = ['1-1', '2-4', '3-4', '4-4', '5-4', '6-4'];
+const odds = CAROUSEL_COST_ODDS;
+const completed = Object.keys(ITEM_DEFINITIONS).filter(id => ITEM_DEFINITIONS[id].kind === 'completed').sort();
+const integer = (n: number, min = 0) => Number.isSafeInteger(n) && n >= min;
+const validRound = (r: string): r is CarouselRoundId => rounds.includes(r as CarouselRoundId);
+const equal = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
+export function schedule(roundId: string): {
+    firstBatchMs: number;
+    batchIntervalMs: number;
+    tailMs: number;
+} {
+    if (!validRound(roundId))
+        throw new RangeError('invalid-round');
+    return { firstBatchMs: CAROUSEL_RULES.firstBatchMs, batchIntervalMs: CAROUSEL_RULES.batchIntervalMs, tailMs: CAROUSEL_RULES.tailMs };
+}
+export function opensCarousel(state: MatchState): boolean {
+    return !!state.carousel && (state.carousel.openingPending === true || validRound(state.roundDefinitionId) && state.roundDefinitionId !== '1-1' && !state.carousel?.receipts.some(r => r.carouselId.endsWith(`:carousel:${state.roundDefinitionId}`)));
+}
+export function prepareCarouselParticipants(pool: SharedPoolState, states: readonly {
+    seatId: string;
+    state: MatchState;
+}[]): {
+    ok: true;
+    pool: SharedPoolState;
+} | {
+    ok: false;
+    pool: SharedPoolState;
+    reason: 'invalid-pool' | 'invalid-participants';
+} {
+    try {
+        assertSharedPoolConservation(pool);
+    }
+    catch {
+        return { ok: false, pool, reason: 'invalid-pool' };
+    }
+    const active = pool.seats.filter(s => !s.released);
+    if (!Array.isArray(states) || pool.seats.length !== pool.seatCount || !active.length || states.length !== active.length || new Set(states.map(s => s.seatId)).size !== states.length)
+        return { ok: false, pool, reason: 'invalid-participants' };
+    const participants: CarouselParticipant[] = [];
+    for (const entry of states) {
+        const seat = active.find(s => s.seatId === entry.seatId), s = entry.state;
+        if (!s || !seat || !integer(s.playerHp, 1) || s.playerHp > 100 || s.sharedPool?.poolId !== pool.poolId || s.sharedPool.seatId !== entry.seatId || s.sharedPool.revision !== seat.revision || s.multiplayer?.status !== 'active' || s.multiplayer.seatId !== entry.seatId)
+            return { ok: false, pool, reason: 'invalid-participants' };
+        participants.push({ seatId: seat.seatId, seatIndex: seat.seatIndex, hp: s.playerHp });
+    }
+    participants.sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex);
+    return { ok: true, pool: { ...pool, carouselParticipants: participants } };
+}
+function drawSlots(initial: Readonly<Record<string, number>>, roundId: CarouselRoundId, rngState: number, id: string) {
+    const available = { ...initial }, slots: CarouselSlot[] = [];
+    let wordState = rngState;
+    const draw = () => { const n = nextRandom(wordState); wordState = n.state; return n.word; };
+    for (let slot = 0; slot < 9; slot++) {
+        let roll = Math.floor(draw() * 10000 / 4294967296), tier = 1;
+        for (let i = 0; i < 5; i++) {
+            tier = i + 1;
+            if (roll < odds[roundId][i])
+                break;
+            roll -= odds[roundId][i];
+        }
+        const stocked = ([1, 2, 3, 4, 5] as CostTier[]).filter(t => SHOP_CATALOG_BY_COST[t].some(d => available[d] > 0)).sort((a, b) => Math.abs(a - tier) - Math.abs(b - tier) || a - b), catalog = [...SHOP_CATALOG_BY_COST[stocked[0]]].sort();
+        let member = Math.floor(draw() * catalog.reduce((sum, d) => sum + available[d], 0) / 4294967296);
+        const definitionId = catalog.find(d => { if (member < available[d])
+            return true; member -= available[d]; return false; })!;
+        available[definitionId]--;
+        const items = roundId === '5-4' || roundId === '6-4' ? completed : COMPONENT_IDS, itemId = items[Math.floor(draw() * items.length / 4294967296)];
+        slots.push({ slot, definitionId, itemId, reservationId: `${id}:slot:${slot}`, pickedBy: null });
+    }
+    return { available, slots, wordState };
+}
+export function createCarousel(pool: SharedPoolState, roundId: CarouselRoundId, rng: CarouselRng): {
+    ok: true;
+    state: CarouselState;
+    events: readonly CarouselEvent[];
+} | {
+    ok: false;
+    pool: SharedPoolState;
+    rng: CarouselRng;
+    reason: CarouselFailure;
+    events: readonly [
+    ];
+} {
+    const fail = (reason: CarouselFailure) => ({ ok: false as const, pool, rng, reason, events: [] as const });
+    try {
+        assertSharedPoolConservation(pool);
+    }
+    catch {
+        return fail('invalid-pool');
+    }
+    if (!validRound(roundId))
+        return fail('invalid-round');
+    try {
+        if (rng.algorithm !== 'lcg32-v1')
+            return fail('invalid-rng');
+        validateSeed(rng.state);
+    }
+    catch {
+        return fail('invalid-rng');
+    }
+    if (pool.carouselRounds.includes(roundId))
+        return fail('carousel-exists');
+    if (roundId === '1-1' ? pool.naturalRound !== 0 : pool.naturalRound !== getCatalogRoundById(roundId).ordinal)
+        return fail('invalid-round');
+    const participants = pool.carouselParticipants, active = pool.seats.filter(s => !s.released);
+    if (pool.seats.length !== pool.seatCount || !participants.length || participants.length !== active.length || new Set(participants.map(p => p.seatId)).size !== participants.length || participants.some(p => !integer(p.hp, 1) || p.hp > 100 || !active.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)))
+        return fail('invalid-participants');
+    if (Object.values(pool.available).reduce((a, b) => a + b, 0) < 9)
+        return fail('pool-exhausted');
+    const id = `${pool.poolId}:carousel:${roundId}`, { available, slots, wordState } = drawSlots(pool.available, roundId, rng.state, id);
+    const ordered = [...participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), releaseOrder = ordered.map(p => p.seatId), times = schedule(roundId);
+    const nextPool: SharedPoolState = { ...pool, available, revision: pool.revision + 1, carouselRounds: [...pool.carouselRounds, roundId], carouselReservations: [...pool.carouselReservations, ...slots.map(s => ({ carouselId: id, reservationId: s.reservationId, slot: s.slot, definitionId: s.definitionId, seatId: null }))] };
+    const state: CarouselState = { version: 'carousel-v1', id, roundId, pool: nextPool, initialAvailable: { ...pool.available }, participants: ordered, status: 'open', revision: 0, elapsedMs: 0, slots, releaseOrder, releaseAtMs: Object.fromEntries(releaseOrder.map((s, i) => [s, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs])), deadlineMs: times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs, rngBefore: { ...rng }, rngAfter: { algorithm: 'lcg32-v1', state: wordState }, receipts: [] };
+    assertSharedPoolConservation(nextPool);
+    return { ok: true, state, events: [{ type: 'carousel-created', carouselId: id, roundId }] };
+}
+const fail = (state: CarouselState, reason: CarouselFailure): CarouselResult => ({ ok: false, state, reason, events: [] });
+export function validateCarousel(state: CarouselState): void {
+    assertSharedPoolConservation(state.pool);
+    if (state.version !== 'carousel-v1' || !validRound(state.roundId) || state.id !== `${state.pool.poolId}:carousel:${state.roundId}` || !state.pool.carouselRounds.includes(state.roundId) || !integer(state.revision) || !integer(state.elapsedMs) || !['open', 'closed'].includes(state.status) || state.slots.length !== 9)
+        throw Error('invalid-carousel');
+    const ordered = [...state.participants].sort((a, b) => a.hp - b.hp || a.seatIndex - b.seatIndex), times = schedule(state.roundId);
+    if (!ordered.length || ordered.length > 8 || !equal(state.releaseOrder, ordered.map(s => s.seatId)) || new Set(state.releaseOrder).size !== ordered.length || ordered.some(p => !integer(p.hp, 1) || p.hp > 100 || !state.pool.seats.some(s => s.seatId === p.seatId && s.seatIndex === p.seatIndex)) || !equal(state.releaseAtMs, Object.fromEntries(ordered.map((s, i) => [s.seatId, times.firstBatchMs + Math.floor(i / 2) * times.batchIntervalMs]))) || state.deadlineMs !== times.firstBatchMs + (Math.ceil(ordered.length / 2) - 1) * times.batchIntervalMs + times.tailMs)
+        throw Error('invalid-carousel');
+    let seed = state.rngBefore.state;
+    validateSeed(seed);
+    for (let i = 0; i < 27; i++)
+        seed = nextRandom(seed).state;
+    if (state.rngBefore.algorithm !== 'lcg32-v1' || state.rngAfter.algorithm !== 'lcg32-v1' || state.rngAfter.state !== seed || !equal(state.receipts, state.pool.carouselReceipts.filter(r => r.carouselId === state.id)))
+        throw Error('invalid-carousel');
+    for (const [i, s] of state.slots.entries()) {
+        if (s.slot !== i || s.reservationId !== `${state.id}:slot:${i}` || !Object.hasOwn(state.pool.initial, s.definitionId) || !ITEM_DEFINITIONS[s.itemId] || s.pickedBy !== null && !state.releaseOrder.includes(s.pickedBy))
+            throw Error('invalid-carousel');
+        const r = state.receipts.find(r => r.slot === i), reservation = state.pool.carouselReservations.find(r => r.reservationId === s.reservationId);
+        if (s.pickedBy === null ? !!r : !r || r.seatId !== s.pickedBy || r.definitionId !== s.definitionId || r.itemId !== s.itemId)
+            throw Error('invalid-carousel');
+        if (r?.status === 'reserved' || !r && state.status === 'open') {
+            if (!reservation || reservation.definitionId !== s.definitionId || reservation.seatId !== s.pickedBy)
+                throw Error('invalid-carousel');
+        }
+        else if (reservation)
+            throw Error('invalid-carousel');
+    }
+    if (!state.initialAvailable || !equal(Object.keys(state.initialAvailable).sort(), Object.keys(state.pool.initial).sort()) || Object.entries(state.initialAvailable).some(([id, n]) => !integer(n) || n > state.pool.initial[id]))
+        throw Error('invalid-carousel');
+    const replayed = drawSlots(state.initialAvailable, state.roundId, state.rngBefore.state, state.id);
+    if (!equal(replayed.slots.map(s => [s.definitionId, s.itemId]), state.slots.map(s => [s.definitionId, s.itemId])))
+        throw Error('invalid-carousel');
+    if (state.status === 'closed' && (state.elapsedMs < state.deadlineMs || state.participants.some(p => !state.receipts.some(r => r.seatId === p.seatId))))
+        throw Error('invalid-carousel');
+}
+export function restoreCarousel(input: unknown): CarouselState { if (typeof input !== 'string')
+    canonicalContent(input); const state = JSON.parse(typeof input === 'string' ? input : JSON.stringify(input)) as CarouselState; canonicalContent(state); validateCarousel(state); return state; }
+function closeIfDue(state: CarouselState): {
+    state: CarouselState;
+    events: CarouselEvent[];
+} {
+    if (state.status === 'closed' || state.elapsedMs < state.deadlineMs || state.participants.some(p => !state.receipts.some(r => r.seatId === p.seatId)))
+        return { state, events: [] };
+    const returned = state.slots.filter(s => s.pickedBy === null), available = { ...state.pool.available };
+    for (const s of returned)
+        available[s.definitionId]++;
+    return { state: { ...state, status: 'closed', revision: state.revision + 1, pool: { ...state.pool, revision: state.pool.revision + 1, available, carouselReservations: state.pool.carouselReservations.filter(r => r.carouselId !== state.id || state.slots[r.slot].pickedBy !== null) } }, events: [{ type: 'carousel-closed', carouselId: state.id, returnedSlots: returned.map(s => s.slot) }] };
+}
+export function advanceCarousel(state: CarouselState, elapsedMs: number): CarouselResult {
+    try {
+        validateCarousel(state);
+    }
+    catch {
+        return fail(state, 'invalid-carousel');
+    }
+    if (!integer(elapsedMs) || elapsedMs < state.elapsedMs)
+        return fail(state, 'invalid-time');
+    if (state.status === 'closed')
+        return { ok: true, state, events: [] };
+    const advanced = elapsedMs === state.elapsedMs ? state : { ...state, elapsedMs, revision: state.revision + 1 }, closed = closeIfDue(advanced);
+    return { ok: true, ...closed };
+}
+export function pickFromCarousel(state: CarouselState, seatId: string, slot: number): CarouselResult {
+    try {
+        validateCarousel(state);
+    }
+    catch {
+        return fail(state, 'invalid-carousel');
+    }
+    if (state.status === 'closed')
+        return fail(state, 'carousel-closed');
+    if (!state.releaseOrder.includes(seatId))
+        return fail(state, 'unknown-seat');
+    if (state.pool.seats.find(s => s.seatId === seatId)?.released)
+        return fail(state, 'seat-eliminated');
+    if (state.receipts.some(r => r.seatId === seatId))
+        return fail(state, 'already-picked');
+    if (state.elapsedMs < state.releaseAtMs[seatId])
+        return fail(state, 'seat-locked');
+    if (!integer(slot) || slot >= 9)
+        return fail(state, 'invalid-slot');
+    if (state.slots[slot].pickedBy !== null)
+        return fail(state, 'slot-taken');
+    const s = state.slots[slot], id = `${state.id}:${seatId}`, receipt: CarouselReceipt = { id, carouselId: state.id, seatId, slot, definitionId: s.definitionId, itemId: s.itemId, holdingSource: id, unitId: null, itemInstanceId: null, status: 'reserved' };
+    const picked: CarouselState = { ...state, revision: state.revision + 1, slots: state.slots.map(s => s.slot === slot ? { ...s, pickedBy: seatId } : s), receipts: [...state.receipts, receipt], pool: { ...state.pool, revision: state.pool.revision + 1, carouselReceipts: [...state.pool.carouselReceipts, receipt], carouselReservations: state.pool.carouselReservations.map(r => r.reservationId === s.reservationId ? { ...r, seatId } : r) } };
+    const closed = closeIfDue(picked);
+    return { ok: true, state: closed.state, events: [{ type: 'carousel-picked', receipt }, ...closed.events] };
+}
+function planAutoPickFromCarousel(state: CarouselState, seatId: string, match: MatchState): CarouselResult {
+    try {
+        validateCarousel(state);
+    }
+    catch {
+        return fail(state, 'invalid-carousel');
+    }
+    if (!match || match.sharedPool?.poolId !== state.pool.poolId || match.sharedPool.seatId !== seatId || !Array.isArray(match.preparation?.units))
+        return fail(state, 'invalid-match');
+    const copies = (id: string) => match.preparation.units.filter(u => u.team === 'player' && u.definitionId === id).reduce((sum, u) => sum + 3 ** (u.starLevel - 1), 0) + (match.carousel?.pendingUnits.filter(u => u.definitionId === id).length ?? 0);
+    const upgrade = (s: CarouselSlot) => { const n = copies(s.definitionId); return n < 9 && n % 3 === 2 ? 1 : 0; };
+    const choices = state.slots.filter(s => s.pickedBy === null).sort((a, b) => upgrade(b) - upgrade(a) || cost(b.definitionId) - cost(a.definitionId) || a.slot - b.slot);
+    return pickFromCarousel(state, seatId, choices[0]?.slot ?? -1);
+}
+const cost = (id: string) => UNIT_DEFINITIONS[id].cost;
+export function listCarouselSlots(state: CarouselState) { return state.slots.map(s => ({ slot: s.slot, definitionId: s.definitionId, starLevel: 1 as const, items: [s.itemId], pickedBy: s.pickedBy })); }
+export { createCarouselMatch };
+function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: string): {
+    ok: true;
+    state: CarouselState;
+    match: MatchState;
+    events: readonly MatchEvent[];
+} | {
+    ok: false;
+    state: CarouselState;
+    match: MatchState;
+    reason: CarouselFailure;
+    events: readonly [
+    ];
+} {
+    const failure = (reason: CarouselFailure) => ({ ok: false as const, state, match, reason, events: [] as const });
+    try {
+        validateCarousel(state);
+        assertSharedPoolConservation(state.pool, [match]);
+    }
+    catch {
+        return failure('invalid-match');
+    }
+    const receipt = state.receipts.find(r => r.seatId === seatId), seat = state.pool.seats.find(s => s.seatId === seatId);
+    if (!receipt || receipt.status === 'released')
+        return failure('receipt-mismatch');
+    if (match.sharedPool?.seatId !== seatId || !seat || seat.released)
+        return failure('seat-eliminated');
+    const prior = match.carousel?.receipts.find(r => r.id === receipt.id);
+    if (receipt.status === 'granted')
+        return prior && equal(prior, receipt) ? { ok: true, state, match, events: [] } : failure('receipt-mismatch');
+    if (prior || match.phase === 'combat' || !match.carousel || (state.roundId === '1-1' ? !match.carousel.openingPending : match.roundDefinitionId !== state.roundId))
+        return failure('invalid-match');
+    const metadata = match.carousel!;
+    const source = { kind: 'carousel' as const, receiptId: receipt.id }, sequence = match.resourceProvenance.entries.length;
+    const acquired = planUnitAcquisition(match, receipt.definitionId, source, sequence), unitId = `unit-${match.nextUnitSerial}`, itemInstanceId = `item-${match.nextItemSerial}`;
+    if (!integer(match.nextItemSerial, 1) || match.nextItemSerial === Number.MAX_SAFE_INTEGER)
+        return failure('invalid-match');
+    const granted: CarouselReceipt = { ...receipt, unitId, itemInstanceId, status: 'granted' };
+    const pending = acquired.ok ? metadata.pendingUnits : [...metadata.pendingUnits, { receiptId: receipt.id, unitId, definitionId: receipt.definitionId }];
+    const facts = acquired.ok ? acquired.facts : [{ kind: 'unit-acquired' as const, unitId, source }], roundId = state.roundId === '1-1' ? '1-2' : state.roundId;
+    const resourceProvenance = appendResourceProvenance(match.resourceProvenance, roundId, [...facts, { kind: 'item-acquired', itemId: itemInstanceId, source }]);
+    let preparation = acquired.ok ? acquired.preparation : match.preparation;
+    // Opening choice supplies the sole champion; use the existing opening legal deployment cell.
+    if (state.roundId === '1-1')
+        preparation = { ...preparation, units: preparation.units.map(u => u.id === unitId ? { ...u, location: { kind: 'board' as const, cell: { col: 1, row: 4 } } } : u) };
+    const receipts = state.receipts.map(r => r.id === receipt.id ? granted : r), poolReceipts = state.pool.carouselReceipts.map(r => r.id === receipt.id ? granted : r);
+    let holdings = [...state.pool.holdings, { seatId, unitId, definitionId: receipt.definitionId, sources: [receipt.holdingSource] }];
+    if (acquired.ok)
+        for (const e of acquired.upgradeEvents) {
+            const ids = [e.survivorId, ...e.consumedIds], merged = holdings.filter(h => h.seatId === seatId && ids.includes(h.unitId));
+            holdings = holdings.filter(h => h.seatId !== seatId || !ids.includes(h.unitId));
+            holdings.push({ seatId, unitId: e.survivorId, definitionId: e.definitionId, sources: merged.flatMap(h => h.sources) });
+        }
+    const nextPool: SharedPoolState = { ...state.pool, revision: state.pool.revision + 1, holdings, carouselReceipts: poolReceipts, carouselReservations: state.pool.carouselReservations.filter(r => r.reservationId !== state.slots[receipt.slot].reservationId), seats: state.pool.seats.map(s => s.seatId === seatId ? { ...s, revision: s.revision + 1 } : s) };
+    const events: MatchEvent[] = [...(acquired.ok ? acquired.events : []), { type: 'carouselGranted', receipt: granted }];
+    const stamped: MatchEvent[] = events.map((e, i) => ({ ...e, domain: 'match', eventSeq: match.nextMatchEventSeq + i }) as MatchEvent);
+    const nextMatch: MatchState = { ...match, preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
+        items: [...(acquired.ok ? acquired.items : match.items), { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }], anomalyBinding: acquired.ok ? acquired.anomalyBinding : match.anomalyBinding,
+        persistentGrowth: acquired.ok ? mergeGrowthLedger(match.persistentGrowth, acquired.upgradeEvents) : match.persistentGrowth,
+        carousel: { openingPending: false, receipts: [...metadata.receipts, granted], pendingUnits: pending }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+    const nextState = { ...state, receipts, pool: nextPool, revision: state.revision + 1 };
+    try {
+        validateCarousel(nextState);
+        assertSharedPoolConservation(nextPool, [nextMatch]);
+    }
+    catch {
+        return failure('invalid-match');
+    }
+    return { ok: true, state: nextState, match: nextMatch, events: stamped };
+}
+/** A single public transaction for the server: a failed grant rolls back the slot too. */
+export function pickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, slot: number) {
+    const bad = (reason: CarouselFailure) => ({ ok: false as const, pool, carousel, state: match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[] });
+    if (!equal(pool, carousel.pool))
+        return bad('stale-pool');
+    const picked = pickFromCarousel(carousel, seatId, slot);
+    if (!picked.ok)
+        return bad(picked.reason);
+    const granted = grantCarouselPick(picked.state, match, seatId);
+    if (!granted.ok)
+        return bad(granted.reason);
+    return { ok: true as const, pool: granted.state.pool, carousel: granted.state, state: granted.match, events: [...picked.events, ...granted.events] };
+}
+export function autoPickCarouselForSeat(pool: SharedPoolState, carousel: CarouselState, match: MatchState, seatId: string, _reason: 'bot' | 'disconnected' | 'timeout') {
+    const picked = autoPickFromCarousel(carousel, seatId, match);
+    if (!picked.ok)
+        return { ok: false as const, pool, carousel, state: match, reason: picked.reason, events: [] as readonly (MatchEvent | CarouselEvent)[] };
+    const slot = picked.state.receipts.find(r => r.seatId === seatId)!.slot;
+    return pickCarouselForSeat(pool, carousel, match, seatId, slot);
+}
+/** Commit x-4 natural income once, only after the fixed cutoff. 1-1 has no income. */
+export function completeCarouselForSeat(state: CarouselState, match: MatchState, seatId: string) {
+    const bad = (reason: CarouselFailure) => ({ ok: false as const, state, match, reason, events: [] as readonly MatchEvent[] });
+    try {
+        validateCarousel(state);
+        assertSharedPoolConservation(state.pool, [match]);
+    }
+    catch {
+        return bad('invalid-match');
+    }
+    if (state.status !== 'closed')
+        return bad('invalid-time');
+    const receipt = state.receipts.find(r => r.seatId === seatId);
+    if (!receipt || receipt.status !== 'granted' || match.sharedPool?.seatId !== seatId || !match.carousel?.receipts.some(r => equal(r, receipt)))
+        return bad('receipt-mismatch');
+    if (state.roundId === '1-1' || match.roundResults.some(r => r.roundId === state.roundId))
+        return { ok: true as const, state, match, events: [] as readonly MatchEvent[] };
+    const result = finishCarouselSupply(match);
+    if (!result.ok)
+        return bad('invalid-match');
+    const seat = state.pool.seats.find(s => s.seatId === seatId)!;
+    const pool = { ...state.pool, revision: state.pool.revision + 1, seats: state.pool.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s) };
+    return { ok: true as const, state: { ...state, pool, revision: state.revision + 1 }, match: { ...result.state, sharedPool: { ...result.state.sharedPool!, revision: seat.revision + 1 } }, events: result.events };
+}
+/** Move previously owned queued units when a legal place/merge exists; never draws or buys. */
+export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchState): SharedPoolResult {
+    const bad = (): SharedPoolResult => ({ ok: false, pool, state: match, reason: 'invalid-seat-state' });
+    try {
+        assertSharedPoolConservation(pool, [match]);
+        if (!match.carousel || match.phase !== 'preparation' || match.multiplayer?.combatRosterLocked)
+            return bad();
+        let next = match;
+        const draft = draftPool(pool), events: MatchEvent[] = [], poolEvents: SharedPoolEvent[] = [];
+        for (const pending of [...match.carousel.pendingUnits].sort((a, b) => a.receiptId < b.receiptId ? -1 : 1)) {
+            const plan = planPurchase(next.preparation, pending.definitionId, pending.unitId);
+            if (!plan.ok)
+                continue;
+            const resources = transferUpgradeResources(next.items, next.anomalyBinding, plan.events);
+            next = { ...next, preparation: plan.preparation, items: resources.items, anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowthLedger(next.persistentGrowth, plan.events), resourceProvenance: appendResourceProvenance(next.resourceProvenance, next.roundDefinitionId, { kind: 'carousel-unit-claimed', unitId: pending.unitId, receiptId: pending.receiptId, upgrades: plan.events }), carousel: { ...next.carousel!, pendingUnits: next.carousel!.pendingUnits.filter(u => u !== pending) } };
+            for (const e of plan.events) {
+                const ids = [e.survivorId, ...e.consumedIds], held = draft.holdings.filter(h => h.seatId === match.sharedPool!.seatId && ids.includes(h.unitId));
+                draft.holdings = draft.holdings.filter(h => h.seatId !== match.sharedPool!.seatId || !ids.includes(h.unitId));
+                draft.holdings.push({ seatId: match.sharedPool!.seatId, unitId: e.survivorId, definitionId: e.definitionId, sources: held.flatMap(h => h.sources) });
+            }
+            events.push(...plan.events, ...resources.events, { type: 'carouselPendingClaimed', unitId: pending.unitId, receiptId: pending.receiptId });
+        }
+        if (next === match)
+            return { ok: true, pool, state: match, events: [], poolEvents: [] };
+        const stamped = events.map((e, i) => ({ ...e, domain: 'match', eventSeq: match.nextMatchEventSeq + i }) as MatchEvent);
+        const seat = pool.seats.find(s => s.seatId === match.sharedPool!.seatId)!;
+        draft.seats = draft.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s);
+        draft.revision++;
+        next = { ...next, sharedPool: { ...match.sharedPool!, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+        assertSharedPoolConservation(draft, [next]);
+        return { ok: true, pool: draft, state: next, events: stamped, poolEvents };
+    }
+    catch {
+        return bad();
+    }
+}
+export function sellPendingCarouselUnit(pool: SharedPoolState, match: MatchState, unitId: string): SharedPoolResult {
+    try {
+        assertSharedPoolConservation(pool, [match]);
+        const pending = match.carousel?.pendingUnits.find(u => u.unitId === unitId);
+        if (!pending || match.phase !== 'preparation' || match.multiplayer?.combatRosterLocked)
+            return { ok: false, pool, state: match, reason: 'unknown-unit' };
+        const goldGranted = cost(pending.definitionId), draft = draftPool(pool), seatId = match.sharedPool!.seatId, seat = pool.seats.find(s => s.seatId === seatId)!;
+        returnHolding(draft, seatId, unitId);
+        draft.seats = draft.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s);
+        draft.revision++;
+        const state: MatchState = { ...match, gold: match.gold + goldGranted, resourceProvenance: appendResourceProvenance(match.resourceProvenance, match.roundDefinitionId, { kind: 'unit-sold', unitId, context: 'preparation', goldGranted }), carousel: { ...match.carousel!, pendingUnits: match.carousel!.pendingUnits.filter(u => u !== pending) }, sharedPool: { ...match.sharedPool!, revision: seat.revision + 1 } };
+        assertSharedPoolConservation(draft, [state]);
+        return { ok: true, pool: draft, state, events: [], poolEvents: [] };
+    }
+    catch {
+        return { ok: false, pool, state: match, reason: 'invalid-seat-state' };
+    }
+}
+/** Release the current frozen participant's ungranted card without changing its frozen order. */
+export function releaseCarouselSeat(state: CarouselState, seatId: string): CarouselResult {
+    try {
+        validateCarousel(state);
+    }
+    catch {
+        return fail(state, 'invalid-carousel');
+    }
+    if (!state.releaseOrder.includes(seatId))
+        return fail(state, 'unknown-seat');
+    let receipt = state.receipts.find(r => r.seatId === seatId);
+    if (receipt?.status === 'released')
+        return { ok: true, state, events: [] };
+    if (receipt?.status === 'granted')
+        return fail(state, 'receipt-mismatch'); // Shared elimination owns actual Match/holding removal.
+    const slot = receipt?.slot ?? state.slots.find(s => s.pickedBy === null)!.slot, s = state.slots[slot];
+    receipt = { id: `${state.id}:${seatId}`, carouselId: state.id, seatId, slot, definitionId: s.definitionId, itemId: s.itemId, holdingSource: `${state.id}:${seatId}`, unitId: null, itemInstanceId: null, status: 'released' };
+    const receipts = [...state.receipts.filter(r => r.seatId !== seatId), receipt], available = { ...state.pool.available, [s.definitionId]: state.pool.available[s.definitionId] + 1 };
+    const pool: SharedPoolState = { ...state.pool, available, revision: state.pool.revision + 1, carouselReservations: state.pool.carouselReservations.filter(r => r.reservationId !== s.reservationId), carouselReceipts: [...state.pool.carouselReceipts.filter(r => r.id !== receipt!.id), receipt] };
+    const released: CarouselState = { ...state, pool, receipts, revision: state.revision + 1, slots: state.slots.map(x => x.slot === slot ? { ...x, pickedBy: seatId } : x) }, closed = closeIfDue(released);
+    return { ok: true, state: closed.state, events: [{ type: 'carousel-seat-released', carouselId: state.id, seatId }, ...closed.events] };
+}
+/** One elimination transaction updates both the frozen carousel and the real pool/Match. */
+export function releaseCarouselParticipant(state: CarouselState, match: MatchState, seatId: string) {
+    const bad = (reason: CarouselFailure) => ({ ok: false as const, state, match, reason, events: [] as readonly (MatchEvent | CarouselEvent)[], poolEvents: [] as readonly SharedPoolEvent[] });
+    try {
+        validateCarousel(state);
+        assertSharedPoolConservation(state.pool, [match]);
+    }
+    catch {
+        return bad('invalid-match');
+    }
+    if (match.sharedPool?.seatId !== seatId || match.multiplayer?.status !== 'eliminated' || match.playerHp !== 0)
+        return bad('invalid-match');
+    if (state.pool.seats.find(s => s.seatId === seatId)?.released)
+        return { ok: true as const, state, match, events: [] as readonly (MatchEvent | CarouselEvent)[], poolEvents: [] as readonly SharedPoolEvent[] };
+    const receipt = state.receipts.find(r => r.seatId === seatId);
+    let staged = state;
+    if (receipt?.status !== 'granted') {
+        const released = releaseCarouselSeat(state, seatId);
+        if (!released.ok)
+            return bad(released.reason);
+        staged = released.state;
+    }
+    if (receipt?.status === 'granted') {
+        const mark = (r: CarouselReceipt): CarouselReceipt => r.id === receipt.id ? { ...r, status: 'released', unitId: null, itemInstanceId: null } : r;
+        staged = { ...staged, receipts: staged.receipts.map(mark), pool: { ...staged.pool, carouselReceipts: staged.pool.carouselReceipts.map(mark) } };
+    }
+    const released = releaseSeatOnElimination(staged.pool, match);
+    if (!released.ok)
+        return bad('invalid-match');
+    const mark = (r: CarouselReceipt): CarouselReceipt => r.carouselId === state.id && r.seatId === seatId ? { ...r, status: 'released', unitId: null, itemInstanceId: null } : r;
+    const pool = { ...released.pool, carouselReceipts: released.pool.carouselReceipts.map(mark) }, nextState = { ...staged, pool, receipts: staged.receipts.map(mark), revision: staged.revision + 1 };
+    try {
+        validateCarousel(nextState);
+    }
+    catch {
+        return bad('invalid-carousel');
+    }
+    return { ok: true as const, state: nextState, match: released.state, events: [...released.events, {type:'carousel-seat-released' as const,carouselId:state.id,seatId}], poolEvents: released.poolEvents };
+}
+export function grantCarouselPick(state: CarouselState, match: MatchState, seatId: string): ReturnType<typeof planGrantCarouselPick> {
+    try {
+        return planGrantCarouselPick(state, match, seatId);
+    }
+    catch {
+        return { ok: false, state, match, reason: 'invalid-match', events: [] };
+    }
+}
+export function autoPickFromCarousel(state: CarouselState, seatId: string, match: MatchState): CarouselResult {
+    try {
+        return planAutoPickFromCarousel(state, seatId, match);
+    }
+    catch {
+        return fail(state, 'invalid-match');
+    }
+}
+
+/** Restore a server-owned seat alongside its carousel. Offline restoreMatch continues
+ * rejecting server metadata; this boundary checks the pool and every carousel birth. */
+export function restoreCarouselSeat(carousel: CarouselState, input: unknown): MatchState {
+    validateCarousel(carousel);
+    if (typeof input !== 'string') canonicalContent(input);
+    const match = JSON.parse(typeof input === 'string' ? input : JSON.stringify(input)) as MatchState;
+    canonicalContent(match);
+    assertSharedPoolConservation(carousel.pool, [match]);
+    if (match.contentDigest !== CONTENT_DIGEST) throw Error('content-digest');
+    const metadata = match.carousel;
+    if (!metadata || typeof metadata.openingPending !== 'boolean' || !Array.isArray(metadata.receipts) || !Array.isArray(metadata.pendingUnits)) throw Error('invalid-match');
+    const ids = new Set<string>();
+    for (const receipt of metadata.receipts) {
+        const pooled = carousel.pool.carouselReceipts.find(r => r.id === receipt.id);
+        const released = carousel.pool.seats.some(s => s.seatId === receipt.seatId && s.released);
+        const same = pooled && (equal(pooled, receipt) || released && equal(pooled, {...receipt,status:'released',unitId:null,itemInstanceId:null}));
+        if (ids.has(receipt.id) || receipt.status !== 'granted' || receipt.seatId !== match.sharedPool!.seatId || !same) throw Error('receipt-mismatch');
+        ids.add(receipt.id);
+        const unitFacts = match.resourceProvenance.entries.filter(e => e.kind === 'unit-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
+        const itemFacts = match.resourceProvenance.entries.filter(e => e.kind === 'item-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
+        if (unitFacts.length !== 1 || unitFacts[0].kind !== 'unit-acquired' || unitFacts[0].unitId !== receipt.unitId || itemFacts.length !== 1 || itemFacts[0].kind !== 'item-acquired' || itemFacts[0].itemId !== receipt.itemInstanceId) throw Error('receipt-mismatch');
+        const unit = match.preparation.units.find(u=>u.id===receipt.unitId), item = match.items.find(i=>i.id===receipt.itemInstanceId);
+        if (unit && unit.definitionId !== receipt.definitionId || item && item.definitionId !== receipt.itemId) throw Error('receipt-mismatch');
+    }
+    const pendingIds = new Set<string>();
+    for (const pending of metadata.pendingUnits) {
+        if (pendingIds.has(pending.unitId) || match.preparation.units.some(u => u.id === pending.unitId) || !metadata.receipts.some(r => r.id === pending.receiptId && r.unitId === pending.unitId && r.definitionId === pending.definitionId)) throw Error('receipt-mismatch');
+        pendingIds.add(pending.unitId);
+    }
+    for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
+    return match;
+}

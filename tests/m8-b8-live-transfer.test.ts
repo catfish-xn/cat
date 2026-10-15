@@ -4,7 +4,7 @@ import type { MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, transferPreparation, players, plan } from './fixtures/t13-loot-public';
-const SURVIVOR='unit-22',DONOR='unit-25',REWARD='unit-29',TG='item-9';
+const SURVIVOR='unit-16',DONOR='unit-10',REWARD='unit-29',TG='item-9';
 const prepared=await transferPreparation();
 const make=(s:MatchState)=>{const l=battle(s);if(!l.revealed)throw Error('Missing live reveal');return {...l,revealed:l.revealed,selected:l.ended};};
 const migration=make(prepared), conflict=make(accepted(api.equipItem(prepared,'item-6',SURVIVOR,0)));
@@ -12,7 +12,7 @@ const scenarios=[{name:'TG migrates',live:migration,returned:false},{name:'confl
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 describe('B8 live randomized reward upgrade with equipment, anomaly and G12 transfer',()=>{
  it('pins the real two paid Ezreals, glove recipe, anomaly target and reward identity',()=>{
-  expect(players(prepared).filter(u=>u.definitionId==='ezreal').map(u=>[u.id,u.starLevel])).toEqual([[SURVIVOR,1],[DONOR,1]]);
+  expect(players(prepared).filter(u=>u.definitionId==='ezreal').map(u=>[u.id,u.starLevel])).toEqual([[DONOR,1],[SURVIVOR,1]]);
   expect(prepared.resourceProvenance.entries.filter(e=>e.kind==='unit-acquired'&&[SURVIVOR,DONOR].includes(e.unitId)).every(e=>e.kind==='unit-acquired'&&e.source.kind==='shop')).toBe(true);
   expect(prepared.items.find(i=>i.id===TG)).toEqual({id:TG,definitionId:'thiefs-gloves',location:{kind:'unit',unitId:DONOR,slot:0}});
   expect(prepared.anomalyBinding).toEqual({definitionId:'mage-armor',unitId:DONOR,choiceId:'round:4-6:anomaly',boundRound:23});
@@ -100,7 +100,7 @@ const corruptions: readonly [string, (state: MutableMatch) => void, string][] = 
     state.m8.loot.receipts.find(receipt => receipt.grantedUnitIds.includes(REWARD))!.grantedUnitIds = [SURVIVOR];
   }, 'Invalid resource provenance: receipt birth binding'],
   ['neutral death identity rewritten', state => { state.combat!.neutralReceipts!.deaths[0].eventSeq++; },
-    'Invalid Match save: neutral receipt event'],
+    'Invalid Match save: neutral death event identity'],
 ];
 describe('B8 strict live transfer corruption boundaries', () => {
   it.each(corruptions)('rejects %s without changing the live route', (_label, change, message) => {

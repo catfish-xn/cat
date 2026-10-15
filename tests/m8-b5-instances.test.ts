@@ -8,7 +8,7 @@ import { accepted, freeze, purchasedThreeHeroMatch, reachRound } from './match-h
 import { publicInventory } from './fixtures/b8-public-acquisition';
 
 // Acquire public-route fixtures once, outside the query/constraint case timers.
-beforeAll(() => { publicInventory(['blue-buff', 'blue-buff'], false, 17); });
+beforeAll(() => { publicInventory(['blue-buff', 'blue-buff'], false, 9); });
 beforeAll(() => { publicInventory(['last-whisper', 'last-whisper']); });
 beforeAll(() => { publicInventory(['quicksilver', 'quicksilver']); });
 beforeAll(() => { publicInventory(['sword', 'sword', 'sword', 'sword'], false, 4); });
@@ -41,9 +41,9 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     rejected(state, s => equipItem(s, 'item-21', 'unit-1', 1), 'unique-conflict');
     const next = accepted(equipItem(state, 'item-21', 'unit-2', 2));
     expect(() => restoreMatch(serializeMatch(next))).toThrow('Invalid B8 Match: current resource fold');
-    // Seed 17 gives a real opening tear; three supply picks finish the two
-    // Blue Buff recipes without simulating an unrelated fifth-stage battle.
-    const legal = publicInventory([definitionId, definitionId], false, definitionId === 'blue-buff' ? 17 : undefined);
+    // Seed 9 acquires all four real tears by 4-1 through drops and supply picks;
+    // seed 17 now needs 4-5 after the expanded-shop route changes.
+    const legal = publicInventory([definitionId, definitionId], false, definitionId === 'blue-buff' ? 9 : undefined);
     const equipped = accepted(equipItem(legal.state, legal.itemIds[0], 'unit-1', 0));
     rejected(equipped, s => equipItem(s, legal.itemIds[1], 'unit-1', 1), 'unique-conflict');
     const control = accepted(equipItem(equipped, legal.itemIds[1], 'unit-2', 2));

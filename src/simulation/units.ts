@@ -1,3 +1,4 @@
+import { G2_UNIT_DEFINITIONS, G2_EXISTING_TRAITS } from './content/g2-units';
 import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
 import { attackInterval } from './m8/stats';
 import { validateNeutralInputs } from './m8/unit-inputs';
@@ -65,7 +66,7 @@ export const LEGACY_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> =
     attackIntervalTicks: 20, initialMana: 0, maxMana: 80, abilityId: 'tempest-burst', traits: ['marksman', 'forge'] }),
 });
 
-export const M5_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = freezeContent({
+const HISTORICAL_M5_UNITS: Readonly<Record<string,UnitDefinition>> = freezeContent({
   "irelia": {
     "id": "irelia",
     "name": "Irelia",
@@ -485,6 +486,11 @@ export const M5_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = free
     ]
   }
 });
+export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = freezeContent({
+  ...Object.fromEntries(Object.entries(HISTORICAL_M5_UNITS).map(([id, unit]) => [id, G2_EXISTING_TRAITS[id] ? { ...unit, traits: G2_EXISTING_TRAITS[id] } : unit])),
+  ...G2_UNIT_DEFINITIONS,
+});
+
 export const NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = freezeContent({
   "neutral-stage-2": {
     "id": "neutral-stage-2",

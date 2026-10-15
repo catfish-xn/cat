@@ -1,3 +1,4 @@
+import { G2_CATALOG } from './fixtures/g2-roster';
 import { describe, expect, it } from 'vitest';
 import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { getUnitSellPrice, getUnitStats } from '../src/simulation/unit-stats';
@@ -17,10 +18,9 @@ const CONTENT = [
 ] as const;
 
 describe('authored unit catalog and star stat resolution', () => {
-  it('retains low-level legacy definitions but offers only the nineteen M5 heroes', () => {
+  it('retains low-level legacy definitions but offers only the thirty-three G2 heroes', () => {
     expect(Object.keys(LEGACY_UNIT_DEFINITIONS)).toEqual(CONTENT.map(row => row[0]));
-    const catalog = { 1: ['darius', 'irelia', 'lux', 'maddie', 'zyra'], 2: ['leona', 'rell', 'tristana', 'urgot', 'vander'],
-      3: ['ezreal', 'kogmaw', 'loris', 'nami', 'scar'], 4: ['corki', 'garen', 'zoe'], 5: ['caitlyn'] };
+    const catalog = G2_CATALOG;
     expect(SHOP_CATALOG_BY_COST).toEqual(catalog);
     expect(Object.keys(M5_UNIT_DEFINITIONS).sort()).toEqual(Object.values(catalog).flat().sort());
     expect(() => validateUnitDefinitions()).not.toThrow();

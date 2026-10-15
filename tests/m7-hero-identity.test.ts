@@ -12,13 +12,13 @@ const lum = (hex: string) => { const [r, g, b] = rgb(hex).map(v => v / 255).map(
 const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
 
 describe('M7 hero identity (G01)', () => {
-  it('covers exactly the 19 purchasable S13 heroes', () => {
-    expect(heroes).toHaveLength(19);
+  it('covers exactly the 33 purchasable S13 heroes', () => {
+    expect(heroes).toHaveLength(33);
     expect(Object.keys(HERO_STYLE).sort()).toEqual(heroes.map(hero => hero.id).sort());
   });
   it('short names are unique two-character Chinese labels', () => {
     const shorts = heroes.map(hero => getHeroIdentity(hero.id).short);
-    expect(new Set(shorts).size).toBe(19);
+    expect(new Set(shorts).size).toBe(33);
     for (const short of shorts) expect(short).toMatch(/^[一-鿿]{2}$/);
   });
   it('hero colors are pairwise distinguishable', () => {
@@ -31,7 +31,7 @@ describe('M7 hero identity (G01)', () => {
   it('emblem shape follows the opened profession and text keeps readable contrast', () => {
     for (const hero of heroes) {
       const identity = getHeroIdentity(hero.id);
-      expect(identity.shape).toBe(TRAIT_SHAPES[hero.traits[0]]);
+      expect(identity.shape).toBe(TRAIT_SHAPES[hero.traits.find(id => TRAIT_SHAPES[id]) ?? ''] ?? 'hexagon');
       expect(contrast(identity.color, identity.ink), hero.id).toBeGreaterThanOrEqual(4.5);
       expect(heroEmblemSvg(hero.id)).toContain(identity.short);
     }
@@ -50,7 +50,7 @@ describe('M7 hero identity (G01)', () => {
       expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
       const open = heroTraitLabels(hero.id).filter(label => label.open).map(label => label.name);
-      expect(open).toEqual([getHeroIdentity(hero.id).traitName]);
+      expect(open.sort()).toEqual(hero.traits.map(id => ({sentinel:'哨兵',artillerist:'炮手',sniper:'狙神',watcher:'监察',sorcerer:'法师',automata:'海克斯机械',family:'家人',firelight:'野火帮'}[id])).sort());
     }
   });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {

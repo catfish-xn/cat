@@ -95,7 +95,7 @@ describe('M6 independent route/history/playback/session integration', () => {
         const prefix = partial.capturePrefix()!;
         expect(prefix.endTick).toBe(tick); expect(prefix.nextEventSeq).toBe(session.combat!.nextEventSeq);
         const candidate = { ...envelope, match: session.state, battles: partial.completedRecords, currentBattle: prefix };
-        await expect(validateEnvelope(candidate, validateBattleCollection)).resolves.toEqual(candidate);
+        deepStrictEqual(await validateEnvelope(candidate, validateBattleCollection), candidate);
         // A legal two-battle prefix isolates missing-history rejection from B9's full-run capacity limit.
         await expect(validateEnvelope({ ...candidate, battles: candidate.battles.slice(1) }, validateBattleCollection)).rejects.toThrow('历史缺战或重战');
         const restored = new MatchSession(candidate.match, prefix.events);
@@ -123,7 +123,7 @@ describe('M6 independent route/history/playback/session integration', () => {
   });
   for(const build of builds)it(`${build}: full catalog-capacity envelope acceptance (B9)`,async()=>{
     const envelope=fullEnvelopes.get(build)!;
-    await expect(validateEnvelope(envelope, validateBattleCollection)).resolves.toEqual(envelope);
+    deepStrictEqual(await validateEnvelope(envelope, validateBattleCollection), envelope);
     if(build==='cannon')await expect(validateEnvelope({ ...envelope, battles: envelope.battles.slice(1) }, validateBattleCollection)).rejects.toThrow();
   }, 120000);
 });

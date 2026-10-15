@@ -154,11 +154,11 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
 export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   validateConsumableState(state);
-  const context: ResourceProvenanceContext = { scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,
+  const context: ResourceProvenanceContext = { carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
-  check(equal(current,{units:sorted(state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))),
+  check(equal(current,{units:sorted([...state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),...(state.carousel?.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))??[])]),
     items:sorted(state.items.map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
     nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial}), 'current resource fold');
   if (state.combat === null) { check(state.combatInputBasis === null, 'inactive input basis'); return {basis:null,saleGold:0}; }

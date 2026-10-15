@@ -10,12 +10,19 @@ export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly parentItemInstanceId?: string | null; readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
 export interface ShieldLayer { readonly m8State?: import('./m8/contracts').ShieldState; readonly m8Grant?: Extract<import('./m8/contracts').Effect, { kind: 'grant-shield' }>; readonly endedReason?: import('./m8/contracts').ShieldEndReason;  readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
 export interface CombatStatus { readonly contributionKeys?: readonly string[]; readonly activity?: import('./m8/contracts').CombatActivity;  readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
-export interface CombatTask { readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
+export interface CombatTask { readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
   readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
 export type CombatMechanics = readonly CombatMechanic[];
 export interface CombatRuntime { readonly attackCount: number; readonly castCount: number; readonly attackSpeedBps: number; readonly abilityPowerFlat: number; readonly rangeBonus: number; readonly nextAttackMagic: number; readonly nextAttackPhysical: number; readonly permanentAdBps: number; readonly buddyTriggered: boolean }
+/** Finite G2 state; absent in battles without G2 mechanics. No hidden counters outside the snapshot. */
+export interface ExpansionState {
+  damageDealt: number; damageTaken: number; crystals: number; crystalDamage: number;
+  attacksRemaining: number; buffUntilTick: number; lastRetaliationTick: number;
+  chainUntilTick: number; chainTargets: string[]; chainCastSeq: number; chainKills: number;
+}
 export interface CombatUnit {
+  readonly expansion?: ExpansionState;
   readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[];
   readonly startingCell?: HexCell;
   readonly baseCritChanceBps?: number;

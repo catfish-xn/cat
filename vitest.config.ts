@@ -8,6 +8,11 @@ const timing = [
   'tests/m5-replay-cannon.test.ts',
   'tests/server/bot-driver-timing.test.ts',
   'tests/server/round-commit-timing.test.ts',
+  // Publishing-watchdog executes a real PvE round within its original 5 s
+  // timeout; isolate the existing suite from parallel route CPU contention.
+  'tests/server/g3-ops.test.ts',
+  // Network replay/resume traverses real battles and has a 5 s wall timeout.
+  'tests/server/ws-client.test.ts',
 ];
 // Tiny route wrappers contain the longest workloads. Start them first even on
 // a clean checkout, when Vitest has no duration cache and sorts by source size.
@@ -28,7 +33,8 @@ export default defineConfig({
     sequence: { sequencer: RouteFirstSequencer },
     projects: [
       { test: { name: 'fast', pool: 'threads', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], globalSetup: ['./tests/fixtures/g4-global-setup.ts'], maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
-      { test: { name: 'timing', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], include: timing, maxWorkers: 1, fileParallelism: false } },
+      // Keep long-route heap/module state out of later wall-clock measurements.
+      { test: { name: 'timing', isolate: true, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], include: timing, maxWorkers: 1, fileParallelism: false } },
     ],
   },
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCombat } from '../src/simulation/combat';
 import type { CombatState } from '../src/simulation/combat-types';
-import { lootPlan, COMPONENTS } from './fixtures/m5/oracle.cjs';
+import { lootPlan, COMPONENTS } from './fixtures/m5/oracle.g2.cjs';
 import { createMatch, type MatchState } from '../src/simulation/match';
 import { prepareMatchLoot, revealMatchLoot, grantDirectLoot, grantLootChoice, unresolvedLootChoices, hasPendingLootCapacity } from '../src/simulation/loot-runtime';
 import { createRoundEnemies } from '../src/simulation/round-enemies';

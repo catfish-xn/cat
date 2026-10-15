@@ -1,7 +1,7 @@
 import type { MatchEvent, MatchState, Shop } from './match-types';
 import type { MultiplayerFailure } from './round-settlement';
 
-export const SHARED_POOL_VERSION = 'shared-pool-v2';
+export const SHARED_POOL_VERSION = 'shared-pool-v3';
 /** Riot 14.15 official patch notes, champion bag sizes: 30/25/18/10/9.
  * https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-15-notes/
  * Explicitly adopted by the project for its 19-hero S13 slice on 2026-10-12.
@@ -27,6 +27,10 @@ export interface PoolRewardReceipt extends RewardReservation {
   readonly resolution:'held'|'gold'|'forfeited'; readonly gold:number;
 }
 export interface SharedPoolState {
+  readonly carouselParticipants: readonly import('./carousel-types').CarouselParticipant[];
+  readonly carouselReservations: readonly import('./carousel-types').CarouselReservation[];
+  readonly carouselReceipts: readonly import('./carousel-types').CarouselReceipt[];
+  readonly carouselRounds: readonly import('./carousel-types').CarouselRoundId[];
   readonly orbLayout: import('./orb-layout').OrbLayoutLedger;
   readonly version:typeof SHARED_POOL_VERSION; readonly poolId:string; readonly seed:number;
   readonly seatCount:number; readonly revision:number;

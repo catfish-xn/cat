@@ -2,7 +2,7 @@
  * independent oracle supplies economic expectations. Never grants resources or rewrites state. */
 const assert=require('node:assert/strict');
 const path=require('node:path');
-const {Ledger,COST,shop,ROUNDS,roundOrdinal}=require('../tests/fixtures/m5/oracle.cjs');
+const {Ledger,COST,shop,ROUNDS,roundOrdinal}=require('../tests/fixtures/m5/oracle.g2.cjs');
 const {hash}=require('./m4-evidence.cjs');
 const BUILDS={
  cannon:{core:'corki',tank:'loris',units:['irelia','rell','leona','loris','tristana','urgot','ezreal','corki'],carry:['deathblade','shojin','gunblade'],early:'maddie'},

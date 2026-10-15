@@ -315,12 +315,80 @@ def generate(source, destination, check=False):
             path.write_text(content, encoding='utf-8')
 
 
+
+# G2 inventory: membership comes from the locked standard-mode source, never display guesses.
+G2_CLASSES = frozenset(('Sentinel', 'Artillerist', 'Sniper', 'Watcher', 'Sorcerer'))
+G2_FACTIONS = frozenset(('Automata', 'Firelight', 'Family'))
+G2_ALIASES = {'TFT13_Beardy': 'loris', 'TFT13_Shooter': 'maddie',
+              'TFT13_Prime': 'vander', 'TFT13_FlyGuy': 'scar',
+              'TFT13_Blue': 'powder', 'TFT13_Red': 'violet'}
+
+
+def g2_outputs(source):
+    mode_index, _ = select(source)  # Reuse the mandatory hash/mode/item-membership gates.
+    mode = source['setData'][mode_index]
+    def evidence(record, pointer):
+        return {'upstreamSha256': SHA256, 'jsonPointer': pointer,
+                'recordCanonicalSha256': digest(record)}
+    champions = []
+    for i, c in enumerate(mode['champions']):
+        if not (set(c['traits']) & (G2_CLASSES | G2_FACTIONS)) or c['cost'] not in range(1, 6):
+            continue
+        identity = G2_ALIASES.get(c['apiName'], c['apiName'].removeprefix('TFT13_').lower())
+        stats = c['stats']
+        normalized = {'health': stats['hp'], 'attack': stats['damage'],
+                      'armor': stats['armor'], 'magicResist': stats['magicResist'],
+                      'attackSpeedBps': round(stats['attackSpeed'] * 10000),
+                      'attackIntervalTicks': (200000 + round(stats['attackSpeed'] * 10000) - 1) // round(stats['attackSpeed'] * 10000),
+                      'attackRange': stats['range'], 'initialMana': stats['initialMana'], 'maxMana': stats['mana']}
+        variables = {v['name']: [round(n, 4) for n in v['value'][1:4]] for v in c['ability']['variables'] if v['value'] is not None}
+        if any(len(v) != 3 for v in variables.values()):
+            raise ValueError('Expected three ability star ranks')
+        champions.append({'id': identity, 'apiName': c['apiName'], 'name': c['name'], 'cost': c['cost'],
+                          'sourceTraits': c['traits'],
+                          'runtimeTraits': [t.lower() for t in c['traits'] if t in G2_CLASSES | G2_FACTIONS],
+                          'stats': normalized, 'ability': {'id': identity + '-ability', 'championId': identity,
+                          'variables': variables, 'description': c['ability']['desc']},
+                          'record': c, 'source': evidence(c, f'/setData/{mode_index}/champions/{i}'),
+                          'status': 'blocked-on-form-stats' if identity == 'swain' else 'source-extracted-needs-runtime-oracle'})
+    champions.sort(key=lambda c: c['id'])
+    if len(champions) != 34 or sum(bool(set(c['sourceTraits']) & G2_CLASSES) for c in champions) != 28:
+        raise ValueError('Expected 28 class champions plus six faction members')
+    traits = [{'record': t, 'source': evidence(t, f'/setData/{mode_index}/traits/{i}')}
+              for i, t in enumerate(mode['traits']) if t['name'] in G2_FACTIONS]
+    if len(traits) != 3:
+        raise ValueError('Expected three selected origins')
+    _, items = select(source)
+    return {'normalized/g2-1-champions.json': {'upstreamSha256': SHA256, 'champions': champions},
+            'normalized/g2-1-traits.json': {'upstreamSha256': SHA256, 'traits': traits},
+            'normalized/g2-1-items.json': {'upstreamSha256': SHA256, 'components': 8, 'completed': 36,
+                'scope': 'all eight ordinary components and 36 ordinary recipes already implemented at 9e3d203',
+                'items': [{'record': t, 'source': evidence(t, f'/items/{i}')} for i, t in items]}}
+
+
+def generate_g2(source, destination, check=False):
+    for relative, value in g2_outputs(source).items():
+        target = destination / relative
+        content = encoded(value).encode('utf-8')
+        if check:
+            if not target.is_file() or target.read_bytes() != content:
+                raise ValueError(f'G2 generated output differs: {relative}')
+        else:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, default=DEST / 'raw/en_us.json.gz')
     parser.add_argument('--output', type=Path, default=DEST)
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--g2-1', action='store_true', help='Extract the G2-1 roster, origins and complete ordinary item inventory')
     args = parser.parse_args()
+    if args.g2_1:
+        generate_g2(load_source(args.source), args.output, args.check)
+        print('Verified G2-1: 34 champions (28 class members), three origins, eight components / 36 recipes')
+        return
     generate(load_source(args.source), args.output, args.check)
     print('Verified 44 archived items / 36 recipes; detailed equipment acceptance and unknown counts are in provenance/coverage.json; no runtime output')
 

@@ -21,7 +21,8 @@ import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
 import { DEFAULT_BOARD, sameCell } from './board';
-import { planCatalogRoundEconomy, OPENING_INITIAL_STATE } from './opening-economy';
+import { OPENING_INITIAL_STATE } from './opening-economy';
+import { resolveRoundEconomy } from './round-economy';
 import { getCatalogRoundByOrdinal, getNextCatalogRound } from './round-selectors';
 import { shareGeneratedJson } from './immutable-json';
 import { COMPONENT_IDS } from './content/items';
@@ -89,6 +90,7 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
   for (const event of getRoundSchedule(state.round).filter(event => (event.timing ?? 'before') === timing)) {
     if (state.scheduleReceipts.some(receipt => receipt.eventId === event.id)) continue;
     if (state.multiplayer?.forfeitedChoices.includes(event.id)) continue;
+    if (state.carousel && event.kind==='component' && getRoundKind(state.round)==='supply') continue;
     if (event.kind === 'reward') {
       const { receipt, ...plan } = planReward(state, event);
       state = { ...state, ...plan, scheduleReceipts: [...state.scheduleReceipts, receipt] };
@@ -119,6 +121,13 @@ function prepareRound(seed: number, round: number, previous?: MatchState['m8']['
     contentStatus:definition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',
     enemies:createRoundEnemies(round),
   }});
+}
+/** Explicit multiplayer carousel bootstrap: 1-1 is a prelude, catalog ordinals stay stable. */
+export function createCarouselMatch(seed=DEFAULT_MATCH_SEED):MatchState {
+  const state=createMatch(seed,{mode:'shared-deferred'});
+  return {...state,carousel:{openingPending:true,receipts:[],pendingUnits:[]},nextUnitSerial:1,
+    resourceProvenance:{version:RESOURCE_PROVENANCE_VERSION,entries:[]},
+    preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.team!=='player')}};
 }
 export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization = {mode:'solo'}): MatchState {
   validateSeed(seed); validateContent();
@@ -262,6 +271,7 @@ export function buyXp(state: MatchState): MatchCommandResult {
   return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
+  if (state.carousel?.openingPending) return 'wrong-phase';
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
   if (state.phase !== 'preparation') return 'wrong-phase';
   if (state.multiplayer?.status === 'eliminated') return 'wrong-phase';
@@ -277,7 +287,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
   const survivingEnemyCount = combat?.units.filter(unit => unit.alive && unit.team === 'enemy').length ?? 0;
-  const plan = planCatalogRoundEconomy({ roundId, result: combat?.result ?? null, gold: state.gold,
+  const plan = resolveRoundEconomy({ roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
   for (const delta of pendingDelta) growth.set(delta.unitId,(growth.get(delta.unitId)??0)+delta.attackDamageBps);
@@ -321,7 +331,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
   const before:MatchState={...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null};
-  const terminal=(!before.multiplayer && before.m8.round.isFinal) || planCatalogRoundEconomy({roundId:before.roundDefinitionId,result:combat.result,
+  const terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&unit.alive).length}).hpAfter===0;
   const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);
@@ -354,6 +364,12 @@ export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): M
   const next = stepCombat(state.combat), settled = withCombat(state, next.state, unitLootPolicy);
   const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
+}
+/** P7 replaces the supply choice, but keeps that natural round's economy exactly once. */
+export function finishCarouselSupply(state:MatchState):MatchCommandResult {
+  if(!state.carousel||state.m8.round.kind!=='supply'||state.phase!=='preparation'||state.pendingChoice||!state.carousel.receipts.some(r=>r.carouselId.endsWith(`:carousel:${state.roundDefinitionId}`)&&r.status==='granted'))return fail(state,'wrong-phase');
+  const settled=settleRound(state,null);
+  return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
 export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');

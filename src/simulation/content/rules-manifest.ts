@@ -8,7 +8,12 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
-  release: 'p3-a/p4-a/p5-a-v1',
+  release: 'g2-1-v1',
+  expansion: { inventory: '33-units-8-traits-8-components-36-completed',
+    blocked: ['swain-form-stats'], source: 'c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3',
+    geometry: 'g2-finite-targeting-v1', tasks: 'g2-attached-infection-v1',
+    twitchCrit: 'one-roll-per-piercing-attack', chain: 'initial-kill-empower-v1',
+    unreachable: ['automata-6','firelight-4','family-4','family-5'] },
   playerDamage: PLAYER_DAMAGE_RULES,
   progression: {policy:'s13-14.24b-nine-levels-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
   opening: { initial: OPENING_INITIAL_STATE, economy: OPENING_ECONOMY_RULES },
