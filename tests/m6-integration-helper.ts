@@ -1,3 +1,4 @@
+import { deepStrictEqual } from 'node:assert';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 /** E-owned cross-module acceptance. Existing golden fixtures remain the route oracle. */
 import { describe, expect, it } from 'vitest';
@@ -30,21 +31,21 @@ describe('M6 independent route/history/playback/session integration', () => {
     const immutableActive = structuredClone({ state: active.state, events: active.combatEvents });
     for (const record of history.completedRecords) {
       const original = route.rounds.find(round => round.round === record.context.round)!;
-      expect(record.events).toEqual(combatEvents(original.events));
-      expect(record.context).toEqual(original.before);
+      deepStrictEqual(record.events, combatEvents(original.events));
+      deepStrictEqual(record.context, original.before);
       const verified = validateBattleRecord(record);
-      expect(verified.settledMatch).toEqual(original.after);
+      deepStrictEqual(verified.settledMatch, original.after);
       const playback = new PlaybackSession(record);
-      expect(playback.read().combat).toEqual(record.initial);
+      deepStrictEqual(playback.read().combat, record.initial);
       // Event tick is the semantic phase, not the committed-prefix boundary.
       // B3 emits tick-0 opening moves during the first step, after initial capture.
       const independentlyStarted = api.startMatchCombat(record.context);
       if (!independentlyStarted.ok) throw new Error('record context cannot start');
       const initialEvents = combatEvents(independentlyStarted.events);
-      expect(record.initial).toEqual(independentlyStarted.state.combat);
+      deepStrictEqual(record.initial, independentlyStarted.state.combat);
       expect(record.initial.nextEventSeq).toBe(initialEvents.length);
-      expect(playback.read().events).toEqual(initialEvents);
-      expect(record.events.slice(0, initialEvents.length)).toEqual(initialEvents);
+      deepStrictEqual(playback.read().events, initialEvents);
+      deepStrictEqual(record.events.slice(0, initialEvents.length), initialEvents);
       // Independent expected SHA256 comes from the original command route's every-tick Match output.
       const trajectory = trajectories.get(record.combatId)!;
       playback.play();
@@ -58,15 +59,15 @@ describe('M6 independent route/history/playback/session integration', () => {
       const middle = Math.floor(record.endTick / 2);
       let model = api.startMatchCombat(record.context).state;
       while (model.combat!.tick < middle) model = api.stepMatch(model).state;
-      expect(playback.seek(middle).combat).toEqual(model.combat);
-      playback.pause(); const paused = playback.read(); playback.advance(10000); expect(playback.read()).toEqual(paused);
-      expect(playback.seek(record.endTick).combat).toEqual(original.after!.combat);
-      expect(playback.read().events).toEqual(record.events);
+      deepStrictEqual(playback.seek(middle).combat, model.combat);
+      playback.pause(); const paused = playback.read(); playback.advance(10000); deepStrictEqual(playback.read(), paused);
+      deepStrictEqual(playback.seek(record.endTick).combat, original.after!.combat);
+      deepStrictEqual(playback.read().events, record.events);
       playback.seek(0); playback.setSpeed(4); playback.play(); playback.advance(50);
       expect(playback.read().tick).toBe(Math.min(4, record.endTick));
       playback.setSpeed(2); playback.pause(); playback.seek(middle);
-      expect(playback.read().combat).toEqual(model.combat);
-      expect({ state: active.state, events: active.combatEvents }).toEqual(immutableActive);
+      deepStrictEqual(playback.read().combat, model.combat);
+      deepStrictEqual({ state: active.state, events: active.combatEvents }, immutableActive);
       playback.dispose(); expect(() => playback.read()).toThrow();
     }
     const envelope: SaveEnvelope = { kind: 'hex-autobattler-save', saveFormatVersion: 3, replayFormatVersion: 3, runId, createdAt: '2026-10-06T00:00:00.000Z', match: route.final, battles: history.completedRecords, currentBattle: null };
@@ -98,15 +99,15 @@ describe('M6 independent route/history/playback/session integration', () => {
         // A legal two-battle prefix isolates missing-history rejection from B9's full-run capacity limit.
         await expect(validateEnvelope({ ...candidate, battles: candidate.battles.slice(1) }, validateBattleCollection)).rejects.toThrow('历史缺战或重战');
         const restored = new MatchSession(candidate.match, prefix.events);
-        expect(restored.combatEvents).toEqual(session.combatEvents);
-        expect(restored.advance(50)).toEqual(api.stepMatch(session.state).events.filter(event => event.domain === 'combat'));
+        deepStrictEqual(restored.combatEvents, session.combatEvents);
+        deepStrictEqual(restored.advance(50), api.stepMatch(session.state).events.filter(event => event.domain === 'combat'));
       }
-      expect(observed).toEqual(Array.from({ length: 41 }, (_, index) => index + 1));
+      deepStrictEqual(observed, Array.from({ length: 41 }, (_, index) => index + 1));
       const before = structuredClone(session.state), ledger = session.combatEvents;
       session.advance(49); session.pause('import'); session.advance(999999);
       expect(session.reroll().ok).toBe(false); expect(session.buyXp().ok).toBe(false); expect(session.sell(before.preparation.units[0].id).ok).toBe(false);
-      session.pause('replay'); session.resume('import'); session.advance(50); expect(session.state).toEqual(before);
-      session.resume('replay'); session.advance(1); expect(session.state).toEqual(before); expect(session.combatEvents).toEqual(ledger);
+      session.pause('replay'); session.resume('import'); session.advance(50); deepStrictEqual(session.state, before);
+      session.resume('replay'); session.advance(1); deepStrictEqual(session.state, before); deepStrictEqual(session.combatEvents, ledger);
       session.advance(49); expect(session.combat!.tick).toBe(42);
       expect(digestContent(session.state)).toBe(digestContent(api.stepMatch(before).state));
       unsubscribe(); const count = observed.length; session.advance(50); expect(observed).toHaveLength(count);

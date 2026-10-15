@@ -54,7 +54,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
           nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
-  units.forEach(unit => freezeCombatDeclarations(unit));
+  units.forEach(unit => freezeCombatDeclarations(unit, false, true));
   const result = eliminationResult(units);
   return {
     board: { ...preparationState.board, deploymentZones: {

@@ -8,7 +8,6 @@ const timing = [
   'tests/m5-replay-cannon.test.ts',
   'tests/server/bot-driver-timing.test.ts',
   'tests/server/round-commit-timing.test.ts',
-  'tests/server/local-room-client-timing.test.ts',
 ];
 // Tiny route wrappers contain the longest workloads. Start them first even on
 // a clean checkout, when Vitest has no duration cache and sorts by source size.
@@ -28,8 +27,8 @@ export default defineConfig({
   test: {
     sequence: { sequencer: RouteFirstSequencer },
     projects: [
-      { test: { name: 'fast', globalSetup: ['./tests/fixtures/g4-global-setup.ts'], maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
-      { test: { name: 'timing', include: timing, maxWorkers: 1, fileParallelism: false } },
+      { test: { name: 'fast', pool: 'threads', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], globalSetup: ['./tests/fixtures/g4-global-setup.ts'], maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
+      { test: { name: 'timing', isolate: false, setupFiles: ['./tests/fixtures/g4-worker-setup.ts'], include: timing, maxWorkers: 1, fileParallelism: false } },
     ],
   },
 });

@@ -1,7 +1,7 @@
-import { shareGeneratedJson } from './immutable-json';
+import { isImmutableJson, shareGeneratedJson } from './immutable-json';
 import { RULES_GAP_MANIFEST } from './content/rules-manifest';
 import { canonicalContent, digestContent, equalValidatedContent } from './content';
-import { freezeContent, isFrozenContent } from './content/freeze';
+import { freezeContent } from './content/freeze';
 import { LOOT_FREEZE_ALGORITHM, LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_HERO_POOL_VERSION, LOOT_POLICY_VERSION } from './content/loot';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
 import { ROUND_CATALOG } from './content/round-catalog';
@@ -43,7 +43,7 @@ export function matchesFrozenLootLedger(ledger: FrozenLootLedger, seed: number, 
   if (verifiedLedgers.get(ledger)?.has(layout)) return true;
   const expected = freezeLootThroughRound(seed, ordinal, layout);
   if (canonicalContent(ledger) !== canonicalReference(expected)) return false;
-  if (isFrozenContent(ledger) && isFrozenContent(layout)) {
+  if (isImmutableJson(ledger) && isImmutableJson(layout)) {
     let layouts = verifiedLedgers.get(ledger);
     if (!layouts) { layouts = new WeakSet(); verifiedLedgers.set(ledger, layouts); }
     layouts.add(layout);
@@ -129,6 +129,7 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
 export function restoreFrozenLootLedger(value:unknown,expected:{readonly seed:number;readonly throughRoundOrdinal:number;readonly layout?:OrbLayoutLedger}, parsedJsonInput = false):FrozenLootLedger {
   const layout = parsedJsonInput && expected.layout ? restoreOrbLayout(expected.layout, true) : expected.layout;
   const replay=freezeLootThroughRound(expected.seed,expected.throughRoundOrdinal,layout);
+
   if(parsedJsonInput ? !equalValidatedContent(value, replay) : canonicalContent(value)!==canonicalReference(replay))throw new RangeError('Invalid frozen loot ledger');return replay;
 }
 export function advanceFrozenLootLedger(ledger:FrozenLootLedger,throughRoundOrdinal:number,layout?:OrbLayoutLedger):FrozenLootLedger {

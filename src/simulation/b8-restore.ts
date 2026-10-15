@@ -24,7 +24,8 @@ const equal = (a: unknown, b: unknown): boolean => canonicalContent(a) === canon
 function keys(value: unknown, names: readonly string[]): void {
   check(value !== null && typeof value === 'object' && !Array.isArray(value)
     && Object.getPrototypeOf(value) === Object.prototype, 'object');
-  check(equal(Object.keys(value).sort(), [...names].sort()), 'fields');
+  const actual = Object.keys(value);
+  check(actual.length === names.length && actual.every(key => names.includes(key)), 'fields');
 }
 function integer(value: unknown, min = 0): void { check(Number.isSafeInteger(value) && (value as number) >= min, 'integer'); }
 const sorted = <T extends { readonly id: string }>(values: readonly T[]): T[] => [...values].sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { canonicalContent, digestContent, equalValidatedContent } from '../src/simulation/content';
 import { freezeLootThroughRound, restoreFrozenLootLedger } from '../src/simulation/loot-freeze';
 import { createOrbLayout, freezeOrbLayoutThroughRound, restoreOrbLayout } from '../src/simulation/orb-layout';
+import { freezeContent } from '../src/simulation/content/freeze';
 
 describe('G4 deterministic reference cache boundaries', () => {
   it('reuses generated references while revalidating mutable layouts and ledgers', () => {
@@ -80,4 +81,30 @@ it('detaches mutable checkpoint declarations before sharing later combat ticks',
   Object.assign(checkpoint.units[0].ability, { id: 'caller-mutated' });
   expect(JSON.stringify(advanced)).toBe(after);
   expect(stepCombat(advanced.state)).toEqual(stepCombat(structuredClone(advanced.state)));
+});
+
+it('canonical scalar serialization retains numeric key order and nested getter sequencing', () => {
+  expect(canonicalContent({ '2': true, '10': false })).toBe('{"10":false,"2":true}');
+  let stage = 0;
+  const nested = { get n() { return ++stage; } };
+  const input = { get a() { return nested; }, get b() { return stage; } };
+  expect(canonicalContent(input)).toBe('{"a":{"n":1},"b":1}');
+  const flat = { get a() { return ++stage; }, get b() { return stage; }, z: -0 };
+  expect(canonicalContent(flat)).toBe('{"a":2,"b":2,"z":0}');
+});
+
+it('rechecks frozen accessor layout and loot inputs after successful authentication', () => {
+  const result = freezeOrbLayoutThroughRound(createOrbLayout(42), 38);
+  if (!result.ok) throw Error(result.reason);
+  const layout = result.layout, ledger = freezeLootThroughRound(9, 38, layout);
+  for (const [source, restore] of [
+    [layout, (value: unknown) => restoreOrbLayout(value)],
+    [ledger, (value: unknown) => restoreFrozenLootLedger(value, { seed: 9, throughRoundOrdinal: 38, layout })],
+  ] as const) {
+    let rng = source.rng;
+    const accessor = freezeContent({ ...source, get rng() { return rng; } });
+    expect(restore(accessor)).toEqual(source);
+    rng = freezeContent({ ...rng, draws: rng.draws + 1 });
+    expect(() => restore(accessor)).toThrow();
+  }
 });

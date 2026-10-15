@@ -42,7 +42,7 @@ function move(state: CombatState, unit: S13Unit, target: S13Unit, occupied: Read
   }
   return undefined;
 }
-function defenses(unit: S13Unit, physical: boolean, tick: number, units: readonly S13Unit[]): number {
+function defenses(unit: S13Unit, physical: boolean, tick: number, units: CombatState['units']): number {
   const stat = physical ? 'armor' : 'magicResist';
   const modifiers: StatModifier[] = [...statusModifiers(unit, stat, tick), ...active(unit, tick, 'resistanceFlat').filter(s => !s.contributionKeys && (physical || !s.key.includes(':armor:'))).map(s => constantModifier(stat, s.amount))];
   for (const m of unit.mechanics ?? []) if (m.mechanic === 'gargoyle') modifiers.push({ ...constantModifier(stat, 0),
@@ -58,7 +58,9 @@ export function readCombatStats(unit: CombatState['units'][number], state: Comba
 } {
   const working = (u: CombatState['units'][number]): S13Unit => ({ ...u, runtime: { ...EMPTY_RUNTIME, ...u.runtime },
     statuses: [...u.statuses ?? []], tasks: [...u.tasks ?? []], shieldLayers: [...u.shieldLayers ?? []] });
-  const current = working(unit), units = state.units.map(working);
+  // defenses only reads identity/alive/target fields of other units.
+  // It needs no detached runtime for those read-only samples.
+  const current = working(unit), units = state.units;
   return { attackDamage: ad(current), abilityPower: ap(current, state.tick), attackIntervalTicks: interval(current, state.tick),
     attackRange: range(current), armor: defenses(current, true, state.tick, units), magicResist: defenses(current, false, state.tick, units) };
 }

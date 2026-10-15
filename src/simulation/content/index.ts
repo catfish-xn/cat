@@ -29,6 +29,16 @@ export { COMPONENT_IDS } from './items';
 // initialize. The lazily allocated cache must be available before this module's body.
 var frozenCanonical: WeakMap<object, string> | undefined;
 var frozenDigests: WeakMap<object, string> | undefined;
+var canonicalKeys: Map<string, string> | undefined;
+var scalarPrototype: object | undefined;
+function quoteKey(key: string): string {
+  const cache = canonicalKeys ??= new Map<string, string>();
+  const cached = cache.get(key);
+  if (cached !== undefined) return cached;
+  const text = JSON.stringify(key);
+  if (cache.size >= 256) cache.delete(cache.keys().next().value!);
+  cache.set(key, text); return text;
+}
 function rememberFrozen(value: object, text: string, keys: readonly string[]): string {
   // A frozen wrapper alone does not make children or getter results immutable.
   if (Object.isFrozen(value) && keys.every(key => {
@@ -41,8 +51,10 @@ function rememberFrozen(value: object, text: string, keys: readonly string[]): s
 }
 /** JSON canonicalization preserves semantic array order and sorts object keys by ASCII. */
 export function canonicalContent(value: unknown): string {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
-  if (typeof value === 'number' && Number.isFinite(value)) return JSON.stringify(value);
+  if (value === null) return 'null';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (value !== null && typeof value === 'object') {
     const cached = (frozenCanonical ??= new WeakMap()).get(value);
     if (cached !== undefined) return cached;
@@ -54,7 +66,25 @@ export function canonicalContent(value: unknown): string {
   }
   if (typeof value === 'object' && value !== null && Object.getPrototypeOf(value) === Object.prototype) {
     const keys = Object.keys(value).sort();
-    return rememberFrozen(value, `{${keys.map(key => `${JSON.stringify(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`).join(',')}}`, keys);
+    // Native JSON handles a flat scalar record in one call. Keep numeric keys
+    // on the original path (native enumeration would reorder them), and stop
+    // at the first nested value so getter evaluation order remains unchanged.
+    if (keys.some(key => key.charCodeAt(0) >= 48 && key.charCodeAt(0) <= 57))
+      return rememberFrozen(value, `{${keys.map(key => `${quoteKey(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`).join(',')}}`, keys);
+    const scalars = Object.create(scalarPrototype ??= Object.freeze(Object.create(null))) as Record<string, unknown>;
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i], child = (value as Record<string, unknown>)[key];
+      if (child === null || typeof child === 'string' || typeof child === 'boolean' || typeof child === 'number' && Number.isFinite(child)) {
+        scalars[key] = child; continue;
+      }
+      const parts = keys.slice(0, i).map(key => `${quoteKey(key)}:${canonicalContent(scalars[key])}`);
+      parts.push(`${quoteKey(key)}:${canonicalContent(child)}`);
+      for (let rest = i + 1; rest < keys.length; rest++) {
+        const key = keys[rest]; parts.push(`${quoteKey(key)}:${canonicalContent((value as Record<string, unknown>)[key])}`);
+      }
+      return rememberFrozen(value, `{${parts.join(',')}}`, keys);
+    }
+    return rememberFrozen(value, JSON.stringify(scalars), keys);
   }
   throw new TypeError('Content must be finite plain JSON data');
 }

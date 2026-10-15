@@ -34,7 +34,7 @@ const budgetsHold = (log: readonly Logged[], limit: number) => {
 };
 
 export function registerBotDriver(mode: 'fast' | 'timing'): void {
-describe('BotDriver: whole matches (§13.3)', () => {
+if (mode === 'timing') describe('BotDriver: whole matches (§13.3)', () => {
   if (mode === 'timing') { it('plays eight bots from the first round to a unique ranking; every intention is accepted by the rules', () => {
     const started = performance.now();
     const { room, clock, bots, log } = botRoom();
@@ -87,7 +87,7 @@ describe('BotDriver: whole matches (§13.3)', () => {
   }, 60_000); }
 });
 
-describe('BotDriver: scheduling', () => {
+if (mode === 'fast') describe('BotDriver: scheduling', () => {
   if (mode === 'fast') { it('behaves the same for the same input: identical intentions, policy streams and seat states', () => {
     const run = () => {
       const { room, clock, bots, log } = botRoom();
@@ -166,7 +166,7 @@ describe('BotDriver: scheduling', () => {
   }, 30_000); }
 });
 
-describe('BotDriver: no takeover by default (P2, TFT behaviour)', () => {
+if (mode === 'fast') describe('BotDriver: no takeover by default (P2, TFT behaviour)', () => {
   if (mode === 'fast') { it('leaves a disconnected human seat alone: no takeover timer, no bot step, the seat stays human and its board still fights', () => {
     const ctx = botRoom(SEATS, { stepMs: 300 });
     const { room, clock, bots, log } = ctx;
@@ -190,7 +190,7 @@ describe('BotDriver: no takeover by default (P2, TFT behaviour)', () => {
   }); }
 });
 
-describe('BotDriver: disconnect takeover when switched on (§13.3 item 1)', () => {
+if (mode === 'fast') describe('BotDriver: disconnect takeover when switched on (§13.3 item 1)', () => {
   const firstPreparation = () => {
     const ctx = botRoom(SEATS, { takeover: true, takeoverMs: 5_000, stepMs: 300 });
     ctx.room.start();

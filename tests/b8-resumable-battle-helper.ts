@@ -1,3 +1,4 @@
+import { deepStrictEqual } from 'node:assert';
 import { freeze } from './combat-helpers';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
@@ -60,7 +61,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
       1: ['c9a99265768f73ffcd928a75f18b54b38229ff74b9c6c4af2d699f5a3104a0a3', 'd276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8'],
       9: ['76432cb53ba5a16ad53225d70db61b474111893d97413fedc8bce49f64b50697', 'abcc86b6bf109fec71b1dd245b4623f606cfb043a4312e3a7bcb0b827e9ccac8'],
     };
-    expect([sha(battle), sha(toCombatReplay(battle))]).toEqual(fingerprints[count]);
+    deepStrictEqual([sha(battle), sha(toCombatReplay(battle))], fingerprints[count]);
   }); }
   if (mode === 'fast') { it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {
@@ -105,7 +106,7 @@ describe('SR-B8-02 resumable pure tasks', () => {
     const source = structuredClone(controlBattle());
     const expected = toCombatReplay(source), task = startCombatReplay(source);
     expect(task.advance(1)).toBeNull(); Object.assign(source, { events: [] });
-    expect(task.advance(1201)).toEqual(expected);
+    deepStrictEqual(task.advance(1201), expected);
     const original = pve(), bad = { ...original, events: original.events.slice(0, -1) };
     const invalidTask = startCombatReplay(bad);
     expect(invalidTask.advance(1)).toBeNull();

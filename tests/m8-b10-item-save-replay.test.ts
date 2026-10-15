@@ -1,3 +1,4 @@
+import { deepStrictEqual } from 'node:assert';
 /** B10 coverage matrix, save/replay column (M8_PLAN §7.1 contentId → … → save/replayTest): every one of the
  * 44 M8 equipment definitions is carried by a real public-command combat (tests/fixtures/m8-b4-match.ts route),
  * recorded the way the application records it, and
@@ -73,20 +74,20 @@ describe('B10 every M8 equipment definition survives record, replay and save/res
     const { record, ticks, settled } = live(prepared);
     const terminal = settled.combat!;
     expect(terminal.tick).toBeGreaterThan(41); // ticks 39/40/41 straddle the 40-tick checkpoint inside the battle
-    expect(record.context).toEqual(prepared);
+    deepStrictEqual(record.context, prepared);
     expect(record.initial.units.some(unit => unit.id === 'unit-1')).toBe(true);
     const verified = validateBattleRecord(record);
-    expect(verified.terminal).toEqual(terminal);
-    expect(verified.settledMatch).toEqual(settled);
+    deepStrictEqual(verified.terminal, terminal);
+    deepStrictEqual(verified.settledMatch, settled);
     for (const tick of [0, 39, 40, 41, terminal.tick - 1]) {
       const at = ticks.get(Math.min(tick, terminal.tick - 1))!;
       const saved = serializeMatch(at);
-      expect(restoreMatch(saved)).toEqual(at);
+      deepStrictEqual(restoreMatch(saved), at);
       // In particular red-buff refreshes a fractional burn after canonical key sorting.
       // Comparing the entire continuation prevents losing its saved remainder (one HP).
-      expect(continueFrom(saved)).toEqual(settled);
+      deepStrictEqual(continueFrom(saved), settled);
     }
-    expect(restoreMatch(serializeMatch(settled))).toEqual(settled);
+    deepStrictEqual(restoreMatch(serializeMatch(settled)), settled);
     // Swapping the definition in the recorded context must not replay to the recorded battle.
     const other = definitionId === 'sword' ? 'bow' : 'sword';
     const context = structuredClone(record.context) as unknown as { items: { id: string; definitionId: string }[] };
