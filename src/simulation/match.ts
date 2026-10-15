@@ -21,7 +21,8 @@ import { UNIT_DEFINITIONS, type UnitLocation } from './units';
 import { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
 import { nextRandom, validateSeed } from './rng';
 import { DEFAULT_BOARD, sameCell } from './board';
-import { planCatalogRoundEconomy, OPENING_INITIAL_STATE } from './opening-economy';
+import { OPENING_INITIAL_STATE } from './opening-economy';
+import { resolveRoundEconomy } from './round-economy';
 import { getCatalogRoundByOrdinal, getNextCatalogRound } from './round-selectors';
 import { shareGeneratedJson } from './immutable-json';
 import { COMPONENT_IDS } from './content/items';
@@ -277,7 +278,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   if (state.roundResults.some(record => record.round >= state.round)) throw new Error('Duplicate settlement');
   const {kind:roundKind,isFinal,roundId} = state.m8.round;
   const survivingEnemyCount = combat?.units.filter(unit => unit.alive && unit.team === 'enemy').length ?? 0;
-  const plan = planCatalogRoundEconomy({ roundId, result: combat?.result ?? null, gold: state.gold,
+  const plan = resolveRoundEconomy({ roundId, result: combat?.result ?? null, gold: state.gold,
     streak: state.streak, level: state.level, xp: state.xp, hp: state.playerHp, enemySurvivors: survivingEnemyCount });
   const growth = new Map(state.persistentGrowth.map(entry => [entry.unitId, entry.attackDamageBps]));
   for (const delta of pendingDelta) growth.set(delta.unitId,(growth.get(delta.unitId)??0)+delta.attackDamageBps);
@@ -321,7 +322,7 @@ function withCombat(initial: MatchState, combat: CombatState, unitLootPolicy?: U
   if (combat.status === 'running') return { state: { ...revealed.state, phase:'combat',combat:combat as RunningCombat },events };
   if (combat.result === null) throw new Error('Invalid combat result');
   const before:MatchState={...revealed.state,phase:'settlement',combat:combat as FinishedCombat,pendingChoice:null};
-  const terminal=(!before.multiplayer && before.m8.round.isFinal) || planCatalogRoundEconomy({roundId:before.roundDefinitionId,result:combat.result,
+  const terminal=(!before.multiplayer && before.m8.round.isFinal) || resolveRoundEconomy({roundId:before.roundDefinitionId,result:combat.result,
     gold:before.gold,streak:before.streak,level:before.level,xp:before.xp,hp:before.playerHp,
     enemySurvivors:combat.units.filter(unit=>unit.team==='enemy'&&unit.alive).length}).hpAfter===0;
   const granted=grantDirectLoot(before,terminal,unitLootPolicy); let state=granted.state; events.push(...granted.events);

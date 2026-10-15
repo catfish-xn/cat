@@ -53,3 +53,8 @@ export type { ConsumableDefinitionId, ConsumableInstance, ConsumableTarget, Cons
 export { readComponentEquivalent } from '../simulation/loot-view';
 
 export { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
+
+export { previewRoundEconomy } from '../simulation/economy-preview';
+export type { RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../simulation/economy-preview';
+export { summarizeBattle } from '../simulation/combat-summary';
+export type { UnitBattleSummary } from '../simulation/combat-summary';

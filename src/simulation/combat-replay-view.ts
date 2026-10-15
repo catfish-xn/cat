@@ -36,7 +36,8 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'packetDamage': return { ...envelope, type: event.type, sourceId: event.outcome.context.source.ownerId,
       targetId: event.outcome.context.targetId, damageType: event.outcome.context.damageType,
       ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']) };
-    case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']) };
+    case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']),
+      shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId, actual: share.actual })) };
     case 'manaChanged': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'before', 'after']) };
     case 'cast': return { ...envelope, type: event.type, sourceId: event.receipt.source.ownerId,
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),

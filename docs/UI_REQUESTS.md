@@ -852,6 +852,8 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **用途**：排行"治疗"页改为按治疗者统计；受治疗量保留在悬停提示。
 - **验收**：同一场战斗中按 `sourceId` 汇总的治疗总和等于按 `targetId` 汇总的总和；镜像回放两侧对称；`replay-divergence` 校验不变。
 
+**Codex G5 交付回应**：heal 保留单条 targetId/actual/tick/eventSeq，新增 `shares: {sourceId, actual}[]`，逐份额复制权威实际治疗，不传执行计划。`summarizeBattle(replay: CombatReplay): readonly UnitBattleSummary[]` 从 simulation/combat-summary 与 server-entry 导出；每行含 unitId/definitionId/team/starLevel、damageDealt（hpDamage+absorbed）、damageTaken（同口径）、shieldAbsorbed、healingDone（份额 sourceId）、healingReceived（targetId）、kills（kill.sourceId）、alive（terminal）。`src/presentation/battle-ranking.ts` 请改用此函数，主治疗列使用 healingDone；B 视角只换 team，ID/统计量不变。完整合同见 MULTIPLAYER_CONTRACT §14.2；服务器与界面接入由 Claude 完成。
+
 ### SR-G5-02 准备期经济预估投影（P2）
 
 - **现状**：私有席位视图没有"本回合结算预估"。界面的利息只能用 `getInterestGold(当前金币)`，它不含胜利金币对计息基数的影响，也不知道开局回合（1-x 走 `OPENING_ECONOMY_RULES`，利息 0）与加时轮；下回合连胜/连败金币需要知道胜负后的连胜规则，界面不能自己推（`planCatalogRoundEconomy`/加时分支的选择属于规则）。
@@ -860,6 +862,8 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
   （补给轮可为 null 或只给一组），由与结算相同的规划函数按当前金币、连胜计算；不含 RNG、敌方信息或掉落。
 - **用途**：经济提示直接显示"利息 +N（胜 +M）· 连败 2 · 再败 +1 金币"，替换 `getInterestGold` 估算。
 - **验收**：对 1-2、2-1、加时轮和一组跨 10 金币边界的胜/负，`economyPreview.ifWin/ifLoss` 与随后结算的 `roundResults[].incomeBreakdown`（金币未再变化时）逐项相等；G5 e2e 改为逐项比对。
+**Codex G5 交付回应**：`previewRoundEconomy(state: MatchState): RoundEconomyPreview | null` 从 simulation/economy-preview 与 server-entry 导出。返回 `{roundId,gold,ifWin:{interest,win,streakGold,streakAfter},ifLoss:{...}}`；preparation/combat 使用当前己方资源，补给/其他阶段/已淘汰席返回 null。与结算共用 resolveRoundEconomy → planCatalogRoundEconomy/加时规划，含开局利息 0；不读 RNG/敌方信息，不预测掉落。请由 Claude 接入私有投影；签名、空值及精确比较条件见 MULTIPLAYER_CONTRACT §14.4。
+
 ## G2 前置界面：羁绊面板与技能/装备说明（2026-10-15，Claude 流水线 C，分支 `claude/g5-traits-tooltips`）
 
 ### 已交付（纯展示，只读 content 公开导出）

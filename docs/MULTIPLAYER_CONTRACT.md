@@ -954,7 +954,8 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 | targetChanged | unitId, before, after；目标标记 |
 | death / kill / growth | unitId；kill 另有 sourceId，growth 另有 amountBps/totalBps；表现事实 |
 | packetDamage | sourceId, targetId, damageType, hit, hpDamage, absorbed, critical, killingPacket；伤害飘字，不执行规则 |
-| heal / manaChanged | targetId, actual / targetId, before, after；表现事实 |
+| heal | targetId, actual, shares: {sourceId, actual}[]；实际治疗与施加者份额 |
+| manaChanged | targetId, before, after；表现事实 |
 | cast | sourceId, actionSeq, completed, actualManaSpent, refundedMana, targetIds, completionCell |
 | shieldLayerChanged | reason, key, targetId, remaining；单层提示，不累加为总盾 |
 | statusChanged | reason, targetId, kind, effectiveMagnitudeBps；无内部贡献/定时执行程序 |
@@ -964,6 +965,36 @@ CombatViewState 按 §10.9 combat 白名单构造，不传 sources/tasks/runtime
 activityChanged/effectTriggered 的执行程序不下发，可见数值后果在 unitUpdated。当前视图不承诺完整的状态图标/持续时间选择器；若 C 需要这些，应另提具体白名单字段，不能回填 runtime。B 视角沿用 §12.6 的纯显示镜像：所有首末/关键帧 unit.cell/startingCell、movement.from/to、cast.completionCell，以及新增 unitUpdated.changes.cell/startingCell 都要翻转 row；队伍/胜负互换、ID/seq/数值不变。对 changes.team（若存在）与 combatFinished.result 同样转换，不镜像 RNG 或重跑战斗。
 
 toCombatReplay 失败以 RangeError 抛出：`invalid-replay-input`（非 tick0 初态、末态未结束或 tick 超界）；`replay-divergence`（重执行未逐 tick 推进、单位集合变化、末视图或投影动画序列不符）。底层非法引擎输入异常原样传播；这些都是服务器故障，不能据此伪造平局/结算。该函数不是不可信战斗验证器，不能用其接受动画序列来证明战斗真实性。toCombatViewState/显示 reducer 无业务失败枚举；只用于可信状态/本协议 DTO。
+
+**SR-G5-01 治疗来源。** heal 保留单条领域事件及原 tick/eventSeq，不拆分或重复序号；actual 为目标实际获得的总治疗，新增 `shares: {sourceId: string, actual: number}[]`，按 outcome.shares 原顺序逐条复制 ownerId 与 actual。包括零份额，同一 owner 的多个来源不合并。权威机制已完成重伤、取整与生命上限裁剪，不得重新按比例分配；可信账本满足 `sum(shares.actual) === actual`。不下发完整 Source、contributions 或执行计划。B 视角保持 sourceId/targetId/份额数值不变。重执行、终态与动画序列校验保持，新增来源和份额同样纳入 replay-divergence 比对。历史无 shares 的缓存回放需从完整账本重新生成才能使用来源统计；本包不改版本号或 digest。
+
+**G5 战斗统计权威入口**（simulation/combat-summary.ts 与 server-entry 导出）：
+
+```ts
+summarizeBattle(replay: CombatReplay): readonly UnitBattleSummary[];
+interface UnitBattleSummary {
+  readonly unitId: string;
+  readonly definitionId: string;
+  readonly team: 'player' | 'enemy';
+  readonly starLevel: 1 | 2 | 3;
+  readonly damageDealt: number;
+  readonly damageTaken: number;
+  readonly shieldAbsorbed: number;
+  readonly healingDone: number;
+  readonly healingReceived: number;
+  readonly kills: number;
+  readonly alive: boolean;
+}
+```
+
+输入是当前合同生成的一场完整可信回放（包括 tick0），不是增量帧或不可信客户端 JSON。沿 initial.units 顺序每单位一行，包括零贡献单位；空战斗返回空数组。只读原始回放，返回独立数组/对象，不推进战斗、不结算、不消费 RNG。无正常业务失败枚举，结构错误的底层异常原样传播。
+
+- damageDealt：packetDamage 的 hpDamage+absorbed 按 sourceId 求和；damageTaken：同一和按 targetId 求和。shieldAbsorbed 单列其中 absorbed，不计护盾授予、衰减、过期或清理。
+- healingDone：heal.shares.actual 按 sourceId 求和；healingReceived：heal.actual 按 targetId 求和，不计 overheal/requested，不把全部治疗归给第一条来源。
+- kills：kill 事件按 sourceId 计数，不重复统计 death/killingPacket。alive：terminal 的单位 alive，不由伤害推测。
+- unitUpdated/关键帧不重复累计统计量。没有本场单位行的外部来源不虚构单位行。镜像席不可结算不影响完整战斗展示。
+
+`src/presentation/battle-ranking.ts` 应改用此函数作为本场排行口径；治疗主列用 healingDone，受治疗提示用 healingReceived，跨场累计展示由界面负责。B 视角只交换单位队伍，所有 ID/统计量不变。本包不改服务器投影与界面接线。字节变化见 [G5 验收证据](evidence/g5/REPORT.md)。
 
 ### 14.3 体积、验证与交接
 
@@ -981,6 +1012,34 @@ B4：接 §11.5 推进/失败处理；B5：用 nextSharedRound 全席批量推�
 交付验证：实际 nvm Node **v22.23.3** / npm **10.9.9**；T5R 3文件14例，连同 T2/T3/TP/T7、单人经济/命令/序列化/跨轮/来源账本与纯依赖回归共 **21文件336例通过**。typecheck、build、test:server-entry、verify-t2/t3/tp/t7/t5r-node-entry 均通过；T1 的既有状态/事件/RNG 轨迹哈希不变。未运行完整浏览器/公网性能套件，网络发布和客户端播放尚待 B7 接入验证。
 
 同步最新 `origin/multiplayer@bc35bac`（B4）后，重新 build/typecheck 与 T5R Node 测量通过，并追加 `tests/server/{room,round-commit,projection,two-sided-resolver,local-room-client}.test.ts` **5文件42例通过**；合计已验证26文件378例。同步只处理 docs/UI_REQUESTS.md 末尾追加冲突，完整保留 B4 新需求；PR 相对该集成基线无服务器/界面改动。
+
+### 14.4 SR-G5-02 当前回合经济预估
+
+从 simulation/economy-preview.ts 与 server-entry 导出：
+
+```ts
+interface RoundEconomyPreviewOutcome {
+  readonly interest: number;
+  readonly win: number;
+  readonly streakGold: number;
+  readonly streakAfter: { readonly kind: 'win' | 'loss' | null; readonly count: number };
+}
+interface RoundEconomyPreview {
+  readonly roundId: string;
+  readonly gold: number;
+  readonly ifWin: RoundEconomyPreviewOutcome;
+  readonly ifLoss: RoundEconomyPreviewOutcome;
+}
+previewRoundEconomy(state: MatchState): RoundEconomyPreview | null;
+```
+
+输入是权威席位 MatchState。preparation/combat 返回基于当前金币与 streak 的两组假设；choice/settlement/gameOver、已淘汰席、supply 回合返回 null。不读取敌方阵容、幸存人数、战斗结果、商店或 RNG，不预测掉落。输入不变，返回的 streakAfter 为独立对象。无正常业务失败枚举，非法权威状态导致的底层规划异常原样传播。
+
+`resolveRoundEconomy` 是预估与真实结算的共用分流：目录回合调用 planCatalogRoundEconomy（1-x 走 OPENING_ECONOMY_RULES，利息/胜利/连胜金币为 0），加时调用原 planRoundEconomy PvP 规划。Match 的离线/PvE 结算与 applyRoundSettlement 均走该入口。预估传入己方 HP/等级/经验及固定 enemySurvivors=0，伤害参数不参与返回经济字段，无须读对手。
+
+ifWin 假设 playerWin，ifLoss 假设 enemyWin；PvP 平局经济与失败相同。gold 是调用时金币，不含基础收入或掉落；正常 PvP 利息基数含胜利金币，streakAfter 是胜负更新后的 streak。若金币/streak 直到结算未变，对应分支的 interest/win/streakGold 精确等于 roundResults 最后一条 incomeBreakdown.interest/win/streak，streakAfter 也相等。不承诺基础收入、掉落、XP、HP 或敌方奖励。
+
+Claude 负责接入私有席位投影及经济提示，界面不得重写开局/目录/加时和 streak 公式。本包不增加 toPrivateSeatView 字段，不改 wire 版本、digest 或玩法。
 
 ## 15 T10：战斗运营与准备截止自动上场（2026-10-13）
 

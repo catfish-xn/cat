@@ -59,6 +59,7 @@ async function worker() {
   const api = await load(path.join(root, 'dist-server/index.mjs'));
   const reference = await load(path.join(out, 'browser-reference.mjs'));
   const expectedExports = [
+    'previewRoundEconomy', 'summarizeBattle',
     'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay', 'startCombatReplay',
     'applyCombatReplayTick', 'COMBAT_REPLAY_KEYFRAME_INTERVAL',
     'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',
