@@ -110,3 +110,79 @@ D1–D8 按推荐 A 签署；公共签名、失败枚举和 shared-deferred 调�
 球数保持 1/2/3/2/2/2/2/1，开场 bonus 50/50、装备珠 90/9/1；仅采样改读冻结 ORB_RULES 权重表（项目政策 `s13-orbs-project-v2`，采样 `frozen-cumulative-weights-v1`）。同局各席同模板、部分击杀、重连/重复推进零额外 RNG 沿原契约。
 
 规则/内容版本改为 s13-rules-gap-v2 / s13-14.24b-rules-gap-v2；schema7/save3/replay3/command3、NET2 不变。CONTENT_DIGEST 与 LOOT_REPLAY_DIGEST 由共同 manifest 同批 canonical 计算；旧原档仅只读保全导出，拒绝旧 digest 续玩。普通阶段轨迹比较记录在 docs/evidence/p3p4p5/release-audit.json，T13 与全部历史原件保留。
+
+
+## P7 共享选秀规则 API（合同提案，2026-10-15；尚未实现）
+
+玩法/证据/分布以 [S13_RULES_GAP §11](S13_RULES_GAP.md#11-p7共享选秀合同提案2026-10-15合同先行未实施) 为唯一数值来源，联机调用见 MULTIPLAYER_CONTRACT §21。本节是待实现导出，不声称当前包已可调用。所有对象为 JSON 数据；输入不变、失败返回原对象、零事件、RNG 不推进。
+
+```ts
+type CarouselRoundId = '1-1'|'2-4'|'3-4'|'4-4'|'5-4'|'6-4';
+type CarouselRng = { algorithm: 'lcg32-v1'; state: number };
+type CarouselParticipant = { seatId: string; seatIndex: number; hp: number };
+type CarouselSlot = {
+  slot: number; definitionId: string; itemId: string;
+  reservationId: string; pickedBy: string|null;
+};
+type CarouselReceipt = {
+  id: string; carouselId: string; seatId: string; slot: number;
+  definitionId: string; itemId: string; holdingSource: string;
+  unitId: string|null; itemInstanceId: string|null;
+  status: 'reserved'|'granted'|'released';
+};
+type CarouselState = {
+  version: 'carousel-v1'; id: string; roundId: CarouselRoundId;
+  pool: SharedPoolState; participants: CarouselParticipant[];
+  status: 'open'|'closed'; revision: number; elapsedMs: number;
+  slots: CarouselSlot[]; releaseOrder: string[];
+  releaseAtMs: Record<string,number>; deadlineMs: number;
+  rngBefore: CarouselRng; rngAfter: CarouselRng;
+  receipts: CarouselReceipt[];
+};
+type CarouselFailure =
+  | 'invalid-pool' | 'invalid-round' | 'invalid-rng'
+  | 'invalid-participants' | 'pool-exhausted' | 'carousel-exists'
+  | 'invalid-carousel' | 'carousel-closed' | 'unknown-seat'
+  | 'seat-eliminated' | 'seat-locked' | 'already-picked'
+  | 'invalid-slot' | 'slot-taken' | 'invalid-time'
+  | 'receipt-mismatch' | 'stale-pool' | 'invalid-match';
+type CarouselEvent =
+  | { type:'carousel-created'; carouselId:string; roundId:CarouselRoundId }
+  | { type:'carousel-picked'; receipt:CarouselReceipt }
+  | { type:'carousel-closed'; carouselId:string; returnedSlots:number[] };
+type CarouselResult =
+  | { ok:true; state:CarouselState; events:CarouselEvent[] }
+  | { ok:false; state:CarouselState; reason:CarouselFailure; events:[] };
+// SharedPoolState vNext 增加显式 carouselParticipants（冻结存活席与 HP）
+// 和 carouselReservations、carouselReceipts；不可由 pool.seats 猜 HP。
+function createCarousel(pool: SharedPoolState, roundId: CarouselRoundId,
+  rng: CarouselRng):
+  | { ok:true; state:CarouselState; events:CarouselEvent[] }
+  | { ok:false; pool:SharedPoolState; rng:CarouselRng;
+      reason:CarouselFailure; events:[] };
+function pickFromCarousel(state:CarouselState, seatId:string,
+  slot:number):CarouselResult;
+// match 为本席资产快照，仅供本席自动策略评分；不在此发资产。
+function autoPickFromCarousel(state:CarouselState, seatId:string,
+  match:MatchState):CarouselResult;
+// 单调逻辑时间；到 deadline 时只更新时间/可选资格，服务器随后逐席自动选取。
+function advanceCarousel(state:CarouselState, elapsedMs:number):CarouselResult;
+// 发布一个席位的资产与共享账本必须同一事务提交。
+function grantCarouselPick(state:CarouselState, match:MatchState,
+  seatId:string):
+  | { ok:true; state:CarouselState; match:MatchState; events:MatchEvent[] }
+  | { ok:false; state:CarouselState; match:MatchState;
+      reason:CarouselFailure; events:[] };
+```
+
+`SharedPoolState` vNext 的 `carouselParticipants` 由规则入口 `prepareCarouselParticipants(pool, states: readonly {seatId:string;state:MatchState}[])` 从完整存活 Match 集合生成，返回 `{ok:true,pool}` 或 `{ok:false,pool,reason:'invalid-participants'|'invalid-pool'}`；禁止信任客户端 HP。校验唯一席、seatIndex 与 pool 对齐、非 released、HP>0，完整覆盖全部未淘汰席。`createCarousel` 要求该快照；私自漏席拒绝。只允许当前自然轮对应 roundId（1-1 另用开局标记），一次性 carouselId=`poolId:carousel:roundId`，不得依调用次数生成新身份。已存在任意创建收据即 `carousel-exists`，关闭也不能重建。
+
+创建按 slot 顺序，各槽先用一词定费用、一词按池剩余份数定单位、一词定装备，共 27 词；即使费用概率 100% 也消费对应词。所有单位候选先 definitionId 代码点排序。槽选择先通过只读可用性预检，全池不足 9 份零消费失败；相应费用为空时按 §11.2 回退，不额外抽 RNG。不使用 Math.random、真实时钟或重连次数。RNG 为独立 carousel 流，父级 seed/roundId 派生规则随实现纳入 digest；恢复只接受已持久化前后状态，不重新调用 create。
+
+`pick` 校验顺序：结构 → closed → seat 存在/存活 → 已选 → 是否放行 → slot 整数范围 → 被占。因此同席重选返回 `already-picked`，其他席抢走槽返回 `slot-taken`。人工截止闸门由服务器在更新逻辑时间前/后按 §21 排序；deadline 后人工不得直接 pick。成功生成唯一 `receipt.id=carouselId:seatId`，`holdingSource=receipt.id`；选择只把槽绑定收据并保留池预留，不生成第二份 holdings。自动函数除评分外调用同一个 pick，RNG 不变；非法本席资产返回 `invalid-match`，不以空资产悄悄兜底。
+
+每个 definitionId 必须逐份满足：`initial = available + shops + holdings基础份数 + pending奖励预留 + 未granted的carouselReservations`。创建 available→carouselReservations，pick 不再扣 available；grant 将预留→该席 holdings 并给 Match 创建新 unit/item ID，收据原子转 granted，不能先发单位再补共享池。空槽在全部参与者选完时关闭，未选单位恰好归还一次；已选但未 grant 的预留继续存在，不随关闭归还。关闭轮仍允许 grant；再次 grant **成功无事件且原对象返回**，以便超时重试，不重建单位/装备。receipt 与实际资产不匹配返回 `receipt-mismatch`，不能把伪造 receipt 当幂等。
+
+备战席满时，领取单位进入新增 `pendingCarouselUnits` 队列（继续计入 holdings，不自动出售、不覆盖棋盘、不会失败丢奖）；准备期在合法空位出现时按 receipt.id 顺序搬入备战席，排队单位不参战、不可商店购买/手动部署，允许明确卖出，卖价沿既有基础售价，物品已入栏不随排队单位出售丢失。该队列必须投影给本席、序列化和恢复校验。grant 后执行既有自动升星，pending 与正式单位只按既有合法目标规则合成，不能引入临时超容量单位。淘汰释放未授予预留/排队持有各一次，收据标 released；淘汰应从下一次参与快照排除，当前冻结轮被淘汰则用规则释放入口处理，不静默删人破坏守恒。
+
+不允许选秀期间的商店/出售/装备等资产变更和其他共享池写入；集成事务以 pool.revision 匹配，过期为 `stale-pool`。本次规则实现须提供 `releaseCarouselSeat(state,seatId)` 与 pool 淘汰入口同一事务的适配，返回 CarouselResult；无未释放资产时成功零事件。恢复验证槽、预留、收据、holdings、物品与 pending 队列的双向一一对应，并完整守恒；不运行 grant、自动选择或重新计时。资产变更事件沿 Match 正式账本，新增事件类型须实现时导出并纳入 digest，不能仅靠投影凭空补资产。

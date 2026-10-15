@@ -1,0 +1,349 @@
+{
+  "retrievedAt": "2026-10-15",
+  "sources": [
+    {
+      "id": "wiki",
+      "url": "https://wiki.leagueoflegends.com/en-us/TFT:Carousel?action=raw",
+      "error": "HTTP Error 403: Forbidden"
+    },
+    {
+      "id": "map22",
+      "url": "https://raw.communitydragon.org/14.24/game/data/maps/shipping/map22/map22.bin.json",
+      "status": 200,
+      "bytes": 54544106,
+      "sha256": "09a9219647c08e70a8eb4d2ccbc35a9afe21934bc5279b4da2d05ca076339e0f"
+    },
+    {
+      "id": "notes14_24",
+      "url": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+      "status": 200,
+      "bytes": 287120,
+      "sha256": "f43b42c3193ba0a0e32a6914b3d4a55c536ed7b29f6a660613aea6658cca0e31"
+    },
+    {
+      "id": "notes10_6",
+      "url": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-10-6-notes/",
+      "status": 200,
+      "bytes": 197332,
+      "sha256": "15b4e45c0074d7acec3aa6f2a2249471e6eb8dace3bfb5ae12a92c3624f5091c"
+    }
+  ],
+  "warning": "14.24 client data, not independent 14.24b server execution; includes other modes and Evolved variants. No carousel probability table inferred from unrelated modes.",
+  "selectedRecords": {
+    "Maps/Shipping/Map22/Sets/TFTSet13": {
+      "name": "TFTSet13",
+      "CoreName": "TFTSet13",
+      "displayName": "DisplayName_TFT_Set13",
+      "number": 13,
+      "AugmentContainerTexture": "ASSETS/UX/TFTMobile/PostGame/EOG_AugmentProp_Set13.TFT_Set13.tex",
+      "AugmentContainerName": "TFT_AugmentProp_Name",
+      "DebugCharacterLists": [
+        "{48b7e1ca}"
+      ],
+      "characterLists": [
+        "{365eee50}",
+        "{3aac87ae}"
+      ],
+      "tftCharacterLists": [
+        "{f4b9b202}",
+        "{8e9a0766}",
+        "{17f294dc}"
+      ],
+      "itemLists": [
+        "{bfe3b5eb}",
+        "{3c6c6457}",
+        "{e0a10d58}",
+        "{3b31435c}"
+      ],
+      "TraitLists": [
+        "{9dc6f890}"
+      ],
+      "{8d56bbf6}": [
+        "{8e9834dc}",
+        "{91983995}",
+        "{90983802}",
+        "{8b983023}",
+        "{8a982e90}",
+        "{8d983349}",
+        "{8c9831b6}",
+        "{97984307}",
+        "{96984174}",
+        "{659b4f84}",
+        "{669b5117}",
+        "{679b52aa}",
+        "{689b543d}",
+        "{619b4938}",
+        "{629b4acb}",
+        "{639b4c5e}",
+        "{649b4df1}",
+        "{5d9b42ec}",
+        "{5e9b447f}",
+        "{d7a2bebf}",
+        "{d6a2bd2c}",
+        "{d9a2c1e5}",
+        "{d8a2c052}",
+        "{d3a2b873}",
+        "{d2a2b6e0}",
+        "{d5a2bb99}",
+        "{d4a2ba06}",
+        "{dfa2cb57}",
+        "{dea2c9c4}"
+      ],
+      "ShopDataLists": [
+        "{22173fed}"
+      ],
+      "DropRateTables": {
+        "Shop": "{1ee21754}"
+      },
+      "ShopContentData": "{a78eeffe}",
+      "{c4274f58}": {
+        "{93fcfdc6}": "DisplayName_TFT13_TeamPlanner_ShortName",
+        "{a19156d9}": "DisplayName_TFT13_TeamPlannerSetHeader",
+        "{b8c2cc83}": {
+          "{f8b71cc4}": "%i:TFTSet13UnselectedDefault%",
+          "{84be004c}": "%i:TFTSet13UnselectedClicked%",
+          "{d3231b43}": "%i:TFTSet13UnselectedHover%",
+          "{1683dbca}": "%i:TFTSet13UnselectedInactive%",
+          "{74f8c1e9}": "%i:TFTSet13SelectedDefault%",
+          "{eca4ae5d}": "%i:TFTSet13SelectedClicked%",
+          "{92d960e6}": "%i:TFTSet13SelectedHover%",
+          "{4ce2d8e5}": "%i:TFTSet13SelectedInactive%",
+          "__type": "{c4587d4a}"
+        },
+        "__type": "{5ec7f50c}"
+      },
+      "ScriptData": {
+        "TierBagListName": {
+          "mValue": "Set13_TierBags",
+          "__type": "GameModeConstantString"
+        },
+        "SetNumber": {
+          "mValue": 13,
+          "__type": "GameModeConstantInteger"
+        },
+        "SetName": {
+          "mValue": "Set13",
+          "__type": "GameModeConstantString"
+        },
+        "SetLevelScriptName": {
+          "mValue": "TFT_LevelScript_Set13",
+          "__type": "GameModeConstantString"
+        },
+        "ElusiveEmblemList": {
+          "mValue": "EMBLEM_SET13_Elusive",
+          "__type": "GameModeConstantString"
+        },
+        "EmblemArmoryContentDefinition": {
+          "mValue": [
+            "ArmoryContent_SpecialEmblemArmory_Set13_T0",
+            "ArmoryContent_SpecialEmblemArmory_Set13_T1",
+            "ArmoryContent_SpecialEmblemArmory_Set13_T2",
+            "ArmoryContent_SpecialEmblemArmory_Set13_T3",
+            "ArmoryContent_SpecialEmblemArmory_Set13_T4"
+          ],
+          "__type": "GameModeConstantStringVector"
+        },
+        "NumAugmentRerollsPerPlayer": {
+          "mValue": 1,
+          "__type": "GameModeConstantInteger"
+        },
+        "EmblemList": {
+          "mValue": "EMBLEM_SET13",
+          "__type": "GameModeConstantString"
+        },
+        "SetAugmentCharacter": {
+          "mValue": "TFT13_Augment",
+          "__type": "GameModeConstantString"
+        },
+        "ShopOverrideEventOrder": {
+          "__type": "GameModeConstantStringVector"
+        },
+        "TFT_ChanceOfRarePortal": {
+          "mValue": 0.30000001192092896,
+          "__type": "GameModeConstantFloat"
+        },
+        "CraftableEmblemList": {
+          "mValue": "EMBLEM_SET13_Craftable",
+          "__type": "GameModeConstantString"
+        },
+        "BotPersonalitiesListName": {
+          "mValue": "SetTutorialPersonalities",
+          "__type": "GameModeConstantString"
+        }
+      },
+      "StageRoundData": "{ffcae0de}",
+      "{fc63519e}": {
+        "AllCombat": "{fb96569f}"
+      },
+      "{46bf1dcb}": "{eef95d23}",
+      "EncounterList": "{52ba4555}",
+      "{e6c62bd9}": "{e6ddca72}",
+      "VfxResourceResolver": "{1a27fe75}",
+      "AudioFeature": "{bb341567}",
+      "AugmentUiOverride": {
+        "BaseLoadable": "{89b65195}",
+        "MobileLoadable": "{e01c5b02}",
+        "__type": "{2483c715}"
+      },
+      "{52e4eea2}": "{ff5d6bfc}",
+      "{412bcd03}": "{5d19139d}",
+      "BotSkillData": {
+        "0": "{e59e1d5d}",
+        "6": "{fdb0c0a2}",
+        "7": "{feb0c235}",
+        "8": "{fbb0bd7c}"
+      },
+      "{8876469a}": "TFT13_OpeningEncounter_Title",
+      "__type": "TFTSetData"
+    },
+    "{78013f9e}": {
+      "mName": "TFT_Round_MacaoPortalSelect",
+      "mIconPath": "ASSETS/Characters/TFT_Shared_Draft/Shared_Draft_Icon.tex",
+      "mDisplayNameTra": "tft9_round_name_RegionPortalSelect",
+      "mDefaultTooltipTra": "tft9_round_name_RegionPortalSelect",
+      "mRoundUpcomingIconPath": "ASSETS/UX/TFT/StageIcons/DraftUpcoming.tex",
+      "mRoundActiveIconPath": "ASSETS/UX/TFT/StageIcons/DraftCurrent.tex",
+      "mRoundResultNoneIconPath": "ASSETS/UX/TFT/StageIcons/DraftDefeat.tex",
+      "mDraftArrival": {
+        "mEnabled": true,
+        "mDuration": 6.0,
+        "__type": "TFTPhaseData"
+      },
+      "mDraft": {
+        "mEnabled": true,
+        "mDuration": 20.200000762939453,
+        "mDisplay": 2,
+        "__type": "TFTPhaseData"
+      },
+      "mDraftDeparture": {
+        "mEnabled": true,
+        "mDuration": 2.0,
+        "__type": "TFTPhaseData"
+      },
+      "mScriptData": {
+        "RoundType": {
+          "mValue": "PortalSelect",
+          "__type": "GameModeConstantString"
+        },
+        "ForcedPortals": {
+          "mValue": [
+            "TFT_Portals_Macao_Stage1_Option1",
+            "TFT_Portals_Macao_Stage1_Option2",
+            "TFT_Portals_Macao_Stage1_Option3"
+          ],
+          "__type": "GameModeConstantStringVector"
+        }
+      },
+      "__type": "TFTRoundData"
+    },
+    "Maps/Shipping/Map22/Rounds/TFT_Round_Carousel": {
+      "mName": "TFT_Round_Carousel",
+      "mIconPath": "ASSETS/Characters/TFT_Shared_Draft/Shared_Draft_Icon.tex",
+      "mDisplayNameTra": "TFT_phase_title_shareddraft",
+      "mDefaultTooltipTra": "stageUI_hover_carousel_label",
+      "mRoundUpcomingIconPath": "ASSETS/UX/TFT/StageIcons/DraftUpcoming.tex",
+      "mRoundActiveIconPath": "ASSETS/UX/TFT/StageIcons/DraftCurrent.tex",
+      "mRoundResultNoneIconPath": "ASSETS/UX/TFT/StageIcons/DraftDefeat.tex",
+      "mDraftArrival": {
+        "mEnabled": true,
+        "mDuration": 6.0,
+        "__type": "TFTPhaseData"
+      },
+      "mDraft": {
+        "mEnabled": true,
+        "mDuration": 6.0,
+        "mDisplay": 2,
+        "__type": "TFTPhaseData"
+      },
+      "mDraftDeparture": {
+        "mEnabled": true,
+        "mDuration": 2.0,
+        "__type": "TFTPhaseData"
+      },
+      "mPlanning": {
+        "mDuration": 30.0,
+        "mDisplay": 6,
+        "mLabel": "TFT_phase_title_shopping",
+        "__type": "TFTPhaseData"
+      },
+      "mCombatArrival": {
+        "mDuration": 6.0,
+        "mDisplay": 3,
+        "mLabel": "TFT_phase_title_arrival",
+        "__type": "TFTPhaseData"
+      },
+      "mCombat": {
+        "mDuration": 30.0,
+        "mDisplay": 4,
+        "mLabel": "TFT_phase_title_overtime",
+        "__type": "TFTPhaseData"
+      },
+      "mCombatDeparture": {
+        "mDuration": 3.0,
+        "mDisplay": 1,
+        "mLabel": "TFT_phase_title_departure",
+        "__type": "TFTPhaseData"
+      },
+      "mScriptData": {
+        "RoundType": {
+          "mValue": "SharedDraftRound",
+          "__type": "GameModeConstantString"
+        }
+      },
+      "__type": "TFTRoundData"
+    }
+  },
+  "standardStageFirstSixRounds": [
+    [
+      "{78013f9e}",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Intro1",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Intro2",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Intro3"
+    ],
+    [
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set6_Standard_AugmentEarly",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Carousel",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Krugs"
+    ],
+    [
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set6_Standard_AugmentMid",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Carousel",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Wolves"
+    ],
+    [
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat_Set6_Standard_AugmentLate",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Carousel",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT13_Round_GoopAppearance",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Raptors"
+    ],
+    [
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Carousel",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Dragon"
+    ],
+    [
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Carousel",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Combat",
+      "Maps/Shipping/Map22/Rounds/TFT_Round_Dragon"
+    ]
+  ]
+}
