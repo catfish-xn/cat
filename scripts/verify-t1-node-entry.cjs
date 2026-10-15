@@ -12,7 +12,7 @@ const deploymentBaseline = require('../tests/t1-deployment-baseline.json');
 const t10Baseline = require('../tests/t10-content-baseline.json');
 const t11Baseline = require('../tests/t11-content-baseline.json');
 const t12Baseline = require('../tests/t12-content-baseline.json');
-const t13Baseline = require('../tests/p3p4p5-content-baseline.json');
+const t13Baseline = require('../tests/p7-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
@@ -59,6 +59,7 @@ async function worker() {
   const api = await load(path.join(root, 'dist-server/index.mjs'));
   const reference = await load(path.join(out, 'browser-reference.mjs'));
   const expectedExports = [
+    'releaseCarouselParticipant','completeCarouselForSeat','releaseCarouselSeat','resolvePendingCarouselUnits','sellPendingCarouselUnit','createCarouselMatch','opensCarousel','schedule','prepareCarouselParticipants','createCarousel','pickFromCarousel','autoPickFromCarousel','advanceCarousel','grantCarouselPick','pickCarouselForSeat','autoPickCarouselForSeat','listCarouselSlots','restoreCarouselSeat','restoreCarousel','validateCarousel','CAROUSEL_RULES','CAROUSEL_COST_ODDS',
     'advanceMultiplayerRound', 'toPrivateSeatView', 'toCombatViewState', 'toCombatViewEvents', 'toCombatReplay', 'startCombatReplay',
     'applyCombatReplayTick', 'COMBAT_REPLAY_KEYFRAME_INTERVAL',
     'decideBotAction', 'BOT_POLICY_VERSION', 'BOT_MAX_STEPS',

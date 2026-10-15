@@ -15,14 +15,17 @@ import type { StarLevel, UnitUpgradedEvent } from './unit-types';
 
 export const RESOURCE_PROVENANCE_VERSION = 'm8-b8-resource-provenance-v1';
 export type UnitAcquisitionSource =
+  | {readonly kind:'carousel';readonly receiptId:string}
   | { readonly kind: 'opening' }
   | { readonly kind: 'shop'; readonly generation: number; readonly slotIndex: number; readonly definitionId: string }
   | { readonly kind: 'loot'; readonly receiptId: string };
 export type ItemAcquisitionSource =
+  | {readonly kind:'carousel';readonly receiptId:string}
   | { readonly kind: 'schedule'; readonly eventId: string }
   | { readonly kind: 'loot'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | {readonly kind:'carousel-unit-claimed';readonly unitId:string;readonly receiptId:string;readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'consumable-used';readonly record:import('./consumable-types').ConsumableUseRecord}
   | { readonly kind: 'unit-acquired'; readonly unitId: string; readonly source: UnitAcquisitionSource }
   | { readonly kind: 'unit-upgraded'; readonly acquisitionSequence: number; readonly event: UnitUpgradedEvent }
@@ -50,6 +53,9 @@ export interface ProvenanceCombatSettlement {
   readonly roundId: string; readonly combatId: string; readonly settlementId: string;
 }
 export interface ResourceProvenanceContext {
+  readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
+  readonly pendingCarouselUnitIds?:readonly string[];
+  readonly carouselOpening?:boolean;
   /** Receipts must already be authenticated against their schedule/frozen loot plan. */
   readonly scheduleReceipts: readonly ScheduleReceipt[];
   readonly lootReceipts: readonly LootReceipt[];
@@ -141,12 +147,19 @@ export function mergeGrowthLedger(
 }
 
 interface BirthReceipt { readonly kind: 'unit' | 'item'; readonly id: string; readonly definitionId: string; readonly roundId: string }
-export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal'>): Map<string, BirthReceipt> {
+export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts'>): Map<string, BirthReceipt> {
   const births = new Map<string, BirthReceipt>(), receiptIds = new Set<string>(), assetIds = new Set<string>();
   const add = (key: string, birth: BirthReceipt) => {
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
     births.set(key, birth); assetIds.add(birth.id);
   };
+  for(const receipt of context.carouselReceipts??[]) {
+    requireValue(receipt.status==='granted'&&receipt.id===`${receipt.carouselId}:${receipt.seatId}`&&receipt.holdingSource===receipt.id&&receipt.unitId!==null&&receipt.itemInstanceId!==null&&!receiptIds.has(receipt.id),'carousel receipt');receiptIds.add(receipt.id);
+    const roundId=receipt.carouselId.slice(receipt.carouselId.lastIndexOf(':')+1),round=getCatalogRoundById(roundId==='1-1'?'1-2':roundId);
+    requireValue(round.ordinal<=context.throughRoundOrdinal&&SHOP_CATALOG.includes(receipt.definitionId)&&Object.hasOwn(ITEM_DEFINITIONS,receipt.itemId),'carousel identity');
+    add(`carousel-unit:${receipt.id}`,{kind:'unit',id:receipt.unitId,definitionId:receipt.definitionId,roundId:round.roundId});
+    add(`carousel-item:${receipt.id}`,{kind:'item',id:receipt.itemInstanceId,definitionId:receipt.itemId,roundId:round.roundId});
+  }
   for (const receipt of context.scheduleReceipts) {
     plainJson(receipt);
     keys(receipt, ['eventId', 'round', 'kind', 'itemIds', 'gold', 'unitId', 'definitionId']);
@@ -230,7 +243,7 @@ function validateUpgrade(event: UnitUpgradedEvent): void {
 export function foldResourceProvenance(value: unknown, context: ResourceProvenanceContext): FoldedResourceProvenance {
   getCatalogRoundByOrdinal(context.throughRoundOrdinal);
   plainJson(value); keys(value, ['version', 'entries']);
-  requireValue(value.version === RESOURCE_PROVENANCE_VERSION && Array.isArray(value.entries) && value.entries.length > 0, 'version/opening');
+  requireValue(value.version === RESOURCE_PROVENANCE_VERSION && Array.isArray(value.entries) && (value.entries.length > 0 || context.carouselOpening===true), 'version/opening');
   const entries = value.entries as ResourceProvenanceEntry[];
   const prefixLength = context.prefixLength ?? entries.length;
   integer(prefixLength); requireValue(prefixLength <= entries.length, 'prefix bounds');
@@ -249,7 +262,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   let result = projection();
   const finishAcquisition = () => {
     if (!acquisition) return;
-    for (const star of [1, 2]) requireValue([...units.values()].filter(unit => unit.definitionId === acquisition!.definitionId && unit.starLevel === star).length < 3, 'missing upgrade');
+    for (const star of [1, 2]) requireValue([...units.values()].filter(unit => unit.definitionId === acquisition!.definitionId && unit.starLevel === star && !context.pendingCarouselUnitIds?.includes(unit.id)).length < 3, 'missing upgrade');
     acquisition = null;
   };
   const takeBirth = (key: string, kind: BirthReceipt['kind'], id: string, roundId: string): string => {
@@ -270,13 +283,15 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       && !firstLootBirth.has(entry.roundId)) firstLootBirth.set(entry.roundId, index);
     if (entry.kind === 'unit-acquired') {
       keys(entry, [...common, 'unitId', 'source']); record(entry.source);
-      requireValue(round.kind !== 'supply', 'unit birth in supply');
+      requireValue(round.kind !== 'supply'||entry.source.kind==='carousel', 'unit birth in supply');
       requireValue(entry.unitId === `unit-${nextUnitSerial}`, 'unit serial'); integer(nextUnitSerial + 1, 1);
       let definitionId: string;
       if (entry.source.kind === 'opening') {
         keys(entry.source, ['kind']);
         requireValue(index === 0 && entry.unitId === OPENING_INITIAL_STATE.unit.id && round.ordinal === 1, 'opening');
         definitionId = OPENING_INITIAL_STATE.unit.definitionId;
+      } else if(entry.source.kind==='carousel') {
+        keys(entry.source,['kind','receiptId']);definitionId=takeBirth(`carousel-unit:${entry.source.receiptId}`,'unit',entry.unitId,entry.roundId);
       } else if (entry.source.kind === 'shop') {
         keys(entry.source, ['kind', 'generation', 'slotIndex', 'definitionId']);
         requireValue(!commits.has(entry.roundId), 'shop after settlement');
@@ -291,7 +306,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         requireValue(entry.source.kind === 'loot', 'unit source'); nonempty(entry.source.receiptId);
         definitionId = takeBirth(`loot:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       }
-      requireValue(index !== 0 || entry.source.kind === 'opening', 'missing opening');
+      requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
       units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel: 1 }); nextUnitSerial++;
       acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: 1 };
     } else if (entry.kind === 'unit-upgraded') {
@@ -308,6 +323,11 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       event.consumedIds.forEach(id => units.delete(id));
       units.set(event.survivorId, { id: event.survivorId, definitionId: event.definitionId, starLevel: event.toStar });
       growth = mergeGrowthLedger(growth, [event]); acquisition.survivorId = event.survivorId; acquisition.star = event.toStar;
+    } else if(entry.kind==='carousel-unit-claimed') {
+      keys(entry,[...common,'unitId','receiptId','upgrades']);
+      const receipt=context.carouselReceipts?.find(r=>r.id===entry.receiptId);
+      requireValue(receipt?.unitId===entry.unitId&&units.has(entry.unitId)&&Array.isArray(entry.upgrades),'pending carousel ownership');
+      for(const event of entry.upgrades as readonly UnitUpgradedEvent[]){validateUpgrade(event);for(const id of [event.survivorId,...event.consumedIds]){const u=units.get(id);requireValue(u&&u.definitionId===event.definitionId&&u.starLevel===event.fromStar,'pending upgrade ownership');}event.consumedIds.forEach(id=>units.delete(id));units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});growth=mergeGrowthLedger(growth,[event]);}
     } else if (entry.kind === 'unit-sold') {
       keys(entry, [...common, 'unitId', 'context', 'goldGranted']); integer(entry.goldGranted);
       const unit = units.get(entry.unitId);
@@ -320,10 +340,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(entry, [...common, 'itemId', 'source']); record(entry.source);
       requireValue(entry.itemId === `item-${nextItemSerial}`, 'item serial'); integer(nextItemSerial + 1, 1);
       const source = entry.source;
-      requireValue(source.kind === 'schedule' || source.kind === 'loot', 'item source');
+      requireValue(source.kind === 'schedule' || source.kind === 'loot'||source.kind==='carousel', 'item source');
       keys(source, source.kind === 'schedule' ? ['kind', 'eventId'] : ['kind', 'receiptId']);
       nonempty(source.kind === 'schedule' ? source.eventId : source.receiptId);
-      const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : `loot:${source.receiptId}`;
+      const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : source.kind==='carousel'?`carousel-item:${source.receiptId}`:`loot:${source.receiptId}`;
       const definitionId = takeBirth(key, 'item', entry.itemId, entry.roundId);
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
     } else if (entry.kind === 'item-combined') {
@@ -393,7 +413,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       growth = [...next].map(([unitId, attackDamageBps]) => ({ unitId, attackDamageBps })).sort(compareGrowth);
       commits.set(entry.roundId, { roundId: entry.roundId, combatId: entry.combatId, settlementId: entry.settlementId });
     } else requireValue(false, 'fact kind');
-    requireValue(index !== 0 || entry.kind === 'unit-acquired' && entry.source.kind === 'opening', 'missing opening');
+    requireValue(index !== 0 || entry.kind === 'unit-acquired' && (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
     if (index + 1 === prefixLength) result = projection();
   }
   finishAcquisition();
