@@ -346,5 +346,18 @@
     "observedMs": 5026.481181,
     "unchangedTimeoutMs": 5000,
     "fix": "Move complete ws-client suite to serial timing project; no test body or production change."
+  },
+  "deliveryAfterExternalMerge": {
+    "pr98MergedHead": "c0fe5aa19e0cc1f84df4505ea3a781140ae77a4b",
+    "pr98Merge": "a8e45722e8cf9cd478cfe9ba871abe3c279e4d5a",
+    "latestIntegrationBase": "71de7b689f480bcd017964a1757d9a13fed05688",
+    "postMergeCheckedHead": "42e40a5f24baadb6ee90a5efbc25468b5464eed8",
+    "typecheck": "passed",
+    "newG5Tests": {
+      "files": 1,
+      "passed": 5,
+      "durationSeconds": 6.35
+    },
+    "fullSuiteScope": "2673 tests on c3eb2ae; the 5 upstream G5 tests were checked separately after merge, not counted as a single 2678-test run."
   }
 }
