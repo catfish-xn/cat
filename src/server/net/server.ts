@@ -19,6 +19,7 @@ import { textLogger, type Logger } from '../log';
 import { startBattleJob, type BattleJob, type BattleResolver } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
+import type { CarouselRules } from '../room/carousel';
 import { Lobby, type LobbyWatchdog } from '../room/lobby';
 import { consumableReceiptEvents, seatPushEvents, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
@@ -67,6 +68,8 @@ export interface GameServerOptions {
   readonly watchdog?: LobbyWatchdog | null;
   /** Build identity reported by /healthz; main.ts fills it from the environment and the rules' digests. */
   readonly build?: BuildInfo;
+  /** G1-P7: the rules' shared carousel (`CAROUSEL_RULES_BINDING`), forwarded to every room; main.ts turns it on. */
+  readonly carousel?: CarouselRules;
   /** Process figures for /healthz (main.ts reads them from Node); null fields when omitted. */
   readonly processStats?: () => { readonly uptimeSec: number; readonly rssBytes: number };
 }
@@ -195,6 +198,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS, seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
+    ...(options.carousel ? { carousel: options.carousel } : {}),
     // Bot steps and takeovers fire on the clock; each one becomes a task of the single write queue (§13.3 item 2).
     bots: { ...options.bots, enqueue: task => queue.push(task) },
   });

@@ -429,6 +429,63 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .opponent-trait { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #203440; color: #9aaeb9; }
 .opponent-trait.active { background: #1f4a46; color: #68ddd0; }
 .opponent-note { margin: 0; font-size: 11px; color: #7e95a4; }
+/* G1-P7 carousel: a ring over the enemy half of the board; the bench rows below stay visible. */
+.carousel-panel { position: absolute; z-index: 31; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
+  width: min(640px, calc(100% - 16px)); display: grid; gap: 8px; padding: 10px 14px; border-radius: 12px; border: 1px solid #b4a1f5;
+  background: rgba(14, 24, 33, .95); color: #e2eef1; box-shadow: 0 12px 32px rgba(0, 0, 0, .45); }
+.carousel-panel[data-can-pick] { border-color: #68ddd0; box-shadow: 0 0 0 2px rgba(104, 221, 208, .35), 0 12px 32px rgba(0, 0, 0, .45); }
+.carousel-head { display: flex; align-items: baseline; gap: 12px; }
+.carousel-title { font-size: 16px; color: #b4a1f5; }
+.carousel-status { flex: 1; font-size: 13px; color: #c9d4da; }
+.carousel-panel[data-can-pick] .carousel-status { color: #68ddd0; font-weight: 700; }
+.carousel-body { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; align-items: center; }
+.carousel-ring { --size: 330px; --radius: calc(var(--size) / 2 - 38px); position: relative; width: var(--size); height: var(--size); justify-self: center;
+  border-radius: 50%; background: radial-gradient(circle, #1d2f3b 0 34%, #14232d 35% 64%, #1a2c36 65%); }
+.carousel-ring.carousel-enter { animation: carousel-spin-in .6s ease-out; }
+@keyframes carousel-spin-in { from { transform: rotate(-40deg) scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
+.carousel-centre { position: absolute; inset: 0; margin: auto; width: 96px; height: 96px; border-radius: 50%; display: grid; place-content: center; justify-items: center;
+  background: #0f1a24; border: 2px solid #34505f; }
+.carousel-timer { font-size: 34px; line-height: 1; font-weight: 700; }
+.carousel-timer-unit { font-size: 11px; color: #7e95a4; }
+.carousel-slot { position: absolute; left: 50%; top: 50%; width: 64px; min-width: 0; min-height: 0; padding: 2px; display: grid; justify-items: center; gap: 1px;
+  transform: translate(-50%, -50%) rotate(var(--angle)) translate(var(--radius)) rotate(calc(-1 * var(--angle)));
+  background: transparent; border: 0; border-radius: 10px; color: #e2eef1; }
+.carousel-slot:disabled { cursor: default; opacity: 1; }
+.carousel-portrait { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; border: 3px solid #7e95a4; display: grid; place-items: center; background: #203440; }
+.carousel-portrait img, .carousel-portrait svg { width: 44px; height: 44px; display: block; object-fit: cover; }
+.carousel-slot.cost-2 .carousel-portrait { border-color: #68c087; } .carousel-slot.cost-3 .carousel-portrait { border-color: #5aa0e6; }
+.carousel-slot.cost-4 .carousel-portrait { border-color: #b46be6; } .carousel-slot.cost-5 .carousel-portrait { border-color: #e6bc76; }
+.carousel-name { font-size: 11px; line-height: 1.1; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.carousel-items { display: flex; gap: 1px; margin-top: -2px; }
+.carousel-items .item-glyph { font-size: 8px; }
+.carousel-slot.takable { cursor: pointer; }
+.carousel-slot.takable .carousel-portrait { box-shadow: 0 0 0 2px #68ddd0, 0 0 12px rgba(104, 221, 208, .6); }
+.carousel-slot.takable:hover .carousel-portrait, .carousel-slot.takable:focus-visible .carousel-portrait { box-shadow: 0 0 0 3px #e6bc76, 0 0 16px rgba(230, 188, 118, .7); }
+.carousel-slot.pending .carousel-portrait { box-shadow: 0 0 0 3px #e6bc76; }
+.carousel-slot.taken .carousel-portrait { filter: grayscale(.85) brightness(.6); }
+.carousel-slot.taken .carousel-name { color: #7e95a4; }
+.carousel-slot.mine .carousel-portrait { filter: none; box-shadow: 0 0 0 3px #68ddd0; }
+.carousel-taker { position: absolute; top: -6px; right: 0; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; padding: 0 5px;
+  border-radius: 999px; background: #4a3a24; color: #f3d9a6; }
+.carousel-slot.mine .carousel-taker { background: #1f4a46; color: #68ddd0; }
+.carousel-order { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; align-self: start; max-height: 330px; overflow: auto; }
+.carousel-batch { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 6px; background: #13212b; font-size: 12px; color: #7e95a4; }
+.carousel-batch.open { background: #183a3a; color: #c9d4da; }
+.carousel-batch.mine { box-shadow: inset 0 0 0 1px #68ddd0; }
+.carousel-batch-no { font-weight: 700; text-align: center; }
+.carousel-batch-seats { display: flex; flex-wrap: wrap; gap: 3px; }
+.carousel-seat { padding: 0 5px; border-radius: 999px; background: #203440; white-space: nowrap; }
+.carousel-seat.me { color: #68ddd0; font-weight: 700; }
+.carousel-seat.picked { text-decoration: line-through; opacity: .6; }
+.carousel-wait { font-variant-numeric: tabular-nums; color: #e6bc76; }
+body[data-online-carousel] .shop-dock { opacity: .55; }
+.carousel-taker.auto { background: #3a3346; color: #cbbcf5; }
+.carousel-seat.auto { font-style: italic; }
+.carousel-queue { position: absolute; z-index: 30; right: 8px; bottom: 8px; display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; border: 1px solid #b4a1f5;
+  background: rgba(14, 24, 33, .92); color: #e2eef1; font-size: 12px; max-width: 260px; }
+.carousel-queue-title { font-size: 12px; color: #b4a1f5; }
+.carousel-queue-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.carousel-queue-sell { font-size: 11px; padding: 2px 8px; }
 /* Eliminated (spectating): the dock and the left panel stay visible but read as disabled. */
 body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
 body[data-online-spectating] .choice-overlay { display: none !important; }

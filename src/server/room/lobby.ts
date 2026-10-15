@@ -13,6 +13,7 @@
 import type { BattleResolver } from './battle-resolver';
 import { BotDriver, type BotDriverOptions } from './bot-driver';
 import type { Clock, ClockHandle } from './clock';
+import type { CarouselRules } from './carousel';
 import { Room, ROOM_TIMING_DEFAULTS, type RoomTimings } from './room';
 import { ROOM_CAPACITY, type LobbyView, type PvpMode, type RoomState, type SeatSpec } from './types';
 
@@ -52,6 +53,8 @@ export interface LobbyOptions {
    * stays readable); the next start disposes it.
    */
   readonly onEnd?: (room: Room) => void;
+  /** G1-P7: the rules' carousel, forwarded to every Room; omitted, rounds open without a carousel. */
+  readonly carousel?: CarouselRules;
   /** Stall / abandon checks of every opened room; null or omitted: off (room-mechanics tests). */
   readonly watchdog?: LobbyWatchdog | null;
 }
@@ -103,7 +106,8 @@ export class Lobby {
     this.queue = [];
     this.disposeRoom();
     this.current = new Room(seats, { ...ROOM_TIMING_DEFAULTS, ...this.options.timings, roomId: this.options.roomId ?? 'room-1', seed: this.options.seed, clock: this.options.clock, resolver: this.options.resolver, ...(this.options.pvpMode ? { pvpMode: this.options.pvpMode } : {}),
-      ...(this.options.poolCapacities ? { poolCapacities: this.options.poolCapacities } : {}), ...(this.options.sliceTicks ? { sliceTicks: this.options.sliceTicks } : {}) });
+      ...(this.options.poolCapacities ? { poolCapacities: this.options.poolCapacities } : {}), ...(this.options.sliceTicks ? { sliceTicks: this.options.sliceTicks } : {}),
+      ...(this.options.carousel ? { carousel: this.options.carousel } : {}) });
     // The driver subscribes before the first round opens so it sees the first phase entry.
     if (this.options.bots !== null) this.driver = new BotDriver(this.current, this.options.seed, this.options.bots ?? {});
     const room = this.current;
