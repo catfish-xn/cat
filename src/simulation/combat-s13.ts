@@ -1,3 +1,4 @@
+import { sharedCombatDeclarations } from './combat-static';
 import { startingRows } from './m8/targeting';
 import { planOpening, commitOpening, advanceOpeningTasks } from './m8/opening';
 import { targetUnit } from './m8/s13-targeting';
@@ -97,13 +98,15 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const units: S13Unit[] = state.units.map(unit => {
     // Legacy mutable fields are detached once. Frozen mechanism declarations and
     // ledgers use copy-on-write updates; sharing them preserves historical inputs.
-    const copy = structuredClone({ ...unit,
+    const shared = sharedCombatDeclarations(unit);
+    const omitted = Object.fromEntries(Object.keys(shared).map(key => [key, undefined]));
+    const copy = structuredClone({ ...unit, ...omitted,
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: undefined } : {}),
       ...(unit.mechanismState ? { mechanismState: undefined } : {}),
       ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) });
     // The native clone is fresh and has not escaped. Assign the overrides to it
     // instead of spreading the entire detached unit into a second large object.
-    return Object.assign(copy, {
+    return Object.assign(copy, { ...shared,
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: unit.mechanismDefinitions } : {}),
       ...(unit.mechanismState ? { mechanismState: unit.mechanismState } : {}),
       ...(unit.triggerLedger ? { triggerLedger: unit.triggerLedger } : {}),

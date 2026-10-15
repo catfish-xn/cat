@@ -1,3 +1,4 @@
+import { BaseSequencer, type TestSpecification } from 'vitest/node';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 // Wall-clock assertions must run without competing test workers. Keep the lists
@@ -7,11 +8,26 @@ const timing = [
   'tests/m5-replay-cannon.test.ts',
   'tests/server/bot-driver-timing.test.ts',
   'tests/server/round-commit-timing.test.ts',
+  'tests/server/local-room-client-timing.test.ts',
 ];
+// Tiny route wrappers contain the longest workloads. Start them first even on
+// a clean checkout, when Vitest has no duration cache and sorts by source size.
+class RouteFirstSequencer extends BaseSequencer {
+  async sort(files: TestSpecification[]): Promise<TestSpecification[]> {
+    const sorted = await super.sort(files);
+    const weight = (file: TestSpecification): number => {
+      if (/m5-replay(?:-mage|-sniper-caitlyn)?\.test\.ts$/.test(file.moduleId)) return 1000;
+      if (/m6-integration(?:-[a-z-]+)?\.test\.ts$/.test(file.moduleId)) return 900;
+      if (/m5-route\.test\.ts$/.test(file.moduleId)) return 800;
+      return 0;
+    };
+    return sorted.sort((a, b) => weight(b) - weight(a));
+  }
+}
 export default defineConfig({
   test: {
     projects: [
-      { test: { name: 'fast', maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
+      { test: { name: 'fast', globalSetup: ['./tests/fixtures/g4-global-setup.ts'], sequence: { sequencer: RouteFirstSequencer }, maxWorkers: '100%', include: configDefaults.include, exclude: [...configDefaults.exclude, ...timing] } },
       { test: { name: 'timing', include: timing, maxWorkers: 1, fileParallelism: false } },
     ],
   },

@@ -63,7 +63,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
   const loot = state.m8.loot;
   keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters']);
   check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
-  const frozen = restoreFrozenLootLedger(loot.frozen, {seed:state.seed, throughRoundOrdinal:state.round,layout:loot.layoutBinding.layout});
+  const frozen = restoreFrozenLootLedger(loot.frozen, {seed:state.seed, throughRoundOrdinal:state.round,layout:loot.layoutBinding.layout}, parsedJsonInput);
   for (const value of [loot.direct,loot.choiceEligibility,loot.choiceResolutions,loot.earnedEvidence,loot.receipts]) check(Array.isArray(value), 'ledger array');
   const direct = frozen.rounds.flatMap(round => round.encounterPlan.drops), choices = allChoices(state);
   check(equal(loot.direct.map(entry => entry.dropId),direct.map(entry => entry.dropId))
@@ -156,7 +156,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   const context: ResourceProvenanceContext = { scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
-  const current = foldResourceProvenance(state.resourceProvenance,context);
+  const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
   check(equal(current,{units:sorted(state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel}))),
     items:sorted(state.items.map(({id,definitionId}) => ({id,definitionId}))),persistentGrowth:state.persistentGrowth,
     nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial}), 'current resource fold');
@@ -177,8 +177,8 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
-    resources:parsedJsonInput && prefixLength === entries.length ? current : foldResourceProvenance(state.resourceProvenance,{...context,prefixLength}),equipmentRolls:state.equipmentState.rolls,
-    equipmentRollPrefixLength:rollPrefix,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults});
+    resources:parsedJsonInput && prefixLength === entries.length ? current : foldResourceProvenance(state.resourceProvenance,{...context,prefixLength},parsedJsonInput),equipmentRolls:state.equipmentState.rolls,
+    equipmentRollPrefixLength:rollPrefix,scheduleReceipts:state.scheduleReceipts,roundResults:state.roundResults}, parsedJsonInput);
   check(state.equipmentState.rolls.slice(rollPrefix).every(roll => roll.roundId === state.roundDefinitionId
     && !basis.inputs.items.some(item => item.id === roll.parentItemInstanceId && item.location.kind === 'unit')), 'post-freeze equipment rolls');
   check(state.battleSeedRngState === basis.battleSeed, 'battle seed cursor');

@@ -1,6 +1,6 @@
 import { shareGeneratedJson } from './immutable-json';
 import { RULES_GAP_MANIFEST } from './content/rules-manifest';
-import { canonicalContent, digestContent } from './content';
+import { canonicalContent, digestContent, equalValidatedContent } from './content';
 import { freezeContent, isFrozenContent } from './content/freeze';
 import { LOOT_FREEZE_ALGORITHM, LOOT_CATEGORIES, LOOT_HERO_POOLS, LOOT_HERO_POOL_VERSION, LOOT_POLICY_VERSION } from './content/loot';
 import { NEUTRAL_ENCOUNTERS, NEUTRAL_ENCOUNTER_CATALOG_VERSION, NEUTRAL_ENCOUNTER_POLICY_VERSION } from './content/neutral-encounters';
@@ -126,9 +126,10 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
   references.set(cacheKey, ledger);
   return ledger;
 }
-export function restoreFrozenLootLedger(value:unknown,expected:{readonly seed:number;readonly throughRoundOrdinal:number;readonly layout?:OrbLayoutLedger}):FrozenLootLedger {
-  const replay=freezeLootThroughRound(expected.seed,expected.throughRoundOrdinal,expected.layout);
-  if(canonicalContent(value)!==canonicalReference(replay))throw new RangeError('Invalid frozen loot ledger');return replay;
+export function restoreFrozenLootLedger(value:unknown,expected:{readonly seed:number;readonly throughRoundOrdinal:number;readonly layout?:OrbLayoutLedger}, parsedJsonInput = false):FrozenLootLedger {
+  const layout = parsedJsonInput && expected.layout ? restoreOrbLayout(expected.layout, true) : expected.layout;
+  const replay=freezeLootThroughRound(expected.seed,expected.throughRoundOrdinal,layout);
+  if(parsedJsonInput ? !equalValidatedContent(value, replay) : canonicalContent(value)!==canonicalReference(replay))throw new RangeError('Invalid frozen loot ledger');return replay;
 }
 export function advanceFrozenLootLedger(ledger:FrozenLootLedger,throughRoundOrdinal:number,layout?:OrbLayoutLedger):FrozenLootLedger {
   restoreFrozenLootLedger(ledger,{seed:ledger.seed,throughRoundOrdinal:ledger.throughRoundOrdinal,layout});validateOrdinal(throughRoundOrdinal);

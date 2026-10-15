@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, toCombatReplay, toCombatViewState, toCombatViewEvents,
   applyCombatReplayTick, stepCombat, startMatchCombat, type MatchState, type CombatState, type LedgerCombatEvent } from '../src/server-entry';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
@@ -34,6 +34,9 @@ function frames(initial:CombatState) {
   const all=[initial];let state=initial;
   while(state.status==='running') {state=stepCombat(state).state;all.push(state);}return all;
 }
+// Reuse compiled control battles; replay creation and all per-tick checks stay in each case.
+const battleFixtures = new Map<boolean, ReturnType<typeof battle>>();
+for (const large of [false, true]) beforeAll(() => { battleFixtures.set(large, freeze(battle(large))); });
 describe('T5R compact combat replay',()=>{
   it.each(ROUND_CATALOG.filter(r=>r.kind!=='supply').map(r=>r.roundId))('catalog %s: every battle produces exact per-tick replay',roundId=>{
     const source=catalogBattle(roundId),replay=toCombatReplay(freeze(source));let view=replay.initial;
@@ -62,7 +65,7 @@ describe('T5R compact combat replay',()=>{
     expect(JSON.stringify(source)).toBe(before);
   });
   it.each([false,true])('every tick matches authoritative view (six-per-side=%s), terminal exact, input untouched',large=>{
-    const source=freeze(battle(large)),before=JSON.stringify(source),replay=toCombatReplay(source),all=frames(source.initial);
+    const source=battleFixtures.get(large)!,before=JSON.stringify(source),replay=toCombatReplay(source),all=frames(source.initial);
     expect(toCombatViewEvents(source.events)).toEqual(replay.ticks.flatMap(f=>f.events).filter(e=>e.type!=='unitUpdated'));
     let view=replay.initial;
     for(const frame of replay.ticks) {

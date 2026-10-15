@@ -1,3 +1,4 @@
+import { freezeCombatDeclarations } from './combat-static';
 import { recordNeutralReceipts } from './neutral-receipts';
 import { COMPILED_NEUTRAL_ENCOUNTERS, readNeutralCombatUnit } from './neutral-encounter-compiler';
 import { compileCombatInitialInputs } from './combat-initialization';
@@ -52,6 +53,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
           nextAttackMagic: 0, nextAttackPhysical: 0, permanentAdBps: 0, buddyTriggered: false } } : {}),
       alive: true, targetId: null }];
   }).sort(compareIds);
+  units.forEach(unit => freezeCombatDeclarations(unit));
   const result = eliminationResult(units);
   return {
     board: { ...preparationState.board, deploymentZones: {

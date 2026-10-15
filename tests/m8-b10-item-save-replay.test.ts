@@ -5,7 +5,7 @@
  *  - saved and restored at ticks 0/39/40/41 and the end, continuing to the identical terminal;
  *  - rejected when the recorded context swaps the item for another definition.
  * The expected terminal is the uninterrupted live battle, not a stored golden. */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { ITEM_DEFINITIONS } from '../src/simulation/content/items';
 import * as api from '../src/simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../src/simulation/match';
@@ -61,6 +61,8 @@ function continueFrom(saved: string): MatchState {
   while (state.phase === 'combat') state = api.stepMatch(state).state;
   return state;
 }
+
+beforeAll(() => { holderPreparation('blue-buff'); });
 
 const IDS = Object.keys(ITEM_DEFINITIONS).sort();
 describe('B10 every M8 equipment definition survives record, replay and save/restore', () => {

@@ -1,4 +1,4 @@
-import { describe,it,expect } from 'vitest';
+import { beforeAll,describe,it,expect } from 'vitest';
 import { wearing,enemy,run,packets } from './fixtures/m8-b4-items';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepCombat } from '../src/simulation/combat';
@@ -8,6 +8,8 @@ import { serializeMatch,restoreMatch } from '../src/simulation/serialization';
 import { readItemCatalog } from '../src/simulation/item-catalog';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { packets as packetViews } from './helpers/replay2-views';
+
+beforeAll(() => { itemMatch(['steraks-gage','bloodthirster']); });
 
 describe('B4 composed consumers and restore rejection',()=>{
  it('IE+JG:25+35+35=95% chance,one redundant source makes multiplier1.5;135→202',()=>{

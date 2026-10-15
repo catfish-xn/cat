@@ -1,9 +1,11 @@
-import {describe,expect,it} from 'vitest';
+import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch} from '../src/simulation/serialization';
 import {accepted,readyMatch} from './match-helpers';
 import {publicEquipmentPreparation} from './fixtures/m8-b4-match';
 import type {MatchState} from '../src/simulation/match-types';
+
+beforeAll(() => { publicEquipmentPreparation(['sword','rod','sword','sword']); });
 
 // Explicit unit-level boundary fixtures, not ordinary acquisition evidence.
 // Full ordinary acquisition is covered independently by the three route tests.

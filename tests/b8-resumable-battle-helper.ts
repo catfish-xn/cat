@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { freeze } from './combat-helpers';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { createMatch, snapshotForBattle, compileBattle, resolveTwoSidedBattle, startTwoSidedBattle,
@@ -23,7 +24,9 @@ function input(count = 9, mirror = false) {
     { battleId: 'resumable', ...(mirror ? { mirrorOfSeatId: 'B' } : {}) });
   compiledInputs.set(key, compiled); return compiled;
 }
+let pveSource: CombatReplayInput | undefined;
 function pve(): CombatReplayInput {
+  if (pveSource) return pveSource;
   const start = startMatchCombat(catalogPreparation('3-7'));
   if (!start.ok || !start.state.combat) throw new Error('start');
   const initial = start.state.combat;
@@ -32,12 +35,13 @@ function pve(): CombatReplayInput {
   while (terminal.status === 'running') {
     const next = stepCombat(terminal); terminal = next.state; events.push(...toLedgerEvents(next.events));
   }
-  return { initial, terminal, events };
+  return pveSource = freeze({ initial, terminal, events });
 }
 const sha = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const invalid = [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1];
 
 export function registerB8(mode: 'fast' | 'timing'): void {
+if (mode === 'fast') beforeAll(() => { pve(); });
 describe('SR-B8-02 resumable pure tasks', () => {
   if (mode === 'fast') { it.each([0, 1, 9])('pre-change byte fingerprint: %s units per side', count => {
     const battle = resolveTwoSidedBattle(input(count), 1201);

@@ -1,5 +1,5 @@
 import { syntheticSharedRound } from './tp-helpers';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
   combineItems, equipItem, deployMatchUnit, startMatchCombat, stepMatch, nextRound,
   buyUnit, buyXp, rerollShop, sellUnit, setShopLock,
@@ -124,8 +124,16 @@ describe('T12 in-place recipes and atomic failures', () => {
   });
 });
 
+// Cache independent public setup; the case still executes all combat/restore assertions.
+const roundFixtures = new Map<string, MatchState>();
+for (const roundId of ['3-5', '3-7']) for (const pair of [['sword', 'rod'], ['gloves', 'gloves']]) {
+  beforeAll(() => { atRound(publicInventory(pair).state, roundId); });
+}
+beforeAll(() => { atRound(publicInventory(['sword', 'sword']).state, '3-6'); });
+beforeAll(() => { publicInventory(['thiefs-gloves', 'gloves', 'gloves']); });
 function atRound(input: MatchState, roundId: string): MatchState {
-  let state = input;
+  const key = JSON.stringify([input, roundId]);
+  let state = roundFixtures.get(key) ?? input;
   for (let budget = 0; state.roundDefinitionId !== roundId && budget < 40; budget++) {
     state = resolvePublicEquipmentChoices(state);
     if (state.phase === 'preparation') state = finishPublicEquipmentBattle(state);
@@ -133,7 +141,9 @@ function atRound(input: MatchState, roundId: string): MatchState {
     state = accepted(nextRound(state, state.round));
   }
   expect(state.roundDefinitionId).toBe(roundId);
-  return resolvePublicEquipmentChoices(state);
+  state = resolvePublicEquipmentChoices(state);
+  roundFixtures.set(key, freeze(state));
+  return state;
 }
 function restored(state: MatchState): MatchState {
   const value = restoreMatch(serializeMatch(freeze(state)));

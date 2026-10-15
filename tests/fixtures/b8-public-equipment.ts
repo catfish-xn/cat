@@ -1,3 +1,4 @@
+import { readRunFixture, writeRunFixture } from './g4-run-cache';
 import { freezeContent } from '../../src/simulation/content/freeze';
 import {
   createMatch, deployMatchUnit, nextRound, selectChoice, startMatchCombat, stepMatch, buyUnit, rerollShop, selectAnomalyTarget, sellUnit,
@@ -29,7 +30,7 @@ function copyFixture(state: MatchState): MatchState {
 /** Record the real opening, including every combat step, when an archive is requested. */
 export function finishPublicEquipmentBattle(input: MatchState, history?: BattleHistory): MatchState {
   const key = history ? undefined : JSON.stringify(input);
-  const cached = key === undefined ? undefined : finishedBattles.get(key);
+  const cached = key === undefined ? undefined : finishedBattles.get(key) ?? readRunFixture<MatchState>('battle', key);
   if (cached) return copyFixture(cached);
   const started = startMatchCombat(input);
   let state = accepted(started);
@@ -46,6 +47,7 @@ export function finishPublicEquipmentBattle(input: MatchState, history?: BattleH
   if (key !== undefined) {
     if (finishedBattles.size >= 128) finishedBattles.delete(finishedBattles.keys().next().value!);
     finishedBattles.set(key, copyFixture(state));
+    writeRunFixture('battle', key, state);
   }
   return state;
 }
@@ -91,7 +93,10 @@ export function publicEquipmentPreparation(components: readonly string[],
   // Seed 38 supplies gloves in the opening and 3-7. Use it for multi-item
   // glove recipes, leaving real supply choices for their other ingredients.
   const seed=options.seed??(components.length>=3&&components.filter(id=>id==='gloves').length>=2?38:42),key=JSON.stringify([seed,components]);
-  if(!options.history&&preparations.has(key))return copyFixture(preparations.get(key)!);
+  if (!options.history) {
+    const cached = preparations.get(key) ?? readRunFixture<MatchState>('preparation', key);
+    if (cached) { preparations.set(key, cached); return copyFixture(cached); }
+  }
   let state=createMatch(seed);
   const missing=()=>{
     const available=state.items.filter(i=>i.location.kind==='inventory').map(i=>i.definitionId);
@@ -114,7 +119,7 @@ export function publicEquipmentPreparation(components: readonly string[],
         state=accepted(sellUnit(state,excess.id));
       }
       state=benchPublicEquipmentPlayers(state);
-      if(!options.history)preparations.set(key,structuredClone(state));return state;
+      if(!options.history) { preparations.set(key,structuredClone(state)); writeRunFixture('preparation', key, state); } return state;
     }
     if(state.phase==='gameOver')throw Error(`Public equipment route ended before ${missing().join(',')}`);
     if(state.phase==='preparation'){

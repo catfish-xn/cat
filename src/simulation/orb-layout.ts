@@ -1,4 +1,4 @@
-import { canonicalContent } from './content';
+import { canonicalContent, equalValidatedContent } from './content';
 import { shareGeneratedJson } from './immutable-json';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { ORB_SLOTS, ORB_RULES } from './content/orbs';
@@ -101,14 +101,14 @@ function replayUncached(seed: number, ordinal: number): OrbLayoutLedger {
   }
   return generated({...layout, throughRoundOrdinal:ordinal, rng, rounds});
 }
-export function restoreOrbLayout(value: unknown): OrbLayoutLedger {
+export function restoreOrbLayout(value: unknown, parsedJsonInput = false): OrbLayoutLedger {
   if (!value || typeof value !== 'object') throw new RangeError('Invalid orb layout');
   const input = value as OrbLayoutLedger;
   if (generatedLayouts.has(input)) return input;
   if (!Number.isSafeInteger(input.throughRoundOrdinal) || input.throughRoundOrdinal < 0 || input.throughRoundOrdinal > ROUND_CATALOG.length)
     throw new RangeError('Invalid orb layout');
   const expected = replay(input.seed, input.throughRoundOrdinal);
-  if (canonicalContent(value) !== canonicalReference(expected)) throw new RangeError('Invalid orb layout');
+  if (parsedJsonInput ? !equalValidatedContent(value, expected) : canonicalContent(value) !== canonicalReference(expected)) throw new RangeError('Invalid orb layout');
   return expected;
 }
 export function freezeOrbLayoutThroughRound(layout: OrbLayoutLedger, ordinal: number): OrbLayoutResult {

@@ -1,3 +1,4 @@
+import { freezeCombatDeclarations } from './combat-static';
 import { shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
 import { validateB8Loot, validateB8Resources } from './b8-restore';
@@ -260,8 +261,13 @@ export function restoreMatch(input: unknown): MatchState {
   const restored=typeof input === 'string' && !input.includes('-0') ? {
     ...detached, m8: shareParsedJson(detached.m8),
     resourceProvenance: shareParsedJson(detached.resourceProvenance),
-    combatInputBasis: detached.combatInputBasis ? shareParsedJson(detached.combatInputBasis) : null,
+    combatInputBasis: detached.combatInputBasis ? (() => {
+      const basis = shareParsedJson(detached.combatInputBasis);
+      // Preserve each restore's independent basis/preparation containers.
+      return { ...basis, inputs: { ...basis.inputs, preparation: { ...basis.inputs.preparation } } };
+    })() : null,
   } : detached;
+  if (typeof input === 'string' && !input.includes('-0')) restored.combat?.units.forEach(unit => freezeCombatDeclarations(unit, true));
   freezeContent(restored.m8);
   if (restored.combatInputBasis) freezeContent(restored.combatInputBasis);
   freezeContent(restored.resourceProvenance);

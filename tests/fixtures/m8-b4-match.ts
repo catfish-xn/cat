@@ -1,3 +1,4 @@
+import { freezeContent } from '../../src/simulation/content/freeze';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import {
   combineItems, deployMatchUnit, equipItem, startMatchCombat,
@@ -25,7 +26,12 @@ const compiledItems = new Map<string, MatchState>();
 export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): MatchState {
   const requested = typeof id === 'string' ? [id] : [...id];
   const key = JSON.stringify([requested, unitId]), cached = compiledItems.get(key);
-  if (cached) return structuredClone(cached);
+  if (cached) {
+    const copy = structuredClone(cached);
+    freezeContent(copy.m8); freezeContent(copy.resourceProvenance);
+    if (copy.combatInputBasis) freezeContent(copy.combatInputBasis);
+    return copy;
+  }
   const components = requested.flatMap(definitionId => {
     const definition = ITEM_DEFINITIONS[definitionId];
     if (!definition) throw new Error(`Unknown fixture item ${definitionId}`);

@@ -3,7 +3,7 @@ import type { MatchBase, PersistentGrowth, RoundResult } from './match-types';
 import type { Unit } from './unit-types';
 import type { ItemInstance, ScheduleReceipt } from './strategy-types';
 import type { EquipmentRoundRoll } from './m8/contracts';
-import { canonicalContent } from './content';
+import { canonicalContent, equalValidatedContent } from './content';
 import { freezeContent } from './content/freeze';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { ROUND_CATALOG } from './content/round-catalog';
@@ -55,7 +55,6 @@ export function freezeCombatInput(state: MatchBase, battleSeed: number, provenan
     equipmentRollPrefixLength: state.equipmentState.rolls.length, provenancePrefixLength,
     inputs: readCombatStrategyInputs(state) }));
 }
-const equal = (a: unknown, b: unknown): boolean => canonicalContent(a) === canonicalContent(b);
 function requireBasis(condition: unknown): asserts condition { if (!condition) throw new RangeError('Invalid combat input basis'); }
 const inputValidation = createInputValidation(requireBasis);
 const integer: InputValidation['integer'] = inputValidation.integer;
@@ -63,8 +62,11 @@ const record: (value: unknown) => void = inputValidation.record;
 const sorted = <T extends { readonly id: string }>(values: readonly T[]): T[] => [...values].sort((a,b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 /** Pure own-format validation. Caller first validates history, receipts and the provenance prefix.
  * No combat creation, RNG mutation, inventory grant, or replacement of saved values. */
-export function restoreCombatInput(value: unknown, authority: CombatInputAuthority): CombatInputBasis {
-  canonicalContent(value); record(value);
+export function restoreCombatInput(value: unknown, authority: CombatInputAuthority, parsedJsonInput = false): CombatInputBasis {
+  // Only restoreMatch's own fully validated JSON.parse graph uses this path.
+  const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
+  if (!parsedJsonInput) canonicalContent(value);
+  record(value);
   const basis = value as unknown as CombatInputBasis, input = basis.inputs; record(input);
   const round = ROUND_CATALOG.find(entry => entry.ordinal === authority.round);
   requireBasis(round && round.kind !== 'supply' && basis.version === COMBAT_INPUT_VERSION
@@ -119,5 +121,5 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
     return projectTemporaryEquipment(roll, item.location.unitId);
   });
   requireBasis(equal(input.temporaryEquipment, expectedChildren));
-  return freezeContent(structuredClone(basis));
+  return freezeContent(parsedJsonInput ? basis : structuredClone(basis));
 }
