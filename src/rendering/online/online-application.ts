@@ -8,6 +8,8 @@ import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import { UNIT_DEFINITIONS } from '../../simulation/units';
 import type { ReplaySnapshot } from '../../replay';
+import { CarouselPanel } from './carousel-panel';
+import { DemoCarousel } from './carousel-demo';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
@@ -56,6 +58,10 @@ export class OnlineApplication implements SceneApplication {
   private lobby: Lobby;
   private sidebar: PlayersSidebar;
   private opponentBoard: OpponentBoardPanel;
+  private carousel: CarouselPanel;
+  /** `?carouselDemo=1`: a preview carousel on fake data runs once at match start (carousel-demo.ts); never sent to the room. */
+  private demo: DemoCarousel | null = null;
+  private demoWanted = new URLSearchParams(window.location.search).has('carouselDemo');
   /** My seat is eliminated while the match goes on: watch only (TFT keeps the screen, the ranking comes at the end). */
   private spectating = false;
   private ranking: RankingOverlay;
@@ -74,6 +80,7 @@ export class OnlineApplication implements SceneApplication {
     this.sidebar = new PlayersSidebar(app, mounts?.countdown ?? null, seatId => this.toggleBoard(seatId));
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
+    this.carousel = new CarouselPanel(frame, slot => this.pickCarousel(slot));
     this.ranking = new RankingOverlay(document.body, () => this.again());
     this.session.pause('lobby');
     this.unsubscribe = this.session.subscribe(change => this.hooks.changed?.(change));
@@ -114,6 +121,7 @@ export class OnlineApplication implements SceneApplication {
   private mergeNote: { readonly round: number; readonly text: string } | null = null;
   private phaseLine: { readonly round: number; readonly phase: string; readonly text: string } | null = null;
   private onRefused(refusal: RefusedCommand) {
+    this.carousel.clearPending();
     const text = NON_RULE_REFUSALS[refusal.reason] ?? null;
     this.hooks.refused?.(refusal.commandId, text === null ? refusal.reason as MatchFailure : null, text);
   }
@@ -146,6 +154,7 @@ export class OnlineApplication implements SceneApplication {
   private onView(view: PlayerView) {
     this.view = view; this.sidebar.render(view); this.opponentBoard.update(view.seats, view.mySeatId);
     this.syncSpectating(view);
+    this.syncCarousel(view);
     if (view.phase.kind === 'ended') {
       // syncMode first: the panel reads body[data-online-mode] while re-rendering to show the online end text.
       if (this.mode !== 'online-ended') { this.mode = 'online-ended'; this.session.skipPlayback(); this.session.pause('ended'); this.syncMode(); this.hooks.clearInput(); this.hooks.refresh(); }
@@ -160,6 +169,36 @@ export class OnlineApplication implements SceneApplication {
     this.syncStatus(view);
   }
   private lastPhase = '';
+  /** G1-P7: the server's carousel wins; the preview carousel only shows while the server has none. */
+  private syncCarousel(view: PlayerView) {
+    if (view.carousel) { this.demo = null; this.carousel.render(view.carousel, view.seats, view.mySeatId, view.phase.serverNow); }
+    else if (this.demoWanted && !this.demo && view.phase.kind !== 'lobby' && view.phase.kind !== 'ended' && !this.demoShown) {
+      this.demoShown = true; this.demo = new DemoCarousel(view.seats, view.mySeatId, performance.now()); this.renderDemo();
+    }
+    else if (!this.demo || view.phase.kind === 'ended') { this.demo = null; this.carousel.hide(); }
+    this.syncCarouselMode();
+  }
+  private demoShown = false;
+  private renderDemo() {
+    const demo = this.demo, view = this.view; if (!demo || !view) return;
+    const now = performance.now();
+    const carousel = demo.view(now);
+    if (demo.finished) { this.demo = null; this.carousel.hide(); this.syncCarouselMode(); return; }
+    this.carousel.render(carousel, view.seats, view.mySeatId, now);
+  }
+  private demoClock = 0;
+  private syncCarouselMode() {
+    if (this.carousel.open) document.body.dataset.onlineCarousel = 'true'; else delete document.body.dataset.onlineCarousel;
+  }
+  private pickCarousel(slot: number) {
+    if (this.demo) { if (!this.demo.pick(slot, performance.now())) this.carousel.clearPending(); this.renderDemo(); return; }
+    const result = this.session.carouselPick(slot);
+    if (result.ok) return;
+    const notice = this.session.takeNotice();
+    if (notice?.kind === 'pending') return; // the receipt and the next view answer it
+    this.carousel.clearPending();
+    this.hooks.status(notice?.kind === 'offline' ? notice.text : `选秀未成功：${result.reason}`);
+  }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {
     const view = this.view, seat = view?.seats.find(candidate => candidate.seatId === seatId);
@@ -192,18 +231,21 @@ export class OnlineApplication implements SceneApplication {
     }
     else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name} · 战斗由服务器计算` : '战斗由服务器计算 · 正在播放');
     const merged = this.mergeNote?.round === view.phase.round ? `${this.mergeNote.text} · ` : '';
-    if (view.phase.kind === 'choice') this.hooks.status(`${merged}请在倒计时内完成选择 · 超时由服务器代选`);
+    if (view.phase.kind === 'carousel') this.hooks.status('选秀 · 生命越低越先放行 · 倒计时结束仍未选取由服务器代选');
+    else if (view.phase.kind === 'choice') this.hooks.status(`${merged}请在倒计时内完成选择 · 超时由服务器代选`);
     else if (view.phase.kind === 'settlement') this.hooks.status(`${merged}回合结算 · 稍后自动进入下一回合`);
   }
   private again() { this.client.reset(); this.backToLobby(); }
   private backToLobby() {
     this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
+    this.demo = null; this.demoShown = false; this.carousel.hide(); this.syncCarouselMode();
     this.session.skipPlayback(); this.session.resume('ended'); this.session.pause('lobby'); this.hooks.clearInput(); this.syncMode();
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
-    this.sidebar.tick();
+    this.sidebar.tick(); this.carousel.tick();
+    if (this.demo && (this.demoClock += Math.max(0, delta)) >= 250) { this.demoClock = 0; this.renderDemo(); }
     if (this.ignoreNextDelta) { this.ignoreNextDelta = false; return false; }
     if (delta > 1000) return false; // a long stall: let the next frame continue from the current state
     return this.isActive;
@@ -228,14 +270,14 @@ export class OnlineApplication implements SceneApplication {
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
   debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
-    opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
+    opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, carouselDemo: this.demo !== null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
     if (this.disposed) return; this.disposed = true;
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.ranking.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.carousel.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

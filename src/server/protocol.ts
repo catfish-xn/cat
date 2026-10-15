@@ -61,8 +61,46 @@ export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
  * parsing the id. Only my seat's `unit` entries are sent; the opponent's ids and every item/augment/anomaly entry stay on the server.
  */
 export interface ReplayUnitId { readonly combatId: string; readonly originalId: string }
-/** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. */
-export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'combat' | 'settlement' | 'ended';
+/** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. G1-P7 adds `carousel`. */
+export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'carousel' | 'combat' | 'settlement' | 'ended';
+
+/* ---------------- G1-P7 shared carousel (选秀) ---------------- */
+
+/** One unit standing on the carousel, with the items it carries (definition ids, in the rules' order). */
+export interface CarouselSlotView {
+  /** Slot index the rules gave it; the `carouselPick` command names it. */
+  readonly slot: number;
+  readonly definitionId: string;
+  readonly starLevel: number;
+  readonly items: readonly string[];
+  /** Seat that took it (shown to everyone, as on the TFT carousel); null while it still stands. */
+  readonly pickedBy: string | null;
+}
+/** One release group: the seats it frees (lowest HP first, as the rules ordered them) and when it opens. */
+export interface CarouselBatchView {
+  readonly seatIds: readonly string[];
+  /** Server clock (ms) at which this batch may pick. */
+  readonly opensAt: number;
+}
+/**
+ * The carousel of the current round, the same for every seat apart from `canPick`/`myPick`. Everything here is copied
+ * from the rules' carousel state and the room's schedule; the client decides nothing (who is released, what is left).
+ */
+export interface CarouselView {
+  readonly carouselId: string;
+  readonly roundName: string;
+  readonly slots: readonly CarouselSlotView[];
+  /** Release order, first batch first. */
+  readonly batches: readonly CarouselBatchView[];
+  /** Batches released so far (0 before the first opens). */
+  readonly openBatches: number;
+  /** Server clock (ms) at which the carousel closes and every seat without a unit gets one automatically. */
+  readonly endsAt: number;
+  /** My seat is released, alive and has not picked yet. */
+  readonly canPick: boolean;
+  /** Slot my seat took (by hand or automatically); null until then. */
+  readonly myPick: number | null;
+}
 export interface PlayerViewPhase {
   readonly kind: PlayerViewPhaseKind;
   readonly round: number;
@@ -90,6 +128,8 @@ export interface PlayerView {
    * always fills it.
    */
   readonly opponentCandidates?: readonly string[];
+  /** G1-P7: the shared carousel while the room is in its carousel phase; null or absent otherwise. */
+  readonly carousel?: CarouselView | null;
   /** Full ranking once the match ended normally. */
   readonly ranking: readonly SeatPublic[] | null;
   /** Set when the room ended abnormally (then `ranking` stays null). */
@@ -129,5 +169,11 @@ export type ClientCommand =
   | { readonly type: 'anomalyTarget'; readonly choiceId: string; readonly generation: number; readonly unitId: string }
   | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
 export type ConsumableCommand = Extract<ClientCommand, { type: 'useConsumable' }>;
-/** Every command a seat may send over the wire (contract §18.8: an alias of ClientCommand since T13-B). */
-export type WireCommand = ClientCommand;
+/**
+ * G1-P7: take the unit on carousel slot `slot`. Not a seat command of match.ts: the room hands it to the rules' shared
+ * carousel pick, which decides everything (release, slot still free, the unit and its items). Kept out of ClientCommand so
+ * the bot policy and its helpers, which map ClientCommand 1:1 to match.ts, are unchanged.
+ */
+export interface CarouselPickCommand { readonly type: 'carouselPick'; readonly slot: number }
+/** Every command a seat may send over the wire: the match.ts commands (§18.8) plus the carousel pick (G1-P7). */
+export type WireCommand = ClientCommand | CarouselPickCommand;

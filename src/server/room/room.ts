@@ -120,6 +120,8 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
     case 'anomalyReroll': return plain(rerollAnomaly(state, command.choiceId, command.generation));
     // §18.3: the tool commands share the operations' four-phase gate; the rules decide everything (see consumables.ts).
     case 'useConsumable': return useSeatConsumable(pool, state, command);
+    // G1-P7: a carousel pick is a room-level transaction (the carousel state is the room's), never a seat command.
+    case 'carouselPick': return { ok: false, pool, state, reason: 'wrong-phase' };
   }
 }
 
