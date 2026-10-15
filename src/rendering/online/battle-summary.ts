@@ -1,8 +1,9 @@
 /**
  * G5 post-battle ranking in the right column (TFT's damage chart): damage dealt, damage taken and healing of every
  * unit of both sides, either in my last battle (本场) or added up over the match by unit kind and star level
- * (本局累计), from the replays' own events (presentation/battle-ranking.ts). It appears when my battle ends and
- * stays through the next preparation. Read-only: no command, no rule.
+ * (本局累计), from the rules' `summarizeBattle` of each replay (presentation/battle-ranking.ts). 治疗 ranks the healers
+ * (healing done); the healing a unit received is on its hover line. It appears when my battle ends and stays through the
+ * next preparation. Read-only: no command, no rule.
  */
 import { accumulateRankings, rankBattle, sortRanking, type BattleRankMetric, type BattleRanking, type RankTotals } from '../../presentation/battle-ranking';
 import { heroEmblemSvg } from '../../presentation/hero-identity';
@@ -16,7 +17,7 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 type Scope = 'battle' | 'match';
 const SCOPES: readonly { readonly scope: Scope; readonly label: string }[] = [{ scope: 'battle', label: '本场' }, { scope: 'match', label: '本局累计' }];
 const METRICS: readonly { readonly metric: BattleRankMetric; readonly label: string }[] = [
-  { metric: 'damageDealt', label: '伤害' }, { metric: 'damageTaken', label: '承伤' }, { metric: 'healingReceived', label: '治疗' },
+  { metric: 'damageDealt', label: '伤害' }, { metric: 'damageTaken', label: '承伤' }, { metric: 'healingDone', label: '治疗' },
 ];
 const RESULT_TEXT: Record<string, string> = { playerWin: '胜利', enemyWin: '失败', draw: '平局' };
 /** What one row shows, for either scope. */
@@ -32,8 +33,6 @@ export class BattleSummaryPanel {
   private scope: Scope = 'battle';
   private metric: BattleRankMetric = 'damageDealt';
   private battles: readonly FinishedBattle[] = [];
-  /** Each battle is tallied once. */
-  private rankings = new WeakMap<FinishedBattle, BattleRanking>();
   constructor(host: HTMLElement) {
     this.root = element('section', '', 'battle-summary'); this.root.id = 'battle-summary'; this.root.hidden = true;
     this.root.dataset.debug = 'online:battle-summary'; this.root.setAttribute('aria-label', '战斗统计');
@@ -49,15 +48,12 @@ export class BattleSummaryPanel {
     tabs(this.scopes, SCOPES.map(entry => ({ key: entry.scope, label: entry.label })), 'scope', key => { this.scope = key as Scope; });
     tabs(this.tabs, METRICS.map(entry => ({ key: entry.metric, label: entry.label })), 'tab', key => { this.metric = key as BattleRankMetric; });
     this.list.dataset.debug = 'online:summary-rows';
-    this.root.title = '伤害与承伤含护盾吸收（承伤另列护盾部分）；治疗为单位受到的治疗量。本局累计按单位与星级合并本局每一场。';
+    this.root.title = '伤害与承伤含护盾吸收（承伤另列护盾部分）；治疗为单位施加的治疗量，悬停可见受到的治疗。本局累计按单位与星级合并本局每一场。';
     this.root.append(head, this.scopes, this.tabs, this.list);
     host.append(this.root);
   }
-  private rankingOf(battle: FinishedBattle): BattleRanking {
-    let ranking = this.rankings.get(battle);
-    if (!ranking) { ranking = rankBattle(battle.replay); this.rankings.set(battle, ranking); }
-    return ranking;
-  }
+  /** The rules' summary of a battle; rankBattle keeps one per replay. */
+  private rankingOf(battle: FinishedBattle): BattleRanking { return rankBattle(battle.replay); }
   /** Shows the last of `battles` and the match totals over all of them; `visible` false hides the panel. */
   show(battles: readonly FinishedBattle[], visible: boolean): void {
     const last = battles.at(-1);
@@ -88,10 +84,10 @@ export class BattleSummaryPanel {
       const value = row[metric];
       const item = element('li', '', `summary-row team-${row.team}${row.alive ? '' : ' dead'}`);
       Object.assign(item.dataset, { unit: row.id, team: row.team, value: String(value), definition: row.definitionId, star: String(row.starLevel),
-        dealt: String(row.damageDealt), taken: String(row.damageTaken), healed: String(row.healingReceived), absorbed: String(row.shieldAbsorbed) });
+        dealt: String(row.damageDealt), taken: String(row.damageTaken), healed: String(row.healingDone), received: String(row.healingReceived), absorbed: String(row.shieldAbsorbed), kills: String(row.kills) });
       if (row.battles !== null) item.dataset.battles = String(row.battles);
       item.title = `${displayUnitName(row.definitionId)} ${row.starLevel}星 · ${row.team === 'player' ? '我方' : '敌方'}${row.alive ? '' : ' · 阵亡'}${row.battles === null ? '' : ` · ${row.battles} 场`}`
-        + `\n伤害 ${row.damageDealt} · 承伤 ${row.damageTaken}（其中护盾 ${row.shieldAbsorbed}）· 受治疗 ${row.healingReceived}`;
+        + `\n伤害 ${row.damageDealt} · 承伤 ${row.damageTaken}（其中护盾 ${row.shieldAbsorbed}）· 治疗 ${row.healingDone} · 受治疗 ${row.healingReceived} · 击杀 ${row.kills}`;
       const portrait = element('span', '', 'summary-portrait'); portrait.innerHTML = heroPortraitHtml(row.definitionId, 22, heroEmblemSvg(row.definitionId, 22));
       const name = element('span', `${displayUnitName(row.definitionId)}${'★'.repeat(row.starLevel)}`, 'summary-name');
       const number = element('span', String(value), 'summary-value');

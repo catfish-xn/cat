@@ -20,12 +20,11 @@
  */
 import { createMatch } from '../../simulation/match';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
-import type { PrivateSeatView } from '../../server-entry';
 import {
   NET_PROTOCOL_VERSION, readReplayUnitIds, type ClientMessage, type ReceiptFailure, type ReceiptMessage, type ServerMessage,
 } from '../../server/net/messages';
 import type {
-  WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView,
+  WireCommand, ClientListeners, ClientSendResult, ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, SeatStateView,
 } from './protocol';
 import { toDisplayMatch } from './seat-view-adapter';
 
@@ -257,7 +256,7 @@ export class WsGameClient implements GameClient {
     this.listeners?.view(view);
   }
   /** The server sends my seat as the rules' private view (B7); the UI gets a display-only MatchState of it. */
-  private onState(roomId: string, round: number, seatRevision: number, view: PrivateSeatView, serverEvents: readonly MatchEvent[]): void {
+  private onState(roomId: string, round: number, seatRevision: number, view: SeatStateView, serverEvents: readonly MatchEvent[]): void {
     const state = toDisplayMatch(view);
     this.roomId = roomId; this.round = round; this.stateRevision = seatRevision; this.lastState = state;
     const confirmed = this.confirmed.filter(entry => entry.seatRevision <= seatRevision);

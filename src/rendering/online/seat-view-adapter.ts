@@ -16,9 +16,22 @@ import { createMatch } from '../../simulation/match';
 import type { MatchState, RoundResult } from '../../simulation/match-types';
 import type { RevealedLootSummary } from '../../presentation/loot-view';
 import type { PrivateSeatView } from '../../server-entry';
+import type { RoundEconomyPreview, SeatStateView } from '../../server/protocol';
 
-/** Display MatchState of a seat view plus the server's revealed-loot summary of my current PvE round (SR-C7-02). */
-export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary };
+/**
+ * Display MatchState of a seat view plus the server's revealed-loot summary of my current PvE round (SR-C7-02) and its
+ * round economy preview (SR-G5-02).
+ */
+export type DisplayMatch = MatchState & { readonly revealedLoot?: RevealedLootSummary; readonly economyPreview?: RoundEconomyPreview | null };
+
+/**
+ * The rules' economy preview of my current round as the server sent it (SR-G5-02, contract §14.4); null outside
+ * preparation and my battle, for supply rounds, offline states and anything the server did not send. Never estimated here.
+ */
+export function readEconomyPreview(state: MatchState): RoundEconomyPreview | null {
+  const preview = (state as DisplayMatch).economyPreview;
+  return preview && typeof preview.roundId === 'string' && preview.ifWin && preview.ifLoss ? preview : null;
+}
 
 /**
  * The authoritative drops of my current PvE round, straight from the private view (contract §14.1 SR-C7-02);
@@ -50,7 +63,7 @@ function placeholderShell(): MatchState {
  * Round records miss the server-only bookkeeping (settlementId, roundKind, streaks, XP requested); they stay
  * absent and the panels print only what is there. `interestBasis` is whitelisted (PR #50) and shown as is.
  */
-export function toDisplayMatch(view: PrivateSeatView): DisplayMatch {
+export function toDisplayMatch(view: PrivateSeatView | SeatStateView): DisplayMatch {
   const base = placeholderShell();
   const round = { ...view.m8.round, isFinal: false };
   // Present only for this round's public PvE encounter (contract §14.1).

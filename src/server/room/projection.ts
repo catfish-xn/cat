@@ -8,9 +8,9 @@ import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatUnit } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
-  startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
+  previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
-import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
+import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
 import { listCarouselSlots } from '../../server-entry';
 import { findPairing } from './pairing';
@@ -116,8 +116,13 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
 
 /* ---------------- B7: private seat state and compact replay (contract §14) ---------------- */
 
-/** The only shape in which a seat's own MatchState leaves the room (initial, increment, resume, fault, refusal). */
-export function toSeatPrivateView(match: MatchState): PrivateSeatView { return toPrivateSeatView(match); }
+/**
+ * The only shape in which a seat's own MatchState leaves the room (initial, increment, resume, fault, refusal): the rules'
+ * `toPrivateSeatView` plus `economyPreview` (SR-G5-02, contract §14.4), the rules' `previewRoundEconomy` of the same state
+ * as it returns it. It is set in preparation and while my battle runs (a PvP seat stays in preparation under the roster
+ * lock, a PvE seat is in combat) and null in choice, settlement, supply rounds, game over and for an eliminated seat.
+ */
+export function toSeatPrivateView(match: MatchState): SeatStateView { return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match) }; }
 
 /** Server-originated events a seat's client may see with its state push: only own-unit moves and merges (T10), nothing else of the ledger. */
 const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded']);

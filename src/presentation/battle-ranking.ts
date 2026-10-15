@@ -1,21 +1,23 @@
 /**
- * G5 post-battle ranking: damage dealt, damage taken and healing per unit of one finished battle, tallied from
- * the compact replay's own §14.2 events (contract §14.2), and the same totals added up over the match.
+ * G5 post-battle ranking: damage dealt, damage taken and healing per unit of one finished battle, and the same totals
+ * added up over the match. The per-battle numbers are the rules' own `summarizeBattle` of the compact replay (contract
+ * §14.2 "G5 战斗统计权威入口"): damage = HP damage + shield absorbed, healing done by the healer's shares of each heal,
+ * healing received by the target. Nothing is tallied from events here; the match totals only add those rows up.
  * Display only: nothing here is a rule, nothing flows back.
- *
- * - 伤害: `packetDamage.hpDamage + absorbed` by `sourceId` — damage that hit a shield counts, as in TFT's damage chart.
- * - 承伤: the same sum by `targetId`; `shieldAbsorbed` keeps the shield part of it apart for display.
- * - 治疗: `heal.actual` by `targetId`. The wire `heal` event carries no source (SR-G5-01), so healing is the healing
- *   a unit received, never credited to a healer by guess.
  */
-import type { CombatReplay, CombatViewEvent, CombatViewUnit } from '../simulation/combat-replay-view';
+import { summarizeBattle } from '../simulation/combat-summary';
+import type { CombatReplay, CombatViewUnit } from '../simulation/combat-replay-view';
 
 export interface RankTotals {
   readonly damageDealt: number;
   readonly damageTaken: number;
   /** The shield part of `damageTaken`. */
   readonly shieldAbsorbed: number;
+  /** Healing this unit gave (its shares of every heal), the 治疗 column. */
+  readonly healingDone: number;
+  /** Healing this unit got, shown on hover. */
   readonly healingReceived: number;
+  readonly kills: number;
 }
 export interface BattleRankRow extends RankTotals {
   readonly unitId: string;
@@ -25,7 +27,7 @@ export interface BattleRankRow extends RankTotals {
   /** Alive on the battle's terminal view. */
   readonly alive: boolean;
 }
-export type BattleRankMetric = 'damageDealt' | 'damageTaken' | 'healingReceived';
+export type BattleRankMetric = 'damageDealt' | 'damageTaken' | 'healingDone';
 export interface BattleRanking {
   readonly combatId: string | null;
   readonly result: string | null;
@@ -42,27 +44,15 @@ export interface MatchRankRow extends RankTotals {
   readonly battles: number;
 }
 
-/** Every event of the replay once, in tick order. */
-export function replayEvents(replay: CombatReplay): CombatViewEvent[] { return replay.ticks.flatMap(frame => frame.events); }
-
+const rankings = new WeakMap<CombatReplay, BattleRanking>();
+/** The rules' summary of one replay with its combat id and result; computed once per replay object. */
 export function rankBattle(replay: CombatReplay): BattleRanking {
-  const totals = new Map(replay.initial.units.map(unit => [unit.id, { damageDealt: 0, damageTaken: 0, shieldAbsorbed: 0, healingReceived: 0 }]));
-  for (const event of replayEvents(replay)) {
-    if (event.type === 'packetDamage') {
-      const source = totals.get(event.sourceId), target = totals.get(event.targetId), dealt = event.hpDamage + event.absorbed;
-      if (source) source.damageDealt += dealt;
-      if (target) { target.damageTaken += dealt; target.shieldAbsorbed += event.absorbed; }
-    } else if (event.type === 'heal') {
-      const target = totals.get(event.targetId);
-      if (target) target.healingReceived += event.actual;
-    }
+  let ranking = rankings.get(replay);
+  if (!ranking) {
+    ranking = { combatId: replay.terminal.combatId ?? null, result: replay.terminal.result ?? null, rows: summarizeBattle(replay) };
+    rankings.set(replay, ranking);
   }
-  const terminal = new Map(replay.terminal.units.map(unit => [unit.id, unit]));
-  return {
-    combatId: replay.terminal.combatId ?? null, result: replay.terminal.result ?? null,
-    rows: replay.initial.units.map(unit => ({ unitId: unit.id, definitionId: unit.definitionId, starLevel: unit.starLevel, team: unit.team,
-      alive: terminal.get(unit.id)?.alive ?? unit.alive, ...totals.get(unit.id)! })),
-  };
+  return ranking;
 }
 
 export const matchRankKey = (row: Pick<BattleRankRow, 'team' | 'definitionId' | 'starLevel'>) => `${row.team}:${row.definitionId}:${row.starLevel}`;
@@ -77,10 +67,10 @@ export function accumulateRankings(battles: readonly BattleRanking[]): MatchRank
     for (const row of battle.rows) {
       const key = matchRankKey(row);
       let total = rows.get(key);
-      if (!total) { total = { key, team: row.team, definitionId: row.definitionId, starLevel: row.starLevel, battles: 0, damageDealt: 0, damageTaken: 0, shieldAbsorbed: 0, healingReceived: 0 }; rows.set(key, total); }
+      if (!total) { total = { key, team: row.team, definitionId: row.definitionId, starLevel: row.starLevel, battles: 0, damageDealt: 0, damageTaken: 0, shieldAbsorbed: 0, healingDone: 0, healingReceived: 0, kills: 0 }; rows.set(key, total); }
       if (!seen.has(key)) { seen.add(key); total.battles++; }
-      total.damageDealt += row.damageDealt; total.damageTaken += row.damageTaken;
-      total.shieldAbsorbed += row.shieldAbsorbed; total.healingReceived += row.healingReceived;
+      total.damageDealt += row.damageDealt; total.damageTaken += row.damageTaken; total.shieldAbsorbed += row.shieldAbsorbed;
+      total.healingDone += row.healingDone; total.healingReceived += row.healingReceived; total.kills += row.kills;
     }
   }
   return [...rows.values()];
@@ -89,4 +79,28 @@ export function accumulateRankings(battles: readonly BattleRanking[]): MatchRank
 /** Rows by one metric, highest first; ties keep the given order. */
 export function sortRanking<T extends RankTotals>(rows: readonly T[], metric: BattleRankMetric): T[] {
   return rows.map((row, index) => ({ row, index })).sort((a, b) => b.row[metric] - a.row[metric] || a.index - b.index).map(entry => entry.row);
+}
+
+/** A battle of mine as the client keeps it: its replay and which battle id is which of my units (C15). */
+export interface RankedBattleSource { readonly replay: CombatReplay; readonly unitIds: readonly { readonly combatId: string; readonly originalId: string }[] }
+/** One unit's line on its hover card: its row in the given battle (null when it did not fight in it) and its kind's match total. */
+export interface UnitBattleStats { readonly battle: BattleRankRow | null; readonly match: MatchRankRow | null }
+const totalsMemo = new WeakMap<readonly RankedBattleSource[], Map<number, MatchRankRow[]>>();
+/**
+ * G5 hover card: the same numbers as the ranking panel for one shown unit, over the first `count` of `history` (all by
+ * default; the client leaves out a battle still being played back). `battle` is that unit's row in the last of them
+ * (found by its battle id, or by my original id through the replay's own `unitIds`); `match` is the total of its team +
+ * definition + star over all of them, the panel's 本局累计 row.
+ */
+export function unitBattleStats(history: readonly RankedBattleSource[], unit: { readonly id: string; readonly definitionId: string; readonly starLevel: number; readonly team: CombatViewUnit['team'] },
+  count = history.length): UnitBattleStats {
+  if (count <= 0) return { battle: null, match: null };
+  const last = history[count - 1]!;
+  const combatId = last.unitIds.find(entry => entry.originalId === unit.id)?.combatId ?? unit.id;
+  const battle = rankBattle(last.replay).rows.find(row => row.unitId === combatId) ?? null;
+  let memo = totalsMemo.get(history);
+  if (!memo) { memo = new Map(); totalsMemo.set(history, memo); }
+  let totals = memo.get(count);
+  if (!totals) { totals = accumulateRankings(history.slice(0, count).map(entry => rankBattle(entry.replay))); memo.set(count, totals); }
+  return { battle, match: totals.find(row => row.key === matchRankKey(unit)) ?? null };
 }

@@ -6,8 +6,8 @@
  * No rule, gold, RNG or outcome is ever computed from these on the client.
  */
 import type { UnitLocation } from '../simulation/units';
-import type { ConsumableFailure, ConsumableTarget } from '../server-entry';
-export type { ConsumableFailure, ConsumableTarget };
+import type { ConsumableFailure, ConsumableTarget, PrivateSeatView, RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../server-entry';
+export type { ConsumableFailure, ConsumableTarget, RoundEconomyPreview, RoundEconomyPreviewOutcome };
 
 export const ROOM_CAPACITY = 8;
 export const ROOM_PROTOCOL_VERSION = 1;
@@ -61,6 +61,15 @@ export interface PublicBoard { readonly units: readonly PublicBoardUnit[] }
  * parsing the id. Only my seat's `unit` entries are sent; the opponent's ids and every item/augment/anomaly entry stay on the server.
  */
 export interface ReplayUnitId { readonly combatId: string; readonly originalId: string }
+/**
+ * My seat's private state as the `state` message carries it: the rules' whitelist projection (contract §14.1) plus
+ * `economyPreview` (SR-G5-02, §14.4), the rules' `previewRoundEconomy` of the same state, copied as returned. Set in
+ * preparation and during my battle; null in choice, settlement, supply rounds, game over and once eliminated. `gold`
+ * is the gold it was computed on; `ifWin`/`ifLoss` are the interest, victory gold, streak gold and streak after the
+ * settlement of this round would credit if that gold and streak stay as they are (a PvP draw settles as `ifLoss`).
+ * Base income, drops, XP and HP are not part of it. The client shows it as given and never recomputes it.
+ */
+export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null };
 /** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. G1-P7 adds `carousel`. */
 export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'carousel' | 'combat' | 'settlement' | 'ended';
 

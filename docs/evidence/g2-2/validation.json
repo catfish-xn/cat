@@ -1,0 +1,58 @@
+{
+  "status": "partial G2-2; no runtime content or identity changes; not a release rerecording",
+  "contentDigest": "fnv1a32-utf16:1ce135cf",
+  "rulesVersion": "s13-g2-1-v1",
+  "sourceCommit": "422e2da",
+  "mergedHead": "3d99a0e094416e317bdf641290c7cd86468ce768",
+  "mergedBase": "295fd0f5ea45c2b0e51c6c37c6e234ed60015f2f",
+  "mergeDifference": "dispatch documentation only; git diff 422e2da HEAD -- src tests scripts is empty",
+  "checks": {
+    "npm test": {
+      "files": 227,
+      "passed": 2845,
+      "failed": 0
+    },
+    "npm run test:timing": {
+      "files": 6,
+      "passed": 32,
+      "failed": 0
+    },
+    "npm run test:server-entry": "passed",
+    "npm run typecheck": "passed"
+  },
+  "unchangedHistoricalFixtureBytes": [
+    {
+      "path": "tests/fixtures/m5/full-match-golden.g2-1.json",
+      "sha256": "2d2c18fe87ae02e396c25a6b55d26ed91fc6b2f69ddb62802355fb0fe73fd6db",
+      "bytes": 97179
+    },
+    {
+      "path": "tests/fixtures/g2-1-recorded-states/cannon.json.gz",
+      "sha256": "19757f6f312f50ed06a93f1c6ebb602ea18c066307ee216d48bdb50856af0557",
+      "bytes": 574378
+    },
+    {
+      "path": "tests/fixtures/g2-1-recorded-states/sniper.json.gz",
+      "sha256": "083a8c7bcad9bf53b9f2403341e06147cb4a99a0b6829697d245b3200f0371e8",
+      "bytes": 597436
+    }
+  ],
+  "logs": [
+    {
+      "path": "docs/evidence/g2-2/npm-test.txt",
+      "sha256": "bdca8c793bf3168ed03c4b6f2f3245c5e550a95a5860ea18bd2b221e685f912a"
+    },
+    {
+      "path": "docs/evidence/g2-2/test-timing.txt",
+      "sha256": "ede38f14762b0fbe4af4fcf32798ca9ae9c5aa25d5dcb6063cb9ae468244f561"
+    },
+    {
+      "path": "docs/evidence/g2-2/test-server-entry.txt",
+      "sha256": "3da20d9ccc778d30e9f3811fc392bca48efddd876855d8045a641516ad2c2725"
+    },
+    {
+      "path": "docs/evidence/g2-2/typecheck.txt",
+      "sha256": "4a0b9d63c8dc0781d84fe590fb615962af85bbc020795a0b0e87689bdf3a54b0"
+    }
+  ]
+}

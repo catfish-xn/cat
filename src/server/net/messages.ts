@@ -10,9 +10,9 @@
  * can reach the room.
  */
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
-import type { CombatReplay, PrivateSeatView } from '../../server-entry';
+import type { CombatReplay } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand } from '../protocol';
+import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, SeatStateView, WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 import type { CarouselFailure } from '../room/carousel';
 import type { ConsumableDisplayEvent } from '../room/projection';
@@ -98,10 +98,11 @@ export type ServerMessage =
   | { readonly type: 'lobby'; readonly view: LobbyView }
   | { readonly type: 'view'; readonly roomId: string; readonly roomRevision: number; readonly view: PlayerView }
   /**
-   * My seat's private state as the rules' whitelist projection (contract §14.1): not a MatchState, never
-   * restorable, no RNG, plans or ledgers. Not sent any more once my seat is eliminated (then only view/replay).
+   * My seat's private state as the rules' whitelist projection (contract §14.1) plus the rules' round economy preview
+   * (`economyPreview`, SR-G5-02 §14.4; see SeatStateView): not a MatchState, never restorable, no RNG, plans or ledgers.
+   * Not sent any more once my seat is eliminated (then only view/replay).
    */
-  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: PrivateSeatView;
+  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: SeatStateView;
     /**
      * Events of the server's own transaction that produced this revision (T10): the deadline's automatic deployment
      * (`unitDeployed`) and the post-battle merges of the settlement (`unitUpgraded`). Absent when there were none.
