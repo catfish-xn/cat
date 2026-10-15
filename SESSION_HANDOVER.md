@@ -1,4 +1,4 @@
-# 交接记录（2026-10-13，晚间更新）
+# 交接记录（2026-10-15 深夜更新）
 
 ## 0.0 高吞吐派单与输出铁律（2026-10-14 用户确认，从下一轮派单起严格执行）
 
@@ -6,6 +6,31 @@
 2. **拉满单次任务体量。** 取消小里程碑停顿。每条派单必须是端到端闭环大单：功能实现 + 边界处理 + 夹具更新 + 目标测试全绿 + 提 PR/转正，执行方单次会话自愈闭环到底。指挥 2 分钟内能写完的合同类型、接口占位、文档字段，由指挥在派单前直接推上 `multiplayer`，消除串行等待。
 3. **Codex 测试指令只给目标集。** 子任务只要求 typecheck + 本次受影响的目标测试文件；不得要求"空闲机单跑全套长回放"。全套回归只在最终合并树上由指挥跑唯一一次。
 4. **拉满横向并发度。** 不局限于 1 Opus + 1 Codex。每次盘点 backlog 后，只要修改目录不强冲突，一次开出 3～4 条并行派单，每条标明窗口编号、分支、目录边界、验收命令。
+
+## 0.0.8 当前状态（2026-10-15 深夜，指挥更新；以本节为准，细节见 `docs/DISPATCH_2026-10-14.md` 第九/十批）
+
+**分支与身份**
+- `multiplayer` head `8288ea3`（docs），代码 head `343877a`。main `b4db0d5`（#111，含选秀接线 + 33 英雄，用户已部署真机）。multiplayer 比 main 多：G2-2 48 英雄 / 14 羁绊（#112）、P7-1 界面切换与临时位显示（#113）。
+- 身份：rules `s13-g2-2-v1`、content `s13-14.24b-g2-2-v1`、CONTENT `fnv1a32-utf16:22f31569`、LOOT_REPLAY `028e5593`；schema/save/replay/protocol 7/3/3/3。旧存档拒绝不迁移。部署时前后端必须一起更新（协议 3）。
+- 今天合入：#104、#105、#94、#100、#106、#109、#108、#110、#112、#113；main 同步 #107、#111。
+
+**进行中（两条并行，不同目录）**
+1. Codex `codex/p7-1-carousel-rules`（从 `343877a` 开）：撤销 1-1 选秀（恢复免费艾瑞莉娅与开局经济，选秀只在 2-4/3-4/4-4/5-4/6-4）、选到棋子去向（备战席 → 场上参战 → 临时位不参战，有空自动移入）、选秀所得延到下回合准备期合星，digest 再换一次。**此 PR 不单独合入**：服务器有 1-1 专用分支（`room.ts:632`、`room/carousel.ts:57 openingPending`），`tests/server/carousel-room.test.ts` 会坏，Codex 不改 tests/server/，只在 PR 正文列出会坏的用例。
+2. Opus `claude/g2-2-ui`（从 `343877a` 开）：48 英雄 / 14 羁绊登记到 `src/presentation/s13-asset-manifest.ts`（21 个新图标已在 `public/assets/s13/`，由指挥补拉）、技能提示改用 `abilityDisplayName/abilityDisplayValues`。提示词已给用户，是否已发未知。
+
+**待发（顺序）**
+- Codex 回报 P7-1 规则 head SHA 后 → 给 Opus `claude/p7-1-server`（从 Codex 分支 head 叠开，目标 multiplayer）：删服务器 1-1 分支、改 `carousel-room.test.ts`、e2e p7-carousel 1-1 段移到 2-4、临时位换规则新字段、e2e `g2-traits-tooltips` 应随之通过。提示词在 DISPATCH "第十批决定" 之前的回合报告里（上一回合聊天），要点同上。
+- 指挥在 Codex + Opus 叠加树上跑全套（typecheck、标准 `npm test`、`npm run test:timing`、`test:server-entry`、build + e2e p7-carousel/c7/g1-scouting/g2-traits-tooltips/g5-stats-economy），按顺序合两份 PR。
+- 之后 W4 强化 6→30（Codex，第九批提示词换新基线 SHA 重发，不得与 P7-1 规则同时跑，两者都改 digest）。
+- 之后 multiplayer → main 第二次部署真机。
+
+**已知问题**
+- e2e `g2-traits-tooltips` 在基线 `17a2ce8` 起失败（1-1 前奏无免费艾瑞莉娅），#110 遗留，P7-1 修。
+- `releaseCarouselParticipant` 已绑定但房间无调用点；本地房间 `local-room-client` 不开选秀；满备战席排队无房间级单测（#110 Opus 自报）。
+- 征服者/学院为有限实现，待批项清单 `docs/evidence/g2-2/RECONCILIATION.md`；Swain/Jayce/Gangplank 未进；外交官胜场历史按 0（UI_REQUESTS 有记录）。
+- Codex 容器拿 communitydragon 图标被 403，指挥容器可通，可用 `node scripts/fetch-s13-assets.cjs --g2-2` 代拉。
+
+**验货方法（不变）**：scratchpad 工作树 + `ln -sfn /home/user/cat/node_modules node_modules`，合并树上跑标准命令，比对合入后 origin 树与测试树 `git diff --stat`；合并用 GitHub API 带 40 位 head SHA。
 
 ## 0.0.5 当前状态（2026-10-14 晚，指挥更新；以本节为准，§0.1–§0.4 为 10-13 的旧记录）
 
