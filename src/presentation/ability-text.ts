@@ -1,37 +1,47 @@
 /**
- * Ability description text for hover cards (G2 prerequisite). Reads the archived description template and the per-star
- * variables of `S13_ABILITY_DATA` as given: `@Var@` (and `@Var*N@`) becomes that variable's value for the star level,
- * Riot markup is reduced to plain text. Variables the content does not list (the AP/AD-modified totals such as
- * `@ModifiedShield@`, unit properties) stay exactly as written: they are computed by the rules and not exported for display.
+ * Ability description text for hover cards. The name and every value come from the rules' display functions
+ * (`abilityDisplayName` / `abilityDisplayValues`, MATCH_CONTRACT SR-G2-01): `@Key@` and expression tokens such as
+ * `@PercentShieldDamage*100@` are looked up as given, never multiplied or recomputed here. Riot markup is reduced to plain
+ * text; the Experiment branch (trait not enabled in this release) is replaced by a "not enabled" note.
  */
+import { abilityDisplayName, abilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
+import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 
 export interface AbilityText {
+  /** Locked CDragon ability name (English, no inferred translation). */
+  readonly name: string;
   readonly text: string;
-  /** Tokens left as written because the content has no such variable (in order of first appearance). */
+  /** Tokens left as written because the display values have no such key (in order of first appearance). */
   readonly unknown: readonly string[];
 }
 
-const SCALE_ICONS: Readonly<Record<string, string>> = { scaleAP: '法强', scaleAD: '攻击力', scaleHealth: '生命', scaleArmor: '护甲', scaleMR: '魔抗', scaleAS: '攻速', scaleMana: '法力' };
+const SCALE_ICONS: Readonly<Record<string, string>> = {
+  scaleAP: '法强', scaleAD: '攻击力', scaleHealth: '生命', scaleArmor: '护甲', scaleMR: '魔抗', scaleAS: '攻速', scaleMana: '法力', scaleDA: '伤害增幅', scaleDR: '减伤',
+};
 const ENTITIES: Readonly<Record<string, string>> = { '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+/** Experiment is not an enabled trait: its whole tooltip branch is shown as a note instead of numbers (SR-G2-01). */
+const EXPERIMENT_BRANCH = /<spellActive enabled=TFT13_ExperimentActive[^>]*>[\s\S]*?<\/spellActive>/g;
+export const EXPERIMENT_NOTE = '试验品加成：本版本未启用';
+/** Non-numeric placeholders of traits that are not enabled (Rumble's Junker King upgrade name); hidden. */
+const HIDDEN_TOKENS: ReadonlySet<string> = new Set(['TFTUnitProperty.:TFT13_JunkerKing_UpgradeTRAKeyWrapper']);
 
-/** Up to two decimals, no trailing zeros (0.3 * 100 → 30, 1.25 → 1.25). */
+/** Up to two decimals, no trailing zeros (30.000000000000004 → 30, 1.25 → 1.25). Formatting only. */
 function formatNumber(value: number): string {
   return String(Math.round(value * 100) / 100);
 }
 
-/** Pure: the template of `description` filled for `starLevel` (1–3) from `variables`. */
-export function fillAbilityTemplate(description: string, variables: Readonly<Record<string, readonly number[]>>, starLevel: number): AbilityText {
+/** Pure: `description` with every `@token@` replaced by `values[token]`, markup reduced to plain text. */
+export function fillAbilityTemplate(description: string, values: Readonly<Record<string, number>>): Omit<AbilityText, 'name'> {
   const unknown: string[] = [];
-  const index = Math.min(3, Math.max(1, Math.trunc(starLevel))) - 1;
-  const filled = description.replace(/@([A-Za-z0-9_.:]+)(?:\*(-?\d+(?:\.\d+)?))?@/g, (token, name: string, multiplier: string | undefined) => {
-    const values = Object.hasOwn(variables, name) ? variables[name] : undefined;
-    const value = values?.[index];
-    if (value === undefined) { if (!unknown.includes(token)) unknown.push(token); return token; }
-    return formatNumber(value * (multiplier === undefined ? 1 : Number(multiplier)));
+  const filled = description.replace(EXPERIMENT_BRANCH, EXPERIMENT_NOTE).replace(/@([^@<>\s]+)@/g, (token, key: string) => {
+    if (Object.hasOwn(values, key)) return formatNumber(values[key]);
+    if (HIDDEN_TOKENS.has(key)) return '';
+    if (!unknown.includes(token)) unknown.push(token);
+    return token;
   });
   const text = filled
-    .replace(/%i:([A-Za-z]+)%/g, (_, icon: string) => SCALE_ICONS[icon] ?? '')
+    .replace(/(?:%i:[A-Za-z]+%)+/g, run => [...run.matchAll(/%i:([A-Za-z]+)%/g)].map(([, icon]) => SCALE_ICONS[icon] ?? '').filter(Boolean).join('+'))
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]*>/g, '')
     .replace(/&[a-z#0-9]+;/gi, entity => ENTITIES[entity] ?? entity)
@@ -43,8 +53,24 @@ export function fillAbilityTemplate(description: string, variables: Readonly<Rec
   return { text, unknown };
 }
 
-/** The ability of `abilityId` at `starLevel`, or null when the content has no description for it (neutrals, legacy units). */
-export function abilityText(abilityId: string, starLevel: number): AbilityText | null {
-  const data = Object.hasOwn(S13_ABILITY_DATA, abilityId) ? S13_ABILITY_DATA[abilityId] : undefined;
-  return data ? fillAbilityTemplate(data.description, data.variables, starLevel) : null;
+/**
+ * The ability of hero `definitionId` at `starLevel` (default base AD and 100 AP unless `stats` is given), or null when the
+ * rules have no display source for it (neutrals, legacy units).
+ */
+export function abilityText(definitionId: string, starLevel: number, stats?: AbilityDisplayStats): AbilityText | null {
+  const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
+  const data = definition && Object.hasOwn(S13_ABILITY_DATA, definition.abilityId) ? S13_ABILITY_DATA[definition.abilityId] : undefined;
+  if (!data) return null;
+  const star = Math.min(3, Math.max(1, Math.trunc(starLevel))) as StarLevel;
+  try {
+    return { name: abilityDisplayName(definitionId), ...fillAbilityTemplate(data.description, abilityDisplayValues(definitionId, star, stats)) };
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
+  }
+}
+
+/** Locked ability name of a hero, or null when the rules have no display source for it. */
+export function abilityNameOf(definitionId: string): string | null {
+  try { return abilityDisplayName(definitionId); } catch (error) { if (error instanceof RangeError) return null; throw error; }
 }

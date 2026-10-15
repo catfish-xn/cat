@@ -1,14 +1,13 @@
 /**
  * Unit description card (G2 prerequisite): cost, traits, ability text for the star level and base stats, all read from the
- * content's public definitions (`UNIT_DEFINITIONS`, `getUnitStats`, `S13_ABILITY_DATA`, `TRAIT_DEFINITIONS`). Nothing is
- * computed beyond formatting: stats are the rules' resolved star stats, the ability text fills only listed variables.
+ * content's public definitions (`UNIT_DEFINITIONS`, `getUnitStats`, `TRAIT_DEFINITIONS`) and the rules' ability display
+ * functions (`abilityDisplayName` / `abilityDisplayValues`). Nothing is computed beyond formatting.
  */
-import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { getUnitStats } from '../simulation/unit-stats';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
 import { abilityText } from './ability-text';
 import type { RankTotals, UnitBattleStats } from './battle-ranking';
-import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from './hero-identity';
+import { getHeroIdentity, heroEmblemSvg, heroTraitTags } from './hero-identity';
 import { attachHoverCards, unitHoverCard } from './hover-card';
 import { heroPortraitHtml } from './s13-assets';
 
@@ -18,11 +17,9 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className 
 /** COMBAT tick is 50 ms: attacks per second from the attack interval when the content has no original speed. */
 const TICKS_PER_SECOND = 20;
 
-/** Trait labels: the S13 client list when the presentation knows the hero, else the content's own trait ids (new heroes). */
+/** Trait labels: the S13 client list, open where the unit's content traits include it (see `heroTraitTags`). */
 export function unitTraitLabels(definitionId: string): { name: string; open: boolean }[] {
-  const labels = heroTraitLabels(definitionId);
-  if (labels.length) return labels;
-  return (UNIT_DEFINITIONS[definitionId]?.traits ?? []).map(id => ({ name: TRAIT_DEFINITIONS[id]?.name ?? id, open: Object.hasOwn(TRAIT_DEFINITIONS, id) }));
+  return heroTraitTags(definitionId);
 }
 
 /** Cache key part of a battle stats line: equal stats draw the same card. */
@@ -70,9 +67,9 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     body.append(traits);
   }
   const stats = getUnitStats(definitionId, neutral ? 1 : star);
-  const ability = abilityText(definition.abilityId, star);
+  const ability = abilityText(definitionId, star);
   const section = el('div', '', 'unit-card-ability'); section.dataset.debug = 'unit-card:ability';
-  section.append(el('div', `技能 · 法力 ${stats.initialMana}/${stats.maxMana}`, 'unit-card-label'));
+  section.append(el('div', `技能${ability ? ` · ${ability.name}` : ''} · 法力 ${stats.initialMana}/${stats.maxMana}`, 'unit-card-label'));
   section.append(el('p', ability?.text || '无主动技能说明', 'unit-card-text'));
   body.append(section);
   const speed = stats.baseAttackSpeedBps !== undefined ? stats.baseAttackSpeedBps / 10_000 : TICKS_PER_SECOND / stats.attackIntervalTicks;
