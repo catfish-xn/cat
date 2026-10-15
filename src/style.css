@@ -479,6 +479,13 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .carousel-seat.picked { text-decoration: line-through; opacity: .6; }
 .carousel-wait { font-variant-numeric: tabular-nums; color: #e6bc76; }
 body[data-online-carousel] .shop-dock { opacity: .55; }
+.carousel-taker.auto { background: #3a3346; color: #cbbcf5; }
+.carousel-seat.auto { font-style: italic; }
+.carousel-queue { position: absolute; z-index: 30; right: 8px; bottom: 8px; display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; border: 1px solid #b4a1f5;
+  background: rgba(14, 24, 33, .92); color: #e2eef1; font-size: 12px; max-width: 260px; }
+.carousel-queue-title { font-size: 12px; color: #b4a1f5; }
+.carousel-queue-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.carousel-queue-sell { font-size: 11px; padding: 2px 8px; }
 /* Eliminated (spectating): the dock and the left panel stay visible but read as disabled. */
 body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
 body[data-online-spectating] .choice-overlay { display: none !important; }

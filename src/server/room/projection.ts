@@ -12,6 +12,7 @@ import {
 } from '../../server-entry';
 import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
 import { carouselPickedSlot, carouselReleased } from './carousel';
+import { listCarouselSlots } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
@@ -52,7 +53,8 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
   return {
     mySeatId: seatId,
     seats,
-    phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.roundName, endsAt: room.deadlineAt, serverNow },
+    // G1-P7: the opening prelude runs before 1-2 (catalog ordinals stay); its name is the carousel's own round, 1-1.
+    phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.phase === 'carousel' && room.carousel ? room.carousel.state.roundId : room.roundName, endsAt: room.deadlineAt, serverNow },
     opponentSeatId,
     opponentCandidates: toOpponentCandidates(room, seatId),
     carousel: toCarouselView(room, seatId),
@@ -81,15 +83,17 @@ export function toOpponentCandidates(room: RoomState, seatId: string): string[] 
 export function toCarouselView(room: RoomState, seatId: string): CarouselView | null {
   const carousel = room.carousel;
   if (room.phase !== 'carousel' || carousel === null) return null;
-  const { view } = carousel;
+  const { state } = carousel;
   const seat = room.seats.find(candidate => candidate.seatId === seatId);
-  const pickedSlot = carouselPickedSlot(view, seatId);
+  const pickedSlot = carouselPickedSlot(state, seatId);
+  const receipt = state.receipts.find(candidate => candidate.seatId === seatId && candidate.status !== 'released');
   return {
-    id: view.id, roundId: view.roundId, roundName: view.roundId, revision: view.revision, status: view.status,
-    slots: view.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, itemId: slot.itemId, pickedBy: slot.pickedBy })),
-    releaseOrder: [...view.releaseOrder], releaseAtMs: { ...view.releaseAtMs }, elapsedMs: view.elapsedMs, deadlineMs: view.deadlineMs, startedAt: carousel.startedAt,
-    eligible: seat !== undefined && seat.alive && view.status === 'open' && pickedSlot === null && view.elapsedMs < view.deadlineMs && carouselReleased(view, seatId),
-    pickedSlot, receiptId: carousel.receipts[seatId] ?? null,
+    id: state.id, roundId: state.roundId, roundName: state.roundId, revision: state.revision, status: state.status,
+    slots: listCarouselSlots(state).map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel, items: [...slot.items], pickedBy: slot.pickedBy })),
+    releaseOrder: [...state.releaseOrder], releaseAtMs: { ...state.releaseAtMs }, elapsedMs: state.elapsedMs, deadlineMs: state.deadlineMs, startedAt: carousel.startedAt,
+    eligible: seat !== undefined && seat.alive && state.status === 'open' && pickedSlot === null && state.elapsedMs < state.deadlineMs && carouselReleased(state, seatId),
+    pickedSlot, receiptId: receipt?.id ?? null,
+    autoPicked: state.releaseOrder.filter(id => carousel.auto[id] !== undefined),
   };
 }
 

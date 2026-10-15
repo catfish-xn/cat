@@ -8,8 +8,7 @@ import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
 import { UNIT_DEFINITIONS } from '../../simulation/units';
 import type { ReplaySnapshot } from '../../replay';
-import { CarouselPanel } from './carousel-panel';
-import { DemoCarousel } from './carousel-demo';
+import { CarouselPanel, PendingCarouselQueue, readPendingCarouselUnits } from './carousel-panel';
 import { BattleSummaryPanel } from './battle-summary';
 import { EconomyHint } from './economy-hint';
 import { Lobby } from './lobby';
@@ -64,9 +63,7 @@ export class OnlineApplication implements SceneApplication {
   private sidebar: PlayersSidebar;
   private opponentBoard: OpponentBoardPanel;
   private carousel: CarouselPanel;
-  /** `?carouselDemo=1`: a preview carousel on fake data runs once at match start (carousel-demo.ts); never sent to the room. */
-  private demo: DemoCarousel | null = null;
-  private demoWanted = new URLSearchParams(window.location.search).has('carouselDemo');
+  private carouselQueue: PendingCarouselQueue;
   /** G5: battle ranking (right column) and the preparation economy hint. */
   private summary: BattleSummaryPanel;
   private economy: EconomyHint;
@@ -89,6 +86,7 @@ export class OnlineApplication implements SceneApplication {
     const frame = document.getElementById('board-frame') ?? app;
     this.opponentBoard = new OpponentBoardPanel(frame, () => this.session.state.preparation.board, () => this.sidebar.setViewing(null));
     this.carousel = new CarouselPanel(frame, (slot, view) => this.pickCarousel(slot, view));
+    this.carouselQueue = new PendingCarouselQueue(frame, unitId => this.session.sell(unitId));
     this.summary = new BattleSummaryPanel(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
     this.ranking = new RankingOverlay(document.body, () => this.again());
@@ -180,29 +178,16 @@ export class OnlineApplication implements SceneApplication {
     this.syncStatus(view);
   }
   private lastPhase = '';
-  /** G1-P7: the server's carousel wins; the preview carousel only shows while the server has none. */
+  /** G1-P7: the carousel panel shows exactly while the server view carries one. */
   private syncCarousel(view: PlayerView) {
-    if (view.carousel) { this.demo = null; this.carousel.render(view.carousel, view.seats, view.mySeatId, view.phase.serverNow); }
-    else if (this.demoWanted && !this.demo && view.phase.kind !== 'lobby' && view.phase.kind !== 'ended' && !this.demoShown) {
-      this.demoShown = true; this.demo = new DemoCarousel(view.seats, view.mySeatId, performance.now()); this.renderDemo();
-    }
-    else if (!this.demo || view.phase.kind === 'ended') { this.demo = null; this.carousel.hide(); }
+    if (view.carousel) this.carousel.render(view.carousel, view.seats, view.mySeatId, view.phase.serverNow);
+    else this.carousel.hide();
     this.syncCarouselMode();
   }
-  private demoShown = false;
-  private renderDemo() {
-    const demo = this.demo, view = this.view; if (!demo || !view) return;
-    const now = performance.now();
-    const carousel = demo.view(now);
-    if (demo.finished) { this.demo = null; this.carousel.hide(); this.syncCarouselMode(); return; }
-    this.carousel.render(carousel, view.seats, view.mySeatId, now);
-  }
-  private demoClock = 0;
   private syncCarouselMode() {
     if (this.carousel.open) document.body.dataset.onlineCarousel = 'true'; else delete document.body.dataset.onlineCarousel;
   }
   private pickCarousel(slot: number, view: CarouselView) {
-    if (this.demo) { if (!this.demo.pick(slot, performance.now())) this.carousel.clearPending(); this.renderDemo(); return; }
     const result = this.session.carouselPick(view.id, view.revision, slot);
     if (result.ok) return;
     const notice = this.session.takeNotice();
@@ -220,6 +205,7 @@ export class OnlineApplication implements SceneApplication {
     const show = playing && battle !== null && !this.session.inBattle && state.phase !== 'combat' && (state.round === battle.round || state.round === battle.round + 1);
     this.summary.show(this.session.battleHistory, show);
     this.economy.render(state, playing && !this.session.inBattle);
+    this.carouselQueue.render(playing ? readPendingCarouselUnits(state) : [], state.phase === 'preparation');
   }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {
@@ -261,14 +247,13 @@ export class OnlineApplication implements SceneApplication {
   private backToLobby() {
     this.ranking.hide(); this.mode = 'online-lobby'; this.lastPhase = ''; this.phaseLine = null; this.view = null;
     this.spectating = false; this.session.spectating = false; this.opponentBoard.close();
-    this.demo = null; this.demoShown = false; this.carousel.hide(); this.syncCarouselMode();
+    this.carousel.hide(); this.syncCarouselMode();
     this.session.forgetBattles();
     this.session.skipPlayback(); this.session.resume('ended'); this.session.pause('lobby'); this.hooks.clearInput(); this.syncMode();
   }
   /** Called by the one Phaser render loop, before active-domain advancement. */
   frame(delta: number): boolean {
     this.sidebar.tick(); this.carousel.tick();
-    if (this.demo && (this.demoClock += Math.max(0, delta)) >= 250) { this.demoClock = 0; this.renderDemo(); }
     if (this.ignoreNextDelta) { this.ignoreNextDelta = false; return false; }
     if (delta > 1000) return false; // a long stall: let the next frame continue from the current state
     return this.isActive;
@@ -295,14 +280,14 @@ export class OnlineApplication implements SceneApplication {
   selectReplayUnit(_id: string | null) { /* no replay online */ }
   debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
     battleSummary: this.summary.debug(), economy: this.economy.debug(),
-    opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, carouselDemo: this.demo !== null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
+    opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], carousel: this.view?.carousel ?? null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
     if (this.disposed) return; this.disposed = true;
     this.clearReclaimed();
     document.removeEventListener('visibilitychange', this.visibility);
     this.unlisten(); this.unsubscribe(); this.client.dispose();
-    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.carousel.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
+    this.lobby.dispose(); this.sidebar.dispose(); this.opponentBoard.dispose(); this.summary.dispose(); this.economy.dispose(); this.carousel.dispose(); this.carouselQueue.dispose(); delete document.body.dataset.onlineCarousel; this.ranking.dispose(); this.session.dispose();
     delete document.body.dataset.online; delete document.body.dataset.onlineMode; delete document.body.dataset.onlineSpectating;
   }
 }

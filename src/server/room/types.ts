@@ -14,7 +14,7 @@ import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
 import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
 import type { CandidateMap, PairingHistory } from './pairing';
-import type { CarouselFailure, RoomCarousel } from './carousel';
+import type { CarouselFailure, CarouselLedgerEntry, RoomCarousel } from './carousel';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
@@ -211,6 +211,8 @@ export interface RoomState {
   readonly opponentCandidates: CandidateMap;
   /** G1-P7: the shared carousel while `phase` is `carousel`; null otherwise. Part of the room state, so a reconnecting seat sees it as is. */
   readonly carousel: RoomCarousel | null;
+  /** G1-P7: every carousel transaction's events, appended in the same publication as the state they produced; never trimmed. */
+  readonly carouselLedger: readonly CarouselLedgerEntry[];
   /** Results of the current round; cleared on round entry. */
   readonly battles: readonly BattleResult[];
   /** settlementIds already committed, in order. */

@@ -66,13 +66,14 @@ export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'carousel
 
 /* ---------------- G1-P7 shared carousel (选秀), MULTIPLAYER_CONTRACT §21.1 ---------------- */
 
-/** One unit standing on the carousel with the item it carries; the same for every seat. */
+/** One unit standing on the carousel with what it carries; the same for every seat (`listCarouselSlots`, field by field). */
 export interface CarouselSlotView {
   /** Slot index (0–8); the `carousel-pick` command names it. */
   readonly slot: number;
   readonly definitionId: string;
-  /** Item definition id the unit carries (a component or a completed item). */
-  readonly itemId: string;
+  readonly starLevel: number;
+  /** Item definition ids the unit carries (one component, or one completed item from 5-4). */
+  readonly items: readonly string[];
   /** Seat that took it; null while it still stands. */
   readonly pickedBy: string | null;
 }
@@ -102,6 +103,8 @@ export interface CarouselView {
   /** Slot my seat took (by hand or automatically); null until then. */
   readonly pickedSlot: number | null;
   readonly receiptId: string | null;
+  /** Seats the server picked for (a bot, a disconnected player, or nobody clicked by the deadline). */
+  readonly autoPicked: readonly string[];
 }
 export interface PlayerViewPhase {
   readonly kind: PlayerViewPhaseKind;

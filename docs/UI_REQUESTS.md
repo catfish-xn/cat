@@ -894,30 +894,15 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **计算后的数值**：模板里的 `@ModifiedShield@`、`@ModifiedDamage@`、`@TotalDamage@` 等是规则按法强/攻击力换算的总值，`variables` 里没有，目前原样显示。请导出只读选择器，例如 `abilityDisplayValues(definitionId, starLevel): Record<string, number>`（按基础法强/攻击力，不含装备与羁绊），界面用它补全这些占位。
 - **验收**：19 名现有英雄 1–3 星的说明文字里不再出现 `@...@`；界面不自行换算。
 
-## G1-P7 选秀：服务器与界面预接线（2026-10-15，Claude 流水线 B/C，分支 `claude/g1-carousel-y1zxfu`）
+## G1-P7 选秀：服务器与界面接线（2026-10-15，Claude 流水线 B/C）
 
-### 已交付（不依赖合同，合同合入后只写绑定层）
+### 已交付（绑定 Codex P7 规则，无需 Codex 动作）
 
-- 界面：`src/rendering/online/carousel-panel.ts` 选秀圆盘（单位头像 + 所携装备、已选者标记、放行批次与每批倒计时、总倒计时）；只有服务器给出 `canPick` 且该格未被选走时可点。`?mode=online&carouselDemo=1` 用假数据预览，不发给房间。
-- 视图：`PlayerView.carousel?: CarouselView | null`，阶段新增 `carousel`；字段见 `src/server/protocol.ts`（`slots[{slot, definitionId, starLevel, items, pickedBy}]`、`batches[{seatIds, opensAt}]`、`openBatches`、`endsAt`、`canPick`、`myPick`）。
-- 命令：线协议新增 `{ type: 'carouselPick', slot }`，`NET_PROTOCOL_VERSION` 2 → 3。它不在 `ClientCommand` 里（机器人策略与 `tests/t7-helpers.ts` 的穷举 switch 不受影响）。
-- 房间：`src/server/room/carousel.ts` 定义 `CarouselRules` 端口；`Room` 在回合进入时若规则标记为选秀轮，先进入 `carousel` 阶段，再走原有选择/准备流程。房间只管放行时间表（存活席按权威 HP 升序、同 HP 按座位序、按批放行）和何时要求自动选取（机器人/接管/断线席在本批放行时，其余在截止时）；建盘、选取、自动选取、共享池扣减、收据与失败原因全部走端口。未传端口时行为与之前一致。
+- 端口：`src/server/room/carousel.ts` 的 `CAROUSEL_RULES_BINDING` 直接绑定 server-entry 的 P7 导出（createCarouselMatch / opensCarousel / prepareCarouselParticipants / createCarousel / advanceCarousel / pickCarouselForSeat / autoPickCarouselForSeat / completeCarouselForSeat / releaseCarouselParticipant / resolvePendingCarouselUnits / sellPendingCarouselUnit / listCarouselSlots）；测试用假规则已删除。
+- 房间：开启选秀时八席用 `createCarouselMatch` 开局，1-1 前奏关闭后才 `refreshSharedShops` 发首店；x-4 由 `completeCarouselForSeat` 结算后走原有结算/推进；每笔 pick/autoPick 的返回事件与新盘、池、席位状态同一次发布（席位 serverEvents + 房间选秀账本）。准备期进入时及每次准备期命令后调用 `resolvePendingCarouselUnits`；对排队单位的 `sell` 走 `sellPendingCarouselUnit`。
+- 网络：`NET_PROTOCOL_VERSION` 3，命令 `{type:'carousel-pick', carouselId, revision, slot}`；`PlayerView.carousel` 公开槽取自 `listCarouselSlots`，另有本席 `eligible/pickedSlot/receiptId` 与公开 `autoPicked`。`main.ts` 默认开启（`CAT_CAROUSEL=0` 仅供旧 e2e）。
+- 界面：选秀圆盘、批次与倒计时、放行时可选单位高亮、他人已选灰显并标注、自动选提示、满备战席排队条（可出售）。
 
-### SR-G1-02 合同 #99 已合入，服务器已按合同改形；等规则实现（P1，阻塞 P7 接线）
+### 说明（无需动作）
 
-服务器（`src/server/room/carousel.ts` 的 `CarouselRules`）已按 MATCH_CONTRACT P7 与 MULTIPLAYER_CONTRACT §21 改形，规则实现合入后由绑定层逐一映射：
-
-| 端口方法 | 对应合同导出 |
-| --- | --- |
-| `carouselRound(state)` | 1-1 开局标记 / x-4 判定（合同未给导出名，请实现时提供，如 `carouselRoundOf(state)`） |
-| `create({ pool, roundId, roomSeed, seats })` | `prepareCarouselParticipants` → `createCarousel(pool, roundId, rng)`（rng 派生请导出，服务器只传房间 seed） |
-| `advance(carousel, elapsedMs)` | `advanceCarousel` |
-| `pick` / `autoPick` | `pickFromCarousel` / `autoPickFromCarousel` + `grantCarouselPick`，同一事务，grant 失败整体丢弃 |
-| `view` / `receiptId` | `CarouselState` 的公开字段与 `receipts` |
-
-- 命令按 §21.1：`{ type: 'carousel-pick', carouselId, revision, slot }`，不一致返回 `stale-carousel`；规则失败枚举原样转发。为不动机器人策略的穷举 switch，它只进线协议 `WireCommand`，不进 `ClientCommand`。
-- 时序按 §21.2：每次先推进逻辑时间；机器人/接管席在放行时自动选；断线真人在截止时兜底；截止时按 releaseOrder 逐席自动选，之后人工命令得到 `carousel-closed`。
-- **与合同不同之处（用户决定，方案 B）**：所有人选完后规则可以照常关闭，但房间不提前离场，阶段持续到 `deadlineMs` + 2000 ms 离场。规则侧无需改动。
-- **待确认**：§11.3 写 1-1 全员同时放行，用户的方案 B 说"两人一批，以此类推"；服务器直接读规则的 `releaseAtMs`，若用户要 1-1 也两人一批，请规则侧改放行表。
-- **还需要**：`pendingCarouselUnits`（满备战席队列）的私有投影字段形状；实现合入后服务器补进本席视图。
-- **验收**：绑定层只调用合同导出；e2e 八席一局 1-1 与 2-4 每席各得一个单位、HP 最低先选、断线席位也有单位。
+- `releaseCarouselParticipant` 已绑定但房间当前没有调用点：淘汰只在战斗结算提交时发生，而选秀阶段只在回合进入时开、截止+2 秒后关，二者不重叠；盘关闭后的淘汰沿用 `releaseSeatOnElimination`（八席整局单测与 e2e 跑到终局无守恒错误）。若规则侧认为关闭后的盘仍需经它释放，请在合同写明。

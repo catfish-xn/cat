@@ -1,7 +1,9 @@
 /**
  * G1-P7 shared carousel (选秀) panel. A ring of the units standing on the carousel, each with the item it carries,
  * floating over the enemy half of my board so the bench below stays visible (a picked unit lands there at once).
- * Release order, the countdown to my batch and to the carousel's end are shown beside it.
+ * Release order, the countdown to my batch and to the carousel's end are shown beside it. Like TFT: the units I may take
+ * light up when my batch is released, units already taken are greyed with the taker's name, and a seat the server picked
+ * for (bot, disconnected, or no click before the deadline) is marked "自动".
  *
  * Read-only apart from the click: a slot is clickable only while the server says `eligible` and the slot still stands.
  * The panel never decides who is released or what is left; everything comes from `PlayerView.carousel` (MULTIPLAYER_CONTRACT
@@ -34,7 +36,8 @@ export function carouselGroups(view: CarouselView): CarouselGroup[] {
 export function carouselStatusText(view: CarouselView, mySeatId: string, serverNow: number): string {
   if (view.pickedSlot !== null) {
     const slot = view.slots.find(candidate => candidate.slot === view.pickedSlot);
-    return slot ? `已选取 ${unitName(slot.definitionId)} · 已进入备战席` : '已选取 · 已进入备战席';
+    const what = slot ? `${unitName(slot.definitionId)}` : '单位';
+    return view.autoPicked.includes(mySeatId) ? `未在截止前选择 · 已自动选取 ${what}` : `已选取 ${what} · 已进入备战席`;
   }
   if (view.eligible) return '已放行 · 点击一个单位选取';
   const at = view.releaseAtMs[mySeatId];
@@ -141,16 +144,17 @@ export class CarouselPanel {
     chip.dataset.debug = `online:carousel-slot:${slot.slot}`; chip.dataset.slot = String(slot.slot); chip.dataset.definition = slot.definitionId;
     if (slot.pickedBy) chip.dataset.pickedBy = slot.pickedBy;
     const holder = slot.pickedBy ? this.seats.find(seat => seat.seatId === slot.pickedBy) : undefined;
-    const label = `${unitName(slot.definitionId)} · 携带 ${itemName(slot.itemId)}`;
-    chip.title = taken ? `${label} · 已被 ${holder?.name ?? slot.pickedBy} 选走` : label;
+    const auto = slot.pickedBy !== null && view.autoPicked.includes(slot.pickedBy);
+    const label = `${unitName(slot.definitionId)} · 携带 ${slot.items.map(itemName).join('、')}`;
+    chip.title = taken ? `${label} · 已被 ${holder?.name ?? slot.pickedBy}${auto ? '（自动）' : ''} 选走` : label;
     chip.setAttribute('aria-label', chip.title);
     const portrait = element('span', '', 'carousel-portrait');
     portrait.innerHTML = heroPortraitHtml(slot.definitionId, 44, heroEmblemSvg(slot.definitionId, 44));
     chip.append(portrait, element('span', unitName(slot.definitionId), 'carousel-name'));
-    const held = element('span', '', 'carousel-items'); held.dataset.debug = `online:carousel-items:${slot.slot}`; held.dataset.item = slot.itemId;
-    held.insertAdjacentHTML('beforeend', itemMarkHtml(slot.itemId, 16));
+    const held = element('span', '', 'carousel-items'); held.dataset.debug = `online:carousel-items:${slot.slot}`; held.dataset.item = slot.items.join(',');
+    for (const itemId of slot.items) held.insertAdjacentHTML('beforeend', itemMarkHtml(itemId, 16));
     chip.append(held);
-    if (taken) chip.append(element('span', mine ? '我' : holder?.name ?? '已选', 'carousel-taker'));
+    if (taken) chip.append(element('span', `${mine ? '我' : holder?.name ?? '已选'}${auto ? ' · 自动' : ''}`, `carousel-taker${auto ? ' auto' : ''}`));
     chip.addEventListener('click', () => {
       const current = this.view;
       if (!current?.eligible || chip.disabled || this.pending !== null) return;
@@ -170,13 +174,54 @@ export class CarouselPanel {
       for (const seatId of batch.seatIds) {
         const seat = this.seats.find(candidate => candidate.seatId === seatId);
         const tag = element('span', seat?.name ?? seatId, `carousel-seat${picked.has(seatId) ? ' picked' : ''}${seatId === this.mySeatId ? ' me' : ''}`);
-        tag.dataset.seat = seatId; tag.title = seat ? `${seat.name} · 生命 ${seat.hp}${picked.has(seatId) ? ' · 已选' : ''}` : seatId;
+        const auto = view.autoPicked.includes(seatId);
+        if (auto) tag.classList.add('auto');
+        tag.dataset.seat = seatId; tag.title = seat ? `${seat.name} · 生命 ${seat.hp}${picked.has(seatId) ? auto ? ' · 已自动选取' : ' · 已选' : ''}` : seatId;
         names.append(tag);
       }
       row.append(names, element('span', '', 'carousel-wait'));
       return row;
     });
     this.order.replaceChildren(...rows);
+  }
+  dispose(): void { this.root.remove(); }
+}
+
+/** One unit a carousel grant queued because my bench was full (`PrivateSeatView.pendingCarouselUnits`, MULTIPLAYER_CONTRACT §21.5). */
+export interface PendingCarouselUnitView { readonly receiptId: string; readonly unitId: string; readonly definitionId: string }
+/** The queued units of my seat view; empty when the server sent none. */
+export function readPendingCarouselUnits(state: object): readonly PendingCarouselUnitView[] {
+  const pending = (state as { readonly pendingCarouselUnits?: unknown }).pendingCarouselUnits;
+  return Array.isArray(pending) ? pending as PendingCarouselUnitView[] : [];
+}
+
+/**
+ * Units a carousel pick could not place because my bench was full. The server moves them in by itself once a bench slot is
+ * free (the rules' `resolvePendingCarouselUnits`); the only command here is the explicit sell, the same `sell` as any unit.
+ */
+export class PendingCarouselQueue {
+  readonly root: HTMLElement;
+  private key = '';
+  constructor(host: HTMLElement, private readonly onSell: (unitId: string) => void) {
+    this.root = element('aside', '', 'carousel-queue'); this.root.hidden = true; this.root.dataset.debug = 'online:carousel-queue';
+    this.root.setAttribute('aria-label', '选秀单位等待入席');
+    host.append(this.root);
+  }
+  render(units: readonly PendingCarouselUnitView[], operable: boolean): void {
+    const key = `${operable}|${units.map(unit => unit.unitId).join(',')}`;
+    if (key === this.key) return;
+    this.key = key;
+    this.root.hidden = units.length === 0;
+    const rows = units.map(unit => {
+      const row = element('div', '', 'carousel-queue-row'); row.dataset.unit = unit.unitId;
+      const cost = UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0;
+      const sell = element('button', `出售 +${cost}`, 'carousel-queue-sell'); sell.type = 'button'; sell.disabled = !operable;
+      sell.dataset.debug = `online:carousel-queue-sell:${unit.unitId}`;
+      sell.addEventListener('click', () => { if (!sell.disabled) this.onSell(unit.unitId); });
+      row.append(element('span', unitName(unit.definitionId), 'carousel-queue-name'), sell);
+      return row;
+    });
+    this.root.replaceChildren(element('strong', '选秀单位等待入席 · 备战席有空位时自动放入', 'carousel-queue-title'), ...rows);
   }
   dispose(): void { this.root.remove(); }
 }

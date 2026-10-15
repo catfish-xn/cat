@@ -16,12 +16,12 @@ import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
   assertSharedPoolConservation, autoDeployToCap, buySharedUnit, lockMatchCombatRoster, createSharedPool, initializeSharedSeat, needsAnomalyRecruitment, nextSharedRound,
-  refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellSharedUnit, setSharedShopLock,
-  type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
+  refreshSharedShops, releaseSeatOnElimination, rerollSharedShop, ROUND_SETTLEMENT_VERSION, runSharedMatchCommand, sellPendingCarouselUnit, sellSharedUnit, setSharedShopLock,
+  type CarouselEvent, type CarouselRoundId, type CarouselState, type RoundSettlementReceipt, type SharedPoolFailure, type SharedPoolState, type SideProposal,
 } from '../../server-entry';
 import { BattleResolveError, startBattleJob, type BattleJob, type BattleResolver } from './battle-resolver';
 import { useSeatConsumable } from './consumables';
-import { carouselPickedSlot, carouselReleased, type CarouselAutoCause, type CarouselGrant, type CarouselRules } from './carousel';
+import { carouselReleased, carouselRoundOf, type CarouselAutoCause, type CarouselLedgerEntry, type CarouselRules } from './carousel';
 import type { CarouselPickCommand } from '../protocol';
 import type { BattleSeatOutcome } from './types';
 import type { Clock, ClockHandle } from './clock';
@@ -62,8 +62,10 @@ export interface RoomOptions extends RoomTimings {
   /** G1-P6: how recent opponents are avoided; DEFAULT_PAIRING_POLICY (placeholder, S13_RULES_GAP §10) when omitted. */
   readonly pairingPolicy?: PairingPolicy;
   /**
-   * G1-P7: the rules' shared carousel. When given, a round whose seats the rules mark as a carousel round opens with the
-   * `carousel` phase before its own choice/preparation; omitted, rounds run as before.
+   * G1-P7: the rules' shared carousel (`CAROUSEL_RULES_BINDING`). When given, the seats open with `createCarouselMatch`
+   * (no free opening unit, 0 gold, 0 components; MULTIPLAYER_CONTRACT §21.4), the match starts with the 1-1 carousel and
+   * every x-4 carousel replaces the old component supply. Omitted, the room opens and runs as before P7 (offline-style
+   * opening unit, supply choice), which the pre-P7 room tests keep using.
    */
   readonly carousel?: CarouselRules;
 }
@@ -117,7 +119,9 @@ export function applySeatCommand(pool: SharedPoolState, state: MatchState, comma
   switch (command.type) {
     case 'deploy': return plain(deployMatchUnit(state, command.unitId, command.target));
     case 'buy': return buySharedUnit(pool, state, command.slot, command.generation);
-    case 'sell': return sellSharedUnit(pool, state, command.unitId);
+    // G1-P7: a unit queued by a carousel grant on a full bench (`pendingCarouselUnits`) is sold through the rules' own entry.
+    case 'sell': return state.carousel?.pendingUnits.some(unit => unit.unitId === command.unitId)
+      ? sellPendingCarouselUnit(pool, state, command.unitId) : sellSharedUnit(pool, state, command.unitId);
     case 'shopLock': return setSharedShopLock(pool, state, command.locked, command.generation);
     // The wire command has no generation (protocol unchanged); under the single-writer queue the seat's current shop is the expected one.
     case 'reroll': return rerollSharedShop(pool, state, state.shop.generation);
@@ -210,16 +214,20 @@ export class Room {
     // the fixed seat index 0–7 (this also enables the server mode of §11.1; §18.2: each seat is built shared-deferred,
     // never solo-then-recoloured, and the first initializeSharedSeat freezes the room's orb layout in pool.orbLayout)
     // → one fair first refresh → publish once. Any refusal throws before anything is published, so the whole proposal is discarded.
+    // G1-P7 (§21.5 order): with the carousel each seat is a `createCarouselMatch` opening and no shop is drawn before the
+    // 1-1 carousel closed (the first refresh would move the pool's natural round); `finishCarousel` draws it.
+    const carousel = options.carousel;
     let rngState = options.seed >>> 0;
     let pool = createSharedPool(options.roomId, options.seed >>> 0, options.poolCapacities ? { capacities: options.poolCapacities } : {});
     const imported = seats.map((spec, index) => {
       const draw = nextRandom(rngState); rngState = draw.state;
-      const joined = initializeSharedSeat(pool, createMatch(draw.word, { mode: 'shared-deferred' }), spec.seatId, index);
+      const opening = carousel ? carousel.createCarouselMatch(draw.word) : createMatch(draw.word, { mode: 'shared-deferred' });
+      const joined = initializeSharedSeat(pool, opening, spec.seatId, index);
       if (!joined.ok) throw new RangeError(`seat ${spec.seatId}: ${joined.reason}`);
       pool = joined.pool;
       return { spec, index, seed: draw.word, match: joined.state };
     });
-    const opened = refreshSharedShops(pool, imported.map(seat => seat.match), 1);
+    const opened = carousel ? { ok: true as const, pool, states: imported.map(seat => seat.match) } : refreshSharedShops(pool, imported.map(seat => seat.match), 1);
     if (!opened.ok) throw new RangeError(`shared pool opening: ${opened.reason}`);
     const seatStates = imported.map(({ spec, index, seed }, position): SeatState => {
       const match = opened.states[position]!;
@@ -227,7 +235,7 @@ export class Room {
         alive: true, rank: null, eliminatedRound: null, seatRevision: 0, match, seed };
     });
     const initial: RoomState = { roomId: options.roomId, protocolVersion: ROOM_PROTOCOL_VERSION, phase: 'waiting', round: 0, roundId: '', roundName: '', roundKind: null,
-      deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, pairingHistory: {}, opponentCandidates: {}, carousel: null, battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState,
+      deadlineAt: null, seats: seatStates, pairings: [], battleSeeds: {}, pairingHistory: {}, opponentCandidates: {}, carousel: null, carouselLedger: [], battles: [], settlements: [], ranking: null, fault: null, roomRevision: 0, rngState,
       pool: opened.pool, poolRevision: opened.pool.revision };
     this.assertConserved(initial);
     this.current = initial;
@@ -298,9 +306,11 @@ export class Room {
     const allowed = !this.disposed && ROOM_COMMAND_GATE[phase].has(command.type);
     if (!allowed) return { ok: false, reason: 'wrong-phase', state: seat.match };
     if (command.type === 'carousel-pick') return this.pickCarousel(seat, command);
-    const result = applySeatCommand(this.current.pool, seat.match, command);
+    const applied = applySeatCommand(this.current.pool, seat.match, command);
     // A refusal publishes nothing: pool, poolRevision, seat state and seatRevision stay the same references.
-    if (!result.ok) return { ok: false, reason: result.reason, state: result.state };
+    if (!applied.ok) return { ok: false, reason: applied.reason, state: applied.state };
+    // G1-P7: a command that freed a bench slot lets the rules move queued carousel units in, in the same publication.
+    const result = this.withPendingResolved(applied);
     const seatRevision = seat.seatRevision + 1;
     this.commitSeat(seatId, result.state, result.pool);
     if (phase === 'choice' && !this.aliveSeats().some(candidate => candidate.match.phase === 'choice')) { this.clearTimer(); this.afterChoiceWindow(); }
@@ -512,9 +522,11 @@ export class Room {
     const opponentCandidates = info.kind === 'pvp' ? planCandidates(alive.map(seat => seat.seatId), state.pairingHistory, this.pairingPolicy) : {};
     this.extensions = 0; this.releaseRound();
     this.replace({ ...state, round: info.ordinal, roundId: info.roundId, roundName: info.displayName, roundKind: info.kind, pairings: [], battleSeeds: {}, opponentCandidates, carousel: null, battles: [] });
+    // G1-P7: the rules mark the carousel round on the seats (`opensCarousel`); every alive seat must agree on it.
     const rules = this.options.carousel;
-    const roundIds = rules ? new Set(alive.map(seat => rules.carouselRound(seat.match))) : new Set<string | null>([null]);
-    const carouselRound = roundIds.size === 1 ? [...roundIds][0]! : null;
+    const roundIds = rules ? new Set(alive.map(seat => carouselRoundOf(rules, seat.match))) : new Set<CarouselRoundId | null>([null]);
+    if (roundIds.size > 1) return this.fail({ kind: 'carousel-error', reason: `round-mismatch:${[...roundIds].join(',')}` });
+    const carouselRound = [...roundIds][0] ?? null;
     if (rules && carouselRound !== null) return this.openCarousel(rules, carouselRound);
     this.continueRound();
   }
@@ -528,95 +540,171 @@ export class Room {
   /* ---------------- G1-P7 carousel (MULTIPLAYER_CONTRACT §21) ---------------- */
 
   /**
-   * Opens the carousel `roundId`: the rules prepare the participants from the alive seats and create it on the pool; both
-   * are published once. Logical time 0 is now; the phase runs to the rules' deadline plus the departure (option B: never
-   * closed early by the room), batches and the deadline are handled on their own timers.
+   * Opens the carousel `roundId` (§21.1, §21.4 "创建"): the rules freeze the alive seats as participants
+   * (`prepareCarouselParticipants`), then `createCarousel` draws it from the room rng; the pool, the room rng after it and
+   * the carousel are published once. Logical time 0 is now; the phase runs to the rules' deadline plus the departure
+   * (option B: never closed early), batches and the deadline are handled on their own timers.
    */
-  private openCarousel(rules: CarouselRules, roundId: string): void {
+  private openCarousel(rules: CarouselRules, roundId: CarouselRoundId): void {
     const state = this.current;
-    const created = rules.create({ pool: state.pool, roundId, roomSeed: this.options.seed, seats: this.aliveSeats().map(seat => ({ seatId: seat.seatId, state: seat.match })) });
-    if (!created.ok) return this.fail({ kind: 'carousel-error', reason: created.reason });
-    const view = rules.view(created.carousel), now = this.options.clock.now();
-    this.replace({ ...state, pool: created.pool, poolRevision: created.pool.revision, carousel: { rules: created.carousel, view, startedAt: now, receipts: {} } });
-    this.setPhase('carousel', view.deadlineMs + CAROUSEL_DEPARTURE_MS);
+    const prepared = rules.prepareCarouselParticipants(state.pool, this.aliveSeats().map(seat => ({ seatId: seat.seatId, state: seat.match })));
+    if (!prepared.ok) return this.fail({ kind: 'carousel-error', reason: `participants:${prepared.reason}` });
+    const created = rules.createCarousel(prepared.pool, roundId, { algorithm: 'lcg32-v1', state: state.rngState });
+    if (!created.ok) return this.fail({ kind: 'carousel-error', reason: `create:${created.reason}` });
+    const carousel = created.state;
+    this.replace({ ...state, pool: carousel.pool, poolRevision: carousel.pool.revision, rngState: carousel.rngAfter.state,
+      carousel: { state: carousel, startedAt: Math.ceil(this.options.clock.now()), auto: {} },
+      carouselLedger: [...state.carouselLedger, { carouselId: carousel.id, seatId: null, events: created.events }] });
+    this.setPhase('carousel', carousel.deadlineMs + CAROUSEL_DEPARTURE_MS);
     this.runCarousel();
   }
 
   /**
-   * Brings the carousel up to the room clock, in the contract's order (§21.2): logical time first, then every bot-controlled
-   * seat released by then picks automatically (release order); at the deadline every alive seat still without a unit is picked
-   * for, in release order. False when the rules refused something (the room faulted).
+   * Brings the carousel up to the room clock in the contract's order (§21.2): logical time first, then every bot-controlled
+   * seat released by then picks automatically; at the deadline every alive seat still without a unit is picked for, in
+   * release order (a disconnected player as `disconnected`, everyone else as `timeout`). False when the rules refused
+   * something (the room faulted).
    */
   private catchUpCarousel(rules: CarouselRules): boolean {
-    const carousel = this.current.carousel!;
-    const elapsed = Math.min(this.options.clock.now() - carousel.startedAt, carousel.view.deadlineMs);
-    if (elapsed > carousel.view.elapsedMs) {
-      const advanced = rules.advance(carousel.rules, elapsed);
-      if (!advanced.ok) { this.fail({ kind: 'carousel-error', reason: advanced.reason }); return false; }
-      this.replace({ ...this.current, pool: advanced.pool, poolRevision: advanced.pool.revision, carousel: { ...carousel, rules: advanced.carousel, view: rules.view(advanced.carousel) } });
+    const room = this.current.carousel!;
+    const elapsed = Math.min(this.carouselElapsed(room.startedAt), room.state.deadlineMs);
+    if (elapsed > room.state.elapsedMs) {
+      const advanced = rules.advanceCarousel(room.state, elapsed);
+      if (!advanced.ok) { this.fail({ kind: 'carousel-error', reason: `advance:${advanced.reason}` }); return false; }
+      this.publishCarousel(advanced.state, null, advanced.events, null);
     }
-    const atDeadline = elapsed >= carousel.view.deadlineMs;
-    for (const seatId of this.current.carousel!.view.releaseOrder) {
+    const atDeadline = elapsed >= room.state.deadlineMs;
+    for (const seatId of room.state.releaseOrder) {
+      const carousel = this.current.carousel!.state;
       const seat = this.current.seats.find(candidate => candidate.seatId === seatId);
-      const view = this.current.carousel!.view;
-      if (!seat || !seat.alive || view.status !== 'open' || carouselPickedSlot(view, seatId) !== null) continue;
+      if (!seat || !seat.alive || carousel.status !== 'open' || carousel.receipts.some(receipt => receipt.seatId === seatId)) continue;
       const bot = seat.controller !== 'human';
-      if (!atDeadline && !(bot && carouselReleased(view, seatId))) continue;
-      if (!this.autoPick(rules, seat, bot ? 'bot' : seat.connected ? 'timeout' : 'disconnected')) return false;
+      if (!atDeadline && !(bot && carouselReleased(carousel, seatId))) continue;
+      const cause: CarouselAutoCause = bot ? 'bot' : seat.connected ? 'timeout' : 'disconnected';
+      const result = rules.autoPickCarouselForSeat(this.current.pool, carousel, seat.match, seatId, cause);
+      if (!result.ok) { this.fail({ kind: 'carousel-error', reason: `auto-pick:${cause}:${result.reason}`, seatId }); return false; }
+      this.publishCarousel(result.carousel, { seatId, match: result.state }, result.events, cause);
     }
     return true;
   }
-  /** Timer step: catch up, then wait for the next release, the deadline or (after it) the end of the departure. */
+  /** Timer step: catch up, then wait for the next release, the deadline, or (after it) the end of the departure. */
   private runCarousel(): void {
     const rules = this.options.carousel;
     if (!rules || this.current.phase !== 'carousel' || !this.current.carousel) return;
     if (!this.catchUpCarousel(rules)) return;
-    const { view, startedAt } = this.current.carousel;
-    const elapsed = this.options.clock.now() - startedAt;
-    if (elapsed >= view.deadlineMs) return this.armTimer(this.current.deadlineAt!, () => this.finishCarousel());
-    const next = Math.min(view.deadlineMs, ...Object.values(view.releaseAtMs).filter(at => at > elapsed));
+    // The next step follows the logical time the rules processed, never a fresh clock read: a timer may fire a little early
+    // (or the catch-up take a moment), and a later read would skip the batch released in between.
+    const { state, startedAt } = this.current.carousel;
+    if (state.elapsedMs >= state.deadlineMs) return this.armTimer(this.current.deadlineAt!, () => this.finishCarousel());
+    const next = Math.min(state.deadlineMs, ...Object.values(state.releaseAtMs).filter(at => at > state.elapsedMs));
     this.armTimer(startedAt + next, () => this.runCarousel());
   }
+  /** The rules take whole logical milliseconds (`advanceCarousel` refuses a fraction); a real clock may give one. */
+  private carouselElapsed(startedAt: number): number { return Math.floor(this.options.clock.now() - startedAt); }
   private armTimer(at: number, run: () => void): void {
     this.clearTimer();
     this.timer = this.options.clock.schedule(at, () => { this.timer = null; run(); });
   }
-  /** End of the departure: the carousel goes, the round goes on. */
+  /**
+   * End of the departure (§21.5): every seat's `completeCarouselForSeat` (x-4: the supply round's natural economy once, the
+   * seat goes to settlement; 1-1: nothing), then after the 1-1 prelude the first fair shop refresh, then the queued units
+   * the rules can place. One publication; the round goes on from the seats' own phases.
+   */
   private finishCarousel(): void {
-    if (this.current.phase !== 'carousel') return;
+    const rules = this.options.carousel;
+    if (this.current.phase !== 'carousel' || !rules) return;
     this.clearTimer();
-    this.replace({ ...this.current, carousel: null });
+    // A deadline timer that fired before the catch-up timer (same instant) still meets the automatic picks first.
+    if (this.current.carousel && this.current.carousel.state.status === 'open' && !this.catchUpCarousel(rules)) return;
+    const room = this.current.carousel;
+    if (!room || room.state.status !== 'closed') return this.fail({ kind: 'carousel-error', reason: 'not-closed' });
+    let carousel = room.state;
+    const ledger: CarouselLedgerEntry[] = [];
+    const matches = new Map<string, MatchState>(), events = new Map<string, MatchEvent[]>();
+    for (const seat of this.aliveSeats()) {
+      const done = rules.completeCarouselForSeat(carousel, seat.match, seat.seatId);
+      if (!done.ok) return this.fail({ kind: 'carousel-error', reason: `complete:${done.reason}`, seatId: seat.seatId });
+      carousel = done.state; matches.set(seat.seatId, done.match); events.set(seat.seatId, [...done.events]);
+      if (done.events.length > 0) ledger.push({ carouselId: carousel.id, seatId: seat.seatId, events: done.events });
+    }
+    let pool = carousel.pool;
+    const alive = this.aliveSeats();
+    if (carousel.roundId === '1-1') {
+      const opened = refreshSharedShops(pool, alive.map(seat => matches.get(seat.seatId)!), alive[0]!.match.round);
+      if (!opened.ok) return this.fail({ kind: 'carousel-error', reason: `first-shop:${opened.reason}` });
+      pool = opened.pool;
+      alive.forEach((seat, position) => matches.set(seat.seatId, opened.states[position]!));
+    }
+    for (const seat of alive) {
+      const resolved = this.withPendingResolved({ pool, state: matches.get(seat.seatId)!, events: events.get(seat.seatId)! });
+      pool = resolved.pool; matches.set(seat.seatId, resolved.state); events.set(seat.seatId, [...resolved.events]);
+    }
+    this.replace({ ...this.current, pool, poolRevision: pool.revision, carousel: null, carouselLedger: [...this.current.carouselLedger, ...ledger],
+      seats: this.current.seats.map(seat => {
+        const match = matches.get(seat.seatId);
+        if (!match || match === seat.match) return seat;
+        const seatRevision = seat.seatRevision + 1;
+        return { ...seat, match, seatRevision, serverEvents: { seatRevision, events: events.get(seat.seatId)! } };
+      }) });
     this.continueRound();
-  }
-  private autoPick(rules: CarouselRules, seat: SeatState, cause: CarouselAutoCause): boolean {
-    const result = rules.autoPick({ carousel: this.current.carousel!.rules, state: seat.match, seatId: seat.seatId });
-    if (!result.ok) { this.fail({ kind: 'carousel-error', reason: `${cause}:${result.reason}`, seatId: seat.seatId }); return false; }
-    this.commitCarousel(rules, seat.seatId, result);
-    return true;
   }
   /**
    * A player's pick (§21.1): the carousel id and revision it was decided on, then the clock catch-up (a pick at or after the
-   * deadline meets the automatic picks first), then the rules' pick and grant as one transaction.
+   * deadline meets the automatic picks first and then the rules' `carousel-closed`), then the rules' one pick-and-grant
+   * transaction (`pickCarouselForSeat`: a failed grant leaves the slot untaken).
    */
   private pickCarousel(seat: SeatState, command: CarouselPickCommand): RoomCommandResult {
-    const rules = this.options.carousel, carousel = this.current.carousel;
-    if (!rules || !carousel) return { ok: false, reason: 'wrong-phase', state: seat.match };
-    if (command.carouselId !== carousel.view.id || command.revision !== carousel.view.revision) return { ok: false, reason: 'stale-carousel', state: seat.match };
+    const rules = this.options.carousel, room = this.current.carousel;
+    if (!rules || !room) return { ok: false, reason: 'wrong-phase', state: seat.match };
+    if (command.carouselId !== room.state.id || command.revision !== room.state.revision) return { ok: false, reason: 'stale-carousel', state: seat.match };
     if (!this.catchUpCarousel(rules)) return { ok: false, reason: 'wrong-phase', state: seat.match };
+    const carousel = this.current.carousel!.state;
     const latest = this.current.seats.find(candidate => candidate.seatId === seat.seatId)!;
-    const result = rules.pick({ carousel: this.current.carousel!.rules, state: latest.match, seatId: seat.seatId, slot: command.slot });
+    if (this.carouselElapsed(this.current.carousel!.startedAt) >= carousel.deadlineMs) return { ok: false, reason: 'carousel-closed', state: latest.match };
+    const result = rules.pickCarouselForSeat(this.current.pool, carousel, latest.match, seat.seatId, command.slot);
     if (!result.ok) return { ok: false, reason: result.reason, state: latest.match };
-    this.commitCarousel(rules, seat.seatId, result);
+    this.publishCarousel(result.carousel, { seatId: seat.seatId, match: result.state }, result.events, null);
     const after = this.current.seats.find(candidate => candidate.seatId === seat.seatId)!;
-    return { ok: true, state: result.state, events: result.events, seatRevision: after.seatRevision, roomRevision: this.current.roomRevision };
+    const matchEvents = result.events.filter((event): event is MatchEvent => 'domain' in event);
+    return { ok: true, state: result.state, events: matchEvents, seatRevision: after.seatRevision, roomRevision: this.current.roomRevision };
   }
-  /** Publishes one pick and grant: the seat state, the pool and the carousel it was decided against, together. */
-  private commitCarousel(rules: CarouselRules, seatId: string, result: Extract<CarouselGrant, { ok: true }>): void {
-    const carousel = this.current.carousel!;
-    const receipt = rules.receiptId(result.carousel, seatId);
-    this.replace({ ...this.current, pool: result.pool, poolRevision: result.pool.revision,
-      carousel: { ...carousel, rules: result.carousel, view: rules.view(result.carousel), receipts: receipt ? { ...carousel.receipts, [seatId]: receipt } : carousel.receipts },
-      seats: this.current.seats.map(candidate => candidate.seatId === seatId ? { ...candidate, match: result.state, seatRevision: candidate.seatRevision + 1 } : candidate) });
+  /**
+   * Publishes one carousel transaction (§21.1 "原子发布"): the carousel, the pool it carries, the granted seat's state and
+   * every event it returned (into the carousel ledger and the seat's server events), in one room publication.
+   */
+  private publishCarousel(carousel: CarouselState, granted: { readonly seatId: string; readonly match: MatchState } | null, events: readonly (CarouselEvent | MatchEvent)[], auto: CarouselAutoCause | null): void {
+    const room = this.current.carousel!;
+    const seatId = granted?.seatId ?? null;
+    const matchEvents = events.filter((event): event is MatchEvent => 'domain' in event);
+    this.replace({ ...this.current, pool: carousel.pool, poolRevision: carousel.pool.revision,
+      carousel: { ...room, state: carousel, auto: auto && seatId ? { ...room.auto, [seatId]: auto } : room.auto },
+      carouselLedger: events.length > 0 ? [...this.current.carouselLedger, { carouselId: carousel.id, seatId, events }] : this.current.carouselLedger,
+      seats: granted === null ? this.current.seats : this.current.seats.map(candidate => {
+        if (candidate.seatId !== granted.seatId) return candidate;
+        const seatRevision = candidate.seatRevision + 1;
+        return { ...candidate, match: granted.match, seatRevision, serverEvents: { seatRevision, events: matchEvents } };
+      }) });
+  }
+  /** §21.5 "进入 preparation 时": each seat with queued carousel units gets the rules' placement, one seat transaction each. */
+  private resolvePendingOnEntry(): void {
+    for (const seat of this.aliveSeats()) {
+      const resolved = this.withPendingResolved({ pool: this.current.pool, state: seat.match, events: [] as readonly MatchEvent[] });
+      if (resolved.state === seat.match) continue;
+      const seatRevision = seat.seatRevision + 1;
+      this.replace({ ...this.current, pool: resolved.pool, poolRevision: resolved.pool.revision,
+        seats: this.current.seats.map(candidate => candidate.seatId === seat.seatId ? { ...candidate, match: resolved.state, seatRevision, serverEvents: { seatRevision, events: resolved.events } } : candidate) });
+    }
+  }
+  /**
+   * §21.5: in preparation, units a full bench queued are moved in (or merged) by the rules whenever a slot is free; the
+   * room only asks. A refusal or nothing to move leaves the transaction as it was.
+   */
+  private withPendingResolved<T extends { readonly pool: SharedPoolState; readonly state: MatchState; readonly events: readonly MatchEvent[] }>(result: T): T {
+    const rules = this.options.carousel;
+    if (!rules || !result.state.carousel?.pendingUnits.length || result.state.phase !== 'preparation') return result;
+    const resolved = rules.resolvePendingCarouselUnits(result.pool, result.state);
+    if (!resolved.ok || resolved.state === result.state) return result;
+    return { ...result, pool: resolved.pool, state: resolved.state, events: [...result.events, ...resolved.events] };
   }
 
   /**
@@ -641,7 +729,7 @@ export class Room {
     const alive = this.aliveSeats();
     const committed = this.current.settlements.includes(`${this.current.roomId}:round-${this.current.round}`);
     if (committed) return this.setPhase('settlement', this.options.settlementMs);
-    if (alive.every(seat => seat.match.phase === 'preparation')) return this.setPhase('preparation', this.options.preparationMs);
+    if (alive.every(seat => seat.match.phase === 'preparation')) { this.resolvePendingOnEntry(); return this.setPhase('preparation', this.options.preparationMs); }
     // A supply round settles inside the choice itself; the rules left nothing to fight.
     if (alive.every(seat => seat.match.phase === 'settlement')) return this.freezeAndResolve();
     this.fail({ kind: 'phase-mismatch', detail: alive.map(seat => `${seat.seatId}:${seat.match.phase}`).join(',') });
