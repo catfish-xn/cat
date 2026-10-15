@@ -73,7 +73,7 @@ export interface PlayerViewPhase {
   readonly serverNow: number;
 }
 /** Why a room ended abnormally; `detail` is already human-readable text chosen by the server. */
-export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable';
+export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable' | 'stalled' | 'abandoned';
 export interface PlayerViewFault { readonly kind: PlayerViewFaultKind; readonly detail: string }
 export interface PlayerView {
   readonly mySeatId: string;

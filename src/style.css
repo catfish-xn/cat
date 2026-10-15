@@ -456,3 +456,8 @@ body[data-online-spectating] .choice-overlay { display: none !important; }
 .consumable-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; background: #2b3f52; color: #9ff0e4; font-size: 12px; font-weight: 700; }
 .consumable-candidate { outline: 2px dashed #68ddd0 !important; outline-offset: -2px; }
 .consumable-hint { color: #9ff0e4 !important; }
+
+/* G3: build / digest label, bottom-right, never in the way of input. */
+.build-badge { position: fixed; right: 6px; bottom: 4px; z-index: 40; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; pointer-events: none;
+  font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #8fa3b0; opacity: .6; text-shadow: 0 1px 2px #000; }
+.build-badge.mismatch { color: #f0a070; opacity: 1; }

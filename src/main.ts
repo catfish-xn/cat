@@ -5,8 +5,10 @@ import { createAppShell } from './rendering/app-shell';
 import { BOARD_LAYOUT } from './rendering/layout-config';
 import { applyThemeVariables } from './presentation/theme';
 import { installImageFallback } from './presentation/s13-assets';
+import { mountBuildBadge } from './rendering/build-badge';
 applyThemeVariables();
 const removeImageFallback = installImageFallback();
+const removeBuildBadge = mountBuildBadge(document.body);
 const app = document.getElementById('app')!;
 const shell = createAppShell(app);
 const board = shell.board;
@@ -48,7 +50,7 @@ new Phaser.Game({
         for (const type of mouseEvents) game.canvas.removeEventListener(type, ignoreTouchMouse, true);
         for (const type of geometryEvents) game.canvas.removeEventListener(type, updateInputBounds, true);
         window.removeEventListener('scroll', updateInputBounds, true);
-        observer.disconnect(); shell.dispose(); removeImageFallback();
+        observer.disconnect(); shell.dispose(); removeImageFallback(); removeBuildBadge();
         if (frame !== null) cancelAnimationFrame(frame);
       });
     },
