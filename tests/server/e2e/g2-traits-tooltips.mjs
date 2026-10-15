@@ -154,7 +154,8 @@ async function main() {
           const text = await hoverText(page, 'unit-card', () => page.mouse.move(token.screenX, token.screenY));
           const key = await page.evaluate(() => document.getElementById('unit-card')?.dataset.key ?? null);
           const vars = await leftoverVariables(page, unit.definitionId, text ?? '');
-          check(key === `unit:${unit.definitionId}:${unit.starLevel}` && Boolean(text) && vars.leftover.length === 0, `canvas hover on ${unit.id} opens its card (${key}, left: ${vars.leftover.join(',') || 'none'})`);
+          // G5 (#109) appends the unit's battle-stats part to the canvas card's key (`unit:<id>:<star>:<stats>`, empty before any battle).
+          check(key?.startsWith(`unit:${unit.definitionId}:${unit.starLevel}:`) && Boolean(text) && vars.leftover.length === 0, `canvas hover on ${unit.id} opens its card (${key}, left: ${vars.leftover.join(',') || 'none'})`);
           await page.screenshot({ path: `${OUT}/unit-card-board.png` });
           await page.mouse.move(5, 5); await sleep(150);
           check(await page.evaluate(() => document.getElementById('unit-card')?.hidden), 'leaving the token closes the card');
