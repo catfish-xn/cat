@@ -14,7 +14,6 @@ import { deriveTraits } from '../simulation/trait-snapshot';
 import { getUnitStats, getXpToNextLevel, getShopOdds, needsAnomalyRecruitment } from '../simulation/match';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import type { UnitLocation } from '../simulation/units';
-import type { Effect } from '../simulation/strategy-types';
 import type { CombatOrigin } from '../simulation/combat-types';
 import type { CombatState } from '../simulation/combat-types';
 import { isLedgerEvent, type CombatViewState, type SceneCombatEvent } from '../presentation/combat-display';
@@ -27,6 +26,10 @@ import { getDeploymentCap } from '../simulation/match';
 import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitLabels } from '../presentation/hero-identity';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
+import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
+import { traitHoverCard } from '../presentation/hover-card';
+import { attachUnitCards } from '../presentation/unit-card';
+import { TraitColumn } from './trait-column';
 import { attachItemPopover, catalogEntry, createItemCodex, itemDescriptions, itemMarkHtml, itemTags } from '../presentation/item-codex';
 import { previewCombine, previewEquip, readUnitEquipment } from '../simulation/item-selectors';
 import { allowedPreviewText, battleLoadout, battleLoadoutText, combinationResult, equipmentFailureText, NEXT_BATTLE_TEXT, pickUnitDropSlot, routeSlotDrop, slotList, slotViews, temporaryItemText, type BattleLoadout } from '../presentation/equipment-feedback';
@@ -96,59 +99,12 @@ function traitLine(definitionId: string): HTMLElement {
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
   const node = document.createElement(tag); node.textContent = text; node.className = className; return node;
 }
-const TERM: Readonly<Record<string,string>> = {
-  health:'生命', maxHp:'最大生命', attack:'攻击力', attackDamage:'攻击力', armor:'护甲', magicResist:'魔抗', abilityPower:'法强', initialMana:'初始法力', maxMana:'最大法力', attackRange:'射程',
-  attackSpeed:'攻速', attackSpeedBps:'攻速', range:'射程', stun:'眩晕', damageReduction:'减伤', armorReduction:'护甲削减', resistanceFlat:'双抗', channel:'引导', redirect:'伤害分担',
-  combatStart:'开战时', onAttack:'普攻时', onCast:'施法时', onHpLoss:'损失生命时', physical:'物理', magic:'魔法',
-  ability:'技能', trait:'羁绊', item:'装备', augment:'强化', anomaly:'异常', enemyGrowth:'敌方成长',
-};
-const term = (value: string) => TERM[value] ?? value;
+export { describeEffect, describeTraitTier };
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
 const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
 /** C18-B: a tool whose content-table target kind is a unit (the remover). */
 const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
 const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? TRAIT_DEFINITIONS[id]?.name ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
-export function describeEffect(effect: Effect): string {
-  if (effect.kind === 'mechanic') {
-    const v = effect.values, pct = (key: string) => `${v[key] / 100}%`;
-    const descriptions: Record<string, string> = {
-      rageblade: `每次普攻叠加 ${pct('attackSpeedBps')} 攻速`, damageAmp: `伤害增幅 ${pct('bps')}`,
-      extraAttackMana: `每次普攻额外 ${v.amount} 法力${v.backRowOnly ? '（最后一排）' : ''}`,
-      archangel: `每 ${v.periodTicks * .05} 秒增加 ${v.abilityPower} 法强`, dragonClaw: `每 ${v.periodTicks * .05} 秒治疗 ${pct('healMaxHpBps')} 最大生命`,
-      gargoyle: `每个以持有者为目标的敌人增加 ${v.resistPerEnemy} 双抗`, gunblade: `实际伤害的 ${pct('selfHealBps')} 自疗、${pct('allyHealBps')} 治疗最低生命比例友军`,
-      artillery: `每 ${v.everyN} 次普攻造成 ${pct('adBps')} 攻击力 范围物理伤害`, sniper: `每格距离增加 ${pct('damageBpsPerHex')} 伤害`,
-      watcher: `减伤 ${pct('reductionBps')}；生命超过 ${pct('thresholdBps')} 时为 ${pct('healthyReductionBps')}`,
-      acquisitionGold: `立即获得 ${v.amount} 金币`, glassCannon: `最后一排初始生命 ${pct('startingHealthBps')}、伤害增加 ${pct('damageAmpBps')}`,
-      pumpingUp: `每轮增加 ${pct('attackSpeedBpsPerRound')} 攻速`, investment: `每点利息永久增加 ${v.healthPerInterest} 生命`,
-      bulkyBuddies: `相邻双人组获得 ${v.health} 生命，触发 ${pct('shieldMaxHpBps')} 最大生命护盾，持续 ${v.durationTicks * .05} 秒`,
-      titanic: `普攻附加 ${pct('adBps')} 攻击力 物理伤害，命中目标及相邻格`, mageArmor: `获得最终法强 ${pct('apBps')} 的双抗`, killStreak: `击杀后存活获得 ${v.mana} 法力`,
-    };
-    return descriptions[effect.mechanic] ?? effect.mechanic;
-  }
-  if (effect.kind === 'statFlat') return `${term(effect.stat)} +${effect.amount}`;
-  if (effect.kind === 'statPercentBps') return `${term(effect.stat)} +${effect.bps / 100}%`;
-  if (effect.kind === 'attackSpeedBps') return `攻速 +${effect.bps / 100}%`;
-  const action = effect.action;
-  const result = action.kind === 'grantShield' ? `护盾 ${action.amount} / ${action.durationTicks * 50 / 1000}s`
-    : action.kind === 'gainMana' ? `法力 +${action.amount}` : `${term(action.damageType)}伤害 ${action.amount}`;
-  return `${term(effect.hook)}${effect.everyN > 1 ? ` 每${effect.everyN}次` : ''} → ${result}`;
-}
-
-/** Describe authored benefits by audience; merge additive flat stats for the member total. */
-export function describeTraitTier(definition: import('../simulation/strategy-types').TraitDefinition,
-  tier: import('../simulation/strategy-types').TraitTier): string {
-  const text = (effects: readonly Effect[]) => effects.map(describeEffect).join('；') || '无';
-  const combined: Effect[] = [];
-  for (const effect of [...tier.effects, ...(tier.memberEffects ?? [])]) {
-    const index = effect.kind === 'statFlat' ? combined.findIndex(value => value.kind === 'statFlat' && value.stat === effect.stat) : -1;
-    const prior = combined[index];
-    if (index >= 0 && prior.kind === 'statFlat' && effect.kind === 'statFlat') combined[index] = { ...prior, amount: prior.amount + effect.amount };
-    else combined.push(effect);
-  }
-  return `${tier.threshold}：${definition.target === 'team' ? '全队收益' : '职业成员收益'}：${text(tier.effects)}`
-    + (tier.memberEffects?.length ? `；职业成员额外收益：${text(tier.memberEffects)}；职业成员最终合计：${text(combined)}` : '');
-}
-
 const CHOICE_POINTER_QUIET_MS = 400;
 const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
@@ -158,6 +114,8 @@ export class StrategyPanel {
   private readonly root: HTMLElement;
   private readonly modal: HTMLElement;
   private readonly disposers: (() => void)[] = [];
+  /** G2: always-visible trait column above the panel (its own mount, so render() replacing the panel keeps it). */
+  private readonly traitColumn: TraitColumn;
   private selectedItems: string[] = [];
   /** C18-B: the consumable picked for targeting (use not wired yet, contract §18.1). */
   private selectedConsumable: string | null = null;
@@ -192,6 +150,9 @@ export class StrategyPanel {
     this.modal.setAttribute('aria-label', '构筑选择'); this.modal.tabIndex = -1; this.modal.hidden = true;
     document.body.append(this.modal);
     this.disposers.push(attachItemPopover(this.root));
+    this.traitColumn = new TraitColumn(this.root.parentElement ?? document.body, this.root, traitHoverCard());
+    this.disposers.push(() => this.traitColumn.dispose(), attachUnitCards(this.root));
+    if (this.shopDock) this.disposers.push(attachUnitCards(this.shopDock));
     const choiceVisible = () => !this.modal.hidden && getComputedStyle(this.modal).display !== 'none';
     // The help dialog sits above every game layer: while it is open the choice is inert and never takes focus.
     const helpOpen = () => document.body.dataset.helpOpen === 'true';
@@ -417,6 +378,7 @@ export class StrategyPanel {
     const operable = this.operable(state);
     this.selectedItems = this.selectedItems.filter(id => state.items.some(item => item.id === id && item.location.kind === 'inventory'));
     this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.eventList = null;
+    this.traitColumn.render(state.preparation);
     const online = isOnline(), ended = isOnlineEnded(), dock = this.shopDock;
     const round = readRoundInfo(state), xp = getXpToNextLevel(state.level), interest = getInterestGold(state.gold);
     const lootView = readLootView(state);
@@ -749,7 +711,8 @@ export class StrategyPanel {
     const roster = element('div', '', 'unit-roster');
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player')) {
       const button = this.button(`mobile:unit:${unit.id}`, `${displayUnitName(unit.definitionId)} ${'★'.repeat(unit.starLevel)} · ${unit.location.kind === 'bench' ? '备战席' : `(${unit.location.cell.col},${unit.location.cell.row})`}${state.anomalyBinding?.unitId === unit.id ? ' ◈' : ''}`, () => { this.actions.selectUnit(unit.id); this.render(); });
-      button.setAttribute('aria-pressed', String(this.actions.selectedUnit() === unit.id)); roster.append(button);
+      button.setAttribute('aria-pressed', String(this.actions.selectedUnit() === unit.id)); button.dataset.unitDef = unit.definitionId; button.dataset.unitStar = String(unit.starLevel);
+      roster.append(button);
     }
     section.append(roster);
     const grid = element('div', '', 'deployment-grid'), zone = state.preparation.board.deploymentZones.player;
@@ -977,6 +940,7 @@ export class StrategyPanel {
       if (definition) {
         const identity = getHeroIdentity(definition.id);
         button.dataset.cost = String(definition.cost); button.classList.toggle('unaffordable', !affordable);
+        button.dataset.unitDef = definition.id; button.dataset.unitStar = '1';
         const emblem = element('span', '', 'shop-emblem'); emblem.innerHTML = heroPortraitHtml(definition.id, 34, heroEmblemSvg(definition.id, 34));
         button.append(emblem, element('span', identity.name, 'shop-name'), traitLine(definition.id), element('span', `${definition.cost}`, 'shop-cost'));
         button.setAttribute('aria-label', `购买 ${identity.name}，${definition.cost} 金币${affordable ? '' : '，金币不足'}`);

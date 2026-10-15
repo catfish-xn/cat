@@ -26,6 +26,8 @@ import { createCombatFeedbackRenderer, type CombatFeedbackRenderer } from '../st
 import type { SessionChange } from '../m6/contracts';
 import { UnitView, type RingState } from '../presentation/unit-view';
 import { getHeroIdentity } from '../presentation/hero-identity';
+import { unitHoverCard } from '../presentation/hover-card';
+import { unitCardBody } from '../presentation/unit-card';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
@@ -722,7 +724,7 @@ export class BoardScene extends Phaser.Scene {
   }
   update(_time: number, delta: number) {
     if (this.application && !this.application.frame(delta)) { if (document.body.dataset.m6Mode === 'replay') this.renderReplayFeedback(); return; }
-    this.renderFeedback(); this.syncLoadoutTip();
+    this.renderFeedback(); this.syncLoadoutTip(); this.syncUnitCard();
     if (performance.now() - this.lastStatsRender > 250) this.renderActiveStats();
     if (this.session.phase !== 'combat') { this.syncSelection(); return; }
     if (this.session instanceof RemoteSession && this.session.takeOpening()) this.showOpening();
@@ -736,6 +738,25 @@ export class BoardScene extends Phaser.Scene {
       this.syncHud(); this.strategyPanel?.render(); this.setStatus(this.session.state.phase === 'choice' ? '战斗已结算 · 请选择本轮组件奖励' : this.session.state.phase === 'gameOver' ? this.endText() : this.settledText());
     }
   }
+  /**
+   * G2: hovering a unit on the board or bench opens its description card (cost, traits, ability, base stats) beside the
+   * token; never while dragging. The card is shared with the DOM anchors and closed here only when this scene opened it.
+   */
+  private syncUnitCard() {
+    const id = this.draggingId ? undefined : this.hoveredId();
+    const token = id ? this.tokens.get(id) : undefined;
+    const unit = id ? this.state.units.find(candidate => candidate.id === id) ?? this.session.combatView?.units.find(candidate => candidate.id === id) : undefined;
+    if (!token || !unit || !UNIT_DEFINITIONS[unit.definitionId]) {
+      if (this.unitCardOpen) { this.unitCardOpen = false; unitHoverCard().hide(); }
+      return;
+    }
+    const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width, half = 29 * scale;
+    const x = canvas.left + token.x * scale, y = canvas.top + token.y * scale;
+    unitHoverCard().showAt({ left: x - half, top: y - half, right: x + half, bottom: y + half }, `unit:${unit.definitionId}:${unit.starLevel}`,
+      () => unitCardBody(unit.definitionId, unit.starLevel)!);
+    this.unitCardOpen = true;
+  }
+  private unitCardOpen = false;
   /** C18: hovering a fighting unit names the battle's loadout and the next one, when an equip changed it mid-battle. */
   private syncLoadoutTip() {
     const view = this.session.combatView, id = view ? this.hoveredId() : undefined;
