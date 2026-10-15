@@ -86,8 +86,8 @@ function describe(entry: Entry): HTMLElement {
  * A scroll keeps a still-focused, still-visible keyboard anchor (native Tab scrolls the
  * focused item into view) and only closes hover anchors. Never intercepts pointers.
  */
-export function attachItemPopover(scope: HTMLElement): () => void {
-  const pop = el('div', '', 'item-popover'); pop.setAttribute('role', 'tooltip'); pop.id = 'item-popover'; pop.hidden = true; pop.dataset.debugItemPopover = 'true';
+export function attachItemPopover(scope: HTMLElement, id = 'item-popover'): () => void {
+  const pop = el('div', '', 'item-popover'); pop.setAttribute('role', 'tooltip'); pop.id = id; pop.hidden = true; pop.dataset.debugItemPopover = 'true';
   document.body.append(pop);
   let anchor: HTMLElement | null = null, via: 'hover' | 'focus' = 'hover';
   const usable = (node: HTMLElement) => {
