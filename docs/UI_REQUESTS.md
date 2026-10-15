@@ -901,3 +901,16 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **技能名**：content 公开导出里没有技能名（只在 `source/s13-14.24.json` 原档的 `ability.name`）。请在 `S13_ABILITY_DATA` 增加 `name`（最好再给中文名），界面直接显示。
 - **计算后的数值**：模板里的 `@ModifiedShield@`、`@ModifiedDamage@`、`@TotalDamage@` 等是规则按法强/攻击力换算的总值，`variables` 里没有，目前原样显示。请导出只读选择器，例如 `abilityDisplayValues(definitionId, starLevel): Record<string, number>`（按基础法强/攻击力，不含装备与羁绊），界面用它补全这些占位。
 - **验收**：19 名现有英雄 1–3 星的说明文字里不再出现 `@...@`；界面不自行换算。
+
+## G1-P7 选秀：服务器与界面接线（2026-10-15，Claude 流水线 B/C）
+
+### 已交付（绑定 Codex P7 规则，无需 Codex 动作）
+
+- 端口：`src/server/room/carousel.ts` 的 `CAROUSEL_RULES_BINDING` 直接绑定 server-entry 的 P7 导出（createCarouselMatch / opensCarousel / prepareCarouselParticipants / createCarousel / advanceCarousel / pickCarouselForSeat / autoPickCarouselForSeat / completeCarouselForSeat / releaseCarouselParticipant / resolvePendingCarouselUnits / sellPendingCarouselUnit / listCarouselSlots）；测试用假规则已删除。
+- 房间：开启选秀时八席用 `createCarouselMatch` 开局，1-1 前奏关闭后才 `refreshSharedShops` 发首店；x-4 由 `completeCarouselForSeat` 结算后走原有结算/推进；每笔 pick/autoPick 的返回事件与新盘、池、席位状态同一次发布（席位 serverEvents + 房间选秀账本）。准备期进入时及每次准备期命令后调用 `resolvePendingCarouselUnits`；对排队单位的 `sell` 走 `sellPendingCarouselUnit`。
+- 网络：`NET_PROTOCOL_VERSION` 3，命令 `{type:'carousel-pick', carouselId, revision, slot}`；`PlayerView.carousel` 公开槽取自 `listCarouselSlots`，另有本席 `eligible/pickedSlot/receiptId` 与公开 `autoPicked`。`main.ts` 默认开启（`CAT_CAROUSEL=0` 仅供旧 e2e）。
+- 界面：选秀圆盘、批次与倒计时、放行时可选单位高亮、他人已选灰显并标注、自动选提示、满备战席排队条（可出售）。
+
+### 说明（无需动作）
+
+- `releaseCarouselParticipant` 已绑定但房间当前没有调用点：淘汰只在战斗结算提交时发生，而选秀阶段只在回合进入时开、截止+2 秒后关，二者不重叠；盘关闭后的淘汰沿用 `releaseSeatOnElimination`（八席整局单测与 e2e 跑到终局无守恒错误）。若规则侧认为关闭后的盘仍需经它释放，请在合同写明。

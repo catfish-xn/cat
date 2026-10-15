@@ -17,7 +17,7 @@ export const ROOM_PROTOCOL_VERSION = 1;
  * its settlement proposals and waits for the rules' commit entry (T3); until T3 lands the room
  * faults there with `settlement-unavailable`.
  */
-export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'awaiting-settlement' | 'settlement' | 'ended';
+export type RoomPhase = 'waiting' | 'carousel' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'awaiting-settlement' | 'settlement' | 'ended';
 export type SeatKind = 'human' | 'bot';
 /**
  * Who issues this seat's commands right now (B6): its human player, a fill-in bot (`kind: 'bot'`, for the whole
@@ -70,8 +70,51 @@ export interface ReplayUnitId { readonly combatId: string; readonly originalId: 
  * Base income, drops, XP and HP are not part of it. The client shows it as given and never recomputes it.
  */
 export type SeatStateView = PrivateSeatView & { readonly economyPreview: RoundEconomyPreview | null };
-/** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. */
-export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'combat' | 'settlement' | 'ended';
+/** Phase as the client sees it: `frozen` and `battle` both show as `combat`, `waiting` as `lobby`. G1-P7 adds `carousel`. */
+export type PlayerViewPhaseKind = 'lobby' | 'preparation' | 'choice' | 'carousel' | 'combat' | 'settlement' | 'ended';
+
+/* ---------------- G1-P7 shared carousel (选秀), MULTIPLAYER_CONTRACT §21.1 ---------------- */
+
+/** One unit standing on the carousel with what it carries; the same for every seat (`listCarouselSlots`, field by field). */
+export interface CarouselSlotView {
+  /** Slot index (0–8); the `carousel-pick` command names it. */
+  readonly slot: number;
+  readonly definitionId: string;
+  readonly starLevel: number;
+  /** Item definition ids the unit carries (one component, or one completed item from 5-4). */
+  readonly items: readonly string[];
+  /** Seat that took it; null while it still stands. */
+  readonly pickedBy: string | null;
+}
+/**
+ * The carousel of the current round (§21.1 public projection) plus this seat's own part. Every field is copied from the
+ * rules' carousel state; times are the rules' logical milliseconds since the carousel opened, `startedAt` is the server
+ * clock at logical 0 so the client can count down. The client decides nothing (who is released, what is left).
+ */
+export interface CarouselView {
+  readonly id: string;
+  readonly roundId: string;
+  readonly roundName: string;
+  readonly revision: number;
+  readonly status: 'open' | 'closed';
+  readonly slots: readonly CarouselSlotView[];
+  /** Release order frozen at creation (lowest HP first, seat index on a tie). */
+  readonly releaseOrder: readonly string[];
+  /** Logical ms at which each seat may pick. */
+  readonly releaseAtMs: Readonly<Record<string, number>>;
+  readonly elapsedMs: number;
+  /** Logical ms at which every seat still without a unit is picked for; the phase ends there (option B). */
+  readonly deadlineMs: number;
+  /** Server clock (ms) at logical 0. */
+  readonly startedAt: number;
+  /** My seat is released, alive and has not picked yet. */
+  readonly eligible: boolean;
+  /** Slot my seat took (by hand or automatically); null until then. */
+  readonly pickedSlot: number | null;
+  readonly receiptId: string | null;
+  /** Seats the server picked for (a bot, a disconnected player, or nobody clicked by the deadline). */
+  readonly autoPicked: readonly string[];
+}
 export interface PlayerViewPhase {
   readonly kind: PlayerViewPhaseKind;
   readonly round: number;
@@ -82,7 +125,7 @@ export interface PlayerViewPhase {
   readonly serverNow: number;
 }
 /** Why a room ended abnormally; `detail` is already human-readable text chosen by the server. */
-export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable' | 'stalled' | 'abandoned';
+export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable' | 'stalled' | 'abandoned' | 'carousel-error';
 export interface PlayerViewFault { readonly kind: PlayerViewFaultKind; readonly detail: string }
 export interface PlayerView {
   readonly mySeatId: string;
@@ -99,6 +142,8 @@ export interface PlayerView {
    * always fills it.
    */
   readonly opponentCandidates?: readonly string[];
+  /** G1-P7: the shared carousel while the room is in its carousel phase; null or absent otherwise. */
+  readonly carousel?: CarouselView | null;
   /** Full ranking once the match ended normally. */
   readonly ranking: readonly SeatPublic[] | null;
   /** Set when the room ended abnormally (then `ranking` stays null). */
@@ -138,5 +183,12 @@ export type ClientCommand =
   | { readonly type: 'anomalyTarget'; readonly choiceId: string; readonly generation: number; readonly unitId: string }
   | { readonly type: 'anomalyReroll'; readonly choiceId: string; readonly generation: number };
 export type ConsumableCommand = Extract<ClientCommand, { type: 'useConsumable' }>;
-/** Every command a seat may send over the wire (contract §18.8: an alias of ClientCommand since T13-B). */
-export type WireCommand = ClientCommand;
+/**
+ * G1-P7 (MULTIPLAYER_CONTRACT §21.1): take the unit on carousel slot `slot` of carousel `carouselId` as seen at `revision`
+ * (another id or revision is `stale-carousel`). The seat is the connection's. Not a match.ts seat command: the room hands it
+ * to the rules' pick and grant, which decide everything. Kept out of ClientCommand so the bot policy and its helpers,
+ * which map ClientCommand 1:1 to match.ts, are unchanged.
+ */
+export interface CarouselPickCommand { readonly type: 'carousel-pick'; readonly carouselId: string; readonly revision: number; readonly slot: number }
+/** Every command a seat may send over the wire: the match.ts commands (§18.8) plus the carousel pick (G1-P7). */
+export type WireCommand = ClientCommand | CarouselPickCommand;
