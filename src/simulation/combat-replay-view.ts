@@ -1,3 +1,4 @@
+import { freezeCombatDeclarations } from './combat-static';
 import type { CombatState, CombatUnit, LedgerCombatEvent } from './combat-types';
 import { stepCombat } from './combat';
 import { toLedgerEvents } from './combat-ledger';
@@ -75,9 +76,18 @@ export interface CombatReplayTask {
   advance(maxTicks: number): CombatReplay | null;
 }
 
+// Scalar view fields need no serialization. Objects and non-finite numbers keep
+// the original JSON comparison, including its getter and null coercion behavior.
+function equalViewField(a: unknown, b: unknown): boolean {
+  if (typeof a === typeof b && (typeof a === 'string' || typeof a === 'boolean'
+    || typeof a === 'number' && Number.isFinite(a) && Number.isFinite(b))) return a === b;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 /** Trusted complete PvP/PvE battle. Own the input across scheduling pauses. */
 export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   const battle = structuredClone(input);
+  battle.initial.units.forEach(unit => freezeCombatDeclarations(unit));
   if (battle.initial.tick !== 0 || battle.terminal.status !== 'finished'
     || battle.terminal.tick > 1200 || battle.terminal.tick < 0) throw new RangeError('invalid-replay-input');
   const initial = toCombatViewState(battle.initial), terminal = toCombatViewState(battle.terminal);
@@ -102,7 +112,7 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
       for (let i = 0; i < view.units.length; i++) {
         const unit = view.units[i], before = previous.units[i];
         const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
-          && JSON.stringify(value) !== JSON.stringify(before[key as keyof CombatViewUnit])));
+          && !equalViewField(value, before[key as keyof CombatViewUnit])));
         if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
       }
       ticks.push({ tick: state.tick, events,

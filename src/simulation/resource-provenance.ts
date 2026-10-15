@@ -1,3 +1,4 @@
+import { shareGeneratedJson } from './immutable-json';
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
 import { freezeContent, isFrozenContent } from './content/freeze';
 import { ITEM_DEFINITIONS } from './content/items';
@@ -109,7 +110,7 @@ export function appendResourceProvenance(
   requireValue(!provenance.entries.length || getMultiplayerRoundById(provenance.entries.at(-1)!.roundId).ordinal <= round.ordinal, 'round order');
   const added = Array.isArray(facts) ? facts : [facts];
   plainJson(added);
-  return freezeContent({ version: RESOURCE_PROVENANCE_VERSION,
+  return shareGeneratedJson({ version: RESOURCE_PROVENANCE_VERSION,
     entries: [...(isFrozenContent(provenance.entries) ? provenance.entries : structuredClone(provenance.entries)), ...added.map((fact, index) => ({
       ...structuredClone(fact), sequence: provenance.entries.length + index, roundId,
     }))] });
@@ -227,9 +228,10 @@ function validateUpgrade(event: UnitUpgradedEvent): void {
  * Match against its independently validated basis and the existing planPurchase implementation.
  * This does not authenticate jointly forged historical shop commands or historical combat events.
  */
-export function foldResourceProvenance(value: unknown, context: ResourceProvenanceContext): FoldedResourceProvenance {
+export function foldResourceProvenance(value: unknown, context: ResourceProvenanceContext, parsedJsonInput = false): FoldedResourceProvenance {
   getCatalogRoundByOrdinal(context.throughRoundOrdinal);
-  plainJson(value); keys(value, ['version', 'entries']);
+  if (!parsedJsonInput) plainJson(value);
+  keys(value, ['version', 'entries']);
   requireValue(value.version === RESOURCE_PROVENANCE_VERSION && Array.isArray(value.entries) && value.entries.length > 0, 'version/opening');
   const entries = value.entries as ResourceProvenanceEntry[];
   const prefixLength = context.prefixLength ?? entries.length;

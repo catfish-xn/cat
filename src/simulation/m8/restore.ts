@@ -2,7 +2,7 @@ import { isDeclaredStatus, validateItemEffectConsumption, declaredEffects, valid
 import { canonicalSource } from './identity';
 /** Development saves may only contain programs produced by the enabled content compiler. */
 import type { CombatUnit } from '../combat-types';
-import { canonicalContent } from '../content';
+import { canonicalContent, equalValidatedContent } from '../content';
 import { getUnitStats } from '../unit-stats';
 import { sourceKey } from '../combat-s13-state';
 import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from './s13-definitions';
@@ -11,9 +11,9 @@ import { validateStatusGroups } from './status';
 import { validatePeriodicTask } from './periodic';
 import { validateShield } from './shield';
 import { integer } from './stats';
-const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`Invalid Match save: ${message}`); }
-export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set()): void {
+export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set(), parsedJsonInput = false): void {
+  const same = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const state = unit.mechanismState, definitions = unit.mechanismDefinitions;
   check(state && definitions && state.initialized === true && state.combatId === combatId && state.sampledAtTick === tick, 'mechanism initialization/namespace');
   const compiled = compileMechanismDefinitions(unit, combatId);

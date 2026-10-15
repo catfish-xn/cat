@@ -48,7 +48,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: node scripts/ci-m5-step.cjs install npm ci
-      - run: node scripts/ci-m5-step.cjs tests npm test
+      - name: Fast tests (parallel)
+        run: node scripts/ci-m5-step.cjs tests npm test
+      - name: Timing tests (one worker, serial files)
+        run: node scripts/ci-m5-step.cjs timing npm run test:timing
       - run: node scripts/ci-m5-step.cjs build npm run build
       - run: node scripts/ci-m5-step.cjs headless npm run test:headless
       - run: M5_EVIDENCE_DIR=artifacts/m5-performance node scripts/ci-m5-step.cjs performance npm run test:performance

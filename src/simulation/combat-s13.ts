@@ -1,3 +1,4 @@
+import { freezeCombatDeclarations, sharedCombatDeclarations } from './combat-static';
 import { startingRows } from './m8/targeting';
 import { planOpening, commitOpening, advanceOpeningTasks } from './m8/opening';
 import { targetUnit } from './m8/s13-targeting';
@@ -41,7 +42,7 @@ function move(state: CombatState, unit: S13Unit, target: S13Unit, occupied: Read
   }
   return undefined;
 }
-function defenses(unit: S13Unit, physical: boolean, tick: number, units: readonly S13Unit[]): number {
+function defenses(unit: S13Unit, physical: boolean, tick: number, units: CombatState['units']): number {
   const stat = physical ? 'armor' : 'magicResist';
   const modifiers: StatModifier[] = [...statusModifiers(unit, stat, tick), ...active(unit, tick, 'resistanceFlat').filter(s => !s.contributionKeys && (physical || !s.key.includes(':armor:'))).map(s => constantModifier(stat, s.amount))];
   for (const m of unit.mechanics ?? []) if (m.mechanic === 'gargoyle') modifiers.push({ ...constantModifier(stat, 0),
@@ -57,7 +58,9 @@ export function readCombatStats(unit: CombatState['units'][number], state: Comba
 } {
   const working = (u: CombatState['units'][number]): S13Unit => ({ ...u, runtime: { ...EMPTY_RUNTIME, ...u.runtime },
     statuses: [...u.statuses ?? []], tasks: [...u.tasks ?? []], shieldLayers: [...u.shieldLayers ?? []] });
-  const current = working(unit), units = state.units.map(working);
+  // defenses only reads identity/alive/target fields of other units.
+  // It needs no detached runtime for those read-only samples.
+  const current = working(unit), units = state.units;
   return { attackDamage: ad(current), abilityPower: ap(current, state.tick), attackIntervalTicks: interval(current, state.tick),
     attackRange: range(current), armor: defenses(current, true, state.tick, units), magicResist: defenses(current, false, state.tick, units) };
 }
@@ -97,13 +100,18 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const units: S13Unit[] = state.units.map(unit => {
     // Legacy mutable fields are detached once. Frozen mechanism declarations and
     // ledgers use copy-on-write updates; sharing them preserves historical inputs.
-    const copy = structuredClone({ ...unit,
+    const shared = sharedCombatDeclarations(unit);
+    const omitted = Object.fromEntries(Object.keys(shared).map(key => [key, undefined]));
+    const copy = structuredClone({ ...unit, ...omitted,
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: undefined } : {}),
       ...(unit.mechanismState ? { mechanismState: undefined } : {}),
       ...(unit.triggerLedger ? { triggerLedger: undefined } : {}) });
+    // A mutable checkpoint is copied first. Only our new declarations freeze;
+    // the caller retains its independent mutable input. Later ticks can share.
+    freezeCombatDeclarations(copy);
     // The native clone is fresh and has not escaped. Assign the overrides to it
     // instead of spreading the entire detached unit into a second large object.
-    return Object.assign(copy, {
+    return Object.assign(copy, { ...shared,
       ...(unit.mechanismDefinitions ? { mechanismDefinitions: unit.mechanismDefinitions } : {}),
       ...(unit.mechanismState ? { mechanismState: unit.mechanismState } : {}),
       ...(unit.triggerLedger ? { triggerLedger: unit.triggerLedger } : {}),

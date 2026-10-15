@@ -1,8 +1,9 @@
+import { snapshotData } from './snapshot';
 import type { BattleRecord } from '../m6/contracts';
 import { CHECKPOINT_INTERVAL_TICKS } from '../m6/limits';
 import { COMBAT_TICK_MS, stepCombat, type CombatState } from '../simulation/combat';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
-import { deepFreeze, equalContent, validateBattleRecord } from './history';
+import { deepFreeze, equalContent, isOwnedBattleRecord, validateBattleRecord } from './history';
 
 export interface ReplaySnapshot {
   readonly combat: CombatState; readonly events: readonly LedgerCombatEvent[];
@@ -21,8 +22,8 @@ export class PlaybackSession {
   constructor(record: BattleRecord) {
     const verified = validateBattleRecord(record);
     if (verified.terminal.status !== 'finished') throw new Error('只能回放已完成战斗');
-    this.record = deepFreeze(structuredClone(record)); this.state = structuredClone(record.initial);
-    this.checkpoints.set(0, structuredClone(this.state));
+    this.record = isOwnedBattleRecord(record) ? record : deepFreeze(structuredClone(record)); this.state = snapshotData(record.initial);
+    this.checkpoints.set(0, snapshotData(this.state));
   }
   private requireRecord(): BattleRecord { if (!this.record) throw new Error('回放已关闭'); return this.record; }
   read(): ReplaySnapshot {
@@ -38,14 +39,14 @@ export class PlaybackSession {
     const next = stepCombat(this.state);
     if (!equalContent(next.events, record.events.slice(from, from + next.events.length))) throw new Error('回放事件不一致');
     this.state = next.state; this.snapshot = null;
-    if (this.state.tick % CHECKPOINT_INTERVAL_TICKS === 0) this.checkpoints.set(this.state.tick, structuredClone(this.state));
+    if (this.state.tick % CHECKPOINT_INTERVAL_TICKS === 0) this.checkpoints.set(this.state.tick, snapshotData(this.state));
     if (this.state.status === 'finished') { this.playing = false; this.accumulator = 0; this.snapshot = null; }
   }
   seek(tick: number): ReplaySnapshot {
     const record = this.requireRecord();
     if (!Number.isSafeInteger(tick) || tick < 0 || tick > record.endTick) throw new Error('回放时间超出范围');
     const nearest = [...this.checkpoints.keys()].filter(value => value <= tick).sort((a,b)=>b-a)[0];
-    this.state = structuredClone(this.checkpoints.get(nearest)!); this.accumulator = 0; this.snapshot = null;
+    this.state = snapshotData(this.checkpoints.get(nearest)!); this.accumulator = 0; this.snapshot = null;
     while (this.state.tick < tick) this.step();
     return this.read();
   }

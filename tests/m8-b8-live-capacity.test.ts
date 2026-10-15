@@ -1,4 +1,4 @@
-import {describe,expect,it} from 'vitest';
+import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
@@ -57,6 +57,8 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
   ] as const)reject(sold,message,change);
  });
 });
+// The lethal cases share the same full public campaign prefix.
+beforeAll(async () => { await terminalPreparation('unit-12', 1); });
 describe('B8 live lethal PvE with randomized orbs',()=>{
  it.each([{name:'two killed carriers',keep:'unit-12',col:1,deaths:2,earned:true},{name:'only orb carrier killed',keep:'unit-11',col:1,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
   const preparation=await terminalPreparation(scenario.keep,scenario.col),l=battle(preparation),s=l.ended;
