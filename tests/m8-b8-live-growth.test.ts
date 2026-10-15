@@ -6,42 +6,42 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, battle, configuredPrefix, plan } from './fixtures/t13-loot-public';
 const copy = <T>(value:T):T => structuredClone(value);
-const prepared = await configuredPrefix('3-7',{seed:74,build:'cannon',copyLimits:{tristana:2},fieldCopies:['tristana']});
+const prepared = await configuredPrefix('3-7',{seed:48,build:'cannon',copyLimits:{tristana:2},fieldCopies:['tristana']});
 const result = battle(prepared);
 if(!result.revealed)throw Error('Expected live reveal before natural final tick');
 const live = {...result,revealed:result.revealed,selected:result.ended};
 function roundTrip(s:MatchState):MatchState {const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 const currentCommit=(s:MatchState)=>s.resourceProvenance.entries.find((e):e is Extract<ResourceProvenanceEntry,{kind:'combat-growth-committed'}>=>e.kind==='combat-growth-committed'&&e.combatId==='round-17')!;
 describe('B8 live growth plus immediate randomized loot merge',()=>{
- it('pins real seed74 prior stock and original-source current delta independently',()=>{
-  expect(prepared.persistentGrowth).toEqual([{unitId:'unit-6',attackDamageBps:500},{unitId:'unit-7',attackDamageBps:250}]);
-  expect(live.events.filter(e=>e.type==='growth')).toEqual([{type:'growth',tick:83,unitId:'unit-6',amountBps:125,totalBps:125,domain:'combat',combatId:'round-17',eventSeq:153}]);
+ it('pins real seed48 prior stock and original-source current delta independently',()=>{
+  expect(prepared.persistentGrowth).toEqual([{unitId:'unit-19',attackDamageBps:125},{unitId:'unit-5',attackDamageBps:375}]);
+  expect(live.events.filter(e=>e.type==='growth')).toEqual([{type:'growth',tick:77,unitId:'unit-5',amountBps:125,totalBps:125,domain:'combat',combatId:'round-17',eventSeq:418}]);
   const stock=prepared.persistentGrowth.reduce((n,g)=>n+g.attackDamageBps,0);
-  const delta=live.ended.combat!.units.filter(u=>['unit-6','unit-7'].includes(u.id)).reduce((n,u)=>n+u.runtime!.permanentAdBps,0);
-  expect({stock,delta,total:stock+delta}).toEqual({stock:750,delta:125,total:875});
-  expect(live.ended.persistentGrowth).toEqual([{unitId:'unit-6',attackDamageBps:875}]);
-  expect(currentCommit(live.ended).sourceDeltas).toEqual([{sourceUnitId:'unit-6',attackDamageBps:125}]);
+  const delta=live.ended.combat!.units.filter(u=>['unit-5','unit-19'].includes(u.id)).reduce((n,u)=>n+u.runtime!.permanentAdBps,0);
+  expect({stock,delta,total:stock+delta}).toEqual({stock:500,delta:125,total:625});
+  expect(live.ended.persistentGrowth).toEqual([{unitId:'unit-5',attackDamageBps:625}]);
+  expect(currentCommit(live.ended).sourceDeltas).toEqual([{sourceUnitId:'unit-5',attackDamageBps:125}]);
  });
  it('keeps the consumed reward birth, original stars and frozen combat basis',()=>{
-  const receipt=live.ended.m8.loot.receipts.find(r=>r.grantedUnitIds.includes('unit-30'))!;
+  const receipt=live.ended.m8.loot.receipts.find(r=>r.grantedUnitIds.includes('unit-27'))!;
   expect(receipt.payload).toEqual({kind:'unit',definitionId:'tristana',quantity:1});
-  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:'unit-6',consumedIds:['unit-30','unit-7'],fromStar:1,toStar:2})]);
-  const birth=live.ended.resourceProvenance.entries.find(e=>e.kind==='unit-acquired'&&e.unitId==='unit-30')!;
+  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:'unit-5',consumedIds:['unit-19','unit-27'],fromStar:1,toStar:2})]);
+  const birth=live.ended.resourceProvenance.entries.find(e=>e.kind==='unit-acquired'&&e.unitId==='unit-27')!;
   expect(birth).toMatchObject({roundId:'3-7',source:{kind:'loot',receiptId:receipt.receiptId}});
   expect(currentCommit(live.ended).sequence).toBeGreaterThan(birth.sequence);
   for(const s of [live.ended,roundTrip(live.ended)]){
-   expect(s.preparation.units.find(u=>u.id==='unit-6')?.starLevel).toBe(2);
-   expect(s.preparation.units.some(u=>['unit-7','unit-30'].includes(u.id))).toBe(false);
+   expect(s.preparation.units.find(u=>u.id==='unit-5')?.starLevel).toBe(2);
+   expect(s.preparation.units.some(u=>['unit-19','unit-27'].includes(u.id))).toBe(false);
    expect(s.combatInputBasis!.inputs.preparation).toEqual(prepared.preparation);
    expect(s.combatInputBasis!.inputs.persistentGrowth).toEqual(prepared.persistentGrowth);
-   expect(s.combat!.units.filter(u=>['unit-6','unit-7'].includes(u.id)).map(u=>u.starLevel)).toEqual([1,1]);
-   expect(s.combat!.units.some(u=>u.id==='unit-30')).toBe(false);
+   expect(s.combat!.units.filter(u=>['unit-5','unit-19'].includes(u.id)).map(u=>u.starLevel)).toEqual([1,1]);
+   expect(s.combat!.units.some(u=>u.id==='unit-27')).toBe(false);
    expect(s.combat!.strategy).toEqual(buildStrategySnapshot(s.combatInputBasis!.inputs));
   }
  });
  it('strictly restores every boundary without pre-granting resources',()=>{
   for(const s of [prepared,live.started,live.revealed,live.beforeFinal,live.ended])roundTrip(s);
-  expect(live.revealed.combat!.tick).toBe(82);
+  expect(live.revealed.combat!.tick).toBe(77);
   expect(live.ended.phase).toBe('settlement');expect(live.ended.pendingChoice).toBeNull();
   for(const key of ['preparation','persistentGrowth','resourceProvenance','nextUnitSerial'] as const)expect(live.revealed[key]).toEqual(prepared[key]);
   expect(live.revealed.m8.loot.receipts).toEqual(prepared.m8.loot.receipts);
@@ -56,7 +56,7 @@ describe('B8 live growth plus immediate randomized loot merge',()=>{
   expect(combat.filter(e=>e.type==='combatFinished')).toHaveLength(1);
   expect(nextRound(roundTrip(b),17)).toEqual(nextRound(a,17));
   const next=roundTrip(accepted(nextRound(a,17)));expect(next.roundDefinitionId).toBe('4-1');
-  expect(next.persistentGrowth).toEqual([{unitId:'unit-6',attackDamageBps:875}]);
+  expect(next.persistentGrowth).toEqual([{unitId:'unit-5',attackDamageBps:625}]);
  });
  it('repeated step, obsolete choice and Continue cannot duplicate receipts or growth',()=>{
   for(const s of [live.ended,roundTrip(live.ended)]){
@@ -89,7 +89,7 @@ const badUpgrade = (state: MutableMatch) => state.resourceProvenance.entries.fin
     entry.kind === 'unit-upgraded' && entry.roundId === '3-7')!;
 const badBirth = (state: MutableMatch) => state.resourceProvenance.entries.find(
   (entry): entry is Mutable<Extract<ResourceProvenanceEntry,{kind:'unit-acquired'}>> =>
-    entry.kind === 'unit-acquired' && entry.unitId === 'unit-30')!;
+    entry.kind === 'unit-acquired' && entry.unitId === 'unit-27')!;
 const reindex = (state: MutableMatch) => {
   state.resourceProvenance.entries.forEach((entry,sequence) => { entry.sequence = sequence; });
 };
@@ -105,48 +105,48 @@ const tamperings: readonly [string, (state:MutableMatch) => void, string][] = [
   ['start prefix moved beyond a real loot birth', state => { badCommit(state).combatStartProvenancePrefixLength++; },
     'Invalid resource provenance: loot before combat start'],
   ['delta attributed to donor instead of original survivor source, preserving final total', state => {
-    badCommit(state).sourceDeltas[0].sourceUnitId = 'unit-7';
+    badCommit(state).sourceDeltas[0].sourceUnitId = 'unit-19';
   }, 'Invalid B8 Match: original combat growth deltas'],
   ['missing delta with a matching forged final stock', state => {
-    badCommit(state).sourceDeltas = []; state.persistentGrowth[0].attackDamageBps = 750;
+    badCommit(state).sourceDeltas = []; state.persistentGrowth[0].attackDamageBps = 500;
   }, 'Invalid B8 Match: original combat growth deltas'],
   ['inflated delta with a matching forged final stock', state => {
-    badCommit(state).sourceDeltas[0].attackDamageBps = 250; state.persistentGrowth[0].attackDamageBps = 1000;
+    badCommit(state).sourceDeltas[0].attackDamageBps = 250; state.persistentGrowth[0].attackDamageBps = 750;
   }, 'Invalid B8 Match: original combat growth deltas'],
   ['delta attributed to the new reward outside the original combat prefix', state => {
-    badCommit(state).sourceDeltas[0].sourceUnitId = 'unit-30';
+    badCommit(state).sourceDeltas[0].sourceUnitId = 'unit-27';
   }, 'Invalid resource provenance: combat growth source/step'],
   ['duplicate original delta', state => {
     badCommit(state).sourceDeltas.push(copy(badCommit(state).sourceDeltas[0]));
   }, 'Invalid resource provenance: combat growth source/step'],
   ['final growth resurrected under consumed source', state => {
-    state.persistentGrowth = [{unitId:'unit-6',attackDamageBps:500},{unitId:'unit-7',attackDamageBps:125}];
+    state.persistentGrowth = [{unitId:'unit-5',attackDamageBps:500},{unitId:'unit-19',attackDamageBps:125}];
   }, 'Invalid Match save: persistent growth'],
   ['birth bound to the component receipt', state => {
     const receipt = state.m8.loot.receipts.find(value => value.payload.kind === 'item')!;
     badBirth(state).source = {kind:'loot',receiptId:receipt.receiptId};
   }, 'Invalid resource provenance: receipt birth binding'],
-  ['birth assigned the consumed old source ID', state => { badBirth(state).unitId = 'unit-7'; },
+  ['birth assigned the consumed old source ID', state => { badBirth(state).unitId = 'unit-19'; },
     'Invalid resource provenance: unit serial'],
   ['missing candidate birth while keeping its upgrade', state => {
     state.resourceProvenance.entries.splice(badBirth(state).sequence,1); reindex(state);
   }, 'Invalid resource provenance: upgrade transaction'],
   ['receipt candidate changed to survivor', state => {
-    state.m8.loot.receipts.find(value => value.grantedUnitIds.includes('unit-30'))!.grantedUnitIds = ['unit-6'];
+    state.m8.loot.receipts.find(value => value.grantedUnitIds.includes('unit-27'))!.grantedUnitIds = ['unit-5'];
   }, 'Invalid resource provenance: receipt birth binding'],
   ['missing upgrade transaction', state => {
     state.resourceProvenance.entries.splice(badUpgrade(state).sequence,1); reindex(state);
   }, 'Invalid resource provenance: missing upgrade'],
   ['upgrade linked to a different acquisition', state => { badUpgrade(state).acquisitionSequence--; },
     'Invalid resource provenance: upgrade transaction'],
-  ['duplicated consumed old source', state => { badUpgrade(state).event.consumedIds = ['unit-7','unit-7']; },
+  ['duplicated consumed old source', state => { badUpgrade(state).event.consumedIds = ['unit-19','unit-19']; },
     'Invalid resource provenance: upgrade participants'],
-  ['wrong old source in consumption', state => { badUpgrade(state).event.consumedIds = ['unit-19','unit-30']; },
+  ['wrong old source in consumption', state => { badUpgrade(state).event.consumedIds = ['unit-26','unit-27']; },
     'Invalid resource provenance: upgrade ownership'],
   ['wrong star for immediate merge', state => { badUpgrade(state).event.fromStar = 2; badUpgrade(state).event.toStar = 3; },
     'Invalid resource provenance: upgrade transaction'],
   ['basis rewritten with reward-upgraded star', state => {
-    state.combatInputBasis!.inputs.preparation.units.find(unit => unit.id === 'unit-6')!.starLevel = 2;
+    state.combatInputBasis!.inputs.preparation.units.find(unit => unit.id === 'unit-5')!.starLevel = 2;
   }, 'Invalid combat input basis'],
 ];
 describe('B8 live merged-growth corruption', () => {

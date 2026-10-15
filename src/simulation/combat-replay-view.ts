@@ -95,9 +95,24 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
   // A tick0 event can be emitted by the first step (e.g. wolves' opening jump).
   // The initial state's ledger cursor, not the event tick, marks applied start effects.
   const firstStepEventSeq = battle.initial.nextEventSeq ?? 0;
-  const ticks: CombatReplayTick[] = [{ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) }];
+  const ticks: CombatReplayTick[] = [freezeContent({ tick: 0, events: toCombatViewEvents(battle.events.filter(event => event.eventSeq < firstStepEventSeq)) })];
   let state = battle.initial, previous = initial;
-  const generated: LedgerCombatEvent[] = [];
+  // Compare the same ordered animation whitelist incrementally. Comparing each
+  // canonical element is equivalent to comparing the complete canonical arrays,
+  // but leaves no whole-battle serialization work in the final scheduling slice.
+  let expectedIndex = 0, divergent = false;
+  let comparisonError: unknown;
+  let comparisonFailed = false;
+  const nextExpected = (): CombatAnimationEvent | undefined => {
+    while (expectedIndex < battle.events.length) {
+      const event = battle.events[expectedIndex++];
+      if (event.eventSeq >= firstStepEventSeq) {
+        const visible = animationEvent(event);
+        if (visible) return visible;
+      }
+    }
+    return undefined;
+  };
   let result: CombatReplay | null = null;
   return { advance(maxTicks) {
     if (!Number.isSafeInteger(maxTicks) || maxTicks < 1) throw new RangeError('invalid-budget');
@@ -107,8 +122,17 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
       const next = stepCombat(state);
       if (next.state.tick !== state.tick + 1) throw new RangeError('replay-divergence');
       state = next.state;
-      const ledger = toLedgerEvents(next.events); generated.push(...ledger);
+      const ledger = toLedgerEvents(next.events);
       const view = toCombatViewState(state), events: CombatViewEvent[] = toCombatViewEvents(ledger);
+      for (const event of events) {
+        try {
+          const expected = nextExpected();
+          if (!expected || canonicalContent(event) !== canonicalContent(expected)) divergent = true;
+        } catch (error) {
+          if (!comparisonFailed) comparisonError = error;
+          comparisonFailed = true;
+        }
+      }
       if (view.units.length !== previous.units.length || view.units.some((u, i) => u.id !== previous.units[i].id)) throw new RangeError('replay-divergence');
       for (let i = 0; i < view.units.length; i++) {
         const unit = view.units[i], before = previous.units[i];
@@ -116,14 +140,15 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
           && !equalViewField(value, before[key as keyof CombatViewUnit])));
         if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
       }
-      ticks.push({ tick: state.tick, events,
-        ...(state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) });
+      ticks.push(freezeContent({ tick: state.tick, events,
+        ...(state.tick % COMBAT_REPLAY_KEYFRAME_INTERVAL === 0 || state.status === 'finished' ? { keyframe: view } : {}) }));
       previous = view;
       steps++;
     }
     if (state.status === 'running' && state.tick < battle.terminal.tick) return null;
-    if (canonicalContent(previous) !== canonicalContent(terminal)
-      || canonicalContent(toCombatViewEvents(generated)) !== canonicalContent(toCombatViewEvents(battle.events.filter(event => event.eventSeq >= firstStepEventSeq)))) {
+    if (canonicalContent(previous) !== canonicalContent(terminal)) throw new RangeError('replay-divergence');
+    if (comparisonFailed) throw comparisonError;
+    if (divergent || nextExpected() !== undefined) {
       throw new RangeError('replay-divergence');
     }
     result = freezeContent({ initial, ticks, terminal });

@@ -2,15 +2,15 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import * as api from '../src/simulation/match';
 import type { MatchEvent, MatchState } from '../src/simulation/match-types';
 import { run } from '../scripts/generate-m5-route.cjs';
-import { Ledger, COMPONENTS, investment, lootIndex, lootPlan, settlement, validateLoot, validateLootTransition } from './fixtures/m5/oracle.cjs';
+import { Ledger, COMPONENTS, investment, lootIndex, lootPlan, settlement, validateLoot, validateLootTransition } from './fixtures/m5/oracle.g2.cjs';
 
 type Command = { type: string; [key: string]: unknown } | undefined;
 type Transition = { before: MatchState; after: MatchState; command: Command; events: readonly MatchEvent[] };
 let initial: MatchState, timeline: Transition[], pending: MatchState;
 async function openingWithRealConsumedReward() {
-  initial=api.createMatch(74);timeline=[];
+  initial=api.createMatch(48);timeline=[];
   const stop=new Error('captured 3-7 settlement');
-  try {await run(api,{seed:74,build:'cannon',copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
+  try {await run(api,{seed:48,build:'cannon',copyLimits:{tristana:2},fieldCopies:['tristana'],onStep(before,result,command){
     if(!('events' in result))throw Error(result.reason);
     timeline.push({before,after:result.state,events:result.events,command});
     if(before.roundDefinitionId==='2-4'&&before.phase==='choice')pending??=before;
@@ -72,12 +72,12 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     const transition = timeline.find(t => t.after.roundDefinitionId==='3-7' && t.events.some(e => e.type === 'unitUpgraded'))!;
     expect(transition).toBeDefined();
     const receipt = transition.after.m8.loot.receipts.find(r => r.payload.kind === 'unit' && r.payload.definitionId === 'tristana')!;
-    expect(receipt.grantedUnitIds).toEqual(['unit-30']);
-    expect(transition.after.preparation.units.some(u => u.id === 'unit-30')).toBe(false);
-    expect(transition.after.preparation.units.find(u => u.id === 'unit-6')?.starLevel).toBe(2);
+    expect(receipt.grantedUnitIds).toEqual(['unit-27']);
+    expect(transition.after.preparation.units.some(u => u.id === 'unit-27')).toBe(false);
+    expect(transition.after.preparation.units.find(u => u.id === 'unit-5')?.starLevel).toBe(2);
     expect(prefixLedger().cards).toBe(transition.after.preparation.units.filter(u=>u.team==='player').reduce((n,u)=>n+3**(u.starLevel-1),0));
     const invalid = copy(transition.after);
-    invalid.m8.loot.receipts.find(r=>r.grantedUnitIds.includes('unit-30'))!.grantedUnitIds = ['unit-6'];
+    invalid.m8.loot.receipts.find(r=>r.grantedUnitIds.includes('unit-27'))!.grantedUnitIds = ['unit-5'];
     const events = copy(transition.events);
     events.filter(e=>e.type==='lootGranted').find(e=>e.receipt.payload.kind==='unit')!.receipt = invalid.m8.loot.receipts.find(r=>r.payload.kind==='unit'&&r.payload.definitionId==='tristana')!;
     expect(() => prefixLedger(timeline.indexOf(transition)).apply(transition.before, invalid, transition.command, events)).toThrow('true loot candidate serial');

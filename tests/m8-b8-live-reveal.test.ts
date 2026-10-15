@@ -87,8 +87,8 @@ describe('B8 real simultaneous loot-source deaths', () => {
   });
 
   it.each([
-    ['unit-12', 'r00', 344, 'settlement', 4],
-    ['unit-16', 'r01', 218, 'settlement', 0],
+    ['unit-11', 'r00', 344, 'settlement', 4],
+    ['unit-15', 'r01', 164, 'settlement', 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
     let state = clone(prefix), slot = 0;
     for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.id !== survivor))

@@ -63,7 +63,9 @@ function continueFrom(saved: string): MatchState {
   return state;
 }
 
-beforeAll(() => { holderPreparation('blue-buff'); });
+// Every recipe uses its real public route; only acquisition is warmed before case timing.
+for (const id of Object.keys(ITEM_DEFINITIONS))
+  beforeAll(() => { holderPreparation(id); });
 
 const IDS = Object.keys(ITEM_DEFINITIONS).sort();
 describe('B10 every M8 equipment definition survives record, replay and save/restore', () => {

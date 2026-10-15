@@ -1,0 +1,646 @@
+{
+  "testedSimulationCommit": "792a6ca2cb84bfc02504a301365181acf86354e2",
+  "latestMergeCommit": "942d7ddce10b84edbf7dd8ec47a537f66849cf52",
+  "logs": [
+    {
+      "log": "fast-processes.log",
+      "bytes": 459673,
+      "sha256": "77ac923714be2f7c8c0882c1ed0fa2638fa076daf9a41eae3b3732496df316f7",
+      "summary": [
+        " FAIL  |fast| tests/m8-b10-encounter-outcomes.test.ts > B10 eight encounters: explicitly isolated engine result boundaries > 3-7: full 1200-tick timeout draw grants no unearned loot",
+        "Error: Test timed out in 5000ms.",
+        " Test Files  1 failed | 220 passed (221)",
+        "      Tests  1 failed | 2724 passed (2725)",
+        "   Duration  2008.18s (tests 89%, import 10%, transform 1%)"
+      ]
+    },
+    {
+      "log": "fast-isolated.log",
+      "bytes": 460086,
+      "sha256": "7d06e6197abdffdda84b8e0d751701fb6b6d8c9ac20062beb4adaf36d8493095",
+      "summary": [
+        " FAIL  |fast| tests/m8-b10-item-save-replay.test.ts > B10 every M8 equipment definition survives record, replay and save/restore > ionic-spark",
+        "Error: Test timed out in 5000ms.",
+        " FAIL  |fast| tests/m8-b4-catalog.test.ts > B4 catalogue and IF-POOL > bloodthirster actual Match start and restore preserve catalogue program sources and RNG",
+        "Error: Test timed out in 5000ms.",
+        " Test Files  2 failed | 219 passed (221)",
+        "      Tests  2 failed | 2722 passed (2724)",
+        "   Duration  1153.19s (tests 88%, import 11%, transform 1%)"
+      ]
+    },
+    {
+      "log": "timing-isolated.log",
+      "bytes": 4694,
+      "sha256": "187b88864c89023c904cfc9d650a107a653df00bf05c321b6174bfe50cdac803",
+      "summary": [
+        " Test Files  6 passed (6)",
+        "      Tests  21 passed (21)",
+        "   Duration  205.99s (tests 98%, transform 1%, import 1%)"
+      ]
+    },
+    {
+      "log": "timing-final.log",
+      "bytes": 1587,
+      "sha256": "a6f415e5f1d8b5fe6e0743e0e93d6b58b9d7fea2997998f35826cd74b0a1a90d",
+      "summary": [
+        " FAIL  |timing| tests/b8-resumable-battle-timing.test.ts > SR-B8-02 resumable pure tasks > one-tick scheduling budget on nine-unit armies: measures startup and longest advance",
+        " Test Files  1 failed | 5 passed (6)",
+        "      Tests  1 failed | 20 passed (21)",
+        "   Duration  216.97s (tests 99%, transform 1%)"
+      ]
+    },
+    {
+      "log": "encounter-recheck.log",
+      "bytes": 9453,
+      "sha256": "34e1ee8d7bc500b39754190c45cdc69b58cb13c6bcbd762ec3ee6c58cd04e448",
+      "summary": [
+        " Test Files  1 passed (1)",
+        "      Tests  46 passed (46)",
+        "   Duration  36.33s (import 72%, transform 18%, tests 10%)"
+      ]
+    },
+    {
+      "log": "release-final.log",
+      "bytes": 1041,
+      "sha256": "97ef6236eae25f788dae72bc7d2f52ed6ee966d08878bd36a0b2cd998fec38cb",
+      "summary": []
+    },
+    {
+      "log": "server-entry-final.log",
+      "bytes": 3363,
+      "sha256": "be0b3b4c94a91507f93f4f8c22456b1d5498613e9a19fb1733bc3aad4f8a1f29",
+      "summary": []
+    },
+    {
+      "log": "source-check.log",
+      "bytes": 93,
+      "sha256": "62ad1f41852b27e92246268ea00883151168ae246a75eb3e62bf323b374f92b4",
+      "summary": []
+    },
+    {
+      "log": "content-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "summary": []
+    },
+    {
+      "log": "audit-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "summary": []
+    },
+    {
+      "log": "c7.log",
+      "bytes": 23590,
+      "sha256": "b47e34426817d2aaeadcfdc0b81173e8eb315138c16248db3562938fe8a20cf5",
+      "summary": []
+    },
+    {
+      "log": "typecheck-latest.log",
+      "bytes": 51,
+      "sha256": "4a0b9d63c8dc0781d84fe590fb615962af85bbc020795a0b0e87689bdf3a54b0",
+      "summary": []
+    },
+    {
+      "log": "b8-latest.log",
+      "bytes": 2430,
+      "sha256": "046c87fbd633dfdf0764893b9fdaaf56c909a596eb5f8663113a888258b228f0",
+      "summary": [
+        " Test Files  1 passed (1)",
+        "      Tests  15 passed (15)",
+        "   Duration  25.45s (tests 94%, transform 5%, import 1%)"
+      ]
+    },
+    {
+      "log": "timing-latest.log",
+      "bytes": 3855,
+      "sha256": "8112025d0007db3c7d6992082c72dd3e5abb36f760f11140738447a35b03843d",
+      "summary": [
+        " FAIL  |timing| tests/server/g3-ops.test.ts > G3 network server > recovers from a resolver error: last view to everyone, credentials released, the next match starts",
+        " FAIL  |timing| tests/server/g3-ops.test.ts > G3 network server > ends a match every player left (abandoned) and lets the next one start",
+        " FAIL  |timing| tests/server/g3-ops.test.ts > G3 network server > answers GET /healthz (also under a proxy prefix) with build identity and counts, 426 elsewhere",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: pending commands > keeps the local state until the receipt and confirms through the following state push; a refusal changes nothing",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: pending commands > pipelines consecutive commands with increasing seatRevision and reports a stale one once nothing is in flight",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: reconnect and resume > reconnects a dropped socket with the stored token and restores view → state in snapshot order",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: reconnect and resume > returns a reloaded page to its seat from storage and supersedes the old tab, which stops for good",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: reconnect and resume > treats a queue drop as leaving the queue and a dead token as a lost seat",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: persistent seat token (C7) > keeps one token per server address; a closed tab reopened on the same address resumes its seat",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: persistent seat token (C7) > clears the token once the match ended, and when a new match revoked the seat",
+        " FAIL  |timing| tests/server/ws-client.test.ts > WsGameClient: battle replay > hands each battle over once as a replay, even after a resume snapshot repeats it",
+        "Error: listen EPERM: operation not permitted 127.0.0.1",
+        " Test Files  2 failed | 4 passed (6)",
+        "      Tests  11 failed | 21 passed (32)",
+        "   Duration  247.47s (tests 98%, transform 1%, import 1%)"
+      ]
+    },
+    {
+      "log": "timing-latest-network.log",
+      "bytes": 256,
+      "sha256": "6cea9b13b5ccb88bab5de3ea7a99855aa9556cf182ea10135e0be3d7d650ab76",
+      "summary": [
+        " Test Files  6 passed (6)",
+        "      Tests  32 passed (32)",
+        "   Duration  264.04s (tests 99%, transform 1%, import 1%)"
+      ]
+    }
+  ],
+  "c7": {
+    "reportSha256": "98208c52cd544e217503be0faea5946de54f65d8247f70c4db75ffcacf45427e",
+    "report": {
+      "rounds": [
+        {
+          "round": 1,
+          "roundId": "1-2",
+          "kind": "pve",
+          "roomRoundKind": "1-2",
+          "enemiesOnBoard": [
+            "pve-minion-melee-a",
+            "pve-minion-melee-a"
+          ],
+          "enemyTokens": 2,
+          "preview": "本轮野怪 · 近战小兵 A ★ ×2近战近战小兵 A ★ ×2位置 2,3 / 4,3生命 110 · 攻击力 8 · 护甲 0 · 魔抗 0射程 1 格 · ",
+          "mine": 1,
+          "battleTeams": [
+            "enemy:pve-minion-melee-a",
+            "player:irelia"
+          ],
+          "result": {
+            "result": "playerWin",
+            "hp": "100->100",
+            "gold": "0->2",
+            "income": 2
+          },
+          "inventory": [],
+          "bench": [
+            "irelia",
+            "irelia"
+          ],
+          "lootPanel": "1-2 宝珠灰色宝珠全部入库艾瑞艾瑞莉娅已入库拆拆卸器已入库来源：近战小兵 A",
+          "lootRows": [
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+              "text": "艾瑞莉娅"
+            },
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",1]\",\"grant\"]",
+              "text": "拆卸器"
+            }
+          ],
+          "revealedLoot": {
+            "roundId": "1-2",
+            "revealedDrops": [
+              {
+                "orbId": "[\"orb\",\"1-2\",\"minions-a-v1\",\"[\\\"pve\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"m01\\\"]\",0]",
+                "entryOrdinal": 0,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+                "encounterId": "minions-a-v1",
+                "sourceUnitId": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m01\"]",
+                "roundId": "1-2",
+                "payload": {
+                  "kind": "unit",
+                  "definitionId": "irelia",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+                "allowedActions": []
+              },
+              {
+                "orbId": "[\"orb\",\"1-2\",\"minions-a-v1\",\"[\\\"pve\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"m01\\\"]\",0]",
+                "entryOrdinal": 1,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]",
+                "encounterId": "minions-a-v1",
+                "sourceUnitId": "[\"pve\",\"1-2\",\"minions-a-v1\",\"m01\"]",
+                "roundId": "1-2",
+                "payload": {
+                  "kind": "consumable",
+                  "definitionId": "magnetic-remover",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-2\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-a-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",1]\",\"grant\"]",
+                "allowedActions": []
+              }
+            ],
+            "revealedOrbs": [
+              {
+                "orbId": "[\"orb\",\"1-2\",\"minions-a-v1\",\"[\\\"pve\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"m01\\\"]\",0]",
+                "tier": "gray",
+                "status": "claimed",
+                "entryDropIds": [
+                  "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+                  "[\"[\\\"orb\\\",\\\"1-2\\\",\\\"minions-a-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-2\\\\\\\",\\\\\\\"minions-a-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "round": 2,
+          "roundId": "1-3",
+          "kind": "pve",
+          "roomRoundKind": "1-3",
+          "enemiesOnBoard": [
+            "pve-minion-melee-b",
+            "pve-minion-melee-b",
+            "pve-minion-ranged-b"
+          ],
+          "enemyTokens": 3,
+          "preview": "本轮野怪 · 近战小兵 B ★ ×2、远程小兵 B ★近战近战小兵 B ★ ×2位置 2,3 / 4,3生命 160 · 攻击力 10 · 护甲 0 · 魔抗 ",
+          "mine": 2,
+          "battleTeams": [
+            "enemy:pve-minion-melee-b",
+            "enemy:pve-minion-ranged-b",
+            "player:irelia",
+            "player:violet"
+          ],
+          "result": {
+            "result": "playerWin",
+            "hp": "100->100",
+            "gold": "0->3",
+            "income": 3
+          },
+          "inventory": [
+            "bow"
+          ],
+          "bench": [
+            "irelia",
+            "irelia",
+            "violet",
+            "powder",
+            "maddie"
+          ],
+          "lootPanel": "1-3 宝珠灰色宝珠全部入库麦迪麦迪已入库拆拆卸器已入库来源：近战小兵 B蓝色宝珠全部入库反曲反曲之弓已入库来源：远程小兵 B",
+          "lootRows": [
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-3\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-b-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+              "text": "麦迪"
+            },
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-3\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-b-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",1]\",\"grant\"]",
+              "text": "拆卸器"
+            },
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-3\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-b-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"r01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+              "text": "反曲之弓"
+            }
+          ],
+          "revealedLoot": {
+            "roundId": "1-3",
+            "revealedDrops": [
+              {
+                "orbId": "[\"orb\",\"1-3\",\"minions-b-v1\",\"[\\\"pve\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"m01\\\"]\",0]",
+                "entryOrdinal": 0,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+                "encounterId": "minions-b-v1",
+                "sourceUnitId": "[\"pve\",\"1-3\",\"minions-b-v1\",\"m01\"]",
+                "roundId": "1-3",
+                "payload": {
+                  "kind": "unit",
+                  "definitionId": "maddie",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-3\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-b-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+                "allowedActions": []
+              },
+              {
+                "orbId": "[\"orb\",\"1-3\",\"minions-b-v1\",\"[\\\"pve\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"m01\\\"]\",0]",
+                "entryOrdinal": 1,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]",
+                "encounterId": "minions-b-v1",
+                "sourceUnitId": "[\"pve\",\"1-3\",\"minions-b-v1\",\"m01\"]",
+                "roundId": "1-3",
+                "payload": {
+                  "kind": "consumable",
+                  "definitionId": "magnetic-remover",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-3\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-b-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",1]\",\"grant\"]",
+                "allowedActions": []
+              },
+              {
+                "orbId": "[\"orb\",\"1-3\",\"minions-b-v1\",\"[\\\"pve\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"r01\\\"]\",0]",
+                "entryOrdinal": 0,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
+                "encounterId": "minions-b-v1",
+                "sourceUnitId": "[\"pve\",\"1-3\",\"minions-b-v1\",\"r01\"]",
+                "roundId": "1-3",
+                "payload": {
+                  "kind": "item",
+                  "definitionId": "bow",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-3\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-b-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"r01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+                "allowedActions": []
+              }
+            ],
+            "revealedOrbs": [
+              {
+                "orbId": "[\"orb\",\"1-3\",\"minions-b-v1\",\"[\\\"pve\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"m01\\\"]\",0]",
+                "tier": "gray",
+                "status": "claimed",
+                "entryDropIds": [
+                  "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+                  "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",1]"
+                ]
+              },
+              {
+                "orbId": "[\"orb\",\"1-3\",\"minions-b-v1\",\"[\\\"pve\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"r01\\\"]\",0]",
+                "tier": "blue",
+                "status": "claimed",
+                "entryDropIds": [
+                  "[\"[\\\"orb\\\",\\\"1-3\\\",\\\"minions-b-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-3\\\\\\\",\\\\\\\"minions-b-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "round": 3,
+          "roundId": "1-4",
+          "kind": "pve",
+          "roomRoundKind": "1-4",
+          "enemiesOnBoard": [
+            "pve-minion-melee-c",
+            "pve-minion-melee-c",
+            "pve-minion-ranged-c",
+            "pve-minion-ranged-c"
+          ],
+          "enemyTokens": 4,
+          "preview": "本轮野怪 · 近战小兵 C ★ ×2、远程小兵 C ★ ×2近战近战小兵 C ★ ×2位置 2,3 / 4,3生命 220 · 攻击力 12 · 护甲 0 · ",
+          "mine": 3,
+          "battleTeams": [
+            "enemy:pve-minion-melee-c",
+            "enemy:pve-minion-ranged-c",
+            "player:irelia",
+            "player:violet"
+          ],
+          "result": {
+            "result": "playerWin",
+            "hp": "100->100",
+            "gold": "1->6",
+            "income": 5
+          },
+          "inventory": [
+            "bow",
+            "sword",
+            "tear"
+          ],
+          "bench": [
+            "irelia",
+            "irelia",
+            "violet",
+            "powder",
+            "maddie",
+            "amumu",
+            "powder"
+          ],
+          "lootPanel": "1-4 宝珠灰色宝珠全部入库拆拆卸器已入库来源：近战小兵 C蓝色宝珠全部入库暴风暴风大剑已入库来源：远程小兵 C蓝色宝珠全部入库女神女神之泪已入库来源：远程小兵 C",
+          "lootRows": [
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-4\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-c-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+              "text": "拆卸器"
+            },
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-4\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-c-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"r01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+              "text": "暴风大剑"
+            },
+            {
+              "dropId": "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",0]",
+              "status": "granted",
+              "receipt": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-4\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-c-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"r02\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+              "text": "女神之泪"
+            }
+          ],
+          "revealedLoot": {
+            "roundId": "1-4",
+            "revealedDrops": [
+              {
+                "orbId": "[\"orb\",\"1-4\",\"minions-c-v1\",\"[\\\"pve\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"m01\\\"]\",0]",
+                "entryOrdinal": 0,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]",
+                "encounterId": "minions-c-v1",
+                "sourceUnitId": "[\"pve\",\"1-4\",\"minions-c-v1\",\"m01\"]",
+                "roundId": "1-4",
+                "payload": {
+                  "kind": "consumable",
+                  "definitionId": "magnetic-remover",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-4\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-c-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"m01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+                "allowedActions": []
+              },
+              {
+                "orbId": "[\"orb\",\"1-4\",\"minions-c-v1\",\"[\\\"pve\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"r01\\\"]\",0]",
+                "entryOrdinal": 0,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
+                "encounterId": "minions-c-v1",
+                "sourceUnitId": "[\"pve\",\"1-4\",\"minions-c-v1\",\"r01\"]",
+                "roundId": "1-4",
+                "payload": {
+                  "kind": "item",
+                  "definitionId": "sword",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-4\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-c-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"r01\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+                "allowedActions": []
+              },
+              {
+                "orbId": "[\"orb\",\"1-4\",\"minions-c-v1\",\"[\\\"pve\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"r02\\\"]\",0]",
+                "entryOrdinal": 0,
+                "dropId": "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",0]",
+                "encounterId": "minions-c-v1",
+                "sourceUnitId": "[\"pve\",\"1-4\",\"minions-c-v1\",\"r02\"]",
+                "roundId": "1-4",
+                "payload": {
+                  "kind": "item",
+                  "definitionId": "tear",
+                  "quantity": 1
+                },
+                "status": "granted",
+                "receiptId": "[\"[\\\"[\\\\\\\"orb\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"[\\\\\\\\\\\\\\\"pve\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"1-4\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"minions-c-v1\\\\\\\\\\\\\\\",\\\\\\\\\\\\\\\"r02\\\\\\\\\\\\\\\"]\\\\\\\",0]\\\",0]\",\"grant\"]",
+                "allowedActions": []
+              }
+            ],
+            "revealedOrbs": [
+              {
+                "orbId": "[\"orb\",\"1-4\",\"minions-c-v1\",\"[\\\"pve\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"m01\\\"]\",0]",
+                "tier": "gray",
+                "status": "claimed",
+                "entryDropIds": [
+                  "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"m01\\\\\\\"]\\\",0]\",0]"
+                ]
+              },
+              {
+                "orbId": "[\"orb\",\"1-4\",\"minions-c-v1\",\"[\\\"pve\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"r01\\\"]\",0]",
+                "tier": "blue",
+                "status": "claimed",
+                "entryDropIds": [
+                  "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]"
+                ]
+              },
+              {
+                "orbId": "[\"orb\",\"1-4\",\"minions-c-v1\",\"[\\\"pve\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"r02\\\"]\",0]",
+                "tier": "blue",
+                "status": "claimed",
+                "entryDropIds": [
+                  "[\"[\\\"orb\\\",\\\"1-4\\\",\\\"minions-c-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"1-4\\\\\\\",\\\\\\\"minions-c-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",0]"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "combine": {
+        "label": "合成 巨人杀手",
+        "disabled": false,
+        "selection": "选择：反曲之弓 + 暴风大剑 → 巨人杀手",
+        "receipts": [
+          {
+            "sent": 17,
+            "command": {
+              "type": "combine",
+              "a": "item-1",
+              "b": "item-2"
+            }
+          },
+          {
+            "receipt": 17,
+            "ok": true,
+            "reason": null,
+            "kind": "applied"
+          }
+        ],
+        "inventoryBefore": [
+          "bow",
+          "sword",
+          "tear"
+        ],
+        "inventoryAfter": [
+          "tear",
+          "giant-slayer"
+        ],
+        "status": "组件已合成"
+      },
+      "swap": "1-3",
+      "pairing": {
+        "candidates": [
+          "bot-1",
+          "bot-2",
+          "bot-3",
+          "bot-4",
+          "bot-5",
+          "bot-6",
+          "bot-7"
+        ],
+        "preparationMarks": [
+          "bot-1:candidate",
+          "bot-2:candidate",
+          "bot-3:candidate",
+          "bot-4:candidate",
+          "bot-5:candidate",
+          "bot-6:candidate",
+          "bot-7:candidate"
+        ],
+        "opponent": "bot-5"
+      },
+      "g2Bots": [
+        {
+          "seatId": "bot-1",
+          "definitionId": "nocturne",
+          "round": 3
+        },
+        {
+          "seatId": "bot-3",
+          "definitionId": "zeri",
+          "round": 3
+        },
+        {
+          "seatId": "bot-6",
+          "definitionId": "zeri",
+          "round": 3
+        },
+        {
+          "seatId": "bot-4",
+          "definitionId": "zeri",
+          "round": 3
+        },
+        {
+          "seatId": "bot-7",
+          "definitionId": "nocturne",
+          "round": 3
+        },
+        {
+          "seatId": "bot-5",
+          "definitionId": "nocturne",
+          "round": 3
+        },
+        {
+          "seatId": "bot-1",
+          "definitionId": "nocturne",
+          "round": 4
+        },
+        {
+          "seatId": "bot-3",
+          "definitionId": "zeri",
+          "round": 4
+        },
+        {
+          "seatId": "bot-4",
+          "definitionId": "zeri",
+          "round": 4
+        },
+        {
+          "seatId": "bot-5",
+          "definitionId": "nocturne",
+          "round": 4
+        },
+        {
+          "seatId": "bot-6",
+          "definitionId": "zeri",
+          "round": 4
+        },
+        {
+          "seatId": "bot-7",
+          "definitionId": "nocturne",
+          "round": 4
+        },
+        {
+          "seatId": "bot-7",
+          "definitionId": "zeri",
+          "round": 4
+        },
+        {
+          "seatId": "bot-2",
+          "definitionId": "zeri",
+          "round": 4
+        },
+        {
+          "seatId": "bot-3",
+          "definitionId": "nocturne",
+          "round": 4
+        }
+      ],
+      "errors": []
+    }
+  }
+}

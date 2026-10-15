@@ -1,0 +1,219 @@
+{
+  "baseline": "a159fbb",
+  "c19": {
+    "compiled": {
+      "previousBytes": 10934,
+      "currentBytes": 11541,
+      "previousSha256": "1b5f165c0d0e4efe13397856cd811209e346115c7837d25e17b8a0b3dda94210",
+      "currentSha256": "c1e80c04ece477d54a8230e8f4dac55b1976b66e47ddcd26b21aa4d7af9d36f5",
+      "byteEqual": false,
+      "firstByteOffset": 176,
+      "firstDifference": {
+        "path": "$.a.contentDigest",
+        "previous": "fnv1a32-utf16:77f80fec",
+        "current": "fnv1a32-utf16:70a355f3"
+      }
+    },
+    "terminal": {
+      "previousBytes": 23276,
+      "currentBytes": 23883,
+      "previousSha256": "548aa8f8bfba4b9f1d086f428f64063a1787c973c67a9c211fbc6e037efc6331",
+      "currentSha256": "812d07b6bfacddd131e1664e4ddd9355d7b3009bdcc5f81f03e3fbce78d06c55",
+      "byteEqual": false,
+      "firstByteOffset": 286,
+      "firstDifference": {
+        "path": "$.strategy.traits.1.traitId",
+        "previous": "sentinel",
+        "current": "automata"
+      }
+    },
+    "events": {
+      "previousBytes": 166434,
+      "currentBytes": 166434,
+      "previousSha256": "ce0a1cdad74d810a3a5063fed553a3016b886d3b90fc1433e0dc074402fa1748",
+      "currentSha256": "ce0a1cdad74d810a3a5063fed553a3016b886d3b90fc1433e0dc074402fa1748",
+      "byteEqual": true,
+      "firstByteOffset": null,
+      "firstDifference": null
+    },
+    "pulses": {
+      "previousBytes": 14192,
+      "currentBytes": 14192,
+      "previousSha256": "501967ee9b7134ee37eccca0fddae0da9cf637f0902d6b7a814b3101691c9d40",
+      "currentSha256": "501967ee9b7134ee37eccca0fddae0da9cf637f0902d6b7a814b3101691c9d40",
+      "byteEqual": true,
+      "firstByteOffset": null,
+      "firstDifference": null
+    },
+    "terminalTick": 244,
+    "result": "enemyWin",
+    "pulseCount": 15
+  },
+  "herald": {
+    "ionic-spark": {
+      "previousBytes": 111551,
+      "currentBytes": 111485,
+      "previousSha256": "0697df8f49101e2886e3789cae4c8f1902bf02077316386e7457d0eeb54f6f50",
+      "currentSha256": "d2a2f4ba786bce7a0150dd594f9f6502e8d443d6120f23f1788dfcd3a531243e",
+      "byteEqual": false,
+      "firstByteOffset": 110,
+      "firstDifference": {
+        "path": "$.anomalyBinding.unitId",
+        "previous": "unit-20",
+        "current": "unit-22"
+      }
+    },
+    "evenshroud": {
+      "previousBytes": 111550,
+      "currentBytes": 111484,
+      "previousSha256": "e7cd79faa8ddf988df3a696df035664c2f26bc8550126789f8ffb2216ebf7903",
+      "currentSha256": "39733732d77f78a775f040cf39276debd8c1b5e05d103f44387883c2a9b00606",
+      "byteEqual": false,
+      "firstByteOffset": 110,
+      "firstDifference": {
+        "path": "$.anomalyBinding.unitId",
+        "previous": "unit-20",
+        "current": "unit-22"
+      }
+    },
+    "ionic-spark--evenshroud": {
+      "previousBytes": 111675,
+      "currentBytes": 111609,
+      "previousSha256": "c94ac7c45b450efaa57fd818a7550ba0c7119e63e93a6f5d19dec98206effa53",
+      "currentSha256": "beb58fa309bea0353e37b2c4f52aed79b9f3992b3f46909157805177d8c2e1b0",
+      "byteEqual": false,
+      "firstByteOffset": 110,
+      "firstDifference": {
+        "path": "$.anomalyBinding.unitId",
+        "previous": "unit-20",
+        "current": "unit-22"
+      }
+    },
+    "quicksilver": {
+      "previousBytes": 111554,
+      "currentBytes": 111488,
+      "previousSha256": "5c05385ee326e909d82863b1176a97bd49a0a2f7d1d25749a2c5c0c77cd09643",
+      "currentSha256": "97438bfd021d77665350c48c0f62bb8d9b5ef9992282409ea3746d56235f8235",
+      "byteEqual": false,
+      "firstByteOffset": 110,
+      "firstDifference": {
+        "path": "$.anomalyBinding.unitId",
+        "previous": "unit-20",
+        "current": "unit-22"
+      }
+    },
+    "edge-of-night": {
+      "previousBytes": 111556,
+      "currentBytes": 111490,
+      "previousSha256": "741444dbbff836a4b43933e32c67efeccf9b20518285de7a85c6afbeee2b4ff0",
+      "currentSha256": "d9940567a92b2677358d0d6c9d14ff4636c9230654ae00987f4c252680c7fff9",
+      "byteEqual": false,
+      "firstByteOffset": 110,
+      "firstDifference": {
+        "path": "$.anomalyBinding.unitId",
+        "previous": "unit-20",
+        "current": "unit-22"
+      }
+    },
+    "trajectory": {
+      "previousBytes": 200588,
+      "currentBytes": 203239,
+      "previousSha256": "9359563bae27044dae3f45b9db7c7080f67127cb0bbd0be702529a6a17761880",
+      "currentSha256": "7f251fc235e440b08cdd40dce4fbcc70b548327aa18865f8aa2fea85dfbc20fd",
+      "byteEqual": false,
+      "firstByteOffset": 42,
+      "firstDifference": {
+        "path": "$.branches.0.battles.0.eventsSha256",
+        "previous": "4aa836701979d562ac42dd887cb177b43f16ced8a797b6332f5f9acd8072c438",
+        "current": "c9290ab5b04a7a1362c542be57efd64162c2b1de131d8ca78316c2f8134b583c"
+      }
+    },
+    "manifest": {
+      "previousBytes": 18717,
+      "currentBytes": 19540,
+      "previousSha256": "29cb0e375e6cb167308ba51da7ec902b5a2d35d720e8e8ac4b3a37de634d5641",
+      "currentSha256": "1301e0896802fb57cb4b3fe8175107584378563f4a9dacf8ad5b175e18de39d3",
+      "byteEqual": false,
+      "firstByteOffset": 152,
+      "firstDifference": {
+        "path": "$.cases.0.rawBytes",
+        "previous": 111552,
+        "current": 111486
+      }
+    }
+  },
+  "b8": {
+    "0": {
+      "battle": {
+        "previousBytes": 3111,
+        "currentBytes": 4325,
+        "previousSha256": "f2ffe4e9f010ead620813e0da4c7245a0d90debe89e5e84cd977253b6d1d7c1a",
+        "currentSha256": "670fd3ebf8da3c33877567832b844ce84cdcf9ec4bb5c3940b2c7c0f1557807d",
+        "byteEqual": false,
+        "firstByteOffset": 523,
+        "firstDifference": {
+          "path": "$.initial.strategy.traits.1.traitId",
+          "previous": "sentinel",
+          "current": "automata"
+        }
+      },
+      "replay": {
+        "previousBytes": 579,
+        "currentBytes": 579,
+        "previousSha256": "d84878cea067bbfa366ac0e4d46cb96e9dfdd39b191f65bb3315559503a25e7e",
+        "currentSha256": "d84878cea067bbfa366ac0e4d46cb96e9dfdd39b191f65bb3315559503a25e7e",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null
+      }
+    },
+    "1": {
+      "battle": {
+        "previousBytes": 292973,
+        "currentBytes": 294187,
+        "previousSha256": "c9a99265768f73ffcd928a75f18b54b38229ff74b9c6c4af2d699f5a3104a0a3",
+        "currentSha256": "deeeca9141b39c52bc27055a8f6948bfb844939558f9f253916194af2e15166d",
+        "byteEqual": false,
+        "firstByteOffset": 784,
+        "firstDifference": {
+          "path": "$.initial.strategy.traits.1.traitId",
+          "previous": "sentinel",
+          "current": "automata"
+        }
+      },
+      "replay": {
+        "previousBytes": 184893,
+        "currentBytes": 184893,
+        "previousSha256": "d276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8",
+        "currentSha256": "d276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null
+      }
+    },
+    "9": {
+      "battle": {
+        "previousBytes": 1267449,
+        "currentBytes": 1268663,
+        "previousSha256": "76432cb53ba5a16ad53225d70db61b474111893d97413fedc8bce49f64b50697",
+        "currentSha256": "a8473a83426768d026f0a4811e75f2436e76160eebcb82e987b8e9807087d8d4",
+        "byteEqual": false,
+        "firstByteOffset": 2483,
+        "firstDifference": {
+          "path": "$.initial.strategy.traits.1.traitId",
+          "previous": "sentinel",
+          "current": "automata"
+        }
+      },
+      "replay": {
+        "previousBytes": 870641,
+        "currentBytes": 870641,
+        "previousSha256": "abcc86b6bf109fec71b1dd245b4623f606cfb043a4312e3a7bcb0b827e9ccac8",
+        "currentSha256": "abcc86b6bf109fec71b1dd245b4623f606cfb043a4312e3a7bcb0b827e9ccac8",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null
+      }
+    }
+  }
+}

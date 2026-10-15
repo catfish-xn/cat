@@ -1,0 +1,1258 @@
+{
+  "completed": 36,
+  "components": 8,
+  "items": [
+    {
+      "record": {
+        "apiName": "TFT_Item_AdaptiveHelm",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NegatronCloak",
+          "TFT_Item_TearOfTheGoddess"
+        ],
+        "desc": "Combat start: Gain different bonuses based on starting position.<br><br>Front Two Rows: @FrontRowBonusResists@ Armor and Magic Resist. Gain @FrontLineManaPerHit@ Mana when struck by an attack.<br><br>Back Two Rows: @BackRowBonusAP@ Ability Power. Gain @ManaPerTickrate@ Mana every @ManaTickrate@ seconds.<br>",
+        "effects": {
+          "AP": 10.0,
+          "BackRowBonusAP": 15.0,
+          "FrontLineManaPerHit": 1.0,
+          "FrontRowBonusResists": 40.0,
+          "MagicResist": 20.0,
+          "Mana": 15.0,
+          "ManaPerTickrate": 10.0,
+          "ManaTickrate": 3.0,
+          "{d357c9f2}": null
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_AdaptiveHelm.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Adaptive Helm",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1362",
+        "recordCanonicalSha256": "a7cf6d96743f5ab3f57bdc380c6141649801fec6eb4b4a26f9a3cfedc78f350e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_ArchangelsStaff",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NeedlesslyLargeRod",
+          "TFT_Item_TearOfTheGoddess"
+        ],
+        "desc": "Combat start: Gain @APPerInterval@ Ability Power every @IntervalSeconds@ seconds in combat.",
+        "effects": {
+          "AP": 20.0,
+          "APPerInterval": 30.0,
+          "IntervalSeconds": 5.0,
+          "Mana": 15.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_ArchangelsStaff.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Archangel's Staff",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1324",
+        "recordCanonicalSha256": "061eea2af9780cb6f60fb06ef250d310b535db83299bc90b994a44024e82dec6",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_BFSword",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "%i:scaleAD% +@AD*100@% Attack Damage",
+        "effects": {
+          "AD": 0.10000000149011612
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_BFSword.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "B.F. Sword",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1359",
+        "recordCanonicalSha256": "1fa1455bb2537a40aa735e9587eeaa8b8a5daf4ac8621b74551ac7285c86c384",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_Bloodthirster",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_NegatronCloak"
+        ],
+        "desc": "Once per combat at @HealthThreshold@% Health, gain a @ShieldHealthPercent@% max Health Shield that lasts up to @ShieldDuration@ seconds.",
+        "effects": {
+          "AD": 0.15000000596046448,
+          "AP": 15.0,
+          "HealthThreshold": 40.0,
+          "LifeSteal": 20.0,
+          "MagicResist": 20.0,
+          "ShieldDuration": 5.0,
+          "ShieldHealthPercent": 25.0,
+          "StatOmnivamp": 0.20000000298023224
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_Bloodthirster.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Bloodthirster",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1321",
+        "recordCanonicalSha256": "4540ebdd208a36b41311f1f0f1a268c74adeb0328041141e5caf142faa672217",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_BlueBuff",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_TearOfTheGoddess",
+          "TFT_Item_TearOfTheGoddess"
+        ],
+        "desc": "Gain @ManaRefund@ Mana after casting. <br><br>When the holder gets a takedown, they deal @DamageAmp*100@% more damage for @TakedownTimer@ seconds.<br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules>",
+        "effects": {
+          "AD": 0.15000000596046448,
+          "AP": 15.0,
+          "DamageAmp": 0.05000000074505806,
+          "Mana": 30.0,
+          "ManaRefund": 10.0,
+          "TakedownTimer": 8.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_BlueBuff.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Blue Buff",
+        "unique": true
+      },
+      "source": {
+        "jsonPointer": "/items/1368",
+        "recordCanonicalSha256": "1eaaebfbce2c9d620f85efcbdc72fb5bfe0c55f93fbd3a00cded03dbef746c1a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_BrambleVest",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_ChainVest",
+          "TFT_Item_ChainVest"
+        ],
+        "desc": "Gain @PercentMaxHP*100@% max health.<br><br>Take @AutoDamageReduction*100@% reduced damage from attacks. When struck by any attack, deal <magicDamage>@1StarAoEDamage@ magic damage</magicDamage> to all adjacent enemies.<br><br><tftitemrules>Cooldown: @ICD@ seconds</tftitemrules>",
+        "effects": {
+          "1StarAoEDamage": 100.0,
+          "2StarAoEDamage": 100.0,
+          "3StarAoEDamage": 100.0,
+          "Armor": 65.0,
+          "AutoDamageReduction": 0.07999999821186066,
+          "ICD": 2.0,
+          "PercentMaxHP": 0.07000000029802322,
+          "{6688a0d5}": 100.0,
+          "{b5c2a66b}": 100.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_BrambleVest.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Bramble Vest",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1254",
+        "recordCanonicalSha256": "e8a2cf39a35b0aebb6aabfefca83d25b24a152a47018634e4996367e77751c36",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_ChainVest",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "%i:scaleArmor% +@Armor@ Armor",
+        "effects": {
+          "Armor": 20.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_ChainVest.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Chain Vest",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1256",
+        "recordCanonicalSha256": "14c039b68c3f88a9a19079a8dc7b782459799249c59b5244c14adea3ae1f9ebe",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_Crownguard",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NeedlesslyLargeRod",
+          "TFT_Item_ChainVest"
+        ],
+        "desc": "Combat start: Gain a @ShieldSize@% max Health Shield for @ShieldDuration@ seconds.<br>When the shield expires, gain @ShieldBonusAP@ Ability Power.<br>",
+        "effects": {
+          "AP": 20.0,
+          "Armor": 20.0,
+          "ChillDuration": 4.0,
+          "Health": 100.0,
+          "HexRange": 2.0,
+          "ShieldBonusAP": 25.0,
+          "ShieldDuration": 8.0,
+          "ShieldSize": 25.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_Crownguard.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Crownguard",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1358",
+        "recordCanonicalSha256": "c9ecd50587d6cc591806d96830c492456a368031aa652b2b1017d88528a9d429",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_Deathblade",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_BFSword"
+        ],
+        "desc": "<tftitemrules>Perfect peace and calm for the holder - and all who face it.</tftitemrules>",
+        "effects": {
+          "AD": 0.550000011920929,
+          "BonusDamage": 0.07999999821186066,
+          "{1543aa48}": 0.07999999821186066
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_Deathblade.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Deathblade",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1393",
+        "recordCanonicalSha256": "df040b91231dea542826a0d7f7ab1b96f037e21c0c6d73627ba592aa622ff774",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_DragonsClaw",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NegatronCloak",
+          "TFT_Item_NegatronCloak"
+        ],
+        "desc": "Gain @PercentMaxHP*100@% max health.<br><br>Every @HealthRegenInterval@ seconds, heal @PercentHealthDamage@% max Health.",
+        "effects": {
+          "HealthRegenInterval": 2.0,
+          "ICD": 0.5,
+          "MagicResist": 75.0,
+          "PercentHealthDamage": 2.5,
+          "PercentMaxHP": 0.09000000357627869
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_DragonsClaw.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Dragon's Claw",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1194",
+        "recordCanonicalSha256": "cf842d62804ea43525be413ebef5e5bfc9b89174d22fe6f72772c388a05bc987",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_FrozenHeart",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_TearOfTheGoddess",
+          "TFT_Item_ChainVest"
+        ],
+        "desc": "Once per combat at @HealthThreshold@% Health, gain a @ShieldHealthPercent@% max Health Shield that lasts @ShieldDuration@ seconds and gain @Stats@ Armor and @Stats@ Magic Resist.",
+        "effects": {
+          "Armor": 20.0,
+          "HealthThreshold": 40.0,
+          "Mana": 30.0,
+          "ShieldDuration": 5.0,
+          "ShieldHealthPercent": 25.0,
+          "Stats": 20.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_FrozenHeart.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Protector's Vow",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1044",
+        "recordCanonicalSha256": "239a47ecc82156ae475c2f5710fa8edcf06f6223ab4d20fc3fdb91b5f3b034e7",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_GargoyleStoneplate",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_ChainVest",
+          "TFT_Item_NegatronCloak"
+        ],
+        "desc": "Gain @ArmorPerEnemy@ Armor and @MRPerEnemy@ Magic Resist for each enemy targeting the holder.",
+        "effects": {
+          "Armor": 25.0,
+          "ArmorPerEnemy": 10.0,
+          "Health": 100.0,
+          "MRPerEnemy": 10.0,
+          "MagicResist": 25.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_GargoyleStoneplate.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Gargoyle Stoneplate",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1253",
+        "recordCanonicalSha256": "9c89d4e43b20da6fb743e9d5904f105baa8787b392b5740fc61eb1ae0d1f1f3e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_GiantsBelt",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "%i:scaleHealth% +@Health@ Health",
+        "effects": {
+          "Health": 150.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_GiantsBelt.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Giant's Belt",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1373",
+        "recordCanonicalSha256": "8d5bceaa6138121ab50944d98f2fefb6e1bf2bc06c46a60e7028725eea1a6763",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_GuardianAngel",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_ChainVest"
+        ],
+        "desc": "Once per combat: At @HealthThreshold@% Health, briefly become untargetable and shed negative effects. Then, gain @AttackSpeed@% bonus Attack Speed.<br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules>",
+        "effects": {
+          "AD": 0.10000000149011612,
+          "Armor": 20.0,
+          "AttackSpeed": 15.0,
+          "DamageReduction": 100.0,
+          "HealthThreshold": 60.0,
+          "StealthDuration": 1.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_GuardianAngel.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Edge of Night",
+        "unique": true
+      },
+      "source": {
+        "jsonPointer": "/items/1293",
+        "recordCanonicalSha256": "09c28cec15c3c65116753f2dfd569823952b69893c112f925206d743b9165e6c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_GuinsoosRageblade",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_RecurveBow",
+          "TFT_Item_NeedlesslyLargeRod"
+        ],
+        "desc": "Attacks grant @AttackSpeedPerStack@% stacking Attack Speed.",
+        "effects": {
+          "AP": 10.0,
+          "AS": 10.0,
+          "AttackSpeedPerStack": 5.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_GuinsoosRageblade.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Guinsoo's Rageblade",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1187",
+        "recordCanonicalSha256": "b92154c477b6cd38005aabbb7a5486c589e8865d5810ac9cca90ca64e1b89a09",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_HextechGunblade",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_NeedlesslyLargeRod"
+        ],
+        "desc": "Heal the lowest percent Health ally for @AllyHealing*100@% of damage dealt.<br><br><TFTTrackerLabel>Ally Healing:</TFTTrackerLabel> <TFTHighlight>@TFTUnitProperty.item:TFT_Tracker_Value1@</TFTHighlight>",
+        "effects": {
+          "AD": 0.20000000298023224,
+          "AP": 20.0,
+          "AllyHealing": 0.25,
+          "Omnivamp": 15.0,
+          "StatOmnivamp": 0.15000000596046448
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_HextechGunblade.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Hextech Gunblade",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1411",
+        "recordCanonicalSha256": "db3b47d1efbfaca91be9792cd035d68370aed45eedfdc68e3dcef922b136e41e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_InfinityEdge",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_SparringGloves"
+        ],
+        "desc": "Abilities can critically strike.<br><br>If the holder's abilities can already critically strike, gain @CritDamageToGive*100@% Critical Strike Damage instead.",
+        "effects": {
+          "AD": 0.3499999940395355,
+          "CritChance": 35.0,
+          "CritDamageToGive": 0.10000000149011612
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_InfinityEdge.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Infinity Edge",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/927",
+        "recordCanonicalSha256": "9018668f94e147922dbd15696f2aa70894ca15b8ed0bbf4783589d07635f47b1",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_IonicSpark",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NeedlesslyLargeRod",
+          "TFT_Item_NegatronCloak"
+        ],
+        "desc": "@MRShred@% <TFTKeyword>Shred</TFTKeyword> enemies within @HexRange@ hexes. When enemies cast an Ability, deal magic damage equal to @ManaRatio@% of the Mana spent.<br><br><tftitemrules><tftbold>Shred</tftbold>: Reduce Magic Resist</tftitemrules>",
+        "effects": {
+          "AP": 15.0,
+          "Damage": 250.0,
+          "Health": 100.0,
+          "HexRange": 2.0,
+          "MRShred": 30.0,
+          "MagicResist": 25.0,
+          "ManaRatio": 160.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_IonicSpark.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Ionic Spark",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1190",
+        "recordCanonicalSha256": "00ae6024414dae751d6e7bfd5516cbfc345af48caa5ba59ab48319dc81d4e09a",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_JeweledGauntlet",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NeedlesslyLargeRod",
+          "TFT_Item_SparringGloves"
+        ],
+        "desc": "Abilities can critically strike.<br><br>If the holder's abilities can already critically strike, gain @CritDamageToGive*100@% Critical Strike Damage instead.",
+        "effects": {
+          "AP": 35.0,
+          "CritChance": 35.0,
+          "CritDamageToGive": 0.10000000149011612
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_JeweledGauntlet.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Jeweled Gauntlet",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1372",
+        "recordCanonicalSha256": "abe9b84e9c890e7c45dae598eceb1bb4ade2d53b200e67d56f85eba4aaf9e059",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_LastWhisper",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_RecurveBow",
+          "TFT_Item_SparringGloves"
+        ],
+        "desc": "Physical damage @ArmorReductionPercent@% <TFTKeyword>Sunders</TFTKeyword> the target for @ArmorBreakDuration@ seconds. This effect does not stack.<br><br><tftitemrules>[Unique - only 1 per champion]<br><tftbold>Sunder</tftbold>: Reduce Armor</tftitemrules>",
+        "effects": {
+          "AD": 0.15000000596046448,
+          "AS": 20.0,
+          "ArmorBreakDuration": 3.0,
+          "ArmorReductionPercent": 30.0,
+          "CritChance": 20.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_LastWhisper.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Last Whisper",
+        "unique": true
+      },
+      "source": {
+        "jsonPointer": "/items/1371",
+        "recordCanonicalSha256": "84cfecededc7319288cbdf65bd02d56f2507cdba7274262e86c5bff3f07c9728",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_Leviathan",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_RecurveBow",
+          "TFT_Item_GiantsBelt"
+        ],
+        "desc": "After casting an Ability, gain @AttackSpeedToGive@% Attack Speed for @ASDuration@ seconds.",
+        "effects": {
+          "AP": 10.0,
+          "AS": 10.0,
+          "ASDuration": 5.0,
+          "AttackSpeedToGive": 60.0,
+          "Health": 150.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_Leviathan.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Nashor's Tooth",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1352",
+        "recordCanonicalSha256": "b0816135872648365982c5b30041700e73ae902300f6c878a76ebf571a1cce79",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_MadredsBloodrazor",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_RecurveBow"
+        ],
+        "desc": "Gain @DamageAmp*100@% additional Damage Amp against enemies with more than @HealthThreshold@ max Health.",
+        "effects": {
+          "AD": 0.25,
+          "AP": 25.0,
+          "AS": 10.0,
+          "DamageAmp": 0.20000000298023224,
+          "HealthThreshold": 1750.0,
+          "LargeBonusPct": 25.0,
+          "{1543aa48}": 0.05000000074505806
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_MadredsBloodrazor.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Giant Slayer",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1275",
+        "recordCanonicalSha256": "74fd1d4294c568d4130a1a4273e9320fda566dce6542e4a912eb49e0523b2a77",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_Morellonomicon",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NeedlesslyLargeRod",
+          "TFT_Item_GiantsBelt"
+        ],
+        "desc": "Attacks and Abilities deal @BurnPercent@% <TFTKeyword>Burn</TFTKeyword> and @GrievousWoundsPercent@% <TFTKeyword>Wound</TFTKeyword> to enemies for @BurnDuration@ seconds.<br><br><tftitemrules>[Unique - only 1 per champion]<br><tftbold>Burn</tftbold>: Deals a percent of the target's max Health as true damage every second<br><tftbold>Wound</tftbold>: Reduces healing received</tftitemrules>",
+        "effects": {
+          "AP": 25.0,
+          "AS": 10.0,
+          "BurnDuration": 10.0,
+          "BurnPercent": 1.0,
+          "GrievousWoundsPercent": 33.0,
+          "Health": 150.0,
+          "MonsterCap": 100.0,
+          "TicksPerSecond": 1.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_Morellonomicon.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Morellonomicon",
+        "unique": true
+      },
+      "source": {
+        "jsonPointer": "/items/1355",
+        "recordCanonicalSha256": "2e74ce3a39bb3896022d0e83ebf61da50d0c2ca07f60f4ca3fbff5e73a3386c7",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_NeedlesslyLargeRod",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "%i:scaleAP% +@AP@ Ability Power",
+        "effects": {
+          "AP": 10.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_NeedlesslyLargeRod.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Needlessly Large Rod",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1379",
+        "recordCanonicalSha256": "7984f38cd4e7a7e89e6b1ca0192594915a79a8a87bc509124a19719b64e74617",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_NegatronCloak",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "%i:scaleMR% +@MagicResist@ Magic Resist",
+        "effects": {
+          "MagicResist": 20.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_NegatronCloak.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Negatron Cloak",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1301",
+        "recordCanonicalSha256": "c450a08482dca3df9c41bc46938ae97573e2c9ae50620874aca6ec7e33cedbfe",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_NightHarvester",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_ChainVest",
+          "TFT_Item_SparringGloves"
+        ],
+        "desc": "Gain @BaseDurability*100@% Durability. While above @ThresholdForEmpower*100@% Health, instead gain @EmpoweredDurability*100@% Durability.",
+        "effects": {
+          "Armor": 20.0,
+          "BaseDamageReduction": 8.0,
+          "BaseDurability": 0.07999999821186066,
+          "CritChance": 20.0,
+          "EmpowerDamageReduction": 15.0,
+          "EmpoweredDurability": 0.15000000596046448,
+          "Health": 200.0,
+          "ThresholdForEmpower": 0.5
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_NightHarvester.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Steadfast Heart",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1383",
+        "recordCanonicalSha256": "521780e7df08ba937f372a4c1026fb3dd949f647bc60123709785cf642005eee",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_PowerGauntlet",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_GiantsBelt",
+          "TFT_Item_SparringGloves"
+        ],
+        "desc": "After damaging a Shield, gain @DamageAmp*100@% additional Damage Amp for @Duration@ seconds.",
+        "effects": {
+          "AP": 10.0,
+          "AS": 20.0,
+          "CritChance": 20.0,
+          "DamageAmp": 0.15000000596046448,
+          "Duration": 3.0,
+          "Health": 150.0,
+          "{1543aa48}": 0.10000000149011612
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_PowerGauntlet.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Guardbreaker",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1221",
+        "recordCanonicalSha256": "3b4d7ae3621ab971ddcc3e64701a0ef6858046e68c53538a78c5578c71fa04dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_Quicksilver",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_SparringGloves",
+          "TFT_Item_NegatronCloak"
+        ],
+        "desc": "Combat start: Gain immunity to crowd control for @SpellShieldDuration@ seconds. During this time, gain @ProcAttackSpeed*100@% Attack Speed every @ProcInterval@ seconds.<br><br><tftitemrules>[Unique - only 1 per champion]</tftitemrules>",
+        "effects": {
+          "AS": 30.0,
+          "CritChance": 20.0,
+          "MagicResist": 20.0,
+          "ProcAttackSpeed": 0.029999999329447746,
+          "ProcInterval": 2.0,
+          "SpellShieldDuration": 18.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_Quicksilver.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Quicksilver",
+        "unique": true
+      },
+      "source": {
+        "jsonPointer": "/items/1392",
+        "recordCanonicalSha256": "69d74cdedf82ba14b4543fda9af4c618963311eb8f757e0c7cae515acda43b0e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_RabadonsDeathcap",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NeedlesslyLargeRod",
+          "TFT_Item_NeedlesslyLargeRod"
+        ],
+        "desc": "<tftitemrules>This humble hat can help you make, or unmake, the world itself.</tftitemrules>",
+        "effects": {
+          "AP": 50.0,
+          "BonusDamage": 0.15000000596046448,
+          "{1543aa48}": 0.15000000596046448
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_RabadonsDeathcap.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Rabadon's Deathcap",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/331",
+        "recordCanonicalSha256": "e59793391010f377ce09e921bb1cdd7e9495dd50f54483ecb99b2649f142ea4c",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_RapidFireCannon",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_RecurveBow",
+          "TFT_Item_RecurveBow"
+        ],
+        "desc": "Attacks and Abilities @BurnPercent@% <TFTKeyword>Burn</TFTKeyword> and @HealingReductionPct@% <TFTKeyword>Wound</TFTKeyword> enemies for @Duration@ seconds.<br><br><tftitemrules><tftbold>Burn</tftbold>: Deals a percent of the target's max Health as true damage every second<br><tftbold>Wound</tftbold>: Reduces healing received</tftitemrules>",
+        "effects": {
+          "AS": 35.0,
+          "BonusDamage": 0.05999999865889549,
+          "BurnPercent": 1.0,
+          "Duration": 5.0,
+          "HealingReductionPct": 33.0,
+          "HexRangeIncrease": 1.0,
+          "{1543aa48}": 0.029999999329447746,
+          "{9f5117db}": 100.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_RapidFireCannon.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Red Buff",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1356",
+        "recordCanonicalSha256": "e7d234e4cc3e907769ebdd5ff5806b9c6d853775628c501ddc98036e108199ed",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_RecurveBow",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "%i:scaleAS% +@AS@% Attack Speed",
+        "effects": {
+          "AS": 10.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_RecurveBow.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Recurve Bow",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1274",
+        "recordCanonicalSha256": "d4a066316b9560c8964c63ed3e79fc982812ddef17230f95d1197fb2e4d99e40",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_RedBuff",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_ChainVest",
+          "TFT_Item_GiantsBelt"
+        ],
+        "desc": "Gain @BonusPercentHP*100@% max Health. <br><br>Every @ICD@ seconds, deal @BurnPercent@% <TFTKeyword>Burn</TFTKeyword> and @GrievousWoundsPercent@% <TFTKeyword>Wound</TFTKeyword> to an enemy within @HexRange@ hexes for @BurnDuration@ seconds.<br><br><tftitemrules>[Unique - only 1 per champion]<br><tftbold>Burn</tftbold>: Deals a percent of the target's max Health as true damage every second<br><tftbold>Wound</tftbold>: Reduces healing received</tftitemrules>",
+        "effects": {
+          "Armor": 20.0,
+          "BonusPercentHP": 0.07999999821186066,
+          "BurnDuration": 10.0,
+          "BurnPercent": 1.0,
+          "GrievousWoundsPercent": 33.0,
+          "Health": 150.0,
+          "HexRange": 2.0,
+          "ICD": 2.0,
+          "MonsterCap": 100.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_RedBuff.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Sunfire Cape",
+        "unique": true
+      },
+      "source": {
+        "jsonPointer": "/items/1287",
+        "recordCanonicalSha256": "68c7b2046926a19e926fd58eb55e800977429c90429ab9f3cf8ded8e2670b530",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_Redemption",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_TearOfTheGoddess",
+          "TFT_Item_GiantsBelt"
+        ],
+        "desc": "Heal allies within 1 hex for @MissingHealthHeal@% of their missing Health every @HealTickRate@ seconds. They also gain @AoEDamageReduction@% Durability for @HealTickRate@ seconds (this does not stack).<br><br><TFTTrackerLabel>Healing:</TFTTrackerLabel> <TFTHighlight>@TFTUnitProperty.item:TFT_Tracker_Value1@</TFTHighlight>",
+        "effects": {
+          "AoEDamageReduction": 10.0,
+          "HealTickRate": 5.0,
+          "Health": 150.0,
+          "HexRadius": 1.0,
+          "Mana": 15.0,
+          "MaxHeal": 1000.0,
+          "MissingHealthHeal": 15.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_Redemption.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Redemption",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1095",
+        "recordCanonicalSha256": "a0b35c26a84095ae31a26cdb44616f874b260bd64b9585778c248d81aa48b263",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_RunaansHurricane",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NegatronCloak",
+          "TFT_Item_RecurveBow"
+        ],
+        "desc": "Attacks fire a bolt at a nearby enemy, dealing @MultiplierForDamage@% Attack Damage %i:scaleAD% as physical damage.",
+        "effects": {
+          "AD": 0.25,
+          "AS": 10.0,
+          "AdditionalTargets": 1.0,
+          "MagicResist": 20.0,
+          "MultiplierForDamage": 55.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_RunaansHurricane.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Runaan's Hurricane",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1308",
+        "recordCanonicalSha256": "6e2f9fa7e961d6920eb1ee15a881a14b5857b11ae52db7be418e924d6850bf6f",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_SparringGloves",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "+@CritChance@ Critical Strike Chance",
+        "effects": {
+          "CritChance": 20.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_SparringGloves.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Sparring Gloves",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1318",
+        "recordCanonicalSha256": "ee5618f5111bdb04f5da985014110317e7c5001b37cadd3a403feb52acf5d4b4",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_SpearOfShojin",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_TearOfTheGoddess"
+        ],
+        "desc": "Attacks grant @FlatManaRestore@ bonus Mana.",
+        "effects": {
+          "AD": 0.15000000596046448,
+          "AP": 15.0,
+          "FlatManaRestore": 5.0,
+          "Mana": 15.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_SpearOfShojin.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Spear of Shojin",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1343",
+        "recordCanonicalSha256": "ac72cc71a2523479fbcaf490a5d277d38522b365028ac3463bd95c5893f0ba9e",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_SpectralGauntlet",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_NegatronCloak",
+          "TFT_Item_GiantsBelt"
+        ],
+        "desc": "@ARReductionAmount@% <TFTKeyword>Sunder</TFTKeyword> enemies within @HexRange@ hexes. Gain @BonusResists@ Armor and Magic Resist for the first @BonusResistDuration@ seconds of combat.<br><br><tftitemrules><tftbold>Sunder</tftbold>: Reduce Armor</tftitemrules>",
+        "effects": {
+          "ARReductionAmount": 30.0,
+          "BonusResistDuration": 10.0,
+          "BonusResists": 25.0,
+          "Health": 150.0,
+          "HexRange": 2.0,
+          "MagicResist": 20.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_SpectralGauntlet.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Evenshroud",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1345",
+        "recordCanonicalSha256": "911cabfcf8d24aef3a6cd97e24bf7a1bab40525293a2200ed5084e0a1efbf469",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_StatikkShiv",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_RecurveBow",
+          "TFT_Item_TearOfTheGoddess"
+        ],
+        "desc": "Every 3rd attack deals @Damage@ magic damage and @MRShred@% <TFTKeyword>Shreds</TFTKeyword> @1StarBounces@ enemies for @MRShredDuration@ seconds.<br><br><tftitemrules><tftbold>Shred</tftbold>: Reduce Magic Resist</tftitemrules>",
+        "effects": {
+          "1StarBounces": 4.0,
+          "AP": 15.0,
+          "AS": 15.0,
+          "Damage": 35.0,
+          "MRShred": 30.0,
+          "MRShredDuration": 5.0,
+          "Mana": 15.0,
+          "{12a15e9e}": 4.0,
+          "{15144cec}": 4.0,
+          "{79e2ec7b}": 4.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_StatikkShiv.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Statikk Shiv",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1404",
+        "recordCanonicalSha256": "b58a2a40c2ba7097c0b79b45c754a0ca46a527db78573ab35c68660c748b7e13",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_SteraksGage",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_BFSword",
+          "TFT_Item_GiantsBelt"
+        ],
+        "desc": "Once per combat at @HealthThreshold@% Health, gain @BonusMaxHealthPerc@% max Health and @BonusADToGive@% Attack Damage.",
+        "effects": {
+          "AD": 0.15000000596046448,
+          "BonusADToGive": 35.0,
+          "BonusMaxHealthPerc": 25.0,
+          "Health": 150.0,
+          "HealthThreshold": 60.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_SteraksGage.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Sterak's Gage",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1193",
+        "recordCanonicalSha256": "23be6124ad8925f979cc7e293b7123393706c00ca20d34259f902ce9fbd09e93",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_TearOfTheGoddess",
+        "associatedTraits": [],
+        "composition": [],
+        "desc": "%i:scaleMana% +@Mana@ Mana",
+        "effects": {
+          "Mana": 15.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_TearOfTheGoddess.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Tear of the Goddess",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1296",
+        "recordCanonicalSha256": "40b627c5edfa5b507ca361e2dd07280234ae4976c62ff95c8dc46d583d558ce8",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_ThiefsGloves",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_SparringGloves",
+          "TFT_Item_SparringGloves"
+        ],
+        "desc": "Each round: Equip 2 random items.<br><br><tftitemrules>[Consumes 3 item slots.]</tftitemrules><br>@TFTUnitProperty.:TFT_BindOnEquipTRA@",
+        "effects": {
+          "CritChance": 20.0,
+          "Health": 150.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_ThiefsGloves.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Thief's Gloves",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1185",
+        "recordCanonicalSha256": "4645809c6f08ec25ccfbd8bef2f3817590d60af3221dbde2be6f13d3e0652576",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_TitansResolve",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_ChainVest",
+          "TFT_Item_RecurveBow"
+        ],
+        "desc": "Gain @StackingAD*100@% Attack Damage and @StackingSP@ Ability Power when attacking or taking damage, stacking up to @StackCap@ times.  <br><br>At full stacks, gain @BonusResistsAtStackCap@ Armor and @BonusResistsAtStackCap@ Magic Resist.",
+        "effects": {
+          "AS": 10.0,
+          "Armor": 20.0,
+          "BonusResistsAtStackCap": 20.0,
+          "StackCap": 25.0,
+          "StackingAD": 0.019999999552965164,
+          "StackingSP": 2.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_TitansResolve.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Titan's Resolve",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1302",
+        "recordCanonicalSha256": "0ae93a96570b8725be74c3363e8dca59d0ff06b94383add566765d4a20247804",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_UnstableConcoction",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_TearOfTheGoddess",
+          "TFT_Item_SparringGloves"
+        ],
+        "desc": "Gain 2 effects:<li>@AD_NotStatBar*100@% Attack Damage and @AP_NotStatBar@ Ability Power.<li>@StatOmnivamp_NotStatBar*100@% Omnivamp.<br><br>While above @HealthThreshold*100@% health, double the Attack Damage and Ability Power. While below @HealthThreshold*100@% Health, double the Omnivamp.",
+        "effects": {
+          "AD_NotStatBar": 0.15000000596046448,
+          "AP_NotStatBar": 15.0,
+          "CritChance": 20.0,
+          "HealthThreshold": 0.5,
+          "Mana": 15.0,
+          "StatOmnivamp_NotStatBar": 0.11999999731779099,
+          "{f23e83fc}": 2.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_UnstableConcoction.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Hand Of Justice",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1291",
+        "recordCanonicalSha256": "6183723ebc3f4a7c66be379a0d8302379375aba512e63e12f46be3bd0b6005dc",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    },
+    {
+      "record": {
+        "apiName": "TFT_Item_WarmogsArmor",
+        "associatedTraits": [],
+        "composition": [
+          "TFT_Item_GiantsBelt",
+          "TFT_Item_GiantsBelt"
+        ],
+        "desc": "Gain @BonusPercentHP*100@% max health.",
+        "effects": {
+          "BonusPercentHP": 0.11999999731779099,
+          "Health": 600.0
+        },
+        "from": null,
+        "icon": "ASSETS/Maps/TFT/Icons/Items/Hexcore/TFT_Item_WarmogsArmor.TFT_Set13.tex",
+        "id": null,
+        "incompatibleTraits": [],
+        "name": "Warmog's Armor",
+        "unique": false
+      },
+      "source": {
+        "jsonPointer": "/items/1399",
+        "recordCanonicalSha256": "961fbfa7b65c1d2b62f87115db675fd4fc2e0eaa5236ff43d2bbc6d865f6b858",
+        "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+      }
+    }
+  ],
+  "scope": "all eight ordinary components and 36 ordinary recipes already implemented at 9e3d203",
+  "upstreamSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3"
+}

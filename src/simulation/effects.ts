@@ -13,9 +13,10 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
   attack: -2, ability: -1, trait: 0, item: 1, augment: 2, anomaly: 3, enemyGrowth: 4,
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
-const MECHANICS = new Set(['artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
+const MECHANICS = new Set(['automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
   'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'lowCostAllies']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  automata: ['crystals','damage','conversionBps'], firelight: ['periodTicks','healBps','attackSpeedBps','dashTicks'], family: ['manaReductionBps','damageReductionBps','heist'],
   artillery: ['everyN', 'adBps', 'radius'], sniper: ['damageBpsPerHex'], watcher: ['reductionBps', 'healthyReductionBps', 'thresholdBps'],
   rageblade: ['attackSpeedBps'], archangel: ['periodTicks', 'abilityPower'], dragonClaw: ['periodTicks', 'healMaxHpBps'],
   gargoyle: ['resistPerEnemy'], gunblade: ['selfHealBps', 'allyHealBps'], extraAttackMana: ['amount'], titanic: ['adBps', 'radius'],

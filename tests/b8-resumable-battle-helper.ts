@@ -1,3 +1,4 @@
+import currentFingerprints from './fixtures/g2-1-b8-fingerprints.json';
 import { deepStrictEqual } from 'node:assert';
 import { freeze } from './combat-helpers';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -55,12 +56,8 @@ if (mode === 'fast') {
 describe('SR-B8-02 resumable pure tasks', () => {
   if (mode === 'fast') { it.each([0, 1, 9])('pre-change byte fingerprint: %s units per side', count => {
     const battle = resolveTwoSidedBattle(input(count), 1201);
-    // Captured by running the e82afa5 implementations, before the task refactor.
-    const fingerprints: Record<number, readonly string[]> = {
-      0: ['f2ffe4e9f010ead620813e0da4c7245a0d90debe89e5e84cd977253b6d1d7c1a', 'd84878cea067bbfa366ac0e4d46cb96e9dfdd39b191f65bb3315559503a25e7e'],
-      1: ['c9a99265768f73ffcd928a75f18b54b38229ff74b9c6c4af2d699f5a3104a0a3', 'd276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8'],
-      9: ['76432cb53ba5a16ad53225d70db61b474111893d97413fedc8bce49f64b50697', 'abcc86b6bf109fec71b1dd245b4623f606cfb043a4312e3a7bcb0b827e9ccac8'],
-    };
+    // G2 bytes audited in docs/evidence/g2-1/fixture-migration.json.
+    const fingerprints: Record<number, readonly string[]> = currentFingerprints;
     const replay = toCombatReplay(battle);
     // G5 adds only heal.shares. Retain the original byte anchor for every prior field,
     // and independently check every newly exposed share against the complete ledger.
@@ -123,6 +120,21 @@ describe('SR-B8-02 resumable pure tasks', () => {
     const invalidTask = startCombatReplay(bad);
     expect(invalidTask.advance(1)).toBeNull();
     expect(() => invalidTask.advance(1201)).toThrow('replay-divergence');
+  }); }
+  if (mode === 'fast') { it('defers early and trailing animation divergence until the terminal slice', () => {
+    const source = controlBattle();
+    const damage = source.events.find(event => event.type === 'packetDamage')!;
+    expect(damage.type).toBe('packetDamage');
+    if (damage.type !== 'packetDamage') throw new Error('missing damage fixture');
+    for (const events of [
+      source.events.map(event => event === damage
+        ? { ...event, outcome: { ...event.outcome, hpDamage: event.outcome.hpDamage + 1 } } : event),
+      [...source.events, damage],
+    ]) {
+      const task = startCombatReplay({ ...source, events });
+      for (let tick = 1; tick < source.terminal.tick; tick++) expect(task.advance(1)).toBeNull();
+      expect(() => task.advance(1)).toThrow('replay-divergence');
+    }
   }); }
   if (mode === 'timing') {
     for (const name of ['battle', 'replay'] as const) describe(name, { concurrent: false, shuffle: false }, () => {

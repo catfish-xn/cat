@@ -1,7 +1,9 @@
+import { G2_ABILITY_DATA } from './g2-abilities';
 import { freezeContent } from './freeze';
 /** Historical coefficients: three entries are 1/2/3-star. Ratios are fractions (1.25 = 125%); durations are seconds; amounts scale with AP/100 as described in source. Runtime must convert ratios to integer basis points before arithmetic. */
 export interface S13AbilityData { readonly id: string; readonly championId: string; readonly variables: Readonly<Record<string, readonly [number,number,number]>>; readonly description: string }
 export const S13_ABILITY_DATA: Readonly<Record<string,S13AbilityData>> = freezeContent({
+  ...G2_ABILITY_DATA,
   "irelia-ability": {
     "id": "irelia-ability",
     "championId": "irelia",

@@ -64,8 +64,8 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
 }
 export function transferPreparation() {
   return configuredPrefix('4-7',{seed:4,build:'cannon',copyLimits:{ezreal:2},fieldCopies:['ezreal'],
-    supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:1}},
-    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:1,anomalyDefinitionId:'mage-armor'});
+    supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
+    reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor'});
 }
 export async function terminalPreparation(keep:string|null,col=1) {
   const key='terminal38';
