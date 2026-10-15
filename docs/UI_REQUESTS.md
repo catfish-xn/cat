@@ -836,6 +836,21 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **需要**：`docs/S13_RULES_GAP.md` §10 给出 14.24b 的定义与推荐值；若 14.24b 的放宽顺序不是"全体逐轮减 1"，或奇数镜像应受约束/计入来源席历史，请在合同写明，服务器按合同改 `pairing.ts`。
 - **验收**：§10 的 6–8 组向量能直接写成 `tests/server/pairing.test.ts` 的用例并通过。
 
+
+## SR-G1-02 规则侧逐项答复（P7，2026-10-15）
+
+正式接口和失败全集见 MATCH_CONTRACT P7，逐项映射表及初始化顺序见 MULTIPLAYER_CONTRACT §21.4–21.5；server-entry 同名导出已补齐。
+- opensCarousel / schedule / prepareCarouselParticipants / createCarousel 均由规则提供；六轮时间均 6000/6000/6000ms，每批 2 人、HP 低先、平血座位先，含 1-1；全选也等固定截止，未选者自动选。
+- 服务器选取用 pickCarouselForSeat，自动选用 autoPickCarouselForSeat，单事务返回 pool/carousel/state/events；底层 pickFromCarousel、grantCarouselPick、autoPickFromCarousel 亦导出。机器人优先同名可升级，再高费用、低 slot，不额外耗 RNG。
+- 公开列表 listCarouselSlots；1-1 不加 catalog 行/不移动 ordinal，使用 createCarouselMatch 空阵容与 0 金币/0 组件开局，选秀给一单位一组件；之后才生成首店。
+- x-4 不保留旧组件 supply 选择；completeCarouselForSeat 在固定截止后结算一次自然经济，nextSharedRound 接续。
+- 满备战席进入本席 pendingUnits（计 holdings）；resolvePendingCarouselUnits 归位/合法合成，sellPendingCarouselUnit 显式出售，不自动卖出。
+- 池 v3 内含预留/收据，assertSharedPoolConservation 无需盘面参数；可传 states 核对单位与队列。淘汰用 releaseCarouselParticipant。
+- 占位失败映射：carousel-slot-taken→slot-taken，carousel-already-picked→already-picked，carousel-unknown-slot→invalid-slot，carousel-not-participant→unknown-seat；carousel-closed 同名，未放行 seat-locked，过期池 stale-pool。完整枚举见 MATCH P7。
+- 恢复先 restoreCarousel 后 restoreCarouselSeat（可信服务器快照边界），不重建、不发奖；网络 carouselPick 可由服务器绑定层沿现有信封适配。
+
+本分支只交付规则/合同/测试，未修改 src/server 或界面；G1 的八席 1-1/2-4 e2e 由其接线后验收。
+
 ## G5 战后统计与经济提示（2026-10-15，Claude 流水线 C，分支 `claude/g5-stats-replay`）
 
 ### 已交付（纯界面，无需 Codex 动作即可运行）

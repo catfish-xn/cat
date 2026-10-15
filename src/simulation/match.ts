@@ -90,6 +90,7 @@ function enterScheduledEvents(initial: MatchState, timing: 'before' | 'after' = 
   for (const event of getRoundSchedule(state.round).filter(event => (event.timing ?? 'before') === timing)) {
     if (state.scheduleReceipts.some(receipt => receipt.eventId === event.id)) continue;
     if (state.multiplayer?.forfeitedChoices.includes(event.id)) continue;
+    if (state.carousel && event.kind==='component' && getRoundKind(state.round)==='supply') continue;
     if (event.kind === 'reward') {
       const { receipt, ...plan } = planReward(state, event);
       state = { ...state, ...plan, scheduleReceipts: [...state.scheduleReceipts, receipt] };
@@ -120,6 +121,13 @@ function prepareRound(seed: number, round: number, previous?: MatchState['m8']['
     contentStatus:definition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',
     enemies:createRoundEnemies(round),
   }});
+}
+/** Explicit multiplayer carousel bootstrap: 1-1 is a prelude, catalog ordinals stay stable. */
+export function createCarouselMatch(seed=DEFAULT_MATCH_SEED):MatchState {
+  const state=createMatch(seed,{mode:'shared-deferred'});
+  return {...state,carousel:{openingPending:true,receipts:[],pendingUnits:[]},nextUnitSerial:1,
+    resourceProvenance:{version:RESOURCE_PROVENANCE_VERSION,entries:[]},
+    preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.team!=='player')}};
 }
 export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization = {mode:'solo'}): MatchState {
   validateSeed(seed); validateContent();
@@ -263,6 +271,7 @@ export function buyXp(state: MatchState): MatchCommandResult {
   return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
+  if (state.carousel?.openingPending) return 'wrong-phase';
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
   if (state.phase !== 'preparation') return 'wrong-phase';
   if (state.multiplayer?.status === 'eliminated') return 'wrong-phase';
@@ -355,6 +364,12 @@ export function stepMatch(state: MatchState, unitLootPolicy?: UnitLootPolicy): M
   const next = stepCombat(state.combat), settled = withCombat(state, next.state, unitLootPolicy);
   const result = accept(settled.state, [...toLedgerEvents(next.events), ...settled.events]);
   return { state: result.state, events: result.ok ? result.events : [] };
+}
+/** P7 replaces the supply choice, but keeps that natural round's economy exactly once. */
+export function finishCarouselSupply(state:MatchState):MatchCommandResult {
+  if(!state.carousel||state.m8.round.kind!=='supply'||state.phase!=='preparation'||state.pendingChoice||!state.carousel.receipts.some(r=>r.carouselId.endsWith(`:carousel:${state.roundDefinitionId}`)&&r.status==='granted'))return fail(state,'wrong-phase');
+  const settled=settleRound(state,null);
+  return accept({...settled,phase:'settlement',combat:null},[{type:'roundSettled',round:state.round}]);
 }
 export function nextRound(state: MatchState, expectedRound: number, layout?:OrbLayoutLedger): MatchCommandResult {
   if (state.multiplayer?.status === 'eliminated') return fail(state,'wrong-phase');

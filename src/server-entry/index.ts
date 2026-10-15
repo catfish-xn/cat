@@ -54,6 +54,8 @@ export { readComponentEquivalent } from '../simulation/loot-view';
 
 export { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 
+export { releaseCarouselParticipant, completeCarouselForSeat, releaseCarouselSeat, resolvePendingCarouselUnits, sellPendingCarouselUnit, createCarouselMatch, opensCarousel, schedule, prepareCarouselParticipants, createCarousel, pickFromCarousel, autoPickFromCarousel, advanceCarousel, grantCarouselPick, pickCarouselForSeat, autoPickCarouselForSeat, listCarouselSlots, restoreCarouselSeat, restoreCarousel, validateCarousel, CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../simulation/carousel';
+export type * from '../simulation/carousel-types';
 export { previewRoundEconomy } from '../simulation/economy-preview';
 export type { RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../simulation/economy-preview';
 export { summarizeBattle } from '../simulation/combat-summary';

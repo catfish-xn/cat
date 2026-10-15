@@ -99,6 +99,19 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
       &&r.gold===(r.resolution==='gold'?UNIT_DEFINITIONS[r.definitionId].cost:0)
       &&!pendingRewards.has(key));rewards.add(key);
   }
+  const carouselKeys=new Set<string>();
+  requirePool(Array.isArray(pool.carouselParticipants)&&Array.isArray(pool.carouselRounds)&&new Set(pool.carouselRounds).size===pool.carouselRounds.length);
+  for(const r of pool.carouselReservations) {
+    requirePool(typeof r.carouselId==='string'&&r.reservationId===`${r.carouselId}:slot:${r.slot}`&&safe(r.slot)&&r.slot<9&&!carouselKeys.has(r.reservationId)&&Object.hasOwn(totals,r.definitionId));
+    requirePool(r.seatId===null||seatIds.has(r.seatId));carouselKeys.add(r.reservationId);totals[r.definitionId]++;
+  }
+  const receiptKeys=new Set<string>();
+  for(const r of pool.carouselReceipts) {
+    requirePool(r.id===`${r.carouselId}:${r.seatId}`&&r.holdingSource===r.id&&!receiptKeys.has(r.id)&&seatIds.has(r.seatId)&&Object.hasOwn(totals,r.definitionId)&&['reserved','granted','released'].includes(r.status));receiptKeys.add(r.id);
+    const reservation=pool.carouselReservations.find(p=>p.carouselId===r.carouselId&&p.slot===r.slot);
+    requirePool(r.status==='reserved'?!!reservation&&reservation.seatId===r.seatId&&reservation.definitionId===r.definitionId:!reservation);
+    requirePool(r.status==='granted'?typeof r.unitId==='string'&&typeof r.itemInstanceId==='string':r.unitId===null&&r.itemInstanceId===null);
+  }
   for(const id of SHOP_CATALOG) requirePool(totals[id]===pool.initial[id]);
   const provided=new Set<string>();
   for(const state of states) {
@@ -115,8 +128,9 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
     requirePool(state.multiplayer?.seatId===seat.seatId&&((state.shop===seat.shop&&isImmutableJson(state.shop))||canonicalContent(state.shop)===canonicalContent(seat.shop)),'invalid-seat-state');
     const roster=state.preparation.units.filter(u=>u.team==='player'),held=pool.holdings.filter(h=>h.seatId===seat.seatId);
     if(seat.released) {requirePool(state.multiplayer?.status==='eliminated'&&state.playerHp===0,'invalid-seat-state');continue;}
-    requirePool(roster.length===held.length,'invalid-seat-state');
+    requirePool(roster.length+(state.carousel?.pendingUnits.length??0)===held.length,'invalid-seat-state');
     for(const u of roster) requirePool(held.some(h=>h.unitId===u.id&&h.definitionId===u.definitionId&&h.sources.length===3**(u.starLevel-1)),'invalid-seat-state');
+    for(const pending of state.carousel?.pendingUnits??[]) requirePool(held.some(h=>h.unitId===pending.unitId&&h.definitionId===pending.definitionId&&h.sources.length===1),'invalid-seat-state');
     for(const p of pool.pending.filter(p=>p.seatId===seat.seatId)) {
       const progress=state.m8.loot.direct.find(d=>d.dropId===p.dropId);
       requirePool(progress&&['revealed','pending-capacity','retained-terminal'].includes(progress.status),'invalid-seat-state');
