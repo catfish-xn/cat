@@ -161,9 +161,12 @@ describe('Room: real resolver end to end', () => {
     room.start();
     runUntil(room, clock, current => current.round === 4 && current.phase === 'preparation');
     expect(room.state.roundKind).toBe('pvp');
-    expect(room.state.pairings).toHaveLength(8);
+    // G1-P6: preparation shows candidates only; the pairings are drawn at the freeze.
+    expect(room.state.pairings).toEqual([]);
+    expect(Object.keys(room.state.opponentCandidates)).toHaveLength(8);
     inputs.length = 0;
     clock.runNext();
+    expect(room.state.pairings).toHaveLength(8);
     expect(inputs).toHaveLength(4);
     expect(inputs.every(input => input.seats.length === 2 && input.mirrorOf === null && input.roundKind === 'pvp')).toBe(true);
     expect(new Set(inputs.flatMap(input => input.seats.map(seat => seat.seatId))).size).toBe(8);

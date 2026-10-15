@@ -6,20 +6,26 @@
  * its own battle (one compact replay per round); nobody receives another seat's shop. This is the
  * only server file that imports ws.
  *
+ * G3: the same port also answers plain HTTP `GET /healthz` (any path ending in /healthz, so a reverse proxy may mount it
+ * under its WebSocket prefix) with the build identity and the live counts, and every log line is a structured record
+ * (src/server/log.ts). A room that ends with a fault releases its credentials and the queue is open again.
+ *
  * Processing order per message (V2 §5.1): parse & field validation → identity and seat →
  * commandId dedupe → room / round / seatRevision → rules (Room.handle) → record receipt → push.
  */
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
+import { textLogger, type Logger } from '../log';
 import { startBattleJob, type BattleJob, type BattleResolver } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
 import type { Clock, ClockHandle } from '../room/clock';
-import { Lobby } from '../room/lobby';
-import { consumableReceiptEvents, seatPushEvents, startReplayWarmup, toCombatReplayFor, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
+import { Lobby, type LobbyWatchdog } from '../room/lobby';
+import { consumableReceiptEvents, seatPushEvents, startReplayWarmup, toCombatReplayFor, toPlayerFault, toPlayerView, toSeatPrivateView, type ReplayWarmup } from '../room/projection';
 import type { Room, RoomRetained, RoomTimings } from '../room/room';
-import type { RoomState } from '../room/types';
+import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type RoomPhase, type RoomState } from '../room/types';
 import { DEFAULT_DEDUPE_WINDOW } from './dedupe';
 import {
-  commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
+  NET_PROTOCOL_VERSION, commandContent, parseClientMessage, type ClientMessage, type CommandMessage, type ErrorCode, type ReceiptFailure, type ReceiptMessage,
   type ReceiptResult, type ServerMessage,
 } from './messages';
 import { SessionRegistry, digestOf, type SeatSession } from './session';
@@ -53,7 +59,47 @@ export interface GameServerOptions {
   /** Battle delivery (B7): `both` by default until the client plays replays (C6). */
   /** Combat ticks resolved per write-queue slice after a preparation deadline (B8); see RoomOptions.sliceTicks. */
   readonly sliceTicks?: number;
+  /** Structured log sink (G3); main.ts writes JSON lines. Takes precedence over `log`. */
+  readonly logger?: Logger;
+  /** Older one-line text sink, still accepted (scripts/loadtest-room.cjs). */
   readonly log?: (line: string) => void;
+  /** Stall / abandon watchdog of every room (G3, Lobby); off when omitted. */
+  readonly watchdog?: LobbyWatchdog | null;
+  /** Build identity reported by /healthz; main.ts fills it from the environment and the rules' digests. */
+  readonly build?: BuildInfo;
+  /** Process figures for /healthz (main.ts reads them from Node); null fields when omitted. */
+  readonly processStats?: () => { readonly uptimeSec: number; readonly rssBytes: number };
+}
+
+export interface BuildInfo {
+  /** Full git commit the running bundle was built from, or "unknown". */
+  readonly sha: string;
+  readonly contentDigest: string;
+  readonly lootReplayDigest: string;
+}
+
+/** Body of `GET /healthz` (G3). Counts and identifiers only: no names, credentials or seat state. */
+export interface HealthReport {
+  readonly status: 'ok';
+  readonly sha: string;
+  readonly contentDigest: string;
+  readonly lootReplayDigest: string;
+  readonly netProtocol: number;
+  readonly roomProtocol: number;
+  /** The current (or last) room; null before the first match. */
+  readonly room: {
+    readonly roomId: string; readonly phase: RoomPhase; readonly round: number; readonly roundName: string;
+    /** RoomFault kind when the room ended abnormally. */
+    readonly fault: string | null;
+    readonly humans: number; readonly humansConnected: number; readonly alive: number;
+  } | null;
+  /** Seats (queued or seated) whose credential is bound to an open connection right now. */
+  readonly seatsOnline: number;
+  readonly queue: number;
+  readonly capacity: number;
+  readonly connections: number;
+  readonly uptimeSec: number | null;
+  readonly rssBytes: number | null;
 }
 
 export interface GameServer {
@@ -65,6 +111,8 @@ export interface GameServer {
   readonly processed: number;
   /** What the server holds across matches (B8): credentials, their dedupe windows and the current room's own leftovers. */
   readonly retained: ServerRetained;
+  /** What `GET /healthz` answers right now. */
+  health(): HealthReport;
   close(): Promise<void>;
 }
 
@@ -125,9 +173,9 @@ const done = (commandId: number, result: ReceiptResult): ReceiptMessage => ({ ty
 
 export function createGameServer(options: GameServerOptions): Promise<GameServer> {
   const limits: ConnectionLimits = { ...LIMIT_DEFAULTS, ...options.limits };
-  const log = options.log ?? (() => {});
+  const log: Logger = options.logger ?? (options.log ? textLogger(options.log) : () => {});
   const clock = options.clock;
-  const queue = new WriteQueue(error => log(`task failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`));
+  const queue = new WriteQueue(error => log('error', 'task.failed', { roomId: room?.state.roomId, error: error instanceof Error ? error.stack ?? error.message : String(error) }));
   const sessions = new SessionRegistry(limits.dedupeWindow);
   const connections = new Map<number, Connection>();
   let room: Room | null = null;
@@ -146,7 +194,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
   const lobby = new Lobby({
     clock: roomClock, sliceTicks: options.sliceTicks ?? DEFAULT_SLICE_TICKS, seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
-    queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened),
+    queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
     // Bot steps and takeovers fire on the clock; each one becomes a task of the single write queue (§13.3 item 2).
     bots: { ...options.bots, enqueue: task => queue.push(task) },
   });
@@ -201,7 +249,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
         // A replay failure is a server fault (§14.2): logged, never turned into a result; settlement still follows.
         let replay: ReturnType<typeof toCombatReplayFor> = null;
         try { replay = toCombatReplayFor(state, seat.seatId); }
-        catch (error) { log(`replay of ${battle.battleId} failed: ${error instanceof Error ? error.message : String(error)}`); }
+        catch (error) { log('error', 'replay.failed', { roomId: state.roomId, seatId: seat.seatId, round: state.round, battleId: battle.battleId, error: error instanceof Error ? error.message : String(error) }); }
         if (replay) send(conn, { type: 'replay', roomId: state.roomId, round: state.round, battleId: replay.battleId, replay: replay.replay, unitIds: replay.unitIds });
       }
     }
@@ -221,7 +269,13 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       sessions.revoke(session.seatId);
     }
     // A listener may fire inside Room.handle (same queue task): defer the push so the receipt leaves first.
-    unsubscribeRoom = opened.subscribe(state => queue.push(() => pushAll(state)));
+    // One log record per phase entry (G3), never per command or tick; the room already entered its first phase.
+    let lastPhase = '';
+    const logPhase = (state: RoomState) => {
+      const phaseKey = `${state.round}:${state.phase}`;
+      if (phaseKey !== lastPhase) { lastPhase = phaseKey; log('info', 'room.phase', { roomId: state.roomId, round: state.round, roundName: state.roundName, phase: state.phase }); }
+    };
+    unsubscribeRoom = opened.subscribe(state => { logPhase(state); queue.push(() => pushAll(state)); });
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
@@ -230,6 +284,35 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     }
     // Queued behind the current task (the "start" receipt) when a player started it; immediate on a queue timeout.
     queue.push(() => { pushAll(opened.state); broadcastLobby(); });
+    log('info', 'room.started', { roomId, humans: opened.state.seats.filter(seat => seat.kind === 'human').length, bots: opened.state.seats.filter(seat => seat.kind === 'bot').length });
+    logPhase(opened.state);
+  }
+
+  /**
+   * G3: the lobby reports a room that reached `ended` (inside the room's publication, so the work is queued). A normal
+   * end keeps its credentials: a player who reconnects still sees the ranking, and the next start revokes them. A
+   * fault (rules/resolver error, stall, every player gone) also hands every seat its last view, then revokes the
+   * room's credentials at once: the queue is open again, and a reconnect with an old token is told to queue again.
+   */
+  function onRoomEnd(ended: Room): void {
+    const state = ended.state;
+    const fault = state.fault;
+    log(fault ? 'warn' : 'info', 'room.ended', { roomId: state.roomId, round: state.round, roundName: state.roundName, result: fault ? 'fault' : 'ranking',
+      fault: fault?.kind, detail: fault ? toPlayerFault(fault).detail : undefined });
+    if (!fault) return;
+    queue.push(() => {
+      if (room !== ended) return;
+      pushAll(ended.state);
+      let revoked = 0;
+      for (const session of [...sessions]) {
+        if (session.roomId !== state.roomId) continue;
+        const holder = session.connection as Connection | null;
+        if (holder) { holder.session = null; holder.epoch = 0; }
+        sessions.revoke(session.seatId); revoked++;
+      }
+      log('info', 'room.released', { roomId: state.roomId, revokedSessions: revoked });
+      broadcastLobby();
+    });
   }
 
   /** A seat is live only while its room runs; sessions of an ended match may queue again. */
@@ -250,7 +333,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const receipt = done(message.commandId, { kind: 'joined', seatId: joined.seatId, token, connectionEpoch: session.connectionEpoch });
     session.dedupe.record(message.commandId, digestOf(commandContent(message)), receipt);
     send(conn, receipt);
-    log(`seat ${joined.seatId} joined as "${message.name}" (connection ${conn.id})`);
+    log('info', 'seat.joined', { seatId: joined.seatId, connection: conn.id, queue: lobby.queued.length });
     broadcastLobby();
   }
 
@@ -286,7 +369,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       if (session.roomId !== null || !lobby.queued.some(entry => entry.seatId === session.seatId)) return fail(message.commandId, 'not-queued');
       const started = lobby.start(); // onStart → attachRoom pushes the first snapshot to every seated connection
       if (!started.ok) return fail(message.commandId, started.reason);
-      log(`room ${started.room.state.roomId} started by ${session.seatId}`);
+      log('info', 'queue.start', { roomId: started.room.state.roomId, seatId: session.seatId });
       return done(message.commandId, { kind: 'started', roomId: started.room.state.roomId });
     });
   }
@@ -311,7 +394,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     send(conn, done(message.commandId, { kind: 'resumed', seatId: session.seatId, roomId: session.roomId, connectionEpoch: session.connectionEpoch, lastCommandId: session.dedupe.highestSeen, ...(reclaimed ? { reclaimed: true as const } : {}) }));
     // Snapshot first (view → state → combat), increments follow through the room listener.
     if (inRoom) pushRoom(conn, current.state); else send(conn, { type: 'lobby', view: lobbyViewFor(conn) });
-    log(`seat ${session.seatId} resumed on connection ${conn.id} (epoch ${session.connectionEpoch})`);
+    log('info', 'seat.resumed', { roomId: session.roomId ?? undefined, seatId: session.seatId, connection: conn.id, epoch: session.connectionEpoch, reclaimed });
   }
 
   function handleCommand(conn: Connection, message: CommandMessage): void {
@@ -402,7 +485,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       }
     }
     conn.session = null;
-    log(`connection ${conn.id} closed`);
+    log('debug', 'connection.closed', { connection: conn.id, seatId: session?.seatId });
   }
 
   function onConnection(socket: WebSocket): void {
@@ -411,24 +494,62 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     connections.set(conn.id, conn);
     socket.on('message', (data, isBinary) => queue.push(() => onMessage(conn, data, isBinary)));
     socket.on('close', () => queue.push(() => onClose(conn)));
-    socket.on('error', error => log(`connection ${conn.id} error: ${error.message}`));
+    socket.on('error', error => log('warn', 'connection.error', { connection: conn.id, error: error.message }));
     queue.push(() => send(conn, { type: 'lobby', view: lobbyViewFor(conn) }));
-    log(`connection ${conn.id} opened`);
+    log('debug', 'connection.opened', { connection: conn.id });
+  }
+
+  /* ---------------- health (G3) ---------------- */
+
+  const build: BuildInfo = options.build ?? { sha: 'unknown', contentDigest: 'unknown', lootReplayDigest: 'unknown' };
+  function health(): HealthReport {
+    const state = room?.state ?? null;
+    const humans = state?.seats.filter(seat => seat.kind === 'human') ?? [];
+    let seatsOnline = 0;
+    for (const conn of connections.values()) if (conn.open && conn.session) seatsOnline++;
+    const stats = options.processStats?.() ?? null;
+    return {
+      status: 'ok', sha: build.sha, contentDigest: build.contentDigest, lootReplayDigest: build.lootReplayDigest,
+      netProtocol: NET_PROTOCOL_VERSION, roomProtocol: ROOM_PROTOCOL_VERSION,
+      room: state && {
+        roomId: state.roomId, phase: state.phase, round: state.round, roundName: state.roundName, fault: state.fault?.kind ?? null,
+        humans: humans.length, humansConnected: humans.filter(seat => seat.connected).length, alive: state.seats.filter(seat => seat.alive).length,
+      },
+      seatsOnline, queue: lobby.queued.length, capacity: ROOM_CAPACITY, connections: connections.size,
+      uptimeSec: stats ? stats.uptimeSec : null, rssBytes: stats ? stats.rssBytes : null,
+    };
+  }
+  /** Plain HTTP on the game port: `/healthz` (CORS-open, so the page can show the server build), 426 for anything else. */
+  function onHttp(request: IncomingMessage, response: ServerResponse): void {
+    const path = (request.url ?? '/').split('?')[0]!;
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, HEAD, OPTIONS' };
+    if (path === '/healthz' || path.endsWith('/healthz')) {
+      if (request.method === 'OPTIONS') { response.writeHead(204, cors); response.end(); return; }
+      if (request.method !== 'GET' && request.method !== 'HEAD') { response.writeHead(405, { ...cors, allow: 'GET, HEAD, OPTIONS' }); response.end(); return; }
+      const body = JSON.stringify(health());
+      response.writeHead(200, { ...cors, 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+      response.end(request.method === 'HEAD' ? undefined : body);
+      return;
+    }
+    response.writeHead(426, { 'content-type': 'text/plain; charset=utf-8', upgrade: 'websocket' });
+    response.end('Upgrade Required');
   }
 
   /* ---------------- listen ---------------- */
 
   return new Promise<GameServer>((resolve, reject) => {
+    const http = createServer(onHttp);
     // permessage-deflate (C4): seat views and replay keyframes repeat almost entirely, so they compress well.
     // Context takeover stays on (the default) so consecutive states compress against each other.
-    const wss = new WebSocketServer({ port: options.port, host: options.host, maxPayload: limits.maxMessageBytes, perMessageDeflate: { threshold: 1024 } });
-    wss.once('error', reject);
+    const wss = new WebSocketServer({ server: http, maxPayload: limits.maxMessageBytes, perMessageDeflate: { threshold: 1024 } });
     wss.on('connection', onConnection);
-    wss.once('listening', () => {
-      const address = wss.address();
+    wss.on('error', error => log('error', 'server.error', { error: error.message }));
+    http.once('error', reject);
+    http.listen(options.port, options.host, () => {
+      const address = http.address();
       const port = typeof address === 'object' && address !== null ? address.port : options.port;
-      wss.off('error', reject);
-      wss.on('error', error => log(`server error: ${error.message}`));
+      http.off('error', reject);
+      http.on('error', error => log('error', 'server.error', { error: error.message }));
       resolve({
         get port() { return port; },
         get lobby() { return lobby; },
@@ -440,12 +561,13 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
           for (const session of sessions) dedupeEntries += session.dedupe.size;
           return { sessions: sessions.size, dedupeEntries, connections: connections.size, room: room?.retained ?? null };
         },
+        health,
         close: () => new Promise<void>(resolveClose => {
           closing = true;
           for (const conn of connections.values()) { conn.open = false; conn.socket.close(CLOSE_CODES.serverClosing, 'server closing'); }
           unsubscribeRoom?.(); unsubscribeRoom = null;
           lobby.dispose();
-          wss.close(() => resolveClose());
+          wss.close(() => { http.close(() => resolveClose()); http.closeIdleConnections(); });
         }),
       });
     });

@@ -16,7 +16,13 @@ import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
 import type { ConsumableDisplayEvent } from '../room/projection';
 
-/** 2 since T13-B (contract §18.7): R3/R4 projection and the useConsumable receipt; protocol 1 clients are refused. */
+/**
+ * 2 since T13-B (contract §18.7): R3/R4 projection and the useConsumable receipt; protocol 1 clients are refused.
+ * Bumped only when a client message or receipt changes shape or meaning (the server validates client messages strictly).
+ * A field added to a server view is not a bump: the client reads views without key validation and ignores what it does
+ * not know. G1-P6 stays at 2 on that rule: `PlayerView.opponentCandidates` is additive, and `opponentSeatId` being null
+ * until the freeze only means an older client highlights the opponent from the battle on.
+ */
 export const NET_PROTOCOL_VERSION = 2;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */

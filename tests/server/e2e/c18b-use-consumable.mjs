@@ -76,6 +76,8 @@ async function main() {
       const receipt = await client.command({ type: 'useConsumable', consumableId: 'no-such-tool', target: { kind: 'unit', unitId: unit.id } });
       // The client shows the short freeze boundary (room phase `frozen`, no command interleaves) as combat too: try again.
       if (kind === 'combat' && !receipt.ok && receipt.reason === 'wrong-phase') { await sleep(250); continue; }
+      // P8: a state pushed while sending makes the envelope stale (§18.3: refresh, resend), as step 4 already allows.
+      if (!receipt.ok && ['seat-revision-mismatch', 'stale-round'].includes(receipt.reason)) { await sleep(250); continue; }
       await sleep(200);
       const pushed = client.inbox.filter(message => message.type === 'state').length - statesBefore;
       check(!receipt.ok && receipt.reason === 'unknown-consumable', `${kind}: the room forwards useConsumable and the rules answer unknown-consumable for a tool I do not hold (${receipt.ok ? 'applied' : receipt.reason})`);
@@ -178,7 +180,7 @@ async function ui() {
     const wire = trackCommands(page);
     await joinOnline(page, onlineUrl(base, wsPort), '工具');
     const status = () => page.evaluate(() => document.querySelector('.panel-status')?.textContent ?? '');
-    const answered = new Set(), done = new Set();
+    const answered = new Set(), done = new Set(), misses = {};
     const worn = (state, unitId) => state.items.filter(item => item.location.kind === 'unit' && item.location.unitId === unitId)
       .sort((a, b) => a.location.slot - b.location.slot);
     /** What the server allows `tool` on for `unit`: its unit target (remover) or an item it wears (reforger), in slot order. */
@@ -211,7 +213,8 @@ async function ui() {
         }
         await sleep(150); continue;
       }
-      const branch = kind === 'combat' && s.state.phase === 'combat' && s.replay?.playingBack && (s.replay.terminalTick ?? 0) >= 80 && (s.replay.tick ?? 0) < 40 ? 'combat'
+      // P8: past the opening walk (the first 20 ticks move every token across the board) with ≥ 60 ticks (3 s) left for a retry.
+      const branch = kind === 'combat' && s.state.phase === 'combat' && s.replay?.playingBack && (s.replay.tick ?? 0) >= 20 && (s.replay.terminalTick ?? 0) - (s.replay.tick ?? 0) >= 60 ? 'combat'
         : kind === 'settlement' && s.state.phase === 'settlement' ? 'settlement' : null;
       if (!branch || done.has(branch)) { await sleep(60); continue; }
       // Combat: a board unit that fights in the shown battle. Settlement: a bench unit first, else a board unit.
@@ -228,16 +231,24 @@ async function ui() {
       const before = wire.mark(), tools = now.state.consumables.length, items = now.state.items.length;
       await page.mouse.move(card.centerX, card.centerY); await page.mouse.down();
       await page.mouse.move(token.screenX, token.screenY, { steps: 8 });
-      // A fighting token walks: aim again where it stands now before letting go (as c17 does).
+      // A fighting token walks: aim again where it stands now right before letting go (as c17 does).
       for (let aim = 0; aim < 2; aim++) { const standing = tokenOf(await read(page)); if (standing) await page.mouse.move(standing.screenX, standing.screenY, { steps: 2 }); }
       const hover = await status();
       await page.mouse.up();
       const receipt = await wire.receiptSince(before, 'useConsumable', 5_000);
       await sleep(300);
       const after = await read(page), shown = await status(), commands = wire.commandsSince(before, 'useConsumable');
+      // P8: the token steps to the next cell between the last aim and the release (diagnostics: where it is now). A
+      // miss is a non-event, as for a player: no command left the page and nothing changed; drop again, at most 3 times.
+      const beside = after.tokens.filter(entry => entry.owner === unit.id && entry.visible).map(entry => ({ id: entry.id, dx: Math.round(entry.screenX - token.screenX), dy: Math.round(entry.screenY - token.screenY) }));
+      if (commands.length === 0 && receipt === null && (misses[branch] ?? 0) < 3) {
+        misses[branch] = (misses[branch] ?? 0) + 1;
+        check(after.state.consumables.length === tools && after.state.items.length === items && /未使用/.test(shown), `${branch}: missed drop ${misses[branch]} sent nothing and changed nothing (token moved ${JSON.stringify(beside)}); dropping again`);
+        continue;
+      }
       await page.screenshot({ path: `${OUT}/${branch}-drop.png` });
       const label = `${branch}: ${tool.definitionId} dragged onto ${unit.location.kind} token ${unit.id}`;
-      console.log(JSON.stringify({ branch, tool: tool.definitionId, unit: unit.id, where: unit.location.kind, target: target.target, hover, shown, receipt, commands }));
+      console.log(JSON.stringify({ branch, tool: tool.definitionId, unit: unit.id, where: unit.location.kind, target: target.target, hover, shown, receipt, commands, beside, misses: misses[branch] ?? 0 }));
       check(commands.length === 1 && commands[0].consumableId === tool.consumableId && JSON.stringify(commands[0].target) === JSON.stringify(target.target), `${label}: one useConsumable for ${JSON.stringify(target.target)} (${JSON.stringify(commands)})`);
       check(receipt === 'consumable-used', `${label}: receipt consumable-used (${receipt}; hover "${hover}")`);
       if (tool.definitionId === 'magnetic-remover') check(target.affectedItemIds.every(id => after.state.items.some(item => item.id === id && item.location.kind === 'inventory')) && worn(after.state, unit.id).length === 0, `${label}: its items ${target.affectedItemIds.join(', ')} are back in the inventory at once`);
