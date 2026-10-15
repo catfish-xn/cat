@@ -113,11 +113,8 @@ describe('SR-B8-02 resumable pure tasks', () => {
     expect(() => invalidTask.advance(1201)).toThrow('replay-divergence');
   }); }
   if (mode === 'timing') {
-    let source: ReturnType<typeof input>;
-    let battle: ReturnType<typeof resolveTwoSidedBattle>;
-    beforeAll(() => { source = input(); battle = resolveTwoSidedBattle(source, 1201); });
-    it.each(['battle', 'replay'] as const)('one-tick scheduling budget on nine-unit armies: measures startup and longest advance (%s)', name => {
-      const factory = name === 'battle' ? () => startTwoSidedBattle(source) : () => startCombatReplay(battle);
+    for (const name of ['battle', 'replay'] as const) describe.sequential(name, () => {
+      let factory: () => ReturnType<typeof startTwoSidedBattle> | ReturnType<typeof startCombatReplay>;
       const measure = () => {
         let begin = performance.now(); const task = factory(); const startupMs = performance.now() - begin;
         let longestMs = 0, result = null, calls = 0;
@@ -127,15 +124,27 @@ describe('SR-B8-02 resumable pure tasks', () => {
         expect(result).not.toBeNull();
         return { startupMs, longestMs, calls };
       };
-      // One complete warmup per task kind, then five consecutive fresh tasks.
+      const samples: ReturnType<typeof measure>[] = [];
+      beforeAll(() => {
+        const source = input();
+        if (name === 'battle') factory = () => startTwoSidedBattle(source);
+        else {
+          const battle = resolveTwoSidedBattle(source, 1201);
+          factory = () => startCombatReplay(battle);
+        }
+        measure(); // Exactly one complete warmup of this task kind, not a sample.
+      });
+      // Consecutive samples each retain the original default test timeout.
       // Each longestMs is the maximum of every one-tick advance in that run.
-      measure();
-      const samples = Array.from({ length: 5 }, () => measure());
-      const median = (values: number[]) => [...values].sort((a, b) => a - b)[2];
-      const startupMs = median(samples.map(sample => sample.startupMs));
-      const longestMs = median(samples.map(sample => sample.longestMs));
-      console.info(JSON.stringify({ name, warmups: 1, samples, startupMs, longestMs }));
-      expect(startupMs).toBeLessThan(50); expect(longestMs).toBeLessThan(50);
+      it.each([1, 2, 3, 4, 5])('complete one-tick measurement %i', () => { samples.push(measure()); });
+      it('one-tick scheduling budget on nine-unit armies: median startup and longest advance', () => {
+        expect(samples).toHaveLength(5);
+        const median = (values: number[]) => [...values].sort((a, b) => a - b)[2];
+        const startupMs = median(samples.map(sample => sample.startupMs));
+        const longestMs = median(samples.map(sample => sample.longestMs));
+        console.info(JSON.stringify({ name, warmups: 1, samples, startupMs, longestMs }));
+        expect(startupMs).toBeLessThan(50); expect(longestMs).toBeLessThan(50);
+      });
     });
   }
 });
