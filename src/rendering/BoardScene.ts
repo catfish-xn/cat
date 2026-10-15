@@ -27,7 +27,8 @@ import type { SessionChange } from '../m6/contracts';
 import { UnitView, type RingState } from '../presentation/unit-view';
 import { getHeroIdentity } from '../presentation/hero-identity';
 import { unitHoverCard } from '../presentation/hover-card';
-import { unitCardBody } from '../presentation/unit-card';
+import { unitBattleStatsKey, unitCardBody } from '../presentation/unit-card';
+import { unitBattleStats } from '../presentation/battle-ranking';
 import { THEME, toNumber } from '../presentation/theme';
 import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
@@ -752,8 +753,11 @@ export class BoardScene extends Phaser.Scene {
     }
     const canvas = this.game.canvas.getBoundingClientRect(), scale = canvas.width / this.scale.gameSize.width, half = 29 * scale;
     const x = canvas.left + token.x * scale, y = canvas.top + token.y * scale;
-    unitHoverCard().showAt({ left: x - half, top: y - half, right: x + half, bottom: y + half }, `unit:${unit.definitionId}:${unit.starLevel}`,
-      () => unitCardBody(unit.definitionId, unit.starLevel)!);
+    // G5 (online): the ranking's numbers of this unit; a battle still being played back is left out until it ends.
+    const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
+    const battle = history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null;
+    unitHoverCard().showAt({ left: x - half, top: y - half, right: x + half, bottom: y + half }, `unit:${unit.definitionId}:${unit.starLevel}:${unitBattleStatsKey(battle)}`,
+      () => unitCardBody(unit.definitionId, unit.starLevel, battle)!);
     this.unitCardOpen = true;
   }
   private unitCardOpen = false;

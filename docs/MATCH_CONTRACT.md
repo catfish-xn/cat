@@ -219,3 +219,38 @@ sellPendingCarouselUnit(pool:SharedPoolState,match:MatchState,unitId:string):Sha
 原子 pick/autoPick wrapper 的 events 按顺序包含完整 CarouselEvent（picked、可能的 closed）及带 Match 序号的发奖事件，不丢弃底层关闭/池返还事件；服务器同时保存这些事件和返回状态。complete/release 的返回仍按上文声明。
 
 `releaseCarouselParticipant` 另返回 `poolEvents:readonly SharedPoolEvent[]`，events 为 `readonly (MatchEvent|CarouselEvent)[]`，保留 sharedSeatReleased 和 carousel-seat-released；重复淘汰返回两个空事件数组。失败也返回空 poolEvents。
+
+### SR-G2-01：技能展示纯函数（G2-2 工作分支）
+
+模块 `src/simulation/ability-display.ts`：
+
+```ts
+interface AbilityDisplayStats {
+  readonly abilityPower?: number;
+  readonly attackDamage?: number;
+}
+function abilityDisplayName(definitionId: string): string;
+function abilityDisplayValues(
+  definitionId: string,
+  starLevel: StarLevel,
+  stats?: AbilityDisplayStats,
+): Readonly<Record<string, number>>;
+```
+
+`abilityDisplayName` 返回锁定 CDragon 原始英文技能名，不猜中文译名。
+`abilityDisplayValues` 返回源变量及计算后占位符的值；键不含两端 `@`，包括
+`PercentShieldDamage*100` 等完整表达式键，界面无需乘法。默认攻击力来自
+`getUnitStats(definitionId, starLevel)`，法强为 100；可显式传入整数 AD/AP（0–1000000）。
+不含装备、羁绊、永久成长、护甲减伤或暴击；生命值仍为该星级基础生命值。
+技能系数先按规则量化，再将 AD/AP/生命项合并向下取整；未纳入内容的单位不支持。
+
+本次已实现原有 19 名英雄全部 1–3 星占位符。`TotalDamage` 遵守源文案的
+单发/单目标含义，例如麦迪是每颗子弹，不能再次乘发数后填回同一占位符。
+范德的额外伤害为每个低费队友的增量；小炮累计成长默认 0。
+婕拉和厄加特的实验体字段仅供原始文案解析，数值来自源字段，**不表示该羁绊已启用**；
+界面应将相应 `enabled=TFT13_ExperimentActive` 分支标为未启用或隐藏。
+新增 G2 英雄目前仅保证源名和原始变量，计算后的占位符覆盖尚未验收。
+
+失败统一抛出 `RangeError`，原因包括未知/暂缓准入单位、无效星级、无效 AD/AP、
+已声明公式缺源变量。不以 0 填补缺失源数据。返回对象冻结；函数不修改状态、
+不消耗 RNG、不读真实时间。

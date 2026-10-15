@@ -10,10 +10,11 @@
  * can reach the room.
  */
 import type { MatchEvent, MatchFailure } from '../../simulation/match-types';
-import type { CombatReplay, PrivateSeatView } from '../../server-entry';
+import type { CombatReplay } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
-import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand } from '../protocol';
+import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, SeatStateView, WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
+import type { CarouselFailure } from '../room/carousel';
 import type { ConsumableDisplayEvent } from '../room/projection';
 
 /**
@@ -22,8 +23,13 @@ import type { ConsumableDisplayEvent } from '../room/projection';
  * A field added to a server view is not a bump: the client reads views without key validation and ignores what it does
  * not know. G1-P6 stays at 2 on that rule: `PlayerView.opponentCandidates` is additive, and `opponentSeatId` being null
  * until the freeze only means an older client highlights the opponent from the battle on.
+ * 3 since G1-P7: the client may send `carousel-pick` (MULTIPLAYER_CONTRACT §21.1), a new command a protocol 2 server would refuse;
+ * its receipts carry the rules' CarouselFailure reasons plus `stale-carousel`. A protocol 2 client could not take part either:
+ * the match now opens on the `carousel` phase with no unit (it could not pick and would sit through 1-1 not knowing why).
+ * `PlayerView.carousel` and the `carousel` phase kind alone would have been additive. A protocol 2 client is refused at its
+ * first message with `unsupported-protocol` ("protocolVersion must be 3").
  */
-export const NET_PROTOCOL_VERSION = 2;
+export const NET_PROTOCOL_VERSION = 3;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
@@ -79,7 +85,7 @@ export type NetFailure =
   | 'rate-limited';
 export type LobbyFailure = 'full' | 'in-progress' | 'empty' | 'not-queued';
 /** SharedPoolFailure (B5) already contains every MatchFailure; MatchFailure stays listed for readers. */
-export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure | SharedPoolFailure;
+export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure | SharedPoolFailure | CarouselFailure;
 
 export type ReceiptMessage =
   | { readonly type: 'receipt'; readonly commandId: number; readonly ok: true; readonly result: ReceiptResult }
@@ -92,10 +98,11 @@ export type ServerMessage =
   | { readonly type: 'lobby'; readonly view: LobbyView }
   | { readonly type: 'view'; readonly roomId: string; readonly roomRevision: number; readonly view: PlayerView }
   /**
-   * My seat's private state as the rules' whitelist projection (contract §14.1): not a MatchState, never
-   * restorable, no RNG, plans or ledgers. Not sent any more once my seat is eliminated (then only view/replay).
+   * My seat's private state as the rules' whitelist projection (contract §14.1) plus the rules' round economy preview
+   * (`economyPreview`, SR-G5-02 §14.4; see SeatStateView): not a MatchState, never restorable, no RNG, plans or ledgers.
+   * Not sent any more once my seat is eliminated (then only view/replay).
    */
-  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: PrivateSeatView;
+  | { readonly type: 'state'; readonly roomId: string; readonly round: number; readonly seatRevision: number; readonly state: SeatStateView;
     /**
      * Events of the server's own transaction that produced this revision (T10): the deadline's automatic deployment
      * (`unitDeployed`) and the post-battle merges of the settlement (`unitUpgraded`). Absent when there were none.
@@ -187,6 +194,8 @@ export function validateClientCommand(value: unknown): WireCommand {
       return { type: 'anomalyTarget', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), unitId: str(value.unitId, `${w}.unitId`, LIMITS.idChars, true) };
     case 'anomalyReroll': onlyKeys(value, ['type', 'choiceId', 'generation'], w);
       return { type: 'anomalyReroll', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0) };
+    case 'carousel-pick': onlyKeys(value, ['type', 'carouselId', 'revision', 'slot'], w);
+      return { type: 'carousel-pick', carouselId: str(value.carouselId, `${w}.carouselId`), revision: int(value.revision, `${w}.revision`, 0), slot: int(value.slot, `${w}.slot`, 0) };
     default: return bad(`command.type ${JSON.stringify(value.type)} is not a client command`);
   }
 }

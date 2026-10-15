@@ -11,6 +11,9 @@
  *   CAT_TAKEOVER             1/true/on: a bot plays a disconnected player's seat (B6). Default off (P2, like TFT:
  *                            a disconnected seat does nothing, its board still fights)
  *   CAT_TAKEOVER_SEC         with CAT_TAKEOVER on, the bot takes over after this long disconnected (default 60)
+ *   CAT_CAROUSEL             1/true/on (default): G1-P7 shared carousel (1-1 opening carousel, x-4 carousels; no free
+ *                            opening unit). 0/false/off: the pre-P7 opening (free unit, x-4 component supply), for old
+ *                            e2e scripts only
  *   CAT_STALL_SEC            G3 watchdog: end a match that publishes nothing this long past its phase deadline (default 120, 0 = off)
  *   CAT_ABANDON_SEC          G3 watchdog: end a match whose human seats are all disconnected this long (default 90, 0 = off)
  *   CAT_LOG_LEVEL            debug / info (default) / warn / error; one JSON object per line on stdout
@@ -26,6 +29,7 @@ import { createJsonLogger, parseLogLevel } from './log';
 import { createGameServer } from './net/server';
 import type { BattleResolver } from './room/battle-resolver';
 import { BOT_DRIVER_DEFAULTS } from './room/bot-driver';
+import { CAROUSEL_RULES_BINDING } from './room/carousel';
 import { RealClock } from './room/real-clock';
 import { ROOM_TIMING_DEFAULTS } from './room/room';
 import { TwoSidedBattleResolver } from './room/two-sided-resolver';
@@ -55,6 +59,7 @@ const queueTimeout = env.CAT_QUEUE_TIMEOUT_SEC ? seconds('CAT_QUEUE_TIMEOUT_SEC'
 const sha = (env.CAT_GIT_SHA ?? '').trim() || 'unknown';
 const watchdog = { stallMs: seconds('CAT_STALL_SEC', 120_000), abandonMs: seconds('CAT_ABANDON_SEC', 90_000) };
 const faultRound = integer('CAT_FAULT_INJECT_ROUND', 0);
+const carousel = flag('CAT_CAROUSEL', true);
 // C6: battles leave only as compact replays; the per-tick frame transport and its switch are gone.
 if (env.CAT_COMBAT_TRANSPORT && env.CAT_COMBAT_TRANSPORT !== 'replay') log('warn', 'config.ignored', { name: 'CAT_COMBAT_TRANSPORT', value: env.CAT_COMBAT_TRANSPORT, reason: 'battles are always sent as replay' });
 const clock = new RealClock();
@@ -89,13 +94,14 @@ createGameServer({
   queueTimeoutMs: queueTimeout,
   bots: { stepMs: integer('CAT_BOT_STEP_MS', BOT_DRIVER_DEFAULTS.stepMs) || BOT_DRIVER_DEFAULTS.stepMs, takeover, takeoverMs: seconds('CAT_TAKEOVER_SEC', BOT_DRIVER_DEFAULTS.takeoverMs) },
   logger: log, watchdog,
+  ...(carousel ? { carousel: CAROUSEL_RULES_BINDING } : {}),
   build: { sha, contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST },
   processStats: () => ({ uptimeSec: Math.round(process.uptime()), rssBytes: process.memoryUsage.rss() }),
 }).then(server => {
   // `msg` keeps the "listening on" text the e2e harness and operators wait for.
   log('info', 'server.listening', { msg: `listening on ws://${host}:${server.port} (http://${host}:${server.port}/healthz)`, host, port: server.port, sha,
     contentDigest: CONTENT_DIGEST, lootReplayDigest: LOOT_REPLAY_DIGEST, prepSec: seconds('CAT_PREP_SEC', ROOM_TIMING_DEFAULTS.preparationMs) / 1000,
-    takeover, stallSec: watchdog.stallMs / 1000, abandonSec: watchdog.abandonMs / 1000 });
+    takeover, carousel, stallSec: watchdog.stallMs / 1000, abandonSec: watchdog.abandonMs / 1000 });
   const shutdown = (signal: string) => { log('info', 'server.stopping', { signal }); server.close().then(() => { clock.dispose(); process.exit(0); }); };
   process.once('SIGINT', () => shutdown('SIGINT'));
   process.once('SIGTERM', () => shutdown('SIGTERM'));

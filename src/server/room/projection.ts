@@ -8,14 +8,16 @@ import type { HexCell } from '../../simulation/board';
 import type { CombatResult, CombatUnit } from '../../simulation/combat-types';
 import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
-  startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
+  previewRoundEconomy, startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState,
 } from '../../server-entry';
-import type { PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
+import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId, SeatStateView } from '../protocol';
+import { carouselPickedSlot, carouselReleased } from './carousel';
+import { listCarouselSlots } from '../../server-entry';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
 const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
-  waiting: 'lobby', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
+  waiting: 'lobby', carousel: 'carousel', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
 };
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
@@ -51,9 +53,11 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
   return {
     mySeatId: seatId,
     seats,
-    phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.roundName, endsAt: room.deadlineAt, serverNow },
+    // G1-P7: the opening prelude runs before 1-2 (catalog ordinals stay); its name is the carousel's own round, 1-1.
+    phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.phase === 'carousel' && room.carousel ? room.carousel.state.roundId : room.roundName, endsAt: room.deadlineAt, serverNow },
     opponentSeatId,
     opponentCandidates: toOpponentCandidates(room, seatId),
+    carousel: toCarouselView(room, seatId),
     ranking,
     fault: room.fault === null ? null : toPlayerFault(room.fault),
   };
@@ -71,6 +75,28 @@ export function toOpponentCandidates(room: RoomState, seatId: string): string[] 
   return room.seats.filter(seat => seat.seatId !== seatId && alive.has(seat.seatId) && listed.has(seat.seatId)).map(seat => seat.seatId);
 }
 
+/**
+ * G1-P7 (MULTIPLAYER_CONTRACT §21.1): the public part of the rules' carousel, field by field and copied for every view, plus
+ * this seat's own `eligible`/`pickedSlot`/`receiptId`. No pool, RNG, full receipts or other seats' assets. Null outside the
+ * carousel phase. Reading it never advances the carousel.
+ */
+export function toCarouselView(room: RoomState, seatId: string): CarouselView | null {
+  const carousel = room.carousel;
+  if (room.phase !== 'carousel' || carousel === null) return null;
+  const { state } = carousel;
+  const seat = room.seats.find(candidate => candidate.seatId === seatId);
+  const pickedSlot = carouselPickedSlot(state, seatId);
+  const receipt = state.receipts.find(candidate => candidate.seatId === seatId && candidate.status !== 'released');
+  return {
+    id: state.id, roundId: state.roundId, roundName: state.roundId, revision: state.revision, status: state.status,
+    slots: listCarouselSlots(state).map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel, items: [...slot.items], pickedBy: slot.pickedBy })),
+    releaseOrder: [...state.releaseOrder], releaseAtMs: { ...state.releaseAtMs }, elapsedMs: state.elapsedMs, deadlineMs: state.deadlineMs, startedAt: carousel.startedAt,
+    eligible: seat !== undefined && seat.alive && state.status === 'open' && pickedSlot === null && state.elapsedMs < state.deadlineMs && carouselReleased(state, seatId),
+    pickedSlot, receiptId: receipt?.id ?? null,
+    autoPicked: state.releaseOrder.filter(id => carousel.auto[id] !== undefined),
+  };
+}
+
 /** Human-readable fault for the client; the structured RoomFault stays on the server. */
 export function toPlayerFault(fault: RoomFault): PlayerViewFault {
   switch (fault.kind) {
@@ -80,6 +106,7 @@ export function toPlayerFault(fault: RoomFault): PlayerViewFault {
     case 'phase-mismatch': return { kind: fault.kind, detail: `阶段不一致：${fault.detail}` };
     case 'stalled': return { kind: fault.kind, detail: `对局卡在 ${fault.phase} 阶段 ${Math.round(fault.idleMs / 1000)} 秒无进展，已关闭` };
     case 'abandoned': return { kind: fault.kind, detail: `所有玩家掉线 ${Math.round(fault.idleMs / 1000)} 秒，对局已关闭` };
+    case 'carousel-error': return { kind: fault.kind, detail: `选秀无法进行${fault.seatId ? `（席位 ${fault.seatId}）` : ''}：${fault.reason}` };
   }
 }
 
@@ -89,8 +116,13 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
 
 /* ---------------- B7: private seat state and compact replay (contract §14) ---------------- */
 
-/** The only shape in which a seat's own MatchState leaves the room (initial, increment, resume, fault, refusal). */
-export function toSeatPrivateView(match: MatchState): PrivateSeatView { return toPrivateSeatView(match); }
+/**
+ * The only shape in which a seat's own MatchState leaves the room (initial, increment, resume, fault, refusal): the rules'
+ * `toPrivateSeatView` plus `economyPreview` (SR-G5-02, contract §14.4), the rules' `previewRoundEconomy` of the same state
+ * as it returns it. It is set in preparation and while my battle runs (a PvP seat stays in preparation under the roster
+ * lock, a PvE seat is in combat) and null in choice, settlement, supply rounds, game over and for an eliminated seat.
+ */
+export function toSeatPrivateView(match: MatchState): SeatStateView { return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match) }; }
 
 /** Server-originated events a seat's client may see with its state push: only own-unit moves and merges (T10), nothing else of the ledger. */
 const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded']);

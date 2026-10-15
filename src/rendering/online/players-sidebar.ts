@@ -8,7 +8,7 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 }
 /** G1-P6 mark of a seat in my pairing: drawn opponent (strong), possible opponent before the freeze (weak), or none. */
 type Pairing = 'opponent' | 'candidate' | null;
-const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选择', combat: '战斗中', settlement: '结算', ended: '对局结束' } as const;
+const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选择', carousel: '选秀', combat: '战斗中', settlement: '结算', ended: '对局结束' } as const;
 /** TFT-style right column: phase badge on top, eight seats ordered by HP below. The big countdown sits above the
  *  board when a countdown host is given (TFT top centre); without one it stays in the sidebar's top bar.
  *  Each seat shows an avatar (its most expensive deployed unit) and opens that seat's public board when clicked. */
