@@ -95,3 +95,7 @@ npm run test:server-entry
 既有压测：同配置 1 场 warmup + 3 场 measured，均 complete，最终轮次均为 40/34/32。PvE 分别 53/52/50 场，wall 总计 26106.153 → 21232.066 ms（-18.7%），CPU 总计 29172.498 → 24077.894 ms（-17.5%）。整局 47251.00/40101.20/38399.92 → 39942.26/34802.31/33281.64 ms。准备命令 RTT p95 分别 16.32/13.12/12.82 → 13.41/12.86/16.46 ms，第三场没有改善；attempts 280/240/224 相同，accepted 首场 278→280，其余不变，属于 RealClock 调度差异。配置的 250 ms 准备期短于 300 ms bot 间隔，此脚本不能替代活跃八 bot e2e。
 
 确定性 PvE probe 的 3 seed 均为 1286 ticks / 8 rewards，state/event SHA-256 前后相同；规则调用 ms：658.19/539.17/516.19 → 569.82/446.48/419.18；1000 次完整八席守恒 ms：185.13/178.75/190.22 → 57.57/55.70/53.63。原始 JSON 数字及指纹见 metrics.json。压测取样在最终属性投影去重前；不把 RealClock 压测当作逐字节验证。
+
+### 第八批基线更新
+
+已 merge `origin/multiplayer@bdf50bb`（merge `820796b`）；上游 round-commit 的配对延迟断言原样移入 helper。合并后 typecheck、test:server-entry 通过；6 文件目标集 48/49 通过，新增上游 `g3-ops` 的 publishing-watchdog 用例在并行时 5840 ms 超过原 5000 ms timeout。未改预算、未删断言，待 G4 后续修复；尚未运行合并后的完整 fast/timing，前面的 2647 全绿不能当作此 merge 的全套成绩。
