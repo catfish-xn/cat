@@ -29,12 +29,19 @@ export const LOOT_REPLAY_DIGEST = digestContent({
 export const drawLootIndex=drawIndex;
 // Pair by layout identity as well as seat seed/boundary. Replacing either side
 // (including JSON restore or structuredClone) always takes the full check.
+// Canonical text is memoized only for private, generated frozen references.
+const referenceText = new WeakMap<object, string>();
+function canonicalReference(value: object): string {
+  let text = referenceText.get(value);
+  if (text === undefined) { text = canonicalContent(value); referenceText.set(value, text); }
+  return text;
+}
 const verifiedLedgers = new WeakMap<object, WeakSet<OrbLayoutLedger>>();
 export function matchesFrozenLootLedger(ledger: FrozenLootLedger, seed: number, ordinal: number, layout: OrbLayoutLedger): boolean {
   if (ledger.seed !== seed || ledger.throughRoundOrdinal !== ordinal) return false;
   if (verifiedLedgers.get(ledger)?.has(layout)) return true;
   const expected = freezeLootThroughRound(seed, ordinal, layout);
-  if (canonicalContent(ledger) !== canonicalContent(expected)) return false;
+  if (canonicalContent(ledger) !== canonicalReference(expected)) return false;
   if (isFrozenContent(ledger) && isFrozenContent(layout)) {
     let layouts = verifiedLedgers.get(ledger);
     if (!layouts) { layouts = new WeakSet(); verifiedLedgers.set(ledger, layouts); }
@@ -55,6 +62,9 @@ export function validateLootContent():void {
   }
 }
 validateLootContent();
+// Only restoreOrbLayout's authenticated immutable reference is used as a key.
+// Mutable/JSON input layouts are still authenticated on every call.
+const replayedLoot = new WeakMap<OrbLayoutLedger, Map<string, FrozenLootLedger>>();
 /** Explicit layout is mandatory for shared callers. The optional standalone form uses its own seed. */
 export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,layout?:OrbLayoutLedger):FrozenLootLedger {
   validateSeed(seed);validateOrdinal(throughRoundOrdinal);
@@ -62,7 +72,10 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
     const result=freezeOrbLayoutThroughRound(createOrbLayout(seed),throughRoundOrdinal);
     if(!result.ok)throw new RangeError(result.reason);layout=result.layout;
   }
-  restoreOrbLayout(layout);
+  layout = restoreOrbLayout(layout);
+  const cacheKey = `${Object.is(seed, -0) ? '-0' : seed}:${Object.is(throughRoundOrdinal, -0) ? '-0' : throughRoundOrdinal}`;
+  const cached = replayedLoot.get(layout)?.get(cacheKey);
+  if (cached) return cached;
   if(layout.throughRoundOrdinal<throughRoundOrdinal)throw new RangeError('Missing orb layout boundary');
   let rng:RngStream={state:(seed^ORB_RULES.lootSeedXor)>>>0,draws:0};
   const rounds:FrozenLootRound[]=[];
@@ -104,11 +117,17 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
     }
     rounds.push({encounterPlan:{roundId:round.roundId,encounterId:round.encounterId!,policyVersion:NEUTRAL_ENCOUNTER_POLICY_VERSION,drops},choices:[],orbs});
   }
-  return freezeContent({version:LOOT_FREEZE_VERSION,seed,replayDigest:LOOT_REPLAY_DIGEST,throughRoundOrdinal,rng,rounds});
+  const ledger: FrozenLootLedger = freezeContent({version:LOOT_FREEZE_VERSION,seed,replayDigest:LOOT_REPLAY_DIGEST,throughRoundOrdinal,rng,rounds});
+  let references = replayedLoot.get(layout);
+  if (!references) { references = new Map(); replayedLoot.set(layout, references); }
+  // Bound seats/seeds per live layout as well as the layout reference cache.
+  if (references.size >= 64) references.delete(references.keys().next().value!);
+  references.set(cacheKey, ledger);
+  return ledger;
 }
 export function restoreFrozenLootLedger(value:unknown,expected:{readonly seed:number;readonly throughRoundOrdinal:number;readonly layout?:OrbLayoutLedger}):FrozenLootLedger {
   const replay=freezeLootThroughRound(expected.seed,expected.throughRoundOrdinal,expected.layout);
-  if(canonicalContent(value)!==canonicalContent(replay))throw new RangeError('Invalid frozen loot ledger');return replay;
+  if(canonicalContent(value)!==canonicalReference(replay))throw new RangeError('Invalid frozen loot ledger');return replay;
 }
 export function advanceFrozenLootLedger(ledger:FrozenLootLedger,throughRoundOrdinal:number,layout?:OrbLayoutLedger):FrozenLootLedger {
   restoreFrozenLootLedger(ledger,{seed:ledger.seed,throughRoundOrdinal:ledger.throughRoundOrdinal,layout});validateOrdinal(throughRoundOrdinal);

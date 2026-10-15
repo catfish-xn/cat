@@ -13,6 +13,9 @@ function accepted(result: MatchCommandResult): MatchState {
 import { publicEquipmentPreparation as acquire } from './b8-public-equipment';
 const equipmentPreparation=(components:readonly string[])=>acquire(components,{seed:6240});
 
+// Cache the public route + item compilation. Each caller owns its mutable copy;
+// negative/continuation tests cannot contaminate later test fixtures.
+const compiledItems = new Map<string, MatchState>();
 /** Public provenance-complete equipment fixture: combat is 2-1 (one/two
  * components) or 3-5 (three/four), not the old synthetic 1-2 encounter.
  * unit-1 is the original Irelia; unit-3 is the Lux actually dropped in 1-3.
@@ -21,6 +24,8 @@ const equipmentPreparation=(components:readonly string[])=>acquire(components,{s
  */
 export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): MatchState {
   const requested = typeof id === 'string' ? [id] : [...id];
+  const key = JSON.stringify([requested, unitId]), cached = compiledItems.get(key);
+  if (cached) return structuredClone(cached);
   const components = requested.flatMap(definitionId => {
     const definition = ITEM_DEFINITIONS[definitionId];
     if (!definition) throw new Error(`Unknown fixture item ${definitionId}`);
@@ -48,7 +53,9 @@ export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): Ma
     state = accepted(equipItem(state, itemId, unitId, slot));
   }
   state = accepted(deployMatchUnit(state, unitId, { kind: 'board', cell: { col: unitId === 'unit-1' ? 1 : 5, row: 4 } }));
-  return accepted(startMatchCombat(state));
+  const compiled = accepted(startMatchCombat(state));
+  compiledItems.set(key, structuredClone(compiled));
+  return compiled;
 }
 
 /** Public-command component acquisition, before any combine/equip/start. */

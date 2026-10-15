@@ -9,15 +9,19 @@ import { toLedgerEvents } from '../src/simulation/combat-ledger';
 import type { CombatState } from '../src/simulation/combat-types';
 import { catalogPreparation } from './t5r-helpers';
 
+const compiledInputs = new Map<string, ReturnType<typeof compileBattle>>();
 function input(count = 9, mirror = false) {
+  const key = `${count}:${mirror}`, cached = compiledInputs.get(key);
+  if (cached) return cached;
   const base = createMatch(42), round = getCatalogRoundById('2-1');
   const names = ['irelia', 'leona', 'tristana', 'maddie', 'lux', 'darius', 'irelia', 'leona', 'lux'];
   const state: MatchState = { ...base, level: 9, round: round.ordinal, roundDefinitionId: round.roundId,
     m8: { ...base.m8, round }, items: [], preparation: { ...base.preparation,
       units: names.slice(0, count).map((definitionId, i) => ({ id: `unit-${i + 1}`, definitionId,
         team: 'player', starLevel: 1, location: { kind: 'board', cell: { col: i % 7, row: 4 + Math.floor(i / 7) } } })) } };
-  return compileBattle(snapshotForBattle(state, 'A'), snapshotForBattle(state, 'B'), 42,
+  const compiled = compileBattle(snapshotForBattle(state, 'A'), snapshotForBattle(state, 'B'), 42,
     { battleId: 'resumable', ...(mirror ? { mirrorOfSeatId: 'B' } : {}) });
+  compiledInputs.set(key, compiled); return compiled;
 }
 function pve(): CombatReplayInput {
   const start = startMatchCombat(catalogPreparation('3-7'));

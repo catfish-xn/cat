@@ -26,6 +26,13 @@ export type LootLayoutBinding = { readonly mode: 'solo'; readonly layout: OrbLay
 
 // Membership is granted only by the deterministic constructors below, never by
 // deserialization or by observing a frozen wrapper supplied by a caller.
+// Canonical text is memoized only for private, generated frozen references.
+const referenceText = new WeakMap<object, string>();
+function canonicalReference(value: object): string {
+  let text = referenceText.get(value);
+  if (text === undefined) { text = canonicalContent(value); referenceText.set(value, text); }
+  return text;
+}
 const generatedLayouts = new WeakSet<OrbLayoutLedger>();
 function generated(layout: OrbLayoutLedger): OrbLayoutLedger {
   freezeContent(layout); generatedLayouts.add(layout); return layout;
@@ -63,7 +70,17 @@ export function sampleOrbTemplate(kind: 'opening-bonus' | 'equipment', index: nu
   }
   throw new RangeError('Invalid orb weight index');
 }
+const replayedLayouts = new Map<string, OrbLayoutLedger>();
 function replay(seed: number, ordinal: number): OrbLayoutLedger {
+  validateSeed(seed);
+  const key = `${Object.is(seed, -0) ? '-0' : seed}:${Object.is(ordinal, -0) ? '-0' : ordinal}`, cached = replayedLayouts.get(key);
+  if (cached) return cached;
+  const layout = replayUncached(seed, ordinal);
+  if (replayedLayouts.size >= 128) replayedLayouts.delete(replayedLayouts.keys().next().value!);
+  replayedLayouts.set(key, layout);
+  return layout;
+}
+function replayUncached(seed: number, ordinal: number): OrbLayoutLedger {
   let layout = createOrbLayout(seed), rng = layout.rng;
   const rounds: OrbRoundLayout[] = [];
   for (const round of ROUND_CATALOG) {
@@ -91,7 +108,7 @@ export function restoreOrbLayout(value: unknown): OrbLayoutLedger {
   if (!Number.isSafeInteger(input.throughRoundOrdinal) || input.throughRoundOrdinal < 0 || input.throughRoundOrdinal > ROUND_CATALOG.length)
     throw new RangeError('Invalid orb layout');
   const expected = replay(input.seed, input.throughRoundOrdinal);
-  if (canonicalContent(value) !== canonicalContent(expected)) throw new RangeError('Invalid orb layout');
+  if (canonicalContent(value) !== canonicalReference(expected)) throw new RangeError('Invalid orb layout');
   return expected;
 }
 export function freezeOrbLayoutThroughRound(layout: OrbLayoutLedger, ordinal: number): OrbLayoutResult {

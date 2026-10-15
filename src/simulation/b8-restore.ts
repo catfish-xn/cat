@@ -1,6 +1,6 @@
 import { validateConsumableState, replayConsumableItems } from './consumables';
 import { ITEM_DEFINITIONS } from './content/items';
-import { canonicalContent } from './content';
+import { canonicalContent, equalValidatedContent } from './content';
 import { LOOT_POLICY_VERSION, LOOT_SLOTS } from './content/loot';
 import { restoreFrozenLootLedger } from './loot-freeze';
 import { lootReceiptId, compareLootChoices } from './loot-identity';
@@ -58,7 +58,8 @@ function equipmentContinuation(expected: readonly ItemInstance[], actual: readon
 }
 
 /** Pure ledger validation. Historical deaths have bounded evidence, not independent replay authentication. */
-export function validateB8Loot(state: MatchState): boolean {
+export function validateB8Loot(state: MatchState, parsedJsonInput = false): boolean {
+  const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const loot = state.m8.loot;
   keys(loot, ['layoutBinding','frozen','direct','choiceEligibility','choiceResolutions','earnedEvidence','receipts','guaranteeCounters']);
   check(loot.layoutBinding.mode==='solo'&&loot.layoutBinding.layout.seed===state.seed&&loot.layoutBinding.layout.throughRoundOrdinal===state.round,'solo layout binding');
@@ -150,6 +151,7 @@ export function validateB8Loot(state: MatchState): boolean {
 
 /** Verify all births/consumption and independently compile the immutable combat prefix. */
 export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
+  const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   validateConsumableState(state);
   const context: ResourceProvenanceContext = { scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')

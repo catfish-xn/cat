@@ -38,6 +38,21 @@ export function canonicalContent(value: unknown): string {
   }
   throw new TypeError('Content must be finite plain JSON data');
 }
+/** Equality for data already admitted by the restore boundary's full JSON validation.
+ * Compares object keys without sorting or allocating canonical strings. Array order,
+ * extra fields and JSON's -0/0 equivalence retain canonicalContent semantics.
+ * This is not an input validator; callers must validate finite plain JSON first. */
+export function equalValidatedContent(a: unknown, b: unknown): boolean {
+  if (a === b) return a !== undefined;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a)) return Array.isArray(b) && a.length === b.length
+    && a.every((value, index) => equalValidatedContent(value, b[index]));
+  if (Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>, right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length
+    && keys.every(key => Object.hasOwn(right, key) && equalValidatedContent(left[key], right[key]));
+}
 /** Validation-only walk for JSON.parse output, whose values are data properties in dense arrays and plain objects: there it
  * accepts and rejects exactly what canonicalContent does (the only possible rejection is a non-finite number), without
  * building the text. Values from anywhere else keep canonicalContent itself. */

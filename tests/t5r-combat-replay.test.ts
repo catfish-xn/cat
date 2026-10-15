@@ -7,7 +7,11 @@ import { freeze } from './combat-helpers';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { catalogPreparation } from './t5r-helpers';
 
+// Catalog/wolf vectors share the identical immutable seed-42 source battle.
+const catalogBattles = new Map<string, { initial: CombatState; terminal: CombatState; events: LedgerCombatEvent[]; all: CombatState[] }>();
 function catalogBattle(roundId: string, seed = 42) {
+  const key = `${roundId}:${seed}`, cached = catalogBattles.get(key);
+  if (cached) return cached;
   const start=startMatchCombat(catalogPreparation(roundId,seed));
   if(!start.ok||!start.state.combat)throw new Error('start');
   const initial=start.state.combat,all:CombatState[]=[initial];let terminal:CombatState=initial;
@@ -15,7 +19,8 @@ function catalogBattle(roundId: string, seed = 42) {
   while(terminal.status==='running') {
     const next=stepCombat(terminal);terminal=next.state;all.push(terminal);events.push(...toLedgerEvents(next.events));
   }
-  return {initial,terminal,events,all};
+  const source = freeze({initial,terminal,events,all});
+  catalogBattles.set(key, source); return source;
 }
 function battle(large=false,empty=false) {
   const base=createMatch(42),round=getCatalogRoundById('2-1');
