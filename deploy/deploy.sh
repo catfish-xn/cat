@@ -71,6 +71,9 @@ wait_healthy() {
   return 1
 }
 
+# Directory a release symlink points at; empty when the link does not exist (readlink -f alone would echo the path).
+target_of() { if [ -L "$1" ]; then readlink -f "$1"; fi; }
+
 # Atomically points $1 (a symlink path) at directory $2.
 switch_link() {
   ln -sfn "$2" "$1.next"
@@ -94,8 +97,8 @@ guard_running_match() {
 
 prune_releases() {
   local keep_current keep_previous count=0 dir
-  keep_current=$(readlink -f "$CURRENT" 2>/dev/null || true)
-  keep_previous=$(readlink -f "$PREVIOUS" 2>/dev/null || true)
+  keep_current=$(target_of "$CURRENT")
+  keep_previous=$(target_of "$PREVIOUS")
   # Newest first; *.tmp-* build leftovers of an interrupted run go too.
   for dir in $(ls -1dt "$RELEASES"/*/ 2>/dev/null); do
     dir=${dir%/}
@@ -109,16 +112,16 @@ prune_releases() {
 # ---------- commands ----------
 
 cmd_status() {
-  echo "current  -> $(readlink -f "$CURRENT" 2>/dev/null || echo 无)"
-  echo "previous -> $(readlink -f "$PREVIOUS" 2>/dev/null || echo 无)"
+  echo "current  -> $(target_of "$CURRENT" | grep . || echo 无)"
+  echo "previous -> $(target_of "$PREVIOUS" | grep . || echo 无)"
   health_json && echo || echo "（/healthz 无响应：$CAT_HEALTH_URL）"
 }
 
 cmd_rollback() {
   local target from
-  target=$(readlink -f "$PREVIOUS" 2>/dev/null || true)
+  target=$(target_of "$PREVIOUS")
   [ -n "$target" ] && [ -f "$target/dist-server/game/main.mjs" ] || die "没有可回滚的 previous 版本"
-  from=$(readlink -f "$CURRENT" 2>/dev/null || true)
+  from=$(target_of "$CURRENT")
   guard_running_match
   switch_link "$CURRENT" "$target"
   [ -n "$from" ] && switch_link "$PREVIOUS" "$from"
@@ -153,7 +156,7 @@ build_release() {
 }
 
 cmd_deploy() {
-  local want=$1 sha dir from
+  local want=$1 sha dir from old_previous
   [[ "$want" =~ ^[0-9a-fA-F]{7,40}$ ]] || die "请给出提交 SHA（7–40 位十六进制），收到 \"$want\""
   mkdir -p "$RELEASES"
   if [ ! -d "$SOURCE/.git" ] && [ ! -f "$SOURCE/HEAD" ]; then
@@ -171,7 +174,8 @@ cmd_deploy() {
   if [ -f "$dir/.release-ok" ]; then log "版本目录已存在且完整，复用 $dir"
   else rm -rf "$dir"; build_release "$sha" "$dir"; fi
 
-  from=$(readlink -f "$CURRENT" 2>/dev/null || true)
+  from=$(target_of "$CURRENT")
+  old_previous=$(target_of "$PREVIOUS")
   if [ "$from" = "$dir" ]; then log "current 已是 $sha"; fi
   guard_running_match
 
@@ -191,7 +195,8 @@ cmd_deploy() {
   if [ -n "$from" ] && [ "$from" != "$dir" ] && [ -f "$from/dist-server/game/main.mjs" ]; then
     log "新版本未通过健康检查，自动回滚到 $(basename "$from")"
     switch_link "$CURRENT" "$from"
-    switch_link "$PREVIOUS" "$dir"
+    # previous never points at a release known to be bad: a later "rollback" goes where it went before this deploy.
+    if [ -n "$old_previous" ]; then switch_link "$PREVIOUS" "$old_previous"; else rm -f "$PREVIOUS"; fi
     restart
     wait_healthy "$(basename "$from")" >/dev/null || die "回滚后的版本也没有通过健康检查，请看 journalctl -u cat-game"
     die "已自动回滚到 $(basename "$from")；新版本 $sha 保留在 $dir 供排查"

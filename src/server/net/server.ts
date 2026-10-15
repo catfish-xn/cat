@@ -269,13 +269,13 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       sessions.revoke(session.seatId);
     }
     // A listener may fire inside Room.handle (same queue task): defer the push so the receipt leaves first.
+    // One log record per phase entry (G3), never per command or tick; the room already entered its first phase.
     let lastPhase = '';
-    unsubscribeRoom = opened.subscribe(state => {
-      // One log record per phase entry (G3), never per command or tick.
+    const logPhase = (state: RoomState) => {
       const phaseKey = `${state.round}:${state.phase}`;
       if (phaseKey !== lastPhase) { lastPhase = phaseKey; log('info', 'room.phase', { roomId: state.roomId, round: state.round, roundName: state.roundName, phase: state.phase }); }
-      queue.push(() => pushAll(state));
-    });
+    };
+    unsubscribeRoom = opened.subscribe(state => { logPhase(state); queue.push(() => pushAll(state)); });
     for (const conn of connections.values()) {
       const session = conn.session;
       if (!session) continue;
@@ -285,6 +285,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     // Queued behind the current task (the "start" receipt) when a player started it; immediate on a queue timeout.
     queue.push(() => { pushAll(opened.state); broadcastLobby(); });
     log('info', 'room.started', { roomId, humans: opened.state.seats.filter(seat => seat.kind === 'human').length, bots: opened.state.seats.filter(seat => seat.kind === 'bot').length });
+    logPhase(opened.state);
   }
 
   /**
