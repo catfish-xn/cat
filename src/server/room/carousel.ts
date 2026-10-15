@@ -27,10 +27,13 @@ export type CarouselCreation =
 /** One unit standing on the carousel as the rules list it; copied verbatim into the view. */
 export type CarouselSlot = Omit<CarouselSlotView, 'pickedBy'> & { readonly pickedBy: string | null };
 
-/** Release timing of one carousel; durations in room-clock milliseconds. */
+/**
+ * Seats freed together. User decision (2026-10-15, G1-P7 option B): the two lowest-HP seats first, then the next two and
+ * so on, on every carousel including 1-1; the carousel then stays open until its deadline even when everyone has a unit.
+ */
+export const CAROUSEL_BATCH_SIZE = 2;
+/** Release timing of one carousel (the rules' numbers); durations in room-clock milliseconds. */
 export interface CarouselSchedule {
-  /** Seats freed together (TFT x-4: two at a time); a value ≥ the alive count frees everyone at once. */
-  readonly batchSize: number;
   /** From the carousel opening to the first batch. */
   readonly firstBatchMs: number;
   /** Between two batches. */
@@ -70,12 +73,12 @@ export interface RoomCarousel {
 
 /**
  * Release order (room-owned, V2: lowest HP picks first): alive seats by authoritative HP ascending, fixed seat index on a
- * tie, cut into batches of `batchSize` opening `batchIntervalMs` apart after `firstBatchMs`. Pure.
+ * tie, cut into pairs (CAROUSEL_BATCH_SIZE) opening `batchIntervalMs` apart after `firstBatchMs`. Pure.
  */
 export function planCarouselBatches(seats: readonly { readonly seatId: string; readonly index: number; readonly hp: number }[], schedule: CarouselSchedule, openedAt: number):
   { readonly batches: readonly CarouselBatchView[]; readonly endsAt: number } {
   const order = [...seats].sort((a, b) => a.hp - b.hp || a.index - b.index).map(seat => seat.seatId);
-  const size = Math.max(1, Math.trunc(schedule.batchSize));
+  const size = CAROUSEL_BATCH_SIZE;
   const batches: CarouselBatchView[] = [];
   for (let at = 0; at < order.length; at += size) batches.push({ seatIds: order.slice(at, at + size), opensAt: openedAt + schedule.firstBatchMs + batches.length * schedule.batchIntervalMs });
   const last = batches.at(-1)?.opensAt ?? openedAt + schedule.firstBatchMs;

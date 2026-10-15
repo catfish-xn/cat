@@ -9,7 +9,7 @@ import type { CarouselAutoCause, CarouselRules, CarouselSchedule, CarouselSlot }
 interface FakeCarousel { readonly slots: readonly CarouselSlot[] }
 export interface FakeCarouselLog { readonly seatId: string; readonly slot: number; readonly cause: CarouselAutoCause | 'player' }
 
-export function fakeCarousel(roundIds: readonly string[], schedule: CarouselSchedule = { batchSize: 2, firstBatchMs: 0, batchIntervalMs: 1_000, tailMs: 2_000 }, slotCount = 9) {
+export function fakeCarousel(roundIds: readonly string[], schedule: CarouselSchedule = { firstBatchMs: 0, batchIntervalMs: 1_000, tailMs: 2_000 }, slotCount = 9) {
   const log: FakeCarouselLog[] = [];
   const take = (carousel: FakeCarousel, seatId: string, slot: number): FakeCarousel => ({ slots: carousel.slots.map(entry => entry.slot === slot ? { ...entry, pickedBy: seatId } : entry) });
   const rules: CarouselRules = {

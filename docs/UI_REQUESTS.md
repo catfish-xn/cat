@@ -852,11 +852,12 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 | 端口方法 | 输入 | 输出 | 用途 |
 | --- | --- | --- | --- |
 | `opensCarousel(state)` | 某席 MatchState | boolean | 回合进入时判断本轮是否选秀（1-1、2-4…6-4） |
-| `schedule(roundId)` | roundId | `{ batchSize, firstBatchMs, batchIntervalMs, tailMs }` | 放行批大小与时间（1-1 是否全员同时放行） |
+| `schedule(roundId)` | roundId | `{ firstBatchMs, batchIntervalMs, tailMs }` | 首批延迟、批间隔、最后一批后的剩余时间（批大小已由用户定为 2，见下） |
 | `createCarousel` | 共享池、roundId、房间 rng 状态、存活席状态 | `{ pool, carousel, rngState }` 或失败原因 | 建盘并从共享池扣减 |
 | `pickFromCarousel` | 池、盘、席状态、seatId、slot | `{ pool, carousel, state, events }` 或失败原因 | 玩家选取，单位进备战席，唯一收据 |
 | 自动选取 | 同上 + 原因（机器人/断线/超时） | 同上 | 机器人策略与超时代选 |
 | 盘面列表 | 盘 | 每格 `{ slot, definitionId, starLevel, items[], pickedBy }` | 投影给所有席位 |
 
+- **用户决定（2026-10-15，方案 B，覆盖合同草案）**：每轮选秀（含 1-1）按 HP 最低的两人先放行，再下两人，以此类推；最后两人放出后不提前结束，等倒计时到点才关闭，未选者由规则自动选取。房间常量 `CAROUSEL_BATCH_SIZE = 2`，合同只需给时间参数。
 - **待合同明确**：1-1 是否新增回合行（会移动 ordinal 与 digest）；2-4 等 x-4 是否保留现有补给选择（服务器在选秀关闭后照常走选择阶段，两种都能接）；备战席已满时的处理；选秀单位是否计入共享池守恒（若 `assertSharedPoolConservation` 需要盘面参数请写明）；失败原因枚举（服务器暂用 `carousel-slot-taken / carousel-already-picked / carousel-unknown-slot / carousel-not-participant / carousel-closed` 占位，合入后改为合同枚举）。
 - **验收**：合同合入后服务器绑定层只调用合同导出；e2e 八席一局 1-1 与 2-4 每席各得一个单位、HP 最低先选、断线席位也有单位。

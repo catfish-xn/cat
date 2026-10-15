@@ -556,12 +556,8 @@ export class Room {
         if (cause && rules && !this.autoPick(rules, seat, cause)) return;
       }
     }
-    if (this.carouselComplete()) return this.closeCarousel();
+    // Option B (user decision): no early close; after the last pair is out the carousel runs to its deadline.
     this.armCarousel();
-  }
-  private carouselComplete(): boolean {
-    const carousel = this.current.carousel;
-    return carousel !== null && this.aliveSeats().every(seat => carousel.picks[seat.seatId] !== undefined);
   }
   /** One timer for the next carousel event: the next batch opening, else the close. */
   private armCarousel(): void {
@@ -605,9 +601,7 @@ export class Room {
     if (!result.ok) return { ok: false, reason: result.reason, state: seat.match };
     const seatRevision = seat.seatRevision + 1;
     this.commitCarousel(rules, seat.seatId, result);
-    const roomRevision = this.current.roomRevision;
-    if (this.carouselComplete()) this.closeCarousel();
-    return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision };
+    return { ok: true, state: result.state, events: result.events, seatRevision, roomRevision: this.current.roomRevision };
   }
   /** Publishes one carousel transaction: the seat state, the pool and the carousel it was decided against, together. */
   private commitCarousel(rules: CarouselRules, seatId: string, result: Extract<CarouselTransaction, { ok: true }>): void {

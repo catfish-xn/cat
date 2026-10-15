@@ -6,17 +6,16 @@ import { fakeCarousel } from './carousel-fake';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { DamageResolver, makeRoom, runUntil } from './helpers';
 
-const SCHEDULE = { batchSize: 2, firstBatchMs: 0, batchIntervalMs: 1_000, tailMs: 2_000 };
+const SCHEDULE = { firstBatchMs: 0, batchIntervalMs: 1_000, tailMs: 2_000 };
 
 describe('G1-P7 carousel release plan', () => {
-  it('orders by authoritative HP ascending, seat index on a tie, in batches of batchSize', () => {
+  it('orders by authoritative HP ascending, seat index on a tie, in pairs', () => {
     const seats = [{ seatId: 'a', index: 0, hp: 50 }, { seatId: 'b', index: 1, hp: 20 }, { seatId: 'c', index: 2, hp: 50 }, { seatId: 'd', index: 3, hp: 90 }, { seatId: 'e', index: 4, hp: 20 }];
-    const plan = planCarouselBatches(seats, { batchSize: 2, firstBatchMs: 500, batchIntervalMs: 3_000, tailMs: 4_000 }, 10_000);
+    const plan = planCarouselBatches(seats, { firstBatchMs: 500, batchIntervalMs: 3_000, tailMs: 4_000 }, 10_000);
     expect(plan.batches).toEqual([
       { seatIds: ['b', 'e'], opensAt: 10_500 }, { seatIds: ['a', 'c'], opensAt: 13_500 }, { seatIds: ['d'], opensAt: 16_500 },
     ]);
     expect(plan.endsAt).toBe(20_500);
-    expect(planCarouselBatches(seats, { ...SCHEDULE, batchSize: 8 }, 0).batches).toEqual([{ seatIds: ['b', 'e', 'a', 'c', 'd'], opensAt: 0 }]);
   });
 });
 
@@ -81,14 +80,22 @@ describe('G1-P7 carousel phase in the room', () => {
     expect(resumed).toMatchObject({ myPick: 0, canPick: false, openBatches: 2 });
   });
 
-  it('closes early once every alive seat holds a unit', () => {
-    const { rules } = fakeCarousel(['1-2'], { batchSize: 8, firstBatchMs: 0, batchIntervalMs: 1_000, tailMs: 10_000 });
-    const { room } = makeRoom(new DamageResolver(() => 0), { carousel: rules });
+  it('stays open until its deadline after every seat holds a unit (option B)', () => {
+    const { rules } = fakeCarousel(['1-2'], { firstBatchMs: 0, batchIntervalMs: 1_000, tailMs: 5_000 });
+    const { room, clock } = makeRoom(new DamageResolver(() => 0), { carousel: rules });
     room.start();
+    expect(room.handle('s0', { type: 'carouselPick', slot: 4 }).ok).toBe(true);
+    expect(room.handle('s1', { type: 'carouselPick', slot: 5 }).ok).toBe(true);
+    clock.advance(1_000);
+    expect(room.handle('s2', { type: 'carouselPick', slot: 6 }).ok).toBe(true);
+    expect(room.handle('s3', { type: 'carouselPick', slot: 7 }).ok).toBe(true);
+    clock.advance(2_000); // the last pair (bots) is out and picked for: everyone holds a unit
+    expect(Object.keys(room.state.carousel!.picks)).toHaveLength(8);
+    expect(room.state.carousel!.openBatches).toBe(4);
     expect(room.state.phase).toBe('carousel');
-    for (const [index, seatId] of ['s0', 's1', 's2'].entries()) expect(room.handle(seatId, { type: 'carouselPick', slot: index + 4 }).ok).toBe(true);
+    clock.advance(4_999);
     expect(room.state.phase).toBe('carousel');
-    expect(room.handle('s3', { type: 'carouselPick', slot: 8 }).ok).toBe(true);
+    clock.advance(1);
     expect(room.state.phase).toBe('preparation');
   });
 
