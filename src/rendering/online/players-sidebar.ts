@@ -6,6 +6,8 @@ import type { PlayerView, SeatPublic } from './protocol';
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
+/** G1-P6 mark of a seat in my pairing: drawn opponent (strong), possible opponent before the freeze (weak), or none. */
+type Pairing = 'opponent' | 'candidate' | null;
 const PHASE_TEXT = { lobby: '等待', preparation: '准备阶段', choice: '选择', combat: '战斗中', settlement: '结算', ended: '对局结束' } as const;
 /** TFT-style right column: phase badge on top, eight seats ordered by HP below. The big countdown sits above the
  *  board when a countdown host is given (TFT top centre); without one it stays in the sidebar's top bar.
@@ -54,12 +56,17 @@ export class PlayersSidebar {
       this.countdownHost!.dataset.phase = view.phase.kind; this.countdownHost!.toggleAttribute('data-spectating', spectating);
     }
     const ordered = [...view.seats].sort(compareSeats);
-    this.list.replaceChildren(...ordered.map(seat => this.seatRow(seat, seat.seatId === view.mySeatId, seat.seatId === view.opponentSeatId)));
+    // G1-P6: before the freeze only candidates are known (weak mark); the drawn opponent, or a single candidate, is certain (strong mark).
+    const candidates = view.opponentCandidates ?? [];
+    const opponent = view.opponentSeatId ?? (candidates.length === 1 ? candidates[0]! : null);
+    const pairing = (seatId: string): Pairing => seatId === opponent ? 'opponent' : candidates.includes(seatId) ? 'candidate' : null;
+    this.list.replaceChildren(...ordered.map(seat => this.seatRow(seat, seat.seatId === view.mySeatId, pairing(seat.seatId))));
     this.tick();
   }
-  private seatRow(seat: SeatPublic, me: boolean, opponent: boolean) {
-    const row = element('li', '', `online-seat${me ? ' me' : ''}${opponent ? ' opponent' : ''}${seat.alive ? '' : ' eliminated'}${seat.seatId === this.viewing ? ' viewing' : ''}`);
+  private seatRow(seat: SeatPublic, me: boolean, pairing: Pairing) {
+    const row = element('li', '', `online-seat${me ? ' me' : ''}${pairing ? ` ${pairing}` : ''}${seat.alive ? '' : ' eliminated'}${seat.seatId === this.viewing ? ' viewing' : ''}`);
     row.dataset.debug = `online:seat:${seat.seatId}`;
+    if (pairing) row.dataset.pairing = pairing;
     if (this.onSelect) {
       row.tabIndex = 0; row.setAttribute('role', 'button'); row.setAttribute('aria-label', `查看 ${seat.name} 的阵容`);
       row.setAttribute('aria-pressed', String(seat.seatId === this.viewing));
@@ -76,7 +83,8 @@ export class PlayersSidebar {
     const kind = seat.controller === 'takeover' ? element('span', '机', 'seat-kind seat-takeover') : element('span', seat.kind === 'bot' ? '机' : me ? '我' : '人', `seat-kind seat-${seat.kind}`);
     kind.title = seat.controller === 'takeover' ? '真人断线，机器人临时接管' : seat.kind === 'bot' ? '补位机器人' : me ? '你' : '真人玩家';
     head.append(avatar, element('span', seat.name, 'seat-name'), kind);
-    if (opponent) head.append(element('span', '对手', 'seat-opponent'));
+    if (pairing === 'opponent') head.append(element('span', '对手', 'seat-opponent'));
+    else if (pairing === 'candidate') { const tag = element('span', '可能', 'seat-candidate'); tag.title = '本回合可能的对手，开战时确定'; head.append(tag); }
     // Bots never hold a connection; a dropped human shows 断线, and 接管中 once a bot plays the seat.
     if (seat.controller === 'takeover') head.append(element('span', '接管中', 'seat-offline seat-takeover-tag'));
     else if (seat.kind === 'human' && !seat.connected) head.append(element('span', '断线', 'seat-offline'));

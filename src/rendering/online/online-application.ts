@@ -11,7 +11,7 @@ import type { ReplaySnapshot } from '../../replay';
 import { Lobby } from './lobby';
 import { OpponentBoardPanel } from './opponent-board';
 import { PlayersSidebar } from './players-sidebar';
-import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand } from './protocol';
+import type { ConfirmedCommand, ConnectionStatus, GameClient, LobbyView, PlayerView, RefusedCommand, SeatPublic } from './protocol';
 import { RankingOverlay } from './ranking';
 import type { RemoteSession } from './remote-session';
 import type { SceneApplication } from './scene-application';
@@ -178,11 +178,16 @@ export class OnlineApplication implements SceneApplication {
   private syncStatus(view: PlayerView) {
     const key = `${view.phase.kind}/${view.phase.round}`; if (key === this.lastPhase) return; this.lastPhase = key;
     if (this.spectating) return; // the spectate line stays; phases still show in the countdown and sidebar
-    const opponent = view.seats.find(seat => seat.seatId === view.opponentSeatId);
+    // G1-P6: the opponent is drawn when the battle starts; before that only the candidates are known (a single one is certain).
+    const candidates = (view.opponentCandidates ?? []).map(seatId => view.seats.find(seat => seat.seatId === seatId)).filter((seat): seat is SeatPublic => seat !== undefined);
+    const opponent = view.seats.find(seat => seat.seatId === view.opponentSeatId) ?? (candidates.length === 1 ? candidates[0] : undefined);
     // SR-C14-01 (option A): the first preparation opens at 0 gold under the opening rules; say so instead of leaving an unaffordable shop unexplained.
     const opening = view.phase.round === 1 ? ' · 首轮 0 金币，1-2 战后到账 2 金币' : '';
     if (view.phase.kind === 'preparation') {
-      const text = opponent ? `对手：${opponent.name} · ${view.phase.roundName} · 倒计时结束自动开战` : `${view.phase.roundName} · 野怪回合${opening} · 倒计时结束自动开战`;
+      const possible = candidates.length <= 3 ? candidates.map(seat => seat.name).join('、') : `${candidates.length} 人`;
+      const text = opponent ? `对手：${opponent.name} · ${view.phase.roundName} · 倒计时结束自动开战`
+        : candidates.length ? `可能的对手：${possible} · ${view.phase.roundName} · 开战时确定`
+        : `${view.phase.roundName} · 野怪回合${opening} · 倒计时结束自动开战`;
       this.phaseLine = { round: view.phase.round, phase: 'preparation', text }; this.hooks.status(text);
     }
     else if (view.phase.kind === 'combat') this.hooks.status(opponent ? `对战 ${opponent.name} · 战斗由服务器计算` : '战斗由服务器计算 · 正在播放');
@@ -222,7 +227,8 @@ export class OnlineApplication implements SceneApplication {
   }
   requestNew() { this.hooks.status(this.mode === 'online-ended' ? '对局已结束 · 点击 返回匹配 再来一局' : '联机对局由服务器控制，没有本地新局'); }
   selectReplayUnit(_id: string | null) { /* no replay online */ }
-  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null, seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
+  debug() { return { mode: this.mode, runId: 'online', transport: this.client.transport, connection: this.connectionText, spectating: this.spectating, viewingSeatId: this.opponentBoard.openSeatId, phase: this.view?.phase ?? null,
+    opponentSeatId: this.view?.opponentSeatId ?? null, opponentCandidates: this.view?.opponentCandidates ?? [], seats: this.view?.seats ?? [], ranking: this.view?.ranking ?? null, playingBack: this.session.playingBack, paused: this.session.paused }; }
   private clearReclaimed() { if (this.reclaimedTimer !== null) { window.clearTimeout(this.reclaimedTimer); this.reclaimedTimer = null; } }
   dispose() {
     if (this.disposed) return; this.disposed = true;

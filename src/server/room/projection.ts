@@ -43,7 +43,7 @@ export function toPublicBoard(match: MatchState): PublicBoard {
 export function toPlayerView(room: RoomState, seatId: string, serverNow: number): PlayerView {
   if (!room.seats.some(seat => seat.seatId === seatId)) throw new RangeError(`unknown seat ${seatId}`);
   const pairing = findPairing(room.pairings, seatId);
-  // The mirrored seat is shown its source as the opponent; the view has no separate mirror field yet.
+  // The mirrored seat is shown its source as the opponent; the view has no separate mirror field yet. Null until the freeze draws the pairings (G1-P6).
   const opponentSeatId = pairing === null ? null : pairing.opponent.kind === 'seat' ? pairing.opponent.seatId : pairing.opponent.sourceSeatId;
   const seats = room.seats.map(toSeatPublic);
   const ranking = room.ranking === null ? null
@@ -53,9 +53,22 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
     seats,
     phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.roundName, endsAt: room.deadlineAt, serverNow },
     opponentSeatId,
+    opponentCandidates: toOpponentCandidates(room, seatId),
     ranking,
     fault: room.fault === null ? null : toPlayerFault(room.fault),
   };
+}
+
+/**
+ * G1-P6: before the freeze of a PvP round (choice or preparation), the seats this seat may fight, in seat order, alive
+ * only, never itself; empty once the pairings are drawn, outside PvP rounds and for an eliminated seat.
+ */
+export function toOpponentCandidates(room: RoomState, seatId: string): string[] {
+  if (room.roundKind !== 'pvp' || room.pairings.length > 0 || (room.phase !== 'choice' && room.phase !== 'preparation')) return [];
+  const alive = new Set(room.seats.filter(seat => seat.alive).map(seat => seat.seatId));
+  if (!alive.has(seatId)) return [];
+  const listed = new Set(room.opponentCandidates[seatId] ?? []);
+  return room.seats.filter(seat => seat.seatId !== seatId && alive.has(seat.seatId) && listed.has(seat.seatId)).map(seat => seat.seatId);
 }
 
 /** Human-readable fault for the client; the structured RoomFault stays on the server. */

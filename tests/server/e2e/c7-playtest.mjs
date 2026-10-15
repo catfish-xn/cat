@@ -24,7 +24,7 @@ async function main() {
   const browser = await launchBrowser();
   const errors = [];
   const receipts = [];
-  const report = { rounds: [], combine: null, swap: null };
+  const report = { rounds: [], combine: null, swap: null, pairing: null };
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -127,6 +127,20 @@ async function main() {
       await page.screenshot({ path: `${OUT}/2-1-6-combine-after.png` });
     } else report.combine = { skipped: `inventory ${inventory.length}` };
     console.log(JSON.stringify(report.combine));
+
+    /* ---------------- G1-P6: 2-1 shows possible opponents; the battle names one of them ---------------- */
+    const marks = () => page.evaluate(() => [...document.querySelectorAll('.online-seat[data-pairing]')].map(node => `${node.dataset.debug.replace('online:seat:', '')}:${node.dataset.pairing}`).sort());
+    const prep21 = await read(page), candidates = prep21.m6.opponentCandidates ?? [];
+    const shownMarks = await marks();
+    report.pairing = { candidates, preparationMarks: shownMarks };
+    check(prep21.m6.phase.kind === 'preparation' && prep21.m6.opponentSeatId === null && candidates.length >= 1, `2-1 preparation: no opponent yet, ${candidates.length} candidate(s) ${candidates.join(',')}`);
+    const expectedMarks = (candidates.length === 1 ? [`${candidates[0]}:opponent`] : candidates.map(seatId => `${seatId}:candidate`)).sort();
+    check(JSON.stringify(shownMarks) === JSON.stringify(expectedMarks), `2-1 preparation: the sidebar marks exactly the candidates (${shownMarks.join(' ')})`);
+    const fight = await waitRead(page, s => s.m6.phase?.kind === 'combat' && s.m6.opponentSeatId, '2-1 battle opponent', 60_000);
+    report.pairing.opponent = fight.m6.opponentSeatId;
+    check(candidates.includes(fight.m6.opponentSeatId), `2-1 battle: the opponent ${fight.m6.opponentSeatId} is one of the candidates`);
+    check(JSON.stringify(await marks()) === JSON.stringify([`${fight.m6.opponentSeatId}:opponent`]), '2-1 battle: only the opponent is marked');
+    await page.screenshot({ path: `${OUT}/2-1-7-opponent.png` });
     writeFileSync(`${OUT}/report.json`, JSON.stringify({ ...report, errors }, null, 2));
     // Item 4: 1-2, 1-3, 1-4 are monster rounds on the real server: monsters on the preparation board, fought in battle.
     const pve = report.rounds.filter(entry => ['1-2', '1-3', '1-4'].includes(entry.roundId));

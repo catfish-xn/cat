@@ -110,9 +110,12 @@ describe('Room: whole-round commit through T3 receipts', () => {
     room.start();
     runUntil(room, clock, atFirstPvp);
     expect(room.state.seats.filter(seat => seat.alive)).toHaveLength(7);
+    expect(room.state.pairings).toEqual([]); // G1-P6: drawn at the freeze
+    clock.runNext();
     const mirrorRow = room.state.pairings.find(pairing => pairing.opponent.kind === 'mirror')!;
     const sourceSeatId = (mirrorRow.opponent as { sourceSeatId: string }).sourceSeatId;
-    clock.runNext(); clock.runNext();
+    expect(room.state.opponentCandidates[mirrorRow.seatId]).toContain(sourceSeatId);
+    clock.runNext();
     expect(room.state.fault).toBeNull();
     expect(room.state.settlements).toContain('test-room:round-4');
     const battles = room.state.battles.filter(twoSided);

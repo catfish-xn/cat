@@ -348,8 +348,15 @@ export class BoardScene extends Phaser.Scene {
     const px = (x - rect.left) * this.scale.gameSize.width / rect.width;
     const py = (y - rect.top) * this.scale.gameSize.height / rect.height;
     const session = this.session, ownerOf = session instanceof RemoteSession ? (id: string) => session.equipmentOwnerId(id) : (id: string) => id;
-    for (const [id, token] of this.tokens) if (token.visible && Math.abs(px - token.x) <= 29 && Math.abs(py - token.y) <= 29) return ownerOf(id);
-    return undefined;
+    // P8: in a battle tokens walk into each other's box (melee neighbours, a unit stepping between cells); the token
+    // nearest the pointer wins, not the first one in insertion order, so a drop on my unit never lands on the enemy beside it.
+    let best: string | undefined, bestDistance = Number.POSITIVE_INFINITY;
+    for (const [id, token] of this.tokens) {
+      if (!token.visible || Math.abs(px - token.x) > 29 || Math.abs(py - token.y) > 29) continue;
+      const distance = (px - token.x) ** 2 + (py - token.y) ** 2;
+      if (distance < bestDistance) { best = id; bestDistance = distance; }
+    }
+    return best === undefined ? undefined : ownerOf(best);
   }
 
   private button(name: string, x: number, y: number, width: number, height: number, text: string, onClick: () => void, size = 17) {

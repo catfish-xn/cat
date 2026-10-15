@@ -79,7 +79,11 @@ export class OpponentBoardPanel {
 
     const grid = element('div', '', 'opponent-grid'); grid.style.setProperty('--cols', String(layout.columns));
     const byCell = new Map(board.units.map(unit => [`${unit.cell.col},${unit.cell.row}`, unit]));
-    for (let row = 0; row < layout.rows; row++) {
+    // Only the owner's own half (its deployment rows, where every public unit stands), as TFT shows a scouted board: the
+    // panel then stays over the enemy half of my board and never over my deployment rows (G1 scouting).
+    const zone = layout.deploymentZones.player;
+    const firstRow = Math.min(zone.firstRow, ...board.units.map(unit => unit.cell.row)), lastRow = Math.max(zone.lastRow, ...board.units.map(unit => unit.cell.row));
+    for (let row = firstRow; row <= lastRow; row++) {
       const line = element('div', `` , `opponent-row${row % 2 ? ' odd' : ''}`);
       for (let col = 0; col < layout.columns; col++) {
         const unit = byCell.get(`${col},${row}`);
@@ -97,8 +101,8 @@ export class OpponentBoardPanel {
       traits.append(item);
     }
     if (!traits.childElementCount) traits.append(element('li', board.units.length ? '无羁绊' : '场上暂无单位', 'opponent-trait empty'));
-    const note = element('p', '只读 · 仅显示场上单位与装备（不含备战席、商店、金币）', 'opponent-note');
-    this.root.replaceChildren(head, grid, traits, note);
+    traits.title = '只读 · 仅显示场上单位与装备（不含备战席、商店、金币）';
+    this.root.replaceChildren(head, grid, traits);
   }
   private unitChip(unit: PublicBoardUnit): HTMLElement {
     const identity = getHeroIdentity(unit.definitionId);
