@@ -9,19 +9,27 @@
   },
   "fast": {
     "files": 218,
-    "tests": 2642,
-    "passed": 2642,
+    "tests": 2652,
+    "passed": 2652,
     "failed": 0,
+    "pending": 0,
     "success": true,
-    "realSeconds": 610.14
+    "realSeconds": 631.61,
+    "userSeconds": 2197.79,
+    "sysSeconds": 72.13,
+    "reportSha256": "57d11a3ef3e5528f54bbdd4bceb198e65fd0c47c26d0a9a308531750824a1d33"
   },
   "timing": {
-    "files": 4,
-    "tests": 5,
-    "passed": 5,
+    "files": 6,
+    "tests": 21,
+    "passed": 21,
     "failed": 0,
+    "pending": 0,
     "success": true,
-    "realSeconds": 203.86
+    "realSeconds": 212.8,
+    "userSeconds": 242.53,
+    "sysSeconds": 9.39,
+    "reportSha256": "57c35fac92f08eef5a34016e193f84a5011da90330f3ad083d1ed4486683b4f3"
   },
   "originalCases": {
     "count": 2635,
@@ -75,6 +83,110 @@
       },
       {
         "name": "shared loot validation cache boundaries does not trust mutable or shallow-frozen identical shop references after warming",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 room: candidates in preparation, opponent at the freeze every frozen opponent was a shown candidate; only PvP rounds grow the history",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 room: candidates in preparation, opponent at the freeze a disconnect, a takeover and a resume leave the candidates unchanged (they live in the room state)",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 room: candidates in preparation, opponent at the freeze the same seed gives the same candidates and pairings",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 candidateOpponents excludes the last two opponents, alive only, never itself, in seat order",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 candidateOpponents steps back 2 → 1 → all survivors when the window leaves nobody",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 candidateOpponents a mirror is recorded under its source for the seat that fought it only",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 8 survivors over 12 rounds: the real opponent is always a shown candidate",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 7 survivors over 12 rounds: the real opponent is always a shown candidate",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 6 survivors over 12 rounds: the real opponent is always a shown candidate",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 5 survivors over 12 rounds: the real opponent is always a shown candidate",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 4 survivors over 12 rounds: the real opponent is always a shown candidate",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 3 survivors over 12 rounds: the real opponent is always a shown candidate",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 2 survivors over 12 rounds: the real opponent is always a shown candidate",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates 8 survivors: nobody meets one of its last two opponents while others are left",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates odd survivors draw the mirror source from the odd seat's candidates",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates relaxes the window for everybody when the candidate sets admit no pairing",
+        "count": 1
+      },
+      {
+        "name": "G1-P6 planPairings under candidates same survivors, history and rng → same plan; an empty history is the plain shuffle",
+        "count": 1
+      },
+      {
+        "name": "game server: disconnect and resume G1-P6: a resumed seat gets the same opponent candidates in preparation and fights one of them",
+        "count": 1
+      },
+      {
+        "name": "G3 lobby watchdog ends a room whose phase deadline task was lost (stalled) and opens the queue again",
+        "count": 1
+      },
+      {
+        "name": "G3 lobby watchdog never fires while the room keeps publishing, even when phases outlast the stall limit",
+        "count": 1
+      },
+      {
+        "name": "G3 lobby watchdog ends a room once every human seat stayed disconnected for abandonMs; a reconnect in between resets the count",
+        "count": 1
+      },
+      {
+        "name": "G3 lobby watchdog is off without a watchdog; an abort is reported once through onEnd",
+        "count": 1
+      },
+      {
+        "name": "G3 network server recovers from a resolver error: last view to everyone, credentials released, the next match starts",
+        "count": 1
+      },
+      {
+        "name": "G3 network server ends a match every player left (abandoned) and lets the next one start",
+        "count": 1
+      },
+      {
+        "name": "G3 network server answers GET /healthz (also under a proxy prefix) with build identity and counts, 426 elsewhere",
+        "count": 1
+      },
+      {
+        "name": "G3 structured log orders ts, level, event, roomId, seatId first, drops undefined and credential keys, and filters by level",
         "count": 1
       }
     ]
@@ -265,5 +377,81 @@
       }
     ]
   },
-  "pveFingerprintsEqual": true
+  "pveFingerprintsEqual": true,
+  "phaseBeforeUpstreamMerge": {
+    "fast": {
+      "files": 218,
+      "tests": 2642,
+      "passed": 2642,
+      "failed": 0,
+      "success": true,
+      "realSeconds": 610.14
+    },
+    "timing": {
+      "files": 4,
+      "tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "success": true,
+      "realSeconds": 203.86
+    },
+    "originalCases": {
+      "count": 2635,
+      "multisetSha256": "0f3fc21441b2c9d48856c4199da9a0077427fedaddf3bcbbc5a23a4bae3367e6",
+      "allPreservedExactlyOnce": true,
+      "differences": [],
+      "additional": [
+        {
+          "name": "G4 deterministic reference cache boundaries reuses generated references while revalidating mutable layouts and ledgers",
+          "count": 1
+        },
+        {
+          "name": "G4 deterministic reference cache boundaries bounded reference eviction preserves seed/boundary and replay bytes",
+          "count": 1
+        },
+        {
+          "name": "G4 deterministic reference cache boundaries shares only immutable data with identical JSON bytes and retains negative zero/getters",
+          "count": 1
+        },
+        {
+          "name": "G4 deterministic reference cache boundaries validated JSON comparison preserves canonical equality, object key order and array order",
+          "count": 1
+        },
+        {
+          "name": "admits detached deep-frozen checkpoints without freezing shallow children or executing getters",
+          "count": 1
+        },
+        {
+          "name": "detaches mutable checkpoint declarations before sharing later combat ticks",
+          "count": 1
+        },
+        {
+          "name": "canonical scalar serialization retains numeric key order and nested getter sequencing",
+          "count": 1
+        },
+        {
+          "name": "rechecks frozen accessor layout and loot inputs after successful authentication",
+          "count": 1
+        },
+        {
+          "name": "G4 detached replay snapshots shares only deeply immutable data and preserves dynamic aliases, cycles and scalar values",
+          "count": 1
+        },
+        {
+          "name": "G4 detached replay snapshots keeps native cloning for accessors and non-JSON data without speculative getter calls",
+          "count": 1
+        },
+        {
+          "name": "G4 detached replay snapshots cannot poison validated owned-record results or admit a tampered external copy",
+          "count": 1
+        },
+        {
+          "name": "shared loot validation cache boundaries does not trust mutable or shallow-frozen identical shop references after warming",
+          "count": 1
+        }
+      ]
+    }
+  },
+  "finalAcceptanceEvidence": "final-acceptance.json",
+  "testedHead": "c3eb2ae93c12a7c06bd4df14c034d7e2f4ed3446"
 }
