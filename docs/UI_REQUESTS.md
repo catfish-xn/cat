@@ -835,3 +835,28 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **现状**：`DEFAULT_PAIRING_POLICY = { avoidRecentRounds: 2 }` 是占位。
 - **需要**：`docs/S13_RULES_GAP.md` §10 给出 14.24b 的定义与推荐值；若 14.24b 的放宽顺序不是"全体逐轮减 1"，或奇数镜像应受约束/计入来源席历史，请在合同写明，服务器按合同改 `pairing.ts`。
 - **验收**：§10 的 6–8 组向量能直接写成 `tests/server/pairing.test.ts` 的用例并通过。
+
+## G5 战后统计与经济提示（2026-10-15，Claude 流水线 C，分支 `claude/g5-stats-replay`）
+
+### 已交付（纯界面，无需 Codex 动作即可运行）
+
+- 战后排行（本场）：我的战斗结束（结算期）起，右侧玩家列表下方显示该场双方全部单位的 伤害 / 承伤 / 治疗 排行，每回合刷新，持续到下一场战斗开始。数据只来自服务器推送的 `replay`（合同 §14.2）事件本身：伤害 = `packetDamage.hpDamage + absorbed` 按 `sourceId`（护盾吸收算伤害，与云顶伤害统计一致），承伤 = 同一和按 `targetId` 并单列其中护盾部分，治疗 = `heal.actual` 按 `targetId`。聚合在 `src/presentation/battle-ranking.ts`，不算任何规则。
+- 本局累计：同一面板的"本局累计"页签按 阵营 + `definitionId` + 星级 把本局每一场（每回合一场，客户端内存里已收到的回放）逐场相加，并给出出场场数；之后出售或被淘汰的单位保留记录。断线重连或刷新页面后，只累计重连后收到的回放。
+- 经济提示：准备期倒计时条右侧显示 利息 / 连胜连败计数 / 上轮连胜败金币。金币、`streak`、上轮 `incomeBreakdown.streak` 均为私有席位视图已有字段；利息预估沿用 HUD"预计利息"已在用的规则只读选择器 `getInterestGold(gold)`。
+- "回看"按用户决定删除（云顶无此功能）。
+
+### SR-G5-01 §14.2 `heal` 事件不带治疗来源（P3，可选）
+
+- **现状**：`combat-replay-view.ts` 的 `heal` 只白名单了 `targetId` 与 `actual`，没有施加者。联机排行的"治疗"因此只能是"单位受到的治疗量"，不能像 TFT 那样按治疗者统计。
+- **需要（可选）**：`heal` 视图事件增加 `sourceId`（`outcome.shares[0].source.ownerId` 或按份额拆分的施加者列表，按合同选定），不暴露执行计划。
+- **用途**：排行"治疗"页改为按治疗者统计；受治疗量保留在悬停提示。
+- **验收**：同一场战斗中按 `sourceId` 汇总的治疗总和等于按 `targetId` 汇总的总和；镜像回放两侧对称；`replay-divergence` 校验不变。
+
+### SR-G5-02 准备期经济预估投影（P2）
+
+- **现状**：私有席位视图没有"本回合结算预估"。界面的利息只能用 `getInterestGold(当前金币)`，它不含胜利金币对计息基数的影响，也不知道开局回合（1-x 走 `OPENING_ECONOMY_RULES`，利息 0）与加时轮；下回合连胜/连败金币需要知道胜负后的连胜规则，界面不能自己推（`planCatalogRoundEconomy`/加时分支的选择属于规则）。
+- **需要**：`toPrivateSeatView` 在准备期（及 PvP 战斗进行中）增加只读字段，例如
+  `economyPreview: { roundId, gold, ifWin: { interest, win, streakGold, streakAfter }, ifLoss: { interest, win, streakGold, streakAfter } } | null`
+  （补给轮可为 null 或只给一组），由与结算相同的规划函数按当前金币、连胜计算；不含 RNG、敌方信息或掉落。
+- **用途**：经济提示直接显示"利息 +N（胜 +M）· 连败 2 · 再败 +1 金币"，替换 `getInterestGold` 估算。
+- **验收**：对 1-2、2-1、加时轮和一组跨 10 金币边界的胜/负，`economyPreview.ifWin/ifLoss` 与随后结算的 `roundResults[].incomeBreakdown`（金币未再变化时）逐项相等；G5 e2e 改为逐项比对。
