@@ -1,0 +1,30 @@
+# systemd 单元（G3）。安装：sudo cp deploy/cat-game.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable cat-game
+# 版本目录由 deploy/deploy.sh 切换 /srv/cat/current；运行配置在 /etc/cat/game.env，版本号（CAT_GIT_SHA）在 current/release.env。
+[Unit]
+Description=Cat single-match WebSocket game server
+After=network.target
+
+[Service]
+Type=simple
+User=catgame
+Group=catgame
+WorkingDirectory=/srv/cat/current
+EnvironmentFile=/etc/cat/game.env
+# 每个版本目录自带 CAT_GIT_SHA，/healthz 与页面右下角据此显示部署的提交。
+EnvironmentFile=-/srv/cat/current/release.env
+ExecStart=/opt/node22/bin/node /srv/cat/current/dist-server/game/main.mjs
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+LimitNOFILE=4096
+# 结构化日志：每行一个 JSON（ts/level/event/roomId/seatId），journalctl -u cat-game -o cat 可直接 jq。
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

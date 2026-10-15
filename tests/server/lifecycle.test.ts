@@ -100,8 +100,9 @@ describe('B8 lifecycle: the network server across matches', () => {
       baselines.push(server.retained);
       previousSeats = [a.seatId!, b.seatId!];
     }
-    // Receipts kept per match: A's join and start, B's join. Room listeners: the server's push and the lobby's bot driver (B6).
-    expect(baselines[0]).toEqual({ sessions: 2, dedupeEntries: 3, connections: 0, room: { ...RELEASED, listeners: 2 } });
+    // Receipts kept per match: A's join and start, B's join. Room listeners: only the server's push; the lobby released
+    // its bot driver (B6) and its own watch when the room ended (G3).
+    expect(baselines[0]).toEqual({ sessions: 2, dedupeEntries: 3, connections: 0, room: { ...RELEASED, listeners: 1 } });
     for (const baseline of baselines) expect(baseline).toEqual(baselines[0]);
   }, 30_000);
 });

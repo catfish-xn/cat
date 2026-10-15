@@ -25,7 +25,9 @@
   - P5 宝珠：14.24b 逐轮球数与品质配比**未找到一手来源（U）**；现行八场共 15 球、1/2/3/2/2/2/2/1。建议 P5-A 保持并把采样器改为读冻结权重表（消除写死分界）。
   - 三项一次发布包（P3-A + P4-A + P5-A）估 3–5.5 人日，只改一次 digest。**用户 2026-10-14 深夜拍板按此包实施**，派单见 `docs/DISPATCH_2026-10-14.md` 第六批。
 - **P3/P4/P5 数值包已由 Codex 交付并合入（#90，multiplayer `386748f`，2026-10-15 凌晨）**：PvP `overtime-n` 基础扣血 12→17（`selectPlayerBaseDamage` 读冻结 BattleInput 的 roundId，服务器路径不改）；P4 九级上限、P5 球数配比保持，采样改读冻结 `ORB_RULES` 权重表。身份 CONTENT `bd9c3a8e→77f80fec`、LOOT_REPLAY `5cd0487c→b8d9d7ca`、rules/content `s13-rules-gap-v2` / `s13-14.24b-rules-gap-v2`；schema7/save3/replay3/command3、NET_PROTOCOL 2 不变。**旧存档再次失效**（只读保全/导出）。验货：合并树全套 2635 用例仅 1 条 m5-replay 并行时间噪声（单跑过）；6 条目标集外旧身份夹具由 Codex 重录并给字节证据（`docs/evidence/p3p4p5/FIXTURE_MIGRATION.md`），指挥独立复核 byteEqual；e2e c7、c19-overtime-display、repro seeds 9/4/11 通过，非加时种子 4/11 与基线逐席一致。
-- 新增 P8（低）：`c18b-use-consumable` e2e 战斗中把工具拖到移动中的棋盘 token 偶发落空（首跑 5 项失败、重跑通过）；Opus 可改为按单位所在格判定落点或在 e2e 等 token 静止。
+- **2026-10-15 凌晨用户决定：main 已合 `6b362a5`，遗留项以后再修，进入下一阶段。用户随后要求按目标规划、每批推进更多：目标与批次见 `docs/PLAN_GOALS_2026-10-15.md`（G1 流程、G2 内容扩容、G3 运维、G4 测试提速、G5 界面），第七批扩为四窗口（Opus: G1-P6+侦察+P8、G3 运维包；Codex: G2-1 内容第一批+§10、G4 测试提速+SR-B8-03），见 `docs/DISPATCH_2026-10-14.md`。待拍板：P7 选秀、Codex 提交图标、systemd/pm2。**
+- **2026-10-15 上午第七批结果**：#92 §10、#93 G3 运维包、#95 G1-P6+侦察+P8 已合 multiplayer `a159fbb`（NET_PROTOCOL 2、digest 不变）；#94 G2-1 内容包草稿打回（全套 30 文件失败，目标集外）；G4 未开工。新铁律：改内容/digest 的 PR 执行者必须自跑全套。第八批（G5 统计回放、P7 选秀服务器+界面、G2-1 转正、P7 规则+G4）见 DISPATCH。
+- ~~新增 P8（低）~~ 已由 #95 修复（三处根因）：`c18b-use-consumable` e2e 战斗中把工具拖到移动中的棋盘 token 偶发落空（首跑 5 项失败、重跑通过）；Opus 可改为按单位所在格判定落点或在 e2e 等 token 静止。
 
 ## 0.0.6 真机反馈与补内容 backlog（2026-10-14 晚，用户两机实测后口述；用户决定先合 main，后续按此慢慢补）
 

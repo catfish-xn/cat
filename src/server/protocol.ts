@@ -73,14 +73,23 @@ export interface PlayerViewPhase {
   readonly serverNow: number;
 }
 /** Why a room ended abnormally; `detail` is already human-readable text chosen by the server. */
-export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable';
+export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable' | 'stalled' | 'abandoned';
 export interface PlayerViewFault { readonly kind: PlayerViewFaultKind; readonly detail: string }
 export interface PlayerView {
   readonly mySeatId: string;
   readonly seats: readonly SeatPublic[];
   readonly phase: PlayerViewPhase;
-  /** Seat this player fights (or fought) this round; null for PvE/supply rounds. */
+  /**
+   * Seat this player fights (or fought) this round; null for PvE/supply rounds and, since G1-P6, during the choice and
+   * preparation of a PvP round: the real opponent is drawn when the round freezes.
+   */
   readonly opponentSeatId: string | null;
+  /**
+   * G1-P6: during the choice and preparation of a PvP round, the seats this player may fight (seat order, alive, never
+   * me); `opponentSeatId` is always one of them once drawn. Empty otherwise. Optional so older views stay valid; the room
+   * always fills it.
+   */
+  readonly opponentCandidates?: readonly string[];
   /** Full ranking once the match ended normally. */
   readonly ranking: readonly SeatPublic[] | null;
   /** Set when the room ended abnormally (then `ranking` stays null). */

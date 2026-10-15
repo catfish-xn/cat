@@ -11,12 +11,12 @@ const FORBIDDEN = [/phaser/i, /\bdocument\b/, /\bwindow\b/, /Math\.random/, /Dat
 
 /**
  * Explicit exceptions (work orders C3 step 2 and B2): the real-clock adapter is the only file that
- * reads the real clock; the network layer may use ws, node:crypto and the WebSocket API; the Node
+ * reads the real clock; the network layer may use ws, node:crypto, node:http (G3 /healthz) and the WebSocket API; the Node
  * entry and the test client may read process. Nothing else in src/server may.
  */
 const ALLOWED: Readonly<Record<string, readonly RegExp[]>> = {
   'room/real-clock.ts': [/performance\.now/, /\bsetTimeout\b/],
-  'net/server.ts': [/WebSocket/, /from 'ws'/],
+  'net/server.ts': [/WebSocket/, /from 'ws'/, /from 'node:/],
   'net/session.ts': [/from 'node:/],
   'net/test-client.ts': [/WebSocket/, /\bsetTimeout\b/, /\bprocess\b/],
   'main.ts': [/\bprocess\b/],

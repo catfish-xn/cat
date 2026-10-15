@@ -819,3 +819,19 @@ PvE 使用原权威执行生成的 initial/terminal/events 创建同一种回放
 seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-minimal.json`，修复后 244 tick 完成；原始输入 355 tick 完成。新增 10 例涵盖两种单位顺序、首跳、刷新、200 tick 的 10 次含末跳付款、非到期拍相位以及真正漏拍的拒绝。既有 golden 与 digest 未改，玩法沿现有 B-01/B-08。
 
 指定目标集 16 文件 / 223 用例通过，typecheck 与 Node 入口通过（165 状态 / 106 事件）；整局三种子结果、数值依据与复现 SHA 见 [窗口 4 证据](evidence/c19/MISSED_PULSE.md)。不需要服务器绕过或新增字段，C19 可在本修复合入后按窗口 3 续单 rebase、完成界面整局验收。
+
+## G1-P6 配对预告与侦察（2026-10-15，Claude 流水线 B/C，分支 `claude/g1-pairing-scouting`）
+
+### 已交付（服务器 + 界面，无需 Codex 动作即可运行）
+
+- `src/server/room/pairing.ts`：`candidateOpponents(aliveSeatIds, seatId, history, policy)`、`planCandidates(aliveSeatIds, history, policy)`、`planPairings(aliveSeatIds, rngState, battleIdPrefix, history?, policy?)`、`recordPairings(history, pairings)`。history 为每席过去 PvP 轮的对手（旧在前，最多 8 条）；镜像只记在打镜像的那一席、记为 `sourceSeatId`，来源席只记自己的真实对手；PvE/补给轮不记。
+- 候选：排除最近 `avoidRecentRounds` 轮对手；为空则窗口减 1，直到 0（全部存活席）。若各席候选互不相容、凑不出完整配对，全体同时减 1 再试（2 → 1 → 0），保证开战抽到的对手一定在准备期展示的候选里。不消耗 RNG。
+- 时机：回合进入时只算候选（`RoomState.opponentCandidates`）；配对与全部 `battleSeeds` 挪到准备截止冻结时抽取，抽取顺序仍是"洗牌 → 奇数镜像来源 → 每场种子"。空历史时与原先无约束洗牌逐位相同。配对历史 `RoomState.pairingHistory` 在房间状态里，断线、接管、重连后候选不变。
+- 投影：`PlayerView.opponentCandidates?: string[]`（选择/准备期、PvP 轮，按座位序，只含存活、不含自己；其它时候为空）；`opponentSeatId` 在冻结前为 null。`NET_PROTOCOL_VERSION` 保持 2（只增视图字段，依据写在 `messages.ts`）。
+- 侦察：右侧玩家列表点击即开对方公开阵容（C5 已有：单位、星级、装备、羁绊激活数，全部来自 `SeatPublic.publicBoard`），Esc 或再点一次关闭。没有新增字段需求。
+
+### SR-G1-01 请 Codex 用 §10 规则替换占位数值（P2，只改参数）
+
+- **现状**：`DEFAULT_PAIRING_POLICY = { avoidRecentRounds: 2 }` 是占位。
+- **需要**：`docs/S13_RULES_GAP.md` §10 给出 14.24b 的定义与推荐值；若 14.24b 的放宽顺序不是"全体逐轮减 1"，或奇数镜像应受约束/计入来源席历史，请在合同写明，服务器按合同改 `pairing.ts`。
+- **验收**：§10 的 6–8 组向量能直接写成 `tests/server/pairing.test.ts` 的用例并通过。
