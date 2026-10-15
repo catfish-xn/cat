@@ -835,3 +835,18 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **现状**：`DEFAULT_PAIRING_POLICY = { avoidRecentRounds: 2 }` 是占位。
 - **需要**：`docs/S13_RULES_GAP.md` §10 给出 14.24b 的定义与推荐值；若 14.24b 的放宽顺序不是"全体逐轮减 1"，或奇数镜像应受约束/计入来源席历史，请在合同写明，服务器按合同改 `pairing.ts`。
 - **验收**：§10 的 6–8 组向量能直接写成 `tests/server/pairing.test.ts` 的用例并通过。
+
+## G2 前置界面：羁绊面板与技能/装备说明（2026-10-15，Claude 流水线 C，分支 `claude/g5-traits-tooltips`）
+
+### 已交付（纯展示，只读 content 公开导出）
+
+- 左栏顶部常驻羁绊列（`src/rendering/trait-column.ts`）：行数、人数、档位来自规则的 `deriveTraits`（与羁绊页签、侦察面板同一选择器），激活行在前，断点高亮当前档，未激活灰显；hover 显示每档效果（`describeTraitTier`，已移到 `src/presentation/effect-text.ts`）与该羁绊全部英雄（场上者标出）。侦察面板改用同一组件渲染对方羁绊列。
+- 单位说明卡（`src/presentation/unit-card.ts`）：商店卡、部署页名册、棋盘/备战席上的棋子、侦察面板单位都可 hover；内容为费用、羁绊、技能（`S13_ABILITY_DATA.description` 按星级把 `@Var@`/`@Var*N@` 换成 `variables` 中的值，去掉 Riot 标签）、法力与 `getUnitStats` 的星级属性。
+- 装备说明：沿用 `item-codex` 的说明弹层（效果 + 配方/可用于配方），新增挂到侦察面板。
+- 缺图标：羁绊用名称首字作占位；英雄沿用 `symbol` 首字母徽标，新英雄无需改代码。
+
+### SR-G2-01 技能说明缺两类展示数据（P2，界面已按"原样显示"处理）
+
+- **技能名**：content 公开导出里没有技能名（只在 `source/s13-14.24.json` 原档的 `ability.name`）。请在 `S13_ABILITY_DATA` 增加 `name`（最好再给中文名），界面直接显示。
+- **计算后的数值**：模板里的 `@ModifiedShield@`、`@ModifiedDamage@`、`@TotalDamage@` 等是规则按法强/攻击力换算的总值，`variables` 里没有，目前原样显示。请导出只读选择器，例如 `abilityDisplayValues(definitionId, starLevel): Record<string, number>`（按基础法强/攻击力，不含装备与羁绊），界面用它补全这些占位。
+- **验收**：19 名现有英雄 1–3 星的说明文字里不再出现 `@...@`；界面不自行换算。
