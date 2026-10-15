@@ -5,6 +5,11 @@
  * light up when my batch is released, units already taken are greyed with the taker's name, and a seat the server picked
  * for (bot, disconnected, or no click before the deadline) is marked "自动".
  *
+ * P7-1: while the carousel runs I can switch between the ring and my own board (the toggle in the head, or Space). On the
+ * board side a compact bar keeps the countdown and the "轮到我" hint; switching back shows the same panel (nothing is
+ * rebuilt or forgotten, a pick still out stays pending). A new carousel always opens on the ring. Viewing only: picks,
+ * bots and the server's auto-pick do not depend on which side is shown.
+ *
  * Read-only apart from the click: a slot is clickable only while the server says `eligible` and the slot still stands.
  * The panel never decides who is released or what is left; everything comes from `PlayerView.carousel` (MULTIPLAYER_CONTRACT
  * §21.1). The release groups shown are the rules' `releaseOrder` cut where `releaseAtMs` changes, for display only.
@@ -37,7 +42,8 @@ export function carouselStatusText(view: CarouselView, mySeatId: string, serverN
   if (view.pickedSlot !== null) {
     const slot = view.slots.find(candidate => candidate.slot === view.pickedSlot);
     const what = slot ? `${unitName(slot.definitionId)}` : '单位';
-    return view.autoPicked.includes(mySeatId) ? `未在截止前选择 · 已自动选取 ${what}` : `已选取 ${what} · 已进入备战席`;
+    // Where the unit lands (bench, board or the holding slot) is the rules' call; the panel does not claim one.
+    return view.autoPicked.includes(mySeatId) ? `未在截止前选择 · 已自动选取 ${what}` : `已选取 ${what}`;
   }
   if (view.eligible) return '已放行 · 点击一个单位选取';
   const at = view.releaseAtMs[mySeatId];
@@ -47,6 +53,14 @@ export function carouselStatusText(view: CarouselView, mySeatId: string, serverN
   const wait = Math.max(0, Math.ceil((view.startedAt + at - serverNow) / 1000));
   return `你在第 ${mine + 1} 批 · ${wait} 秒后放行 · 生命越低越先选`;
 }
+/** The compact bar's line while I look at my board: my turn is called out, everything else reads as on the ring. */
+export function carouselBoardText(view: CarouselView, mySeatId: string, serverNow: number): string {
+  return myTurn(view) ? '轮到我选秀 · 返回选秀盘选取' : carouselStatusText(view, mySeatId, serverNow);
+}
+const myTurn = (view: CarouselView) => view.eligible && view.pickedSlot === null && view.status !== 'closed';
+export type CarouselSide = 'carousel' | 'board';
+/** Space switches sides, unless the key goes to a control or a text field (a focused slot button takes Space as a click). */
+const SWITCH_KEY = 'Space';
 
 export class CarouselPanel {
   readonly root: HTMLElement;
@@ -62,14 +76,23 @@ export class CarouselPanel {
   private clockOffset = 0;
   /** Slot I clicked and whose answer is still out; cleared by the next view. */
   private pending: number | null = null;
+  /** Which side I look at while the carousel runs; a new carousel resets it to the ring. */
+  private side: CarouselSide = 'carousel';
+  /** Shown instead of the panel while I look at my board: countdown, my line, the way back. */
+  private bar: HTMLElement;
+  private barTimer: HTMLElement;
+  private barStatus: HTMLElement;
 
-  constructor(host: HTMLElement, private readonly onPick: (slot: number, view: CarouselView) => void) {
+  constructor(host: HTMLElement, private readonly onPick: (slot: number, view: CarouselView) => void, private readonly onSide: (side: CarouselSide) => void = () => {}) {
     this.root = element('section', '', 'carousel-panel'); this.root.id = 'carousel-panel'; this.root.hidden = true;
     this.root.dataset.debug = 'online:carousel'; this.root.setAttribute('role', 'dialog'); this.root.setAttribute('aria-label', '选秀');
     const head = element('header', '', 'carousel-head');
     this.title = element('strong', '选秀', 'carousel-title');
     this.status = element('span', '', 'carousel-status'); this.status.dataset.debug = 'online:carousel-status'; this.status.setAttribute('role', 'status');
-    head.append(this.title, this.status);
+    const toBoard = element('button', '查看我的棋盘', 'carousel-switch'); toBoard.type = 'button'; toBoard.dataset.debug = 'online:carousel-to-board';
+    toBoard.title = '切到自己的棋盘（空格）· 选秀继续进行'; toBoard.append(element('kbd', '空格'));
+    toBoard.addEventListener('click', () => this.setSide('board'));
+    head.append(this.title, this.status, toBoard);
     const body = element('div', '', 'carousel-body');
     this.ring = element('div', '', 'carousel-ring'); this.ring.dataset.debug = 'online:carousel-ring';
     this.timer = element('span', '', 'carousel-timer'); this.timer.dataset.debug = 'online:carousel-timer'; this.timer.setAttribute('role', 'timer');
@@ -77,17 +100,46 @@ export class CarouselPanel {
     this.order = element('ol', '', 'carousel-order'); this.order.dataset.debug = 'online:carousel-order'; this.order.setAttribute('aria-label', '放行顺序');
     body.append(this.ring, this.order);
     this.root.append(head, body);
-    host.append(this.root);
+    this.bar = element('div', '', 'carousel-bar'); this.bar.hidden = true; this.bar.dataset.debug = 'online:carousel-bar';
+    this.bar.setAttribute('role', 'status'); this.bar.setAttribute('aria-label', '选秀进行中');
+    this.barTimer = element('span', '', 'carousel-bar-timer'); this.barTimer.dataset.debug = 'online:carousel-bar-timer'; this.barTimer.setAttribute('role', 'timer');
+    this.barStatus = element('span', '', 'carousel-bar-status'); this.barStatus.dataset.debug = 'online:carousel-bar-status';
+    const back = element('button', '返回选秀', 'carousel-switch'); back.type = 'button'; back.dataset.debug = 'online:carousel-to-ring';
+    back.title = '回到选秀盘（空格）'; back.append(element('kbd', '空格'));
+    back.addEventListener('click', () => this.setSide('carousel'));
+    this.bar.append(element('strong', '选秀', 'carousel-bar-title'), this.barTimer, element('span', '秒', 'carousel-timer-unit'), this.barStatus, back);
+    host.append(this.root, this.bar);
+    document.addEventListener('keydown', this.onKey);
   }
   get open(): boolean { return this.view !== null; }
+  /** The side shown while a carousel runs; null when there is none. */
+  get showing(): CarouselSide | null { return this.view ? this.side : null; }
+  /** Switches between the ring and my board. Only what is shown changes; the view, a pending pick and the clocks stay. */
+  setSide(side: CarouselSide): void {
+    if (!this.view || side === this.side) return;
+    this.side = side; this.applySide(); this.tick(); this.onSide(side);
+  }
+  toggleSide(): void { this.setSide(this.side === 'carousel' ? 'board' : 'carousel'); }
+  private applySide(): void {
+    const open = this.view !== null;
+    this.root.hidden = !open || this.side !== 'carousel';
+    this.bar.hidden = !open || this.side !== 'board';
+  }
+  private onKey = (event: KeyboardEvent) => {
+    if (event.code !== SWITCH_KEY || !this.view || event.repeat || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && (target.isContentEditable || target.closest('input, textarea, select, button, [role="button"]'))) return;
+    event.preventDefault(); this.toggleSide();
+  };
 
   /** Shows the carousel of this view, or hides the panel when the view has none. */
   render(view: CarouselView | null, seats: readonly SeatPublic[], mySeatId: string, serverNow: number): void {
     if (!view) { this.hide(); return; }
     const fresh = this.view?.id !== view.id;
+    if (fresh) this.side = 'carousel';
     this.view = view; this.seats = seats; this.mySeatId = mySeatId; this.clockOffset = performance.now() - serverNow;
     this.pending = null;
-    this.root.hidden = false; this.root.dataset.carousel = view.id;
+    this.applySide(); this.root.dataset.carousel = view.id;
     this.root.toggleAttribute('data-can-pick', view.eligible);
     this.title.textContent = `选秀 · ${view.roundName}`;
     this.renderRing(view, fresh);
@@ -103,7 +155,7 @@ export class CarouselPanel {
   }
   hide(): void {
     if (this.view === null) return;
-    this.view = null; this.pending = null; this.root.hidden = true;
+    this.view = null; this.pending = null; this.side = 'carousel'; this.applySide();
     this.ring.replaceChildren(); this.order.replaceChildren();
   }
 
@@ -115,6 +167,12 @@ export class CarouselPanel {
     if (this.timer.textContent !== seconds) this.timer.textContent = seconds;
     const status = this.pending !== null && view.eligible ? '选取中…' : carouselStatusText(view, this.mySeatId, now);
     if (this.status.textContent !== status) this.status.textContent = status;
+    if (this.side === 'board') {
+      if (this.barTimer.textContent !== seconds) this.barTimer.textContent = seconds;
+      const line = this.pending !== null && view.eligible ? '选取中…' : carouselBoardText(view, this.mySeatId, now);
+      if (this.barStatus.textContent !== line) this.barStatus.textContent = line;
+      this.bar.classList.toggle('my-turn', myTurn(view) && this.pending === null);
+    }
     for (const row of Array.from(this.order.children) as HTMLElement[]) {
       const at = Number(row.dataset.releaseAt);
       const wait = row.querySelector<HTMLElement>('.carousel-wait');
@@ -184,44 +242,57 @@ export class CarouselPanel {
     });
     this.order.replaceChildren(...rows);
   }
-  dispose(): void { this.root.remove(); }
-}
-
-/** One unit a carousel grant queued because my bench was full (`PrivateSeatView.pendingCarouselUnits`, MULTIPLAYER_CONTRACT §21.5). */
-export interface PendingCarouselUnitView { readonly receiptId: string; readonly unitId: string; readonly definitionId: string }
-/** The queued units of my seat view; empty when the server sent none. */
-export function readPendingCarouselUnits(state: object): readonly PendingCarouselUnitView[] {
-  const pending = (state as { readonly pendingCarouselUnits?: unknown }).pendingCarouselUnits;
-  return Array.isArray(pending) ? pending as PendingCarouselUnitView[] : [];
+  dispose(): void { document.removeEventListener('keydown', this.onKey); this.root.remove(); this.bar.remove(); }
 }
 
 /**
- * Units a carousel pick could not place because my bench was full. The server moves them in by itself once a bench slot is
- * free (the rules' `resolvePendingCarouselUnits`); the only command here is the explicit sell, the same `sell` as any unit.
+ * One unit a carousel pick could not place (MULTIPLAYER_CONTRACT §21.5). Today the server sends these as
+ * `PrivateSeatView.pendingCarouselUnits` (bench full); P7-1 rules turn them into a holding slot for "bench and board both
+ * full" (DISPATCH_2026-10-14 真机反馈 P7-1 item 2). Only `readHeldCarouselUnits` reads the wire, so the new field replaces
+ * the source there and nothing else changes.
  */
-export class PendingCarouselQueue {
+export interface HeldCarouselUnitView { readonly receiptId: string; readonly unitId: string; readonly definitionId: string }
+/** The held units of my seat view; empty when the server sent none. */
+export function readHeldCarouselUnits(state: object): readonly HeldCarouselUnitView[] {
+  const pending = (state as { readonly pendingCarouselUnits?: unknown }).pendingCarouselUnits;
+  return Array.isArray(pending) ? pending as HeldCarouselUnitView[] : [];
+}
+
+/**
+ * The holding slot (临时位) beside the bench: a carousel unit kept there does not fight. The server moves it out by
+ * itself once the bench or the board has room (the rules decide where); the only command here is the explicit sell, the
+ * same `sell` as any unit.
+ */
+export class CarouselHoldingSlot {
   readonly root: HTMLElement;
   private key = '';
   constructor(host: HTMLElement, private readonly onSell: (unitId: string) => void) {
-    this.root = element('aside', '', 'carousel-queue'); this.root.hidden = true; this.root.dataset.debug = 'online:carousel-queue';
-    this.root.setAttribute('aria-label', '选秀单位等待入席');
+    this.root = element('aside', '', 'carousel-holding'); this.root.hidden = true; this.root.dataset.debug = 'online:carousel-holding';
+    this.root.setAttribute('aria-label', '临时位 · 不参战');
     host.append(this.root);
   }
-  render(units: readonly PendingCarouselUnitView[], operable: boolean): void {
+  render(units: readonly HeldCarouselUnitView[], operable: boolean): void {
     const key = `${operable}|${units.map(unit => unit.unitId).join(',')}`;
     if (key === this.key) return;
     this.key = key;
     this.root.hidden = units.length === 0;
-    const rows = units.map(unit => {
-      const row = element('div', '', 'carousel-queue-row'); row.dataset.unit = unit.unitId;
+    const cards = units.map(unit => {
       const cost = UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0;
-      const sell = element('button', `出售 +${cost}`, 'carousel-queue-sell'); sell.type = 'button'; sell.disabled = !operable;
-      sell.dataset.debug = `online:carousel-queue-sell:${unit.unitId}`;
+      const card = element('div', '', `carousel-holding-unit cost-${cost}`); card.dataset.unit = unit.unitId; card.dataset.definition = unit.definitionId;
+      card.dataset.debug = `online:carousel-holding-unit:${unit.unitId}`;
+      card.title = `${unitName(unit.definitionId)} · 临时位：只保管，不参战 · 备战席或场上有空位时自动移入`;
+      const portrait = element('span', '', 'carousel-holding-portrait');
+      portrait.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40));
+      const sell = element('button', `出售 +${cost}`, 'carousel-holding-sell'); sell.type = 'button'; sell.disabled = !operable;
+      sell.dataset.debug = `online:carousel-holding-sell:${unit.unitId}`;
+      sell.title = operable ? `出售 ${unitName(unit.definitionId)}` : '准备阶段可出售';
       sell.addEventListener('click', () => { if (!sell.disabled) this.onSell(unit.unitId); });
-      row.append(element('span', unitName(unit.definitionId), 'carousel-queue-name'), sell);
-      return row;
+      card.append(portrait, element('span', unitName(unit.definitionId), 'carousel-holding-name'), element('span', '不参战', 'carousel-holding-idle'), sell);
+      return card;
     });
-    this.root.replaceChildren(element('strong', '选秀单位等待入席 · 备战席有空位时自动放入', 'carousel-queue-title'), ...rows);
+    const head = element('header', '', 'carousel-holding-head'); head.title = '临时位：只保管，不参战 · 备战席或场上有空位时自动移入';
+    head.append(element('strong', '临时位', 'carousel-holding-title'), element('span', '只保管不参战 · 有空位自动移入', 'carousel-holding-note'));
+    this.root.replaceChildren(head, ...cards);
   }
   dispose(): void { this.root.remove(); }
 }

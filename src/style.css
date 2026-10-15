@@ -478,14 +478,38 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .carousel-seat.me { color: #68ddd0; font-weight: 700; }
 .carousel-seat.picked { text-decoration: line-through; opacity: .6; }
 .carousel-wait { font-variant-numeric: tabular-nums; color: #e6bc76; }
-body[data-online-carousel] .shop-dock { opacity: .55; }
+body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
 .carousel-taker.auto { background: #3a3346; color: #cbbcf5; }
 .carousel-seat.auto { font-style: italic; }
-.carousel-queue { position: absolute; z-index: 30; right: 8px; bottom: 8px; display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; border: 1px solid #b4a1f5;
-  background: rgba(14, 24, 33, .92); color: #e2eef1; font-size: 12px; max-width: 260px; }
-.carousel-queue-title { font-size: 12px; color: #b4a1f5; }
-.carousel-queue-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.carousel-queue-sell { font-size: 11px; padding: 2px 8px; }
+/* P7-1 holding slot (临时位): a narrow extra slot in the margin right of the bench; a kept unit does not fight. */
+.carousel-holding { position: absolute; z-index: 30; right: 2px; bottom: calc(var(--online-dock-h, 0px) + var(--online-gap, 8px) + 10px); width: 80px; display: grid; gap: 4px;
+  padding: 4px; border-radius: 10px; border: 2px dashed #b4a1f5; background: rgba(14, 24, 33, .94); color: #e2eef1; font-size: 11px; text-align: center; }
+.carousel-holding-head { display: grid; gap: 1px; cursor: help; }
+.carousel-holding-title { font-size: 12px; color: #b4a1f5; }
+.carousel-holding-note { display: none; }
+.carousel-holding-unit { display: grid; justify-items: center; gap: 2px; padding: 3px 2px; border-radius: 8px; background: #13212b; }
+.carousel-holding-portrait { width: 44px; height: 44px; border-radius: 6px; overflow: hidden; border: 2px solid #7e95a4; display: grid; place-items: center;
+  background: #203440; filter: grayscale(.55) brightness(.8); }
+.carousel-holding-portrait img, .carousel-holding-portrait svg { width: 40px; height: 40px; display: block; object-fit: cover; }
+.carousel-holding-unit.cost-2 .carousel-holding-portrait { border-color: #68c087; } .carousel-holding-unit.cost-3 .carousel-holding-portrait { border-color: #5aa0e6; }
+.carousel-holding-unit.cost-4 .carousel-holding-portrait { border-color: #b46be6; } .carousel-holding-unit.cost-5 .carousel-holding-portrait { border-color: #e6bc76; }
+.carousel-holding-name { max-width: 100%; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.carousel-holding-idle { font-size: 10px; padding: 0 6px; border-radius: 999px; background: #3a3346; color: #cbbcf5; }
+.carousel-holding-sell { width: 100%; min-height: 0; font-size: 11px; padding: 2px 4px; }
+/* P7-1: switching between the ring and my board while the carousel runs. */
+.carousel-switch { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 10px; white-space: nowrap; }
+.carousel-switch kbd { font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 0 4px; border-radius: 3px; background: #203440; color: #9fb4c2; }
+.carousel-head .carousel-switch { align-self: center; }
+.carousel-bar { position: absolute; z-index: 31; top: calc(var(--online-countdown-h, 48px) + var(--online-gap, 8px)); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: baseline; gap: 8px; padding: 6px 10px 6px 14px; border-radius: 999px; border: 1px solid #b4a1f5; background: rgba(14, 24, 33, .94);
+  color: #c9d4da; font-size: 13px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0, 0, 0, .4); }
+.carousel-bar-title { color: #b4a1f5; }
+.carousel-bar-timer { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: #e2eef1; }
+.carousel-bar .carousel-switch { align-self: center; }
+.carousel-bar.my-turn { border-color: #68ddd0; box-shadow: 0 0 0 2px rgba(104, 221, 208, .45), 0 6px 18px rgba(0, 0, 0, .4); animation: carousel-bar-pulse 1.2s ease-in-out infinite; }
+.carousel-bar.my-turn .carousel-bar-status { color: #68ddd0; font-weight: 700; }
+@keyframes carousel-bar-pulse { 50% { box-shadow: 0 0 0 4px rgba(104, 221, 208, .2), 0 6px 18px rgba(0, 0, 0, .4); } }
+@media (prefers-reduced-motion: reduce) { .carousel-bar.my-turn { animation: none; } }
 /* Eliminated (spectating): the dock and the left panel stay visible but read as disabled. */
 body[data-online-spectating] .shop-dock, body[data-online-spectating] #strategy-root { opacity: .55; filter: grayscale(.6); }
 body[data-online-spectating] .choice-overlay { display: none !important; }

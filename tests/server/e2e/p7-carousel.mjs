@@ -12,6 +12,9 @@
  * 2-4: the release order follows the public HP (ascending, seat order on a tie); no component choice opens; A does not
  * click and is picked for at the deadline with the "已自动选取" hint, B is picked for while disconnected, bots before the
  * deadline; the round settles once and A holds one more item.
+ * P7-1 switch: before my 1-1 batch I switch to my board (button), the ring hides and a compact bar keeps the countdown;
+ * my release turns the bar into "轮到我"; Space brings the ring back with the same carousel and slots, and the pick works
+ * from there. A side left on the board does not carry into the next carousel (2-4 opens on the ring).
  * Screenshots go to artifacts/p7-carousel/ (not committed). P7_WS_PORT / P7_VITE_PORT override the ports.
  */
 import { collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, outDir, pollRead, read, sleep, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
@@ -31,6 +34,12 @@ const ring = page => page.evaluate(() => {
       pickedBy: node.dataset.pickedBy ?? null, auto: node.querySelector('.carousel-taker.auto') !== null })),
     batches: [...root.querySelectorAll('.carousel-batch')].map(node => [...node.querySelectorAll('.carousel-seat')].map(seat => seat.dataset.seat)),
   };
+});
+const bar = page => page.evaluate(() => {
+  const root = document.querySelector('[data-debug="online:carousel-bar"]');
+  if (!root || root.hidden) return null;
+  return { timer: root.querySelector('.carousel-bar-timer')?.textContent ?? '', status: root.querySelector('.carousel-bar-status')?.textContent ?? '',
+    myTurn: root.classList.contains('my-turn'), body: document.body.dataset.onlineCarousel ?? null };
 });
 const myUnits = s => s.state.preparation.units.filter(unit => unit.team === 'player');
 const carouselOf = s => s?.m6?.carousel ?? null;
@@ -74,7 +83,33 @@ async function main() {
     check(s.state.phase !== 'choice' && !s.state.pendingChoice, 'no component choice at the opening');
     await a.screenshot({ path: `${OUT}/1-1-waiting.png` });
 
+    /* P7-1: switch to my board and back while the carousel runs. */
+    check(s.m6.carouselSide === 'carousel', `the carousel opens on the ring (${s.m6.carouselSide})`);
+    const takenBefore = r.slots.filter(slot => slot.taken).map(slot => slot.slot);
+    await a.click('[data-debug="online:carousel-to-board"]');
+    let b1 = await bar(a);
+    s = await read(a);
+    check(await ring(a) === null && b1 !== null && b1.body === 'board' && s.m6.carouselSide === 'board', `the switch hides the ring and shows the board with the bar (${JSON.stringify(b1)})`);
+    check(/^\d+$/.test(b1?.timer ?? ''), `the bar keeps the countdown (${b1?.timer})`);
+    if (!carouselOf(s).eligible) {
+      check(!b1.myTurn && /放行|选秀/.test(b1.status), `before my batch the bar says when I am released ("${b1.status}")`);
+      await sleep(1_200);
+      const b2 = await bar(a);
+      check(b2 && Number(b2.timer) < Number(b1.timer), `the bar countdown runs on the board side (${b1.timer} → ${b2?.timer})`);
+    }
+    await a.screenshot({ path: `${OUT}/1-1-board-side.png` });
     s = await waitRead(a, s => carouselOf(s)?.eligible === true, 'my 1-1 release', 40_000);
+    for (let wait = 0; wait < 30 && !(b1 = await bar(a))?.myTurn; wait++) await sleep(100); // the bar refreshes on the next frame
+    check(b1?.myTurn === true && /轮到我/.test(b1.status), `my release shows "轮到我" on the board side ("${b1?.status}")`);
+    await a.screenshot({ path: `${OUT}/1-1-board-my-turn.png` });
+    await a.evaluate(() => (document.activeElement instanceof HTMLElement) && document.activeElement.blur());
+    await a.keyboard.press('Space');
+    s = await read(a);
+    r = await ring(a);
+    check(r !== null && await bar(a) === null && s.m6.carouselSide === 'carousel', 'Space brings the ring back and hides the bar');
+    check(r?.slots.length === 9 && takenBefore.every(slot => r.slots.find(chip => chip.slot === slot)?.taken) && s.m6.carousel.id === c.id,
+      'the ring comes back with the same carousel and its taken slots');
+    check(s.m6.seats.filter(seat => seat.kind === 'bot').length === bots.length, 'the seats and bots are unchanged by switching');
     r = await ring(a);
     const free = r.slots.filter(slot => !slot.taken);
     check(r.canPick && free.length > 0 && free.every(slot => slot.takable && !slot.disabled), `my batch: every free unit lights up (${free.length} takable, "${r.status}")`);
@@ -114,7 +149,10 @@ async function main() {
     check(c.slots.filter(slot => slot.pickedBy !== null).length === 8, 'eight of nine units taken, one goes back to the pool');
     await a.screenshot({ path: `${OUT}/1-1-closed.png` });
     check(s.m6.phase.kind === 'carousel', 'the phase holds after the close (departure)');
+    // Leave the closed carousel on the board side: the bar goes with it, and the next carousel opens on the ring again.
+    await a.click('[data-debug="online:carousel-to-board"]').catch(() => {});
     s = await waitRead(a, s => s.m6.phase.kind === 'preparation', '1-2 preparation', 10_000);
+    check(await bar(a) === null && s.m6.carouselSide === null, 'the bar is gone with the carousel');
     check(s.state.roundDefinitionId === '1-2' && myUnits(s).length === 1 && s.state.items.length === 1, `1-2 opens with exactly my carousel unit and item (${myUnits(s).length}/${s.state.items.length})`);
     check(s.state.shop.slots.length > 0 && s.state.shop.generation > 0, 'the first shop is dealt after the carousel');
     check(await ring(a) === null, 'the carousel panel is gone');
@@ -144,6 +182,7 @@ async function main() {
     const expected = [...alive].sort((x, y) => x.hp - y.hp || seatIndex.get(x.seatId) - seatIndex.get(y.seatId)).map(seat => seat.seatId);
     check(JSON.stringify(c.releaseOrder) === JSON.stringify(expected), `2-4 release order follows HP (${alive.map(seat => `${seat.name}:${seat.hp}`).join(' ')})`);
     check(c.slots.length === 9 && c.slots.every(slot => slot.items.length === 1), '2-4 ring: nine units, one item each');
+    check(s.m6.carouselSide === 'carousel' && await ring(a) !== null, `2-4 opens on the ring, not on the side left at 1-1 (${s.m6.carouselSide})`);
     await a.screenshot({ path: `${OUT}/2-4-open.png` });
     // A does not click this time.
     for (;;) {
