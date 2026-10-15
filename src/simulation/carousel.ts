@@ -1,3 +1,4 @@
+import { placeCarouselUnit, resolveCarouselPreparation } from './carousel-units';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
 import { SHOP_CATALOG_BY_COST } from './match-rules';
@@ -11,16 +12,14 @@ import type { CarouselRoundId, CarouselRng, CarouselParticipant, CarouselSlot, C
 import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from './carousel-policy';
 import { UNIT_DEFINITIONS } from './units';
 import { releaseSeatOnElimination } from './shared-pool';
-import { planUnitAcquisition } from './unit-acquisition';
-import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
+import { appendResourceProvenance } from './resource-provenance';
 import { createCarouselMatch, finishCarouselSupply } from './match';
 import type { MatchEvent } from './match-types';
-import { planPurchase, transferUpgradeResources } from './upgrades';
-import { draftPool, returnHolding } from './shared-pool-ledger';
+import { draftPool, returnHolding, reconcileHoldings } from './shared-pool-ledger';
 import type { SharedPoolResult, SharedPoolEvent } from './shared-pool-types';
 export type * from './carousel-types';
 export { CAROUSEL_RULES, CAROUSEL_COST_ODDS };
-const rounds: readonly CarouselRoundId[] = ['1-1', '2-4', '3-4', '4-4', '5-4', '6-4'];
+const rounds: readonly CarouselRoundId[] = ['2-4', '3-4', '4-4', '5-4', '6-4'];
 const odds = CAROUSEL_COST_ODDS;
 const completed = Object.keys(ITEM_DEFINITIONS).filter(id => ITEM_DEFINITIONS[id].kind === 'completed').sort();
 const integer = (n: number, min = 0) => Number.isSafeInteger(n) && n >= min;
@@ -36,7 +35,7 @@ export function schedule(roundId: string): {
     return { firstBatchMs: CAROUSEL_RULES.firstBatchMs, batchIntervalMs: CAROUSEL_RULES.batchIntervalMs, tailMs: CAROUSEL_RULES.tailMs };
 }
 export function opensCarousel(state: MatchState): boolean {
-    return !!state.carousel && (state.carousel.openingPending === true || validRound(state.roundDefinitionId) && state.roundDefinitionId !== '1-1' && !state.carousel?.receipts.some(r => r.carouselId.endsWith(`:carousel:${state.roundDefinitionId}`)));
+    return !!state.carousel && validRound(state.roundDefinitionId) && !state.carousel.receipts.some(r => r.carouselId.endsWith(`:carousel:${state.roundDefinitionId}`));
 }
 export function prepareCarouselParticipants(pool: SharedPoolState, states: readonly {
     seatId: string;
@@ -76,9 +75,9 @@ function drawSlots(initial: Readonly<Record<string, number>>, roundId: CarouselR
         let roll = Math.floor(draw() * 10000 / 4294967296), tier = 1;
         for (let i = 0; i < 5; i++) {
             tier = i + 1;
-            if (roll < odds[roundId][i])
+            if (roll < odds[roundId as Exclude<CarouselRoundId,'1-1'>][i])
                 break;
-            roll -= odds[roundId][i];
+            roll -= odds[roundId as Exclude<CarouselRoundId,'1-1'>][i];
         }
         const stocked = ([1, 2, 3, 4, 5] as CostTier[]).filter(t => SHOP_CATALOG_BY_COST[t].some(d => available[d] > 0)).sort((a, b) => Math.abs(a - tier) - Math.abs(b - tier) || a - b), catalog = [...SHOP_CATALOG_BY_COST[stocked[0]]].sort();
         let member = Math.floor(draw() * catalog.reduce((sum, d) => sum + available[d], 0) / 4294967296);
@@ -269,36 +268,26 @@ function planGrantCarouselPick(state: CarouselState, match: MatchState, seatId: 
     const prior = match.carousel?.receipts.find(r => r.id === receipt.id);
     if (receipt.status === 'granted')
         return prior && equal(prior, receipt) ? { ok: true, state, match, events: [] } : failure('receipt-mismatch');
-    if (prior || match.phase === 'combat' || !match.carousel || (state.roundId === '1-1' ? !match.carousel.openingPending : match.roundDefinitionId !== state.roundId))
+    if (prior || match.phase === 'combat' || !match.carousel || match.roundDefinitionId !== state.roundId)
         return failure('invalid-match');
     const metadata = match.carousel!;
-    const source = { kind: 'carousel' as const, receiptId: receipt.id }, sequence = match.resourceProvenance.entries.length;
-    const acquired = planUnitAcquisition(match, receipt.definitionId, source, sequence), unitId = `unit-${match.nextUnitSerial}`, itemInstanceId = `item-${match.nextItemSerial}`;
-    if (!integer(match.nextItemSerial, 1) || match.nextItemSerial === Number.MAX_SAFE_INTEGER)
+    const source = { kind: 'carousel' as const, receiptId: receipt.id };
+    const unitId = `unit-${match.nextUnitSerial}`, itemInstanceId = `item-${match.nextItemSerial}`;
+    if (!integer(match.nextUnitSerial, 1) || match.nextUnitSerial === Number.MAX_SAFE_INTEGER || !integer(match.nextItemSerial, 1) || match.nextItemSerial === Number.MAX_SAFE_INTEGER)
         return failure('invalid-match');
     const granted: CarouselReceipt = { ...receipt, unitId, itemInstanceId, status: 'granted' };
-    const pending = acquired.ok ? metadata.pendingUnits : [...metadata.pendingUnits, { receiptId: receipt.id, unitId, definitionId: receipt.definitionId }];
-    const facts = acquired.ok ? acquired.facts : [{ kind: 'unit-acquired' as const, unitId, source }], roundId = state.roundId === '1-1' ? '1-2' : state.roundId;
-    const resourceProvenance = appendResourceProvenance(match.resourceProvenance, roundId, [...facts, { kind: 'item-acquired', itemId: itemInstanceId, source }]);
-    let preparation = acquired.ok ? acquired.preparation : match.preparation;
-    // Opening choice supplies the sole champion; use the existing opening legal deployment cell.
-    if (state.roundId === '1-1')
-        preparation = { ...preparation, units: preparation.units.map(u => u.id === unitId ? { ...u, location: { kind: 'board' as const, cell: { col: 1, row: 4 } } } : u) };
+    const preparation = placeCarouselUnit(match, {receiptId:receipt.id,unitId,definitionId:receipt.definitionId});
+    const held = preparation ? metadata.heldCarouselUnits : [...metadata.heldCarouselUnits, { receiptId: receipt.id, unitId, definitionId: receipt.definitionId }];
+    const resourceProvenance = appendResourceProvenance(match.resourceProvenance, state.roundId, [
+        {kind:'unit-acquired',unitId,source},{kind:'item-acquired',itemId:itemInstanceId,source}]);
     const receipts = state.receipts.map(r => r.id === receipt.id ? granted : r), poolReceipts = state.pool.carouselReceipts.map(r => r.id === receipt.id ? granted : r);
-    let holdings = [...state.pool.holdings, { seatId, unitId, definitionId: receipt.definitionId, sources: [receipt.holdingSource] }];
-    if (acquired.ok)
-        for (const e of acquired.upgradeEvents) {
-            const ids = [e.survivorId, ...e.consumedIds], merged = holdings.filter(h => h.seatId === seatId && ids.includes(h.unitId));
-            holdings = holdings.filter(h => h.seatId !== seatId || !ids.includes(h.unitId));
-            holdings.push({ seatId, unitId: e.survivorId, definitionId: e.definitionId, sources: merged.flatMap(h => h.sources) });
-        }
+    const holdings = [...state.pool.holdings, { seatId, unitId, definitionId: receipt.definitionId, sources: [receipt.holdingSource] }];
     const nextPool: SharedPoolState = { ...state.pool, revision: state.pool.revision + 1, holdings, carouselReceipts: poolReceipts, carouselReservations: state.pool.carouselReservations.filter(r => r.reservationId !== state.slots[receipt.slot].reservationId), seats: state.pool.seats.map(s => s.seatId === seatId ? { ...s, revision: s.revision + 1 } : s) };
-    const events: MatchEvent[] = [...(acquired.ok ? acquired.events : []), { type: 'carouselGranted', receipt: granted }];
+    const events: MatchEvent[] = [{ type: 'carouselGranted', receipt: granted }];
     const stamped: MatchEvent[] = events.map((e, i) => ({ ...e, domain: 'match', eventSeq: match.nextMatchEventSeq + i }) as MatchEvent);
-    const nextMatch: MatchState = { ...match, preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
-        items: [...(acquired.ok ? acquired.items : match.items), { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }], anomalyBinding: acquired.ok ? acquired.anomalyBinding : match.anomalyBinding,
-        persistentGrowth: acquired.ok ? mergeGrowthLedger(match.persistentGrowth, acquired.upgradeEvents) : match.persistentGrowth,
-        carousel: { openingPending: false, receipts: [...metadata.receipts, granted], pendingUnits: pending }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
+    const nextMatch: MatchState = { ...match, preparation:preparation??match.preparation, resourceProvenance, nextUnitSerial: match.nextUnitSerial + 1, nextItemSerial: match.nextItemSerial + 1,
+        items: [...match.items, { id: itemInstanceId, definitionId: receipt.itemId, location: { kind: 'inventory' } }],
+        carousel: { ...metadata, receipts: [...metadata.receipts, granted], heldCarouselUnits:held, pendingUnits:held }, sharedPool: { ...match.sharedPool, revision: seat.revision + 1 }, nextMatchEventSeq: match.nextMatchEventSeq + events.length };
     const nextState = { ...state, receipts, pool: nextPool, revision: state.revision + 1 };
     try {
         validateCarousel(nextState);
@@ -360,21 +349,10 @@ export function resolvePendingCarouselUnits(pool: SharedPoolState, match: MatchS
         assertSharedPoolConservation(pool, [match]);
         if (!match.carousel || match.phase !== 'preparation' || match.multiplayer?.combatRosterLocked)
             return bad();
-        let next = match;
-        const draft = draftPool(pool), events: MatchEvent[] = [], poolEvents: SharedPoolEvent[] = [];
-        for (const pending of [...match.carousel.pendingUnits].sort((a, b) => a.receiptId < b.receiptId ? -1 : 1)) {
-            const plan = planPurchase(next.preparation, pending.definitionId, pending.unitId);
-            if (!plan.ok)
-                continue;
-            const resources = transferUpgradeResources(next.items, next.anomalyBinding, plan.events);
-            next = { ...next, preparation: plan.preparation, items: resources.items, anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowthLedger(next.persistentGrowth, plan.events), resourceProvenance: appendResourceProvenance(next.resourceProvenance, next.roundDefinitionId, { kind: 'carousel-unit-claimed', unitId: pending.unitId, receiptId: pending.receiptId, upgrades: plan.events }), carousel: { ...next.carousel!, pendingUnits: next.carousel!.pendingUnits.filter(u => u !== pending) } };
-            for (const e of plan.events) {
-                const ids = [e.survivorId, ...e.consumedIds], held = draft.holdings.filter(h => h.seatId === match.sharedPool!.seatId && ids.includes(h.unitId));
-                draft.holdings = draft.holdings.filter(h => h.seatId !== match.sharedPool!.seatId || !ids.includes(h.unitId));
-                draft.holdings.push({ seatId: match.sharedPool!.seatId, unitId: e.survivorId, definitionId: e.definitionId, sources: held.flatMap(h => h.sources) });
-            }
-            events.push(...plan.events, ...resources.events, { type: 'carouselPendingClaimed', unitId: pending.unitId, receiptId: pending.receiptId });
-        }
+        const resolved = resolveCarouselPreparation(match);
+        let next = resolved.state;
+        const draft = draftPool(pool), events = [...resolved.events], poolEvents: SharedPoolEvent[] = [];
+        reconcileHoldings(draft, match, next, poolEvents);
         if (next === match)
             return { ok: true, pool, state: match, events: [], poolEvents: [] };
         const stamped = events.map((e, i) => ({ ...e, domain: 'match', eventSeq: match.nextMatchEventSeq + i }) as MatchEvent);
@@ -399,7 +377,7 @@ export function sellPendingCarouselUnit(pool: SharedPoolState, match: MatchState
         returnHolding(draft, seatId, unitId);
         draft.seats = draft.seats.map(s => s === seat ? { ...s, revision: s.revision + 1 } : s);
         draft.revision++;
-        const state: MatchState = { ...match, gold: match.gold + goldGranted, resourceProvenance: appendResourceProvenance(match.resourceProvenance, match.roundDefinitionId, { kind: 'unit-sold', unitId, context: 'preparation', goldGranted }), carousel: { ...match.carousel!, pendingUnits: match.carousel!.pendingUnits.filter(u => u !== pending) }, sharedPool: { ...match.sharedPool!, revision: seat.revision + 1 } };
+        const state: MatchState = { ...match, gold: match.gold + goldGranted, resourceProvenance: appendResourceProvenance(match.resourceProvenance, match.roundDefinitionId, { kind: 'unit-sold', unitId, context: 'preparation', goldGranted }), carousel: { ...match.carousel!, pendingUnits: match.carousel!.pendingUnits.filter(u => u !== pending), heldCarouselUnits: match.carousel!.heldCarouselUnits.filter(u => u !== pending) }, sharedPool: { ...match.sharedPool!, revision: seat.revision + 1 } };
         assertSharedPoolConservation(draft, [state]);
         return { ok: true, pool: draft, state, events: [], poolEvents: [] };
     }
@@ -495,7 +473,7 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown): Ma
     assertSharedPoolConservation(carousel.pool, [match]);
     if (match.contentDigest !== CONTENT_DIGEST) throw Error('content-digest');
     const metadata = match.carousel;
-    if (!metadata || typeof metadata.openingPending !== 'boolean' || !Array.isArray(metadata.receipts) || !Array.isArray(metadata.pendingUnits)) throw Error('invalid-match');
+    if (!metadata || !Array.isArray(metadata.receipts) || !Array.isArray(metadata.pendingUnits) || !Array.isArray(metadata.heldCarouselUnits) || !equal(metadata.pendingUnits,metadata.heldCarouselUnits) || !Array.isArray(metadata.preparationReceipts) || metadata.openingPending!==undefined)  throw Error('invalid-match');
     const ids = new Set<string>();
     for (const receipt of metadata.receipts) {
         const pooled = carousel.pool.carouselReceipts.find(r => r.id === receipt.id);

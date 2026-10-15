@@ -72,7 +72,7 @@ export function initializeSharedSeat(pool:SharedPoolState,state:MatchState,seatI
     requirePool(typeof seatId==='string'&&seatId.length>0&&safe(seatIndex)&&seatIndex<pool.seatCount
       &&!pool.seats.some(s=>s.seatId===seatId||s.seatIndex===seatIndex),'invalid-seat');
     const roster=state.preparation.units.filter(u=>u.team==='player');
-    const carouselOpening=state.carousel?.openingPending===true;
+    const carouselOpening=!!state.carousel;
     requirePool(canonicalContent(state)===canonicalContent(carouselOpening?createCarouselMatch(state.seed):createMatch(state.seed,{mode:'shared-deferred'})),'invalid-seat-state');
     const enabled=enableMultiplayerSettlement(state,seatId);if(!enabled.ok)return failure(pool,state,enabled.reason);
     const draft=draftPool(pool),hero=roster[0];
@@ -213,6 +213,7 @@ function refreshBatch(pool:SharedPoolState,states:readonly MatchState[],round:nu
       if(!advance) {requirePool(state.phase==='preparation'||state.phase==='choice','wrong-phase');return state;}
       const {sharedPool, ...unbound}=state;
       const result=advanceMultiplayerRound(unbound,round,draft.orbLayout);if(!result.ok)throw new PoolError(result.reason);
+      reconcileHoldings(draft,state,result.state,poolEvents);
       events.push({seatId:state.sharedPool!.seatId,events:result.events});
       // Discard only the unobserved infinite-shop proposal; keep schedule/equipment/loot progression.
       return {...result.state,sharedPool,shop:state.shop,rngState:state.rngState};

@@ -81,8 +81,11 @@ export type CarouselResult = {
     readonly events: readonly [
     ];
 };
-export interface PendingCarouselUnit {
+export interface HeldCarouselUnit {
     readonly receiptId: string;
     readonly unitId: string;
     readonly definitionId: string;
 }
+
+/** @deprecated Storage/API type alias retained for the current server adapter. */
+export type PendingCarouselUnit = HeldCarouselUnit;

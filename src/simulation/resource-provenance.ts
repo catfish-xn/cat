@@ -26,6 +26,7 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'loot'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | {readonly kind:'carousel-preparation-settled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[];readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'carousel-unit-claimed';readonly unitId:string;readonly receiptId:string;readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'consumable-used';readonly record:import('./consumable-types').ConsumableUseRecord}
   | { readonly kind: 'unit-acquired'; readonly unitId: string; readonly source: UnitAcquisitionSource }
@@ -262,9 +263,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
   const projection = (): FoldedResourceProvenance => ({ units: [...units.values()].map(unit => ({ ...unit })).sort(compareIds),
     items: [...items.values()].map(item => ({ ...item })).sort(compareIds), persistentGrowth: growth.map(entry => ({ ...entry })), nextUnitSerial, nextItemSerial });
   let result = projection();
+  const deferredCarouselIds = new Set<string>(), preparationReceipts = new Set<string>(), claimedCarouselIds = new Set<string>();
   const finishAcquisition = () => {
     if (!acquisition) return;
-    for (const star of [1, 2]) requireValue([...units.values()].filter(unit => unit.definitionId === acquisition!.definitionId && unit.starLevel === star && !context.pendingCarouselUnitIds?.includes(unit.id)).length < 3, 'missing upgrade');
+    for (const star of [1, 2]) requireValue([...units.values()].filter(unit => unit.definitionId === acquisition!.definitionId && unit.starLevel === star && !deferredCarouselIds.has(unit.id) && !context.pendingCarouselUnitIds?.includes(unit.id)).length < 3, 'missing upgrade');
     acquisition = null;
   };
   const takeBirth = (key: string, kind: BirthReceipt['kind'], id: string, roundId: string): string => {
@@ -310,6 +312,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       }
       requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
       units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel: 1 }); nextUnitSerial++;
+      if(entry.source.kind==='carousel')deferredCarouselIds.add(entry.unitId);
       acquisition = { sequence: index, unitId: entry.unitId, definitionId, roundId: entry.roundId, survivorId: entry.unitId, star: 1 };
     } else if (entry.kind === 'unit-upgraded') {
       keys(entry, [...common, 'acquisitionSequence', 'event']); integer(entry.acquisitionSequence);
@@ -325,6 +328,13 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       event.consumedIds.forEach(id => units.delete(id));
       units.set(event.survivorId, { id: event.survivorId, definitionId: event.definitionId, starLevel: event.toStar });
       growth = mergeGrowthLedger(growth, [event]); acquisition.survivorId = event.survivorId; acquisition.star = event.toStar;
+    } else if(entry.kind==='carousel-preparation-settled') {
+      keys(entry,[...common,'receiptIds','claimedUnitIds','upgrades']);
+      requireValue(Array.isArray(entry.receiptIds)&&Array.isArray(entry.claimedUnitIds)&&Array.isArray(entry.upgrades),'carousel preparation');
+      const eligible = (id:string) => { const r=context.carouselReceipts?.find(r=>r.id===id);requireValue(r && getCatalogRoundById(r.carouselId.split(':').at(-1)!).ordinal<round.ordinal,'carousel preparation boundary');return r!; };
+      for(const id of entry.receiptIds){const r=eligible(id);requireValue(!preparationReceipts.has(id),'duplicate carousel preparation');preparationReceipts.add(id);if(r.unitId)deferredCarouselIds.delete(r.unitId);}
+      for(const id of entry.claimedUnitIds){const r=context.carouselReceipts?.find(r=>r.unitId===id);requireValue(r&&units.has(id)&&!claimedCarouselIds.has(id),'carousel claim ownership');eligible(r!.id);claimedCarouselIds.add(id);deferredCarouselIds.delete(id);}
+      for(const event of entry.upgrades as readonly UnitUpgradedEvent[]){validateUpgrade(event);for(const id of [event.survivorId,...event.consumedIds]){const u=units.get(id);requireValue(u&&u.definitionId===event.definitionId&&u.starLevel===event.fromStar,'carousel upgrade ownership');}event.consumedIds.forEach(id=>units.delete(id));units.set(event.survivorId,{id:event.survivorId,definitionId:event.definitionId,starLevel:event.toStar});growth=mergeGrowthLedger(growth,[event]);}
     } else if(entry.kind==='carousel-unit-claimed') {
       keys(entry,[...common,'unitId','receiptId','upgrades']);
       const receipt=context.carouselReceipts?.find(r=>r.id===entry.receiptId);

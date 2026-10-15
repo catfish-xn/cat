@@ -1,0 +1,93 @@
+{
+  "baseline": {
+    "contentDigest": "fnv1a32-utf16:bb66f4f8",
+    "lootReplayDigest": "fnv1a32-utf16:028e5593",
+    "rulesVersion": "s13-g2-2-v1",
+    "contentVersion": "s13-14.24b-g2-2-v1",
+    "schemaVersion": 7,
+    "firstBattle": {
+      "seed": 42,
+      "ticks": 164,
+      "events": 106,
+      "result": "playerWin",
+      "stateHash": "fnv1a32-utf16:1541a026",
+      "eventHash": "fnv1a32-utf16:966105d6"
+    },
+    "previousContentDigest": "fnv1a32-utf16:22f31569",
+    "previousLootReplayDigest": "fnv1a32-utf16:028e5593",
+    "traceHashes": {
+      "state": "0eaac1000d2e4c49985814567a28ede35cfdbf337e3f2685a630d3b350407d1d",
+      "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
+      "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+    },
+    "reason": "P7-1 free Irelia, bench-board-held placement and next-preparation merges; one content digest update. Offline routes unchanged except content identity; previous baselines archived."
+  },
+  "previousGoldenSha256": "b623b030883b07960bbc6b0005fdb1fde00adabf3d016aa467336f40d3bd9f15",
+  "identityReplacements": [
+    [
+      "fnv1a32-utf16:22f31569",
+      "fnv1a32-utf16:bb66f4f8"
+    ]
+  ],
+  "builds": {
+    "cannon": {
+      "comparedStates": 67,
+      "recording": {
+        "previousBytes": 7957518,
+        "currentBytes": 7957518,
+        "previousSha256": "a67a92c8913353fec0ccf61789d715ef359139adaa27283fa99135841ee9d8f3",
+        "currentSha256": "d0c218159969ce55f6f9a877f96b25bb8ad05a5219e9980cdff33a402fa75c30",
+        "byteEqual": false,
+        "firstByteOffset": 5446,
+        "normalizedBytesEqual": true,
+        "textAndObjectRestoreEqual": true
+      },
+      "commandsUnchanged": true,
+      "eventsUnchanged": true,
+      "recordedRounds": 33,
+      "previousRecordingSha256": "85ee1ce7f9bafa78f4cf0e47fac46e8ca70bbeda4dc5558023c6055eb5dd6b38"
+    },
+    "sniper": {
+      "comparedStates": 67,
+      "recording": {
+        "previousBytes": 8198304,
+        "currentBytes": 8198304,
+        "previousSha256": "ebce8e79217cbf73f62e535223c677ffc9850ed8ae54652258c1edd08bfb10c9",
+        "currentSha256": "fb538151e0d7f66dbe832993c99c11eb230592d06220852f5eef3a22f466e0a1",
+        "byteEqual": false,
+        "firstByteOffset": 5446,
+        "normalizedBytesEqual": true,
+        "textAndObjectRestoreEqual": true
+      },
+      "commandsUnchanged": true,
+      "eventsUnchanged": true,
+      "recordedRounds": 33,
+      "previousRecordingSha256": "75ebed977bd56981a72962a2af12cd9e573660fc62a80469493573711534f9ec"
+    },
+    "mage": {
+      "comparedStates": 0,
+      "recording": null,
+      "commandsUnchanged": true,
+      "eventsUnchanged": true,
+      "recordedRounds": 33,
+      "previousRecordingSha256": null
+    },
+    "sniper-caitlyn": {
+      "comparedStates": 0,
+      "recording": null,
+      "commandsUnchanged": true,
+      "eventsUnchanged": true,
+      "recordedRounds": 33,
+      "previousRecordingSha256": null
+    }
+  },
+  "goldenBytes": {
+    "previousBytes": 101012,
+    "currentBytes": 101071,
+    "previousSha256": "b623b030883b07960bbc6b0005fdb1fde00adabf3d016aa467336f40d3bd9f15",
+    "currentSha256": "f0440ed9583ddb51b4cfd639567b236b1e1ac09e6ecd201182d7556735c0ddb4",
+    "byteEqual": false,
+    "firstByteOffset": 13
+  },
+  "candidateSha256": "f0440ed9583ddb51b4cfd639567b236b1e1ac09e6ecd201182d7556735c0ddb4"
+}

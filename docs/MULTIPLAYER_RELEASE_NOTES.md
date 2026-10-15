@@ -472,3 +472,10 @@ P3-A 从首场PvP加时起基础扣血12→17，普通stage2–6和每个存活�
 - Baseline already contains8 ordinary components and36 completed items. No fictitious ninth ordinary component or emblem is added. This discrepancy with the dispatch remains a scope decision.
 - Prior #90 state/golden bytes remain intact; old identities cannot resume/replay and remain available for original-file read-only export. New public-command recordings and source/runtime/approximation tables: [G2-1 evidence](evidence/g2-1/RECONCILIATION.md), [byte audit](evidence/g2-1/release-audit.json).
 - Source fields not modeled, finite geometry conventions and inaccessible emblem tiers are explicitly listed in the reconciliation. Icon manifest only; no `public/assets/` changes. Candidate remains draft until the inventory and numerical limitations are resolved/reviewed.
+# P7-1 规则修正（与 Opus 服务器/界面配套 PR 一起验收）
+
+基线 multiplayer `343877a5d364231ac64cdca0e2b7882730f35dea`。仅五次 x-4 选秀；恢复免费艾瑞莉娅与既有开局经济。选秀卡按备战席、未满人口的棋盘、临时位顺序放置，临时位不参战可出售；下一准备期迁入并合星，以 preparationReceipts 防止重复结算。
+
+CONTENT `fnv1a32-utf16:22f31569 → fnv1a32-utf16:bb66f4f8`，仅更新一次；LOOT_REPLAY 保持 `fnv1a32-utf16:028e5593`。schema/save/replay/command 7/3/3/3，rules/content 字符串沿用 G2-2，选秀 revision=p7-1 纳入内容身份。旧快照保留原字节供导出，新局重开，不静默迁移。
+
+新投影 heldCarouselUnits 替换 pendingCarouselUnits；运行时不再输出 openingPending。pendingUnits 和旧 resolve/sell 导出名暂保留兼容，详见 MULTIPLAYER_CONTRACT §21.6。规则 PR 不单独合入或部署；Opus 从规则 head 叠服务器 PR，修正 1-1 专用分支、投影消费与 tests/server 单测/e2e 后共同验收。
