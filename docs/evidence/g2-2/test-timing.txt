@@ -1,0 +1,13 @@
+
+> hex-autobattler@0.1.0 test:timing
+> vitest run --project timing --no-file-parallelism
+
+
+ RUN  v5.0.3 /workspace/cat
+
+
+ Test Files  6 passed (6)
+      Tests  32 passed (32)
+   Start at  12:26:59
+   Duration  134.24s (tests 98%, transform 1%, import 1%)
+
