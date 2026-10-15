@@ -194,7 +194,7 @@ P7 方案 B 覆盖（2026-10-15）：包括 1-1，全部按 HP 每批两人放�
 
 P7 实现端口补充（SR-G1-02）：完整原子 wrapper 签名、初始化顺序、队列与淘汰见 MULTIPLAYER_CONTRACT §21.4–21.5。`schedule(roundId:string):{firstBatchMs:number,batchIntervalMs:number,tailMs:number}` 对非法回合抛 `RangeError('invalid-round')`；三个值均 6000。`opensCarousel(match:MatchState):boolean` 只对启用 P7 的 Match 返回选秀资格。
 
-`restoreCarousel(input:unknown):CarouselState` 校验并复制盘/池，`restoreCarouselSeat(carousel:CarouselState,input:unknown):MatchState` 复制已持久化的服务器席位快照，核对当前 digest、池绑定/冻结掉落、收据、来源事实、资产折叠与排队单位，不发奖、不抽随机数。两者遇损坏输入抛错，不能当命令失败继续。淘汰席保留原 granted 历史收据，池中对应收据为 released，资产只作归档、不再占池。此端口用于**可信服务器快照的 P7 一致性检查**，不是任意客户端上传 Match 的完整恢复/认证；房间其他阶段、经济和战斗历史仍由原服务器持久化边界验证。离线 restoreMatch 明确拒绝 carousel/sharedPool/multiplayer。
+`restoreCarousel(input:unknown):CarouselState` 校验并复制盘/池，`restoreCarouselSeat(carousel:CarouselState,input:unknown):MatchState` 复制已持久化的服务器席位快照，核对当前 digest、池绑定/冻结掉落、收据、选秀出生事实、仍持有的选秀资产定义与排队单位，不发奖、不抽随机数。两者遇损坏输入抛错，不能当命令失败继续。淘汰席保留原 granted 历史收据，池中对应收据为 released，资产只作归档、不再占池。此端口用于**可信服务器快照的 P7 一致性检查**，不是任意客户端上传 Match 的完整恢复/认证；房间其他阶段、经济和战斗历史仍由原服务器持久化边界验证。离线 restoreMatch 明确拒绝 carousel/sharedPool/multiplayer。
 
 本次发布仅将 carousel-v1/shared-pool-v3 政策加入共同 manifest：CONTENT_DIGEST `77f80fec → f95bdcf8`（完整前缀 fnv1a32-utf16），LOOT_REPLAY_DIGEST 不变；schema7/save3/replay3/command3 保持。新旧快照不可混用；没有静默迁移。
 

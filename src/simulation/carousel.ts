@@ -12,7 +12,7 @@ import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from './carousel-policy';
 import { UNIT_DEFINITIONS } from './units';
 import { releaseSeatOnElimination } from './shared-pool';
 import { planUnitAcquisition } from './unit-acquisition';
-import { appendResourceProvenance, mergeGrowthLedger, foldResourceProvenance } from './resource-provenance';
+import { appendResourceProvenance, mergeGrowthLedger } from './resource-provenance';
 import { createCarouselMatch, finishCarouselSupply } from './match';
 import type { MatchEvent } from './match-types';
 import { planPurchase, transferUpgradeResources } from './upgrades';
@@ -506,6 +506,8 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown): Ma
         const unitFacts = match.resourceProvenance.entries.filter(e => e.kind === 'unit-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
         const itemFacts = match.resourceProvenance.entries.filter(e => e.kind === 'item-acquired' && e.source.kind === 'carousel' && e.source.receiptId === receipt.id);
         if (unitFacts.length !== 1 || unitFacts[0].kind !== 'unit-acquired' || unitFacts[0].unitId !== receipt.unitId || itemFacts.length !== 1 || itemFacts[0].kind !== 'item-acquired' || itemFacts[0].itemId !== receipt.itemInstanceId) throw Error('receipt-mismatch');
+        const unit = match.preparation.units.find(u=>u.id===receipt.unitId), item = match.items.find(i=>i.id===receipt.itemInstanceId);
+        if (unit && unit.definitionId !== receipt.definitionId || item && item.definitionId !== receipt.itemId) throw Error('receipt-mismatch');
     }
     const pendingIds = new Set<string>();
     for (const pending of metadata.pendingUnits) {
@@ -513,12 +515,5 @@ export function restoreCarouselSeat(carousel: CarouselState, input: unknown): Ma
         pendingIds.add(pending.unitId);
     }
     for (const fact of match.resourceProvenance.entries) if ((fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'carousel' && !ids.has(fact.source.receiptId)) throw Error('receipt-mismatch');
-    const resources = foldResourceProvenance(match.resourceProvenance, {
-        carouselReceipts: metadata.receipts, pendingCarouselUnitIds: metadata.pendingUnits.map(u => u.unitId), carouselOpening: true,
-        scheduleReceipts: match.scheduleReceipts, lootReceipts: match.m8.loot.receipts, throughRoundOrdinal: match.round,
-        combatSettlements: match.roundResults.filter(r => r.roundKind !== 'supply').map(r => ({roundId:r.roundId,combatId:`round-${r.round}`,settlementId:r.settlementId})),
-    });
-    const sorted = <T extends {id:string}>(v:T[]) => v.sort((a,b)=>a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-    if (!equal(resources, {units:sorted([...match.preparation.units.filter(u=>u.team==='player').map(({id,definitionId,starLevel})=>({id,definitionId,starLevel})),...metadata.pendingUnits.map(u=>({id:u.unitId,definitionId:u.definitionId,starLevel:1}))]),items:sorted(match.items.map(({id,definitionId})=>({id,definitionId}))),persistentGrowth:match.persistentGrowth,nextUnitSerial:match.nextUnitSerial,nextItemSerial:match.nextItemSerial})) throw Error('receipt-mismatch');
     return match;
 }

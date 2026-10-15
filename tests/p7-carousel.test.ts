@@ -182,6 +182,7 @@ describe('P7 supply and capacity integration', () => {
         state = picked.state;
         pool = picked.pool;
         expect(state.carousel!.pendingUnits).toHaveLength(1);
+        expect(()=>restoreCarouselSeat(picked.carousel,state)).not.toThrow();
         const pending = state.carousel!.pendingUnits[0], serial = state.nextUnitSerial;
         pool = must(advanceCarousel(picked.carousel, 12000)).state.pool;
         const discarded = must(sellPendingCarouselUnit(pool, state, pending.unitId));
@@ -189,12 +190,14 @@ describe('P7 supply and capacity integration', () => {
         expect(discarded.state.items).toEqual(state.items);
         expect(discarded.state.carousel!.pendingUnits).toEqual([]);
         assertSharedPoolConservation(discarded.pool, [discarded.state]);
+        expect(()=>restoreCarouselSeat({...picked.carousel,pool:discarded.pool,status:'closed',elapsedMs:12000},discarded.state)).not.toThrow();
         const sold = must(sellSharedUnit(pool, state, state.preparation.units.find(u => u.location.kind === 'bench')!.id));
         const moved = must(resolvePendingCarouselUnits(sold.pool, sold.state));
         expect(moved.state.carousel!.pendingUnits).toHaveLength(0);
         expect(moved.state.nextUnitSerial).toBe(serial);
         expect(moved.state.preparation.units.some(u => u.id === pending.unitId)).toBe(true);
         assertSharedPoolConservation(moved.pool, [moved.state]);
+        expect(()=>restoreCarouselSeat({...picked.carousel,pool:moved.pool,status:'closed',elapsedMs:12000},moved.state)).not.toThrow();
     });
     it('release is inert on repeat and returns its reserved copy once', () => {
         let { state } = opening(2);
