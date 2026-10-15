@@ -8,6 +8,9 @@ const timing = [
   'tests/m5-replay-cannon.test.ts',
   'tests/server/bot-driver-timing.test.ts',
   'tests/server/round-commit-timing.test.ts',
+  // Publishing-watchdog executes a real PvE round within its original 5 s
+  // timeout; isolate the existing suite from parallel route CPU contention.
+  'tests/server/g3-ops.test.ts',
 ];
 // Tiny route wrappers contain the longest workloads. Start them first even on
 // a clean checkout, when Vitest has no duration cache and sorts by source size.
