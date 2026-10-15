@@ -17,7 +17,7 @@ export const ROOM_PROTOCOL_VERSION = 1;
  * its settlement proposals and waits for the rules' commit entry (T3); until T3 lands the room
  * faults there with `settlement-unavailable`.
  */
-export type RoomPhase = 'waiting' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'awaiting-settlement' | 'settlement' | 'ended';
+export type RoomPhase = 'waiting' | 'carousel' | 'preparation' | 'choice' | 'frozen' | 'battle' | 'awaiting-settlement' | 'settlement' | 'ended';
 export type SeatKind = 'human' | 'bot';
 /**
  * Who issues this seat's commands right now (B6): its human player, a fill-in bot (`kind: 'bot'`, for the whole
@@ -111,7 +111,7 @@ export interface PlayerViewPhase {
   readonly serverNow: number;
 }
 /** Why a room ended abnormally; `detail` is already human-readable text chosen by the server. */
-export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable' | 'stalled' | 'abandoned';
+export type PlayerViewFaultKind = 'resolver-error' | 'invalid-results' | 'seat-stuck' | 'phase-mismatch' | 'settlement-unavailable' | 'stalled' | 'abandoned' | 'carousel-error';
 export interface PlayerViewFault { readonly kind: PlayerViewFaultKind; readonly detail: string }
 export interface PlayerView {
   readonly mySeatId: string;

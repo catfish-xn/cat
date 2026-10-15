@@ -14,6 +14,7 @@ import type { CombatReplay, PrivateSeatView } from '../../server-entry';
 import type { UnitLocation } from '../../simulation/units';
 import type { ConsumableTarget, LobbyView, PlayerView, ReplayUnitId, WireCommand } from '../protocol';
 import type { RoomFailure, SharedPoolFailure } from '../room/types';
+import type { CarouselFailure } from '../room/carousel';
 import type { ConsumableDisplayEvent } from '../room/projection';
 
 /**
@@ -22,8 +23,10 @@ import type { ConsumableDisplayEvent } from '../room/projection';
  * A field added to a server view is not a bump: the client reads views without key validation and ignores what it does
  * not know. G1-P6 stays at 2 on that rule: `PlayerView.opponentCandidates` is additive, and `opponentSeatId` being null
  * until the freeze only means an older client highlights the opponent from the battle on.
+ * 3 since G1-P7: the client may send `carouselPick`, a new command a protocol 2 server would refuse; `PlayerView.carousel`
+ * and the `carousel` phase kind alone would have been additive.
  */
-export const NET_PROTOCOL_VERSION = 2;
+export const NET_PROTOCOL_VERSION = 3;
 /** Hard caps on free-text fields; longer input is a validation failure, not a truncation. */
 /** Rule ids (choiceId is a nested JSON key of ~110 characters) stay well under idChars. */
 export const LIMITS = { nameChars: 24, idChars: 256, tokenChars: 128 } as const;
@@ -79,7 +82,7 @@ export type NetFailure =
   | 'rate-limited';
 export type LobbyFailure = 'full' | 'in-progress' | 'empty' | 'not-queued';
 /** SharedPoolFailure (B5) already contains every MatchFailure; MatchFailure stays listed for readers. */
-export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure | SharedPoolFailure;
+export type ReceiptFailure = NetFailure | LobbyFailure | RoomFailure | MatchFailure | SharedPoolFailure | CarouselFailure;
 
 export type ReceiptMessage =
   | { readonly type: 'receipt'; readonly commandId: number; readonly ok: true; readonly result: ReceiptResult }
@@ -187,6 +190,7 @@ export function validateClientCommand(value: unknown): WireCommand {
       return { type: 'anomalyTarget', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0), unitId: str(value.unitId, `${w}.unitId`, LIMITS.idChars, true) };
     case 'anomalyReroll': onlyKeys(value, ['type', 'choiceId', 'generation'], w);
       return { type: 'anomalyReroll', choiceId: str(value.choiceId, `${w}.choiceId`), generation: int(value.generation, `${w}.generation`, 0) };
+    case 'carouselPick': onlyKeys(value, ['type', 'slot'], w); return { type: 'carouselPick', slot: int(value.slot, `${w}.slot`, 0) };
     default: return bad(`command.type ${JSON.stringify(value.type)} is not a client command`);
   }
 }

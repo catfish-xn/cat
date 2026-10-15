@@ -14,6 +14,7 @@ import type { CombatResult } from '../../simulation/combat-types';
 // Rules types of the two-sided battle entry (T2) and the settlement receipt (T3); aliased so the room's scheduling envelope keeps its own names.
 import type { BattleResult as RulesBattleResult, CombatReplayInput, RoundSettlementReceipt, SharedPoolFailure, SharedPoolState, SideProposal } from '../../server-entry';
 import type { CandidateMap, PairingHistory } from './pairing';
+import type { CarouselFailure, RoomCarousel } from './carousel';
 import { ROOM_CAPACITY, ROOM_PROTOCOL_VERSION, type WireCommand, type RoomPhase, type SeatController, type SeatKind } from '../protocol';
 
 // Shared with the client: one copy lives in src/server/protocol.ts (C3).
@@ -182,7 +183,9 @@ export type RoomFault =
   /** G3 watchdog: nothing was published for `idleMs` past the phase's own deadline (a task died or a slice never came back). */
   | { readonly kind: 'stalled'; readonly phase: RoomPhase; readonly idleMs: number }
   /** G3 watchdog: no human seat held a connection for `idleMs`; the match is closed so the queue opens again. */
-  | { readonly kind: 'abandoned'; readonly idleMs: number };
+  | { readonly kind: 'abandoned'; readonly idleMs: number }
+  /** G1-P7: the rules refused to open the carousel or an automatic pick (`seatId` set for the latter); nothing of it was published. */
+  | { readonly kind: 'carousel-error'; readonly reason: string; readonly seatId?: string };
 
 export interface RoomState {
   readonly roomId: string;
@@ -206,6 +209,8 @@ export interface RoomState {
   readonly pairingHistory: PairingHistory;
   /** G1-P6: possible opponents of each alive seat this PvP round, set at round entry from `pairingHistory`; empty otherwise. */
   readonly opponentCandidates: CandidateMap;
+  /** G1-P7: the shared carousel while `phase` is `carousel`; null otherwise. Part of the room state, so a reconnecting seat sees it as is. */
+  readonly carousel: RoomCarousel | null;
   /** Results of the current round; cleared on round entry. */
   readonly battles: readonly BattleResult[];
   /** settlementIds already committed, in order. */
@@ -232,9 +237,11 @@ export type SeatCommand = WireCommand;
  * `seat-controlled`: a player command reached a human seat a bot took over (B6); `control-revoked`: a bot step
  * decided under an older control generation (the player resumed in between, or the seat is not bot-controlled).
  */
-export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 'seat-controlled' | 'control-revoked';
+export type RoomFailure = 'unknown-seat' | 'seat-eliminated' | 'room-phase' | 'seat-controlled' | 'control-revoked'
+  /** G1-P7: a carousel pick before this seat's batch opened (the release schedule is the room's). */
+  | 'carousel-not-released';
 export type RoomCommandResult =
   | { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[]; readonly seatRevision: number; readonly roomRevision: number }
   /** `SharedPoolFailure` includes every MatchFailure plus the pool's own reasons (pool-empty, empty-slot, ...). */
-  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure; readonly state: MatchState | null };
+  | { readonly ok: false; readonly reason: RoomFailure | MatchFailure | SharedPoolFailure | CarouselFailure; readonly state: MatchState | null };
 export type { MatchCommandResult };

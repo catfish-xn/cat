@@ -45,6 +45,9 @@ const NON_RULE_REFUSALS: Partial<Record<ReceiptFailure, string>> = {
   'no-room': '对局已不存在', 'wrong-room': '对局已更换，请刷新页面', 'not-authenticated': '连接未绑定席位 · 正在恢复',
   'rate-limited': '操作过快 · 请稍后再试', 'invalid-message': '客户端发送了无效命令（请刷新页面）', 'commandId-conflict': '命令编号冲突（请刷新页面）',
   'unsupported-protocol': '客户端版本过旧，请刷新页面',
+  'carousel-not-released': '还没轮到你选秀 · 生命越低越先放行', 'carousel-slot-taken': '这个单位已被选走 · 请换一个',
+  'carousel-already-picked': '你已经选过了', 'carousel-unknown-slot': '选秀位置无效 · 请重新选择', 'carousel-not-participant': '你不在本轮选秀中',
+  'carousel-closed': '选秀已结束',
 };
 const RECONNECTING = '连接中断，重连中…';
 const SUPERSEDED = '已在别处打开此席位 · 本页停止操作';
@@ -197,7 +200,7 @@ export class OnlineApplication implements SceneApplication {
     const notice = this.session.takeNotice();
     if (notice?.kind === 'pending') return; // the receipt and the next view answer it
     this.carousel.clearPending();
-    this.hooks.status(notice?.kind === 'offline' ? notice.text : `选秀未成功：${result.reason}`);
+    this.hooks.status(notice?.kind === 'offline' ? notice.text : NON_RULE_REFUSALS[result.reason as ReceiptFailure] ?? `选秀未成功：${result.reason}`);
   }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {

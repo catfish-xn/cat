@@ -10,12 +10,13 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 import {
   startCombatReplay, toCombatReplay, toPrivateSeatView, type CombatReplay, type CombatReplayInput, type CombatReplayTask, type CombatViewEvent, type CombatViewState, type PrivateSeatView,
 } from '../../server-entry';
-import type { PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
+import type { CarouselView, PublicBoard, PublicBoardUnit, ReplayUnitId } from '../protocol';
+import { carouselReleased } from './carousel';
 import { findPairing } from './pairing';
 import type { BattleResult, PlayerView, PlayerViewFault, PlayerViewPhaseKind, RoomFault, RoomPhase, RoomState, SeatPublic, SeatState } from './types';
 
 const PHASE_VIEW: Readonly<Record<RoomPhase, PlayerViewPhaseKind>> = {
-  waiting: 'lobby', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
+  waiting: 'lobby', carousel: 'carousel', preparation: 'preparation', choice: 'choice', frozen: 'combat', battle: 'combat', 'awaiting-settlement': 'settlement', settlement: 'settlement', ended: 'ended',
 };
 
 export function toSeatPublic(seat: SeatState): SeatPublic {
@@ -54,6 +55,7 @@ export function toPlayerView(room: RoomState, seatId: string, serverNow: number)
     phase: { kind: PHASE_VIEW[room.phase], round: room.round, roundName: room.roundName, endsAt: room.deadlineAt, serverNow },
     opponentSeatId,
     opponentCandidates: toOpponentCandidates(room, seatId),
+    carousel: toCarouselView(room, seatId),
     ranking,
     fault: room.fault === null ? null : toPlayerFault(room.fault),
   };
@@ -71,6 +73,24 @@ export function toOpponentCandidates(room: RoomState, seatId: string): string[] 
   return room.seats.filter(seat => seat.seatId !== seatId && alive.has(seat.seatId) && listed.has(seat.seatId)).map(seat => seat.seatId);
 }
 
+/**
+ * G1-P7: the carousel as this seat sees it, field by field; the rules' own carousel state never leaves the room. Every seat
+ * sees the same units, items, takers and release order; only `canPick`/`myPick` are its own. Null outside the carousel phase.
+ */
+export function toCarouselView(room: RoomState, seatId: string): CarouselView | null {
+  const carousel = room.carousel;
+  if (room.phase !== 'carousel' || carousel === null) return null;
+  const seat = room.seats.find(candidate => candidate.seatId === seatId);
+  const myPick = carousel.picks[seatId] ?? null;
+  return {
+    carouselId: carousel.carouselId, roundName: room.roundName,
+    slots: carousel.slots.map(slot => ({ slot: slot.slot, definitionId: slot.definitionId, starLevel: slot.starLevel, items: [...slot.items], pickedBy: slot.pickedBy })),
+    batches: carousel.batches.map(batch => ({ seatIds: [...batch.seatIds], opensAt: batch.opensAt })),
+    openBatches: carousel.openBatches, endsAt: carousel.endsAt,
+    canPick: seat !== undefined && seat.alive && myPick === null && carouselReleased(carousel, seatId), myPick,
+  };
+}
+
 /** Human-readable fault for the client; the structured RoomFault stays on the server. */
 export function toPlayerFault(fault: RoomFault): PlayerViewFault {
   switch (fault.kind) {
@@ -80,6 +100,7 @@ export function toPlayerFault(fault: RoomFault): PlayerViewFault {
     case 'phase-mismatch': return { kind: fault.kind, detail: `阶段不一致：${fault.detail}` };
     case 'stalled': return { kind: fault.kind, detail: `对局卡在 ${fault.phase} 阶段 ${Math.round(fault.idleMs / 1000)} 秒无进展，已关闭` };
     case 'abandoned': return { kind: fault.kind, detail: `所有玩家掉线 ${Math.round(fault.idleMs / 1000)} 秒，对局已关闭` };
+    case 'carousel-error': return { kind: fault.kind, detail: `选秀无法进行${fault.seatId ? `（席位 ${fault.seatId}）` : ''}：${fault.reason}` };
   }
 }
 
