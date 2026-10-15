@@ -835,3 +835,28 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 - **现状**：`DEFAULT_PAIRING_POLICY = { avoidRecentRounds: 2 }` 是占位。
 - **需要**：`docs/S13_RULES_GAP.md` §10 给出 14.24b 的定义与推荐值；若 14.24b 的放宽顺序不是"全体逐轮减 1"，或奇数镜像应受约束/计入来源席历史，请在合同写明，服务器按合同改 `pairing.ts`。
 - **验收**：§10 的 6–8 组向量能直接写成 `tests/server/pairing.test.ts` 的用例并通过。
+
+## G1-P7 选秀：服务器与界面预接线（2026-10-15，Claude 流水线 B/C，分支 `claude/g1-carousel-y1zxfu`）
+
+### 已交付（不依赖合同，合同合入后只写绑定层）
+
+- 界面：`src/rendering/online/carousel-panel.ts` 选秀圆盘（单位头像 + 所携装备、已选者标记、放行批次与每批倒计时、总倒计时）；只有服务器给出 `canPick` 且该格未被选走时可点。`?mode=online&carouselDemo=1` 用假数据预览，不发给房间。
+- 视图：`PlayerView.carousel?: CarouselView | null`，阶段新增 `carousel`；字段见 `src/server/protocol.ts`（`slots[{slot, definitionId, starLevel, items, pickedBy}]`、`batches[{seatIds, opensAt}]`、`openBatches`、`endsAt`、`canPick`、`myPick`）。
+- 命令：线协议新增 `{ type: 'carouselPick', slot }`，`NET_PROTOCOL_VERSION` 2 → 3。它不在 `ClientCommand` 里（机器人策略与 `tests/t7-helpers.ts` 的穷举 switch 不受影响）。
+- 房间：`src/server/room/carousel.ts` 定义 `CarouselRules` 端口；`Room` 在回合进入时若规则标记为选秀轮，先进入 `carousel` 阶段，再走原有选择/准备流程。房间只管放行时间表（存活席按权威 HP 升序、同 HP 按座位序、按批放行）和何时要求自动选取（机器人/接管/断线席在本批放行时，其余在截止时）；建盘、选取、自动选取、共享池扣减、收据与失败原因全部走端口。未传端口时行为与之前一致。
+
+### SR-G1-02 请 Codex 合同覆盖以下端口（P1，阻塞 P7 接线）
+
+服务器需要的最小能力（名称可按合同改，服务器写绑定层适配）：
+
+| 端口方法 | 输入 | 输出 | 用途 |
+| --- | --- | --- | --- |
+| `opensCarousel(state)` | 某席 MatchState | boolean | 回合进入时判断本轮是否选秀（1-1、2-4…6-4） |
+| `schedule(roundId)` | roundId | `{ batchSize, firstBatchMs, batchIntervalMs, tailMs }` | 放行批大小与时间（1-1 是否全员同时放行） |
+| `createCarousel` | 共享池、roundId、房间 rng 状态、存活席状态 | `{ pool, carousel, rngState }` 或失败原因 | 建盘并从共享池扣减 |
+| `pickFromCarousel` | 池、盘、席状态、seatId、slot | `{ pool, carousel, state, events }` 或失败原因 | 玩家选取，单位进备战席，唯一收据 |
+| 自动选取 | 同上 + 原因（机器人/断线/超时） | 同上 | 机器人策略与超时代选 |
+| 盘面列表 | 盘 | 每格 `{ slot, definitionId, starLevel, items[], pickedBy }` | 投影给所有席位 |
+
+- **待合同明确**：1-1 是否新增回合行（会移动 ordinal 与 digest）；2-4 等 x-4 是否保留现有补给选择（服务器在选秀关闭后照常走选择阶段，两种都能接）；备战席已满时的处理；选秀单位是否计入共享池守恒（若 `assertSharedPoolConservation` 需要盘面参数请写明）；失败原因枚举（服务器暂用 `carousel-slot-taken / carousel-already-picked / carousel-unknown-slot / carousel-not-participant / carousel-closed` 占位，合入后改为合同枚举）。
+- **验收**：合同合入后服务器绑定层只调用合同导出；e2e 八席一局 1-1 与 2-4 每席各得一个单位、HP 最低先选、断线席位也有单位。
