@@ -1,7 +1,7 @@
 import { syntheticSharedRound } from './tp-helpers';
 import { describe, expect, it } from 'vitest';
 import { advanceMultiplayerRound, snapshotForBattle, compileBattle, resolveTwoSidedBattle, proposeSettlement,
-  applyRoundSettlement, nextRound, createMatch, nextSharedRound, buySharedUnit, sellSharedUnit,
+  applyRoundSettlement, restoreBattleInput, nextRound, createMatch, nextSharedRound, buySharedUnit, sellSharedUnit,
   needsAnomalyRecruitment, forfeitPendingChoice, claimOrDiscardLoot, equipItem, buyUnit, sellUnit,
   type MatchState } from '../src/server-entry';
 import { FINAL_ROUND, getRoundSchedule } from '../src/simulation/round-schedule';
@@ -15,7 +15,7 @@ const duel = (a:MatchState,b:MatchState) => resolveTwoSidedBattle(compileBattle(
   snapshotForBattle(b,b.multiplayer!.seatId),42,{battleId:`overtime:${a.round}`}),1201);
 
 describe('T5R online overtime',()=>{
-  it('five empty-v-empty rounds have independent receipts, normal income/XP/shops and 12 raw damage each',()=>{
+  it('five empty-v-empty rounds have independent receipts, normal income/XP/shops and 17 raw damage each',()=>{
     const initial = finalSettlement();
     let a:MatchState={...initial,preparation:{...initial.preparation,units:[]}},
       b:MatchState={...a,multiplayer:{...a.multiplayer!,seatId:'B'}};
@@ -32,11 +32,15 @@ describe('T5R online overtime',()=>{
       expect(needsAnomalyRecruitment(a)).toBe(false);
       expect(forfeitPendingChoice(a,a.round,null,null)).toEqual({ok:false,state:a,reason:'no-pending-choice'});
       const battle=duel(a,b),p=proposeSettlement(battle);
-      expect(p.a).toMatchObject({result:'draw',baseDamage:12,damage:12,opposingSurvivors:0});
-      expect(p.b).toMatchObject({result:'draw',damage:12});
+      const restored=restoreBattleInput(JSON.parse(JSON.stringify(compileBattle(snapshotForBattle(a,'A'),snapshotForBattle(b,'B'),42,{battleId:`overtime:${a.round}`}))));
+      expect(proposeSettlement(resolveTwoSidedBattle(restored,1201))).toEqual(p);
+      const oldReceipt={version:'multiplayer-settlement-v1',settlementId:`old-${n}`,battleId:battle.battleId,seatId:'A',round:a.round,roundId:a.roundDefinitionId,settlementEligible:true,result:'draw',baseDamage:12,damage:12,opposingSurvivors:0,growth:[],combatTicks:battle.terminal.tick,combatEventCount:battle.events.length};
+      expect(applyRoundSettlement(a,oldReceipt)).toEqual({ok:false,state:a,reason:'invalid-receipt'});
+      expect(p.a).toMatchObject({result:'draw',baseDamage:17,damage:17,opposingSurvivors:0});
+      expect(p.b).toMatchObject({result:'draw',damage:17});
       a=settle(a,battle,p.a);b=settle(b,battle,p.b);
       gold+=5+Math.min(5,Math.floor(gold/10))+(n>=4?2:n>=2?1:0);xp+=2;
-      expect(a.gold).toBe(gold);expect(a.xp).toBe(xp);expect(a.playerHp).toBe(100-12*n);
+      expect(a.gold).toBe(gold);expect(a.xp).toBe(xp);expect(a.playerHp).toBe(100-17*n);
       expect(a.multiplayer!.receipts).toHaveLength(n);expect(a.roundResults).toHaveLength(FINAL_ROUND+n);
       expect(applyRoundSettlement(a,a.multiplayer!.receipts.at(-1))).toEqual({ok:false,state:a,reason:'duplicate-settlement'});
       expect(accepted(claimOrDiscardLoot(a,a.round))).toBe(a);
@@ -48,7 +52,7 @@ describe('T5R online overtime',()=>{
     const battle=duel(a,b),p=proposeSettlement(battle);
     for(const state of [settle(a,battle,p.a),settle(b,battle,p.b)]) {
       expect(state).toMatchObject({playerHp:0,phase:'settlement',outcome:null,multiplayer:{status:'eliminated'}});
-      expect(state.roundResults.at(-1)).toMatchObject({playerDamage:12,hpLost:1});
+      expect(state.roundResults.at(-1)).toMatchObject({playerDamage:17,hpLost:1});
       expect(advanceMultiplayerRound(state,state.round)).toEqual({ok:false,state,reason:'seat-eliminated'});
     }
     const mirror=resolveTwoSidedBattle(compileBattle(snapshotForBattle(a,'A'),snapshotForBattle(b,'B'),42,{battleId:'mirror',mirrorOfSeatId:'B'}),1201);

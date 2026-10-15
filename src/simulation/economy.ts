@@ -1,9 +1,10 @@
-import { ECONOMY_RULES, MATCH_RULES, STAGE_PLAYER_DAMAGE } from './match-rules';
+import { ECONOMY_RULES, MATCH_RULES, STAGE_PLAYER_DAMAGE, selectPlayerBaseDamage } from './match-rules';
 import { grantXp } from './progression';
 
 export interface EconomyStreak { readonly kind: 'win' | 'loss' | null; readonly count: number }
 export interface RoundEconomyInput {
   readonly stage: number;
+  readonly roundId?: string;
   readonly roundKind: 'pvp' | 'pve' | 'supply';
   readonly result: 'playerWin' | 'enemyWin' | 'draw' | null;
   readonly gold: number;
@@ -68,7 +69,7 @@ export function planRoundEconomy(input: RoundEconomyInput): RoundEconomyPlan {
   const income = incomeBreakdown.base + win + interest + streakGold;
   const goldAfter = gold + income;
   nonnegativeInteger(goldAfter, 'settled gold');
-  const baseDamage = isPvp ? STAGE_PLAYER_DAMAGE[stage] : roundKind === 'pve' ? ECONOMY_RULES.pveFailureDamage : 0;
+  const baseDamage = selectPlayerBaseDamage(stage, roundKind, input.roundId);
   const playerDamage = roundKind === 'supply' || won ? 0 : baseDamage + (isPvp ? enemySurvivors : 0);
   nonnegativeInteger(playerDamage, 'player damage');
   const hpAfter = Math.max(0, hp - playerDamage);

@@ -1,3 +1,4 @@
+import { PLAYER_DAMAGE_RULES, XP_TO_NEXT_LEVEL, MATCH_RULES } from '../match-rules';
 import { freezeContent } from './freeze';
 import { ORB_RULES, ORB_SLOTS } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
@@ -7,6 +8,9 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 
 /** One release manifest is included in both content and loot replay identities. */
 export const RULES_GAP_MANIFEST = freezeContent({
+  release: 'p3-a/p4-a/p5-a-v1',
+  playerDamage: PLAYER_DAMAGE_RULES,
+  progression: {policy:'s13-14.24b-nine-levels-v1', thresholds:XP_TO_NEXT_LEVEL, maxLevel:MATCH_RULES.maxLevel},
   opening: { initial: OPENING_INITIAL_STATE, economy: OPENING_ECONOMY_RULES },
   equipment: { version: EQUIPMENT_RULES_VERSION, operations: EQUIPMENT_OPERATION_RULES_VERSION,
     multiplayer: MULTIPLAYER_OPERATION_RULES, autoCombine: 'lowest-permanent-component-slot' },

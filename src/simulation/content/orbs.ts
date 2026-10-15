@@ -1,7 +1,7 @@
 import { freezeContent } from './freeze';
 import type { OrbTier } from '../orb-layout';
 export const ORB_RULES = freezeContent({
-  policy:'s13-orbs-project-v1', layout:'s13-orb-layout-v1', freeze:'s13-orb-freeze-v1',
+  policy:'s13-orbs-project-v2', sampler:'frozen-cumulative-weights-v1', layout:'s13-orb-layout-v1', freeze:'s13-orb-freeze-v1',
   layoutSeedXor:0x4f524253, lootSeedXor:0xdeadbeef, equipmentWeights:[90,9,1], openingWeights:[50,50],
   grayToolWeights:[80,10,10], goldBonus:4, prismaticGold:8, openingGold:3,
   componentEquivalent:{component:1,completed:2,gold:0,unit:0,consumable:0},

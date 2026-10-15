@@ -33,3 +33,16 @@ export const OPENING_ECONOMY_RULES = freezeContent({
   rounds:{'1-2':{baseGold:2,naturalXp:2},'1-3':{baseGold:3,naturalXp:2},'1-4':{baseGold:5,naturalXp:2}},
   interest:0, victoryGold:0, streakGold:0, updateStreak:false, pveFailureDamage:ECONOMY_RULES.pveFailureDamage,
 } as const);
+
+/** Project overtime maps to standard stage 7 damage, without changing its schedule/economy. */
+export const PLAYER_DAMAGE_RULES = Object.freeze({ version: 's13-player-damage-overtime-v2',
+  ordinary: STAGE_PLAYER_DAMAGE, overtimePvpBase: 17, survivingEnemyDamage: 1 });
+export function selectPlayerBaseDamage(stage: number, roundKind: 'pvp' | 'pve' | 'supply', roundId?: string): number {
+  if (!Number.isInteger(stage) || STAGE_PLAYER_DAMAGE[stage] === undefined) throw new RangeError('Invalid stage');
+  if (roundId?.startsWith('overtime-')) {
+    if (!/^overtime-[1-9][0-9]*$/.test(roundId) || !Number.isSafeInteger(Number(roundId.slice(9))) || roundKind !== 'pvp' || stage !== 6)
+      throw new RangeError('Invalid overtime damage context');
+    return PLAYER_DAMAGE_RULES.overtimePvpBase;
+  }
+  return roundKind === 'pvp' ? STAGE_PLAYER_DAMAGE[stage] : roundKind === 'pve' ? ECONOMY_RULES.pveFailureDamage : 0;
+}
