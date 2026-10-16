@@ -1,0 +1,212 @@
+
+> hex-autobattler@0.1.0 test
+> vitest run --project fast
+
+
+ RUN  v5.0.3 /root/projects/p7-1-carousel-rules
+
+ ❯ |fast| tests/server/carousel-room.test.ts (8 tests | 7 failed) 1078ms
+   ❯ G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) (8)
+     × opens the match with the 1-1 carousel on createCarouselMatch seats: no free unit, no gold, no component, no shop 148ms
+     × runs on the rules' release times, auto-picks bots on release and the rest at the deadline, then deals the first shop 83ms
+     × a disconnected player is picked for at the deadline (not on release) and resumes onto the same carousel 50ms
+     × a timer firing early, with time passing during the catch-up, never skips a release batch (real clocks do both) 88ms
+     × option B: stays until the deadline and departure after every seat holds a unit 44ms
+     × 2-4 releases lowest HP first, replaces the component supply, settles the round once and the match plays to its end 624ms
+     × faults the room when the rules refuse to open the carousel 37ms
+ ❯ |fast| tests/server/net/server.test.ts (13 tests | 13 failed) 51ms
+   ❯ game server: visibility (1)
+     × shows the other seat its level and HP changes but never its shop or private state 25ms
+   ❯ game server: rejections leave the room untouched (1)
+     × refuses forged seats, uploaded gold, wrong protocol, wrong types and stale versions 8ms
+   ❯ game server: commandId dedupe (2)
+     × executes a repeated commandId once and refuses the same id with other content 2ms
+     × refuses an id that fell out of the retention window and demands a resync 1ms
+   ❯ game server: disconnect and resume (3)
+     × returns a dropped seat to its owner by token, snapshot before increments, and disarms the old socket 1ms
+     × G1-P6: a resumed seat gets the same opponent candidates in preparation and fights one of them 1ms
+     × drops a queued player that disconnects before the match and frees the seat 1ms
+   ❯ game server: queue (2)
+     × refuses the ninth join with "full" and leaves the queue at eight 1ms
+     × refuses a join while a match runs and lets a new queue form after it ends 1ms
+   ❯ game server: single writer (1)
+     × runs 50 pipelined commands strictly in arrival order with no interleaving 1ms
+   ❯ game server: connection limits (2)
+     × closes a connection that sends an oversized frame 1ms
+     × rate-limits a connection on the room clock and accepts again in the next window 3ms
+   ❯ game server: whole match over the wire (1)
+     × drives two clients from the queue to a full ranking with replays on the manual clock 2ms
+ ❯ |fast| tests/server/local-room-client.test.ts (6 tests | 1 failed) 67089ms
+   ❯ LocalRoomClient (1)
+     × plays the room from the first preparation to the final ranking, pushing one replay per battle round 65564ms
+ ❯ |fast| tests/server/projection-wire.test.ts (9 tests | 3 failed) 39593ms
+   ❯ B7 private seat view on every state path (3)
+     × sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot 13ms
+     × keeps the fault snapshot projected 3ms
+   ❯ B7 compact replay (4)
+     × sends each battle once as the room's own replay and never as combat frames (C6) 1ms
+ ❯ |fast| tests/server/lifecycle.test.ts (5 tests | 1 failed) 16883ms
+   ❯ B8 lifecycle: the network server across matches (1)
+     × keeps connections, credentials, dedupe windows and timers at the same baseline after each of five matches 4ms
+ ❯ |fast| tests/server/net/takeover.test.ts (3 tests | 3 failed) 5ms
+   ❯ game server: no takeover by default (P2) (1)
+     × keeps a disconnected seat human-controlled long after the old takeover delay; resume is a plain reconnect 2ms
+   ❯ game server: bot takeover of a disconnected seat when switched on (B6) (2)
+     × shows the takeover to everyone after takeoverMs and hands the seat back on resume with reclaimed=true 1ms
+     × a resume before takeoverMs is a plain reconnect: no takeover, no reclaimed flag 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 28 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > opens the match with the 1-1 carousel on createCarouselMatch seats: no free unit, no gold, no component, no shop
+AssertionError: expected { Object (receipts, pendingUnits, ...) } to match object { openingPending: true, …(2) }
+(2 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "openingPending": true,
+    "pendingUnits": [],
+    "receipts": [],
+  }
+
+ ❯ tests/server/carousel-room.test.ts:25:35
+     23|     const { room } = makeRoom(new DamageResolver(() => 0), { carousel:…
+     24|     for (const seat of room.state.seats) {
+     25|       expect(seat.match.carousel).toMatchObject({ openingPending: true…
+       |                                   ^
+     26|       expect(seat.match.preparation.units.filter(unit => unit.team ===…
+     27|       expect(seat.match).toMatchObject({ gold: 0, items: [] });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/28]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > runs on the rules' release times, auto-picks bots on release and the rest at the deadline, then deals the first shop
+AssertionError: expected { ok: false, …(2) } to match object { ok: false, reason: 'wrong-phase' }
+(47 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "ok": false,
+-   "reason": "wrong-phase",
++   "reason": "insufficient-gold",
+  }
+
+ ❯ tests/server/carousel-room.test.ts:48:51
+     46|     room.start();
+     47|     // Preparation commands wait; before its release the rules lock th…
+     48|     expect(room.handle('s0', { type: 'reroll' })).toMatchObject({ ok: …
+       |                                                   ^
+     49|     let before = room.state;
+     50|     expect(pick(room, 's0', 4)).toMatchObject({ ok: false, reason: 'se…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/28]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > a disconnected player is picked for at the deadline (not on release) and resumes onto the same carousel
+TypeError: Cannot read properties of null (reading 'state')
+ ❯ tests/server/carousel-room.test.ts:123:37
+    121|     room.start();
+    122|     room.setConnected('s3', false);
+    123|     const id = room.state.carousel!.state.id;
+       |                                     ^
+    124|     clock.advance(12_000);
+    125|     expect(room.state.carousel!.state.receipts.some(receipt => receipt…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/28]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > a timer firing early, with time passing during the catch-up, never skips a release batch (real clocks do both)
+TypeError: Cannot read properties of null (reading 'state')
+ ❯ tests/server/carousel-room.test.ts:148:33
+    146|     room.start();
+    147|     inner.advance(18_000);
+    148|     expect(room.state.carousel!.state.elapsedMs).toBe(18_000);
+       |                                 ^
+    149|     expect(room.state.carousel!.auto).toEqual({ s4: 'bot', s5: 'bot' }…
+    150|     inner.advance(6_000);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/28]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > option B: stays until the deadline and departure after every seat holds a unit
+TypeError: Cannot read properties of null (reading 'state')
+ ❯ pick tests/server/carousel-room.test.ts:15:41
+     13| const rules = CAROUSEL_RULES_BINDING;
+     14| const pick = (room: Room, seatId: string, slot: number, override: { ca…
+     15|   const carousel = room.state.carousel!.state;
+       |                                         ^
+     16|   return room.handle(seatId, { type: 'carousel-pick', carouselId: over…
+     17| };
+ ❯ tests/server/carousel-room.test.ts:159:34
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/28]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > 2-4 releases lowest HP first, replaces the component supply, settles the round once and the match plays to its end
+Error: room never reached the expected state (phase ended, round 1, fault {"kind":"seat-stuck","seatId":"s0","reason":"stale-refresh"})
+ ❯ runUntil tests/server/helpers.ts:40:37
+     38|     if (!clock.runNext()) break;
+     39|   }
+     40|   if (!predicate(room.state)) throw new Error(`room never reached the …
+       |                                     ^
+     41|   return room.state;
+     42| }
+ ❯ tests/server/carousel-room.test.ts:179:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/28]⎯
+
+ FAIL  |fast| tests/server/carousel-room.test.ts > G1-P7 carousel phase in the room, bound to the rules (MULTIPLAYER_CONTRACT §21) > faults the room when the rules refuse to open the carousel
+AssertionError: expected 'preparation' to be 'ended' // Object.is equality
+
+Expected: "ended"
+Received: "preparation"
+
+ ❯ tests/server/carousel-room.test.ts:206:30
+    204|     const { room } = makeRoom(new DamageResolver(() => 0), { carousel:…
+    205|     room.start();
+    206|     expect(room.state.phase).toBe('ended');
+       |                              ^
+    207|     expect(room.state.fault).toEqual({ kind: 'carousel-error', reason:…
+    208|     expect(toPlayerView(room.state, 's0', 0).fault?.kind).toBe('carous…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/28]⎯
+
+ FAIL  |fast| tests/server/lifecycle.test.ts > B8 lifecycle: the network server across matches > keeps connections, credentials, dedupe windows and timers at the same baseline after each of five matches
+ FAIL  |fast| tests/server/projection-wire.test.ts > B7 private seat view on every state path > sends only the private view: first snapshot, increments, resume snapshot and the fault snapshot
+ FAIL  |fast| tests/server/projection-wire.test.ts > B7 private seat view on every state path > keeps the fault snapshot projected
+ FAIL  |fast| tests/server/projection-wire.test.ts > B7 compact replay > sends each battle once as the room's own replay and never as combat frames (C6)
+ FAIL  |fast| tests/server/net/server.test.ts > game server: visibility > shows the other seat its level and HP changes but never its shop or private state
+ FAIL  |fast| tests/server/net/server.test.ts > game server: rejections leave the room untouched > refuses forged seats, uploaded gold, wrong protocol, wrong types and stale versions
+ FAIL  |fast| tests/server/net/server.test.ts > game server: commandId dedupe > executes a repeated commandId once and refuses the same id with other content
+ FAIL  |fast| tests/server/net/server.test.ts > game server: commandId dedupe > refuses an id that fell out of the retention window and demands a resync
+ FAIL  |fast| tests/server/net/server.test.ts > game server: disconnect and resume > returns a dropped seat to its owner by token, snapshot before increments, and disarms the old socket
+ FAIL  |fast| tests/server/net/server.test.ts > game server: disconnect and resume > G1-P6: a resumed seat gets the same opponent candidates in preparation and fights one of them
+ FAIL  |fast| tests/server/net/server.test.ts > game server: disconnect and resume > drops a queued player that disconnects before the match and frees the seat
+ FAIL  |fast| tests/server/net/server.test.ts > game server: queue > refuses the ninth join with "full" and leaves the queue at eight
+ FAIL  |fast| tests/server/net/server.test.ts > game server: queue > refuses a join while a match runs and lets a new queue form after it ends
+ FAIL  |fast| tests/server/net/server.test.ts > game server: single writer > runs 50 pipelined commands strictly in arrival order with no interleaving
+ FAIL  |fast| tests/server/net/server.test.ts > game server: connection limits > closes a connection that sends an oversized frame
+ FAIL  |fast| tests/server/net/server.test.ts > game server: connection limits > rate-limits a connection on the room clock and accepts again in the next window
+ FAIL  |fast| tests/server/net/server.test.ts > game server: whole match over the wire > drives two clients from the queue to a full ranking with replays on the manual clock
+ FAIL  |fast| tests/server/net/takeover.test.ts > game server: no takeover by default (P2) > keeps a disconnected seat human-controlled long after the old takeover delay; resume is a plain reconnect
+ FAIL  |fast| tests/server/net/takeover.test.ts > game server: bot takeover of a disconnected seat when switched on (B6) > shows the takeover to everyone after takeoverMs and hands the seat back on resume with reclaimed=true
+ FAIL  |fast| tests/server/net/takeover.test.ts > game server: bot takeover of a disconnected seat when switched on (B6) > a resume before takeoverMs is a plain reconnect: no takeover, no reclaimed flag
+Error: listen EPERM: operation not permitted 127.0.0.1
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/28]⎯
+
+ FAIL  |fast| tests/server/local-room-client.test.ts > LocalRoomClient > plays the room from the first preparation to the final ranking, pushing one replay per battle round
+Error: Test timed out in 60000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/server/local-room-client-helper.ts:66:26
+     64|     expect(client.currentRoom!.state.seats[0]!.seatRevision).toBe(1);
+     65|   });
+     66|   if (mode === 'timing') it('plays the room from the first preparation…
+       |                          ^
+     67|     const { client, log, runUntil, last } = harness();
+     68|     client.joinQueue('a'); client.startMatch();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/28]⎯
+
+
+ Test Files  6 failed | 228 passed (234)
+      Tests  28 failed | 2910 passed (2938)
+   Start at  23:53:47
+   Duration  685.56s (tests 92%, import 7%, transform 1%)

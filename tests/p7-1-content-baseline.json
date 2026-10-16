@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:bb66f4f8",
+  "lootReplayDigest": "fnv1a32-utf16:028e5593",
+  "rulesVersion": "s13-g2-2-v1",
+  "contentVersion": "s13-14.24b-g2-2-v1",
+  "schemaVersion": 7,
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1541a026",
+    "eventHash": "fnv1a32-utf16:966105d6"
+  },
+  "previousContentDigest": "fnv1a32-utf16:22f31569",
+  "previousLootReplayDigest": "fnv1a32-utf16:028e5593",
+  "traceHashes": {
+    "state": "0eaac1000d2e4c49985814567a28ede35cfdbf337e3f2685a630d3b350407d1d",
+    "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
+    "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+  },
+  "reason": "P7-1 free Irelia, bench-board-held placement and next-preparation merges; one content digest update. Offline routes unchanged except content identity; previous baselines archived."
+}

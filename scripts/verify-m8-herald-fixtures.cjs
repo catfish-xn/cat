@@ -8,7 +8,7 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 // T11 keeps the B9 raw inputs as historical evidence; regenerate current-rule inputs separately.
-const directory = path.join(root, 'tests/fixtures/g2-2-herald-raw');
+const directory = path.join(root, 'tests/fixtures/p7-1-herald-raw');
 const args = process.argv.slice(2);
 const write = args.includes('--write');
 const baselineArgument = args.find(argument => argument.startsWith('--baseline-dir='));

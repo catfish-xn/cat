@@ -1,3 +1,4 @@
+import { resolveCarouselPreparation } from './carousel-units';
 import { planConsumable } from './consumables';
 import { CONSUMABLE_RULES } from './content/consumables';
 import type { LootInitialization, OrbLayoutLedger } from './orb-layout';
@@ -122,12 +123,10 @@ function prepareRound(seed: number, round: number, previous?: MatchState['m8']['
     enemies:createRoundEnemies(round),
   }});
 }
-/** Explicit multiplayer carousel bootstrap: 1-1 is a prelude, catalog ordinals stay stable. */
+/** Shared opening keeps the free Irelia and existing economy; 1-1 is PortalSelect. */
 export function createCarouselMatch(seed=DEFAULT_MATCH_SEED):MatchState {
   const state=createMatch(seed,{mode:'shared-deferred'});
-  return {...state,carousel:{openingPending:true,receipts:[],pendingUnits:[]},nextUnitSerial:1,
-    resourceProvenance:{version:RESOURCE_PROVENANCE_VERSION,entries:[]},
-    preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.team!=='player')}};
+  return {...state,carousel:{receipts:[],pendingUnits:[],heldCarouselUnits:[],preparationReceipts:[]}};
 }
 export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization = {mode:'solo'}): MatchState {
   validateSeed(seed); validateContent();
@@ -271,7 +270,6 @@ export function buyXp(state: MatchState): MatchCommandResult {
   return accept({ ...state, gold: state.gold - MATCH_RULES.xpPurchaseCost, level: progression.level, xp: progression.xp });
 }
 export function matchStartFailure(state: MatchState): MatchFailure | undefined {
-  if (state.carousel?.openingPending) return 'wrong-phase';
   if (state.m8.loot.layoutBinding.mode === 'shared-deferred') return 'wrong-phase';
   if (state.phase !== 'preparation') return 'wrong-phase';
   if (state.multiplayer?.status === 'eliminated') return 'wrong-phase';
@@ -383,9 +381,10 @@ export function nextRound(state: MatchState, expectedRound: number, layout?:OrbL
   const emptyAnomaly = getRoundSchedule(round).some(event => event.kind === 'anomaly') && !state.preparation.units.some(unit => unit.team === 'player');
   // An exhausted locked shop cannot supply a target. Use this round's normal free refresh.
   const refresh = state.shop.locked && !(emptyAnomaly && !affordableOffer(state)) ? { shop: state.shop, rngState: state.rngState } : generateShop(state.rngState, state.shop.generation + 1, state.level);
-  const entered = enterScheduledEvents({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
+  const carousel = resolveCarouselPreparation({ ...state, round, m8, roundDefinitionId: definition.roundId, phase: 'preparation', combat: null, combatInputBasis:null,
     preparation: { ...state.preparation, units: [...state.preparation.units.filter(unit => unit.team === 'player'), ...m8.preparation.enemies] }, ...refresh });
-  return acceptEquipment(entered.state, entered.events);
+  const entered = enterScheduledEvents(carousel.state);
+  return acceptEquipment(entered.state, [...carousel.events,...entered.events]);
 }
 
 /** Online advancement. Shared seats must use the all-seat nextSharedRound transaction. */

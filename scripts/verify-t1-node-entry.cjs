@@ -12,7 +12,7 @@ const deploymentBaseline = require('../tests/t1-deployment-baseline.json');
 const t10Baseline = require('../tests/t10-content-baseline.json');
 const t11Baseline = require('../tests/t11-content-baseline.json');
 const t12Baseline = require('../tests/t12-content-baseline.json');
-const t13Baseline = require('../tests/g2-2-content-baseline.json');
+const t13Baseline = require('../tests/p7-1-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({

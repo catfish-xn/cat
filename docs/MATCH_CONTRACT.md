@@ -176,7 +176,7 @@ function grantCarouselPick(state:CarouselState, match:MatchState,
       reason:CarouselFailure; events:[] };
 ```
 
-`SharedPoolState` v3 的 `carouselParticipants` 由规则入口 `prepareCarouselParticipants(pool, states: readonly {seatId:string;state:MatchState}[])` 从完整存活 Match 集合生成，返回 `{ok:true,pool}` 或 `{ok:false,pool,reason:'invalid-participants'|'invalid-pool'}`；禁止信任客户端 HP。校验唯一席、seatIndex 与 pool 对齐、非 released、HP>0，完整覆盖全部未淘汰席。`createCarousel` 要求该快照；私自漏席拒绝。只允许当前自然轮对应 roundId（1-1 另用开局标记），一次性 carouselId=`poolId:carousel:roundId`，不得依调用次数生成新身份。已存在任意创建收据即 `carousel-exists`，关闭也不能重建。
+`SharedPoolState` v3 的 `carouselParticipants` 由规则入口 `prepareCarouselParticipants(pool, states: readonly {seatId:string;state:MatchState}[])` 从完整存活 Match 集合生成，返回 `{ok:true,pool}` 或 `{ok:false,pool,reason:'invalid-participants'|'invalid-pool'}`；禁止信任客户端 HP。校验唯一席、seatIndex 与 pool 对齐、非 released、HP>0，完整覆盖全部未淘汰席。`createCarousel` 要求该快照；私自漏席拒绝。只允许当前自然轮对应的五个 x-4 roundId（1-1 返回 invalid-round），一次性 carouselId=`poolId:carousel:roundId`，不得依调用次数生成新身份。已存在任意创建收据即 `carousel-exists`，关闭也不能重建。
 
 创建按 slot 顺序，各槽先用一词定费用、一词按池剩余份数定单位、一词定装备，共 27 词；即使费用概率 100% 也消费对应词。所有单位候选先 definitionId 代码点排序。槽选择先通过只读可用性预检，全池不足 9 份零消费失败；相应费用为空时按 §11.2 回退，不额外抽 RNG。不使用 Math.random、真实时钟或重连次数。RNG 为独立 carousel 流，父级服务器将独立 RNG 游标传入，本端不再额外派生种子；恢复只接受已持久化前后状态，不重新调用 create。
 
@@ -184,12 +184,12 @@ function grantCarouselPick(state:CarouselState, match:MatchState,
 
 每个 definitionId 必须逐份满足：`initial = available + shops + holdings基础份数 + pending奖励预留 + 未granted的carouselReservations`。创建 available→carouselReservations，pick 不再扣 available；grant 将预留→该席 holdings 并给 Match 创建新 unit/item ID，收据原子转 granted，不能先发单位再补共享池。固定 deadline 到达且全部参与者选完才关闭，未选单位恰好归还一次；已选但未 grant 的预留继续存在，不随关闭归还。关闭轮仍允许 grant；再次 grant **成功无事件且原对象返回**，以便超时重试，不重建单位/装备。receipt 与实际资产不匹配返回 `receipt-mismatch`，不能把伪造 receipt 当幂等。
 
-备战席满时，领取单位进入新增 `pendingCarouselUnits` 队列（继续计入 holdings，不自动出售、不覆盖棋盘、不会失败丢奖）；准备期在合法空位出现时按 receipt.id 顺序搬入备战席，排队单位不参战、不可商店购买/手动部署，允许明确卖出，卖价沿既有基础售价，物品已入栏不随排队单位出售丢失。该队列必须投影给本席、序列化和恢复校验。grant 后执行既有自动升星，pending 与正式单位只按既有合法目标规则合成，不能引入临时超容量单位。淘汰释放未授予预留/排队持有各一次，收据标 released；淘汰应从下一次参与快照排除，当前冻结轮被淘汰则用规则释放入口处理，不静默删人破坏守恒。
+P7-1 领取位置：备战席空 → 最小空 slot；备战席满且场上人数 < level → 玩家部署区 row/col 升序首个空格（参战）；两处满 → `carousel.heldCarouselUnits`（不参战、可出售）。领取只生一张 1 星单位和一件库存装备，绝不合星；合星和迁入在下一准备期入口结算，详见下方 P7-1 修订。临时位始终计入 holdings，淘汰只归还一次。
 
 不允许选秀期间的商店/出售/装备等资产变更和其他共享池写入；集成事务以 pool.revision 匹配，过期为 `stale-pool`。本次规则实现须提供 `releaseCarouselSeat(state,seatId)` 与 pool 淘汰入口同一事务的适配，返回 CarouselResult；无未释放资产时成功零事件。恢复验证槽、预留、收据、holdings、物品与 pending 队列的双向一一对应，并完整守恒；不运行 grant、自动选择或重新计时。资产变更事件沿 Match 正式账本，新增事件类型须实现时导出并纳入 digest，不能仅靠投影凭空补资产。
 
 
-P7 方案 B 覆盖（2026-10-15）：包括 1-1，全部按 HP 每批两人放行，firstBatchMs/batchIntervalMs/tailMs 均 6000ms；不提前关闭。全选完也等待 deadline，未选席到期自动选取。SR-G1-02 端口与逐项答复见 MULTIPLAYER_CONTRACT §21.4。
+P7 方案 B 覆盖（2026-10-15）：P7-1 后仅五次 x-4，全部按 HP 每批两人放行，firstBatchMs/batchIntervalMs/tailMs 均 6000ms；不提前关闭。全选完也等待 deadline，未选席到期自动选取。SR-G1-02 端口与逐项答复见 MULTIPLAYER_CONTRACT §21.4。
 
 
 P7 实现端口补充（SR-G1-02）：完整原子 wrapper 签名、初始化顺序、队列与淘汰见 MULTIPLAYER_CONTRACT §21.4–21.5。`schedule(roundId:string):{firstBatchMs:number,batchIntervalMs:number,tailMs:number}` 对非法回合抛 `RangeError('invalid-round')`；三个值均 6000。`opensCarousel(match:MatchState):boolean` 只对启用 P7 的 Match 返回选秀资格。
@@ -258,3 +258,27 @@ function abilityDisplayValues(
 ### G2-2 有限内容合同
 
 48英雄/14羁绊，15新英雄名单、每源字段与全部近似见 `docs/evidence/g2-2/RECONCILIATION.md`。学院不发永久装备；征服者不产生宝箱。极客只在战斗编译时临时替换散件，不改装备账本、不消耗 RNG；外交官仅恰好1或4名生效。CombatInputBasis.inputs.roundResults 保存开战前胜场权威历史，恢复与已验证历史前缀逐项相等。当前联机冻结投影缺胜场历史时 Ambessa 胜场双抗为0，详见 UI_REQUESTS 的 G2-2 缺口。旧身份拒绝恢复，历史夹具只读保留。
+
+### P7-1 正式修订（覆盖本节旧开局/排队语义）
+
+来源和规则见 S13_RULES_GAP §11.4。`createCarouselMatch(seed?:number):MatchState` 恢复 shared-deferred 的免费艾瑞莉娅与既有经济；不再创建 1-1 前奏。`opensCarousel(state:MatchState):boolean` 仅对五个 x-4、启用选秀且本轮尚无领取收据返回 true；`schedule('1-1')` 抛 `RangeError('invalid-round')`，`createCarousel` 对该 ID 原子返回 `invalid-round`。`CarouselRoundId` 暂保留 `'1-1'` 输入类型，以便未叠服务器 PR 的代码可编译，但它不是合法运行时回合；不用于生成概率或日程。
+
+字段和导出变更：
+
+| 项 | 本次处理与接线要求 |
+| --- | --- |
+| `carousel.openingPending` | 从新运行时状态删除；不生成 true/false，不再以它判断选秀。仅保留可选 TS 成员供旧服务器读取时编译，恢复若出现此字段即拒绝。Opus 删除 1-1 专用分支，改按 `opensCarousel` 判断。 |
+| `carousel.heldCarouselUnits: readonly HeldCarouselUnit[]` | 新规范状态；每项 `{receiptId:string,unitId:string,definitionId:string}`，只包含两处都满的临时位。单位无 location、恒为 1 星，不进 preparation/combat 阵容。 |
+| `PrivateSeatView.heldCarouselUnits` | 新本席投影，独立复制上述三字段；其他席不发送。 |
+| `PrivateSeatView.pendingCarouselUnits` | **本次删除并改名为 heldCarouselUnits**，旧客户端需同步更新读取处。 |
+| `carousel.pendingUnits` / `PendingCarouselUnit` | 为尚未叠加的服务器出售/自动迁入适配暂留的废弃别名；分别严格等于 heldCarouselUnits / HeldCarouselUnit，绝不是“备战席一满就排队”。恢复和池检查拒绝两个数组分叉；Opus 应改读规范字段，后续可删别名。 |
+| `carousel.preparationReceipts: readonly string[]` | 新字段，记录已进入下一准备期处理的 carousel receipt ID；唯一且与 provenance 事实一一对应，包括仍无位置/已经售出的选秀卡。 |
+| `resolvePendingCarouselUnits` / `sellPendingCarouselUnit` | **保留导出名与函数签名**，为现有服务器接口兼容；分别改为迁入临时位/出售临时位。无导出函数删除。 |
+
+`nextRound`/`nextSharedRound` 自动在下一准备期入口（choice 之前）迁入并结算合星；共享池按同一事务折叠升级来源，事件/池/全部席位一并提交。之后准备期出售腾空、部署腾空或 `buyXp` 升级人口，服务器调用 `resolvePendingCarouselUnits(pool,match):SharedPoolResult`，并发布返回 pool/state/events。同轮 x-4 的 receipt 未离场时该调用成功原对象零事件，不提前合星；战斗锁定或非 preparation 为 `invalid-seat-state`。无位置成功原对象，不自动出售。顺序 receiptId；先迁入，再沿既有递归合星与装备/异常/成长转移规则释放位置，继续可迁入者。
+
+`sellPendingCarouselUnit(pool,match,unitId):SharedPoolResult` 只在 preparation 且未锁定时出售 held 单位，按既有 1 星费用发金并归池一次，装备留库存。未知/已售/非 preparation/锁定为 `unknown-unit`；输入池/席位损坏为 `invalid-seat-state`。`resolvePendingCarouselUnits` 损坏或无选秀元数据为 `invalid-seat-state`。两者失败必须返回原 pool/state、不消费资源/RNG；SharedPoolResult 的失败分支沿既有类型无 events 属性。
+
+新增 Match 事件 `{type:'carouselPreparationSettled',receiptIds:readonly string[],claimedUnitIds:readonly string[]}`；保留 `carouselPendingClaimed` 作为兼容的迁入事件名，另有既有 unitUpgraded/装备转移事件。它们统一加 domain/eventSeq。来源事实 `{kind:'carousel-preparation-settled',receiptIds,claimedUnitIds,upgrades}` 与元数据收据一起持久化；收据只能在原 x-4 之后的 round ordinal 出现且不得重复，晚迁入不再次发行选秀结算收据。重复 step、恢复、grant/resolve 均无二次出生/结算。可信 `restoreCarouselSeat` 增加别名一致、临时位身份及 preparationReceipts/事实的唯一性核对；离线 restoreMatch 仍拒绝服务器元数据。
+
+CONTENT `22f31569 → bb66f4f8`（均 fnv1a32-utf16），LOOT_REPLAY 保持 `028e5593`；规则字符串 s13-g2-2-v1 与 schema/save/replay/command 7/3/3/3 保持，选秀政策 revision=p7-1 纳入 CONTENT。旧客户端字段不兼容，由服务器/界面配套 PR 接线后共同发布。

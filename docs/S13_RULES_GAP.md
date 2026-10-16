@@ -544,18 +544,17 @@ P5-B 是后续改数量/品质：先取得带版本的普通模式脚本，或�
 | [Riot 10.6，Carousel](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-10-6-notes/) | H：当时首次选秀从全 2 费改为全 1 费；允许多种装备组合、早于第五次的成装及第六次以后的组件 | 将首次全 1 费继承到本切片为 I；不能推出 S13 所有费用/装备概率 |
 | S2：14.24 的 Table Scraps | H：未来四次选秀获得未被选走的单位及其装备 | 证明有剩余槽，不证明恰有 9 槽，也不是每席额外 1 金；该强化不在本 P7 实施 |
 | [14.24 map22 原件](https://raw.communitydragon.org/14.24/game/data/maps/shipping/map22/map22.bin.json)，[抽取与 hash](evidence/p7/sources.json) | H：下载客户端记录的标准 `TFTSet13.StageRoundData={ffcae0de}`，阶段 2–6 第四轮均指向 `TFT_Round_Carousel`；该 round 的 arrival/draft/departure 字段为 6/6/2 秒 | 不是独立 14.24b 服务端脚本；字段不是逐对放行间隔。文件同时含其他模式/后续变体，不能把 Evolved/PVEMODE 的 SixCostCarouselOdds 用作标准 S13 概率 |
-| 同原件第一轮 `{78013f9e}` | H：指向 `TFT_Round_MacaoPortalSelect` / `RoundType=PortalSelect`，不是全 1 费选秀配置 | **本次派工要求的 1-1 选秀记 P 产品设计**；不将开场遭遇/传送门伪称选秀。初始金币、组件发放时点的 14.24b 完整脚本为 U |
+| 同原件第一轮 `{78013f9e}` | H：指向 `TFT_Round_MacaoPortalSelect` / `RoundType=PortalSelect`，不是全 1 费选秀配置 | **P7-1 据此撤销原 1-1 选秀项目约定**；不将开场遭遇/传送门伪称选秀。初始金币、组件发放时点的 14.24b 完整脚本为 U |
 | 同 HP 放行、平血打破与机器人 | 完整 14.24b 放行脚本、精确分批时间、官方机器人评分表均 U | 下文给明确 P 策略；不以教程机器人或现代攻略补为 H |
 
 原件 54,544,106 bytes，SHA-256 `09a9219647c08e70a8eb4d2ccbc35a9afe21934bc5279b4da2d05ca076339e0f`。Wiki 原文请求 403，未取得固定历史修订，不作证据。S1 原档仍只支持已有内容身份。客户端日程比旧 §6 增加直接证据，但不认证全部服务端时序。
 
-### 11.2 费用和装备分布（均 P，首次全 1 费有 I 锚点）
+### 11.2 费用和装备分布（均 P，仅五次 x-4）
 
 每次生成 9 个稳定编号槽（0–8）；存活席最多 8，每席恰选一个；淘汰席不参与。下表为**每槽费用抽样基点**，合计 10000。费用确定后，在该费用当前有余量的项目 SHOP_CATALOG 中按剩余份数抽取，立即预留；无余量则按“费用距离升序、同距离低费优先”找可用费用。全池不足 9 份原子失败，不凭空补卡。表是明确的切片提案，历史精确概率 U。
 
 | roundId | 1 费 | 2 费 | 3 费 | 4 费 | 5 费 | 普通组件/普通成装 Bps |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| 1-1 | 10000 | 0 | 0 | 0 | 0 | 10000 / 0 |
 | 2-4 | 2000 | 8000 | 0 | 0 | 0 | 10000 / 0 |
 | 3-4 | 0 | 2000 | 8000 | 0 | 0 | 10000 / 0 |
 | 4-4 | 0 | 0 | 2000 | 8000 | 0 | 10000 / 0 |
@@ -566,19 +565,25 @@ P5-B 是后续改数量/品质：先取得带版本的普通模式脚本，或�
 
 ### 11.3 放行与分批时间（P）
 
-规则输入显式整数逻辑毫秒，不读真实时钟。arrival 6000ms 后可选：所有选秀（含 1-1）在创建时冻结存活席 HP 升序，平血按 `seatIndex` 升序，连续每两席一组，放行偏移为 6000/12000/18000/24000ms；已放行未选席始终可选，不等前组完成才放后组。最后组放行后再给 6000ms，八席 deadline=30000ms；少于八席 deadline=`6000+6000*ceil(alive/2)`。deadline 当刻先执行规则超时自动选取，迟到人工命令拒绝。所有人选完也保持到固定 deadline 才关闭；离场 2000ms 后进入下一准备期。这些数字是 P，不把原件的 draft=6 秒解释为完整历史总时长。
+规则输入显式整数逻辑毫秒，不读真实时钟。arrival 6000ms 后可选：五次 x-4 选秀在创建时冻结存活席 HP 升序，平血按 `seatIndex` 升序，连续每两席一组，放行偏移为 6000/12000/18000/24000ms；已放行未选席始终可选，不等前组完成才放后组。最后组放行后再给 6000ms，八席 deadline=30000ms；少于八席 deadline=`6000+6000*ceil(alive/2)`。deadline 当刻先执行规则超时自动选取，迟到人工命令拒绝。所有人选完也保持到固定 deadline 才关闭；离场 2000ms 后进入下一准备期。这些数字是 P，不把原件的 draft=6 秒解释为完整历史总时长。
 
 机器人在本席放行时调用纯自动选取，离线真人在 deadline 兜底；同时触发依冻结 releaseOrder 逐席提交。自动策略只看公开槽与本席资产，依“能使本席同名基础份数达到下一次三星合成阈值的单位优先、费用降序、slot 升序”排序，不读对手私有手牌、不耗 RNG；三星已满者不记升级优先。升级优先判定用同名星级折合份数 `sum(3**(star-1))`，模 3 为 2 且总份数 <9。该简化机器人是 P，不冒称 Riot AI。
 
-### 11.4 1-1 开局与兼容边界（P，历史精确启动账本 U）
+### 11.4 P7-1：撤销 1-1、临时位与下一准备期合星
 
-新局 1-1 前 `gold=0,level=1,xp=0,hp=100`，棋盘/备战席/物品栏为空；撤销免费固定 Irelia，只由选秀取得一张 1 星单位和一件组件。选秀无购卡费、无现金奖励、无自然 XP/利息/连胜结算。进入 1-2 自动将该唯一单位按既有合法格顺序部署，不再发第二张开局单位或组件。1-2/1-3/1-4 已签字收入与 XP 独立维持；开场 PvE 宝珠“三件组件价值”预算**仍只计算 PvE，不包含选秀的一件**，总开场组件上限因此为 4（1+3），明确不把它描述为官方已核实上限。
+依据：`DISPATCH_2026-10-14.md`「真机反馈 P7-1」第 1–3 条用户决定，及 §11.1 已下载的 14.24 map22 原件。标准 `TFTSet13.StageRoundData` 第一轮 `{78013f9e}` 指向 `TFT_Round_MacaoPortalSelect`，`RoundType=PortalSelect`，不是 Carousel；原件 SHA-256 `09a9219647c08e70a8eb4d2ccbc35a9afe21934bc5279b4da2d05ca076339e0f`。旧 §11.4 的 1-1 选秀产品约定已撤销，不再以前奏模拟。
 
-1-1 为现有 38 条 catalog 之前的非战斗前奏，不移动 1-2 等 ID。x-4 共享选秀替换该轮原单席 supply 发放与收据，不双发补给；仍正常经过该轮一次自然经济/商店刷新边界，选秀本身不得再结一次。7+ 加时沿既有规则，本轮不新增 x-4。旧 digest 存档不自动补选秀；实现时同一发布仅更新一次 digest/规则版本并拒绝不兼容旧档，合同 PR 不改版本。
+`opensCarousel` 在 1-1/开局 1-2 返回 false；`createCarousel(…, '1-1', …)` 返回 `invalid-round`，`schedule('1-1')` 抛同名 RangeError。仅 2-4/3-4/4-4/5-4/6-4 开选秀。`createCarouselMatch(seed)` 等于 shared-deferred `createMatch` 加选秀元数据：恢复免费 1 星艾瑞莉娅 unit-1、原合法格 (1,4)、nextUnitSerial=2；金币 0、等级 1、XP 0、HP 100、初始物品为空。1-2/1-3/1-4 既有收入、XP、PvE 宝珠预算不变，不补发开场选秀组件。catalog ordinal 不变；本项目不新增可玩传送门选择。
+
+选秀授予不合星：备战席有空按最小 slot 放入；备战席满而场上玩家数量小于 level，按玩家部署区 row/col 升序的首个空格上场，进入下一场战斗；两处均满则进 `carousel.heldCarouselUnits`，占共享池 holdings、无 location、不参战。装备始终直接进物品栏。临时位只能保管或明确出售，不能手动部署或装备。之后在下一准备期入口、以及准备期腾空/升级人口后调用规则入口，按 receiptId 顺序优先备战席、再上场；无合法位置继续保留，不通过合星偷偷绕过临时位放置条件。
+
+选秀期间不合星，关闭后的 settlement 也不合星。`nextSharedRound`/`nextRound` 在下一 preparation 入口、计划事件选择之前，迁入临时位并按既有递归合星/装备转移/成长转移规则结算。`carousel.preparationReceipts` 与来源事实 `carousel-preparation-settled` 记录每次选秀收据仅结算一次；后续迁入独立记录 claimedUnitIds，不新建 unit/item、不扣金、不抽随机。重复 step、grant、resolve 和可信服务器恢复均不重发。临时位售出仅归还该 1 星单位基础份数与售价，已进库存的装备保留。
+
+x-4 仍替换旧 supply，正常结算该自然轮经济一次。新旧 digest 快照不能混用；只更新一次 CONTENT，LOOT_REPLAY 不变。旧档保留原字节供导出，不静默迁移。
 
 ### 11.5 施工和验收
 
 公共类型、原子性、收据、容量与恢复见 MATCH_CONTRACT 的 P7 节和 MULTIPLAYER_CONTRACT §21。合同 #99 合入后实现，验收覆盖相同输入的确定性、完整池守恒、抢同槽与同席重复拒绝、分批边界、所有失败零变化、满备战席、淘汰归还、恢复不重发，以及修订 1-1 账本。内容 digest 更新一次；作者自己运行全套清零并贴通过数，再跑 typecheck 与 test:server-entry。合同只改文档，不预先改任何 golden。
 
 
-P7 方案 B（2026-10-15）：包括 1-1，全部按 HP 每批两人放行，firstBatchMs/batchIntervalMs/tailMs 均 6000ms；不提前关闭。全选完也等待 deadline，未选席到期自动选取。SR-G1-02 端口与逐项答复见 MULTIPLAYER_CONTRACT §21.4。
+P7 方案 B（2026-10-15）：P7-1 覆盖后仅五次 x-4，全部按 HP 每批两人放行，firstBatchMs/batchIntervalMs/tailMs 均 6000ms；不提前关闭。全选完也等待 deadline，未选席到期自动选取。SR-G1-02 端口与逐项答复见 MULTIPLAYER_CONTRACT §21.4。

@@ -1,3 +1,4 @@
+import { validateCarouselMetadata } from './carousel-units';
 import { isImmutableJson } from './immutable-json';
 import { restoreOrbLayout } from './orb-layout';
 import { matchesFrozenLootLedger } from './loot-freeze';
@@ -115,6 +116,7 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
   for(const id of SHOP_CATALOG) requirePool(totals[id]===pool.initial[id]);
   const provided=new Set<string>();
   for(const state of states) {
+    validateCarouselMetadata(state);
     const layoutBinding=state.m8.loot.layoutBinding;
     requirePool(layoutBinding.mode==='shared'&&layoutBinding.poolId===pool.poolId&&layoutBinding.version===pool.orbLayout.version,'invalid-seat-state');
     requirePool(layoutBinding.throughRoundOrdinal === state.m8.loot.frozen.throughRoundOrdinal
@@ -163,6 +165,8 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
       requirePool(parts.every(h=>h&&h.definitionId===e.definitionId&&h.sources.length===3**(e.fromStar-1)),'invalid-seat-state');
       pool.holdings=pool.holdings.filter(h=>h.seatId!==seatId||!ids.includes(h.unitId));
       pool.holdings.push({seatId,unitId:e.survivorId,definitionId:e.definitionId,sources:parts.flatMap(h=>h!.sources)});
+    } else if(fact.kind==='carousel-preparation-settled'||fact.kind==='carousel-unit-claimed') {
+      for(const e of fact.upgrades){const ids=[e.survivorId,...e.consumedIds],parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));requirePool(parts.every(h=>h&&h.definitionId===e.definitionId&&h.sources.length===3**(e.fromStar-1)),'invalid-seat-state');pool.holdings=pool.holdings.filter(h=>h.seatId!==seatId||!ids.includes(h.unitId));pool.holdings.push({seatId,unitId:e.survivorId,definitionId:e.definitionId,sources:parts.flatMap(h=>h!.sources)});}
     } else if(fact.kind==='unit-sold' && fact.unitId!==preSold) returnHolding(pool,seatId,fact.unitId);
   }
   for(const p of pool.pending.filter(p=>p.seatId===seatId)) {
