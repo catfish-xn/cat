@@ -1,0 +1,1413 @@
+{
+  "baselineCommit": "80b893ac66c01b79ec6606b493e141eca3bf00cb",
+  "baselineFilesVerified": 346,
+  "baselineSourceSha256": "eea138aa0929cc2f460c0034f84608a0ae83857c55bd54afb7460e2c0d2c8d07",
+  "baselineSources": {
+    "scripts/generate-m5-route.cjs": "e919d15ec1a1ddfacd8a2149d5181a6508330acfdfd5def667ecea11ecc85e42",
+    "scripts/m4-evidence.cjs": "6577e857f1bd23944f862e46104706c02b4efe8afbb7259a9016fb7b71714973",
+    "src/server-entry/index.ts": "4e0e9ebc9ea35940b8a8595c2deea846c9241ee1391745ef0e516442d9e09c3d",
+    "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
+    "src/simulation/ability-display.ts": "f7b92a9fb079cc97e9de6409055fab075872d8a17bba38b91bc172646ee40757",
+    "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
+    "src/simulation/b8-restore.ts": "69604c483528f040a41e5c5d59101723c79ab28f1989257af79134b146a02242",
+    "src/simulation/board.ts": "7712e502a393e6dd54340dabb2738907775f14288f38ec60a568b4be12bfe77c",
+    "src/simulation/bot/formation.ts": "d6e7405620f95d18d20770a4d05d378a64c2ad1deb10d4d5a9ca671ce30d5435",
+    "src/simulation/bot/index.ts": "2d30cb54b427decfe6be6526f4b43a65e1ba2b0d3e8cf4fb4278753140bda744",
+    "src/simulation/bot/preflight.ts": "184868de10779fb1542b1eed71c45c4fb12c71a47148bd1f032e77bd1f9d57da",
+    "src/simulation/bot/types.ts": "9aa6dffaf870c09aeb719d727fca86ad5bb860a65dba7d6181366bd09975234b",
+    "src/simulation/carousel-policy.ts": "28f1b5912b2cc7590d974d68ae773b6702d8d855b438527c5264b5aa62730d5f",
+    "src/simulation/carousel-types.ts": "b37b74c206373cd3f2e5760867f3d722208fa10fb5bab49a4345982e83ce804e",
+    "src/simulation/carousel-units.ts": "096649e2e69ab359f66fa579d6369379420da85c4d1e577c8fe7ad869038ae1d",
+    "src/simulation/carousel.ts": "65ba9116eeb99248e78d489758ca306ee9bcc129daffbcada2bfb417f9db0d6d",
+    "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
+    "src/simulation/combat-abilities.ts": "6c2626a28ea30605c3e008d446a3ae34b8b45f1a30861d150cdf1d7e403a45dd",
+    "src/simulation/combat-damage.ts": "e9b49633572cd22a79c8e43bb82755423869c0fba8ca9143475036bcfbf96da4",
+    "src/simulation/combat-effects.ts": "ba106eefdfe8b45160fd6ae20e3700a5298bf354d6b30dbe687bd69e5401eade",
+    "src/simulation/combat-g2-2.ts": "229f15681779af16cb832a9ec74de6300d698d6650f79da08c0cbf07e8442fc4",
+    "src/simulation/combat-g2.ts": "2c2a9f1739610c604c488b0821acebd0ea84737a9ffec3ce6e26d4a57be7c13f",
+    "src/simulation/combat-initialization.ts": "377f35966338941f18fe0be69c28dcc48ccdebb51fbe3622f0b3670f4b6a4b2c",
+    "src/simulation/combat-input.ts": "f80c935a1b68cddf5d1545ad46c4afe520302d58a9f0c7cb54a6bff561e816b2",
+    "src/simulation/combat-ledger.ts": "71a2e894d3abe537bfc55b43464fb6cd356c1ac649503ea7de45e8c8b4f90d74",
+    "src/simulation/combat-replay-view.ts": "60abdb0e69c37266af6b3fe4eb4f5bfa96a57cfaefa471cd3e57db9ac2f289d7",
+    "src/simulation/combat-s13-abilities.ts": "142d1f794e9bdee36407d169011fe094a702e4e224dd82a8eced257a0d7c980e",
+    "src/simulation/combat-s13-state.ts": "00b445834ea7a59b4f6629304575b7df50f611bcf5f2e9aa136a7db7f6c66448",
+    "src/simulation/combat-s13.ts": "1f75bbcb158c98554a2985f4d5fccd5167b27d32b6849b877357a57cd22e661c",
+    "src/simulation/combat-static.ts": "463180343e52c9a0e86da915ee407c16a95d0f3c7f938673c6e5de247dcae871",
+    "src/simulation/combat-summary.ts": "4b8a4ae4567a975f32ef45c7529d85c460a502aa8d24af8106acd62e1b6c6426",
+    "src/simulation/combat-tick.ts": "98ff95ffa1d8f042361006eef70a02c1c21207308b9b495b0916045de16ae143",
+    "src/simulation/combat-types.ts": "6f8465f9b2bbb0cba30449c7d92ba8f482dee6cadcdc9cb16a2630a9e58317f7",
+    "src/simulation/combat.ts": "b6813b33dbe05186692e856b0ff38d7331179bbf4ef02dc1b7f673cf135c2152",
+    "src/simulation/component-pool.ts": "018c62b2eeedd40e08872bae1159dbf0611f4d5f465583cf0e0b4e08e60b9288",
+    "src/simulation/consumable-types.ts": "4918f4c996803c151cbba390693f2466239fe6b85074d3c429ec452f9ce859f6",
+    "src/simulation/consumables.ts": "5f4a3e51b9d122fef215d2ea7dfcd1e919f2e21f02d56473e8820e2c5a7775f8",
+    "src/simulation/content/abilities.ts": "00c5eadd194ba13371c4ceba724cb7cdddf7a78e25baeb064cf0b946e05996eb",
+    "src/simulation/content/anomalies.ts": "911d8b6d4d7b0545dc9ec0bd51b20d217a33b57faf7873dfdde9ee700a023aac",
+    "src/simulation/content/augments.ts": "c7659d098953ecc250bd4fb9bc870b6b3dc45c8f7b6226adbfb30ff25705cc86",
+    "src/simulation/content/consumables.ts": "ed7c9a02dc82fa6881acc5a689bb92ab0fc42bc45775ecb9e6deff8de2f23b1c",
+    "src/simulation/content/freeze.ts": "91965b7be2e8c0b75bb403d632dce45b8f272d57781c52f3e6f319ff911e11ab",
+    "src/simulation/content/g2-2-abilities.ts": "f1056777733c6fb59d8c899381b873f71d401cd0f48b2c958386434f205c4390",
+    "src/simulation/content/g2-2-traits.ts": "ebc6375f5cd5bf99e4c4070c76c9dc6053dac41ccbd73ecf548c75f412d29ea9",
+    "src/simulation/content/g2-2-units.ts": "ba7b9f30e2566f609fc9ded95a94b884965cf87cae6193d80b4c688ee48baa6d",
+    "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
+    "src/simulation/content/g2-traits.ts": "a3652fafa7170e0367f38d4a2cdc4bcdf34f77ad7071ab708a69e5e7a62603a5",
+    "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
+    "src/simulation/content/index.ts": "4d9e398973dace6b9a37554bba81a0a75d7ba1414738fa91d580d12b632c5bce",
+    "src/simulation/content/item-programs.ts": "369f7a6bac925e0b46b540b2dd81a068c766e2e5c21d54af1d66438924114b30",
+    "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
+    "src/simulation/content/items-bow.ts": "4da0832e81baf5191b87a4c53a99abd2050b53ecf493648f670863b04262ddec",
+    "src/simulation/content/items-cloak.ts": "e2d299cc14dd101a3fc84540b7ee30964de3ac17b22d4b2ff56e014d245c1740",
+    "src/simulation/content/items-components.ts": "d684e5673eaa56085ed7f93f7bbfd973d13571f07722439b32c2d394ce3d83d4",
+    "src/simulation/content/items-gloves.ts": "0a6c3b4f32363dedb91d5f794aa19b1c0e80690efe60530fed587465fa6983b1",
+    "src/simulation/content/items-rod.ts": "6fb3813452c46ed8f4d9f525438c937acd8560c7180306fb6eef9705becedc3d",
+    "src/simulation/content/items-sword.ts": "550956dd4d5cfb620e62914820892c80c3d79e9d694a32193941ce9b72784c20",
+    "src/simulation/content/items-tear.ts": "be584045a6e29f18c5737274e54bfbfb171a0d1365ead9d9ecb2d74b859cd141",
+    "src/simulation/content/items-vest.ts": "6b4096290b257492a329eb361c22e304ffb9a81e5c734a1dcaf976cb2ffa1ed6",
+    "src/simulation/content/items.ts": "d56aa5bcf261823de04a3c8bb09cb619ed00ac1ad465883b78cdd43b0f536538",
+    "src/simulation/content/legacy-anomalies.ts": "73d439d72aa92e649206e3ae35e34e339c2d506e4a00978d3b27d1e9e87ce144",
+    "src/simulation/content/legacy-augments.ts": "8598ff4706ad27c4eaa4450c4d52539b0db95d8af819e15606673f1715d742b6",
+    "src/simulation/content/legacy-items.ts": "6453d0f0a263de40c74ee128462125349b679863f661ab47dcd2b2fc23848258",
+    "src/simulation/content/legacy-traits.ts": "3e7e99a383a671f596a8877d0711d0a33ee4cde30bc363a91e7cb9e8ef190b57",
+    "src/simulation/content/loot.ts": "759f9aaee093bf470b6656673ea62d66c62ac6e3ade875ae505ee1c38da94db9",
+    "src/simulation/content/neutral-encounters.ts": "55615f61edaed29cc2cf3f9cf728972cc64fb8aa2b633cc45cfbde3aa4b5c353",
+    "src/simulation/content/neutrals.ts": "67be00c1e83c55228e9640ba99c53cab8d4a40aa7eb31677c049fb22d5b6d9cc",
+    "src/simulation/content/orbs.ts": "8ea3d950cce68dc22a1f7281ef82163264e5719b3fd9eb3454803ea3e6ccdf34",
+    "src/simulation/content/round-catalog.ts": "3df01cff78d0b74bd941e8340af4b892680fb6a5f39d801a2ea1e1c019df9e4e",
+    "src/simulation/content/rules-manifest.ts": "9cf585b8f0311dff28b9b50bccdb1482beb9446813244fae0e9de459aa62791e",
+    "src/simulation/content/source-manifest.ts": "615e6e3a7570f4592ed38868950b03d4da56f70db8c6c81f191786576e573f66",
+    "src/simulation/content/source/s13-14.24.json": "219dd985349544e6769b51dc7fd4f7d2c718f2bb1d45be0f89c3d30dc3a50ef8",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-1-champions.json": "cd63df6273416b6194b44be0b0914a79f651d416a39334172e4fecc7a3ec523a",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-1-items.json": "5e4bf674ad78b1dd4917815dad26a411d82df1c7b763b116d25c7b0307c35960",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-1-traits.json": "d119a8fada75a2777e51485abc2f35e99239c5383124ca6fa5ade647f3029765",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-2-champions.json": "7f4698ff78a13f365430685320ef2aafd05f7fa12e8cfff49923183561932e29",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-2-traits.json": "1ddf20227085c71c9c8ee7423a66a711ce444b2c23e24cf07d4e7083f6b49458",
+    "src/simulation/content/source/s13-14.24b/normalized/items.json": "4999ac30c3b1dfd53bcc3afa138b5b3522b9195b2ec163331bd732f5cbf6de94",
+    "src/simulation/content/source/s13-14.24b/normalized/recipes.json": "e4152521ff49032688726d8cf7e826f682f5c64e2f675312ef05be80c2d8f9ac",
+    "src/simulation/content/source/s13-14.24b/provenance/convention-approvals.json": "3934217516a61f4bb20355629b2275330ed066022a22f750a656d28a085dd07c",
+    "src/simulation/content/source/s13-14.24b/provenance/coverage.json": "8f5317b97a07fe608f287e0cd5ef844ef824e51cb157a3bf50f5097608a761cf",
+    "src/simulation/content/source/s13-14.24b/provenance/item-review-a.json": "29d7a92f60f88d914a0a690c3714e1091ba4435dad907493bce9d00ad821fdec",
+    "src/simulation/content/source/s13-14.24b/provenance/item-review-b.json": "8738801ad6fc37ebced145e6ba7fb871b14f3b7fe779edb4a39e1d127abfbe2e",
+    "src/simulation/content/source/s13-14.24b/provenance/manifest.json": "a2ce6ec9109cea505724d3abafa02e2e57acf9b3da7730278324ff46f87f73c8",
+    "src/simulation/content/source/s13-14.24b/provenance/overrides.json": "180ab9f6ba234e03319f59d4548dc53d24b7bd6db4c2b61c6b740d6bf8cd0444",
+    "src/simulation/content/source/s13-14.24b/provenance/project-conventions.json": "0d93a92ca5e2d369c21c8b755e2a02e656f1c8703071b30ec2adc4e7dbceb795",
+    "src/simulation/content/source/s13-14.24b/provenance/questions.md": "0ba2759b06b7e26a06f67560f016dd44f960c3c2a8168d505782168dc065ce67",
+    "src/simulation/content/source/s13-14.24b/provenance/review-common.json": "bd390ac12f4d4d93a37dc819caefe4a2e7da9eff214cded8bf5af2c0c0e21dfd",
+    "src/simulation/content/source/s13-14.24b/provenance/single-player-policy.md": "9e9a7f7363f67bf41c278c793a0a0e2fe42d0da6bbbaa133cbb314f272388f7f",
+    "src/simulation/content/source/s13-14.24b/provenance/source-policy.json": "be4103a68fe6a7c1cd41bdfc9501844271100ef8fe98bac6e4de84387b032750",
+    "src/simulation/content/source/s13-14.24b/raw/en_us.json.gz": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+    "src/simulation/content/source/s13-14.24b/raw/selected-items.json": "599572b3cfa8c5cffad2a7612918ebd0c44ee27c33467c572f483312bb98a0e5",
+    "src/simulation/content/source/s13-14.24b/raw/selected-neutrals.json": "f2d954a62c44796359c6f0f00c3cd231b3e270ea01b41981cbfcb4ba821db699",
+    "src/simulation/content/traits.ts": "2f2f51524a0c849fdfa705df99303225571466a5d2c62e0ab135e670a7fec28a",
+    "src/simulation/deferred-upgrades.ts": "9bd23d7897326aeecf7acef996e5b42dd261fabbfe44b23cf377d83bfe7c07cd",
+    "src/simulation/economy-preview.ts": "6422096b249f5d7bda55d46626a6e0a7e2c139f263e1996271ccfdc2dda228e3",
+    "src/simulation/economy.ts": "bb4bc60af090f3468cb7675976f48d2311d9b4db837c0e44660344a06955dc42",
+    "src/simulation/effects.ts": "647148ff72dbfecea8063a6acc7709b49a2bbc417e29f65d6f4968bb886918be",
+    "src/simulation/encounter-selectors.ts": "ddb974b3a9d0572a9380651fbe99b09004a213b3656e0ce4b5b04a5647c705e3",
+    "src/simulation/equipment-policy.ts": "611f86bda6837df50f7b7febba237f63da2e36fd3d9661c2e40bcd524db56e18",
+    "src/simulation/game.ts": "ee2112df26da6c3b5140d086bb3a186d43ae728e4c0aebd4fbd76a4b134d5e7f",
+    "src/simulation/immutable-json.ts": "01f0ab2a0ed8be03f74bb3d220a0dcb108eb602bd011db87110689922a2a2416",
+    "src/simulation/input-assets.ts": "fe645acd36725e174730249516b4485c63f9cbc6b1de065a108ea82ed5dae238",
+    "src/simulation/inventory.ts": "16820cdbbda77dab257161e8fbb169d413d8e3126fe0809f91c583fece859932",
+    "src/simulation/item-catalog.ts": "016c51902549b3b3cfe34faf5d79554a0eb835391c58d0c88a0d836a70654437",
+    "src/simulation/item-grants.ts": "722053b5cbcc3a1c6cb59d256c707d97a0d6169c4e54b2fa576117ac77d87825",
+    "src/simulation/item-selectors.ts": "b4120d24be9c9a50818439ea442c4d834efff96a9d11836200f00ae9075f2f9b",
+    "src/simulation/loot-choice.ts": "c7326d19d82a768fdc246d8fdd7ddeeaa145bcb0f8b5a291967234d6a70f5001",
+    "src/simulation/loot-freeze.ts": "ad3b08bea8f80a50cddd3c4f2ca5005193ee3f4019ebb87deae397c111f69635",
+    "src/simulation/loot-identity.ts": "97d2a179df45f90ab7b4e3e0f5d0f1a874890f4875f6517bbc7bcb3b8a13cc6d",
+    "src/simulation/loot-runtime.ts": "93c8156c190ff6c64a7e178bcb7033e4b0a6545688c6a59c4139bb0522dd5e65",
+    "src/simulation/loot-types.ts": "fadf195e8b369fb44a670d21caf7469b7641963f9216ccf86ab74ad13abba029",
+    "src/simulation/loot-view.ts": "a08f55cbb24d5ef42fe913da76b70fa6cc3e676b52e11923f026cad5d9652f01",
+    "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
+    "src/simulation/m8/contracts.ts": "699549db4c20291f4e0a7f9355d2a6320f1e51f80f9af270da102977d64a28bc",
+    "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
+    "src/simulation/m8/damage.ts": "85beb9cbfc32df8f4c370e69f8cf081b47962f134b3c37a800890d28e32fb7d7",
+    "src/simulation/m8/equipment.ts": "df61f7e318ef0e1ddaba0d93c4e4690e486ea2fddd4ea135d1ec3dfd80651616",
+    "src/simulation/m8/heal.ts": "54f7c5cd4ca47461c0627dc70443a0e5597f624585e984dcd91e3b1f0c6cdfda",
+    "src/simulation/m8/identity.ts": "4320828fac9b27ce85eeb89a2bea04ea5038d409d0af24e1309174cb15c80066",
+    "src/simulation/m8/item-program.ts": "c5eba838ed0e15d68317e51b7a6b69f27e6025338a3f2d281fbc8680feae4d3a",
+    "src/simulation/m8/item-restore.ts": "b15241594be266c5faeb8cc573b2db63f4dbf0fb1c1b515075c35573bf88dacc",
+    "src/simulation/m8/mana.ts": "91478f46feaa2be5a56a59e5c8422695ba12fdef42a3ec9510a6893cb6762f9f",
+    "src/simulation/m8/opening.ts": "3d987598b9ca57965eee0abf6afb03796105b51a94e5a52e793a2bac2e4d9ada",
+    "src/simulation/m8/periodic.ts": "c2d8551c2161f8093c0fe4d94cae58923ce0c818ae79f718ab4b6ae6304f099d",
+    "src/simulation/m8/planning.ts": "d4bbeb4b5801f937ff4e09744abf9b0975870f982ee2b437185c80286c94ebf7",
+    "src/simulation/m8/restore.ts": "1d8f16adf892f9d58c56f4aa3fd0906e9ec05278dde98f6da4c7b9c09be3bc6c",
+    "src/simulation/m8/runtime-types.ts": "9d91a5a5f9f2fcf7e29275499628e25d9c7a4521823c435955f29b6b3c6a493e",
+    "src/simulation/m8/s13-definitions.ts": "9e4ff1d9224e95d6307634475d7da0d77b7ab92f5f21368c521dad293039a980",
+    "src/simulation/m8/s13-mechanisms.ts": "a8c1ccba65eabb9cab16be9bcc7fd43345c692ffb2fccfecee96b059c235362f",
+    "src/simulation/m8/s13-targeting.ts": "34271238a9dec3e6e7b5cd3d6762d0c93d88839308939b9fb0f17129e90fa967",
+    "src/simulation/m8/s13-triggers.ts": "2816d39585fd8dd71f5a9ec53b55944ba9db8ff9aca6931d1a3c9b948f751782",
+    "src/simulation/m8/shield.ts": "33a11c76d20f64c0ebadc0e04dfaa1aa64ab2ea218cbbc5394d0b7ab82999b22",
+    "src/simulation/m8/stats.ts": "88866f3f085f10f7dbcd9928f6f1044d996b3079b8a618ea0c2fac206ed49e78",
+    "src/simulation/m8/status.ts": "05f2efbfd2bf20ab02ac0bcf7cdf4362dcd89a3d8054105b9856284af0415d28",
+    "src/simulation/m8/targeting.ts": "462e9338cf39d7da81bd5ce445a925ad583cdf24d89e0fe170f9b4a768ca11f1",
+    "src/simulation/m8/triggers.ts": "4d19a13d8cd6fdda5eaeb63270458cad3fd424fe0f1c984eec41d8f5404b2242",
+    "src/simulation/m8/ui-contracts.ts": "400d965f8530fc4016194a8dc819be793a44b08f983cbea98f6d852b37d4ff58",
+    "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
+    "src/simulation/m8/version.ts": "8753e7e156524afa623d32b53544ad674c9174038d4790b6533e2b0614434614",
+    "src/simulation/match-rules.ts": "9298a307e6c9cc64d52360746304b011f22d2bed78337611322b2cf1f3dad9d8",
+    "src/simulation/match-types.ts": "72badd2718003649e2e64ada10ef8edda0f2b8ee15c6e53d8a29da3182e5a5e9",
+    "src/simulation/match.ts": "9c8f41f56ca94ed69edae4d7389802cb6c0caba066ade1e75b84e5331c75eb9a",
+    "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
+    "src/simulation/neutral-encounter-compiler.ts": "aea0ec1e0d99e1e00aaf4691f4ef32598b4f9e1effd11000b831cfe350675125",
+    "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
+    "src/simulation/neutral-restore.ts": "f20d9b4d23ce0bf4d67f5bde04c8c8df252067384515699200dd0db41eda0bd1",
+    "src/simulation/opening-economy.ts": "738401d4a82d7f22455724df07fc2696d0b088726140bf89e67bd5ecf8466914",
+    "src/simulation/operation-policy.ts": "af069a8c9529485f8a7f9242ae11c907c28aebc9eb39ee761afaf3524fb201e3",
+    "src/simulation/orb-layout.ts": "12d4bb8568aef5487d226cd1ac215eb8216d369395ee0b8127b8d966879c76d3",
+    "src/simulation/private-seat-view.ts": "256e988308f3ee91c9034e33a730fdf5e04256f3752f9a277d890ca35d15d195",
+    "src/simulation/progression.ts": "bf9df858df4e3fde5f7296e988ad09bfd93c30b0b101fd92a406b67685b05669",
+    "src/simulation/resource-provenance.ts": "5270538e52f8cd9ae47b3e5395c1f399feb140a97e3c25ae35eebdcadca97b1a",
+    "src/simulation/rewards.ts": "8fb93de633a9bcf61f63a6a98b3e43b731bdd82b1da0f10f819209dff15c6d9e",
+    "src/simulation/rng.ts": "adb06e124b9f314aa4404e7108cc8aa4496e70f2289d8dab7c4aa116012a200e",
+    "src/simulation/round-economy.ts": "6c72758b47694f283bf746cd9c684ada382be3889c7da7cb3de7da94368b8356",
+    "src/simulation/round-enemies.ts": "1da1fe200ec43156fc23a808007d40b6f36cafd9a84059752f331d8d9d7827e8",
+    "src/simulation/round-schedule.ts": "d7af2c803248c6047fc6307776b342b52c3703345f4e83e199e6a1e6ee034424",
+    "src/simulation/round-selectors.ts": "927b08f1f456bc2400e9674c80349abf2e8b3ffced7817035702d6474e92fbd8",
+    "src/simulation/round-settlement.ts": "1a1bc835a1a5cb25c69597b9b2a86c276747caa522dcc1f73b3d091904ac41ff",
+    "src/simulation/s13-rules.ts": "e8a4c70e9b01ad88fdd70af35fb627b1d7b2dfe976d231f8d57b8d050a672e4c",
+    "src/simulation/serialization.ts": "7ce711057b5f78383626867f60851abf372c962ee7c2ad9132e29625f49dfc5e",
+    "src/simulation/shared-pool-ledger.ts": "492e085d4973b3ad8afec8e88f274157d10783d0d4e2179fe644c9f2c03a9422",
+    "src/simulation/shared-pool-types.ts": "c56f05680ce98c6bc2eb7af6f5b73f680b8910f790d7eac29350e6e97b064df3",
+    "src/simulation/shared-pool.ts": "9e010391fb36764f36f6e78efce6f19d13a47f9154ef6dc77d61b3c5eae11c2c",
+    "src/simulation/shop.ts": "60ba064ab8c2a1edab5ce957fc63bdc10e294ca27cdd62d2e6e78c2340314f45",
+    "src/simulation/strategy-g2-2.ts": "569e151a21b02edcd0c6db75b018ea55db50eed8789140702ea1a1b43b0cedbc",
+    "src/simulation/strategy-snapshot.ts": "5b54f25f5f1a7a0e8468057d4770e1cf41974bd4364c08e4229cfce8977b2ea2",
+    "src/simulation/strategy-types.ts": "b658103405878c3c3d14e209cf5d014064d79a5ec37b98290445ced98609b7fc",
+    "src/simulation/temporary-equipment.ts": "15039bd6d5f238028995e90d15e5d6c368e534493a75daf3d029c3e0888c6e99",
+    "src/simulation/trait-snapshot.ts": "55104921b0933977892389f43910d81a37c6f817afdb4c934c62c7f4086111c7",
+    "src/simulation/two-sided-battle.ts": "07416a57873ab642d4c71f0d776f10dd9c7fbb5b68844274a7d3fdbcbbf7d177",
+    "src/simulation/two-sided-snapshot.ts": "b622c113b29410e8ff4af5546bf6694e3bc84b053c21f5f7464992459863e8e7",
+    "src/simulation/two-sided-types.ts": "1c2f1b282b941e6179302e4aa65046edbe1c68532089039c2d8a30358c2928ee",
+    "src/simulation/unit-acquisition.ts": "9a867e504678b2b8080fd4b0e33e58dae940515a1b2e8d63d9d3105e0f8606d2",
+    "src/simulation/unit-stats.ts": "ebb99fbc8367a9a510c8ccb60b1a26c37bc2f9c75e849b59802a50d7102a3803",
+    "src/simulation/unit-types.ts": "1974e6c2868b6549144fb4602fb6873d075cef04b475827b4a9bd0bbe8247d47",
+    "src/simulation/units.ts": "2dc358faa3bfa33cd4826a6f923726c29b68eebdeaa90025aae54d5deefec878",
+    "src/simulation/upgrades.ts": "c0bdee1d1352c144707a5ec9aa1a7e55ac539ee714de9c21a2c0705624393542",
+    "src/simulation/validate-content.ts": "452838af2fa18c4a1ce6735f309f36381b2301f286de9771f46adbc5a240086f",
+    "src/simulation/view-fields.ts": "758328ac0d4935b74548418de09ef1f63683f5049af8b8fe5a89c197c7f1f81d",
+    "tests/fixtures/b8-public-acquisition.ts": "d9a42ba994db83cde89d8bdc6d94696dd07bbd07d0b1e19d7f4e4791963c347e",
+    "tests/fixtures/b8-public-equipment.ts": "a0d24e79cc018a7af6a7a13d8c365bf28a7c24737a125ac5d4d2f91cc6f17ea6",
+    "tests/fixtures/c19-seed-9-minimal.json": "45e3a1d3ceb3a917e3909e967499f34a697c8ef192acfbca95f93144b6a86b37",
+    "tests/fixtures/g2-1-b8-fingerprints.json": "4145b6c3d7322f09c511e20583def699e815ce72ba4b52bc9eaa76e00cf095f5",
+    "tests/fixtures/g2-1-herald-raw/edge-of-night.json": "590602fe905cccd1313f5ea2e0488a7768bfee731dbadf1d9c3639e9d798f491",
+    "tests/fixtures/g2-1-herald-raw/evenshroud.json": "55681bbbb6eebe83a16e86015576cd56407f34b6b1a9e218dd124a3071c3e4d6",
+    "tests/fixtures/g2-1-herald-raw/ionic-spark--evenshroud.json": "81be3d98346c6b0870243259f676c2e4f402751996b61e03b8c7c06daa97e83e",
+    "tests/fixtures/g2-1-herald-raw/ionic-spark.json": "6160a348be31cd94e0d76425f23a550b69778e477a482b48c210cd1ab967792c",
+    "tests/fixtures/g2-1-herald-raw/manifest.json": "e3564507659f2b3341a97a93a8c63754bbf6c7eda04865d279e920c45f581285",
+    "tests/fixtures/g2-1-herald-raw/quicksilver.json": "af891f2a152c58b5a513ae95536ab136407ee28455024f66241527e0254d19e2",
+    "tests/fixtures/g2-1-herald-raw/trajectory.json": "c60665bfef194f38384c88fb42ffd3cfbdbd1450e09098c9f25c67ac073b5569",
+    "tests/fixtures/g2-1-recorded-states/cannon.json.gz": "19757f6f312f50ed06a93f1c6ebb602ea18c066307ee216d48bdb50856af0557",
+    "tests/fixtures/g2-1-recorded-states/sniper.json.gz": "083a8c7bcad9bf53b9f2403341e06147cb4a99a0b6829697d245b3200f0371e8",
+    "tests/fixtures/g2-2-b8-fingerprints.json": "40673dd1851b38dd4cd680580fad2bc2755b00fe55d1b67dc51e0ba85645cb6b",
+    "tests/fixtures/g2-2-c19-seed-9-minimal.json": "fb0cf7d48300b81bff21d701761db95a5353d310dd5b5e9b554677f04a8051d6",
+    "tests/fixtures/g2-2-herald-raw/edge-of-night.json": "1d18156fe13d42ff7bb43c1a31491d746f97244635b2ad9967ace40c9e02b828",
+    "tests/fixtures/g2-2-herald-raw/evenshroud.json": "a3077d692c16bb38ab60780759eedd9468d703e801bf42aae0a01ec051c855b9",
+    "tests/fixtures/g2-2-herald-raw/ionic-spark--evenshroud.json": "9fbc3013c20272c32909c724b82116d5b508e5e43d31cf36a7da3aae305d1827",
+    "tests/fixtures/g2-2-herald-raw/ionic-spark.json": "79ef2a0dc19283c5a0178c1345a0b46af2ae7b5ee25d1a42e7b7f32fd35349d2",
+    "tests/fixtures/g2-2-herald-raw/manifest.json": "8e9c347291508327418b0a320cd017712236081281592c23a5ca2a1f9f961ca1",
+    "tests/fixtures/g2-2-herald-raw/quicksilver.json": "c7b7f8b78037a2c49eb6fb3a87d41d525e4eac80b0326f8bdd81af9007ff7ae9",
+    "tests/fixtures/g2-2-herald-raw/trajectory.json": "863072aca92b823d18cb5b716648fb10714893910e277c3fdf114e73b4846a64",
+    "tests/fixtures/g2-2-recorded-states/cannon.json.gz": "85ee1ce7f9bafa78f4cf0e47fac46e8ca70bbeda4dc5558023c6055eb5dd6b38",
+    "tests/fixtures/g2-2-recorded-states/sniper.json.gz": "75ebed977bd56981a72962a2af12cd9e573660fc62a80469493573711534f9ec",
+    "tests/fixtures/g2-roster.ts": "8de6d48f65d4189459b3083e2de80112099b40846aff2a26a2c2b8ea282d285f",
+    "tests/fixtures/g4-global-setup.ts": "e20786364c13915f90c42d93e5a10421c15bd86b962814bee84881aa94b3739e",
+    "tests/fixtures/g4-run-cache.ts": "c66aa5b50215420a3453668a4760aae3ded689402be54f98d208d63fbcdf38d6",
+    "tests/fixtures/g4-worker-setup.ts": "df91467c067aac87b6c7dc2878c9505bc1301b4fdcac4390b8e1a92d75289c7d",
+    "tests/fixtures/m3/oracle.cjs": "f62dadd62c2f36a6895bc6fe0a39044ac5a0f45b1b5bbf5819017e0000583405",
+    "tests/fixtures/m3/oracle.d.cts": "ebbe767cdc0c84183bf2c28c77ec0157d91d8c4f49c5000671c960af5ba22a4e",
+    "tests/fixtures/m4/assert-golden.cjs": "71b96937a67b6ff60a84f6a0148efa8960405c3b9788757c6d7939d61b518fce",
+    "tests/fixtures/m4/assert-golden.d.cts": "cd67996630e24fcba66ec7fd759df995e772bc30910df78b3d444b9c52830601",
+    "tests/fixtures/m4/full-match-golden.json": "2e9dd741526fd6ea137139ae1f2108170fde600db76d7393b9203003f505037d",
+    "tests/fixtures/m4/oracle.cjs": "252945cb877e315bac16efb2fb242c48bfd8a1a728a4978a7b06753f7c381477",
+    "tests/fixtures/m4/oracle.d.cts": "ebbe767cdc0c84183bf2c28c77ec0157d91d8c4f49c5000671c960af5ba22a4e",
+    "tests/fixtures/m5/assert-equal.cjs": "2e438f6710b39ba852e6507df3262f6bad35e18bd8613529b19c437ae4be2b53",
+    "tests/fixtures/m5/assert-equal.d.cts": "439a41811e01e99c86b943038bc368c26a6f67da7ddc54af152d86f9cd669fdb",
+    "tests/fixtures/m5/assert-golden.cjs": "3016a7326ef2877ce150c8b974107eb000a9ed63f90cb4519708e3c4de2ae263",
+    "tests/fixtures/m5/assert-golden.d.cts": "a0656fbbb4dbf084ab969214799fedd761b3220169818a4d17d28dafb6ce791e",
+    "tests/fixtures/m5/command-oracle.cjs": "70f878977c693c3a0c2d75ab64962045074cdf3116cdd32de7ed0a107f12f028",
+    "tests/fixtures/m5/command-oracle.d.cts": "362da10667db7a1017d6fd81ffb98f416c6b71bd11f6244fbf842da896037584",
+    "tests/fixtures/m5/command-oracle.g2.cjs": "51ec490a46e02d350e777074751b81222dba49ba682fef966231dcdce8a4a01e",
+    "tests/fixtures/m5/command-oracle.g2.d.cts": "362da10667db7a1017d6fd81ffb98f416c6b71bd11f6244fbf842da896037584",
+    "tests/fixtures/m5/full-match-golden.g2-1.json": "2d2c18fe87ae02e396c25a6b55d26ed91fc6b2f69ddb62802355fb0fe73fd6db",
+    "tests/fixtures/m5/full-match-golden.g2-2.json": "b623b030883b07960bbc6b0005fdb1fde00adabf3d016aa467336f40d3bd9f15",
+    "tests/fixtures/m5/full-match-golden.json": "ae227f505d9cdb31fbdd16e37263040e34d100aee40ab5a380ed81aba2176b9b",
+    "tests/fixtures/m5/full-match-golden.p3p4p5.json": "e5397017e626b068dbf1acf45f2e2c2ee353fef1b9f7ff43f2d15fe75ca8871e",
+    "tests/fixtures/m5/full-match-golden.p7-1.json": "f0440ed9583ddb51b4cfd639567b236b1e1ac09e6ecd201182d7556735c0ddb4",
+    "tests/fixtures/m5/full-match-golden.p7.json": "b3b8d3a80181cbc85f5dabdcf2c3af4563495717e97e419850b02a1c23a2a4c0",
+    "tests/fixtures/m5/full-match-golden.pre-audit-fix.json": "2d5416dca140d07ac4ab43d5b05eb667a436e0819e7b5e9658eb4a22fa0aaf82",
+    "tests/fixtures/m5/full-match-golden.pre-b6-b3-sync.json": "1adf09af7b7508277599703677a9d3fdc7d87b46799384671fbbcd7694204395",
+    "tests/fixtures/m5/full-match-golden.pre-cross-review.json": "0a7b6c5ee37e4a72a0f27491991ddf9ef3671cd85da468807756bb0f08751829",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b3-audit.json": "6ebbd26bf6c211edaac74f704138684e51f0a335cd22c3f4ddb1205d90f8a1a2",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b3-second.json": "7d355211597103530d3225e5008d4687e25f214f3781301e88911f13bbba9ff0",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b3-third.json": "36d84c6571778747c090b89e2930fd188ffcd3878c3c59b5c23980fd361d54cd",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b3.json": "7fb298ba43a4a550b59a13e85149f6c65dcc32cca1a6993610da94ed84a3ba19",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b4-audit.json": "8411098960f487fdc864a9d52a259f752e623232c774fd4fb837dad922d1d9e1",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b4.json": "62488ab525446dcb2e7cfc120b2fb34b889ca3fc1fd814515f185655650aa28f",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b5.json": "c5f62626160dd8b8a837f62d1c5d4b97fb130d4dd832936e27146868fb990e73",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b6.json": "615f5dcee18cad1bf948216ed766ee2fddb101a9466bccce41611f72f990857d",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b7.json": "983806603e27718f263d280c0a4fd42740226bca1e56163f9b5d214ef8ec5fac",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b8.json": "007b6b4136d6959b227cbd9567948f83dca75db4ad788fd43d03c4e3cf069cc5",
+    "tests/fixtures/m5/full-match-golden.pre-m8-b9.json": "8d129f70c093a63b339543f65814232f3cfb6daa13d95168aac3b06bdc39ac28",
+    "tests/fixtures/m5/full-match-golden.pre-neutral-timing.json": "b7172c2a78b4aa62414b33bd133b2fa30894b66e392872d986edcd85dffa8a0c",
+    "tests/fixtures/m5/full-match-golden.t11.json": "1369f32bb8790f3a756819623e52f857e0e6c3649e511af95359b706c1495c56",
+    "tests/fixtures/m5/full-match-golden.t12.json": "9acaea36280a4d7405b59bcfab38e438624ab6667e4771fdd63e3093ba26acf3",
+    "tests/fixtures/m5/full-match-golden.t13-a.json": "dc7cbe9620a08ae7a20c5ee002b20815b9b4be3ebb920f07853e86c8f5c9ac94",
+    "tests/fixtures/m5/full-match-golden.t13.json": "b45aa9b5a046fffd7a5022a539982ffe4db50c59150e5f6483d07c2a37810e86",
+    "tests/fixtures/m5/oracle.cjs": "0b11a6cc60f3d31e59553d5121acb8a1fdc22ce3c6091ae3065ff0f8c35ad6ca",
+    "tests/fixtures/m5/oracle.d.cts": "c12feb1c89509fb8ea39f84bdf7d6f2207488ba6e13f11ff6384536938efc9ff",
+    "tests/fixtures/m5/oracle.g2.cjs": "31bf2e5a3c0b9f0e93e5d3ec82dcf66fd0742829cda1c348cdc944584aea4d66",
+    "tests/fixtures/m5/oracle.g2.d.cts": "c12feb1c89509fb8ea39f84bdf7d6f2207488ba6e13f11ff6384536938efc9ff",
+    "tests/fixtures/m6-saves/01-initial-component-choice.json.gz": "da3cfe20a0b0ed54b7fe68b8020869fae95e71894f7ef72f9a256d231fed63bd",
+    "tests/fixtures/m6-saves/02-preparation.json.gz": "6a28c0143b444a7e486414e298d292b157d784de59adb38625b1c08e82ee6cf4",
+    "tests/fixtures/m6-saves/03-augment-choice.json.gz": "6649b13a7a89c90e9597b8dc72d6dcf94303e5c59f57a9ab8359685f0deca57f",
+    "tests/fixtures/m6-saves/04-combat-tick40-with-history.json.gz": "0d9d9996d60f86b45aca6d1de6ac5c2f053475f79d421cfe2e124396fb39f980",
+    "tests/fixtures/m6-saves/05-settlement.json.gz": "2faa7d9e45bf4623b1a6759420b88001251e4376564eb1e4c86317e4187bc295",
+    "tests/fixtures/m6-saves/06-anomaly-offer.json.gz": "536bfaa6755e5aac5e59d8d9ef158d409a4fa41f06793e43c65c53308734f2fb",
+    "tests/fixtures/m6-saves/07-game-over.json.gz": "8e607ac700cfd5f454aa05e2121f0ba68f5a74788b653f980a214d48e2b4f3e9",
+    "tests/fixtures/m6-saves/load.cjs": "5b48741052e04d7f593ab26edd93078c0d1784e8dc083691d3849c9a58b5d01c",
+    "tests/fixtures/m6-saves/load.d.cts": "564e8a93672b7ce922f29c98046772ea7cb31b9bfda500c2c031cc4bddb7a6ef",
+    "tests/fixtures/m6-saves/manifest.json": "d4a0a8f018004d4660cd037fe845b9e3efef0c8410ffa95d172a60e5dbbdeb11",
+    "tests/fixtures/m8-ability-plans.ts": "8432b624fbd59a14bf64806a6bfaba0375788bc8cdb28cf78fa67f039e4f2d5d",
+    "tests/fixtures/m8-audit-definitions.ts": "49f0e2f86c212696bd887b4ee7d55d3c5425723debeb367c4a64cda33e816074",
+    "tests/fixtures/m8-b3/damage-control-opening.json": "67595759f8ee13c7b461e5dd778285b3219f33f6414a5f3dcaff0fd085ecdb00",
+    "tests/fixtures/m8-b4-items.ts": "9f0587a1722cc871586e61370baec18f1fd2dd0c2cac4516ee97bbcb710f4d46",
+    "tests/fixtures/m8-b4-match.ts": "a452ffe6574d3f48c38432ed13e763a9b227328dcdb8cde352042df57b8b3a21",
+    "tests/fixtures/m8-contract-cases.ts": "cdbe471aad1ce081805bbf43372820094b1288768a13b99ab30c0976b5fe0252",
+    "tests/fixtures/m8-golden-states.cjs": "d5e4d6bf77bcb1be9a87e381345adbf338a4de02deaaf5f86a6941df4150f789",
+    "tests/fixtures/m8-golden-states.d.cts": "df454c9d9a55581be135f1a564349422ee1a642c017911ded26f5053123f6b4c",
+    "tests/fixtures/m8-herald-raw/README.md": "ebf1753c5859ee44d7eb1c0af632c0206afb2d5fb69eac138a055b79aa977fc7",
+    "tests/fixtures/m8-herald-raw/edge-of-night.json": "a687cbf430964ff56d24e65442bfa6ed294ddb24d4c455c2e3a9cd0419f69898",
+    "tests/fixtures/m8-herald-raw/evenshroud.json": "8660e4aabab4221bd7f73f98d1fdb3a424ed977ed275025ba585f70b26a20663",
+    "tests/fixtures/m8-herald-raw/generate.ts": "4759a3656aeea73c0b7103b312281e4682e7be337a1590110b02309b6a760261",
+    "tests/fixtures/m8-herald-raw/ionic-spark--evenshroud.json": "0c7d0971c5a9518b5a233032c8534ac64f37230794335232c57a8b921d34366a",
+    "tests/fixtures/m8-herald-raw/ionic-spark.json": "a530483bdbaeb7c2f218c4dc24cef09c53f67b66c16a181ab938e25442b95fc5",
+    "tests/fixtures/m8-herald-raw/manifest.json": "6062dcb04d7ed0068a9b0b1e65d22146de974d29278d5907949851924fe31ab8",
+    "tests/fixtures/m8-herald-raw/quicksilver.json": "ecc7518f17dce209a5559a5a1fe56830e55a98b7d3bf7dc16530f5e5fb4c45a6",
+    "tests/fixtures/m8-herald-raw/raw-import.d.ts": "dfd7f4b4dcae99ea35fb10e0a2426a89d6a10f1a031975a44a1fb40926d3864b",
+    "tests/fixtures/m8-herald-raw/trajectory.json": "e6492ce303768262ae81a45b16c93d296914640fc6587484609ca892a493e137",
+    "tests/fixtures/m8-neutral-public-route.ts": "8f497d548c4faf1115f5ff16d8cbe3c45b081f1e4acd3936b76860302c979af0",
+    "tests/fixtures/m8/pressure-9v9.cjs": "cac1eace9d74a588d9dc9eee7393611dacdc3848f3eeff3f0057f75eeb978ba5",
+    "tests/fixtures/p3p4p5-recorded-states/cannon.json.gz": "3f5fe64f85d1050d3865415460a9a96af9289ef90f05f50e9722619eae84597a",
+    "tests/fixtures/p3p4p5-recorded-states/sniper.json.gz": "36bc804d0e04c5aea4d6950aeb793588d638394e3dc7ba587d98c8f2ea8af783",
+    "tests/fixtures/p7-1-b8-fingerprints.json": "40673dd1851b38dd4cd680580fad2bc2755b00fe55d1b67dc51e0ba85645cb6b",
+    "tests/fixtures/p7-1-c19-seed-9-minimal.json": "d72b78870ef9160c06b2cc1424afbcefd37fcb2b6ec32532b86b59b70b18f79c",
+    "tests/fixtures/p7-1-herald-raw/edge-of-night.json": "affe9cbf9915d147e68ace0a2a49b1c2820ab0dc34706db864b17ac8dd1b4463",
+    "tests/fixtures/p7-1-herald-raw/evenshroud.json": "045d2ef9037d22bf1ca2e0076390e875a1f392e831ad67b95e307f98c7f4469b",
+    "tests/fixtures/p7-1-herald-raw/ionic-spark--evenshroud.json": "516a96de7ac8935753e5811551dbf8761189854501e90741319860b76dc9c6fd",
+    "tests/fixtures/p7-1-herald-raw/ionic-spark.json": "7c9cc1029d42c113276d13f8b8f52ce37b43fdf333714486b14d1e34d6f99745",
+    "tests/fixtures/p7-1-herald-raw/manifest.json": "61bb59a9bb7cdc16bb3c1529206c03e376900b404c14da6933f33e0e1198c6fe",
+    "tests/fixtures/p7-1-herald-raw/quicksilver.json": "4a4ee0e18db09d2bdfb37c761980b61e33e80baf43764350526064853032faba",
+    "tests/fixtures/p7-1-herald-raw/trajectory.json": "74b37ccc8586cf36ad157a265c968fdea63bb14c7b7d4e5bf03037bc65355a97",
+    "tests/fixtures/p7-1-recorded-states/cannon.json.gz": "d58d92efb645c9aa71d3b9d0a889176916fc2aca85b2c1004cf7eaeb710524b3",
+    "tests/fixtures/p7-1-recorded-states/sniper.json.gz": "4747211d15f44543df7e6ecf54e1de613e50917a5ad0cb0170d5de8b8b7d31ef",
+    "tests/fixtures/p7-c19-seed-9-minimal.json": "08169a7a141403dd6a1615a289ae64e6874dc2aff0e9f869a62487109e3b2ebd",
+    "tests/fixtures/p7-herald-raw/edge-of-night.json": "8ed8cc1abd426c318383d1bbc85c19c5f369149742d128b548a659ea736aef3e",
+    "tests/fixtures/p7-herald-raw/evenshroud.json": "76ac51640121c026c1b60cbfce12887fa8f7260a4efb1eb7433421b80ebe10cc",
+    "tests/fixtures/p7-herald-raw/ionic-spark--evenshroud.json": "83759494abd9a4b4e2a899c8257f285065180aeacdad42976121165ef86afa66",
+    "tests/fixtures/p7-herald-raw/ionic-spark.json": "aafc65865ffa32401abf60103823d94915ea38bca80501439847e5ca0a7b3cd9",
+    "tests/fixtures/p7-herald-raw/manifest.json": "25268758539b89584608d993091d6b857a9e85992d46dc48947fc95b246c83b4",
+    "tests/fixtures/p7-herald-raw/quicksilver.json": "3f966041c48119f8252ec9c66af9b1582fe5dd9e16b642564a14d92306a3a261",
+    "tests/fixtures/p7-herald-raw/trajectory.json": "54c130a06c3db27e76b8d926cc1e27ef9ed35af8ea1a69b429ef05a320df9ac9",
+    "tests/fixtures/p7-recorded-states/cannon.json.gz": "aff5a8308e8490b8a63c07c50736c508c60a92d312f544b6e14f53742a9b0b99",
+    "tests/fixtures/p7-recorded-states/sniper.json.gz": "e98974dc802d772e00e90504c5df69dbfd3b224f948de44292af187cb72d3e84",
+    "tests/fixtures/r3r4-public.ts": "86c2bf16e56bfb3885fd788373b49ed9e34423ee827fa3256cd188955a74e9e2",
+    "tests/fixtures/record-m8-states.cjs": "2e69d0a3b3466d4ca010a08c5f8aa37b8c4e7a089a27202deb2af47b8b2334b5",
+    "tests/fixtures/s13-source.cjs": "9ff38676cfc81fe3111961b7c058132143f7b007db8802b5f0905235f4c5c7f9",
+    "tests/fixtures/s13-source.d.cts": "fe049094a6ee68a8dce77f7fecf231c97804c47c1db8485d55e7c5d5930814fc",
+    "tests/fixtures/t11-herald-raw/edge-of-night.json": "707e995db8986dea5e552b9fd5bde308fa0ef4d18e07cb868885b245c3d59ad3",
+    "tests/fixtures/t11-herald-raw/evenshroud.json": "344e784bc6460d2e247994f7529b16266f56ab8d43277ae382f35f03551f4d73",
+    "tests/fixtures/t11-herald-raw/ionic-spark--evenshroud.json": "f8fceb8fc2dd70d07f69807df73693509cf1c8bfe9531a27ee6b9279d4082875",
+    "tests/fixtures/t11-herald-raw/ionic-spark.json": "214f44eae2be8193bfecc086bff7095a46b8b16d94f41522df55f6f198d8e35e",
+    "tests/fixtures/t11-herald-raw/manifest.json": "2a34e3f39739c688b58a1ccfb5a794feffbc914f57d8d4ee95af272779144cdd",
+    "tests/fixtures/t11-herald-raw/quicksilver.json": "e0ad07a52e15464c72adb5938582d00d3624095bcefc6f81acb9eed0c42dce75",
+    "tests/fixtures/t11-herald-raw/trajectory.json": "8212c5abd0a1c3ca7a24f363103ddbfac5e9a9b2ffbea352f9b6bc411ec56df8",
+    "tests/fixtures/t12-herald-raw/edge-of-night.json": "d3a9b82a79bc82510ca9706a743729d9b23723ed573a69db7008abcc7479beb4",
+    "tests/fixtures/t12-herald-raw/evenshroud.json": "e617db3afc96ca0a51553432756bd4356327162f39ac6c91f84731fc99b20b81",
+    "tests/fixtures/t12-herald-raw/ionic-spark--evenshroud.json": "c9f345d6f8b520049b8f2295089e493edf47156d9b44f4927af2e42abd3b6ac1",
+    "tests/fixtures/t12-herald-raw/ionic-spark.json": "4de18a1416c2408f8d58cb64580ee3a2b66ea504c6bf590ec6d364f353efe051",
+    "tests/fixtures/t12-herald-raw/manifest.json": "bd56b60d121956f7eab3663abc4afbe021c861b43eb7d06c25c48500ea9f3e01",
+    "tests/fixtures/t12-herald-raw/quicksilver.json": "b1b26b0c8d47ea6aa4a6981b52346a442efd78d41b9680633890e492ed4bb262",
+    "tests/fixtures/t12-herald-raw/trajectory.json": "49a3b910aacbd6b3cf4ce15af5ba24b7ddf3c4ace0ae8160aec0e80d80df9090",
+    "tests/fixtures/t12-recorded-states/cannon.json.gz": "ad0c674be5eb9be4e6c4eea5ed774b5e964a2f5368beef2bfcd26865dfb3dc1a",
+    "tests/fixtures/t12-recorded-states/sniper.json.gz": "15d795ddefd5456d1398717a7f541911eeff2ac6fd72eb270a37c26acedd612c",
+    "tests/fixtures/t13-a-herald-raw/edge-of-night.json": "53987276593bd515444a1a16a7c2423603f2a5286551be1c110d45b9cdda7a5e",
+    "tests/fixtures/t13-a-herald-raw/evenshroud.json": "923edb45d65f6b88822ec81185ff58052b6116b32f1588bd0ab6a71b2e2b86bf",
+    "tests/fixtures/t13-a-herald-raw/ionic-spark--evenshroud.json": "5a24785df6cd4b46c46f20ac64876dddcd6479cdfabf1b4c5e62db35af2dcb9a",
+    "tests/fixtures/t13-a-herald-raw/ionic-spark.json": "7e42cb82ce2f6648bfdadaebb0d874bf32682e86342fc3b27656116587d341b4",
+    "tests/fixtures/t13-a-herald-raw/manifest.json": "63e414c1c9c9707f32777a41db31df97ef14df66714de05076bc9cbb9c5dad15",
+    "tests/fixtures/t13-a-herald-raw/quicksilver.json": "e45ce8b920163a4c24a7c9b2313d2fd89dde257758f7a8d2364208a51a15d11e",
+    "tests/fixtures/t13-a-herald-raw/trajectory.json": "67930074686263341dd0b9bc9d413a07878e8512ab09575e6f03428f41da262e",
+    "tests/fixtures/t13-a-recorded-states/cannon.json.gz": "ea68c9774df83b135419639be371a52c8cceaafd78d72813f5c756118758bc4b",
+    "tests/fixtures/t13-a-recorded-states/sniper.json.gz": "84133ed7a672ce0c5667f447e071ef4a339267446e69861fc8e8e6503fe9c8ed",
+    "tests/fixtures/t13-herald-raw/edge-of-night.json": "de2e1558f470032039520f35fa982f03b93306c5c35c77992cfa047dc1e5a374",
+    "tests/fixtures/t13-herald-raw/evenshroud.json": "6b4387f42fb2bca55cae9619cb8a702ba7b6801fe91a7b74da1ff399a0d4f167",
+    "tests/fixtures/t13-herald-raw/ionic-spark--evenshroud.json": "7e57f6ba823ad0ba13d8dbc05b06234fc1f14bb8811e685f0db938d27687975b",
+    "tests/fixtures/t13-herald-raw/ionic-spark.json": "4a3aa0232c7a11b6164ba7772dc39849ed166275a06ea3e0321329d8b221a679",
+    "tests/fixtures/t13-herald-raw/manifest.json": "5baf98efe71622172d772ba67aee1ac371f379fa9c05a31f8ed3775cdc825628",
+    "tests/fixtures/t13-herald-raw/quicksilver.json": "7a12c9e9fd79033960e485dddbc8d3e3c493a3ba606907844b77aa1f35224bbb",
+    "tests/fixtures/t13-herald-raw/trajectory.json": "f0a2c7ce755369eb91d536e2d03f1e60e8aa123f9549ab8fb66ac0ad4b7ed79f",
+    "tests/fixtures/t13-loot-public.ts": "442aed5e702876848e0406e5ad6fdbdbed4ae00033db7ff1bdb88773eb93b1f1",
+    "tests/fixtures/t13-public-gloves.ts": "cd0396fcd65f870a820240a7bb59acaa2668d19b9911ae7f958fd0e73c837959",
+    "tests/fixtures/t13-recorded-states/cannon.json.gz": "ee97a18535850a44f4295b076b81ca4346d7f8196d743b1efdac6e9b10bf997f",
+    "tests/fixtures/t13-recorded-states/sniper.json.gz": "3dfdb35a4944aeeed1adb732e69a437a0449caf3c105fad94206fc95b70b705e"
+  },
+  "currentSourceSha256": "0893ea6c282f1b3ddb741095682831026e24c7a9be4f0d1dbe47247b826d8e6b",
+  "currentSources": {
+    "scripts/generate-m5-route.cjs": "e81ea893e5976b473b8eb96aa07ffa49726a1b1a9fdb0725f11d4599e87dac69",
+    "scripts/m4-evidence.cjs": "6577e857f1bd23944f862e46104706c02b4efe8afbb7259a9016fb7b71714973",
+    "scripts/record-g2-augments-fixtures.cjs": "efa2db7b2dda4e099164765de6f59b34b6cce9cfc2b24ef5eaad3252c8c505d0",
+    "src/server-entry/index.ts": "4e0e9ebc9ea35940b8a8595c2deea846c9241ee1391745ef0e516442d9e09c3d",
+    "src/simulation/ability-display-source.ts": "c039c22cd87f152e62ab9ba48b8b39eee03067636daf5246f0601fd2b70c5984",
+    "src/simulation/ability-display.ts": "f7b92a9fb079cc97e9de6409055fab075872d8a17bba38b91bc172646ee40757",
+    "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
+    "src/simulation/augment-effects.ts": "21b990db9f02b4d3e2383844d154aa924e43298e44c5f0031f87c32357f5dcbd",
+    "src/simulation/b8-restore.ts": "69604c483528f040a41e5c5d59101723c79ab28f1989257af79134b146a02242",
+    "src/simulation/board.ts": "7712e502a393e6dd54340dabb2738907775f14288f38ec60a568b4be12bfe77c",
+    "src/simulation/bot/formation.ts": "d6e7405620f95d18d20770a4d05d378a64c2ad1deb10d4d5a9ca671ce30d5435",
+    "src/simulation/bot/index.ts": "2d30cb54b427decfe6be6526f4b43a65e1ba2b0d3e8cf4fb4278753140bda744",
+    "src/simulation/bot/preflight.ts": "184868de10779fb1542b1eed71c45c4fb12c71a47148bd1f032e77bd1f9d57da",
+    "src/simulation/bot/types.ts": "9aa6dffaf870c09aeb719d727fca86ad5bb860a65dba7d6181366bd09975234b",
+    "src/simulation/carousel-policy.ts": "28f1b5912b2cc7590d974d68ae773b6702d8d855b438527c5264b5aa62730d5f",
+    "src/simulation/carousel-types.ts": "b37b74c206373cd3f2e5760867f3d722208fa10fb5bab49a4345982e83ce804e",
+    "src/simulation/carousel-units.ts": "096649e2e69ab359f66fa579d6369379420da85c4d1e577c8fe7ad869038ae1d",
+    "src/simulation/carousel.ts": "65ba9116eeb99248e78d489758ca306ee9bcc129daffbcada2bfb417f9db0d6d",
+    "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
+    "src/simulation/combat-abilities.ts": "6c2626a28ea30605c3e008d446a3ae34b8b45f1a30861d150cdf1d7e403a45dd",
+    "src/simulation/combat-augment-effects.ts": "770eafa606f91c8db1e6bd33a4e160157403df3fda201d2653b96acd2adf6036",
+    "src/simulation/combat-damage.ts": "e9b49633572cd22a79c8e43bb82755423869c0fba8ca9143475036bcfbf96da4",
+    "src/simulation/combat-effects.ts": "ba106eefdfe8b45160fd6ae20e3700a5298bf354d6b30dbe687bd69e5401eade",
+    "src/simulation/combat-g2-2.ts": "229f15681779af16cb832a9ec74de6300d698d6650f79da08c0cbf07e8442fc4",
+    "src/simulation/combat-g2.ts": "2c2a9f1739610c604c488b0821acebd0ea84737a9ffec3ce6e26d4a57be7c13f",
+    "src/simulation/combat-initialization.ts": "335003b45209b6aeb93266abe7e988f7a3c5f7a45687281146372a6bdfca0a9f",
+    "src/simulation/combat-input.ts": "f80c935a1b68cddf5d1545ad46c4afe520302d58a9f0c7cb54a6bff561e816b2",
+    "src/simulation/combat-ledger.ts": "71a2e894d3abe537bfc55b43464fb6cd356c1ac649503ea7de45e8c8b4f90d74",
+    "src/simulation/combat-replay-view.ts": "60abdb0e69c37266af6b3fe4eb4f5bfa96a57cfaefa471cd3e57db9ac2f289d7",
+    "src/simulation/combat-s13-abilities.ts": "142d1f794e9bdee36407d169011fe094a702e4e224dd82a8eced257a0d7c980e",
+    "src/simulation/combat-s13-state.ts": "23102ec55e6e9f4b0fc788d830f0aa497692be2281909de0a078c43003a2862b",
+    "src/simulation/combat-s13.ts": "76e065a9375bbde484b76f8ef7d92179cc6afe69769d42e67c907d8f15f56a40",
+    "src/simulation/combat-static.ts": "463180343e52c9a0e86da915ee407c16a95d0f3c7f938673c6e5de247dcae871",
+    "src/simulation/combat-summary.ts": "4b8a4ae4567a975f32ef45c7529d85c460a502aa8d24af8106acd62e1b6c6426",
+    "src/simulation/combat-tick.ts": "98ff95ffa1d8f042361006eef70a02c1c21207308b9b495b0916045de16ae143",
+    "src/simulation/combat-types.ts": "6f8465f9b2bbb0cba30449c7d92ba8f482dee6cadcdc9cb16a2630a9e58317f7",
+    "src/simulation/combat.ts": "b6813b33dbe05186692e856b0ff38d7331179bbf4ef02dc1b7f673cf135c2152",
+    "src/simulation/component-pool.ts": "018c62b2eeedd40e08872bae1159dbf0611f4d5f465583cf0e0b4e08e60b9288",
+    "src/simulation/consumable-types.ts": "4918f4c996803c151cbba390693f2466239fe6b85074d3c429ec452f9ce859f6",
+    "src/simulation/consumables.ts": "5f4a3e51b9d122fef215d2ea7dfcd1e919f2e21f02d56473e8820e2c5a7775f8",
+    "src/simulation/content/abilities.ts": "00c5eadd194ba13371c4ceba724cb7cdddf7a78e25baeb064cf0b946e05996eb",
+    "src/simulation/content/anomalies.ts": "911d8b6d4d7b0545dc9ec0bd51b20d217a33b57faf7873dfdde9ee700a023aac",
+    "src/simulation/content/augment-policy.ts": "b1282504fa5f9f02b676c04003bffed80bbe64570c4d420e9a253f2493dc5ab7",
+    "src/simulation/content/augments.ts": "e54a973e9c64681be44fda24f0ef486d15409a2046d1a9a6a6a1f75275c73879",
+    "src/simulation/content/consumables.ts": "ed7c9a02dc82fa6881acc5a689bb92ab0fc42bc45775ecb9e6deff8de2f23b1c",
+    "src/simulation/content/freeze.ts": "91965b7be2e8c0b75bb403d632dce45b8f272d57781c52f3e6f319ff911e11ab",
+    "src/simulation/content/g2-2-abilities.ts": "f1056777733c6fb59d8c899381b873f71d401cd0f48b2c958386434f205c4390",
+    "src/simulation/content/g2-2-traits.ts": "ebc6375f5cd5bf99e4c4070c76c9dc6053dac41ccbd73ecf548c75f412d29ea9",
+    "src/simulation/content/g2-2-units.ts": "ba7b9f30e2566f609fc9ded95a94b884965cf87cae6193d80b4c688ee48baa6d",
+    "src/simulation/content/g2-abilities.ts": "50c9dff4b8478aa8192a03de423a6557a97b86ab182c4a0b6ea212d42a197438",
+    "src/simulation/content/g2-traits.ts": "a3652fafa7170e0367f38d4a2cdc4bcdf34f77ad7071ab708a69e5e7a62603a5",
+    "src/simulation/content/g2-units.ts": "afd82fbfe2373fef6a158b72a83d246f406494a1eed1e6403b20a42c0bca19fe",
+    "src/simulation/content/index.ts": "74a1e4dde2ed89172e4f884bfa175ee6a5d16642238ec0c33a537f86417a3bf7",
+    "src/simulation/content/item-programs.ts": "369f7a6bac925e0b46b540b2dd81a068c766e2e5c21d54af1d66438924114b30",
+    "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
+    "src/simulation/content/items-bow.ts": "4da0832e81baf5191b87a4c53a99abd2050b53ecf493648f670863b04262ddec",
+    "src/simulation/content/items-cloak.ts": "e2d299cc14dd101a3fc84540b7ee30964de3ac17b22d4b2ff56e014d245c1740",
+    "src/simulation/content/items-components.ts": "d684e5673eaa56085ed7f93f7bbfd973d13571f07722439b32c2d394ce3d83d4",
+    "src/simulation/content/items-gloves.ts": "0a6c3b4f32363dedb91d5f794aa19b1c0e80690efe60530fed587465fa6983b1",
+    "src/simulation/content/items-rod.ts": "6fb3813452c46ed8f4d9f525438c937acd8560c7180306fb6eef9705becedc3d",
+    "src/simulation/content/items-sword.ts": "550956dd4d5cfb620e62914820892c80c3d79e9d694a32193941ce9b72784c20",
+    "src/simulation/content/items-tear.ts": "be584045a6e29f18c5737274e54bfbfb171a0d1365ead9d9ecb2d74b859cd141",
+    "src/simulation/content/items-vest.ts": "6b4096290b257492a329eb361c22e304ffb9a81e5c734a1dcaf976cb2ffa1ed6",
+    "src/simulation/content/items.ts": "d56aa5bcf261823de04a3c8bb09cb619ed00ac1ad465883b78cdd43b0f536538",
+    "src/simulation/content/legacy-anomalies.ts": "73d439d72aa92e649206e3ae35e34e339c2d506e4a00978d3b27d1e9e87ce144",
+    "src/simulation/content/legacy-augments.ts": "8598ff4706ad27c4eaa4450c4d52539b0db95d8af819e15606673f1715d742b6",
+    "src/simulation/content/legacy-items.ts": "6453d0f0a263de40c74ee128462125349b679863f661ab47dcd2b2fc23848258",
+    "src/simulation/content/legacy-traits.ts": "3e7e99a383a671f596a8877d0711d0a33ee4cde30bc363a91e7cb9e8ef190b57",
+    "src/simulation/content/loot.ts": "759f9aaee093bf470b6656673ea62d66c62ac6e3ade875ae505ee1c38da94db9",
+    "src/simulation/content/neutral-encounters.ts": "55615f61edaed29cc2cf3f9cf728972cc64fb8aa2b633cc45cfbde3aa4b5c353",
+    "src/simulation/content/neutrals.ts": "67be00c1e83c55228e9640ba99c53cab8d4a40aa7eb31677c049fb22d5b6d9cc",
+    "src/simulation/content/orbs.ts": "8ea3d950cce68dc22a1f7281ef82163264e5719b3fd9eb3454803ea3e6ccdf34",
+    "src/simulation/content/round-catalog.ts": "3df01cff78d0b74bd941e8340af4b892680fb6a5f39d801a2ea1e1c019df9e4e",
+    "src/simulation/content/rules-manifest.ts": "9cf585b8f0311dff28b9b50bccdb1482beb9446813244fae0e9de459aa62791e",
+    "src/simulation/content/source-manifest.ts": "46108cb64d2b704de0d0d52d1e9dcf54116ea32b4d6d350fa28cc4cfa5beeeac",
+    "src/simulation/content/source/s13-14.24.json": "219dd985349544e6769b51dc7fd4f7d2c718f2bb1d45be0f89c3d30dc3a50ef8",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-1-champions.json": "cd63df6273416b6194b44be0b0914a79f651d416a39334172e4fecc7a3ec523a",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-1-items.json": "5e4bf674ad78b1dd4917815dad26a411d82df1c7b763b116d25c7b0307c35960",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-1-traits.json": "d119a8fada75a2777e51485abc2f35e99239c5383124ca6fa5ade647f3029765",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-2-champions.json": "7f4698ff78a13f365430685320ef2aafd05f7fa12e8cfff49923183561932e29",
+    "src/simulation/content/source/s13-14.24b/normalized/g2-2-traits.json": "1ddf20227085c71c9c8ee7423a66a711ce444b2c23e24cf07d4e7083f6b49458",
+    "src/simulation/content/source/s13-14.24b/normalized/items.json": "4999ac30c3b1dfd53bcc3afa138b5b3522b9195b2ec163331bd732f5cbf6de94",
+    "src/simulation/content/source/s13-14.24b/normalized/recipes.json": "e4152521ff49032688726d8cf7e826f682f5c64e2f675312ef05be80c2d8f9ac",
+    "src/simulation/content/source/s13-14.24b/provenance/convention-approvals.json": "3934217516a61f4bb20355629b2275330ed066022a22f750a656d28a085dd07c",
+    "src/simulation/content/source/s13-14.24b/provenance/coverage.json": "8f5317b97a07fe608f287e0cd5ef844ef824e51cb157a3bf50f5097608a761cf",
+    "src/simulation/content/source/s13-14.24b/provenance/item-review-a.json": "29d7a92f60f88d914a0a690c3714e1091ba4435dad907493bce9d00ad821fdec",
+    "src/simulation/content/source/s13-14.24b/provenance/item-review-b.json": "8738801ad6fc37ebced145e6ba7fb871b14f3b7fe779edb4a39e1d127abfbe2e",
+    "src/simulation/content/source/s13-14.24b/provenance/manifest.json": "a2ce6ec9109cea505724d3abafa02e2e57acf9b3da7730278324ff46f87f73c8",
+    "src/simulation/content/source/s13-14.24b/provenance/overrides.json": "180ab9f6ba234e03319f59d4548dc53d24b7bd6db4c2b61c6b740d6bf8cd0444",
+    "src/simulation/content/source/s13-14.24b/provenance/project-conventions.json": "0d93a92ca5e2d369c21c8b755e2a02e656f1c8703071b30ec2adc4e7dbceb795",
+    "src/simulation/content/source/s13-14.24b/provenance/questions.md": "0ba2759b06b7e26a06f67560f016dd44f960c3c2a8168d505782168dc065ce67",
+    "src/simulation/content/source/s13-14.24b/provenance/review-common.json": "bd390ac12f4d4d93a37dc819caefe4a2e7da9eff214cded8bf5af2c0c0e21dfd",
+    "src/simulation/content/source/s13-14.24b/provenance/single-player-policy.md": "9e9a7f7363f67bf41c278c793a0a0e2fe42d0da6bbbaa133cbb314f272388f7f",
+    "src/simulation/content/source/s13-14.24b/provenance/source-policy.json": "be4103a68fe6a7c1cd41bdfc9501844271100ef8fe98bac6e4de84387b032750",
+    "src/simulation/content/source/s13-14.24b/raw/en_us.json.gz": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+    "src/simulation/content/source/s13-14.24b/raw/selected-items.json": "599572b3cfa8c5cffad2a7612918ebd0c44ee27c33467c572f483312bb98a0e5",
+    "src/simulation/content/source/s13-14.24b/raw/selected-neutrals.json": "f2d954a62c44796359c6f0f00c3cd231b3e270ea01b41981cbfcb4ba821db699",
+    "src/simulation/content/traits.ts": "2f2f51524a0c849fdfa705df99303225571466a5d2c62e0ab135e670a7fec28a",
+    "src/simulation/deferred-upgrades.ts": "9bd23d7897326aeecf7acef996e5b42dd261fabbfe44b23cf377d83bfe7c07cd",
+    "src/simulation/economy-preview.ts": "6422096b249f5d7bda55d46626a6e0a7e2c139f263e1996271ccfdc2dda228e3",
+    "src/simulation/economy.ts": "bb4bc60af090f3468cb7675976f48d2311d9b4db837c0e44660344a06955dc42",
+    "src/simulation/effects.ts": "5540e6e02326ba97576461c9910a9c0d612db9d3632a15972bc776747e55ee63",
+    "src/simulation/encounter-selectors.ts": "ddb974b3a9d0572a9380651fbe99b09004a213b3656e0ce4b5b04a5647c705e3",
+    "src/simulation/equipment-policy.ts": "611f86bda6837df50f7b7febba237f63da2e36fd3d9661c2e40bcd524db56e18",
+    "src/simulation/game.ts": "ee2112df26da6c3b5140d086bb3a186d43ae728e4c0aebd4fbd76a4b134d5e7f",
+    "src/simulation/immutable-json.ts": "01f0ab2a0ed8be03f74bb3d220a0dcb108eb602bd011db87110689922a2a2416",
+    "src/simulation/input-assets.ts": "fe645acd36725e174730249516b4485c63f9cbc6b1de065a108ea82ed5dae238",
+    "src/simulation/inventory.ts": "16820cdbbda77dab257161e8fbb169d413d8e3126fe0809f91c583fece859932",
+    "src/simulation/item-catalog.ts": "016c51902549b3b3cfe34faf5d79554a0eb835391c58d0c88a0d836a70654437",
+    "src/simulation/item-grants.ts": "722053b5cbcc3a1c6cb59d256c707d97a0d6169c4e54b2fa576117ac77d87825",
+    "src/simulation/item-selectors.ts": "b4120d24be9c9a50818439ea442c4d834efff96a9d11836200f00ae9075f2f9b",
+    "src/simulation/loot-choice.ts": "c7326d19d82a768fdc246d8fdd7ddeeaa145bcb0f8b5a291967234d6a70f5001",
+    "src/simulation/loot-freeze.ts": "ad3b08bea8f80a50cddd3c4f2ca5005193ee3f4019ebb87deae397c111f69635",
+    "src/simulation/loot-identity.ts": "97d2a179df45f90ab7b4e3e0f5d0f1a874890f4875f6517bbc7bcb3b8a13cc6d",
+    "src/simulation/loot-runtime.ts": "93c8156c190ff6c64a7e178bcb7033e4b0a6545688c6a59c4139bb0522dd5e65",
+    "src/simulation/loot-types.ts": "fadf195e8b369fb44a670d21caf7469b7641963f9216ccf86ab74ad13abba029",
+    "src/simulation/loot-view.ts": "a08f55cbb24d5ef42fe913da76b70fa6cc3e676b52e11923f026cad5d9652f01",
+    "src/simulation/m8/companions.ts": "3241c94d4e2e1b8de5d0ba4f2324f9b4403bd7b92a36a4b25899629fde2377f0",
+    "src/simulation/m8/contracts.ts": "4875ab391b08381bc9f560c21a3fce406c3f25107bd6547e239e862ea684dee8",
+    "src/simulation/m8/crit.ts": "12cb364c4e92e1fe345dc17c14d05b55908e76739c4f4e258819c9540898e7c8",
+    "src/simulation/m8/damage.ts": "85beb9cbfc32df8f4c370e69f8cf081b47962f134b3c37a800890d28e32fb7d7",
+    "src/simulation/m8/equipment.ts": "df61f7e318ef0e1ddaba0d93c4e4690e486ea2fddd4ea135d1ec3dfd80651616",
+    "src/simulation/m8/heal.ts": "54f7c5cd4ca47461c0627dc70443a0e5597f624585e984dcd91e3b1f0c6cdfda",
+    "src/simulation/m8/identity.ts": "4320828fac9b27ce85eeb89a2bea04ea5038d409d0af24e1309174cb15c80066",
+    "src/simulation/m8/item-program.ts": "c5eba838ed0e15d68317e51b7a6b69f27e6025338a3f2d281fbc8680feae4d3a",
+    "src/simulation/m8/item-restore.ts": "facdbb4a1486d375569a8511a61684f46b207d2bd51c7b9310a52b36830124b4",
+    "src/simulation/m8/mana.ts": "91478f46feaa2be5a56a59e5c8422695ba12fdef42a3ec9510a6893cb6762f9f",
+    "src/simulation/m8/opening.ts": "3d987598b9ca57965eee0abf6afb03796105b51a94e5a52e793a2bac2e4d9ada",
+    "src/simulation/m8/periodic.ts": "c2d8551c2161f8093c0fe4d94cae58923ce0c818ae79f718ab4b6ae6304f099d",
+    "src/simulation/m8/planning.ts": "d4bbeb4b5801f937ff4e09744abf9b0975870f982ee2b437185c80286c94ebf7",
+    "src/simulation/m8/restore.ts": "4401910b16e3fb405b2fa0e0f1c7a264d8cdd5e41b4cb456f7ad7f7508a67d9e",
+    "src/simulation/m8/runtime-types.ts": "9d91a5a5f9f2fcf7e29275499628e25d9c7a4521823c435955f29b6b3c6a493e",
+    "src/simulation/m8/s13-definitions.ts": "1efb20ee44995e5687c23272ced5fee2704285ee1547954557683d66bfa841a1",
+    "src/simulation/m8/s13-mechanisms.ts": "a8c1ccba65eabb9cab16be9bcc7fd43345c692ffb2fccfecee96b059c235362f",
+    "src/simulation/m8/s13-targeting.ts": "34271238a9dec3e6e7b5cd3d6762d0c93d88839308939b9fb0f17129e90fa967",
+    "src/simulation/m8/s13-triggers.ts": "2816d39585fd8dd71f5a9ec53b55944ba9db8ff9aca6931d1a3c9b948f751782",
+    "src/simulation/m8/shield.ts": "33a11c76d20f64c0ebadc0e04dfaa1aa64ab2ea218cbbc5394d0b7ab82999b22",
+    "src/simulation/m8/stats.ts": "88866f3f085f10f7dbcd9928f6f1044d996b3079b8a618ea0c2fac206ed49e78",
+    "src/simulation/m8/status.ts": "05f2efbfd2bf20ab02ac0bcf7cdf4362dcd89a3d8054105b9856284af0415d28",
+    "src/simulation/m8/targeting.ts": "462e9338cf39d7da81bd5ce445a925ad583cdf24d89e0fe170f9b4a768ca11f1",
+    "src/simulation/m8/triggers.ts": "4d19a13d8cd6fdda5eaeb63270458cad3fd424fe0f1c984eec41d8f5404b2242",
+    "src/simulation/m8/ui-contracts.ts": "400d965f8530fc4016194a8dc819be793a44b08f983cbea98f6d852b37d4ff58",
+    "src/simulation/m8/unit-inputs.ts": "f8e401420672897f696d7bda57528b380c47a770bee0b6c46d2d948b52e8a956",
+    "src/simulation/m8/version.ts": "00eac109f0a11cbabefef10913984d793050365d1d9dd05b9ba222a36af800f9",
+    "src/simulation/match-rules.ts": "9298a307e6c9cc64d52360746304b011f22d2bed78337611322b2cf1f3dad9d8",
+    "src/simulation/match-types.ts": "72badd2718003649e2e64ada10ef8edda0f2b8ee15c6e53d8a29da3182e5a5e9",
+    "src/simulation/match.ts": "18ca25668d69b1f31b96b576f80565da935e28ca9a6ba1ad3c625cb4f754ed33",
+    "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
+    "src/simulation/neutral-encounter-compiler.ts": "aea0ec1e0d99e1e00aaf4691f4ef32598b4f9e1effd11000b831cfe350675125",
+    "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
+    "src/simulation/neutral-restore.ts": "f20d9b4d23ce0bf4d67f5bde04c8c8df252067384515699200dd0db41eda0bd1",
+    "src/simulation/opening-economy.ts": "738401d4a82d7f22455724df07fc2696d0b088726140bf89e67bd5ecf8466914",
+    "src/simulation/operation-policy.ts": "af069a8c9529485f8a7f9242ae11c907c28aebc9eb39ee761afaf3524fb201e3",
+    "src/simulation/orb-layout.ts": "12d4bb8568aef5487d226cd1ac215eb8216d369395ee0b8127b8d966879c76d3",
+    "src/simulation/private-seat-view.ts": "256e988308f3ee91c9034e33a730fdf5e04256f3752f9a277d890ca35d15d195",
+    "src/simulation/progression.ts": "bf9df858df4e3fde5f7296e988ad09bfd93c30b0b101fd92a406b67685b05669",
+    "src/simulation/resource-provenance.ts": "5270538e52f8cd9ae47b3e5395c1f399feb140a97e3c25ae35eebdcadca97b1a",
+    "src/simulation/rewards.ts": "8fb93de633a9bcf61f63a6a98b3e43b731bdd82b1da0f10f819209dff15c6d9e",
+    "src/simulation/rng.ts": "adb06e124b9f314aa4404e7108cc8aa4496e70f2289d8dab7c4aa116012a200e",
+    "src/simulation/round-economy.ts": "6c72758b47694f283bf746cd9c684ada382be3889c7da7cb3de7da94368b8356",
+    "src/simulation/round-enemies.ts": "1da1fe200ec43156fc23a808007d40b6f36cafd9a84059752f331d8d9d7827e8",
+    "src/simulation/round-schedule.ts": "d7af2c803248c6047fc6307776b342b52c3703345f4e83e199e6a1e6ee034424",
+    "src/simulation/round-selectors.ts": "927b08f1f456bc2400e9674c80349abf2e8b3ffced7817035702d6474e92fbd8",
+    "src/simulation/round-settlement.ts": "1a1bc835a1a5cb25c69597b9b2a86c276747caa522dcc1f73b3d091904ac41ff",
+    "src/simulation/s13-rules.ts": "e8a4c70e9b01ad88fdd70af35fb627b1d7b2dfe976d231f8d57b8d050a672e4c",
+    "src/simulation/serialization.ts": "a2002f10881322a537022a1a744dfc32ce05d1198e0ba279a79ea2e69aa088bb",
+    "src/simulation/shared-pool-ledger.ts": "492e085d4973b3ad8afec8e88f274157d10783d0d4e2179fe644c9f2c03a9422",
+    "src/simulation/shared-pool-types.ts": "c56f05680ce98c6bc2eb7af6f5b73f680b8910f790d7eac29350e6e97b064df3",
+    "src/simulation/shared-pool.ts": "9e010391fb36764f36f6e78efce6f19d13a47f9154ef6dc77d61b3c5eae11c2c",
+    "src/simulation/shop.ts": "60ba064ab8c2a1edab5ce957fc63bdc10e294ca27cdd62d2e6e78c2340314f45",
+    "src/simulation/strategy-g2-2.ts": "569e151a21b02edcd0c6db75b018ea55db50eed8789140702ea1a1b43b0cedbc",
+    "src/simulation/strategy-snapshot.ts": "9aace4a3b1cab7934281951606954b15d517dde5f79d448451003b573482ca51",
+    "src/simulation/strategy-types.ts": "b658103405878c3c3d14e209cf5d014064d79a5ec37b98290445ced98609b7fc",
+    "src/simulation/temporary-equipment.ts": "15039bd6d5f238028995e90d15e5d6c368e534493a75daf3d029c3e0888c6e99",
+    "src/simulation/trait-snapshot.ts": "55104921b0933977892389f43910d81a37c6f817afdb4c934c62c7f4086111c7",
+    "src/simulation/two-sided-battle.ts": "07416a57873ab642d4c71f0d776f10dd9c7fbb5b68844274a7d3fdbcbbf7d177",
+    "src/simulation/two-sided-snapshot.ts": "b622c113b29410e8ff4af5546bf6694e3bc84b053c21f5f7464992459863e8e7",
+    "src/simulation/two-sided-types.ts": "1c2f1b282b941e6179302e4aa65046edbe1c68532089039c2d8a30358c2928ee",
+    "src/simulation/unit-acquisition.ts": "9a867e504678b2b8080fd4b0e33e58dae940515a1b2e8d63d9d3105e0f8606d2",
+    "src/simulation/unit-stats.ts": "ebb99fbc8367a9a510c8ccb60b1a26c37bc2f9c75e849b59802a50d7102a3803",
+    "src/simulation/unit-types.ts": "1974e6c2868b6549144fb4602fb6873d075cef04b475827b4a9bd0bbe8247d47",
+    "src/simulation/units.ts": "2dc358faa3bfa33cd4826a6f923726c29b68eebdeaa90025aae54d5deefec878",
+    "src/simulation/upgrades.ts": "c0bdee1d1352c144707a5ec9aa1a7e55ac539ee714de9c21a2c0705624393542",
+    "src/simulation/validate-content.ts": "d6dd9a30109275a8a83ae85cf8c9522099af30e6756d827f2a0d28899a8cd1ef",
+    "src/simulation/view-fields.ts": "758328ac0d4935b74548418de09ef1f63683f5049af8b8fe5a89c197c7f1f81d",
+    "tests/fixtures/m5/oracle.g2.cjs": "3c4b18b21d3fbef011985f677eb32af268b21143ad33f8f266d76ea4677f684b"
+  },
+  "identityReplacements": [
+    [
+      "fnv1a32-utf16:bb66f4f8",
+      "fnv1a32-utf16:8914b323"
+    ],
+    [
+      "s13-g2-2-v1",
+      "s13-g2-2-aug30-v1"
+    ],
+    [
+      "s13-14.24b-g2-2-v1",
+      "s13-14.24b-g2-2-aug30-v1"
+    ]
+  ],
+  "lootReplayDigestUnchanged": "fnv1a32-utf16:028e5593",
+  "builds": {
+    "cannon": {
+      "commands": {
+        "previousBytes": 7260,
+        "currentBytes": 7100,
+        "previousSha256": "12434c04e4dc908d437c6e6fdfedd2873709c44f9842e91272d460a5299f1123",
+        "currentSha256": "ccb8eccab526ab4a4a4549925d079f9f3d9cbf227d3c81d9fcc55746799f52be",
+        "byteEqual": false,
+        "firstByteOffset": 456,
+        "firstDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        },
+        "firstGameplayDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "commandEvents": {
+        "previousBytes": 42238,
+        "currentBytes": 42272,
+        "previousSha256": "98e38738f3b7b808334c4f95ededbac0af2a4e129e5601251cb6dd9e9d76c2f0",
+        "currentSha256": "96ed2984c23aba81db9bb5928454c6dc4f4b5c9ca8da6d2c79ae035247a0870a",
+        "byteEqual": false,
+        "firstByteOffset": 182,
+        "firstDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        },
+        "firstGameplayDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        }
+      },
+      "battleEvents": {
+        "previousBytes": 26583099,
+        "currentBytes": 23995267,
+        "previousSha256": "540a97076b446b156815006bd243228cdebc6b4b8708a70459fd6310a889a3e8",
+        "currentSha256": "9e828b09beddd3a4692ca0f8a0d40ea4434f2398c6b8d54f80010a859e8bed94",
+        "byteEqual": false,
+        "firstByteOffset": 431283,
+        "firstDifference": {
+          "path": "$.4.14.outcome.mitigated",
+          "previous": 22,
+          "current": 23
+        },
+        "firstGameplayDifference": {
+          "path": "$.4.14.outcome.mitigated",
+          "previous": 22,
+          "current": 23
+        }
+      },
+      "states": {
+        "previousBytes": 7957507,
+        "currentBytes": 8113928,
+        "previousSha256": "569bea8bcacf000c02b0ea04f84b51871dc36823ce8f614af843976b11c7e3cd",
+        "currentSha256": "b9e98be7efd74295b3fc730fddcddeea68cb32991324a175ce78f0a475723b49",
+        "byteEqual": false,
+        "firstByteOffset": 45,
+        "firstDifference": {
+          "path": "$.0.rulesVersion",
+          "previous": "s13-g2-2-v1",
+          "current": "s13-g2-2-aug30-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.6.augments.0.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "roundResults": {
+        "previousBytes": 17383,
+        "currentBytes": 17378,
+        "previousSha256": "b56bf37208063d7fe94150422a4d46549e1083abeeb3d6e42adadf090f75a15a",
+        "currentSha256": "0dc1dfa511169fdbe1e62695353830d6c0a8468368cc33d5f0c61df0dea7d2d2",
+        "byteEqual": false,
+        "firstByteOffset": 2193,
+        "firstDifference": {
+          "path": "$.4.combatTicks",
+          "previous": 531,
+          "current": 513
+        },
+        "firstGameplayDifference": {
+          "path": "$.4.combatTicks",
+          "previous": 531,
+          "current": 513
+        }
+      },
+      "previousTicks": 9889,
+      "currentTicks": 9135,
+      "archivedRecording": {
+        "previousBytes": 614171,
+        "currentBytes": 619207,
+        "previousSha256": "d58d92efb645c9aa71d3b9d0a889176916fc2aca85b2c1004cf7eaeb710524b3",
+        "currentSha256": "c6377032ac8deb3bd1abb0bba2459ffc72c66746bdf7b2bc6022f492ab706925",
+        "byteEqual": false,
+        "firstByteOffset": 11
+      }
+    },
+    "sniper": {
+      "commands": {
+        "previousBytes": 6866,
+        "currentBytes": 6945,
+        "previousSha256": "4c373e2377ddfac53d2362cf55d817cd0d3d1ae85863a7ef598f0419baecb5ae",
+        "currentSha256": "a028ec650b2b8bea2af84dae30bee99e2bb376105568bd02242e8790d650bec8",
+        "byteEqual": false,
+        "firstByteOffset": 412,
+        "firstDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        },
+        "firstGameplayDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "commandEvents": {
+        "previousBytes": 69033,
+        "currentBytes": 55217,
+        "previousSha256": "a8321a1788626d21635114129fa25b645ded9d5acd8b844f0c1a2adcd69b7883",
+        "currentSha256": "8e35ed18e1c419adf4f4b5d189b9323c2f7f1bc9a236dafde635c10b94f0a955",
+        "byteEqual": false,
+        "firstByteOffset": 182,
+        "firstDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        },
+        "firstGameplayDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        }
+      },
+      "battleEvents": {
+        "previousBytes": 47300542,
+        "currentBytes": 39326168,
+        "previousSha256": "e83b683c82cbf87893d67e867d6bf9df1a72213f98292bee2e6f43a0bd12f9a8",
+        "currentSha256": "2e9bc7756c788b20026780bf2125c9ec8bdd27b59148ed9fc1cfc7a2195341af",
+        "byteEqual": false,
+        "firstByteOffset": 1546043,
+        "firstDifference": {
+          "path": "$.7.22.outcome.mitigated",
+          "previous": 39,
+          "current": 41
+        },
+        "firstGameplayDifference": {
+          "path": "$.7.22.outcome.mitigated",
+          "previous": 39,
+          "current": 41
+        }
+      },
+      "states": {
+        "previousBytes": 8198293,
+        "currentBytes": 8240880,
+        "previousSha256": "e953a70979e82eceb279d047f547c4bd72ff547146a83c33ff13355da314205f",
+        "currentSha256": "4551dbbebf683b95604b7d3c46c91033c5e2576a3a8808aaeeec2405c14b382b",
+        "byteEqual": false,
+        "firstByteOffset": 45,
+        "firstDifference": {
+          "path": "$.0.rulesVersion",
+          "previous": "s13-g2-2-v1",
+          "current": "s13-g2-2-aug30-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.6.augments.0.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "roundResults": {
+        "previousBytes": 17396,
+        "currentBytes": 17394,
+        "previousSha256": "3ea5c6391374197c8b63eb8b9048785feb4fcd156f4fa033fc6a0d88b3cecf54",
+        "currentSha256": "5735e2ec389918dfc3faf19e7553508d242d5c24e69aa1abe94a6a4a68ba3f28",
+        "byteEqual": false,
+        "firstByteOffset": 3761,
+        "firstDifference": {
+          "path": "$.7.combatTicks",
+          "previous": 281,
+          "current": 274
+        },
+        "firstGameplayDifference": {
+          "path": "$.7.combatTicks",
+          "previous": 281,
+          "current": 274
+        }
+      },
+      "previousTicks": 12569,
+      "currentTicks": 11073,
+      "archivedRecording": {
+        "previousBytes": 641044,
+        "currentBytes": 637734,
+        "previousSha256": "4747211d15f44543df7e6ecf54e1de613e50917a5ad0cb0170d5de8b8b7d31ef",
+        "currentSha256": "8395916fb903ea55724d4b7f7acb5a7b198efcef3654239b6aa1e1683baaf603",
+        "byteEqual": false,
+        "firstByteOffset": 115
+      }
+    },
+    "mage": {
+      "commands": {
+        "previousBytes": 6935,
+        "currentBytes": 7041,
+        "previousSha256": "cb3f11d9d88689a64f6b8369f1df2f4327f1d9c505cd132ac82f85230632ab1c",
+        "currentSha256": "c00838ad65c414011a124193e77c83f154b0603e6480112790e05f79c9824783",
+        "byteEqual": false,
+        "firstByteOffset": 412,
+        "firstDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        },
+        "firstGameplayDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "commandEvents": {
+        "previousBytes": 48962,
+        "currentBytes": 48986,
+        "previousSha256": "361353119e6d5ad21530a6da9d48fe9aab86a9aa0e036956185f0bf821bd6c1e",
+        "currentSha256": "2121c4cc95f85ae3d7fbe80d9594d038e18a52ab5878110dd556d2dc6fb511dd",
+        "byteEqual": false,
+        "firstByteOffset": 182,
+        "firstDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        },
+        "firstGameplayDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        }
+      },
+      "battleEvents": {
+        "previousBytes": 37779084,
+        "currentBytes": 33429515,
+        "previousSha256": "476950e96105f4193799b918a92f55cd934571c28f9d0283a124d652d0d58c5b",
+        "currentSha256": "8c7e695f5144ee3e4128f2597045ce8979d6572d32d4aef007b9f9797bae6e07",
+        "byteEqual": false,
+        "firstByteOffset": 582713,
+        "firstDifference": {
+          "path": "$.4.14.outcome.mitigated",
+          "previous": 22,
+          "current": 23
+        },
+        "firstGameplayDifference": {
+          "path": "$.4.14.outcome.mitigated",
+          "previous": 22,
+          "current": 23
+        }
+      },
+      "states": {
+        "previousBytes": 8063922,
+        "currentBytes": 8216822,
+        "previousSha256": "72c37bc2f7dc2e8ef0f0b33daa43a82d155fd470dc4dc862da7969a988c84613",
+        "currentSha256": "f53c561648c89937ca9d6dc0629ee3b3279818e0918afc46395fb8c795f714bc",
+        "byteEqual": false,
+        "firstByteOffset": 45,
+        "firstDifference": {
+          "path": "$.0.rulesVersion",
+          "previous": "s13-g2-2-v1",
+          "current": "s13-g2-2-aug30-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.6.augments.0.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "roundResults": {
+        "previousBytes": 17405,
+        "currentBytes": 17401,
+        "previousSha256": "843b520b661958e377cee094adefe442b51eeeeee2222fd385be33f6e8c5395c",
+        "currentSha256": "7fc4aed7e244e7a5238a06a2c1df4e7653bfc751eed918e6c2f5d00a16c734aa",
+        "byteEqual": false,
+        "firstByteOffset": 2194,
+        "firstDifference": {
+          "path": "$.4.combatTicks",
+          "previous": 540,
+          "current": 513
+        },
+        "firstGameplayDifference": {
+          "path": "$.4.combatTicks",
+          "previous": 540,
+          "current": 513
+        }
+      },
+      "previousTicks": 12528,
+      "currentTicks": 11113
+    },
+    "sniper-caitlyn": {
+      "commands": {
+        "previousBytes": 7887,
+        "currentBytes": 7966,
+        "previousSha256": "958fd4b960c193479ac38ba395e4f38c8d069d3526aab8fbdb69b2ad7abaef9a",
+        "currentSha256": "352bed37a53e95a6bfc5fa0058cbf6abd7c17ccb376059067c6103a00774da0c",
+        "byteEqual": false,
+        "firstByteOffset": 412,
+        "firstDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        },
+        "firstGameplayDifference": {
+          "path": "$.10.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "commandEvents": {
+        "previousBytes": 69180,
+        "currentBytes": 55364,
+        "previousSha256": "82163daeea67fc21948c02f98e75a5b92629cce2d9b1dd99424af25c6661d489",
+        "currentSha256": "81a9cd26a4caa14b16b08180b3b5fdf5c4a37e1a4dab4541b38f3ed40de4e184",
+        "byteEqual": false,
+        "firstByteOffset": 182,
+        "firstDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        },
+        "firstGameplayDifference": {
+          "path": "$.9.0.choice.offers.0",
+          "previous": "bulky-buddies-i",
+          "current": "backup"
+        }
+      },
+      "battleEvents": {
+        "previousBytes": 46714539,
+        "currentBytes": 39751739,
+        "previousSha256": "bcc11c5419678cdf246379a9a7353d8d401004ade683675ddf5e5eb1bb350b90",
+        "currentSha256": "666c737ade932e77b1898b072816700a827bdc9f9883e1baf93657364b0ebde5",
+        "byteEqual": false,
+        "firstByteOffset": 1546043,
+        "firstDifference": {
+          "path": "$.7.22.outcome.mitigated",
+          "previous": 39,
+          "current": 41
+        },
+        "firstGameplayDifference": {
+          "path": "$.7.22.outcome.mitigated",
+          "previous": 39,
+          "current": 41
+        }
+      },
+      "states": {
+        "previousBytes": 8187782,
+        "currentBytes": 8244800,
+        "previousSha256": "34293c7393e8623da378219edc20935d200d087ea88ee828505086237ced58f3",
+        "currentSha256": "3d444667ccb279834e33a68699502978b033e5f2985d72a46f9a9a8942362d3c",
+        "byteEqual": false,
+        "firstByteOffset": 45,
+        "firstDifference": {
+          "path": "$.0.rulesVersion",
+          "previous": "s13-g2-2-v1",
+          "current": "s13-g2-2-aug30-v1"
+        },
+        "firstGameplayDifference": {
+          "path": "$.6.augments.0.definitionId",
+          "previous": "investment-strategy-i",
+          "current": "bronze-for-life-i"
+        }
+      },
+      "roundResults": {
+        "previousBytes": 17352,
+        "currentBytes": 17349,
+        "previousSha256": "08c6a7a2e9a0fcc7cb39bbb43a5f2c33f0ec0a8900b85e07d3988a780225e5c5",
+        "currentSha256": "f8ad062dc1434d09c4d39df2c1e5702141890454c25bf0cd1cdc6df2f71a1058",
+        "byteEqual": false,
+        "firstByteOffset": 3761,
+        "firstDifference": {
+          "path": "$.7.combatTicks",
+          "previous": 281,
+          "current": 274
+        },
+        "firstGameplayDifference": {
+          "path": "$.7.combatTicks",
+          "previous": 281,
+          "current": 274
+        }
+      },
+      "previousTicks": 12374,
+      "currentTicks": 11054
+    }
+  },
+  "c19": {
+    "compiled": {
+      "previousBytes": 13254,
+      "currentBytes": 13254,
+      "previousSha256": "5646a35af8a23b4a1aa1ea8f5d18fe9ce342cdd97a15aaa786b168d6461707f1",
+      "currentSha256": "af96061ec8b7448e37c591a75df571e7580d4b632dda7175051503fac8523a5f",
+      "byteEqual": false,
+      "firstByteOffset": 175,
+      "firstDifference": {
+        "path": "$.a.contentDigest",
+        "previous": "fnv1a32-utf16:bb66f4f8",
+        "current": "fnv1a32-utf16:8914b323"
+      },
+      "firstGameplayDifference": null
+    },
+    "terminal": {
+      "previousBytes": 25996,
+      "currentBytes": 25996,
+      "previousSha256": "a531e29d6091238fde55d325cc9e89d8685c7bc97a39669644c5528c048b8e3e",
+      "currentSha256": "a531e29d6091238fde55d325cc9e89d8685c7bc97a39669644c5528c048b8e3e",
+      "byteEqual": true,
+      "firstByteOffset": null,
+      "firstDifference": null,
+      "firstGameplayDifference": null
+    },
+    "events": {
+      "previousBytes": 171840,
+      "currentBytes": 171840,
+      "previousSha256": "a7e7474c9fe3bc46f6877152c11df914ab33c68c5d6061c4b6f3ea7e1069d76f",
+      "currentSha256": "a7e7474c9fe3bc46f6877152c11df914ab33c68c5d6061c4b6f3ea7e1069d76f",
+      "byteEqual": true,
+      "firstByteOffset": null,
+      "firstDifference": null,
+      "firstGameplayDifference": null
+    },
+    "pulses": {
+      "previousBytes": 15139,
+      "currentBytes": 15139,
+      "previousSha256": "2c35be1ab62f09d7f83fe94bc27ef08690757f5e39d807d1c0a089b5df71c197",
+      "currentSha256": "2c35be1ab62f09d7f83fe94bc27ef08690757f5e39d807d1c0a089b5df71c197",
+      "byteEqual": true,
+      "firstByteOffset": null,
+      "firstDifference": null,
+      "firstGameplayDifference": null
+    }
+  },
+  "b8": {
+    "0": {
+      "battle": {
+        "previousBytes": 6737,
+        "currentBytes": 6737,
+        "previousSha256": "4c1ff60362f293db5ae86d6bbffe61c90feabecf3b2dc5f7439cb5c4a9eaeabe",
+        "currentSha256": "4c1ff60362f293db5ae86d6bbffe61c90feabecf3b2dc5f7439cb5c4a9eaeabe",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null,
+        "firstGameplayDifference": null
+      },
+      "replay": {
+        "previousBytes": 579,
+        "currentBytes": 579,
+        "previousSha256": "d84878cea067bbfa366ac0e4d46cb96e9dfdd39b191f65bb3315559503a25e7e",
+        "currentSha256": "d84878cea067bbfa366ac0e4d46cb96e9dfdd39b191f65bb3315559503a25e7e",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null,
+        "firstGameplayDifference": null
+      }
+    },
+    "1": {
+      "battle": {
+        "previousBytes": 296631,
+        "currentBytes": 296631,
+        "previousSha256": "7227708a51ae3f0246cd6c92c969826576856a67dae210dc9342d58880143ce2",
+        "currentSha256": "7227708a51ae3f0246cd6c92c969826576856a67dae210dc9342d58880143ce2",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null,
+        "firstGameplayDifference": null
+      },
+      "replay": {
+        "previousBytes": 184893,
+        "currentBytes": 184893,
+        "previousSha256": "d276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8",
+        "currentSha256": "d276b24882658621fcdbf692cd7be4e1714b7217580efe1e1da8c65a1b961ba8",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null,
+        "firstGameplayDifference": null
+      }
+    },
+    "9": {
+      "battle": {
+        "previousBytes": 1274988,
+        "currentBytes": 1274988,
+        "previousSha256": "7fd32a9a9ab5092f54511701322ea453bf0a0a09156eede810df2938fd153a86",
+        "currentSha256": "7fd32a9a9ab5092f54511701322ea453bf0a0a09156eede810df2938fd153a86",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null,
+        "firstGameplayDifference": null
+      },
+      "replay": {
+        "previousBytes": 826837,
+        "currentBytes": 826837,
+        "previousSha256": "73906cbafe4a67c7842140b0368bf6b36ff56e4051f590168035ed8f22b13062",
+        "currentSha256": "73906cbafe4a67c7842140b0368bf6b36ff56e4051f590168035ed8f22b13062",
+        "byteEqual": true,
+        "firstByteOffset": null,
+        "firstDifference": null,
+        "firstGameplayDifference": null
+      }
+    }
+  },
+  "herald": {
+    "ionic-spark": {
+      "fileBytes": {
+        "previousBytes": 110974,
+        "currentBytes": 110897,
+        "previousSha256": "7c9cc1029d42c113276d13f8b8f52ce37b43fdf333714486b14d1e34d6f99745",
+        "currentSha256": "13a1e83ddb37894056ee0bcf4b8b3a2daee94eb9cb8cc5b6045a78a0b754a768",
+        "byteEqual": false,
+        "firstByteOffset": 148
+      },
+      "raw": {
+        "previousBytes": 110973,
+        "currentBytes": 110896,
+        "previousSha256": "55801b019a24bc895105ddd8e3ec402a7d7f33d5ac7330f54adae624b1a4e909",
+        "currentSha256": "57c633612aa510f87357e093633081921e04d9faf417ba5e457b6ad65861341b",
+        "byteEqual": false,
+        "firstByteOffset": 148,
+        "firstDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "start": {
+        "previousBytes": 152733,
+        "currentBytes": 153745,
+        "previousSha256": "428552fca9427e89f42f7fa9663d9a4f5818bb48ed4a3def3d2ab022a1be7fe4",
+        "currentSha256": "2431f2bbc40e075a03e6fc4336b7adaf97624cdb9cda0368db70a12be1ba4e85",
+        "byteEqual": false,
+        "firstByteOffset": 167,
+        "firstDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "firstFifteenSteps": {
+        "previousBytes": 2416320,
+        "currentBytes": 2431500,
+        "previousSha256": "7e9ce4202fa8555fb0f47dc0a6f51e3b5b1c4d2dae9178f6fbb38103171b31a7",
+        "currentSha256": "d288f2c618797c026783b7412d0a0c891615d633226b3e50671874ca18231bb6",
+        "byteEqual": false,
+        "firstByteOffset": 158,
+        "firstDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      }
+    },
+    "evenshroud": {
+      "fileBytes": {
+        "previousBytes": 110973,
+        "currentBytes": 110896,
+        "previousSha256": "045d2ef9037d22bf1ca2e0076390e875a1f392e831ad67b95e307f98c7f4469b",
+        "currentSha256": "aa4ede8d3517574e5bc071f19b7069e186cc02fb258a275d84ae8ca9ae0b6ac9",
+        "byteEqual": false,
+        "firstByteOffset": 148
+      },
+      "raw": {
+        "previousBytes": 110972,
+        "currentBytes": 110895,
+        "previousSha256": "112e2bf939bde209ac03d9ec77ccdb9519b82ee629704efafb6eac191d336fa9",
+        "currentSha256": "a42d2e2842f480707b0d7937cb5b6d46814194120aa16e05208307220b3a7cf9",
+        "byteEqual": false,
+        "firstByteOffset": 148,
+        "firstDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "start": {
+        "previousBytes": 158277,
+        "currentBytes": 159289,
+        "previousSha256": "db034f2b28801b31a01c7efdb8dac3825a5c26823c72f6b0dd96e88ac351f7a3",
+        "currentSha256": "df0692f100eaf4a36a1609143f82013b565843270f66d3645f740bebbde5955f",
+        "byteEqual": false,
+        "firstByteOffset": 167,
+        "firstDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "firstFifteenSteps": {
+        "previousBytes": 2466788,
+        "currentBytes": 2481968,
+        "previousSha256": "fd45b414803cf51ad4e365ddd62d47eb54f30cb963b3cc7f70e222bcf60e5c86",
+        "currentSha256": "31605390dc4139199ac63b63674330cebc61ae4f75a88d7100fa8212dbb88df7",
+        "byteEqual": false,
+        "firstByteOffset": 158,
+        "firstDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      }
+    },
+    "ionic-spark--evenshroud": {
+      "fileBytes": {
+        "previousBytes": 111098,
+        "currentBytes": 111021,
+        "previousSha256": "516a96de7ac8935753e5811551dbf8761189854501e90741319860b76dc9c6fd",
+        "currentSha256": "0a7e87876a2cc6804e78019d14927d261f3bb933411fca610e0588f1a193b382",
+        "byteEqual": false,
+        "firstByteOffset": 148
+      },
+      "raw": {
+        "previousBytes": 111097,
+        "currentBytes": 111020,
+        "previousSha256": "ca70952ababb6a2b82ef369fc08e35dfb8890ce579fea2318fa2ba9c9effa74a",
+        "currentSha256": "c806972359765ffcbfc872cdcb284afd50711b4e3f017963cc24aca99b356d89",
+        "byteEqual": false,
+        "firstByteOffset": 148,
+        "firstDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "start": {
+        "previousBytes": 166458,
+        "currentBytes": 167470,
+        "previousSha256": "2cf17eef835c8668fd5b7fc63dbb670966c23f7375fc85b3911f48ca2e7dfccb",
+        "currentSha256": "79769beb80ad477fee0bd37d26231a8f705ac921b67f89b315b8eac91ba06d42",
+        "byteEqual": false,
+        "firstByteOffset": 167,
+        "firstDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "firstFifteenSteps": {
+        "previousBytes": 2643874,
+        "currentBytes": 2659054,
+        "previousSha256": "5c32e1eb876ffa6748136e7537e93229749ea3b71c0c1a5959a3ec33ac6f2392",
+        "currentSha256": "feb55ad1d541f9cc61703d42b70f683d42c4dca6b8efabe6487aaf35cd1f9cc4",
+        "byteEqual": false,
+        "firstByteOffset": 158,
+        "firstDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      }
+    },
+    "quicksilver": {
+      "fileBytes": {
+        "previousBytes": 110977,
+        "currentBytes": 110900,
+        "previousSha256": "4a4ee0e18db09d2bdfb37c761980b61e33e80baf43764350526064853032faba",
+        "currentSha256": "d1e68c6a37b7682e8deb5f13b0c732d5fffc85cfcb40f53b7bc308960c4eaa6e",
+        "byteEqual": false,
+        "firstByteOffset": 148
+      },
+      "raw": {
+        "previousBytes": 110976,
+        "currentBytes": 110899,
+        "previousSha256": "5f50f7848ca7ff756c657eccd7eec123a3b8b934516eba99b6d7208fe836dca4",
+        "currentSha256": "4538354241394271b433928953e2301c5dd698b9b84d709b918595c29cd544bc",
+        "byteEqual": false,
+        "firstByteOffset": 148,
+        "firstDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "start": {
+        "previousBytes": 153972,
+        "currentBytes": 154982,
+        "previousSha256": "cd18e6b1be4aacb88a838a90599804855c65dd267c4d8d7e3538703900e382a8",
+        "currentSha256": "4f81705c947f9eca798fdc916a70a30db1a210d3129b2b4aaac68bedd46c7471",
+        "byteEqual": false,
+        "firstByteOffset": 167,
+        "firstDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "firstFifteenSteps": {
+        "previousBytes": 2338753,
+        "currentBytes": 2353901,
+        "previousSha256": "800df2f192b5f1fed65b26b6d432ae4aca83fbaf9a55c9c648658538f696d27c",
+        "currentSha256": "3164eeb70d9d643aa264c7013ec1b09f6e63c2bc6fd1c049dad847f68601951e",
+        "byteEqual": false,
+        "firstByteOffset": 158,
+        "firstDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      }
+    },
+    "edge-of-night": {
+      "fileBytes": {
+        "previousBytes": 110979,
+        "currentBytes": 110902,
+        "previousSha256": "affe9cbf9915d147e68ace0a2a49b1c2820ab0dc34706db864b17ac8dd1b4463",
+        "currentSha256": "9c0533b162378469239506a64fe150839264c29c7aac0becb31592b4838fcd5c",
+        "byteEqual": false,
+        "firstByteOffset": 148
+      },
+      "raw": {
+        "previousBytes": 110978,
+        "currentBytes": 110901,
+        "previousSha256": "c0d08f67c521953fbc85a80411e83a66a42ed8fb041db9fb3ad2864bf7b1e263",
+        "currentSha256": "02452a49b64e1a1333c2b0ac37a9b42fb823ab02632c26e666ceb8c369db8453",
+        "byteEqual": false,
+        "firstByteOffset": 148,
+        "firstDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "start": {
+        "previousBytes": 151453,
+        "currentBytes": 152463,
+        "previousSha256": "ea59411b066cf20e92e59fa215a3b1242af1eb7bc600487bc00867d97f48bef7",
+        "currentSha256": "6b9a6673813d9f1afec1feb57a68cfbc60b33c318dde9cfb14a91854d7926b60",
+        "byteEqual": false,
+        "firstByteOffset": 167,
+        "firstDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      },
+      "firstFifteenSteps": {
+        "previousBytes": 2342801,
+        "currentBytes": 2357951,
+        "previousSha256": "da2a15567750a0aebb628681f2ae88da1d8fa1ad463cf16d6f0e78fc3e91f5cc",
+        "currentSha256": "72fd840997823e490ef8b6968793f0af549231be42f5805d045cc789d43e4321",
+        "byteEqual": false,
+        "firstByteOffset": 158,
+        "firstDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        },
+        "firstGameplayDifference": {
+          "path": "$.0.state.augmentProgress.investmentHp",
+          "previous": 1032,
+          "current": 0
+        }
+      }
+    },
+    "trajectory": {
+      "previousBytes": 203114,
+      "currentBytes": 202674,
+      "previousSha256": "94885367135b8446bc02da33eaa28bc8f5a12cebdb9c3aa6c6e4ba918f3ffc93",
+      "currentSha256": "1958f5748bd8ddcd426d8afe1c2e37aa414002e025c4f7b54f17c20b8bd5d842",
+      "byteEqual": false,
+      "firstByteOffset": 42,
+      "firstDifference": {
+        "path": "$.branches.0.battles.0.eventsSha256",
+        "previous": "00a8dbb772ae92b8c58d0bb0dfa1ce9d115b8a072a395b2359b63319c111f31a",
+        "current": "7e37dfc71ea5ff5151c9bb2baee0bbeb43499accef58aaabfacb50a861a33034"
+      },
+      "firstGameplayDifference": {
+        "path": "$.branches.0.battles.0.eventsSha256",
+        "previous": "00a8dbb772ae92b8c58d0bb0dfa1ce9d115b8a072a395b2359b63319c111f31a",
+        "current": "7e37dfc71ea5ff5151c9bb2baee0bbeb43499accef58aaabfacb50a861a33034"
+      }
+    }
+  },
+  "goldenBytes": {
+    "previousBytes": 101071,
+    "currentBytes": 101324,
+    "previousSha256": "f0440ed9583ddb51b4cfd639567b236b1e1ac09e6ecd201182d7556735c0ddb4",
+    "currentSha256": "387522c770720d46e7c5f000715d5676f3496c3f437f2adfeaecdd9162ea3699",
+    "byteEqual": false,
+    "firstByteOffset": 13
+  }
+}

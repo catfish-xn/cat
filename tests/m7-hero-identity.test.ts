@@ -1,6 +1,7 @@
+import { TRAIT_DEFINITIONS } from '../src/simulation/content/traits';
 import { describe, expect, it } from 'vitest';
 import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
-import { HERO_STYLE, TRAIT_SHAPES, getHeroIdentity, heroEmblemSvg, EMBLEM_POINTS, HERO_S13_TRAITS, S13_TRAIT_ZH, heroTraitLabels } from '../src/presentation/hero-identity';
+import { HERO_STYLE, TRAIT_SHAPES, getHeroIdentity, heroEmblemSvg, EMBLEM_POINTS, HERO_S13_TRAITS, S13_TRAIT_ZH, S13_TRAIT_IDS, heroTraitTags } from '../src/presentation/hero-identity';
 import { champions } from './fixtures/s13-source.cjs';
 import { THEME, costColor } from '../src/presentation/theme';
 import { heroPortraitHtml, s13AssetUrl } from '../src/presentation/s13-assets';
@@ -50,9 +51,23 @@ describe('M7 hero identity (G01)', () => {
       expect(HERO_S13_TRAITS[hero.id], hero.id).toEqual(archive[hero.id].traits);
       expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
-      const open = heroTraitLabels(hero.id).filter(label => label.open).map(label => label.name);
-      expect(open.sort()).toEqual(hero.traits.filter(id => ['sentinel','artillerist','sniper','watcher','sorcerer','automata','family','firelight'].includes(id)).map(id => ({sentinel:'哨兵',artillerist:'炮手',sniper:'狙神',watcher:'监察',sorcerer:'法师',automata:'海克斯机械',family:'家人',firelight:'野火帮',rebel:'蓝发小队',academy:'皮城学院',enforcer:'执法官',conqueror:'征服者',scrap:'极客',emissary:'外交官'}[id])).sort());
+      const open = heroTraitTags(hero.id).filter(label => label.open).map(label => label.name);
+      const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
+      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(14);
+      expect(open.sort()).toEqual(hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id)).map(id => names[id]).sort());
     }
+  });
+  it('opens all fourteen content traits for all forty-eight G2-2 heroes', () => {
+    const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
+    const observed = new Set<string>();
+    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(48);
+    for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
+      const expected = hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id));
+      expected.forEach(id => observed.add(id));
+      expect(heroTraitTags(hero.id).filter(tag => tag.open).map(tag => tag.name).sort(), hero.id)
+        .toEqual(expected.map(id => names[id]).sort());
+    }
+    expect([...observed].sort()).toEqual(Object.keys(TRAIT_DEFINITIONS).sort());
   });
   it('falls back to the code-drawn emblem for any hero without a bundled official icon', () => {
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {

@@ -1,3 +1,4 @@
+import { AUGMENT_OFFER_POLICY, AUGMENT_BRONZE_THRESHOLDS, AUGMENT_TIERS } from './augment-policy';
 import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../carousel-policy';
 import { RULES_GAP_MANIFEST } from './rules-manifest';
 import { EQUIPMENT_OPERATION_RULES_VERSION, MULTIPLAYER_OPERATION_RULES } from '../operation-policy';
@@ -143,7 +144,7 @@ export const CONTENT_DIGEST = digestContent({
   equipmentRulesVersion: EQUIPMENT_RULES_VERSION, equipmentOperations: EQUIPMENT_OPERATION_RULES_VERSION,
   temporaryEquipmentPool: TEMPORARY_EQUIPMENT_POOL,
   units: M5_UNIT_DEFINITIONS, neutralUnits: NEUTRAL_UNIT_DEFINITIONS, abilities: ABILITY_DEFINITIONS, s13Abilities: S13_ABILITY_DATA, traits: TRAIT_DEFINITIONS, items: ITEM_DEFINITIONS,
-  augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
+  augmentPolicy:AUGMENT_OFFER_POLICY, augmentTiers:AUGMENT_TIERS, augmentBronzeThresholds:AUGMENT_BRONZE_THRESHOLDS, augments: AUGMENT_DEFINITIONS, anomalies: ANOMALY_DEFINITIONS, schedule: ROUND_SCHEDULE,
   shopCatalog: SHOP_CATALOG_BY_COST, shopOdds: SHOP_ODDS,
   enemyTemplates: ENEMY_TEMPLATES, enemyPositions: ENEMY_POSITIONS, enemyGrowth: ENEMY_GROWTH,
   opponents: ROUND_ENEMY_PROJECTIONS,

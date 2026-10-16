@@ -1,9 +1,10 @@
 import {describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
+import {UNIT_DEFINITIONS} from '../src/simulation/units';
 import type {MatchState} from '../src/simulation/match';
 import {accepted,battle,players,reserveExcept,plan} from './fixtures/t13-loot-public';
-let preparation=api.createMatch(42);
+let preparation=api.createMatch(13);
 while(preparation.roundDefinitionId!=='2-7'){
  if(preparation.phase==='choice'){const c=preparation.pendingChoice!;preparation=accepted(api.selectChoice(preparation,c.choiceId,c.generation,c.kind==='component'?'sword':'investment-strategy-i'));}
  else if(preparation.phase==='settlement')preparation=accepted(api.nextRound(preparation,preparation.round));
@@ -22,20 +23,20 @@ describe('B8 live gold before interest, randomized direct loot',()=>{
  it.each([{gold:9,basis:10,interest:1,after:16,hp:136},{gold:49,basis:50,interest:5,after:60,hp:168},{gold:50,basis:51,interest:5,after:61,hp:168}])('$gold G plus earned 1G settles to $after once, across exact restore/Continue',v=>{
   expect(preparation).toMatchObject({gold:65,playerHp:73,level:4,augmentProgress:{investmentHp:128}});
   let before=preparation;
-  if(v.gold%2===0)before=accepted(api.buyUnit(before,0,before.shop.generation));
+  if(v.gold%2===0){const slot=before.shop.slots.findIndex(o=>o.status==='available'&&UNIT_DEFINITIONS[o.definitionId].cost%2===1);expect(slot).toBeGreaterThanOrEqual(0);before=accepted(api.buyUnit(before,slot,before.shop.generation));}
   while(before.gold>v.gold)before=accepted(api.rerollShop(before));
   expect(before.gold).toBe(v.gold);roundTrip(before);
   const l=battle(before),s=l.ended;
   expect(battle(roundTrip(before))).toEqual(l);
   expect(s.phase).toBe('settlement');expect(s.pendingChoice).toBeNull();
-  expect(s.roundResults.at(-1)).toMatchObject({roundId:'2-7',result:'playerWin',combatTicks:205,combatEventCount:217,interestBasis:v.basis,goldBefore:v.basis,goldAfter:v.after,incomeBreakdown:{base:5,win:0,interest:v.interest,streak:0}});
+  expect(s.roundResults.at(-1)).toMatchObject({roundId:'2-7',result:'playerWin',combatTicks:292,combatEventCount:239,interestBasis:v.basis,goldBefore:v.basis,goldAfter:v.after,incomeBreakdown:{base:5,win:0,interest:v.interest,streak:0}});
   expect(s.gold).toBe(v.after);expect(s.augmentProgress.investmentHp).toBe(v.hp);
   expect(s.augmentProgress.investmentHp).toBe(before.augmentProgress.investmentHp+8*v.interest);
   const drops=plan(before).encounterPlan.drops,ids=new Set(drops.map(d=>d.dropId));
-  expect(drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'cloak',quantity:1},{kind:'item',definitionId:'rod',quantity:1},{kind:'gold',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
+  expect(drops.map(d=>d.payload)).toEqual([{kind:'item',definitionId:'bow',quantity:1},{kind:'item',definitionId:'sword',quantity:1},{kind:'gold',quantity:1},{kind:'consumable',definitionId:'magnetic-remover',quantity:1}]);
   const receipts=s.m8.loot.receipts.filter(r=>ids.has(r.dropId));expect(receipts.map(r=>r.payload)).toEqual(drops.map(d=>d.payload));
-  expect(receipts.slice(0,2).map(r=>r.grantedItemIds)).toEqual([['item-5'],['item-6']]);
-  expect(s.nextUnitSerial).toBe(before.nextUnitSerial);expect(s.nextItemSerial).toBe(7);
+  expect(receipts.slice(0,2).map(r=>r.grantedItemIds)).toEqual([[`item-${before.nextItemSerial}`],[`item-${before.nextItemSerial+1}`]]);
+  expect(s.nextUnitSerial).toBe(before.nextUnitSerial);expect(s.nextItemSerial).toBe(before.nextItemSerial+2);
   expect(s.scheduleReceipts).toEqual(before.scheduleReceipts);expect(s.m8.loot.frozen).toEqual(before.m8.loot.frozen);
   for(const key of ['rngState','choiceRngState','rewardRngState','equipmentState'] as const)expect(s[key]).toEqual(before[key]);
   expect(s.combatInputBasis).toEqual(l.started.combatInputBasis);

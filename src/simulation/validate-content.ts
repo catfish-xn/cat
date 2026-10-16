@@ -43,6 +43,20 @@ function ids<T extends {readonly id:string}>(catalog:Readonly<Record<string,T>>,
 }
 /** Each finite mechanic has an explicit schema. Unknown names/fields are rejected before play. */
 export const MECHANIC_FIELDS:Readonly<Record<string,readonly string[]>>=Object.freeze({
+  mentorship:['health', 'attackSpeedBps'],
+  itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],
+  backup:['minimum', 'attackSpeedBps'],
+  lineup:['resistCentiPerUnit'],
+  findCenter:['healthBps', 'damageAmpBps'],
+  littleBuddies:['health', 'attackSpeedBps'],
+  bronzeForLife:['damageAmpBps', 'durabilityBps'],
+  builtDifferent:['health2', 'health3', 'health4', 'health5', 'speed2', 'speed3', 'speed4', 'speed5'],
+  blisteringStrikes:['durationTicks', 'burnBpsPerSecond', 'woundBps'],
+  fractionalFlat:['armorCenti', 'magicResistCenti', 'abilityPowerCenti'],
+  clockworkAccelerator:['attackSpeedBps', 'periodTicks'],
+  loneHero:['attackSpeedBps', 'durabilityBps'],
+  climbLadder:['adBps', 'abilityPower', 'armor', 'magicResist'],
+  inspiringEpitaph:['shieldMaxHpBps', 'attackSpeedBps'],
   rebel:['thresholdBps','adApBps','bonusHpBps','stunTicks','attackSpeedBps','durationTicks'], enforcer:['shieldBps','wanted','attackSpeedBps'], academy:['sponsoredBps','memberBaseBps'], scrap:['shieldPerComponent','conversions','durationTicks','componentCount'], emissary:['armorPerWin','healthBps','mana','starSpeedBps'],
   automata:['crystals','damage','conversionBps'],firelight:['periodTicks','healBps','attackSpeedBps','dashTicks'],family:['manaReductionBps','damageReductionBps','heist'],
   artillery:['everyN','adBps','radius'],sniper:['damageBpsPerHex'],watcher:['reductionBps','healthyReductionBps','thresholdBps'],
@@ -102,7 +116,7 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     augments:AUGMENT_DEFINITIONS,anomalies:ANOMALY_DEFINITIONS,shopCatalog:SHOP_CATALOG_BY_COST,schedule:ROUND_SCHEDULE,...overrides};
   finiteJson(content);
   for(const kind of ['units','abilities','traits','items','augments','anomalies'] as const) ids<{readonly id:string}>(content[kind],kind);
-  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:48,traits:14,items:44,augments:6,anomalies:3})) {
+  if(!Object.keys(overrides).length) for(const [kind,count] of Object.entries({units:48,traits:14,items:44,augments:30,anomalies:3})) {
     if(Object.keys(content[kind as 'units'|'traits'|'items'|'augments'|'anomalies']).length!==count) fail(`Incorrect M5 ${kind} count`);
   }
   validateUnitDefinitions(content.units,content.shopCatalog);validateAbilityDefinitions(content.abilities);

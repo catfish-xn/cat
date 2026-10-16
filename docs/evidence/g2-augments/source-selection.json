@@ -1,0 +1,1367 @@
+{
+  "schemaVersion": 1,
+  "scope": "24 additional S13 14.24b augments beside existing six",
+  "sourcePath": "src/simulation/content/source/s13-14.24b/raw/en_us.json.gz",
+  "sourceCompressedSha256": "7e0e2d41a806833f6f18e5752c0d5eea4fa3a74e75b61c1c54853de74c2ac5d2",
+  "sourceDecompressedSha256": "c1237ba2441f932a1b9761ce12887ad21089dffbd3a8004671cc9cb82dfd5bd3",
+  "officialPatchSource": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+  "selectionCount": 24,
+  "tierCounts": {
+    "silver": 9,
+    "gold": 12,
+    "prismatic": 3
+  },
+  "selection": [
+    {
+      "id": "manaflow-ii",
+      "apiName": "TFT_Augment_Manaflow2",
+      "name": "Manaflow II",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Manaflow_II.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1561",
+      "setMembershipPointer": "/setData/1/augments/243",
+      "rawEffects": {
+        "ManaPerAttack": 4.0
+      },
+      "rawDescription": "Your units that start combat in the back row gain @ManaPerAttack@ additional Mana per attack.",
+      "implementationClass": "reuse",
+      "semantics": "开战最后一排；每次普攻额外4法力。",
+      "patchOverrides": []
+    },
+    {
+      "id": "glass-cannon-ii",
+      "apiName": "TFT_Augment_GlassCannonII",
+      "name": "Glass Cannon II",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/GlassCannon_II.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1786",
+      "setMembershipPointer": "/setData/1/augments/222",
+      "rawEffects": {
+        "DamageAmp": 0.20000000298023224,
+        "Health": 0.800000011920929
+      },
+      "rawDescription": "Units that start combat in the back row begin combat at @Health*100@% health but gain @DamageAmp*100@% Damage Amp.",
+      "implementationClass": "reuse",
+      "semantics": "开战最后一排；80%初始生命，20%增伤。",
+      "patchOverrides": []
+    },
+    {
+      "id": "pumping-up-ii",
+      "apiName": "TFT9_Augment_PumpingUp2",
+      "name": "Pumping Up II",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Pumping-Up-II.tex"
+      },
+      "sourcePointer": "/items/1797",
+      "setMembershipPointer": "/setData/1/augments/160",
+      "rawEffects": {
+        "BaseAS": 8.0,
+        "IncreasePerRound": 1.0
+      },
+      "rawDescription": "Your team gains @BaseAS@% Attack Speed now. Each round after, they gain @IncreasePerRound@% more. (current Attack Speed: @TFTUnitProperty.item:TFT9_PumpingUp2Rounds@%)",
+      "implementationClass": "reuse",
+      "semantics": "基础8%攻速；获得后每轮再加1个百分点。",
+      "patchOverrides": []
+    },
+    {
+      "id": "pumping-up-iii",
+      "apiName": "TFT9_Augment_PumpingUp3",
+      "name": "Pumping Up III",
+      "tier": "prismatic",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Pumping-Up-III.tex"
+      },
+      "sourcePointer": "/items/1795",
+      "setMembershipPointer": "/setData/1/augments/161",
+      "rawEffects": {
+        "BaseAS": 12.0,
+        "IncreasePerRound": 2.0
+      },
+      "rawDescription": "Your team gains @BaseAS@% Attack Speed now. Each round after, they gain @IncreasePerRound@% more. (current Attack Speed: @TFTUnitProperty.item:TFT9_PumpingUp3Rounds@%)",
+      "implementationClass": "reuse",
+      "semantics": "基础12%攻速；获得后每轮再加2个百分点。",
+      "patchOverrides": []
+    },
+    {
+      "id": "bulky-buddies-ii",
+      "apiName": "TFT_Augment_BulkyBuddies2",
+      "name": "Bulky Buddies II",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/BulkyBuddies_II.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1920",
+      "setMembershipPointer": "/setData/1/augments/188",
+      "rawEffects": {
+        "HealthBonus": 175.0,
+        "ShieldAmount": 0.15000000596046448,
+        "ShieldDuration": 10.0
+      },
+      "rawDescription": "Allies that start combat next to exactly 1 other ally gain @HealthBonus@ Health. When that champion dies, the other gains a @ShieldAmount*100@% max Health Shield for @ShieldDuration@ seconds.",
+      "implementationClass": "reuse",
+      "semantics": "恰邻接一个友军：175HP；该友军死亡给15%最大HP盾10秒。",
+      "patchOverrides": []
+    },
+    {
+      "id": "bulky-buddies-iii",
+      "apiName": "TFT_Augment_BulkyBuddies3",
+      "name": "Bulky Buddies III",
+      "tier": "prismatic",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/BulkyBuddies_III.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1923",
+      "setMembershipPointer": "/setData/1/augments/189",
+      "rawEffects": {
+        "HealthBonus": 330.0,
+        "ShieldAmount": 0.18000000715255737,
+        "ShieldDuration": 10.0
+      },
+      "rawDescription": "Allies that start combat next to exactly 1 other ally gain @HealthBonus@ Health. When that champion dies, the other gains a @ShieldAmount*100@% max Health Shield for @ShieldDuration@ seconds.",
+      "implementationClass": "reuse",
+      "semantics": "恰邻接一个友军：330HP；该友军死亡给18%最大HP盾10秒。",
+      "patchOverrides": []
+    },
+    {
+      "id": "placebo-plus",
+      "apiName": "TFT_Augment_PlaceboPlus",
+      "name": "Placebo+",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Placebo_I.TFT_Set12.tex"
+      },
+      "sourcePointer": "/items/1640",
+      "setMembershipPointer": "/setData/1/augments/260",
+      "rawEffects": {
+        "AttackSpeed": 0.009999999776482582,
+        "Gold": 15.0
+      },
+      "rawDescription": "Gain @Gold@ gold. Your team gains @AttackSpeed*100@% Attack Speed.",
+      "implementationClass": "reuse-acquisition",
+      "semantics": "15金币仅获得时发放一次；全队1%攻速，不改变经济规则。",
+      "patchOverrides": []
+    },
+    {
+      "id": "mentorship-i",
+      "apiName": "TFT_Augment_Mentorship1",
+      "name": "Mentorship I",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Mentorship-I.tex"
+      },
+      "sourcePointer": "/items/1701",
+      "setMembershipPointer": "/setData/1/augments/245",
+      "rawEffects": {
+        "AS": 0.11999999731779099,
+        "Health": 150.0
+      },
+      "rawDescription": "If an ally starts combat next to a higher-cost ally, it gains @AS*100@% Attack Speed and @Health@ Health.",
+      "implementationClass": "snapshot-selector",
+      "semantics": "邻接至少一个更高费友军：12%AS和150HP；不是按邻居数叠加。",
+      "patchOverrides": []
+    },
+    {
+      "id": "mentorship-ii",
+      "apiName": "TFT_Augment_Mentorship2",
+      "name": "Mentorship II",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Mentorship-II.tex"
+      },
+      "sourcePointer": "/items/1703",
+      "setMembershipPointer": "/setData/1/augments/246",
+      "rawEffects": {
+        "AS": 0.18000000715255737,
+        "Health": 220.0
+      },
+      "rawDescription": "If an ally starts combat next to a higher-cost ally, it gains @AS*100@% Attack Speed and @Health@ Health.",
+      "implementationClass": "snapshot-selector",
+      "semantics": "邻接至少一个更高费友军：18%AS和220HP；不是按邻居数叠加。",
+      "patchOverrides": []
+    },
+    {
+      "id": "item-collector-i",
+      "apiName": "TFT_Augment_ItemCollector1",
+      "name": "Item Collector I",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/ItemCollector_I.TFT_Set12.tex"
+      },
+      "sourcePointer": "/items/1467",
+      "setMembershipPointer": "/setData/1/augments/236",
+      "rawEffects": {
+        "AD": 0.009999999776482582,
+        "AP": 1.0,
+        "BaseHP": 10.0,
+        "Health": 2.0,
+        "{74536db7}": 99.0
+      },
+      "rawDescription": "Your team gains @BaseHP@ Health. For each unique item they are holding, your team gains bonus @Health@ Health, @AD*100@ Attack Damage, and @AP@ Ability Power.",
+      "implementationClass": "snapshot-count",
+      "semantics": "全队基础10HP；每种不同穿戴物品全队2HP、1%AD、1AP。原文不限定成装。",
+      "patchOverrides": []
+    },
+    {
+      "id": "item-collector-ii",
+      "apiName": "TFT_Augment_ItemCollector2",
+      "name": "Item Collector II",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/ItemCollector_II.TFT_Set12.tex"
+      },
+      "sourcePointer": "/items/1466",
+      "setMembershipPointer": "/setData/1/augments/237",
+      "rawEffects": {
+        "AD": 0.014999999664723873,
+        "AP": 1.5,
+        "BaseHP": 20.0,
+        "Health": 5.0,
+        "{74536db7}": 99.0
+      },
+      "rawDescription": "Your team gains @BaseHP@ Health. For each unique item they are holding, your team gains bonus @Health@ Health, @AD*100@ Attack Damage, and @AP@ Ability Power.",
+      "implementationClass": "snapshot-count-fraction",
+      "semantics": "全队基础20HP；每种不同穿戴物品全队5HP、1.5%AD、1.5AP。",
+      "patchOverrides": []
+    },
+    {
+      "id": "bronze-for-life-i",
+      "apiName": "TFT_Augment_BronzeForLifeI",
+      "name": "Bronze For Life I",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/BronzeForLife_II.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1683",
+      "setMembershipPointer": "/setData/1/augments/186",
+      "rawEffects": {
+        "DamageAmpBonus": 0.029999999329447746,
+        "DurabilityBonus": null
+      },
+      "rawDescription": "Your team gains @DamageAmpBonus*100@% Damage Amp for each Bronze-tier trait.<br><br>Damage Amp Bonus: @TFTUnitProperty.item:TFT_Augment_BronzeForLife_CurrentDamageAmp@%",
+      "implementationClass": "snapshot-trait-style",
+      "semantics": "每个当前铜级羁绊全队3%增伤；不是所有最低阈值。",
+      "patchOverrides": []
+    },
+    {
+      "id": "bronze-for-life-ii",
+      "apiName": "TFT_Augment_BronzeForLife2",
+      "name": "Bronze For Life II",
+      "tier": "prismatic",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/BronzeForLife_III.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1526",
+      "setMembershipPointer": "/setData/1/augments/185",
+      "rawEffects": {
+        "DamageAmpBonus": 0.03500000014901161,
+        "DurabilityBonus": 0.014999999664723873
+      },
+      "rawDescription": "Your team gains @DamageAmpBonus*100@% Damage Amp and @DurabilityBonus*100@% Durability for each Bronze-tier trait.<br><br>Damage Amp Bonus: @TFTUnitProperty.item:TFT_Augment_BronzeForLife_CurrentDamageAmp@%<br>Durability Bonus: @TFTUnitProperty.item:TFT_Augment_BronzeForLife_CurrentDurability@%",
+      "implementationClass": "snapshot-trait-style",
+      "semantics": "每个当前铜级羁绊全队3.5%增伤和1.5%坚韧。",
+      "patchOverrides": []
+    },
+    {
+      "id": "little-buddies",
+      "apiName": "TFT10_Augment_LittleBuddies",
+      "name": "Little Buddies",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Little-Buddies-II.tex"
+      },
+      "sourcePointer": "/items/1790",
+      "setMembershipPointer": "/setData/1/augments/5",
+      "rawEffects": {
+        "AttackSpeed": 0.07000000029802322,
+        "Health": 65.0,
+        "{0d14760d}": 4.0,
+        "{82aeb8a7}": 2.0
+      },
+      "rawDescription": "Your 4-cost and 5-cost champions gain @health@ Health and @AttackSpeed*100@% Attack Speed  for every 1-cost and 2-cost champion on your board.",
+      "implementationClass": "snapshot-count",
+      "semantics": "每个1/2费上场友军，使4/5费友军增加65HP和7%AS；不可误扩到6费。",
+      "patchOverrides": []
+    },
+    {
+      "id": "backup",
+      "apiName": "TFT_Augment_Backup",
+      "name": "Backup",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Backup-I.tex"
+      },
+      "sourcePointer": "/items/1862",
+      "setMembershipPointer": "/setData/1/augments/178",
+      "rawEffects": {
+        "AttackSpeed": 0.10000000149011612,
+        "MinUnits": 4.0
+      },
+      "rawDescription": "Your team gains @AttackSpeed*100@% Attack Speed if at least @MinUnits@ allies start combat in the back two rows.",
+      "implementationClass": "snapshot-selector",
+      "semantics": "后两排至少4个友军，全队10%AS。",
+      "patchOverrides": []
+    },
+    {
+      "id": "lineup",
+      "apiName": "TFT_Augment_Lineup",
+      "name": "Lineup",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Lineup-I.tex"
+      },
+      "sourcePointer": "/items/1783",
+      "setMembershipPointer": "/setData/1/augments/239",
+      "rawEffects": {
+        "Resistances": 2.5
+      },
+      "rawDescription": "Your team gains @Resistances@ Armor and Magic Resist for each unit that starts combat in the front two rows.",
+      "implementationClass": "snapshot-count-fraction",
+      "semantics": "前两排每个友军，全队2.5护甲和魔抗。",
+      "patchOverrides": []
+    },
+    {
+      "id": "find-your-center",
+      "apiName": "TFT_Augment_FindYourCenter",
+      "name": "Find Your Center",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/FindYourCenter_I.TFT_Set12.tex"
+      },
+      "sourcePointer": "/items/1705",
+      "setMembershipPointer": "/setData/1/augments/215",
+      "rawEffects": {
+        "BonusDamage": 0.15000000596046448,
+        "BonusHealth": 0.15000000596046448
+      },
+      "rawDescription": "Your champion that starts combat in the center of the board gains @BonusDamage*100@% Damage Amp and @BonusHealth*100@% max Health.",
+      "implementationClass": "snapshot-selector",
+      "semantics": "中心格开战单位15%增伤和15%最大HP；中心坐标需项目约定。",
+      "patchOverrides": []
+    },
+    {
+      "id": "built-different",
+      "apiName": "TFT6_Augment_Traitless2",
+      "name": "Built Different",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/BuiltDifferent2.tex"
+      },
+      "sourcePointer": "/items/1718",
+      "setMembershipPointer": "/setData/1/augments/121",
+      "rawEffects": {
+        "AS1": 45.0,
+        "AS2": 50.0,
+        "AS3": 55.0,
+        "AS4": 60.0,
+        "HP1": 240.0,
+        "HP2": 330.0,
+        "HP3": 420.0,
+        "HP4": 530.0
+      },
+      "rawDescription": "Your units with no Traits active gain @HP1@-@HP4@ Health and @AS1@-@AS4@% Attack Speed (based on current Stage).",
+      "implementationClass": "snapshot-trait-stage",
+      "semantics": "无任何激活羁绊的单位；B补丁stage2/3/4/5+为300/400/500/600HP和45/55/65/75%AS。",
+      "patchOverrides": [
+        {
+          "officialSource": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+          "section": "December 17 / AUGMENTS",
+          "rawValues": {
+            "HP1": 240.0,
+            "HP2": 330.0,
+            "HP3": 420.0,
+            "HP4": 530.0,
+            "AS1": 45.0,
+            "AS2": 50.0,
+            "AS3": 55.0,
+            "AS4": 60.0
+          },
+          "adoptedEffects": {
+            "HP1": 300,
+            "HP2": 400,
+            "HP3": 500,
+            "HP4": 600,
+            "AS1": 45,
+            "AS2": 55,
+            "AS3": 65,
+            "AS4": 75
+          },
+          "reason": "14.24b official B patch supersedes 14.24 client snapshot; do not mutate raw"
+        }
+      ]
+    },
+    {
+      "id": "blistering-strikes",
+      "apiName": "TFT9_Augment_RedBuff",
+      "name": "Blistering Strikes",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Red-Buff-I.tex"
+      },
+      "sourcePointer": "/items/1719",
+      "setMembershipPointer": "/setData/1/augments/162",
+      "rawEffects": {
+        "BurnPercent": 5.0,
+        "Duration": 5.0,
+        "HealingReductionPct": 33.0
+      },
+      "rawDescription": "Your team's attacks Burn their targets for @BurnPercent@% of their max Health over @Duration@ seconds. Attacks also reduce their targets' healing received by @HealingReductionPct@%.",
+      "implementationClass": "combat-attack-trigger",
+      "semantics": "全队攻击给目标5秒共5%最大HP灼烧和33%重伤；每秒1%最大HP，50ms/tick下持续100ticks。仅攻击触发，不能扩展为所有伤害触发。",
+      "patchOverrides": []
+    },
+    {
+      "id": "clockwork-accelerator",
+      "apiName": "TFT_Augment_ClockworkAccelerator",
+      "name": "Clockwork Accelerator",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/ClockworkAccelerator_II.TFT_Set12.tex"
+      },
+      "sourcePointer": "/items/1824",
+      "setMembershipPointer": "/setData/1/augments/195",
+      "rawEffects": {
+        "AttackSpeed": 0.10000000149011612,
+        "Frequency": 3.0
+      },
+      "rawDescription": "Your team gains @attackspeed*100@% Attack Speed every @frequency@ seconds in combat.",
+      "implementationClass": "combat-timer",
+      "semantics": "每3秒全队增加10%AS；不是开战即加。",
+      "patchOverrides": []
+    },
+    {
+      "id": "lone-hero",
+      "apiName": "TFT_Augment_LoneHero",
+      "name": "Lone Hero",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/LoneSurvivor_I.TFT_Set13.tex",
+        "conflict": "Official 14.24 page lists durability change under GOLD AUGMENTS; raw icon LoneSurvivor_I indicates silver. Retain raw icon tier, disclose heading discrepancy."
+      },
+      "sourcePointer": "/items/1944",
+      "setMembershipPointer": "/setData/1/augments/240",
+      "rawEffects": {
+        "ASBonus": 1.399999976158142,
+        "DurabilityBonus": 0.3499999940395355
+      },
+      "rawDescription": "Your last surviving unit gains @ASBonus*100@% Attack Speed and @DurabilityBonus*100@% Durability",
+      "implementationClass": "combat-survivor",
+      "semantics": "最后存活单位140%AS与35%坚韧；持续条件与召唤物计数需约定。",
+      "patchOverrides": []
+    },
+    {
+      "id": "climb-the-ladder-i",
+      "apiName": "TFT_Augment_ClimbTheLadder1",
+      "name": "Climb The Ladder I",
+      "tier": "silver",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/ClimbtheLadder_I.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1611",
+      "setMembershipPointer": "/setData/1/augments/193",
+      "rawEffects": {
+        "BonusAD": 0.029999999329447746,
+        "BonusAP": 3.0,
+        "BonusArmor": 3.0,
+        "BonusMR": 3.0
+      },
+      "rawDescription": "Each time an ally dies, allies that share at least one trait with them gain @BonusAP@ Ability Power, @BonusAD*100@% Attack Damage, @BonusArmor@ Armor, and @BonusMR@ Magic Resist.",
+      "implementationClass": "combat-death",
+      "semantics": "每个友军死亡，和死者共享至少一个羁绊的存活友军+3%AD、3AP、3双抗。",
+      "patchOverrides": []
+    },
+    {
+      "id": "climb-the-ladder-ii",
+      "apiName": "TFT_Augment_ClimbTheLadder2",
+      "name": "Climb The Ladder II",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/ClimbtheLadder_II.TFT_Set13.tex"
+      },
+      "sourcePointer": "/items/1606",
+      "setMembershipPointer": "/setData/1/augments/194",
+      "rawEffects": {
+        "BonusAD": 0.05000000074505806,
+        "BonusAP": 5.0,
+        "BonusArmor": 5.0,
+        "BonusMR": 5.0
+      },
+      "rawDescription": "Each time an ally dies, allies that share at least one trait with them gain @BonusAP@ Ability Power, @BonusAD*100@% Attack Damage, @BonusArmor@ Armor, and @BonusMR@ Magic Resist.",
+      "implementationClass": "combat-death",
+      "semantics": "每个友军死亡，和死者共享至少一个羁绊的存活友军+5%AD、5AP、5双抗。",
+      "patchOverrides": []
+    },
+    {
+      "id": "inspiring-epitaph",
+      "apiName": "TFT10_Augment_InspiringEpitaph",
+      "name": "Inspiring Epitaph",
+      "tier": "gold",
+      "tierEvidence": {
+        "source": "raw icon filename tier marker; not display-name numeral",
+        "icon": "ASSETS/Maps/TFT/Icons/Augments/Hexcore/Inspiring-Epitaph-II.tex"
+      },
+      "sourcePointer": "/items/1702",
+      "setMembershipPointer": "/setData/1/augments/4",
+      "rawEffects": {
+        "AttackSpeed": 0.10000000149011612,
+        "ShieldRatio": 0.20000000298023224
+      },
+      "rawDescription": "When a unit dies, the nearest ally gains a @ShieldRatio*100@% max Health Shield and @AttackSpeed*100@% stacking Attack Speed.",
+      "implementationClass": "combat-death",
+      "semantics": "单位死亡，最近友军获得20%最大HP盾及可叠10%AS；raw未给盾持续时间。",
+      "patchOverrides": []
+    }
+  ],
+  "traitStyleMapping": [
+    {
+      "apiName": "TFT13_Hextech",
+      "name": "Automata",
+      "sourcePointer": "/setData/1/traits/0/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Teamup_Menaces",
+      "name": "Menaces",
+      "sourcePointer": "/setData/1/traits/1/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Sorcerer",
+      "name": "Sorcerer",
+      "sourcePointer": "/setData/1/traits/2/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 7,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 8,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Scrap",
+      "name": "Scrap",
+      "sourcePointer": "/setData/1/traits/3/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 8,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 9,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Martialist",
+      "name": "Artillerist",
+      "sourcePointer": "/setData/1/traits/4/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_FormSwapper",
+      "name": "Form Swapper",
+      "sourcePointer": "/setData/1/traits/5/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Ambassador",
+      "name": "Emissary",
+      "sourcePointer": "/setData/1/traits/6/effects",
+      "tiers": [
+        {
+          "minUnits": 1,
+          "maxUnits": 1,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 4,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Teamup_Mentorship",
+      "name": "Martial Law",
+      "sourcePointer": "/setData/1/traits/7/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Titan",
+      "name": "Sentinel",
+      "sourcePointer": "/setData/1/traits/8/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Teamup_Reunion",
+      "name": "Reunion",
+      "sourcePointer": "/setData/1/traits/9/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Family",
+      "name": "Family",
+      "sourcePointer": "/setData/1/traits/10/effects",
+      "tiers": [
+        {
+          "minUnits": 3,
+          "maxUnits": 3,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 4,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 5,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Ambusher",
+      "name": "Ambusher",
+      "sourcePointer": "/setData/1/traits/11/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 2,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 3,
+          "maxUnits": 3,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 4,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 5,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Teamup_Sisters",
+      "name": "Sisters",
+      "sourcePointer": "/setData/1/traits/12/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Invoker",
+      "name": "Visionary",
+      "sourcePointer": "/setData/1/traits/13/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 7,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 8,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Sniper",
+      "name": "Sniper",
+      "sourcePointer": "/setData/1/traits/14/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Warband",
+      "name": "Conqueror",
+      "sourcePointer": "/setData/1/traits/15/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 8,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 9,
+          "maxUnits": 25000,
+          "style": 6,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_HighRoller",
+      "name": "High Roller",
+      "sourcePointer": "/setData/1/traits/16/effects",
+      "tiers": [
+        {
+          "minUnits": 1,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Academy",
+      "name": "Academy",
+      "sourcePointer": "/setData/1/traits/17/effects",
+      "tiers": [
+        {
+          "minUnits": 3,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 4,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 5,
+          "maxUnits": 5,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Crime",
+      "name": "Chem-Baron",
+      "sourcePointer": "/setData/1/traits/18/effects",
+      "tiers": [
+        {
+          "minUnits": 3,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 4,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 5,
+          "maxUnits": 5,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 6,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 7,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Rebel",
+      "name": "Rebel",
+      "sourcePointer": "/setData/1/traits/19/effects",
+      "tiers": [
+        {
+          "minUnits": 3,
+          "maxUnits": 4,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 5,
+          "maxUnits": 6,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 7,
+          "maxUnits": 9,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 10,
+          "maxUnits": 25000,
+          "style": 6,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Infused",
+      "name": "Dominator",
+      "sourcePointer": "/setData/1/traits/20/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Pugilist",
+      "name": "Pit Fighter",
+      "sourcePointer": "/setData/1/traits/21/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 7,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 8,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Teamup_BloodBrothers",
+      "name": "What Could Have Been",
+      "sourcePointer": "/setData/1/traits/22/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Squad",
+      "name": "Enforcer",
+      "sourcePointer": "/setData/1/traits/23/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 7,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 8,
+          "maxUnits": 9,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 10,
+          "maxUnits": 25000,
+          "style": 6,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Hoverboard",
+      "name": "Firelight",
+      "sourcePointer": "/setData/1/traits/24/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 2,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 3,
+          "maxUnits": 3,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Teamup_UnlikelyDuo",
+      "name": "Unlikely Duo",
+      "sourcePointer": "/setData/1/traits/25/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Experiment",
+      "name": "Experiment",
+      "sourcePointer": "/setData/1/traits/26/effects",
+      "tiers": [
+        {
+          "minUnits": 3,
+          "maxUnits": 4,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 5,
+          "maxUnits": 6,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 7,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Bruiser",
+      "name": "Bruiser",
+      "sourcePointer": "/setData/1/traits/27/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_JunkerKing",
+      "name": "Junker King",
+      "sourcePointer": "/setData/1/traits/28/effects",
+      "tiers": [
+        {
+          "minUnits": 1,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Cabal",
+      "name": "Black Rose",
+      "sourcePointer": "/setData/1/traits/29/effects",
+      "tiers": [
+        {
+          "minUnits": 3,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 4,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 5,
+          "maxUnits": 6,
+          "style": 5,
+          "bronze": false
+        },
+        {
+          "minUnits": 7,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Challenger",
+      "name": "Quickstriker",
+      "sourcePointer": "/setData/1/traits/30/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 2,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 3,
+          "maxUnits": 3,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Teamup_Geniuses",
+      "name": "Geniuses",
+      "sourcePointer": "/setData/1/traits/31/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 25000,
+          "style": 4,
+          "bronze": false
+        }
+      ]
+    },
+    {
+      "apiName": "TFT13_Watcher",
+      "name": "Watcher",
+      "sourcePointer": "/setData/1/traits/32/effects",
+      "tiers": [
+        {
+          "minUnits": 2,
+          "maxUnits": 3,
+          "style": 1,
+          "bronze": true
+        },
+        {
+          "minUnits": 4,
+          "maxUnits": 5,
+          "style": 3,
+          "bronze": false
+        },
+        {
+          "minUnits": 6,
+          "maxUnits": 25000,
+          "style": 5,
+          "bronze": false
+        }
+      ]
+    }
+  ],
+  "projectConventions": [
+    "所有百分比先转换整数基点；2.5双抗和1.5AP等小数flat应使用整数定点，汇总全部同stat贡献后再统一floor，不逐项floor；精确舍入未由原文规定，标注项目约定，非官方证据。",
+    "源style=1解释为铜级；仅匹配当前实际激活档位。Family所有档位style=5，不可按首档算铜；Emissary一人档style=1，四人档style=5；唯一羁绊style=4，不算铜。",
+    "中心格坐标、同距最近友军平局、死亡同时发生时处理顺序、永久盾是否持续至战斗结束，原文不完整，应列项目约定。",
+    "Inspiring Epitaph raw没有盾时长，不能把虚构的10秒说成官方值；建议战斗内不自然过期，并清楚标注项目约定。",
+    "Climb the Ladder按单位自身trait集合交集判定，不要求共享羁绊已经激活。Item Collector去重按物品definition身份，临时装备与组件统计口径须显式约定。",
+    "不要修改经济/XP/选秀/回合规则；Placebo+仅复用既有一次性acquisitionGold，Pumping仅复用既有成长钩子。",
+    "Blistering Strikes沿既有burn/wound状态时序：攻击完成时施加、持续100ticks、每秒100Bps最大生命灼烧、3300Bps重伤；重复施加/同类状态刷新沿既有合同。原文不授权法术伤害触发。"
+  ],
+  "excludedCandidates": [
+    {
+      "apiName": "TFT_Augment_InvestmentStrategy2",
+      "reason": "提高最大利息，超出范围。"
+    },
+    {
+      "apiName": "TFT9_Augment_LongDistanceRelationship2",
+      "reason": "双向最终AD/AP/双抗分享涉及快照及反馈顺序，本次排除。"
+    },
+    {
+      "apiName": "TFT_Augment_CalculatedEnhancement",
+      "reason": "随机四单位选择需新增RNG选择合同，本次排除。"
+    },
+    {
+      "apiName": "TFT_Augment_Moonlight",
+      "reason": "临时升星且14.24正文与raw值不同，本次排除。"
+    },
+    {
+      "apiName": "TFT_Augment_GuardbreakerSpirit",
+      "reason": "新增物品发放及暴击属性通路，本次排除。"
+    },
+    {
+      "apiName": "TFT_Augment_SpiritLink1",
+      "reason": "联机PlayerBattleSnapshot不含playerHP或roundResults，不能忠实推导缺血治疗加成；本任务不新增公开合同输入，故排除。"
+    }
+  ],
+  "limitations": [
+    "Read-only evidence research; implementation and runtime tests not performed by this source-review task.",
+    "Source effects preserve exact JSON float representations; numbers in prose are intended decimal values.",
+    "Existing six not duplicated in selection; existing Investment Strategy I is gold, not silver."
+  ]
+}
