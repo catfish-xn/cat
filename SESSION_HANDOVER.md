@@ -10,7 +10,7 @@
 ## 0.0.8 当前状态（2026-10-16 凌晨，指挥更新；以本节为准，细节见 `docs/DISPATCH_2026-10-14.md` 第九/十批）
 
 **分支与身份**
-- `multiplayer` head `599b2e7`（#118 merge；代码含 #114–#118）。main `b4db0d5`（#111，含选秀接线 + 33 英雄，用户已部署真机）。multiplayer 比 main 多：G2-2 48 英雄 / 14 羁绊（#112 规则 + #114 界面）、P7-1 完整包（#113 界面切换与临时位、#115 规则、#116 服务器接线）。
+- `multiplayer` head `599b2e7`（#118 merge；代码含 #114–#118）。**main `5494ab9`（#119，2026-10-16 上午，与 multiplayer `592cb30` 同树）**，部署用 SHA `5494ab96093daeba99a4d7351ce1bac7ece35445`。旧 main `b4db0d5`（#111）已被覆盖。multiplayer 比 main 多：G2-2 48 英雄 / 14 羁绊（#112 规则 + #114 界面）、P7-1 完整包（#113 界面切换与临时位、#115 规则、#116 服务器接线）。
 - 身份：rules `s13-g2-2-aug30-v1`、content `s13-14.24b-g2-2-aug30-v1`、CONTENT `fnv1a32-utf16:8914b323`、LOOT_REPLAY `028e5593`；schema/save/replay/protocol 7/3/3/3。旧存档拒绝不迁移。部署时前后端必须一起更新（协议 3；投影字段 `heldCarouselUnits`）。
 - 2026-10-15 合入：#104、#105、#94、#100、#106、#109、#108、#110、#112、#113；main 同步 #107、#111。2026-10-16 凌晨合入：#114、#115、#116（按序，叠加树全套验收见 DISPATCH 第十批结果）；上午合入 #117（local-room-client 整局用例拆到 timing，digest 不变）、#118（W4 强化 6→30，CONTENT `8914b323`；Codex 平台拒推，指挥用其 git bundle 代推代开 PR）。
 
@@ -19,7 +19,7 @@
 - #116 head 的 e2e p7-carousel 在指挥机复现失败（Playwright 原生 click 对隐藏按钮等 30 s），指挥补一行 `f6d3f15` 后 47/47 合入；教训：执行者必须在 PR head 上复跑 e2e，而不是本地工作副本。
 
 **待发 / 待拍板**
-- multiplayer `599b2e7` → main 第二次部署真机：含 48 英雄 / 14 羁绊、P7-1 选秀修订、30 强化。旧存档作废（CONTENT 变过三次），前后端必须同时更新（协议 3）。待用户拍板。
+- ~~multiplayer → main~~ 已合（#119 `5494ab9`）。用户部署真机：`deploy/deploy.sh 5494ab96093daeba99a4d7351ce1bac7ece35445`，旧存档作废，前后端同时更新（协议 3）。真机反馈后再派下一批。
 - Opus 下一包（部署后或并行）：24 个新强化的中文名/图标/提示接入界面（现为英文名、走 fallback），需要的数据字段写 UI_REQUESTS。
 - Codex：本地仅文档提交 `304845a`（W4 REPORT 验收日志）待其平台恢复推送后补；G2-3（剩余英雄与羁绊、成装补齐 36、异变 30）待派。
 - Codex 平台推送受阻的备用通道：`git bundle create` 导出 → 用户上传到指挥会话 → 指挥 verify 后代推、代开 PR；提交作者保持 Codex。
