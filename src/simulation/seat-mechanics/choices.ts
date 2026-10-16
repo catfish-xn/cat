@@ -1,4 +1,4 @@
-import { ITEM_DEFINITIONS } from '../content/items';
+import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { planPermanentItemGrant } from '../item-grants';
 import type { MatchEvent, MatchFailure, MatchState } from '../match-types';
 import { appendResourceProvenance } from '../resource-provenance';
@@ -27,9 +27,10 @@ export function validateMechanicChoiceSpec(kind: MechanicChoiceKind, offers: rea
   if (!payload || payload.kind !== kind || !nonempty(payload.source)) fail('payload kind/source');
   if (!Array.isArray(offers) || !offers.length || !offers.every(nonempty) || new Set(offers).size !== offers.length
     || offers.includes(CHOICE_SKIP_OPTION)) fail('offers');
-  if (kind !== 'armory' && !offers.every(id => Object.hasOwn(ITEM_DEFINITIONS, id))) fail('item offers');
+  if (kind !== 'armory' && !(payload.kind==='blackMarket'&&payload.grantItem===false) && !offers.every(id => Object.hasOwn(ITEM_DEFINITIONS, id))) fail('item offers');
   const skippable = payload.kind === 'blackMarket' && payload.skippable;
   if (payload.kind === 'blackMarket') {
+    if(payload.grantItem!==undefined&&typeof payload.grantItem!=='boolean')fail('grant item');
     if (typeof payload.skippable !== 'boolean') fail('skippable');
     if (payload.skipReward !== null && (!nonempty(payload.skipReward?.kind) || !count(payload.skipReward.amount))) fail('skip reward');
     if (!payload.skippable && payload.skipReward !== null) fail('skip reward without skip');
@@ -83,7 +84,7 @@ export function resolveMechanicChoice(state: MatchState, optionId: string, timed
   if (state.gold < price) return refuse('insufficient-gold');
   let next: MatchState = { ...state, gold: state.gold - price, pendingChoice: null } as MatchState;
   let itemId: string | null = null;
-  if (payload.kind !== 'armory' && !skipped) {
+  if (payload.kind !== 'armory' && !(payload.kind==='blackMarket'&&payload.grantItem===false) && !skipped) {
     const grant = planPermanentItemGrant(next, { definitionId: optionId, receiptId: choice.choiceId }, []);
     if (!grant.ok) return refuse('invalid-choice');
     itemId = grant.grantedItemIds[0];

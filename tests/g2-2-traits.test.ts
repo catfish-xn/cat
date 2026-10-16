@@ -1,3 +1,4 @@
+import {readG23Progress} from '../src/simulation/g2-3-state';
 import {expect,it} from 'vitest';
 import {createMatch} from '../src/simulation/match';
 import {deriveTraits} from '../src/simulation/trait-snapshot';
@@ -25,7 +26,7 @@ it('Conqueror grants source base AD/AP without chest growth',()=>{
 it('Academy sponsorship has no bonus without an eligible held item and no inventory grants',()=>{
  const s=input(['lux','leona','ezreal']),before=JSON.stringify(s);
  const plain=buildStrategySnapshot(s);
- const equipped={...s,items:[{id:'sponsored',definitionId:s.g23!.sponsored[0],location:{kind:'unit' as const,unitId:'lux',slot:0 as const}}]};
+ const equipped={...s,items:[{id:'sponsored',definitionId:readG23Progress(s)!.sponsored[0],location:{kind:'unit' as const,unitId:'lux',slot:0 as const}}]};
  const rich=buildStrategySnapshot(equipped);
  expect(rich.units.find(u=>u.unitId==='lux')!.mechanics?.find(m=>m.mechanic==='damageAmp')?.values.bps).toBe(900);
  expect(plain.units.find(u=>u.unitId==='lux')!.mechanics?.some(m=>m.mechanic==='damageAmp')).toBe(false);

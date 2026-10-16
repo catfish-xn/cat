@@ -25,7 +25,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from './round-catalog';
 import { SOURCE_MANIFEST } from './source-manifest';
 import { TRAIT_DEFINITIONS } from './traits';
-import { ITEM_DEFINITIONS } from './items';
+import { ITEM_DEFINITIONS } from './g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './augments';
 import { ANOMALY_DEFINITIONS } from './anomalies';
 export { TRAIT_DEFINITIONS, ITEM_DEFINITIONS, AUGMENT_DEFINITIONS, ANOMALY_DEFINITIONS };

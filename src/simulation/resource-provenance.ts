@@ -19,7 +19,6 @@ import { UNIT_DEFINITIONS } from './units';
 
 export const RESOURCE_PROVENANCE_VERSION = 'm8-b8-resource-provenance-v1';
 export type UnitAcquisitionSource =
-  | {readonly kind:'g23';readonly receiptId:string}
   | {readonly kind:'carousel';readonly receiptId:string}
   | { readonly kind: 'opening'; readonly seed: number; readonly seatId: string }
   | { readonly kind: 'shop'; readonly generation: number; readonly slotIndex: number; readonly definitionId: string }
@@ -27,7 +26,6 @@ export type UnitAcquisitionSource =
   /** G2-3 seat-mechanics grant; receiptId names a SeatMechanicsState receipt. */
   | { readonly kind: 'mechanic'; readonly receiptId: string };
 export type ItemAcquisitionSource =
-  | {readonly kind:'g23';readonly receiptId:string}
   | {readonly kind:'carousel';readonly receiptId:string}
   | { readonly kind: 'schedule'; readonly eventId: string }
   | { readonly kind: 'loot'; readonly receiptId: string }
@@ -65,8 +63,6 @@ export interface ProvenanceCombatSettlement {
 }
 export interface ResourceProvenanceContext {
   readonly g23RadiantRound?:number;
-  readonly g23RewardClaims?:readonly import('./g2-3-rewards').G23RewardClaim[];
-  readonly g23Receipts?:readonly import('./g2-3-match-progress').G23ItemReceipt[];
   readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
   readonly pendingCarouselUnitIds?:readonly string[];
   readonly carouselOpening?:boolean;
@@ -178,28 +174,12 @@ function mechanicBirths(receipts: readonly import('./seat-mechanics/types').Mech
     return [{ key, kind: 'item' as const, id: itemId, definitionId, roundId: receipt.roundId }];
   });
 }
-export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts' | 'mechanicReceipts' | 'g23Receipts' | 'g23RewardClaims'>): Map<string, BirthReceipt> {
+export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts' | 'mechanicReceipts'>): Map<string, BirthReceipt> {
   const births = new Map<string, BirthReceipt>(), receiptIds = new Set<string>(), assetIds = new Set<string>();
   const add = (key: string, birth: BirthReceipt) => {
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
     births.set(key, birth); assetIds.add(birth.id);
   };
-  for(const r of context.g23RewardClaims??[]){
-    if(!['item','unit','duplicator'].includes(r.kind))continue;
-    requireValue(typeof r.instanceId==='string'&&r.round<=context.throughRoundOrdinal,'G23 resource birth');
-    add(`g23:${r.id}`,{kind:r.kind==='item'?'item':'unit',id:r.instanceId!,definitionId:r.definitionId,roundId:getCatalogRoundByOrdinal(r.round).roundId});
-  }
-  for(const receipt of context.g23Receipts??[]){
-    requireValue(receipt.round<=context.throughRoundOrdinal&&Object.hasOwn(ITEM_DEFINITIONS,receipt.definitionId),'G23 item birth');
-    add(`g23:${receipt.id}`,{kind:'item',id:receipt.itemId,definitionId:receipt.definitionId,roundId:getCatalogRoundByOrdinal(receipt.round).roundId});
-  }
-  for(const receipt of context.carouselReceipts??[]) {
-    requireValue(receipt.status==='granted'&&receipt.id===`${receipt.carouselId}:${receipt.seatId}`&&receipt.holdingSource===receipt.id&&receipt.unitId!==null&&receipt.itemInstanceId!==null&&!receiptIds.has(receipt.id),'carousel receipt');receiptIds.add(receipt.id);
-    const roundId=receipt.carouselId.slice(receipt.carouselId.lastIndexOf(':')+1),round=getCatalogRoundById(roundId==='1-1'?'1-2':roundId);
-    requireValue(round.ordinal<=context.throughRoundOrdinal&&SHOP_CATALOG.includes(receipt.definitionId)&&Object.hasOwn(ITEM_DEFINITIONS,receipt.itemId),'carousel identity');
-    add(`carousel-unit:${receipt.id}`,{kind:'unit',id:receipt.unitId,definitionId:receipt.definitionId,roundId:round.roundId});
-    add(`carousel-item:${receipt.id}`,{kind:'item',id:receipt.itemInstanceId,definitionId:receipt.itemId,roundId:round.roundId});
-  }
   for (const receipt of context.scheduleReceipts) {
     plainJson(receipt);
     keys(receipt, ['eventId', 'round', 'kind', 'itemIds', 'gold', 'unitId', 'definitionId']);
@@ -352,7 +332,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         definitionId = takeBirth(`mechanic:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       } else {
         keys(entry.source, ['kind', 'receiptId']);
-        requireValue(entry.source.kind === 'loot'||entry.source.kind==='g23', 'unit source'); nonempty(entry.source.receiptId);
+        requireValue(entry.source.kind === 'loot', 'unit source'); nonempty(entry.source.receiptId);
         definitionId = takeBirth(`${entry.source.kind}:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       }
       requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
@@ -397,10 +377,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(entry, [...common, 'itemId', 'source']); record(entry.source);
       requireValue(entry.itemId === `item-${nextItemSerial}`, 'item serial'); integer(nextItemSerial + 1, 1);
       const source = entry.source;
-      requireValue(source.kind === 'schedule' || source.kind === 'loot'||source.kind==='carousel'||source.kind==='mechanic'||source.kind==='g23', 'item source');
+      requireValue(source.kind === 'schedule' || source.kind === 'loot'||source.kind==='carousel'||source.kind==='mechanic', 'item source');
       keys(source, source.kind === 'schedule' ? ['kind', 'eventId'] : ['kind', 'receiptId']);
       nonempty(source.kind === 'schedule' ? source.eventId : source.receiptId);
-      const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : source.kind==='carousel'?`carousel-item:${source.receiptId}`:source.kind==='g23'?`g23:${source.receiptId}`:source.kind==='mechanic'?`mechanic:${source.receiptId}`:`loot:${source.receiptId}`;
+      const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : source.kind==='carousel'?`carousel-item:${source.receiptId}`:source.kind==='mechanic'?`mechanic:${source.receiptId}`:`loot:${source.receiptId}`;
       const definitionId = takeBirth(key, 'item', entry.itemId, entry.roundId);
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
     } else if(entry.kind==='g23-item-converted'){

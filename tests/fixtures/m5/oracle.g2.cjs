@@ -44,7 +44,7 @@ function settlement(before,combat,goldBefore=before.gold+ungrantedLootGold(befor
  const progression=xp(before.level,before.xp,naturalXp),income=base+win+interest+streak,hpLost=Math.min(before.playerHp,playerDamage);
  return {round,roundId,result,combatTicks:combat?.tick??0,combatEventCount:combat?.nextEventSeq??0,settlementId:`round-${round}-settled`,roundKind,
   incomeBreakdown:{base,win,interest,streak},interestBasis,streakBefore:before.streak,streakAfter,xpRequested:naturalXp,
-  income,goldBefore,goldAfter:goldBefore+income,xpAwarded:progression.xpApplied,levelBefore:before.level,
+  income,mechanicReceiptPrefixLength:before.seatMechanics?.receipts.length??0,goldBefore,goldAfter:goldBefore+income,xpAwarded:progression.xpApplied,levelBefore:before.level,
   levelAfter:progression.level,xpBefore:before.xp,xpAfter:progression.xp,hpBefore:before.playerHp,hpAfter:before.playerHp-hpLost,
   baseDamage,survivingEnemyCount,playerDamage,hpLost};
 }

@@ -29,6 +29,7 @@ export type MechanicReceipt =
   | (ReceiptIdentity & { readonly kind: 'gold'; readonly amount: number })
   /** `held`: a unit was born (unitId). `gold`: the shared pool had no copy, `gold` = unit cost, like PvE unit loot. */
   | (ReceiptIdentity & { readonly kind: 'unit'; readonly definitionId: string; readonly resolution: 'held' | 'gold'; readonly unitId: string | null; readonly gold: number })
+  | (ReceiptIdentity & { readonly kind: 'consumable'; readonly definitionId:string; readonly consumableId:string })
   | (ReceiptIdentity & { readonly kind: 'item'; readonly definitionId: string; readonly itemId: string })
   /** One resolved forge/blackMarket/armory choice. receiptId === choiceId. itemId only when the option granted an item. */
   | (ReceiptIdentity & { readonly kind: 'choice'; readonly choiceKind: MechanicChoiceKind; readonly optionId: string;
@@ -58,7 +59,7 @@ export const CHOICE_SKIP_OPTION = '@skip' as const;
  */
 export type MechanicChoicePayload =
   | { readonly kind: 'forge'; readonly source: MechanicSource; readonly timeoutOption: string }
-  | { readonly kind: 'blackMarket'; readonly source: MechanicSource; readonly skippable: boolean;
+  | { readonly kind: 'blackMarket'; readonly grantItem?:boolean; readonly source: MechanicSource; readonly skippable: boolean;
       readonly skipReward: { readonly kind: string; readonly amount: number } | null; readonly timeoutOption: string }
   | { readonly kind: 'armory'; readonly source: MechanicSource; readonly prices: Readonly<Record<string, number>>; readonly timeoutOption: string };
 

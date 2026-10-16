@@ -44,16 +44,17 @@ describe('G2-3 seat mechanic container', () => {
     state = writeSeatMechanic(state, 'radiantConversion', true);
     state = writeHiddenMechanic(state, 'alchemist', { rng: 123456 });
     const view = toPrivateSeatView(freeze(state));
-    expect(view.seatMechanics?.seat).toEqual({ conqueror: { stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500 }, radiantConversion: true });
+    expect(view.seatMechanics?.seat).toMatchObject({ conqueror: { stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500 }, radiantConversion: true });
     expect(view.seatMechanics?.hidden).toEqual({});
     expect(JSON.stringify(view)).not.toContain('123456');
     const display = toDisplayMatch(view as never);
     expect(readSeatMechanic(display, 'conqueror')).toEqual({ stacks: 640, chestsOpened: 9, nextThreshold: 650, bonusBps: 4500 });
     expect(readSeatMechanic(display, 'radiantConversion')).toBe(true);
   });
-  it('is absent from existing states and views, and rejects non-integer values', () => {
+  it('is present in G2-3 states and views, and rejects non-integer values', () => {
     const view = toPrivateSeatView(solo());
-    expect('seatMechanics' in view).toBe(false);
+    expect('seatMechanics' in view).toBe(true);
+    expect(view.seatMechanics?.hidden).toEqual({});
     expect(() => writeSeatMechanic(solo(), 'conqueror', { stacks: 0.5 })).toThrow(RangeError);
   });
   it('pays mechanic gold once per receipt and records its source', () => {

@@ -1,3 +1,4 @@
+import {readG23Progress} from './g2-3-state';
 import {validateG23Progress} from './g2-3-match-progress';
 import { shareGeneratedJson } from './immutable-json';
 import type { MatchBase, PersistentGrowth, RoundResult } from './match-types';
@@ -19,8 +20,9 @@ import { nextRandom, validateSeed } from './rng';
 export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 /** Exactly the inputs consumed by the single strategy compiler; never its answer. */
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
-  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' | 'g23'> & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number };
+  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number };
 export interface CombatInputBasis {
+  readonly mechanicReceiptPrefixLength:number;
   readonly version: typeof COMBAT_INPUT_VERSION;
   readonly combatId: string; readonly roundId: string; readonly contentDigest: string;
   readonly battleSeed: number; readonly playerLevel: number;
@@ -36,7 +38,7 @@ export interface CombatResourcePrefix {
   readonly nextUnitSerial: number; readonly nextItemSerial: number;
 }
 export interface CombatInputAuthority {
-  readonly g23?:MatchBase['g23'];readonly playerHp?:number;
+  readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly playerHp?:number;
   readonly seed: number; readonly round: number; readonly contentDigest: string;
   readonly playerLevel: number; readonly provenancePrefixLength: number;
   readonly resources: CombatResourcePrefix;
@@ -45,13 +47,15 @@ export interface CombatInputAuthority {
   readonly scheduleReceipts: readonly ScheduleReceipt[];
   readonly roundResults: readonly RoundResult[];
 }
-export function readCombatStrategyInputs(state: CombatStrategyInputs): CombatStrategyInputs {
-  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress,g23, roundResults = [],playerHp } = state;
-  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults,...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}) };
+export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase): CombatStrategyInputs {
+  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [],playerHp } = state;
+  const g23='seatMechanics' in state?readG23Progress(state):('g23' in state?state.g23:undefined);
+  const visibleExperimentCells='seatMechanics' in state&&state.seatMechanics&&!state.seatMechanics.hidden.progress?state.seatMechanics.seat.experimentCells as readonly import('./board').HexCell[]:('visibleExperimentCells' in state?state.visibleExperimentCells:undefined);
+  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults,...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
-  return shareGeneratedJson(structuredClone({ version: COMBAT_INPUT_VERSION, combatId: `round-${state.round}`,
+  return shareGeneratedJson(structuredClone({ version: COMBAT_INPUT_VERSION,mechanicReceiptPrefixLength:state.seatMechanics?.receipts.length??0, combatId: `round-${state.round}`,
     roundId: state.roundDefinitionId, contentDigest: state.contentDigest, battleSeed, playerLevel: state.level,
     nextUnitSerial: state.nextUnitSerial, nextItemSerial: state.nextItemSerial,
     equipmentRollPrefixLength: state.equipmentState.rolls.length, provenancePrefixLength,
@@ -74,6 +78,7 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   requireBasis(round && round.kind !== 'supply' && basis.version === COMBAT_INPUT_VERSION
     && basis.combatId === `round-${authority.round}` && basis.roundId === round.roundId
     && basis.contentDigest === authority.contentDigest && input.round === authority.round);
+  integer(basis.mechanicReceiptPrefixLength);
   if(input.playerHp!==undefined){integer(input.playerHp);requireBasis(input.playerHp<=100&&input.playerHp===authority.playerHp);}
   if(authority.g23){
     requireBasis(input.g23);validateG23Progress(input.g23,authority.seed,authority.round);

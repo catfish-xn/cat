@@ -14,7 +14,8 @@ type Subset<T> = T extends readonly (infer V)[] ? readonly Subset<V>[] : T exten
 const asSubset = (view:PrivateSeatView):Subset<MatchState> => view;
 function sentinels(value:unknown):void {
   if(value===null||typeof value!=='object') return;
-  for(const child of Object.values(value)) sentinels(child);
+  // Generic owner-visible payload is explicitly public JSON, not a field whitelist.
+  for(const [key,child] of Object.entries(value)) if(key!=='seat') sentinels(child);
   if(!Array.isArray(value)) Object.assign(value,{rngState:'DO_NOT_SEND',futurePlan:'DO_NOT_SEND'});
 }
 function noReferences(a:unknown,b:unknown):void {
@@ -82,7 +83,7 @@ describe('T5R private own-seat whitelist',()=>{
     expect(view.preparation.units.every(u=>u.team==='player')).toBe(true);
     expect(Object.keys(view).sort()).toEqual(['schemaVersion','rulesVersion','contentVersion','contentDigest','commandProtocolVersion','tickMs',
       'round','roundDefinitionId','phase','gold','level','xp','playerHp','streak','shop','preparation','items','temporaryEquipment','augments',
-      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets'].sort());
+      'anomalyBinding','persistentGrowth','augmentProgress','pendingChoice','roundResults','m8','consumables','consumableTargets','seatMechanics'].sort());
   });
   it('hidden RNG/future plans never affect output; nested sentinel additions never leak',()=>{
     const state=richSeat(),before=JSON.stringify(state),expected=toPrivateSeatView(state),hidden=structuredClone(state);

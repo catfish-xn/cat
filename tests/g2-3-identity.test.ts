@@ -1,3 +1,4 @@
+import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import {expect,it} from 'vitest';
 import {M5_UNIT_DEFINITIONS} from '../src/simulation/units';
 import {SHOP_CATALOG} from '../src/simulation/match-rules';
@@ -49,8 +50,8 @@ import {serializeMatch,restoreMatch} from '../src/simulation/serialization';
 import {publicPaidArmorySettlement} from './fixtures/g2-3-armory-public';
 it('restores a real paid armory purchase after settlement without deducting its preparation cost twice',async()=>{
  const state=await publicPaidArmorySettlement();
- expect(state.g23!.junkerPurchases).toHaveLength(1);
- expect(state.g23!.junkerPurchases[0].cost).toBe(5);
+ expect(readG23Progress(state)!.junkerPurchases).toHaveLength(1);
+ expect(readG23Progress(state)!.junkerPurchases[0].cost).toBe(5);
  expect(state.roundDefinitionId).toBe('5-5');
  expect(state.gold).toBe(state.roundResults.at(-1)!.goldAfter);
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
@@ -62,18 +63,18 @@ it('canonical-text restore retains actual public opening and G23 settlement rece
  const initial=createMatch(42),started=startMatchCombat(initial);expect(started.ok).toBe(true);if(!started.ok)throw Error(started.reason);
  let state=started.state;
  while(state.phase==='combat')state=stepMatch(state).state;
- expect(state.g23?.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId==='round-1')).toBe(true);
+ expect(readG23Progress(state)?.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId==='round-1')).toBe(true);
  expect(restoreMatch(serializeMatch(state))).toEqual(state);
  expect(restoreMatch(serializeMatch(initial))).toEqual(initial);
 });
 
 it('rejects current saves that omit persistent G23 authority or forge settled combat facts',()=>{
- const fresh=createMatch(42),{g23,...missing}=fresh;
- expect(()=>restoreMatch(missing)).toThrow();expect(g23).toBeDefined();
+ const fresh=createMatch(42),{seatMechanics,...missing}=fresh;
+ expect(()=>restoreMatch(missing)).toThrow();expect(seatMechanics).toBeDefined();
  let state=startMatchCombat(fresh).state;while(state.phase==='combat')state=stepMatch(state).state;
- const bad=structuredClone(state);const r=bad.g23!.economyReceipts[0];
+ const bad=structuredClone(state);const r=readG23Progress(bad)!.economyReceipts[0];
  if(r.kind!=='battle')throw Error('battle receipt');
- const forged={...bad,g23:{...bad.g23!,economyReceipts:[{...r,facts:{...r.facts,alliedDeaths:r.facts.alliedDeaths+1}}]}};
+ const forged=writeG23Progress(bad,{...readG23Progress(bad)!,economyReceipts:[{...r,facts:{...r.facts,alliedDeaths:r.facts.alliedDeaths+1}}]});
  expect(()=>restoreMatch(forged)).toThrow();
 });
 
@@ -128,7 +129,7 @@ it('a public two-sided proposal carrying G23 facts commits once instead of faili
  const receipt={...proposal,version:ROUND_SETTLEMENT_VERSION,round:state.round,settlementId:'g23-first-pvp',combatTicks:result.terminal.tick,combatEventCount:result.events.length};
  expect(applyRoundSettlement(state,{...receipt,unknownField:1})).toEqual({ok:false,state,reason:'invalid-receipt'});
  const committed=accept(applyRoundSettlement(state,receipt));
- expect(committed.g23!.economyReceipts.at(-1)).toMatchObject({kind:'battle',facts:proposal.g23Facts});
+ expect(readG23Progress(committed)!.economyReceipts.at(-1)).toMatchObject({kind:'battle',facts:proposal.g23Facts});
  expect(applyRoundSettlement(committed,receipt)).toEqual({ok:false,state:committed,reason:'duplicate-settlement'});
  expect(committed.roundResults).toHaveLength(state.round);
 });

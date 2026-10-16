@@ -67,6 +67,7 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly removedUnitIds?:readonly string[];
   readonly neutralReceipts?: import('./neutral-receipts').NeutralReceipts;
   readonly openingDefinitions?: readonly import('./m8/opening').OpeningDefinition[];
   readonly openingState?: import('./m8/opening').OpeningState;

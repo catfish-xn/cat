@@ -9,6 +9,7 @@ export function advanceG23Summons(ctx:AbilityContext):void{
   const casts=ctx.units.filter(a=>a.team===u.team&&UNIT_DEFINITIONS[a.definitionId]?.traits.includes('black-rose')).reduce((n,a)=>n+a.runtime.castCount,0);
   if(casts<5&&u.hp*10000>=u.maxHp*6500)continue;
   u.runtime.buddyTriggered=true;
+  ctx.events.push({type:'bindingChanged',tick:ctx.tick,unitId:u.id,bound:false,reason:casts>=5?'casts':'hp-threshold'});
   const tier=u.mechanics?.find(m=>m.mechanic==='g23Sion')?.values.tier??3;
   if(tier>=5)ctx.heals.push({source:origin(u),targetId:u.id,amount:u.maxHp-u.hp});
   grantShield(u,origin(u),amount(u,ctx.tick,{ap:tier>=5?75:175}),ctx.tick+(tier>=5?60:100),ctx.tick,ctx.events);

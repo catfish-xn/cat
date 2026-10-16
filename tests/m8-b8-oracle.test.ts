@@ -75,7 +75,11 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     const reward=`unit-${transition.before.nextUnitSerial}`;
     const oldCopies=transition.before.preparation.units.filter(u=>u.definitionId==='tristana'&&u.starLevel===1).map(u=>u.id).sort();
     expect(oldCopies).toHaveLength(2);
-    const survivor=oldCopies[0];
+    // Retention prefers the deployed copy, then board position; lexical ID is only a tie-break.
+    const survivor=transition.before.preparation.units.filter(u=>oldCopies.includes(u.id)).sort((a,b)=>{
+      const key=(u:typeof a)=>u.location.kind==='board'?[0,u.location.cell.row,u.location.cell.col]:[1,u.location.slot,0];
+      const ka=key(a),kb=key(b);return ka[0]-kb[0]||ka[1]-kb[1]||ka[2]-kb[2]||(a.id<b.id?-1:1);
+    })[0].id;
     expect(receipt.grantedUnitIds).toEqual([reward]);
     expect(transition.after.preparation.units.some(u => u.id === reward)).toBe(false);
     expect(transition.after.preparation.units.find(u => u.id === survivor)?.starLevel).toBe(2);

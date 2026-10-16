@@ -17,7 +17,7 @@ const currentBaseline = require('../tests/g2-3-content-baseline.json');
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const load = file => import(pathToFileURL(file).href);
 const randomState = state => ({
-  seed: state.seed, shop: state.rngState, choice: state.choiceRngState,
+  seed: state.seed, mechanics:state.seatMechanics?{state:state.seatMechanics.hidden.progress.rngState,draws:state.seatMechanics.hidden.progress.rngDraws}:null, shop: state.rngState, choice: state.choiceRngState,
   reward: state.rewardRngState, battleSeed: state.battleSeedRngState,
   equipment: state.equipmentState.equipment, reforge: state.reforgeState,
   layout: state.m8.loot.layoutBinding.mode === 'solo' ? state.m8.loot.layoutBinding.layout.rng : null, loot: state.m8.loot.frozen.rng,

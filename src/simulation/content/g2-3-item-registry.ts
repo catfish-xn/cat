@@ -1,6 +1,6 @@
 import {g23RadiantProgram} from './g2-3-radiant-programs';
 import {ITEM_DEFINITIONS as ORDINARY} from './items';
-import {G23_SPECIAL_ITEM_SOURCE} from './g2-3-special-item-source';
+import {G23_SPECIAL_ITEM_SOURCE,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
 import type {Effect,ItemDefinition} from '../strategy-types';
 import type {ItemProgram} from '../m8/item-program';
 import {modifier,periodic,stat,trigger,shield,survival,vamp,amount} from './item-programs';
@@ -30,7 +30,7 @@ export const G23_SPECIAL_ITEMS:Readonly<Record<string,ItemDefinition>>=freezeCon
  // Finite conversion fallback: retain ordinary TG's receipted temporary pair until radiant-pair policy lands.
  const gloves=id==='TFT5_Item_ThiefsGlovesRadiant';
  if(gloves)program.effects=[...program.effects??[],...ORDINARY['thiefs-gloves'].combatProgram!.effects!];
- return [id,{id,apiName:id,name:s.name,kind:'completed',evidenceStatus:'approved-provisional',unique:s.unique,slotCost:gloves?3:1,effects,combatProgram:program,conventionIds:['G23-SPECIAL-FINITE-01'],effectDescriptions:['有限奖励装备：源基础属性与部分程序；省略清单见 G2-3 RECONCILIATION。']} satisfies ItemDefinition];
+ return [id,{id,apiName:id,name:s.name,kind:isRadiant?'radiant':'completed',...(isRadiant?{radiantOf:Object.keys(G23_RADIANT_MAPPING).find(k=>(G23_RADIANT_MAPPING as Readonly<Record<string,string>>)[k]===id)!}:{}),...(!isRadiant&&id.includes('TFT13_')?{restriction:{kind:'trait' as const,traitId:'chem-baron'}}:{}),evidenceStatus:'approved-provisional',unique:s.unique,slotCost:gloves?3:1,effects,combatProgram:program,conventionIds:['G23-SPECIAL-FINITE-01'],effectDescriptions:['有限奖励装备：源基础属性与部分程序；省略清单见 G2-3 RECONCILIATION。']} satisfies ItemDefinition];
 })));
 /** Acquisition pools/recipes retain the ordinary 44-entry catalogue. Domain ownership admits reward-only identities too. */
 export const ITEM_DEFINITIONS:Readonly<Record<string,ItemDefinition>>=freezeContent({...ORDINARY,...G23_SPECIAL_ITEMS});

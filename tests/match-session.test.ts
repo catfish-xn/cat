@@ -1,4 +1,4 @@
-import { G2_CATALOG } from './fixtures/g2-roster';
+import { G23_CATALOG as G2_CATALOG } from './fixtures/g2-3-roster';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
 import { MatchSession } from '../src/rendering/match-session';

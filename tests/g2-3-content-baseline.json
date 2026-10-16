@@ -1,15 +1,15 @@
 {
-  "contentDigest": "fnv1a32-utf16:5293dee0",
-  "lootReplayDigest": "fnv1a32-utf16:417d2707",
+  "contentDigest": "fnv1a32-utf16:5789146c",
+  "lootReplayDigest": "fnv1a32-utf16:9d23a2a9",
   "rulesVersion": "s13-g2-3-v1",
   "contentVersion": "s13-14.24b-g2-3-v1",
   "schemaVersion": 7,
   "previousContentDigest": "fnv1a32-utf16:299ec0d0",
   "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
   "traceHashes": {
-    "state": "a66308b1276fe834d205fb307e4b5e6aa05db8a4ec85fcc96092ed7c243f2f5f",
+    "state": "3af858c811b9447367e85264fea237dcfa00a3bf114b747fda5b1ca3acee3ee2",
     "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
-    "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+    "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
   },
   "firstBattle": {
     "seed": 42,
@@ -19,5 +19,5 @@
     "stateHash": "fnv1a32-utf16:1db5b9e9",
     "eventHash": "fnv1a32-utf16:cf452d32"
   },
-  "reason": "G2-3: 60 canonical heroes, four fixed ranged forms,25 enabled origins and30 anomalies; baseline multiplayer38747c5 includes random1cost opening."
+  "reason": "G2-3: 60 canonical heroes, four fixed ranged forms,25 enabled origins and30 anomalies; baseline multiplayer38747c5 includes random1cost opening; integrated PR134 at19aa9f1."
 }

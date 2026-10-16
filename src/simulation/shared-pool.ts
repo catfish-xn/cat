@@ -163,7 +163,7 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
       case 'useConsumable': return useConsumable(state,command.consumableId,command.target);
-      case 'settleRound': return applyRoundSettlement(state,command.receipt);
+      case 'settleRound': return applyRoundSettlement(state,command.receipt,policy);
       case 'startCombat': return startMatchCombat(state,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}
       case 'choose': return selectChoice(state,command.choiceId,command.generation,command.definitionId,policy);
@@ -251,7 +251,7 @@ export function nextSharedRound(pool:SharedPoolState,states:readonly MatchState[
   return refreshBatch(pool,states,expectedRound,true);
 }
 
-/** G23 gifts consume real pool copies; an empty pool leaves the gift pending and the transaction inert. */
+/** G23 gifts consume real pool copies; an empty pool resolves the gift to cost gold. */
 export function sharedClaimG23Reward(pool:SharedPoolState,state:MatchState,atomId:string,definitionId:string):SharedPoolResult{
- return transact(pool,state,()=>claimG23Reward(state,atomId,definitionId));
+ return transact(pool,state,(_draft,policy)=>claimG23Reward(state,atomId,definitionId,policy));
 }

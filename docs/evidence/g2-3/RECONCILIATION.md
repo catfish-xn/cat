@@ -1,7 +1,7 @@
 # G2-3 实现对账与接口交接
 
 基线：`multiplayer@38747c595b7f4900133ca6e85c63b1bb48e83e2d`（含 OPENING-R1、SRC-MAP22、RESEARCH）；分支 `codex/g2-3-impl`。
-用户决定：2026-10-16，含 13:46 补充及随后折金口径。**内容/规则实现中；待 Claude 通用接口 PR 合入后 rebase 接入。不是完成验收声明。**
+用户决定：2026-10-16，含 13:46 补充及随后折金口径。**已基于 #134（19aa9f1）接入纯领域通用接口；服务器事实转发仍需配套，非联机上线声明。**
 
 ## 依据与重现
 
@@ -61,7 +61,7 @@
 
 已有拆卸器、重铸器不属于本批延后范围，按源表保留；第5档无延后物品，不触发折金。
 
-奖励金币在唯一战斗结算事务内直接发放；非金币奖励进入`g23.rewards`托管。物品/英雄以逐副本领取收据防重；共享池英雄领取先校验实际库存，失败不消费选项、RNG、序号或金币。普通成装锻造器虽能用已有36装备池表达，本批仍按决定延后，不能偷偷发放。
+奖励金币在唯一战斗结算事务内通过通用收据发放；非金币奖励存于`seatMechanics.seat.conqueror.rewards`，自动发放或弹出forge，满席英雄托管。物品走grantMechanicItem、英雄走grantMechanicUnit及同事务policy，池空按合同折金；逐副本MechanicReceipt防重。普通成装锻造器虽能用已有36装备池表达，本批仍按决定延后，不能偷偷发放。
 
 ## 学院、炼金男爵、机械公敌与试验格
 
@@ -85,7 +85,7 @@
 | 其他实验供体 | 约定值 | Nunu3%自身HP魔伤1秒ICD、Urgot施法8%HP盾和20%AS5秒、Zyra额外50%真实伤害分2次/2秒；Twitch每5击20%目标HP（#127未冻结此数值，显式约定）。无Warwick/纹章，因此不开放其供体 |
 | Sion解锁/成长 | 外部考证 | 黑玫瑰成员合计5次施法或Sion降至65%以下解锁；每星15%生命；4/5档阶段倍率按#127表 |
 | 召唤物胜负/玩家伤害 | 约定值 | Forge和预留g23-barrel不维持阵营存活，Sion仍是战斗单位；所有战斗召唤物不增加玩家伤害，与双边原始资产名单口径一致。桶当前为技能伤害包，没有桶实体；预留id仅防止将来实体接入后错误撑局 |
-| Sion/Forge实体 | 约定值 | Sion1000HP/100AD/40双抗/100法力；阶段映射2…6。技能300%AD线伤、175AP盾5秒、1.5秒晕；5档解锁满血、75AP盾3秒、1秒晕。召唤物暂以战斗入口投影，待Claude帮助函数与出现/移除事件接入 |
+| Sion/Forge实体 | 约定值 | Sion1000HP/100AD/40双抗/100法力；阶段映射2…6。技能300%AD线伤、175AP盾5秒、1.5秒晕；5档解锁满血、75AP盾3秒、1秒晕。召唤物在战斗入口经spawnCombatUnit投影，带不可售/不占人口标记及unitSpawned；Sion绑定变化有bindingChanged，Forge同实体复活用unitRevived；不创建准备期永久资产 |
 
 ## 30项异变
 
@@ -140,21 +140,21 @@
 ## 确定性、恢复、版本与证据
 
 - 无真实时钟/网络/`Math.random()`；固定50ms tick，显式lcg32-v1。G23独立进度流seed xor 0x67323370，开局学院抽1词，黑市每个offer1词；奖励原子由种子+bundle/atom ID哈希派生独立LCG；实验格/军械库另用各自常量混合。
-- 当前准备期军械库扣费已进入后续RoundResult的goldBefore/goldAfter；单人恢复仅追加结算后机制金币，不再次扣准备期军械库费。#134通用收据接入须保留结算前后边界，见PR134_INTEGRATION。
-- `g23`持久化层数、微光、菜单进度、奖励、领取/发物收据。恢复从种子重演经济收据，并比对当前终局Combat事实；缺失G23进度、重复/篡改收据、非法领取副本均拒绝。恢复不发奖、不抽随机数。
+- 当前准备期军械库扣费已进入后续RoundResult的goldBefore/goldAfter；单人恢复仅追加结算后机制金币，不再次扣准备期军械库费。冻结mechanicReceiptPrefixLength区分经济结算前后收据；只追加前缀后gold、池空unit折金并减choice价款，见PR134_INTEGRATION。
+- `seatMechanics.seat`持久化六键公开进度，hidden.progress保存种子、RNG与经济重演事实；学院/奖励领取凭通用MechanicReceipt派生，不持久化重复发奖收据。冻结战斗输入中的g23只是编译DTO，不是MatchState根权威。恢复从种子重演经济收据，并比对当前终局Combat事实；缺失G23进度、重复/篡改收据、非法领取副本均拒绝。恢复不发奖、不抽随机数。
 - rules=`s13-g2-3-v1`，content=`s13-14.24b-g2-3-v1`；仅本批统一切换，schema7/save3/replay3不变。旧存档与旧回放输入按版本/digest拒绝，无迁移。
-- `release-audit.json`与候选夹具当前是中间记录；Claude接口合入并接完后重新录制，以最终PR head为准。历史opening-random夹具原字节保留；新增夹具不覆盖历史归档。全套`npm test`和`test:timing`尚未执行，仅最终head各一次。
+- `release-audit.json`与候选夹具已按19aa9f1接入后源码重录，包含源码摘要、旧新字节和恢复证据。历史opening-random夹具原字节保留；新增夹具不覆盖历史归档。全套`npm test`和`test:timing`尚未执行，仅最终head各一次。
 
 开发验证见`development-validation.json`；`live-reveal-audit.json`从真实mage公共命令前缀重跑完整及单留英雄分支，通过公共部署交换Lux/Nami得到tick51双死亡(447/448)，单留Loris保留有掉落失败、单留Zyra并部署(0,4)得到tick152无掉落失败。包含旧/新测试源码字节长度、SHA及首差异位置；没有改造战斗状态来伪造死亡，尚未宣称旧全套通过。
 
-## Claude接口交接（待其PR合入后rebase）
+## #134 接入与服务器交接
 
-1. 通用机制容器：`readG23MechanismState(state)`提供本席脱离引用的待接数据；映射`g23.conquest`、`sponsored/itemReceipts`、`chem`、`junkerRounds/junkerPurchases`、`g23Laboratories()`结果、`radiantConversion`；单位当前形态读开战编译后的ability championId或`g23FormDefinitionId`。不得界面重新抽签/另算进度。
-2. 通用选择：用黑市/军械库/锻造器kind承载offerId、菜单choices和奖励atomId；Rumble弹出可收起，超时确定性选首个合法项，付费余额不足选Spare；普通命令失败语义保持原对象。现有临时`chooseG23Junker`、`chooseG23BlackMarket`、`claimG23Reward`接入后走公共choose。
-3. 召唤物：`projectG23Summons`/`reviveG23Forge`迁到通用生成帮助函数；出现/移除/复活事件完整记录。召唤物不可出售、不占人口、无共享卡池占用。
-4. 物品：光明定义接`ItemDefinition.kind='radiant'`，recipe仍普通36池，光明不进入普通重铸/轮盘/窃贼手套池。`readG23RewardItemCatalog()`供奖励中文名/说明；项目约定状态不可标为完整考证。
-5. 双边结算：`SideProposal.g23Facts`转发到`RoundSettlementReceipt.g23Facts`。真实席位只结算本席事实；镜像不收进度/收益。权威冻结输入新增G23进度和playerHp；服务器不能只转旧字段而静默丢失事实。
-6. 金币来源、失败原因接Claude扩展位；结算金/折金/HighRoller币必须保留来源和唯一收据；不能只用UI提示代替事件。
-7. 已有改动交叉文件：`combat-types.ts`（G23任务、状态、临时unitRevived事件）、`combat-replay-view.ts`（临时unitRevived投影）、`match-types.ts`（g23进度与学院事件）、`m8/contracts.ts`（事件封套）。`strategy-types.ts`、`unit-types.ts`、`private-seat-view.ts`、`bot`未改。`match.ts`及快照/恢复/结算属本PR领域实现；需rebase解决通用选择连接。
-8. #134审查中合同已读取（head `4a025f8c12405c2e8c2e0ef159bc4ae1392317d9`），三项指定补接责任及金币前缀边界见`PR134_INTEGRATION.md`；未提前合并/rebase。
-9. `src/server/`、`src/rendering/`、`src/server-entry/`本批未改；待Claude适配命令exports、权威结算转发、私有视图、选择超时、回放事件和召唤物标记。不得把当前单人领域验证通过描述成联机已完成。
+- 源数据：目录统一使用g2-3-item-registry超集；36个光明kind为radiant并带radiantOf；化工装有chem-baron限制。普通配方/重铸/轮盘池维持独立。
+- 约定值：本席容器使用conqueror、academy、alchemist、junkerKing、experimentCells、radiantConversion；hidden不外泄。随机流与收据如上，恢复不发奖。
+- 约定值：黑市TFT13_Crime_LootA4源奖励没有装备，grantItem:false只认证选择，再发源英雄包；不伪造装备。低费复制器有限自动复制首个已拥有且≤3费的源种子候选，通过同一卡池policy；无合格英雄则托管，省略玩家手动指定复制目标。其他多选用forge，拆卸器/重铸器用consumable通用收据。
+- 外部考证：High Roller每次施法发castOutcome，结算按战斗聚合为唯一high-roller金币收据；箱子金币另用conqueror-chest来源，不重发。
+- 约定值：Rumble仅弹出armory，普通Spare、全购Finishing、三星Titan都有0元timeoutOption；黑市支持@skip，choose/bot/timeout复用通用接口。
+- 约定值：Forge/预留barrel不维持阵营，Sion维持阵营，所有召唤物不增加玩家伤害；移除ID永不重用。Gangplank桶仍为伤害包，未宣称可承伤桶实体。
+- 服务器交接：src/server/room/room.ts的buildReceipt须转发proposal.g23Facts；接口/命令exports和界面消费由Claude适配。src/server/、src/rendering/、src/server-entry/本批未改，不能将领域测试通过描述成联机上线。
+
+详见[PR134_INTEGRATION](PR134_INTEGRATION.md)和[发布说明](RELEASE_NOTES.md)。

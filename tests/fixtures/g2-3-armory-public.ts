@@ -1,3 +1,4 @@
+import {readG23Progress} from '../../src/simulation/g2-3-state';
 import * as api from '../../src/simulation/match';
 import {g23JunkerMenu} from '../../src/simulation/g2-3-junker';
 import {createRequire} from 'node:module';
@@ -21,8 +22,8 @@ export async function publicPaidArmorySettlement(seed=4):Promise<api.MatchState>
       state=accept(api.selectAnomalyTarget(state,choice.choiceId,choice.generation,targetId));
     }else state=accept(api.selectChoice(state,choice.choiceId,choice.generation,choice.offers[0]));
   };
-  for(let budget=0;state.g23!.junkerRounds<3;budget++){
-    if(budget>15000||state.phase==='gameOver')throw Error('Public Rumble battle budget '+JSON.stringify({round:state.roundDefinitionId,phase:state.phase,gold:state.gold,level:state.level,junkerRounds:state.g23!.junkerRounds,rumbleId}));
+  for(let budget=0;readG23Progress(state)!.junkerRounds<3;budget++){
+    if(budget>15000||state.phase==='gameOver')throw Error('Public Rumble battle budget '+JSON.stringify({round:state.roundDefinitionId,phase:state.phase,gold:state.gold,level:state.level,junkerRounds:readG23Progress(state)!.junkerRounds,rumbleId}));
     if(state.phase==='choice')choose();
     else if(state.phase==='preparation'){
       if(!rumbleId){
@@ -38,7 +39,7 @@ export async function publicPaidArmorySettlement(seed=4):Promise<api.MatchState>
     }else if(state.phase==='combat')state=api.stepMatch(state).state;
     else state=accept(api.nextRound(state,state.round));
   }
-  while(state.phase!=='preparation'){
+  while(state.pendingChoice?.kind!=='armory'){
     if(state.phase==='choice')choose();
     else if(state.phase==='settlement')state=accept(api.nextRound(state,state.round));
     else throw Error('Public Rumble armory phase');

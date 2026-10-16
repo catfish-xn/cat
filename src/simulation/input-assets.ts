@@ -55,7 +55,7 @@ export function validateInputAssets(
   const units = new Map<string, Unit>(), locations = new Set<string>();
   for (const unit of input.preparation.units) {
     record(unit); id(unit.id); requireValue(!units.has(unit.id), 'duplicate unit'); units.set(unit.id, unit);
-    definitionId(unit.definitionId, unit.team === 'player' ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
+    definitionId(unit.definitionId, unit.team === 'player'&&!UNIT_DEFINITIONS[unit.definitionId]?.summon ? M5_UNIT_DEFINITIONS : UNIT_DEFINITIONS, 'unit definition');
     requireValue(unit.team === 'player' || unit.team === 'enemy', 'team');
     requireValue([1, 2, 3].includes(unit.starLevel), 'star'); record(unit.location);
     if (unit.team === 'player') checkSerial(unit.id, 'unit', boundary.nextUnitSerial);
@@ -68,7 +68,7 @@ export function validateInputAssets(
   const byId = (a: Unit, b: Unit): number => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   requireValue(canonicalContent(input.preparation.units.filter(unit => unit.team === 'enemy').sort(byId))
     === canonicalContent([...enemies].sort(byId)), 'enemy roster identity');
-  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board').length <= boundary.playerLevel, 'population cap');
+  requireValue([...units.values()].filter(unit => unit.team === 'player' && unit.location.kind === 'board' && (UNIT_DEFINITIONS[unit.definitionId]?.summon?.countsTowardPopulation??true)).length <= boundary.playerLevel, 'population cap');
   list(input.items); const itemIds = new Set<string>(), equipment = new Set<string>();
   for (const item of input.items) {
     record(item); id(item.id); checkSerial(item.id, 'item', boundary.nextItemSerial);

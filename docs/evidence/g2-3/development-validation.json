@@ -1,9 +1,9 @@
 {
-  "status": "development-checkpoint-not-final-acceptance",
+  "status": "PR134-integrated-target-validation",
   "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
   "identity": {
-    "contentDigest": "fnv1a32-utf16:5293dee0",
-    "lootReplayDigest": "fnv1a32-utf16:417d2707",
+    "contentDigest": "fnv1a32-utf16:5789146c",
+    "lootReplayDigest": "fnv1a32-utf16:9d23a2a9",
     "rulesVersion": "s13-g2-3-v1",
     "contentVersion": "s13-14.24b-g2-3-v1"
   },
@@ -20,18 +20,21 @@
       "tests/shop.test.ts",
       "tests/tp-shared-pool.test.ts",
       "tests/server/round-commit.test.ts",
-      "tests/m8-b8-live-reveal.test.ts"
+      "tests/m8-b8-live-reveal.test.ts",
+      "tests/g2-3-integration.test.ts",
+      "tests/g2-3-netcode-hooks.test.ts"
     ],
-    "passed": 224,
-    "failed": 0
+    "passed": 255,
+    "failed": 0,
+    "note": "14-file batch passed before the added armory-refresh regression; final regression is recorded separately below."
   },
   "serverEntry": {
     "passed": true,
     "comparedStates": 165,
     "traceHashes": {
-      "state": "a66308b1276fe834d205fb307e4b5e6aa05db8a4ec85fcc96092ed7c243f2f5f",
+      "state": "3af858c811b9447367e85264fea237dcfa00a3bf114b747fda5b1ca3acee3ee2",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
-      "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+      "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
     },
     "scope": "seed 42 existing first battle; browser-target bundle executed in ordinary Node, not a live browser or multiplayer acceptance"
   },
@@ -43,17 +46,31 @@
   "fullTestRuns": 0,
   "timingTestRuns": 0,
   "pending": [
-    "用户通知Claude #134合入后先rebase，再接私有机制容器、选择/超时/机器人、召唤事件和radiant kind",
-    "shared-pool.ts的settleRound透传同事务policy到机制英雄奖励；空池折金与满席路径测试",
-    "通用机制金币恢复校验区分结算前/后收据，避免已包含在goldBefore的款项和旧g23总额双计",
-    "接口接入后补中途召唤事件/移除回放与恢复验证，重录最终夹具并核对合同",
-    "仅在最终PR head上全套npm test和test:timing各一次，随后开PR目标multiplayer；本检查点按用户要求不开PR"
+    "最终PR head上全套npm test与test:timing各一次，结果记录于PR，避免验收后改head",
+    "Claude服务器buildReceipt转发proposal.g23Facts（禁止修改server，本PR仅合同交接）"
   ],
   "typecheck": "passed",
   "independentAudit": {
     "B8": "公共站位交换保留同tick死亡覆盖；Loris/Zyra分别覆盖实际部分失败的有/无掉落来源，附旧新源码及事件字节证据",
     "summons": "两侧Forge/预留barrel不维持阵营，Sion维持阵营；召唤物不增加玩家伤害；Forge生成/复活碰撞按己方坐标镜像",
     "settlement": "真实公共双边提案的g23Facts通过严格白名单，未知字段与重复结算拒绝",
-    "paidArmory": "seed4公共cannon路线5-1招募Rumble，三场后支付5金升级，5-5结算text/object恢复一致，±5金篡改拒绝、重复step惰性；准备期费用不重复扣减"
+    "paidArmory": "seed4公共cannon路线5-1招募Rumble，三场后支付5金升级，5-5结算text/object恢复一致，±5金篡改拒绝、重复step惰性；准备期费用不重复扣减",
+    "integration": "单一机制容器、目录超集、radiantOf、免费超时、有池/空池共享结算、召唤物不撑胜负和ID防复用",
+    "affectedRegressions": "旧恢复/库存/回放12文件：296通过、商店旧目录2项已按独立G23目录修正；4文件回归118通过。"
+  },
+  "integrationBaseCommit": "19aa9f1",
+  "additionalValidation": {
+    "integrationPrivateView": {
+      "files": 2,
+      "passed": 32,
+      "failed": 0
+    },
+    "legacyCatalog": {
+      "files": 4,
+      "passed": 118,
+      "failed": 0
+    },
+    "fixtureSourceFilesVerified": 232,
+    "B8Oracle": "站位保留规则：seed48在3-7保留(1,7)的unit-9，消费候选unit-23和unit-5；旧ID排序假设已修正"
   }
 }

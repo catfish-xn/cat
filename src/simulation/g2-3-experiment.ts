@@ -16,7 +16,7 @@ export function g23ExperimentEffects(state:CombatStrategyInputs,unit:Unit):Effec
  if(unit.location.kind!=='board'||!UNIT_DEFINITIONS[unit.definitionId].traits.includes('experiment'))return [];
  const army=state.preparation.units.filter(u=>u.team===unit.team&&u.location.kind==='board'&&UNIT_DEFINITIONS[u.definitionId].traits.includes('experiment'));
  const count=new Set(army.map(u=>u.definitionId)).size,tier=count>=7?7:count>=5?5:count>=3?3:0;
- const labs=g23Laboratories(state.g23?.seed??0,unit.team,tier),onLab=(u:Unit)=>{const location=u.location;return location.kind==='board'&&labs.some(c=>c.col===location.cell.col&&c.row===location.cell.row);};
+ const labs=unit.team==='player'&&state.visibleExperimentCells?state.visibleExperimentCells:g23Laboratories(state.g23?.seed??0,unit.team,tier),onLab=(u:Unit)=>{const location=u.location;return location.kind==='board'&&labs.some(c=>c.col===location.cell.col&&c.row===location.cell.row);};
  if(!onLab(unit))return [];
  const donors=army.filter(onLab),factor=tier>=7?2:1;
  return [{kind:'statFlat',stat:'maxHp',amount:(tier>=5?300:100)+(donors.some(u=>u.definitionId==='drmundo')?120*factor:0)},

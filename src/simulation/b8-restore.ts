@@ -1,3 +1,5 @@
+import {openG23Choice} from './g2-3-runtime';
+import {readG23Progress,validateG23MechanicLinks} from './g2-3-state';
 import {g23RadiantRound,g23SoloFacts} from './g2-3-settlement';
 import {g23RadiantDefinitionId} from './g2-3-rewards';
 import { validateG23Progress } from './g2-3-match-progress';
@@ -157,14 +159,19 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
 export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   validateConsumableState(state);
-  check(!!state.g23, 'G23 progress required');
-  if(state.g23){
-    validateG23Progress(state.g23,state.seed,state.round);
+  check(!!state.seatMechanics?.hidden.progress&&!!readG23Progress(state), 'G23 progress required');
+  validateG23MechanicLinks(state);
+  if(state.phase==='choice'&&state.pendingChoice!.choiceId.startsWith('g23:')){
+    const choice=state.pendingChoice!;const expected=openG23Choice({...state,phase:choice.returnPhase,pendingChoice:null} as MatchState);
+    check(equal(expected.state.pendingChoice,choice),'G23 pending choice authority');
+  }
+  if(readG23Progress(state)){
+    validateG23Progress(readG23Progress(state)!,state.seed,state.round);
     if(!state.multiplayer&&state.combat?.status==='finished'){
-     const receipt=state.g23.economyReceipts.find(r=>r.kind==='battle'&&r.facts.round===state.round);
+     const receipt=readG23Progress(state)!.economyReceipts.find(r=>r.kind==='battle'&&r.facts.round===state.round);
      check(receipt?.kind==='battle'&&equal(receipt.facts,g23SoloFacts(state,state.combat)),'G23 terminal combat facts');
     }
-    for(const r of state.g23.economyReceipts)if(r.kind==='battle'){
+    for(const r of readG23Progress(state)!.economyReceipts)if(r.kind==='battle'){
       const history=state.roundResults.find(h=>h.round===r.facts.round);check(history&&history.roundKind!=='supply'&&r.facts.roundKind===(history.roundKind==='pvp'?'pvp':'pve')&&r.facts.result===(history.result==='playerWin'?'win':history.result==='enemyWin'?'loss':'draw'),'G23 settlement history');
       const multiplayer=state.multiplayer?.receipts.find(m=>m.round===r.facts.round);
       check(multiplayer?!!multiplayer.g23Facts&&equal(multiplayer.g23Facts,r.facts):r.facts.battleId===`round-${r.facts.round}`,'G23 settlement identity');
@@ -172,7 +179,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   }
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
-  const context: ResourceProvenanceContext = { g23RadiantRound:g23RadiantRound(state),g23RewardClaims:state.g23?.rewardClaims,g23Receipts:state.g23?.itemReceipts,carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
+  const context: ResourceProvenanceContext = { g23RadiantRound:g23RadiantRound(state),carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
@@ -192,7 +199,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{g23:state.g23,playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{g23:readG23Progress(state),playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.

@@ -3,7 +3,7 @@ import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { CONSUMABLE_DEFINITIONS, CONSUMABLE_RULES, REFORGE_POOLS } from './content/consumables';
 import { canOperateEquipment } from './operation-policy';
 import { isTemporaryItemId } from './temporary-equipment';
-import { getCatalogRoundById,getCatalogRoundByOrdinal } from './round-selectors';
+import { getCatalogRoundById } from './round-selectors';
 import { planEquip } from './inventory';
 import type { GameState } from './game';
 import { drawIndex } from './orb-layout';
@@ -98,7 +98,7 @@ export function validateConsumableState(state:MatchState):void {
   const check=(condition:unknown)=>{if(!condition)throw new RangeError('Invalid consumable ledger');};
   const grants=new Map<string,{definitionId:string;roundId:string}>(); let serial=1;
   const all:{id:string;definitionId:string;roundId:string}[]=[];
-  for(const r of state.g23?.rewardClaims??[])if(r.kind==='tool'){check(typeof r.instanceId==='string'&&Object.hasOwn(CONSUMABLE_DEFINITIONS,r.definitionId));all.push({id:r.instanceId!,definitionId:r.definitionId,roundId:getCatalogRoundByOrdinal(r.round).roundId});}
+  for(const r of state.seatMechanics?.receipts??[])if(r.kind==='consumable'){check(Object.hasOwn(CONSUMABLE_DEFINITIONS,r.definitionId));all.push({id:r.consumableId,definitionId:r.definitionId,roundId:r.roundId});}
   for (const receipt of state.m8.loot.receipts) {
     if (receipt.payload.kind!=='consumable') {check(!receipt.grantedConsumableIds);continue;}
     const ids=receipt.grantedConsumableIds;check(ids?.length===1&&receipt.payload.quantity===1&&Object.hasOwn(CONSUMABLE_DEFINITIONS,receipt.payload.definitionId));
@@ -115,7 +115,7 @@ export function validateConsumableState(state:MatchState):void {
     const r=fact.record,grant=grants.get(r.consumableId),definition=CONSUMABLE_DEFINITIONS[r.definitionId];
     check(grant&&grant.definitionId===r.definitionId&&definition&&definition.effect===r.effect
       &&definition.target===r.target.kind&&equal(r.rngBefore,rng));
-    check(grant && (settled.has(grant.roundId)||state.g23?.rewardClaims.some(r=>r.kind==='tool'&&r.instanceId===fact.record.consumableId))
+    check(grant && (settled.has(grant.roundId)||state.seatMechanics?.receipts.some(r=>r.kind==='consumable'&&r.consumableId===fact.record.consumableId))
       && getCatalogRoundById(grant.roundId).ordinal <= getCatalogRoundById(fact.roundId).ordinal);
     check(Array.isArray(r.affectedItems)&&r.affectedItems.length>0&&new Set(r.affectedItems.map(i=>i.id)).size===r.affectedItems.length);
     if (r.target.kind==='unit') {

@@ -10,7 +10,7 @@ import { g23AnomalyProgram, g23TraitProgram,g23ExperimentProgram } from './g2-3-
 import { compileAugmentEffect } from './augment-effects';
 import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
 import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
-import type { CombatStrategyInputs } from './combat-input';
+import {readCombatStrategyInputs,type CombatStrategyInputs } from './combat-input';
 import type {
   Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition,
 } from './strategy-types';
@@ -44,6 +44,7 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
 export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG): StrategySnapshot {
+  state=readCombatStrategyInputs(state);
   state={...state,preparation:projectG23Summons(state.preparation)};
   const traits = [...deriveTraits(state.preparation, 'player', catalog.traits), ...deriveTraits(state.preparation, 'enemy', catalog.traits)];
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')

@@ -1,4 +1,4 @@
-import { G2_CATALOG } from './fixtures/g2-roster';
+import { G23_CATALOG as G2_CATALOG } from './fixtures/g2-3-roster';
 import { describe, expect, it } from 'vitest';
 import { planRoundEconomy, type RoundEconomyInput } from '../src/simulation/economy';
 import { getShopOdds, getXpToNextLevel, grantXp } from '../src/simulation/progression';
@@ -107,13 +107,13 @@ describe('M5 frozen XP and shop', () => {
     expect(grantXp(8, 75, 4)).toEqual({ level: 9, xp: 0, xpRequested: 4, xpApplied: 1, levelsGained: 1 });
   });
 
-  it('has exactly the 33 selectable heroes in stable code-point order', () => {
+  it('has exactly the 60 selectable heroes in stable code-point order', () => {
     expect(SHOP_CATALOG_BY_COST).toEqual(G2_CATALOG);
   });
 
   it.each([
     { level: 3, definitions: ['darius', 'irelia', 'amumu', 'darius', 'ziggs'] },
-    { level: 9, definitions: ['camille', 'ezreal', 'blitzcrank', 'blitzcrank', 'zoe'] },
+    { level: 9, definitions: ['camille', 'ezreal', 'blitzcrank', 'cassiopeia', 'zoe'] },
   ])('seed 42 level $level uses independently tabulated 10-word shop', ({ level, definitions }) => {
     // Independent BigInt LCG tabulation: words 1/3/5/7/9 map to percentiles 25/57/37/44/87;
     // words 2/4/6/8/10 map within each bucket to 8/22/2/11/99 percentiles.

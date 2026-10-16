@@ -1,3 +1,4 @@
+import {findMechanicReceipt} from './seat-mechanics/state';
 import { validateCarouselMetadata } from './carousel-units';
 import { isImmutableJson } from './immutable-json';
 import { restoreOrbLayout } from './orb-layout';
@@ -157,8 +158,8 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
         definitionId=r.definitionId;source=shopSource(r);pool.shops=pool.shops.filter(s=>s!==r);
       } else if(fact.source.kind==='mechanic') {
         // G2-3 mechanic grant: summons never enter the pool; heroes consume the same-transaction reservation.
-        const unit=after.preparation.units.find(u=>u.id===fact.unitId);
-        if(unit&&UNIT_DEFINITIONS[unit.definitionId]?.summon) continue;
+        const mechanicReceipt=findMechanicReceipt(after,fact.source.receiptId);
+        if(mechanicReceipt?.kind==='unit'&&UNIT_DEFINITIONS[mechanicReceipt.definitionId]?.summon)continue;
         const dropId=mechanicDropId(fact.source.receiptId),p=pool.pending.find(p=>p.seatId===seatId&&p.dropId===dropId);
         requirePool(p,'invalid-seat-state');definitionId=p.definitionId;source=rewardSource(p);
         pool.pending=pool.pending.filter(r=>r!==p);
@@ -172,7 +173,7 @@ export function reconcileHoldings(pool:PoolDraft,before:MatchState,after:MatchSt
       }
       pool.holdings.push({seatId,unitId:fact.unitId,definitionId,sources:[source]});
     } else if(fact.kind==='unit-upgraded'||fact.kind==='unit-upgraded-after-combat') {
-      const e=fact.event,ids=[e.survivorId,...e.consumedIds];
+      const e=fact.event;if(UNIT_DEFINITIONS[e.definitionId]?.summon)continue;const ids=[e.survivorId,...e.consumedIds];
       const parts=ids.map(id=>pool.holdings.find(h=>h.seatId===seatId&&h.unitId===id));
       requirePool(parts.every(h=>h&&h.definitionId===e.definitionId&&h.sources.length===3**(e.fromStar-1)),'invalid-seat-state');
       pool.holdings=pool.holdings.filter(h=>h.seatId!==seatId||!ids.includes(h.unitId));

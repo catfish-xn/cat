@@ -1,4 +1,4 @@
-# G2-3 发布说明（待接口接入和最终验收）
+# G2-3 发布说明（#134 接入）
 
 rules `s13-g2-3-v1`、content `s13-14.24b-g2-3-v1`统一发布；旧存档及旧回放输入失效，不能继续旧局。schema7/save3/replay3保持，不提供内容迁移。
 
@@ -6,4 +6,6 @@ rules `s13-g2-3-v1`、content `s13-14.24b-g2-3-v1`统一发布；旧存档及旧
 
 学院29组项目赞助池、未恢复的脚本/碰撞/召唤物属性均明确标约定值或有限近似，详见[实现对账](RECONCILIATION.md)。神器、辅助装、战术家之冠、窃贼手套新奖励、锻造器、复制器延后下一批。
 
-联机机制容器、弹出选择、超时默认、召唤事件及光明kind等待Claude通用接口PR；本说明不是当前联机上线或完成验收声明。最终PR head、digest、目标/全套/timing验证和夹具字节证据在接口接入后补全。
+已接入#134（19aa9f1）的机制容器、弹出选择、免费超时项、召唤事件和radiant kind。目录选择g2-3-item-registry超集，统一用于发奖/选择/恢复/摘要。CONTENT digest为fnv1a32-utf16:5789146c；版本只切换一次。
+
+服务器buildReceipt仍需Claude转发proposal.g23Facts；本PR不改server/rendering/server-entry，因此不是联机机制上线声明。夹具字节证据见release-audit.json、input-fixture-audit.json、live-reveal-audit.json，开发验证见development-validation.json；最终head全套与timing结果在PR记录。

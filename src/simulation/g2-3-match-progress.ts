@@ -1,3 +1,5 @@
+import {findMechanicReceipt,grantMechanicItem} from './seat-mechanics';
+import {readG23Progress} from './g2-3-state';
 import {canonicalContent} from './content';
 import type {G23RewardClaim} from './g2-3-rewards';
 import {g23RewardAtoms} from './g2-3-rewards';
@@ -9,8 +11,6 @@ import { G23_POLICY } from './content/g2-3-policy';
 import { G23_ACADEMY_LISTS } from './content/g2-3-academy';
 import { EMPTY_G23_CONQUEST,validateG23Conquest,type G23ConquestProgress } from './g2-3-progress';
 import { deriveTraits } from './trait-snapshot';
-import { planPermanentItemGrant } from './item-grants';
-import { appendResourceProvenance } from './resource-provenance';
 export interface G23ItemReceipt {readonly id:string;readonly kind:'academy';readonly tier:number;readonly round:number;readonly itemId:string;readonly definitionId:string}
 export interface G23MatchProgress {readonly version:'g2-3-progress-v1';readonly seed:number;readonly rngState:number;readonly rngDraws:number;readonly sponsored:readonly string[];readonly conquest:G23ConquestProgress;readonly chem:G23ChemProgress;readonly junkerRounds:number;readonly junkerPurchases:readonly G23JunkerPurchase[];readonly rewards:readonly G23RewardBundle[];readonly economyReceipts:readonly G23EconomyReceipt[];readonly rewardClaims:readonly G23RewardClaim[];readonly itemReceipts:readonly G23ItemReceipt[]}
 export function createG23Progress(seed:number):G23MatchProgress{
@@ -18,17 +18,15 @@ export function createG23Progress(seed:number):G23MatchProgress{
  return {version:'g2-3-progress-v1',seed,rngState:draw.state,rngDraws:1,sponsored,conquest:EMPTY_G23_CONQUEST,chem:EMPTY_G23_CHEM,junkerRounds:0,junkerPurchases:[],rewards:[],economyReceipts:[],rewardClaims:[],itemReceipts:[]};
 }
 export function grantG23Academy(initial:MatchState):{state:MatchState;events:MatchEvent[]}{
- if(initial.phase!=='preparation'||!initial.g23)return {state:initial,events:[]};
+ if(initial.phase!=='preparation'||!readG23Progress(initial))return {state:initial,events:[]};
  const tier=deriveTraits(initial.preparation,'player').find(t=>t.traitId==='academy')?.tier??0;
- let state=initial;const events:MatchEvent[]=[];
+ let state:MatchState=initial;const events:MatchEvent[]=[];
  for(const milestone of [3,4,5]){
   const id=`g23:academy:${milestone}`;
-  if(tier<milestone||state.g23!.itemReceipts.some(r=>r.id===id))continue;
-  const definitionId=state.g23!.sponsored[milestone-3],plan=planPermanentItemGrant(state,{receiptId:id,definitionId},state.g23!.itemReceipts.map(r=>r.id));
-  if(!plan.ok)throw new Error('Invalid Academy grant: '+plan.reason);
-  const receipt:G23ItemReceipt={id,kind:'academy',tier:milestone,round:state.round,itemId:plan.grantedItemIds[0],definitionId};
-  state={...plan.state,g23:{...state.g23!,itemReceipts:[...state.g23!.itemReceipts,receipt]},resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'item-acquired',itemId:receipt.itemId,source:{kind:'g23',receiptId:id}})};
-  events.push({type:'g23ItemGranted',receipt});
+  if(tier<milestone||findMechanicReceipt(state,id))continue;
+  const granted=grantMechanicItem(state,{receiptId:id,source:'academy',definitionId:readG23Progress(state)!.sponsored[milestone-3]});
+  if(!granted.ok)throw new Error(granted.reason);
+  state=granted.state;events.push(...granted.events);
  }
  return {state,events};
 }
@@ -57,7 +55,7 @@ export function validateG23Progress(progress:G23MatchProgress,seed:number,round:
  fail(Array.isArray(progress.rewardClaims));const claimIds=new Set<string>();
  for(const r of progress.rewardClaims){
  const bundle=progress.rewards.find(b=>b.id===r.bundleId),atom=bundle&&g23RewardAtoms(bundle,seed).find(a=>a.id===r.atomId);
- fail(Object.keys(r).length===9&&bundle&&atom&&r.id===`${r.atomId}:copy:${r.copy}`&&!claimIds.has(r.id)&&Number.isSafeInteger(r.copy)&&r.copy>=0&&r.copy<atom!.quantity&&Number.isSafeInteger(r.round)&&r.round>=bundle!.round&&r.round<=round&&r.copy===progress.rewardClaims.slice(0,progress.rewardClaims.indexOf(r)).filter(c=>c.atomId===r.atomId).length&&r.kind===atom!.kind&&r.gold===atom!.gold&&(r.kind==='gold'?r.definitionId===''&&r.instanceId===null:atom!.options.includes(r.definitionId)));
+ fail(Object.keys(r).length===9&&bundle&&atom&&(r.id===`${r.atomId}:copy:${r.copy}`||bundle?.source==='black-market'&&r.id===bundle.id&&r.copy===0)&&!claimIds.has(r.id)&&Number.isSafeInteger(r.copy)&&r.copy>=0&&r.copy<atom!.quantity&&Number.isSafeInteger(r.round)&&r.round>=bundle!.round&&r.round<=round&&r.copy===progress.rewardClaims.slice(0,progress.rewardClaims.indexOf(r)).filter(c=>c.atomId===r.atomId).length&&r.kind===atom!.kind&&r.gold===atom!.gold&&(r.kind==='gold'?r.definitionId===''&&r.instanceId===null:atom!.options.includes(r.definitionId)));
  claimIds.add(r.id);
  }
  validateG23Conquest(progress.conquest);fail(Array.isArray(progress.itemReceipts));

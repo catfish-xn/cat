@@ -1,3 +1,4 @@
+import {readG23Progress} from './g2-3-state';
 import { validateG23Progress } from './g2-3-match-progress';
 import { canonicalContent, CONTENT_DIGEST } from './content';
 import { freezeContent } from './content/freeze';
@@ -111,7 +112,7 @@ export function snapshotForBattle(state: MatchState, seatId: string): PlayerBatt
   const units = state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').sort(ascii);
   const ids = new Set(units.map(unit => unit.id));
   return restorePlayerBattleSnapshot({
-    version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:state.g23,seatId, roundId: state.roundDefinitionId, level: state.level,
+    version: PLAYER_BATTLE_SNAPSHOT_VERSION, contentDigest: state.contentDigest, playerHp:state.playerHp,g23:readG23Progress(state),seatId, roundId: state.roundDefinitionId, level: state.level,
     units, items: state.items.filter(item => item.location.kind === 'unit' && ids.has(item.location.unitId)).sort(ascii),
     temporaryEquipment: state.temporaryEquipment.filter(item => ids.has(item.holderId)),
     augments: state.augments, anomalyBinding: state.anomalyBinding && ids.has(state.anomalyBinding.unitId) ? state.anomalyBinding : null,

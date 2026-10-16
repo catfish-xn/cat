@@ -1,3 +1,5 @@
+import type {UnitLootPolicy} from './loot-runtime';
+import {mechanicGrantEvents,openG23Choice} from './g2-3-runtime';
 import {commitG23Settlement} from './g2-3-settlement';
 import {validateG23BattleFacts,type G23BattleFacts} from './g2-3-economy';
 import {deriveTraits} from './trait-snapshot';
@@ -55,7 +57,7 @@ export function enableMultiplayerSettlement(state: MatchState, seatId: string): 
 }
 
 /** One seat's atomic commit. The room stages all successful results before publishing any seat. */
-export function applyRoundSettlement(state: MatchState, input: unknown): MultiplayerCommandResult {
+export function applyRoundSettlement(state: MatchState, input: unknown,unitLootPolicy?:UnitLootPolicy): MultiplayerCommandResult {
   if (!state.multiplayer || state.multiplayer.version !== ROUND_SETTLEMENT_VERSION) return fail(state,'multiplayer-required');
   const multiplayer = state.multiplayer;
   try {
@@ -116,7 +118,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
       round:r.round,roundId:r.roundId,settlementId:r.settlementId,roundKind:'pvp',result,
       combatTicks:r.combatTicks,combatEventCount:r.combatEventCount,income:plan.income,incomeBreakdown:plan.incomeBreakdown,
       interestBasis:plan.interestBasis,streakBefore:state.streak,streakAfter:plan.streakAfter,
-      goldBefore:state.gold,goldAfter:plan.goldAfter,xpRequested:plan.progression.xpRequested,xpAwarded:plan.progression.xpApplied,
+      mechanicReceiptPrefixLength:state.seatMechanics?.receipts.length??0,goldBefore:state.gold,goldAfter:plan.goldAfter,xpRequested:plan.progression.xpRequested,xpAwarded:plan.progression.xpApplied,
       levelBefore:state.level,levelAfter:plan.progression.level,xpBefore:state.xp,xpAfter:plan.progression.xp,
       hpBefore:state.playerHp,hpAfter,baseDamage:r.baseDamage,survivingEnemyCount:r.opposingSurvivors,
       playerDamage:r.damage,hpLost:state.playerHp-hpAfter,
@@ -132,9 +134,11 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
       augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
-    const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts):next);
+    const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts,unitLootPolicy):next);
+    const opened=openG23Choice(merged.state);
+    const extra=[...merged.events,...mechanicGrantEvents(state,merged.state),...opened.events];
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
-      ...merged.events.map((event,index) => ({...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
-    return {ok:true,state:{...merged.state,nextMatchEventSeq:next.nextMatchEventSeq+merged.events.length},events};
+      ...extra.map((event,index) => ('tick' in event?event:{...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
+    return {ok:true,state:{...opened.state,nextMatchEventSeq:next.nextMatchEventSeq+extra.length},events};
   } catch { return fail(state,'invalid-receipt'); }
 }

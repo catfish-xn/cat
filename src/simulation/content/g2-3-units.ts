@@ -96,6 +96,7 @@ export const G23_UNITS: Readonly<Record<string, UnitDefinition>> = freezeContent
   },
   "elise": {
     "id": "elise",
+    "formSwap": true,
     "name": "Elise",
     "symbol": "E",
     "color": 10466749,
@@ -142,6 +143,7 @@ export const G23_UNITS: Readonly<Record<string, UnitDefinition>> = freezeContent
   },
   "jayce": {
     "id": "jayce",
+    "formSwap": true,
     "name": "Jayce",
     "symbol": "J",
     "color": 10466749,
@@ -280,6 +282,7 @@ export const G23_UNITS: Readonly<Record<string, UnitDefinition>> = freezeContent
   },
   "gangplank": {
     "id": "gangplank",
+    "formSwap": true,
     "name": "Gangplank",
     "symbol": "G",
     "color": 10466749,
@@ -326,6 +329,7 @@ export const G23_UNITS: Readonly<Record<string, UnitDefinition>> = freezeContent
   },
   "swain": {
     "id": "swain",
+    "formSwap": true,
     "name": "Swain",
     "symbol": "S",
     "color": 10466749,

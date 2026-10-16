@@ -1,3 +1,4 @@
+import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import { expect,it } from 'vitest';
 import { G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,G23_POLICY,g23ConquerorReward } from '../src/simulation/content/g2-3-policy';
 import { EMPTY_G23_CONQUEST,planG23Conquest,validateG23Conquest,g23ConquerorBonusBps,g23WeightedIndex,rollG23HighRoller,rollG23BlackMarket } from '../src/simulation/g2-3-progress';
@@ -44,14 +45,14 @@ it('Academy selects one ordered project list with an independent lcg oracle',()=
 });
 it('Academy grants all crossed thresholds once; receipts authenticate actual item births',()=>{
  const s=formation(['lux','leona','ezreal','heimerdinger','jayce']),before=JSON.stringify(s),plan=grantG23Academy(s);
- expect(JSON.stringify(s)).toBe(before);expect(plan.events).toHaveLength(3);expect(plan.state.g23!.itemReceipts.map(r=>r.tier)).toEqual([3,4,5]);
- expect(plan.state.items.map(i=>i.definitionId)).toEqual(s.g23!.sponsored);
- expect(grantG23Academy(plan.state).state).toBe(plan.state);validateG23Progress(plan.state.g23!,42,1);
- const births=validateResourceReceipts({g23Receipts:plan.state.g23!.itemReceipts,scheduleReceipts:[],lootReceipts:[],throughRoundOrdinal:1});expect(births.size).toBe(3);
- expect(()=>validateG23Progress({...plan.state.g23!,sponsored:['warmog','deathblade','archangel']},42,1)).toThrow();
+ expect(JSON.stringify(s)).toBe(before);expect(plan.events).toHaveLength(3);expect(readG23Progress(plan.state)!.itemReceipts.map(r=>r.tier)).toEqual([3,4,5]);
+ expect(plan.state.items.map(i=>i.definitionId)).toEqual(readG23Progress(s)!.sponsored);
+ expect(grantG23Academy(plan.state).state).toBe(plan.state);validateG23Progress(readG23Progress(plan.state)!,42,1);
+ const births=validateResourceReceipts({mechanicReceipts:plan.state.seatMechanics!.receipts,scheduleReceipts:[],lootReceipts:[],throughRoundOrdinal:1});expect(births.size).toBe(3);
+ expect(()=>validateG23Progress({...readG23Progress(plan.state)!,sponsored:['warmog','deathblade','archangel']},42,1)).toThrow();
 });
 it('Academy matching ordinary copies stack; extra member five percent applies once',()=>{
- const s=formation(['lux','leona','ezreal','heimerdinger','jayce','darius']),sponsored=s.g23!.sponsored[0];
+ const s=formation(['lux','leona','ezreal','heimerdinger','jayce','darius']),sponsored=readG23Progress(s)!.sponsored[0];
  const items=[0,1].map(slot=>({id:'item-'+slot,definitionId:sponsored,location:{kind:'unit' as const,unitId:'lux',slot}}));
  const compiled=buildStrategySnapshot({...s,items});
  expect(compiled.units.find(u=>u.unitId==='lux')!.mechanics?.find(m=>m.mechanic==='damageAmp')?.values.bps).toBe(2500);
@@ -60,7 +61,7 @@ it('Academy matching ordinary copies stack; extra member five percent applies on
 });
 it('opened chests scale the real Conqueror strategy bonus',()=>{
  const s=formation(['darius','draven']),conquest=planG23Conquest(EMPTY_G23_CONQUEST,'b',2,Array.from({length:10},(_,i)=>'e'+i));
- const compiled=buildStrategySnapshot({...s,g23:{...s.g23!,conquest}}),draven=compiled.units.find(u=>u.unitId==='draven')!;
+ const compiled=buildStrategySnapshot(writeG23Progress(s,{...readG23Progress(s)!,conquest})),draven=compiled.units.find(u=>u.unitId==='draven')!;
  expect(draven.attackDamagePercentBps).toBe(1890);expect(draven.abilityPower).toBe(118);
 });
 import {advanceG23Economy,decideG23Market,type G23BattleFacts} from '../src/simulation/g2-3-economy';
@@ -104,7 +105,7 @@ it('only deferred Conqueror tiers get the whole-tier gold floor, preserving all 
 });
 it('passing a market grows only Chem-Barons by the active source tier health-per-skip',()=>{
  const state=formation(['renata','renni','singed','darius']);
- const plain=buildStrategySnapshot(state),grown=buildStrategySnapshot({...state,g23:{...state.g23!,chem:{...state.g23!.chem,skips:2}}});
+ const plain=buildStrategySnapshot(state),grown=buildStrategySnapshot(writeG23Progress(state,{...readG23Progress(state)!,chem:{...readG23Progress(state)!.chem,skips:2}}));
  for(const unit of grown.units){const before=plain.units.find(u=>u.unitId===unit.unitId)!;expect(unit.stats.health-before.stats.health).toBe(unit.unitId==='darius'?0:40);}
 });
 
@@ -131,7 +132,7 @@ it('radiant conversion changes equipped board/bench items once; thereafter only 
  const state=formation(['lux']);
  const conquest=planG23Conquest(EMPTY_G23_CONQUEST,'conversion',9,Array.from({length:75},(_,i)=>'e'+i));
  const items=[{id:'item-1',definitionId:'shojin',location:{kind:'unit' as const,unitId:'lux',slot:0}},{id:'item-2',definitionId:'warmog',location:{kind:'inventory' as const}}];
- const converted=applyG23Radiant({...state,g23:{...state.g23!,conquest},items});
+ const converted=applyG23Radiant(writeG23Progress({...state,items},{...readG23Progress(state)!,conquest}));
  expect(converted.items.map(i=>i.definitionId)).toEqual(['TFT5_Item_SpearOfShojinRadiant','warmog']);
  expect(applyG23Radiant(converted)).toBe(converted);
  const combined=applyG23Radiant(converted,new Set(['item-2']));
@@ -153,7 +154,7 @@ it('radiant conversion preserves glove parent slots and its already receipted fi
  const state=formation(['lux']);
  const equipped=planTemporaryEquipment({...state,items:[{id:'item-1',definitionId:'thiefs-gloves',location:{kind:'unit',unitId:'lux',slot:0}}]}).state;
  const conquest=planG23Conquest(EMPTY_G23_CONQUEST,'conversion',9,Array.from({length:75},(_,i)=>'e'+i));
- const converted=applyG23Radiant({...equipped,g23:{...equipped.g23!,conquest}});
+ const converted=applyG23Radiant(writeG23Progress(equipped,{...readG23Progress(equipped)!,conquest}));
  expect(converted.items[0].definitionId).toBe('TFT5_Item_ThiefsGlovesRadiant');
  expect(G23_SPECIAL_ITEMS[converted.items[0].definitionId].slotCost).toBe(3);
  const next=planTemporaryEquipment(converted);

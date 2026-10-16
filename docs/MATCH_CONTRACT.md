@@ -2,30 +2,30 @@
 
 ## G2-3 当前实现与接入合同（2026-10-16）
 
-本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。G2-3 尚待 Claude 通用接口 PR 合入后 rebase 接入并最终验收；本节同时标明已经实现的规则与待接接口。
+本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。已 rebase 到 multiplayer 的 #134（19aa9f1），领域侧通用接口已接入；服务器转发与最终验收边界见下文。
 
 - 版本统一为 rules `s13-g2-3-v1` / content `s13-14.24b-g2-3-v1`，schema7、存档3、回放3保持；digest包含新内容、奖励过渡政策及有限规则manifest。旧存档/回放拒绝，无迁移或静默回退。开局沿用#126的一费随机英雄，不回退旧的固定开局。
 - 准入60位商店英雄，1–5费14/13/13/12/8种，共享库存1171份；原始26个非Teamup羁绊启用25个，FormSwapper与7个Teamup不开放；30个异变，排除Cosmic Rhythm。远程形态和召唤物不加入商店/合成/共享池。
 - Elise/Swain/Gangplank/Jayce按开战初始站位选属性与技能：己方前两排近战、后两排远程；敌方对称，整战不切换。永久资产保持canonical ID，Combat ability championId/初始属性记录当前形态，移动/恢复不重选。射程4格和Forge1000生命是约定值。
-- `g23`为持久进度权威，含学院赞助/发物、征服者层数/开箱、炼金微光/黑市、军械库、奖励托管及领取收据。当前格式恢复必须携带它；验证从种子重演进度并核对当前终局事实，恢复不发奖、不抽签。
+- `seatMechanics` 是唯一持久机制容器；本席进度在 seat 的六个预留键，RNG/进度重演历史在 hidden.progress；发物、发英雄、金币和选择只有 MechanicReceipt，来源事实统一 mechanic，事件统一 mechanicGranted。MatchState.g23 和 g23ItemGranted 已删除。恢复从种子重演进度、核对通用收据和当前终局事实，不发奖、不抽签。CombatInputBasis/PlayerBattleSnapshot 的 g23 仅是从容器重建的冻结编译输入 DTO，不是第二个可修改的 MatchState 权威。
 - 征服者仅15个启用箱，第10档650，超过1500继续积层；唯一战斗/受害者收据防重，2/4/6/9档每击杀或助攻1/3/6/20层。每箱使羁绊基础AD/AP加成成长5%。各档只取非零权重Option1。
 - 征服者延后神器、辅助装、冠、窃贼手套、锻造器、复制器。仅受影响档删除这些物品，保留其余奖励，Gold=max(原Gold,map22整档估值)。已有拆卸器、重铸器保留，第5档不触发折金。第14档60金+光明装备+拆卸器；第15档200金+永久光明转化。逐档源/过渡对照在RECONCILIATION，均标约定值，下一批恢复原奖励。
 - 光明转化开出时转换场上/备战席英雄穿戴的普通成装；随后仅新合成成装自动转光明。每件转换记录原ID、目标apiName和`g23:conqueror:15`唯一来源；不会转换未穿戴库存或普通新赠成装。
 - 学院按独立LCG抽一组有序三件项目赞助池（29组ID/均匀权重为约定值）。首次成功准备命令跨越3/4/5档逐档发奖到库存，receipt防重；同ID永久穿戴复制品叠加，学院成员额外5%只一次。Jayce使5档可达。
 - 黑市按map22权重单次抽样，拒领保留微光并累积跳过次数，领取清零；源HealthPerSkip按当前档×次数给成员。跨多断点保留最高一次offer为有限约定。
-- Rumble军械库采用弹出选择，可收起，超时确定性选合法项；付费余额不足时选Spare。每3个Rumble参战回合一次，2个未购升级+Spare，付费5金，全购后Finishing，三星下一菜单Titan；不做常驻商店。临时领域命令将接Claude通用选择kind/超时语义后才算完整运行时接入。
+- Rumble军械库采用弹出选择，可收起，超时确定性选合法项；付费余额不足时选Spare。每3个Rumble参战回合一次，2个未购升级+Spare，付费5金，全购后Finishing，三星下一菜单Titan；不做常驻商店。使用 pendingChoice.kind=armory、choose/timeoutChoice；超时始终选择0金项（普通Spare、全购Finishing、三星Titan），余额不足的付费选择拒绝并保持原对象。菜单待选期间拒绝卖出Rumble；联机购买合星改变菜单时刷新offers并增加generation，旧选择失效。
 - Rumble三星自爆为双抗合计的20000%（2000000Bps），死亡伤害先于最后单位判负；实验Mundo120生命与每唯一击杀+60；Sion/Forge有限实体与技能省略范围见对账，不能把归档文本视为完整执行声明。
 - G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每offer1词；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。
-- 奖励金币在唯一结算事务发放；其他奖励托管。逐副本领取时发物/英雄、检查备战席/共享池并写唯一收据；失败保留待领权利。`readG23RewardItemCatalog()`提供奖励apiName、中文名、约定状态。光明kind待Claude扩展位接入，普通recipe/重铸/轮盘/临时装备池不随奖励目录扩大。
+- 奖励金币在唯一结算事务发放；已确定物品/英雄/工具同步发放，未决物品选择和满席英雄托管。英雄一律 grantMechanicUnit，并透传同事务 UnitLootPolicy；池空按费用折金，满席在碰池前保留待领奖励；卖出释放空间或 claimLoot 时重试。`readG23RewardItemCatalog()`提供奖励apiName、中文名、约定状态。光明装备 kind=radiant 且 radiantOf 指向唯一普通成装；通用物品读取统一到 g2-3-item-registry，普通recipe/重铸/轮盘/临时装备池不随奖励目录扩大。
 
 - 召唤物结算约定：Sion维持阵营存活，Forge与预留桶id不维持；所有战斗召唤物不增加玩家伤害。Forge生成及复活空格搜索按席位坐标后镜像。
-- #134审查中合同已提前核对；三项Codex补接责任与当前状态见 [PR134接入清单](evidence/g2-3/PR134_INTEGRATION.md)，合入后先rebase。
+- #134已合入并完成rebase；卡池policy透传、通用机制金币校验、非战斗召唤物判负均已接入，详见 [PR134接入清单](evidence/g2-3/PR134_INTEGRATION.md)。
 
-### G2-3 / Claude 联机接口连接点（未完成）
+### G2-3 / Claude 服务器配套交接（本PR不越界）
 
-`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。Claude接口PR合入后先rebase，再将上述进度接机制状态容器；黑市/军械库/锻造器接新pendingChoice kind及skip；召唤物改用生成帮助函数、出现/移除事件和不可售/不占人口标记；光明改kind=radiant（实际标识为`radiant`）。金币来源/新增失败原因走通用扩展位。
+`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。领域已经接入#134的容器、choose/skip/timeout、召唤帮助函数和事件、radiant种类、金币来源/失败枚举。准备期不创建永久Sion/Forge资产；开战投影经spawnCombatUnit进入Combat，发unitSpawned；Sion发bindingChanged，High Roller发castOutcome。Forge死亡后恢复同一实体发unitRevived，未发生移除/重生，因此不复用已移除id。removeCombatUnit记录废弃id，spawn拒绝复用。
 
-双边`proposeSettlement()`产生`SideProposal.g23Facts`；服务器必须原样转到`RoundSettlementReceipt.g23Facts`，仅实际参与席位结算。镜像没有进度/收益。冻结快照须携带开战前g23/playerHp；漏转字段不能视为已支持。临时领域选择命令、召唤事件及交叉文件清单见对账末节，接入后更新本节为实际接口。
+双边`proposeSettlement()`产生`SideProposal.g23Facts`；服务器必须原样转到`RoundSettlementReceipt.g23Facts`，仅实际参与席位结算，镜像无进度/收益。当前`src/server/room/room.ts`的`buildReceipt`（约1052行）仍只复制旧字段；Claude需补`...(proposal.g23Facts ? {g23Facts:proposal.g23Facts} : {})`，不自行算规则。该转发未完成前不能宣称G2-3联机机制已上线。见`docs/UI_REQUESTS.md`的G23-SERVER-FACTS。冻结战斗输入的g23/playerHp由规则快照函数提供，服务器不得另造进度。
 
 
 > M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
@@ -378,13 +378,13 @@ appendMechanicReceipt(state, receipt) / findMechanicReceipt(state, receiptId)
 ```
 
 - 值只能是纯 JSON，数字必须是安全整数（百分比用 bps），写入和恢复都会校验，不合格抛 RangeError。
-- 预留键：`conqueror`、`academy`、`alchemist`、`junkerKing`、`experimentCells`、`radiantConversion`。建议形状（Codex 定稿后在此回填，界面按回填读）：
-  - conqueror `{stacks, chestsOpened, nextThreshold, bonusBps}`
-  - academy `{sponsoredItemIds: string[3], granted: {tier, itemId, receiptId}[]}`
-  - alchemist `{glimmer, threshold, skipped, hpBonus}`
-  - junkerKing `{roundsUntilArmory, purchased: string[]}`
-  - experimentCells `{cells: {col,row}[]}`
-  - radiantConversion `true`（第 15 档生效后）
+- 预留键：`conqueror`、`academy`、`alchemist`、`junkerKing`、`experimentCells`、`radiantConversion`。G2-3实际形状（全部owner-only；这里只列结构，数值口径见顶部）：
+  - conqueror `{stacks, chestsOpened, receipts, rewards}`：永久征服进度/战斗去重事实、已获得奖励包；15档阈值从内容表查询
+  - academy `{sponsored: string[3]}`；已发物品从source=academy的MechanicReceipt读取
+  - alchemist `{shimmer, losses, skips, offeredThrough, offer}`；offer是已抽出的当前机会，不是未来候选
+  - junkerKing `{rounds, purchases:[{id,round,unitId,upgrade,cost}]}`；购买映射必须与对应choice收据一致
+  - experimentCells `{col,row}[]`
+  - radiantConversion `boolean`（第15档生效后true）
 - 凡是影响界面显示或客户端选择器（羁绊、属性、previewCombine、previewEquip、getDeploymentCap）的状态都放 `seat`；客户端拿不到 `hidden`，选择器不能读它。
 - 需要界面播提示时，同一命令里发 `{type:'seatMechanicChanged', key}` 事件。
 - `restoreMatch` 只做结构校验（`validateSeatMechanicsState`），各机制自己的不变量由 Codex 补进恢复校验。
@@ -399,13 +399,13 @@ grantMechanicUnit(state, {receiptId, source, definitionId}, unitLootPolicy?)
 reason: 'duplicate-mechanic-receipt' | 'bench-full' | 'invalid-mechanic-state'
 ```
 
-- `source` 是自由文本的来源名，例如 `conqueror-chest`、`high-roller`、`academy`。收据记录 round、roundId、source，这就是战斗中金币和开箱金币的"金币来源"，界面按 round 分组显示。`incomeBreakdown` 不改。
+- `source` 是自由文本的来源名，例如 `conqueror-chest`、`high-roller`、`academy`。保留拆卸器/重铸器的收据为`{kind:"consumable",consumableId,definitionId,...identity}`；其库存序号与消耗事实同样按唯一收据验证。收据记录 round、roundId、source，这就是战斗中金币和开箱金币的"金币来源"，界面按 round 分组显示。`incomeBreakdown` 不改。
 - events 未盖序号，含 `mechanicGranted{receipt}` 和英雄入席时的升级事件，由调用方所在命令的 accept 统一盖 eventSeq。
 - 物品和英雄的来源事实是 `{kind:'mechanic', receiptId}`，单人存档恢复按收据核对出生。
 - **共享卡池**：原有给玩家发英雄的路径只有商店购买和 PvE 掉落（rewardPolicy），没有通用路径，所以新增 `grantMechanicUnit`。联机时必须传入命令闭包里的 `policy`（`runSharedMatchCommand` 给每个命令的那个 UnitLootPolicy）：池里有副本就扣一张并入席，池空就按英雄费用折成金币（收据 `resolution:'gold'`），与 PvE 英雄掉落一致。备战席满时在动卡池前就返回 `bench-full`，什么都不变。成功结果必须在同一命令里提交，否则卡池守恒校验会失败。
   - 只能发商店目录里的英雄或带 `summon` 标记的召唤物。
-  - 注意：`settleRound` 命令目前没有把 policy 传给 `applyRoundSettlement`。若征服者在结算时发英雄，Codex 需要在 `shared-pool.ts` 把 policy 传进去。
-- 单人存档：结算后的金币校验在 `serialization.ts` 里写的是 `gold === goldAfter + 卖出金币`。结算阶段发金币时，Codex 要把机制金币收据计入这条校验。
+  - 注意：`settleRound` 已在shared-pool.ts把同一闭包policy传入applyRoundSettlement，再传到commitG23Settlement的逐副本grantMechanicUnit；满席保留托管，池空金币写unit收据。
+- 单人存档：`RoundResult.mechanicReceiptPrefixLength`冻结进入经济结算前的通用收据前缀，且与CombatInputBasis同名字段核对。结算当前gold=goldAfter+掉落容量售出金币+前缀后本轮机制净金币（gold.amount、unit.gold、减choice.price）。准备期费用/金币已在goldBefore，不再加减一次。恢复同时核对经济历史与机制收据关联。
 
 ### 3 新的选择类型：锻造器、黑市、军械库
 
@@ -424,7 +424,7 @@ CHOICE_SKIP_OPTION = '@skip'
 - 打开：和强化一样是阻塞选择（用户已定军械库也这样），界面可以先收起，不选完不能离开选择阶段。`returnPhase` 必须等于当前阶段：`preparation` 在准备阶段开，`settlement` 在结算阶段开并保留战斗结果。补给回合和已有待选时拒绝（`wrong-phase`）。choiceId 不能和已有收据重复。
 - 玩家操作复用 `choose`（`selectChoice(state, choiceId, generation=0, optionId)`）。黑市跳过就是 `optionId='@skip'`，不可跳过时返回 `choice-not-skippable`。军械库钱不够返回 `insufficient-gold`。失败返回原 state，不耗资源和 RNG。
 - 选完写一条收据 `{kind:'choice', receiptId:choiceId, choiceKind, optionId, skipped, price, itemId, timedOut}`，发 `choiceSelected` 和 `mechanicGranted`，然后按 returnPhase 继续本回合日程（与强化选完后一样）。效果由机制自己读收据：已购升级就是 armory 收据列表；跳过收益由炼金男爵按 skipped 收据计算。
-- 超时：`forfeitPendingChoice` 选 `payload.timeoutOption`，事件 `choiceTimedOut{resolution:'default-option'}`，收据 `timedOut:true`。军械库的 timeoutOption 价格必须是 0（免费"备用零件"），打开时校验，所以超时永不扣钱；黑市可以用 `@skip` 当超时项。
+- 超时：`forfeitPendingChoice` 选 `payload.timeoutOption`，事件 `choiceTimedOut{resolution:'default-option'}`，收据 `timedOut:true`。军械库的 timeoutOption 价格必须是 0（免费"备用零件"），打开时校验，所以超时永不扣钱；黑市可以用 `@skip` 当超时项。源表的无物品奖励包（LootA4）使用blackMarket的可选`grantItem:false`，offers为源奖励包apiName；通用层只记接受/跳过收据，不造占位物品，领域层发包内英雄/有限复制奖励。默认不带此字段仍按物品选择运行。
 - 机器人：`decideBotAction` 对新 kind 直接选 timeoutOption。Codex 可以以后换成更好的策略。
 - 存档：`restoreMatch` 接受待选的新 kind（`validateMechanicPendingChoice`）。
 
@@ -432,7 +432,7 @@ CHOICE_SKIP_OPTION = '@skip'
 
 - `UnitDefinition.formSwap?: true`。`resolveUnitForm(definition, team, location, board?)` 和 `getUnitForm(unit)` 返回 `'melee' | 'ranged' | null`：本方部署区离敌方最近的两排是近战，后两排是远程；备战席和普通英雄为 null。用户已定：开战时按站位定形态，战斗中不切换。
 - `CombatUnit.form?`：Codex 在开战快照里按 `getUnitForm` 填写并据此选那套属性和技能；回放单位视图带 `form`。
-- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。准备阶段的召唤物（锻炉）要用 `grantMechanicUnit` 生成，来源事实才能通过校验。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
+- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。若机制创建准备资产，必须用grantMechanicUnit；本批Sion/Forge仅在Combat入口由spawnCombatUnit生成，不进入准备资产、卡池或备战席。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
 
 ### 5 物品
 

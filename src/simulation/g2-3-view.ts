@@ -1,3 +1,4 @@
+import {readG23Progress} from './g2-3-state';
 import type {MatchState} from './match-types';
 import {deriveTraits} from './trait-snapshot';
 import {g23Laboratories} from './g2-3-experiment';
@@ -6,7 +7,7 @@ import {g23RewardAtoms} from './g2-3-rewards';
 /** Owner-only detached data for Claude's generic mechanisms container.
  * No command, draw or grant occurs while projecting. Do not publish on opponent views. */
 export function readG23MechanismState(state:MatchState){
- const p=state.g23;if(!p)return null;
+ const p=readG23Progress(state);if(!p)return null;
  const tier=deriveTraits(state.preparation,'player').find(t=>t.traitId==='experiment')?.tier??0;
  return structuredClone({conqueror:{stacks:p.conquest.stacks,chestsOpened:p.conquest.chestsOpened},academy:{sponsored:p.sponsored,receipts:p.itemReceipts},
   chemBaron:p.chem,junkerKing:{eligibleRounds:p.junkerRounds,purchases:p.junkerPurchases,menu:g23JunkerMenu(state)},

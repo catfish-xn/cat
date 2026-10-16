@@ -23,7 +23,7 @@ export interface CombatMembershipChange { readonly state: CombatState; readonly 
  * Throws on a duplicate id or an occupied/out-of-board cell; never moves another unit.
  */
 export function spawnCombatUnit(state: CombatState, unit: CombatUnit, source: CombatOrigin, tick: number): CombatMembershipChange {
-  if (state.units.some(other => other.id === unit.id)) throw new RangeError(`Duplicate combat unit ${unit.id}`);
+  if (state.units.some(other => other.id === unit.id)||state.removedUnitIds?.includes(unit.id)) throw new RangeError(`Duplicate combat unit ${unit.id}`);
   if (!contains(state.board, unit.cell) || state.units.some(other => other.alive && sameCell(other.cell, unit.cell)))
     throw new RangeError(`Spawn cell unavailable for ${unit.id}`);
   return { state: { ...state, units: [...state.units, unit] }, events: [{ type: 'unitSpawned', tick, unitId: unit.id,
@@ -34,7 +34,7 @@ export function spawnCombatUnit(state: CombatState, unit: CombatUnit, source: Co
 export function removeCombatUnit(state: CombatState, unitId: string, reason: string, tick: number): CombatMembershipChange {
   if (!state.units.some(unit => unit.id === unitId)) throw new RangeError(`Unknown combat unit ${unitId}`);
   const units = state.units.filter(unit => unit.id !== unitId).map(unit => unit.targetId === unitId ? { ...unit, targetId: null } : unit);
-  return { state: { ...state, units }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId] }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
 }
 
 export function castOutcomeEvent(tick: number, unitId: string, abilityKey: string, outcome: string, subOutcomes: readonly string[] = []): CombatEvent {

@@ -3,8 +3,8 @@ import type { S13AbilityData } from './abilities';
 import { freezeContent } from './freeze';
 /** 约定值: full source stat blocks are unavailable; these finite bodies are explicitly project data. */
 export const G23_SUMMON_UNITS:Readonly<Record<string,UnitDefinition>>=freezeContent({
- 'g23-sion':{id:'g23-sion',name:'Sion',symbol:'S',color:10466749,cost:1,traits:[],baseStats:{health:1000,attack:100,armor:40,magicResist:40},attackRange:1,attackIntervalTicks:27,baseAttackSpeedBps:7500,initialMana:0,maxMana:100,abilityId:'g23-sion-ability'},
- 'g23-forge':{id:'g23-forge',name:'Hextech Forge',symbol:'F',color:10466749,cost:1,traits:[],baseStats:{health:1000,attack:0,armor:0,magicResist:0},attackRange:1,attackIntervalTicks:1200,baseAttackSpeedBps:167,initialMana:0,maxMana:1,abilityId:'g23-forge-ability'},
+ 'g23-sion':{id:'g23-sion',name:'Sion',symbol:'S',color:10466749,cost:1,traits:[],summon:{sellable:false,countsTowardPopulation:false},baseStats:{health:1000,attack:100,armor:40,magicResist:40},attackRange:1,attackIntervalTicks:27,baseAttackSpeedBps:7500,initialMana:0,maxMana:100,abilityId:'g23-sion-ability'},
+ 'g23-forge':{id:'g23-forge',name:'Hextech Forge',symbol:'F',color:10466749,cost:1,traits:[],summon:{sellable:false,countsTowardPopulation:false},baseStats:{health:1000,attack:0,armor:0,magicResist:0},attackRange:1,attackIntervalTicks:1200,baseAttackSpeedBps:167,initialMana:0,maxMana:1,abilityId:'g23-forge-ability'},
 });
 export const G23_SUMMON_ABILITIES:Readonly<Record<string,S13AbilityData>>=freezeContent({
  'g23-sion-ability':{id:'g23-sion-ability',championId:'g23-sion',name:'Decimating Smash',description:'Project finite Sion: shield, line damage and stun. Base stats and stage assignment are conventions.',variables:{PercentAttackDamage:[3,3,3],Shield:[175,175,175],ShieldDuration:[5,5,5],StunDuration:[1.5,1.5,1.5]}},

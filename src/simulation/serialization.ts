@@ -1,3 +1,4 @@
+import {getUnitForm} from './seat-mechanics/forms';
 import {countsG23SurvivorDamage} from './g2-3-summons';
 import { g23RoundGold } from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
@@ -103,6 +104,7 @@ export function restoreMatch(input: unknown): MatchState {
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
   requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
+  requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
@@ -187,7 +189,7 @@ export function restoreMatch(input: unknown): MatchState {
   let streak = { kind: null as 'win' | 'loss' | null, count: 0 };
   let experienceAfter = totalExperience(OPENING_INITIAL_STATE.level,OPENING_INITIAL_STATE.xp);
   for (const [i, result] of state.roundResults.entries()) {
-    record(result); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
+    record(result); integer(result.mechanicReceiptPrefixLength); requireValue(result.mechanicReceiptPrefixLength!<=(state.seatMechanics?.receipts.length??0), 'mechanic receipt prefix'); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
@@ -217,6 +219,7 @@ export function restoreMatch(input: unknown): MatchState {
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   validateMatchEquipment(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
+  if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
   // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
   if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
@@ -245,6 +248,7 @@ export function restoreMatch(input: unknown): MatchState {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
+      requireValue((unit.form??null)===getUnitForm(origin,combatPreparation.board),'frozen unit form');
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       const { stats } = resolved;
       if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
