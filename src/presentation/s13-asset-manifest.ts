@@ -770,5 +770,194 @@ export const S13_ASSETS: readonly S13Asset[] = [
     "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/items/hexcore/tft_item_thiefsgloves.tft_set13.png",
     "bytes": 18466,
     "sha256": "181e9eeabef80f740a7d06d5e0d743fe20895244895672793ea11ccedb4a26fb"
+  },
+  {
+    "apiName": "TFT13_Akali",
+    "kind": "champion",
+    "id": "akali",
+    "path": "assets/s13/champions/akali.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_akali/hud/tft13_akali_square.tft_set13.png",
+    "bytes": 26121,
+    "sha256": "2dfdef3f26ebeafa7e2029a937cf7570f5b075035572ef63d91f57099166b187"
+  },
+  {
+    "apiName": "TFT13_Ambessa",
+    "kind": "champion",
+    "id": "ambessa",
+    "path": "assets/s13/champions/ambessa.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ambessa/hud/tft13_ambessa_square.tft_set13.png",
+    "bytes": 24606,
+    "sha256": "5c05edaf7349712bfc5b0a13b606a1f6e34b493ba90bd535559b9f9014fc72b1"
+  },
+  {
+    "apiName": "TFT13_Camille",
+    "kind": "champion",
+    "id": "camille",
+    "path": "assets/s13/champions/camille.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_camille/hud/tft13_camille_square.tft_set13.png",
+    "bytes": 21340,
+    "sha256": "dfc460d563038dace3b9f323c5f58f3b06c7892bf74f60904ce43401ea84d676"
+  },
+  {
+    "apiName": "TFT13_Draven",
+    "kind": "champion",
+    "id": "draven",
+    "path": "assets/s13/champions/draven.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_draven/hud/tft13_draven_square.tft_set13.png",
+    "bytes": 24937,
+    "sha256": "e11ec8527ace9df7550672c20f48c5b64d684011f391f40580ef31959885e202"
+  },
+  {
+    "apiName": "TFT13_Heimerdinger",
+    "kind": "champion",
+    "id": "heimerdinger",
+    "path": "assets/s13/champions/heimerdinger.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_heimerdinger/hud/tft13_heimerdinger_square.tft_set13.png",
+    "bytes": 25549,
+    "sha256": "b3c7bb5798d2ca950825af6c9c181b95bd7b6281b4127043ef16644096bfcdad"
+  },
+  {
+    "apiName": "TFT13_Jinx",
+    "kind": "champion",
+    "id": "jinx",
+    "path": "assets/s13/champions/jinx.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_jinx/hud/tft13_jinx_square.tft_set13.png",
+    "bytes": 22750,
+    "sha256": "3f3f8dae8ad3f68727f230ab563d6750495d86410d45316e5f884da80c6a2472"
+  },
+  {
+    "apiName": "TFT13_Mordekaiser",
+    "kind": "champion",
+    "id": "mordekaiser",
+    "path": "assets/s13/champions/mordekaiser.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_mordekaiser/hud/tft13_mordekaiser_square.tft_set13.png",
+    "bytes": 21362,
+    "sha256": "b662959f4da97d1b6b4c5e23d2641ec386efa14a39b9e593b58b8071479a6f20"
+  },
+  {
+    "apiName": "TFT13_Morgana",
+    "kind": "champion",
+    "id": "morgana",
+    "path": "assets/s13/champions/morgana.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_morgana/hud/tft13_morgana_square.tft_set13.png",
+    "bytes": 23651,
+    "sha256": "85c8b4b4596cd076760c14fc55b11698e266107eb12b342524ec8852de4f5f54"
+  },
+  {
+    "apiName": "TFT13_Sett",
+    "kind": "champion",
+    "id": "sett",
+    "path": "assets/s13/champions/sett.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_sett/hud/tft13_sett_square.tft_set13.png",
+    "bytes": 27174,
+    "sha256": "0b8ea6f170035b9492d359b97f99a5c7fe68409156dd87625d1da37268214333"
+  },
+  {
+    "apiName": "TFT13_Fish",
+    "kind": "champion",
+    "id": "steb",
+    "path": "assets/s13/champions/steb.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_fish/hud/tft13_fish_square.tft_set13.png",
+    "bytes": 21929,
+    "sha256": "2b40c7c1ed9e1c60946d5bab3fadc6aadc5f9df7a26e3c5e21469aa66f21a0a2"
+  },
+  {
+    "apiName": "TFT13_Trundle",
+    "kind": "champion",
+    "id": "trundle",
+    "path": "assets/s13/champions/trundle.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_trundle/hud/tft13_trundle_square.tft_set13.png",
+    "bytes": 25482,
+    "sha256": "ec93ebe4c50c07780f6c715c51613813b716ce5aec0cb6f64d97019f6d2e91b7"
+  },
+  {
+    "apiName": "TFT13_TwistedFate",
+    "kind": "champion",
+    "id": "twistedfate",
+    "path": "assets/s13/champions/twistedfate.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_twistedfate/hud/tft13_twistedfate_square.tft_set13.png",
+    "bytes": 23329,
+    "sha256": "b6b53a8de091177203e80983b49b821397b4ac2ddb0e510c0f928691cdaab11c"
+  },
+  {
+    "apiName": "TFT13_Vex",
+    "kind": "champion",
+    "id": "vex",
+    "path": "assets/s13/champions/vex.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vex/hud/tft13_vex_square.tft_set13.png",
+    "bytes": 26870,
+    "sha256": "3c36b8ee4d1c229aabc821e468f6737916fd4d8cacafd4f93d6e21e6a0988c82"
+  },
+  {
+    "apiName": "TFT13_Vi",
+    "kind": "champion",
+    "id": "vi",
+    "path": "assets/s13/champions/vi.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_vi/hud/tft13_vi_square.tft_set13.png",
+    "bytes": 19847,
+    "sha256": "a5b091ae9fd6de1cc675d38d0c7f94934f146cff3d24cfe2eb88d0b756fecfe1"
+  },
+  {
+    "apiName": "TFT13_Ziggs",
+    "kind": "champion",
+    "id": "ziggs",
+    "path": "assets/s13/champions/ziggs.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/characters/tft13_ziggs/hud/tft13_ziggs_square.tft_set13.png",
+    "bytes": 24809,
+    "sha256": "a4cf9379b417a19a15f1ec0b52b9986cb46505fe2b1d2bf4522e414586bb83b1"
+  },
+  {
+    "apiName": "TFT13_Scrap",
+    "kind": "trait",
+    "id": "scrap",
+    "path": "assets/s13/traits/scrap.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_6_scrap.png",
+    "bytes": 356,
+    "sha256": "d0213e423e395f7f94b992bc8d5aeb1b0af5a75b96a04074d11eb00a2f3e7d34"
+  },
+  {
+    "apiName": "TFT13_Ambassador",
+    "kind": "trait",
+    "id": "emissary",
+    "path": "assets/s13/traits/emissary.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_diplomat.tft_set13.png",
+    "bytes": 510,
+    "sha256": "2e806b322d70fe5fef1e3cd4c5845c660840ae7ad22e72a9c69f89ef32ab72fa"
+  },
+  {
+    "apiName": "TFT13_Warband",
+    "kind": "trait",
+    "id": "conqueror",
+    "path": "assets/s13/traits/conqueror.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_conqueror.tft_set13.png",
+    "bytes": 399,
+    "sha256": "f03333b0e8a8f201f1cad4ffc34b7c23edc8ce198c857bc233de48644f1bccd3"
+  },
+  {
+    "apiName": "TFT13_Academy",
+    "kind": "trait",
+    "id": "academy",
+    "path": "assets/s13/traits/academy.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_academy.tft_set13.png",
+    "bytes": 511,
+    "sha256": "5d5c24d41ff36d398b41f54aa61bae815864ea77d231ae2a695868086c77faee"
+  },
+  {
+    "apiName": "TFT13_Rebel",
+    "kind": "trait",
+    "id": "rebel",
+    "path": "assets/s13/traits/rebel.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_rebel.tft_set13.png",
+    "bytes": 605,
+    "sha256": "5eb7385eb7da8bef4316ce86e80280759d49e422a6a307d550722ad5fa7b5876"
+  },
+  {
+    "apiName": "TFT13_Squad",
+    "kind": "trait",
+    "id": "enforcer",
+    "path": "assets/s13/traits/enforcer.png",
+    "source": "https://raw.communitydragon.org/14.24/game/assets/ux/traiticons/trait_icon_13_squad.tft_set13.png",
+    "bytes": 552,
+    "sha256": "495f15588c9ed6e3b28cbe92616058ebe2547da2a687145142cd863c6e45e1da"
   }
 ];

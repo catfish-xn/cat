@@ -3,6 +3,7 @@
  * Reads authored Effect values only; describes them, never evaluates them.
  */
 import type { Effect, TraitDefinition, TraitTier } from '../simulation/strategy-types';
+import { displayUnitName } from '../rendering/display-names';
 
 export const TERM: Readonly<Record<string,string>> = {
   health:'生命', maxHp:'最大生命', attack:'攻击力', attackDamage:'攻击力', armor:'护甲', magicResist:'魔抗', abilityPower:'法强', initialMana:'初始法力', maxMana:'最大法力', attackRange:'射程',
@@ -26,6 +27,17 @@ export function describeEffect(effect: Effect): string {
       pumpingUp: `每轮增加 ${pct('attackSpeedBpsPerRound')} 攻速`, investment: `每点利息永久增加 ${v.healthPerInterest} 生命`,
       bulkyBuddies: `相邻双人组获得 ${v.health} 生命，触发 ${pct('shieldMaxHpBps')} 最大生命护盾，持续 ${v.durationTicks * .05} 秒`,
       titanic: `普攻附加 ${pct('adBps')} 攻击力 物理伤害，命中目标及相邻格`, mageArmor: `获得最终法强 ${pct('apBps')} 的双抗`, killStreak: `击杀后存活获得 ${v.mana} 法力`,
+      // G2 traits: values exactly as authored in TRAIT_DEFINITIONS (bps → %, ticks → seconds), see MATCH_CONTRACT G2-2.
+      automata: `造成伤害积累水晶，满 ${v.crystals} 个时对目标造成 ${v.damage} 魔法伤害 + 期间伤害的 ${pct('conversionBps')}`,
+      firelight: `每 ${v.periodTicks * .05} 秒冲刺，治疗期间所受伤害的 ${pct('healBps')}${v.attackSpeedBps ? `，冲刺时攻速 +${pct('attackSpeedBps')}` : ''}`,
+      family: `最大法力 -${pct('manaReductionBps')}，减伤 ${pct('damageReductionBps')}`,
+      rebel: `我方损失 ${pct('thresholdBps')} 生命后：攻速 +${pct('attackSpeedBps')} 持续 ${v.durationTicks * .05} 秒，攻击力/法强 +${pct('adApBps')}`
+        + `${v.bonusHpBps ? `、最大生命 +${pct('bonusHpBps')}` : ''}${v.stunTicks ? `，眩晕全部敌人 ${v.stunTicks * .05} 秒` : ''}`,
+      enforcer: `开战获得 ${pct('shieldBps')} 最大生命护盾；生命最高的 ${v.wanted} 名敌人被通缉，通缉目标阵亡时攻速 +${pct('attackSpeedBps')}`,
+      academy: `赞助装备每件提供 ${pct('sponsoredBps')} 生命与伤害增幅；学院成员持有时加倍并额外 +${pct('memberBaseBps')}`,
+      scrap: `开战时最多 ${v.conversions} 件散件临时合成完整装备；全队每件散件提供 ${v.shieldPerComponent} 护盾，持续 ${v.durationTicks * .05} 秒`,
+      emissary: `恰好 1 名（该外交官的加成）或 4 名（全部加成）外交官时生效：${displayUnitName('ambessa')} 每场胜利 +${v.armorPerWin} 双抗；${displayUnitName('garen')} 开战使自身与左右友军获得其 ${pct('healthBps')} 生命；`
+        + `${displayUnitName('nami')} 友军普攻额外 ${v.mana} 法力；${displayUnitName('tristana')} 每星级攻速 +${pct('starSpeedBps')}`,
     };
     return descriptions[effect.mechanic] ?? effect.mechanic;
   }
