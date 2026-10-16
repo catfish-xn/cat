@@ -399,7 +399,7 @@
 |---|---|---|---|
 |Arcana Overwhelming|缺 / 缺|官方补丁 `{"bonusMagicResist":65}`|补充MR→AP完整转换口径|
 |Avalanche of Armor|缺 / 缺|官方补丁 `{"armorToAttackDamageRatio":0.3}`|补充基础护甲与转换顺序|
-|Center of the Universe|缺 / 缺|官方仅述轨道变快|官方仅述轨道变快；需轨道周期、伤害、目标与几何|
+|Center of the Universe|缺 / 缺|官方仅述轨道变快|需轨道周期、伤害、目标与几何|
 |Berserker Rage|缺 / 缺|官方补丁 `{"baseAttackDamagePercent":25,"baseAbilityPower":25}`|补充低血阈值和增幅完整语义|
 |Bully|缺 / 缺|官方补丁 `{"baseDamageAmpPercent":12,"lowerStarTargetDamageAmpPercent":36}`|补充目标星级取值合同|
 |Comeback Story|缺 / 缺|官方补丁 `{"damageAmpPercentPer10PlayerHealthLost":5}`|12月10日微补丁覆盖正文6；需玩家累计损血输入|
@@ -452,7 +452,7 @@ Cosmic Rhythm 被官方14.24明确停用，排除，不用于凑数。Hardened M
 
 ### G23-CONQUEROR：征服者有限实现及扩档（pending-extension-only）
 
-既有授权：G2-2 RECONCILIATION「已获准有限发布」及G22_CONVENTIONS：2/4档仅基础18/25% AD与18/25 AP，用户已允许有限发布。
+既有授权：依据 [docs/evidence/g2-2/RECONCILIATION.md 的「已获准有限发布」小节](../g2-2/RECONCILIATION.md#已获准有限发布后续完整实现待批清单)：2/4档仅基础18/25% AD与18/25 AP，用户已允许有限发布。
 
 1. 推荐：保留已批准有限实现；6档基础40%/40AP、9档自然不可达及宝箱整链另议。
 2. 补齐：先提供征服累计阈值、宝箱池、永久进度/恢复/重复结算合同，明确B补丁每宝箱5%成长后另批。
