@@ -14,18 +14,18 @@
  * The panel never decides who is released or what is left; everything comes from `PlayerView.carousel` (MULTIPLAYER_CONTRACT
  * §21.1). The release groups shown are the rules' `releaseOrder` cut where `releaseAtMs` changes, for display only.
  */
-import { ITEM_DEFINITIONS } from '../../simulation/content/items';
 import { UNIT_DEFINITIONS } from '../../simulation/units';
 import { getHeroIdentity, heroEmblemSvg } from '../../presentation/hero-identity';
 import { itemMarkHtml } from '../../presentation/item-codex';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import type { CarouselSlotView, CarouselView, SeatPublic } from './protocol';
+import { itemDisplayName } from '../../presentation/g23-display';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
 const unitName = (definitionId: string) => getHeroIdentity(definitionId).name;
-const itemName = (definitionId: string) => ITEM_DEFINITIONS[definitionId]?.name ?? definitionId;
+const itemName = (definitionId: string) => itemDisplayName(definitionId);
 
 /** One release group as shown: consecutive seats of the release order that share a release time. */
 export interface CarouselGroup { readonly seatIds: readonly string[]; readonly releaseAtMs: number }

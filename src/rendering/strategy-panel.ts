@@ -43,6 +43,7 @@ import { genericOffer, isKnownChoiceKind, readChoiceExtras, type GenericChoiceOf
 import { previewConsumable, readConsumables, readOrbLoot } from './online/loot-fields';
 import { consumableDropText, consumableEventText, consumableName, consumableShelf, consumableTargetHint, orbLootSection, routeToolUnitDrop } from '../presentation/orb-loot';
 import type { ConsumableInstance, ConsumableTarget } from '../simulation/consumable-types';
+import { anomalyDisplayName, itemDisplayName } from '../presentation/g23-display';
 
 type ControlName = 'reroll' | 'buy-xp' | 'sell' | 'start-combat' | 'continue' | 'new-match';
 const PHASE_LABEL: Readonly<Record<MatchState['phase'], string>> = { preparation: '准备阶段', choice: '构筑选择', combat: '战斗中', settlement: '回合结算', gameOver: '对局结束' };
@@ -106,10 +107,10 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', class
 }
 export { describeEffect, describeTraitTier };
 /** A finished item's name from the content table (C17 combine preview); never assembled from a recipe here. */
-const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
+const itemDefinitionName = (id: string) => itemDisplayName(id);
 /** C18-B: a tool whose content-table target kind is a unit (the remover). */
 const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
-const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? (AUGMENT_DEFINITIONS[id] ? augmentDisplayName(id) : undefined) ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
+const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? (ITEM_DEFINITIONS[id] ? itemDisplayName(id) : undefined) ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? (AUGMENT_DEFINITIONS[id] ? augmentDisplayName(id) : undefined) ?? (ANOMALY_DEFINITIONS[id] ? anomalyDisplayName(id) : undefined) ?? '未知来源';
 const CHOICE_POINTER_QUIET_MS = 400;
 const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
@@ -347,7 +348,7 @@ export class StrategyPanel {
     const state = this.actions.state(), hit = document.elementFromPoint(x, y);
     // A unit tool (the remover) names the unit from any of its slots, also one wearing an item.
     const itemId = unitTool(tool) ? undefined : hit?.closest<HTMLElement>('[data-item-id]')?.dataset.itemId;
-    if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : itemId }; }
+    if (itemId) { const item = state.items.find(entry => entry.id === itemId); return { target: { kind: 'item', itemId }, label: item ? itemDisplayName(item.definitionId) : itemId }; }
     const unitId = hit?.closest<HTMLElement>('[data-unit-id]')?.dataset.unitId ?? this.actions.unitAt(x, y);
     const unit = unitId ? state.preparation.units.find(entry => entry.id === unitId) : undefined;
     if (!unit) return null;
@@ -495,7 +496,7 @@ export class StrategyPanel {
     owned.append(augments);
     if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
-    owned.append(element('p', binding ? `异常： ${ANOMALY_DEFINITIONS[binding.definitionId].name} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
+    owned.append(element('p', binding ? `异常： ${anomalyDisplayName(binding.definitionId)} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
     this.root.append(owned);
     this.renderChoice(state); this.lastCombatTick = -1; this.updateCombat();
   }
@@ -605,10 +606,10 @@ export class StrategyPanel {
     for (const card of Array.from(inventory.querySelectorAll<HTMLElement>('.item-card'))) if (usable({ kind: 'item', itemId: card.dataset.itemId! })) card.classList.add('consumable-candidate');
     // Combine and equip legality come from the B5 previews (same validators as the commands);
     // the commands still re-check the current state when clicked.
-    const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? ITEM_DEFINITIONS[item.definitionId].name : '已不存在的物品'; };
+    const itemName = (id: string) => { const item = state.items.find(entry => entry.id === id); return item ? itemDisplayName(item.definitionId) : '已不存在的物品'; };
     const selected = [...this.selectedItems];
     const combine = open && selected.length === 2 ? previewCombine(state, selected[0], selected[1]) : null;
-    const resultName = combine?.allowed ? ITEM_DEFINITIONS[combine.resultDefinitionId]?.name ?? combine.resultDefinitionId : '';
+    const resultName = combine?.allowed ? itemDisplayName(combine.resultDefinitionId) : '';
     const choice = element('p', `选择：${selected.map(itemName).join(' + ') || '无'}${combine?.allowed ? ` → ${resultName}` : ''}`, 'combine-selection');
     section.append(choice);
     if (combine && !combine.allowed) { const hint = element('p', `无法合成：${equipmentFailureText(combine.reason)}`, 'equip-hint denied'); hint.dataset.debug = 'combine-preview'; hint.dataset.reason = combine.reason; section.append(hint); }
@@ -634,15 +635,15 @@ export class StrategyPanel {
       for (const entry of view ? slotViews(view) : []) {
         const { slot } = entry, item = entry.itemInstanceId ? state.items.find(value => value.id === entry.itemInstanceId) : undefined;
         const reserved = !item && entry.reservedByItemInstanceId !== null;
-        const label = item ? ITEM_DEFINITIONS[item.definitionId].name
-          : entry.temporary ? `临时 · ${ITEM_DEFINITIONS[entry.temporary.definitionId]?.name ?? entry.temporary.definitionId}`
+        const label = item ? itemDisplayName(item.definitionId)
+          : entry.temporary ? `临时 · ${itemDisplayName(entry.temporary.definitionId)}`
           : reserved ? `${itemName(entry.reservedByItemInstanceId!)} 占用` : `空槽 ${slot + 1}`;
         const button = this.button(`equipment:${unit.id}:${slot}`, label, () => {
           if (this.router.current) { this.actions.status('请先结束当前拖拽，再点击装备槽'); return; }
           if (tool) {
             const onItem = item && !unitTool(tool) ? item : undefined;
             const target: ConsumableTarget = onItem ? { kind: 'item', itemId: onItem.id } : { kind: 'unit', unitId: unit.id };
-            this.useTool(tool, { target, label: onItem ? ITEM_DEFINITIONS[onItem.definitionId].name : displayUnitName(unit.definitionId) });
+            this.useTool(tool, { target, label: onItem ? itemDisplayName(onItem.definitionId) : displayUnitName(unit.definitionId) });
             return;
           }
           if (chosen) this.equipAt(chosen, unit.id, slot); else this.actions.status('请先点选物品备战席中的一件物品');
@@ -670,7 +671,7 @@ export class StrategyPanel {
       row.append(slots);
       if (loadoutText) { const line = element('p', loadoutText, 'equip-loadout'); line.dataset.debug = `equip-loadout:${unit.id}`; row.append(line); }
       if (previews) row.append(this.equipHint(previews, itemName));
-      for (const temporary of view?.temporaryItems ?? []) row.append(element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, itemName(temporary.parentItemInstanceId)), 'temporary-line'));
+      for (const temporary of view?.temporaryItems ?? []) row.append(element('p', temporaryItemText(temporary, id => itemDisplayName(id), itemName(temporary.parentItemInstanceId)), 'temporary-line'));
       section.append(row);
     }
     section.append(this.codex ??= createItemCodex());
@@ -688,15 +689,15 @@ export class StrategyPanel {
     if (state.preparation.units.find(unit => unit.id === unitId)?.team !== 'player') return;
     const view = readUnitEquipment(state, unitId);
     if (!view) return;
-    const name = (id: string | null) => { const item = id ? state.items.find(entry => entry.id === id) : undefined; return item ? ITEM_DEFINITIONS[item.definitionId]?.name ?? item.definitionId : null; };
-    const slots = slotViews(view).map(entry => entry.itemInstanceId ? name(entry.itemInstanceId) : entry.temporary ? `临时·${ITEM_DEFINITIONS[entry.temporary.definitionId]?.name ?? entry.temporary.definitionId}`
+    const name = (id: string | null) => { const item = id ? state.items.find(entry => entry.id === id) : undefined; return item ? itemDisplayName(item.definitionId) : null; };
+    const slots = slotViews(view).map(entry => entry.itemInstanceId ? name(entry.itemInstanceId) : entry.temporary ? `临时·${itemDisplayName(entry.temporary.definitionId)}`
       : entry.reservedByItemInstanceId ? `（${name(entry.reservedByItemInstanceId) ?? '独占装备'}占用）` : '空');
     const line = element('p', `装备槽：${slots.map((text, slot) => `${slot + 1} ${text}`).join(' · ')}`, 'unit-equipment'); line.dataset.debug = `unit-equipment:${unitId}`;
     node.append(line);
     const loadout = battleLoadout(state.items, this.actions.battleItems(), unitId);
     if (loadout?.changed) { const text = element('p', battleLoadoutText(loadout, itemDefinitionName), 'equip-loadout'); text.dataset.debug = `unit-loadout:${unitId}`; node.append(text); }
     for (const temporary of view.temporaryItems) {
-      const item = element('p', temporaryItemText(temporary, id => ITEM_DEFINITIONS[id]?.name ?? id, name(temporary.parentItemInstanceId) ?? '已移除的装备'), 'temporary-line');
+      const item = element('p', temporaryItemText(temporary, id => itemDisplayName(id), name(temporary.parentItemInstanceId) ?? '已移除的装备'), 'temporary-line');
       item.dataset.itemDef = temporary.definitionId; item.tabIndex = 0; node.append(item);
     }
   }
@@ -811,7 +812,7 @@ export class StrategyPanel {
         const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；');
         // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
         const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
-          : `${definition.name}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${effects}`;
+          : `${choice.kind === 'anomaly' ? anomalyDisplayName(id) : itemDisplayName(id)}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${effects}`;
         const button = this.button(`choice:${id}`, label, () => {
           this.actions.choose(choice.choiceId, choice.generation, id);
           const after = this.actions.state().pendingChoice;
@@ -1016,7 +1017,7 @@ export class StrategyPanel {
     const list = element('ul', '', 'anomaly-codex-list');
     for (const definition of definitions) {
       const row = element('li', '', 'anomaly-codex-entry'); row.dataset.anomaly = definition.id;
-      row.append(element('strong', definition.name), element('span', `：${definition.description}`));
+      row.append(element('strong', anomalyDisplayName(definition.id)), element('span', `：${definition.description}`));
       list.append(row);
     }
     codex.append(list);

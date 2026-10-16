@@ -6,7 +6,7 @@
 import type { SessionChange } from '../../m6/contracts';
 import type { ReceiptFailure } from '../../server/net/messages';
 import type { MatchEvent, MatchFailure, MatchState } from '../../simulation/match-types';
-import { UNIT_DEFINITIONS } from '../../simulation/units';
+import { displayUnitName } from '../display-names';
 import type { ReplaySnapshot } from '../../replay';
 import { CarouselHoldingSlot, CarouselPanel, readHeldCarouselUnits } from './carousel-panel';
 import { BattleSummaryPanel } from './battle-summary';
@@ -36,7 +36,7 @@ export interface OnlineHooks {
 /** Status text of the post-battle merges among server events (T10 §15.3), or null when there are none. */
 export function mergeNotice(events: readonly MatchEvent[]): string | null {
   const upgrades = events.filter(event => event.type === 'unitUpgraded');
-  return upgrades.length ? `战后合并 · ${upgrades.map(event => `${UNIT_DEFINITIONS[event.definitionId]?.name ?? event.definitionId} → ${event.toStar}★`).join(' · ')}` : null;
+  return upgrades.length ? `战后合并 · ${upgrades.map(event => `${displayUnitName(event.definitionId)} → ${event.toStar}★`).join(' · ')}` : null;
 }
 /** Refusals that are not rule failures (docs/UI_REQUESTS.md B2 错误码表); everything else uses the offline wording. */
 const NON_RULE_REFUSALS: Partial<Record<ReceiptFailure, string>> = {

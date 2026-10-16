@@ -6,6 +6,7 @@
  */
 import { readItemCatalog, type RuntimeItemCatalogEntry } from '../simulation/item-catalog';
 import { s13AssetUrl } from './s13-assets';
+import { itemDisplayName } from './g23-display';
 
 type Entry = RuntimeItemCatalogEntry;
 let cached: { list: readonly Entry[]; byId: ReadonlyMap<string, Entry> } | null = null;
@@ -37,7 +38,7 @@ const escapeHtml = (text: string) => text.replace(/[&<>"']/g, c => ({ '&': '&amp
  */
 export function itemMarkHtml(id: string, size: number): string {
   const entry = catalogEntry(id), url = s13AssetUrl('item', id);
-  const kind = entry?.kind ?? 'component', glyph = escapeHtml([...(entry?.name ?? id)].slice(0, 2).join(''));
+  const kind = entry?.kind ?? 'component', glyph = escapeHtml([...(entry ? itemDisplayName(id) : id)].slice(0, 2).join(''));
   return `<span class="item-mark kind-${kind}" style="width:${size}px;height:${size}px" aria-hidden="true"><span class="item-glyph">${glyph}</span>`
     + `${url ? `<img class="item-icon" src="${url}" width="${size}" height="${size}" alt="" draggable="false" loading="lazy" decoding="async">` : ''}</span>`;
 }
@@ -51,7 +52,7 @@ export function itemTags(entry: Entry): { text: string; kind: 'unique' | 'slots'
 }
 function tagNodes(entry: Entry): HTMLElement[] { return itemTags(entry).map(tag => el('span', tag.text, `item-tag tag-${tag.kind}`)); }
 function nameNode(entry: Entry): HTMLElement {
-  const name = el('span', entry.name, 'item-name');
+  const name = el('span', itemDisplayName(entry.id), 'item-name');
   // Every current name is temporary; the marker stays until the catalogue reports "verified".
   if (entry.localizationStatus === 'temporary-unverified') name.append(el('sup', '暂译', 'item-l10n'));
   return name;
@@ -69,8 +70,8 @@ function describe(entry: Entry): HTMLElement {
   const head = el('div', '', 'item-pop-head'); head.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 36));
   const title = el('div'); title.append(nameNode(entry), ...tagNodes(entry));
   title.append(el('div', `${itemKindName(entry.kind)} · ${entry.apiName}`, 'item-pop-meta')); head.append(title); body.append(head);
-  if (entry.recipe) body.append(el('p', `配方：${entry.recipe.map(id => catalogEntry(id)?.name ?? id).join(' + ')}`, 'item-pop-recipe'));
-  else { const uses = usedIn(entry.id); if (uses.length) body.append(el('p', `可用于配方：${uses.map(item => item.name).join('、')}`, 'item-pop-recipe')); }
+  if (entry.recipe) body.append(el('p', `配方：${entry.recipe.map(id => catalogEntry(id) ? itemDisplayName(id) : id).join(' + ')}`, 'item-pop-recipe'));
+  else { const uses = usedIn(entry.id); if (uses.length) body.append(el('p', `可用于配方：${uses.map(item => itemDisplayName(item.id)).join('、')}`, 'item-pop-recipe')); }
   const effects = el('ul', '', 'item-pop-effects');
   for (const line of entry.effectDescriptions) effects.append(el('li', line));
   if (!entry.effectDescriptions.length) effects.append(el('li', '目录未提供效果说明'));
@@ -221,7 +222,7 @@ export function createItemCodex(): HTMLElement {
     tile.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 32));
     const text = el('div', '', 'codex-tile-text'); text.append(nameNode(entry));
     const tags = el('div', '', 'codex-tile-tags'); tags.append(el('span', itemKindName(entry.kind), 'item-tag tag-kind'), ...tagNodes(entry)); text.append(tags);
-    tile.append(text); tile.setAttribute('aria-label', `${entry.name}，${itemKindName(entry.kind)}${itemTags(entry).map(tag => `，${tag.text}`).join('')}`);
+    tile.append(text); tile.setAttribute('aria-label', `${itemDisplayName(entry.id)}，${itemKindName(entry.kind)}${itemTags(entry).map(tag => `，${tag.text}`).join('')}`);
     grid.append(tile); return { entry, tile };
   });
   root.append(grid);
@@ -233,15 +234,15 @@ export function createItemCodex(): HTMLElement {
   table.setAttribute('role', 'grid'); table.setAttribute('aria-label', '组件合成表');
   table.append(el('caption', '行与列为两件组件，交点为配方结果（静态配方，不代表当前可合成）'));
   const head = table.createTHead().insertRow(); head.append(el('th'));
-  for (const component of components) { const th = el('th'); th.scope = 'col'; th.dataset.itemDef = component.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(component.id, 26)); th.setAttribute('aria-label', component.name); head.append(th); }
+  for (const component of components) { const th = el('th'); th.scope = 'col'; th.dataset.itemDef = component.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(component.id, 26)); th.setAttribute('aria-label', itemDisplayName(component.id)); head.append(th); }
   const body = table.createTBody();
   for (const a of components) {
-    const row = body.insertRow(); const th = el('th'); th.scope = 'row'; th.dataset.itemDef = a.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(a.id, 26)); th.setAttribute('aria-label', a.name); row.append(th);
+    const row = body.insertRow(); const th = el('th'); th.scope = 'row'; th.dataset.itemDef = a.id; th.insertAdjacentHTML('afterbegin', itemMarkHtml(a.id, 26)); th.setAttribute('aria-label', itemDisplayName(a.id)); row.append(th);
     for (const b of components) {
       const cell = row.insertCell(), result = recipeFor(a.id, b.id);
       if (!result) { cell.textContent = '—'; continue; }
       cell.dataset.itemDef = result.id; cell.dataset.recipeCell = `${a.id}+${b.id}`;
-      cell.setAttribute('aria-label', `${a.name} + ${b.name} → ${result.name}`);
+      cell.setAttribute('aria-label', `${itemDisplayName(a.id)} + ${itemDisplayName(b.id)} → ${itemDisplayName(result.id)}`);
       cell.insertAdjacentHTML('afterbegin', itemMarkHtml(result.id, 30));
       if (result.evidenceStatus === 'approved-provisional') cell.classList.add('provisional');
       if (result.unique || result.slotCost > 1) cell.classList.add('declared');
@@ -255,7 +256,7 @@ export function createItemCodex(): HTMLElement {
   function apply(): void {
     const query = search.value.trim().toLowerCase(); let shown = 0;
     for (const { entry, tile } of tiles) {
-      const visible = matches(entry, filter) && (!query || entry.name.toLowerCase().includes(query) || entry.apiName.toLowerCase().includes(query) || entry.id.includes(query));
+      const visible = matches(entry, filter) && (!query || itemDisplayName(entry.id).toLowerCase().includes(query) || entry.apiName.toLowerCase().includes(query) || entry.id.includes(query));
       tile.hidden = !visible; if (visible) shown++;
     }
     for (const [value, button] of buttons) button.setAttribute('aria-pressed', String(value === filter));

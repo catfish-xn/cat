@@ -6,7 +6,6 @@
  */
 import type { Board } from '../../simulation/board';
 import type { GameState } from '../../simulation/game';
-import { ITEM_DEFINITIONS } from '../../simulation/content/items';
 import { deriveTraits } from '../../simulation/trait-snapshot';
 import { UNIT_DEFINITIONS, type Unit } from '../../simulation/units';
 import { getHeroIdentity, heroEmblemSvg, traitDisplayName } from '../../presentation/hero-identity';
@@ -17,6 +16,7 @@ import { traitHoverCard } from '../../presentation/hover-card';
 import { attachUnitCards } from '../../presentation/unit-card';
 import { attachTraitCards, renderTraitRows, traitRows, type TraitRow } from '../trait-column';
 import type { PublicBoard, PublicBoardUnit, SeatPublic } from './protocol';
+import { itemDisplayName } from '../../presentation/g23-display';
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
@@ -122,7 +122,7 @@ export class OpponentBoardPanel {
     chip.dataset.debug = `online:opponent-unit:${unit.cell.col},${unit.cell.row}`;
     chip.dataset.definition = unit.definitionId; chip.dataset.star = String(unit.starLevel);
     chip.dataset.unitDef = unit.definitionId; chip.dataset.unitStar = String(unit.starLevel);
-    chip.title = `${identity.name} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => ITEM_DEFINITIONS[id]?.name ?? id).join('、')}` : ''}`;
+    chip.title = `${identity.name} ${'★'.repeat(unit.starLevel)}${unit.items.length ? ` · ${unit.items.map(id => itemDisplayName(id)).join('、')}` : ''}`;
     const portrait = element('span', '', 'opponent-portrait'); portrait.innerHTML = heroPortraitHtml(unit.definitionId, 36, heroEmblemSvg(unit.definitionId, 36));
     chip.append(element('span', '★'.repeat(unit.starLevel), `opponent-stars star-${unit.starLevel}`), portrait);
     if (unit.items.length) {

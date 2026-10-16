@@ -3,6 +3,12 @@
  * free non-commercial fan use; see README). Icon paths come from the archived client data
  * (src/simulation/content/source/s13-14.24b/raw/en_us.json.gz). Kept apart from the
  * generated s13-asset-manifest.ts so the shared fetch script output is untouched.
+ *
+ * Asset checks: `bytes` and `sha256` are the length and SHA-256 of the PNG as bundled under public/<path>, and equal the
+ * original file at `source`. CommunityDragon sits behind Cloudflare Polish, which may answer a plain request with a
+ * recompressed copy (smaller, different hash; the `cf-polished: orig_size=` header gives the original length), so
+ * re-download with a cache-busting query string before comparing. tests/presentation/g2-3-display.test.ts recomputes
+ * both values from disk. Placebo and Placebo+ share one client icon (Placebo_I.TFT_Set12), hence identical rows.
  */
 export interface S13AugmentAsset { readonly apiName: string; readonly id: string; readonly path: string; readonly source: string; readonly bytes: number; readonly sha256: string }
 export const S13_AUGMENT_ASSETS: readonly S13AugmentAsset[] = [
@@ -59,8 +65,8 @@ export const S13_AUGMENT_ASSETS: readonly S13AugmentAsset[] = [
     "id": "manaflow-ii",
     "path": "assets/s13/augments/manaflow-ii.png",
     "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/manaflow_ii.tft_set13.png",
-    "bytes": 4924,
-    "sha256": "591eadc322815c0cadcfa8d7d79b977294611ec191bbe1cec7b6e014ec58c75c"
+    "bytes": 6441,
+    "sha256": "029c3c6d4b32310859738e49040127cddbd5b3917d6e5a749d126174c9f74f66"
   },
   {
     "apiName": "TFT_Augment_GlassCannonII",
@@ -107,8 +113,8 @@ export const S13_AUGMENT_ASSETS: readonly S13AugmentAsset[] = [
     "id": "placebo-plus",
     "path": "assets/s13/augments/placebo-plus.png",
     "source": "https://raw.communitydragon.org/14.24/game/assets/maps/tft/icons/augments/hexcore/placebo_i.tft_set12.png",
-    "bytes": 5494,
-    "sha256": "ff67c6cc840c2392d896068c61c6fac79653eef50e3d091205ac5bee5f1e14ad"
+    "bytes": 7801,
+    "sha256": "8c26ef75ca2bf9f05368122db2727ecfe78621790fb9796733a70024e63cfd2b"
   },
   {
     "apiName": "TFT_Augment_Mentorship1",
