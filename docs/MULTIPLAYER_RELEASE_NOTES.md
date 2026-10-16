@@ -479,3 +479,10 @@ P3-A 从首场PvP加时起基础扣血12→17，普通stage2–6和每个存活�
 CONTENT `fnv1a32-utf16:22f31569 → fnv1a32-utf16:bb66f4f8`，仅更新一次；LOOT_REPLAY 保持 `fnv1a32-utf16:028e5593`。schema/save/replay/command 7/3/3/3，rules/content 字符串沿用 G2-2，选秀 revision=p7-1 纳入内容身份。旧快照保留原字节供导出，新局重开，不静默迁移。
 
 新投影 heldCarouselUnits 替换 pendingCarouselUnits；运行时不再输出 openingPending。pendingUnits 和旧 resolve/sell 导出名暂保留兼容，详见 MULTIPLAYER_CONTRACT §21.6。规则 PR 不单独合入或部署；Opus 从规则 head 叠服务器 PR，修正 1-1 专用分支、投影消费与 tests/server 单测/e2e 后共同验收。
+
+
+### 2026-10-16 随机一费起手
+
+1-1 每席独立、等权获得 14 个一费英雄之一，允许撞卡，联机从共享池扣一张；单人同一选择规则。0G/等级1/0XP/100HP、unit-1 和 (1,4) 不变。按用户 2026-10-16 决定维持随机：1-2/1-3 从原五个老一费随机抽取，随机流、范围和消耗次数沿用 multiplayer 基线，重复照常合星。专用 opening-unit-v1 随机流不影响其他随机流。
+
+本次升级 rules/content 身份并更新 CONTENT 与 LOOT_REPLAY digest，旧存档、快照、回放作废且不迁移。应在活动局结束后发布。详见 [交付与验证](OPENING_RANDOM_1COST_RELEASE.md)。

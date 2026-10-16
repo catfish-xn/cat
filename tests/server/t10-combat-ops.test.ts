@@ -180,6 +180,14 @@ describe('T10 deferred merge after the battle (contract §15.3)', () => {
     const offersOf = (seatId: string, definitionId: string) => seat(room.state, seatId).match.shop.slots
       .flatMap((offer, slot) => offer.status === 'available' && offer.definitionId === definitionId ? [slot] : []);
     const botIds = ['s4', 's5', 's6', 's7'];
+    // Seek the required pair through paid public rerolls; random openings no longer
+    // guarantee that seed 23's original board hero appears twice in its first shop.
+    for(const id of botIds) {
+      while(!onBoard(seat(room.state,id).match).some(unit=>offersOf(id,unit.definitionId).length>=2)&&seat(room.state,id).match.gold>=2) {
+        const result=room.handle(id,{type:'reroll'});if(!result.ok)break;
+      }
+      if(onBoard(seat(room.state,id).match).some(unit=>offersOf(id,unit.definitionId).length>=2))break;
+    }
     const seatId = botIds.find(id => onBoard(seat(room.state, id).match).some(unit => offersOf(id, unit.definitionId).length >= 2))!;
     expect(seatId).toBeDefined();
     const s4 = () => seat(room.state, seatId);

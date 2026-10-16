@@ -26,7 +26,22 @@ export function describeEffect(effect: Effect): string {
       acquisitionGold: `立即获得 ${v.amount} 金币`, glassCannon: `最后一排初始生命 ${pct('startingHealthBps')}、伤害增加 ${pct('damageAmpBps')}`,
       pumpingUp: `每轮增加 ${pct('attackSpeedBpsPerRound')} 攻速`, investment: `每点利息永久增加 ${v.healthPerInterest} 生命`,
       bulkyBuddies: `相邻双人组获得 ${v.health} 生命，触发 ${pct('shieldMaxHpBps')} 最大生命护盾，持续 ${v.durationTicks * .05} 秒`,
-      titanic: `普攻附加 ${pct('adBps')} 攻击力 物理伤害，命中目标及相邻格`, mageArmor: `获得最终法强 ${pct('apBps')} 的双抗`, killStreak: `击杀后存活获得 ${v.mana} 法力`,
+      // W4 augments: values exactly as authored in AUGMENT_DEFINITIONS (Centi → /100), wording per MATCH_CONTRACT augment section.
+      mentorship: `开战时与更高费友军相邻：攻速 +${pct('attackSpeedBps')}、生命 +${v.health}`,
+      itemCollector: `全队生命 +${v.baseHealth}；全队每穿戴一种不同装备，再 +${v.healthPerItem} 生命、+${pct('adBpsPerItem')} 攻击力、+${v.apCentiPerItem / 100} 法强`,
+      bronzeForLife: `每个铜级羁绊使全队伤害增幅 +${pct('damageAmpBps')}${v.durabilityBps ? `、伤害减免 +${pct('durabilityBps')}` : ''}`,
+      littleBuddies: `每个上场的 1/2 费友军使 4/5 费友军生命 +${v.health}、攻速 +${pct('attackSpeedBps')}`,
+      backup: `开战时后两排至少 ${v.minimum} 名友军：全队攻速 +${pct('attackSpeedBps')}`,
+      lineup: `开战时前两排每有 1 名友军，全队护甲和魔抗 +${v.resistCentiPerUnit / 100}`,
+      findCenter: `开战时位于中心格的友军：伤害增幅 +${pct('damageAmpBps')}、最大生命 +${pct('healthBps')}`,
+      builtDifferent: `未激活任何羁绊的单位，按阶段 2/3/4/5+ 获得 ${v.health2}/${v.health3}/${v.health4}/${v.health5} 生命、`
+        + `${v.speed2 / 100}/${v.speed3 / 100}/${v.speed4 / 100}/${v.speed5 / 100}% 攻速`,
+      blisteringStrikes: `普攻使目标灼烧 ${v.durationTicks * .05} 秒（每秒 ${pct('burnBpsPerSecond')} 最大生命）并重伤 ${pct('woundBps')}`,
+      clockworkAccelerator: `战斗中每 ${v.periodTicks * .05} 秒全队攻速 +${pct('attackSpeedBps')}`,
+      loneHero: `最后存活的友军：攻速 +${pct('attackSpeedBps')}、伤害减免 +${pct('durabilityBps')}`,
+      climbLadder: `友军阵亡时，与其共享羁绊的存活友军 +${pct('adBps')} 攻击力、+${v.abilityPower} 法强、+${v.armor} 护甲、+${v.magicResist} 魔抗`,
+      inspiringEpitaph: `友军阵亡时，最近的友军获得 ${pct('shieldMaxHpBps')} 最大生命护盾（持续本场）和可叠加的 +${pct('attackSpeedBps')} 攻速`,
+      titanic:`普攻附加 ${pct('adBps')} 攻击力 物理伤害，命中目标及相邻格`, mageArmor: `获得最终法强 ${pct('apBps')} 的双抗`, killStreak: `击杀后存活获得 ${v.mana} 法力`,
       // G2 traits: values exactly as authored in TRAIT_DEFINITIONS (bps → %, ticks → seconds), see MATCH_CONTRACT G2-2.
       automata: `造成伤害积累水晶，满 ${v.crystals} 个时对目标造成 ${v.damage} 魔法伤害 + 期间伤害的 ${pct('conversionBps')}`,
       firelight: `每 ${v.periodTicks * .05} 秒冲刺，治疗期间所受伤害的 ${pct('healBps')}${v.attackSpeedBps ? `，冲刺时攻速 +${pct('attackSpeedBps')}` : ''}`,

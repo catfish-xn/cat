@@ -10,6 +10,7 @@ import { asDisplayEvents, type DisplayCombat, type DisplayUnit, type SceneCombat
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
+import { augmentDisplayName } from './augment-display';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { displayUnitName } from '../rendering/display-names';
 import { getHeroIdentity } from './hero-identity';
@@ -18,6 +19,7 @@ import { THEME, toNumber } from './theme';
 const C = THEME.color;
 const SOURCE_KIND: Readonly<Record<string, string>> = { ability: '技能', trait: '羁绊', item: '装备', augment: '强化', anomaly: '异常', enemyGrowth: '敌方成长' };
 const sourceName = (kind: string, id: string) => {
+  if (kind === 'augment' && AUGMENT_DEFINITIONS[id]) return augmentDisplayName(id);
   const catalog = kind === 'item' ? ITEM_DEFINITIONS : kind === 'trait' ? TRAIT_DEFINITIONS : kind === 'augment' ? AUGMENT_DEFINITIONS : kind === 'anomaly' ? ANOMALY_DEFINITIONS : null;
   return (catalog?.[id] as { name?: string } | undefined)?.name ?? displayUnitName(id);
 };

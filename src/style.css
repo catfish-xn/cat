@@ -40,6 +40,9 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .choice-dialog p { color: #c2d7de; line-height: 1.5; }
 .choice-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
 .choice-cards button { min-height: 150px; font-size: 16px; line-height: 1.65; }
+.choice-cards .augment-icon { display: block; margin: 0 auto 6px; border-radius: 8px; }
+.owned-augments .augment-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 4px 0; padding: 1px 7px 1px 2px; border-radius: 999px; background: #0b151f; cursor: help; }
+.owned-augments .augment-icon { border-radius: 4px; }
 .choice-targets { display: flex; flex-wrap: wrap; gap: 10px; }
 @media (max-width: 1000px) {
   #app { grid-template-columns: 1fr; }

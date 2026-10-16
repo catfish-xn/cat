@@ -86,7 +86,7 @@ describe('B8 live growth plus immediate randomized loot merge',()=>{
   for(const s of [prepared,live.started,live.revealed,live.beforeFinal,live.ended])roundTrip(s);
   const reveal=live.revealPrefix.find(e=>e.type==='lootRevealed')!;
   expect(reveal.type).toBe('lootRevealed');
-  const death=live.revealed.combat!.neutralReceipts!.deaths.find(d=>live.revealed.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===d.eventSeq))!;
+  const death=live.revealed.combat!.neutralReceipts!.deaths.find(d=>d.eventSeq===reveal.death.eventSeq&&live.revealed.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===d.eventSeq))!;
   expect(live.revealed.combat!.tick).toBe(death.tick);
   expect(live.revealed.phase).toBe('combat');
   expect(live.ended.phase).toBe('settlement');expect(live.ended.pendingChoice).toBeNull();

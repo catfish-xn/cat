@@ -11,7 +11,7 @@ import type { UnitUpgradedEvent } from '../src/simulation/unit-types';
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 const empty = (): ResourceProvenance => ({ version: RESOURCE_PROVENANCE_VERSION, entries: [] });
-const opening = (): ResourceProvenance => appendResourceProvenance(empty(), '1-2', { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening' } });
+const opening = (): ResourceProvenance => appendResourceProvenance(empty(), '1-2', { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening', seed: 42, seatId: 'solo' } });
 const context = (extra: Partial<ResourceProvenanceContext> = {}): ResourceProvenanceContext => ({
   throughRoundOrdinal: 38, scheduleReceipts: [], lootReceipts: [], combatSettlements: [], ...extra,
 });
@@ -131,7 +131,7 @@ describe('B8 provenance opening, append and prefix projections', () => {
 
   it.each([
     ['no opening', empty()],
-    ['duplicate opening', appendResourceProvenance(opening(), '1-2', { kind: 'unit-acquired', unitId: 'unit-2', source: { kind: 'opening' } })],
+    ['duplicate opening', appendResourceProvenance(opening(), '1-2', { kind: 'unit-acquired', unitId: 'unit-2', source: { kind: 'opening', seed: 42, seatId: 'solo' } })],
     ['wrong opening unit', mutateEntry(opening(), 0, { unitId: 'unit-2' })],
     ['wrong opening round', mutateEntry(opening(), 0, { roundId: '1-3' })],
     ['wrong first source', mutateEntry(opening(), 0, { source: { kind: 'shop', definitionId: 'irelia', generation: 1, slotIndex: 0 } })],

@@ -1,0 +1,208 @@
+{
+  "previousHead": "2e21f18ad9c7f035b1595b6626bbdd919b79f26f",
+  "previousSeed": 145424,
+  "currentSeed": 3151248,
+  "cases": [
+    {
+      "items": "bloodthirster",
+      "holder": "unit-1",
+      "state": {
+        "previousBytes": 68912,
+        "currentBytes": 70558,
+        "previousSha256": "522268e078299503fb409e5ac66112fbd49f2c8c75c72d8b72c09479517c8166",
+        "currentSha256": "4335c3debeaa50eaea329286dac990924d11d409936779831e4baba6917cd1a0",
+        "firstByteOffset": 191
+      },
+      "nextStepEvents": {
+        "previousBytes": 6306,
+        "currentBytes": 6305,
+        "previousSha256": "c5759a51e7cedf4d33576e2ee2e8d8ce2710d2d85f74f498099b70945a86fbed",
+        "currentSha256": "3a9dae37249eada33245f6b5f04f198319ce78b71ab158b189640cf7f3ba2dfc",
+        "firstByteOffset": 2944
+      },
+      "vector": {
+        "holder": {
+          "id": "unit-1",
+          "definitionId": "irelia",
+          "team": "player",
+          "starLevel": 1,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 4
+            }
+          }
+        },
+        "items": [
+          [
+            "item-2",
+            "rod"
+          ],
+          [
+            "item-3",
+            "gloves"
+          ],
+          [
+            "item-5",
+            "bloodthirster"
+          ]
+        ],
+        "augments": [
+          "manaflow-i"
+        ],
+        "stats": [
+          {
+            "id": "unit-1",
+            "definitionId": "irelia",
+            "star": 1,
+            "maxHp": 700,
+            "attackDamage": 51,
+            "armor": 40,
+            "magicResist": 60,
+            "maxMana": 70
+          }
+        ]
+      },
+      "strictTextAndObjectRestore": true
+    },
+    {
+      "items": "hand-of-justice",
+      "holder": "unit-3",
+      "state": {
+        "previousBytes": 76964,
+        "currentBytes": 78610,
+        "previousSha256": "34f9d96c6bf5bd94c1eb7721a20635f4bb6e76d43f8250fcf885480a738eaa32",
+        "currentSha256": "e6bf5b6680d604a7a3c8b770bfb3d15523dfdf06d2dbcfa1f4d7831682ae98b9",
+        "firstByteOffset": 191
+      },
+      "nextStepEvents": {
+        "previousBytes": 6447,
+        "currentBytes": 6447,
+        "previousSha256": "cff9fd84e70798d128c31551669a6099ebba9c505750e947cb7cf45bdff4edef",
+        "currentSha256": "4d88cefab6b7348022d120e3f55d7a5113c2ca199aaca9b42ed7e259847d6340",
+        "firstByteOffset": 3095
+      },
+      "vector": {
+        "holder": {
+          "id": "unit-3",
+          "definitionId": "lux",
+          "team": "player",
+          "starLevel": 1,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 4
+            }
+          }
+        },
+        "items": [
+          [
+            "item-1",
+            "cloak"
+          ],
+          [
+            "item-2",
+            "rod"
+          ],
+          [
+            "item-5",
+            "hand-of-justice"
+          ]
+        ],
+        "augments": [
+          "manaflow-i"
+        ],
+        "stats": [
+          {
+            "id": "unit-3",
+            "definitionId": "lux",
+            "star": 1,
+            "maxHp": 500,
+            "attackDamage": 30,
+            "armor": 20,
+            "magicResist": 20,
+            "maxMana": 50
+          }
+        ]
+      },
+      "strictTextAndObjectRestore": true
+    },
+    {
+      "items": [
+        "bloodthirster",
+        "bloodthirster"
+      ],
+      "holder": "unit-1",
+      "state": {
+        "previousBytes": 102799,
+        "currentBytes": 104742,
+        "previousSha256": "4e59c053f945d335f0d8440c2bb3906dadb80086da47c8e71afc0ef146ff2413",
+        "currentSha256": "7e94bd2f4fd7d54bb4de9ca52119a5279a0ae5f9d3b957a4429e3d6146c3d91c",
+        "firstByteOffset": 274
+      },
+      "nextStepEvents": {
+        "previousBytes": 7623,
+        "currentBytes": 7210,
+        "previousSha256": "880137f22d20c89b0d2aa2439dcbd0312b8abeaab85629d3fb85a8ea55bd7265",
+        "currentSha256": "90dcd90b425e771c9e0021d8b90c74cc2a293310780327917d44193292f80fe7",
+        "firstByteOffset": 4273
+      },
+      "vector": {
+        "holder": {
+          "id": "unit-1",
+          "definitionId": "irelia",
+          "team": "player",
+          "starLevel": 1,
+          "location": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 4
+            }
+          }
+        },
+        "items": [
+          [
+            "item-2",
+            "rod"
+          ],
+          [
+            "item-3",
+            "gloves"
+          ],
+          [
+            "item-5",
+            "bow"
+          ],
+          [
+            "item-8",
+            "bloodthirster"
+          ],
+          [
+            "item-9",
+            "bloodthirster"
+          ]
+        ],
+        "augments": [
+          "manaflow-i",
+          "pumping-up-ii"
+        ],
+        "stats": [
+          {
+            "id": "unit-1",
+            "definitionId": "irelia",
+            "star": 1,
+            "maxHp": 700,
+            "attackDamage": 58,
+            "armor": 40,
+            "magicResist": 80,
+            "maxMana": 70
+          }
+        ]
+      },
+      "strictTextAndObjectRestore": true
+    }
+  ]
+}
