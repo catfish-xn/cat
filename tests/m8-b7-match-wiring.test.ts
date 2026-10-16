@@ -121,10 +121,27 @@ describe('B7 installed encounters and trusted Match restore',()=>{
 
   it.each([[],['ionic-spark'],['evenshroud'],['ionic-spark','evenshroud']])('restores Herald action identity after earlier tick-one aura maintenance: %j',(...ids)=>{
     const items=ids as string[];
-    // Empty equipment branch retains a real Sunfire aura in G2-2 (one earlier action).
+    // The live branch explicitly returns its legitimately acquired Ionic Spark to the single Herald target.
+    // Sunfire starts at tick 40, so cannot establish tick-one maintenance; keep the earlier-action scenario.
     // Only the five approved nonempty saves use generated raw input. Independent parsing and the full production restore stay inside this case.
     let s=items.length ? restoreMatch(publicHeraldRawInput(items)) : publicHeraldEquipment(items);
-    s=accepted(api.startMatchCombat(s));roundTrip(s);s=api.stepMatch(s).state;roundTrip(s);
+    if (!items.length) {
+      const aura = s.items.find(item => item.definitionId === 'ionic-spark');
+      expect(aura).toBeDefined();
+      expect(aura!.location.kind).toBe('unit');
+      if (aura!.location.kind !== 'unit') throw new Error('Expected publicly equipped Ionic Spark');
+      expect(aura!.location.unitId).not.toBe('unit-1');
+      s = accepted(api.sellUnit(s, aura!.location.unitId));
+      expect(s.items.find(item => item.id === aura!.id)?.location).toEqual({kind:'inventory'});
+      s = accepted(api.equipItem(s, aura!.id, 'unit-1', 1));
+      roundTrip(s);
+    }
+    s=accepted(api.startMatchCombat(s));roundTrip(s);
+    const maintained = api.stepMatch(s); s=maintained.state; roundTrip(s);
+    // Independent scenario obligation: an actual aura status must precede the charge receipt.
+    const auraContributions = s.combat!.units.flatMap(u => u.mechanismState?.statuses.flatMap(g => g.contributions) ?? [])
+      .filter(c => ['ionic-spark','evenshroud'].includes(c.source.definitionId));
+    expect(auraContributions.length).toBeGreaterThanOrEqual(items.length || 1);
     const c=s.combat!.units.find(u=>u.id==='unit-1')!.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.source.definitionId==='void-charge-project-v1')!;
     expect(c).toBeDefined();expect(JSON.parse(JSON.parse(c.key)[8])).toEqual([items.length || 1,1]);
     corrupt(s,x=>{const target=x.combat.units.find((u:any)=>u.id==='unit-1');target.maxMana=0;target.mana=0;});

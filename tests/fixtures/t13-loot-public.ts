@@ -67,17 +67,16 @@ export function transferPreparation() {
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor'});
 }
-export async function terminalPreparation(keep:string|null,col=1) {
+export async function terminalPreparation(keep:string|null,col=1,row=7) {
   const key='terminal38';
   if(!prefixes.has(key)) {
     const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
     const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}
-      return api.startMatchCombat(losses.has(s.roundDefinitionId)?reserveExcept(s,[]):s);}}, {seed:38,build:'cannon'});
+    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:['unit-10','unit-15']});
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }
   let s=structuredClone(prefixes.get(key)!);
-  if(keep)s=accepted(api.deployMatchUnit(s,keep,{kind:'board',cell:{col,row:7}}));
+  if(keep)s=accepted(api.deployMatchUnit(s,keep,{kind:'board',cell:{col,row}}));
   return fillBench(s,['ezreal']);
 }

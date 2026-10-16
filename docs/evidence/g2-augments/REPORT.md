@@ -53,3 +53,14 @@ LOOT_REPLAY不变；schema/save/replay/command 7/3/3/3、NET_PROTOCOL 3不变。
 - 测试过了吗：专项已执行，最终全套与计时尚待完成。
 - 越界了吗：当前仅src/simulation、tests非server、scripts、docs；最终diff还需复核。
 - 改玩法了吗：按授权新增24强化并改变候选池/CONTENT身份；不改变已冻结日程或基础经济，组合约定已披露。
+
+## 明确批准的版本断言同步
+
+用户于本轮另行明确批准 `tests/m8-contracts.test.ts` 第73行：
+`currentRulesVersion: 's13-g2-2-v1'` → `'s13-g2-2-aug30-v1'` 及上传。
+该字段是 `CompatibilityView` 的当前版本字面量类型，随已批准规则身份升级必须同步；
+只改这一个版本字符串，不改该文件其余断言、恢复要求或M8玩法。
+
+### 用户明确批准的旧身份测试适配
+
+`tests/p7-1-identity.test.ts` 中旧 P7 fixture 的两处恢复正控改为旧 digest 拒绝负控，用户已明确批准此适配及上传。新 digest 的等价恢复正控位于 `tests/g2-augments-identity.test.ts`，覆盖新录制的原始存档并逐例执行生产恢复；严格 digest 校验保留，不以旧档恢复成功作为本批期望。

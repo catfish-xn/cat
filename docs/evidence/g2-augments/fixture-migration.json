@@ -350,9 +350,9 @@
     "tests/fixtures/t13-recorded-states/cannon.json.gz": "ee97a18535850a44f4295b076b81ca4346d7f8196d743b1efdac6e9b10bf997f",
     "tests/fixtures/t13-recorded-states/sniper.json.gz": "3dfdb35a4944aeeed1adb732e69a437a0449caf3c105fad94206fc95b70b705e"
   },
-  "currentSourceSha256": "f613337c2528c0f869375ea8f6327a68b2865ec5d3db1d8033ee7ec6c7e2589d",
+  "currentSourceSha256": "0893ea6c282f1b3ddb741095682831026e24c7a9be4f0d1dbe47247b826d8e6b",
   "currentSources": {
-    "scripts/generate-m5-route.cjs": "560c8cc61d201ea9c612f574d1236d97832e33edd07d6c88902def66c5e0de83",
+    "scripts/generate-m5-route.cjs": "e81ea893e5976b473b8eb96aa07ffa49726a1b1a9fdb0725f11d4599e87dac69",
     "scripts/m4-evidence.cjs": "6577e857f1bd23944f862e46104706c02b4efe8afbb7259a9016fb7b71714973",
     "scripts/record-g2-augments-fixtures.cjs": "efa2db7b2dda4e099164765de6f59b34b6cce9cfc2b24ef5eaad3252c8c505d0",
     "src/server-entry/index.ts": "4e0e9ebc9ea35940b8a8595c2deea846c9241ee1391745ef0e516442d9e09c3d",

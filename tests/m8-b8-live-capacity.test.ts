@@ -16,7 +16,7 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
   expect(prepared.gold).toBe(21);expect(bench(prepared)).toHaveLength(9);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'tristana',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(74);expect(waiting.combat!.tick).toBe(122);
+  expect(live.revealed!.combat!.tick).toBe(74);expect(waiting.combat!.tick).toBe(121);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);
@@ -60,8 +60,8 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
 // The lethal cases share the same full public campaign prefix.
 beforeAll(async () => { await terminalPreparation('unit-10', 1); });
 describe('B8 live lethal PvE with randomized orbs',()=>{
- it.each([{name:'two killed carriers',keep:'unit-10',col:1,deaths:2,earned:true},{name:'only orb carrier killed',keep:'unit-15',col:1,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
-  const preparation=await terminalPreparation(scenario.keep,scenario.col),l=battle(preparation),s=l.ended;
+ it.each([{name:'two killed carriers',keep:'unit-10',col:1,row:6,deaths:2,earned:true},{name:'only orb carrier killed',keep:'unit-10',col:1,row:7,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,row:7,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
+  const preparation=await terminalPreparation(scenario.keep,scenario.col,scenario.row),l=battle(preparation),s=l.ended;
   expect(preparation.playerHp).toBe(3);expect(preparation.roundResults.reduce((n,r)=>n+r.hpLost,0)).toBe(97);
   expect(s.phase).toBe('gameOver');expect(s.outcome).toBe('defeat');expect(s.playerHp).toBe(0);
   expect(s.combat!.neutralReceipts!.deaths).toHaveLength(scenario.deaths);

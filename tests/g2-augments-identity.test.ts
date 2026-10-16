@@ -48,7 +48,7 @@ for (const build of ['cannon', 'sniper']) {
   });
   // Each raw checkpoint has its own original five-second limit and full production restore.
   // Only raw inputs are read ahead; no validated runtime object or restore result is cached.
-  it.each(current.map((_:unknown,index:number)=>index))(`${build}: checkpoint %i survives strict text/object restore`,index=>{
+  it.each(Array.from({length:current.length},(_,index)=>index))(`${build}: checkpoint %i survives strict text/object restore`,index=>{
     const state=structuredClone(current[index]), serialized=serializeMatch(state);
     expect(restoreMatch(serialized)).toEqual(state);
     expect(restoreMatch(JSON.parse(serialized))).toEqual(state);
