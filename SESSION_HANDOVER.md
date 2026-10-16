@@ -10,18 +10,17 @@
 ## 0.0.8 当前状态（2026-10-16 凌晨，指挥更新；以本节为准，细节见 `docs/DISPATCH_2026-10-14.md` 第九/十批）
 
 **分支与身份**
-- `multiplayer` head `80b893a`（#116 merge）。main `b4db0d5`（#111，含选秀接线 + 33 英雄，用户已部署真机）。multiplayer 比 main 多：G2-2 48 英雄 / 14 羁绊（#112 规则 + #114 界面）、P7-1 完整包（#113 界面切换与临时位、#115 规则、#116 服务器接线）。
+- `multiplayer` head `6f5253a`（#117 merge；代码含 #114–#117）。main `b4db0d5`（#111，含选秀接线 + 33 英雄，用户已部署真机）。multiplayer 比 main 多：G2-2 48 英雄 / 14 羁绊（#112 规则 + #114 界面）、P7-1 完整包（#113 界面切换与临时位、#115 规则、#116 服务器接线）。
 - 身份：rules `s13-g2-2-v1`、content `s13-14.24b-g2-2-v1`、CONTENT `fnv1a32-utf16:bb66f4f8`、LOOT_REPLAY `028e5593`；schema/save/replay/protocol 7/3/3/3。旧存档拒绝不迁移。部署时前后端必须一起更新（协议 3；投影字段 `heldCarouselUnits`）。
-- 2026-10-15 合入：#104、#105、#94、#100、#106、#109、#108、#110、#112、#113；main 同步 #107、#111。2026-10-16 凌晨合入：#114、#115、#116（按序，叠加树全套验收见 DISPATCH 第十批结果）。
+- 2026-10-15 合入：#104、#105、#94、#100、#106、#109、#108、#110、#112、#113；main 同步 #107、#111。2026-10-16 凌晨合入：#114、#115、#116（按序，叠加树全套验收见 DISPATCH 第十批结果）；上午合入 #117（local-room-client 整局用例拆到 timing，digest 不变）。
 
 **P7-1 现状（已合入）**
 - 开局恢复免费艾瑞莉娅与既有开局经济；选秀只在 2-4/3-4/4-4/5-4/6-4，服务器只问 `opensCarousel`；选到棋子去向 备战席 → 场上参战 → 临时位（不参战、可售），准备期腾位后服务器调 `resolvePendingCarouselUnits` 原子发布；合星在下一准备期由规则完成。e2e `g2-traits-tooltips` 随之恢复通过。
 - #116 head 的 e2e p7-carousel 在指挥机复现失败（Playwright 原生 click 对隐藏按钮等 30 s），指挥补一行 `f6d3f15` 后 47/47 合入；教训：执行者必须在 PR head 上复跑 e2e，而不是本地工作副本。
 
-**待发（顺序）**
-- Codex：W4 强化 6→30（第九批提示词换基线 `80b893a` 重发，改 digest）；顺带更新 `tests/m7-hero-identity.test.ts` 让开放羁绊覆盖 G2-2 的 14 个（#114 请求）。
-- Opus：小 PR 把 `tests/server/local-room-client.test.ts` 整局用例拆到 vitest timing 项目（单跑约 47 s，fast 上限 60 s，全套并行必超时；需改根 `vitest.config.ts`）。
-- 之后 multiplayer → main 第二次部署真机。
+**进行中 / 待发**
+- Codex `codex/g2-augments-30`（W4 强化 6→30 + `tests/m7-hero-identity.test.ts` 14 羁绊）：WIP `3358193` 只有证据与对账表，实现/测试/PR 未到。到 PR 后指挥在含 #117 的 multiplayer 上跑全套（typecheck、`npm test`、`test:timing`、`test:server-entry`、build + e2e c7/g1/g2-traits-tooltips/g5/p7-carousel），digest 必改。
+- 之后 multiplayer → main 第二次部署真机（旧存档作废，前后端同时更新，协议 3）。
 
 **已知问题**
 - ~~e2e `g2-traits-tooltips` 在基线 `17a2ce8` 起失败~~ 已随 #115/#116 恢复通过（18/18）。
