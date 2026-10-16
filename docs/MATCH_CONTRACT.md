@@ -220,7 +220,7 @@ sellPendingCarouselUnit(pool:SharedPoolState,match:MatchState,unitId:string):Sha
 
 `releaseCarouselParticipant` 另返回 `poolEvents:readonly SharedPoolEvent[]`，events 为 `readonly (MatchEvent|CarouselEvent)[]`，保留 sharedSeatReleased 和 carousel-seat-released；重复淘汰返回两个空事件数组。失败也返回空 poolEvents。
 
-适用窗口（2026-10-16 澄清，规则代码未变）：`releaseCarouselParticipant` 只在盘仍为当前池的事务基准时使用，即盘 `open` 期间的参与席淘汰。盘关闭且收据全为 granted、池已经 complete/nextSharedRound 推进后发生的淘汰，只调用 `releaseSeatOnElimination(pool,match)`：选秀单位已在 holdings 中，随该席全部归还，池守恒成立；该席池收据保持 `granted` 作为历史出生记录，不改为 released，不另发 carousel-seat-released。此时以旧 CarouselState 调 `releaseCarouselParticipant` 会因池/席位修订号过期返回 `invalid-match`，不改变任何状态。回归见 `tests/p7-1-carousel-rules.test.ts`「eliminated after the 2-4 carousel closed」。
+适用窗口（2026-10-16 澄清，规则代码未变）：`releaseCarouselParticipant` 只在盘仍为当前池的事务基准时使用，即盘 `open` 期间的参与席淘汰。盘关闭且收据全为 granted、池已经 complete/nextSharedRound 推进后发生的淘汰，只调用 `releaseSeatOnElimination(pool,match)`：选秀单位已在 holdings 中，随该席全部归还，池守恒成立；该席池收据保持 `granted` 作为历史出生记录，不改为 released，不另发 carousel-seat-released。此时以旧 CarouselState 调 `releaseCarouselParticipant` 会因旧池与当前席状态不一致返回 `invalid-match`，不改变任何状态。回归见 `tests/p7-1-carousel-rules.test.ts`「eliminated after the 2-4 carousel closed」。
 
 ### SR-G2-01：技能展示纯函数（G2-2 工作分支）
 
