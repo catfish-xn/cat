@@ -329,3 +329,102 @@ UI继续消费现有ChoiceDefinition字段；无新增预览或界面字段，�
 ### OPENING-R1 奖励随机口径（2026-10-16）
 
 按用户 2026-10-16 决定维持随机：1-2/1-3 的英雄奖励各从原五个老一费 `darius/irelia/lux/maddie/zyra` 等权抽取；恢复 multiplayer 基线的掉落随机流、候选顺序、拒绝采样及消耗次数。1-1 每席随机一费起手保持 PR #126 现状，费用相同、允许重复。沿用本 PR 首次提交的 CONTENT/LOOT_REPLAY digest 和版本号，本次不再 bump。
+
+## G2-3 机制通用接口（2026-10-16，Claude 一次性代做，供 Codex 接入）
+
+用户 2026-10-16 决定：联机所需的通用接口由 Claude 先做，Codex 在 G2-3 里把征服者、学院、炼金男爵、机械公敌、试验格、光明转化、形态英雄、召唤物接上。本节只定接口，不加任何英雄、羁绊、异常或装备；现有内容下对局结果、CONTENT digest、版本号和夹具都不变。统一导入点 `src/simulation/seat-mechanics/index.ts`。联机视图与回放线格式见 MULTIPLAYER_CONTRACT §25。
+
+### 1 席位机制容器
+
+```ts
+MatchState.seatMechanics?: SeatMechanicsState   // 没有机制写过时不存在
+interface SeatMechanicsState {
+  version: 'g2-3-seat-mechanics-v1';
+  seat: Record<string, MechanicJson>;    // 本席可见，原样进入联机视图
+  hidden: Record<string, MechanicJson>;  // 只在权威侧，永不发给客户端（RNG 字、未来候选）
+  receipts: MechanicReceipt[];           // 只追加的收据，本席可见
+}
+readSeatMechanic(state, key) / readHiddenMechanic(state, key)
+writeSeatMechanic(state, key, value | undefined) / writeHiddenMechanic(...)   // 纯函数，undefined 删除
+appendMechanicReceipt(state, receipt) / findMechanicReceipt(state, receiptId)
+```
+
+- 值只能是纯 JSON，数字必须是安全整数（百分比用 bps），写入和恢复都会校验，不合格抛 RangeError。
+- 预留键：`conqueror`、`academy`、`alchemist`、`junkerKing`、`experimentCells`、`radiantConversion`。建议形状（Codex 定稿后在此回填，界面按回填读）：
+  - conqueror `{stacks, chestsOpened, nextThreshold, bonusBps}`
+  - academy `{sponsoredItemIds: string[3], granted: {tier, itemId, receiptId}[]}`
+  - alchemist `{glimmer, threshold, skipped, hpBonus}`
+  - junkerKing `{roundsUntilArmory, purchased: string[]}`
+  - experimentCells `{cells: {col,row}[]}`
+  - radiantConversion `true`（第 15 档生效后）
+- 凡是影响界面显示或客户端选择器（羁绊、属性、previewCombine、previewEquip、getDeploymentCap）的状态都放 `seat`；客户端拿不到 `hidden`，选择器不能读它。
+- 需要界面播提示时，同一命令里发 `{type:'seatMechanicChanged', key}` 事件。
+- `restoreMatch` 只做结构校验（`validateSeatMechanicsState`），各机制自己的不变量由 Codex 补进恢复校验。
+
+### 2 发放与收据（每个 receiptId 只发一次）
+
+```ts
+grantMechanicGold(state, {receiptId, source, amount})
+grantMechanicItem(state, {receiptId, source, definitionId})
+grantMechanicUnit(state, {receiptId, source, definitionId}, unitLootPolicy?)
+  -> {ok:true, state, events, receipt, upgradeEvents} | {ok:false, state, reason}
+reason: 'duplicate-mechanic-receipt' | 'bench-full' | 'invalid-mechanic-state'
+```
+
+- `source` 是自由文本的来源名，例如 `conqueror-chest`、`high-roller`、`academy`。收据记录 round、roundId、source，这就是战斗中金币和开箱金币的"金币来源"，界面按 round 分组显示。`incomeBreakdown` 不改。
+- events 未盖序号，含 `mechanicGranted{receipt}` 和英雄入席时的升级事件，由调用方所在命令的 accept 统一盖 eventSeq。
+- 物品和英雄的来源事实是 `{kind:'mechanic', receiptId}`，单人存档恢复按收据核对出生。
+- **共享卡池**：原有给玩家发英雄的路径只有商店购买和 PvE 掉落（rewardPolicy），没有通用路径，所以新增 `grantMechanicUnit`。联机时必须传入命令闭包里的 `policy`（`runSharedMatchCommand` 给每个命令的那个 UnitLootPolicy）：池里有副本就扣一张并入席，池空就按英雄费用折成金币（收据 `resolution:'gold'`），与 PvE 英雄掉落一致。备战席满时在动卡池前就返回 `bench-full`，什么都不变。成功结果必须在同一命令里提交，否则卡池守恒校验会失败。
+  - 只能发商店目录里的英雄或带 `summon` 标记的召唤物。
+  - 注意：`settleRound` 命令目前没有把 policy 传给 `applyRoundSettlement`。若征服者在结算时发英雄，Codex 需要在 `shared-pool.ts` 把 policy 传进去。
+- 单人存档：结算后的金币校验在 `serialization.ts` 里写的是 `gold === goldAfter + 卖出金币`。结算阶段发金币时，Codex 要把机制金币收据计入这条校验。
+
+### 3 新的选择类型：锻造器、黑市、军械库
+
+```ts
+PendingChoice.kind += 'forge' | 'blackMarket' | 'armory';   PendingChoice.payload?: MechanicChoicePayload
+openMechanicChoice(state, {choiceId, offers, payload, returnPhase}) -> {ok, state, events} | {ok:false, reason}
+CHOICE_SKIP_OPTION = '@skip'
+```
+
+| kind | offers | payload | 选中效果 |
+| --- | --- | --- | --- |
+| forge | 物品 definitionId | `{kind, source, timeoutOption}` | 该物品进库存 |
+| blackMarket | 物品 definitionId | `{kind, source, skippable, skipReward:{kind,amount}\|null, timeoutOption}` | 选物品则进库存；`@skip` 不给物品，收据 `skipped:true` |
+| armory | 机制选项 id（不是物品） | `{kind, source, prices:{[option]:gold}, timeoutOption}` | 扣 `prices[option]` 金币，只记收据 |
+
+- 打开：和强化一样是阻塞选择（用户已定军械库也这样），界面可以先收起，不选完不能离开选择阶段。`returnPhase` 必须等于当前阶段：`preparation` 在准备阶段开，`settlement` 在结算阶段开并保留战斗结果。补给回合和已有待选时拒绝（`wrong-phase`）。choiceId 不能和已有收据重复。
+- 玩家操作复用 `choose`（`selectChoice(state, choiceId, generation=0, optionId)`）。黑市跳过就是 `optionId='@skip'`，不可跳过时返回 `choice-not-skippable`。军械库钱不够返回 `insufficient-gold`。失败返回原 state，不耗资源和 RNG。
+- 选完写一条收据 `{kind:'choice', receiptId:choiceId, choiceKind, optionId, skipped, price, itemId, timedOut}`，发 `choiceSelected` 和 `mechanicGranted`，然后按 returnPhase 继续本回合日程（与强化选完后一样）。效果由机制自己读收据：已购升级就是 armory 收据列表；跳过收益由炼金男爵按 skipped 收据计算。
+- 超时：`forfeitPendingChoice` 选 `payload.timeoutOption`，事件 `choiceTimedOut{resolution:'default-option'}`，收据 `timedOut:true`。军械库的 timeoutOption 价格必须是 0（免费"备用零件"），打开时校验，所以超时永不扣钱；黑市可以用 `@skip` 当超时项。
+- 机器人：`decideBotAction` 对新 kind 直接选 timeoutOption。Codex 可以以后换成更好的策略。
+- 存档：`restoreMatch` 接受待选的新 kind（`validateMechanicPendingChoice`）。
+
+### 4 形态英雄与召唤物标记
+
+- `UnitDefinition.formSwap?: true`。`resolveUnitForm(definition, team, location, board?)` 和 `getUnitForm(unit)` 返回 `'melee' | 'ranged' | null`：本方部署区离敌方最近的两排是近战，后两排是远程；备战席和普通英雄为 null。用户已定：开战时按站位定形态，战斗中不切换。
+- `CombatUnit.form?`：Codex 在开战快照里按 `getUnitForm` 填写并据此选那套属性和技能；回放单位视图带 `form`。
+- `UnitDefinition.summon?: {sellable, countsTowardPopulation}`。`sellable:false` 时卖出返回 `unit-not-sellable`；`countsTowardPopulation:false` 时 `getPlayerDeploymentCount` 不计它，人口上限检查随之放宽。召唤物不进共享卡池：守恒校验的棋盘名单和 reconcileHoldings 会跳过它。准备阶段的召唤物（锻炉）要用 `grantMechanicUnit` 生成，来源事实才能通过校验。三只同名召唤物会被现有合星逻辑合并，Codex 需要用不同 definitionId 或别的放置方式避免。
+
+### 5 物品
+
+- `ItemDefinition.kind += 'radiant'`，并加 `radiantOf: <成装 id>`。内容校验要求光明装备没有配方、`radiantOf` 指向成装、每件成装最多一件光明版。`radiantVersionOf(id)` 和 `isRadiantItem(id)` 供转化与界面使用。重铸、选秀、临时装备池默认不含光明装备。
+- `ItemDefinition.restriction?: {kind:'trait', traitId}`。穿给没有该羁绊的单位时，`previewEquip` 和 `equipItem` 返回 `item-restricted`（黑市装备只给炼金男爵）。
+- 按用户决定，神器、辅助装、战术家之冠、窃贼手套、锻造器、复制器这批不做；征服者奖励里这些先按源表金币估值折成金币，用 `grantMechanicGold` 发，对账表标"约定值"。
+
+### 6 战斗中途出现的单位与新战斗事件
+
+```ts
+spawnCombatUnit(state, unit, source, tick) / removeCombatUnit(state, unitId, reason, tick)
+castOutcomeEvent(tick, unitId, abilityKey, outcome, subOutcomes?) / bindingChangedEvent(tick, unitId, bound, reason)
+```
+
+- 新账本事件（已并入 CombatEventData 和 M8CombatEvent）：`unitSpawned{unitId, definitionId, team, cell, source}`、`unitRemoved{unitId, reason}`、`castOutcome{unitId, abilityKey, outcome, subOutcomes}`（High Roller 的火箭、护盾、金币、三连）、`bindingChanged{unitId, bound, reason}`（赛恩束缚和挣脱）。帮助函数返回未盖序号的事件，放进当前 tick 的事件列表，由 `stampCombatStep` 统一盖号。
+- `spawnCombatUnit` 只把已算好属性的单位追加到 `state.units` 末尾，并检查 id 不重复、格子在棋盘内且没有存活单位。回放按这个顺序比对，插到中间会抛 `replay-divergence`。
+- 回放每 tick 自动比对单位名单，生成 `unitEntered{unit}` 和 `unitLeft{unitId}`，`applyCombatReplayTick` 接受新单位，不用等关键帧。
+- `eliminationResult` 仍按存活单位判胜负。火药桶这类不该撑住阵营的召唤物，Codex 需要在判定里排除或战斗结束前移除。
+- High Roller 掷到金币时，Codex 在战斗结算处用 `grantMechanicGold`（source `high-roller`，receiptId 带 combatId 和施法序号）发放，保证重复 step 不重发。
+
+### 7 新失败原因
+
+`MatchFailure += 'unit-not-sellable' | 'item-restricted' | 'choice-not-skippable' | 'duplicate-mechanic-receipt' | 'invalid-mechanic-state'`；`EquipmentFailure += 'item-restricted'`（界面已有中文）。

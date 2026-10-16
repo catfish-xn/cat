@@ -152,7 +152,8 @@ export function sellSharedUnit(pool:SharedPoolState,state:MatchState,unitId:stri
     const unit=state.preparation.units.find(u=>u.id===unitId);
     requirePool(unit,'unknown-unit');requirePool(unit.team==='player','enemy-unit');
     // Returning the sold copies precedes automatic pending claims in the same private transaction.
-    returnHolding(draft,state.sharedPool!.seatId,unitId);
+    // G2-3 summons never hold a pool copy.
+    if(!UNIT_DEFINITIONS[unit.definitionId]?.summon) returnHolding(draft,state.sharedPool!.seatId,unitId);
     return sellUnit(state,unitId,policy);
   },unitId);
 }

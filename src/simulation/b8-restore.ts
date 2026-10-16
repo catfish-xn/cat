@@ -87,7 +87,7 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
   }
   // The same structural receipt validator also supplies the provenance birth proof.
   // Keep the frozen-slot authentication here; do not maintain a second receipt schema.
-  validateResourceReceipts({scheduleReceipts:state.scheduleReceipts,lootReceipts:loot.receipts,throughRoundOrdinal:state.round});
+  validateResourceReceipts({scheduleReceipts:state.scheduleReceipts,lootReceipts:loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,throughRoundOrdinal:state.round});
   const receipts = new Map<string,LootReceipt>();
   let receiptRound = 0;
   for (const receipt of loot.receipts) {
@@ -156,7 +156,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   validateConsumableState(state);
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
-  const context: ResourceProvenanceContext = { carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,
+  const context: ResourceProvenanceContext = { carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);

@@ -28,7 +28,8 @@ export interface LocalRoomOptions {
   readonly faultAtRound: number | null;
   /** `two-sided` (default): real PvP through T2/T3. `placeholder` is the B1 test path (`?pvp=placeholder`). */
   readonly pvpMode: PvpMode;
-  /** Debug only (`?poolCaps=irelia:8,darius:1`): a scarce shared pool so empty shop slots and pool-empty rerolls can be seen; null = official sizes. */
+  /** Debug only (`?poolCaps=irelia:8,darius:1`): a scarce shared pool so empty shop slots and pool-empty rerolls can be seen
+   * (the room tops up the random opening heroes, `withOpeningCopies`); null = official sizes. */
   readonly poolCapacities?: Readonly<Record<string, number>> | null;
   /** Injectable for tests; the browser uses the real clock. */
   readonly clock?: Clock;

@@ -1649,3 +1649,26 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 - rules=`s13-opening-random-1cost-v1`，content=`s13-14.24b-opening-random-1cost-v1`；CONTENT_DIGEST=`fnv1a32-utf16:299ec0d0`，LOOT_REPLAY_DIGEST=`fnv1a32-utf16:b9250813`。schema7/save3/replay3/commandProtocol3/50ms/lcg32-v1 保持。旧存档、对局快照和旧回放身份作废，严格拒绝，不迁移；活动局结束后切换。
 
 执行者测试与迁移字节证据见 [随机起手交付](OPENING_RANDOM_1COST_RELEASE.md)。
+
+## 25. G2-3 联机通用接口（2026-10-16）
+
+规则侧接口见 MATCH_CONTRACT「G2-3 机制通用接口」。本节写联机视图、指令和回放线格式。NET_PROTOCOL、schema、save、replay、commandProtocol 版本号都不变；所有新字段只在 G2-3 机制写入后出现，现有对局的线数据逐字节不变。
+
+**私有视图（toPrivateSeatView）**
+- `seatMechanics?: {version, seat, hidden:{}, receipts}`：整个本席机制容器原样进入视图，不用逐个字段加白名单。`hidden` 永远发空对象。键名与 MatchState 相同，`toDisplayMatch` 直接透传，客户端选择器用 `readSeatMechanic(display, key)` 读。
+- `pendingChoice.payload?`：锻造器、黑市、军械库三种选择的载荷原样发送（候选、价格、可否跳过、跳过收益、超时选项）。
+- `preparation.units[].form?`：形态英雄在棋盘上时给出当前站位对应的形态；备战席和普通英雄没有这个字段。
+
+**指令**：不新增 ClientCommand。三种新选择都用现有 `choose`，黑市跳过是 `definitionId:'@skip'`。房间阶段门、超时（`timeoutChoice` → `forfeitPendingChoice`）、机器人（`decideBotAction`）都已覆盖新 kind，服务器不用改分派。新的失败原因（`unit-not-sellable`、`item-restricted`、`choice-not-skippable` 等）走现有失败回执。
+
+**推送事件**：`PUSHED_EVENT_TYPES` 加入 `mechanicGranted`（带收据，用于开箱结果、金币来源、军械库购买提示）和 `seatMechanicChanged`（带 key）。只推给本席。
+
+**战斗回放线格式**（`CombatViewEvent` 新增）
+- 动画事件：`unitSpawned{unitId, definitionId, team, cell, sourceId}`、`unitRemoved{unitId, reason}`、`castOutcome{unitId, abilityKey, outcome, subOutcomes}`、`bindingChanged{unitId, bound, reason}`。
+- 状态事件：`unitEntered{unit}`（完整单位视图）、`unitLeft{unitId}`，由回放按 tick 比对单位名单自动生成，排在该 tick 的 `unitUpdated` 之前。
+- 单位视图新增可选字段 `form`。
+- 敌方视角镜像：`mirrorCombatReplay` 翻转 `unitEntered.unit` 的格子和阵营，以及 `unitSpawned` 的 `cell` 和 `team`。
+
+**共享卡池**：机制发英雄（征服者宝箱等）借用 PvE 掉落的预留路径，伪掉落 id 为 `["mechanic",receiptId]`；`reconcileHoldings` 认来源 `mechanic` 的出生事实。池空时按英雄费用折成金币。召唤物（`UnitDefinition.summon`）不进卡池，守恒校验的棋盘名单跳过它们。
+
+**本次服务器目录改动**：`src/server/room/projection.ts` 的镜像分支和推送白名单，此外不变。界面仍需按 g2-3-ui-server-needs 盘点逐项接显示；PR #132 的选择弹窗兜底可以用 `payload.skippable` 打开"跳过"按钮。
