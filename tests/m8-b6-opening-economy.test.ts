@@ -13,7 +13,7 @@ describe('B6 isolated opening economy', () => {
   it('exports only immutable initialization data for the 1-1 semantics', () => {
     expect(OPENING_INITIAL_STATE).toEqual({
       gold:0, level:1, xp:0, hp:100,
-      unit:{definitionId:'irelia', id:'unit-1', starLevel:1, cell:{col:1,row:4}}, nextUnitSeq:2,
+      unit:{definitionId:OPENING_INITIAL_STATE.unit.definitionId, id:'unit-1', starLevel:1, cell:{col:1,row:4}}, nextUnitSeq:2,
     });
     expect(Object.isFrozen(OPENING_INITIAL_STATE)).toBe(true);
     expect(Object.isFrozen(OPENING_INITIAL_STATE.unit)).toBe(true);

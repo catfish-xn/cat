@@ -1,0 +1,2316 @@
+{
+  "baselineCommit": "94eecbcbfbce72d4740923b8c793c66c483bfd51",
+  "method": "Both engines execute original public helpers. No state fields are patched. Every captured state strictly restores as text and object.",
+  "cases": [
+    {
+      "name": "transfer",
+      "preparation": {
+        "previousBytes": 86265,
+        "currentBytes": 86589,
+        "previousSha256": "138b75718d8aacd44bc741a5e7d4a161042049eecddd3b4862e9068d0a6fbdb1",
+        "currentSha256": "16ab6a6d4d8bcdb74f90439ff4360ecd3f5c95c2e892525df556f6c5d2b49077",
+        "byteEqual": false,
+        "firstByteOffset": 109
+      },
+      "events": {
+        "previousBytes": 276073,
+        "currentBytes": 225188,
+        "previousSha256": "270c6ef17d015d1061059670f2c4b783a74299fdb6ccb5b583f2672f26e4b01e",
+        "currentSha256": "f6a82e18a450674671cd10ab8adc0704444cd1b2114091f64a87a516c5592dda",
+        "byteEqual": false,
+        "firstByteOffset": 230
+      },
+      "final": {
+        "previousBytes": 237278,
+        "currentBytes": 236354,
+        "previousSha256": "1485b45910fba7106ee3eb8120a0fa2845e1569893d78e21b617490c721f2fa3",
+        "currentSha256": "5bf80a9ef0d8b0bc0db485a6824b631b1d21b4a8648dd5c930a12817851c0ea5",
+        "byteEqual": false,
+        "firstByteOffset": 109
+      },
+      "previous": {
+        "gold": 18,
+        "hp": 58,
+        "nextUnitSerial": 27,
+        "units": [
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+            "hero": "pve-razorbeak-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-11",
+            "hero": "urgot",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-14",
+            "hero": "corki",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-16",
+            "hero": "corki",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 0
+            }
+          },
+          {
+            "id": "unit-17",
+            "hero": "leona",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-20",
+            "hero": "loris",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-21",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 4
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "urgot",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-25",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-7",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-8",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-9",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            }
+          }
+        ],
+        "growth": [],
+        "deathTicks": [
+          69,
+          82,
+          94,
+          109,
+          123,
+          137
+        ],
+        "growthEvents": [],
+        "upgrades": [
+          {
+            "type": "unitUpgraded",
+            "survivorId": "unit-9",
+            "consumedIds": [
+              "unit-27",
+              "unit-7"
+            ],
+            "definitionId": "ezreal",
+            "fromStar": 1,
+            "toStar": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            },
+            "domain": "match",
+            "eventSeq": 114
+          }
+        ]
+      },
+      "current": {
+        "gold": 18,
+        "hp": 89,
+        "nextUnitSerial": 28,
+        "units": [
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+            "hero": "pve-razorbeak-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-10",
+            "hero": "urgot",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-13",
+            "hero": "corki",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-16",
+            "hero": "leona",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-17",
+            "hero": "loris",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-20",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "urgot",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 3
+            }
+          },
+          {
+            "id": "unit-26",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-6",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-7",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-8",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            }
+          }
+        ],
+        "growth": [],
+        "deathTicks": [
+          69,
+          69,
+          76,
+          83,
+          109,
+          110
+        ],
+        "growthEvents": [],
+        "upgrades": [
+          {
+            "type": "unitUpgraded",
+            "survivorId": "unit-8",
+            "consumedIds": [
+              "unit-28",
+              "unit-6"
+            ],
+            "definitionId": "ezreal",
+            "fromStar": 1,
+            "toStar": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            },
+            "domain": "match",
+            "eventSeq": 114
+          }
+        ]
+      },
+      "strictTextAndObjectRestore": true
+    },
+    {
+      "name": "terminal",
+      "preparation": {
+        "previousBytes": 65361,
+        "currentBytes": 65049,
+        "previousSha256": "1411ae8e1fb00eb9c598822ecaa09fd3578594b63b8c053838c03a475d7277d9",
+        "currentSha256": "c641c17e3cefc2b5e5be53192f338a1b6afb34a36933fffb89544c9d6f643d03",
+        "byteEqual": false,
+        "firstByteOffset": 110
+      },
+      "events": {
+        "previousBytes": 1098,
+        "currentBytes": 1098,
+        "previousSha256": "55ce1e6ac2bc446e99e39c7ca692baef799a81af77b48acdf62aff394c91b2cc",
+        "currentSha256": "55ce1e6ac2bc446e99e39c7ca692baef799a81af77b48acdf62aff394c91b2cc",
+        "byteEqual": true,
+        "firstByteOffset": null
+      },
+      "final": {
+        "previousBytes": 100282,
+        "currentBytes": 99925,
+        "previousSha256": "e9533c4ac73142298985f3cc848a3d902af66c5ac46f40e9adb9ce95bed73762",
+        "currentSha256": "fd186d305baa9d95d5f6b47e29f1fab08a97bdcbb50eb88a9f346bf714b6a6b9",
+        "byteEqual": false,
+        "firstByteOffset": 110
+      },
+      "previous": {
+        "gold": 27,
+        "hp": 3,
+        "nextUnitSerial": 28,
+        "units": [
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+            "hero": "pve-razorbeak-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 0
+            }
+          },
+          {
+            "id": "unit-10",
+            "hero": "loris",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-13",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 3
+            }
+          },
+          {
+            "id": "unit-14",
+            "hero": "leona",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 4
+            }
+          },
+          {
+            "id": "unit-15",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-21",
+            "hero": "ezreal",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 6
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "leona",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 1
+            }
+          },
+          {
+            "id": "unit-25",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 8
+            }
+          },
+          {
+            "id": "unit-7",
+            "hero": "urgot",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 7
+            }
+          }
+        ],
+        "growth": [
+          {
+            "unitId": "unit-13",
+            "attackDamageBps": 125
+          }
+        ],
+        "deathTicks": [],
+        "growthEvents": [],
+        "upgrades": []
+      },
+      "current": {
+        "gold": 27,
+        "hp": 3,
+        "nextUnitSerial": 27,
+        "units": [
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+            "hero": "pve-razorbeak-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 0
+            }
+          },
+          {
+            "id": "unit-12",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 1
+            }
+          },
+          {
+            "id": "unit-13",
+            "hero": "leona",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 3
+            }
+          },
+          {
+            "id": "unit-14",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 4
+            }
+          },
+          {
+            "id": "unit-20",
+            "hero": "ezreal",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-21",
+            "hero": "leona",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-24",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 7
+            }
+          },
+          {
+            "id": "unit-6",
+            "hero": "loris",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 6
+            }
+          },
+          {
+            "id": "unit-7",
+            "hero": "urgot",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 8
+            }
+          }
+        ],
+        "growth": [],
+        "deathTicks": [],
+        "growthEvents": [],
+        "upgrades": []
+      },
+      "strictTextAndObjectRestore": true
+    },
+    {
+      "name": "reveal",
+      "preparation": {
+        "previousBytes": 82782,
+        "currentBytes": 82596,
+        "previousSha256": "1b17f3361d65cf4b4c03c83ce7c9c0a63051faebfc0cdeb19fb6a619c3b24e5e",
+        "currentSha256": "987153c2a75b266dddefff4c49c386038f3d375f5f6b7b48982358edfff5d5d6",
+        "byteEqual": false,
+        "firstByteOffset": 115
+      },
+      "events": {
+        "previousBytes": 778428,
+        "currentBytes": 726721,
+        "previousSha256": "c26d9efc3a32f321dde25f906ea985db266cdf0b0506b4764af1a2aa4d03cbbb",
+        "currentSha256": "b6e0882a01cad761b69980f388877aac44c66fcf837543285ca218b412958543",
+        "byteEqual": false,
+        "firstByteOffset": 181
+      },
+      "final": {
+        "previousBytes": 237469,
+        "currentBytes": 237264,
+        "previousSha256": "7d42450979aaa9e0c14a46db1aa02e3195a7058858756784dacd19e461ab277b",
+        "currentSha256": "772d1991926aaac90848d3f40de32600de4b24f1574a7bbef97120affb8edca9",
+        "byteEqual": false,
+        "firstByteOffset": 115
+      },
+      "previous": {
+        "gold": 28,
+        "hp": 95,
+        "nextUnitSerial": 29,
+        "units": [
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-12",
+            "hero": "lux",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-15",
+            "hero": "loris",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-19",
+            "hero": "zoe",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "nami",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-25",
+            "hero": "leona",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-3",
+            "hero": "zyra",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-7",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+            "hero": "pve-razorbeak-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          }
+        ],
+        "growth": [],
+        "deathTicks": [
+          48,
+          48,
+          76,
+          101,
+          102,
+          112
+        ],
+        "growthEvents": [],
+        "upgrades": []
+      },
+      "current": {
+        "gold": 31,
+        "hp": 100,
+        "nextUnitSerial": 28,
+        "units": [
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-14",
+            "hero": "loris",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-17",
+            "hero": "zoe",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-20",
+            "hero": "nami",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-24",
+            "hero": "leona",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-4",
+            "hero": "lux",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-7",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-9",
+            "hero": "zyra",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+            "hero": "pve-razorbeak-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",
+            "hero": "pve-razorbeak-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          }
+        ],
+        "growth": [],
+        "deathTicks": [
+          48,
+          48,
+          71,
+          89,
+          94,
+          102
+        ],
+        "growthEvents": [],
+        "upgrades": []
+      },
+      "strictTextAndObjectRestore": true
+    },
+    {
+      "name": "capacity",
+      "preparation": {
+        "previousBytes": 65222,
+        "currentBytes": 65199,
+        "previousSha256": "e0c80d585a794b1323b0a9c7287aa5c41b580ad30f4da33211e223fb5a0514b6",
+        "currentSha256": "2d8620ad6a93823bbdb2509de2c1865814b2c502074fb39c0f52480849d7fb76",
+        "byteEqual": false,
+        "firstByteOffset": 692
+      },
+      "events": {
+        "previousBytes": 116784,
+        "currentBytes": 97941,
+        "previousSha256": "6b25737abf501ec802c294fcae232406c27993124cdc4742babb859dc84da9ac",
+        "currentSha256": "247e71b3cb9e7d857f7e85743be174a5b166732f513cdd31b8d9cccc34629d98",
+        "byteEqual": false,
+        "firstByteOffset": 117
+      },
+      "final": {
+        "previousBytes": 139786,
+        "currentBytes": 139802,
+        "previousSha256": "18c3e3172a4c5e944b3cc93b0584d5459ef7fc12ff413e649252312f1289bc64",
+        "currentSha256": "35b81593ee3a206a16da349149276cb2ef7d3693434e9f04e257b8c8b47feed2",
+        "byteEqual": false,
+        "firstByteOffset": 543
+      },
+      "previous": {
+        "gold": 21,
+        "hp": 55,
+        "nextUnitSerial": 28,
+        "units": [
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w00\"]",
+            "hero": "pve-wolf-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w01\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w02\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w03\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w04\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-10",
+            "hero": "ezreal",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-14",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-16",
+            "hero": "urgot",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 4
+            }
+          },
+          {
+            "id": "unit-17",
+            "hero": "tristana",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-20",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 1
+            }
+          },
+          {
+            "id": "unit-21",
+            "hero": "urgot",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 0
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "leona",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-23",
+            "hero": "leona",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 3
+            }
+          },
+          {
+            "id": "unit-24",
+            "hero": "blitzcrank",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-25",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 6
+            }
+          },
+          {
+            "id": "unit-26",
+            "hero": "blitzcrank",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 7
+            }
+          },
+          {
+            "id": "unit-27",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 8
+            }
+          },
+          {
+            "id": "unit-3",
+            "hero": "maddie",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-9",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 4
+              }
+            }
+          }
+        ],
+        "growth": [],
+        "deathTicks": [
+          74,
+          75,
+          97,
+          106,
+          121
+        ],
+        "growthEvents": [
+          {
+            "type": "growth",
+            "tick": 74,
+            "unitId": "unit-17",
+            "amountBps": 125,
+            "totalBps": 125,
+            "domain": "combat",
+            "combatId": "round-17",
+            "eventSeq": 118
+          }
+        ],
+        "upgrades": []
+      },
+      "current": {
+        "gold": 18,
+        "hp": 62,
+        "nextUnitSerial": 27,
+        "units": [
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w00\"]",
+            "hero": "pve-wolf-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w01\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w02\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w03\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w04\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-13",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-15",
+            "hero": "urgot",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-16",
+            "hero": "tristana",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-19",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 0
+            }
+          },
+          {
+            "id": "unit-2",
+            "hero": "maddie",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 1
+            }
+          },
+          {
+            "id": "unit-20",
+            "hero": "rell",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-21",
+            "hero": "irelia",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 3
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "morgana",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 4
+            }
+          },
+          {
+            "id": "unit-23",
+            "hero": "akali",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-24",
+            "hero": "ziggs",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 6
+            }
+          },
+          {
+            "id": "unit-25",
+            "hero": "twistedfate",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 7
+            }
+          },
+          {
+            "id": "unit-26",
+            "hero": "zyra",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 8
+            }
+          },
+          {
+            "id": "unit-8",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-9",
+            "hero": "ezreal",
+            "star": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            }
+          }
+        ],
+        "growth": [
+          {
+            "unitId": "unit-16",
+            "attackDamageBps": 250
+          }
+        ],
+        "deathTicks": [
+          66,
+          74,
+          75,
+          97,
+          110
+        ],
+        "growthEvents": [
+          {
+            "type": "growth",
+            "tick": 74,
+            "unitId": "unit-16",
+            "amountBps": 125,
+            "totalBps": 125,
+            "domain": "combat",
+            "combatId": "round-17",
+            "eventSeq": 125
+          }
+        ],
+        "upgrades": []
+      },
+      "strictTextAndObjectRestore": true
+    },
+    {
+      "name": "growth",
+      "preparation": {
+        "previousBytes": 64596,
+        "currentBytes": 64476,
+        "previousSha256": "90c1b43a301ef635168b8c63cad96946a1a6a1f32ffea956a659e4f8dbed4728",
+        "currentSha256": "52410192dcdf192ee3a693ef66d4fa43592bf98ac23ddf635c2337161b6e78f1",
+        "byteEqual": false,
+        "firstByteOffset": 703
+      },
+      "events": {
+        "previousBytes": 112194,
+        "currentBytes": 133704,
+        "previousSha256": "6b7d1ff63b062510082b0ae0c20243b7a1074e194f3ef13cddc95d585922df6a",
+        "currentSha256": "d9745289985d395596923a9eaffcbf8b1019499246b2979fd3a1d64330b56fe0",
+        "byteEqual": false,
+        "firstByteOffset": 10
+      },
+      "final": {
+        "previousBytes": 122117,
+        "currentBytes": 114875,
+        "previousSha256": "c2a47e3767fa297de650add988446379c2048a712dd344bfd86c63a9d038c3f1",
+        "currentSha256": "662625df0202153318505cf3e9663694151fa5fd092e1e015480f6d6ac82f314",
+        "byteEqual": false,
+        "firstByteOffset": 552
+      },
+      "previous": {
+        "gold": 32,
+        "hp": 81,
+        "nextUnitSerial": 23,
+        "units": [
+          {
+            "id": "unit-1",
+            "hero": "irelia",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 0
+            }
+          },
+          {
+            "id": "unit-10",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-12",
+            "hero": "leona",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 6
+            }
+          },
+          {
+            "id": "unit-13",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 3
+            }
+          },
+          {
+            "id": "unit-14",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 4
+              }
+            }
+          },
+          {
+            "id": "unit-15",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-18",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 7
+            }
+          },
+          {
+            "id": "unit-19",
+            "hero": "maddie",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-21",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 1
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 4
+            }
+          },
+          {
+            "id": "unit-5",
+            "hero": "urgot",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 8
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w00\"]",
+            "hero": "pve-wolf-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w01\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w02\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w03\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w04\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          }
+        ],
+        "growth": [
+          {
+            "unitId": "unit-14",
+            "attackDamageBps": 500
+          },
+          {
+            "unitId": "unit-15",
+            "attackDamageBps": 250
+          }
+        ],
+        "deathTicks": [
+          71,
+          115,
+          197,
+          198,
+          291
+        ],
+        "growthEvents": [
+          {
+            "type": "growth",
+            "tick": 71,
+            "unitId": "unit-14",
+            "amountBps": 125,
+            "totalBps": 125,
+            "domain": "combat",
+            "combatId": "round-17",
+            "eventSeq": 76
+          },
+          {
+            "type": "growth",
+            "tick": 198,
+            "unitId": "unit-14",
+            "amountBps": 125,
+            "totalBps": 250,
+            "domain": "combat",
+            "combatId": "round-17",
+            "eventSeq": 182
+          }
+        ],
+        "upgrades": [
+          {
+            "type": "unitUpgraded",
+            "survivorId": "unit-14",
+            "consumedIds": [
+              "unit-15",
+              "unit-23"
+            ],
+            "definitionId": "tristana",
+            "fromStar": 1,
+            "toStar": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 0,
+                "row": 4
+              }
+            },
+            "domain": "match",
+            "eventSeq": 64
+          }
+        ]
+      },
+      "current": {
+        "gold": 35,
+        "hp": 69,
+        "nextUnitSerial": 23,
+        "units": [
+          {
+            "id": "unit-10",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 5
+            }
+          },
+          {
+            "id": "unit-12",
+            "hero": "leona",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 6
+            }
+          },
+          {
+            "id": "unit-13",
+            "hero": "loris",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 3
+            }
+          },
+          {
+            "id": "unit-14",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 6,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-15",
+            "hero": "tristana",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            }
+          },
+          {
+            "id": "unit-18",
+            "hero": "rell",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 8
+            }
+          },
+          {
+            "id": "unit-19",
+            "hero": "maddie",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 2
+            }
+          },
+          {
+            "id": "unit-2",
+            "hero": "maddie",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 7
+            }
+          },
+          {
+            "id": "unit-21",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 1
+            }
+          },
+          {
+            "id": "unit-22",
+            "hero": "ezreal",
+            "star": 1,
+            "location": {
+              "kind": "bench",
+              "slot": 4
+            }
+          },
+          {
+            "id": "unit-5",
+            "hero": "urgot",
+            "star": 2,
+            "location": {
+              "kind": "bench",
+              "slot": 0
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w00\"]",
+            "hero": "pve-wolf-large",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 2
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w01\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 1,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w02\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 2,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w03\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 4,
+                "row": 3
+              }
+            }
+          },
+          {
+            "id": "[\"pve\",\"3-7\",\"wolves-v1\",\"w04\"]",
+            "hero": "pve-wolf-small",
+            "star": 1,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 5,
+                "row": 3
+              }
+            }
+          }
+        ],
+        "growth": [
+          {
+            "unitId": "unit-14",
+            "attackDamageBps": 125
+          },
+          {
+            "unitId": "unit-15",
+            "attackDamageBps": 125
+          }
+        ],
+        "deathTicks": [
+          103,
+          213,
+          233
+        ],
+        "growthEvents": [
+          {
+            "type": "growth",
+            "tick": 213,
+            "unitId": "unit-15",
+            "amountBps": 125,
+            "totalBps": 125,
+            "domain": "combat",
+            "combatId": "round-17",
+            "eventSeq": 190
+          }
+        ],
+        "upgrades": [
+          {
+            "type": "unitUpgraded",
+            "survivorId": "unit-15",
+            "consumedIds": [
+              "unit-14",
+              "unit-23"
+            ],
+            "definitionId": "tristana",
+            "fromStar": 1,
+            "toStar": 2,
+            "location": {
+              "kind": "board",
+              "cell": {
+                "col": 3,
+                "row": 7
+              }
+            },
+            "domain": "match",
+            "eventSeq": 65
+          }
+        ]
+      },
+      "strictTextAndObjectRestore": true
+    }
+  ],
+  "sources": [
+    {
+      "file": "tests/fixtures/t13-loot-public.ts",
+      "previousBytes": 5148,
+      "currentBytes": 5614,
+      "previousSha256": "2a3065c156f2b797566d7c96d11e7f136377e285698e566400f35fb67a883501",
+      "currentSha256": "cdf308228c524d8ca315aa7d6ecd59c1180b69aa4ba4fdc9bb2ea169f324e880",
+      "byteEqual": false,
+      "firstByteOffset": 1157
+    },
+    {
+      "file": "tests/m8-b8-live-growth.test.ts",
+      "previousBytes": 15497,
+      "currentBytes": 15530,
+      "previousSha256": "a8901d12a394cfefb39d4742a246e3149a4c8c72a84f17d2632a8ed95f9f4ec6",
+      "currentSha256": "3d5186b3fe305b4b77729a145d014446bdd6aa41252d46f10768f173ebe1f692",
+      "byteEqual": false,
+      "firstByteOffset": 2673
+    },
+    {
+      "file": "tests/m8-b8-live-capacity.test.ts",
+      "previousBytes": 8226,
+      "currentBytes": 8220,
+      "previousSha256": "6ad3059f153eb3959a3f199a9e9b4f1d52c9b2a5f632f3816ce5a15d3c6e6adc",
+      "currentSha256": "5456fdf4b6120e7203420164fedcfa2825a6377b0805f6b209ffd0b5ade52c80",
+      "byteEqual": false,
+      "firstByteOffset": 1551
+    },
+    {
+      "file": "tests/m8-b8-live-transfer.test.ts",
+      "previousBytes": 10448,
+      "currentBytes": 10441,
+      "previousSha256": "26189d86fed44cf1a07aacdd02e725bd88505e2f51be84d74c7530d5d2813c85",
+      "currentSha256": "4ff2fd9cabf32d7f945b1cc0327d88322865c606b95dd56f5072eeb862f7d520",
+      "byteEqual": false,
+      "firstByteOffset": 431
+    },
+    {
+      "file": "tests/m8-b8-live-reveal.test.ts",
+      "previousBytes": 8121,
+      "currentBytes": 8185,
+      "previousSha256": "8964fb2d3219ca2a78aebfd0f7d7e9016540b5aa55815190e5f0e93ce4125cbf",
+      "currentSha256": "8b4813a1cb9df54ea9abf8b2b604f1dff89e9530dc5fb4ff68c7d33d1ffbceb2",
+      "byteEqual": false,
+      "firstByteOffset": 5245
+    }
+  ]
+}

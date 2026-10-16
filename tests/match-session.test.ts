@@ -10,7 +10,7 @@ import { nextRandom } from '../src/simulation/rng';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 
 function preparation(): MatchState {
-  return deployMatchUnit(readyMatch(6240), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
+  return deployMatchUnit(readyMatch(0), 'unit-1', { kind: 'board', cell: { col: 2, row: 7 } }).state;
 }
 const players = (state: MatchState) => state.preparation.units.filter(unit => unit.team === 'player');
 // Independent M8B_LOOT §2 opening transcription: no receipt or unit fields copied from the result.

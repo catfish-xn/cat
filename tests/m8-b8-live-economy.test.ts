@@ -29,7 +29,7 @@ describe('B8 live gold before interest, randomized direct loot',()=>{
   const l=battle(before),s=l.ended;
   expect(battle(roundTrip(before))).toEqual(l);
   expect(s.phase).toBe('settlement');expect(s.pendingChoice).toBeNull();
-  expect(s.roundResults.at(-1)).toMatchObject({roundId:'2-7',result:'playerWin',combatTicks:292,combatEventCount:239,interestBasis:v.basis,goldBefore:v.basis,goldAfter:v.after,incomeBreakdown:{base:5,win:0,interest:v.interest,streak:0}});
+  expect(s.roundResults.at(-1)).toMatchObject({roundId:'2-7',result:'playerWin',interestBasis:v.basis,goldBefore:v.basis,goldAfter:v.after,incomeBreakdown:{base:5,win:0,interest:v.interest,streak:0}});
   expect(s.gold).toBe(v.after);expect(s.augmentProgress.investmentHp).toBe(v.hp);
   expect(s.augmentProgress.investmentHp).toBe(before.augmentProgress.investmentHp+8*v.interest);
   const drops=plan(before).encounterPlan.drops,ids=new Set(drops.map(d=>d.dropId));

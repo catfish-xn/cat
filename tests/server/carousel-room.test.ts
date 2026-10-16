@@ -1,3 +1,4 @@
+import { selectOpeningUnit } from '../../src/simulation/opening-unit';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assertSharedPoolConservation, type SharedPoolState } from '../../src/server-entry';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
@@ -77,7 +78,7 @@ class RecordingResolver extends TwoSidedBattleResolver {
 }
 
 describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () => {
-  it('opens like a plain room: the free Irelia, the opening economy and the first shop; no carousel at the opening', () => {
+  it('opens like a plain room: the random one-cost unit, the opening economy and the first shop; no carousel at the opening', () => {
     const { room } = makeRoom(new DamageResolver(() => 0), { carousel: rules });
     const { room: plain } = makeRoom(new DamageResolver(() => 0));
     // createCarouselMatch → initializeSharedSeat → refreshSharedShops: the same pool and room rng as without the carousel.
@@ -86,7 +87,7 @@ describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () =
     for (const [index, seat] of room.state.seats.entries()) {
       const other = plain.state.seats[index]!.match;
       expect(seat.match.carousel).toEqual({ receipts: [], heldCarouselUnits: [], pendingUnits: [], preparationReceipts: [] });
-      expect(unitsOf(room, seat.seatId).map(unit => [unit.definitionId, unit.starLevel, unit.location.kind])).toEqual([['irelia', 1, 'board']]);
+      expect(unitsOf(room, seat.seatId).map(unit => [unit.definitionId, unit.starLevel, unit.location.kind])).toEqual([[selectOpeningUnit(room.state.pool.seed,seat.seatId), 1, 'board']]);
       for (const key of ['round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp', 'items', 'shop', 'preparation'] as const) expect(seat.match[key], key).toEqual(other[key]);
       const view = toSeatPrivateView(seat.match);
       expect(view.heldCarouselUnits).toEqual([]);

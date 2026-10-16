@@ -10,9 +10,10 @@ function accepted(result: MatchCommandResult): MatchState {
   return result.state;
 }
 
-// Seed 6240 independently yields Maddie then Lux; the original holders keep their identities.
+// Seed 145424 independently selects Irelia and retains the cloak/rod/gloves/bow/sword component vector.
+// Fixed opening rewards provide Maddie and Lux; no roster or raw state is patched.
 import { publicEquipmentPreparation as acquire } from './b8-public-equipment';
-const equipmentPreparation=(components:readonly string[])=>acquire(components,{seed:6240});
+const equipmentPreparation=(components:readonly string[])=>acquire(components,{seed:145424});
 
 // Cache the public route + item compilation. Each caller owns its mutable copy;
 // negative/continuation tests cannot contaminate later test fixtures.

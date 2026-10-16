@@ -3,7 +3,7 @@ import {equipItem,startMatchCombat,stepMatch,useConsumable,serializeMatch,restor
 import {accepted,transferPreparation} from './fixtures/t13-loot-public';
 it('T12 offline loot upgrade migrates latest equipment and restores overflow of a frozen donor item',async()=>{
   let state=await transferPreparation();
-  const survivor='unit-9',donor='unit-7',tg=state.items.find(i=>i.definitionId==='thiefs-gloves')!,vest=state.items.find(i=>i.definitionId==='vest')!;
+  const survivor='unit-8',donor='unit-6',tg=state.items.find(i=>i.definitionId==='thiefs-gloves')!,vest=state.items.find(i=>i.definitionId==='vest')!;
   state=accepted(useConsumable(state,state.consumables.find(c=>c.definitionId==='magnetic-remover')!.consumableId,{kind:'unit',unitId:donor}));
   state=accepted(equipItem(state,vest.id,donor,0));
   state=accepted(startMatchCombat(state));
@@ -19,5 +19,6 @@ it('T12 offline loot upgrade migrates latest equipment and restores overflow of 
   Object.assign(forged.items.find(i=>i.definitionId==='thiefs-gloves')!,{location:{kind:'inventory'}});
   Object.assign(forged,{temporaryEquipment:[]});
   expect(()=>restoreMatch(forged)).toThrow(/finished resource projection/);
-// T13 full public acquisition + every-tick resumption measured 5.45s on one worker.
-}, 15000);
+// Random-opening public acquisition + every-tick resumption takes about 9s alone;
+// allow the same four-worker contention budget as other full public routes.
+}, 60000);

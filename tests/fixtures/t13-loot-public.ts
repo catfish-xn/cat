@@ -14,7 +14,15 @@ export function reserveExcept(initial: MatchState, keep: readonly string[]): Mat
   for (const u of players(s).filter(u => u.location.kind === 'board' && !keep.includes(u.id))) {
     const used = new Set(bench(s).map(u => u.location.kind === 'bench' ? u.location.slot : -1));
     const slot = Array.from({length:9}, (_,i)=>i).find(i=>!used.has(i));
-    if (slot === undefined) throw Error('T13 public bench full');
+    if (slot === undefined) {
+      const excess=bench(s).find(unit=>!keep.includes(unit.id));
+      if(!excess)throw Error('T13 public bench full');
+      s=accepted(api.sellUnit(s,excess.id));
+      const location=excess.location;
+      if(location.kind!=='bench')throw Error('Expected bench sale');
+      s=accepted(api.deployMatchUnit(s,u.id,{kind:'bench',slot:location.slot}));
+      continue;
+    }
     s = accepted(api.deployMatchUnit(s,u.id,{kind:'bench',slot}));
   }
   return s;
@@ -72,11 +80,11 @@ export async function terminalPreparation(keep:string|null,col=1,row=7) {
   if(!prefixes.has(key)) {
     const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
     const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:['unit-10','unit-15']});
+    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:['unit-6','unit-14']});
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }
   let s=structuredClone(prefixes.get(key)!);
-  if(keep)s=accepted(api.deployMatchUnit(s,keep,{kind:'board',cell:{col,row}}));
+  if(keep) {const unit=players(s).find(u=>u.id===keep||u.definitionId===keep);if(!unit)throw Error(`Missing terminal target ${keep}`);s=accepted(api.deployMatchUnit(s,unit.id,{kind:'board',cell:{col,row}}));}
   return fillBench(s,['ezreal']);
 }

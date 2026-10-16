@@ -1625,3 +1625,26 @@ P4-A：现表符合 14.24b，68 为 16.1 值，不开 10 级；阈值 2/2/6/10/2
 - resolve 失败枚举 invalid-seat-state；sell 为 unknown-unit（含非准备期/锁定/已售）或 invalid-seat-state（池/席位损坏）；create/pick/grant 等 CarouselFailure 枚举不变，1-1 为 invalid-round。失败原对象无资源/RNG 消费。
 
 服务器与界面配套接线需随本规则 PR 叠加验收，单独不发布。需更新 tests/server/carousel-room 的开局/时序用例和 e2e/p7-carousel 的 1-1 段；规则 PR 不修改这些目录。CONTENT bb66f4f8，LOOT_REPLAY 028e5593；旧快照不静默迁移。
+
+
+## 24. 随机一费起手（2026-10-16 用户决定，覆盖旧固定 Irelia 条款）
+
+公共导出签名保持兼容：
+
+```ts
+createMatch(seed?: number, loot?: LootInitialization): MatchState
+createCarouselMatch(seed?: number): MatchState
+initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, seatIndex: number): SharedPoolResult
+```
+
+服务器继续只调用公共导出。先 `createMatch(seatSeed,{mode:'shared-deferred'})`（或选秀模式的 `createCarouselMatch(seatSeed)`），再 `initializeSharedSeat(pool,state,seatId,index)`，八席导入完成后才刷新共享商店。签名无变更，Claude 无需自行抽样或改调用参数。`initializeSharedSeat` 校验未操作初始状态后，以 **pool.seed + seatId** 生成最终起手，原子替换 unit-1 与 opening 来源事实，并扣池一张；失败保持原 pool/state，无 RNG 或资源消费。既有失败枚举不变，包括 `invalid-seat`、`invalid-seat-state`、`pool-empty`、`already-generated`。不得因小型自定义卡池缺卡而改抽其他英雄。
+
+规则选择器 `src/simulation/opening-unit.ts` 导出 `selectOpeningUnit(seed: number, seatId?: string): string`（seatId 默认 `solo`），非法 uint32 seed 或空席位抛 RangeError。服务器不需要直接调用该选择器。单人 `createMatch(seed)` 与同 seed、seatId=`solo` 的共享席位选择一致。
+
+- 候选为按目录顺序的 `SHOP_CATALOG_BY_COST[1]`，14 个英雄等权；独立抽取，允许同英雄，扣一基础副本。总共扣八张，不能写死 Irelia 可用 22。
+- 流命名：`opening-unit-v1/<seatId>`，按 JS UTF-16 code unit 顺序 FNV-1a32（初值 0x811c9dc5，乘数 0x01000193，逐步 uint32 截断）。初态 `(gameSeed ^ namespaceHash ^ 0x6f706844) >>> 0`；执行一次 lcg32-v1，`floor(word * catalog.length / 4294967296)` 取下标。不是共享商店 RNG 的一部分，也不消费选秀、掉落、装备、选择或 battle-seed 流。
+- `OPENING_INITIAL_STATE.unit.definitionId` 现在是冻结的生成规则描述，不再是某英雄 ID。实际 ID 只从已创建 state 的单位读取。opening 来源事实变为 `{kind:'opening',seed:gameSeed,seatId}`，恢复由该规则重算；共享守恒校验核对 pool.seed 和席位身份。不得把新来源格式补写到旧存档上。
+- 其余初始化仍为 0G/等级1/0XP/100HP，unit-1/一星/(1,4)/nextUnitSerial=2。1-2 固定麦迪，1-3 固定拉克丝；重复英雄按原合星规则处理。基线 T13 的实现实际随机化了这两张奖励，本次按用户明确要求纠正；保留每张既有的一词掉落流位置，后续掉落流位置不变，起手专用流绝不借用它。
+- rules=`s13-opening-random-1cost-v1`，content=`s13-14.24b-opening-random-1cost-v1`；CONTENT_DIGEST=`fnv1a32-utf16:299ec0d0`，LOOT_REPLAY_DIGEST=`fnv1a32-utf16:b9250813`。schema7/save3/replay3/commandProtocol3/50ms/lcg32-v1 保持。旧存档、对局快照和旧回放身份作废，严格拒绝，不迁移；活动局结束后切换。
+
+执行者测试与迁移字节证据见 [随机起手交付](OPENING_RANDOM_1COST_RELEASE.md)。

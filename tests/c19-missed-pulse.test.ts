@@ -14,7 +14,7 @@ import { battle, unit, freeze } from './combat-helpers';
 import { source } from './fixtures/m8-contract-cases';
 import { packets } from './helpers/replay2-views';
 
-const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/g2-augments-c19-seed-9-minimal.json', import.meta.url), 'utf8'));
+const fixture = () => JSON.parse(readFileSync(new URL('./fixtures/opening-random-c19-seed-9-minimal.json', import.meta.url), 'utf8'));
 const id = (seat: string, unitId: string) => JSON.stringify(['t2', seat, 'unit', unitId]);
 function advance(state: CombatState, through: number) {
   const events: CombatEvent[] = [];

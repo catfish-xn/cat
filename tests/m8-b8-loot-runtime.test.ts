@@ -19,7 +19,7 @@ function fixture(round = 1, seed = 5): MatchState {
       roundId: definition.roundId, encounterId: definition.encounterId, enemies } },
     preparation: { ...base.preparation, units: [...base.preparation.units.filter(unit => unit.team === 'player'), ...enemies] },
     resourceProvenance: appendResourceProvenance({ version: RESOURCE_PROVENANCE_VERSION, entries: [] }, '1-2',
-      { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening' } }),
+      { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening', seed, seatId: 'solo' } }),
   };
 }
 const plan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId)!;
@@ -89,7 +89,7 @@ describe('B8 real loot preparation and earned-only transitions', () => {
 describe('B8 atomic direct awards, capacity and actual purchase lineage', () => {
   it('grants the real opening hero once, recording the candidate birth and unique receipt', () => {
     const state = observed(fixture()), { state: granted, events, upgradeEvents } = grantDirectLoot(state, false);
-    expect(granted.preparation.units.find(unit => unit.id === 'unit-2')).toMatchObject({ definitionId: 'darius', starLevel: 1, location: { kind: 'bench', slot: 0 } });
+    expect(granted.preparation.units.find(unit => unit.id === 'unit-2')).toMatchObject({ definitionId: 'maddie', starLevel: 1, location: { kind: 'bench', slot: 0 } });
     expect(granted.m8.loot.receipts).toHaveLength(2); expect(granted.m8.loot.receipts[0].grantedUnitIds).toEqual(['unit-2']);
     expect(granted.resourceProvenance.entries.at(-1)).toMatchObject({ kind: 'unit-acquired', unitId: 'unit-2', source: { kind: 'loot', receiptId: granted.m8.loot.receipts[0].receiptId } });
     expect(granted.nextUnitSerial).toBe(3); expect(events.map(value => value.type)).toEqual(['lootGranted','lootGranted']); expect(upgradeEvents).toEqual([]);

@@ -1,3 +1,4 @@
+import { selectOpeningUnit } from '../../src/simulation/opening-unit';
 /**
  * B5: the room runs on the TP shared card pool (contract §12). Opening order (§12.2), shop commands as pool transactions,
  * free failure of an empty paid reroll, one release per eliminated seat (§12.4), conservation after every publication
@@ -66,8 +67,8 @@ describe('Room on the shared pool: opening (§12.2)', () => {
     conserved(state);
     expect(state.pool.seats.map(seat => [seat.seatId, seat.seatIndex])).toEqual(state.seats.map(seat => [seat.seatId, seat.index]));
     expect(state.pool.naturalRound).toBe(1);
-    expect(state.pool.available['irelia']).toBe(30 - 8 - state.pool.shops.filter(shop => shop.definitionId === 'irelia').length);
-    // 674 copies − 8 openings − 40 reserved shop cards (contract §12.2).
+    expect(state.pool.available['irelia']).toBe(30 - state.pool.holdings.filter(h=>h.definitionId==='irelia').length - state.pool.shops.filter(shop => shop.definitionId === 'irelia').length);
+    // 990 copies − 8 openings − 40 reserved shop cards (contract §12.2).
     expect(total(state.pool.available)).toBe(942);
     expect(state.pool.shops).toHaveLength(40);
     for (const seat of state.seats) {
@@ -86,9 +87,11 @@ describe('Room on the shared pool: opening (§12.2)', () => {
 });
 
 describe('Room on the shared pool: seat commands are pool transactions', () => {
-  /** Only eight Irelia (the openings) and one Darius exist: exactly one shop slot of the whole room can ever hold a card. */
+  /** Only the eight selected openings and one extra Darius exist: exactly one shop slot of the whole room can ever hold a card. */
   function scarceRoom() {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { poolCapacities: { irelia: 8, darius: 1 } });
+    const capacities:Record<string,number>={darius:1};
+    for(let i=0;i<8;i++) {const hero=selectOpeningUnit(42,`s${i}`);capacities[hero]=(capacities[hero]??0)+1;}
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { poolCapacities: capacities });
     room.start();
     runUntil(room, clock, state => state.round === 2 && state.phase === 'preparation');
     return { room, clock };
@@ -116,11 +119,11 @@ describe('Room on the shared pool: seat commands are pool transactions', () => {
     expect(room.handle(holder.seatId, { type: 'buy', slot, generation: holder.match.shop.generation }).ok).toBe(true);
     expect(room.state.poolRevision).toBe(before.poolRevision + 1);
     expect(room.state.pool.available['darius']).toBe(0);
-    expect(room.state.pool.holdings.filter(holding => holding.definitionId === 'darius')).toEqual([expect.objectContaining({ seatId: holder.seatId })]);
+    expect(room.state.pool.holdings.filter(holding => holding.definitionId === 'darius')).toEqual([...before.pool.holdings.filter(holding => holding.definitionId === 'darius'),expect.objectContaining({ seatId: holder.seatId })]);
     conserved(room.state);
 
     // Sold back, the copy returns to the pool; the other seat's reroll now takes it, and a third seat finds the pool empty again.
-    const bought = room.state.seats.find(seat => seat.seatId === holder.seatId)!.match.preparation.units.find(unit => unit.team === 'player' && unit.definitionId === 'darius')!;
+    const bought = room.state.seats.find(seat => seat.seatId === holder.seatId)!.match.preparation.units.find(unit => unit.team === 'player' && unit.definitionId === 'darius' && unit.id !== 'unit-1')!;
     expect(room.handle(holder.seatId, { type: 'sell', unitId: bought.id }).ok).toBe(true);
     expect(room.state.pool.available['darius']).toBe(1);
     const rerolled = room.handle(other.seatId, { type: 'reroll' });

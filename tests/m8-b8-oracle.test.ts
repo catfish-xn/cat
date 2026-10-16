@@ -148,6 +148,6 @@ describe('independent B8 oracle checks authentic command transitions', () => {
     expect(Object.values(route.final.m8.loot.guaranteeCounters)).toEqual([0, 1, 1, 2, 2, 2, 2, 0]);
     if (seed === 230) expect(route.final.m8.loot.receipts.filter((r: MatchState['m8']['loot']['receipts'][number]) => r.payload.kind === 'unit')
       .map((r: MatchState['m8']['loot']['receipts'][number]) => r.payload)).toEqual(
-        ['darius','irelia'].map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
+        ['maddie','lux'].map(definitionId => ({ kind: 'unit', definitionId, quantity: 1 })));
   }, 120000);
 });

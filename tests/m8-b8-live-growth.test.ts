@@ -34,21 +34,21 @@ if(!captured)throw Error('Missing genuine preparation');
 const initial=captured;
 const originals=initial.preparation.units.filter(u=>u.definitionId==='tristana'&&u.starLevel===1).map(u=>u.id).sort();
 expect(originals).toHaveLength(2);
-const [SURVIVOR,DONOR]=originals;
+const [DONOR,SURVIVOR]=originals;
 const REWARD=`unit-${initial.nextUnitSerial}`;
 const OTHER=initial.preparation.units.find(u=>!originals.includes(u.id))!.id;
 const priorBySource=originals.map(unitId=>({unitId,attackDamageBps:priorFacts.filter(f=>f.unitId===unitId).length*GAIN}));
 const STOCK=priorBySource.reduce((n,g)=>n+g.attackDamageBps,0);
 
 // Public deployment isolates both original growth sources and earns a real current-battle delta.
-const prepared = accepted(deployMatchUnit(reserveExcept(initial,originals),SURVIVOR,{kind:'board',cell:{col:0,row:4}}));
+const prepared = accepted(deployMatchUnit(reserveExcept(initial,originals),DONOR,{kind:'board',cell:{col:6,row:7}}));
 const currentFacts:ReturnType<typeof bounceFacts>=[];
 let probe=accepted(startMatchCombat(prepared));
 while(probe.phase==='combat'){const next=stepMatch(probe);currentFacts.push(...bounceFacts(probe,next.state,next.events));probe=next.state;}
 const DELTA=currentFacts.length*GAIN,TOTAL=STOCK+DELTA;
 expect(priorBySource.every(g=>g.attackDamageBps>0)).toBe(true);
 expect(DELTA).toBeGreaterThan(0);
-expect(currentFacts).toHaveLength(2);
+expect(currentFacts).toHaveLength(1);
 const result = battle(prepared);
 if(!result.revealed)throw Error('Expected live reveal before natural final tick');
 const live = {...result,revealed:result.revealed,selected:result.ended};
@@ -86,7 +86,7 @@ describe('B8 live growth plus immediate randomized loot merge',()=>{
   for(const s of [prepared,live.started,live.revealed,live.beforeFinal,live.ended])roundTrip(s);
   const reveal=live.revealPrefix.find(e=>e.type==='lootRevealed')!;
   expect(reveal.type).toBe('lootRevealed');
-  const death=live.revealed.combat!.neutralReceipts!.deaths.find(d=>live.revealed.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===d.eventSeq))!;
+  const death=live.revealed.combat!.neutralReceipts!.deaths.find(d=>d.eventSeq===reveal.death.eventSeq&&live.revealed.m8.loot.earnedEvidence.some(e=>e.death.eventSeq===d.eventSeq))!;
   expect(live.revealed.combat!.tick).toBe(death.tick);
   expect(live.revealed.phase).toBe('combat');
   expect(live.ended.phase).toBe('settlement');expect(live.ended.pendingChoice).toBeNull();

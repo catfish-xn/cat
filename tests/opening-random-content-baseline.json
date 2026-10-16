@@ -1,0 +1,23 @@
+{
+  "contentDigest": "fnv1a32-utf16:299ec0d0",
+  "lootReplayDigest": "fnv1a32-utf16:b9250813",
+  "rulesVersion": "s13-opening-random-1cost-v1",
+  "contentVersion": "s13-14.24b-opening-random-1cost-v1",
+  "schemaVersion": 7,
+  "firstBattle": {
+    "seed": 42,
+    "ticks": 164,
+    "events": 106,
+    "result": "playerWin",
+    "stateHash": "fnv1a32-utf16:1541a026",
+    "eventHash": "fnv1a32-utf16:966105d6"
+  },
+  "previousContentDigest": "fnv1a32-utf16:8914b323",
+  "previousLootReplayDigest": "fnv1a32-utf16:028e5593",
+  "traceHashes": {
+    "state": "b6e58d9bbd7865b2260bfdd6088344b74f366f65db907a5d6f471e8afa983859",
+    "events": "ee501e10ccff2c7d20f0262b17fc84ba9f21beb14c6db084beb554b63623a8b3",
+    "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+  },
+  "reason": "Opening: independent random one-cost unit per seat; public routes independently re-recorded; previous fixtures preserved."
+}

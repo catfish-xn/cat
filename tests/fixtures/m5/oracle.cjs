@@ -76,7 +76,7 @@ function lootPlan(seed,ordinal){
   for(const [local,slotOrdinal,kind,value] of slots){
    const sourceUnitId=JSON.stringify(['pve',roundId,encounterId,local]),orbId=JSON.stringify(['orb',roundId,encounterId,sourceUnitId,slotOrdinal]);
    const identity={roundId,encounterId,sourceUnitId,slotOrdinal,orbId};let tier='gray',templateId=kind,payloads;
-   if(kind==='opening-unit')payloads=[hero(1),remover()];
+   if(kind==='opening-unit'){hero(1);payloads=[{kind:'unit',definitionId:roundId==='1-2'?'maddie':'lux',quantity:1},remover()];}
    if(kind==='component'){tier='blue';payloads=[component()];}
    if(kind==='remover')payloads=[remover()];
    if(kind==='bonus'){const roll=color();tier=roll<50?'blue':'gray';templateId=roll<50?'component':'opening-gold';payloads=roll<50?[component()]:[gold(3)];}
