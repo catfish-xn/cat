@@ -13,6 +13,9 @@ const timing = [
   'tests/server/g3-ops.test.ts',
   // Network replay/resume traverses real battles and has a 5 s wall timeout.
   'tests/server/ws-client.test.ts',
+  // The LocalRoomClient full-match case plays a whole room (~47 s alone) and
+  // exceeds the fast project's 60 s case limit under 4-worker contention.
+  'tests/server/local-room-client-full-match.test.ts',
 ];
 // Tiny route wrappers contain the longest workloads. Start them first even on
 // a clean checkout, when Vitest has no duration cache and sorts by source size.
