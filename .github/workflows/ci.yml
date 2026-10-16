@@ -109,7 +109,7 @@ jobs:
     env:
       M5_JOB_KEY: input-${{ matrix.mode }}-sample${{ matrix.sample }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 32 # Includes native input and a normal-time touch route.
+    timeout-minutes: 45 # Native input, a normal-time touch route and (dev) the M6/M8 tail; dev measured ~36 min on 2026-10-16 once every step ran.
     strategy:
       fail-fast: false
       matrix:
