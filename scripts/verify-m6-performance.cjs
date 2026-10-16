@@ -83,7 +83,7 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
   const fixtures={complete:largestComplete.envelope,current:largestIncremental.envelope,record:largestRecord.record,fullLoad:fullLoadEnvelope,expectedBattleCount:ROUND_CATALOG.filter(round=>round.kind!=='supply').length};
   const transport=inspectFixtureGroups(fixtures),expectedFixtureSignature=await fixtureSignature(fixtures);
   await stageFixtureGroups(page,fixtures,transport.groups);
-  report.fixtureTransport={method:'two native Playwright groups; delete staging and release handles before original callback',helperHash:hash(fs.readFileSync(require.resolve('./m6-fixture-transport.cjs'),'utf8')),groups:transport.summaries,sharedReferences:transport.sharedReferences,capacityBytes:transport.capacityBytes,commandReserveBytes:transport.commandReserveBytes,expected:expectedFixtureSignature,setupMs:performance.now()-transportStarted};
+  report.fixtureTransport={method:'three native Playwright groups; delete staging and release handles before original callback',helperHash:hash(fs.readFileSync(require.resolve('./m6-fixture-transport.cjs'),'utf8')),groups:transport.summaries,sharedReferences:transport.sharedReferences,capacityBytes:transport.capacityBytes,commandReserveBytes:transport.commandReserveBytes,expected:expectedFixtureSignature,setupMs:performance.now()-transportStarted};
   diagnosticPhase('fixture-transport-complete',report.fixtureTransport);
   diagnosticPhase('measurements-requested');
   report.measurements=await page.evaluate(()=>{
