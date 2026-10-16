@@ -1,6 +1,6 @@
-/* U6 automated UI regression: the live loot panel and loot choice through the real app.
+/* U6 automated UI regression: the live loot panel through the real app (T13 orbs: no PvE loot pick).
  * States come only from public commands: a fresh seed-42 opening driven by native clicks,
- * and the seed-230 capacity / lethal 4-7 routes recorded headlessly with BattleHistory and
+ * and the seed-36 3-7 capacity / seed-38 lethal 4-7 routes recorded headlessly with BattleHistory and
  * loaded through the real save-import control. After import every action is a native click.
  * At each checkpoint the DOM rows, statuses, receipts and Continue verdict must equal
  * readLootView() computed independently in Node from the page's own Match state.
@@ -25,11 +25,14 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     const api = await server.ssrLoadModule('/src/simulation/match.ts');
     const { BattleHistory, validateBattleCollection } = await server.ssrLoadModule('/src/replay/index.ts');
     const { validateEnvelope } = await server.ssrLoadModule('/src/persistence/format.ts');
+    const { M8_VERSION } = await server.ssrLoadModule('/src/simulation/m8/version.ts');
     const { run } = require('./generate-m5-route.cjs');
     const accepted = result => { if (!result.ok) throw new Error(result.reason); return result.state; };
     const combatOnly = events => events.filter(event => event.domain === 'combat');
 
     /* ---------- headless public routes recorded as ordinary save envelopes ---------- */
+    // T13 orb loot has no PvE pick: the scenarios are the public ones of tests/m8-b8-live-capacity
+    // (seed-36 3-7 Tristana at nine capacity; seed-38 lethal 4-7 with Loris killing both carriers).
     const players = state => state.preparation.units.filter(unit => unit.team === 'player');
     const bench = state => players(state).filter(unit => unit.location.kind === 'bench');
     function reserveExcept(initial, keep) {
@@ -37,48 +40,60 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       for (const unit of players(state).filter(unit => unit.location.kind === 'board' && !keep.includes(unit.id))) {
         const used = new Set(bench(state).map(unit => unit.location.slot));
         const slot = Array.from({ length: 9 }, (_, index) => index).find(index => !used.has(index));
+        assert.notEqual(slot, undefined, 'bench has room to reserve the board');
         state = accepted(api.deployMatchUnit(state, unit.id, { kind: 'bench', slot }));
       }
       return state;
     }
-    const emptyRounds = new Set(['1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-7', '4-1', '4-2']);
-    /** Same command route as tests/m8-b8-live-capacity: stop at roundId's preparation. Starts are recorded
-     * from the exact state that starts (after any bench deployment), ticks from the route's own steps. */
-    async function recordedPrefix(roundId, accumulateLosses, runId) {
+    /** Nine real paid bench births that never merge and never buy the excluded heroes. */
+    function fillBench(input, excluded) {
+      let state = input;
+      for (let budget = 0; bench(state).length < 9; budget++) {
+        assert(budget <= 80, 'fill bench budget');
+        const slot = state.shop.slots.findIndex(offer => offer.status === 'available' && !excluded.includes(offer.definitionId)
+          && players(state).filter(unit => unit.definitionId === offer.definitionId && unit.starLevel === 1).length < 2);
+        state = accepted(slot < 0 ? api.rerollShop(state) : api.buyUnit(state, slot, state.shop.generation));
+      }
+      return state;
+    }
+    const plan = state => state.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === state.roundDefinitionId);
+    const heroDrop = state => plan(state).encounterPlan.drops.find(drop => drop.payload.kind === 'unit');
+    /** Stop at roundId's preparation. Starts are recorded from the exact state that starts, ticks from the route's own steps. */
+    async function recordedPrefix(roundId, options, runId) {
       const history = new BattleHistory(runId), captured = new Error('captured');
       let prefix;
       const driver = { ...api, startMatchCombat(state) {
         if (state.roundDefinitionId === roundId) { prefix = state; throw captured; }
-        const ready = accumulateLosses && emptyRounds.has(state.roundDefinitionId) ? reserveExcept(state, []) : state;
-        const result = api.startMatchCombat(ready);
-        if (result.ok) history.observe({ before: ready, after: result.state, events: combatOnly(result.events), reason: 'command' });
+        const result = api.startMatchCombat(state);
+        if (result.ok) history.observe({ before: state, after: result.state, events: combatOnly(result.events), reason: 'command' });
         return result;
       } };
       const onStep = (before, result, command) => { if (!command) history.observe({ before, after: result.state, events: combatOnly(result.events), reason: 'tick' }); };
-      try { await run(driver, { build: 'cannon', seed: 230, onStep }); } catch (error) { if (error !== captured) throw error; }
+      try { await run(driver, { build: 'cannon', ...options, onStep }); } catch (error) { if (error !== captured) throw error; }
       assert(prefix, `route reached ${roundId}`);
       return { prefix, history };
     }
     async function envelopeFile(name, runId, match, history) {
-      const envelope = { kind: 'hex-autobattler-save', saveFormatVersion: 2, replayFormatVersion: 2, runId,
+      const envelope = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion, runId,
         createdAt: '2026-10-10T00:00:00.000Z', match, battles: history.completedRecords, currentBattle: null };
       await validateEnvelope(JSON.parse(JSON.stringify(envelope)), validateBattleCollection);
       const file = path.join(output, `${name}.json`); fs.writeFileSync(file, JSON.stringify(envelope));
       return { file, runId, battles: envelope.battles.length };
     }
-    // Capacity: seed-230 2-7 with nine real paid non-merging bench births (live-capacity fixture).
-    const capacity = await recordedPrefix('2-7', false, 'u6-capacity');
-    let capacityState = capacity.prefix;
-    for (const [generation, slots] of [[9, [1, 3]], [10, [1, 4]], [11, [3]], [12, [1, 3, 4]], [13, [1]]]) {
-      if (capacityState.shop.generation < generation) capacityState = accepted(api.rerollShop(capacityState));
-      for (const slot of slots) capacityState = accepted(api.buyUnit(capacityState, slot, generation));
-    }
+    // Capacity: seed-36 3-7 whose orb carries a Tristana, bench filled with nine non-merging heroes.
+    const capacity = await recordedPrefix('3-7', { seed: 36 }, 'u6-capacity');
+    const capacityHero = heroDrop(capacity.prefix);
+    assert.deepEqual(capacityHero?.payload, { kind: 'unit', definitionId: 'tristana', quantity: 1 }, 'seed-36 3-7 orb carries Tristana');
+    const capacityState = fillBench(capacity.prefix, ['tristana']);
     assert.equal(bench(capacityState).length, 9);
-    const capacityFile = await envelopeFile('u6-capacity-2-7', 'u6-capacity', capacityState, capacity.history);
-    // Terminal: seed-230 lethal 4-7 "both sources" (3 HP, full bench, units 11 and 6 fielded).
-    const terminal = await recordedPrefix('4-7', true, 'u6-terminal');
-    let terminalState = reserveExcept(terminal.prefix, ['unit-11', 'unit-6']);
-    for (const slot of [2, 3]) terminalState = accepted(api.buyUnit(terminalState, slot, 43));
+    const capacityFile = await envelopeFile('u6-capacity-3-7', 'u6-capacity', capacityState, capacity.history);
+    // Terminal: seed-38 lethal 4-7 (3 HP after empty-board losses, full bench, only Loris fielded at 1,6).
+    const losses = ['1-3', '1-4', '2-1', '2-2', '2-3', '2-5', '2-6', '2-7', '3-1', '3-2', '3-3', '3-7', '4-1', '4-2', '4-7'];
+    const terminal = await recordedPrefix('4-7', { seed: 38, emptyBoardRounds: losses, protectedUnitIds: ['unit-10', 'unit-15'] }, 'u6-terminal');
+    assert.equal(heroDrop(terminal.prefix)?.payload.definitionId, 'ezreal', 'seed-38 4-7 orb carries Ezreal');
+    let terminalState = fillBench(reserveExcept(terminal.prefix, []), ['ezreal']);
+    const loris = players(terminalState).find(unit => unit.definitionId === 'loris');
+    terminalState = fillBench(accepted(api.deployMatchUnit(terminalState, loris.id, { kind: 'board', cell: { col: 1, row: 6 } })), ['ezreal']);
     assert.equal(bench(terminalState).length, 9); assert.equal(terminalState.playerHp, 3);
     const terminalFile = await envelopeFile('u6-terminal-4-7', 'u6-terminal', terminalState, terminal.history);
     report.fixtures = { capacity: capacityFile, terminal: terminalFile };
@@ -101,7 +116,8 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     }
     async function domPanel() {
       return page.evaluate(() => {
-        const panel = document.querySelector('[data-debug="loot-panel"],[data-debug="loot-terminal"]');
+        // C18-B: a round with opened orbs renders orb cards (orb-loot); otherwise the plain list (loot-panel).
+        const panel = document.querySelector('[data-debug="loot-panel"],[data-debug="orb-loot"],[data-debug="loot-terminal"]');
         const button = document.querySelector('[data-debug="mobile:continue"]');
         if (!panel) return { kind: null, continueDisabled: button?.disabled ?? null, continueReason: button?.dataset.blockedReason ?? null };
         return { kind: panel.dataset.debug, canContinue: panel.dataset.canContinue ?? null,
@@ -113,7 +129,8 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
           dialogText: document.querySelector('.choice-dialog')?.textContent ?? '',
           continueDisabled: document.querySelector('[data-debug="mobile:continue"]')?.disabled ?? null,
           continueReason: document.querySelector('[data-debug="mobile:continue"]')?.dataset.blockedReason ?? null,
-          rows: [...panel.querySelectorAll('[data-debug^="loot-drop:"]')].map(row => ({ dropId: row.dataset.debug.slice('loot-drop:'.length), status: row.dataset.status, receipt: row.dataset.receipt ?? null })) };
+          orbs: [...panel.querySelectorAll('[data-debug^="orb:"]')].filter(card => card.dataset.debug !== 'orb:other').map(card => ({ orbId: card.dataset.debug.slice('orb:'.length), tier: card.dataset.tier, status: card.dataset.status })),
+          rows: [...panel.querySelectorAll('[data-debug^="loot-drop:"],[data-debug^="orb-entry:"]')].map(row => ({ dropId: row.dataset.debug.slice(row.dataset.debug.indexOf(':') + 1), status: row.dataset.status, receipt: row.dataset.receipt ?? null })) };
       });
     }
     /** DOM must equal the domain projection of the page's own state (retried while a render is pending). */
@@ -131,7 +148,8 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
           else {
             const view = api.readLootView(current);
             assert(dom.kind, `${label}: loot panel present`);
-            assert.equal(dom.kind, current.phase === 'gameOver' ? 'loot-terminal' : 'loot-panel');
+            assert.equal(dom.kind, current.phase === 'gameOver' ? 'loot-terminal' : view.revealedOrbs.length ? 'orb-loot' : 'loot-panel');
+            if (dom.kind === 'orb-loot') assert.deepEqual(dom.orbs, view.revealedOrbs.map(orb => ({ orbId: orb.orbId, tier: orb.tier, status: orb.status })), `${label}: orb cards equal readLootView`);
             const rows = view.revealedDrops.map(drop => ({ dropId: drop.dropId, status: drop.status, receipt: drop.receiptId }));
             const sort = list => [...list].sort((a, b) => a.dropId < b.dropId ? -1 : 1);
             assert.deepEqual(sort(dom.rows), sort(rows), `${label}: rows equal readLootView`);
@@ -139,7 +157,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
             const hidden = current.m8.loot.direct.filter(drop => drop.status === 'planned' || drop.status === 'forfeited').map(drop => drop.dropId);
             assert(dom.rows.every(row => !hidden.includes(row.dropId)), `${label}: no hidden drop rendered`);
             assert.equal(dom.buttons, 0, `${label}: loot panel offers no claim action`);
-            if (dom.kind === 'loot-panel') assert.equal(dom.canContinue, String(view.canContinue));
+            if (dom.kind !== 'loot-terminal') assert.equal(dom.canContinue, String(view.canContinue));
             assert.equal(dom.block, view.canContinue ? null : view.reason);
             // Approved addendum: the pending loot pick is named by the domain, never inferred by the UI.
             assert.equal(dom.pendingDrop, view.pendingChoice?.dropId ?? null, `${label}: pending pick row`);
@@ -169,57 +187,59 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       return sawRevealed;
     }
 
-    // 1. Fresh seed-42 opening by native clicks: 1-2 reveal/grant, 1-3 loot choice.
+    // 1. Fresh seed-42 opening by native clicks: 1-2 and 1-3 orbs reveal mid-combat and are granted by receipt.
     await page.locator('[data-debug="m6-seed-input"]').fill('42'); await page.locator('[data-debug="m6-fixed-start"]').click();
     await waitActive(); assert.equal((await state()).seed, 42);
+    const hero12 = heroDrop(await state());
+    assert(hero12, '1-2 orb carries a hero');
     await checkPanel('1-2 preparation');
     await delay(450); await click('mobile:start-combat');
-    assert(await finishCombat('1-2'), '1-2 Maddie drop is revealed during combat');
-    await checkPanel('1-2 settlement', view => assert(view.revealedDrops.some(drop => drop.status === 'granted' && drop.payload.definitionId === 'maddie')));
-    await click('mobile:continue'); await delay(450); await click('mobile:start-combat');
-    await finishCombat('1-3');
-    const loot13 = await checkPanel('1-3 loot choice pending', view => assert.equal(view.reason, 'pending-choice'));
-    assert.equal(loot13.state.phase, 'choice');
-    assert.equal(await page.locator('.choice-dialog').getAttribute('data-choice-source'), 'loot');
-    assert.equal(await page.locator('.choice-dialog [data-debug^="choice:"]').count(), 8);
-    const pick = loot13.state.pendingChoice.offers[2];
-    await click(`choice:${pick}`); await quiet();
-    await checkPanel('1-3 after real choice', view => assert(view.revealedDrops.some(drop => drop.status === 'granted' && drop.payload.definitionId === pick)));
+    assert(await finishCombat('1-2'), '1-2 orb drops are revealed during combat');
+    await checkPanel('1-2 settlement', view => assert(view.revealedDrops.some(drop => drop.dropId === hero12.dropId && drop.status === 'granted' && drop.receiptId), '1-2 hero granted by receipt'));
+    await click('mobile:continue'); await delay(450);
+    const hero13 = heroDrop(await state());
+    assert(hero13, '1-3 orb carries a hero');
+    await click('mobile:start-combat');
+    assert(await finishCombat('1-3'), '1-3 orb drops are revealed during combat');
+    await checkPanel('1-3 settlement', (view, dom, current) => {
+      assert.equal(current.phase, 'settlement'); assert.equal(dom.dialogSource, null, 'T13 orbs open no loot pick');
+      assert(view.revealedDrops.some(drop => drop.dropId === hero13.dropId && drop.status === 'granted' && drop.receiptId), '1-3 hero granted by receipt');
+    });
 
-    // 2. Capacity: import, choose, blocked Continue, sell, granted and Continue.
+    // 2. Capacity: import, hero waits on a full bench, blocked Continue, sell, granted and Continue.
     await page.locator('[data-debug="m6-import"]').setInputFiles(capacityFile.file); await waitActive('u6-capacity');
-    assert.equal((await state()).roundDefinitionId, '2-7');
-    await delay(450); await click('mobile:start-combat'); await finishCombat('2-7 capacity');
-    const waitingChoice = await checkPanel('2-7 choice with full bench', view => assert.equal(view.reason, 'pending-choice'));
-    assert(waitingChoice.view.revealedDrops.some(drop => drop.status === 'pending-capacity'), 'hero waits for capacity');
-    await click(`choice:${waitingChoice.state.pendingChoice.offers[0]}`); await quiet();
-    const blocked = await checkPanel('2-7 capacity blocks Continue', view => {
-      assert.equal(view.reason, 'pending-capacity'); assert.equal(view.canContinue, false); assert.equal(view.pendingClaims.length, 1);
+    assert.equal((await state()).roundDefinitionId, '3-7');
+    await delay(450); await click('mobile:start-combat');
+    assert(await finishCombat('3-7 capacity'), '3-7 orb drops are revealed during combat');
+    const blocked = await checkPanel('3-7 capacity blocks Continue', view => {
+      assert.equal(view.reason, 'pending-capacity'); assert.equal(view.canContinue, false); assert.deepEqual(view.pendingClaims, [capacityHero.dropId]);
     });
     // The button is not operable: a native click on it is a no-op (the domain refusal is tested separately).
     const blockedBefore = blocked.state, continueBox = await page.locator('[data-debug="mobile:continue"]').boundingBox();
     assert(await page.locator('[data-debug="mobile:continue"]').isDisabled(), 'Continue disabled while the hero waits');
     await page.mouse.click(continueBox.x + continueBox.width / 2, continueBox.y + continueBox.height / 2); await delay(300);
     assert.deepEqual(await state(), blockedBefore, 'native click on the disabled Continue changes nothing');
-    const zoe = bench(blockedBefore).find(unit => unit.definitionId === 'zoe');
-    await click('panel:units'); await click(`mobile:unit:${zoe.id}`); await click('mobile:sell');
-    await checkPanel('2-7 after real sale', view => {
+    const sold = bench(blockedBefore)[0];
+    await click('panel:units'); await click(`mobile:unit:${sold.id}`); await click('mobile:sell');
+    await checkPanel('3-7 after real sale', view => {
       assert.equal(view.canContinue, true); assert.equal(view.pendingClaims.length, 0);
       assert(view.revealedDrops.every(drop => drop.status === 'granted'));
     });
+    assert(players(await state()).some(unit => unit.definitionId === 'tristana'), 'the waiting Tristana joined the bench');
     assert(await page.locator('[data-debug="mobile:continue"]').isEnabled(), 'Continue usable again after the real sale');
     await click('mobile:continue');
-    await checkPanel('3-1 preparation after Continue');
-    assert.equal((await state()).roundDefinitionId, '3-1', 'the re-enabled Continue really advanced');
+    await checkPanel('4-1 preparation after Continue');
+    assert.equal((await state()).roundDefinitionId, '4-1', 'the re-enabled Continue really advanced');
 
-    // 3. Terminal: import 4-7, lethal combat, read-only terminal record with retained hero and fallback receipt.
+    // 3. Terminal: import 4-7, lethal combat, read-only terminal record with retained hero and component receipts.
     await page.locator('[data-debug="m6-import"]').setInputFiles(terminalFile.file); await waitActive('u6-terminal');
-    await delay(450); await click('mobile:start-combat'); await finishCombat('4-7 terminal');
+    await delay(450); await click('mobile:start-combat');
+    assert(await finishCombat('4-7 terminal'), '4-7 orb drops are revealed during combat');
     await checkPanel('4-7 game over', (view, dom, current) => {
       assert.equal(current.phase, 'gameOver'); assert.equal(view.reason, 'game-over'); assert.equal(dom.block, 'game-over');
-      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null), 'retained hero shown without receipt');
-      const choice = current.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '4-7').choices[0];
-      assert(view.revealedDrops.some(drop => drop.dropId === choice.dropId && drop.status === 'granted' && drop.payload.definitionId === 'tear'), 'earned fallback shown only via its receipt');
+      assert.deepEqual(view.revealedDrops.map(drop => drop.status), ['granted', 'granted', 'retained-terminal', 'granted'], 'both carriers killed: every drop earned');
+      assert(view.revealedDrops.some(drop => drop.status === 'retained-terminal' && drop.receiptId === null && drop.payload.definitionId === 'ezreal'), 'retained hero shown without receipt');
+      assert(view.revealedDrops.filter(drop => drop.status === 'granted').every(drop => drop.receiptId), 'earned drops shown only via their receipts');
     });
     assert.deepEqual(report.errors, []);
     report.passed = true;

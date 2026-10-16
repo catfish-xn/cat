@@ -1,11 +1,13 @@
 /*
  * M7 hard budgets (M7_PLAN §5) measured as a pair on the same machine:
- *  - production JS gzip  <= baseline × 1.30
+ *  - production JS gzip  <= baseline × 1.50
  *  - first interactive   <= baseline median × 1.20 (navigation → public 以固定种子开始 enabled)
  * The historical interaction baseline is the signed-off M6 tree. M8 CI supplies a separate
  * --js-base signed-off M7 build, per M8_PLAN §7.6. The M8-only 1.30 allowance follows
  * docs/M8_REMAINING_JS_BUDGET_PLAN.md §7 (2026-10-10): batch stop lines apply; M9 must reassess, not inherit 1.30;
  * the 1.20 interaction allowance and measurement methods are unchanged.
+ * 2026-10-16 (user decision): JS allowance raised 1.30 → 1.50 for the eight-player online code (measured 1.46).
+ * Every G2 content batch reports its measured ratio; if G2-3/G2-4 pass 1.50, split the bundle instead of raising again.
  * Both interaction dist folders are served from the
  * root by the same static server; samples alternate base/current to share machine noise.
  * Usage: node scripts/m7-budget.cjs --base=<base dist> --current=<current dist> [--js-base=<JS base dist>] [--samples=9]
@@ -54,7 +56,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
   } finally { await browser.close(); for (const server of Object.values(servers)) server.close(); }
   const result = {
     baselineDirectories: { js: jsBaseDir, interactive: baseDir },
-    jsGzipBytes: size, jsRatio: size.current / size.base, jsBudget: 1.30,
+    jsGzipBytes: size, jsRatio: size.current / size.base, jsBudget: 1.50,
     interactiveMs: { base: times.base, current: times.current, baseMedian: median(times.base), currentMedian: median(times.current) },
     interactiveRatio: median(times.current) / median(times.base), interactiveBudget: 1.20,
   };

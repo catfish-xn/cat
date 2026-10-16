@@ -74,20 +74,31 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
           else throw Error(`Unexpected U3 preparation phase ${state.phase}`);
         }
         if (state.roundDefinitionId !== '2-1' || state.phase !== 'preparation') throw Error('U3 fixture did not reach real 2-1');
-        for (const id of ['maddie', 'lux']) {
-          const slot = state.shop.slots.findIndex(offer => offer.status === 'available' && offer.definitionId === id);
-          state = accepted(api.buyUnit(state, slot, state.shop.generation));
-        }
+        // Two paid heroes become unit-2/unit-3. Any two available offers whose definitions differ
+        // from each other and from the opening hero work (no star-up merge), so the fixture does
+        // not depend on which hero the opening or the 2-1 shop happens to produce.
+        const opening = state.preparation.units.find(unit => unit.id === 'unit-1').definitionId;
+        const picks = [];
+        state.shop.slots.forEach((offer, slot) => {
+          if (picks.length < 2 && offer.status === 'available' && offer.definitionId !== opening
+            && !picks.some(pick => pick.definitionId === offer.definitionId)) picks.push({ slot, definitionId: offer.definitionId });
+        });
+        if (picks.length < 2) throw Error(`U3 fixture 2-1 shop lacks two distinct heroes: ${JSON.stringify(state.shop.slots)}`);
+        for (const { slot } of picks) state = accepted(api.buyUnit(state, slot, state.shop.generation));
         for (const [index, id] of ['unit-1', 'unit-2', 'unit-3'].entries())
           state = accepted(api.deployMatchUnit(state, id, { kind: 'board', cell: { col: 1 + 2 * index, row: 4 } }));
-        const definitions = ['sword', 'thiefs-gloves', 'blue-buff', 'blue-buff', 'vest', 'cloak', 'sword'];
-        state = { ...state, nextItemSerial: 107, items: definitions.map((definitionId, index) => ({
+        // item-107..109 are completed, non-unique items: a component dragged onto a unit wearing a
+        // loose component now combines with it (C18 / T13-A), so occupied and full holders wear
+        // completed items to keep testing first-allowed-slot routing and the full-holder refusal.
+        const definitions = ['sword', 'thiefs-gloves', 'blue-buff', 'blue-buff', 'vest', 'cloak', 'sword',
+          'bloodthirster', 'infinity-edge', 'giant-slayer'];
+        state = { ...state, nextItemSerial: 100 + definitions.length, items: definitions.map((definitionId, index) => ({
           id: `item-${100 + index}`, definitionId, location: { kind: 'inventory' },
         })) };
         const equip = (item, slot = 0) => { state = accepted(api.equipItem(state, item, 'unit-1', slot)); };
         if (kind === 'tg') equip('item-101');
-        if (kind === 'occupied') equip('item-104');
-        if (kind === 'full') { equip('item-104'); equip('item-105', 1); equip('item-106', 2); }
+        if (kind === 'occupied') equip('item-107');
+        if (kind === 'full') { equip('item-107'); equip('item-108', 1); equip('item-109', 2); }
         if (kind === 'unique') equip('item-102');
         const scene = window.__U3_SCENE__;
         scene.clearCombatEffects();
@@ -196,8 +207,9 @@ const output = path.resolve(process.env.U3_EVIDENCE_DIR || 'artifacts/m8-u3-dyna
       for (let slot = 0; slot < 3; slot++) assert.equal(await page.locator(`[data-debug="equipment:unit-1:${slot}"]`).getAttribute('data-preview'), 'unique-conflict');
       assert.match(await page.locator('[data-debug="equipment:unit-1:0"]').getAttribute('class'), /equip-conflict/);
       assert.match(await page.locator('.equipment-row').first().innerText(), /冲突：蓝霸符/);
+      // C16: a slot click sends only what previewEquip accepts; a refused slot names the reason and sends nothing.
       await click('equipment:unit-1:1'); const after = await read(); unchanged(before, after);
-      assert.equal(after.calls.length, 1); assert.equal(after.calls[0].reason, 'unique-conflict');
+      assert.equal(after.calls.length, 0);
       assert.equal(after.status, await page.evaluate(() => window.__U3_API__.feedback.EQUIPMENT_FAILURE_TEXT['unique-conflict']));
       return { status: after.status, calls: after.calls };
     });
