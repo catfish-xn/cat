@@ -414,6 +414,88 @@ describe('P7 carousel timing and refusals, each on its own room played to 2-4', 
   }, 120_000);
 });
 
+/**
+ * Why the room never calls `releaseCarouselParticipant` (MULTIPLAYER_CONTRACT §21.4: it is required only for an elimination
+ * while a carousel is open): eliminations happen only at a round settlement, and the carousel phase closes (deadline plus
+ * departure, `finishCarousel`) before the round goes on. A seat eliminated later releases through `releaseSeatOnElimination`,
+ * which the rules accept once the closed carousel has left no reservation. These pin both halves on one played room.
+ */
+describe('carousel and elimination never overlap; a later elimination returns the carousel picks', () => {
+  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { carousel: rules });
+  const seat = (seatId: string) => seatOf(room, seatId);
+  const opened: string[] = [];
+  const overlaps: string[] = [];
+  const reservationsAfterClose: number[] = [];
+  let participants: readonly string[] = [];
+  let previousPhase = '';
+  let previousCarousel = '';
+  // s0 at its death: the round, the carousel just before it, and its carousel picks and pool state right before the settlement.
+  let death: { readonly roundId: string; readonly afterCarousel: string; readonly picks: readonly { readonly unitId: string; readonly definitionId: string }[] } | null = null;
+  let beforeDeath = room.state;
+  let atDeath = room.state;
+
+  beforeAll(() => {
+    room.subscribe(state => {
+      if (state.phase === 'carousel' && state.carousel) {
+        if (opened.at(-1) !== state.roundId) { opened.push(state.roundId); participants = state.carousel.state.releaseOrder; }
+        for (const seatId of participants) {
+          if (!state.seats.find(candidate => candidate.seatId === seatId)!.alive) overlaps.push(`${state.roundId}:${seatId}`);
+        }
+        previousCarousel = state.roundId;
+      }
+      if (previousPhase === 'carousel' && state.phase !== 'carousel') reservationsAfterClose.push(state.pool.carouselReservations.length);
+      previousPhase = state.phase;
+      const s0 = state.seats.find(candidate => candidate.seatId === 's0')!;
+      if (s0.alive) { beforeDeath = state; return; }
+      if (death) return;
+      atDeath = state;
+      const was = beforeDeath.seats.find(candidate => candidate.seatId === 's0')!.match;
+      const units = new Set(was.preparation.units.map(unit => unit.id));
+      death = { roundId: state.roundId, afterCarousel: previousCarousel,
+        picks: was.carousel!.receipts.filter(receipt => receipt.unitId !== null && units.has(receipt.unitId)).map(receipt => ({ unitId: receipt.unitId!, definitionId: receipt.definitionId })) };
+    });
+    room.start();
+    // s0 stays a connected human that sells everything it did not get from a carousel, so it loses every fight while keeping
+    // its picks (the deadline picks for it as `timeout`); the other seats play as bots.
+    for (const seatId of ['s1', 's2', 's3']) { room.setConnected(seatId, false); expect(room.takeOver(seatId)).toBe(true); }
+    const prepared = new Set<string>();
+    for (let fired = 0; fired < 200_000 && room.state.phase !== 'ended'; fired++) {
+      if (room.state.phase === 'preparation' && seat('s0').alive && !prepared.has(room.state.roundId)) {
+        prepared.add(room.state.roundId);
+        const picks = new Set(seat('s0').match.carousel!.receipts.map(receipt => receipt.unitId));
+        for (const unit of unitsOf(room, 's0').filter(candidate => !picks.has(candidate.id))) expect(room.handle('s0', { type: 'sell', unitId: unit.id }).ok).toBe(true);
+      }
+      if (!clock.runNext()) break;
+    }
+  }, 120_000);
+
+  it('no carousel participant is eliminated while its carousel is open, and every closed carousel leaves no reservation', () => {
+    expect(room.state.phase).toBe('ended');
+    expect(room.state.fault).toBeNull();
+    expect(opened).toEqual(['2-4', '3-4', '4-4', '5-4', '6-4']);
+    expect(overlaps).toEqual([]);
+    expect(reservationsAfterClose).toEqual([0, 0, 0, 0, 0]);
+    // Not vacuous: seats did die over the match, every one of them at a settlement after some carousel.
+    expect(room.state.seats.filter(candidate => !candidate.alive).length).toBeGreaterThan(0);
+  });
+
+  it('a seat eliminated at the first fight after a carousel, still holding that pick, returns every pick to the pool', () => {
+    // Seed 42: s0 dies at 5-5, the round right after the 5-4 carousel, holding its 5-4 pick and the earlier ones.
+    expect(death).toMatchObject({ roundId: '5-5', afterCarousel: '5-4' });
+    const { picks } = death!;
+    expect(picks.length).toBe(4);
+    expect(beforeDeath.seats.find(candidate => candidate.seatId === 's0')!.match.carousel!.receipts.at(-1)!.carouselId.endsWith(':5-4')).toBe(true);
+    for (const pickedUnit of picks) expect(beforeDeath.pool.holdings.some(holding => holding.seatId === 's0' && holding.unitId === pickedUnit.unitId)).toBe(true);
+    for (const after of [atDeath, room.state]) {
+      expect(after.pool.seats.find(candidate => candidate.seatId === 's0')!.released).toBe(true);
+      expect(after.pool.holdings.filter(holding => holding.seatId === 's0')).toEqual([]);
+      assertSharedPoolConservation(after.pool, after.seats.map(candidate => candidate.match));
+    }
+    expect(atDeath.fault).toBeNull();
+    conserved(room);
+  });
+});
+
 describe('carousel-pick on the wire', () => {
   it('accepts carousel-pick (protocol 3) with exactly carouselId, revision and a non-negative slot', () => {
     const envelope = (command: unknown) => JSON.stringify({ protocolVersion: NET_PROTOCOL_VERSION, commandId: 1, type: 'command', roomId: 'r', round: 1, seatRevision: 0, command });
