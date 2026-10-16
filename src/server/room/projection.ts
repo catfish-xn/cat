@@ -125,7 +125,7 @@ const swapResult = (result: CombatResult | null): CombatResult | null => result 
 export function toSeatPrivateView(match: MatchState): SeatStateView { return { ...toPrivateSeatView(match), economyPreview: previewRoundEconomy(match) }; }
 
 /** Server-originated events a seat's client may see with its state push: only own-unit moves and merges (T10), nothing else of the ledger. */
-const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded']);
+const PUSHED_EVENT_TYPES: ReadonlySet<string> = new Set(['unitDeployed', 'unitUpgraded', 'mechanicGranted', 'seatMechanicChanged']);
 export function seatPushEvents(seat: SeatState): readonly MatchEvent[] {
   const pushed = seat.serverEvents;
   if (!pushed || pushed.seatRevision !== seat.seatRevision) return [];
@@ -270,15 +270,21 @@ function mirrorViewState(view: CombatViewState, rows: number): CombatViewState {
   return {
     ...view,
     board: { ...view.board, deploymentZones: { player: enemy, enemy: player } },
-    units: view.units.map(unit => ({ ...unit, team: swapTeam(unit.team), cell: flipCell(unit.cell, rows), ...(unit.startingCell ? { startingCell: flipCell(unit.startingCell, rows) } : {}) })),
+    units: view.units.map(unit => mirrorViewUnit(unit, rows)),
     result: swapResult(view.result),
   };
+}
+function mirrorViewUnit(unit: CombatViewState['units'][number], rows: number): CombatViewState['units'][number] {
+  return { ...unit, team: swapTeam(unit.team), cell: flipCell(unit.cell, rows), ...(unit.startingCell ? { startingCell: flipCell(unit.startingCell, rows) } : {}) };
 }
 function mirrorViewEvent(event: CombatViewEvent, rows: number): CombatViewEvent {
   switch (event.type) {
     case 'movement': return { ...event, from: flipCell(event.from, rows), to: flipCell(event.to, rows) };
     case 'cast': return { ...event, completionCell: flipCell(event.completionCell, rows) };
     case 'combatFinished': return { ...event, result: swapResult(event.result) ?? event.result };
+    // G2-3 mid-combat units: the entered view and the spawn fact carry a cell and a team.
+    case 'unitEntered': return { ...event, unit: mirrorViewUnit(event.unit, rows) };
+    case 'unitSpawned': return { ...event, team: swapTeam(event.team), cell: flipCell(event.cell, rows) };
     case 'unitUpdated': {
       const { cell, startingCell, team } = event.changes;
       return { ...event, changes: { ...event.changes, ...(cell ? { cell: flipCell(cell, rows) } : {}), ...(startingCell ? { startingCell: flipCell(startingCell, rows) } : {}), ...(team ? { team: swapTeam(team) } : {}) } };

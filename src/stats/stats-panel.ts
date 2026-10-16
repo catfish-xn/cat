@@ -59,7 +59,7 @@ function eventText(event: LedgerCombatEvent, combat: CombatState): string | null
 const DAMAGE_NAMES = { physical: '物理', magic: '魔法', true: '真实' } as const;
 /** Sentences for §14.2 wire events: only the fields the event carries (no source kinds, no shares). */
 function viewEventText(event: DisplayCombatEvent, combat: CombatViewState): string | null {
-  if (event.type === 'unitUpdated') return null; // values, not a fact to list
+  if (event.type === 'unitUpdated' || event.type === 'unitEntered' || event.type === 'unitLeft') return null; // values, not a fact to list
   const name = (id: string | null) => unitName(combat, id);
   const prefix = `第 ${event.tick} tick：`;
   switch (event.type) {
@@ -89,6 +89,7 @@ function viewIncludesUnit(event: DisplayCombatEvent, id: string): boolean {
     case 'heal': case 'manaChanged': case 'shieldLayerChanged': case 'statusChanged': return event.targetId === id;
     case 'combatFinished': return false;
     case 'effectTriggered': return event.ownerId === id || event.targetId === id;
+    case 'unitEntered': return event.unit.id === id;
     default: return event.unitId === id;
   }
 }

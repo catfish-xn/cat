@@ -19,7 +19,7 @@ export const catalogEntry = (id: string): Entry | undefined => catalog().byId.ge
 /** Authoritative description lines, shown verbatim. */
 export const itemDescriptions = (id: string): readonly string[] => catalogEntry(id)?.effectDescriptions ?? [];
 
-const KIND_NAMES = { component: '组件', completed: '成装' } as const;
+const KIND_NAMES = { component: '组件', completed: '成装', radiant: '光明' } as const;
 const EVIDENCE_NAMES: Readonly<Record<Entry['evidenceStatus'], string>> = { 'source-reviewed': '来源已核对', 'approved-provisional': '批准暂行，待历史核验' };
 const LOCALIZATION_NAMES: Readonly<Record<Entry['localizationStatus'], string>> = { 'temporary-unverified': '临时译名（待核实）', verified: '译名已核实' };
 

@@ -32,6 +32,8 @@ import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
 import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
+import { validateSeatMechanicsState } from './seat-mechanics/state';
+import { isMechanicChoice, validateMechanicPendingChoice } from './seat-mechanics/choices';
 
 // Reuse the pure default-catalog compilation, never any candidate validation.
 // Only local, already authenticated JSON basis inputs enter this byte-keyed map.
@@ -54,6 +56,7 @@ const list: InputValidation['list'] = inputValidation.list;
 const record: InputValidation['record'] = inputValidation.record;
 const checkSerial: InputValidation['checkSerial'] = inputValidation.checkSerial;
 function nullableString(value: unknown): void { if (value !== null) id(value); }
+function mechanicCheck(check: () => void, message: string): void { try { check(); } catch { requireValue(false, message); } }
 /** Across preparation, XP can only increase in paid four-XP transactions (or cap). */
 function totalExperience(level:number,xp:number):number {
   grantXp(level,xp,0); // Validate normalized values before using them as indices.
@@ -137,7 +140,9 @@ export function restoreMatch(input: unknown): MatchState {
   for (const augment of state.augments) requireValue(receipts.get(augment.choiceId)?.definitionId === augment.definitionId && receipts.get(augment.choiceId)?.round === augment.acquiredRound, 'augment missing receipt');
   if (state.anomalyBinding) requireValue(receipts.get(state.anomalyBinding.choiceId)?.definitionId === state.anomalyBinding.definitionId && receipts.get(state.anomalyBinding.choiceId)?.round === state.anomalyBinding.boundRound, 'binding missing receipt');
   const lootChoice = validateB8Loot(state, typeof input === 'string');
-  if (state.phase === 'choice' && !lootChoice) {
+  if (state.seatMechanics !== undefined) mechanicCheck(() => validateSeatMechanicsState(state.seatMechanics), 'seat mechanics');
+  if (state.phase === 'choice' && !lootChoice && isMechanicChoice(state.pendingChoice)) mechanicCheck(() => validateMechanicPendingChoice(state), 'mechanic choice');
+  else if (state.phase === 'choice' && !lootChoice) {
     record(state.pendingChoice); const choice = state.pendingChoice;
     id(choice.choiceId); id(choice.eventId); nullableString(choice.targetId); requireValue(choice.choiceId === choice.eventId, 'choice event ID');
     integer(choice.generation); integer(choice.rerollCount); list(choice.offers);

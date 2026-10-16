@@ -148,6 +148,10 @@ export function validateContent(overrides:Partial<ContentCatalogs>={}):void {
     else if(item.kind==='completed') {
       if(!item.recipe||item.recipe.length!==2||item.recipe.some(id=>!components.includes(id))) fail('Invalid item recipe');
       const key=[...item.recipe!].sort().join('|');if(recipes.has(key)) fail('Duplicate recipe');recipes.add(key);
+    } else if(item.kind==='radiant') {
+      // G2-3 radiant: no recipe, one completed base, at most one radiant per base.
+      if(item.recipe!==undefined||content.items[item.radiantOf??'']?.kind!=='completed'
+        ||Object.values(content.items).filter(other=>other.kind==='radiant'&&other.radiantOf===item.radiantOf).length!==1) fail('Invalid radiant item');
     } else fail('Invalid item kind');
   }
   for(let a=0;a<components.length;a++) for(let b=a;b<components.length;b++) if(!recipes.has([components[a],components[b]].sort().join('|'))) fail('Missing completed recipe');

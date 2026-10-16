@@ -5,7 +5,7 @@
  *
  *   npm run build:game && node tests/server/e2e/p7-carousel.mjs
  *
- * Opening (P7-1): no carousel; 1-2 preparation opens with the free Irelia and a dealt shop, like the pre-P7 opening.
+ * Opening (P7-1): no carousel; 1-2 preparation opens with the free random one-cost hero and a dealt shop, like the pre-P7 opening.
  * Up to 2-4: in every preparation A deploys bench units onto its board up to its level and buys until its bench is full
  * (rerolling in stage 2 when needed), so at 2-4 both are full. No carousel opens before 2-4.
  * 2-4: the ring shows nine units with their item; the release order follows the public HP (ascending, seat order on a
@@ -19,12 +19,15 @@
  * bench slot at once; the holding slot disappears.
  * Screenshots go to artifacts/p7-carousel/ (not committed). P7_WS_PORT / P7_VITE_PORT override the ports.
  */
+import { readFileSync } from 'node:fs';
 import { click, collectErrors, createChecks, joinOnline, launchBrowser, onlineUrl, outDir, pollRead, read, sleep, startGameServer, startVite, stopAll, trackCommands, waitRead } from './harness.mjs';
 
 const OUT = outDir('p7-carousel');
 const WS_PORT = Number(process.env.P7_WS_PORT ?? 8826);
 const VITE_PORT = Number(process.env.P7_VITE_PORT ?? 5226);
 const { check, finish } = createChecks();
+/** The opening is a random one-cost (OPENING_INITIAL_STATE / opening-unit-v1): the catalog is read from the rules source, not restated. */
+const ONE_COST = JSON.parse(readFileSync(new URL('../../../src/simulation/match-rules.ts', import.meta.url), 'utf8').match(/SHOP_CATALOG_BY_COST[^=]*=\s*Object\.freeze\(\{\s*1:\s*Object\.freeze\((\[[^\]]*\])\)/)[1]);
 
 const ring = page => page.evaluate(() => {
   const root = document.querySelector('#carousel-panel');
@@ -81,7 +84,7 @@ async function main() {
     const bots = s.m6.seats.filter(seat => seat.kind === 'bot').map(seat => seat.seatId);
     const seatIndex = new Map(s.m6.seats.map((seat, index) => [seat.seatId, index]));
     check(s.state.roundDefinitionId === '1-2' && carouselOf(s) === null && await ring(a) === null, `the match opens on 1-2 preparation without a carousel (${s.m6.phase.kind} ${s.state.roundDefinitionId})`);
-    check(myUnits(s).length === 1 && myUnits(s)[0].definitionId === 'irelia' && myUnits(s)[0].starLevel === 1, `the free opening Irelia is mine (${myUnits(s).map(unit => unit.definitionId)})`);
+    check(myUnits(s).length === 1 && ONE_COST.includes(myUnits(s)[0].definitionId) && myUnits(s)[0].starLevel === 1, `the free opening one-cost hero is mine (${myUnits(s).map(unit => unit.definitionId)})`);
     check(s.state.shop.generation > 0 && s.state.shop.slots.some(slot => slot.status === 'available'), 'the first shop is dealt');
     check(s.state.items.length === 0 && heldOf(s).length === 0 && await holding(a) === null, 'no component, nothing held at the opening');
     await a.screenshot({ path: `${OUT}/1-2-opening.png` });

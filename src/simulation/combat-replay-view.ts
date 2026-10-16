@@ -6,11 +6,12 @@ import { readCombatStats } from './combat-s13';
 import { canonicalContent } from './content';
 import { freezeContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
+import { alignReplayUnits, applyReplayMembership } from './seat-mechanics/replay-units';
 
 export const COMBAT_REPLAY_KEYFRAME_INTERVAL = 20;
 const scalarKeys = ['id', 'definitionId', 'team', 'starLevel', 'hp', 'maxHp', 'mana', 'maxMana', 'shield',
   'alive', 'targetId', 'attackDamage', 'attackRange', 'attackIntervalTicks', 'armor', 'magicResist',
-  'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps'] as const;
+  'abilityPower', 'baseAttackSpeedBps', 'attackSpeedBonusBps', 'form'] as const;
 function unitView(unit: CombatUnit, state: CombatState) {
   return { ...pick(unit, scalarKeys), ...readCombatStats(unit, state), cell: cellView(unit.cell),
     ...(unit.startingCell ? { startingCell: cellView(unit.startingCell) } : {}) };
@@ -50,11 +51,18 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'maxHpChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'beforeMax', 'afterMax', 'beforeHp', 'afterHp']) };
     // Activities/effect programs contain execution plans. Only their visible consequences are sent.
     case 'activityChanged': case 'effectTriggered': return null;
+    // G2-3: membership changes also produce unitEntered/unitLeft state events (seat-mechanics/replay-units.ts).
+    case 'unitSpawned': return { ...envelope, type: event.type, sourceId: event.source.ownerId,
+      ...pick(event, ['unitId', 'definitionId', 'team']), cell: cellView(event.cell) };
+    case 'unitRemoved': return { ...envelope, ...pick(event, ['type', 'unitId', 'reason']) };
+    case 'castOutcome': return { ...envelope, ...pick(event, ['type', 'unitId', 'abilityKey', 'outcome']), subOutcomes: [...event.subOutcomes] };
+    case 'bindingChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'bound', 'reason']) };
   }
 }
 export type CombatAnimationEvent = NonNullable<ReturnType<typeof animationEvent>>;
 export type CombatViewEvent = CombatAnimationEvent
-  | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> };
+  | { readonly type: 'unitUpdated'; readonly unitId: string; readonly changes: Partial<Omit<CombatViewUnit, 'id'>> }
+  | import('./seat-mechanics/replay-units').ReplayMembershipEvent;
 export interface CombatReplayTick {
   readonly tick: number;
   readonly events: readonly CombatViewEvent[];
@@ -133,11 +141,14 @@ export function startCombatReplay(input: CombatReplayInput): CombatReplayTask {
           comparisonFailed = true;
         }
       }
-      if (view.units.length !== previous.units.length || view.units.some((u, i) => u.id !== previous.units[i].id)) throw new RangeError('replay-divergence');
+      const sameMembers = view.units.length === previous.units.length && view.units.every((u, i) => u.id === previous.units[i].id);
+      // G2-3: units may enter (append) or leave mid-combat; the diff then emits unitEntered/unitLeft before updates.
+      const before = sameMembers ? previous.units : alignReplayUnits(previous.units, view.units, events);
       for (let i = 0; i < view.units.length; i++) {
-        const unit = view.units[i], before = previous.units[i];
+        const unit = view.units[i], prior = before[i];
+        if (!prior) continue;
         const changes = Object.fromEntries(Object.entries(unit).filter(([key, value]) => key !== 'id'
-          && !equalViewField(value, before[key as keyof CombatViewUnit])));
+          && !equalViewField(value, prior[key as keyof CombatViewUnit])));
         if (Object.keys(changes).length) events.push({ type: 'unitUpdated', unitId: unit.id, changes });
       }
       ticks.push(freezeContent({ tick: state.tick, events,
@@ -167,6 +178,6 @@ export function applyCombatReplayTick(view: CombatViewState, frame: CombatReplay
   let units = view.units;
   for (const event of frame.events) if (event.type === 'unitUpdated') {
     units = units.map(unit => unit.id === event.unitId ? { ...unit, ...event.changes } : unit);
-  }
+  } else if (event.type === 'unitEntered' || event.type === 'unitLeft') units = applyReplayMembership(units, event);
   return freezeContent({ ...view, tick: frame.tick, units });
 }
