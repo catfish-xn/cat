@@ -1,8 +1,7 @@
 /**
  * Player-facing augment names and icons. Content keeps its own `name` (the 24 W4 augments
- * carry the English client name there); the UI shows the 14.24 zh_CN client name instead.
- * Families already in play keep the series name the first six used (加快节奏 / 大块头伙伴)
- * so I / II / III read as one line in the choice dialog.
+ * carry the English client name there, and two first-tier names predate the client wording);
+ * the UI shows the 14.24 zh_CN client name for every augment (user decision 2026-10-16).
  */
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { S13_AUGMENT_ASSETS } from './s13-augment-asset-manifest';
@@ -13,8 +12,8 @@ const ICONS = new Map(S13_AUGMENT_ASSETS.map(asset => [asset.id, asset.path]));
 /** zh_CN client names (cdragon 14.24 zh_cn.json), keyed by repo augment id. */
 export const AUGMENT_ZH: Readonly<Record<string, string>> = Object.freeze({
   'manaflow-ii': '法力流 II', 'glass-cannon-ii': '玻璃大炮 II',
-  'pumping-up-ii': '加快节奏 II', 'pumping-up-iii': '加快节奏 III',
-  'bulky-buddies-ii': '大块头伙伴 II', 'bulky-buddies-iii': '大块头伙伴 III',
+  'pumping-up-i': '打气 I', 'pumping-up-ii': '打气 II', 'pumping-up-iii': '打气 III',
+  'bulky-buddies-i': '巨大伙伴 I', 'bulky-buddies-ii': '巨大伙伴 II', 'bulky-buddies-iii': '巨大伙伴 III',
   'placebo-plus': '安慰剂+', 'mentorship-i': '导师制 I', 'mentorship-ii': '导师制 II',
   'item-collector-i': '装备收集器 I', 'item-collector-ii': '装备收集器 II',
   'bronze-for-life-i': '终身黄铜 I', 'bronze-for-life-ii': '终身黄铜 II',
