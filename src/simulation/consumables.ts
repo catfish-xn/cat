@@ -53,7 +53,8 @@ export function planConsumable(state:MatchState,consumableId:string,target:Consu
   } else {
     if (!Number.isSafeInteger(nextItemSerial+1)||state.items.some(i=>i.id===`item-${nextItemSerial}`)) throw new RangeError('Invalid reforge serial');
     const original=affectedItems[0],kind=ITEM_DEFINITIONS[original.definitionId].kind;
-    const candidates=REFORGE_POOLS[kind].filter(d=>d.definitionId!==original.definitionId);
+    // previewUseConsumable admits only component/completed items, so radiant never reaches a reforge pool.
+    const candidates=REFORGE_POOLS[kind as 'component'|'completed'].filter(d=>d.definitionId!==original.definitionId);
     const draw=drawIndex(rngAfter,candidates.length);rngAfter=draw.rng;
     output={id:`item-${nextItemSerial++}`,definitionId:candidates[draw.index].definitionId};
     items=[...state.items.filter(i=>i.id!==original.id),{...output,location:{kind:'inventory' as const}}].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);

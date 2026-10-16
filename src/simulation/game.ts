@@ -1,5 +1,6 @@
 import { contains, DEFAULT_BOARD, isDeploymentCell, sameCell, type Board } from './board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from './units';
+import { countsTowardPopulation } from './seat-mechanics/forms';
 export interface GameState { readonly board: Board; readonly benchSize: number; readonly units: readonly Unit[] }
 export type DeploymentFailure = 'unknown-unit' | 'enemy-unit' | 'invalid-location' | 'outside-deployment-zone' | 'occupied';
 export type DeploymentResult = { readonly ok: true; readonly state: GameState } | { readonly ok: false; readonly reason: DeploymentFailure; readonly state: GameState };
@@ -55,6 +56,6 @@ export function deployUnit(state: GameState, unitId: string, target: UnitLocatio
     : unit === occupant ? { ...unit, location: copyLocation(source.location) } : unit) } };
 }
 export function getPlayerDeploymentCount(state: GameState): number {
-  return state.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board').length;
+  return state.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board' && countsTowardPopulation(unit.definitionId)).length;
 }
 export function getDefinition(unit: Unit) { return UNIT_DEFINITIONS[unit.definitionId]; }

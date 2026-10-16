@@ -88,7 +88,7 @@ export function validateEquipmentState(state:EquipmentState,pool:EquipmentPool,i
     if(cursor.state!==state.equipment.state||cursor.draws!==state.equipment.draws)throw new RangeError('Equipment stream mismatch');
   }
 }
-export function createEquipmentPool(entries:readonly (EquipmentPoolEntry & {readonly kind:'component'|'completed';readonly effects:readonly import('./contracts').Effect[]})[]):EquipmentPool{
+export function createEquipmentPool(entries:readonly (EquipmentPoolEntry & {readonly kind:'component'|'completed'|'radiant';readonly effects:readonly import('./contracts').Effect[]})[]):EquipmentPool{
   const eligible=entries.filter(e=>!e.effects.some(effect=>effect.kind==='temporary-equipment'));
   const project=(e:EquipmentPoolEntry)=>({apiName:e.apiName,definitionId:e.definitionId});
   const pool:EquipmentPool={version:'tg-01-v1',completed:eligible.filter(e=>e.kind==='completed').map(project),components:eligible.filter(e=>e.kind==='component').map(project)};
