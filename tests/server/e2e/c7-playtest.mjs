@@ -25,6 +25,7 @@ async function main() {
   const errors = [];
   const receipts = [];
   const report = { rounds: [], combine: null, swap: null, pairing: null, g2Bots: [] };
+  const openingOf = new Map();
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -35,7 +36,11 @@ async function main() {
         if (m.type === 'view') {
           const admitted = new Set(['amumu','powder','singed','violet','nocturne','vladimir','zeri','blitzcrank','ekko','illaoi','twitch','leblanc','malzahar','rumble']);
           for (const seat of m.view.seats ?? []) if (seat.kind === 'bot') {
-            for (const unit of seat.publicBoard?.units ?? []) if (admitted.has(unit.definitionId)) {
+            const units = seat.publicBoard?.units ?? [];
+            // The random opening one-cost (alone on the board when first seen) may itself be an admitted hero: only copies beyond it count as bought.
+            if (!openingOf.has(seat.seatId) && units.length > 0) openingOf.set(seat.seatId, units[0].definitionId);
+            const copies = id => units.filter(unit => unit.definitionId === id).reduce((sum, unit) => sum + 3 ** (unit.starLevel - 1), 0);
+            for (const unit of units) if (admitted.has(unit.definitionId) && copies(unit.definitionId) > (openingOf.get(seat.seatId) === unit.definitionId ? 1 : 0)) {
               const observation = { seatId: seat.seatId, definitionId: unit.definitionId, round: m.view.phase.round };
               if (!report.g2Bots.some(row => row.seatId === observation.seatId && row.definitionId === observation.definitionId && row.round === observation.round)) report.g2Bots.push(observation);
             }
@@ -141,7 +146,7 @@ async function main() {
 
     /* ---------------- G1-P6: 2-1 shows possible opponents; the battle names one of them ---------------- */
     const marks = () => page.evaluate(() => [...document.querySelectorAll('.online-seat[data-pairing]')].map(node => `${node.dataset.debug.replace('online:seat:', '')}:${node.dataset.pairing}`).sort());
-    check(report.g2Bots.length > 0, 'G2-1: bots bought and deployed an admitted new hero (opening/PvE loot contain only historical heroes)');
+    check(report.g2Bots.length > 0, 'G2-1: bots bought and deployed an admitted new hero (beyond their random one-cost opening; PvE loot contains only historical heroes)');
     const prep21 = await read(page), candidates = prep21.m6.opponentCandidates ?? [];
     const shownMarks = await marks();
     report.pairing = { candidates, preparationMarks: shownMarks };

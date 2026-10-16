@@ -9,6 +9,7 @@ import {
   applyRoundSettlement, assertSharedPoolConservation, releaseSeatOnElimination, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt,
 } from '../../src/server-entry';
 import { type BattleResolver } from '../../src/server/room/battle-resolver';
+import { withOpeningCopies } from '../../src/server/room/room';
 import { toPlayerView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
 import type { BattleSeatOutcome, RoomState, SeatState } from '../../src/server/room/types';
@@ -83,6 +84,32 @@ describe('Room on the shared pool: opening (§12.2)', () => {
     room.start();
     const view = JSON.stringify(toPlayerView(room.state, 's0', clock.now()));
     for (const word of ['available', 'holdings', 'pending', 'sharedPool', 'poolId', 'naturalRound']) expect(view).not.toContain(word);
+  });
+});
+
+describe('Room on a debug pool (poolCapacities) with random openings', () => {
+  it('raises each seat\'s opening hero to its number of openings, so a fixture that omits them still opens', () => {
+    const openings = Array.from({ length: 8 }, (_, i) => selectOpeningUnit(42, `s${i}`));
+    const { room } = makeRoom(new TwoSidedBattleResolver(), { poolCapacities: { darius: 1 } });
+    room.start();
+    conserved(room.state);
+    for (const [index, seat] of room.state.seats.entries()) {
+      const units = seat.match.preparation.units.filter(unit => unit.team === 'player');
+      expect(units.map(unit => unit.definitionId)).toEqual([openings[index]]);
+    }
+    const held = (id: string) => room.state.pool.holdings.filter(holding => holding.definitionId === id).length;
+    for (const hero of new Set(openings)) expect(held(hero)).toBe(openings.filter(id => id === hero).length);
+  });
+
+  it('keeps capacities that already cover the openings and every other hero as given', () => {
+    const ids = Array.from({ length: 8 }, (_, i) => `s${i}`);
+    const openings = ids.map(id => selectOpeningUnit(42, id));
+    const covered: Record<string, number> = { darius: 1 };
+    for (const hero of openings) covered[hero] = (covered[hero] ?? 0) + 1;
+    expect(withOpeningCopies(covered, 42, ids)).toEqual(covered);
+    const raised = withOpeningCopies({ ekko: 2 }, 42, ids);
+    expect(raised['ekko']).toBe(2);
+    for (const hero of new Set(openings)) expect(raised[hero]).toBe(openings.filter(id => id === hero).length);
   });
 });
 
