@@ -1,8 +1,8 @@
 import {freezeCombatInput} from '../src/simulation/combat-input';
 import {expect,it} from 'vitest';
-import {atSupply,must} from './p7-carousel-helper';
-import {createCarousel,prepareCarouselParticipants,advanceCarousel,pickCarouselForSeat,completeCarouselForSeat,resolvePendingCarouselUnits,sellPendingCarouselUnit,restoreCarouselSeat,grantCarouselPick} from '../src/simulation/carousel';
-import {buySharedUnit,rerollSharedShop,nextSharedRound,sellSharedUnit,assertSharedPoolConservation} from '../src/simulation/shared-pool';
+import {atSupply,must,supplySeats} from './p7-carousel-helper';
+import {createCarousel,prepareCarouselParticipants,advanceCarousel,pickCarouselForSeat,completeCarouselForSeat,resolvePendingCarouselUnits,sellPendingCarouselUnit,restoreCarouselSeat,grantCarouselPick,releaseCarouselParticipant} from '../src/simulation/carousel';
+import {buySharedUnit,rerollSharedShop,nextSharedRound,sellSharedUnit,assertSharedPoolConservation,releaseSeatOnElimination} from '../src/simulation/shared-pool';
 import {buyXp,deployMatchUnit,stepMatch} from '../src/simulation/match';
 import {toPrivateSeatView} from '../src/simulation/private-seat-view';
 import {UNIT_DEFINITIONS} from '../src/simulation/units';
@@ -109,4 +109,34 @@ it('defers a real upgrade until next preparation; repeated steps, grants and res
     const bad=structuredClone(recovered);mutate(bad);expect(()=>restoreCarouselSeat(next.carousel,bad)).toThrow();
   }
   assertSharedPoolConservation(next.pool,[recovered]);
+});
+// UI_REQUESTS G1-P7: after a carousel closes every receipt is granted and the units are ordinary pool holdings, so an
+// elimination in a later round goes through releaseSeatOnElimination alone. The closed carousel's frozen pool is stale
+// by then and releaseCarouselParticipant refuses it; the granted receipt stays as the historical birth record.
+it('a seat eliminated after the 2-4 carousel closed is released by releaseSeatOnElimination alone; the pool stays conserved',()=>{
+  const {pool,states}=supplySeats(2);
+  let carousel=must(advanceCarousel(must(createCarousel(pool,'2-4',{algorithm:'lcg32-v1',state:77})).state,6000)).state;
+  const seats=[...states];
+  for(const [i,seatId] of ['s0','s1'].entries()){
+    const picked=must(pickCarouselForSeat(carousel.pool,carousel,seats[i],seatId,i));carousel=picked.carousel;seats[i]=picked.state;
+  }
+  carousel=must(advanceCarousel(carousel,carousel.deadlineMs)).state;
+  expect(carousel.status).toBe('closed');
+  expect(carousel.receipts.map(r=>r.status)).toEqual(['granted','granted']);
+  expect(carousel.pool.carouselReservations).toEqual([]);
+  for(const [i,seatId] of ['s0','s1'].entries()){
+    const done=must(completeCarouselForSeat(carousel,seats[i],seatId));carousel=done.state;seats[i]=done.match;
+  }
+  const closed=carousel,advanced=must(nextSharedRound(closed.pool,seats,seats[0].round));
+  const receipt=closed.receipts.find(r=>r.seatId==='s0')!;
+  const eliminated:MatchState={...advanced.states[0],playerHp:0,multiplayer:{...advanced.states[0].multiplayer!,status:'eliminated'}};
+  expect(advanced.pool.holdings.some(h=>h.seatId==='s0'&&h.unitId===receipt.unitId)).toBe(true);
+  expect(releaseCarouselParticipant(closed,eliminated,'s0')).toMatchObject({ok:false,reason:'invalid-match',state:closed,match:eliminated,events:[],poolEvents:[]});
+  const released=must(releaseSeatOnElimination(advanced.pool,eliminated));
+  assertSharedPoolConservation(released.pool,[released.state,advanced.states[1]]);
+  expect(released.poolEvents.some(e=>e.type==='sharedSeatReleased'&&e.seatId==='s0')).toBe(true);
+  expect(released.pool.seats.find(s=>s.seatId==='s0')?.released).toBe(true);
+  expect(released.pool.holdings.some(h=>h.seatId==='s0')).toBe(false);
+  expect(released.pool.carouselReceipts.find(r=>r.id===receipt.id)).toEqual(receipt);
+  expect(releaseSeatOnElimination(released.pool,released.state)).toMatchObject({ok:false,reason:'duplicate-release',pool:released.pool});
 });

@@ -914,6 +914,7 @@ seed-9 已缩减为 2 对 2 的直接编译输入 `tests/fixtures/c19-seed-9-min
 ### 说明（无需动作）
 
 - `releaseCarouselParticipant` 已绑定但房间当前没有调用点：淘汰只在战斗结算提交时发生，而选秀阶段只在回合进入时开、截止+2 秒后关，二者不重叠；盘关闭后的淘汰沿用 `releaseSeatOnElimination`（八席整局单测与 e2e 跑到终局无守恒错误）。若规则侧认为关闭后的盘仍需经它释放，请在合同写明。
+- **回应（2026-10-16，规则侧结论：无需调用）**：盘关闭后的淘汰只走 `releaseSeatOnElimination` 即保持卡池守恒，房间现有做法正确，无需改动。选秀单位在发放时已登记为普通 holdings，淘汰释放会连同其他棋子一并归还；该席池收据保持 `granted` 是历史出生记录，不是遗漏，不必改成 released。关闭后的旧 CarouselState 已与当前池脱节，再用它调 `releaseCarouselParticipant` 会以 `invalid-match` 拒绝。`releaseCarouselParticipant` 仅用于盘开着时淘汰参与席（房间当前不会发生）。合同见 MULTIPLAYER_CONTRACT §21.5 `releaseCarouselSeat` 条目下「盘关闭后的淘汰」与 MATCH_CONTRACT P7「适用窗口」；回归用例见 `tests/p7-1-carousel-rules.test.ts`。
 
 ### SR-G2-01 G2-2 完整回应
 
