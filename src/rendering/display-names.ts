@@ -1,5 +1,6 @@
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { NEUTRAL_DEFINITIONS } from '../simulation/content/neutrals';
+import { g23UnitName } from '../presentation/g23-display';
 
 /** S13 client names (CommunityDragon 14.24 zh_cn.json, checked 2026-10-15). Swain is listed though its form stays blocked. */
 const UNIT_ZH: Readonly<Record<string,string>> = {
@@ -10,4 +11,4 @@ const UNIT_ZH: Readonly<Record<string,string>> = {
   akali:'阿卡丽', ambessa:'安蓓萨', camille:'卡蜜尔', draven:'德莱文', heimerdinger:'黑默丁格', jinx:'金克丝', mordekaiser:'莫德凯撒', morgana:'莫甘娜',
   sett:'瑟提', steb:'斯特卜', trundle:'特朗德尔', twistedfate:'崔斯特', vex:'薇古丝', vi:'蔚', ziggs:'吉格斯',
 };
-export const displayUnitName = (id: string) => UNIT_ZH[id] ?? (Object.hasOwn(NEUTRAL_DEFINITIONS, id) ? NEUTRAL_DEFINITIONS[id].name : undefined) ?? UNIT_DEFINITIONS[id]?.name ?? '未知单位';
+export const displayUnitName = (id: string) => UNIT_ZH[id] ?? g23UnitName(id) ?? (Object.hasOwn(NEUTRAL_DEFINITIONS, id) ? NEUTRAL_DEFINITIONS[id].name : undefined) ?? UNIT_DEFINITIONS[id]?.name ?? '未知单位';
