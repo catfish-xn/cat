@@ -12,6 +12,7 @@ import {
   buyXp, combineItems, createMatch, deployMatchUnit, equipItem, nextRound, rerollAnomaly, selectAnomalyTarget,
 } from '../../simulation/match';
 import type { MatchCommandResult, MatchEvent, MatchState } from '../../simulation/match-types';
+import { selectOpeningUnit } from '../../simulation/opening-unit';
 import { nextRandom, validateSeed } from '../../simulation/rng';
 import { readRoundInfo } from '../../simulation/round-selectors';
 import {
@@ -52,7 +53,11 @@ export interface RoomOptions extends RoomTimings {
    * default (tests); production may turn it off. The rules' own transactions check their seat either way.
    */
   readonly assertPoolConservation?: boolean;
-  /** Test fixtures only (§12.2): partial per-hero capacities, unspecified heroes have 0. Production omits it (official sizes). */
+  /**
+   * Test fixtures only (§12.2): partial per-hero capacities, unspecified heroes have 0. Production omits it (official sizes).
+   * Each seat's random opening one-cost needs a copy, so a hero is raised to at least its number of openings
+   * (`withOpeningCopies`); a fixture that already covers the openings is used as given.
+   */
   readonly poolCapacities?: Readonly<Record<string, number>>;
   /**
    * Combat ticks resolved per clock slice after the preparation deadline (B8). The frozen round is resolved in slices
@@ -63,7 +68,7 @@ export interface RoomOptions extends RoomTimings {
   readonly pairingPolicy?: PairingPolicy;
   /**
    * G1-P7: the rules' shared carousel (`CAROUSEL_RULES_BINDING`). When given, the seats open with `createCarouselMatch`
-   * (P7-1: the free Irelia and the usual opening economy, MULTIPLAYER_CONTRACT §21.5–21.6) and every carousel the rules
+   * (P7-1: the random one-cost opening hero and the usual opening economy, MULTIPLAYER_CONTRACT §21.5–21.6) and every carousel the rules
    * open (`opensCarousel`: the five x-4 rounds) replaces the old component supply. Omitted, the room opens and runs as
    * before P7 (supply choice), which the pre-P7 room tests keep using.
    */
@@ -214,11 +219,12 @@ export class Room {
     // the fixed seat index 0–7 (this also enables the server mode of §11.1; §18.2: each seat is built shared-deferred,
     // never solo-then-recoloured, and the first initializeSharedSeat freezes the room's orb layout in pool.orbLayout)
     // → one fair first refresh → publish once. Any refusal throws before anything is published, so the whole proposal is discarded.
-    // P7-1 (§21.5 order): with the carousel each seat is a `createCarouselMatch` opening (the free Irelia), joined and
+    // P7-1 (§21.5 order): with the carousel each seat is a `createCarouselMatch` opening (a random one-cost hero), joined and
     // refreshed exactly like the plain opening; no carousel is created here, the first one is the rules' 2-4.
     const carousel = options.carousel;
     let rngState = options.seed >>> 0;
-    let pool = createSharedPool(options.roomId, options.seed >>> 0, options.poolCapacities ? { capacities: options.poolCapacities } : {});
+    const capacities = options.poolCapacities ? withOpeningCopies(options.poolCapacities, options.seed >>> 0, seats.map(seat => seat.seatId)) : null;
+    let pool = createSharedPool(options.roomId, options.seed >>> 0, capacities ? { capacities } : {});
     const imported = seats.map((spec, index) => {
       const draw = nextRandom(rngState); rngState = draw.state;
       const opening = carousel ? carousel.createCarouselMatch(draw.word) : createMatch(draw.word, { mode: 'shared-deferred' });
@@ -1016,6 +1022,20 @@ function finishLiveCombat(pool: SharedPoolState, state: MatchState):
 }
 
 /** The rules' conservation check as a value: null when balanced, else its reason (never used as protocol text). */
+/**
+ * Debug/test `poolCapacities` with random openings: the rules give each seat a random one-cost hero from the pool
+ * (`selectOpeningUnit(pool seed, seatId)`, MULTIPLAYER_CONTRACT), and a pool without that copy refuses the seat with
+ * `pool-empty`. Each opening hero is raised to at least the number of seats opening with it; everything else is kept.
+ * The selector is only read here to size the fixture, the opening itself stays the rules' `initializeSharedSeat`.
+ */
+export function withOpeningCopies(capacities: Readonly<Record<string, number>>, seed: number, seatIds: readonly string[]): Readonly<Record<string, number>> {
+  const openings: Record<string, number> = {};
+  for (const seatId of seatIds) { const hero = selectOpeningUnit(seed, seatId); openings[hero] = (openings[hero] ?? 0) + 1; }
+  const result: Record<string, number> = { ...capacities };
+  for (const [hero, count] of Object.entries(openings)) result[hero] = Math.max(result[hero] ?? 0, count);
+  return result;
+}
+
 function conservationProblem(pool: SharedPoolState, states: readonly MatchState[]): string | null {
   try { assertSharedPoolConservation(pool, states); return null; }
   catch (error) { return error instanceof Error ? error.message : String(error); }
