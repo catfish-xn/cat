@@ -29,6 +29,15 @@
       "limitations": "同页三个时间层；正文、A 热修、B 补丁必须按小标题定位。"
     },
     {
+      "id": "riot-14.23",
+      "url": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+      "archive_url": null,
+      "credibility": "官方",
+      "version": "14.23中途更新，2024-11-21；14.24/14.24b未再列Mundo实验加成改动",
+      "access": "正文已读",
+      "limitations": "定位Mid-Patch Updates → NOVEMBER 21ST → TRAITS；只用于Mundo实验加成，不混同本体技能。"
+    },
+    {
       "id": "academy-lol",
       "url": "https://lolchess.gg/rewards/set13/academy-sponsored-items?hl=en",
       "archive_url": null,
@@ -62,7 +71,7 @@
       "credibility": "攻略站",
       "version": "页面更新2024-12-10；14.24发布同日",
       "access": "搜索索引正文",
-      "limitations": "LeDuck 机制整理，不等同原始挖掘；该日时间先后、jackpot分配及强化精确倍率未锁定。"
+      "limitations": "LeDuck 原文含 40/35/24.5/0.5 二级概率表；Unlikely Duo将Triple从10%提高至20%的说明原文标not confirmed。非原始挖掘；发布同日先后、jackpot分配及强化精确倍率未锁定；本次直连404，搜索索引仍可读一级表和Notes。"
     },
     {
       "id": "academy-archive",
@@ -107,7 +116,7 @@
       "credibility": "攻略站",
       "version": "页面快照20241212200931；图片快照20250219205122",
       "access": "存档HTML已读；图片单独目视读取",
-      "limitations": "12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。"
+      "limitations": "12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。 实验图仍含Mundo 200/75的14.23改动前旧值；Twitch 15%、纹章分身40%来源可能早于 14.23，仅作参考，不作为约定值依据。"
     },
     {
       "id": "experiment-image",
@@ -116,7 +125,7 @@
       "credibility": "攻略站",
       "version": "2025-02-19图片快照，14.24适用性未证实",
       "access": "图表已目视读取",
-      "limitations": "图表数值只作候选或冲突证据；不能用页面时间代替图片时间。"
+      "limitations": "图表数值只作候选或冲突证据；不能用页面时间代替图片时间。 实验图仍含Mundo 200/75的14.23改动前旧值；Twitch 15%、纹章分身40%来源可能早于 14.23，仅作参考，不作为约定值依据。"
     },
     {
       "id": "sevika-archive",
@@ -179,7 +188,7 @@
       "credibility": "攻略站",
       "version": "当前Set13，非14.24冻结",
       "access": "正文已读",
-      "limitations": "当前5档450HP、Warwick眩晕1.5s等不能回填14.24。"
+      "limitations": "当前5档450HP、Warwick眩晕1.5s等不能回填14.24。 Mundo 120生命/击杀+60与Riot 14.23官方改动一致，该项已确认。"
     },
     {
       "id": "sion-tools",
@@ -526,7 +535,7 @@
               "jackpot": 0.5
             }
           },
-          "version": "14.24同日LeDuck一级表；二级表仅后期图片支持",
+          "version": "14.24同日LeDuck原文含一级与二级概率表；后期图片仅辅助参考",
           "status": "supported",
           "evidence": [
             {
@@ -551,7 +560,27 @@
               "source_version": "2025-02-19图片快照，14.24适用性未证实"
             }
           ],
-          "note": "一级合计100%；二级合计100%；10%不能与二级的四项相加。二级是条件概率的图表解释，并非已解码的脚本控制流。"
+          "note": "LeDuck 原文含 40/35/24.5/0.5 二级概率表。一级合计100%；二级合计100%；10%不能与二级四项相加。二级按Triple条件概率解释，尚非已解码的脚本控制流；本次直连受限，版本边界保留。"
+        },
+        {
+          "id": "unlikely-duo-triple-chance",
+          "value": {
+            "base_triple_percent": 10,
+            "possible_with_unlikely_duo_percent": 20,
+            "confirmed": false
+          },
+          "version": "LeDuck 2024-12-10 Notes；14.24/14.24b未确认",
+          "status": "candidate",
+          "evidence": [
+            {
+              "source_id": "sevika-leduck",
+              "url": "https://www.tacter.com/es/tft/guides/sevika-high-roller-odds-tft-set-13-f6af8bda",
+              "archive_url": null,
+              "credibility": "攻略站",
+              "source_version": "页面更新2024-12-10；14.24发布同日"
+            }
+          ],
+          "note": "原文明确标not confirmed：Unlikely Duo可能把三连（Triple）从10%提高到20%。仅记录未确认线索，不作为约定值或运行时概率依据。"
         },
         {
           "id": "hash-alignment",
@@ -1261,20 +1290,26 @@
           "id": "bonus-Dr. Mundo",
           "value": {
             "unit": "Dr. Mundo",
-            "image_max_hp": 200,
-            "image_takedown_hp": 75,
-            "tools_max_hp": 120,
-            "tools_takedown_hp": 60
+            "max_hp": 120,
+            "on_kill_hp": 60,
+            "official_original": "Experiment, Dr. Mundo's Experiment Bonus HP: 200 + 75 ⇒ 120 + 60"
           },
-          "version": "14.24官方优先；其余攻略候选，图片非12月冻结",
-          "status": "conflict",
+          "version": "14.23中途更新（2024-11-21）生效；14.24/14.24b公告未再改动",
+          "status": "confirmed",
           "evidence": [
             {
-              "source_id": "experiment-image",
-              "url": "https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png",
-              "archive_url": "https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png",
-              "credibility": "攻略站",
-              "source_version": "2025-02-19图片快照，14.24适用性未证实"
+              "source_id": "riot-14.23",
+              "url": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-23-notes/",
+              "archive_url": null,
+              "credibility": "官方",
+              "source_version": "14.23中途更新，2024-11-21；14.24/14.24b未再列Mundo实验加成改动"
+            },
+            {
+              "source_id": "riot",
+              "url": "https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/",
+              "archive_url": null,
+              "credibility": "官方",
+              "source_version": "14.24 / 14.24a(12-10) / 14.24b(12-17)"
             },
             {
               "source_id": "experiment-tools",
@@ -1284,7 +1319,7 @@
               "source_version": "当前Set13，非14.24冻结"
             }
           ],
-          "note": ""
+          "note": "已确认（官方，Riot 14.23公告）；数值120生命/击杀+60。tft.tools的120/60是正确的，与官方一致；LittleBuddyBot图中的200/75为改动前旧值，不用于目标版本。"
         },
         {
           "id": "bonus-Twitch",
@@ -1294,8 +1329,8 @@
             "image_nearest_enemy_max_hp_physical_percent": 15,
             "tools_nearest_enemy_max_hp_physical_percent": 20
           },
-          "version": "14.24官方优先；其余攻略候选，图片非12月冻结",
-          "status": "conflict",
+          "version": "旧图与当前攻略的跨版本参考；14.24/14.24b尚未冻结",
+          "status": "candidate",
           "evidence": [
             {
               "source_id": "experiment-image",
@@ -1312,7 +1347,7 @@
               "source_version": "当前Set13，非14.24冻结"
             }
           ],
-          "note": ""
+          "note": "图中Twitch 15%：来源可能早于 14.23，仅作参考，不作为约定值依据。当前tft.tools的20%也未独立冻结到14.24；两者不能构成目标版本的可靠冲突或定值依据。"
         },
         {
           "id": "bonus-Warwick",
@@ -1341,7 +1376,7 @@
             "image_clone_hp_percent": 40,
             "clone_player_damage": 0
           },
-          "version": "14.24官方优先；其余攻略候选，图片非12月冻结",
+          "version": "图中分身生命/时机为旧图参考；玩家伤害0为14.24官方字段",
           "status": "candidate",
           "evidence": [
             {
@@ -1359,24 +1394,23 @@
               "source_version": "14.24 / 14.24a(12-10) / 14.24b(12-17)"
             }
           ],
-          "note": ""
+          "note": "图中纹章分身40%（及图中触发时机）：来源可能早于 14.23，仅作参考，不作为约定值依据。clone_player_damage=0由14.24官方修复支持，不能据此确认分身生命或触发时机。"
         }
       ],
       "gaps": [
         {
-          "id": "hex-coordinates-and-mundo-twitch-emblem",
+          "id": "hex-coordinates-and-twitch-emblem",
           "status": "not_found",
           "value": null,
           "proposed_value": {
             "hex_coordinates": "不固定伪造坐标，配置为空并阻塞Experiment随机格准入",
-            "mundo_hp": 200,
-            "mundo_takedown_hp": 75,
-            "twitch_enemy_max_hp_percent": 15,
-            "emblem_clone_hp_percent": 40
+            "twitch_enemy_max_hp_percent": null,
+            "emblem_clone_hp_percent": null,
+            "unverified_bonus_enabled": false
           },
           "proposal_approved": false,
-          "reason": "坐标/生成算法未查到；Mundo、Twitch、纹章只找到跨版本候选。建议数值取已读图表作为单独待批准约定，不能写成14.24实装值。",
-          "statement": "未查到，建议约定值 {\"hex_coordinates\": \"不固定伪造坐标，配置为空并阻塞Experiment随机格准入\", \"mundo_hp\": 200, \"mundo_takedown_hp\": 75, \"twitch_enemy_max_hp_percent\": 15, \"emblem_clone_hp_percent\": 40}，理由 坐标/生成算法未查到；Mundo、Twitch、纹章只找到跨版本候选。建议数值取已读图表作为单独待批准约定，不能写成14.24实装值。",
+          "reason": "坐标/生成算法及Twitch、纹章的目标版本数值未查到；旧图15%/40%来源可能早于14.23，不作为约定值依据，建议保持待定并阻塞相应效果。Mundo已由官方确认为120生命/击杀+60，移出缺口。",
+          "statement": "未查到，建议约定值 {\"hex_coordinates\": \"不固定伪造坐标，配置为空并阻塞Experiment随机格准入\", \"twitch_enemy_max_hp_percent\": null, \"emblem_clone_hp_percent\": null, \"unverified_bonus_enabled\": false}，理由 坐标/生成算法及Twitch、纹章的目标版本数值未查到；旧图15%/40%来源可能早于14.23，不作为约定值依据，建议保持待定并阻塞相应效果。Mundo已由官方确认为120生命/击杀+60，移出缺口。",
           "evidence": [
             {
               "source_id": "experiment-image",

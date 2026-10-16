@@ -4,36 +4,37 @@
 
 ## 结论与使用边界
 
-已找到可直接引用的官方 B 改动、学院每件加成、Rumble 两项改动、实验体 Urgot/Warwick、Sion 部分规则，以及异变停用与数值修订。**完整历史学院组合与抽法、Sion完整属性、形态/召唤物默认属性、全部异变正式服池、征服者20档阈值仍未证实。** 下文逐项列出建议约定值，均未批准。
+已找到可直接引用的官方 B 改动、学院每件加成、Rumble 两项改动、实验体 Urgot/Warwick及Mundo、Sion 部分规则，以及异变停用与数值修订。**完整历史学院组合与抽法、Sion完整属性、形态/召唤物默认属性、全部异变正式服池、征服者20档阈值仍未证实。** 下文逐项列出建议约定值，均未批准。
 
 状态：`confirmed`=官方字段；`supported`=外部支持但有时间边界；`candidate`=待确认候选；`conflict`=保留冲突；`inference`=推导；`not_found`=目标版本未查到。可信度标签按官方/攻略站标记；本次未取得可核验的原始挖掘脚本，不能把Reddit玩家评论称作挖掘事实。
 
 同一Riot URL内，正文是14.24，**DECEMBER 10是pre(A)热修，DECEMBER 17才是B**。本报告的14.24候选基线优先纳入12/10热修，并单列正文原值；不把A改动写成B。
 
-**存档陷阱：** LittleBuddyBot的12月HTML已读，但图片实际回放到了2025-02-19。图中旧Urgot、Sion复活50%、征服者650等均保留为冲突，不能借HTML时间冒充12月图片冻结。Mobalytics 12/14和12/22异变表正文相同且滞后；LoLCHESS 1/2表含PBE线索Hivemind，数据库清单不是正式服可抽白名单。
+**存档陷阱：** LittleBuddyBot的12月HTML已读，但图片实际回放到了2025-02-19。图中旧Urgot、Sion复活50%、征服者650等均保留为冲突，不能借HTML时间冒充12月图片冻结。实验图含Mundo 14.23改动前旧值；Twitch 15%、纹章分身40%来源可能早于 14.23，仅作参考，不作为约定值依据。Mobalytics 12/14和12/22异变表正文相同且滞后；LoLCHESS 1/2表含PBE线索Hivemind，数据库清单不是正式服可抽白名单。
 
 ## 来源索引
 
 | ID | 可信度与对应版本 | 来源/存档 | 读取与限制 |
 | --- | --- | --- | --- |
 | `riot` | 官方；14.24 / 14.24a(12-10) / 14.24b(12-17) | [来源](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/) · 未使用存档 | 正文已读；同页三个时间层；正文、A 热修、B 补丁必须按小标题定位。 |
+| `riot-14.23` | 官方；14.23中途更新，2024-11-21；14.24/14.24b未再列Mundo实验加成改动 | [来源](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-23-notes/) · 未使用存档 | 正文已读；定位Mid-Patch Updates → NOVEMBER 21ST → TRAITS；只用于Mundo实验加成，不混同本体技能。 |
 | `academy-lol` | 攻略站；Set 13，当前页未锁定14.24 | [来源](https://lolchess.gg/rewards/set13/academy-sponsored-items?hl=en) · 未使用存档 | 正文已读；可确认通用文案；不能仅凭当前页面推定历史抽取算法。 |
 | `academy-copies` | 攻略站；2024-12-17，B上线当日，发帖先后未知 | [来源](https://www.reddit.com/r/TeamfightTactics/comments/1hggiuu/copies_of_academy_items_meaning/) · 未使用存档 | 正文已读；Reddit 玩家解释；非 Riot、非原始挖掘。 |
 | `academy-leduck` | 攻略站；2024-11-25，早于14.24 | [来源](https://www.tacter.com/es/tft/guides/academy-sponsored-item-list-tft-set-13-d5f8c0de?nxtPgame=tft) · 未使用存档 | 搜索索引；搜索索引可读；正文图片未从该站读取。 |
-| `sevika-leduck` | 攻略站；页面更新2024-12-10；14.24发布同日 | [来源](https://www.tacter.com/es/tft/guides/sevika-high-roller-odds-tft-set-13-f6af8bda) · 未使用存档 | 搜索索引正文；LeDuck 机制整理，不等同原始挖掘；该日时间先后、jackpot分配及强化精确倍率未锁定。 |
+| `sevika-leduck` | 攻略站；页面更新2024-12-10；14.24发布同日 | [来源](https://www.tacter.com/es/tft/guides/sevika-high-roller-odds-tft-set-13-f6af8bda) · 未使用存档 | 搜索索引正文；LeDuck 原文含 40/35/24.5/0.5 二级概率表；Unlikely Duo将Triple从10%提高至20%的说明原文标not confirmed。非原始挖掘；发布同日先后、jackpot分配及强化精确倍率未锁定；本次直连404，搜索索引仍可读一级表和Notes。 |
 | `academy-archive` | 攻略站；页面快照20241212093929；图片快照20250219192335 | [来源](https://www.littlebuddybot.com/academy-items) · [实际使用存档](https://web.archive.org/web/20241212093929/https://www.littlebuddybot.com/academy-items) | 存档HTML已读；图片单独目视读取；12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。文件名写14.23。 |
 | `academy-image` | 攻略站；2025-02-19图片快照，14.24适用性未证实 | [来源](https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=681,fit=crop,trim=0;0;0;0/mnlvzo4MORckGV8d/set-13-tables-14.23-academy-AwvMNxbPoWseqr3W.png) · [实际使用存档](https://web.archive.org/web/20250219192335id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=681,fit=crop,trim=0;0;0;0/mnlvzo4MORckGV8d/set-13-tables-14.23-academy-AwvMNxbPoWseqr3W.png) | 图表已目视读取；图表数值只作候选或冲突证据；不能用页面时间代替图片时间。 |
 | `sion-archive` | 攻略站；页面快照20241212115728；图片快照20250219203836 | [来源](https://www.littlebuddybot.com/black-rose-sion-ability) · [实际使用存档](https://web.archive.org/web/20241212115728/https://www.littlebuddybot.com/black-rose-sion-ability) | 存档HTML已读；图片单独目视读取；12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。 |
 | `sion-image` | 攻略站；2025-02-19图片快照，14.24适用性未证实 | [来源](https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=632,fit=crop,trim=0;1.812191103789127;0;1.812191103789127/mnlvzo4MORckGV8d/set-13-tables-blackrose-YD06PRypBgCRwglo.png) · [实际使用存档](https://web.archive.org/web/20250219203836id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=632,fit=crop,trim=0;1.812191103789127;0;1.812191103789127/mnlvzo4MORckGV8d/set-13-tables-blackrose-YD06PRypBgCRwglo.png) | 图表已目视读取；图表数值只作候选或冲突证据；不能用页面时间代替图片时间。 |
-| `experiment-archive` | 攻略站；页面快照20241212200931；图片快照20250219205122 | [来源](https://www.littlebuddybot.com/experiment-bonuses) · [实际使用存档](https://web.archive.org/web/20241212200931/https://www.littlebuddybot.com/experiment-bonuses) | 存档HTML已读；图片单独目视读取；12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。 |
-| `experiment-image` | 攻略站；2025-02-19图片快照，14.24适用性未证实 | [来源](https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png) · [实际使用存档](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png) | 图表已目视读取；图表数值只作候选或冲突证据；不能用页面时间代替图片时间。 |
+| `experiment-archive` | 攻略站；页面快照20241212200931；图片快照20250219205122 | [来源](https://www.littlebuddybot.com/experiment-bonuses) · [实际使用存档](https://web.archive.org/web/20241212200931/https://www.littlebuddybot.com/experiment-bonuses) | 存档HTML已读；图片单独目视读取；12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。 实验图仍含Mundo 200/75的14.23改动前旧值；Twitch 15%、纹章分身40%来源可能早于 14.23，仅作参考，不作为约定值依据。 |
+| `experiment-image` | 攻略站；2025-02-19图片快照，14.24适用性未证实 | [来源](https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png) · [实际使用存档](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png) | 图表已目视读取；图表数值只作候选或冲突证据；不能用页面时间代替图片时间。 实验图仍含Mundo 200/75的14.23改动前旧值；Twitch 15%、纹章分身40%来源可能早于 14.23，仅作参考，不作为约定值依据。 |
 | `sevika-archive` | 攻略站；页面快照20241213065257；图片快照20250219191534 | [来源](https://www.littlebuddybot.com/sevika-high-roller) · [实际使用存档](https://web.archive.org/web/20241213065257/https://www.littlebuddybot.com/sevika-high-roller) | 存档HTML已读；图片单独目视读取；12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。 |
 | `sevika-image` | 攻略站；2025-02-19图片快照，14.24适用性未证实 | [来源](https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=488,fit=crop,trim=0;0;0;0/mnlvzo4MORckGV8d/set-13-tables-highroller-m7VwlZlXRnI4O0e1.png) · [实际使用存档](https://web.archive.org/web/20250219191534id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=488,fit=crop,trim=0;0;0;0/mnlvzo4MORckGV8d/set-13-tables-highroller-m7VwlZlXRnI4O0e1.png) | 图表已目视读取；图表数值只作候选或冲突证据；不能用页面时间代替图片时间。 |
 | `conqueror-archive` | 攻略站；页面快照20241212104640；图片快照20250219205805 | [来源](https://www.littlebuddybot.com/conqueror-loot-table) · [实际使用存档](https://web.archive.org/web/20241212104640/https://www.littlebuddybot.com/conqueror-loot-table) | 存档HTML已读；图片单独目视读取；12月HTML引用同名图片，但实际图片回放重定向到2025-02-19；不能把图片字节当12月冻结证据。 |
 | `conqueror-image` | 攻略站；2025-02-19图片快照，14.24适用性未证实 | [来源](https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=439,fit=crop,trim=1.8136363636363635;0;1.8136363636363635;0/mnlvzo4MORckGV8d/set-13-tables-conqueror-A0xwaRK5L4sDDNWL.png) · [实际使用存档](https://web.archive.org/web/20250219205805id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=439,fit=crop,trim=1.8136363636363635;0;1.8136363636363635;0/mnlvzo4MORckGV8d/set-13-tables-conqueror-A0xwaRK5L4sDDNWL.png) | 图表已目视读取；图表数值只作候选或冲突证据；不能用页面时间代替图片时间。 |
 | `rumble-lol` | 攻略站；当前Set13，14.24适用性逐项判断 | [来源](https://lolchess.gg/rewards/set13/junkerking-items?hl=en) · 未使用存档 | 搜索索引正文；部分数值与14.24官方吻合；Self-Destruct三星值与官方冲突。 |
 | `rumble-community` | 攻略站；2025-01-09，非14.24冻结 | [来源](https://www.reddit.com/r/CompetitiveTFT/comments/1hxjr7w/junker_king_upgrades_discussion/) · 未使用存档 | 正文已读；Reddit菜单说明；所列喷火及自爆一二星仍是14.24前旧值，不能整表当14.24。 |
-| `experiment-tools` | 攻略站；当前Set13，非14.24冻结 | [来源](https://tft.tools/info/set-13/traits/tft13_experiment) · 未使用存档 | 正文已读；当前5档450HP、Warwick眩晕1.5s等不能回填14.24。 |
+| `experiment-tools` | 攻略站；当前Set13，非14.24冻结 | [来源](https://tft.tools/info/set-13/traits/tft13_experiment) · 未使用存档 | 正文已读；当前5档450HP、Warwick眩晕1.5s等不能回填14.24。 Mundo 120生命/击杀+60与Riot 14.23官方改动一致，该项已确认。 |
 | `sion-tools` | 攻略站；当前Set13，非14.24冻结 | [来源](https://tft.tools/info/set-13/traits/tft13_cabal) · 未使用存档 | 正文已读；只支持5次施法/65%解锁等通用文案，非完整属性表。 |
 | `jayce-tools` | 攻略站；当前Set13，非14.24冻结 | [来源](https://tft.tools/info/set-13/units/tft13_jayce) · 未使用存档 | 正文已读；模板range=1、armor=0等不代表已解析的远程形态。 |
 | `forms-wiki` | 攻略站；当前模块混合多个赛季及后续补丁 | [来源](https://wiki.leagueoflegends.com/en-us/Module%3ATFTUnitData/data) · 未使用存档 | 搜索索引片段；直连受限；只用明确Set13的锻炉被动段；搜索片段中的range4可能属于其他赛季，不能据此证实四名形态英雄。 |
@@ -85,8 +86,14 @@
 ### two-stage-distribution
 
 - 数值/规则：{"first_roll_percent": {"rocket": 35, "shield": 35, "coin": 20, "triple": 10}, "conditional_on_triple_percent": {"blue_flamethrower": 40, "knockout_punch": 35, "quadruple_chomp": 24.5, "jackpot": 0.5}}
-- 对应版本：14.24同日LeDuck一级表；二级表仅后期图片支持；状态：`supported`；依据：[`sevika-leduck`](https://www.tacter.com/es/tft/guides/sevika-high-roller-odds-tft-set-13-f6af8bda)、[`sevika-archive`](https://web.archive.org/web/20241213065257/https://www.littlebuddybot.com/sevika-high-roller)、[`sevika-image`](https://web.archive.org/web/20250219191534id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=488,fit=crop,trim=0;0;0;0/mnlvzo4MORckGV8d/set-13-tables-highroller-m7VwlZlXRnI4O0e1.png)。
-- 边界：一级合计100%；二级合计100%；10%不能与二级的四项相加。二级是条件概率的图表解释，并非已解码的脚本控制流。
+- 对应版本：14.24同日LeDuck原文含一级与二级概率表；后期图片仅辅助参考；状态：`supported`；依据：[`sevika-leduck`](https://www.tacter.com/es/tft/guides/sevika-high-roller-odds-tft-set-13-f6af8bda)、[`sevika-archive`](https://web.archive.org/web/20241213065257/https://www.littlebuddybot.com/sevika-high-roller)、[`sevika-image`](https://web.archive.org/web/20250219191534id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=488,fit=crop,trim=0;0;0;0/mnlvzo4MORckGV8d/set-13-tables-highroller-m7VwlZlXRnI4O0e1.png)。
+- 边界：LeDuck 原文含 40/35/24.5/0.5 二级概率表。一级合计100%；二级合计100%；10%不能与二级四项相加。二级按Triple条件概率解释，尚非已解码的脚本控制流；本次直连受限，版本边界保留。
+
+### unlikely-duo-triple-chance
+
+- 数值/规则：{"base_triple_percent": 10, "possible_with_unlikely_duo_percent": 20, "confirmed": false}
+- 对应版本：LeDuck 2024-12-10 Notes；14.24/14.24b未确认；状态：`candidate`；依据：[`sevika-leduck`](https://www.tacter.com/es/tft/guides/sevika-high-roller-odds-tft-set-13-f6af8bda)。
+- 边界：原文明确标not confirmed：Unlikely Duo可能把三连（Triple）从10%提高到20%。仅记录未确认线索，不作为约定值或运行时概率依据。
 
 ### hash-alignment
 
@@ -200,13 +207,15 @@
 
 ### bonus-Dr. Mundo
 
-- 数值/规则：{"unit": "Dr. Mundo", "image_max_hp": 200, "image_takedown_hp": 75, "tools_max_hp": 120, "tools_takedown_hp": 60}
-- 对应版本：14.24官方优先；其余攻略候选，图片非12月冻结；状态：`conflict`；依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`experiment-tools`](https://tft.tools/info/set-13/traits/tft13_experiment)。
+- 数值/规则：{"unit": "Dr. Mundo", "max_hp": 120, "on_kill_hp": 60, "official_original": "Experiment, Dr. Mundo's Experiment Bonus HP: 200 + 75 ⇒ 120 + 60"}
+- 对应版本：14.23中途更新（2024-11-21）生效；14.24/14.24b公告未再改动；状态：`confirmed`；依据：[`riot-14.23`](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-23-notes/)、[`riot`](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/)、[`experiment-tools`](https://tft.tools/info/set-13/traits/tft13_experiment)。
+- 边界：已确认（官方，Riot 14.23公告）；数值120生命/击杀+60。tft.tools的120/60是正确的，与官方一致；LittleBuddyBot图中的200/75为改动前旧值，不用于目标版本。
 
 ### bonus-Twitch
 
 - 数值/规则：{"unit": "Twitch", "after_attacks": 5, "image_nearest_enemy_max_hp_physical_percent": 15, "tools_nearest_enemy_max_hp_physical_percent": 20}
-- 对应版本：14.24官方优先；其余攻略候选，图片非12月冻结；状态：`conflict`；依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`experiment-tools`](https://tft.tools/info/set-13/traits/tft13_experiment)。
+- 对应版本：旧图与当前攻略的跨版本参考；14.24/14.24b尚未冻结；状态：`candidate`；依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`experiment-tools`](https://tft.tools/info/set-13/traits/tft13_experiment)。
+- 边界：图中Twitch 15%：来源可能早于 14.23，仅作参考，不作为约定值依据。当前tft.tools的20%也未独立冻结到14.24；两者不能构成目标版本的可靠冲突或定值依据。
 
 ### bonus-Warwick
 
@@ -216,12 +225,13 @@
 ### bonus-Emblem
 
 - 数值/规则：{"unit": "Emblem", "image_trigger": "after 8 seconds or on death", "image_clone_hp_percent": 40, "clone_player_damage": 0}
-- 对应版本：14.24官方优先；其余攻略候选，图片非12月冻结；状态：`candidate`；依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`riot`](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/)。
+- 对应版本：图中分身生命/时机为旧图参考；玩家伤害0为14.24官方字段；状态：`candidate`；依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`riot`](https://teamfighttactics.leagueoflegends.com/en-us/news/game-updates/teamfight-tactics-patch-14-24-notes/)。
+- 边界：图中纹章分身40%（及图中触发时机）：来源可能早于 14.23，仅作参考，不作为约定值依据。clone_player_damage=0由14.24官方修复支持，不能据此确认分身生命或触发时机。
 
 
 ### 未查到项目与建议约定
 
-- **hex-coordinates-and-mundo-twitch-emblem**：未查到，建议约定值 {"hex_coordinates": "不固定伪造坐标，配置为空并阻塞Experiment随机格准入", "mundo_hp": 200, "mundo_takedown_hp": 75, "twitch_enemy_max_hp_percent": 15, "emblem_clone_hp_percent": 40}，理由 坐标/生成算法未查到；Mundo、Twitch、纹章只找到跨版本候选。建议数值取已读图表作为单独待批准约定，不能写成14.24实装值。建议未批准；查阅依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`experiment-tools`](https://tft.tools/info/set-13/traits/tft13_experiment)。
+- **hex-coordinates-and-twitch-emblem**：未查到，建议约定值 {"hex_coordinates": "不固定伪造坐标，配置为空并阻塞Experiment随机格准入", "twitch_enemy_max_hp_percent": null, "emblem_clone_hp_percent": null, "unverified_bonus_enabled": false}，理由 坐标/生成算法及Twitch、纹章的目标版本数值未查到；旧图15%/40%来源可能早于14.23，不作为约定值依据，建议保持待定并阻塞相应效果。Mundo已由官方确认为120生命/击杀+60，移出缺口。建议未批准；查阅依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`experiment-tools`](https://tft.tools/info/set-13/traits/tft13_experiment)。
 
 ## 5. Black Rose的Sion
 
