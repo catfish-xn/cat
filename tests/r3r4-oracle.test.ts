@@ -28,8 +28,8 @@ function oracle(seed:number,roomSeed=seed) {
   const remover=()=>tool('magnetic-remover');
   const plans=rounds.map((roundId,index)=>{
     const tiers:string[]=[], payloads:ReturnType<typeof gold | typeof item | typeof hero>[][]=[];
-    if(index===0){hero(1);tiers.push('gray');payloads.push([{kind:'unit',definitionId:'maddie',quantity:1},remover()]);}
-    else if(index===1){hero(1);tiers.push('gray','blue');payloads.push([{kind:'unit',definitionId:'lux',quantity:1},remover()],[component()]);}
+    if(index===0){tiers.push('gray');payloads.push([hero(1),remover()]);}
+    else if(index===1){tiers.push('gray','blue');payloads.push([hero(1),remover()],[component()]);}
     else if(index===2){const extra=layout.draw(100)<50;tiers.push('gray','blue',extra?'blue':'gray');payloads.push([remover()],[component()],extra?[component()]:[gold(3)]);}
     else if(index===7){tiers.push('gray');payloads.push([gold(5),remover()]);}
     else {

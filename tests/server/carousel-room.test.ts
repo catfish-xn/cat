@@ -53,10 +53,10 @@ function buyAll(room: Room, seatId: string): void {
   for (let slot = 0; slot < 5 && placed(room, seatId, 'bench') < 9; slot++) room.handle(seatId, { type: 'buy', slot, generation: seatOf(room, seatId).match.shop.generation });
 }
 /**
- * Units on the 2-4 carousel of this room (seed 42); s1 collects two one-star copies of one of them before it opens, so its
- * pick is a third copy. Checked when s1 picks: a content or rules change that moves the carousel fails there, by name.
+ * Units on the 2-4 carousel of this room (seed 35: under random openings and rewards, seed 42 left s0 one bench card short);
+ * s1 collects two one-star copies of one of them before it opens, so its pick is a third copy. Checked when s1 picks: a content or rules change that moves the carousel fails there, by name.
  */
-const PAIR_TARGETS = ['vladimir', 'powder', 'sett'];
+const PAIR_TARGETS = ['vander', 'urgot', 'camille', 'leona', 'rell'];
 const copiesOf = (room: Room, seatId: string, definitionId: string) => unitsOf(room, seatId).filter(unit => unit.definitionId === definitionId && unit.starLevel === 1);
 function collectPairs(room: Room, seatId: string, reroll: boolean): void {
   for (let rolls = 0; ; rolls++) {
@@ -108,7 +108,7 @@ describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () =
  */
 describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAYER_CONTRACT §21.6)', () => {
   const resolver = new RecordingResolver();
-  const { room, clock } = makeRoom(resolver, { carousel: rules });
+  const { room, clock } = makeRoom(resolver, { carousel: rules, seed: 35 });
   const opened: string[] = [];
   room.subscribe(state => { if (state.phase === 'carousel' && opened.at(-1) !== state.roundId) opened.push(state.roundId); });
   const carousel = () => room.state.carousel!.state;
@@ -124,6 +124,8 @@ describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAY
         if (roundId !== '2-3') return;
         while (seatOf(room, 's0').match.level < 5) if (!room.handle('s0', { type: 'buyXp' }).ok) break;
         for (const seatId of ['s0', 's2', 's3']) buyAll(room, seatId);
+        // Random openings leave s0's bench one short after the XP spend; reroll on its own content stream until it is full.
+        while (placed(room, 's0', 'bench') < 9 && room.handle('s0', { type: 'reroll' }).ok) buyAll(room, 's0');
       },
     });
     carouselId = room.state.carousel?.state.id ?? '';

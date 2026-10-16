@@ -80,9 +80,9 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
   if(!started.ok)throw Error(started.reason);
   const basis=state.combatInputBasis,basisBefore=structuredClone(basis),events:MatchEvent[]=[...started.events];
   const sourceUnitId=JSON.stringify(['pve','1-2','minions-a-v1','m01']),orbId=JSON.stringify(['orb','1-2','minions-a-v1',sourceUnitId,0]),dropId=JSON.stringify([orbId,0]),toolDropId=JSON.stringify([orbId,1]);
-  const receiptId=JSON.stringify([dropId,'grant']),receipt={receiptId,dropId,payload:{kind:'unit',definitionId:'maddie',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
+  const receiptId=JSON.stringify([dropId,'grant']),receipt={receiptId,dropId,payload:{kind:'unit',definitionId:'darius',quantity:1},grantedItemIds:[],grantedUnitIds:['unit-2']};
   const toolReceiptId=JSON.stringify([toolDropId,'grant']),toolReceipt={receiptId:toolReceiptId,dropId:toolDropId,payload:{kind:'consumable',definitionId:'magnetic-remover',quantity:1},grantedItemIds:[],grantedUnitIds:[],grantedConsumableIds:['consumable-1']};
-  const maddie={id:'unit-2',definitionId:'maddie',team:'player',starLevel:1,location:{kind:'bench',slot:0}};
+  const maddie={id:'unit-2',definitionId:'darius',team:'player',starLevel:1,location:{kind:'bench',slot:0}};
   while(state.phase==='combat'){
    const prior=freeze(state),saved=structuredClone(prior),step=stepMatch(prior);state=step.state;events.push(...step.events);
    expect(prior).toEqual(saved);expect(state.shop).toBe(prep.shop);
@@ -93,7 +93,7 @@ describe('M5 lifecycle retains unique settlement and isolated snapshots',()=>{
     expect([state.gold,state.level,state.xp,state.playerHp]).toEqual([prep.gold,prep.level,prep.xp,prep.playerHp]);
     expect(state.nextUnitSerial).toBe(2);expect(state.m8.loot.receipts).toEqual([]);
    }else{
-    // B8: terminal preparation admits only the fixed Maddie birth and tool receipt, never live combat changes.
+    // B8: terminal preparation admits only the random Darius birth and tool receipt, never live combat changes.
     expect(state.preparation).toEqual({...prep.preparation,units:[...prep.preparation.units.filter(u=>u.team==='enemy'),...players(prep),maddie]});
     expect(state.nextUnitSerial).toBe(3);expect(state.items).toEqual(prep.items);expect(state.nextItemSerial).toBe(prep.nextItemSerial);
     expect(state.m8.loot.receipts).toEqual([receipt,toolReceipt]);expect(state.consumables).toHaveLength(1);expect(step.events.filter(e=>e.domain==='match')).toEqual([
