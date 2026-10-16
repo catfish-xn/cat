@@ -26,8 +26,8 @@
           "target": {
             "kind": "board",
             "cell": {
-              "col": 1,
-              "row": 7
+              "col": 3,
+              "row": 4
             }
           }
         },
@@ -45,7 +45,18 @@
         },
         {
           "type": "sell",
-          "id": "unit-3"
+          "id": "unit-2"
+        },
+        {
+          "type": "deploy",
+          "id": "unit-3",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
         },
         {
           "type": "start"
@@ -66,6 +77,10 @@
           "generation": 4
         },
         {
+          "type": "sell",
+          "id": "unit-3"
+        },
+        {
           "type": "combine",
           "ids": [
             "item-2",
@@ -77,6 +92,17 @@
           "itemId": "item-3",
           "unitId": "unit-1",
           "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-5",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
         },
         {
           "type": "start"
@@ -97,10 +123,10 @@
         },
         {
           "type": "deploy",
-          "id": "unit-2",
+          "id": "unit-5",
           "target": {
             "kind": "bench",
-            "slot": 4
+            "slot": 3
           }
         },
         {
@@ -144,7 +170,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-2",
+          "id": "unit-5",
           "target": {
             "kind": "board",
             "cell": {
@@ -214,7 +240,7 @@
         {
           "type": "equip",
           "itemId": "item-7",
-          "unitId": "unit-2",
+          "unitId": "unit-5",
           "slot": 0
         },
         {
@@ -245,6 +271,11 @@
         {
           "type": "buy",
           "slot": 3,
+          "generation": 12
+        },
+        {
+          "type": "buy",
+          "slot": 4,
           "generation": 12
         },
         {
@@ -333,7 +364,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-2",
+          "id": "unit-5",
           "target": {
             "kind": "bench",
             "slot": 5
@@ -341,7 +372,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-12",
+          "id": "unit-13",
           "target": {
             "kind": "board",
             "cell": {
@@ -352,7 +383,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-15",
+          "id": "unit-16",
           "target": {
             "kind": "board",
             "cell": {
@@ -363,7 +394,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-16",
+          "id": "unit-17",
           "target": {
             "kind": "board",
             "cell": {
@@ -409,14 +440,14 @@
           "type": "reroll"
         },
         {
+          "type": "reroll"
+        },
+        {
           "type": "start"
         },
         {
           "type": "continue",
           "round": 15
-        },
-        {
-          "type": "reroll"
         },
         {
           "type": "buy",
@@ -430,8 +461,11 @@
           "type": "reroll"
         },
         {
+          "type": "reroll"
+        },
+        {
           "type": "deploy",
-          "id": "unit-15",
+          "id": "unit-16",
           "target": {
             "kind": "bench",
             "slot": 1
@@ -439,7 +473,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-19",
+          "id": "unit-23",
           "target": {
             "kind": "board",
             "cell": {
@@ -472,7 +506,9 @@
           "round": 17
         },
         {
-          "type": "buyXp"
+          "type": "buy",
+          "slot": 0,
+          "generation": 34
         },
         {
           "type": "buyXp"
@@ -490,7 +526,7 @@
         {
           "type": "equip",
           "itemId": "item-11",
-          "unitId": "unit-2",
+          "unitId": "unit-5",
           "slot": 1
         },
         {
@@ -507,24 +543,20 @@
           "definitionId": "bronze-for-life-ii"
         },
         {
-          "type": "buy",
-          "slot": 0,
-          "generation": 34
+          "type": "buyXp"
         },
         {
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 3,
-          "generation": 35
+          "type": "reroll"
         },
         {
           "type": "reroll"
         },
         {
           "type": "deploy",
-          "id": "unit-24",
+          "id": "unit-16",
           "target": {
             "kind": "board",
             "cell": {
@@ -554,6 +586,11 @@
         },
         {
           "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 2,
+          "generation": 44
         },
         {
           "type": "start"
@@ -600,9 +637,6 @@
           "type": "buyXp"
         },
         {
-          "type": "buyXp"
-        },
-        {
           "type": "combine",
           "ids": [
             "item-10",
@@ -612,7 +646,7 @@
         {
           "type": "equip",
           "itemId": "item-13",
-          "unitId": "unit-12",
+          "unitId": "unit-13",
           "slot": 0
         },
         {
@@ -626,7 +660,7 @@
           "type": "target",
           "choiceId": "round:4-6:anomaly",
           "generation": 0,
-          "unitId": "unit-16"
+          "unitId": "unit-17"
         },
         {
           "type": "anomalyReroll",
@@ -640,7 +674,7 @@
           "definitionId": "titanic-strikes"
         },
         {
-          "type": "reroll"
+          "type": "buyXp"
         },
         {
           "type": "reroll"
@@ -650,7 +684,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-2",
+          "id": "unit-5",
           "target": {
             "kind": "board",
             "cell": {
@@ -662,7 +696,7 @@
         {
           "type": "equip",
           "itemId": "item-5",
-          "unitId": "unit-16",
+          "unitId": "unit-17",
           "slot": 0
         },
         {
@@ -688,58 +722,29 @@
           "type": "reroll"
         },
         {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 24
-        },
-        {
           "type": "buy",
           "slot": 1,
           "generation": 55
         },
         {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
           "type": "sell",
-          "id": "unit-2"
-        },
-        {
-          "type": "combine",
-          "ids": [
-            "item-15",
-            "item-14"
-          ]
+          "id": "unit-5"
         },
         {
           "type": "equip",
           "itemId": "item-11",
-          "unitId": "unit-26",
+          "unitId": "unit-27",
           "slot": 0
         },
         {
           "type": "equip",
-          "itemId": "item-16",
-          "unitId": "unit-12",
-          "slot": 1
-        },
-        {
-          "type": "equip",
           "itemId": "item-7",
-          "unitId": "unit-26",
+          "unitId": "unit-27",
           "slot": 1
         },
         {
           "type": "deploy",
-          "id": "unit-26",
+          "id": "unit-27",
           "target": {
             "kind": "board",
             "cell": {
@@ -753,7 +758,16 @@
         },
         {
           "type": "continue",
-          "round": 25
+          "round": 24
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -764,7 +778,24 @@
           "generation": 60
         },
         {
-          "type": "reroll"
+          "type": "combine",
+          "ids": [
+            "item-15",
+            "item-14"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-16",
+          "unitId": "unit-13",
+          "slot": 1
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 25
         },
         {
           "type": "reroll"
@@ -841,7 +872,7 @@
         {
           "type": "equip",
           "itemId": "item-20",
-          "unitId": "unit-26",
+          "unitId": "unit-27",
           "slot": 2
         },
         {
@@ -896,168 +927,168 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "299df935ba6220adab1e597ed777cf51065205bbf8b626c364eb76de80ffc63a",
-          "eventsHash": "f76da981f8d4a11cc1a09fe4ecdcccc5d45ae14e414e61d25a70eb919a909065"
+          "stateHash": "fd37b2726fe457543afd069075916b0a10c84417aebc4386cef7da421e096a9b",
+          "eventsHash": "e301cf34df80bab890d2305dd377e2baccdf53632e47908dfec58e225e2025bd"
         },
         {
           "round": 2,
-          "stateHash": "c946bd6d6f523c2d390835ebb603b9f222c0c41620b3d35dd2136d1d3f74f000",
-          "eventsHash": "3498a85b335e8c7b5e139aef26c78ff404cb6d243f8e35a5926d184eaef811c3"
+          "stateHash": "80e0c9314f2fc6f0f01b6c3d5c49279b1e43c0041ce673c94a1c1d01e0016dc4",
+          "eventsHash": "fb37eeceac5e3d24c6a42133829b12b72f94b360d291fd6d66ef456bf1ca5244"
         },
         {
           "round": 3,
-          "stateHash": "4fe2bbb8ef6101c8a5b9f83d2bf496763b79e502112e94a1e14630287253b020",
-          "eventsHash": "9503b822cf77a4a1543861e4ae731fb16d7c0cfa4822261a72ae78e026d5815e"
+          "stateHash": "e8965103dae1892eb2823d2a1f76230a5549bd1d072e2635d817844d667e36d9",
+          "eventsHash": "ce4328d9ff0b7590a9bc6e4cccb9b162aafa49a0e903d01ae9c8650bcf836f55"
         },
         {
           "round": 4,
-          "stateHash": "71b39c43d899b5a53be5580c141fcf68ecbe28523951d4f8f52e156df6d8843c",
-          "eventsHash": "09b4d1755ea756a55ed3afa366e27ff8542a931e9e7d6957fcd4bc5f75b60752"
+          "stateHash": "c815616901aef751d320a4650959563e8be526d89ddfd7cee7766e0163ff58a3",
+          "eventsHash": "f276deaefea238c9c929f07e7ee7a98680efb88cbeebe0f0c828e7f05d678ada"
         },
         {
           "round": 5,
-          "stateHash": "51e292f5c0d622f6092561f26e7b685bb298c8137a2e1434bb0f6245463228da",
+          "stateHash": "4c7772e0ba9a5f1dccb800cfc2add27074d2f9b1237168d390a12f7e72bf1e35",
           "eventsHash": "45e8b959d24ac04d48d77c8f3c328d2534c233d36931e8347340d5e4cc585dc1"
         },
         {
           "round": 6,
-          "stateHash": "5f1a18b1671d009191506d00954aa9c728cb41a75dd3a0b6834d9e6052f39b60",
-          "eventsHash": "74f32b4a5a6bd4b245b5351bdae9475854311f69dc8ebee945b6e322df03b32e"
+          "stateHash": "adf6d28e3dba6b75f4c3f45fcf6423af9c007ce6a56c7f00e671e1ec732d8ab3",
+          "eventsHash": "4789cefb8f60b801f237b67adaf826c3ffce21219819e2c318742b048fe26907"
         },
         {
           "round": 8,
-          "stateHash": "5f257d8c45a75a558c26aedd8934a734bb1486c26ee270462ef02f2a2c0a901f",
-          "eventsHash": "6b406ea3c82e104c410c2585d68aded9939c2f2ba6de2d1acdab7688a75b3da1"
+          "stateHash": "3354917d86adbd5695f3114ebb875e2af0817eb3154af874c848f77131b9c62c",
+          "eventsHash": "d40ce62f35f192df313a462c307a23e9dcf98116a613de5186b8f8bfc66990eb"
         },
         {
           "round": 9,
-          "stateHash": "f1e4051b86ecff49e60c32063d2bb3826f39f8befe54cb8fff667249e52cef55",
-          "eventsHash": "669d1053bd73b097cc8a819d3096508afb0f33f261d99e56f295792f75d10f5d"
+          "stateHash": "2fa76e4f3b3a37f13a8af6bb2e26424fa2864601fe643fedef9db2a9b9576de9",
+          "eventsHash": "91664d60c9c4f73c489cf7b5d680e4d34ba136b7e3e7bc37bbcaa61754dae20d"
         },
         {
           "round": 10,
-          "stateHash": "4774e9da47fc8603bea978fca610ad23064a4d7df9c427251ff98561ecb674df",
-          "eventsHash": "59603c908c4a6effbd98b3136901cbbaccb64267a200bdbb321a998ff9a733bd"
+          "stateHash": "2c7befb202ee700682db1878240cb85a5bb6ecfa40bef851534ac1b5dc92b8f2",
+          "eventsHash": "9e36707c5a983c6d25a8fe6266d0d0dacce07a7ee1b0ca562e26236eb1da411a"
         },
         {
           "round": 11,
-          "stateHash": "f04d02aa653f30174cb8e2ff9309a96c2e6050ed1b65caab4147ab20e28646db",
-          "eventsHash": "3143711e18d7463772f5437611a79a4a342493fbb90dd47c726aa71a3932db01"
+          "stateHash": "e4a0bc34a7f161404f4745143193a150ad73f9e035a431d60d36c5a4b15f8aa8",
+          "eventsHash": "014c2d266feac1f3bc94636e8e342604b22b597ab56f6422ea5e6e6bd3d519b5"
         },
         {
           "round": 12,
-          "stateHash": "8b54bb79d77f5688c7b5fa8ead77f01b700514d71fe40e87e3a7c2e64d14d55b",
-          "eventsHash": "2c491dc207ff7a52b4cd596436b50b067405c6db568c96ee10bfba1c6a2e7fdf"
+          "stateHash": "3fb82074cb61d0ed06f34de908290d16c447743956a1dc2cffed85ddd1869472",
+          "eventsHash": "76691e70747527d8e624168a1bc263dde7c0ddef36b3a745d0f7c6041162fd9a"
         },
         {
           "round": 13,
-          "stateHash": "f143f7e8e4de884d831f7d548ee4b9c86f92cd4cc7c82075234f1b05fabbf55b",
-          "eventsHash": "28a160d90f952b69681dd7ce3d8bb8715af34628b5f246985428ef9d253336dd"
+          "stateHash": "3c37edce5b4d702dd417a6b92625b368dd92cd22c36a209773a31d783aa36d66",
+          "eventsHash": "628e1e212ee2c4231407f4ae6e652208af95f5bdb4824f85dd8106fabdc966ac"
         },
         {
           "round": 15,
-          "stateHash": "5fef9ff390e539b8e238618c22fd4501285af0058a3ff8caecfcccb7cef65c1a",
-          "eventsHash": "d3b8d2a2a896f972286857ad273c574ad61da4a892fb935efb7fd9fb61c60711"
+          "stateHash": "860335273b1ed88a1addb01a48b9df56bb723fb41f61798418450c744450f2dd",
+          "eventsHash": "b0d3c9e5fdabab691722c2a9f40c13e81e2754e0893fcfe0eb714ac1640d01ad"
         },
         {
           "round": 16,
-          "stateHash": "2a825c4a185daf4f89ada58b789dc3dd0b30c14fcb42374e01723b2adf981de7",
-          "eventsHash": "5ab620c4a485a91b6e9141d59d654ee779ac5cebc95394995f110f652dc8cd9b"
+          "stateHash": "cff5165fa3c362c833da2a0e0c41954771562b5bce6067c9c78e6e53cf904d3e",
+          "eventsHash": "00a47517abab6fe5bacd04fe3059b1656df5d7b6dfc826f78c4e717372fab57a"
         },
         {
           "round": 17,
-          "stateHash": "1a37f4d064bebaf5f83a0e00204b3a64286f2372be76ee2578779487f8f90ed9",
-          "eventsHash": "420850337ed16f2e1ef408bad61bc9d5d66f89d3a97bebe92bd510b809093b17"
+          "stateHash": "875c6424df7ca2372f692facf188fdee8f4d08902c5c5bb692f8f090f949c37d",
+          "eventsHash": "aa80720ffe18c31f0bb89c9ddef92431b07bec6801e148afad720b3d0d01bbfe"
         },
         {
           "round": 18,
-          "stateHash": "c999cecb439d8abcadac8342ddaf48d4490f78b12d2a7ff7d1e0be611705b79a",
-          "eventsHash": "dc7f3cc80e60cd7ed7fe701cea1547376178f7ebcaa1eaff5455bef5d9de071c"
+          "stateHash": "ba922ed1d2a1f6c0d2b4fb6e1f7862980997655f3626b6e447ddbcda97910270",
+          "eventsHash": "7e17e968e387b841834a8038cf4dd4f2fa80baaa3a7fb96386129f97aac573a7"
         },
         {
           "round": 19,
-          "stateHash": "a393dec43bb9043ed25f8d340118da31285ef8f60a9ac4c61ef21e6416d69aa8",
-          "eventsHash": "7d1a9cd9eeca01fce8ae004fd304a68f2ea8ab634556233b2aa70670362d6d78"
+          "stateHash": "7af75178a260a2da3a750ab4f032b2963b1fd1855b38c55e17c889e8eb993ecb",
+          "eventsHash": "4c97668ab12451c6ae56f92cf57a3f34b935235c8e9e621d2ce76964a03d9b9c"
         },
         {
           "round": 20,
-          "stateHash": "889f4650bbb6dcd4f9d080597fba573396cf33a4cd94f2284d7281c94ff9b146",
-          "eventsHash": "b05a02b18e3591c29062fd3628208d3630db957ff04c273dd8b43625f6477189"
+          "stateHash": "60800af0b93aa102b01833e8098707e54f1360db69c03c13fb8af3e29f0a9de1",
+          "eventsHash": "be86a46a08c66575322354f8f8dd275eeeebbc75b25103595b00280e9fbc5bf2"
         },
         {
           "round": 22,
-          "stateHash": "6c92337b9916ca8e9dc8e82fbbc52daa8ada2223874e289468328ef3b5367c14",
-          "eventsHash": "097eaa149cb005fd633920caaf09c2379ae7f1562ce5133376c40f4930914bc4"
+          "stateHash": "520a483dc5dd8a094981c4ad19a6355732feccb5144053c34b2ff4d2613fd797",
+          "eventsHash": "4f29efbaf8121ebd828eccb9dd1b17c19baa7009dddb8e5c7eecb70349744071"
         },
         {
           "round": 23,
-          "stateHash": "bbcd05a27e41e5018e48e574c076a9890c4c3adfe638979e1036a0592c4e22e2",
-          "eventsHash": "cbfc5cbe26e90d88b573de0412c122242b43dd92bf5a341ebb593dadd43cd798"
+          "stateHash": "ba1613dbb2272d0d70d0e9151026c522a3c182131cefcce9d1e5587358f59316",
+          "eventsHash": "21114ba6d3ae6cd784f00f203b7925187519943b73cc6b27b84a9f042c2e5709"
         },
         {
           "round": 24,
-          "stateHash": "81c716f255ce60568a31e0e602ef87504a8f675f166b6929ff56ad18325ad4a5",
-          "eventsHash": "d3bd819e77056a86eb5eb7037be10e8819953587d96efb7bbe05d9c0680cfe66"
+          "stateHash": "94e084a5a65f649a41166852ca2297b7a4c9964735b605f97967ab9fce311e18",
+          "eventsHash": "72b6ae3c3e408995727d47852fecc340095523a6a10551863a0c21cf0f3b5d57"
         },
         {
           "round": 25,
-          "stateHash": "3b1f94465c441cf262e4b56bea48cac321110b30cd3c47ac8335b065743e5e7a",
-          "eventsHash": "6d8a6935006389b41eb842cc9cb9d6c7a3de2dfc9cec4b18d80d0f6c174af7f8"
+          "stateHash": "23d01989d6a0c7244246ecb5fd7b57c1fe4253b5c7b4817c0ff4000119af9c17",
+          "eventsHash": "4a7f17bfd5e7a810364278833ad5d7e8b2ee065000f4a6bd56bfc29fa0bef3b7"
         },
         {
           "round": 26,
-          "stateHash": "75baba6102ec4133f2d34a82e6605346ab481e13da44afad5259538788e9cd2b",
-          "eventsHash": "575104eb1185026d92255eeebdcfb3e782637d3b5241e5de5e84be046b6ab655"
+          "stateHash": "adb5bf049fbad41d3ffcc0f934dae5d444c00423ed6d7b2044ca26adcec1ab3b",
+          "eventsHash": "bacdbe9b023ea332732c9a8059199bad440fb855fc4a961bbfe408b7557258f9"
         },
         {
           "round": 27,
-          "stateHash": "8877ef04a641217e01d05ea681e46e9640830edeed90683559fbcc3ba5ab6c99",
-          "eventsHash": "30981fa28696860bcc4f479e524a929c8c6b28e14053d7a26aea7466f2851522"
+          "stateHash": "a379ad22b6cef865bc6df64bba1b25e29e9e8f47e000158d3d9608362114b7e0",
+          "eventsHash": "a3c7325bc8eddf3fcbd90d84ba22648b1834c46a1969a8afc38febf02b810075"
         },
         {
           "round": 29,
-          "stateHash": "322655ca1782dba0504afb628b53545bfee53e5720ec3c227c80c5a5ba5a620b",
-          "eventsHash": "2a7665492d1944e16484c68e123f0f36f775e177cf8a40c4bbebe45746dbe3ab"
+          "stateHash": "febae10a573b00caeacded48f2f78ca9ec09fcefbe893db348eeb03bff86959d",
+          "eventsHash": "11477b91bcb1f153c35f5be5dab0796a74ec5681df7a461bd20e167ab2a2b8c1"
         },
         {
           "round": 30,
-          "stateHash": "c7324f8fe6edb0fc495a8c8235f980e76a2be1f46dca9ea138fcb8856fa3f496",
-          "eventsHash": "560009b24180e5fe4280758fe444f5c2432d6adcb6fa40e52c7c64b85cd264f1"
+          "stateHash": "a14a9eaee33b037dae2d85d3304b023dd32956d47e01f53950577c4a5ec99751",
+          "eventsHash": "e1e21880326ba59e5b8c4f2be16246de18f6099b90d2c7274ccc8cb6dd977a73"
         },
         {
           "round": 31,
-          "stateHash": "30ce6b00cd6d57020b5542c82875cfff748a784a78b10af7b1a7ae69431e684b",
-          "eventsHash": "9b61f04ce4e74ba8a1667f34f98e229e51d0ea1a43b8833c67796364034d74ae"
+          "stateHash": "8f22fcda28cfbd62757f7deb6cd02dc74e75ba1ce78f0a26d242c9f3327e410d",
+          "eventsHash": "f5d8ec4db3425588994d243bebc0b2a3b436c642e111f52c0bcccb5825298700"
         },
         {
           "round": 32,
-          "stateHash": "47350140f76be462428a806c2fe2e9d2175a0b1cccb2f95d314dcb16dab6e8e8",
-          "eventsHash": "38481d1316204cb3ec1576f6a13e43f03b74932d4878b566e6d03156be7df393"
+          "stateHash": "639d94afea291d03a03cf8793951e129d5dc368673f953a01dc5d9372ded7412",
+          "eventsHash": "7e7eb7cd62295031cef47ff615a40715a9b7d18236578181aacbf481e8e186a6"
         },
         {
           "round": 33,
-          "stateHash": "e2313cb09cc260c7967840f50a7bf884dfac1645b403c57743b485999419b833",
-          "eventsHash": "3bc1583a86714e9c122fb2f9e369b31aab015411a97f3384211227c407891e81"
+          "stateHash": "dab909cd0c01c9a9a19c174b9911b5d5e78b3126030818971c2979d832788317",
+          "eventsHash": "6b4118dfa0f1751d025eed8b6238aabd42b07972b0b122f68aaf5406a9896c24"
         },
         {
           "round": 34,
-          "stateHash": "7e2252245564bc95c30ab1bb3478a7fc4eed04427aec31c9e1fc88c9e915f343",
-          "eventsHash": "bd375ab5c1293704d23803d9eafb86de90d5b747308140031a360e97d644107b"
+          "stateHash": "5b0bfef4c46f3101a4f102b07cb03707f5649c8d43ec7ea02954d6e36ee2db6f",
+          "eventsHash": "8e95d6c8374b40fd27e49aebc0f06d054a6401a2c1bbca5f2688a02c21e9949f"
         },
         {
           "round": 36,
-          "stateHash": "04890432243817b3fde1ad49aec129f4dd5645150faa8e20b199931d10f2968c",
-          "eventsHash": "25dc3ff87541431a0d6b8dce04f8239154bf92a8011b973a3a6cbc689201860b"
+          "stateHash": "2ff7bd69be1c6427e9bd4da998639545935f8a29b8fa9d4374d5bc0bff76536a",
+          "eventsHash": "5768ebc498759151a0f0bae2b6ee8b383c7a79b18f0f95fcecf3b5873375361f"
         },
         {
           "round": 37,
-          "stateHash": "3274affa069d4e8eaaf9bcdc82a6750403899111d942cdf3743cf730361c7578",
-          "eventsHash": "665cd115dc90b78b66c7d03b8fbb6d0239b215748f094509143ab934fcebf909"
+          "stateHash": "77d06515e132b41ca5834739159a640e17d06d90d9ce0169c3f3e2aab1586a13",
+          "eventsHash": "3bf884df2a0a2fc2707317d3ca79b4d26518a3b7fbb5879f8aa959410861611c"
         },
         {
           "round": 38,
-          "stateHash": "9ecade8b1a5b30eb135efbc3ad6e3f7bb13dda724270442883684ae1c912cc1b",
-          "eventsHash": "db9d14b7bc246aef212ebb81f23685ad26f2950bd9b79a968fc9fb4f93c00a75"
+          "stateHash": "bbf4aa04652e0566d2ab5366006b636e4f7ff00ab668292b6b2ecba2edad4701",
+          "eventsHash": "c93ff536e4e608f9e542f87b2a6d0261ccf01e9e9823b31371d9f6ebf9bb7036"
         }
       ]
     },
@@ -1087,7 +1118,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-3",
+          "id": "unit-2",
           "target": {
             "kind": "board",
             "cell": {
@@ -1109,15 +1140,8 @@
           "generation": 3
         },
         {
-          "type": "deploy",
-          "id": "unit-2",
-          "target": {
-            "kind": "board",
-            "cell": {
-              "col": 1,
-              "row": 7
-            }
-          }
+          "type": "sell",
+          "id": "unit-4"
         },
         {
           "type": "start"
@@ -1151,6 +1175,17 @@
           "slot": 0
         },
         {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
           "type": "start"
         },
         {
@@ -1180,17 +1215,6 @@
           "generation": 5
         },
         {
-          "type": "deploy",
-          "id": "unit-4",
-          "target": {
-            "kind": "board",
-            "cell": {
-              "col": 3,
-              "row": 7
-            }
-          }
-        },
-        {
           "type": "start"
         },
         {
@@ -1211,6 +1235,17 @@
           "type": "buy",
           "slot": 0,
           "generation": 7
+        },
+        {
+          "type": "deploy",
+          "id": "unit-8",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
         },
         {
           "type": "start"
@@ -1257,10 +1292,10 @@
         },
         {
           "type": "deploy",
-          "id": "unit-4",
+          "id": "unit-8",
           "target": {
             "kind": "bench",
-            "slot": 4
+            "slot": 1
           }
         },
         {
@@ -1301,8 +1336,27 @@
         {
           "type": "equip",
           "itemId": "item-7",
-          "unitId": "unit-4",
+          "unitId": "unit-8",
           "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "bench",
+            "slot": 3
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
         },
         {
           "type": "start"
@@ -1332,6 +1386,11 @@
         {
           "type": "buy",
           "slot": 2,
+          "generation": 12
+        },
+        {
+          "type": "buy",
+          "slot": 4,
           "generation": 12
         },
         {
@@ -1384,26 +1443,38 @@
           "type": "reroll"
         },
         {
-          "type": "sell",
-          "id": "unit-8"
+          "type": "reroll"
         },
         {
-          "type": "equip",
-          "itemId": "item-7",
-          "unitId": "unit-17",
-          "slot": 0
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "sell",
+          "id": "unit-14"
         },
         {
           "type": "deploy",
-          "id": "unit-3",
+          "id": "unit-11",
           "target": {
             "kind": "bench",
-            "slot": 1
+            "slot": 2
           }
         },
         {
           "type": "deploy",
-          "id": "unit-17",
+          "id": "unit-18",
           "target": {
             "kind": "board",
             "cell": {
@@ -1414,11 +1485,11 @@
         },
         {
           "type": "deploy",
-          "id": "unit-19",
+          "id": "unit-17",
           "target": {
             "kind": "board",
             "cell": {
-              "col": 3,
+              "col": 0,
               "row": 4
             }
           }
@@ -1444,10 +1515,83 @@
           "type": "reroll"
         },
         {
+          "type": "buy",
+          "slot": 0,
+          "generation": 26
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 27
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 28
+        },
+        {
           "type": "reroll"
         },
         {
           "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "sell",
+          "id": "unit-8"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-8",
+            "item-5"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-18",
+          "slot": 0
+        },
+        {
+          "type": "equip",
+          "itemId": "item-9",
+          "unitId": "unit-23",
+          "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-12",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 6,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 15
         },
         {
           "type": "reroll"
@@ -1464,43 +1608,7 @@
         {
           "type": "buy",
           "slot": 0,
-          "generation": 26
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "buy",
-          "slot": 4,
-          "generation": 27
-        },
-        {
-          "type": "combine",
-          "ids": [
-            "item-8",
-            "item-5"
-          ]
-        },
-        {
-          "type": "equip",
-          "itemId": "item-9",
-          "unitId": "unit-22",
-          "slot": 0
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 15
-        },
-        {
-          "type": "buy",
-          "slot": 4,
-          "generation": 28
-        },
-        {
-          "type": "reroll"
+          "generation": 36
         },
         {
           "type": "reroll"
@@ -1511,6 +1619,11 @@
         {
           "type": "continue",
           "round": 16
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 38
         },
         {
           "type": "buyXp"
@@ -1535,9 +1648,6 @@
           "type": "buyXp"
         },
         {
-          "type": "buyXp"
-        },
-        {
           "type": "start"
         },
         {
@@ -1551,12 +1661,7 @@
           "definitionId": "bronze-for-life-ii"
         },
         {
-          "type": "reroll"
-        },
-        {
-          "type": "buy",
-          "slot": 2,
-          "generation": 34
+          "type": "buyXp"
         },
         {
           "type": "reroll"
@@ -1565,18 +1670,16 @@
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 0,
-          "generation": 36
+          "type": "reroll"
         },
         {
           "type": "deploy",
-          "id": "unit-3",
+          "id": "unit-13",
           "target": {
             "kind": "board",
             "cell": {
-              "col": 6,
-              "row": 4
+              "col": 1,
+              "row": 7
             }
           }
         },
@@ -1591,9 +1694,16 @@
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 4,
-          "generation": 38
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -1655,7 +1765,7 @@
         {
           "type": "equip",
           "itemId": "item-13",
-          "unitId": "unit-22",
+          "unitId": "unit-23",
           "slot": 1
         },
         {
@@ -1669,7 +1779,7 @@
           "type": "target",
           "choiceId": "round:4-6:anomaly",
           "generation": 0,
-          "unitId": "unit-17"
+          "unitId": "unit-18"
         },
         {
           "type": "anomalyReroll",
@@ -1693,7 +1803,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-22",
+          "id": "unit-23",
           "target": {
             "kind": "board",
             "cell": {
@@ -1710,9 +1820,19 @@
           "round": 23
         },
         {
-          "type": "buy",
-          "slot": 1,
-          "generation": 46
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "start"
@@ -1720,6 +1840,21 @@
         {
           "type": "continue",
           "round": 24
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "combine",
@@ -1731,7 +1866,7 @@
         {
           "type": "equip",
           "itemId": "item-16",
-          "unitId": "unit-17",
+          "unitId": "unit-18",
           "slot": 1
         },
         {
@@ -1740,6 +1875,20 @@
         {
           "type": "continue",
           "round": 25
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 72
         },
         {
           "type": "start"
@@ -1775,7 +1924,7 @@
         {
           "type": "equip",
           "itemId": "item-18",
-          "unitId": "unit-22",
+          "unitId": "unit-23",
           "slot": 2
         },
         {
@@ -1858,168 +2007,168 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "299df935ba6220adab1e597ed777cf51065205bbf8b626c364eb76de80ffc63a",
-          "eventsHash": "f76da981f8d4a11cc1a09fe4ecdcccc5d45ae14e414e61d25a70eb919a909065"
+          "stateHash": "fd37b2726fe457543afd069075916b0a10c84417aebc4386cef7da421e096a9b",
+          "eventsHash": "e301cf34df80bab890d2305dd377e2baccdf53632e47908dfec58e225e2025bd"
         },
         {
           "round": 2,
-          "stateHash": "38a883195c3fae7868dcdb4207f55cd8e06bd1922efdd5d2056b0f35849fd3c3",
-          "eventsHash": "f95f4c23847ad4659127a297ae5707fa55a594302fba3bbd66c1eb5d54010d2d"
+          "stateHash": "22f55d96d32e8ed7a4d44418ccdaff5ad81825049c911e63854530627d96031b",
+          "eventsHash": "57b44ec0ec3d6b8ea47aadd8475f178a05359e265c8a7acccad0e89090bd6441"
         },
         {
           "round": 3,
-          "stateHash": "82fe12c7f68a5d14ede2ec08d9f31193dcaa752753e416df042292e3b5fdd008",
-          "eventsHash": "397330cface9a3c188ccd3ba6453601066f029548790e037323a87971042f33d"
+          "stateHash": "139bec324866888a2e6b5b66c58d39164d468fa9637bd213224e7e9d3f3b08f6",
+          "eventsHash": "f78ce251d8c00344bb5a3d0228b9f555b9503c7118b337028e3d154f0f96dec1"
         },
         {
           "round": 4,
-          "stateHash": "3a8d7e4709a7d503fb36f2e1585d02d495bfb60cd7572aa977bcecccc0496b8b",
-          "eventsHash": "994bb8a05c7f5c7dd7164cebf1b8ac85fc445200a9169291d8b385511b98ccf9"
+          "stateHash": "6bd268dcfc06dd9b14f2520e03688d70e86fed52b1b575b720b832237d5de0b9",
+          "eventsHash": "1ed92c90767ace61454758b8c9ce93067cefe87045c6011755a235c31fcc7103"
         },
         {
           "round": 5,
-          "stateHash": "c5ed31ba74232b6b7a11a9159ac3a89180b46f0c265841fc8ea1a3b6ea158aab",
-          "eventsHash": "f69068cd201d9ebe48d854dc7598b46635124552bab1445f385e0bd42fb89aff"
+          "stateHash": "b7214ac18ad5a2182f4797f660e0467e037c32ae06dee966bef0e5aa246653c3",
+          "eventsHash": "32e6c4137788447046f4f2decda47041aaa100a7444598eb318ad31f488207a7"
         },
         {
           "round": 6,
-          "stateHash": "d920b8fcb3eb107af54b73a11d99c6414f9042841a91607264fbcf94265ede04",
-          "eventsHash": "a3517e5b0a11d105483d3edcb4f8ce18f35e67f4ed8432e22fd6975e91ce2b34"
+          "stateHash": "e92270b27a00acd6f2c3a30e6d0997d2ccf3d85c488c5550d16f5f192bbc3544",
+          "eventsHash": "64086d73bc13334d4cae772110f6be3e4ed6c01fb8c514b9a8fb1b603459ec34"
         },
         {
           "round": 8,
-          "stateHash": "48a733aa7adf4892f07a27a28d8cf600b641f92f33b4205f24fe3588687793ea",
-          "eventsHash": "8b6c7ba69413d5be7230d57ab58b19d0a198e2d22a62d896126bb5684d942613"
+          "stateHash": "5441f9ce8b57c5c51255e023722e4e361d1e79b40cd5c8fab899f9790ed8c84e",
+          "eventsHash": "e0ee3a5dd4d5cb6948800afc8b1161d72c6ac60d264503a90e82b842f0205a16"
         },
         {
           "round": 9,
-          "stateHash": "61e61b9bcb969a91f848e373d475c33693b51d756abb78d4db15398a7450b67f",
-          "eventsHash": "d41d421c7d525b1fc5734a0f664948bceef88f14f84eccdd6fff8bf0d490a426"
+          "stateHash": "715ba080d221668fd11115dfa55afb5652667bc463505dac85ff0750ea7fd4ac",
+          "eventsHash": "0c3dd148e4e0c8ce1ffefd20995ff2b360d97837a03e09cd45b117eb9da9d8e4"
         },
         {
           "round": 10,
-          "stateHash": "7770369d6a428b651f77ac9abb90a19e724271de13375ea3e96076deb4c363cf",
-          "eventsHash": "110439f99b13bfac40360c2eba1566954e169f133d8ad3e238b4b4fa31be6500"
+          "stateHash": "f591cf569bc87f362251f80ef72bec01a0d293b895642032eeb3d2f9ad47bf72",
+          "eventsHash": "5e8825a42247c7300e309a38bdba71bd87014442276da1a9dea87f4874b9ddee"
         },
         {
           "round": 11,
-          "stateHash": "9bbabc2f3eec814b352ec14b1105b48a5b5dd0f041d624a126698a6dc778799a",
-          "eventsHash": "2dff6579c7890f8615e59abe180f7e573c7731dc76ccf677d1139cf5eea863b5"
+          "stateHash": "49a6431681e99415d147f39340ae4cba7d756c9a4a29589e72fe3310aee4315c",
+          "eventsHash": "7ca00630f25829224c53838077237149e243ad05a045a35d54d6f6f8f664c568"
         },
         {
           "round": 12,
-          "stateHash": "6008724fe8a96d35077eb56e1e11255660e8042c72fbcd348405dca468438aac",
-          "eventsHash": "3dad254b8adf12bade3b153d02b50c72a1bb1ec157c6f07009a1d9e94b418a1d"
+          "stateHash": "fedf734deae74ef9bd5b952506dd879280566c76624b12b2e39b25c5573d4fa9",
+          "eventsHash": "7bbaf6e2343ba18a707283c567d58ebaca94f60e00a5471b7f32a53b9541ee1c"
         },
         {
           "round": 13,
-          "stateHash": "c43464b9aa1c4c04f9ea84ae6a750ac4205730eb0abd43644926f6c3a3ef6315",
-          "eventsHash": "bc787f3cfa8d1c448eb5d4cf8f1642909a9d29abd678490d8f9272086968d161"
+          "stateHash": "4186cc05c97fe2727183ae54e449d440e4d2140f17633fd49da049a000b5b798",
+          "eventsHash": "3206f15cf8f1e0dd86ab9b3a11b0217e8a62626341f6aa0a9a68cee18f201fb9"
         },
         {
           "round": 15,
-          "stateHash": "8c57b78d300982c85fbd2f540c39b01481822d41df2c19344344e3ed675e8797",
-          "eventsHash": "46501282d84c86016e7c9af1d5f199e2552edb81d1d6699e37d406e0d338aa16"
+          "stateHash": "680911d461ddc3225f57ee71357fa8922cb3c0c4880df99db596f10b75a8261c",
+          "eventsHash": "ed9ea08ce54f36f55a30e1b66a1f269c5cef920070e96de75047e50ba5e98ef2"
         },
         {
           "round": 16,
-          "stateHash": "fe35419073ef53ec67b94c6153466a9745473feb246e23a2391e01d4f5c56579",
-          "eventsHash": "1275a8b0cbc9ec1cbb85fbec9da718dc00334ded8fc04473211f1c2719872412"
+          "stateHash": "cc26d2a53927fb3688ef375010f769a54a62094850bef087fd9ba877b9a066b3",
+          "eventsHash": "5ecf29cbe00d2a4212da67f2403db972bc955275e52fa6731507c9eb690cd105"
         },
         {
           "round": 17,
-          "stateHash": "b16a4851590093e9d38327d089f551652846586216a8ecf9e8edef5da9591160",
-          "eventsHash": "e5ae78e441e5fae2b7365a46e28ad2a7b76fa5e82df1624461499459a5fb1268"
+          "stateHash": "b63a5ebbaeb892eda0ec3cbe1b469fbe2eb2397d264121a5c7ebc8e88d11d0be",
+          "eventsHash": "057843fd503adc72334a49f3df28d4ebfc760bdca3ada4c4f8e54686cff0b714"
         },
         {
           "round": 18,
-          "stateHash": "0ed8b0cd44a0a37fcf448319a27d9221c893b6da64b0b3750298bed88fd9eefd",
-          "eventsHash": "69bf9980ef8ed54133536f263103ca03daab855b9bf6c30c7ab9803812e4d680"
+          "stateHash": "0f9e47514b499e66558e8d8c664b891b18ab6e34a4ac8ce119cda14659eb8e2a",
+          "eventsHash": "eb93cddd7eb158074177424b35c96225073951cd7dfcd3036d98062bbdafbc1f"
         },
         {
           "round": 19,
-          "stateHash": "1e85313c0b31dd9d0e9351cc3ff8cda30b3eea8bf281efaf20a442ca7e0576a8",
-          "eventsHash": "2e770ba3fcb3a2eef0b8c7cd91f8a49522ba6d5d15656837fe043973e204961a"
+          "stateHash": "99927fdb5f298df122e1d36b568d876c89a7b707b3792b7e90aa7d02bebade78",
+          "eventsHash": "8a985c5543a952e21aef3190fd91e6ccfc9f694fa093bc8d34aac28f5c9d7480"
         },
         {
           "round": 20,
-          "stateHash": "18b48f8d12a4bf358cc4679b047da439f6cdae2144acb729518a3501a020961f",
-          "eventsHash": "649656b52e9368612bdc3097be684bb8b6fb21e7f127faf188a8a706dc1b6867"
+          "stateHash": "61e53dd1757c081d5821c54663659520318017c0c3874a7e5369b4186fcbcb5f",
+          "eventsHash": "a984fa593b15ceaa3b88b4406f5029bc8faace6210db1beed8ae464c1483f898"
         },
         {
           "round": 22,
-          "stateHash": "f877223b42508eb78e628e9e685c8d9ca96a1f36a141953d6baadab09b7c9e68",
-          "eventsHash": "d03348095b8591a4283213669f59c0e9566f0890b9d7c24e0859fe06cafe51f9"
+          "stateHash": "86d8393d0b07b2845994c24ff151cb5c9d1698119d7c7577c7c1d1bb839746c5",
+          "eventsHash": "141bf9a80ce6f2386b6a37e05c38d0230758f485801d76faff344f237113d4fb"
         },
         {
           "round": 23,
-          "stateHash": "b78ad832ffff8a0ffd9023756a6ab217e3dc952f00ddf93af50493018d4bf1d2",
-          "eventsHash": "7b1945a79ae0d3da069595cd057eea64525981a71b7d0da7c4fb66af50e6aa9d"
+          "stateHash": "6d9dfd1f618bbfb103e028684164f1cae9f20d06e2c15d0774aef92295224d56",
+          "eventsHash": "1d2026253ace5515e3abecbc0201ac2548231e3018aab067ed44ad32bb28c58e"
         },
         {
           "round": 24,
-          "stateHash": "e7bff6f4dbdae77bd6dccc71909e142d0e8b70f7086e4caed2e3d257e187f9c4",
-          "eventsHash": "56d9cbb05f21df5fe21137e8df5a8a71d167f38d5580f719ee2964250fecabb4"
+          "stateHash": "19a47ed565df187940085c626fd28f41116b68d54cbb23979be300649fd732ea",
+          "eventsHash": "80b54e69640fbb68f32aee2a73fc24cab8293f51ecb05f932623c6f9c350dbd1"
         },
         {
           "round": 25,
-          "stateHash": "38f171f94bb368c60505b9b3ba645505214a0968385579f5698506446fab64bb",
-          "eventsHash": "e3dacfa96cd01478e0f35a75a5fe90ad0205fb3e44b5e2e370e095a9ed33fab4"
+          "stateHash": "4c7634c13c707c8084f09eb9915b0bf8728b6a4dedaa315050b7b8cc1848dc37",
+          "eventsHash": "9f26bf529da515f47527f7688115b8c1bba03fa56e10a57d6d380d463e1ca2d5"
         },
         {
           "round": 26,
-          "stateHash": "74eb2700e73d573534c7e0b389dc73fddc3acd17e9ac94b9fc7781bb03c42baf",
-          "eventsHash": "8d1d57133cf763ebe226eeffd217e1ffc97a44b8dbfd271e5a9f082e23b84813"
+          "stateHash": "b1b8e150ed8e34820a14a3314308d0b34523b9654cd9d8c6bcd2ed2ac4f28eff",
+          "eventsHash": "0073e579a811d2ed39579f1cd92914fa82a89aefc1ff91bf8f0359a0b8c56d00"
         },
         {
           "round": 27,
-          "stateHash": "6950f091715846e13188fdf6af69e1759b4f1b79508f441a616849934463c062",
-          "eventsHash": "81d0fcbe2724d25ab86eab827eef78ff4b7715a88dedc98d131a9322caea255e"
+          "stateHash": "dbdef255bd9e106a3ae536f1f0c3ded98efcc372eb74b59d70a1c80e4af3179b",
+          "eventsHash": "ebfc0fe8fb2fbf2c0acd31063f9ce22bf086044da86fba48726f51d3c5781973"
         },
         {
           "round": 29,
-          "stateHash": "999d76ee35b70295e70b420519eff3029616c75d66417067af86983ad63c3716",
-          "eventsHash": "aa24648566d5dfb761d6c5517b18982236bdaafcc3fec9f05ac97b3fd9a8b588"
+          "stateHash": "2a398c76a823eb87181aba6110cb8ef34cdd45f2dea72d554fb043d1133f4467",
+          "eventsHash": "26ab1f55b3825058e6a7b9ff9e51024dab8b04103ef34e6a54c4ba8294593df6"
         },
         {
           "round": 30,
-          "stateHash": "7520e6363349156cf62e368f165ebd2cdcf1faf63adcda9c4cc58dc6642b5d3a",
-          "eventsHash": "6b2268f3edd7c8d72645e012f6d17f400421a0e01c41d96494620dced4dac3b4"
+          "stateHash": "fcb6ff7fc8dc63a94027f7a929a567198d368a9c65f2df49eb14dfe5452e9e8e",
+          "eventsHash": "38ff670dc83ccb8c7b4f58dc1de43863b4dd6ddbc84c3f50f99b5b3cb855712e"
         },
         {
           "round": 31,
-          "stateHash": "cb1a1293a488860211bff1408053acdf16e5c4b67fb9fca9a653c1ea0413f41b",
-          "eventsHash": "1e5d36c0d707d2c4e00269627c4a86086814aa34691262d75b23867690c7ecc8"
+          "stateHash": "20c18579a123d4fa52aedf5c51145edcd968c91b3a3e3121f4164b36448e7bb8",
+          "eventsHash": "e4188cab6d29acdf67647bb13580e9fd009ae5ab2c2a833c9aa6fd31bfd92550"
         },
         {
           "round": 32,
-          "stateHash": "5690211e6f1fd34b341b17887f1fe463e8eefc303c3c41673a1db41b4b213cfc",
-          "eventsHash": "38841a5e601f55d412f34a3e74a7508bfed20e11183312f66ee93ef66d2fd66b"
+          "stateHash": "07013c4c3efa5fe0b779c6e6be926a80e27a535fc4fc3bdee8a41d226b82be3d",
+          "eventsHash": "0468963d96be2454353b5cdd64c97b13d4df86fbe27199a0ae3c0de28136ad6d"
         },
         {
           "round": 33,
-          "stateHash": "329a23701ade2e871342251bdbf53bc9d3c604fe6bad35b6eb460309674d6d71",
-          "eventsHash": "0825d884783569aa2df92beb50ad6a799693a7d94c3adb990143826419d1d27f"
+          "stateHash": "5ae4c7a75c6ffceace9b63d3f1ea3d4192f06ea5e113fd03d6a4ec070d71663e",
+          "eventsHash": "40a3d1b40faf1cddfc865644edb196869ce4f2b3e5702a4ccaac54d60d3d5d39"
         },
         {
           "round": 34,
-          "stateHash": "acc8d627fc4fa759f33da6db9776bc1eb7516cd39bc52f19e6fd36b2ff6ecd1d",
-          "eventsHash": "d106a5063b4a0a3660c22e9710fb5b3e6228254f17e0c941a75f933f7cd6ae44"
+          "stateHash": "b88a158ae68b575870f0ac5498ba5711d9ab6586b6d8c123523dcc43193c732b",
+          "eventsHash": "9b65716733d7870de3971ba8626e2527a8a426cb81a7a7e3dd8592960c626e5d"
         },
         {
           "round": 36,
-          "stateHash": "061266068a7c7c19392a5c441e51d076a6048b3978314bb24a9bc29bf2df40f9",
-          "eventsHash": "bc148d1e2b6b55ada19c5e58616588f815df2e5b690cd0549e54e7fc1df1ca92"
+          "stateHash": "8ebe72f274c2f4eadbfd03b7057c8cabfb4e4410518e5d626b0935c1234045aa",
+          "eventsHash": "a2c4bbfa4677bb9351f8d9eb2ad5ec2196144fd9b9c2ac10c65b7fd0144e05fe"
         },
         {
           "round": 37,
-          "stateHash": "af6fa2108cf2ce63c8d7248cb220343ee6694e376e9f9468c8651653ff321683",
-          "eventsHash": "9b7d04114f21088726fb2bfd55d9690236f755b59769804ad1f314cccfd77ac1"
+          "stateHash": "14ae669b9ada34702fb70c2cd1e1ce90791befbccddb11ac960b71ae3e752be7",
+          "eventsHash": "2871470a809944483885f29c78203e0cff4b4d49f3d5acf1bcfb797ab7e9e3b2"
         },
         {
           "round": 38,
-          "stateHash": "ab4716060991748faee34eaa71c4012da90b72b60b15b503e7eed5e1269173c5",
-          "eventsHash": "3674c53d41b4588c6f69351d0bec51f24d29d35ded3118fb8893da3ba4a0d377"
+          "stateHash": "cff57fe3d2428a76156eddd8b917294f909410cff0767993416893d76de73d55",
+          "eventsHash": "41b6ec4881f564d6d0deb99350e8965f4444b3c9833579eae1f90591a342034d"
         }
       ]
     },
@@ -2048,6 +2197,10 @@
           "generation": 2
         },
         {
+          "type": "sell",
+          "id": "unit-2"
+        },
+        {
           "type": "deploy",
           "id": "unit-3",
           "target": {
@@ -2069,17 +2222,6 @@
           "type": "buy",
           "slot": 1,
           "generation": 3
-        },
-        {
-          "type": "deploy",
-          "id": "unit-4",
-          "target": {
-            "kind": "board",
-            "cell": {
-              "col": 3,
-              "row": 7
-            }
-          }
         },
         {
           "type": "start"
@@ -2113,6 +2255,17 @@
           "slot": 0
         },
         {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
           "type": "start"
         },
         {
@@ -2126,10 +2279,10 @@
         },
         {
           "type": "deploy",
-          "id": "unit-4",
+          "id": "unit-6",
           "target": {
             "kind": "bench",
-            "slot": 4
+            "slot": 3
           }
         },
         {
@@ -2162,7 +2315,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-4",
+          "id": "unit-6",
           "target": {
             "kind": "board",
             "cell": {
@@ -2199,6 +2352,25 @@
           "generation": 7
         },
         {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "bench",
+            "slot": 0
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-8",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
           "type": "start"
         },
         {
@@ -2215,7 +2387,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-2",
+          "id": "unit-6",
           "target": {
             "kind": "board",
             "cell": {
@@ -2253,8 +2425,27 @@
         {
           "type": "equip",
           "itemId": "item-7",
-          "unitId": "unit-2",
+          "unitId": "unit-11",
           "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-11",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 5,
+              "row": 7
+            }
+          }
         },
         {
           "type": "start"
@@ -2275,6 +2466,25 @@
           "generation": 11
         },
         {
+          "type": "deploy",
+          "id": "unit-8",
+          "target": {
+            "kind": "bench",
+            "slot": 2
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-12",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
+        },
+        {
           "type": "start"
         },
         {
@@ -2284,6 +2494,11 @@
         {
           "type": "buy",
           "slot": 0,
+          "generation": 12
+        },
+        {
+          "type": "buy",
+          "slot": 4,
           "generation": 12
         },
         {
@@ -2305,6 +2520,11 @@
         },
         {
           "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 14
         },
         {
           "type": "reroll"
@@ -2361,61 +2581,33 @@
           "generation": 22
         },
         {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
           "type": "sell",
-          "id": "unit-2"
+          "id": "unit-11"
         },
         {
           "type": "equip",
           "itemId": "item-7",
-          "unitId": "unit-17",
+          "unitId": "unit-19",
           "slot": 0
         },
         {
           "type": "deploy",
-          "id": "unit-3",
-          "target": {
-            "kind": "bench",
-            "slot": 5
-          }
-        },
-        {
-          "type": "deploy",
-          "id": "unit-17",
+          "id": "unit-19",
           "target": {
             "kind": "board",
             "cell": {
-              "col": 1,
+              "col": 5,
               "row": 7
             }
           }
         },
         {
           "type": "deploy",
-          "id": "unit-14",
+          "id": "unit-15",
           "target": {
             "kind": "board",
             "cell": {
               "col": 5,
-              "row": 4
-            }
-          }
-        },
-        {
-          "type": "deploy",
-          "id": "unit-18",
-          "target": {
-            "kind": "board",
-            "cell": {
-              "col": 0,
               "row": 4
             }
           }
@@ -2438,6 +2630,15 @@
           "round": 14
         },
         {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
           "type": "buy",
           "slot": 1,
           "generation": 27
@@ -2447,11 +2648,6 @@
         },
         {
           "type": "reroll"
-        },
-        {
-          "type": "buy",
-          "slot": 0,
-          "generation": 29
         },
         {
           "type": "reroll"
@@ -2471,28 +2667,20 @@
           "generation": 33
         },
         {
-          "type": "reroll"
-        },
-        {
-          "type": "buy",
-          "slot": 0,
-          "generation": 34
-        },
-        {
           "type": "deploy",
-          "id": "unit-18",
+          "id": "unit-3",
           "target": {
             "kind": "bench",
-            "slot": 2
+            "slot": 1
           }
         },
         {
           "type": "deploy",
-          "id": "unit-20",
+          "id": "unit-22",
           "target": {
             "kind": "board",
             "cell": {
-              "col": 5,
+              "col": 1,
               "row": 7
             }
           }
@@ -2503,6 +2691,14 @@
         {
           "type": "continue",
           "round": 15
+        },
+        {
+          "type": "buy",
+          "slot": 0,
+          "generation": 34
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -2519,22 +2715,16 @@
           "generation": 38
         },
         {
-          "type": "reroll"
-        },
-        {
-          "type": "reroll"
-        },
-        {
           "type": "deploy",
-          "id": "unit-4",
+          "id": "unit-22",
           "target": {
             "kind": "bench",
-            "slot": 0
+            "slot": 2
           }
         },
         {
           "type": "deploy",
-          "id": "unit-24",
+          "id": "unit-25",
           "target": {
             "kind": "board",
             "cell": {
@@ -2585,7 +2775,7 @@
         {
           "type": "equip",
           "itemId": "item-11",
-          "unitId": "unit-17",
+          "unitId": "unit-19",
           "slot": 1
         },
         {
@@ -2617,17 +2807,12 @@
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 3,
-          "generation": 48
-        },
-        {
           "type": "deploy",
-          "id": "unit-4",
+          "id": "unit-22",
           "target": {
             "kind": "board",
             "cell": {
-              "col": 3,
+              "col": 1,
               "row": 7
             }
           }
@@ -2641,6 +2826,11 @@
         },
         {
           "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 48
         },
         {
           "type": "reroll"
@@ -2669,9 +2859,7 @@
           "round": 21
         },
         {
-          "type": "buy",
-          "slot": 3,
-          "generation": 55
+          "type": "buyXp"
         },
         {
           "type": "buyXp"
@@ -2710,7 +2898,7 @@
         {
           "type": "equip",
           "itemId": "item-13",
-          "unitId": "unit-14",
+          "unitId": "unit-15",
           "slot": 0
         },
         {
@@ -2724,7 +2912,7 @@
           "type": "target",
           "choiceId": "round:4-6:anomaly",
           "generation": 0,
-          "unitId": "unit-17"
+          "unitId": "unit-19"
         },
         {
           "type": "anomalyReroll",
@@ -2738,11 +2926,16 @@
           "definitionId": "titanic-strikes"
         },
         {
-          "type": "buyXp"
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 3,
+          "generation": 55
         },
         {
           "type": "deploy",
-          "id": "unit-9",
+          "id": "unit-3",
           "target": {
             "kind": "board",
             "cell": {
@@ -2806,7 +2999,7 @@
         {
           "type": "equip",
           "itemId": "item-17",
-          "unitId": "unit-14",
+          "unitId": "unit-15",
           "slot": 1
         },
         {
@@ -2871,7 +3064,7 @@
         {
           "type": "equip",
           "itemId": "item-21",
-          "unitId": "unit-14",
+          "unitId": "unit-15",
           "slot": 2
         },
         {
@@ -2895,168 +3088,168 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "299df935ba6220adab1e597ed777cf51065205bbf8b626c364eb76de80ffc63a",
-          "eventsHash": "f76da981f8d4a11cc1a09fe4ecdcccc5d45ae14e414e61d25a70eb919a909065"
+          "stateHash": "fd37b2726fe457543afd069075916b0a10c84417aebc4386cef7da421e096a9b",
+          "eventsHash": "e301cf34df80bab890d2305dd377e2baccdf53632e47908dfec58e225e2025bd"
         },
         {
           "round": 2,
-          "stateHash": "61e6b9d0222fab6bc0ae3334f942f38d3258f8e2651c337e451cc7afa8015c89",
-          "eventsHash": "fb384c9d9b6e1e80567468eb61df2a3ebad64fb4a5617f13106f8123816bc2ca"
+          "stateHash": "ed24d7f2750e9144248778dc1d8511fd247877138392ecaaf114f3aa8bd1d2f8",
+          "eventsHash": "b28a2c990f9e24cfc223abe991bef22fa73924b83f444a998ae3a472b7972a25"
         },
         {
           "round": 3,
-          "stateHash": "fa291fe00eee95b56bbc737d811aafbf2714f2e8f363c92816f1871fda9c51f6",
-          "eventsHash": "11f60b552ffee3b9cb3418a6a7b7466a9f70a044c8f18898dbd9c2190ebc0fae"
+          "stateHash": "b5d6dad34c54808ba3e87c191084ce7d1460ceeec455be9664b38c27e44d2773",
+          "eventsHash": "ce4328d9ff0b7590a9bc6e4cccb9b162aafa49a0e903d01ae9c8650bcf836f55"
         },
         {
           "round": 4,
-          "stateHash": "75322b1f0c3f46da5023e2dd9dd534f6dcb69a6cc0ea46c7edfffe343e252318",
-          "eventsHash": "ecd19a5b45c338f569315d1525900668425cd3ca4e4ab98af716cffc60b95778"
+          "stateHash": "a9666d84f6a1baa4e057e8239c74209e736cc0490f558ac7d83d39de97abc2cd",
+          "eventsHash": "82d88b0bc1772f0c2cd55919f78f49429c8a7520eb908bca66beaa64b6859ff3"
         },
         {
           "round": 5,
-          "stateHash": "b80cb164a358a9a65f2ed7c2737ca330b3b261162ab564b32ba0e804a889ff5f",
+          "stateHash": "66027a64ad5018abb42a5f47c52a5e74cd1bfd7d60cd05a784e98245b6ba9549",
           "eventsHash": "7638deaadf5cf71dadeeac8ef6b87353171b9712ca6a0f062d52d8e4eb5339db"
         },
         {
           "round": 6,
-          "stateHash": "4573290c9e75519a2bf45c4195b212664cd9fdec0f3503c4f0459a437ca33582",
-          "eventsHash": "7afb5856b8517257906325a3370049898381a793268b62e1662772366ca4b527"
+          "stateHash": "32bfc87b0eacd32e802e8b4bb2318198b27fe104f331c45b1cb84813666e2519",
+          "eventsHash": "288be8b34e57acc4feccf616d6535a0b48502d29215fd8dd96101fd2fc019f32"
         },
         {
           "round": 8,
-          "stateHash": "93219377c50926eda4bd13e772e5f66ddbbe164ee0999f4fe773a55c4fc84a90",
-          "eventsHash": "bbf427066f2db8df15458010e895e9b6455c1ef74cda4db6fc34ca0c6dcdeab4"
+          "stateHash": "4b11194d439b95757e567ba44aa678a5e12d9eeb5ef6155db2d933a3e07d784a",
+          "eventsHash": "a88aaa0a356a9ba5568276220fa9afb73f2713d29350f9f90203707934646af6"
         },
         {
           "round": 9,
-          "stateHash": "8503d74527c1f5fca0d0d2773adf09b9adca04e7c55f21de62f757723ceb75b0",
-          "eventsHash": "6bd23773df9752cfabbffb3d86712cad9f85292cafb9f6f8fe598a0393ae55e7"
+          "stateHash": "c625e494fd1a8dd8637d3f9d31ff4323509a9431328ab85096469191a7ef39b8",
+          "eventsHash": "3fabb43d0c755812cce6c9b021d2983ee7e2f369885423b4fa50375a13e73894"
         },
         {
           "round": 10,
-          "stateHash": "c770059c848347b194efe442245a5d2856501f5a0edcdc3b7ddec40b048f4079",
-          "eventsHash": "3ebfca184c305d02210469df68af743adc0559829bb7881e56d257081214430c"
+          "stateHash": "617840a09b82ad178dc47cb1ea162d4c198fa494c6556de9b95a87f644978417",
+          "eventsHash": "6c35c402915a4651f4cc1c20925de000881c0710ab4e2ef50d7d3a83c7221022"
         },
         {
           "round": 11,
-          "stateHash": "ba2068ce700932b1fcb690a5348683d5be79b16de456e427862cded0dcabdb2b",
-          "eventsHash": "83fcdf74e5097c8d30439865fa222000948818cefa22f978f31210fbe6be8bdd"
+          "stateHash": "1b70a617f768fe14fae4a39979c01668d05da9b9dc254caad86cd10f96194a55",
+          "eventsHash": "c93339902a0a0dde2a4a54775d41ee72f95beb28e369dc5c9f90d7fae542cfc4"
         },
         {
           "round": 12,
-          "stateHash": "3a1a84062c115a91a1fd6d95d976e20a5cbac5f5ac32a02ffe3548a01ecc57e4",
-          "eventsHash": "066c3d460f37db70477f1ae1b2c8f0a799c51d9362ec7861185d43a4c7f2d8be"
+          "stateHash": "216ecf4a05ceedf840458119407fbcb8cf3134894f3866f36c2199ed4a0221cb",
+          "eventsHash": "20636ea5ceeda4e56a4554e88cda02872a27f248d6a0050c2cb9b5c9e79dc1bb"
         },
         {
           "round": 13,
-          "stateHash": "38f87fee08e1eda82bd77540898bc43986dce9719ae2886e4643ce51f105ff7e",
-          "eventsHash": "7a333bbf201bbbf9c361681c1c879fec4ed30e667513a67b3d07a2e0f7b593df"
+          "stateHash": "c91199b005a390a3820dcd2c55c3aa9a91190eb4da92768d70157f0fee683370",
+          "eventsHash": "d0a4ebe35d0a5a806f02a37cdbd266abf3dbe2064083a32994bb7b1d2be6211c"
         },
         {
           "round": 15,
-          "stateHash": "0bb17929cb18f01da594936c92a4556cf09a2197c877c6ccd87527d8d2726ca3",
-          "eventsHash": "3239b1fbdb38aaca72704036c529180e1ee67ca83ecac77e727f92d302dee01a"
+          "stateHash": "45cd3f5a3046934196fe6908f37066bf2e123c6eb70eac5ad27791b64d970fd9",
+          "eventsHash": "9ca8cbb55441c27fd29290f27b1c62e49eaa7e32215404b40876643bb3cf6e4f"
         },
         {
           "round": 16,
-          "stateHash": "bd2bae81c8e504c7dfd70e9cc49c1c4f64cea6ca31869e2d9c5dea9a0349868d",
-          "eventsHash": "fe279a675fcf4542b42d74d10da5801da1a120e6ab51c2ba869a23495bb4f121"
+          "stateHash": "05aa9d98ca1476935c347a291a56d1a9ee012b232c5dd2cd0b445d445743a875",
+          "eventsHash": "48b911c0564282e1e21ed69e64e6b8eb8b39e35afcaa1de08cae09210c0b302f"
         },
         {
           "round": 17,
-          "stateHash": "a58c924103b50d39b4c277e66e402c30baa6b3a9ab6f78f56f150346ae47a823",
-          "eventsHash": "49e69fdf3ea4eb731f40e6da6d219cf2e36c24e82cdffb7836516001565e1f63"
+          "stateHash": "8c6667afbe892eb670ab296947fd1c7d2ab4cf5c46256a7d2dfd149a3975697d",
+          "eventsHash": "60041c885882058ed9977a17f9b951f975e9744c63a270320696229c293a5421"
         },
         {
           "round": 18,
-          "stateHash": "ef0ff531e1a6c6c7f4df415a5279a28f713e2e86adaa41a275790ec31e74c39f",
-          "eventsHash": "5c076cd72e0f9d68297a7a2a139af6e142a184f7990d5ba6b07dd0b5d1f18fd0"
+          "stateHash": "0964ddcdbb8fdd1051923dd9dfc3cd8e2c3e21a8b66b9b69339fa2c6474e78a1",
+          "eventsHash": "f4fa3bb960ae5cfd57e03134a34c840687c542120aecc51f42b44d4dc397e453"
         },
         {
           "round": 19,
-          "stateHash": "f2b7bc4003a18493024981dd76ea144a3caaf927b90bbf9fbe96c0f9f1ff344a",
-          "eventsHash": "ae6705559bc6ec0993b67c78ab24f053c3211047390e49131c29fc76d404ab24"
+          "stateHash": "65fb4a2cf6a3bd2ee01bff5f1a1e67c9903416251f4f986ea1e0046fafc5177d",
+          "eventsHash": "1d4e548da463a7823db7a78b482f18a7e15bd38c29e975642aa4f2f0907517fb"
         },
         {
           "round": 20,
-          "stateHash": "1ae91fc5164bdb935d2211acf761099fa72268ba3d36747345be8f8de15079d9",
-          "eventsHash": "2c1a36a3832919dbc125e2f21651acbdd849d4794e58352b69068dce1dc352e1"
+          "stateHash": "85cc4e8724f44f5da716793e1f8013bb80cbf83b6809302fd4b772826ed8d6e5",
+          "eventsHash": "a4bf2c07b2c07dbbf6788c0a1811d50317c5318dcdb3a9a599f0f9fd029a2bdf"
         },
         {
           "round": 22,
-          "stateHash": "2bef65a3673c463172931aedf89baa34c744cdc4cf69d8291ef1d79f02a606ba",
-          "eventsHash": "1938365df1f8cfb50e3604dd545f2293610b12bce1987efbf624449d5e558861"
+          "stateHash": "c709971ce18043730dde73351c1023a6495ebc377187a33da098fedfc39f663f",
+          "eventsHash": "85cdcda48b05be765a9c338c8ade71a9a0b23eb6606df6a34331ce729104451b"
         },
         {
           "round": 23,
-          "stateHash": "5837b3c9d5a6aac3a9a5c6990d91887c4c9226d7bd28caaa3fa02e520d218b73",
-          "eventsHash": "a2c70fec60f9da3ef405bc4602b3617a4c54f4db0bd86cc685d8e20d86331ff6"
+          "stateHash": "1da9bbc8142a90823f942d2fb79735d792a6c54bc61217820bd71ef480f0d38f",
+          "eventsHash": "5591603d0ceef03744c3ce595a1c6e7d0113f244dbcf00e8ab05df14c5f63376"
         },
         {
           "round": 24,
-          "stateHash": "772d1991926aaac90848d3f40de32600de4b24f1574a7bbef97120affb8edca9",
-          "eventsHash": "e6df2b8d48d4fbb22d651f765ff918a41411500a63d2e61eb44ffd9941f00905"
+          "stateHash": "b02b494c44e9ae6c98da49229526ad75188a25931fcc2d76167a2f559c166a67",
+          "eventsHash": "c19d30bc993c04cd9f3759dd0315227c44b6012737288f5330e74912fed572e3"
         },
         {
           "round": 25,
-          "stateHash": "904775e0df874d1f0af6333de2c7c444f5d34fa2de933b48307e32639d71447e",
-          "eventsHash": "2ae034e5b1de08c394cd20d3f0228a1448d5dd5a62627ac23e5e47a211764fba"
+          "stateHash": "dfc910dc9443957fe588b4d8164fa9aa6f77e1f5cd549157ad03df55666ead78",
+          "eventsHash": "5b6250003480d862b67aa942b39706bea8f0f0a7d5346745961792fa827d88aa"
         },
         {
           "round": 26,
-          "stateHash": "85d9b0aaab52aab8f92f36827a918f84aa1caa261badf39745bf7558d5f4bbb2",
-          "eventsHash": "bbf13242fc47431ecbb649b4227ce6e5a8e09f9c9e44265eb37bb55760e325ec"
+          "stateHash": "4ced67befe5961fdd7da300b42cc2872cbad87f4d770a04b05e78b3a08fac58c",
+          "eventsHash": "9b64af80bd146f85f4def7fe35f97c44c7f499d369d210b5f1c0ee83341f97f9"
         },
         {
           "round": 27,
-          "stateHash": "c12ccb0bb2b8985864c3d1d8e1afbbc5f905b8703458ab683edca17a7466dde5",
-          "eventsHash": "7c6670eb77fb9997f01723b5d56c1101efff954743458f39c70d3530327a30a6"
+          "stateHash": "3a58250e251920a4e38259529fcca0b5f06e2bf09554ccbfe3418b43a908c837",
+          "eventsHash": "b876891c981be578b477d875f55c7aa792901085bd58a6580f0b6c15a5408e73"
         },
         {
           "round": 29,
-          "stateHash": "a65f1e739e64d6eb95ab44717499dd9cf58468184d72f5df05e859a89dcca34c",
-          "eventsHash": "f6e439b5f50e0588a750446090033c8cd405599b95911a9ff3a5ab9c21f68215"
+          "stateHash": "a4e97345def25941e2ffe10cb8829565e0eeea1da3f305913fd14bbf2fced42c",
+          "eventsHash": "cee8de323ae500a468203aa9ca6711c07a94fb8db1225259812c3abc67a18325"
         },
         {
           "round": 30,
-          "stateHash": "4e88df91681d42d484577233b644ff7128916978a031bcf68246ab1ecbdc6181",
-          "eventsHash": "9075605e1cbdd3f1c26d53147f64708e547606137dbf25773edaabc8e00ee058"
+          "stateHash": "a28a22d2cfe42339ee7b8f633b62ea6c440b413aebf6d91be79babb118003659",
+          "eventsHash": "9076d3af1d79c597273cc3942c22680dcab87feb832c1b60b409c6e5a30482c3"
         },
         {
           "round": 31,
-          "stateHash": "83946ae20a6d9798e905f1533e04e53014d325f8231691f4206cbf5267b4940f",
-          "eventsHash": "a75236cdb5d9dc394cd3411181ac2215fa71bf0bd5c1a1cc681639313cb63ec3"
+          "stateHash": "32b96584d81e0764cd5025155311fbeacc13983a2709f8932c4e3b7c93053597",
+          "eventsHash": "994675829fa33d60c842ce8a3b850f245974c8d1d34260ad59fca853ce8d4fb5"
         },
         {
           "round": 32,
-          "stateHash": "fdd2e6db78c403607405fa438bbef28ba23614d9bc0017be891bbf5afea2d1fe",
-          "eventsHash": "3f88b94f7ee0fecbf61d568481777c7e01a08cd1bcaf8915277f0e8df335c4c7"
+          "stateHash": "cb57ce77842fbe57c460f50418437ce9ebb08807816f6c92446d3fd04e212693",
+          "eventsHash": "d213dd5e2f5067c210caad19809f31100df51af398b04c65a493c3fb8b6429c2"
         },
         {
           "round": 33,
-          "stateHash": "634db50e8b1e90a553afa2f48471fdc70d3d345bbe5cff0e904bc390e8d4af9b",
-          "eventsHash": "0ad5c0f2692ca7e2cc8830b2998af4ba42d1353380a7779c9df5667bf89d74ab"
+          "stateHash": "6a4f958c8d53673bb5860beb3851e9f4a9dda2ae74418d734575158fe3c7d5d1",
+          "eventsHash": "aab634ef44ceeea96cff5785047f0dd0ed2c19b26cb80a6a0205404d1b0b85fa"
         },
         {
           "round": 34,
-          "stateHash": "3fff50f9d725ccca70f51f9cb22bedbff5f57472d366e556f039f3b6dc997728",
-          "eventsHash": "2fe06c02d85b1ce1a97965d077de2d33c8f609fdd98187178e6ac95ef768de20"
+          "stateHash": "009765538e4b936dbe791f210abbbf93bf0fe666be9874e0ffea42535b505482",
+          "eventsHash": "113811f8de5a1522532fea6fdb7b1288adcc4560a5396515bd75f61368583a66"
         },
         {
           "round": 36,
-          "stateHash": "239877415a800e57caf02ce81d89fc841c65f210ba8fafdff87520f7fa53ccb7",
-          "eventsHash": "d6515d42eeee54e49247f255ecd42c6551ddffa2039116cabc579f4dfc2e491a"
+          "stateHash": "f5150ac0ff7ffbbf0ba43ed1c7e39e6adfff701c59719152005f5fad75df1dbf",
+          "eventsHash": "2417ad840f9f97871d0bd3acd0e841b67d00642e2a677d825ca7550ca6529020"
         },
         {
           "round": 37,
-          "stateHash": "aef60e5e3d9585b13350a5a7d433d90cdfe87407ed1ce62754636ec3e5524a68",
-          "eventsHash": "885125d826850e0dd962ff77cd178b3979a8cc5851bb96072ea3c05f4fbdcc65"
+          "stateHash": "9da2686e7b58ba92b62ef6e8f32fe8ad7b16620e09a42c80701a4ae8382694d4",
+          "eventsHash": "f0f8d7eebf6106679a1e257b9dc7cc5783c83e4bf4b206af448145c66861f454"
         },
         {
           "round": 38,
-          "stateHash": "3ca6e40ef1748b849f7f0d688d225e133609a23437e3601256aac8731a800744",
-          "eventsHash": "40957b00848667e2435cbbce3c6a1998002d1ea794179f2deec1469864a83970"
+          "stateHash": "e9da8d4811b1722b2d759765b3a73d66e2f615c28e054eb6bb1b6ea536e7a19a",
+          "eventsHash": "c116b5cc7bcf1d1d43498ce53598fc8f5de44880b2c370b3c6cc2b0e319cb628"
         }
       ]
     },
@@ -3086,7 +3279,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-3",
+          "id": "unit-2",
           "target": {
             "kind": "board",
             "cell": {
@@ -3108,15 +3301,8 @@
           "generation": 3
         },
         {
-          "type": "deploy",
-          "id": "unit-2",
-          "target": {
-            "kind": "board",
-            "cell": {
-              "col": 1,
-              "row": 7
-            }
-          }
+          "type": "sell",
+          "id": "unit-4"
         },
         {
           "type": "start"
@@ -3150,6 +3336,17 @@
           "slot": 0
         },
         {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
+        },
+        {
           "type": "start"
         },
         {
@@ -3179,17 +3376,6 @@
           "generation": 5
         },
         {
-          "type": "deploy",
-          "id": "unit-4",
-          "target": {
-            "kind": "board",
-            "cell": {
-              "col": 3,
-              "row": 7
-            }
-          }
-        },
-        {
           "type": "start"
         },
         {
@@ -3210,6 +3396,17 @@
           "type": "buy",
           "slot": 0,
           "generation": 7
+        },
+        {
+          "type": "deploy",
+          "id": "unit-8",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 3,
+              "row": 7
+            }
+          }
         },
         {
           "type": "start"
@@ -3256,10 +3453,10 @@
         },
         {
           "type": "deploy",
-          "id": "unit-4",
+          "id": "unit-8",
           "target": {
             "kind": "bench",
-            "slot": 4
+            "slot": 1
           }
         },
         {
@@ -3300,8 +3497,27 @@
         {
           "type": "equip",
           "itemId": "item-7",
-          "unitId": "unit-4",
+          "unitId": "unit-8",
           "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-6",
+          "target": {
+            "kind": "bench",
+            "slot": 3
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 1,
+              "row": 7
+            }
+          }
         },
         {
           "type": "start"
@@ -3331,6 +3547,11 @@
         {
           "type": "buy",
           "slot": 2,
+          "generation": 12
+        },
+        {
+          "type": "buy",
+          "slot": 4,
           "generation": 12
         },
         {
@@ -3383,26 +3604,38 @@
           "type": "reroll"
         },
         {
-          "type": "sell",
-          "id": "unit-8"
+          "type": "reroll"
         },
         {
-          "type": "equip",
-          "itemId": "item-7",
-          "unitId": "unit-17",
-          "slot": 0
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "sell",
+          "id": "unit-14"
         },
         {
           "type": "deploy",
-          "id": "unit-3",
+          "id": "unit-11",
           "target": {
             "kind": "bench",
-            "slot": 1
+            "slot": 2
           }
         },
         {
           "type": "deploy",
-          "id": "unit-17",
+          "id": "unit-18",
           "target": {
             "kind": "board",
             "cell": {
@@ -3413,11 +3646,11 @@
         },
         {
           "type": "deploy",
-          "id": "unit-19",
+          "id": "unit-17",
           "target": {
             "kind": "board",
             "cell": {
-              "col": 3,
+              "col": 0,
               "row": 4
             }
           }
@@ -3443,10 +3676,83 @@
           "type": "reroll"
         },
         {
+          "type": "buy",
+          "slot": 0,
+          "generation": 26
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 27
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 28
+        },
+        {
           "type": "reroll"
         },
         {
           "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "sell",
+          "id": "unit-8"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-8",
+            "item-5"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-7",
+          "unitId": "unit-18",
+          "slot": 0
+        },
+        {
+          "type": "equip",
+          "itemId": "item-9",
+          "unitId": "unit-23",
+          "slot": 0
+        },
+        {
+          "type": "deploy",
+          "id": "unit-13",
+          "target": {
+            "kind": "bench",
+            "slot": 1
+          }
+        },
+        {
+          "type": "deploy",
+          "id": "unit-12",
+          "target": {
+            "kind": "board",
+            "cell": {
+              "col": 6,
+              "row": 4
+            }
+          }
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 15
         },
         {
           "type": "reroll"
@@ -3463,43 +3769,7 @@
         {
           "type": "buy",
           "slot": 0,
-          "generation": 26
-        },
-        {
-          "type": "reroll"
-        },
-        {
-          "type": "buy",
-          "slot": 4,
-          "generation": 27
-        },
-        {
-          "type": "combine",
-          "ids": [
-            "item-8",
-            "item-5"
-          ]
-        },
-        {
-          "type": "equip",
-          "itemId": "item-9",
-          "unitId": "unit-22",
-          "slot": 0
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 15
-        },
-        {
-          "type": "buy",
-          "slot": 4,
-          "generation": 28
-        },
-        {
-          "type": "reroll"
+          "generation": 36
         },
         {
           "type": "reroll"
@@ -3510,6 +3780,11 @@
         {
           "type": "continue",
           "round": 16
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 38
         },
         {
           "type": "buyXp"
@@ -3534,9 +3809,6 @@
           "type": "buyXp"
         },
         {
-          "type": "buyXp"
-        },
-        {
           "type": "start"
         },
         {
@@ -3550,12 +3822,7 @@
           "definitionId": "bronze-for-life-ii"
         },
         {
-          "type": "reroll"
-        },
-        {
-          "type": "buy",
-          "slot": 2,
-          "generation": 34
+          "type": "buyXp"
         },
         {
           "type": "reroll"
@@ -3564,18 +3831,16 @@
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 0,
-          "generation": 36
+          "type": "reroll"
         },
         {
           "type": "deploy",
-          "id": "unit-3",
+          "id": "unit-13",
           "target": {
             "kind": "board",
             "cell": {
-              "col": 6,
-              "row": 4
+              "col": 1,
+              "row": 7
             }
           }
         },
@@ -3590,9 +3855,16 @@
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 4,
-          "generation": 38
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "reroll"
@@ -3654,7 +3926,7 @@
         {
           "type": "equip",
           "itemId": "item-13",
-          "unitId": "unit-22",
+          "unitId": "unit-23",
           "slot": 1
         },
         {
@@ -3668,7 +3940,7 @@
           "type": "target",
           "choiceId": "round:4-6:anomaly",
           "generation": 0,
-          "unitId": "unit-17"
+          "unitId": "unit-18"
         },
         {
           "type": "anomalyReroll",
@@ -3692,7 +3964,7 @@
         },
         {
           "type": "deploy",
-          "id": "unit-22",
+          "id": "unit-23",
           "target": {
             "kind": "board",
             "cell": {
@@ -3709,9 +3981,19 @@
           "round": 23
         },
         {
-          "type": "buy",
-          "slot": 1,
-          "generation": 46
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
         },
         {
           "type": "start"
@@ -3736,11 +4018,6 @@
           "type": "reroll"
         },
         {
-          "type": "buy",
-          "slot": 1,
-          "generation": 52
-        },
-        {
           "type": "combine",
           "ids": [
             "item-10",
@@ -3750,12 +4027,279 @@
         {
           "type": "equip",
           "itemId": "item-16",
-          "unitId": "unit-17",
+          "unitId": "unit-18",
           "slot": 1
         },
         {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 25
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "buy",
+          "slot": 1,
+          "generation": 72
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 26
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 27
+        },
+        {
+          "type": "select",
+          "choiceId": "round:5-4:supply",
+          "generation": 0,
+          "definitionId": "cloak"
+        },
+        {
+          "type": "continue",
+          "round": 28
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-14",
+            "item-17"
+          ]
+        },
+        {
+          "type": "equip",
+          "itemId": "item-18",
+          "unitId": "unit-23",
+          "slot": 2
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 29
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 30
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 31
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 32
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 33
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 34
+        },
+        {
+          "type": "select",
+          "choiceId": "round:6-4:supply",
+          "generation": 0,
+          "definitionId": "belt"
+        },
+        {
+          "type": "continue",
+          "round": 35
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "reroll"
+        },
+        {
+          "type": "combine",
+          "ids": [
+            "item-19",
+            "item-21"
+          ]
+        },
+        {
+          "type": "start"
+        },
+        {
+          "type": "continue",
+          "round": 36
+        },
+        {
+          "type": "buy",
+          "slot": 4,
+          "generation": 129
+        },
+        {
           "type": "deploy",
-          "id": "unit-2",
+          "id": "unit-13",
           "target": {
             "kind": "bench",
             "slot": 1
@@ -3777,116 +4321,6 @@
         },
         {
           "type": "continue",
-          "round": 25
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 26
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 27
-        },
-        {
-          "type": "select",
-          "choiceId": "round:5-4:supply",
-          "generation": 0,
-          "definitionId": "cloak"
-        },
-        {
-          "type": "continue",
-          "round": 28
-        },
-        {
-          "type": "combine",
-          "ids": [
-            "item-14",
-            "item-17"
-          ]
-        },
-        {
-          "type": "equip",
-          "itemId": "item-18",
-          "unitId": "unit-22",
-          "slot": 2
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 29
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 30
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 31
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 32
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 33
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 34
-        },
-        {
-          "type": "select",
-          "choiceId": "round:6-4:supply",
-          "generation": 0,
-          "definitionId": "belt"
-        },
-        {
-          "type": "continue",
-          "round": 35
-        },
-        {
-          "type": "combine",
-          "ids": [
-            "item-19",
-            "item-21"
-          ]
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
-          "round": 36
-        },
-        {
-          "type": "start"
-        },
-        {
-          "type": "continue",
           "round": 37
         },
         {
@@ -3896,168 +4330,168 @@
       "rounds": [
         {
           "round": 1,
-          "stateHash": "299df935ba6220adab1e597ed777cf51065205bbf8b626c364eb76de80ffc63a",
-          "eventsHash": "f76da981f8d4a11cc1a09fe4ecdcccc5d45ae14e414e61d25a70eb919a909065"
+          "stateHash": "fd37b2726fe457543afd069075916b0a10c84417aebc4386cef7da421e096a9b",
+          "eventsHash": "e301cf34df80bab890d2305dd377e2baccdf53632e47908dfec58e225e2025bd"
         },
         {
           "round": 2,
-          "stateHash": "38a883195c3fae7868dcdb4207f55cd8e06bd1922efdd5d2056b0f35849fd3c3",
-          "eventsHash": "f95f4c23847ad4659127a297ae5707fa55a594302fba3bbd66c1eb5d54010d2d"
+          "stateHash": "22f55d96d32e8ed7a4d44418ccdaff5ad81825049c911e63854530627d96031b",
+          "eventsHash": "57b44ec0ec3d6b8ea47aadd8475f178a05359e265c8a7acccad0e89090bd6441"
         },
         {
           "round": 3,
-          "stateHash": "82fe12c7f68a5d14ede2ec08d9f31193dcaa752753e416df042292e3b5fdd008",
-          "eventsHash": "397330cface9a3c188ccd3ba6453601066f029548790e037323a87971042f33d"
+          "stateHash": "139bec324866888a2e6b5b66c58d39164d468fa9637bd213224e7e9d3f3b08f6",
+          "eventsHash": "f78ce251d8c00344bb5a3d0228b9f555b9503c7118b337028e3d154f0f96dec1"
         },
         {
           "round": 4,
-          "stateHash": "3a8d7e4709a7d503fb36f2e1585d02d495bfb60cd7572aa977bcecccc0496b8b",
-          "eventsHash": "994bb8a05c7f5c7dd7164cebf1b8ac85fc445200a9169291d8b385511b98ccf9"
+          "stateHash": "6bd268dcfc06dd9b14f2520e03688d70e86fed52b1b575b720b832237d5de0b9",
+          "eventsHash": "1ed92c90767ace61454758b8c9ce93067cefe87045c6011755a235c31fcc7103"
         },
         {
           "round": 5,
-          "stateHash": "c5ed31ba74232b6b7a11a9159ac3a89180b46f0c265841fc8ea1a3b6ea158aab",
-          "eventsHash": "f69068cd201d9ebe48d854dc7598b46635124552bab1445f385e0bd42fb89aff"
+          "stateHash": "b7214ac18ad5a2182f4797f660e0467e037c32ae06dee966bef0e5aa246653c3",
+          "eventsHash": "32e6c4137788447046f4f2decda47041aaa100a7444598eb318ad31f488207a7"
         },
         {
           "round": 6,
-          "stateHash": "d920b8fcb3eb107af54b73a11d99c6414f9042841a91607264fbcf94265ede04",
-          "eventsHash": "a3517e5b0a11d105483d3edcb4f8ce18f35e67f4ed8432e22fd6975e91ce2b34"
+          "stateHash": "e92270b27a00acd6f2c3a30e6d0997d2ccf3d85c488c5550d16f5f192bbc3544",
+          "eventsHash": "64086d73bc13334d4cae772110f6be3e4ed6c01fb8c514b9a8fb1b603459ec34"
         },
         {
           "round": 8,
-          "stateHash": "48a733aa7adf4892f07a27a28d8cf600b641f92f33b4205f24fe3588687793ea",
-          "eventsHash": "8b6c7ba69413d5be7230d57ab58b19d0a198e2d22a62d896126bb5684d942613"
+          "stateHash": "5441f9ce8b57c5c51255e023722e4e361d1e79b40cd5c8fab899f9790ed8c84e",
+          "eventsHash": "e0ee3a5dd4d5cb6948800afc8b1161d72c6ac60d264503a90e82b842f0205a16"
         },
         {
           "round": 9,
-          "stateHash": "61e61b9bcb969a91f848e373d475c33693b51d756abb78d4db15398a7450b67f",
-          "eventsHash": "d41d421c7d525b1fc5734a0f664948bceef88f14f84eccdd6fff8bf0d490a426"
+          "stateHash": "715ba080d221668fd11115dfa55afb5652667bc463505dac85ff0750ea7fd4ac",
+          "eventsHash": "0c3dd148e4e0c8ce1ffefd20995ff2b360d97837a03e09cd45b117eb9da9d8e4"
         },
         {
           "round": 10,
-          "stateHash": "7770369d6a428b651f77ac9abb90a19e724271de13375ea3e96076deb4c363cf",
-          "eventsHash": "110439f99b13bfac40360c2eba1566954e169f133d8ad3e238b4b4fa31be6500"
+          "stateHash": "f591cf569bc87f362251f80ef72bec01a0d293b895642032eeb3d2f9ad47bf72",
+          "eventsHash": "5e8825a42247c7300e309a38bdba71bd87014442276da1a9dea87f4874b9ddee"
         },
         {
           "round": 11,
-          "stateHash": "9bbabc2f3eec814b352ec14b1105b48a5b5dd0f041d624a126698a6dc778799a",
-          "eventsHash": "2dff6579c7890f8615e59abe180f7e573c7731dc76ccf677d1139cf5eea863b5"
+          "stateHash": "49a6431681e99415d147f39340ae4cba7d756c9a4a29589e72fe3310aee4315c",
+          "eventsHash": "7ca00630f25829224c53838077237149e243ad05a045a35d54d6f6f8f664c568"
         },
         {
           "round": 12,
-          "stateHash": "6008724fe8a96d35077eb56e1e11255660e8042c72fbcd348405dca468438aac",
-          "eventsHash": "3dad254b8adf12bade3b153d02b50c72a1bb1ec157c6f07009a1d9e94b418a1d"
+          "stateHash": "fedf734deae74ef9bd5b952506dd879280566c76624b12b2e39b25c5573d4fa9",
+          "eventsHash": "7bbaf6e2343ba18a707283c567d58ebaca94f60e00a5471b7f32a53b9541ee1c"
         },
         {
           "round": 13,
-          "stateHash": "c43464b9aa1c4c04f9ea84ae6a750ac4205730eb0abd43644926f6c3a3ef6315",
-          "eventsHash": "bc787f3cfa8d1c448eb5d4cf8f1642909a9d29abd678490d8f9272086968d161"
+          "stateHash": "4186cc05c97fe2727183ae54e449d440e4d2140f17633fd49da049a000b5b798",
+          "eventsHash": "3206f15cf8f1e0dd86ab9b3a11b0217e8a62626341f6aa0a9a68cee18f201fb9"
         },
         {
           "round": 15,
-          "stateHash": "8c57b78d300982c85fbd2f540c39b01481822d41df2c19344344e3ed675e8797",
-          "eventsHash": "46501282d84c86016e7c9af1d5f199e2552edb81d1d6699e37d406e0d338aa16"
+          "stateHash": "680911d461ddc3225f57ee71357fa8922cb3c0c4880df99db596f10b75a8261c",
+          "eventsHash": "ed9ea08ce54f36f55a30e1b66a1f269c5cef920070e96de75047e50ba5e98ef2"
         },
         {
           "round": 16,
-          "stateHash": "fe35419073ef53ec67b94c6153466a9745473feb246e23a2391e01d4f5c56579",
-          "eventsHash": "1275a8b0cbc9ec1cbb85fbec9da718dc00334ded8fc04473211f1c2719872412"
+          "stateHash": "cc26d2a53927fb3688ef375010f769a54a62094850bef087fd9ba877b9a066b3",
+          "eventsHash": "5ecf29cbe00d2a4212da67f2403db972bc955275e52fa6731507c9eb690cd105"
         },
         {
           "round": 17,
-          "stateHash": "b16a4851590093e9d38327d089f551652846586216a8ecf9e8edef5da9591160",
-          "eventsHash": "e5ae78e441e5fae2b7365a46e28ad2a7b76fa5e82df1624461499459a5fb1268"
+          "stateHash": "b63a5ebbaeb892eda0ec3cbe1b469fbe2eb2397d264121a5c7ebc8e88d11d0be",
+          "eventsHash": "057843fd503adc72334a49f3df28d4ebfc760bdca3ada4c4f8e54686cff0b714"
         },
         {
           "round": 18,
-          "stateHash": "0ed8b0cd44a0a37fcf448319a27d9221c893b6da64b0b3750298bed88fd9eefd",
-          "eventsHash": "69bf9980ef8ed54133536f263103ca03daab855b9bf6c30c7ab9803812e4d680"
+          "stateHash": "0f9e47514b499e66558e8d8c664b891b18ab6e34a4ac8ce119cda14659eb8e2a",
+          "eventsHash": "eb93cddd7eb158074177424b35c96225073951cd7dfcd3036d98062bbdafbc1f"
         },
         {
           "round": 19,
-          "stateHash": "1e85313c0b31dd9d0e9351cc3ff8cda30b3eea8bf281efaf20a442ca7e0576a8",
-          "eventsHash": "2e770ba3fcb3a2eef0b8c7cd91f8a49522ba6d5d15656837fe043973e204961a"
+          "stateHash": "99927fdb5f298df122e1d36b568d876c89a7b707b3792b7e90aa7d02bebade78",
+          "eventsHash": "8a985c5543a952e21aef3190fd91e6ccfc9f694fa093bc8d34aac28f5c9d7480"
         },
         {
           "round": 20,
-          "stateHash": "18b48f8d12a4bf358cc4679b047da439f6cdae2144acb729518a3501a020961f",
-          "eventsHash": "649656b52e9368612bdc3097be684bb8b6fb21e7f127faf188a8a706dc1b6867"
+          "stateHash": "61e53dd1757c081d5821c54663659520318017c0c3874a7e5369b4186fcbcb5f",
+          "eventsHash": "a984fa593b15ceaa3b88b4406f5029bc8faace6210db1beed8ae464c1483f898"
         },
         {
           "round": 22,
-          "stateHash": "f877223b42508eb78e628e9e685c8d9ca96a1f36a141953d6baadab09b7c9e68",
-          "eventsHash": "d03348095b8591a4283213669f59c0e9566f0890b9d7c24e0859fe06cafe51f9"
+          "stateHash": "86d8393d0b07b2845994c24ff151cb5c9d1698119d7c7577c7c1d1bb839746c5",
+          "eventsHash": "141bf9a80ce6f2386b6a37e05c38d0230758f485801d76faff344f237113d4fb"
         },
         {
           "round": 23,
-          "stateHash": "b78ad832ffff8a0ffd9023756a6ab217e3dc952f00ddf93af50493018d4bf1d2",
-          "eventsHash": "7b1945a79ae0d3da069595cd057eea64525981a71b7d0da7c4fb66af50e6aa9d"
+          "stateHash": "6d9dfd1f618bbfb103e028684164f1cae9f20d06e2c15d0774aef92295224d56",
+          "eventsHash": "1d2026253ace5515e3abecbc0201ac2548231e3018aab067ed44ad32bb28c58e"
         },
         {
           "round": 24,
-          "stateHash": "e7bff6f4dbdae77bd6dccc71909e142d0e8b70f7086e4caed2e3d257e187f9c4",
-          "eventsHash": "56d9cbb05f21df5fe21137e8df5a8a71d167f38d5580f719ee2964250fecabb4"
+          "stateHash": "19a47ed565df187940085c626fd28f41116b68d54cbb23979be300649fd732ea",
+          "eventsHash": "80b54e69640fbb68f32aee2a73fc24cab8293f51ecb05f932623c6f9c350dbd1"
         },
         {
           "round": 25,
-          "stateHash": "5f43a49dad7503be451e0bb3b0881440b145c06487e5bac826e1c420336975cb",
-          "eventsHash": "9e52a6221a105fdcdfba3aff57a90ca504fd4c88e910bd68057b25e521132f50"
+          "stateHash": "4c7634c13c707c8084f09eb9915b0bf8728b6a4dedaa315050b7b8cc1848dc37",
+          "eventsHash": "9f26bf529da515f47527f7688115b8c1bba03fa56e10a57d6d380d463e1ca2d5"
         },
         {
           "round": 26,
-          "stateHash": "0288560e72fd6a0eab006fed9ee6272b732abc6b433d6c819ec1c98fe07c1a99",
-          "eventsHash": "be60a99000bb2243dc2f81316ad4049d8382fa97b9fc25091b8aa8a521a7c278"
+          "stateHash": "b1b8e150ed8e34820a14a3314308d0b34523b9654cd9d8c6bcd2ed2ac4f28eff",
+          "eventsHash": "0073e579a811d2ed39579f1cd92914fa82a89aefc1ff91bf8f0359a0b8c56d00"
         },
         {
           "round": 27,
-          "stateHash": "91b1e20dba63353166f9b74e41d66c4c19fd5498433ed5fa4a429ed91859fd77",
-          "eventsHash": "8984b21472ac9b50469f6f31fef87f575996b503f419064fad944a435701104a"
+          "stateHash": "2e81780833373f0e9d9522528d0245e271f9da15c0297b48eb2da8686de1444c",
+          "eventsHash": "ebfc0fe8fb2fbf2c0acd31063f9ce22bf086044da86fba48726f51d3c5781973"
         },
         {
           "round": 29,
-          "stateHash": "d1439b1877d48420570c8022604514cbff325cabca1a8fad438b2830e0e41258",
-          "eventsHash": "3f9d4d25f19e1a6a5759ea6c398db844f7c1349d6b01cca0487a80ca0aabff17"
+          "stateHash": "df43db5e5f575421598856ce2a358a3d71fa5b2badccf6cb5bdf18a78d18f28d",
+          "eventsHash": "26ab1f55b3825058e6a7b9ff9e51024dab8b04103ef34e6a54c4ba8294593df6"
         },
         {
           "round": 30,
-          "stateHash": "8fcee9ab81cdb5cf991965a60155c600856ddae01a7bac93e60d134bd2216829",
-          "eventsHash": "0b4b80a106cae99c7afc7ed6951d1f42ce94d40077356edb342e1587e9ff2e75"
+          "stateHash": "287497bb6b1221c3a6ca5ac51e65af1ec569a7890993d5e87f5851869712c248",
+          "eventsHash": "38ff670dc83ccb8c7b4f58dc1de43863b4dd6ddbc84c3f50f99b5b3cb855712e"
         },
         {
           "round": 31,
-          "stateHash": "6718ed1f6c57b5e9430a4a785346983e0e73a6a2f41368c53ca525f6ad7d3118",
-          "eventsHash": "854296f224e2dd85afc770f4a61b105707b09248f3e5ba5093c8a9afb1eb9e6a"
+          "stateHash": "10d19eed8a6cc29622fa0f87b5da14b67054dc2d53b5373857608204c5b308a7",
+          "eventsHash": "e4188cab6d29acdf67647bb13580e9fd009ae5ab2c2a833c9aa6fd31bfd92550"
         },
         {
           "round": 32,
-          "stateHash": "32103c04cacea4657420d6b18dbaa0548aacc94b316bab422fa57086d77a4bbd",
-          "eventsHash": "0a30accabc9cb9fa649bbb567fdf69c4ec833a17171c892076909a23b972de15"
+          "stateHash": "b24113d81bf01efc7089d8435e70560ab49f75c6ce2d6d983fad603c66c73d7c",
+          "eventsHash": "0468963d96be2454353b5cdd64c97b13d4df86fbe27199a0ae3c0de28136ad6d"
         },
         {
           "round": 33,
-          "stateHash": "fcf600d6689245a8a835abf55bf00897d24bfdae9656c3d39d1f89c25aaf54a0",
-          "eventsHash": "f282e29405ccb5cc125a96d24c45d3e396ae9a58fc5a0a7c337d8cfb273b9241"
+          "stateHash": "8f51a4d03a43bbcb834bf1ace986fb5a460b61dcc2a587a6c5abaa287ed1173b",
+          "eventsHash": "40a3d1b40faf1cddfc865644edb196869ce4f2b3e5702a4ccaac54d60d3d5d39"
         },
         {
           "round": 34,
-          "stateHash": "6cf9f57edeae8bdac5f468ea405b08c3eef2fce64a730b3870858e64281511f6",
-          "eventsHash": "b005b8776db0a5b283bddda9636dc000a696410c9fb7e6e8100bd995f6c51dd3"
+          "stateHash": "aa1fe9f15af7c880c99c1659cce0f06e2f8be64d7fc089e5ba863da395fdbecd",
+          "eventsHash": "9b65716733d7870de3971ba8626e2527a8a426cb81a7a7e3dd8592960c626e5d"
         },
         {
           "round": 36,
-          "stateHash": "2953e6e2d484ad8b5e15a65a9f9ebae5fe8af0dcd78d7485bbe5fcd8f9d86166",
-          "eventsHash": "e0048992c7ff3a4e11d694ca5a9c658990ae249f4cde4d607b3f619bd1795650"
+          "stateHash": "e61a604db82933c2be59a7dadfafa6293cfde5c7f582434e6be88795a326382b",
+          "eventsHash": "a2c4bbfa4677bb9351f8d9eb2ad5ec2196144fd9b9c2ac10c65b7fd0144e05fe"
         },
         {
           "round": 37,
-          "stateHash": "f5900adbdefae081f55b0ce676011da7bb69af17dcd005bdeb690bd6f296f118",
-          "eventsHash": "76a60cf1f9817c7ca91c99024da7f8455107b8b3a2b5690856f256fcaeda1ec7"
+          "stateHash": "01258f8c2ee311173dd7ad0ee01b77f141b589d3ffa6bcb729eedfff03e65ca1",
+          "eventsHash": "59e33d8a58f320dc25a561f27693e8465dddf5544243711a955a2f504c977357"
         },
         {
           "round": 38,
-          "stateHash": "c3b381cf888d6cc36d5490d446a025b683ab88a16ff8d1ce590841c3ad9b59bd",
-          "eventsHash": "65acac8567d375c444d5763cb8896d8fae2f3ccb79f48ae2f86e5570674aa963"
+          "stateHash": "747aa9277c62c64b13aa371c4d141a5ca3880f2b505157c7bce8f25f4eb64d49",
+          "eventsHash": "278a08305d75ca75c473874ce657192e91d4d4f6d749ecab9c557fedf54aa5fc"
         }
       ]
     }

@@ -33,8 +33,8 @@ describe('T3 earned loot timeout transaction',()=>{
   it('grants the earned hero once, with original lineage and zero gold spent',()=>{
     const state=fixture(),next=accept(claimOrDiscardLoot(freeze(state),state.round));
     expect(next.gold).toBe(state.gold);expect(next.m8.loot.receipts).toHaveLength(2);expect(next.consumables).toHaveLength(1);
-    expect(next.m8.loot.receipts[0].payload).toEqual({kind:'unit',definitionId:'maddie',quantity:1});
-    expect(next.preparation.units.find(u=>u.id==='unit-2')).toMatchObject({definitionId:'maddie',location:{kind:'bench',slot:0}});
+    expect(next.m8.loot.receipts[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
+    expect(next.preparation.units.find(u=>u.id==='unit-2')).toMatchObject({definitionId:'darius',location:{kind:'bench',slot:0}});
     retry(next);
   });
   it('discards a capacity-blocked hero once, without allocating a unit or reward receipt',()=>{

@@ -13,10 +13,10 @@ function reject(s:MatchState,message:string,change:(s:any)=>void){const saved=se
 const soldResult=command(waiting,s=>api.sellUnit(s,soldUnit.id)),sold=accepted(soldResult);
 describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
-  expect(prepared.gold).toBe(18);expect(bench(prepared)).toHaveLength(9);
+  expect(prepared.gold).toBe(21);expect(bench(prepared)).toHaveLength(9);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'tristana',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(75);expect(waiting.combat!.tick).toBe(110);
+  expect(live.revealed!.combat!.tick).toBe(74);expect(waiting.combat!.tick).toBe(121);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);

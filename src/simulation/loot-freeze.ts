@@ -93,10 +93,7 @@ export function freezeLootThroughRound(seed:number,throughRoundOrdinal:number,la
     for(const orb of template.orbs) {
       let payloads:LootPayload[];
       switch(orb.templateId) {
-        case 'opening-unit':
-          // Preserve the pre-existing reserved loot word; opening-unit-v1 never borrows it.
-          hero(1);
-          payloads=[{kind:'unit',definitionId:round.roundId==='1-2'?'maddie':'lux',quantity:1},tool('magnetic-remover')];break;
+        case 'opening-unit':payloads=[hero(1),tool('magnetic-remover')];break;
         case 'component':payloads=[component()];break;
         case 'remover':payloads=[tool('magnetic-remover')];break;
         case 'opening-gold':payloads=[gold(3)];break;

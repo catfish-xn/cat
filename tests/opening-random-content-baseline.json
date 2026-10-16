@@ -15,8 +15,8 @@
   "previousContentDigest": "fnv1a32-utf16:8914b323",
   "previousLootReplayDigest": "fnv1a32-utf16:028e5593",
   "traceHashes": {
-    "state": "b6e58d9bbd7865b2260bfdd6088344b74f366f65db907a5d6f471e8afa983859",
-    "events": "ee501e10ccff2c7d20f0262b17fc84ba9f21beb14c6db084beb554b63623a8b3",
+    "state": "e57433afb3176f8941bd16bf6f4a71db2d56ee8a11373a631dfc35da9ca658fb",
+    "events": "c84fc0c5481acea029dc63224d38e34dba98507b53d1d2d6acd59fdaffa397d8",
     "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
   },
   "reason": "Opening: independent random one-cost unit per seat; public routes independently re-recorded; previous fixtures preserved."

@@ -1431,7 +1431,7 @@ MatchFailure 增加上述尚不存在的消耗品分支；SharedPoolFailure 继�
 ### 18.6 共享池与原子收据
 
 - 英雄池容量、商店占用和来源守恒沿 §12；工具/装备不是卡池份数。useConsumable 共享成功时 available/shops/holdings/pending/rewards、共享商店 RNG 全部不变；poolEvents=[]。因本席资产已变，pool.revision 与本席绑定 revision 沿既有事务各加一次【L1/P】，不可误把“无卡池转移”理解为无并发版本变化。
-- 开局刀妹占池不变；原固定麦迪/拉克丝改随机英雄后仍逐 entry 走 UnitLootPolicy。计划冻结/击杀揭示不预留；战后首次授予尝试才预留。有货但满席先预留并 pending；缺货直接按一星购买价补金币，无论是否满席。不按珠整体扣池，不让一个 pending 英雄阻断同珠工具/金币。
+- 开局英雄按 §24 占池；按用户 2026-10-16 决定维持随机，1-2/1-3 的英雄奖励仍逐 entry 走 UnitLootPolicy。计划冻结/击杀揭示不预留；战后首次授予尝试才预留。有货但满席先预留并 pending；缺货直接按一星购买价补金币，无论是否满席。不按珠整体扣池，不让一个 pending 英雄阻断同珠工具/金币。
 - 每个 entry 使用唯一 dropId/receiptId，卡池来源继续以 JSON 元组带 seatId。重试不重复预留/补偿；已预留后来入库转 holdings，不再扣池；超时/淘汰归还一次。未赚到的 entry 不预留、不补偿。断线不释放，淘汰按原整轮排序释放。
 - 首次授予可能竞争最后一份英雄；仍按现有全轮稳定席序串接最新 pool，不能按消息到达顺序各自从旧池发奖后合并。颜色数量公平不承诺英雄库存竞争也同结果。
 - 一珠部分领取是合法成功，不是半事务提交；本次可授予 entry、预留和 pending 进度一起原子提交。若校验真正失败，整个命令（全轮则整个未发布批次）回滚，包括 layout 与内容流。金币/工具无容量上限【项目自定/P】，不存在因英雄 bench-full 而丢弃同珠金币的路径。
@@ -1644,7 +1644,7 @@ initializeSharedSeat(pool: SharedPoolState, state: MatchState, seatId: string, s
 - 候选为按目录顺序的 `SHOP_CATALOG_BY_COST[1]`，14 个英雄等权；独立抽取，允许同英雄，扣一基础副本。总共扣八张，不能写死 Irelia 可用 22。
 - 流命名：`opening-unit-v1/<seatId>`，按 JS UTF-16 code unit 顺序 FNV-1a32（初值 0x811c9dc5，乘数 0x01000193，逐步 uint32 截断）。初态 `(gameSeed ^ namespaceHash ^ 0x6f706844) >>> 0`；执行一次 lcg32-v1，`floor(word * catalog.length / 4294967296)` 取下标。不是共享商店 RNG 的一部分，也不消费选秀、掉落、装备、选择或 battle-seed 流。
 - `OPENING_INITIAL_STATE.unit.definitionId` 现在是冻结的生成规则描述，不再是某英雄 ID。实际 ID 只从已创建 state 的单位读取。opening 来源事实变为 `{kind:'opening',seed:gameSeed,seatId}`，恢复由该规则重算；共享守恒校验核对 pool.seed 和席位身份。不得把新来源格式补写到旧存档上。
-- 其余初始化仍为 0G/等级1/0XP/100HP，unit-1/一星/(1,4)/nextUnitSerial=2。1-2 固定麦迪，1-3 固定拉克丝；重复英雄按原合星规则处理。基线 T13 的实现实际随机化了这两张奖励，本次按用户明确要求纠正；保留每张既有的一词掉落流位置，后续掉落流位置不变，起手专用流绝不借用它。
+- 其余初始化仍为 0G/等级1/0XP/100HP，unit-1/一星/(1,4)/nextUnitSerial=2。按用户 2026-10-16 决定维持随机：1-2/1-3 各从原五个老一费 `darius/irelia/lux/maddie/zyra` 等权抽取，随机流、候选顺序、拒绝采样及消耗次数与 multiplayer 基线完全一致；重复英雄按原合星规则处理，起手专用流绝不借用掉落流。
 - rules=`s13-opening-random-1cost-v1`，content=`s13-14.24b-opening-random-1cost-v1`；CONTENT_DIGEST=`fnv1a32-utf16:299ec0d0`，LOOT_REPLAY_DIGEST=`fnv1a32-utf16:b9250813`。schema7/save3/replay3/commandProtocol3/50ms/lcg32-v1 保持。旧存档、对局快照和旧回放身份作废，严格拒绝，不迁移；活动局结束后切换。
 
 执行者测试与迁移字节证据见 [随机起手交付](OPENING_RANDOM_1COST_RELEASE.md)。

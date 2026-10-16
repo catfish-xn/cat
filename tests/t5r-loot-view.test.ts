@@ -115,8 +115,8 @@ describe('SR-C7-02 revealed loot whitelist',()=>{
     detached(view);
   });
   it('shows real shared-pool shortage compensation from the paid receipt, not the frozen hero plan',()=>{
-    const {pool,states}=room({irelia:2,maddie:1}),first=fight(pool,states[0]),second=fight(first.pool,states[1]);
-    expect(check(first.state).revealedDrops[0].payload).toEqual({kind:'unit',definitionId:'maddie',quantity:1});
+    const {pool,states}=room({irelia:2,darius:1}),first=fight(pool,states[0]),second=fight(first.pool,states[1]);
+    expect(check(first.state).revealedDrops[0].payload).toEqual({kind:'unit',definitionId:'darius',quantity:1});
     expect(check(second.state).revealedDrops[0].payload).toEqual({kind:'gold',quantity:1});
   });
   it('shows a real pending-capacity reward and retains its timeout forfeiture',()=>{

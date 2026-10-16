@@ -42,17 +42,32 @@ it('draws every seat independently from the game seed, permits collisions and de
   expect(pool.shops).toEqual([]);
   assertSharedPoolConservation(pool,states);
 });
-it('uses the same selection in solo and shared modes and preserves fixed 1-2/1-3 reward plans', () => {
+it('uses the same selection in solo and shared modes and preserves baseline random 1-2/1-3 reward plans', () => {
   const solo = createMatch(42);
   const joined = initializeSharedSeat(createSharedPool('solo-comparison',42),createMatch(99,{mode:'shared-deferred'}),'solo',0);
   if (!joined.ok) throw new Error(joined.reason);
   expect(hero(joined.state).definitionId).toBe(hero(solo).definitionId);
   expect(joined.state.choiceRngState).toBe(createMatch(99,{mode:'shared-deferred'}).choiceRngState);
   expect(joined.state.rewardRngState).toBe(createMatch(99,{mode:'shared-deferred'}).rewardRngState);
-  for (const seed of [0,42,3328,0xffffffff]) {
-    const plans = prepareMatchLoot(seed,2).frozen.rounds;
-    expect(plans.map(p=>p.encounterPlan.drops.filter(d=>d.payload.kind==='unit').map(d=>d.payload.kind==='unit'?d.payload.definitionId:''))).toEqual([['maddie'],['lux']]);
+  const candidates = ['darius','irelia','lux','maddie','zyra'];
+  const seen = new Set<string>();
+  for (const seed of [...Array.from({length:100},(_,i)=>i),3328,4166519247,0xffffffff]) {
+    // Independent baseline sampler: loot seed XOR, lcg32-v1 rejection, modulo 5.
+    let word = BigInt((seed ^ 0xdeadbeef) >>> 0), draws = 0;
+    const draw = (size: number) => {
+      const n = BigInt(size), limit = (4294967296n / n) * n;
+      do { word = (word * 1664525n + 1013904223n) % 4294967296n; draws++; } while (word >= limit);
+      return Number(word % n);
+    };
+    const expected = [candidates[draw(5)],candidates[draw(5)]];
+    draw(8); // 1-3 component follows the two unit words, as on multiplayer.
+    const frozen = prepareMatchLoot(seed,2).frozen;
+    const actual = frozen.rounds.map(p=>p.encounterPlan.drops.filter(d=>d.payload.kind==='unit').map(d=>d.payload.kind==='unit'?d.payload.definitionId:''));
+    expect(actual).toEqual(expected.map(id=>[id]));
+    expect(frozen.rng).toEqual({state:Number(word),draws});
+    actual.flat().forEach(id=>seen.add(id));
   }
+  expect([...seen].sort()).toEqual([...candidates].sort());
   expect(() => selectOpeningUnit(-1)).toThrow();
   expect(() => selectOpeningUnit(42,'')).toThrow();
 });

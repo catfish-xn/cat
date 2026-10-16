@@ -322,3 +322,8 @@ UI继续消费现有ChoiceDefinition字段；无新增预览或界面字段，�
 
 同族组合（U）：Glass Cannon初始损失生命百分比按相同统计口径相加，I+II均损失20%，
 合计从60%最大生命开始，增伤12%+20%=32%；Bulky各来源独立发盾，Manaflow额外法力相加。
+
+
+### OPENING-R1 奖励随机口径（2026-10-16）
+
+按用户 2026-10-16 决定维持随机：1-2/1-3 的英雄奖励各从原五个老一费 `darius/irelia/lux/maddie/zyra` 等权抽取；恢复 multiplayer 基线的掉落随机流、候选顺序、拒绝采样及消耗次数。1-1 每席随机一费起手保持 PR #126 现状，费用相同、允许重复。沿用本 PR 首次提交的 CONTENT/LOOT_REPLAY digest 和版本号，本次不再 bump。

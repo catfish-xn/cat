@@ -31,7 +31,11 @@ it('binds random opening to one new content/rules identity while updating the op
   expect(audit.baselineCommit).toBe('94eecbcbfbce72d4740923b8c793c66c483bfd51');
   expect(audit.lootReplayDigestCurrent).toBe(LOOT_REPLAY_DIGEST);
   expect(sha(bytes('tests/fixtures/m5/full-match-golden.g2-augments.json'))).toBe(audit.goldenBytes.previousSha256);
-  expect(sha(bytes('tests/fixtures/m5/full-match-golden.opening-random.json'))).toBe(audit.goldenBytes.currentSha256);
+  const r1 = load('docs/evidence/opening-random/r1-random-rewards.json');
+  const golden = r1.files['tests/fixtures/m5/full-match-golden.opening-random.json'];
+  expect(golden.previousSha256).toBe(audit.goldenBytes.currentSha256);
+  expect(sha(bytes('tests/fixtures/m5/full-match-golden.opening-random.json'))).toBe(golden.currentSha256);
+  expect(r1.identity).toMatchObject({contentDigest:CONTENT_DIGEST,lootReplayDigest:LOOT_REPLAY_DIGEST,unchangedFromPreviousHead:true});
 });
 
 it('rejects each old release identity without migration shortcuts', () => {

@@ -80,7 +80,7 @@ export async function terminalPreparation(keep:string|null,col=1,row=7) {
   if(!prefixes.has(key)) {
     const losses=new Set(['1-3','1-4','2-1','2-2','2-3','2-5','2-6','2-7','3-1','3-2','3-3','3-7','4-1','4-2']);
     const captured=new Error('terminal capture');let prefix:MatchState|undefined;
-    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:['unit-6','unit-14']});
+    try {await run({...api,startMatchCombat(s:MatchState){if(s.roundDefinitionId==='4-7'){prefix=s;throw captured;}return api.startMatchCombat(s);}}, {seed:38,build:'cannon',emptyBoardRounds:[...losses,'4-7'],protectedUnitIds:['unit-10','unit-15']});
     }catch(e){if(e!==captured)throw e;}
     if(!prefix)throw Error('Missing terminal prefix');prefixes.set(key,fillBench(reserveExcept(prefix,[]),['ezreal']));
   }
