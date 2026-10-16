@@ -12,7 +12,7 @@ export function compileCombatInitialInputs(id: string, stats: ResolvedUnitStats,
   resolved?: Pick<StrategyUnitSnapshot, 'mechanics' | 'abilityPower' | 'itemPrograms'>) {
   const inputs = {
     ...compileUnitInputs(stats),
-    hp: Math.floor(stats.health * (resolved?.mechanics?.find(m => m.mechanic === 'glassCannon')?.values.startingHealthBps ?? 10000) / 10000),
+    hp: Math.floor(stats.health * Math.max(0, 10000 - (resolved?.mechanics ?? []).filter(m => m.mechanic === 'glassCannon').reduce((loss, m) => loss + 10000 - m.values.startingHealthBps, 0)) / 10000),
     maxHp: stats.health, mana: stats.initialMana, maxMana: stats.maxMana,
     ...(ability.kind === 's13' ? { abilityPower: resolved?.abilityPower ?? 100,
       ...(resolved?.itemPrograms ? { itemPrograms: structuredClone(resolved.itemPrograms) } : {}) } : {}),

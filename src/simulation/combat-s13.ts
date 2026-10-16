@@ -1,3 +1,4 @@
+import { advanceAugmentCombat, settleAugmentDeaths } from './combat-augment-effects';
 import { advanceG22Traits, recordG22Damage, shareStebHeal } from './combat-g2-2';
 import { advanceG2Passives, recordG2Damage } from './combat-g2';
 import { freezeCombatDeclarations, sharedCombatDeclarations } from './combat-static';
@@ -183,6 +184,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     });
   };
   maintainMechanisms(ctx, () => actionSeq++);
+  advanceAugmentCombat(ctx);
   advanceG22Traits(ctx);
   advanceG2Passives(ctx, () => actionSeq++);
   const blocked = new Set<string>();
@@ -432,11 +434,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       unit.mana = outcome.after;
       if (gain > 0) events.push({ type: 'manaChanged', tick, outcome });
     }
-    for (const effect of unit.mechanics ?? []) if (effect.mechanic === 'bulkyBuddies' && !unit.runtime.buddyTriggered) {
-      const buddy = units.find(u => u.id === effect.targetId);
-      if (buddy && (startHp.get(buddy.id) ?? 0) > 0 && buddy.hp === 0) {
-        unit.runtime.buddyTriggered = true; grantShield(unit, effect.source, Math.floor(unit.maxHp * effect.values.shieldMaxHpBps / 10000), tick + effect.values.durationTicks, tick, events);
-      }
+    if (!unit.runtime.buddyTriggered) {
+      const grants = (unit.mechanics ?? []).filter(effect => effect.mechanic === 'bulkyBuddies' && units.some(buddy => buddy.id === effect.targetId && (startHp.get(buddy.id) ?? 0) > 0 && buddy.hp === 0));
+      for (const effect of grants) grantShield(unit, effect.source, Math.floor(unit.maxHp * effect.values.shieldMaxHpBps / 10000), tick + effect.values.durationTicks, tick, events);
+      if (grants.length) unit.runtime.buddyTriggered = true;
     }
   }
   cleanupMechanisms(ctx);
@@ -450,6 +451,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // Keep depleted protective layers only until their independent end task has consumed absorption.
     unit.shieldLayers = unit.shieldLayers.filter(layer => layer.remaining > 0 || unit.tasks.some(t => t.shieldEndKey === layer.key));
   }
+  settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive));
   if (companionState) {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));
     companionState = registerDeaths(companionState, deaths, units.filter(u => u.alive).map(u => u.id));

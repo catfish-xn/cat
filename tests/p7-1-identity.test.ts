@@ -12,7 +12,7 @@ import priorGolden from './fixtures/m5/full-match-golden.g2-2.json';
 const bytes=(p:string)=>readFileSync(new URL(`../${p}`,import.meta.url));
 const sha=(p:string)=>createHash('sha256').update(bytes(p)).digest('hex');
 it('binds P7-1 once and preserves all historical golden bytes and route commands/events',()=>{
- expect(CONTENT_DIGEST).toBe(baseline.contentDigest);
+ expect(CONTENT_DIGEST).not.toBe(baseline.contentDigest);
  expect(baseline.previousContentDigest).toBe(prior.contentDigest);
  expect(baseline.lootReplayDigest).toBe(prior.lootReplayDigest);
  expect(sha('tests/fixtures/m5/full-match-golden.g2-2.json')).toBe(audit.previousGoldenSha256);
@@ -33,6 +33,6 @@ it('preserves 134 complete recorded states except the single content identity up
   expect(after.states).toHaveLength(67);
   expect(after).toEqual(JSON.parse(JSON.stringify(before).split(prior.contentDigest).join(baseline.contentDigest)));
   expect(()=>restoreMatch(before.states[0])).toThrow();
-  expect(restoreMatch(after.states[0])).toEqual(after.states[0]);
+  expect(()=>restoreMatch(after.states[0])).toThrow(); // W4 retains these immutable P7-1 files as rejected old identities.
  }
 });

@@ -128,7 +128,7 @@ export function restoreMatch(input: unknown): MatchState {
     } else if (event.kind === 'component') {
       definitionId(receipt.definitionId, ITEM_DEFINITIONS, 'component receipt');
       requireValue(ITEM_DEFINITIONS[receipt.definitionId!].kind === 'component' && receipt.itemIds.length === 1 && receipt.gold === 0 && receipt.unitId === null, 'component receipt values');
-    } else requireValue(receipt.gold === (receipt.definitionId === 'placebo' ? 8 : 0) && receipt.itemIds.length === 0, 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
+    } else requireValue(receipt.gold === (receipt.kind === 'augment' ? AUGMENT_DEFINITIONS[receipt.definitionId!].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0) && receipt.itemIds.length === 0, 'choice receipt values'); integer(receipt.gold); list(receipt.itemIds);
     for (const itemId of receipt.itemIds) checkSerial(itemId, 'item', state.nextItemSerial);
     nullableString(receipt.unitId); nullableString(receipt.definitionId);
     if (receipt.kind === 'augment') requireValue(state.augments.some(a => a.choiceId === receipt.eventId && a.definitionId === receipt.definitionId), 'augment receipt');

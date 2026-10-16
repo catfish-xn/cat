@@ -4,7 +4,10 @@ const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "m
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10]};
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76};
-const AUGMENTS=['bulky-buddies-i','glass-cannon-i','investment-strategy-i','manaflow-i','placebo','pumping-up-i'];
+// Literal W4 pool transcribed from the independently reconciled source-selection.json.
+// No production content import; lexical ordering is the public choice contract.
+const AUGMENTS=["backup", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "find-your-center", "glass-cannon-i", "glass-cannon-ii", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii"];
+const AUGMENT_GOLD={'placebo':8,'placebo-plus':15};
 const ANOMALIES=['kill-streak','mage-armor','titanic-strikes'];
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
 const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44]};
@@ -201,7 +204,7 @@ class Ledger {
   for(const event of events.filter(e=>e.type==='unitUpgraded')){assert.equal(event.consumedIds.length,2);assert.equal(new Set([event.survivorId,...event.consumedIds]).size,3);for(const id of [event.survivorId,...event.consumedIds])assert.deepEqual(units.get(id),{definitionId:event.definitionId,starLevel:event.fromStar},'upgrade consumes actual candidate lineage');assert.equal(event.toStar,event.fromStar+1);for(const id of event.consumedIds)units.delete(id);units.set(event.survivorId,{definitionId:event.definitionId,starLevel:event.toStar});}
   assert.deepEqual(new Map(after.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,{definitionId:u.definitionId,starLevel:u.starLevel}])),units,'actual player unit lineage');
   const schedule=appended(before.scheduleReceipts,after.scheduleReceipts,'eventId','schedule receipts');
-  for(const receipt of schedule){assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
+  for(const receipt of schedule){if(before.pendingChoice?.kind==='augment'&&receipt.eventId===before.pendingChoice.eventId){assert.equal(command?.type,'select');assert.equal(receipt.gold,AUGMENT_GOLD[command.definitionId]??0,'independent once-only augment acquisition gold');assert.deepEqual(receipt.itemIds,[],'augments do not grant items');}assert(!this.receipts.has(receipt.eventId),'schedule receipt only once');this.receipts.add(receipt.eventId);this.gold+=receipt.gold;costs.rewards+=receipt.gold;}
   let itemSerial=before.nextItemSerial;
   for(const receipt of lootReceipts)for(const id of receipt.grantedItemIds)assert.equal(id,`item-${itemSerial++}`,'loot item serial');
   for(const receipt of schedule)for(const id of receipt.itemIds)assert.equal(id,`item-${itemSerial++}`,'schedule item serial');

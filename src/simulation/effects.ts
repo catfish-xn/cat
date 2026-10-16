@@ -13,9 +13,23 @@ const SOURCE_ORDER: Readonly<Record<SourceKind, number>> = {
   attack: -2, ability: -1, trait: 0, item: 1, augment: 2, anomaly: 3, enemyGrowth: 4,
 };
 const STAT_NAMES: readonly Stat[] = ['maxHp', 'attackDamage', 'armor', 'magicResist', 'initialMana', 'abilityAmount', 'abilityPower'];
-const MECHANICS = new Set(['rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
+const MECHANICS = new Set(['mentorship','itemCollector','backup','lineup','findCenter','littleBuddies','bronzeForLife','builtDifferent','blisteringStrikes','fractionalFlat','clockworkAccelerator','loneHero','climbLadder','inspiringEpitaph','rebel','enforcer','academy','scrap','emissary','automata', 'firelight', 'family', 'artillery', 'sniper', 'watcher', 'rageblade', 'archangel', 'dragonClaw', 'gargoyle', 'gunblade',
   'extraAttackMana', 'titanic', 'killStreak', 'bulkyBuddies', 'mageArmor', 'glassCannon', 'pumpingUp', 'investment', 'damageAmp', 'acquisitionGold', 'lowCostAllies']);
 const MECHANIC_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  mentorship:['health', 'attackSpeedBps'],
+  itemCollector:['baseHealth', 'healthPerItem', 'adBpsPerItem', 'apCentiPerItem'],
+  backup:['minimum', 'attackSpeedBps'],
+  lineup:['resistCentiPerUnit'],
+  findCenter:['healthBps', 'damageAmpBps'],
+  littleBuddies:['health', 'attackSpeedBps'],
+  bronzeForLife:['damageAmpBps', 'durabilityBps'],
+  builtDifferent:['health2', 'health3', 'health4', 'health5', 'speed2', 'speed3', 'speed4', 'speed5'],
+  blisteringStrikes:['durationTicks', 'burnBpsPerSecond', 'woundBps'],
+  fractionalFlat:['armorCenti', 'magicResistCenti', 'abilityPowerCenti'],
+  clockworkAccelerator:['attackSpeedBps', 'periodTicks'],
+  loneHero:['attackSpeedBps', 'durabilityBps'],
+  climbLadder:['adBps', 'abilityPower', 'armor', 'magicResist'],
+  inspiringEpitaph:['shieldMaxHpBps', 'attackSpeedBps'],
   rebel:['thresholdBps','adApBps','bonusHpBps','stunTicks','attackSpeedBps','durationTicks'], enforcer:['shieldBps','wanted','attackSpeedBps'], academy:['sponsoredBps','memberBaseBps'], scrap:['shieldPerComponent','conversions','durationTicks','componentCount'], emissary:['armorPerWin','healthBps','mana','starSpeedBps'],
   automata: ['crystals','damage','conversionBps'], firelight: ['periodTicks','healBps','attackSpeedBps','dashTicks'], family: ['manaReductionBps','damageReductionBps','heist'],
   artillery: ['everyN', 'adBps', 'radius'], sniper: ['damageBpsPerHex'], watcher: ['reductionBps', 'healthyReductionBps', 'thresholdBps'],
@@ -142,7 +156,12 @@ export function resolveEffects(baseStats: ResolvedUnitStats, baseAbility: Resolv
     }
   }
   if (Object.values(percent).some(value => value > 40000) || speed > 20000) throw new RangeError('Effect stacking bound exceeded');
+  const centi = { armor: 0, magicResist: 0, abilityPower: 0 };
+  for (const { effect } of sources) if (effect.kind === 'mechanic' && effect.mechanic === 'fractionalFlat')
+    for (const name of ['armor', 'magicResist', 'abilityPower'] as const) centi[name] += effect.values[`${name}Centi`];
   const stat = (name: Exclude<Stat, 'initialMana'>, base: number, minimum = 0): number => {
+    const fraction = name === 'armor' || name === 'magicResist' || name === 'abilityPower' ? centi[name] : 0;
+    if (fraction) return Math.max(minimum, Number(((BigInt(base + flat[name]) * 100n + BigInt(fraction)) * BigInt(10000 + percent[name])) / 1000000n));
     if (baseAbility.kind !== 's13' || name === 'abilityAmount')
       return Math.max(minimum, Math.floor(multiply(add(integer(base), flat[name]), add(10000, percent[name])) / 10000));
     const modifiers: StatModifier[] = sources.flatMap(({ effect }) => {

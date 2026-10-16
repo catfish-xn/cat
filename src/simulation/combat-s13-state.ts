@@ -180,7 +180,7 @@ export function applyStatus(unit: S13Unit, source: CombatOrigin, kind: CombatSta
   const legacyApplication = suffix.startsWith('armor:') ? suffix.slice(6) : suffix;
   // Legacy display keys remain compatible; frozen independent applications use
   // canonical tuples instead of their historical colon-separated labels.
-  const applicationId = !legacyApplication ? 'source' : legacyApplication.startsWith('[') ? legacyApplication
+  const applicationId = !legacyApplication ? (kind === 'attackSpeed' && source.definitionId === 'singed-ability' ? 'singed-speed' : 'source') : legacyApplication.startsWith('[') ? legacyApplication
     : JSON.stringify([...legacyApplication.split(':').map(Number), unit.id]);
   const contributionKeys: string[] = [];
   let groups = unit.mechanismState!.statuses, refreshed = true;

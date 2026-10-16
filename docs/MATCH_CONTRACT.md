@@ -282,3 +282,43 @@ function abilityDisplayValues(
 新增 Match 事件 `{type:'carouselPreparationSettled',receiptIds:readonly string[],claimedUnitIds:readonly string[]}`；保留 `carouselPendingClaimed` 作为兼容的迁入事件名，另有既有 unitUpgraded/装备转移事件。它们统一加 domain/eventSeq。来源事实 `{kind:'carousel-preparation-settled',receiptIds,claimedUnitIds,upgrades}` 与元数据收据一起持久化；收据只能在原 x-4 之后的 round ordinal 出现且不得重复，晚迁入不再次发行选秀结算收据。重复 step、恢复、grant/resolve 均无二次出生/结算。可信 `restoreCarouselSeat` 增加别名一致、临时位身份及 preparationReceipts/事实的唯一性核对；离线 restoreMatch 仍拒绝服务器元数据。
 
 CONTENT `22f31569 → bb66f4f8`（均 fnv1a32-utf16），LOOT_REPLAY 保持 `028e5593`；规则字符串 s13-g2-2-v1 与 schema/save/replay/command 7/3/3/3 保持，选秀政策 revision=p7-1 纳入 CONTENT。旧客户端字段不兼容，由服务器/界面配套 PR 接线后共同发布。
+
+## W4：30 强化目录（2026-10-16）
+
+本批由用户批准扩容原六项到30项，完整来源、14.24b覆盖及未入库候选见
+[evidence/g2-augments/RECONCILIATION.md](evidence/g2-augments/RECONCILIATION.md)。
+旧六项保留，原目录历史证据不覆盖。新规则身份为 `s13-g2-2-aug30-v1`、
+内容身份为 `s13-14.24b-g2-2-aug30-v1`；仅 CONTENT digest 改变。
+LOOT_REPLAY、schema/save/replay/command 7/3/3/3、NET_PROTOCOL 3 不变。
+
+- 仍在2-1、3-2、4-2提供三选一，使用现有排序池无放回抽取，精确消耗3个LCG字。
+  没有取得可锁定14.24b普通模式的官方分层概率，证据等级 **U**：沿用等权候选池；
+  tier只标注内容级别，不擅造银/金/彩概率。算法及tier表冻结在content并进入digest。
+- 非法choiceId、generation、definitionId失败返回原state，不耗RNG、不发事件或收据。
+  Placebo+使用与Placebo同一通用acquisitionGold效果与唯一schedule receipt，选择时一次入账；
+  step、重复命令或恢复不再次运行授予，恢复逐项验证receipt.gold与对应内容效果。
+  不改基础收入、经验、商店、选秀或日程。
+- 静态条件从已有冻结开战输入编译。Pumping I沿用经校验的pumpingRounds；II/III从各自acquiredRound到当前轮之前的
+  已完成战斗日程计数（排除supply、包括联机加时），单人/双边共用，无历史副本。
+  Blistering Strikes仅普攻命中目标施加5秒灼烧（每秒1%最大HP）及33%重伤。
+- Item Collector对全队上场单位实际穿戴的唯一definitionId计数（含散件、成装、
+  临时装备；板凳/库存不计，重复definition只计一次）。Lineup与Collector的半点数值
+  用整数百分之一保存，先汇总所有flat贡献，再合并百分比并最终向下取整，不能每项先舍入。
+- Bronze For Life仅计CDragon `style=1`档位；Family无铜档，Emissary 1人为铜/4人为金，
+  不把最低实现门槛一律视为铜。Built Different只有自身所属羁绊均未激活才生效。
+- 未给精确几何/时长的部分为项目约定（U）：Find Your Center为己方4行区域前向中间格
+  `(col=3,row=5)`；最近友军等距离按unitId排序；
+  Inspiring Epitaph盾持续本场至tick1201，独立死者可叠盾及攻速。
+- Clockwork在60、120…tick生效，tick0不额外触发；Lone Hero只有一名存活友军时生效。
+  Climb/Inspiring由实际死亡批次驱动，同批先确认全部死者再挑存活收件者，重复处理不重发。
+  动态效果使用既有来源绑定status/shield持久态，不增加跨调用缓存；恢复验证来源、系数、
+  时间及适用资格，不重新执行钩子。
+
+UI继续消费现有ChoiceDefinition字段；无新增预览或界面字段，本批不修改表现层。
+
+恢复边界：沿用现有快照结构校验，不宣称完整命令历史证明。死亡强化会拒绝来源、系数、
+数量、四项/两项贡献完整性及时间不一致；但快照未保存独立死亡时刻收据，联合把同一死者
+全部贡献改为另一个合法较早tick，结构校验不能独立排除。本批不新增死亡日志权威。
+
+同族组合（U）：Glass Cannon初始损失生命百分比按相同统计口径相加，I+II均损失20%，
+合计从60%最大生命开始，增伤12%+20%=32%；Bulky各来源独立发盾，Manaflow额外法力相加。

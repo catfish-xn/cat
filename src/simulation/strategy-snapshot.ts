@@ -1,3 +1,4 @@
+import { compileAugmentEffect } from './augment-effects';
 import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
 import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
 import type { CombatStrategyInputs } from './combat-input';
@@ -67,9 +68,8 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
       }
       for (const augment of state.augments) {
         const definition = lookup(catalog.augments, augment.definitionId);
-        sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => {
+        sources.push(...makeSourcedEffects(unit.id, 'augment', augment.definitionId, augment.choiceId, definition.effects.flatMap<Effect>(effect => compileAugmentEffect(effect,state,unit,augment,boardUnits,traits)).flatMap<Effect>(effect => {
           if (effect.kind !== 'mechanic') return [effect];
-          if (effect.mechanic === 'pumpingUp') return [{ kind: 'attackSpeedBps' as const, bps: state.augmentProgress.pumpingRounds * effect.values.attackSpeedBpsPerRound }];
           if (effect.mechanic === 'investment') return [{ kind: 'statFlat' as const, stat: 'maxHp' as const, amount: state.augmentProgress.investmentHp }];
           if (effect.values.backRowOnly && unit.location.kind === 'board' && unit.location.cell.row !== state.preparation.board.deploymentZones.player.lastRow) return [];
           if (effect.mechanic === 'bulkyBuddies') {

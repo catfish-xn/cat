@@ -587,3 +587,9 @@ x-4 仍替换旧 supply，正常结算该自然轮经济一次。新旧 digest �
 
 
 P7 方案 B（2026-10-15）：P7-1 覆盖后仅五次 x-4，全部按 HP 每批两人放行，firstBatchMs/batchIntervalMs/tailMs 均 6000ms；不提前关闭。全选完也等待 deadline，未选席到期自动选取。SR-G1-02 端口与逐项答复见 MULTIPLAYER_CONTRACT §21.4。
+
+## W4 强化池补齐
+
+30项见 `evidence/g2-augments/RECONCILIATION.md`。选择概率未找到一手历史证据，
+标记U并沿用等权3字无放回，不据tier编造权重。非来源明确的舍入、中心格、盾时长等
+有限项目约定写入 `MATCH_CONTRACT.md` 的W4条目；不改变日程、经济、XP、选秀。

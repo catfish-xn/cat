@@ -566,7 +566,7 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   const granted = choice.kind === 'component' ? planPermanentItemGrant(state, { definitionId, receiptId: choice.eventId }, state.scheduleReceipts.map(receipt => receipt.eventId)) : null;
   if (granted && !granted.ok) return fail(state, 'invalid-choice');
   const itemId = granted?.ok ? granted.grantedItemIds[0] : null;
-  const acquisitionGold = choice.kind === 'augment' && definitionId === 'placebo' ? 8 : 0;
+  const acquisitionGold = choice.kind === 'augment' ? AUGMENT_DEFINITIONS[definitionId].effects.reduce((sum,effect)=>sum+(effect.kind==='mechanic'&&effect.mechanic==='acquisitionGold'?effect.values.amount:0),0) : 0;
   const receipt: ScheduleReceipt = { eventId: choice.eventId, round: state.round, kind: choice.kind,
     itemIds: itemId ? [itemId] : [], gold: acquisitionGold, unitId: choice.targetId, definitionId };
   let selected: MatchState = { ...state, pendingChoice: null, gold: state.gold + acquisitionGold,

@@ -1,3 +1,4 @@
+import { augmentCombatEffects } from '../combat-augment-effects';
 import { modifier, stat } from '../content/item-programs';
 import { asSource } from './s13-definitions';
 /** Source-bound validation for newly enabled catalogue declarations. */
@@ -23,6 +24,7 @@ export function declaredEffects(unit:CombatUnit,combatId:string):{source:Source;
  for(const p of compiled.periodicTasks)collect(p.source,p.program.effects);
  for(const m of unit.mechanics??[]) {
   const source=asSource(m.source);
+  for(const effect of augmentCombatEffects(m))result.push({source,effect});
   if(m.mechanic==='rebel') {
    for(const effect of [stat(modifier('attackDamage',m.values.adApBps,'bps')),stat(modifier('abilityPower',m.values.adApBps/100)),stat(modifier('attackSpeed',m.values.attackSpeedBps,'bps'),m.values.durationTicks)])result.push({source,effect});
    if(m.values.bonusHpBps)result.push({source,effect:{kind:'change-max-hp',bonusBps:m.values.bonusHpBps,currentHp:'add-max-delta',countsAsHeal:false}});
@@ -100,10 +102,11 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  * of AP values obtainable from the enabled declarations, rather than current HP. */
 function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage',at:number,combatId:string):Set<number> {
  const base=stat==='abilityPower'?(unit.abilityPower ?? 100)+(unit.mechanics ?? []).filter(m=>m.mechanic==='archangel').reduce((n,m)=>n+Math.floor(at/m.values.periodTicks)*m.values.abilityPower,0):unit.attackDamageBase!;
- if(!unit.itemPrograms?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
+ const augmentGrowth=(unit.mechanismState?.statuses ?? []).flatMap(g=>g.contributions).filter(c=>c.source.sourceKind==='augment'&&c.application.modifier?.stat===stat&&(at===0||c.appliedAtTick<=at)).sort((a,b)=>a.appliedAtTick-b.appliedAtTick);
+ if(!augmentGrowth.length&&!unit.itemPrograms?.length&&!unit.g22?.rebelTriggered)return new Set([stat==='abilityPower'?base:Math.floor(base*(10000+unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0))/10000)]);
  let values=[{flat:0,bps:stat==='attackDamage'?unit.attackDamagePercentBps!+(unit.runtime?.permanentAdBps ?? 0):0}];const seen=new Set<string>();
  for(const d of declaredEffects(unit,combatId)) {
-  if(d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
+  if(d.source.sourceKind==='augment'||d.effect.kind!=='modify-stat'||d.effect.modifier.stat!==stat)continue;
   if(unit.mechanismDefinitions?.periodicTasks.some(t=>canonicalSource(t.source)===canonicalSource(d.source)))continue;
   const key=canonicalSource(d.source);if(seen.has(key))continue;seen.add(key);
   const m=d.effect.modifier;
@@ -119,7 +122,9 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   } else options=[0];
   values=values.flatMap(n=>options.map(v=>({...n,[m.unit]:n[m.unit as 'flat'|'bps']+v})));
  }
- return new Set(values.map(v=>Math.floor((base+v.flat)*(10000+v.bps)/10000)));
+ const histories=[{flat:0,bps:0}];
+ for(const c of augmentGrowth){const m=c.application.modifier!;if(m.value.kind==='constant'&&(m.unit==='flat'||m.unit==='bps')){const previous=histories[histories.length-1];histories.push({...previous,[m.unit]:previous[m.unit]+m.value.amount});}}
+ return new Set(values.flatMap(v=>histories.map(g=>Math.floor((base+v.flat+g.flat)*(10000+v.bps+g.bps)/10000))));
 }
 export const abilityPowerCandidates=(unit:CombatUnit,at:number,combatId:string)=>sampledStatCandidates(unit,'abilityPower',at,combatId);
 export const attackDamageCandidates=(unit:CombatUnit,at:number,combatId:string)=>sampledStatCandidates(unit,'attackDamage',at,combatId);
