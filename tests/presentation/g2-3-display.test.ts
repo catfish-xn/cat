@@ -12,7 +12,8 @@ import {
   G23_HERO_IDS, G23_HERO_STYLE, G23_HERO_TRAITS, anomalyDisplayName, anomalyIconUrl, g23AnomalyApiName, g23ChampionApiName,
   g23TraitApiName, itemDisplayName, lootEntry, radiantItem,
 } from '../../src/presentation/g23-display';
-import { G23_ANOMALIES, G23_ASSETS, G23_CHAMPIONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS } from '../../src/presentation/s13-g23-manifest';
+import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, g23IconPath } from '../../src/presentation/s13-g23-manifest';
+import { G23_ASSETS } from '../../src/presentation/s13-g23-asset-checks';
 import { S13_AUGMENT_ASSETS } from '../../src/presentation/s13-augment-asset-manifest';
 import { G22_HERO_STYLE, HERO_STYLE, heroTraitTags, traitDisplayName } from '../../src/presentation/hero-identity';
 import { s13AssetUrl } from '../../src/presentation/s13-assets';
@@ -34,6 +35,11 @@ describe('bundled icon manifests match the files on disk', () => {
   it('G2-3 paths and apiNames are unique per kind', () => {
     expect(new Set(G23_ASSETS.map(asset => asset.path)).size).toBe(G23_ASSETS.length);
     expect(new Set(G23_ASSETS.map(asset => `${asset.kind}:${asset.apiName}`)).size).toBe(G23_ASSETS.length);
+  });
+  it('G2-3 runtime icon list is exactly the checked rows, at the derived path', () => {
+    const runtime = Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`));
+    expect(runtime.sort()).toEqual(G23_ASSETS.map(asset => `${asset.kind}:${asset.apiName}`).sort());
+    for (const asset of G23_ASSETS) expect(g23IconPath(asset.kind, asset.apiName)).toBe(asset.path);
   });
 });
 

@@ -17,14 +17,12 @@ import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { ITEM_DEFINITIONS } from '../simulation/content/items';
-import { G23_ANOMALIES, G23_ASSETS, G23_CHAMPIONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, type G23Asset, type G23Name } from './s13-g23-manifest';
+import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
-const assetIndex = new Map(G23_ASSETS.map(asset => [`${asset.kind}:${asset.apiName}`, asset]));
-const assetUrl = (kind: G23Asset['kind'], apiName: string | undefined): string | null => {
-  const asset = apiName ? assetIndex.get(`${kind}:${apiName}`) : undefined;
-  return asset ? `${BASE}${asset.path}` : null;
-};
+const iconIndex = new Set(Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`)));
+const assetUrl = (kind: G23IconKind, apiName: string | undefined): string | null =>
+  apiName && iconIndex.has(`${kind}:${apiName}`) ? `${BASE}${g23IconPath(kind, apiName)}` : null;
 
 /** Candidate content ids from RECONCILIATION.md (`候选ID`). Swain's id is already `swain` in content. */
 export const G23_HERO_IDS: Readonly<Record<string, string>> = Object.freeze({
@@ -165,8 +163,8 @@ export function g23IconUrl(kind: 'champion' | 'trait' | 'item', id: string): str
 export function g23ChampionAssets(): readonly { readonly id: string; readonly path: string }[] {
   const list: { id: string; path: string }[] = [];
   for (const id of Object.keys(UNIT_DEFINITIONS)) {
-    const asset = assetIndex.get(`champions:${g23ChampionApiName(id) ?? ''}`);
-    if (asset) list.push({ id, path: asset.path });
+    const apiName = g23ChampionApiName(id);
+    if (apiName && iconIndex.has(`champions:${apiName}`)) list.push({ id, path: g23IconPath('champions', apiName) });
   }
   return list;
 }
