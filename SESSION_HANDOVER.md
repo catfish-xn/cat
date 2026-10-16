@@ -10,12 +10,13 @@
 ## 0.0.9 当前状态（2026-10-16 收工，协调者整理；以本节为准，§0.0.8 及以下为旧记录）
 
 **一页总结（新会话先读这段）**
-- 阶段：G2-3 内容与通用机制已合入 multiplayer（#136，`108adcb`）。main 仍是 `5494ab9`（#119），multiplayer 比 main 多 10-16 下午起的全部 PR；什么时候合进 main 由用户决定。
+- 阶段：G2-3 内容与通用机制已合入 multiplayer（#136，`108adcb`），界面显示表随 #138 对齐（multiplayer 现为 `cbbee3d`）。main 仍是 `5494ab9`（#119），multiplayer 比 main 多 10-16 下午起的全部 PR；什么时候合进 main 由用户决定。
 - 身份（#136 起）：rules `s13-g2-3-v1`、content `s13-14.24b-g2-3-v1`、CONTENT `fnv1a32-utf16:5789146c`。
 - CI：#129 合入（`cac2233`）后 multiplayer 首次全绿，16 项通过或按设计跳过（heap-diagnostics、warmup-experiment 按设计跳过）。之后以绿色为基线，任何红项都算新增失败。
-- 108adcb 整体 CI（run 416，手动触发）：【待补：结果】
-- 体积：合入 #136 后页面脚本 JS **1.294 倍**（预算 1.5 倍），首交互本地 **1.12 倍**（预算 1.2 倍，以 CI 为准）。
-- 本会话收工时没有正在跑的讨论串；本交接 PR 开着待用户决定是否合入。
+- `108adcb` 整体 CI（run 416，合入 #136 后手动触发）：16 个作业 13 绿、2 红、3 跳过。法师、狙神、炮手 dev/preview 六个完整对局全绿，炮手 11–14 分钟跑完未超时；精简版 Phaser 不缺 #136 用到的对象。红项：①快测 3 个文件，其中 2 个是展示测试断言（#133 与 #136 叠加后过时，已由 #138 修好），1 个是 m8-b5-equipment-history 的 beforeAll 超时；②input-dev 末尾满载性能门槛，存档激活 activation 最大 1040.6 ms（上限 1000 ms）。
+- **multiplayer `cbbee3d` 上 CI 全绿**（#138 的 CI 重跑一次后全绿，activation 767.9 ms 通过），但有偶发项：activation 压线、m5-growth/m8-b5/m8-b7 快测压线超时、m8-u6-loot 偶发红（见待办 1，不放宽门槛）。
+- 体积：合入 #136 后页面脚本 JS **1.294 倍**（预算 1.5 倍）；首交互 CI 实测 **1.09 倍**（run 416，本地 1.12 倍，预算 1.2 倍，以 CI 为准）。
+- 收工时本交接 PR（#137）开着，待用户决定是否合入。
 
 **更正旧交接（以本节为准）**
 - 成装已有 **36 件**（不是 §0.0.8 写的"补齐 36"待办）。
@@ -45,8 +46,9 @@
 | #129 | `cac2233` | CI 修复：T13 之后长期红的脚本；同一 PR 新提交自动取消旧运行；input-dev 时限 32→45 分钟 |
 | #135 | `2f9a275` | 页面脚本瘦身：Phaser 改用核心构建（m7 JS 1.495 → 1.173 倍） |
 | #136 | `108adcb` | Codex：G2-3 完整内容与通用机制接入（审查无必须改项，报告见共享文件夹 reviews/pr-136-review.md） |
+| #138 | `cbbee3d` | G2-3 显示表对齐 #136 实际内容 |
 
-- g23-display.ts 按 #136 实际 id 复核：【待补：结论】
+- g23-display.ts 按 #136 实际 id 复核：有出入，已由 #138 修好。界面改读完整物品注册表，28 件炼金男爵奖励和 36 件光明装备都显示官方中文名和图标；异常名单按 #136 换齐 8 个（共 30 个）；远程形态显示英雄名。#138 首次 CI 时 m8-u6-loot 和 test-and-build 红，重跑一次全绿。
 
 ### 今天的决定（用户定）
 - 1-1 开局：每席随机一只一费英雄，费用相同，允许八席抽到同一只（选 A）；1-2/1-3 奖励维持原代码随机（选 B）。
@@ -66,13 +68,17 @@
 - 需求盘点：共享文件夹 planning/g2-3-ui-server-needs-2026-10-16.md；征服者档位：planning/conqueror-tiers-2026-10-16.md；来源缺口：planning/g2-3-source-gap-2026-10-16.md。
 
 ### 下次开工待办（按顺序）
-1. **联机下 G2-3 机制不生效**：`src/server/room/room.ts` 的 `buildReceipt` 没转发 `proposal.g23Facts`（Codex 已写进 UI_REQUESTS 的 G23-SERVER-FACTS）。改这一行之前，**必须先修** `src/simulation/bot/index.ts` 读旧物品目录拿到空值的问题（第 51 行 `ITEM_DEFINITIONS[...].kind` 无空值保护），否则机器人拿到光明装会崩。两处归属哪一边由协调者下次定。
-2. **Codex 派单**：#136 审查第 4 节的建议项（见 reviews/pr-136-review.md，第 1 条即上面的机器人空值，其余含选秀出生登记疑似误删、Power Absorption 与对账表不一致、RELEASE_NOTES 写 27 个异变实为 30 等）；外加 `docs/evidence/M5_CI_BUDGET.json` 里 input-dev 时限 32 → 45 分钟。
-3. **#134 留下的小建议**：注释里合同章节号写成 §19/§20，应为 MULTIPLAYER_CONTRACT §25 和 MATCH_CONTRACT「G2-3 机制通用接口」；`restoreMatch` 校验顺序要调整（`validateB8Loot` 先于 `validateSeatMechanicsState`，收据损坏时可能先抛 TypeError 而不是统一的 "Invalid Match save"）。
-4. **G2-4 候选**：宝箱奖励物品种类（神器、辅助装、战术家之冠、窃贼手套、锻造器、复制器）；补齐后恢复征服者原奖励。
-5. **外交官胜场历史**：用户原定等 G2-3 之后，现在可以排进来。
-6. **#128 是 [skip ci] 合入的**，要等下次 multiplayer → main 时一起验。multiplayer 现在是绿的，何时合进 main 由用户决定。
-7. **首交互余量很小**（1.12 / 1.2）：每批 G2 合入都要同时报 JS 倍数和首交互倍数。
+1. **#136 之后的变慢与偶发失败，交给 Codex 查，不放宽任何门槛**：
+   - 存档激活 activation 两次结果 1040.6 ms（run 416，超 1000 上限）和 767.9 ms（#138），#136 前是 623–745 ms；completeImport 和 firstSeek 也一起变慢，疑似恢复校验变重。
+   - m5-growth、m8-b5-equipment-history、m8-b7-audit-vectors 三个快测本地慢了约三到四成，CI 并行时压线超时。
+   - m8-u6-loot 偶发红。
+2. **联机下 G2-3 机制不生效**：`src/server/room/room.ts` 的 `buildReceipt` 没转发 `proposal.g23Facts`（Codex 已写进 UI_REQUESTS 的 G23-SERVER-FACTS）。改这一行之前，**必须先修** `src/simulation/bot/index.ts` 读旧物品目录拿到空值的问题（第 51 行 `ITEM_DEFINITIONS[...].kind` 无空值保护），否则机器人拿到光明装会崩。两处归属哪一边由协调者下次定。
+3. **Codex 派单**：#136 审查第 4 节的 12 条建议（见 reviews/pr-136-review.md，第 1 条即待办 2 的机器人空值，其余含选秀出生登记疑似误删、Power Absorption 与对账表不一致、RELEASE_NOTES 写 27 个异变实为 30 等）；外加 `docs/evidence/M5_CI_BUDGET.json` 里 input-dev 时限 32 → 45 分钟。
+4. **#134 留下的小建议**：注释里合同章节号写成 §19/§20，应为 MULTIPLAYER_CONTRACT §25 和 MATCH_CONTRACT「G2-3 机制通用接口」；`restoreMatch` 校验顺序要调整（`validateB8Loot` 先于 `validateSeatMechanicsState`，收据损坏时可能先抛 TypeError 而不是统一的 "Invalid Match save"）。
+5. **G2-4 候选**：宝箱奖励物品种类（神器、辅助装、战术家之冠、窃贼手套、锻造器、复制器）；补齐后恢复征服者原奖励。
+6. **外交官胜场历史**：用户原定等 G2-3 之后，现在可以排进来。
+7. **#128 是 [skip ci] 合入的**，要等下次 multiplayer → main 时一起验。multiplayer 现在是绿的，何时合进 main 由用户决定。
+8. **首交互余量很小**（CI 1.09 / 1.2）：每批 G2 合入都要同时报 JS 倍数和首交互倍数。
 
 ### 协作约定（用户 2026-10-16 定）
 - **分工**：所有讨论、规划、决策、汇报在协调者对话里，用户只在那里说话。协调者不改代码，动手的活（写代码、改文档、跑测试、审 PR）一律开讨论串。讨论串只做被派的一件事：需要用户决定时停下报给协调者；做完汇报，不安排下一步、不写 Codex 派单。后端归 Codex，协调者在对话里把派单写成一整段代码块供用户转发；用户可临时把派单改给 Claude（Codex 太慢时）。Codex 开 PR 后用户给 PR 号，协调者开讨论串审查并用大白话汇总。
