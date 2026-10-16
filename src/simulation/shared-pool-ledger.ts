@@ -124,6 +124,8 @@ export function assertSharedPoolConservation(pool:SharedPoolState,states:readonl
       && state.m8.loot.frozen.throughRoundOrdinal<=pool.orbLayout.throughRoundOrdinal,'invalid-seat-state');
     requirePool(matchesFrozenLootLedger(state.m8.loot.frozen,state.seed,state.m8.loot.frozen.throughRoundOrdinal,pool.orbLayout),'invalid-seat-state');
     const binding=state.sharedPool;requirePool(binding&&binding.poolId===pool.poolId,'invalid-seat-state');
+    const opening=state.resourceProvenance.entries[0];
+    requirePool(opening?.kind==='unit-acquired'&&opening.source.kind==='opening'&&opening.source.seed===pool.seed&&opening.source.seatId===binding.seatId,'invalid-seat-state');
     requirePool(!provided.has(binding.seatId),'invalid-seat-state');provided.add(binding.seatId);
     const seat=seats.get(binding.seatId);requirePool(seat,'invalid-seat-state');
     requirePool(binding.revision===seat.revision,'stale-seat');

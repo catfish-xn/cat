@@ -4,7 +4,7 @@ import type { Unit, UnitLocation } from '../src/simulation/units';
 import { expectedCommand } from './fixtures/m5/command-oracle.g2.cjs';
 import { accepted, freeze, readyMatch } from './match-helpers';
 
-const opening = { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening' }, sequence: 0, roundId: '1-2' };
+const opening = { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening', seed: 42, seatId: 'solo' }, sequence: 0, roundId: '1-2' };
 const unit = (id: string, location: UnitLocation, starLevel: Unit['starLevel'] = 1): Unit =>
   ({ id, definitionId: 'irelia', team: 'player', starLevel, location });
 

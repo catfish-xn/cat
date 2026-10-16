@@ -1,3 +1,4 @@
+import { selectOpeningUnit } from '../src/simulation/opening-unit';
 import {must,supplySeats,atSupply} from './p7-carousel-helper';
 import { createMatch } from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
@@ -164,7 +165,7 @@ describe('P7 supply and capacity integration', () => {
 });
 describe('P7 boundary rejection and recovery authentication', () => {
     it('fails exhausted pools without creating a round or advancing caller RNG', () => {
-        let pool = createSharedPool('small', 0, { seatCount: 1, capacities: { irelia:1,darius: 8 } });
+        let pool = createSharedPool('small', 0, { seatCount: 1, capacities: { [selectOpeningUnit(0,'s0')]:1,darius:8 } });
         const seat = must(initializeSharedSeat(pool, createCarouselMatch(1), 's0', 0));
         pool = must(prepareCarouselParticipants(seat.pool, [{ seatId: 's0', state: seat.state }])).pool;
         pool={...pool,naturalRound:7};

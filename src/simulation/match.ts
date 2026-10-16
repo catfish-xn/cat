@@ -1,3 +1,4 @@
+import { selectOpeningUnit } from './opening-unit';
 import { resolveCarouselPreparation } from './carousel-units';
 import { planConsumable } from './consumables';
 import { CONSUMABLE_RULES } from './content/consumables';
@@ -123,7 +124,7 @@ function prepareRound(seed: number, round: number, previous?: MatchState['m8']['
     enemies:createRoundEnemies(round),
   }});
 }
-/** Shared opening keeps the free Irelia and existing economy; 1-1 is PortalSelect. */
+/** Shared opening keeps the random one-cost unit and existing economy; 1-1 is PortalSelect. */
 export function createCarouselMatch(seed=DEFAULT_MATCH_SEED):MatchState {
   const state=createMatch(seed,{mode:'shared-deferred'});
   return {...state,carousel:{receipts:[],pendingUnits:[],heldCarouselUnits:[],preparationReceipts:[]}};
@@ -134,7 +135,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
   const initial: MatchState = { schemaVersion: M8_VERSION.schemaVersion, rulesVersion: M8_VERSION.rulesVersion, contentVersion: M8_VERSION.contentVersion,
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
-      {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
+      {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening',seed,seatId:'solo'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
     contentDigest: CONTENT_DIGEST, seed,
     equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
@@ -144,7 +145,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
     ...generateShop(seed, 1, MATCH_RULES.initialLevel), round: 1, gold: MATCH_RULES.initialGold,
     level: MATCH_RULES.initialLevel, xp: OPENING_INITIAL_STATE.xp, playerHp: MATCH_RULES.initialHp, nextUnitSerial: OPENING_INITIAL_STATE.nextUnitSeq,
     preparation: { board: structuredClone(DEFAULT_BOARD), benchSize: 9, units: [
-      { id:OPENING_INITIAL_STATE.unit.id,definitionId:OPENING_INITIAL_STATE.unit.definitionId,
+      { id:OPENING_INITIAL_STATE.unit.id,definitionId:selectOpeningUnit(seed),
         team:'player',starLevel:OPENING_INITIAL_STATE.unit.starLevel,
         location:{kind:'board',cell:{...OPENING_INITIAL_STATE.unit.cell}} },
       ...m8.preparation.enemies] }, roundResults: [], phase: 'preparation', combat: null };

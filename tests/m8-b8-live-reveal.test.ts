@@ -87,14 +87,15 @@ describe('B8 real simultaneous loot-source deaths', () => {
   });
 
   it.each([
-    ['unit-15', 'r00', 381, 'settlement', 4],
-    ['unit-12', 'r01', 152, 'settlement', 0],
+    ['loris', 'r00', 381, 'settlement', 4],
+    ['lux', 'r01', 152, 'settlement', 0],
   ] as const)('earns only killed source rewards after an actual partial defeat with %s', (survivor, source, deathTick, phase, directReceipts) => {
     let state = clone(prefix), slot = 0;
-    expect(state.preparation.units.find(unit => unit.id === survivor)).toMatchObject({
-      definitionId: survivor === 'unit-15' ? 'loris' : 'lux', starLevel: 2, team: 'player',
+    const targetId=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===survivor)!.id;
+    expect(state.preparation.units.find(unit => unit.id === targetId)).toMatchObject({
+      definitionId: survivor, starLevel: 2, team: 'player',
     });
-    for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.id !== survivor))
+    for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.id !== targetId))
       state = accepted(api.deployMatchUnit(state, unit.id, { kind: 'bench', slot: slot++ }));
     state = clone(state);
     const beforeReceipts = state.m8.loot.receipts.length, beforeItemSerial = state.nextItemSerial;

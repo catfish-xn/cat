@@ -4,7 +4,7 @@ import { freezeContent } from './content/freeze';
 /** Approved M8B OPENING initialization, shared by Match and the content digest. */
 export const OPENING_INITIAL_STATE = freezeContent({
   gold:0, level:1, xp:0, hp:100,
-  unit:{definitionId:'irelia',id:'unit-1',starLevel:1,cell:{col:1,row:4}}, nextUnitSeq:2,
+  unit:{definitionId:{rule:'opening-unit-v1',catalog:'SHOP_CATALOG_BY_COST[1]',stream:'opening-unit-v1/<seatId>',rngAlgorithm:'lcg32-v1',derivation:'fnv1a32-utf16-xor-seed',sampling:'floor-word-times-length-over-2^32',seedXor:0x6f706844},id:'unit-1',starLevel:1,cell:{col:1,row:4}}, nextUnitSeq:2,
 } as const);
 export const MATCH_RULES = Object.freeze({ initialGold: OPENING_INITIAL_STATE.gold, rerollCost: 2, roundIncome: 5, shopSize: 5,
   initialLevel: OPENING_INITIAL_STATE.level, maxLevel: 9, initialHp: OPENING_INITIAL_STATE.hp, xpPurchaseCost: 4, xpPurchaseAmount: 4, roundXp: 2 });

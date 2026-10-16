@@ -1,3 +1,4 @@
+import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
 import { freezeContent, isFrozenContent } from './content/freeze';
@@ -17,7 +18,7 @@ import type { StarLevel, UnitUpgradedEvent } from './unit-types';
 export const RESOURCE_PROVENANCE_VERSION = 'm8-b8-resource-provenance-v1';
 export type UnitAcquisitionSource =
   | {readonly kind:'carousel';readonly receiptId:string}
-  | { readonly kind: 'opening' }
+  | { readonly kind: 'opening'; readonly seed: number; readonly seatId: string }
   | { readonly kind: 'shop'; readonly generation: number; readonly slotIndex: number; readonly definitionId: string }
   | { readonly kind: 'loot'; readonly receiptId: string };
 export type ItemAcquisitionSource =
@@ -291,9 +292,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(entry.unitId === `unit-${nextUnitSerial}`, 'unit serial'); integer(nextUnitSerial + 1, 1);
       let definitionId: string;
       if (entry.source.kind === 'opening') {
-        keys(entry.source, ['kind']);
+        keys(entry.source, ['kind','seed','seatId']);
         requireValue(index === 0 && entry.unitId === OPENING_INITIAL_STATE.unit.id && round.ordinal === 1, 'opening');
-        definitionId = OPENING_INITIAL_STATE.unit.definitionId;
+        definitionId = selectOpeningUnit(entry.source.seed as number, entry.source.seatId as string);
       } else if(entry.source.kind==='carousel') {
         keys(entry.source,['kind','receiptId']);definitionId=takeBirth(`carousel-unit:${entry.source.receiptId}`,'unit',entry.unitId,entry.roundId);
       } else if (entry.source.kind === 'shop') {

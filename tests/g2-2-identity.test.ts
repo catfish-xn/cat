@@ -11,7 +11,7 @@ import audit from '../docs/evidence/g2-2/release-audit.json';
 const bytes=(p:string)=>readFileSync(new URL('../'+p,import.meta.url));
 const sha=(p:string)=>createHash('sha256').update(bytes(p)).digest('hex');
 it('freezes one G2-2 identity on the P7 merged base and retains historical bytes',()=>{
- expect(CONTENT_DIGEST).not.toBe(baseline.contentDigest);expect(LOOT_REPLAY_DIGEST).toBe(baseline.lootReplayDigest);
+ expect(CONTENT_DIGEST).not.toBe(baseline.contentDigest);expect(LOOT_REPLAY_DIGEST).not.toBe(baseline.lootReplayDigest);
  expect(baseline.rulesVersion).toBe('s13-g2-2-v1');expect(baseline.previousContentDigest).toBe(prior.contentDigest);
  expect(sha('tests/fixtures/m5/full-match-golden.p7.json')).toBe(audit.previousGoldenSha256);
  expect(sha('tests/fixtures/m5/full-match-golden.g2-2.json')).toBe(audit.candidateSha256);

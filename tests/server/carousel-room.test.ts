@@ -1,3 +1,4 @@
+import { selectOpeningUnit } from '../../src/simulation/opening-unit';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { assertSharedPoolConservation, type SharedPoolState } from '../../src/server-entry';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
@@ -52,10 +53,10 @@ function buyAll(room: Room, seatId: string): void {
   for (let slot = 0; slot < 5 && placed(room, seatId, 'bench') < 9; slot++) room.handle(seatId, { type: 'buy', slot, generation: seatOf(room, seatId).match.shop.generation });
 }
 /**
- * Units on the 2-4 carousel of this room (seed 42); s1 collects two one-star copies of one of them before it opens, so its
- * pick is a third copy. Checked when s1 picks: a content or rules change that moves the carousel fails there, by name.
+ * Units on the 2-4 carousel of this room (seed 35: under random openings and rewards, seed 42 left s0 one bench card short);
+ * s1 collects two one-star copies of one of them before it opens, so its pick is a third copy. Checked when s1 picks: a content or rules change that moves the carousel fails there, by name.
  */
-const PAIR_TARGETS = ['vladimir', 'powder', 'sett'];
+const PAIR_TARGETS = ['vander', 'urgot', 'camille', 'leona', 'rell'];
 const copiesOf = (room: Room, seatId: string, definitionId: string) => unitsOf(room, seatId).filter(unit => unit.definitionId === definitionId && unit.starLevel === 1);
 function collectPairs(room: Room, seatId: string, reroll: boolean): void {
   for (let rolls = 0; ; rolls++) {
@@ -77,7 +78,7 @@ class RecordingResolver extends TwoSidedBattleResolver {
 }
 
 describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () => {
-  it('opens like a plain room: the free Irelia, the opening economy and the first shop; no carousel at the opening', () => {
+  it('opens like a plain room: the random one-cost unit, the opening economy and the first shop; no carousel at the opening', () => {
     const { room } = makeRoom(new DamageResolver(() => 0), { carousel: rules });
     const { room: plain } = makeRoom(new DamageResolver(() => 0));
     // createCarouselMatch → initializeSharedSeat → refreshSharedShops: the same pool and room rng as without the carousel.
@@ -86,7 +87,7 @@ describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () =
     for (const [index, seat] of room.state.seats.entries()) {
       const other = plain.state.seats[index]!.match;
       expect(seat.match.carousel).toEqual({ receipts: [], heldCarouselUnits: [], pendingUnits: [], preparationReceipts: [] });
-      expect(unitsOf(room, seat.seatId).map(unit => [unit.definitionId, unit.starLevel, unit.location.kind])).toEqual([['irelia', 1, 'board']]);
+      expect(unitsOf(room, seat.seatId).map(unit => [unit.definitionId, unit.starLevel, unit.location.kind])).toEqual([[selectOpeningUnit(room.state.pool.seed,seat.seatId), 1, 'board']]);
       for (const key of ['round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp', 'items', 'shop', 'preparation'] as const) expect(seat.match[key], key).toEqual(other[key]);
       const view = toSeatPrivateView(seat.match);
       expect(view.heldCarouselUnits).toEqual([]);
@@ -107,7 +108,7 @@ describe('P7-1 opening (MULTIPLAYER_CONTRACT §21.5 initialisation order)', () =
  */
 describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAYER_CONTRACT §21.6)', () => {
   const resolver = new RecordingResolver();
-  const { room, clock } = makeRoom(resolver, { carousel: rules });
+  const { room, clock } = makeRoom(resolver, { carousel: rules, seed: 35 });
   const opened: string[] = [];
   room.subscribe(state => { if (state.phase === 'carousel' && opened.at(-1) !== state.roundId) opened.push(state.roundId); });
   const carousel = () => room.state.carousel!.state;
@@ -123,6 +124,8 @@ describe('P7-1: the 2-4 carousel of a played room, bound to the rules (MULTIPLAY
         if (roundId !== '2-3') return;
         while (seatOf(room, 's0').match.level < 5) if (!room.handle('s0', { type: 'buyXp' }).ok) break;
         for (const seatId of ['s0', 's2', 's3']) buyAll(room, seatId);
+        // Random openings leave s0's bench one short after the XP spend; reroll on its own content stream until it is full.
+        while (placed(room, 's0', 'bench') < 9 && room.handle('s0', { type: 'reroll' }).ok) buyAll(room, 's0');
       },
     });
     carouselId = room.state.carousel?.state.id ?? '';

@@ -19,7 +19,7 @@ function fixture(round = 1, seed = 5): MatchState {
       roundId: definition.roundId, encounterId: definition.encounterId, enemies } },
     preparation: { ...base.preparation, units: [...base.preparation.units.filter(unit => unit.team === 'player'), ...enemies] },
     resourceProvenance: appendResourceProvenance({ version: RESOURCE_PROVENANCE_VERSION, entries: [] }, '1-2',
-      { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening' } }),
+      { kind: 'unit-acquired', unitId: 'unit-1', source: { kind: 'opening', seed, seatId: 'solo' } }),
   };
 }
 const plan = (state: MatchState) => state.m8.loot.frozen.rounds.find(value => value.encounterPlan.roundId === state.roundDefinitionId)!;

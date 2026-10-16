@@ -19,5 +19,6 @@ it('T12 offline loot upgrade migrates latest equipment and restores overflow of 
   Object.assign(forged.items.find(i=>i.definitionId==='thiefs-gloves')!,{location:{kind:'inventory'}});
   Object.assign(forged,{temporaryEquipment:[]});
   expect(()=>restoreMatch(forged)).toThrow(/finished resource projection/);
-// T13 full public acquisition + every-tick resumption measured 5.45s on one worker.
-}, 15000);
+// Random-opening public acquisition + every-tick resumption takes about 9s alone;
+// allow the same four-worker contention budget as other full public routes.
+}, 60000);
