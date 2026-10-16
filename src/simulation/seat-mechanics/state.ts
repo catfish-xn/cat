@@ -69,6 +69,7 @@ export function validateMechanicReceipt(receipt: MechanicReceipt): void {
       case 'gold': return count(receipt.amount, 1);
       case 'unit': return nonempty(receipt.definitionId) && count(receipt.gold)
         && (receipt.resolution === 'held' ? nonempty(receipt.unitId) && receipt.gold === 0 : receipt.resolution === 'gold' && receipt.unitId === null);
+      case 'consumable': return nonempty(receipt.definitionId) && nonempty(receipt.consumableId);
       case 'item': return nonempty(receipt.definitionId) && nonempty(receipt.itemId);
       case 'choice': return ['forge', 'blackMarket', 'armory'].includes(receipt.choiceKind) && nonempty(receipt.optionId)
         && typeof receipt.skipped === 'boolean' && count(receipt.price) && typeof receipt.timedOut === 'boolean'

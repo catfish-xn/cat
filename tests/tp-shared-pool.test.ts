@@ -7,14 +7,14 @@ import { freeze } from './combat-helpers';
 import { accept,batch,room,conserved,rejected,fullBench } from './tp-helpers';
 
 describe('TP finite shop transactions',()=>{
-  it('uses exactly the admitted 48 heroes and Riot 30/25/18/10/9; all opening gifts precede shops',()=>{
+  it('uses exactly the admitted 60 heroes and Riot 30/25/18/10/9; all opening gifts precede shops',()=>{
     expect(POOL_CAPACITY_BY_COST).toEqual({1:30,2:25,3:18,4:10,5:9});
     const {pool,states}=room(undefined,8);
-    expect(Object.keys(pool.initial)).toHaveLength(48);expect(Object.values(pool.initial).reduce((a,b)=>a+b)).toBe(990);
+    expect(Object.keys(pool.initial)).toHaveLength(60);expect(Object.values(pool.initial).reduce((a,b)=>a+b)).toBe(1171);
     expect(pool.initial.irelia).toBe(30);expect(pool.available.irelia).toBe(30-pool.holdings.filter(h=>h.definitionId==='irelia').length);expect(pool.holdings).toHaveLength(8);
     expect(pool.shops).toEqual([]);expect(states.every(s=>s.shop.slots.every(o=>o.status==='purchased'&&o.empty))).toBe(true);
     const shops=batch(refreshSharedShops(freeze(pool),freeze(states),1));
-    expect(shops.pool.shops).toHaveLength(40);expect(Object.values(shops.pool.available).reduce((a,b)=>a+b)).toBe(942);
+    expect(shops.pool.shops).toHaveLength(40);expect(Object.values(shops.pool.available).reduce((a,b)=>a+b)).toBe(1123);
     conserved(shops.pool,shops.states);
   });
   it('two seats competing for the last copy cannot both display it; purchase moves the reservation',()=>{

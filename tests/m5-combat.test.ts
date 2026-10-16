@@ -40,7 +40,7 @@ function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redir
 
 describe('M5 independent finite combat rules', () => {
   it('resolves all admitted abilities as integer-only isolated snapshots', () => {
-    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(48);
+    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(66);
     for (const id of Object.keys(S13_ABILITY_DATA)) for (const star of [1, 2, 3] as const) {
       const ability = resolveAbility(id, star);
       expect(ability.kind).toBe('s13');
@@ -58,7 +58,7 @@ describe('M5 independent finite combat rules', () => {
     for (const name of Object.values(S13_ABILITY_DATA).map(a => a.championId)) {
       const state = battle([hero(name), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)], { rngState: 42, rngDraws: 0 });
       const step = stepCombat(state);
-      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(!['amumu','zeri'].includes(name));
+      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(!['amumu','zeri','g23-sion','g23-forge'].includes(name));
       expect(stepCombat(JSON.parse(JSON.stringify(step.state)))).toEqual(stepCombat(step.state));
       expect(step.state.units.every(u => Number.isSafeInteger(u.hp) && Number.isSafeInteger(u.shield)), name).toBe(true);
     }

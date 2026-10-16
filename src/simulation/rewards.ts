@@ -1,7 +1,7 @@
 import type { MatchState } from './match-types';
 import type { GameState } from './game';
 import type { ItemInstance, ScheduleEvent, ScheduleReceipt } from './strategy-types';
-import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/items';
+import { COMPONENT_IDS, ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { ROUND_SCHEDULE } from './round-schedule';
 import { nextRandom } from './rng';
 import { planPermanentItemGrant } from './item-grants';

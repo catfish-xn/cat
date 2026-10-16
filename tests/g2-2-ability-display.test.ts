@@ -28,7 +28,7 @@ describe('SR-G2-01 base display', () => {
   });
   it('rejects unknown definitions, invalid stars and invalid numeric inputs', () => {
     expect(() => abilityDisplayValues('__proto__', 1)).toThrow(RangeError);
-    expect(() => abilityDisplayValues('swain', 1)).toThrow(RangeError);
+    expect(() => abilityDisplayValues('cosmic-rhythm', 1)).toThrow(RangeError);
     expect(() => abilityDisplayValues('lux', 4 as StarLevel)).toThrow(RangeError);
     for (const value of [NaN, Infinity, -1, 0.5, 1_000_001]) expect(() => abilityDisplayValues('lux', 1, { abilityPower: value })).toThrow(RangeError);
   });

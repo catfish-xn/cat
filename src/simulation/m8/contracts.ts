@@ -303,6 +303,7 @@ export interface CounterDefinition {
   readonly cap: number | null;
 }
 export interface TargetSelector {
+  readonly geometry?: 'line-to-primary';
   readonly primary: 'normal' | 'first-required';
   readonly candidates: 'board' | 'event-actor' | 'event-target' | 'bound-target';
   readonly relation: 'self' | 'ally' | 'enemy';
@@ -436,8 +437,8 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 7;
-  readonly rulesVersion: 's13-opening-random-1cost-v1';
-  readonly contentVersion: 's13-14.24b-opening-random-1cost-v1';
+  readonly rulesVersion: 's13-g2-3-v1';
+  readonly contentVersion: 's13-14.24b-g2-3-v1';
   readonly contentDigest: string;
   readonly saveFormatVersion: 3;
   readonly replayFormatVersion: 3;
@@ -445,7 +446,7 @@ export interface M8Version {
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;
 }
-export type UnchangedCombatEvent = Extract<CombatEventData, { readonly type: 'targetChanged' | 'kill' | 'growth' | 'effectTriggered' | 'movement' | 'attack' | 'death' | 'combatFinished' }>;
+export type UnchangedCombatEvent = Extract<CombatEventData, { readonly type: 'targetChanged' | 'kill' | 'growth' | 'effectTriggered' | 'movement' | 'attack' | 'death' | 'unitRevived' | 'combatFinished' }>;
 export type M8CombatEvent = { readonly domain: 'combat'; readonly combatId: string; readonly tick: Tick; readonly eventSeq: number } & (
   | UnchangedCombatEvent
   | { readonly type: 'activityChanged'; readonly activity: CombatActivity; readonly reason: 'applied' | 'refreshed' | ActivityEndReason }

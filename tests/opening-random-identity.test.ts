@@ -6,12 +6,13 @@ import { CONTENT_DIGEST, digestContent } from '../src/simulation/content';
 import { LOOT_REPLAY_DIGEST } from '../src/simulation/loot-freeze';
 import { createMatch, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import prior from './g2-augments-content-baseline.json';
+import prior from './opening-random-content-baseline.json';
+import previousOpening from './g2-augments-content-baseline.json';
 
 const bytes = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url));
 const sha = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const load = (p: string) => JSON.parse(bytes(p).toString());
-const baseline = () => load('tests/opening-random-content-baseline.json');
+const baseline = () => load('tests/g2-3-content-baseline.json');
 
 it('binds random opening to one new content/rules identity while updating the opening replay identity', () => {
   const recorded = baseline(), fresh = createMatch(42);
@@ -29,13 +30,14 @@ it('binds random opening to one new content/rules identity while updating the op
   expect(recorded.lootReplayDigest).toBe(LOOT_REPLAY_DIGEST);
   const audit = load('docs/evidence/opening-random/fixture-migration.json');
   expect(audit.baselineCommit).toBe('94eecbcbfbce72d4740923b8c793c66c483bfd51');
-  expect(audit.lootReplayDigestCurrent).toBe(LOOT_REPLAY_DIGEST);
+  expect(audit.lootReplayDigestCurrent).toBe(prior.lootReplayDigest);
   expect(sha(bytes('tests/fixtures/m5/full-match-golden.g2-augments.json'))).toBe(audit.goldenBytes.previousSha256);
   const r1 = load('docs/evidence/opening-random/r1-random-rewards.json');
   const golden = r1.files['tests/fixtures/m5/full-match-golden.opening-random.json'];
+  expect(prior.previousContentDigest).toBe(previousOpening.contentDigest);
   expect(golden.previousSha256).toBe(audit.goldenBytes.currentSha256);
   expect(sha(bytes('tests/fixtures/m5/full-match-golden.opening-random.json'))).toBe(golden.currentSha256);
-  expect(r1.identity).toMatchObject({contentDigest:CONTENT_DIGEST,lootReplayDigest:LOOT_REPLAY_DIGEST,unchangedFromPreviousHead:true});
+  expect(r1.identity).toMatchObject({contentDigest:prior.contentDigest,lootReplayDigest:prior.lootReplayDigest,unchangedFromPreviousHead:true});
 });
 
 it('rejects each old release identity without migration shortcuts', () => {
@@ -44,8 +46,8 @@ it('rejects each old release identity without migration shortcuts', () => {
     expect(() => restoreMatch({ ...fresh, [key]: prior[key] })).toThrow();
 });
 for (const build of ['cannon', 'sniper']) {
-  const old = JSON.parse(gunzipSync(bytes(`tests/fixtures/g2-augments-recorded-states/${build}.json.gz`)).toString()).states;
-  const current = JSON.parse(gunzipSync(bytes(`tests/fixtures/opening-random-recorded-states/${build}.json.gz`)).toString()).states;
+  const old = JSON.parse(gunzipSync(bytes(`tests/fixtures/opening-random-recorded-states/${build}.json.gz`)).toString()).states;
+  const current = JSON.parse(gunzipSync(bytes(`tests/fixtures/g2-3-recorded-states/${build}.json.gz`)).toString()).states;
   it(`${build}: preserves all 67 raw checkpoints and rejects old first/final states`,()=>{
     expect(old).toHaveLength(67);expect(current).toHaveLength(67);
     for (const state of [old[0], old.at(-1)]) expect(() => restoreMatch(state)).toThrow();

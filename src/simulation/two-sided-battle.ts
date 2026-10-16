@@ -1,3 +1,6 @@
+import {countsG23SurvivorDamage} from './g2-3-summons';
+import {g23BattleFacts} from './g2-3-settlement';
+import { projectG23Summons } from './g2-3-summons';
 import { DEFAULT_BOARD, type Team } from './board';
 import { canonicalContent, digestContent } from './content';
 import { freezeContent } from './content/freeze';
@@ -35,7 +38,7 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
   // effects use the owner's preparation coordinates before B is mirrored to the upper half.
   const preparation = { board:structuredClone(DEFAULT_BOARD), benchSize:9, units:s.units.map(unit => ({...unit,id:map('unit',unit.id)})) };
   const inputs: CombatStrategyInputs = {
-    round:getMultiplayerRoundById(s.roundId).ordinal, preparation,
+    round:getMultiplayerRoundById(s.roundId).ordinal, preparation,playerHp:s.playerHp,g23:s.g23,
     items:s.items.map(item => ({...item,id:map('item',item.id),location:item.location.kind === 'unit'
       ? {...item.location,unitId:map('unit',item.location.unitId)} : item.location})),
     temporaryEquipment:s.temporaryEquipment.map(child => ({...child,temporaryId:map('temporary-item',child.temporaryId),
@@ -54,7 +57,7 @@ function compileSide(s: PlayerBattleSnapshot, team: Team) {
   const sourced = (value: SourcedEffect): SourcedEffect => { const mapped = source(value.source); return {...value,source:mapped,key:effectKey(mapped)}; };
   return {
     mapping,
-    units:preparation.units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
+    units:projectG23Summons(preparation).units.map(unit=>({...unit,team,location:unit.location.kind === 'board'
       ? {kind:'board' as const,cell:{col:unit.location.cell.col,row:team === 'player' ? unit.location.cell.row : DEFAULT_BOARD.rows - 1 - unit.location.cell.row}}
       : unit.location})),
     strategy:{ traits:compiled.traits.filter(trait=>trait.team === 'player').map(trait=>({...trait,team})),
@@ -113,7 +116,7 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
     if (!unit) throw new BattleValidationError('invalid-result');
     return {originalId:entry.originalId,unit};
   }).sort((a,b)=>order(a.originalId,b.originalId));
-  return { seatId, survivors:units.filter(({unit})=>unit.alive).map(({originalId,unit})=>({unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp})),
+  return { seatId, survivors:units.filter(({unit})=>countsG23SurvivorDamage(unit)).map(({originalId,unit})=>({unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp})),
     growth:isMirror ? [] : units.filter(({unit})=>(unit.runtime?.permanentAdBps ?? 0)>0).map(({originalId,unit})=>({unitId:originalId,attackDamageBps:unit.runtime!.permanentAdBps})),
   };
 }
@@ -175,7 +178,7 @@ export function proposeSettlement(result: BattleResult): { readonly a: SidePropo
       baseDamage,opposingSurvivors:opponent.survivors.length,
       // Same frozen PvP rule as economy.ts: winner 0; otherwise stage base + opposing survivors.
       damage:own.seatId === result.mirrorOfSeatId || result.winnerSeatId === own.seatId ? 0 : baseDamage + opponent.survivors.length,
-      growth:own.growth,events:result.events,
+      growth:own.growth,events:result.events,...(own.seatId===result.mirrorOfSeatId?{}:{g23Facts:g23BattleFacts(result.terminal,own.seatId===result.a.seatId?'player':'enemy',stage.ordinal,'pvp')}),
     });
     return freezeContent({a:side(result.a,result.b),b:side(result.b,result.a)});
   } catch (error) {

@@ -56,7 +56,7 @@ function buyAll(room: Room, seatId: string): void {
  * Units on the 2-4 carousel of this room (seed 35: under random openings and rewards, seed 42 left s0 one bench card short);
  * s1 collects two one-star copies of one of them before it opens, so its pick is a third copy. Checked when s1 picks: a content or rules change that moves the carousel fails there, by name.
  */
-const PAIR_TARGETS = ['vander', 'urgot', 'camille', 'leona', 'rell'];
+const PAIR_TARGETS = ['nocturne', 'urgot', 'rell', 'renata'];
 const copiesOf = (room: Room, seatId: string, definitionId: string) => unitsOf(room, seatId).filter(unit => unit.definitionId === definitionId && unit.starLevel === 1);
 function collectPairs(room: Room, seatId: string, reroll: boolean): void {
   for (let rolls = 0; ; rolls++) {
@@ -477,10 +477,10 @@ describe('a whole carousel match: 2-4 by HP, no overlap with eliminations, a lat
   it('a seat eliminated at the first fight after a carousel, still holding that pick, returns its holdings to the pool', () => {
     expect(death).not.toBeNull();
     const { state: atDeath, afterCarousel } = death!;
-    // Seed 42: s0 dies at 5-5, right after the 5-4 carousel. Only this line names the round; a content or rules change that
+    // Seed 42: s0 dies at 5-6, two fights after the 5-4 carousel. Only this line names the round; a content or rules change that
     // moves the death fails here, and the rest follows from what the match recorded.
-    expect(atDeath.roundId).toBe('5-5');
-    expect(death!.fightsSinceCarousel).toBe(1);
+    expect(atDeath.roundId).toBe('5-6');
+    expect(death!.fightsSinceCarousel).toBe(2);
     const was = beforeDeath.seats.find(candidate => candidate.seatId === 's0')!.match;
     // One granted receipt per carousel opened so far, the latest from the carousel just before the death.
     expect(was.carousel!.receipts.map(receipt => receipt.carouselId.split(':').at(-1))).toEqual(opened.slice(0, opened.indexOf(afterCarousel) + 1));

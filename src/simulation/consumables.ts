@@ -1,5 +1,5 @@
 import { canonicalContent } from './content';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { CONSUMABLE_DEFINITIONS, CONSUMABLE_RULES, REFORGE_POOLS } from './content/consumables';
 import { canOperateEquipment } from './operation-policy';
 import { isTemporaryItemId } from './temporary-equipment';
@@ -35,6 +35,8 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
     if (ITEM_DEFINITIONS[item.definitionId]?.kind!==(tool.definitionId==='component-reforger'?'component':'completed')
       || item.location.kind==='unit'&&!state.preparation.units.some(u=>u.id===(item.location.kind==='unit'?item.location.unitId:'')&&u.team==='player'))
       return {ok:false,reason:'invalid-consumable-target'};
+    const ordinaryPool=REFORGE_POOLS[tool.definitionId==='component-reforger'?'component':'completed'];
+    if(!ordinaryPool.some(d=>d.definitionId===item.definitionId))return {ok:false,reason:'invalid-consumable-target'};
     items=[item];
   }
   return {ok:true,effect:definition.effect,affectedItemIds:items.map(i=>i.id),destination:'inventory',affectsCurrentBattle:false};
@@ -95,14 +97,16 @@ export function replayConsumableItems(items:readonly ItemInstance[],serial:numbe
 export function validateConsumableState(state:MatchState):void {
   const check=(condition:unknown)=>{if(!condition)throw new RangeError('Invalid consumable ledger');};
   const grants=new Map<string,{definitionId:string;roundId:string}>(); let serial=1;
+  const all:{id:string;definitionId:string;roundId:string}[]=[];
+  for(const r of state.seatMechanics?.receipts??[])if(r.kind==='consumable'){check(Object.hasOwn(CONSUMABLE_DEFINITIONS,r.definitionId));all.push({id:r.consumableId,definitionId:r.definitionId,roundId:r.roundId});}
   for (const receipt of state.m8.loot.receipts) {
     if (receipt.payload.kind!=='consumable') {check(!receipt.grantedConsumableIds);continue;}
-    const ids=receipt.grantedConsumableIds;
-    check(ids?.length===1&&ids[0]===`consumable-${serial}`&&receipt.payload.quantity===1
-      &&Object.hasOwn(CONSUMABLE_DEFINITIONS,receipt.payload.definitionId));
-    const drop=state.m8.loot.frozen.rounds.flatMap(r=>r.encounterPlan.drops).find(d=>d.dropId===receipt.dropId);
-    check(drop);grants.set(ids![0],{definitionId:receipt.payload.definitionId,roundId:drop!.roundId});serial++;
+    const ids=receipt.grantedConsumableIds;check(ids?.length===1&&receipt.payload.quantity===1&&Object.hasOwn(CONSUMABLE_DEFINITIONS,receipt.payload.definitionId));
+    const drop=state.m8.loot.frozen.rounds.flatMap(r=>r.encounterPlan.drops).find(d=>d.dropId===receipt.dropId);check(drop);
+    all.push({id:ids![0],definitionId:receipt.payload.definitionId,roundId:drop!.roundId});
   }
+  all.sort((a,b)=>Number(a.id.slice(11))-Number(b.id.slice(11)));
+  for(const r of all){check(r.id===`consumable-${serial}`&&!grants.has(r.id));grants.set(r.id,{definitionId:r.definitionId,roundId:r.roundId});serial++;}
   let rng={state:(state.seed^CONSUMABLE_RULES.seedXor)>>>0,draws:0};
   const settled = new Set<string>();
   for (const fact of state.resourceProvenance.entries) {
@@ -111,14 +115,14 @@ export function validateConsumableState(state:MatchState):void {
     const r=fact.record,grant=grants.get(r.consumableId),definition=CONSUMABLE_DEFINITIONS[r.definitionId];
     check(grant&&grant.definitionId===r.definitionId&&definition&&definition.effect===r.effect
       &&definition.target===r.target.kind&&equal(r.rngBefore,rng));
-    check(grant && settled.has(grant.roundId)
+    check(grant && (settled.has(grant.roundId)||state.seatMechanics?.receipts.some(r=>r.kind==='consumable'&&r.consumableId===fact.record.consumableId))
       && getCatalogRoundById(grant.roundId).ordinal <= getCatalogRoundById(fact.roundId).ordinal);
     check(Array.isArray(r.affectedItems)&&r.affectedItems.length>0&&new Set(r.affectedItems.map(i=>i.id)).size===r.affectedItems.length);
     if (r.target.kind==='unit') {
       check(r.output===null&&r.affectedItems.every(i=>i.location.kind==='unit'&&i.location.unitId===(r.target.kind==='unit'?r.target.unitId:'')));
     } else {
       const original=r.affectedItems[0],kind=r.definitionId==='component-reforger'?'component':'completed';
-      check(r.affectedItems.length===1&&original.id===r.target.itemId&&ITEM_DEFINITIONS[original.definitionId]?.kind===kind);
+      check(r.affectedItems.length===1&&original.id===r.target.itemId&&ITEM_DEFINITIONS[original.definitionId]?.kind===kind&&REFORGE_POOLS[kind].some(d=>d.definitionId===original.definitionId));
       const candidates=REFORGE_POOLS[kind].filter(d=>d.definitionId!==original.definitionId),draw=drawIndex(rng,candidates.length);
       rng=draw.rng;check(r.output?.definitionId===candidates[draw.index].definitionId);
     }

@@ -1,3 +1,4 @@
+import {isG23NonCombatant} from './g2-3-summons';
 import type { Board, HexCell, Team } from './board';
 import type { ResolvedAbility } from './ability-types';
 import type { StrategySnapshot, SourcedEffect, ResolvedTrigger, EffectRuntime, EffectSource, EffectAction } from './strategy-types';
@@ -10,7 +11,7 @@ export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly parentItemInstanceId?: string | null; readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
 export interface ShieldLayer { readonly m8State?: import('./m8/contracts').ShieldState; readonly m8Grant?: Extract<import('./m8/contracts').Effect, { kind: 'grant-shield' }>; readonly endedReason?: import('./m8/contracts').ShieldEndReason;  readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
 export interface CombatStatus { readonly contributionKeys?: readonly string[]; readonly activity?: import('./m8/contracts').CombatActivity;  readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
-export interface CombatTask { readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
+export interface CombatTask { readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
   readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
 export type CombatMechanics = readonly CombatMechanic[];
@@ -22,9 +23,20 @@ export interface ExpansionState {
   chainUntilTick: number; chainTargets: string[]; chainCastSeq: number; chainKills: number;
 }
 export interface G22State { initialized: boolean; rebelTriggered: boolean; wanted: string[]; wantedDeaths: number; mordeUntilTick: number; reaveUntilTick: number; reaveBps: number; exposureFromTick: number; exposureUntilTick: number; exposureBps: number }
+export interface G23State {
+  ascension:{untilTick:number;nextPulseTick:number;actionSeq:number;takedowns:string[]}|null;
+  conquestTakedowns:string[];
+  experimentTakedowns:string[];
+  cuts: Record<string,number>;
+  stationaryTicks:number;
+  lastCell:HexCell;
+  absorbed: {unitId:string;tick:number;value:number}[];
+  highRoller: {actionSeq:number;spell:number;mod:import('./g2-3-progress').G23HighRollerMod;enhanced:boolean;gold:number}[];
+}
 export interface CombatUnit {
   /** G2-3 form swapper's form, frozen from its preparation row at combat start (seat-mechanics/forms.ts). */
   readonly form?: import('./seat-mechanics/types').UnitForm;
+  readonly g23?: G23State;
   readonly g22?: G22State;
   readonly expansion?: ExpansionState;
   readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[];
@@ -55,6 +67,7 @@ export interface CombatUnit {
   readonly shield: number; readonly shieldExpiresAtTick: number | null; readonly ability: ResolvedAbility;
 }
 export interface CombatState {
+  readonly removedUnitIds?:readonly string[];
   readonly neutralReceipts?: import('./neutral-receipts').NeutralReceipts;
   readonly openingDefinitions?: readonly import('./m8/opening').OpeningDefinition[];
   readonly openingState?: import('./m8/opening').OpeningState;
@@ -78,6 +91,7 @@ export type UnchangedCombatEventData =
   | { readonly type: 'effectTriggered'; readonly tick: number; readonly source: EffectSource; readonly effectKey: string; readonly action: EffectAction; readonly targetId: string }
   | { readonly type: 'movement'; readonly tick: number; readonly unitId: string; readonly from: HexCell; readonly to: HexCell }
   | { readonly type: 'attack'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
+  | { readonly type: 'unitRevived'; readonly tick: number; readonly unitId: string; readonly source: CombatOrigin; readonly hp: number }
   | { readonly type: 'death'; readonly tick: number; readonly unitId: string }
   | { readonly type: 'combatFinished'; readonly tick: number; readonly result: CombatResult; readonly reason: 'elimination' | 'timeout' };
 /** B9 replay2 payloads, field-for-field the frozen M8CombatEvent members (pinned by tests/m8-b9-replay2-events.test.ts). */
@@ -101,7 +115,7 @@ export type CombatEventData = UnchangedCombatEventData | ReplayTwoEventData | Le
 export interface CombatStep { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 export function compareIds(a: { readonly id: string }, b: { readonly id: string }): number { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }
 export function eliminationResult(units: readonly CombatUnit[]): CombatResult | null {
-  const player = units.some(unit => unit.alive && unit.team === 'player');
-  const enemy = units.some(unit => unit.alive && unit.team === 'enemy');
+  const player = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'player');
+  const enemy = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'enemy');
   return player && enemy ? null : player ? 'playerWin' : enemy ? 'enemyWin' : 'draw';
 }

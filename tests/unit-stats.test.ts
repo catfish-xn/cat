@@ -1,4 +1,4 @@
-import { G2_CATALOG } from './fixtures/g2-roster';
+import { G23_CATALOG as G2_CATALOG } from './fixtures/g2-3-roster';
 import { describe, expect, it } from 'vitest';
 import { SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { getUnitSellPrice, getUnitStats } from '../src/simulation/unit-stats';
@@ -18,7 +18,7 @@ const CONTENT = [
 ] as const;
 
 describe('authored unit catalog and star stat resolution', () => {
-  it('retains low-level legacy definitions but offers only the thirty-three G2 heroes', () => {
+  it('retains low-level legacy definitions but offers only the sixty G2-3 heroes', () => {
     expect(Object.keys(LEGACY_UNIT_DEFINITIONS)).toEqual(CONTENT.map(row => row[0]));
     const catalog = G2_CATALOG;
     expect(SHOP_CATALOG_BY_COST).toEqual(catalog);

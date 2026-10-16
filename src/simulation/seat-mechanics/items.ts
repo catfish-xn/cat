@@ -1,4 +1,4 @@
-import { ITEM_DEFINITIONS } from '../content/items';
+import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { UNIT_DEFINITIONS } from '../units';
 import type { ItemRestriction } from './types';
 

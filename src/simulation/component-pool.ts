@@ -1,4 +1,4 @@
-import { ITEM_DEFINITIONS, COMPONENT_IDS } from './content/items';
+import { ITEM_DEFINITIONS, COMPONENT_IDS } from './content/g2-3-item-registry';
 import type { ItemDefinition } from './strategy-types';
 export const COMPONENT_POOL_VERSION = 'm8b-components-v1' as const;
 export const COMPONENT_POOL = Object.freeze([

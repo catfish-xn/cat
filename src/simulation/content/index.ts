@@ -1,3 +1,7 @@
+import {G23_SPECIAL_ITEMS} from './g2-3-item-registry';
+import {G23_SPECIAL_ITEM_SOURCE,G23_SPECIAL_ITEM_POOLS,G23_RADIANT_MAPPING} from './g2-3-special-item-source';
+import {G23_TRAIT_SOURCE} from './g2-3-trait-source';
+import {G23_ANOMALY_SOURCE} from './g2-3-anomaly-source';
 import { AUGMENT_OFFER_POLICY, AUGMENT_BRONZE_THRESHOLDS, AUGMENT_TIERS } from './augment-policy';
 import { CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../carousel-policy';
 import { RULES_GAP_MANIFEST } from './rules-manifest';
@@ -21,7 +25,7 @@ import { OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../opening-economy
 import { ROUND_CATALOG, ROUND_SEMANTIC_NODES } from './round-catalog';
 import { SOURCE_MANIFEST } from './source-manifest';
 import { TRAIT_DEFINITIONS } from './traits';
-import { ITEM_DEFINITIONS } from './items';
+import { ITEM_DEFINITIONS } from './g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './augments';
 import { ANOMALY_DEFINITIONS } from './anomalies';
 export { TRAIT_DEFINITIONS, ITEM_DEFINITIONS, AUGMENT_DEFINITIONS, ANOMALY_DEFINITIONS };
@@ -130,7 +134,7 @@ export function digestContent(value: unknown): string {
 import { ORB_RULES, ORB_SLOTS } from './orbs';
 import { CONSUMABLE_RULES, CONSUMABLE_DEFINITIONS, REFORGE_POOLS } from './consumables';
 export const CONTENT_DIGEST = digestContent({
-  rulesManifest: RULES_GAP_MANIFEST,
+  rulesManifest: RULES_GAP_MANIFEST,g23:{specialItems:G23_SPECIAL_ITEMS,specialItemSource:G23_SPECIAL_ITEM_SOURCE,specialItemPools:G23_SPECIAL_ITEM_POOLS,radiantMapping:G23_RADIANT_MAPPING,traitSource:G23_TRAIT_SOURCE,anomalySource:G23_ANOMALY_SOURCE},
   carousel:{rules:CAROUSEL_RULES,costOdds:CAROUSEL_COST_ODDS},
   // B9: the frozen rules/content identity and the replay event format are part of the digested runtime content.
   versions:{rulesVersion:M8_VERSION.rulesVersion,contentVersion:M8_VERSION.contentVersion,replayFormatVersion:M8_VERSION.replayFormatVersion},

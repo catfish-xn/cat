@@ -1,8 +1,9 @@
+import {g23RadiantDefinitionId} from './g2-3-rewards';
 import { selectOpeningUnit } from './opening-unit';
 import { shareGeneratedJson } from './immutable-json';
 import { DEFAULT_BOARD, isDeploymentCell } from './board';
 import { freezeContent, isFrozenContent } from './content/freeze';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { lootReceiptId, lootOrbId, lootEntryId } from './loot-identity';
 import { MATCH_RULES, OPENING_INITIAL_STATE, SHOP_CATALOG } from './match-rules';
 import type { PersistentGrowth } from './match-types';
@@ -31,6 +32,7 @@ export type ItemAcquisitionSource =
   | { readonly kind: 'mechanic'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
+  | {readonly kind:'g23-item-converted';readonly itemId:string;readonly from:string;readonly to:string;readonly receiptId:string}
   | {readonly kind:'carousel-preparation-settled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[];readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'carousel-unit-claimed';readonly unitId:string;readonly receiptId:string;readonly upgrades:readonly UnitUpgradedEvent[]}
   | {readonly kind:'consumable-used';readonly record:import('./consumable-types').ConsumableUseRecord}
@@ -60,6 +62,7 @@ export interface ProvenanceCombatSettlement {
   readonly roundId: string; readonly combatId: string; readonly settlementId: string;
 }
 export interface ResourceProvenanceContext {
+  readonly g23RadiantRound?:number;
   readonly carouselReceipts?:readonly import('./carousel-types').CarouselReceipt[];
   readonly pendingCarouselUnitIds?:readonly string[];
   readonly carouselOpening?:boolean;
@@ -177,13 +180,6 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
     births.set(key, birth); assetIds.add(birth.id);
   };
-  for(const receipt of context.carouselReceipts??[]) {
-    requireValue(receipt.status==='granted'&&receipt.id===`${receipt.carouselId}:${receipt.seatId}`&&receipt.holdingSource===receipt.id&&receipt.unitId!==null&&receipt.itemInstanceId!==null&&!receiptIds.has(receipt.id),'carousel receipt');receiptIds.add(receipt.id);
-    const roundId=receipt.carouselId.slice(receipt.carouselId.lastIndexOf(':')+1),round=getCatalogRoundById(roundId==='1-1'?'1-2':roundId);
-    requireValue(round.ordinal<=context.throughRoundOrdinal&&SHOP_CATALOG.includes(receipt.definitionId)&&Object.hasOwn(ITEM_DEFINITIONS,receipt.itemId),'carousel identity');
-    add(`carousel-unit:${receipt.id}`,{kind:'unit',id:receipt.unitId,definitionId:receipt.definitionId,roundId:round.roundId});
-    add(`carousel-item:${receipt.id}`,{kind:'item',id:receipt.itemInstanceId,definitionId:receipt.itemId,roundId:round.roundId});
-  }
   for (const receipt of context.scheduleReceipts) {
     plainJson(receipt);
     keys(receipt, ['eventId', 'round', 'kind', 'itemIds', 'gold', 'unitId', 'definitionId']);
@@ -337,7 +333,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       } else {
         keys(entry.source, ['kind', 'receiptId']);
         requireValue(entry.source.kind === 'loot', 'unit source'); nonempty(entry.source.receiptId);
-        definitionId = takeBirth(`loot:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
+        definitionId = takeBirth(`${entry.source.kind}:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       }
       requireValue(index !== 0 || (entry.source.kind === 'opening'||entry.source.kind==='carousel'&&context.carouselOpening===true), 'missing opening');
       units.set(entry.unitId, { id: entry.unitId, definitionId, starLevel: 1 }); nextUnitSerial++;
@@ -387,6 +383,8 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : source.kind==='carousel'?`carousel-item:${source.receiptId}`:source.kind==='mechanic'?`mechanic:${source.receiptId}`:`loot:${source.receiptId}`;
       const definitionId = takeBirth(key, 'item', entry.itemId, entry.roundId);
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
+    } else if(entry.kind==='g23-item-converted'){
+      keys(entry,[...common,'itemId','from','to','receiptId']);requireValue(context.g23RadiantRound!==undefined&&getCatalogRoundById(entry.roundId).ordinal>=context.g23RadiantRound&&entry.receiptId==='g23:conqueror:15'&&items.get(entry.itemId)?.definitionId===entry.from&&g23RadiantDefinitionId(entry.from)===entry.to,'radiant conversion');items.set(entry.itemId,{id:entry.itemId,definitionId:entry.to});
     } else if (entry.kind === 'item-combined') {
       keys(entry, [...common, 'event']); keys(entry.event, ['type', 'consumedIds', 'itemId', 'definitionId']);
       // T12 permits combinations before/after settlement and during supply choices.
@@ -433,7 +431,7 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       requireValue(start <= index && Array.isArray(entry.sourceDeltas), 'combat start prefix');
       requireValue(start <= (firstLootBirth.get(entry.roundId) ?? index), 'loot before combat start');
       const suffix = entries.slice(start, index);
-      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind === 'item-combined' || fact.kind === 'consumable-used' || fact.kind === 'unit-upgraded'
+      requireValue(suffix.every(fact => fact.roundId === entry.roundId && (fact.kind==='g23-item-converted'||fact.kind === 'item-combined' || fact.kind === 'consumable-used' || fact.kind === 'unit-upgraded'
         || (fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'loot')), 'combat resource suffix');
       requireValue(start === entries.length || entries[start]?.kind !== 'unit-upgraded', 'combat start transaction boundary');
       const originalUnits = unitPrefixes.get(start)!;

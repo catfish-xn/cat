@@ -3,7 +3,7 @@ import { shareGeneratedJson } from './immutable-json';
 import { createOrbLayout, freezeOrbLayoutThroughRound } from './orb-layout';
 import { FINAL_ROUND } from './round-schedule';
 import { prepareMatchLoot } from './loot-runtime';
-import { createMatch, createCarouselMatch, useConsumable } from './match';
+import { createMatch, createCarouselMatch, useConsumable,claimG23Reward } from './match';
 import { canOperateMatch } from './operation-policy';
 import { canonicalContent } from './content';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from './match-rules';
@@ -163,7 +163,7 @@ export function runSharedMatchCommand(pool:SharedPoolState,state:MatchState,comm
   return transact(pool,state,(_draft,policy)=>{
     switch(command.type) {
       case 'useConsumable': return useConsumable(state,command.consumableId,command.target);
-      case 'settleRound': return applyRoundSettlement(state,command.receipt);
+      case 'settleRound': return applyRoundSettlement(state,command.receipt,policy);
       case 'startCombat': return startMatchCombat(state,policy);
       case 'step': {const next=stepMatch(state,policy);return {ok:true,...next};}
       case 'choose': return selectChoice(state,command.choiceId,command.generation,command.definitionId,policy);
@@ -249,4 +249,9 @@ export function refreshSharedShops(pool:SharedPoolState,states:readonly MatchSta
 /** Atomic catalog/overtime advance + free refresh; neither an infinite shop nor its RNG is published. */
 export function nextSharedRound(pool:SharedPoolState,states:readonly MatchState[],expectedRound:number):SharedPoolBatchResult {
   return refreshBatch(pool,states,expectedRound,true);
+}
+
+/** G23 gifts consume real pool copies; an empty pool resolves the gift to cost gold. */
+export function sharedClaimG23Reward(pool:SharedPoolState,state:MatchState,atomId:string,definitionId:string):SharedPoolResult{
+ return transact(pool,state,(_draft,policy)=>claimG23Reward(state,atomId,definitionId,policy));
 }

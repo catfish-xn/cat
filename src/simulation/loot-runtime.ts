@@ -4,7 +4,7 @@ import { LOOT_POLICY_VERSION } from './content/loot';
 import type { CombatState } from './combat-types';
 import { COMPONENT_POOL } from './component-pool';
 import { canonicalContent } from './content';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { ROUND_CATALOG } from './content/round-catalog';
 import { planPermanentItemGrant } from './item-grants';
 import { orderedUnresolvedLootChoices } from './loot-choice';

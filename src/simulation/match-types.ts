@@ -16,6 +16,7 @@ export interface Streak { readonly kind: 'win' | 'loss' | null; readonly count: 
 export type RoundKind = 'pvp' | 'pve' | 'supply';
 export interface PersistentGrowth { readonly unitId: string; readonly attackDamageBps: number }
 export interface RoundResult {
+  readonly mechanicReceiptPrefixLength?:number;
   readonly round: number; readonly roundId: string; readonly result: CombatResult | 'supply'; readonly combatTicks: number;
   readonly combatEventCount: number;
   readonly settlementId: string; readonly roundKind: RoundKind;

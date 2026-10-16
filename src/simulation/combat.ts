@@ -1,3 +1,8 @@
+import {getUnitForm} from './seat-mechanics/forms';
+import {spawnCombatUnit} from './seat-mechanics/combat-events';
+import {stampCombatStep} from './combat-effects';
+import { projectG23Summons,isG23Summon } from './g2-3-summons';
+import { g23FormStats } from './g2-3-forms';
 import { shareGeneratedDeclaration } from './immutable-json';
 import { freezeCombatDeclarations } from './combat-static';
 import { recordNeutralReceipts } from './neutral-receipts';
@@ -9,7 +14,7 @@ import { applyCombatStart } from './combat-effects';
 import type { GameState } from './game';
 import { getUnitStats } from './unit-stats';
 import { resolveAbility } from './combat-abilities';
-import { compareIds, eliminationResult, MAX_COMBAT_TICKS, type CombatState, type CombatStep, type CombatUnit } from './combat-types';
+import { compareIds, eliminationResult, MAX_COMBAT_TICKS, type CombatEvent,type CombatState, type CombatStep, type CombatUnit } from './combat-types';
 import { advanceCombatTick } from './combat-tick';
 export * from './combat-types';
 
@@ -26,7 +31,8 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 }
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
-function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatState {
+function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatStep {
+  preparationState=projectG23Summons(preparationState);
   const units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
@@ -37,7 +43,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     if (stats.unitKind === 'neutral' && (!neutral || neutral.definitionId !== unit.definitionId || neutral.encounterId !== unit.encounterId || unit.team !== 'enemy')) throw new RangeError('Invalid neutral combat identity');
     return [{ ...(neutral?.companionDefinitions ? {companionDefinitions:structuredClone(neutral.companionDefinitions)} : {}),
       ...(neutral?.attackCone ? {attackCone:structuredClone(neutral.attackCone)} : {}), ...compileCombatInitialInputs(unit.id, stats, ability, resolved), ...(unit.encounterId ? { encounterId: unit.encounterId } : {}), id: unit.id, definitionId: unit.definitionId, team: unit.team, starLevel: unit.starLevel,
-      cell: { ...unit.location.cell },
+      ...(getUnitForm(unit,preparationState.board)?{form:getUnitForm(unit,preparationState.board)!}:{}),cell: { ...unit.location.cell },
       attackDamage: stats.attack, attackRange: stats.attackRange,
       attackIntervalTicks: stats.attackIntervalTicks, cooldownTicks: 0, moveCooldownTicks: 0,
       armor: stats.armor, magicResist: stats.magicResist,
@@ -46,7 +52,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
-        maxHpBasis: { base: getUnitStats(unit.definitionId, unit.starLevel).health,
+        maxHpBasis: { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],
@@ -56,7 +62,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
   }).sort(compareIds);
   units.forEach(unit => freezeCombatDeclarations(unit, false, true));
   const result = eliminationResult(units);
-  return {
+  let state:CombatState={
     board: { ...preparationState.board, deploymentZones: {
       player: { ...preparationState.board.deploymentZones.player },
       enemy: { ...preparationState.board.deploymentZones.enemy },
@@ -66,10 +72,22 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
     rngState, rngDraws: 0, nextActionSeq: 0, units, tick: 0, maxTicks: MAX_COMBAT_TICKS,
     status: result === null ? 'running' : 'finished', result,
   };
+  const summons=state.units.filter(u=>isG23Summon(u));
+  state={...state,units:state.units.filter(u=>!isG23Summon(u))};
+  const events:CombatEvent[]=[];
+  for(const unit of summons){
+    const ownerId=unit.id.replace(/:g23-(sion|forge)$/, '');
+    const spawned=spawnCombatUnit(state,unit,{ownerId,sourceKind:'trait',definitionId:unit.definitionId==='g23-sion'?'black-rose':'junker-king',instanceId:unit.id,effectIndex:0},0);
+    state=spawned.state;events.push(...spawned.events);
+    if(unit.definitionId==='g23-sion')events.push({type:'bindingChanged',tick:0,unitId:unit.id,bound:true,reason:'combat-start'});
+  }
+  return stampCombatStep(state,events);
 }
-export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState); }
+export function createCombat(preparationState: GameState): CombatState { return snapshotCombat(preparationState).state; }
 export function createCombatWithEvents(preparation: GameState, strategy: StrategySnapshot, combatId: string, rngState = 42): CombatStep {
-  const started = applyCombatStart(snapshotCombat(preparation, strategy, combatId, rngState));
+  const spawned=snapshotCombat(preparation,strategy,combatId,rngState);
+  const start=applyCombatStart(spawned.state);
+  const started={state:start.state,events:[...spawned.events,...start.events]};
   for (const unit of started.state.units) if (unit.mechanismDefinitions)
     Object.assign(unit, { mechanismDefinitions: shareGeneratedDeclaration(structuredClone(unit.mechanismDefinitions)) });
   return started;

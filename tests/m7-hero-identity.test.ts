@@ -52,15 +52,15 @@ describe('M7 hero identity (G01)', () => {
       expect(archive[hero.id].cost, hero.id).toBe(hero.cost);
       for (const trait of archive[hero.id].traits) expect(S13_TRAIT_ZH[trait], trait).toBeTruthy();
       const open = heroTraitTags(hero.id).filter(label => label.open).map(label => label.name);
-      const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
-      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(14);
+      const names = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]]))};
+      expect(Object.keys(TRAIT_DEFINITIONS)).toHaveLength(25);
       expect(open.sort()).toEqual(hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id)).map(id => names[id]).sort());
     }
   });
-  it('opens all fourteen content traits for all forty-eight G2-2 heroes', () => {
-    const names = Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]]));
+  it('opens all twenty-five enabled traits for all sixty G2-3 heroes', () => {
+    const names = {...Object.fromEntries(Object.values(TRAIT_DEFINITIONS).map(t=>[t.id,t.name])),...Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name,id])=>[id,S13_TRAIT_ZH[name]]))};
     const observed = new Set<string>();
-    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(48);
+    expect(Object.values(M5_UNIT_DEFINITIONS)).toHaveLength(60);
     for (const hero of Object.values(M5_UNIT_DEFINITIONS)) {
       const expected = hero.traits.filter(id => Object.hasOwn(TRAIT_DEFINITIONS, id));
       expected.forEach(id => observed.add(id));

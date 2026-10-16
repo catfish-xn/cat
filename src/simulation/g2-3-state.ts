@@ -1,0 +1,73 @@
+import {G23_CONQUEROR_CHESTS,g23ConquerorReward} from './content/g2-3-policy';
+import {g23RewardAtoms,type G23RewardClaim} from './g2-3-rewards';
+import {UNIT_DEFINITIONS} from './units';
+import {getMultiplayerRoundByOrdinal} from './multiplayer-round';
+import type {MatchState} from './match-types';
+import type {G23MatchProgress} from './g2-3-match-progress';
+import {emptySeatMechanics} from './seat-mechanics/state';
+import {g23Laboratories} from './g2-3-experiment';
+import {deriveTraits} from './trait-snapshot';
+/** The DTO is reconstructed from disjoint container fields; never persisted alongside them. */
+export function readG23Progress(state:{readonly seatMechanics?:MatchState['seatMechanics'];readonly g23?:G23MatchProgress}):G23MatchProgress|undefined{
+ if(state.g23)return state.g23; // immutable combat-input DTO, never a MatchState field
+ const m=state.seatMechanics;if(!m?.seat.academy||!m.seat.junkerKing||!m.seat.alchemist)return undefined;
+ const h=(m.hidden.progress??{version:'g2-3-progress-v1',seed:0,rngState:0,rngDraws:0,economyReceipts:[]}) as Omit<G23MatchProgress,'conquest'|'sponsored'|'chem'|'junkerRounds'|'junkerPurchases'|'itemReceipts'|'rewardClaims'|'rewards'>;
+ const {rewards,...c}=m.seat.conqueror as Omit<G23MatchProgress['conquest'],'radiantConversion'>&{rewards:G23MatchProgress['rewards']};
+ const a=m.seat.academy as {sponsored:readonly string[]};
+ const j=m.seat.junkerKing as {rounds:number;purchases:G23MatchProgress['junkerPurchases']};
+ const rewardClaims:G23RewardClaim[]=[];
+ for(const r of m.receipts)for(const b of rewards){
+  const atoms=g23RewardAtoms(b,h.seed);
+  for(const atom of atoms){
+   const prefix=atom.id+':copy:';
+   const marketFirst=r.kind==='choice'&&r.choiceKind==='blackMarket'&&r.receiptId===b.id&&!r.skipped&&atom===atoms.find(a=>a.kind==='item');
+   if(!r.receiptId.startsWith(prefix)&&!marketFirst)continue;
+   const copy=marketFirst?0:Number(r.receiptId.slice(prefix.length));
+   const definitionId=r.kind==='item'||r.kind==='unit'||r.kind==='consumable'?r.definitionId:r.kind==='choice'?r.optionId:'';
+   const instanceId=r.kind==='item'||r.kind==='choice'?r.itemId:r.kind==='unit'?r.unitId:r.kind==='consumable'?r.consumableId:null;
+   rewardClaims.push({id:r.receiptId,bundleId:b.id,atomId:atom.id,copy,round:r.round,kind:atom.kind,definitionId,instanceId,gold:atom.gold});
+  }
+ }
+ return {...h,rewards,rewardClaims,conquest:{...c,radiantConversion:m.seat.radiantConversion as boolean},sponsored:a.sponsored,chem:m.seat.alchemist as G23MatchProgress['chem'],junkerRounds:j.rounds,junkerPurchases:j.purchases,
+ itemReceipts:m.receipts.flatMap(r=>r.kind==='item'&&r.source==='academy'?[{id:r.receiptId,kind:'academy' as const,tier:Number(r.receiptId.split(':').at(-1)),round:r.round,itemId:r.itemId,definitionId:r.definitionId}]:[])};
+}
+export function writeG23Progress<T extends Pick<MatchState,'seatMechanics'>>(state:T,p:G23MatchProgress):T{
+ const m=state.seatMechanics??emptySeatMechanics();
+ const {conquest,sponsored,chem,junkerRounds,junkerPurchases,itemReceipts:_derived,rewardClaims:_selectors,rewards,...hidden}=p;
+ const {radiantConversion,...conqueror}=conquest;
+ return {...state,seatMechanics:{...m,seat:{...m.seat,conqueror:{...conqueror,rewards},academy:{sponsored},alchemist:chem,junkerKing:{rounds:junkerRounds,purchases:junkerPurchases},radiantConversion},hidden:{...m.hidden,progress:hidden}}};
+}
+export function updateG23Cells(state:MatchState):MatchState{
+ const p=readG23Progress(state);if(!p)return state;
+ const tier=deriveTraits(state.preparation,'player').find(t=>t.traitId==='experiment')?.tier??0;
+ return {...state,seatMechanics:{...state.seatMechanics!,seat:{...state.seatMechanics!.seat,experimentCells:g23Laboratories(p.seed,'player',tier)}}};
+}
+/** Generic receipts authorize every grant; internal selectors can never mint a second resource birth. */
+export function validateG23MechanicLinks(state:MatchState):void{
+ const p=readG23Progress(state);if(!p)throw new RangeError('Missing G23 mechanics');
+ const check=(v:unknown)=>{if(!v)throw new RangeError('Invalid G23 mechanic receipt link');};
+ const receipts=state.seatMechanics!.receipts;
+ const expectedGold=new Map<string,{amount:number;round:number;source:string}>();
+ for(const action of p.economyReceipts)if(action.kind==='battle'){
+  if(action.facts.highRollerGold)expectedGold.set(`g23:high-roller:${action.facts.battleId}`,{amount:action.facts.highRollerGold,round:action.facts.round,source:'high-roller'});
+  for(const bundleId of action.bundles){
+   const chest=G23_CONQUEROR_CHESTS[Number(bundleId.split(':').at(-1))-1],amount=Number(g23ConquerorReward(chest).Gold??0);
+   if(amount)expectedGold.set(`${bundleId}:gold`,{amount,round:action.facts.round,source:'conqueror-chest'});
+  }
+ }
+ for(const [id,expected] of expectedGold){const r=receipts.find(r=>r.receiptId===id);check(r?.kind==='gold'&&r.amount===expected.amount&&r.round===expected.round&&r.source===expected.source);}
+ for(const claim of p.rewardClaims){
+  const r=receipts.find(r=>r.receiptId===claim.id);check(r&&r.round===claim.round);
+  if(!r)continue;
+  if(claim.kind==='item')check((r.kind==='item'&&r.definitionId===claim.definitionId&&r.itemId===claim.instanceId)||(r.kind==='choice'&&r.optionId===claim.definitionId&&r.itemId===claim.instanceId));
+  else if(claim.kind==='unit'||claim.kind==='duplicator')check(r.kind==='unit'&&r.definitionId===claim.definitionId&&r.unitId===claim.instanceId&&(r.resolution!=='gold'||r.gold===UNIT_DEFINITIONS[r.definitionId]?.cost));
+  else if(claim.kind==='tool')check(r.kind==='consumable'&&r.definitionId===claim.definitionId&&r.consumableId===claim.instanceId);
+  else check(r.kind==='gold'&&r.amount===claim.gold);
+ }
+ for(const purchase of p.junkerPurchases){const r=receipts.find(r=>r.receiptId===purchase.id);check(r?.kind==='choice'&&r.choiceKind==='armory'&&r.optionId===purchase.upgrade&&r.price===purchase.cost&&r.round===purchase.round);}
+ for(const r of receipts){
+  check(r.round<=state.round&&r.roundId===getMultiplayerRoundByOrdinal(r.round).roundId);
+  if(r.source==='high-roller'||r.source==='conqueror-chest')check(expectedGold.has(r.receiptId));
+  if(r.source==='conqueror'||r.source==='black-market')check(p.rewardClaims.some(c=>c.id===r.receiptId)||(r.kind==='choice'&&r.choiceKind==='blackMarket'&&p.economyReceipts.some(e=>e.kind==='market'&&e.offerId===r.receiptId)));
+ }
+}

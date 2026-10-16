@@ -51,8 +51,9 @@ function applyFrozenStatus(ctx: AbilityContext, target: S13Unit, source: Source,
   target.mechanismState = { ...target.mechanismState!, statuses: result.groups };
   const group = result.groups.find(g => g.contributions.some(c => c.key === identity.key))!;
   // New kinds retain their frozen group fact; a legacy status event only supplies its removal/display anchor.
+  const applied=group.contributions.find(c=>c.key===identity.key)!.application;
   const status: CombatStatus = { key: identity.key, source, kind: application.kind === 'stun' ? 'stun' : application.kind === 'sunder' ? 'armorReduction' : 'resistanceFlat',
-    amount: application.modifier?.value.kind === 'constant' ? application.modifier.value.amount : application.magnitudeBps,
+    amount: applied.modifier?.value.kind === 'constant' ? applied.modifier.value.amount : applied.magnitudeBps,
     startsAtTick: group.contributions.find(c => c.key === identity.key)!.appliedAtTick, expiresAtTick: group.contributions.find(c => c.key === identity.key)!.expiresAtTick ?? 1201, contributionKeys: [identity.key] };
   target.statuses=[...target.statuses.filter(s=>s.key!==status.key),status].sort((a,b)=>compareText(a.key,b.key));
   ctx.events.push(changedStatusEvent(ctx.tick, result.groups, [identity.key], result.refreshed));

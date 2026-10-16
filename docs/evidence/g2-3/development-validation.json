@@ -1,0 +1,100 @@
+{
+  "status": "PR134-integrated-local-regressions-passed",
+  "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
+  "identity": {
+    "contentDigest": "fnv1a32-utf16:5789146c",
+    "lootReplayDigest": "fnv1a32-utf16:9d23a2a9",
+    "rulesVersion": "s13-g2-3-v1",
+    "contentVersion": "s13-14.24b-g2-3-v1"
+  },
+  "targetTests": {
+    "files": [
+      "tests/g2-3-content.test.ts",
+      "tests/g2-3-skills.test.ts",
+      "tests/g2-3-traits.test.ts",
+      "tests/g2-3-identity.test.ts",
+      "tests/g2-3-anomalies.test.ts",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/m7-hero-identity.test.ts",
+      "tests/g2-2-ability-display.test.ts",
+      "tests/shop.test.ts",
+      "tests/tp-shared-pool.test.ts",
+      "tests/server/round-commit.test.ts",
+      "tests/m8-b8-live-reveal.test.ts",
+      "tests/g2-3-integration.test.ts",
+      "tests/g2-3-netcode-hooks.test.ts"
+    ],
+    "passed": 255,
+    "failed": 0,
+    "note": "14-file batch passed before the added armory-refresh regression; final regression is recorded separately below."
+  },
+  "serverEntry": {
+    "passed": true,
+    "comparedStates": 165,
+    "traceHashes": {
+      "state": "3af858c811b9447367e85264fea237dcfa00a3bf114b747fda5b1ca3acee3ee2",
+      "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+      "rng": "85d15d6ac07bd28de6c9066ae52fce2e502df72b6df9b6c5a47c8944f925daee"
+    },
+    "scope": "seed 42 existing first battle; browser-target bundle executed in ordinary Node, not a live browser or multiplayer acceptance"
+  },
+  "fixtureEvidence": [
+    "release-audit.json",
+    "input-fixture-audit.json",
+    "live-reveal-audit.json",
+    "recovery-regression-audit.json"
+  ],
+  "fullTestRuns": 1,
+  "timingTestRuns": 0,
+  "pending": [
+    "最终提交后仅执行一次test:timing，结果记录于PR，不再改head",
+    "Claude服务器buildReceipt转发proposal.g23Facts（禁止修改server，本PR仅合同交接）"
+  ],
+  "typecheck": "passed",
+  "independentAudit": {
+    "B8": "公共站位交换保留同tick死亡覆盖；Loris/Zyra分别覆盖实际部分失败的有/无掉落来源，附旧新源码及事件字节证据",
+    "summons": "两侧Forge/预留barrel不维持阵营，Sion维持阵营；召唤物不增加玩家伤害；Forge生成/复活碰撞按己方坐标镜像",
+    "settlement": "真实公共双边提案的g23Facts通过严格白名单，未知字段与重复结算拒绝",
+    "paidArmory": "seed4公共cannon路线5-1招募Rumble，三场后支付5金升级，5-5结算text/object恢复一致，±5金篡改拒绝、重复step惰性；准备期费用不重复扣减",
+    "integration": "单一机制容器、目录超集、radiantOf、免费超时、有池/空池共享结算、召唤物不撑胜负和ID防复用",
+    "affectedRegressions": "旧恢复/库存/回放12文件：296通过、商店旧目录2项已按独立G23目录修正；4文件回归118通过。"
+  },
+  "integrationBaseCommit": "19aa9f1",
+  "additionalValidation": {
+    "integrationPrivateView": {
+      "files": 2,
+      "passed": 32,
+      "failed": 0
+    },
+    "legacyCatalog": {
+      "files": 4,
+      "passed": 118,
+      "failed": 0
+    },
+    "fixtureSourceFilesVerified": 232,
+    "B8Oracle": "站位保留规则：seed48在3-7保留(1,7)的unit-9，消费候选unit-23和unit-5；旧ID排序假设已修正"
+  },
+  "fullTestResult": {
+    "head": "22e7cfe7ca9e09d3ae24683740e1489eee118193",
+    "filesPassed": 231,
+    "filesFailed": 18,
+    "testsPassed": 3333,
+    "testsFailed": 40,
+    "durationSeconds": 672.26,
+    "note": "唯一一次本地全套在此提交上暴露回归；随后只重跑失败文件，不重复全套。最终head的自动CI结果记录于PR。"
+  },
+  "finalLocalRegression": {
+    "allOriginalFailingFilesPassed": true,
+    "b5": {
+      "files": 1,
+      "passed": 8
+    },
+    "capacityAndTransfer": {
+      "files": 2,
+      "passed": 25
+    },
+    "mageReplayAndOfflineTransfer": "通过，包含逐tick恢复",
+    "typecheck": "通过",
+    "note": "早期目标批次的失败均已逐项修复并在对应文件回归通过；不将旧全套宣称为最终head全绿。"
+  }
+}

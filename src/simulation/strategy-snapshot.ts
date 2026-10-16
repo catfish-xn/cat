@@ -1,7 +1,16 @@
+import {g23JunkerEffects} from './g2-3-junker';
+import { g23ExperimentEffects } from './g2-3-experiment';
+import { projectG23Summons,g23SionTeam } from './g2-3-summons';
+import { G23_SUMMON_POLICY } from './content/g2-3-summons';
+import { getCatalogRoundByOrdinal } from './round-selectors';
+import { g23ConversionProgramValues } from './g2-3-combat';
+import { modifier,stat,trigger } from './content/item-programs';
+import { g23FormStats } from './g2-3-forms';
+import { g23AnomalyProgram, g23TraitProgram,g23ExperimentProgram } from './g2-3-programs';
 import { compileAugmentEffect } from './augment-effects';
 import { g22Equipment, scrapConversions, g22TraitEffects } from './strategy-g2-2';
 import { validateItemProgram, type BoundItemProgram } from './m8/item-program';
-import type { CombatStrategyInputs } from './combat-input';
+import {readCombatStrategyInputs,type CombatStrategyInputs } from './combat-input';
 import type {
   Effect, ChoiceDefinition, ItemDefinition, SourcedEffect, StrategySnapshot, TraitDefinition,
 } from './strategy-types';
@@ -13,7 +22,7 @@ import { resolveAbility } from './combat-abilities';
 import { deriveTraits } from './trait-snapshot';
 import { makeSourcedEffects, resolveEffects } from './effects';
 import { TRAIT_DEFINITIONS } from './content/traits';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 
@@ -35,6 +44,8 @@ function lookup<T>(catalog: Readonly<Record<string, T>>, id: string): T {
  * with no links to Match or content records and no board/bench decisions left for the tick.
  */
 export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: StrategyCatalog = DEFAULT_CATALOG): StrategySnapshot {
+  state=readCombatStrategyInputs(state);
+  state={...state,preparation:projectG23Summons(state.preparation)};
   const traits = [...deriveTraits(state.preparation, 'player', catalog.traits), ...deriveTraits(state.preparation, 'enemy', catalog.traits)];
   const boardUnits = state.preparation.units.filter(unit => unit.location.kind === 'board')
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
@@ -91,14 +102,37 @@ export function buildStrategySnapshot(state: CombatStrategyInputs, catalog: Stra
         bindItem(definition, `enemy:${state.round}:${unit.id}:${item.slot}`);
       }
     }
+    if(unit.definitionId==='rumble'&&unit.team==='player')sources.push(...makeSourcedEffects(unit.id,'trait','junker-king',unit.id+':junker',(unit.definitionId==='rumble'?g23JunkerEffects(state,unit.id):[])));
+    sources.push(...makeSourcedEffects(unit.id,'trait','experiment',unit.id+':laboratory',g23ExperimentEffects(state,unit)));
+    if(unit.definitionId==='g23-sion'){
+      const rose=g23SionTeam(state.preparation,unit.team),stage=getCatalogRoundByOrdinal(state.round).stage,index=Math.max(0,Math.min(4,stage-2));
+      const stages=rose.tier>=5?G23_SUMMON_POLICY.sion.tier5StageBps:rose.tier===4?G23_SUMMON_POLICY.sion.tier4StageBps:G23_SUMMON_POLICY.sion.tier3StageBps;
+      const bps=Math.floor(stages[index]*(10000+rose.stars*1500)/10000)-10000;
+      sources.push(...makeSourcedEffects(unit.id,'trait','black-rose',unit.id,[{kind:'statFlat',stat:'maxHp',amount:Math.max(0,Math.floor(1000*bps/10000))},{kind:'mechanic',mechanic:'g23Sion',values:{tier:rose.tier}}]));
+    }
     const growth = state.persistentGrowth.find(entry => entry.unitId === unit.id);
     if (growth) sources.push(...makeSourcedEffects(unit.id, 'ability', 'tristana-ability', `persistent:${unit.id}`, [{ kind: 'statPercentBps', stat: 'attackDamage', bps: growth.attackDamageBps }]));
-    const base = getUnitStats(unit.definitionId, unit.starLevel);
+    const anomaly=state.anomalyBinding?.unitId===unit.id?state.anomalyBinding.definitionId:null;
+    const bonus=anomaly==='freestyling'?Math.round(traits.filter(t=>t.team===unit.team&&t.tier>0&&lookup(catalog.traits,t.traitId).tiers[0].threshold>1).length*450)
+      :anomaly==='force-of-friendship'?boardUnits.filter(x=>x.team===unit.team).reduce((n,x)=>n+(x.starLevel===3?800:x.starLevel*100),0)
+      :anomaly==='comeback-story'?Math.floor((100-(state.playerHp??100))/10)*500:0;
+    if(bonus&&state.anomalyBinding)sources.push(...makeSourcedEffects(unit.id,'anomaly',anomaly!,state.anomalyBinding.choiceId+':scaling',[{kind:'mechanic',mechanic:'damageAmp',values:{bps:bonus}}]));
+    const base = unit.location.kind==='board'?g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row):getUnitStats(unit.definitionId,unit.starLevel);
     let resolved = resolveEffects(base, resolveAbility(base.abilityId, unit.starLevel), sources);
     const family = (resolved.mechanics ?? []).find(m => m.mechanic === 'family');
     if (family) {
       const maxMana = Math.floor(resolved.stats.maxMana * (10000 - family.values.manaReductionBps) / 10000);
       resolved = { ...resolved, stats: { ...resolved.stats, maxMana, initialMana: Math.min(resolved.stats.initialMana, maxMana) } };
+    }
+    for(const m of resolved.mechanics ?? []) {
+      const program=m.mechanic==='g23Junker'?{modifiers:m.values.titan?[modifier('damageReduction',9000,'bps')]:[]}:m.mechanic==='g23Experiment'?g23ExperimentProgram(m.values):m.mechanic==='g23Trait'?g23TraitProgram(m.source.definitionId,m.values.tier,resolved.stats.maxMana):m.mechanic==='g23Anomaly'?g23AnomalyProgram(m.source.definitionId,resolved.stats.maxMana):null;
+      if(m.mechanic==='g23Anomaly'){
+        const conversion=g23ConversionProgramValues(m.source.definitionId,resolved.stats.armor,resolved.stats.magicResist);
+        if(conversion)itemPrograms.push({source:{...m.source,parentItemInstanceId:null},program:{modifiers:[modifier(conversion.stat,conversion.amount)]}});
+        if(['power-absorption','energy-absorption'].includes(m.source.definitionId))for(const ally of boardUnits.filter(x=>x.id!==unit.id&&x.team===unit.team))
+          itemPrograms.push({source:{...m.source,instanceId:JSON.stringify([m.source.instanceId,'absorb',ally.id]),parentItemInstanceId:null},program:{triggers:[trigger({id:'absorb',event:'counter-updated',effects:[stat({...modifier(m.source.definitionId==='power-absorption'?'attackDamage':'abilityPower',0),value:{kind:'counter',counterId:'g23Absorb',perCount:1}})]})]}});
+      }
+      if(program&&Object.keys(program).length){validateItemProgram(program);itemPrograms.push({source:{...m.source,parentItemInstanceId:null},program});}
     }
     const mechanics = (resolved.mechanics ?? []).map(mechanic => {
       if (mechanic.mechanic !== 'bulkyBuddies') return mechanic;

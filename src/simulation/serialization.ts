@@ -1,3 +1,9 @@
+import {getUnitForm} from './seat-mechanics/forms';
+import {countsG23SurvivorDamage} from './g2-3-summons';
+import { g23RoundGold } from './g2-3-settlement';
+import { projectG23Summons } from './g2-3-summons';
+import { validateG23State } from './g2-3-combat';
+import { G23_ABILITIES } from './content/g2-3-abilities';
 import { freezeCombatDeclarations } from './combat-static';
 import { shareParsedDeclaration, shareParsedJson } from './immutable-json';
 import { validateNeutralCombat } from './neutral-restore';
@@ -12,7 +18,7 @@ import { compileItemCrit } from './m8/item-program';
 import type { MatchState } from './match-types';
 import { CONTENT_DIGEST, assertParsedContent, canonicalContent, equalValidatedContent } from './content';
 import { UNIT_DEFINITIONS } from './units';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { FINAL_ROUND, ROUND_PREPARATION_RULES, getRoundKind, getRoundSchedule } from './round-schedule';
@@ -98,6 +104,7 @@ export function restoreMatch(input: unknown): MatchState {
     contentStatus:roundDefinition.kind === 'pve' ? ROUND_PREPARATION_RULES.pveContent : 'not-pve',enemies:enemyProjection.units,
   }), 'round preparation freeze');
   requireValue(state.level === 9 ? state.xp === 0 : state.xp < XP_TO_NEXT_LEVEL[state.level], 'current XP');
+  requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
   record(raw.shop); requireValue(typeof raw.shop.locked === 'boolean', 'shop lock'); integer(raw.shop.generation, 1); list(raw.shop.slots); requireValue(raw.shop.slots.length === 5, 'shop size');
   for (const slot of state.shop.slots) {
     record(slot); requireValue(slot.status === 'purchased' || slot.status === 'available', 'shop slot');
@@ -182,7 +189,7 @@ export function restoreMatch(input: unknown): MatchState {
   let streak = { kind: null as 'win' | 'loss' | null, count: 0 };
   let experienceAfter = totalExperience(OPENING_INITIAL_STATE.level,OPENING_INITIAL_STATE.xp);
   for (const [i, result] of state.roundResults.entries()) {
-    record(result); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
+    record(result); integer(result.mechanicReceiptPrefixLength); requireValue(result.mechanicReceiptPrefixLength!<=(state.seatMechanics?.receipts.length??0), 'mechanic receipt prefix'); requireValue(result.round === i + 1 && result.roundId === getCatalogRoundByOrdinal(i+1).roundId && result.settlementId === `round-${i+1}-settled` && result.roundKind === getRoundKind(i+1), 'history round/identity');
     for (const field of ['round','combatTicks','combatEventCount','income','goldBefore','goldAfter','xpRequested','xpAwarded','levelBefore','levelAfter','xpBefore','xpAfter','hpBefore','hpAfter','baseDamage','survivingEnemyCount','playerDamage','hpLost']) integer(result[field as keyof typeof result]);
     requireValue(result.hpBefore === (i === 0 ? 100 : state.roundResults[i-1].hpAfter), 'history HP chain');
     requireValue(same(result.streakBefore, streak), 'history streak before');
@@ -212,7 +219,9 @@ export function restoreMatch(input: unknown): MatchState {
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   validateMatchEquipment(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
-  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
+  if(basis&&settled)requireValue(state.roundResults.at(-1)!.mechanicReceiptPrefixLength===basis.mechanicReceiptPrefixLength,'settlement mechanic boundary');
+  // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
+  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
@@ -226,12 +235,12 @@ export function restoreMatch(input: unknown): MatchState {
     record(combat.strategy); list(combat.strategy.units); list(combat.strategy.traits); list(combat.units);
     requireValue(basis, 'missing combat input');
     const expectedStrategy = compileRestoredStrategy(basis.inputs, typeof input === 'string' && !input.includes('-0'));
-    const combatPreparation = basis.inputs.preparation, combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
+    const combatPreparation = projectG23Summons(basis.inputs.preparation), combatOrigins = new Map(combatPreparation.units.map(unit => [unit.id,unit]));
     requireValue(same(combat.strategy, expectedStrategy), 'resolved strategy');
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
     const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
     requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
-    if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>unit.alive&&unit.team==='enemy').length, 'combat settlement result'); }
+    if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>countsG23SurvivorDamage(unit)&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();
@@ -239,6 +248,7 @@ export function restoreMatch(input: unknown): MatchState {
       record(unit); requireValue(combatOrigins.get(unit.id)?.location.kind === 'board', 'combat unit origin');
       const origin = combatOrigins.get(unit.id)!; const resolved = expectedStrategy.units.find(value => value.unitId === unit.id)!;
       if (unit.ability.kind === 's13') { requireValue(unit.attackDamageBase === resolved.attackDamageBase && unit.attackDamagePercentBps === resolved.attackDamagePercentBps && unit.abilityPower === resolved.abilityPower && unit.baseAttackSpeedBps === (resolved.stats.baseAttackSpeedBps ?? Math.floor(200000 / resolved.stats.attackIntervalTicks)) && unit.attackSpeedBonusBps === (resolved.stats.attackSpeedBonusBps ?? 0), 'resolved dynamic bases'); requireValue(same(unit.mechanics, resolved.mechanics), 'resolved mechanics'); requireValue(same(unit.itemPrograms ?? [], resolved.itemPrograms ?? []), 'resolved item programs'); }
+      requireValue((unit.form??null)===getUnitForm(origin,combatPreparation.board),'frozen unit form');
       requireValue(unit.team === origin.team && unit.definitionId === origin.definitionId && unit.starLevel === origin.starLevel, 'combat unit identity');
       const { stats } = resolved;
       if (unit.ability.kind !== 's13') requireValue(unit.maxHp === stats.health, 'resolved legacy maximum health');
@@ -255,7 +265,7 @@ export function restoreMatch(input: unknown): MatchState {
       if (!unit.alive) requireValue(unit.targetId === null && unit.mana === 0 && unit.shield === 0 && unit.cooldownTicks === 0 && unit.moveCooldownTicks === 0, 'dead fields');
       if (unit.ability.kind === 's13') validateMechanisms(unit, combat.units, combat.tick, combat.combatId!, combat.status === 'finished', combat.nextActionSeq!, neutralStatuses, typeof input === 'string');
       record(unit.ability); integer(unit.ability.amount); requireValue(['damage','selfShield','s13'].includes(unit.ability.kind), 'ability kind');
-      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same);
+      validateM5Runtime(unit, combat.tick, combatIds, combat.units, combat.combatId!, neutralStatuses, same,combat.nextActionSeq!);
       list(unit.sources); list(unit.triggers); list(unit.effectRuntime);
       const sourceKeys = new Set<string>();
       for (const source of unit.sources) { requireValue(source.key === effectKey(source.source) && source.source.ownerId === unit.id && !sourceKeys.has(source.key), 'source key'); sourceKeys.add(source.key); cloneEffect(source.effect); }
@@ -296,8 +306,9 @@ export function restoreMatch(input: unknown): MatchState {
 export function serializeMatch(state: MatchState): string { return canonicalContent(restoreMatch(state)); }
 
 /** Runtime records are checked separately from frozen stats; restoring never executes them. */
-function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean): void {
+function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: number, combatIds: Set<string>, combatUnits: readonly import('./combat-types').CombatUnit[], combatId: string, neutralStatuses: ReadonlySet<string>, same: (a: unknown, b: unknown) => boolean,nextActionSeq:number): void {
   if (unit.ability.kind !== 's13') return;
+  validateG23State(unit,combatUnits,tick,nextActionSeq);
   requireValue(!unit.itemPrograms?.length || unit.spellCrit !== undefined, 'missing item critical projection');
   if (unit.spellCrit !== undefined) {
     record(unit.spellCrit); list(unit.spellCrit.itemSources); list(unit.spellCrit.nonItemSources);
@@ -392,7 +403,7 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     record(status); origin(status.source, neutralStatuses.has(status.key)); id(status.key); integer(status.startsAtTick); integer(status.expiresAtTick);
     requireValue(Number.isSafeInteger(status.amount) && (status.amount >= 0 || status.kind === 'resistanceFlat') && !statusKeys.has(status.key) && status.expiresAtTick > tick && status.startsAtTick <= tick + 1, 'status range');
     requireValue(['stun','damageReduction','armorReduction','resistanceFlat','attackSpeed','abilityPower','channel','redirect'].includes(status.kind), 'status kind');
-    requireValue(status.kind !== 'abilityPower' && (status.kind !== 'attackSpeed' || status.source.definitionId === 'singed-ability' || status.source.definitionId === 'firelight'), 'unsupported dynamic status source');
+    requireValue(status.kind !== 'abilityPower' && (status.kind !== 'attackSpeed' || status.source.definitionId === 'singed-ability' || status.source.definitionId === 'firelight' || status.source.definitionId === 'jayce-ranged-ability'), 'unsupported dynamic status source');
     requireValue(Math.abs(status.amount) <= 1000000, 'status arithmetic bound');
     if (['damageReduction','armorReduction','redirect'].includes(status.kind)) requireValue(status.amount <= 10000, 'status bps');
     requireValue(status.key.startsWith(sourceKey(status.source)) || status.contributionKeys?.includes(status.key) && unit.mechanismState!.statuses.some(g=>g.contributions.some(c=>c.key===status.key&&canonicalSource(c.source)===canonicalSource(asSource(status.source)))), 'status key/source'); statusKeys.add(status.key);
@@ -407,10 +418,11 @@ function validateM5Runtime(unit: import('./combat-types').CombatUnit, tick: numb
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g23Heal','g23Magic','g23Physical','g23True','g23Smeech'].includes(task.kind), 'task kind');
     if (task.kind.startsWith('g2')) {
       const expected = ({g22Vex:'vex',g22Curse:'morgana',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && !task.cancellable, 'G2 task owner');
+      if(task.kind.startsWith('g23')) requireValue((Object.hasOwn(G23_ABILITIES, task.source.definitionId)||champion(owner)==='rumble'&&mechanic(owner,'g23Junker','rod')===1||task.kind==='g23True'&&mechanic(owner,'g23Experiment','zyra')>0) && task.source.definitionId === owner.ability.id && task.source.sourceKind === 'ability', 'G23 task source');
       if(expected) requireValue(champion(owner) === expected && task.source.sourceKind === 'ability' && task.source.definitionId === expected + '-ability', 'G2 skill task');
       if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
       if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');

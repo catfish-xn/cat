@@ -1,4 +1,4 @@
-import { ITEM_DEFINITIONS } from '../content/items';
+import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { planPermanentItemGrant } from '../item-grants';
 import type { UnitLootPolicy } from '../loot-runtime';
 import type { FrozenDirectDrop } from '../loot-types';
