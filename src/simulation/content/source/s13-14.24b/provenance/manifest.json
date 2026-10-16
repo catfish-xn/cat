@@ -165,5 +165,209 @@
     "sourceReviewedEquipment": 44,
     "verifiedRecipes": 36
   },
-  "localizationStatus": "outside-B1-legacy-followup"
+  "localizationStatus": "outside-B1-legacy-followup",
+  "extendedSourceAcquisition": {
+    "id": "SRC-MAP22",
+    "archivePatch": "14.24",
+    "referencePatch": "S13-14.24b",
+    "status": "archived-and-hash-verified",
+    "downloadTimestampBasis": "Local last-write time of the completed curl download; upstream Last-Modified was not preserved.",
+    "selection": "All nine source files archived in full; no subset extraction or JSON reserialization.",
+    "patchBoundary": "14.24 client values precede the B patch. B-patch differences (including Conqueror 5% per chest) remain explicit patch-note overrides under provenance/source-policy.json; no override is introduced or changed by SRC-MAP22.",
+    "evidencePath": "docs/evidence/g2-3/README.md",
+    "runtimeContentChanged": false,
+    "digestChanged": false,
+    "sources": [
+      {
+        "id": "map22.bin.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/data/maps/shipping/map22/map22.bin.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:23:56.536483Z",
+        "bytes": 54544106,
+        "sha256": "09a9219647c08e70a8eb4d2ccbc35a9afe21934bc5279b4da2d05ca076339e0f",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/map22.bin.json.gz",
+        "archiveBytes": 4427277,
+        "archiveSha256": "743bf3668141be28d44b39160dcfc0da0aca0e919e6aa14513a0b3feb666b2b0",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "matched-dispatch-byte-count-and-hash-prefix-suffix",
+          "archiveRoundTripVerified": true,
+          "reference": "SRC-MAP22 user dispatch (full reference SHA256 not supplied)",
+          "expectedBytes": 54544106,
+          "expectedSha256Prefix": "09a92196",
+          "expectedSha256Suffix": "9e0f"
+        },
+        "purpose": "G2-3 GoopBuff 异变、四名双形态单位 FormSwapperStats、ArmoryTable_TFT13_Warband_Cashout1…20 / CashoutBreakpoints、TFT13_Crime_BlackMarket1…8 及 Loot 权重表的完整原始来源。"
+      },
+      {
+        "id": "en_us.tft.stringtable.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/en_us/data/menu/en_us/tft.stringtable.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:24:53.621599Z",
+        "bytes": 15272538,
+        "sha256": "4951a0356e8d9ac7f59b3b54360c964d65baea8112bcbd8da23b8540df07a443",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/en_us.tft.stringtable.json.gz",
+        "archiveBytes": 2740724,
+        "archiveSha256": "1a96281672670a865cea018b7b2c447ead04e74b7a6800984749cb0f71732e8e",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "matched-dispatch-byte-count-and-hash-prefix-suffix",
+          "archiveRoundTripVerified": true,
+          "reference": "SRC-MAP22 user dispatch (full reference SHA256 not supplied)",
+          "expectedBytes": 15272538,
+          "expectedSha256Prefix": "4951a035",
+          "expectedSha256Suffix": "a443"
+        },
+        "purpose": "TFT13_GoopBuff_*_Title / _Description 英文名称与描述及其原始占位符，供后续语义核对。",
+        "locale": "en_us"
+      },
+      {
+        "id": "zh_cn.tft.stringtable.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/zh_cn/data/menu/en_us/tft.stringtable.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:25:39.356302Z",
+        "bytes": 15365105,
+        "sha256": "aa9ca3629482cdde5356a38c1f83c804fdcc20e2b6315cc872e6a9800dbacda3",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/zh_cn.tft.stringtable.json.gz",
+        "archiveBytes": 3068733,
+        "archiveSha256": "ae17b0ce7ebc199e3b3c8dbc7fc906cfb0a83a1c45a9d6ce2d4a78e1526ebca4",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "download-archive-round-trip-verified",
+          "archiveRoundTripVerified": true
+        },
+        "purpose": "异变等简体中文名称与描述，供后续界面文案使用；不在本单接入界面。",
+        "locale": "zh_cn"
+      },
+      {
+        "id": "tft13_elise.cdtb.bin.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/characters/tft13_elise.cdtb.bin.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:24:51.071281Z",
+        "bytes": 242677,
+        "sha256": "70fb6dd4a4de9e9eb5c656d692ac6890b51822c72206e454bd93d8c3c83463c8",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/tft13_elise.cdtb.bin.json.gz",
+        "archiveBytes": 25370,
+        "archiveSha256": "4884fba9fcc9adcbfcfd946cc8692b93a27792beeb09d4f4afd5d7bc1558e2f7",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "download-archive-round-trip-verified",
+          "archiveRoundTripVerified": true
+        },
+        "purpose": "Elise 双形态角色与技能原始数据。"
+      },
+      {
+        "id": "tft13_swain.cdtb.bin.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/characters/tft13_swain.cdtb.bin.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:24:52.302434Z",
+        "bytes": 148554,
+        "sha256": "1b1a668b51739a89cf37ad33e788738bae366c54899a40766a6b9b85f16fcc0d",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/tft13_swain.cdtb.bin.json.gz",
+        "archiveBytes": 15288,
+        "archiveSha256": "41e3de058501408540e29ed9d02c73b13fd5d7e0262c9cde89d5d7c3d402b810",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "download-archive-round-trip-verified",
+          "archiveRoundTripVerified": true
+        },
+        "purpose": "Swain 双形态角色与技能原始数据。"
+      },
+      {
+        "id": "tft13_jayce.cdtb.bin.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/characters/tft13_jayce.cdtb.bin.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:24:52.037401Z",
+        "bytes": 444152,
+        "sha256": "30b73215c710c88013714fce9c9538dfa3df7cccedc74456d375334b181dd153",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/tft13_jayce.cdtb.bin.json.gz",
+        "archiveBytes": 41136,
+        "archiveSha256": "c1b4c1dfc08eca05ec180cb6585a71ac8d61ec3395a3103e7cfe8974a6f78d11",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "download-archive-round-trip-verified",
+          "archiveRoundTripVerified": true
+        },
+        "purpose": "Jayce 双形态角色与技能原始数据。"
+      },
+      {
+        "id": "tft13_gangplank.cdtb.bin.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/characters/tft13_gangplank.cdtb.bin.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:24:50.145165Z",
+        "bytes": 128788,
+        "sha256": "38a38489a8e911680d1334047765933c44b2c1d61236fc80fb4457a6e2256f0d",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/tft13_gangplank.cdtb.bin.json.gz",
+        "archiveBytes": 13801,
+        "archiveSha256": "e6529a6c4e3d625e0ae7c9e0ad749fc707e6c5aa0c0bb51f1a2d02a16a048a95",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "download-archive-round-trip-verified",
+          "archiveRoundTripVerified": true
+        },
+        "purpose": "Gangplank 双形态角色与技能原始数据。"
+      },
+      {
+        "id": "tft13_jaycesummon.cdtb.bin.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/characters/tft13_jaycesummon.cdtb.bin.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:24:50.767243Z",
+        "bytes": 95320,
+        "sha256": "f9410801ae051c3544a8d44182d95a0b54a0bbd6a9b3e98869d892733eb88c69",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/tft13_jaycesummon.cdtb.bin.json.gz",
+        "archiveBytes": 11320,
+        "archiveSha256": "b6f0e514a1c6f7edb8998b1aa1a3b1439407b1ef351e7bcc154626130f0e2951",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "download-archive-round-trip-verified",
+          "archiveRoundTripVerified": true
+        },
+        "purpose": "Jayce 召唤物角色与技能原始数据。"
+      },
+      {
+        "id": "tft13_gangplankbarrel.cdtb.bin.json",
+        "method": "direct-https-download",
+        "sourceUrl": "https://raw.communitydragon.org/14.24/game/characters/tft13_gangplankbarrel.cdtb.bin.json",
+        "downloadDate": "2026-10-16",
+        "downloadUtc": "2026-10-16T09:24:51.573343Z",
+        "bytes": 9419,
+        "sha256": "da19ad7222ddbaff34c0ada98e935042931239c150ca2da2000e066d39a5f71e",
+        "archivePath": "src/simulation/content/source/s13-14.24b/raw/tft13_gangplankbarrel.cdtb.bin.json.gz",
+        "archiveBytes": 1776,
+        "archiveSha256": "ed8f92e84e87d8005258e5121e016636b05c50a690bf3b96692bcac2d3e422c7",
+        "compression": "gzip level 9, mtime=0; decompression reproduces exact downloaded bytes",
+        "selection": "complete-file-no-subset",
+        "sourceNetworkFetchPerformed": true,
+        "hashVerification": {
+          "status": "download-archive-round-trip-verified",
+          "archiveRoundTripVerified": true
+        },
+        "purpose": "Gangplank 火药桶角色与技能原始数据。"
+      }
+    ]
+  }
 }
