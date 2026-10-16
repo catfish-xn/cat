@@ -57,3 +57,21 @@ it('Smeech leaps again only after a kill, with the next three slashes reduced by
  expect(packets(second.events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability').map(p=>p.raw)).toEqual([133,133,133]);
  expect(second.events.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
 });
+
+import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
+import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
+import type {S13Unit} from '../src/simulation/combat-s13-state';
+import {DEFAULT_BOARD} from '../src/simulation/board';
+it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
+ for(const team of ['player','enemy'] as const){
+  const row=(value:number)=>team==='player'?value:7-value;
+  const jayce=hero('jayce',{id:'j',team,cell:{col:2,row:row(4)}}) as S13Unit;
+  const forge=hero('jayce',{id:'j:g23-forge',definitionId:'g23-forge',team,alive:false,hp:0,maxHp:1000,cell:{col:2,row:row(5)}}) as S13Unit;
+  const blocker=dummy('blocker',{team,cell:{col:2,row:row(5)}}) as S13Unit;
+  const ctx:AbilityContext={tick:10,combatId:'forge',board:DEFAULT_BOARD,units:[jayce,forge,blocker],events:[],packets:[],heals:[],draw:()=>{throw Error('forge must not draw');}};
+  expect(reviveG23Forge(ctx,jayce)).toBe(forge);
+  expect(forge.cell).toEqual({col:0,row:row(0)});expect(forge.hp).toBe(1000);expect(forge.alive).toBe(true);
+  expect(ctx.events.map(e=>e.type)).toEqual(['movement','unitRevived']);
+  expect(reviveG23Forge(ctx,jayce)).toBe(forge);expect(ctx.events).toHaveLength(2);expect(ctx.units).toHaveLength(3);
+ }
+});

@@ -20,8 +20,6 @@ export function commitG23Settlement(state:MatchState,facts:G23BattleFacts):Match
 }
 export function g23RoundGold(state:MatchState,round:number):number{return state.g23?.economyReceipts.reduce((n,r)=>n+(r.kind==='battle'&&r.facts.round===round?r.gold:0),0)??0;}
 
-export function g23RoundCosts(state:MatchState,round:number):number{return state.g23?.junkerPurchases.filter(r=>r.round===round).reduce((n,r)=>n+r.cost,0)??0;}
-
 export function g23RadiantRound(state:MatchState):number|undefined{
  const id=state.g23?.conquest.receipts.find(r=>r.chestTiers.includes(15))?.battleId;
  return state.g23?.economyReceipts.find(r=>r.kind==='battle'&&r.facts.battleId===id)?.kind==='battle'?state.g23.economyReceipts.filter(r=>r.kind==='battle').find(r=>r.facts.battleId===id)?.facts.round:undefined;

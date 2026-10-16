@@ -21,7 +21,7 @@ export function reviveG23Forge(ctx:AbilityContext,jayce:S13Unit):S13Unit|undefin
  if(!forge.alive){
   const occupied=(col:number,row:number)=>ctx.units.some(u=>u.alive&&u.cell.col===col&&u.cell.row===row);
   if(occupied(forge.cell.col,forge.cell.row)){
-   const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat();
+   const cells=Array.from({length:ctx.board.rows},(_,localRow)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row:jayce.team==='player'?localRow:ctx.board.rows-1-localRow}))).flat();
    const cell=cells.find(c=>!occupied(c.col,c.row));if(!cell)return;
    ctx.events.push({type:'movement',tick:ctx.tick,unitId:forge.id,from:forge.cell,to:cell});forge.cell=cell;
   }

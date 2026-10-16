@@ -109,6 +109,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
     }
     const fields = ['version','settlementId','battleId','seatId','round','roundId','settlementEligible','result','damage',
       'baseDamage','opposingSurvivors','growth','combatTicks','combatEventCount'];
+    if(r.g23Facts)fields.push('g23Facts');
     if (Object.keys(r).length !== fields.length || Object.keys(r).some(key => !fields.includes(key))) return fail(state,'invalid-receipt');
     const hpAfter = Math.max(0,state.playerHp-r.damage);
     const record: RoundResult = {

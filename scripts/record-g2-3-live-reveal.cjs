@@ -5,6 +5,7 @@ async function main(){
  const {createServer}=await import('vite');const server=await createServer({configFile:false,server:{middlewareMode:true,ws:false},appType:'custom',logLevel:'error'});
  try{
  const api=await server.ssrLoadModule('/src/simulation/match.ts');
+ const helpers=await server.ssrLoadModule('/tests/fixtures/g2-3-b8-public.ts');
  let prefix;const reached=new Error('public route reached4-7');
  try{await require('./generate-m5-route.cjs').run(api,{build:'mage',seed:42,onStep(before,_result,command){if(command?.type==='start'&&before.roundDefinitionId==='4-7'){prefix=before;throw reached;}}});}catch(e){if(e!==reached)throw e;}
  assert(prefix);
@@ -14,14 +15,23 @@ async function main(){
  while(state.phase==='combat'){const step=api.stepMatch(state);state=step.state;events.push(...step.events);}
  return {deaths:state.combat.neutralReceipts.deaths,reveals:events.filter(e=>e.type==='lootRevealed').map(e=>({dropId:e.dropId,death:e.death})),result:state.combat.result,phase:state.phase,eventHash:sha(events),terminalHash:sha(state),receipts:state.m8.loot.receipts.length-prefix.m8.loot.receipts.length};
  }
- const branches={full:resolve(prefix)};
- for(const definitionId of ['loris','lux']){
- let state=prefix,slot=0;const target=state.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId);assert(target);
- for(const unit of state.preparation.units.filter(u=>u.team==='player'&&u.id!==target.id))state=accept(api.deployMatchUnit(state,unit.id,{kind:'bench',slot:slot++}));
- branches[definitionId]={...resolve(state),star:target.starLevel};
+ const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix))};
+ assert.deepEqual(branches.simultaneous.deaths.slice(0,2),[{unitId:'["pve","4-7","razorbeaks-v1","r00"]',tick:51,eventSeq:447},{unitId:'["pve","4-7","razorbeaks-v1","r01"]',tick:51,eventSeq:448}]);
+ for(const definitionId of ['loris','zyra']){
+ const target=prefix.preparation.units.find(u=>u.team==='player'&&u.definitionId===definitionId);assert(target);
+ branches[definitionId]={...resolve(helpers.partialB8Preparation(prefix,definitionId)),star:target.starLevel};
  }
- const audit={contentDigest:prefix.contentDigest,route:'mage',seed:42,roundId:'4-7',prefixHash:sha(prefix),driverSha256:createHash('sha256').update(fs.readFileSync('scripts/generate-m5-route.cjs')).digest('hex'),branches};
- fs.writeFileSync('docs/evidence/g2-3/live-reveal-audit.json',JSON.stringify(audit,null,2)+'\n');console.log(JSON.stringify(audit));
+ assert.equal(branches.loris.deaths.length,1);assert.equal(branches.loris.deaths[0].tick,381);assert.equal(branches.loris.receipts,4);
+ assert.equal(branches.zyra.deaths.length,1);assert.equal(branches.zyra.deaths[0].tick,152);assert.equal(branches.zyra.receipts,0);
+ const previousAssertions={simultaneous:[{tick:48,eventSeq:413},{tick:48,eventSeq:414}],partialWithoutDrops:{definitionId:'lux',tick:152}};
+ const currentAssertions={simultaneous:branches.simultaneous.deaths.slice(0,2),partialWithoutDrops:{definitionId:'zyra',tick:152}};
+ const evidence=(value)=>({bytes:Buffer.byteLength(JSON.stringify(value)),sha256:sha(value)});
+ const oldTest=require('node:child_process').execFileSync('git',['show','38747c595b7f4900133ca6e85c63b1bb48e83e2d:tests/m8-b8-live-reveal.test.ts']);
+ const newTest=fs.readFileSync('tests/m8-b8-live-reveal.test.ts');let first=0;
+ while(first<Math.min(oldTest.length,newTest.length)&&oldTest[first]===newTest[first])first++;
+ const byteEvidence={previousCommit:'38747c595b7f4900133ca6e85c63b1bb48e83e2d',previousBytes:oldTest.length,currentBytes:newTest.length,previousSha256:createHash('sha256').update(oldTest).digest('hex'),currentSha256:createHash('sha256').update(newTest).digest('hex'),firstDifferentByte:first};
+ const audit={contentDigest:prefix.contentDigest,route:'mage',seed:42,roundId:'4-7',prefixHash:sha(prefix),previousAssertions,currentAssertions,assertionBytes:{previous:evidence(previousAssertions),current:evidence(currentAssertions)},byteEvidence,helperSha256:createHash('sha256').update(fs.readFileSync('tests/fixtures/g2-3-b8-public.ts')).digest('hex'),driverSha256:createHash('sha256').update(fs.readFileSync('scripts/generate-m5-route.cjs')).digest('hex'),branches};
+ fs.writeFileSync('docs/evidence/g2-3/live-reveal-audit.json',JSON.stringify(audit,null,2)+'\n');console.log(JSON.stringify({contentDigest:prefix.contentDigest,branches:Object.keys(branches),sameTick51:true,partialReceipts:[branches.loris.receipts,branches.zyra.receipts]}));
  }finally{await server.close();}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

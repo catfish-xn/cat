@@ -21,7 +21,7 @@
     "src/simulation/combat-effects.ts": "ba106eefdfe8b45160fd6ae20e3700a5298bf354d6b30dbe687bd69e5401eade",
     "src/simulation/combat-g2-2.ts": "229f15681779af16cb832a9ec74de6300d698d6650f79da08c0cbf07e8442fc4",
     "src/simulation/combat-g2-3-junker.ts": "09e21c43eafa52219e0c1022ab15e8dfe92a2b8d8fd524ffbd8020578bc97241",
-    "src/simulation/combat-g2-3-summons.ts": "27599af8ccda1782ebdc4b6c3f7e01dce08844fae0d980673007b516e33417bd",
+    "src/simulation/combat-g2-3-summons.ts": "733b10b16372487977a3534946fe29751b05eb8d45cd469b3174d6b5ad48362b",
     "src/simulation/combat-g2-3.ts": "bc84db0ff3a3637b4ae87142f299e5545117573b4c9f902992a68221056358e0",
     "src/simulation/combat-g2.ts": "c4e3f136f3638ac2badfc5254d4e156ab824919634b070ed43b3f8246a42f971",
     "src/simulation/combat-initialization.ts": "335003b45209b6aeb93266abe7e988f7a3c5f7a45687281146372a6bdfca0a9f",
@@ -34,7 +34,7 @@
     "src/simulation/combat-static.ts": "463180343e52c9a0e86da915ee407c16a95d0f3c7f938673c6e5de247dcae871",
     "src/simulation/combat-summary.ts": "4b8a4ae4567a975f32ef45c7529d85c460a502aa8d24af8106acd62e1b6c6426",
     "src/simulation/combat-tick.ts": "98ff95ffa1d8f042361006eef70a02c1c21207308b9b495b0916045de16ae143",
-    "src/simulation/combat-types.ts": "6ac5bdb4303ec8539e07869079fa05ff8c354e37f4eb1debce8a871be79e0ab0",
+    "src/simulation/combat-types.ts": "2461633942c3ff781d31b16721e18dd6da4374edd65316662833b4af171661f4",
     "src/simulation/combat.ts": "9c44342ce5fd611c9f7e6a5963630e2c69b71f0b4197da7dbaa1b973b1807115",
     "src/simulation/component-pool.ts": "ef979cf4a814d84c3c890b5c2206205dbcbad1a61f2c247292a4778040da4fae",
     "src/simulation/consumable-types.ts": "4918f4c996803c151cbba390693f2466239fe6b85074d3c429ec452f9ce859f6",
@@ -57,7 +57,7 @@
     "src/simulation/content/g2-3-policy.ts": "8e12309008232727bfdf6fa2df1a66f4dc4e4c4ee68daad77ade39388aae0c5c",
     "src/simulation/content/g2-3-radiant-programs.ts": "0ec2b735c361dc4b531a1d434b287a217c5c2227c6ba53cf1e53228459de5369",
     "src/simulation/content/g2-3-special-item-source.ts": "eb34370a6661955b877d3a6557074947d99ee5d9c496454cd8a6e7ed53c4a5c0",
-    "src/simulation/content/g2-3-summons.ts": "8436cc9af8b4f96a5b85975552d1a06f8b3dda0e29db0a244ea25040e85a2c31",
+    "src/simulation/content/g2-3-summons.ts": "0ead4ce29b712ab9820cf9c4fbc4dfc1e1134267eb11579bda7f88907a067e00",
     "src/simulation/content/g2-3-trait-source.ts": "e82c0ed2e0443e7a5d3f705b6da4fa8b40e73baab8d432c00b62d448c4655d2c",
     "src/simulation/content/g2-3-traits.ts": "3429e32adcb78d74733d466ecf4cca0ba4d16107aa905e224e4281398b0ad26c",
     "src/simulation/content/g2-3-units.ts": "098e01a470a2cdd8fe1dd345e5361affde6060ed2b51a22695e4cae1482640c0",
@@ -136,8 +136,8 @@
     "src/simulation/g2-3-progress.ts": "21eddf26cdf3d4228c5778f704111c1e441eb95cf4de344f4e4466fbb723afdc",
     "src/simulation/g2-3-radiant.ts": "f9fc25a833977ff1131756c1c7b88c9c4c006c8889b17ae6f55bd9eb4555c29a",
     "src/simulation/g2-3-rewards.ts": "55c310a45674a205583fc6ae09ed89aa65e54a452980cf0768781180ccc8790e",
-    "src/simulation/g2-3-settlement.ts": "0ec44e41a0584b48e3101805eeef4e4a3930ebba29ac3929743458399aef23f1",
-    "src/simulation/g2-3-summons.ts": "49fb2312326b72ab6bb868a3d4be5cf3a2d13e4525d2b3660c5af9081e1b8c46",
+    "src/simulation/g2-3-settlement.ts": "29d291b0dc344554a2a2c68f4074ae5f57a3ca7842df7c449bc2901328527e22",
+    "src/simulation/g2-3-summons.ts": "5a86dc39718d257e24b090d236f2beb5a627a2b888ccc8804e3f9b687914d11a",
     "src/simulation/g2-3-view.ts": "2a8741e496b09d0e43cd643e69364df9051ce908a96e3a5ba54aee664011fcd2",
     "src/simulation/game.ts": "ee2112df26da6c3b5140d086bb3a186d43ae728e4c0aebd4fbd76a4b134d5e7f",
     "src/simulation/immutable-json.ts": "01f0ab2a0ed8be03f74bb3d220a0dcb108eb602bd011db87110689922a2a2416",
@@ -181,7 +181,7 @@
     "src/simulation/m8/version.ts": "c7f9b317e8b88863cc9f05914af98fae2c9fd88decd2e3f76323a6112043fed3",
     "src/simulation/match-rules.ts": "7544d75ec2276972235bb3a814b777c4009f5434bc4e1ea19a5958b86709020e",
     "src/simulation/match-types.ts": "a2d7b1ef3a6912da6ac3b292aa95a1a1dc0d478a331ab79f3a16fc90774dae1f",
-    "src/simulation/match.ts": "ac55235275b4d903fa53b6ab1d27385128f7e1ed88088cef1cc109375962b194",
+    "src/simulation/match.ts": "55807a11a9492dc0b0613512f5a72bfcd7f38e155cbc3be76da384a16bbd6a66",
     "src/simulation/multiplayer-round.ts": "b133277e700d3edde100810fcf77d9864bd74807c407c33cd24d6c70ebb7db7c",
     "src/simulation/neutral-encounter-compiler.ts": "aea0ec1e0d99e1e00aaf4691f4ef32598b4f9e1effd11000b831cfe350675125",
     "src/simulation/neutral-receipts.ts": "028860fa83319434f5c34d604e3ac7a3755331e49b71b0794d7a9d8f04b45f40",
@@ -199,9 +199,9 @@
     "src/simulation/round-enemies.ts": "1da1fe200ec43156fc23a808007d40b6f36cafd9a84059752f331d8d9d7827e8",
     "src/simulation/round-schedule.ts": "d7af2c803248c6047fc6307776b342b52c3703345f4e83e199e6a1e6ee034424",
     "src/simulation/round-selectors.ts": "927b08f1f456bc2400e9674c80349abf2e8b3ffced7817035702d6474e92fbd8",
-    "src/simulation/round-settlement.ts": "3eb7a713f4ca72796a6892a0c81044b29d0ed963f4bb072b2563c574356b0967",
+    "src/simulation/round-settlement.ts": "f03038b9663124ecffc7b0f4915b607eecc5e7c8c48900f223693a43a74ae183",
     "src/simulation/s13-rules.ts": "e8a4c70e9b01ad88fdd70af35fb627b1d7b2dfe976d231f8d57b8d050a672e4c",
-    "src/simulation/serialization.ts": "faaf580c07e1e5591216493de9f591aed7bca2ff46b1f8218b726fd9dac641be",
+    "src/simulation/serialization.ts": "be2710dc7dfbf4029454cb9cb3544f10fbd703fd6781fa99b3235f85f1255b65",
     "src/simulation/shared-pool-ledger.ts": "67d983d0ba506212171633b138f248b677524cf89940cdbf8c1ffe9e7b1adb5e",
     "src/simulation/shared-pool-types.ts": "c56f05680ce98c6bc2eb7af6f5b73f680b8910f790d7eac29350e6e97b064df3",
     "src/simulation/shared-pool.ts": "c4c951ff9d669ac5da3dda265fdeab9a3edbc94988a9e2aa9019c33f09902936",
@@ -211,7 +211,7 @@
     "src/simulation/strategy-types.ts": "b658103405878c3c3d14e209cf5d014064d79a5ec37b98290445ced98609b7fc",
     "src/simulation/temporary-equipment.ts": "81ac16dfd751c09975a3aad996aa6fda82831bd0b1f721bd494b7ee4cd2ec424",
     "src/simulation/trait-snapshot.ts": "55104921b0933977892389f43910d81a37c6f817afdb4c934c62c7f4086111c7",
-    "src/simulation/two-sided-battle.ts": "d3f754f4ad954022b168fb2fd6b493f045a1a155c418510b619c2314fa25f109",
+    "src/simulation/two-sided-battle.ts": "35d5d7943e3bb49d4bbdaefb2dae4dc007eebd2b47b03ed93dd044bdbfd1d42b",
     "src/simulation/two-sided-snapshot.ts": "c857e117514c737ccde552c89bfe2762f6ec417274fbfb62bc6168d1a12e4c3d",
     "src/simulation/two-sided-types.ts": "f66173de78197b5db5e26098dd3d4d6921f3820028905fdb5f56a69c19ab8ac5",
     "src/simulation/unit-acquisition.ts": "9a867e504678b2b8080fd4b0e33e58dae940515a1b2e8d63d9d3105e0f8606d2",
@@ -224,15 +224,15 @@
   },
   "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
   "baseline": {
-    "contentDigest": "fnv1a32-utf16:fe963b26",
-    "lootReplayDigest": "fnv1a32-utf16:eac89353",
+    "contentDigest": "fnv1a32-utf16:5293dee0",
+    "lootReplayDigest": "fnv1a32-utf16:417d2707",
     "rulesVersion": "s13-g2-3-v1",
     "contentVersion": "s13-14.24b-g2-3-v1",
     "schemaVersion": 7,
     "previousContentDigest": "fnv1a32-utf16:299ec0d0",
     "previousLootReplayDigest": "fnv1a32-utf16:b9250813",
     "traceHashes": {
-      "state": "9f5e023b9408a9cb06b5d7bc91bc59bbe35da2ea4be52f1ff63083dcb8d6a032",
+      "state": "a66308b1276fe834d205fb307e4b5e6aa05db8a4ec85fcc96092ed7c243f2f5f",
       "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
       "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
     },
@@ -270,14 +270,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 620004,
-          "currentBytes": 679425,
+          "currentBytes": 679361,
           "previousSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0",
-          "currentSha256": "4a18fd568a55f5f57b8e449ee40d90199592bcbb75413c380c7efaca77d46563",
+          "currentSha256": "f55237bd9845735ab857c4fb1474cce0c61a1c108d01f1810310cb1339c37e84",
           "firstDifferentByte": 11
         },
         "states": 67,
-        "gzipSha256": "4a18fd568a55f5f57b8e449ee40d90199592bcbb75413c380c7efaca77d46563",
-        "stateUtf8Sha256": "38de22a92e3e3ce953bd49152a016267f6142e3f13e83b7d38b75d9a4092fa1c",
+        "gzipSha256": "f55237bd9845735ab857c4fb1474cce0c61a1c108d01f1810310cb1339c37e84",
+        "stateUtf8Sha256": "abc6ec34ad5373fdfac4a58e045741564f31b2d8d37d043ab079c3569fa04031",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "849fa89f62fc9d61f19f7091b19f2756bf47462d0050eecfceb041a611bcc5d0"
       },
@@ -1822,14 +1822,14 @@
       "recording": {
         "byteEvidence": {
           "previousBytes": 638531,
-          "currentBytes": 703228,
+          "currentBytes": 703165,
           "previousSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd",
-          "currentSha256": "fb81b094646f898650df2adb87e35927ef7b46662d24a944317b44642a9f4d79",
+          "currentSha256": "5732ed84ffae0c2012dc62010b3cb434100f2ca4fa0443526069206a2c5f2ad3",
           "firstDifferentByte": 12
         },
         "states": 67,
-        "gzipSha256": "fb81b094646f898650df2adb87e35927ef7b46662d24a944317b44642a9f4d79",
-        "stateUtf8Sha256": "3b4f6b2ea79347ac30971933820cd60bbd51b7133a00d4fc2478f3a5a189b32d",
+        "gzipSha256": "5732ed84ffae0c2012dc62010b3cb434100f2ca4fa0443526069206a2c5f2ad3",
+        "stateUtf8Sha256": "34de99ad187976f10e7da82587b4cc51c59f2eb89e15397ffbb2c23fc3f6f282",
         "textAndObjectRestoreBytesEqual": true,
         "previousGzipSha256": "79ceb3f3e9d163f53ae703e2a09defb2c49c68bbf1569c2daa40bda54481cabd"
       },
@@ -6411,12 +6411,12 @@
       }
     }
   },
-  "candidateSha256": "d4dd21f8e188e0f041aa51cf5be479e3f9b71c820f59d76b0c1f9f24161248d1",
+  "candidateSha256": "16915fec5ecced2957c7085caa0c9cfb845e0f52f8bf2286bf52a5fdeaeff1a7",
   "goldenByteEvidence": {
     "previousBytes": 101416,
     "currentBytes": 99700,
     "previousSha256": "360f94c1f717202b1870c413ff201b870771e9507f0b962b37edd336bb8adb15",
-    "currentSha256": "d4dd21f8e188e0f041aa51cf5be479e3f9b71c820f59d76b0c1f9f24161248d1",
+    "currentSha256": "16915fec5ecced2957c7085caa0c9cfb845e0f52f8bf2286bf52a5fdeaeff1a7",
     "firstDifferentByte": 13
   }
 }

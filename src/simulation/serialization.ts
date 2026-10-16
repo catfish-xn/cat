@@ -1,4 +1,5 @@
-import { g23RoundGold,g23RoundCosts } from './g2-3-settlement';
+import {countsG23SurvivorDamage} from './g2-3-summons';
+import { g23RoundGold } from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
 import { validateG23State } from './g2-3-combat';
 import { G23_ABILITIES } from './content/g2-3-abilities';
@@ -216,7 +217,8 @@ export function restoreMatch(input: unknown): MatchState {
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
   validateMatchEquipment(state);
   const { basis, saleGold } = validateB8Resources(state, typeof input === 'string');
-  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round)-g23RoundCosts(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
+  // Preparation armory prices already belong to goldBefore/goldAfter; only post-economy grants are added here.
+  if (settled) { const last = state.roundResults.at(-1)!; requireValue(state.gold === last.goldAfter + saleGold + g23RoundGold(state,state.round) && state.level === last.levelAfter && state.xp === last.xpAfter, 'current settlement totals'); }
   requireValue((state.phase === 'gameOver') === (state.playerHp === 0 || settled && roundDefinition.isFinal), 'terminal boundary');
   if (state.phase === 'preparation' || state.phase === 'choice' && !settled || getRoundKind(state.round) === 'supply') requireValue(state.combat === null, 'inactive combat');
   else {
@@ -235,7 +237,7 @@ export function restoreMatch(input: unknown): MatchState {
     requireValue(same(combat.board, combatPreparation.board), 'combat board');
     const expectedIds = combatPreparation.units.filter(unit => unit.location.kind === 'board').map(unit => unit.id).sort();
     requireValue(same(combat.units.map(unit => unit.id).sort(), expectedIds), 'combat roster');
-    if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>unit.alive&&unit.team==='enemy').length, 'combat settlement result'); }
+    if (settled) { const last = state.roundResults.at(-1)!; requireValue(last.result === combat.result && last.combatTicks === combat.tick && last.combatEventCount === combat.nextEventSeq && last.survivingEnemyCount === combat.units.filter(unit=>countsG23SurvivorDamage(unit)&&unit.team==='enemy').length, 'combat settlement result'); }
     const combatIds = new Set(combat.units.map(unit => unit.id)); requireValue(combatIds.size === combat.units.length, 'duplicate combat ID');
     const neutralStatuses = validateNeutralCombat(combat, combatPreparation, expectedStrategy);
     const cells = new Set<string>();

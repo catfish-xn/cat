@@ -18,6 +18,9 @@
 - G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每offer1词；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。
 - 奖励金币在唯一结算事务发放；其他奖励托管。逐副本领取时发物/英雄、检查备战席/共享池并写唯一收据；失败保留待领权利。`readG23RewardItemCatalog()`提供奖励apiName、中文名、约定状态。光明kind待Claude扩展位接入，普通recipe/重铸/轮盘/临时装备池不随奖励目录扩大。
 
+- 召唤物结算约定：Sion维持阵营存活，Forge与预留桶id不维持；所有战斗召唤物不增加玩家伤害。Forge生成及复活空格搜索按席位坐标后镜像。
+- #134审查中合同已提前核对；三项Codex补接责任与当前状态见 [PR134接入清单](evidence/g2-3/PR134_INTEGRATION.md)，合入后先rebase。
+
 ### G2-3 / Claude 联机接口连接点（未完成）
 
 `src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。Claude接口PR合入后先rebase，再将上述进度接机制状态容器；黑市/军械库/锻造器接新pendingChoice kind及skip；召唤物改用生成帮助函数、出现/移除事件和不可售/不占人口标记；光明改kind=radiant（实际标识为`radiant`）。金币来源/新增失败原因走通用扩展位。

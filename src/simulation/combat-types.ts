@@ -1,3 +1,4 @@
+import {isG23NonCombatant} from './g2-3-summons';
 import type { Board, HexCell, Team } from './board';
 import type { ResolvedAbility } from './ability-types';
 import type { StrategySnapshot, SourcedEffect, ResolvedTrigger, EffectRuntime, EffectSource, EffectAction } from './strategy-types';
@@ -113,7 +114,7 @@ export type CombatEventData = UnchangedCombatEventData | ReplayTwoEventData | Le
 export interface CombatStep { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 export function compareIds(a: { readonly id: string }, b: { readonly id: string }): number { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }
 export function eliminationResult(units: readonly CombatUnit[]): CombatResult | null {
-  const player = units.some(unit => unit.alive && unit.definitionId !== 'g23-forge' && unit.team === 'player');
-  const enemy = units.some(unit => unit.alive && unit.definitionId !== 'g23-forge' && unit.team === 'enemy');
+  const player = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'player');
+  const enemy = units.some(unit => unit.alive && !isG23NonCombatant(unit) && unit.team === 'enemy');
   return player && enemy ? null : player ? 'playerWin' : enemy ? 'enemyWin' : 'draw';
 }

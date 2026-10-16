@@ -1,3 +1,4 @@
+import {countsG23SurvivorDamage} from './g2-3-summons';
 import {g23BattleFacts} from './g2-3-settlement';
 import { projectG23Summons } from './g2-3-summons';
 import { DEFAULT_BOARD, type Team } from './board';
@@ -115,7 +116,7 @@ function sideResult(seatId: string, mapping: readonly BattleIdMapping[], termina
     if (!unit) throw new BattleValidationError('invalid-result');
     return {originalId:entry.originalId,unit};
   }).sort((a,b)=>order(a.originalId,b.originalId));
-  return { seatId, survivors:units.filter(({unit})=>unit.alive).map(({originalId,unit})=>({unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp})),
+  return { seatId, survivors:units.filter(({unit})=>countsG23SurvivorDamage(unit)).map(({originalId,unit})=>({unitId:originalId,definitionId:unit.definitionId,starLevel:unit.starLevel,hp:unit.hp})),
     growth:isMirror ? [] : units.filter(({unit})=>(unit.runtime?.permanentAdBps ?? 0)>0).map(({originalId,unit})=>({unitId:originalId,attackDamageBps:unit.runtime!.permanentAdBps})),
   };
 }
