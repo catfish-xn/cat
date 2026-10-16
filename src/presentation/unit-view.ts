@@ -7,7 +7,7 @@ import Phaser from 'phaser';
 import type { Unit } from '../simulation/units';
 import type { CombatState } from '../simulation/combat-types';
 import type { DisplayUnit } from './combat-display';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { EMBLEM_POINTS, getHeroIdentity, type HeroIdentity } from './hero-identity';
 import { THEME, costColor, toNumber } from './theme';
 import { championPortraitKey } from './s13-assets';

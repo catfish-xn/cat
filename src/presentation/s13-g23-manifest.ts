@@ -49,19 +49,16 @@ export const G23_TRAITS: readonly G23Name[] = [
   {"apiName": "TFT13_Cabal", "en": "Black Rose", "zh": "黑色玫瑰"},
   {"apiName": "TFT13_Challenger", "en": "Quickstriker", "zh": "迅击战士"},
 ];
-/** 30 anomalies (TFT13_GoopBuff_*): the 3 already playable + 27 G2-3 candidates; Cosmic Rhythm excluded. Names from `<apiName>_Title`. */
+/** The 30 anomalies content ships (g2-3-anomaly-source.ts, TFT13_GoopBuff_*); Cosmic Rhythm excluded. Names from `<apiName>_Title`. */
 export const G23_ANOMALIES: readonly G23Name[] = [
   {"apiName": "TFT13_GoopBuff_TitanicStrikes", "en": "Titanic Strikes", "zh": "泰坦打击"},
   {"apiName": "TFT13_GoopBuff_MageArmor", "en": "Mage Armor", "zh": "法师护甲"},
   {"apiName": "TFT13_GoopBuff_KillStreak", "en": "Kill Streak", "zh": "连杀"},
   {"apiName": "TFT13_GoopBuff_ArcanaOverwhelming", "en": "Arcana Overwhelming", "zh": "奥术浩荡"},
   {"apiName": "TFT13_GoopBuff_AvalancheofArmor", "en": "Avalanche of Armor", "zh": "护甲山崩"},
-  {"apiName": "TFT13_GoopBuff_CenteroftheUniverse", "en": "Center of the Universe", "zh": "星原之准"},
   {"apiName": "TFT13_GoopBuff_BerserkerRage", "en": "Berserker Rage", "zh": "狂战之怒"},
   {"apiName": "TFT13_GoopBuff_Bully", "en": "Bully", "zh": "恃强凌弱"},
   {"apiName": "TFT13_GoopBuff_ComebackStory", "en": "Comeback Story", "zh": "翻盘故事"},
-  {"apiName": "TFT13_GoopBuff_DramaticEntrance", "en": "Dramatic Entrance", "zh": "震撼登场"},
-  {"apiName": "TFT13_GoopBuff_Fireball", "en": "Fireball", "zh": "火球"},
   {"apiName": "TFT13_GoopBuff_Fortified", "en": "Fortified", "zh": "坚不可破"},
   {"apiName": "TFT13_GoopBuff_HardenedMind", "en": "Defense Expert", "zh": "防御专家"},
   {"apiName": "TFT13_GoopBuff_HeavyHitter", "en": "Heavy Hitter", "zh": "重量级打击手"},
@@ -70,17 +67,20 @@ export const G23_ANOMALIES: readonly G23Name[] = [
   {"apiName": "TFT13_GoopBuff_MagicTraining", "en": "Magic Training", "zh": "魔法训练"},
   {"apiName": "TFT13_GoopBuff_PowerAbsorption", "en": "Power Absorption", "zh": "攻击吸收"},
   {"apiName": "TFT13_GoopBuff_ShouldertheBurden", "en": "Protective Shielding", "zh": "防御型护盾"},
-  {"apiName": "TFT13_GoopBuff_NothingWasted", "en": "Nothing Wasted", "zh": "绝不浪费"},
   {"apiName": "TFT13_GoopBuff_OneThousandCuts", "en": "One Thousand Cuts", "zh": "千刀斩"},
-  {"apiName": "TFT13_GoopBuff_ScuttleFamiliar", "en": "Scuttle Familiar", "zh": "真的会蟹"},
-  {"apiName": "TFT13_GoopBuff_ShareYourEnergy", "en": "Share Your Energy", "zh": "分享你的能量"},
   {"apiName": "TFT13_GoopBuff_SlimeTime", "en": "Slime Time", "zh": "史莱姆时间"},
   {"apiName": "TFT13_GoopBuff_SlowCooker", "en": "Slow Cooker", "zh": "慢炖"},
-  {"apiName": "TFT13_GoopBuff_UltimateHero", "en": "Ultimate Hero", "zh": "终极英雄"},
-  {"apiName": "TFT13_GoopBuff_WolfFamiliars", "en": "Wolf Familiars", "zh": "双狼佣兽"},
   {"apiName": "TFT13_GoopBuff_SharpenedMind", "en": "Attack Expert", "zh": "物理专家"},
   {"apiName": "TFT13_GoopBuff_MagicMind", "en": "Magic Expert", "zh": "魔法专家"},
   {"apiName": "TFT13_GoopBuff_Bulwark", "en": "Bulwark", "zh": "壁垒"},
+  {"apiName": "TFT13_GoopBuff_Freestyling", "en": "Freestyling", "zh": "即兴发挥"},
+  {"apiName": "TFT13_GoopBuff_EnergyAbsorption", "en": "Energy Absorption", "zh": "法强吸收"},
+  {"apiName": "TFT13_GoopBuff_GiantSized", "en": "Giant-Sized", "zh": "巨人体型"},
+  {"apiName": "TFT13_GoopBuff_DeepRoots", "en": "Deep Roots", "zh": "根深蒂固"},
+  {"apiName": "TFT13_GoopBuff_EagleEye", "en": "Eagle Eye", "zh": "鹰眼"},
+  {"apiName": "TFT13_GoopBuff_AllForOne", "en": "Force of Friendship", "zh": "友谊之力"},
+  {"apiName": "TFT13_GoopBuff_Hypervelocity", "en": "Hypervelocity", "zh": "超高速"},
+  {"apiName": "TFT13_GoopBuff_StrengthTraining", "en": "Strength Training", "zh": "力量训练"},
 ];
 /**
  * Radiant (光明) version of each of the 36 completed items, keyed by the base item apiName. Five base items use an older

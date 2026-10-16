@@ -16,7 +16,7 @@
 import { UNIT_DEFINITIONS } from '../simulation/units';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { G23_ANOMALIES, G23_CHAMPIONS, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
@@ -81,6 +81,8 @@ const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT].
 /** apiName of a G2-3 hero or summon by content id; undefined for everything else. */
 export function g23ChampionApiName(id: string): string | undefined {
   if (Object.hasOwn(G23_HERO_IDS, id)) return G23_HERO_IDS[id];
+  // Ranged form definitions (`elise-ranged`, g2-3-forms.ts) carry the hero's client name.
+  if (id.endsWith('-ranged') && Object.hasOwn(G23_HERO_IDS, id.slice(0, -7))) return G23_HERO_IDS[id.slice(0, -7)];
   const direct = CHAMPION_BY_ID.get(id) ?? CHAMPION_BY_ID.get(lower(id));
   if (direct) return direct.apiName;
   const en = UNIT_DEFINITIONS[id]?.name;

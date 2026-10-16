@@ -1,7 +1,7 @@
 import type { CombatOrigin } from '../simulation/combat-types';
 import type { LedgerCombatEvent } from '../simulation/combat-types';
 import { UNIT_DEFINITIONS } from '../simulation/units';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { augmentDisplayName } from '../presentation/augment-display';

@@ -6,7 +6,7 @@
  * Optional display fields are read from `choice.display` when the rules provide them; until a
  * contract names them every field is absent and the offer falls back to its definition name.
  */
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { catalogEntry } from './item-codex';
