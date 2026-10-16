@@ -40,6 +40,11 @@ import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
 import type { ConsumableTarget } from '../simulation/consumable-types';
+import type { HexCell } from '../simulation/board';
+
+/** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
+export interface SpecialCell { readonly kind: string; readonly cell: HexCell }
+const SPECIAL_CELL_COLORS: Readonly<Record<string, string>> = { trial: THEME.color.gold };
 
 declare global {
   interface Window { __CAT_DEBUG__?: Readonly<{ read: () => ReturnType<BoardScene['debugSnapshot']> }> }
@@ -94,6 +99,9 @@ export class BoardScene extends Phaser.Scene {
   private startHint!: Phaser.GameObjects.Text;
   private timer!: Phaser.GameObjects.Text;
   private overlay!: Phaser.GameObjects.Graphics;
+  /** G2-3 prep: special-cell layer (trial cells) drawn above the board fill, below units; empty until the rules supply cells. */
+  private specialCellLayer!: Phaser.GameObjects.Graphics;
+  private specialCells: readonly SpecialCell[] = [];
   private status!: Phaser.GameObjects.Text;
   /** C18: "本场：X / 下场：Y" above a hovered fighting unit whose equipment changed during the battle. */
   private loadoutTip!: Phaser.GameObjects.Text;
@@ -148,6 +156,8 @@ export class BoardScene extends Phaser.Scene {
       graphics.fillStyle(toNumber(isDeploymentCell(this.state.board, 'player', { col, row }) ? THEME.color.boardAlly : THEME.color.boardEnemy)).lineStyle(1, toNumber(THEME.color.boardLine));
       graphics.fillPoints(this.layout.corners({ col, row }), true).strokePoints(this.layout.corners({ col, row }), true);
     }
+    this.specialCellLayer = this.add.graphics();
+    this.drawSpecialCells();
     this.add.text(-2000, 140, `${this.state.board.columns} 列 × ${this.state.board.rows} 行`, { fontSize: '14px', color: '#7e95a4' });
     for (const team of ['enemy', 'player'] as const) {
       const zone = this.state.board.deploymentZones[team];
@@ -432,6 +442,21 @@ export class BoardScene extends Phaser.Scene {
       : unit.location.kind === 'bench' && target.kind === 'bench' && unit.location.slot === target.slot));
   }
   private benchCenter(slot: number): Point { return { x: 27 + slot * 53.25, y: 480 }; }
+  /** G2-3 prep: replace the special cells shown on the board; an empty list clears the layer. Display only. */
+  setSpecialCells(cells: readonly SpecialCell[]): void {
+    this.specialCells = cells.map(entry => ({ kind: entry.kind, cell: { col: entry.cell.col, row: entry.cell.row } }));
+    this.drawSpecialCells();
+  }
+  private drawSpecialCells(): void {
+    const layer = this.specialCellLayer;
+    if (!layer?.active) return;
+    layer.clear();
+    for (const { kind, cell } of this.specialCells) {
+      if (cell.col < 0 || cell.row < 0 || cell.col >= this.state.board.columns || cell.row >= this.state.board.rows) continue;
+      const color = toNumber(SPECIAL_CELL_COLORS[kind] ?? THEME.color.focus), corners = this.layout.corners(cell);
+      layer.fillStyle(color, 0.18).lineStyle(2, color, 0.9).fillPoints(corners, true).strokePoints(corners, true);
+    }
+  }
   private position(location: UnitLocation): Point { return location.kind === 'board' ? this.layout.center(location.cell) : this.benchCenter(location.slot); }
   private target(point: Point): UnitLocation | undefined {
     const cell = this.layout.hitTest(point);
