@@ -18,7 +18,10 @@ export const catalogEntry = (id: string): Entry | undefined => catalog().byId.ge
 /** Authoritative description lines, shown verbatim. */
 export const itemDescriptions = (id: string): readonly string[] => catalogEntry(id)?.effectDescriptions ?? [];
 
-const KIND_NAMES = { component: '组件', completed: '成装' } as const;
+/** Kind labels; a kind added by later content shows its own label here, or "其他" until one is added (never "undefined"). */
+const KIND_NAMES: Readonly<Record<string, string>> = { component: '组件', completed: '成装' };
+const KNOWN_KINDS = Object.keys(KIND_NAMES);
+export const itemKindName = (kind: string): string => (Object.hasOwn(KIND_NAMES, kind) ? KIND_NAMES[kind] : '其他');
 const EVIDENCE_NAMES: Readonly<Record<Entry['evidenceStatus'], string>> = { 'source-reviewed': '来源已核对', 'approved-provisional': '批准暂行，待历史核验' };
 const LOCALIZATION_NAMES: Readonly<Record<Entry['localizationStatus'], string>> = { 'temporary-unverified': '临时译名（待核实）', verified: '译名已核实' };
 
@@ -65,7 +68,7 @@ function describe(entry: Entry): HTMLElement {
   const body = el('div', '', 'item-pop-body');
   const head = el('div', '', 'item-pop-head'); head.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 36));
   const title = el('div'); title.append(nameNode(entry), ...tagNodes(entry));
-  title.append(el('div', `${KIND_NAMES[entry.kind]} · ${entry.apiName}`, 'item-pop-meta')); head.append(title); body.append(head);
+  title.append(el('div', `${itemKindName(entry.kind)} · ${entry.apiName}`, 'item-pop-meta')); head.append(title); body.append(head);
   if (entry.recipe) body.append(el('p', `配方：${entry.recipe.map(id => catalogEntry(id)?.name ?? id).join(' + ')}`, 'item-pop-recipe'));
   else { const uses = usedIn(entry.id); if (uses.length) body.append(el('p', `可用于配方：${uses.map(item => item.name).join('、')}`, 'item-pop-recipe')); }
   const effects = el('ul', '', 'item-pop-effects');
@@ -175,10 +178,17 @@ function installGridNavigation(table: HTMLTableElement): void {
   });
 }
 
-type Filter = 'all' | 'component' | 'completed' | 'unique' | 'slots' | 'provisional';
-const FILTERS: readonly [Filter, string][] = [['all', '全部'], ['component', '组件'], ['completed', '成装'], ['unique', '唯一'], ['slots', '占多槽'], ['provisional', '暂定']];
-const matches = (entry: Entry, filter: Filter) => filter === 'all' || filter === entry.kind || filter === 'unique' && entry.unique
+/** 'kind:<kind>' filters are one per kind the catalogue holds, so new kinds get a group without code changes. */
+type Filter = 'all' | `kind:${string}` | 'unique' | 'slots' | 'provisional';
+/** Known kinds keep their order; any other kind in the catalogue follows in first-seen order. */
+function filters(list: readonly Entry[]): readonly [Filter, string][] {
+  const kinds = [...new Set<string>([...KNOWN_KINDS, ...list.map(entry => entry.kind)])];
+  return [['all', '全部'], ...kinds.map(kind => [`kind:${kind}`, itemKindName(kind)] as [Filter, string]), ['unique', '唯一'], ['slots', '占多槽'], ['provisional', '暂定']];
+}
+const matches = (entry: Entry, filter: Filter) => filter === 'all' || filter === `kind:${entry.kind}` || filter === 'unique' && entry.unique
   || filter === 'slots' && entry.slotCost > 1 || filter === 'provisional' && entry.evidenceStatus === 'approved-provisional';
+/** Debug names stay `codex-filter:component` / `:completed` as before. */
+const filterDebug = (filter: Filter) => filter.startsWith('kind:') ? filter.slice(5) : filter;
 
 /**
  * Codex section (built once, reused across panel renders so filter/open state survive).
@@ -193,9 +203,9 @@ export function createItemCodex(): HTMLElement {
 
   const controls = el('div', '', 'codex-controls'); controls.setAttribute('role', 'group'); controls.setAttribute('aria-label', '图鉴筛选');
   const buttons = new Map<Filter, HTMLButtonElement>();
-  for (const [value, label] of FILTERS) {
+  for (const [value, label] of filters(list)) {
     const count = list.filter(entry => matches(entry, value)).length;
-    const button = el('button', `${label} ${count}`, 'codex-filter'); button.type = 'button'; button.dataset.debug = `codex-filter:${value}`;
+    const button = el('button', `${label} ${count}`, 'codex-filter'); button.type = 'button'; button.dataset.debug = `codex-filter:${filterDebug(value)}`;
     button.addEventListener('click', () => { filter = value; apply(); }); buttons.set(value, button); controls.append(button);
   }
   const search = el('input', '', 'codex-search'); search.type = 'search'; search.placeholder = '搜索名称或 apiName'; search.setAttribute('aria-label', '搜索装备'); search.dataset.debug = 'codex-search';
@@ -209,8 +219,8 @@ export function createItemCodex(): HTMLElement {
     tile.dataset.itemDef = entry.id; tile.dataset.codexItem = entry.id;
     tile.insertAdjacentHTML('afterbegin', itemMarkHtml(entry.id, 32));
     const text = el('div', '', 'codex-tile-text'); text.append(nameNode(entry));
-    const tags = el('div', '', 'codex-tile-tags'); tags.append(el('span', KIND_NAMES[entry.kind], 'item-tag tag-kind'), ...tagNodes(entry)); text.append(tags);
-    tile.append(text); tile.setAttribute('aria-label', `${entry.name}，${KIND_NAMES[entry.kind]}${itemTags(entry).map(tag => `，${tag.text}`).join('')}`);
+    const tags = el('div', '', 'codex-tile-tags'); tags.append(el('span', itemKindName(entry.kind), 'item-tag tag-kind'), ...tagNodes(entry)); text.append(tags);
+    tile.append(text); tile.setAttribute('aria-label', `${entry.name}，${itemKindName(entry.kind)}${itemTags(entry).map(tag => `，${tag.text}`).join('')}`);
     grid.append(tile); return { entry, tile };
   });
   root.append(grid);
