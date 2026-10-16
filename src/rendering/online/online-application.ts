@@ -207,7 +207,10 @@ export class OnlineApplication implements SceneApplication {
     const show = playing && battle !== null && !this.session.inBattle && state.phase !== 'combat' && (state.round === battle.round || state.round === battle.round + 1);
     this.summary.show(this.session.battleHistory, show);
     this.economy.render(state, playing);
-    this.carouselHolding.render(playing ? readHeldCarouselUnits(state) : [], state.phase === 'preparation');
+    // A held unit is sold in the room's preparation or choice window; the seat stays in preparation through the x-4 carousel
+    // and under the PvP roster lock, where the server refuses it, so the button follows the room phase too.
+    const sellable = state.phase === 'preparation' && (this.view?.phase.kind === 'preparation' || this.view?.phase.kind === 'choice');
+    this.carouselHolding.render(playing ? readHeldCarouselUnits(state) : [], sellable);
   }
   /** Opens (or closes) the read-only public board of a seat; no command is involved. */
   private toggleBoard(seatId: string) {

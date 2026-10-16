@@ -11,8 +11,8 @@
  *   CAT_TAKEOVER             1/true/on: a bot plays a disconnected player's seat (B6). Default off (P2, like TFT:
  *                            a disconnected seat does nothing, its board still fights)
  *   CAT_TAKEOVER_SEC         with CAT_TAKEOVER on, the bot takes over after this long disconnected (default 60)
- *   CAT_CAROUSEL             1/true/on (default): G1-P7 shared carousel (1-1 opening carousel, x-4 carousels; no free
- *                            opening unit). 0/false/off: the pre-P7 opening (free unit, x-4 component supply), for old
+ *   CAT_CAROUSEL             1/true/on (default): G1-P7 shared carousel (P7-1: the usual opening with the free unit,
+ *                            carousels at the five x-4 rounds). 0/false/off: the pre-P7 x-4 component supply, for old
  *                            e2e scripts only
  *   CAT_STALL_SEC            G3 watchdog: end a match that publishes nothing this long past its phase deadline (default 120, 0 = off)
  *   CAT_ABANDON_SEC          G3 watchdog: end a match whose human seats are all disconnected this long (default 90, 0 = off)
