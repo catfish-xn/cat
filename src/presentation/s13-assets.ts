@@ -6,14 +6,20 @@
 import type Phaser from 'phaser';
 import { S13_ASSETS, type S13Asset } from './s13-asset-manifest';
 import { heroEmblemSvg } from './hero-identity';
+import { g23ChampionAssets, g23IconUrl } from './g23-display';
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const index = new Map<string, S13Asset>(S13_ASSETS.map(asset => [`${asset.kind}:${asset.id}`, asset]));
 
 export function s13AssetUrl(kind: S13Asset['kind'], id: string): string | null {
   const asset = index.get(`${kind}:${id}`);
-  return asset ? `${BASE}${asset.path}` : null;
+  // G2-3 icons live in their own manifest keyed by apiName (s13-g23-manifest.ts).
+  return asset ? `${BASE}${asset.path}` : g23IconUrl(kind, id);
 }
+/** Every bundled champion portrait by content id: the generated manifest plus G2-3 heroes/summons present in content. */
+const championAssets = (): readonly { readonly id: string; readonly path: string }[] => [
+  ...S13_ASSETS.filter(asset => asset.kind === 'champion'), ...g23ChampionAssets(),
+];
 export const championTextureKey = (id: string) => `s13-champion-${id}`;
 export const championPortraitKey = (id: string) => `s13-champion-round-${id}`;
 
@@ -23,7 +29,7 @@ export const championPortraitKey = (id: string) => `s13-champion-round-${id}`;
  */
 export function loadS13Portraits(scene: Phaser.Scene, ready: () => void): void {
   let queued = 0;
-  for (const asset of S13_ASSETS) if (asset.kind === 'champion' && !scene.textures.exists(championTextureKey(asset.id))) {
+  for (const asset of championAssets()) if (!scene.textures.exists(championTextureKey(asset.id))) {
     scene.load.image(championTextureKey(asset.id), `${BASE}${asset.path}`); queued++;
   }
   if (!queued) { ready(); return; }
@@ -33,8 +39,7 @@ export function loadS13Portraits(scene: Phaser.Scene, ready: () => void): void {
 
 /** Once per game: circle-clipped portrait textures so pieces need no per-token masks. */
 export function buildPortraitTextures(scene: Phaser.Scene, size = 108): void {
-  for (const asset of S13_ASSETS) {
-    if (asset.kind !== 'champion') continue;
+  for (const asset of championAssets()) {
     const source = championTextureKey(asset.id), target = championPortraitKey(asset.id);
     if (!scene.textures.exists(source) || scene.textures.exists(target)) continue;
     const texture = scene.textures.createCanvas(target, size, size);

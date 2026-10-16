@@ -13,13 +13,17 @@ import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { augmentDisplayName } from './augment-display';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { displayUnitName } from '../rendering/display-names';
-import { getHeroIdentity } from './hero-identity';
+import { getHeroIdentity, traitDisplayName } from './hero-identity';
+import { anomalyDisplayName, itemDisplayName } from './g23-display';
 import { THEME, toNumber } from './theme';
 
 const C = THEME.color;
 const SOURCE_KIND: Readonly<Record<string, string>> = { ability: '技能', trait: '羁绊', item: '装备', augment: '强化', anomaly: '异常', enemyGrowth: '敌方成长' };
 const sourceName = (kind: string, id: string) => {
   if (kind === 'augment' && AUGMENT_DEFINITIONS[id]) return augmentDisplayName(id);
+  if (kind === 'item' && ITEM_DEFINITIONS[id]) return itemDisplayName(id);
+  if (kind === 'trait' && TRAIT_DEFINITIONS[id]) return traitDisplayName(id);
+  if (kind === 'anomaly' && ANOMALY_DEFINITIONS[id]) return anomalyDisplayName(id);
   const catalog = kind === 'item' ? ITEM_DEFINITIONS : kind === 'trait' ? TRAIT_DEFINITIONS : kind === 'augment' ? AUGMENT_DEFINITIONS : kind === 'anomaly' ? ANOMALY_DEFINITIONS : null;
   return (catalog?.[id] as { name?: string } | undefined)?.name ?? displayUnitName(id);
 };

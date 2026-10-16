@@ -5,6 +5,8 @@ import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { augmentDisplayName } from '../presentation/augment-display';
+import { anomalyDisplayName, itemDisplayName } from '../presentation/g23-display';
+import { traitDisplayName } from '../presentation/hero-identity';
 import { ANOMALY_DEFINITIONS } from '../simulation/content/anomalies';
 import { displayUnitName } from './display-names';
 import { m8EventText, STATUS_KIND_NAMES } from '../presentation/combat-status';
@@ -18,7 +20,9 @@ export function originLabel(source: CombatOrigin, lookup?: UnitNameLookup): stri
   const catalog = source.sourceKind === 'item' ? ITEM_DEFINITIONS : source.sourceKind === 'trait' ? TRAIT_DEFINITIONS
     : source.sourceKind === 'augment' ? AUGMENT_DEFINITIONS : source.sourceKind === 'anomaly' ? ANOMALY_DEFINITIONS : UNIT_DEFINITIONS;
   // Champion attack/ability ids are not catalog keys; the owner's name already identifies them.
-  const label = UNIT_DEFINITIONS[source.definitionId] ? displayUnitName(source.definitionId) : source.sourceKind === 'augment' && catalog[source.definitionId] ? augmentDisplayName(source.definitionId) : catalog[source.definitionId]?.name
+  const label = UNIT_DEFINITIONS[source.definitionId] ? displayUnitName(source.definitionId) : (!catalog[source.definitionId] ? undefined
+    : source.sourceKind === 'augment' ? augmentDisplayName(source.definitionId) : source.sourceKind === 'item' ? itemDisplayName(source.definitionId)
+    : source.sourceKind === 'trait' ? traitDisplayName(source.definitionId) : source.sourceKind === 'anomaly' ? anomalyDisplayName(source.definitionId) : catalog[source.definitionId].name)
     ?? (['attack', 'ability', 'enemyGrowth'].includes(source.sourceKind) && lookup ? '' : '效果');
   // M8 Source carries the parent instance for temporary child items; the plain origin has none.
   const parent = (source as CombatOrigin & { readonly parentItemInstanceId?: string | null }).parentItemInstanceId;

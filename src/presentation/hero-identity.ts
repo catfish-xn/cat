@@ -8,6 +8,7 @@ import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { NEUTRAL_DEFINITIONS } from '../simulation/content/neutrals';
 import { displayUnitName } from '../rendering/display-names';
 import { toNumber } from './theme';
+import { contentTraitIdByEn, g23HeroStyle, g23HeroTraits, g23TraitName } from './g23-display';
 
 export type EmblemShape = 'shield' | 'burst' | 'reticle' | 'lens' | 'hexstar' | 'hexagon';
 export interface HeroIdentity {
@@ -62,9 +63,9 @@ export const G22_HERO_STYLE: Readonly<Record<string, { short: string; color: str
   steb: { short: '斯特', color: '#77bfa0' }, trundle: { short: '特朗', color: '#97f0e0' }, twistedfate: { short: '崔斯', color: '#c8a020' },
   vex: { short: '薇古', color: '#0a4a4a' }, vi: { short: '大蔚', color: '#e85a7a' }, ziggs: { short: '吉格', color: '#d0d090' },
 });
-/** Style of any of the 48 purchasable heroes; undefined for neutrals and legacy units. */
+/** Style of any purchasable hero (48 authored here, G2-3 heroes from g23-display); undefined for neutrals and legacy units. */
 export const heroStyle = (definitionId: string): { short: string; color: string } | undefined =>
-  Object.hasOwn(HERO_STYLE, definitionId) ? HERO_STYLE[definitionId] : Object.hasOwn(G22_HERO_STYLE, definitionId) ? G22_HERO_STYLE[definitionId] : undefined;
+  Object.hasOwn(HERO_STYLE, definitionId) ? HERO_STYLE[definitionId] : Object.hasOwn(G22_HERO_STYLE, definitionId) ? G22_HERO_STYLE[definitionId] : g23HeroStyle(definitionId);
 
 const luminance = (hex: string) => {
   const [r, g, b] = [1, 3, 5].map(i => Number.parseInt(hex.slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
@@ -133,6 +134,7 @@ export const S13_TRAIT_ZH: Readonly<Record<string, string>> = Object.freeze({
   Sentinel: '哨兵', Artillerist: '炮手', Sniper: '狙神', Watcher: '监察', Sorcerer: '法师',
   Academy: '皮城学院', Automata: '海克斯机械', Conqueror: '铁血征服者', Emissary: '外交官', Enforcer: '执法官', Experiment: '试验品',
   Family: '家人', Firelight: '野火帮', Rebel: '蓝发小队', Scrap: '极客', 'Pit Fighter': '搏击手', Visionary: '先知', Ambusher: '伏击专家', 'Chem-Baron': '炼金男爵', Dominator: '统领', 'Black Rose': '黑色玫瑰', Bruiser: '格斗家', 'Junker King': '机械公敌', Quickstriker: '迅击战士',
+  'Form Swapper': '双形战士', 'High Roller': '百变铁手',
 });
 /** S13 client trait name → content trait id, for the 14 traits the content implements. */
 export const S13_TRAIT_IDS: Readonly<Record<string, string>> = Object.freeze({
@@ -142,7 +144,7 @@ export const S13_TRAIT_IDS: Readonly<Record<string, string>> = Object.freeze({
 const TRAIT_ZH_BY_ID: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries(Object.entries(S13_TRAIT_IDS).map(([name, id]) => [id, S13_TRAIT_ZH[name]])));
 /** Chinese client name of a content trait (same in the trait column, cards, scouting); the content name when unmapped. */
 export function traitDisplayName(traitId: string): string {
-  return TRAIT_ZH_BY_ID[traitId] ?? TRAIT_DEFINITIONS[traitId]?.name ?? traitId;
+  return TRAIT_ZH_BY_ID[traitId] ?? g23TraitName(traitId) ?? TRAIT_DEFINITIONS[traitId]?.name ?? traitId;
 }
 const OPEN_TRAITS = new Set(['Sentinel', 'Artillerist', 'Sniper', 'Watcher', 'Sorcerer', 'Automata', 'Family', 'Firelight']);
 export interface HeroTraitLabel { readonly name: string; readonly open: boolean }
@@ -159,8 +161,8 @@ export function heroTraitLabels(definitionId: string): HeroTraitLabel[] {
  */
 export function heroTraitTags(definitionId: string): HeroTraitLabel[] {
   const content = UNIT_DEFINITIONS[definitionId]?.traits ?? [];
-  const tags = (HERO_S13_TRAITS[definitionId] ?? []).map(name => {
-    const id = S13_TRAIT_IDS[name], open = id !== undefined && content.includes(id);
+  const tags = (HERO_S13_TRAITS[definitionId] ?? g23HeroTraits(definitionId) ?? []).map(name => {
+    const id = S13_TRAIT_IDS[name] ?? contentTraitIdByEn(name), open = id !== undefined && content.includes(id);
     return { name: open ? traitDisplayName(id) : S13_TRAIT_ZH[name] ?? name, open, id };
   });
   for (const id of content) if (!tags.some(tag => tag.id === id)) tags.push({ name: traitDisplayName(id), open: Object.hasOwn(TRAIT_DEFINITIONS, id), id });

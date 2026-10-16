@@ -3,7 +3,6 @@ import { getDefinition, getPlayerDeploymentCount } from '../simulation/game';
 import { isDeploymentCell } from '../simulation/board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from '../simulation/units';
 import { displayUnitName } from './display-names';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
 import { MATCH_RULES, getUnitSellPrice, getUnitStats, getDeploymentCap, getXpToNextLevel, getShopOdds, readLootView, validateMatchDeployment, type MatchCommandResult, type MatchFailure } from '../simulation/match';
 import type { MatchEvent, MatchState } from '../simulation/match-types';
 import { COMBAT_TICK_MS } from '../simulation/combat';
@@ -40,6 +39,7 @@ import { battleLoadout, battleLoadoutText, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT
 import { isEmptyShopSlot, POOL_REFUSAL_TEXT } from './online/pool-feedback';
 import { CONSUMABLE_FAILURE_TEXT } from '../presentation/orb-loot';
 import type { ConsumableTarget } from '../simulation/consumable-types';
+import { itemDisplayName } from '../presentation/g23-display';
 import type { HexCell } from '../simulation/board';
 
 /** One marked board cell; `kind` picks the outline colour, unknown kinds use the focus colour. */
@@ -793,7 +793,7 @@ export class BoardScene extends Phaser.Scene {
     const token = id && view?.units.some(unit => unit.id === id) ? this.tokens.get(id) : undefined;
     const loadout = token ? battleLoadout(this.session.state.items, this.frozenItems(), this.equipmentOwner(id!)) : null;
     if (!token || !loadout?.changed) { if (this.loadoutTip?.visible) this.loadoutTip.setVisible(false); return; }
-    const text = battleLoadoutText(loadout, definitionId => ITEM_DEFINITIONS[definitionId]?.name ?? definitionId);
+    const text = battleLoadoutText(loadout, definitionId => itemDisplayName(definitionId));
     this.loadoutTip?.setText(text).setPosition(token.x, token.y - 50).setVisible(true);
   }
   private clearDrag() {
