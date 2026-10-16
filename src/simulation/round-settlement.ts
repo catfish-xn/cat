@@ -1,3 +1,6 @@
+import {commitG23Settlement} from './g2-3-settlement';
+import {validateG23BattleFacts,type G23BattleFacts} from './g2-3-economy';
+import {deriveTraits} from './trait-snapshot';
 import { resolveDeferredUpgrades } from './deferred-upgrades';
 import { canonicalContent } from './content';
 import { resolveRoundEconomy } from './round-economy';
@@ -22,6 +25,7 @@ export interface MultiplayerProgress {
 }
 /** Trusted server receipt; income is calculated from seat resources, never supplied by a client. */
 export interface RoundSettlementReceipt {
+  readonly g23Facts?:G23BattleFacts;
   readonly version: typeof ROUND_SETTLEMENT_VERSION;
   readonly settlementId: string;
   readonly battleId: string;
@@ -78,6 +82,10 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
         && !multiplayer.forfeitedChoices.includes(event.id))) return fail(state,'wrong-phase');
     const round = getMultiplayerRoundById(r.roundId);
     if (round.ordinal !== r.round || round.kind !== 'pvp') return fail(state,'invalid-receipt');
+    if(r.g23Facts){
+      validateG23BattleFacts(r.g23Facts);const facts=r.g23Facts,traits=deriveTraits(state.preparation,'player');
+      if(facts.battleId!==r.battleId||facts.round!==r.round||facts.roundKind!=='pvp'||facts.result!==r.result||facts.conquerorTier!==(traits.find(t=>t.traitId==='conqueror')?.tier??0)||facts.chemBaronTier!==(traits.find(t=>t.traitId==='chem-baron')?.tier??0))return fail(state,'invalid-receipt');
+    }
     // Require contiguous history, including already-settled PvE/supply nodes.
     if (state.roundResults.length !== state.round - 1
       || state.roundResults.some((record,index) => record.round !== index + 1)) return fail(state,'unsettled-round');
@@ -123,7 +131,7 @@ export function applyRoundSettlement(state: MatchState, input: unknown): Multipl
       persistentGrowth:[...growth].sort(([a],[b])=>a<b?-1:a>b?1:0).map(([unitId,attackDamageBps])=>({unitId,attackDamageBps})),
       augmentProgress,roundResults:[...state.roundResults,record],nextMatchEventSeq:state.nextMatchEventSeq+1,
       multiplayer:{...unlockedMultiplayer,status:hpAfter===0?'eliminated':'active',receipts:[...state.multiplayer.receipts,structuredClone(r)]}};
-    const merged = resolveDeferredUpgrades(next);
+    const merged = resolveDeferredUpgrades(r.g23Facts?commitG23Settlement(next,r.g23Facts):next);
     const events: MatchEvent[] = [{type:'roundSettled',round:r.round,domain:'match',eventSeq:state.nextMatchEventSeq},
       ...merged.events.map((event,index) => ({...event,domain:'match' as const,eventSeq:next.nextMatchEventSeq+index}))];
     return {ok:true,state:{...merged.state,nextMatchEventSeq:next.nextMatchEventSeq+merged.events.length},events};

@@ -1,0 +1,38 @@
+{
+  "status": "source-verified-runtime-integration-pending",
+  "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
+  "branch": "codex/g2-3-impl",
+  "runtimeIdentityChanged": true,
+  "fullTestRuns": 0,
+  "timingTestRuns": 0,
+  "files": {
+    "src/simulation/content/g2-3-abilities.ts": {
+      "bytes": 18889,
+      "sha256": "19bef67cfe4916d78cf1d5146be5c60a637eb08d678481ae302f848d9a4a9a0e"
+    },
+    "src/simulation/content/g2-3-anomaly-source.ts": {
+      "bytes": 19069,
+      "sha256": "b74fc184b83549caea6e7c7a2bdb7690955aaff8fd5c894f42b7c91e21fbd3a1"
+    },
+    "src/simulation/content/g2-3-loot-source.ts": {
+      "bytes": 26872,
+      "sha256": "c62373e4a5d907afce0fe03e9db5e682a5626c55f376a36d9da78474cfe7d459"
+    },
+    "src/simulation/content/g2-3-trait-source.ts": {
+      "bytes": 35187,
+      "sha256": "e82c0ed2e0443e7a5d3f705b6da4fa8b40e73baab8d432c00b62d448c4655d2c"
+    },
+    "src/simulation/content/g2-3-units.ts": {
+      "bytes": 11059,
+      "sha256": "098e01a470a2cdd8fe1dd345e5361affde6060ed2b51a22695e4cae1482640c0"
+    },
+    "src/simulation/content/source/s13-14.24b/normalized/g2-3-champions.json": {
+      "bytes": 3874,
+      "sha256": "563c4d37915d7bc636e13e41ab40684847ddd7b9d5bb258c18ca30f6a161f8df"
+    },
+    "src/simulation/content/g2-3-special-item-source.ts": {
+      "bytes": 48543,
+      "sha256": "eb34370a6661955b877d3a6557074947d99ee5d9c496454cd8a6e7ed53c4a5c0"
+    }
+  }
+}

@@ -5,6 +5,7 @@ import type { ItemInstance, OwnedAugment, AnomalyBinding, PendingChoice, Schedul
 import type { UnitUpgradedEvent } from './unit-types';
 export type { UnitUpgradedEvent } from './unit-types';
 export type MatchEvent = LedgerCombatEvent | ((import('./consumable-types').ConsumableEvent | { readonly type: 'unitDeployed'; readonly unitId: string; readonly from: import('./unit-types').UnitLocation; readonly to: import('./unit-types').UnitLocation } | UnitUpgradedEvent | StrategyEvent | import('./loot-types').LootMatchEvent | { readonly type: 'roundSettled'; readonly round: number }
+  | {readonly type:'g23ItemGranted';readonly receipt:import('./g2-3-match-progress').G23ItemReceipt}
   | {readonly type:'carouselPendingClaimed';readonly unitId:string;readonly receiptId:string}
   | {readonly type:'carouselPreparationSettled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[]}
   | {readonly type:'carouselGranted';readonly receipt:import('./carousel-types').CarouselReceipt}
@@ -35,6 +36,7 @@ export interface RoundPreparation {
   readonly enemies: readonly import('./unit-types').Unit[];
 }
 export interface MatchBase {
+  readonly g23?:import('./g2-3-match-progress').G23MatchProgress;
   readonly carousel?: {readonly openingPending?:boolean;readonly receipts:readonly import('./carousel-types').CarouselReceipt[];readonly pendingUnits:readonly import('./carousel-types').PendingCarouselUnit[];readonly heldCarouselUnits:readonly import('./carousel-types').PendingCarouselUnit[];readonly preparationReceipts:readonly string[]};
   readonly consumables: readonly import('./consumable-types').ConsumableInstance[];
   readonly nextConsumableSerial: number;

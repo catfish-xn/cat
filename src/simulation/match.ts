@@ -1,3 +1,9 @@
+import {applyG23Radiant} from './g2-3-radiant';
+import {g23RewardAtoms,type G23RewardClaim} from './g2-3-rewards';
+import {g23JunkerMenu,type G23JunkerUpgrade} from './g2-3-junker';
+import {decideG23Market} from './g2-3-economy';
+import { commitG23Settlement,g23SoloFacts } from './g2-3-settlement';
+import { createG23Progress,grantG23Academy } from './g2-3-match-progress';
 import { selectOpeningUnit } from './opening-unit';
 import { resolveCarouselPreparation } from './carousel-units';
 import { planConsumable } from './consumables';
@@ -27,7 +33,7 @@ import { OPENING_INITIAL_STATE } from './opening-economy';
 import { resolveRoundEconomy } from './round-economy';
 import { getCatalogRoundByOrdinal, getNextCatalogRound } from './round-selectors';
 import { shareGeneratedJson } from './immutable-json';
-import { COMPONENT_IDS } from './content/items';
+import { COMPONENT_IDS } from './content/g2-3-item-registry';
 import { generateShop } from './shop';
 import { grantXp } from './progression';
 import { getUnitSellPrice } from './unit-stats';
@@ -58,6 +64,8 @@ export { readLootView } from './loot-view';
 export { getUnitSellPrice, getUnitStats } from './unit-stats';
 const fail = (state: MatchState, reason: MatchFailure): MatchCommandResult => ({ ok: false, state, reason });
 const accept = (state: MatchState, events: readonly MatchEvent[] = []): MatchCommandResult => {
+  state=applyG23Radiant(state,new Set(events.flatMap(e=>e.type==='itemCombined'?[e.itemId]:[])));
+  const academy=grantG23Academy(state);state=academy.state;events=[...events,...academy.events];
   let seq = state.nextMatchEventSeq;
   const stamped = events.map(event => 'tick' in event ? event : { ...event, domain: 'match' as const, eventSeq: seq++ });
   return { ok: true, state: { ...state, nextMatchEventSeq: seq }, events: stamped };
@@ -138,6 +146,7 @@ export function createMatch(seed = DEFAULT_MATCH_SEED, loot:LootInitialization =
     commandProtocolVersion: M8_VERSION.commandProtocolVersion, rngAlgorithm: M8_VERSION.rngAlgorithm, tickMs: M8_VERSION.tickMs,
     m8, combatInputBasis:null, resourceProvenance:appendResourceProvenance({version:RESOURCE_PROVENANCE_VERSION,entries:[]},m8.round.roundId,
       {kind:'unit-acquired',unitId:OPENING_INITIAL_STATE.unit.id,source:{kind:'opening',seed,seatId:'solo'}}), roundDefinitionId: m8.round.roundId, streak: { kind: null, count: 0 }, outcome: null, persistentGrowth: [],
+    g23:createG23Progress(seed),
     augmentProgress: { pumpingRounds: 0, investmentHp: 0 }, battleSeedRngState: (seed ^ 0x9e3779b9) >>> 0,
     contentDigest: CONTENT_DIGEST, seed,
     equipmentState: { equipment: initializeStreams(seed).equipment, rolls: [] }, temporaryEquipment: [],
@@ -300,7 +309,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
   }) : state.resourceProvenance;
   const terminal = plan.hpAfter === 0 || isFinal;
   const outcome = terminal ? isFinal && plan.hpAfter > 0 && combat?.result === 'playerWin' ? 'victory' as const : 'defeat' as const : null;
-  return { ...state, resourceProvenance, phase: terminal && !state.multiplayer ? 'gameOver' : 'settlement',
+  const settled:MatchState={ ...state, resourceProvenance, phase: terminal && !state.multiplayer ? 'gameOver' : 'settlement',
     outcome:state.multiplayer ? null : outcome, combat,
     ...(state.multiplayer ? {multiplayer:{...state.multiplayer,status:plan.hpAfter===0?'eliminated' as const:'active' as const}} : {}),
     gold: plan.goldAfter, playerHp: plan.hpAfter, streak: plan.streakAfter, level: plan.progression.level, xp: plan.progression.xp,
@@ -317,6 +326,7 @@ function settleRound(state: MatchState, combat: FinishedCombat | null, pendingDe
       levelBefore: state.level, levelAfter: plan.progression.level, xpBefore: state.xp, xpAfter: plan.progression.xp,
       hpBefore: state.playerHp, hpAfter: plan.hpAfter, baseDamage: plan.baseDamage, survivingEnemyCount,
       playerDamage: plan.playerDamage, hpLost: plan.hpLost }] };
+  return combat?commitG23Settlement(settled,g23SoloFacts(state,combat)):settled;
 }
 function combatGrowth(combat: CombatState): readonly import('./match-types').PersistentGrowth[] {
   return combat.units.filter(unit=>unit.team==='player' && (unit.runtime?.permanentAdBps??0)>0)
@@ -602,4 +612,40 @@ export function selectChoice(state: MatchState, choiceId: string, generation: nu
   }
   const entered = enterScheduledEvents(selected, choice.returnPhase === 'settlement' ? 'after' : 'before');
   return accept(entered.state, [...events, ...entered.events]);
+}
+
+/** Domain menus are consumed explicitly; clients never calculate price or progress. */
+export function chooseG23Junker(state:MatchState,menuId:string,upgrade:G23JunkerUpgrade):MatchCommandResult{
+ if(state.phase!=='preparation'||isCombatRosterLocked(state))return fail(state,'wrong-phase');
+ const menu=g23JunkerMenu(state);if(!menu||menu.id!==menuId||!menu.choices.includes(upgrade))return fail(state,'stale-choice');
+ const cost=['spare-parts','finishing-touch','junkyard-titan'].includes(upgrade)?0:5;
+ if(state.gold<cost)return fail(state,'insufficient-gold');
+ return accept({...state,gold:state.gold-cost,g23:{...state.g23!,junkerPurchases:[...state.g23!.junkerPurchases,{id:menu.id,round:state.round,unitId:menu.unitId,upgrade,cost}]}});
+}
+export function chooseG23BlackMarket(state:MatchState,offerId:string,take:boolean):MatchCommandResult{
+ if(!['preparation','settlement'].includes(state.phase)||isCombatRosterLocked(state))return fail(state,'wrong-phase');
+ if(!state.g23?.chem.offer||state.g23.chem.offer.id!==offerId||typeof take!=='boolean')return fail(state,'stale-choice');
+ return accept({...state,g23:decideG23Market(state.g23,offerId,take,state.round)});
+}
+
+export function claimG23Reward(state:MatchState,atomId:string,definitionId:string):MatchCommandResult{
+ if(state.phase!=='preparation'||isCombatRosterLocked(state)||!state.g23)return fail(state,'wrong-phase');
+ const bundle=state.g23.rewards.find(b=>g23RewardAtoms(b,state.seed).some(a=>a.id===atomId)),atom=bundle&&g23RewardAtoms(bundle,state.seed).find(a=>a.id===atomId);
+ if(!bundle||!atom)return fail(state,'stale-choice');
+ const copy=state.g23.rewardClaims.filter(r=>r.atomId===atomId).length;
+ if(copy>=atom.quantity||atom.kind!=='gold'&&!atom.options.includes(definitionId)||atom.kind==='gold'&&definitionId!=='')return fail(state,'stale-choice');
+ if(atom.kind==='duplicator'&&!state.preparation.units.some(u=>u.team==='player'&&u.definitionId===definitionId))return fail(state,'unknown-unit');
+ const id=`${atomId}:copy:${copy}`;let next:MatchState=state,instanceId:string|null=null;const events:MatchEvent[]=[];
+ if(atom.kind==='unit'||atom.kind==='duplicator'){
+  const plan=planUnitAcquisition(state,definitionId,{kind:'g23',receiptId:id},state.resourceProvenance.entries.length);
+  if(!plan.ok)return fail(state,plan.reason);
+  instanceId=plan.unitId;next={...state,preparation:plan.preparation,items:plan.items,anomalyBinding:plan.anomalyBinding,nextUnitSerial:plan.nextUnitSerial,persistentGrowth:mergeGrowthLedger(state.persistentGrowth,plan.upgradeEvents),resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,plan.facts)};events.push(...plan.events);
+ }else if(atom.kind==='item'){
+  const plan=planPermanentItemGrant(state,{receiptId:id,definitionId},state.g23.rewardClaims.map(r=>r.id));if(!plan.ok)return fail(state,'unknown-item');
+  instanceId=plan.grantedItemIds[0];next={...plan.state,resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,{kind:'item-acquired',itemId:instanceId,source:{kind:'g23',receiptId:id}})};
+ }else if(atom.kind==='tool'){
+  instanceId=`consumable-${state.nextConsumableSerial}`;next={...state,nextConsumableSerial:state.nextConsumableSerial+1,consumables:[...state.consumables,{consumableId:instanceId,definitionId:definitionId as import('./consumable-types').ConsumableDefinitionId}]};
+ }else next={...state,gold:state.gold+atom.gold};
+ const claim:G23RewardClaim={id,bundleId:bundle.id,atomId,copy,round:state.round,kind:atom.kind,definitionId,instanceId,gold:atom.gold};
+ return accept({...next,g23:{...state.g23,rewardClaims:[...state.g23.rewardClaims,claim]}},events);
 }

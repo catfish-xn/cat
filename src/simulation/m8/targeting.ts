@@ -22,13 +22,15 @@ function enemies(env:TargetEnvironment):TargetUnit[] {
   return env.units.filter(u=>u.team!==holder.team&&isSelectable(u,holder,env)).sort((a,b)=>compareCodePoints(a.id,b.id));
 }
 export function selectTargets(selector: TargetSelector, env: TargetEnvironment): string[] {
+  if(selector.geometry!==undefined&&selector.geometry!=='line-to-primary')throw new RangeError('Unknown selector geometry');
   integer(selector.maxTargets); if(selector.radius!==null)integer(selector.radius);
   const holder=get(env,env.holderId);if(!holder)return[];
   const primary=get(env,env.primaryId), previous=get(env,env.previousId), actor=get(env,env.eventActorId);
   const anchor=selector.anchor==='holder'?holder.cell:selector.anchor==='primary-target'?primary?.cell:selector.anchor==='previous-target'?previous?.cell:env.eventActorCell ?? actor?.cell;
   if(!anchor)return[];
   const candidateIds=selector.candidates==='event-actor'?[env.eventActorId]:selector.candidates==='event-target'?[env.eventTargetId]:selector.candidates==='bound-target'?env.boundTargetIds??[]:null;
-  const qualified=(u:TargetUnit)=>isSelectable(u,holder,env)&&(selector.relation==='self'?u.id===holder.id:selector.relation==='ally'?u.team===holder.team:u.team!==holder.team)
+  const line=selector.geometry==='line-to-primary'&&primary?shortestPath(env.board,holder.cell,primary.cell).slice(0,selector.radius??100):null;
+  const qualified=(u:TargetUnit)=>isSelectable(u,holder,env)&&(!line||line.some(c=>sameCell(c,u.cell)))&&(selector.relation==='self'?u.id===holder.id:selector.relation==='ally'?u.team===holder.team:u.team!==holder.team)
     &&(!selector.excludeSelf||u.id!==holder.id)&&(!selector.excludePrimary||u.id!==primary?.id)&&(selector.radius===null||hexDistance(anchor,u.cell)<=selector.radius);
   let candidates=env.units.filter(u=>(candidateIds===null||candidateIds.includes(u.id))&&qualified(u));
   const burnt=(u:TargetUnit)=>env.source&&u.burnSources?.some(s=>s.ownerId===env.source!.ownerId&&s.sourceKind===env.source!.sourceKind&&s.definitionId===env.source!.definitionId&&s.instanceId===env.source!.instanceId&&s.parentItemInstanceId===env.source!.parentItemInstanceId)?1:0;

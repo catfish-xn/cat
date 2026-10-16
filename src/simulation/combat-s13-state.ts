@@ -81,12 +81,14 @@ export function active(unit: CombatUnit, tick: number, kind: CombatStatus['kind'
   return (unit.statuses ?? []).filter(s => s.kind === kind && s.startsAtTick <= tick && s.expiresAtTick > tick);
 }
 export function ap(unit: S13Unit, tick: number): number {
-  return resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat),
+  const result = resolveStat('abilityPower', unit.abilityPower ?? 100, [constantModifier('abilityPower', unit.runtime.abilityPowerFlat),
     ...active(unit, tick, 'abilityPower').filter(s => !s.contributionKeys).map(s => constantModifier('abilityPower', s.amount)), ...statusModifiers(unit, 'abilityPower', tick)], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='magic-expert')?14000:10000)/10000);
 }
 export function ad(unit: S13Unit): number {
-  return resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
+  const result = resolveStat('attackDamage', unit.attackDamageBase ?? unit.attackDamage,
     [constantModifier('attackDamage', unit.attackDamagePercentBps ?? 0, 'bps'), constantModifier('attackDamage', unit.runtime.permanentAdBps, 'bps'), ...statusModifiers(unit, 'attackDamage')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });
+  return Math.floor(result*(unit.mechanics?.some(m=>m.mechanic==='g23Anomaly'&&m.source.definitionId==='attack-expert')?15500:10000)/10000);
 }
 export function range(unit: S13Unit): number {
   return resolveStat('range', champion(unit) === 'twitch' && (unit.expansion?.attacksRemaining ?? 0) > 0 ? 100 : unit.attackRange, [constantModifier('range', unit.runtime.rangeBonus + (champion(unit) === 'ambessa' && (unit.runtime.castCount === 0 || unit.runtime.castCount % 2 === 1) || champion(unit) === 'mordekaiser' && (unit.g22?.mordeUntilTick ?? 0) > (unit.mechanismState?.sampledAtTick ?? 0) ? 1 : 0), 'hexes'), ...statusModifiers(unit, 'range')], { holder: hpSample(unit), startingRows: startingRows(unit.team, unit.startingCell?.row ?? unit.cell.row) ?? undefined });

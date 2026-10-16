@@ -1,5 +1,5 @@
 import { itemRestrictionAllows } from './seat-mechanics/items';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { checkEquipmentPlacement } from './equipment-policy';
 import type { GameState } from './game';
 import type { CombinePreview, EquipPreview, EquipmentFailure } from './m8/ui-contracts';

@@ -1,0 +1,52 @@
+{
+  "status": "development-checkpoint-not-final-acceptance",
+  "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
+  "identity": {
+    "contentDigest": "fnv1a32-utf16:fe963b26",
+    "lootReplayDigest": "fnv1a32-utf16:eac89353",
+    "rulesVersion": "s13-g2-3-v1",
+    "contentVersion": "s13-14.24b-g2-3-v1"
+  },
+  "targetTests": {
+    "files": [
+      "tests/g2-3-content.test.ts",
+      "tests/g2-3-skills.test.ts",
+      "tests/g2-3-traits.test.ts",
+      "tests/g2-3-identity.test.ts",
+      "tests/g2-3-anomalies.test.ts",
+      "tests/m8-content-equivalence.test.ts",
+      "tests/m7-hero-identity.test.ts",
+      "tests/g2-2-ability-display.test.ts",
+      "tests/shop.test.ts",
+      "tests/tp-shared-pool.test.ts",
+      "tests/server/round-commit.test.ts"
+    ],
+    "passed": 215,
+    "failed": 0
+  },
+  "serverEntry": {
+    "passed": true,
+    "comparedStates": 165,
+    "traceHashes": {
+      "state": "9f5e023b9408a9cb06b5d7bc91bc59bbe35da2ea4be52f1ff63083dcb8d6a032",
+      "events": "0d4a792a1ed641b992bb3bf786ae315b4f350d86451e677f283357c6383c9e1e",
+      "rng": "7ae89cb2aa9c8791a4a14eeb87040fa6c686ad97912e65f0e3f00c8e2bb864be"
+    },
+    "scope": "seed 42 existing first battle; browser-target bundle executed in ordinary Node, not a live browser or multiplayer acceptance"
+  },
+  "fixtureEvidence": [
+    "release-audit.json",
+    "input-fixture-audit.json",
+    "live-reveal-audit.json"
+  ],
+  "fullTestRuns": 0,
+  "timingTestRuns": 0,
+  "pending": [
+    "Claude通用接口PR合入后先rebase，再接私有机制容器、选择/超时/机器人、召唤事件和radiant kind",
+    "复核召唤物幸存伤害与双边锻炉恢复",
+    "旧B8 live-reveal回归待适配：源命令复跑证实r01 tick48/405、r00 tick59/516，lux单留无击杀；须保留同tick覆盖而非只替换golden",
+    "接口接入后重录最终夹具并核对合同",
+    "仅在最终PR head上全套npm test和test:timing各一次，随后开PR目标multiplayer"
+  ],
+  "typecheck": "passed"
+}

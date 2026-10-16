@@ -1,3 +1,7 @@
+import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
+import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
+import { advanceG23Summons,g23Bound } from './combat-g2-3-summons';
+import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG23Attack,recordG23Damage,g23Anomaly } from './g2-3-combat';
 import { advanceAugmentCombat, settleAugmentDeaths } from './combat-augment-effects';
 import { advanceG22Traits, recordG22Damage, shareStebHeal } from './combat-g2-2';
 import { advanceG2Passives, recordG2Damage } from './combat-g2';
@@ -52,8 +56,9 @@ function defenses(unit: S13Unit, physical: boolean, tick: number, units: CombatS
     value: { kind: 'unit-count', perUnit: m.values.resistPerEnemy, population: 'alive-enemies-targeting-holder', sample: 'current', distinctBy: 'unitId' } });
   const shred = Math.max(statusMagnitude(unit.mechanismState?.statuses ?? [], physical ? 'sunder' : 'shred', tick), ...(physical ? active(unit, tick, 'armorReduction').filter(s => !s.contributionKeys).map(s => s.amount) : [0]));
   modifiers.push(constantModifier(stat, -shred, 'bps'));
-  return resolveStat(stat, physical ? unit.armor : unit.magicResist, modifiers, { holder: hpSample(unit), startingRows: startingRows(unit.team,unit.startingCell?.row ?? unit.cell.row) ?? undefined,
+  const resolved = resolveStat(stat, physical ? unit.armor : unit.magicResist, modifiers, { holder: hpSample(unit), startingRows: startingRows(unit.team,unit.startingCell?.row ?? unit.cell.row) ?? undefined,
     enemiesTargetingHolder: units.filter(u => u.alive && u.team !== unit.team && u.targetId === unit.id).map(u => u.id) });
+  return Math.floor(resolved*(g23Anomaly(unit,'defense-expert')?16600:10000)/10000);
 }
 /** Authoritative read projection for renderers; it neither consumes RNG nor advances any counter. */
 export function readCombatStats(unit: CombatState['units'][number], state: CombatState): {
@@ -82,6 +87,7 @@ function damageRequest(packet: S13Packet, combatId: string, tick: number): Damag
 function damageSample(packet: S13Packet, target: S13Unit, owner: S13Unit | undefined, tick: number, units: readonly S13Unit[], hp: number): DamageSample {
   const amplifiers: StatModifier[] = owner ? [...statusModifiers(owner, 'damageAmp', tick)] : [];
   if (target.g22 && target.g22.exposureFromTick <= tick && target.g22.exposureUntilTick > tick) amplifiers.push(constantModifier('damageAmp', target.g22.exposureBps, 'bps'));
+  if(owner&&g23Anomaly(owner,'bully')&&target.starLevel<owner.starLevel)amplifiers.push(constantModifier('damageAmp',2400,'bps'));
   if (owner) for (const m of owner.mechanics ?? []) {
     if (m.mechanic === 'damageAmp') amplifiers.push(constantModifier('damageAmp', m.values.bps, 'bps'));
     if (m.mechanic === 'sniper') amplifiers.push(constantModifier('damageAmp', m.values.damageBpsPerHex * hexDistance(owner.cell, target.cell), 'bps'));
@@ -185,7 +191,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   };
   maintainMechanisms(ctx, () => actionSeq++);
   advanceAugmentCombat(ctx);
-  advanceG22Traits(ctx);
+  advanceG22Traits(ctx); advanceG23Anomalies(ctx); advanceG23Summons(ctx); advanceG23Skills(ctx); advanceG23Junker(ctx,()=>actionSeq++);
   advanceG2Passives(ctx, () => actionSeq++);
   const blocked = new Set<string>();
   for (const unit of units) {
@@ -198,8 +204,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   const occupied = new Set(units.filter(u => u.alive).map(u => key(u.cell))), reserved = new Set<string>();
   const intents = units.map(unit => {
-    if (!unit.alive || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
+    if (unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) return undefined;
     const target = byDistance(unit, enemies(unit, units))[0];
+    if (g23Anomaly(unit,'deep-roots')) return undefined;
     if (!target || unit.moveCooldownTicks > 0 || hexDistance(unit.cell, target.cell) <= range(unit)) return undefined;
     return move(state, unit, target, occupied);
   });
@@ -241,11 +248,11 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         if (piercing) piercingCrit.set(packet.actionSeq, packet.critical);
       }
     };
-    if (!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
+    if (unit.definitionId==='g23-forge'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0) { rollPlannedPackets(); continue; }
     const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
     const selfCast = ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie'].includes(champion(unit));
     const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
-    if (!['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (inRange || selfCast)) {
+    if ((unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (inRange || selfCast)) {
       const seq = actionSeq++, beforeCount = events.length;
       const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.mana)!;
       spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
@@ -264,7 +271,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     } else if (inRange && unit.cooldownTicks === 0) {
       const seq = actionSeq++, neutral = champion(unit) === 'neutral';
       unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: target.id });
-      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, target, seq); unit.cooldownTicks = oldInterval;
+      const oldInterval = interval(unit, tick); planS13Attack(ctx, unit, target, seq); recordG23Attack(ctx,unit,target,seq); unit.cooldownTicks = oldInterval;
       hooks(unit, 'onAttack', seq);
       emitMechanismSignal(ctx, { event: 'attack-completed', tick, actionSeq: seq, actorId: unit.id, targetId: target.id, cast: null });
       if (!neutral) attackMana.set(unit.id, S13_COMBAT_RULES.attackMana + mechanic(unit, 'extraAttackMana', 'amount'));
@@ -277,7 +284,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const virtualHp = new Map(units.map(u => [u.id, u.hp])), hpLost = new Map<string, number>();
   const damageByAction = new Map<string, { owner: S13Unit; source: CombatOrigin; seq: number; outcomes: DamageOutcome[]; hpAmount: number; heal?: Amount }>();
   const allOutcomes: DamageOutcome[] = [];
-  const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist');
+  const trackAssists = hasMechanismSubscriber(units, 'kill-or-assist')||units.some(u=>champion(u)==='swain'||u.sources?.some(s=>s.source.sourceDefinitionId==='conqueror'));
   const damageContributors = { ...state.damageContributors };
 
   ctx.virtualHp = virtualHp;
@@ -285,6 +292,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const ricochetActions = new Set<string>(), aggregatedActions = new Set<number>();
   const commitOutcome = (target: S13Unit, result: ReturnType<typeof allocateDamage>, packet: S13Packet) => {
     const outcome = result.outcome, { absorbed, hpDamage: actual, context, critical } = outcome;
+    recordG23SkillDamage(ctx,units.find(u=>u.id===packet.source.ownerId),target,actual,packet);
+    recordG23Damage(ctx,units.find(u=>u.id===packet.source.ownerId),actual,packet,absorbed);
     recordG22Damage(ctx, units.find(u => u.id === packet.source.ownerId), actual, packet);
     recordG2Damage(ctx, units.find(u => u.id === packet.source.ownerId), target, actual, absorbed, packet, Math.max(0, (virtualHp.get(target.id) ?? 0) - actual));
     target.shieldLayers = result.shields.map(layer => {
@@ -314,6 +323,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         outcomes: [...old?.outcomes ?? [], outcome], hpAmount: (old?.hpAmount ?? 0) + actual, heal: old?.heal ?? packet.onPositiveHpDamageHeal });
     }
     if (outcome.killingPacket) {
+      g23RumbleDeath(ctx,target,actionSeq++,defenses(target,true,tick,units)+defenses(target,false,tick,units));
       killed.set(target.id, packet.source); events.push({ type: 'kill', tick, unitId: target.id, source: packet.source });
       const ricochetKey = JSON.stringify([packet.source.ownerId, packet.actionSeq]);
       if (owner && !context.redirected && packet.bounce && !ricochetActions.has(ricochetKey) && outcome.overkill > 0) {
@@ -408,12 +418,15 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   if (trackAssists) for (const death of allOutcomes.filter(o => o.killingPacket)) for (const actorId of damageContributors[death.context.targetId] ?? [])
     if (units.some(u => u.id === actorId && u.hp > 0)) emitMechanismSignal(ctx, { event: 'kill-or-assist', tick, actionSeq: death.context.rootActionSeq, actorId, targetId: death.context.targetId, cast: null }, { ...ctx.resolutionFacts!, damage: [death] });
+  for(const [victimId,source] of killed){const contributors=[source.ownerId,...(damageContributors[victimId]??[])];extendG23Swain(ctx,victimId,contributors);recordG23Conquest(ctx,victimId,contributors);}
+  settleG23ExperimentKills(ctx,killed);
   for (const source of killed.values()) {
     const owner = units.find(u => u.id === source.ownerId);
     if (owner && owner.hp > 0 && hasMechanic(owner, 'killStreak')) killMana.set(owner.id, (killMana.get(owner.id) ?? 0) + mechanic(owner, 'killStreak', 'mana'));
   }
-  for (const request of ctx.manaRequests ?? []) {
+  for (let request of ctx.manaRequests ?? []) {
     const target = units.find(u => u.id === request.targetId); if (!target?.alive || target.hp <= 0) continue;
+    request={...request,amount:Math.floor(request.amount*(10000+mechanic(target,'visionary','manaBps'))/10000)};
     const mana = { unitId: target.id, current: target.mana, maximum: target.maxMana, lockedUntilTick: target.manaLockedUntilTick ?? 0 };
     const receipt = ctx.castReceipts?.find(c => c.source.ownerId === target.id && c.actionSeq === request.castActionSeq);
     const result = request.reason === 'cast-refund' ? refundCast(mana, request, receipt!, tick) : { outcome: resolveMana(mana, request, tick) };
@@ -430,7 +443,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // replay2: one ManaOutcome event per non-zero request, resolved in the same order as before.
     for (const [reason, gain] of [['attack', attackGain], ['damage', damageGain], ['kill', killGain]] as const) {
       const outcome = resolveMana({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 },
-        { source: asSource(origin(unit)), targetId: unit.id, amount: gain, reason, bypassLock: 'none', castActionSeq: null }, tick);
+        { source: asSource(origin(unit)), targetId: unit.id, amount: Math.floor(gain*(10000+mechanic(unit,'visionary','manaBps'))/10000), reason, bypassLock: 'none', castActionSeq: null }, tick);
       unit.mana = outcome.after;
       if (gain > 0) events.push({ type: 'manaChanged', tick, outcome });
     }

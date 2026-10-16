@@ -1,3 +1,4 @@
+import { G23_TRAITS } from './g2-3-traits';
 import { G22_TRAITS } from './g2-2-traits';
 import { G2_TRAIT_DEFINITIONS } from './g2-traits';
 import type { TraitDefinition } from '../strategy-types';
@@ -205,5 +206,6 @@ export const TRAIT_DEFINITIONS: Readonly<Record<string,TraitDefinition>> = freez
         ]
       }
     ]
-  }
+  },
+  ...G23_TRAITS,
 });

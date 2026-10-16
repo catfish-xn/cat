@@ -1,3 +1,5 @@
+import { projectG23Summons } from './g2-3-summons';
+import { g23FormStats } from './g2-3-forms';
 import { shareGeneratedDeclaration } from './immutable-json';
 import { freezeCombatDeclarations } from './combat-static';
 import { recordNeutralReceipts } from './neutral-receipts';
@@ -27,6 +29,7 @@ export function validateCombatStart(preparation: GameState): CombatStartFailure 
 
 /** Creates an isolated board-only battle. Preparation is never a combat write target. */
 function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot, combatId = 'standalone', rngState = 42): CombatState {
+  preparationState=projectG23Summons(preparationState);
   const units: CombatUnit[] = preparationState.units.flatMap(unit => {
     if (unit.location.kind !== 'board') return [];
     const resolved = strategy?.units.find(entry => entry.unitId === unit.id);
@@ -46,7 +49,7 @@ function snapshotCombat(preparationState: GameState, strategy?: StrategySnapshot
       ...(ability.kind === 's13' ? { attackDamageBase: resolved?.attackDamageBase ?? stats.attack, attackDamagePercentBps: resolved?.attackDamagePercentBps ?? 0,
         baseAttackSpeedBps: stats.baseAttackSpeedBps ?? Math.floor(200000 / stats.attackIntervalTicks),
         attackSpeedBonusBps: stats.attackSpeedBonusBps ?? 0,
-        maxHpBasis: { base: getUnitStats(unit.definitionId, unit.starLevel).health,
+        maxHpBasis: { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.location.cell.row).health,
           flat: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
           bps: (resolved?.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 },
         mechanics: structuredClone(resolved?.mechanics ?? []), shieldLayers: [], statuses: [], tasks: [],

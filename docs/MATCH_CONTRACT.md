@@ -1,5 +1,30 @@
 # M5 Match contract v5
 
+## G2-3 当前实现与接入合同（2026-10-16）
+
+本节与 [G2-3 实现对账](evidence/g2-3/RECONCILIATION.md) 优先于本文历史切片中的48英雄、3异变、学院不发奖、征服者无宝箱等描述。G2-3 尚待 Claude 通用接口 PR 合入后 rebase 接入并最终验收；本节同时标明已经实现的规则与待接接口。
+
+- 版本统一为 rules `s13-g2-3-v1` / content `s13-14.24b-g2-3-v1`，schema7、存档3、回放3保持；digest包含新内容、奖励过渡政策及有限规则manifest。旧存档/回放拒绝，无迁移或静默回退。开局沿用#126的一费随机英雄，不回退旧的固定开局。
+- 准入60位商店英雄，1–5费14/13/13/12/8种，共享库存1171份；原始26个非Teamup羁绊启用25个，FormSwapper与7个Teamup不开放；30个异变，排除Cosmic Rhythm。远程形态和召唤物不加入商店/合成/共享池。
+- Elise/Swain/Gangplank/Jayce按开战初始站位选属性与技能：己方前两排近战、后两排远程；敌方对称，整战不切换。永久资产保持canonical ID，Combat ability championId/初始属性记录当前形态，移动/恢复不重选。射程4格和Forge1000生命是约定值。
+- `g23`为持久进度权威，含学院赞助/发物、征服者层数/开箱、炼金微光/黑市、军械库、奖励托管及领取收据。当前格式恢复必须携带它；验证从种子重演进度并核对当前终局事实，恢复不发奖、不抽签。
+- 征服者仅15个启用箱，第10档650，超过1500继续积层；唯一战斗/受害者收据防重，2/4/6/9档每击杀或助攻1/3/6/20层。每箱使羁绊基础AD/AP加成成长5%。各档只取非零权重Option1。
+- 征服者延后神器、辅助装、冠、窃贼手套、锻造器、复制器。仅受影响档删除这些物品，保留其余奖励，Gold=max(原Gold,map22整档估值)。已有拆卸器、重铸器保留，第5档不触发折金。第14档60金+光明装备+拆卸器；第15档200金+永久光明转化。逐档源/过渡对照在RECONCILIATION，均标约定值，下一批恢复原奖励。
+- 光明转化开出时转换场上/备战席英雄穿戴的普通成装；随后仅新合成成装自动转光明。每件转换记录原ID、目标apiName和`g23:conqueror:15`唯一来源；不会转换未穿戴库存或普通新赠成装。
+- 学院按独立LCG抽一组有序三件项目赞助池（29组ID/均匀权重为约定值）。首次成功准备命令跨越3/4/5档逐档发奖到库存，receipt防重；同ID永久穿戴复制品叠加，学院成员额外5%只一次。Jayce使5档可达。
+- 黑市按map22权重单次抽样，拒领保留微光并累积跳过次数，领取清零；源HealthPerSkip按当前档×次数给成员。跨多断点保留最高一次offer为有限约定。
+- Rumble军械库采用弹出选择，可收起，超时确定性选合法项；付费余额不足时选Spare。每3个Rumble参战回合一次，2个未购升级+Spare，付费5金，全购后Finishing，三星下一菜单Titan；不做常驻商店。临时领域命令将接Claude通用选择kind/超时语义后才算完整运行时接入。
+- Rumble三星自爆为双抗合计的20000%（2000000Bps），死亡伤害先于最后单位判负；实验Mundo120生命与每唯一击杀+60；Sion/Forge有限实体与技能省略范围见对账，不能把归档文本视为完整执行声明。
+- G23进度随机流seed xor 0x67323370，初始赞助1词，黑市每offer1词；HighRoller消耗显式Combat流，只有Triple追加二级词。军械库、试验格、奖励原子使用带独立常量/身份的LCG派生流，不污染商店/开局/战斗种子流。失败命令返回原state，无资源、RNG、收据或事件变化。
+- 奖励金币在唯一结算事务发放；其他奖励托管。逐副本领取时发物/英雄、检查备战席/共享池并写唯一收据；失败保留待领权利。`readG23RewardItemCatalog()`提供奖励apiName、中文名、约定状态。光明kind待Claude扩展位接入，普通recipe/重铸/轮盘/临时装备池不随奖励目录扩大。
+
+### G2-3 / Claude 联机接口连接点（未完成）
+
+`src/server/`、`src/rendering/`、`src/server-entry/`不由本PR修改。Claude接口PR合入后先rebase，再将上述进度接机制状态容器；黑市/军械库/锻造器接新pendingChoice kind及skip；召唤物改用生成帮助函数、出现/移除事件和不可售/不占人口标记；光明改kind=radiant（实际标识为`radiant`）。金币来源/新增失败原因走通用扩展位。
+
+双边`proposeSettlement()`产生`SideProposal.g23Facts`；服务器必须原样转到`RoundSettlementReceipt.g23Facts`，仅实际参与席位结算。镜像没有进度/收益。冻结快照须携带开战前g23/playerHp；漏转字段不能视为已支持。临时领域选择命令、召唤事件及交叉文件清单见对账末节，接入后更新本节为实际接口。
+
+
 > M8 B2审计修订待复审，目标合同见 [M8_RULES.md](M8_RULES.md) 与 [M8_UI_CONTRACT.md](M8_UI_CONTRACT.md)。本文件仍描述当前M7运行行为；新类型未接入，正式版本切换由B3–B9完成。
 
 Public entrypoint: `src/simulation/match.ts`; public state: `match-types.ts` and `strategy-types.ts`. [M5_RULES](../M5_RULES.md) defines exact values and ordering. Match is the sole authority for economy, resources, schedule, progression and terminal state. The historical M4 contract is available in Git at the M4 baseline; this document describes the current API.
@@ -257,7 +282,7 @@ function abilityDisplayValues(
 已声明公式缺源变量。不以 0 填补缺失源数据。返回对象冻结；函数不修改状态、
 不消耗 RNG、不读真实时间。
 
-### G2-2 有限内容合同
+### G2-2 有限内容合同（历史，已由顶部G2-3节覆盖）
 
 48英雄/14羁绊，15新英雄名单、每源字段与全部近似见 `docs/evidence/g2-2/RECONCILIATION.md`。学院不发永久装备；征服者不产生宝箱。极客只在战斗编译时临时替换散件，不改装备账本、不消耗 RNG；外交官仅恰好1或4名生效。CombatInputBasis.inputs.roundResults 保存开战前胜场权威历史，恢复与已验证历史前缀逐项相等。当前联机冻结投影缺胜场历史时 Ambessa 胜场双抗为0，详见 UI_REQUESTS 的 G2-2 缺口。旧身份拒绝恢复，历史夹具只读保留。
 

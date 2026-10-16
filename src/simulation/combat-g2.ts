@@ -1,3 +1,4 @@
+import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
 import { getNeighbors, hexDistance } from './board';
@@ -105,7 +106,7 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       break;
     }
   }
-  return ids.length ? ids : planG22Cast(ctx, unit, target, seq);
+  return ids.length ? ids : (() => { const next=planG22Cast(ctx, unit, target, seq); return next.length ? next : planG23Cast(ctx, unit, target, seq); })();
 }
 /** Passive attack replacements return true when they already emitted the basic packet. */
 export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Unit, seq: number): boolean {
@@ -139,6 +140,7 @@ export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Uni
   return false;
 }
 export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask): void {
+  if (t.kind.startsWith('g23')) { executeG23Task(ctx, unit, t); return; }
   if (t.kind.startsWith('g22')) { executeG22Task(ctx, unit, t); return; }
   const target = ctx.units.find(u => u.id === t.targetId && u.alive && u.hp > 0);
   if (t.kind === 'g2SingedSpeed') {

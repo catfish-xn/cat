@@ -37,12 +37,20 @@ export function statusDeclaration(effect:Effect,owner:CombatUnit,source:Source):
  if(effect.kind==='apply-status')return effect.status;
  if(effect.kind!=='modify-stat')return null;
  const raw=effect.modifier,value=raw.value;
- const modifier=value.kind==='counter'?{...raw,value:{kind:'constant' as const,amount:(owner.triggerLedger?.runtimes.find(r=>r.source.definitionId===source.definitionId&&r.source.instanceId===source.instanceId&&r.source.effectIndex<=source.effectIndex&&source.effectIndex<r.source.effectIndex+32)?.counters[value.counterId] ?? 0)*value.perCount}}:raw;
+ const modifier=value.kind==='counter'?{...raw,value:{kind:'constant' as const,amount:(value.counterId==='g23Absorb'?owner.g23?.absorbed.find(r=>{try{return JSON.parse(source.instanceId)[2]===r.unitId;}catch{return false;}})?.value ?? 0:owner.triggerLedger?.runtimes.find(r=>r.source.definitionId===source.definitionId&&r.source.instanceId===source.instanceId&&r.source.effectIndex<=source.effectIndex&&source.effectIndex<r.source.effectIndex+32)?.counters[value.counterId] ?? 0)*value.perCount}}:raw;
  return {kind:modifier.value.kind==='constant'&&modifier.value.amount<0?'stat-debuff':'stat-buff',magnitudeBps:0,duration:effect.duration,stackPolicy:effect.stackPolicy,activation:effect.activation,polarity:modifier.value.kind==='constant'&&modifier.value.amount<0?'harmful':'beneficial',removable:modifier.value.kind==='constant'&&modifier.value.amount<0,modifier,damageFilter:null,onEnd:null};
 }
 export function isDeclaredStatus(source:Source,app:StatusApplication,units:readonly CombatUnit[],combatId:string):boolean {
  const owner=units.find(u=>u.id===source.ownerId);if(!owner)return false;
- return declaredEffects(owner,combatId).some(d=>canonicalSource(d.source)===canonicalSource(source)&&same(statusDeclaration(d.effect,owner,d.source),app));
+ return declaredEffects(owner,combatId).some(d=>{
+  if(canonicalSource(d.source)!==canonicalSource(source))return false;
+  const expected=statusDeclaration(d.effect,owner,d.source);if(same(expected,app))return true;
+  if(!expected||d.effect.kind!=='modify-stat'||d.effect.stackPolicy.kind!=='add-stacks'||expected.modifier?.value.kind!=='constant'||app.modifier?.value.kind!=='constant')return false;
+  const per=expected.modifier.value.amount,total=app.modifier.value.amount;
+  const runtime=owner.triggerLedger?.runtimes.find(r=>canonicalSource(r.source)===canonicalSource(source));
+  const limit=Math.min(d.effect.stackPolicy.cap??Number.MAX_SAFE_INTEGER,runtime?.triggerCount??Math.floor((owner.mechanismState?.sampledAtTick??0)/40));
+  return per!==0&&Number.isInteger(total/per)&&total/per>=1&&total/per<=limit&&same({...expected,modifier:{...expected.modifier,value:{kind:'constant',amount:total}}},app);
+ });
 }
 /** Live threshold/start effects require their once-per-combat receipt. */
 export function validateItemEffectConsumption(source:Source,at:number,units:readonly CombatUnit[],combatId:string):void {
@@ -82,8 +90,17 @@ export function validateItemRuntime(unit:CombatUnit,combatId:string,tick:number,
  const basis=unit.maxHpBasis!;
  const bonuses=unit.itemPrograms?.length?declaredEffects(unit,combatId).filter(d=>d.effect.kind==='change-max-hp'):[];
  const uniqueBonuses=new Map(bonuses.map(d=>[canonicalSource(d.source),d]));
- const expectedBonus=[...uniqueBonuses.values()].reduce((n,d)=>n+(d.effect.kind==='change-max-hp'&&state.runtimes.some(r=>r.source.definitionId===d.source.definitionId&&r.source.instanceId===d.source.instanceId&&r.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<r.source.effectIndex+32)?d.effect.bonusBps:0),0);
- if(basis.bonusBps!==expectedBonus+(unit.g22?.rebelTriggered?(unit.mechanics??[]).find(m=>m.mechanic==='rebel')?.values.bonusHpBps??0:0))throw new Error('Invalid Match save: item max HP consumption');
+ const expectedBonuses=new Set([0]);
+ for(const d of uniqueBonuses.values()){
+  if(d.effect.kind!=='change-max-hp')continue;
+  const periodic=definitions.periodicTasks.find(p=>canonicalSource(p.source)===canonicalSource(d.source));
+  const pulses=periodic?Math.max(0,Math.floor((Math.min(tick,periodic.endsAtTick===null?tick:periodic.endsAtTick-1)-periodic.nextPulseAtTick)/periodic.periodTicks)+1):0;
+  const triggered=state.runtimes.some(r=>r.source.definitionId===d.source.definitionId&&r.source.instanceId===d.source.instanceId&&r.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<r.source.effectIndex+32);
+  const counts=periodic?(unit.alive?[pulses]:Array.from({length:pulses+1},(_,i)=>i)):[triggered?1:0];
+  const previous=[...expectedBonuses];expectedBonuses.clear();for(const n of previous)for(const count of counts)expectedBonuses.add(n+count*d.effect.bonusBps);
+ }
+ const rebelBonus=unit.g22?.rebelTriggered?(unit.mechanics??[]).find(m=>m.mechanic==='rebel')?.values.bonusHpBps??0:0;
+ if(!expectedBonuses.has(basis.bonusBps-rebelBonus))throw new Error('Invalid Match save: item max HP consumption');
  const maximum=resolveStat('maxHp',basis.base,[{stat:'maxHp',unit:'flat',value:{kind:'constant',amount:basis.flat},condition:{kind:'always'},damageFilter:null},{stat:'maxHp',unit:'bps',value:{kind:'constant',amount:basis.bps+basis.bonusBps},condition:{kind:'always'},damageFilter:null}],{holder:unit});
  if(unit.maxHp!==maximum)throw new Error('Invalid Match save: current max HP');
 }
@@ -92,6 +109,11 @@ export function maxHpCandidates(unit:CombatUnit,at:number,combatId:string):Set<n
  for(const d of declaredEffects(unit,combatId)){
   const key=canonicalSource(d.source);
   if(d.effect.kind!=='change-max-hp'||seen.has(key))continue;seen.add(key);
+  const periodic=compileMechanismDefinitions(unit,combatId).periodicTasks.find(p=>canonicalSource(p.source)===key);
+  if(periodic){
+    const pulses=Math.max(0,Math.floor((Math.min(at,periodic.endsAtTick===null?at:periodic.endsAtTick-1)-periodic.nextPulseAtTick)/periodic.periodTicks)+1),bonus=d.effect.bonusBps;
+    bonuses=new Set([...bonuses].flatMap(n=>Array.from({length:pulses+1},(_,i)=>n+i*bonus)));continue;
+  }
   if(d.source.sourceKind==='trait'&&d.source.definitionId==='rebel'&&unit.g22?.rebelTriggered || unit.mechanismState!.runtimes.some(r=>r.source.definitionId===d.source.definitionId&&r.source.instanceId===d.source.instanceId&&r.source.effectIndex<=d.source.effectIndex&&d.source.effectIndex<r.source.effectIndex+32&&r.startsAtTick<=at)){
    const bonus=d.effect.bonusBps;bonuses=new Set([...bonuses].flatMap(n=>[n,n+bonus]));
   }
@@ -116,6 +138,7 @@ function sampledStatCandidates(unit:CombatUnit,stat:'abilityPower'|'attackDamage
   if(m.value.kind==='constant')options=initial&&m.condition.kind==='always'?[m.value.amount]:[0,m.value.amount];
   else if(m.value.kind==='counter') {
     const value=m.value;
+    if(value.counterId==='g23Absorb'){const bound=statusDeclaration(d.effect,unit,d.source)?.modifier;const n=bound?.value.kind==='constant'?bound.value.amount:0;options=[0,n];values=values.flatMap(previous=>options.map(v=>({...previous,[m.unit]:previous[m.unit as 'flat'|'bps']+v})));continue;}
     const cap=(compileMechanismDefinitions(unit,combatId).eventTriggers ?? []).flatMap(t=>t.counters).find(c=>c.id===value.counterId)?.cap;
     if(cap===undefined||cap===null)throw new Error('Unbounded enabled AP counter');
     options=Array.from({length:cap+1},(_,i)=>i*value.perCount);

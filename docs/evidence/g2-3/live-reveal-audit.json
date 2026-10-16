@@ -1,0 +1,142 @@
+{
+  "contentDigest": "fnv1a32-utf16:fe963b26",
+  "route": "mage",
+  "seed": 42,
+  "roundId": "4-7",
+  "prefixHash": "7f73061b4dd1b6b14a7831adf3582b662cc41c4c9c49e1d5a058dbc83662168a",
+  "driverSha256": "e81ea893e5976b473b8eb96aa07ffa49726a1b1a9fdb0725f11d4599e87dac69",
+  "branches": {
+    "full": {
+      "deaths": [
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+          "tick": 48,
+          "eventSeq": 405
+        },
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+          "tick": 59,
+          "eventSeq": 516
+        },
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+          "tick": 88,
+          "eventSeq": 687
+        },
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+          "tick": 102,
+          "eventSeq": 818
+        },
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
+          "tick": 102,
+          "eventSeq": 819
+        },
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r05\"]",
+          "tick": 118,
+          "eventSeq": 916
+        }
+      ],
+      "reveals": [
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",0]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 59,
+            "eventSeq": 516
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",1]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 59,
+            "eventSeq": 516
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",1]\",0]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 59,
+            "eventSeq": 516
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",1]\",1]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 59,
+            "eventSeq": 516
+          }
+        }
+      ],
+      "result": "playerWin",
+      "phase": "settlement",
+      "eventHash": "df40a045b5e798692ab50813e14e80c78d454a54af1d3e478910df0bfbf01d4e",
+      "terminalHash": "a6b413ae4e2c88d2c310711af7ae517312acc935f97c7355635640ed6ef3a7ae",
+      "receipts": 4
+    },
+    "loris": {
+      "deaths": [
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+          "tick": 381,
+          "eventSeq": 4803
+        }
+      ],
+      "reveals": [
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",0]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 381,
+            "eventSeq": 4803
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",1]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 381,
+            "eventSeq": 4803
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",1]\",0]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 381,
+            "eventSeq": 4803
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",1]\",1]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 381,
+            "eventSeq": 4803
+          }
+        }
+      ],
+      "result": "enemyWin",
+      "phase": "settlement",
+      "eventHash": "ef87ee66495c9fb34cf3b46f7fe33edbfd29a6628ebd8bcd5b313f53a2a7bc37",
+      "terminalHash": "24423b8e6935969ee4ec9bdf0aaf350b0b61af437fe83379e5fda18941e77f74",
+      "receipts": 4,
+      "star": 2
+    },
+    "lux": {
+      "deaths": [],
+      "reveals": [],
+      "result": "enemyWin",
+      "phase": "settlement",
+      "eventHash": "95633a1636a81c1e757b81007bf7cdc94de9e2cb5ed3b971607c49f40384bf7d",
+      "terminalHash": "86a13e8efc7064850555b8fddcca6277d49a3e3b79114b7566a60c583ebba865",
+      "receipts": 0,
+      "star": 2
+    }
+  }
+}

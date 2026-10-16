@@ -1,4 +1,4 @@
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import type { ItemInstance } from './strategy-types';
 
 export interface ItemGrantState { readonly items: readonly ItemInstance[]; readonly nextItemSerial: number }

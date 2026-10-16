@@ -1,3 +1,4 @@
+import { g23FormStats } from '../g2-3-forms';
 import { augmentCombatEffects } from '../combat-augment-effects';
 import { M5_UNIT_DEFINITIONS } from '../units';
 import { statusDeclaration, isDeclaredStatus, validateItemEffectConsumption, declaredEffects, validateItemRuntime, abilityPowerCandidates, maxHpCandidates } from './item-restore';
@@ -5,7 +6,6 @@ import { canonicalSource } from './identity';
 /** Development saves may only contain programs produced by the enabled content compiler. */
 import type { CombatUnit } from '../combat-types';
 import { canonicalContent, equalValidatedContent } from '../content';
-import { getUnitStats } from '../unit-stats';
 import { sourceKey } from '../combat-s13-state';
 import { asSource, compileMechanismDefinitions, flatAmount, selfSelector } from './s13-definitions';
 import { validateIdentity } from './identity';
@@ -23,8 +23,8 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
   check(Array.isArray(state.statuses) && Array.isArray(state.periodicTasks) && Array.isArray(state.runtimes) && Array.isArray(state.activities), 'mechanism arrays');
   validateItemRuntime(unit,combatId,tick,compiled);
   const basis = unit.maxHpBasis;
-  const expectedBasis = { base: getUnitStats(unit.definitionId, unit.starLevel).health,
-    flat: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0),
+  const expectedBasis = { base: g23FormStats(unit.definitionId, unit.starLevel,unit.team,unit.startingCell?.row ?? unit.cell.row).health,
+    flat: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statFlat' && e.effect.stat === 'maxHp' ? e.effect.amount : 0), 0)+(unit.g23?.experimentTakedowns.length??0)*(unit.mechanics?.find(m=>m.mechanic==='g23Experiment')?.values.mundo??0),
     bps: (unit.sources ?? []).reduce((n, e) => n + (e.effect.kind === 'statPercentBps' && e.effect.stat === 'maxHp' ? e.effect.bps : 0), 0), bonusBps: 0 };
   check(same({...basis,bonusBps:0}, expectedBasis), 'resolved maximum health basis');
   validateStatusGroups(state.statuses, tick, combatId);
@@ -34,7 +34,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     check(Array.isArray(legacy.contributionKeys) && legacy.contributionKeys.length > 0, 'missing status contribution projection');
     for (const key of legacy.contributionKeys) {
       const c = contributions.find(c => c.key === key);
-      if(c && (neutralStatuses.has(c.key) || (c.source.sourceKind==='item'||c.source.sourceKind==='augment'||c.source.sourceKind==='trait'&&['rebel','enforcer'].includes(c.source.definitionId)) && isDeclaredStatus(c.source,c.application,units,combatId))) {
+      if(c && (neutralStatuses.has(c.key) || (c.source.sourceKind==='item'||c.source.sourceKind==='augment'||c.source.sourceKind==='anomaly'||c.source.sourceKind==='trait') && isDeclaredStatus(c.source,c.application,units,combatId))) {
         check(!covered.has(key) && c.targetId===unit.id && same(c.source,asSource(legacy.source)) && legacy.key===c.key && c.appliedAtTick===legacy.startsAtTick && (c.expiresAtTick ?? 1201)===legacy.expiresAtTick, 'item status source/timing projection');
         if (c.source.sourceKind === 'augment' && c.source.definitionId === 'blistering-strikes') {
           const owner = units.find(u => u.id === c.source.ownerId)!;
@@ -84,6 +84,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
           && app.activation === 'immediate' && app.duration.kind === 'ticks'
           && (owner.ability.kind === 's13' && owner.ability.championId === 'singed' && c.source.sourceKind === 'ability' && c.source.definitionId === 'singed-ability'
             && app.duration.ticks === 1 && legacy.amount >= 0 && legacy.amount <= owner.ability.variables.AttackSpeed / 100
+            || owner.ability.kind === 's13' && owner.ability.championId === 'jayce-ranged' && c.source.sourceKind === 'ability' && c.source.definitionId === 'jayce-ranged-ability' && app.duration.ticks === owner.ability.variables.ASDuration / 10000 * 20 && legacy.amount === owner.ability.variables.AttackSpeed
             || firelight && app.duration.ticks === firelight.values.dashTicks && legacy.amount === firelight.values.attackSpeedBps);
         check(app.modifier.value.kind === 'constant' && app.modifier.value.amount === legacy.amount
           && (speed || app.modifier.unit === 'flat' && ['armor', 'magicResist'].includes(app.modifier.stat)) && app.modifier.condition.kind === 'always' && app.modifier.damageFilter === null, 'status modifier projection');
@@ -148,10 +149,11 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
         continue;
       }
     }
-    const declared=shield.source.sourceKind==='item'?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
+    const declared=['item','trait','anomaly'].includes(shield.source.sourceKind)?units.filter(u=>u.id===shield.source.ownerId).flatMap(u=>declaredEffects(u,combatId)).find(d=>canonicalSource(d.source)===canonicalSource(shield.source)&&d.effect.kind==='grant-shield'&&same(d.effect,grant)):undefined;
     if(declared) {
       validateItemEffectConsumption(shield.source,shield.startsAtTick,units,combatId);
-      check(shield.decay.kind===grant.decay.kind && [...maxHpCandidates(unit,shield.startsAtTick,combatId)].some(hp=>shield.granted===Math.floor(hp*grant.amount.maxHpBps/10000)), 'item shield sampled amount');
+      const holder=units.find(u=>u.id===shield.source.ownerId)!;
+      check(shield.decay.kind===grant.decay.kind && [...maxHpCandidates(holder,shield.startsAtTick,combatId)].some(hp=>shield.granted===grant.amount.flat+Math.floor(hp*grant.amount.maxHpBps/10000)), 'declared shield sampled amount');
       check(shield.remaining>0&&layer.endedReason===undefined&&!shield.endRewardConsumed&&!units.some(u=>u.tasks?.some(t=>t.shieldEndKey===layer.key)), 'item shield active lifecycle');
       continue;
     }

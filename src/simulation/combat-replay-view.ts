@@ -30,6 +30,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cellView(event.from), to: cellView(event.to) };
     case 'attack': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'targetChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'before', 'after']) };
+    case 'unitRevived': return { ...envelope, ...pick(event, ['type','unitId','hp']), sourceId:event.source.ownerId };
     case 'death': return { ...envelope, ...pick(event, ['type', 'unitId']) };
     case 'kill': return { ...envelope, type: event.type, unitId: event.unitId, sourceId: event.source.ownerId };
     case 'growth': return { ...envelope, ...pick(event, ['type', 'unitId', 'amountBps', 'totalBps']) };

@@ -1,3 +1,4 @@
+import {validateG23Progress} from './g2-3-match-progress';
 import { shareGeneratedJson } from './immutable-json';
 import type { MatchBase, PersistentGrowth, RoundResult } from './match-types';
 import type { Unit } from './unit-types';
@@ -7,7 +8,7 @@ import { canonicalContent, equalValidatedContent } from './content';
 import { freezeContent } from './content/freeze';
 import { createInputValidation, validateInputAssets, type InputValidation } from './input-assets';
 import { ROUND_CATALOG } from './content/round-catalog';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { readRoundEnemyProjection } from './round-enemies';
@@ -18,7 +19,7 @@ import { nextRandom, validateSeed } from './rng';
 export const COMBAT_INPUT_VERSION = 'm8-b8-combat-input-v1';
 /** Exactly the inputs consumed by the single strategy compiler; never its answer. */
 export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'items' | 'temporaryEquipment'
-  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress'> & { readonly roundResults?: readonly RoundResult[] };
+  | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' | 'g23'> & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number };
 export interface CombatInputBasis {
   readonly version: typeof COMBAT_INPUT_VERSION;
   readonly combatId: string; readonly roundId: string; readonly contentDigest: string;
@@ -35,6 +36,7 @@ export interface CombatResourcePrefix {
   readonly nextUnitSerial: number; readonly nextItemSerial: number;
 }
 export interface CombatInputAuthority {
+  readonly g23?:MatchBase['g23'];readonly playerHp?:number;
   readonly seed: number; readonly round: number; readonly contentDigest: string;
   readonly playerLevel: number; readonly provenancePrefixLength: number;
   readonly resources: CombatResourcePrefix;
@@ -44,8 +46,8 @@ export interface CombatInputAuthority {
   readonly roundResults: readonly RoundResult[];
 }
 export function readCombatStrategyInputs(state: CombatStrategyInputs): CombatStrategyInputs {
-  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults = [] } = state;
-  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults };
+  const { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress,g23, roundResults = [],playerHp } = state;
+  return { round, preparation, items, temporaryEquipment, augments, anomalyBinding, persistentGrowth, augmentProgress, roundResults,...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
@@ -72,6 +74,13 @@ export function restoreCombatInput(value: unknown, authority: CombatInputAuthori
   requireBasis(round && round.kind !== 'supply' && basis.version === COMBAT_INPUT_VERSION
     && basis.combatId === `round-${authority.round}` && basis.roundId === round.roundId
     && basis.contentDigest === authority.contentDigest && input.round === authority.round);
+  if(input.playerHp!==undefined){integer(input.playerHp);requireBasis(input.playerHp<=100&&input.playerHp===authority.playerHp);}
+  if(authority.g23){
+    requireBasis(input.g23);validateG23Progress(input.g23,authority.seed,authority.round);
+    requireBasis(equal(input.g23.economyReceipts,authority.g23.economyReceipts.slice(0,input.g23.economyReceipts.length)));
+    requireBasis(input.g23.economyReceipts.filter(r=>r.kind==='battle').length===authority.g23.economyReceipts.filter(r=>r.kind==='battle'&&r.facts.round<authority.round).length);
+    requireBasis(equal(input.g23.itemReceipts,authority.g23.itemReceipts));
+  }else requireBasis(input.g23===undefined);
   requireBasis(equal(input.roundResults ?? [], authority.roundResults.filter(r => r.round < input.round)));
   validateSeed(authority.seed); validateSeed(basis.battleSeed);
   let battleSeed = (authority.seed ^ 0x9e3779b9) >>> 0;

@@ -1,6 +1,6 @@
 /* Independent M5_RULES R3/R4 and approved M8B_OPENING/LOOT/ADDENDUM arithmetic. No production imports. */
 const assert = require('node:assert/strict');
-const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "ezreal", "kogmaw", "loris", "nami", "scar", "twistedfate"], ["ambessa", "corki", "ekko", "garen", "heimerdinger", "illaoi", "twitch", "vi", "zoe"], ["caitlyn", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble"]];
+const CATALOG = [[], ["amumu", "darius", "draven", "irelia", "lux", "maddie", "morgana", "powder", "singed", "steb", "trundle", "vex", "violet", "zyra"], ["akali", "camille", "leona", "nocturne", "rell", "renata", "sett", "tristana", "urgot", "vander", "vladimir", "zeri", "ziggs"], ["blitzcrank", "cassiopeia", "ezreal", "gangplank", "kogmaw", "loris", "nami", "nunu", "renni", "scar", "smeech", "swain", "twistedfate"], ["ambessa", "corki", "drmundo", "ekko", "elise", "garen", "heimerdinger", "illaoi", "silco", "twitch", "vi", "zoe"], ["caitlyn", "jayce", "jinx", "leblanc", "malzahar", "mordekaiser", "rumble", "sevika"]];
 const COST = Object.fromEntries(CATALOG.flatMap((ids,cost)=>ids.map(id=>[id,cost])));
 const ODDS = {1:[100,0,0,0,0],2:[100,0,0,0,0],3:[75,25,0,0,0],4:[55,30,15,0,0],5:[45,33,20,2,0],6:[30,40,25,5,0],7:[19,30,40,10,1],8:[18,25,32,22,3],9:[15,20,25,30,10]};
 const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76};
@@ -8,7 +8,7 @@ const XP = {1:2,2:2,3:6,4:10,5:20,6:36,7:48,8:76};
 // No production content import; lexical ordering is the public choice contract.
 const AUGMENTS=["backup", "blistering-strikes", "bronze-for-life-i", "bronze-for-life-ii", "built-different", "bulky-buddies-i", "bulky-buddies-ii", "bulky-buddies-iii", "climb-the-ladder-i", "climb-the-ladder-ii", "clockwork-accelerator", "find-your-center", "glass-cannon-i", "glass-cannon-ii", "inspiring-epitaph", "investment-strategy-i", "item-collector-i", "item-collector-ii", "lineup", "little-buddies", "lone-hero", "manaflow-i", "manaflow-ii", "mentorship-i", "mentorship-ii", "placebo", "placebo-plus", "pumping-up-i", "pumping-up-ii", "pumping-up-iii"];
 const AUGMENT_GOLD={'placebo':8,'placebo-plus':15};
-const ANOMALIES=['kill-streak','mage-armor','titanic-strikes'];
+const ANOMALIES=["arcana-overwhelming", "attack-expert", "avalanche-of-armor", "berserker-rage", "bully", "bulwark", "comeback-story", "deep-roots", "defense-expert", "eagle-eye", "energy-absorption", "force-of-friendship", "fortified", "freestyling", "giant-sized", "heavy-hitter", "hypervelocity", "kill-streak", "laser-eyes", "legacy-of-shurima", "mage-armor", "magic-expert", "magic-training", "one-thousand-cuts", "power-absorption", "protective-shielding", "slime-time", "slow-cooker", "strength-training", "titanic-strikes"];
 const COMPONENTS=['sword','vest','belt','rod','cloak','bow','gloves','tear'];
 const SELL = {1:[1,3,9],2:[2,5,17],3:[3,8,26],4:[4,11,35],5:[5,14,44]};
 function word(value){return Number((BigInt(value)*1664525n+1013904223n)%4294967296n);}

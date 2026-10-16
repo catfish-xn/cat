@@ -1,4 +1,4 @@
-import { G2_HERO_IDS } from './fixtures/g2-roster';
+import { G23_HERO_IDS } from './fixtures/g2-3-roster';
 import { ROUND_CATALOG } from '../src/simulation/content/round-catalog';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { describe, expect, it } from 'vitest';
@@ -18,10 +18,10 @@ import type { Effect } from '../src/simulation/strategy-types';
 // Explicit reference answers below were transcribed from the frozen RULES and
 // historical source; they never call production calculators to derive expectations.
 describe('M5 frozen S13 slice',()=>{
-  it('keeps exactly 48 buyable heroes, all five costs populated, and neutrals/legacy isolated',()=>{
-    expect(M5_UNIT_IDS).toEqual(G2_HERO_IDS);
+  it('keeps exactly 60 buyable heroes, all five costs populated, and neutrals/legacy isolated',()=>{
+    expect(M5_UNIT_IDS).toEqual(G23_HERO_IDS);
     expect(Object.values(SHOP_CATALOG_BY_COST).flat().sort()).toEqual(M5_UNIT_IDS);
-    expect(Object.values(SHOP_CATALOG_BY_COST).map(row=>row.length)).toEqual([14,12,7,9,6]);
+    expect(Object.values(SHOP_CATALOG_BY_COST).map(row=>row.length)).toEqual([14,13,13,12,8]);
     expect(Object.keys(NEUTRAL_UNIT_DEFINITIONS)).toHaveLength(5);
     expect(UNIT_DEFINITIONS.sentinel).toBeDefined();
     expect(M5_UNIT_DEFINITIONS.sentinel).toBeUndefined();
@@ -41,7 +41,7 @@ describe('M5 frozen S13 slice',()=>{
     expect(M5_UNIT_DEFINITIONS.caitlyn.baseStats.attack).toBe(82);
   });
   it('retains the historically distinct skills and all their three-star coefficient slots',()=>{
-    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(48);
+    expect(Object.keys(S13_ABILITY_DATA)).toHaveLength(66);
     expect(S13_ABILITY_DATA['tristana-ability'].variables.PercentAttackDamage).toEqual([5.25,5.25,5.25]);
     expect(S13_ABILITY_DATA['tristana-ability'].variables.ASKillGain).toEqual([1.25,1.25,1.25]);
     expect(S13_ABILITY_DATA['corki-ability'].variables.BaseMissiles).toEqual([21,21,35]);
@@ -54,8 +54,8 @@ describe('M5 frozen S13 slice',()=>{
       expect(values).toHaveLength(3);expect(values.every(Number.isFinite)).toBe(true);
     }
   });
-  it('freezes exactly 14 supported traits, 8 components, 36 recipes, 30 augments and 3 anomalies',()=>{
-    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([14,44,30,3]);
+  it('freezes exactly 25 supported traits, 8 components, 36 recipes, 30 augments and 30 anomalies',()=>{
+    expect([TRAIT_DEFINITIONS,ITEM_DEFINITIONS,AUGMENT_DEFINITIONS,ANOMALY_DEFINITIONS].map(c=>Object.keys(c).length)).toEqual([25,44,30,30]);
     expect(COMPONENT_IDS).toEqual(['sword','vest','belt','rod','cloak','bow','gloves','tear']);
     const complete=Object.values(ITEM_DEFINITIONS).filter(i=>i.kind==='completed');expect(complete).toHaveLength(36);
     for(const item of complete) expect(item.recipe?.every(id=>COMPONENT_IDS.includes(id))).toBe(true);
@@ -68,7 +68,7 @@ describe('M5 frozen S13 slice',()=>{
   it('provides all three published eight-unit builds through the actual shop and complete recipes',()=>{
     const builds=[['tristana','urgot','ezreal','corki','irelia','rell','leona','loris'],['maddie','kogmaw','darius','vander','scar','garen','irelia','loris'],['lux','zyra','nami','zoe','irelia','rell','leona','loris']];
     for(const build of builds){expect(new Set(build).size).toBe(8);for(const id of build)expect(M5_UNIT_IDS).toContain(id);}
-    expect(builds.map(build=>Object.fromEntries(Object.keys(TRAIT_DEFINITIONS).map(t=>[t,build.filter(id=>M5_UNIT_DEFINITIONS[id].traits.includes(t)).length])))).toEqual([
+    expect(builds.map(build=>Object.fromEntries(['sentinel','artillerist','sniper','watcher','sorcerer','automata','firelight','family','rebel','academy','enforcer','conqueror','scrap','emissary'].map(t=>[t,build.filter(id=>M5_UNIT_DEFINITIONS[id].traits.includes(t)).length])))).toEqual([
       {sentinel:4,artillerist:4,sniper:0,watcher:0,sorcerer:0,automata:0,firelight:0,family:0,rebel:2,academy:2,enforcer:1,conqueror:1,scrap:1,emissary:1},
       {sentinel:2,artillerist:0,sniper:2,watcher:4,sorcerer:0,automata:1,firelight:1,family:1,rebel:1,academy:0,enforcer:2,conqueror:1,scrap:0,emissary:1},
       {sentinel:4,artillerist:0,sniper:0,watcher:0,sorcerer:4,automata:0,firelight:0,family:0,rebel:2,academy:2,enforcer:1,conqueror:1,scrap:0,emissary:1},

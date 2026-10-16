@@ -1,3 +1,5 @@
+import { G23_TRAIT_SOURCE } from './content/g2-3-trait-source';
+import { g23ConquerorBonusBps } from './g2-3-progress';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect, ItemDefinition, TraitSnapshot, TraitTier } from './strategy-types';
@@ -26,14 +28,22 @@ export function scrapConversions(units:readonly Unit[],traits:readonly TraitSnap
   return result;
 }
 export function g22TraitEffects(state:CombatStrategyInputs,unit:Unit,trait:TraitSnapshot,tier:TraitTier,
-  board:readonly Unit[],equipment:readonly G22Equipment[],converted:ReadonlyMap<string,string>,catalog:Readonly<Record<string,ItemDefinition>>):Effect[] {
+  board:readonly Unit[],equipment:readonly G22Equipment[],_converted:ReadonlyMap<string,string>,catalog:Readonly<Record<string,ItemDefinition>>):Effect[] {
   const result:Effect[]=[];
+  if(trait.traitId==='chem-baron'&&unit.team==='player')result.push({kind:'statFlat',stat:'maxHp',amount:(state.g23?.chem.skips??0)*(G23_TRAIT_SOURCE['chem-baron'].tiers.find(t=>t.threshold===trait.tier)?.values.HealthPerSkip??0)});
   const member=trait.memberDefinitionIds.includes(unit.definitionId);
   for(const e of [...tier.effects,...(member?tier.memberEffects??[]:[])]) {
-    if(e.kind!=='mechanic'){result.push(e);continue;}
+    if(e.kind!=='mechanic'){
+      if(trait.traitId==='conqueror'&&unit.team==='player'){
+        const opened=state.g23?.conquest.chestsOpened??0;
+        if(e.kind==='statPercentBps'&&e.stat==='attackDamage'){result.push({...e,bps:g23ConquerorBonusBps(e.bps,opened)});continue;}
+        if(e.kind==='statFlat'&&e.stat==='abilityPower'){result.push({kind:'mechanic',mechanic:'fractionalFlat',values:{abilityPowerCenti:g23ConquerorBonusBps(e.amount*100,opened),armorCenti:0,magicResistCenti:0}});continue;}
+      }
+      result.push(e);continue;
+    }
     if(e.mechanic==='academy'){
-      const sponsored=equipment.some(i=>i.unitId===unit.id&&(G22_CONVENTIONS.academy.sponsored as readonly string[]).includes(converted.get(i.id)??i.definitionId));
-      if(sponsored){const bps=e.values.sponsoredBps*(member?2:1)+(member?e.values.memberBaseBps:0);result.push({kind:'statPercentBps',stat:'maxHp',bps},{kind:'mechanic',mechanic:'damageAmp',values:{bps}});}continue;
+      const sponsored=state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===unit.id&&(state.g23?.sponsored ?? G22_CONVENTIONS.academy.sponsored as readonly string[]).includes(i.definitionId)).length;
+      if(sponsored){const bps=sponsored*e.values.sponsoredBps*(member?2:1)+(member?e.values.memberBaseBps:0);result.push({kind:'statPercentBps',stat:'maxHp',bps},{kind:'mechanic',mechanic:'damageAmp',values:{bps}});}continue;
     }
     if(e.mechanic==='emissary'){
       if(trait.memberDefinitionIds.includes('nami'))result.push({kind:'mechanic',mechanic:'extraAttackMana',values:{amount:e.values.mana}});

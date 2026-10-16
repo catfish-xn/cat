@@ -1,4 +1,4 @@
-import { G2_CATALOG } from './fixtures/g2-roster';
+import { G23_CATALOG } from './fixtures/g2-3-roster';
 import { describe, expect, it } from 'vitest';
 import { MATCH_RULES, SHOP_CATALOG, SHOP_CATALOG_BY_COST } from '../src/simulation/match-rules';
 import { generateShop } from '../src/simulation/shop';
@@ -6,7 +6,7 @@ import { UNIT_DEFINITIONS } from '../src/simulation/units';
 
 const MODULUS = 4294967296n;
 // Deliberately independent copies: this oracle never calls production RNG/odds/catalog helpers.
-const CATALOG = Object.values(G2_CATALOG);
+const CATALOG = Object.values(G23_CATALOG);
 const ODDS = [[100, 0, 0, 0, 0], [100, 0, 0, 0, 0], [75, 25, 0, 0, 0], [55, 30, 15, 0, 0],
   [45, 33, 20, 2, 0], [30, 40, 25, 5, 0], [19, 30, 40, 10, 1], [18, 25, 32, 22, 3], [15, 20, 25, 30, 10]];
 const word = (seed: bigint) => (seed * 1664525n + 1013904223n) % MODULUS;
@@ -105,7 +105,7 @@ describe('versioned level-dependent deterministic shop', () => {
 
   it('changes offers by level while keeping identical RNG consumption and generation metadata independent', () => {
     const low = generateShop(42, 1, 3), high = generateShop(42, 1, 9);
-    expect(high.shop.slots).toEqual(available(['camille', 'ezreal', 'blitzcrank', 'blitzcrank', 'zoe']));
+    expect(high.shop.slots).toEqual(available(['camille', 'ezreal', 'blitzcrank', 'cassiopeia', 'zoe']));
     expect(high.shop.slots).not.toEqual(low.shop.slots);
     expect(high.rngState).toBe(low.rngState);
     expect(generateShop(42, 500, 3)).toEqual({ ...low, shop: { ...low.shop, generation: 500 } });

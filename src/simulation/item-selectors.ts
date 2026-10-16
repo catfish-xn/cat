@@ -1,5 +1,5 @@
 import { canOperateEquipment } from './operation-policy';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { validateCombine, validateEquip } from './inventory';
 import type { MatchState } from './match-types';
 import type { CombinePreview, EquipPreview, UnitEquipmentView } from './m8/ui-contracts';
@@ -7,7 +7,7 @@ import { getRoundEnemyItems } from './round-enemies';
 import type { ItemInstance } from './strategy-types';
 import { isTemporaryItemId } from './temporary-equipment';
 
-export { readItemCatalog } from './item-catalog';
+export { readItemCatalog,readG23RewardItemCatalog } from './item-catalog';
 
 export interface InventoryItemView { readonly itemInstanceId: string; readonly definitionId: string }
 /** Permanent inventory only; unresolved rewards and temporary children are never stock. */

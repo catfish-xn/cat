@@ -1,3 +1,5 @@
+import { G23_SUMMON_UNITS } from './content/g2-3-summons';
+import { G23_UNITS, G23_MEMBERSHIP } from './content/g2-3-units';
 import { G22_UNITS, G22_MEMBERSHIP } from './content/g2-2-units';
 import { G2_UNIT_DEFINITIONS, G2_EXISTING_TRAITS } from './content/g2-units';
 import { NEUTRAL_DEFINITIONS, neutralAbilityId } from './content/neutrals';
@@ -491,8 +493,9 @@ const G21_AND_G22_UNITS: Readonly<Record<string, UnitDefinition>> = freezeConten
   ...Object.fromEntries(Object.entries(HISTORICAL_M5_UNITS).map(([id, unit]) => [id, G2_EXISTING_TRAITS[id] ? { ...unit, traits: G2_EXISTING_TRAITS[id] } : unit])),
   ...G2_UNIT_DEFINITIONS,
   ...G22_UNITS,
+  ...Object.fromEntries(Object.entries(G23_UNITS).filter(([id])=>!id.endsWith('-ranged'))),
 });
-export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = Object.freeze(Object.fromEntries(Object.entries(G21_AND_G22_UNITS).map(([id,u])=>[id, Object.freeze({...u, traits:G22_MEMBERSHIP[id] ?? u.traits})])));
+export const M5_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = Object.freeze(Object.fromEntries(Object.entries(G21_AND_G22_UNITS).map(([id,u])=>[id, Object.freeze({...u, traits:G23_MEMBERSHIP[id] ?? G22_MEMBERSHIP[id] ?? u.traits})])));
 
 export const NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = freezeContent({
   "neutral-stage-2": {
@@ -602,7 +605,7 @@ export const M8_NEUTRAL_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition
     baseCritChanceBps:d.baseCritChanceBps,baseCritMultiplierBps:d.baseCritMultiplierBps,
   }])));
 export const M5_UNIT_IDS: readonly string[] = Object.freeze(Object.keys(M5_UNIT_DEFINITIONS).sort());
-export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
+export const UNIT_DEFINITIONS: Readonly<Record<string,UnitDefinition>> = Object.freeze({ ...G23_SUMMON_UNITS,...LEGACY_UNIT_DEFINITIONS,...M5_UNIT_DEFINITIONS,...NEUTRAL_UNIT_DEFINITIONS,...M8_NEUTRAL_UNIT_DEFINITIONS});
 /** Reject malformed IDs and fields without silently changing shop sampling. */
 export function validateUnitDefinitions(definitions: Readonly<Record<string,UnitDefinition>> = UNIT_DEFINITIONS, catalogByCost = SHOP_CATALOG_BY_COST): void {
   const integerAtLeast = (value:number,minimum:number) => Number.isSafeInteger(value) && value >= minimum;

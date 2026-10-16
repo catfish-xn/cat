@@ -1,5 +1,8 @@
+import {g23RadiantRound,g23SoloFacts} from './g2-3-settlement';
+import {g23RadiantDefinitionId} from './g2-3-rewards';
+import { validateG23Progress } from './g2-3-match-progress';
 import { validateConsumableState, replayConsumableItems } from './consumables';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { canonicalContent, equalValidatedContent } from './content';
 import { LOOT_POLICY_VERSION, LOOT_SLOTS } from './content/loot';
 import { restoreFrozenLootLedger } from './loot-freeze';
@@ -154,9 +157,22 @@ export function validateB8Loot(state: MatchState, parsedJsonInput = false): bool
 export function validateB8Resources(state: MatchState, parsedJsonInput = false): { basis: CombatInputBasis | null; saleGold: number } {
   const equal = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   validateConsumableState(state);
+  check(!!state.g23, 'G23 progress required');
+  if(state.g23){
+    validateG23Progress(state.g23,state.seed,state.round);
+    if(!state.multiplayer&&state.combat?.status==='finished'){
+     const receipt=state.g23.economyReceipts.find(r=>r.kind==='battle'&&r.facts.round===state.round);
+     check(receipt?.kind==='battle'&&equal(receipt.facts,g23SoloFacts(state,state.combat)),'G23 terminal combat facts');
+    }
+    for(const r of state.g23.economyReceipts)if(r.kind==='battle'){
+      const history=state.roundResults.find(h=>h.round===r.facts.round);check(history&&history.roundKind!=='supply'&&r.facts.roundKind===(history.roundKind==='pvp'?'pvp':'pve')&&r.facts.result===(history.result==='playerWin'?'win':history.result==='enemyWin'?'loss':'draw'),'G23 settlement history');
+      const multiplayer=state.multiplayer?.receipts.find(m=>m.round===r.facts.round);
+      check(multiplayer?!!multiplayer.g23Facts&&equal(multiplayer.g23Facts,r.facts):r.facts.battleId===`round-${r.facts.round}`,'G23 settlement identity');
+    }
+  }
   const opening = state.resourceProvenance.entries[0];
   check(opening?.kind === 'unit-acquired' && opening.source.kind === 'opening' && opening.source.seatId === (state.sharedPool?.seatId ?? 'solo') && (state.sharedPool || opening.source.seed === state.seed), 'opening stream identity');
-  const context: ResourceProvenanceContext = { carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
+  const context: ResourceProvenanceContext = { g23RadiantRound:g23RadiantRound(state),g23RewardClaims:state.g23?.rewardClaims,g23Receipts:state.g23?.itemReceipts,carouselReceipts:state.carousel?.receipts,pendingCarouselUnitIds:state.carousel?.pendingUnits.map(u=>u.unitId),carouselOpening:!!state.carousel, scheduleReceipts:state.scheduleReceipts,lootReceipts:state.m8.loot.receipts,mechanicReceipts:state.seatMechanics?.receipts,
     throughRoundOrdinal:state.round,combatSettlements:state.roundResults.filter(result => result.roundKind !== 'supply')
       .map(result => ({roundId:result.roundId,combatId:`round-${result.round}`,settlementId:result.settlementId})) };
   const current = foldResourceProvenance(state.resourceProvenance,context,parsedJsonInput);
@@ -176,7 +192,7 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
   check(entries[prefixLength]?.kind !== 'unit-upgraded', 'combat prefix transaction boundary');
   const rollPrefix = candidate.equipmentRollPrefixLength;
   integer(rollPrefix); check(rollPrefix <= state.equipmentState.rolls.length, 'equipment prefix bounds');
-  const basis = restoreCombatInput(state.combatInputBasis,{seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+  const basis = restoreCombatInput(state.combatInputBasis,{g23:state.g23,playerHp:state.roundResults[state.round-1]?.hpBefore??state.playerHp,seed:state.seed,round:state.round,contentDigest:state.contentDigest,
     playerLevel:state.roundResults[state.round-1]?.levelBefore ?? state.level,provenancePrefixLength:prefixLength,
     // Only locally parsed JSON cannot run accessors between these reads. Keep
     // the original second validation for every object input and shorter prefix.
@@ -191,7 +207,8 @@ export function validateB8Resources(state: MatchState, parsedJsonInput = false):
     check(equal(live, frozenInputs), 'running input mutation');
     let items = originalItems, serial = basis.nextItemSerial;
     for (const fact of entries.slice(prefixLength)) {
-      check((fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
+      check((fact.kind==='g23-item-converted'||fact.kind === 'item-combined'||fact.kind==='consumable-used') && fact.roundId === state.roundDefinitionId, 'running resource suffix');
+      if(fact.kind==='g23-item-converted'){items=replayG23Conversion(items,fact);continue;}
       const plan = fact.kind==='consumable-used'?replayConsumableItems(items,serial,fact.record,state.preparation):replayCombination(items, state.preparation, serial, fact);
       items = plan.items; serial = plan.nextItemSerial;
     }
@@ -218,8 +235,9 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     check(equal(entries[cursor],{...fact,sequence:cursor,roundId:state.roundDefinitionId}), 'ordered resource transaction'); cursor++;
   };
   const combinations = () => {
-    while (entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
+    while (entries[cursor]?.kind==='g23-item-converted'||entries[cursor]?.kind === 'item-combined'||entries[cursor]?.kind==='consumable-used') {
       const tool=entries[cursor];
+      if(tool.kind==='g23-item-converted'){items=replayG23Conversion(items,tool);take({kind:tool.kind,itemId:tool.itemId,from:tool.from,to:tool.to,receiptId:tool.receiptId});continue;}
       if(tool.kind==='consumable-used') {
         check(!committed||state.phase!=='gameOver','terminal consumable operation');
         const plan=replayConsumableItems(items,nextItem,tool.record,state.preparation);take({kind:'consumable-used',record:tool.record});
@@ -311,4 +329,9 @@ function replayCurrentSuffix(state: MatchState, basis: CombatInputBasis): number
     || choices.some(slot => slot.dropId === receipt.dropId)).map(receipt => receipt.dropId)), 'current grant order');
   for (const progress of loot.direct.filter(entry => expectedProgress.has(entry.dropId))) check(progress.status === expectedProgress.get(progress.dropId), 'capacity retry projection');
   return saleGold;
+}
+
+function replayG23Conversion(items:readonly import('./strategy-types').ItemInstance[],fact:Extract<ResourceFact,{kind:'g23-item-converted'}>){
+ check(items.some(i=>i.id===fact.itemId&&i.definitionId===fact.from)&&g23RadiantDefinitionId(fact.from)===fact.to,'G23 conversion source');
+ return items.map(i=>i.id===fact.itemId?{...i,definitionId:fact.to}:i);
 }

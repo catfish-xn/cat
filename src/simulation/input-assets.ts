@@ -3,7 +3,7 @@ import type { Unit } from './unit-types';
 import type { ItemInstance } from './strategy-types';
 import { DEFAULT_BOARD, contains, isDeploymentCell } from './board';
 import { canonicalContent } from './content';
-import { ITEM_DEFINITIONS } from './content/items';
+import { ITEM_DEFINITIONS } from './content/g2-3-item-registry';
 import { M5_UNIT_DEFINITIONS, UNIT_DEFINITIONS } from './units';
 import { checkEquipmentPlacement } from './equipment-policy';
 
