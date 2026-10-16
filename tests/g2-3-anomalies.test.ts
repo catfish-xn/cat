@@ -5,8 +5,8 @@ import {ANOMALY_DEFINITIONS} from '../src/simulation/content/anomalies';
 import {createCombatWithEvents,stepCombat,type CombatState} from '../src/simulation/combat';
 import {validateMechanisms} from '../src/simulation/m8/restore';
 import {packets} from './helpers/replay2-views';
-function start(id:string){
- const s=createMatch(42),preparation={...s.preparation,units:[{id:'p',definitionId:'lux',starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:1,row:4}}},{id:'e',definitionId:'garen',starLevel:3 as const,team:'enemy' as const,location:{kind:'board' as const,cell:{col:1,row:3}}}]};
+function start(id:string,definitionId='lux',starLevel:1|2|3=1){
+ const s=createMatch(42),preparation={...s.preparation,units:[{id:'p',definitionId,starLevel,team:'player' as const,location:{kind:'board' as const,cell:{col:1,row:4}}},{id:'e',definitionId:'garen',starLevel:3 as const,team:'enemy' as const,location:{kind:'board' as const,cell:{col:1,row:3}}}]};
  const strategy=buildStrategySnapshot({...s,preparation,anomalyBinding:{definitionId:id,unitId:'p',choiceId:'test',boundRound:1}});
  return createCombatWithEvents(preparation,strategy,'g23-anomaly').state;
 }
@@ -52,4 +52,15 @@ it('Comeback Story uses the frozen player HP, not unit health',()=>{
  const s=createMatch(42),preparation={...s.preparation,units:[{id:'p',definitionId:'lux',starLevel:1 as const,team:'player' as const,location:{kind:'board' as const,cell:{col:1,row:4}}}]};
  const strategy=buildStrategySnapshot({...s,playerHp:64,preparation,anomalyBinding:{definitionId:'comeback-story',unitId:'p',choiceId:'a',boundRound:1}});
  expect(strategy.units[0].mechanics?.find(m=>m.mechanic==='damageAmp')?.values.bps).toBe(1500);
+});
+
+it('Protective Shielding restores the exact carried fractional shield at its second pulse',()=>{
+ let state=start('protective-shielding','zoe',2);
+ state={...state,units:state.units.map(u=>({...u,cooldownTicks:1000,moveCooldownTicks:1000,attackDamage:0,mana:0,maxMana:0}))};
+ for(let tick=0;tick<320;tick++)state=stepCombat(state).state;
+ expect(state.units.find(u=>u.id==='p')!.shieldLayers!.find(l=>l.source.definitionId==='protective-shielding')!.granted).toBe(173);
+ validate(state);
+ const bad=structuredClone(state),layer=bad.units.find(u=>u.id==='p')!.shieldLayers![0];
+ Object.assign(layer,{granted:174,remaining:174});Object.assign(layer.m8State!,{granted:174,remaining:174});
+ expect(()=>validate(bad)).toThrow();
 });

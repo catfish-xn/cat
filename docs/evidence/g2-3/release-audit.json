@@ -167,7 +167,7 @@
     "src/simulation/m8/opening.ts": "3d987598b9ca57965eee0abf6afb03796105b51a94e5a52e793a2bac2e4d9ada",
     "src/simulation/m8/periodic.ts": "c2d8551c2161f8093c0fe4d94cae58923ce0c818ae79f718ab4b6ae6304f099d",
     "src/simulation/m8/planning.ts": "d4bbeb4b5801f937ff4e09744abf9b0975870f982ee2b437185c80286c94ebf7",
-    "src/simulation/m8/restore.ts": "3b1223b6bd3bac66f4cd8f68ce32893b89abbe14e66e1b2d3da941dd10147202",
+    "src/simulation/m8/restore.ts": "14a058c0f3968c12411652322bbfabea44847627119dfe8c59dc812f0e8321d7",
     "src/simulation/m8/runtime-types.ts": "9d91a5a5f9f2fcf7e29275499628e25d9c7a4521823c435955f29b6b3c6a493e",
     "src/simulation/m8/s13-definitions.ts": "1efb20ee44995e5687c23272ced5fee2704285ee1547954557683d66bfa841a1",
     "src/simulation/m8/s13-mechanisms.ts": "4cab644aa4ce8e946f032e6e7fff1cc5baec6dd68309a362367f04555fd2efb1",
@@ -259,7 +259,7 @@
     "reason": "G2-3: 60 canonical heroes, four fixed ranged forms,25 enabled origins and30 anomalies; baseline multiplayer38747c5 includes random1cost opening; integrated PR134 at19aa9f1."
   },
   "previousGoldenSha256": "360f94c1f717202b1870c413ff201b870771e9507f0b962b37edd336bb8adb15",
-  "driverSha256": "e81ea893e5976b473b8eb96aa07ffa49726a1b1a9fdb0725f11d4599e87dac69",
+  "driverSha256": "8d8ad2fd9fbc4819edae6747c7c8c049e52e9a8478724ebdc15bb4f5e48f03c3",
   "oracleSha256": "066edb21bfdddccf46401fe50deed96c29065dc216736edc649c90f37832373a",
   "builds": {
     "cannon": {

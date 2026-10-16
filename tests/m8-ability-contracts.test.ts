@@ -1,4 +1,4 @@
-import { G2_HERO_IDS } from './fixtures/g2-roster';
+import { G23_HERO_IDS as G2_HERO_IDS } from './fixtures/g2-3-roster';
 import { describe, expect, it } from 'vitest';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { abilityPlans, type Champion } from './fixtures/m8-ability-plans';
@@ -7,8 +7,8 @@ const tasks = (p: AbilityPlan): readonly ActionTask[] => p.operations.flatMap(op
 const encoded = (name: Champion) => JSON.stringify(abilityPlans[name]);
 
 describe('all existing champion mechanisms remain representable (data contracts only)', () => {
-  it('covers the nineteen historical plan contracts and expanded 33-entry ability roster exactly', () => {
-    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual(G2_HERO_IDS.map(id => `${id}-ability`).sort());
+  it('covers the nineteen historical plan contracts and expanded 66-entry ability roster exactly', () => {
+    expect(Object.keys(S13_ABILITY_DATA).sort()).toEqual([...G2_HERO_IDS,'elise-ranged','swain-ranged','gangplank-ranged','jayce-ranged','g23-sion','g23-forge'].map(id => `${id}-ability`).sort());
     expect(Object.keys(abilityPlans)).toHaveLength(19);
     for (const id of Object.keys(abilityPlans)) expect(S13_ABILITY_DATA).toHaveProperty(`${id}-ability`);
   });

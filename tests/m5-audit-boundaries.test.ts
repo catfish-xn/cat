@@ -1,3 +1,4 @@
+import {G23_ANOMALY_SOURCE as ANOMALY_SOURCE} from '../src/simulation/content/g2-3-anomaly-source';
 import { COST } from './fixtures/m5/oracle.g2.cjs';
 import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -71,18 +72,18 @@ beforeAll(async () => {
     expect(slot).toBeGreaterThanOrEqual(0); expect(api.buyUnit(s, slot, s.shop.generation).ok).toBe(true);
   });
   it.each([0, 1, 42, 0xffffffff])('maps one complete random word at each draw and revisits all offers, seed %i', seed => {
-    let s = { ...anomaly, choiceRngState: seed, gold: 100 } as MatchState;
+    let s = { ...anomaly, choiceRngState: seed, gold: 500 } as MatchState;
     const c = s.pendingChoice!, target = s.preparation.units.find(u => u.team === 'player')!;
     let word = (BigInt(seed) * 1664525n + 1013904223n) % 4294967296n;
     s = accepted(api.selectAnomalyTarget(s, c.choiceId, c.generation, target.id));
-    const ids = ['kill-streak', 'mage-armor', 'titanic-strikes'];
-    expect(s.pendingChoice!.offers[0]).toBe(ids[Number(word * 3n / 4294967296n)]);
+    const ids = Object.keys(ANOMALY_SOURCE).sort();
+    expect(s.pendingChoice!.offers[0]).toBe(ids[Number(word * BigInt(ids.length) / 4294967296n)]);
     const seen = new Set(s.pendingChoice!.offers);
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 400; i++) {
       const previous = s.pendingChoice!.offers[0], pool = ids.filter(id => id !== previous), before = s;
       word = (word * 1664525n + 1013904223n) % 4294967296n;
       const pending = s.pendingChoice!; s = accepted(api.rerollAnomaly(s, pending.choiceId, pending.generation));
-      expect(s.choiceRngState).toBe(Number(word)); expect(s.pendingChoice!.offers[0]).toBe(pool[Number(word * 2n / 4294967296n)]);
+      expect(s.choiceRngState).toBe(Number(word)); expect(s.pendingChoice!.offers[0]).toBe(pool[Number(word * BigInt(pool.length) / 4294967296n)]);
       expect(s.gold).toBe(before.gold - 1); seen.add(s.pendingChoice!.offers[0]);
     }
     expect([...seen].sort()).toEqual(ids);

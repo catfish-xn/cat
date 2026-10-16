@@ -68,7 +68,7 @@ describe('B8 live growth plus immediate randomized loot merge',()=>{
  it('keeps the consumed reward birth, original stars and frozen combat basis',()=>{
   const receipt=live.ended.m8.loot.receipts.find(r=>r.grantedUnitIds.includes(REWARD))!;
   expect(receipt.payload).toEqual({kind:'unit',definitionId:'tristana',quantity:1});
-  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:SURVIVOR,consumedIds:[DONOR,REWARD],fromStar:1,toStar:2})]);
+  expect(live.events.filter(e=>e.type==='unitUpgraded')).toEqual([expect.objectContaining({survivorId:SURVIVOR,consumedIds:[DONOR,REWARD].sort(),fromStar:1,toStar:2})]);
   const birth=live.ended.resourceProvenance.entries.find(e=>e.kind==='unit-acquired'&&e.unitId===REWARD)!;
   expect(birth).toMatchObject({roundId:'3-7',source:{kind:'loot',receiptId:receipt.receiptId}});
   expect(currentCommit(live.ended).sequence).toBeGreaterThan(birth.sequence);

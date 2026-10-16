@@ -70,10 +70,20 @@ export async function configuredPrefix(roundId:string, options:Record<string,unk
   }});}catch(e){if(e!==captured)throw e;}
   if(!prefix)throw Error(`Missing configured prefix ${roundId}`);return prefix;
 }
-export function transferPreparation() {
-  return configuredPrefix('4-7',{seed:4,build:'cannon',copyLimits:{ezreal:2},fieldCopies:['ezreal'],
+export async function transferPreparation() {
+  let s=await configuredPrefix('4-7',{seed:4,build:'cannon',copyLimits:{ezreal:2},fieldCopies:['ezreal'],
     supplyChoices:['gloves','gloves','vest'],equipmentTargets:{'thiefs-gloves':{definitionId:'ezreal',copy:0}},
     reservedComponents:['gloves','vest'],anomalyTargetDefinitionId:'ezreal',anomalyTargetCopy:0,anomalyDefinitionId:'mage-armor'});
+  // Preserve the donor-transfer scenario under the expanded shop: position, not ID, selects the survivor.
+  const pair=players(s).filter(u=>u.definitionId==='ezreal'),donor=pair.find(u=>s.anomalyBinding?.unitId===u.id)!,survivor=pair.find(u=>u.id!==donor.id)!;
+  if(donor.location.kind==='board'&&survivor.location.kind==='board'){
+    const a=donor.location,b=survivor.location;
+    if(a.cell.row<b.cell.row||a.cell.row===b.cell.row&&a.cell.col<b.cell.col){
+      const used=new Set(bench(s).map(u=>u.location.kind==='bench'?u.location.slot:-1)),slot=Array.from({length:9},(_,i)=>i).find(i=>!used.has(i))!;
+      s=accepted(api.deployMatchUnit(s,donor.id,{kind:'bench',slot}));s=accepted(api.deployMatchUnit(s,survivor.id,a));s=accepted(api.deployMatchUnit(s,donor.id,b));
+    }
+  }
+  return s;
 }
 export async function terminalPreparation(keep:string|null,col=1,row=7) {
   const key='terminal38';

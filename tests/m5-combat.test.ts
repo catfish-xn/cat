@@ -58,7 +58,7 @@ describe('M5 independent finite combat rules', () => {
     for (const name of Object.values(S13_ABILITY_DATA).map(a => a.championId)) {
       const state = battle([hero(name), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)], { rngState: 42, rngDraws: 0 });
       const step = stepCombat(state);
-      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(!['amumu','zeri'].includes(name));
+      expect(casts(step.events).some(c => c.sourceId === 'p'), name).toBe(!['amumu','zeri','g23-sion','g23-forge'].includes(name));
       expect(stepCombat(JSON.parse(JSON.stringify(step.state)))).toEqual(stepCombat(step.state));
       expect(step.state.units.every(u => Number.isSafeInteger(u.hp) && Number.isSafeInteger(u.shield)), name).toBe(true);
     }

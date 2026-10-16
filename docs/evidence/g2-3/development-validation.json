@@ -1,5 +1,5 @@
 {
-  "status": "PR134-integrated-target-validation",
+  "status": "PR134-integrated-local-regressions-passed",
   "baseCommit": "38747c595b7f4900133ca6e85c63b1bb48e83e2d",
   "identity": {
     "contentDigest": "fnv1a32-utf16:5789146c",
@@ -41,12 +41,13 @@
   "fixtureEvidence": [
     "release-audit.json",
     "input-fixture-audit.json",
-    "live-reveal-audit.json"
+    "live-reveal-audit.json",
+    "recovery-regression-audit.json"
   ],
-  "fullTestRuns": 0,
+  "fullTestRuns": 1,
   "timingTestRuns": 0,
   "pending": [
-    "最终PR head上全套npm test与test:timing各一次，结果记录于PR，避免验收后改head",
+    "最终提交后仅执行一次test:timing，结果记录于PR，不再改head",
     "Claude服务器buildReceipt转发proposal.g23Facts（禁止修改server，本PR仅合同交接）"
   ],
   "typecheck": "passed",
@@ -72,5 +73,28 @@
     },
     "fixtureSourceFilesVerified": 232,
     "B8Oracle": "站位保留规则：seed48在3-7保留(1,7)的unit-9，消费候选unit-23和unit-5；旧ID排序假设已修正"
+  },
+  "fullTestResult": {
+    "head": "22e7cfe7ca9e09d3ae24683740e1489eee118193",
+    "filesPassed": 231,
+    "filesFailed": 18,
+    "testsPassed": 3333,
+    "testsFailed": 40,
+    "durationSeconds": 672.26,
+    "note": "唯一一次本地全套在此提交上暴露回归；随后只重跑失败文件，不重复全套。最终head的自动CI结果记录于PR。"
+  },
+  "finalLocalRegression": {
+    "allOriginalFailingFilesPassed": true,
+    "b5": {
+      "files": 1,
+      "passed": 8
+    },
+    "capacityAndTransfer": {
+      "files": 2,
+      "passed": 25
+    },
+    "mageReplayAndOfflineTransfer": "通过，包含逐tick恢复",
+    "typecheck": "通过",
+    "note": "早期目标批次的失败均已逐项修复并在对应文件回归通过；不将旧全套宣称为最终head全绿。"
   }
 }

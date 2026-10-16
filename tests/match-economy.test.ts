@@ -144,7 +144,7 @@ describe('M5 atomic economy and independent ledger', () => {
     expect([state.level, state.xp, state.gold]).toEqual([4, 2, 2]);
     expect(state.shop).toBe(before.shop); expect(state.rngState).toBe(before.rngState);
     state = ledger(state, { type: 'reroll' });
-    expect(state.shop.slots).toEqual(['loris', 'zeri', 'camille', 'zyra', 'twistedfate'].map(definitionId => ({ status: 'available', definitionId })));
+    expect(state.shop.slots).toEqual(['nami', 'zeri', 'camille', 'zyra', 'swain'].map(definitionId => ({ status: 'available', definitionId })));
     rejects(state, buyXp, 'insufficient-gold');
   });
   it('F preserves a valid old-generation offer and checks max-level before money', () => {

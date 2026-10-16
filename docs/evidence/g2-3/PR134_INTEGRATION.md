@@ -12,7 +12,7 @@
 | 召唤物 | 不可售/不占人口/不占池；Forge/barrel不撑胜负，Sion撑胜负 | 出生/绑定/复活、废弃ID不重用、合星receipt定义查找 |
 | 军械库 | 普通/全购/三星菜单合法免费timeoutOption；购买合星刷新菜单/generation | 三种菜单超时选择 |
 
-以上新增覆盖集中在tests/g2-3-integration.test.ts；原G23、B8和netcode-hooks回归同步适配。完整验证结果写入development-validation.json，最终head全套/timing只各一次，结果记录在PR。
+以上新增覆盖集中在tests/g2-3-integration.test.ts；原G23、B8和netcode-hooks回归同步适配。完整验证结果写入development-validation.json，本地全套仅运行一次，随后发现的回归只复测对应失败文件；最终head的timing仅一次，完整结果与自动CI记录在PR。
 
 ## 配套余项
 

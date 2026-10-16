@@ -50,7 +50,7 @@ describe('M5 frozen S13 slice',()=>{
     expect(S13_ABILITY_DATA['kogmaw-ability'].variables.DamageOnAttack).toEqual([48,72,120]);
     expect(S13_ABILITY_DATA['scar-ability'].variables.StunDuration).toEqual([1.5,1.5,1.75]);
     for(const [abilityId, ability] of Object.entries(S13_ABILITY_DATA)) for(const [key,values] of Object.entries(ability.variables)) {
-      if (!['akali','ambessa','camille','draven','heimerdinger','jinx','mordekaiser','morgana','sett','steb','trundle','twistedfate','vex','vi','ziggs','amumu','blitzcrank','ekko','illaoi','leblanc','malzahar','nocturne','powder','rumble','singed','twitch','violet','vladimir','zeri'].some(id => abilityId === `${id}-ability`)) { expect(key).not.toMatch(/^(HERO|Experiment)/);expect(key).not.toContain('Hyperroll'); }
+      if (!['renata','cassiopeia','nunu','renni','smeech','drmundo','elise','silco','sevika','swain','jayce','gangplank','elise-ranged','swain-ranged','jayce-ranged','gangplank-ranged','g23-sion','g23-forge','akali','ambessa','camille','draven','heimerdinger','jinx','mordekaiser','morgana','sett','steb','trundle','twistedfate','vex','vi','ziggs','amumu','blitzcrank','ekko','illaoi','leblanc','malzahar','nocturne','powder','rumble','singed','twitch','violet','vladimir','zeri'].some(id => abilityId === `${id}-ability`)) { expect(key).not.toMatch(/^(HERO|Experiment)/);expect(key).not.toContain('Hyperroll'); }
       expect(values).toHaveLength(3);expect(values.every(Number.isFinite)).toBe(true);
     }
   });

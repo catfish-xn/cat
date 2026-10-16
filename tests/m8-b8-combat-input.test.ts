@@ -1,3 +1,4 @@
+import {readG23Progress} from '../src/simulation/g2-3-state';
 import { describe, expect, it } from 'vitest';
 import { createMatch, combineItems, deployMatchUnit, equipItem, nextRound, selectChoice, startMatchCombat } from '../src/simulation/match';
 import { accepted, emptyBoard, reachRound } from './match-helpers';
@@ -9,7 +10,7 @@ import { restoreMatch } from '../src/simulation/serialization';
 function fixture() {
   const state = createMatch(42), draw = nextRandom(state.battleSeedRngState);
   const basis = freezeCombatInput(state, draw.word, 1);
-  const authority: CombatInputAuthority = { seed: state.seed, round: state.round, contentDigest: state.contentDigest,
+  const authority: CombatInputAuthority = {g23:readG23Progress(state),playerHp:state.playerHp, seed: state.seed, round: state.round, contentDigest: state.contentDigest,
     playerLevel: state.level, provenancePrefixLength: 1, equipmentRollPrefixLength: 0,
     resources: { units: [{id:'unit-1',definitionId:'irelia',starLevel:1}], items: [], persistentGrowth: [], nextUnitSerial: 2, nextItemSerial: 1 },
     equipmentRolls: [], scheduleReceipts: [], roundResults: [] };
@@ -75,7 +76,7 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
     state = accepted(equipItem(state,'item-3','unit-1',0));
     state = accepted(deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
     const basis = freezeCombatInput(state,nextRandom(state.battleSeedRngState).word,10);
-    const authority: CombatInputAuthority = { seed:state.seed,round:state.round,contentDigest:state.contentDigest,
+    const authority: CombatInputAuthority = {g23:readG23Progress(state),playerHp:state.playerHp, seed:state.seed,round:state.round,contentDigest:state.contentDigest,
       playerLevel:state.level,provenancePrefixLength:10,equipmentRollPrefixLength:state.equipmentState.rolls.length,
       resources:{units:state.preparation.units.filter(unit => unit.team === 'player').map(({id,definitionId,starLevel}) => ({id,definitionId,starLevel})),
         items:state.items.map(({id,definitionId}) => ({id,definitionId})),persistentGrowth:[],nextUnitSerial:state.nextUnitSerial,nextItemSerial:state.nextItemSerial},
