@@ -7,6 +7,11 @@ import { ANOMALY_DEFINITIONS } from '../../src/simulation/content/anomalies';
 import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
 import { TRAIT_DEFINITIONS } from '../../src/simulation/content/traits';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
+import { G23_UNITS } from '../../src/simulation/content/g2-3-units';
+import { G23_SUMMON_UNITS } from '../../src/simulation/content/g2-3-summons';
+import { G23_TRAITS as G23_CONTENT_TRAITS } from '../../src/simulation/content/g2-3-traits';
+import { G23_ANOMALIES as G23_CONTENT_ANOMALIES } from '../../src/simulation/content/g2-3-anomalies';
+import { G23_SPECIAL_ITEMS } from '../../src/simulation/content/g2-3-item-registry';
 import { displayUnitName } from '../../src/rendering/display-names';
 import {
   G23_HERO_IDS, G23_HERO_STYLE, G23_HERO_TRAITS, anomalyDisplayName, anomalyIconUrl, g23AnomalyApiName, g23ChampionApiName,
@@ -90,7 +95,10 @@ describe('content id bridge', () => {
       expect(displayUnitName(id)).toBe(name);
       expect(s13AssetUrl('champion', id), id).not.toBeNull();
     }
-    expect(heroTraitTags('renata')).toEqual([{ name: '炼金男爵', open: false }, { name: '先知', open: false }]);
+    // #136 ships both traits, so they show as active; 双形战士 is listed by the client but not implemented.
+    expect(heroTraitTags('renata')).toEqual([{ name: '炼金男爵', open: true }, { name: '先知', open: true }]);
+    expect(heroTraitTags('elise')).toEqual([{ name: '黑色玫瑰', open: true }, { name: '双形战士', open: false }, { name: '格斗家', open: true }]);
+    for (const id of ['elise', 'jayce', 'gangplank', 'swain']) expect(displayUnitName(`${id}-ranged`)).toBe(expected[id]);
     expect(G23_HERO_TRAITS.TFT13_Lieutenant).toEqual(['High Roller', 'Chem-Baron', 'Pit Fighter']);
   });
   it('resolves summons by apiName-derived id', () => {
@@ -115,10 +123,30 @@ describe('content id bridge', () => {
     expect(anomalyIconUrl()).toMatch(/assets\/s13\/g23\/anomalies\/tft13_goopitem_icon\.png$/);
   });
   it('never captures an existing hero, trait or item id', () => {
-    for (const id of Object.keys(UNIT_DEFINITIONS)) if (id !== 'swain') expect(g23ChampionApiName(id), id).toBeUndefined();
-    for (const id of Object.keys(TRAIT_DEFINITIONS)) expect(g23TraitApiName(id), id).toBeUndefined();
+    const g23Units = new Set([...Object.keys(G23_UNITS), ...Object.keys(G23_SUMMON_UNITS)]);
+    for (const id of Object.keys(UNIT_DEFINITIONS)) if (!g23Units.has(id)) expect(g23ChampionApiName(id), id).toBeUndefined();
+    // Traits that predate G2-3 keep their content names; only the G2-3 traits resolve through the client table.
+    const bridged = new Set(['ambusher', 'visionary', 'high-roller', 'chem-baron', 'dominator', 'pit-fighter', 'experiment', 'bruiser', 'junker-king', 'black-rose', 'quickstriker']);
+    for (const id of Object.keys(TRAIT_DEFINITIONS)) if (!bridged.has(id)) expect(g23TraitApiName(id), id).toBeUndefined();
     for (const id of Object.keys(ITEM_DEFINITIONS)) expect(itemDisplayName(id)).toBe(ITEM_DEFINITIONS[id].name);
     for (const id of Object.keys(ANOMALY_DEFINITIONS)) expect(g23AnomalyApiName(id)).toBeDefined();
+  });
+});
+
+describe('G2-3 content (#136) resolves to client names', () => {
+  it('every hero, form, summon, trait, anomaly and reward item id', () => {
+    for (const id of [...Object.keys(G23_UNITS), ...Object.keys(G23_SUMMON_UNITS)]) {
+      expect(displayUnitName(id), id).toMatch(/[\u4e00-\u9fff]/);
+      if (!id.endsWith('-ranged')) expect(s13AssetUrl('champion', id), id).not.toBeNull();
+    }
+    for (const id of Object.keys(G23_CONTENT_TRAITS)) expect(traitDisplayName(id), id).toMatch(/[\u4e00-\u9fff]/);
+    const anomalyApis = new Set(G23_ANOMALIES.map(row => row.apiName));
+    for (const id of Object.keys(G23_CONTENT_ANOMALIES)) expect(anomalyApis.has(g23AnomalyApiName(id) ?? ''), id).toBe(true);
+    for (const [id, item] of Object.entries(G23_SPECIAL_ITEMS)) {
+      expect(itemDisplayName(id), id).not.toBe(item.apiName);
+      expect(itemDisplayName(id), id).toMatch(/[\u4e00-\u9fff]/);
+      expect(s13AssetUrl('item', id), id).not.toBeNull();
+    }
   });
 });
 

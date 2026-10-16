@@ -7,7 +7,7 @@
 import type { HexCell } from '../simulation/board';
 import type { ResolvedAbility } from '../simulation/ability-types';
 import { asDisplayEvents, type DisplayCombat, type DisplayUnit, type SceneCombatEvent } from './combat-display';
-import { ITEM_DEFINITIONS } from '../simulation/content/items';
+import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import { TRAIT_DEFINITIONS } from '../simulation/content/traits';
 import { AUGMENT_DEFINITIONS } from '../simulation/content/augments';
 import { augmentDisplayName } from './augment-display';
