@@ -32,6 +32,14 @@ export interface TraitRow {
   readonly members: readonly string[];
 }
 
+/**
+ * G2-3 prep: optional runtime counter lines per trait (stacks, opened chests and the like), supplied by the rules
+ * through a later contract. The column only shows them verbatim; with no entry for a trait nothing extra renders.
+ */
+export interface TraitRuntimeLine { readonly label: string; readonly value: string }
+export type TraitRuntime = ReadonlyMap<string, readonly TraitRuntimeLine[]>;
+const runtimeText = (lines: readonly TraitRuntimeLine[] | undefined) => (lines ?? []).map(line => `${line.label} ${line.value}`).join(' · ');
+
 /** Rows of the traits present on the board (count > 0): active by tier desc, then count desc, then name; inactive after. */
 export function traitRows(snapshots: readonly TraitSnapshot[]): TraitRow[] {
   return snapshots.filter(snapshot => snapshot.count > 0 && Object.hasOwn(TRAIT_DEFINITIONS, snapshot.traitId)).map(snapshot => {
@@ -53,7 +61,7 @@ export function traitIconHtml(traitId: string, size: number): string {
 }
 
 /** The list element; rows carry `data-trait` so a hover card can describe them. */
-export function renderTraitRows(rows: readonly TraitRow[], debug: string, empty: string): HTMLElement {
+export function renderTraitRows(rows: readonly TraitRow[], debug: string, empty: string, runtime?: TraitRuntime): HTMLElement {
   const list = el('ol', '', 'trait-rows'); list.dataset.debug = debug;
   for (const row of rows) {
     const item = el('li', '', `trait-row${row.tier > 0 ? ' active' : ' inactive'}`);
@@ -68,6 +76,8 @@ export function renderTraitRows(rows: readonly TraitRow[], debug: string, empty:
       steps.append(step);
     });
     item.append(steps);
+    const counter = runtimeText(runtime?.get(row.traitId));
+    if (counter) { const line = el('span', counter, 'trait-runtime'); line.dataset.debug = `${debug}:${row.traitId}:runtime`; item.append(line); }
     item.setAttribute('aria-label', `${row.name} ${row.count} 人，${row.tier > 0 ? `已激活 ${row.tier} 档` : '未激活'}，断点 ${row.thresholds.join('/')}`);
     list.append(item);
   }
@@ -76,7 +86,7 @@ export function renderTraitRows(rows: readonly TraitRow[], debug: string, empty:
 }
 
 /** Hover body of one trait: breakpoints with each tier's effect, then every hero of the trait with those on the board marked. */
-export function traitCardBody(traitId: string, count: number, onBoard: readonly string[]): HTMLElement | null {
+export function traitCardBody(traitId: string, count: number, onBoard: readonly string[], runtime?: readonly TraitRuntimeLine[]): HTMLElement | null {
   const definition = Object.hasOwn(TRAIT_DEFINITIONS, traitId) ? TRAIT_DEFINITIONS[traitId] : undefined;
   if (!definition) return null;
   const body = el('div', '', 'trait-card'); body.dataset.trait = traitId;
@@ -89,6 +99,11 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
     tiers.append(el('li', describeTraitTier(definition, tier), reached ? 'reached' : ''));
   }
   body.append(tiers);
+  if (runtime?.length) {
+    const counters = el('ul', '', 'trait-card-runtime'); counters.dataset.debug = 'trait-card:runtime';
+    for (const line of runtime) counters.append(el('li', `${line.label}：${line.value}`));
+    body.append(counters);
+  }
   const members = el('div', '', 'trait-card-members'); members.dataset.debug = 'trait-card:members';
   for (const id of SHOP_CATALOG.filter(id => UNIT_DEFINITIONS[id]?.traits.includes(traitId))) {
     const unit = UNIT_DEFINITIONS[id]!;
@@ -99,10 +114,11 @@ export function traitCardBody(traitId: string, count: number, onBoard: readonly 
 }
 
 /** Hover cards for every `[data-trait]` row inside `scope`; the members on board are read back from the rendered rows. */
-export function attachTraitCards(scope: HTMLElement, card: HoverCard, membersOf: (traitId: string) => readonly string[]): () => void {
+export function attachTraitCards(scope: HTMLElement, card: HoverCard, membersOf: (traitId: string) => readonly string[],
+  runtimeOf: (traitId: string) => readonly TraitRuntimeLine[] | undefined = () => undefined): () => void {
   return attachHoverCards(scope, card, '.trait-row[data-trait]', anchor => {
-    const traitId = anchor.dataset.trait!, count = Number(anchor.dataset.count ?? 0), members = membersOf(traitId);
-    return { key: `trait:${traitId}:${count}:${members.join(',')}`, build: () => traitCardBody(traitId, count, members) ?? el('div', traitId) };
+    const traitId = anchor.dataset.trait!, count = Number(anchor.dataset.count ?? 0), members = membersOf(traitId), runtime = runtimeOf(traitId);
+    return { key: `trait:${traitId}:${count}:${members.join(',')}:${runtimeText(runtime)}`, build: () => traitCardBody(traitId, count, members, runtime) ?? el('div', traitId) };
   });
 }
 
@@ -110,20 +126,22 @@ export function attachTraitCards(scope: HTMLElement, card: HoverCard, membersOf:
 export class TraitColumn {
   readonly root: HTMLElement;
   private rows: readonly TraitRow[] = [];
+  private runtime: TraitRuntime | undefined;
   private key = '';
   private readonly detach: () => void;
   constructor(host: HTMLElement, before: HTMLElement | null, card: HoverCard) {
     this.root = el('section', '', 'trait-column'); this.root.id = 'trait-column'; this.root.setAttribute('aria-label', '羁绊');
     this.root.dataset.debug = 'trait-column';
     if (before && before.parentElement === host) host.insertBefore(this.root, before); else host.prepend(this.root);
-    this.detach = attachTraitCards(this.root, card, traitId => this.rows.find(row => row.traitId === traitId)?.members ?? []);
+    this.detach = attachTraitCards(this.root, card, traitId => this.rows.find(row => row.traitId === traitId)?.members ?? [], traitId => this.runtime?.get(traitId));
   }
-  render(preparation: GameState): void {
+  /** `runtime`: optional counter lines per trait (G2-3 prep); omitted, the column renders exactly as before. */
+  render(preparation: GameState, runtime?: TraitRuntime): void {
     const rows = boardTraitRows(preparation);
-    const key = rows.map(row => `${row.traitId}:${row.count}:${row.tier}`).join('|');
+    const key = rows.map(row => `${row.traitId}:${row.count}:${row.tier}:${runtimeText(runtime?.get(row.traitId))}`).join('|');
     if (key === this.key && this.root.childElementCount) return;
-    this.rows = rows; this.key = key;
-    this.root.replaceChildren(el('h3', '羁绊', 'trait-column-title'), renderTraitRows(rows, 'trait-column:rows', '场上暂无单位'));
+    this.rows = rows; this.runtime = runtime; this.key = key;
+    this.root.replaceChildren(el('h3', '羁绊', 'trait-column-title'), renderTraitRows(rows, 'trait-column:rows', '场上暂无单位', runtime));
   }
   dispose(): void { this.detach(); this.root.remove(); }
 }
