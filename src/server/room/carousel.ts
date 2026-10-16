@@ -21,11 +21,11 @@ import type { MatchEvent, MatchState } from '../../simulation/match-types';
 
 /**
  * The rules' carousel transactions the room uses (MULTIPLAYER_CONTRACT §21.4–21.5), bound to the contract exports.
- * `releaseCarouselParticipant` has no call site. MULTIPLAYER_CONTRACT §21.5 says an elimination must not bypass it while a
- * carousel is active; the room's current reading (pending a contract clarification, docs/UI_REQUESTS.md:916) is that it
- * is therefore needed only then, and the room eliminates only at a round settlement, after the carousel phase has closed.
- * Those later eliminations use `releaseSeatOnElimination`, which returns the seat's holdings but leaves `carouselReceipts`
- * alone: the dead seat's receipts stay `granted`. Pinned in tests/server/carousel-room.test.ts.
+ * `releaseCarouselParticipant` has no call site: it is needed only for an elimination while a carousel is active, and the
+ * room eliminates only at a round settlement, after the carousel phase has closed (contract clarification: MULTIPLAYER_CONTRACT
+ * §21.5 scope note, PR #123). Those eliminations use `releaseSeatOnElimination`, which returns the seat's holdings and keeps
+ * the pool conserved; `carouselReceipts` stay `granted` by design (they record the grant; ownership is the holdings), and
+ * the rules refuse `releaseCarouselParticipant` on a closed carousel (`invalid-match`). Pinned in tests/server/carousel-room.test.ts.
  */
 export const CAROUSEL_RULES_BINDING = {
   createCarouselMatch, opensCarousel, prepareCarouselParticipants, createCarousel, advanceCarousel, pickCarouselForSeat, autoPickCarouselForSeat,
