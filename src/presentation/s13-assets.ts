@@ -78,7 +78,7 @@ export function installImageFallback(root: Document = document): () => void {
       const holder = root.createElement('span'); holder.className = 'hero-fallback';
       holder.innerHTML = heroEmblemSvg(image.dataset.hero, Number(image.getAttribute('width')) || 34);
       image.replaceWith(holder);
-    } else if (image.classList.contains('item-icon') || image.classList.contains('trait-icon')) image.remove();
+    } else if (image.classList.contains('item-icon') || image.classList.contains('trait-icon') || image.classList.contains('augment-icon')) image.remove();
   };
   root.addEventListener('error', onError, true);
   return () => root.removeEventListener('error', onError, true);

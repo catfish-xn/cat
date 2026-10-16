@@ -27,6 +27,7 @@ import { getPlayerDeploymentCount } from '../simulation/game';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags, traitDisplayName } from '../presentation/hero-identity';
 import { abilityNameOf } from '../presentation/ability-text';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
+import { augmentDisplayName, augmentIconHtml, augmentPlayerDescription } from '../presentation/augment-display';
 import { describeEffect, describeTraitTier, term } from '../presentation/effect-text';
 import { traitHoverCard } from '../presentation/hover-card';
 import { attachUnitCards } from '../presentation/unit-card';
@@ -105,7 +106,7 @@ export { describeEffect, describeTraitTier };
 const itemDefinitionName = (id: string) => ITEM_DEFINITIONS[id]?.name ?? id;
 /** C18-B: a tool whose content-table target kind is a unit (the remover). */
 const unitTool = (tool: { readonly definitionId: string }) => CONSUMABLE_DEFINITIONS[tool.definitionId as ConsumableDefinitionId]?.targetKind === 'unit';
-const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? AUGMENT_DEFINITIONS[id]?.name ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
+const definitionName = (id: string) => (UNIT_DEFINITIONS[id] ? displayUnitName(id) : undefined) ?? ITEM_DEFINITIONS[id]?.name ?? (TRAIT_DEFINITIONS[id] ? traitDisplayName(id) : undefined) ?? (AUGMENT_DEFINITIONS[id] ? augmentDisplayName(id) : undefined) ?? ANOMALY_DEFINITIONS[id]?.name ?? '未知来源';
 const CHOICE_POINTER_QUIET_MS = 400;
 const LIFECYCLE_QUIET_MS = 400;
 const LIFECYCLE: ReadonlySet<string> = new Set(['start-combat', 'continue', 'new-match']);
@@ -276,6 +277,13 @@ export class StrategyPanel {
   reset(): void { this.eventTexts = []; this.eventCombatId = undefined; this.lastCombatTick = -1; this.lastCombatId = undefined; this.cancel(); this.clearChoiceDismissal(); this.selectedItems = []; this.selectedConsumable = null; this.choiceToken = ''; this.previewOpen = null; }
   destroy(): void { this.cancel(); this.clearChoiceDismissal(); this.disposers.forEach(dispose => dispose()); this.root.replaceChildren(); this.shopDock?.replaceChildren(); this.modal.remove(); }
   status(message: string): void { if (this.statusText) this.statusText.textContent = message; }
+  /** Owned augment: icon + zh name; hovering shows the authored effect text. */
+  private augmentChip(id: string): HTMLElement {
+    const chip = element('span', augmentDisplayName(id), 'augment-chip');
+    chip.dataset.augment = id; chip.title = `${augmentDisplayName(id)}\n${AUGMENT_DEFINITIONS[id]?.effects.map(describeEffect).join('；') ?? ''}`;
+    chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
+    return chip;
+  }
   private button(name: string, label: string, action: () => void, disabled = false): HTMLButtonElement {
     const button = element('button', label); button.type = 'button'; button.dataset.debug = name; button.disabled = disabled;
     button.addEventListener('click', action);
@@ -478,7 +486,9 @@ export class StrategyPanel {
     if (this.tab === 'builds') this.renderBuilds();
     if (this.tab === 'events') { this.eventList = element('section', '', 'battle-record'); this.eventList.dataset.debug = 'battle-record'; this.root.append(this.eventList); this.renderEventList(); }
     const owned = element('section', '', 'owned-modifiers'); owned.append(element('h3', '永久构筑'));
-    owned.append(element('p', `强化： ${state.augments.map(augment => AUGMENT_DEFINITIONS[augment.definitionId].name).join(' / ') || '尚未选择'}`));
+    const augments = element('p', state.augments.length ? '强化：' : '强化： 尚未选择', 'owned-augments');
+    for (const augment of state.augments) augments.append(this.augmentChip(augment.definitionId));
+    owned.append(augments);
     if (needsAnomalyRecruitment(state)) owned.append(element('p', '4-6 异常等待招募：先购买一名棋子，再选择异常目标。刷新与经验购买必须保留招募资金。', 'anomaly-recruitment'));
     const binding = state.anomalyBinding;
     owned.append(element('p', binding ? `异常： ${ANOMALY_DEFINITIONS[binding.definitionId].name} → ${displayUnitName(state.preparation.units.find(unit => unit.id === binding.unitId)!.definitionId)}` : '异常： 4-6 选择单位'));
@@ -791,11 +801,16 @@ export class StrategyPanel {
       const offers = element('div', '', 'choice-cards');
       for (const id of choice.offers) {
         const definition = (choice.kind === 'component' ? ITEM_DEFINITIONS : choice.kind === 'augment' ? AUGMENT_DEFINITIONS : ANOMALY_DEFINITIONS)[id];
-        const button = this.button(`choice:${id}`, `${definition.name}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；')}`, () => {
+        const effects = choice.kind === 'component' ? itemDescriptions(id).join('；') : definition.effects.map(describeEffect).join('；');
+        // Augments: zh name + icon; the W4 batch's content description is an implementation note, so only effects show.
+        const label = choice.kind === 'augment' ? [augmentDisplayName(id), augmentPlayerDescription(id), effects].filter(Boolean).join('\n')
+          : `${definition.name}\n${'description' in definition ? definition.description : '领取后可合成或装备'}\n${effects}`;
+        const button = this.button(`choice:${id}`, label, () => {
           this.actions.choose(choice.choiceId, choice.generation, id);
           const after = this.actions.state().pendingChoice;
           if (!after || after.choiceId !== choice.choiceId || after.generation !== choice.generation) this.shieldChoiceDismissal();
         });
+        if (choice.kind === 'augment') { button.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 48)); button.title = label; }
         button.dataset.choiceId = choice.choiceId; button.dataset.generation = String(choice.generation); offers.append(button);
       }
       card.append(offers);
