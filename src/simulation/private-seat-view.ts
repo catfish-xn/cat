@@ -5,11 +5,16 @@ import { previewUseConsumable } from './consumables';
 import type { ConsumableTarget, ConsumableFailure } from './consumable-types';
 import { freezeContent } from './content/freeze';
 import { boardView, cellView, pick } from './view-fields';
+import { getUnitForm } from './seat-mechanics/forms';
+import { seatMechanicsView } from './seat-mechanics/state';
+import type { MechanicChoicePayload } from './seat-mechanics/types';
 
 function preparationUnitView(unit: MatchState['preparation']['units'][number]) {
+  // G2-3 form swappers only: the form the unit would take if combat started now (seat-mechanics/forms.ts).
+  const form = getUnitForm(unit);
   return { ...pick(unit, ['id', 'definitionId', 'team', 'starLevel']),
     location: unit.location.kind === 'bench' ? pick(unit.location, ['kind', 'slot'])
-      : { kind: 'board' as const, cell: cellView(unit.location.cell) } };
+      : { kind: 'board' as const, cell: cellView(unit.location.cell) }, ...(form ? { form } : {}) };
 }
 
 /** Current-round display summary, deliberately separate from the private m8.loot authority. */
@@ -48,6 +53,7 @@ export function toPrivateSeatView(state: MatchState) {
   const enemies = preview ? preview.enemies.filter(unit => unit.team === 'enemy' && unit.location.kind === 'board') : [];
   const items = state.items.filter(item => item.location.kind === 'inventory' || ids.has(item.location.unitId));
   const revealedLoot = revealedLootView(state);
+  const seatMechanics = seatMechanicsView(state);
   // Candidate ownership is filtered before authority preview; never reveal foreign targets or rolls.
   const candidates: ConsumableTarget[] = [
     ...units.map(unit => ({ kind: 'unit' as const, unitId: unit.id })),
@@ -67,6 +73,8 @@ export function toPrivateSeatView(state: MatchState) {
       'tickMs', 'round', 'roundDefinitionId', 'phase', 'gold', 'level', 'xp', 'playerHp']),
     ...(state.carousel?{heldCarouselUnits:state.carousel.heldCarouselUnits.map(u=>pick(u,['receiptId','unitId','definitionId']))}:{}),
     ...(revealedLoot ? { revealedLoot } : {}),
+    // G2-3: the whole owner-visible mechanic container; `hidden` always empty. Same key as MatchState, so display states keep it.
+    ...(seatMechanics ? { seatMechanics } : {}),
     consumables:state.consumables.map(c=>pick(c,['consumableId','definitionId'])),
     consumableTargets,
     streak: pick(state.streak, ['kind', 'count']),
@@ -89,6 +97,7 @@ export function toPrivateSeatView(state: MatchState) {
     pendingChoice: state.phase === 'choice' && state.pendingChoice ? {
       ...pick(state.pendingChoice, ['kind', 'step', 'choiceId', 'generation', 'targetId', 'rerollCount']),
       offers: [...state.pendingChoice.offers],
+      ...(state.pendingChoice.payload ? { payload: structuredClone(state.pendingChoice.payload) as MechanicChoicePayload } : {}),
     } : null,
     roundResults: state.roundResults.map(result => ({ ...pick(result,
       ['round', 'roundId', 'result', 'combatTicks', 'combatEventCount', 'baseDamage', 'survivingEnemyCount',

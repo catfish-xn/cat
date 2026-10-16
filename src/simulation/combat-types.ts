@@ -23,6 +23,8 @@ export interface ExpansionState {
 }
 export interface G22State { initialized: boolean; rebelTriggered: boolean; wanted: string[]; wantedDeaths: number; mordeUntilTick: number; reaveUntilTick: number; reaveBps: number; exposureFromTick: number; exposureUntilTick: number; exposureBps: number }
 export interface CombatUnit {
+  /** G2-3 form swapper's form, frozen from its preparation row at combat start (seat-mechanics/forms.ts). */
+  readonly form?: import('./seat-mechanics/types').UnitForm;
   readonly g22?: G22State;
   readonly expansion?: ExpansionState;
   readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[];
@@ -95,7 +97,7 @@ export type LegacyCombatEventData =
   | { readonly type: 'shieldChanged'; readonly tick: number; readonly unitId: string; readonly reason: 'granted' | 'expired'; readonly before: number; readonly after: number; readonly expiresAtTick: number | null }
   | { readonly type: 'damage'; readonly tick: number; readonly unitId: string; readonly amount: number; readonly hp: number; readonly physicalAmount: number; readonly magicAmount: number; readonly absorbed: number; readonly hpDamage: number; readonly shield: number; readonly packets?: readonly (DamagePacket & { readonly mitigated: number })[] }
   | { readonly type: 'manaChanged'; readonly tick: number; readonly unitId: string; readonly before: number; readonly spent: number; readonly attackGain: number; readonly damageGain: number; readonly hookGain?: number; readonly overflow: number; readonly after: number };
-export type CombatEventData = UnchangedCombatEventData | ReplayTwoEventData | LegacyCombatEventData;
+export type CombatEventData = UnchangedCombatEventData | ReplayTwoEventData | LegacyCombatEventData | import('./seat-mechanics/combat-events').G23CombatEventData;
 export interface CombatStep { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 export function compareIds(a: { readonly id: string }, b: { readonly id: string }): number { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; }
 export function eliminationResult(units: readonly CombatUnit[]): CombatResult | null {

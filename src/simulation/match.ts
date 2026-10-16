@@ -47,6 +47,8 @@ import { AUGMENT_DEFINITIONS } from './content/augments';
 import { ANOMALY_DEFINITIONS } from './content/anomalies';
 import { generateChoices } from './choices';
 import type { ScheduleReceipt } from './strategy-types';
+import { isSellableUnit } from './seat-mechanics/forms';
+import { isMechanicChoice, isMechanicChoiceKind, resolveMechanicChoice, choiceTimeoutOption } from './seat-mechanics/choices';
 import type { FinishedCombat, MatchCommandResult, MatchEvent, MatchFailure, MatchState, MatchStep, RunningCombat } from './match-types';
 export * from './match-types';
 export { DEFAULT_MATCH_SEED, MATCH_RULES } from './match-rules';
@@ -235,6 +237,7 @@ export function sellUnit(state: MatchState, unitId: string, unitLootPolicy?: Uni
   const unit = state.preparation.units.find(unit => unit.id === unitId);
   if (!unit) return fail(state, 'unknown-unit');
   if (unit.team !== 'player') return fail(state, 'enemy-unit');
+  if (!isSellableUnit(unit.definitionId)) return fail(state, 'unit-not-sellable');
   if (state.multiplayer && (state.phase !== 'preparation' || isCombatRosterLocked(state)) && unit.location.kind !== 'bench') return fail(state, 'wrong-phase');
   const returned = returnUnitItems(state.items, unitId), removesBinding = state.anomalyBinding?.unitId === unitId;
   const goldGranted = getUnitSellPrice(unit);
@@ -502,6 +505,12 @@ export function forfeitPendingChoice(state: MatchState, expectedRound: number,
       if (!selected.ok) return multiplayerFail(state,selected.reason);
       current=selected.state; events.push(...selected.events);
     }
+    if (isMechanicChoice(choice)) {
+      const selected=completeMechanicChoice(state,choiceTimeoutOption(choice)!,true);
+      if (!selected.ok) return multiplayerFail(state,selected.reason);
+      const marked=accept(selected.state,[{type:'choiceTimedOut',choiceId:choice.choiceId,resolution:'default-option'}]);
+      return marked.ok ? {...marked,events:[...selected.events,...marked.events]} : fail(state,marked.reason);
+    }
     const pending=current.pendingChoice!;
     if (!pending.offers.length) return multiplayerFail(state,'invalid-choice');
     const selected=selectChoice(current,pending.choiceId,pending.generation,pending.offers[0],unitLootPolicy);
@@ -546,9 +555,18 @@ export function claimOrDiscardLoot(state: MatchState, expectedRound: number, uni
     return acceptEquipment(current,events);
   } catch { return multiplayerFail(state,'invalid-loot'); }
 }
+/** G2-3 forge/blackMarket/armory: resolve through seat-mechanics, then continue the round's schedule like any choice. */
+function completeMechanicChoice(state: MatchState, optionId: string, timedOut: boolean): MatchCommandResult {
+  const choice = state.pendingChoice!;
+  const resolved = resolveMechanicChoice(state, optionId, timedOut);
+  if (!resolved.ok) return fail(state, resolved.reason);
+  const entered = enterScheduledEvents(resolved.state, choice.returnPhase === 'settlement' ? 'after' : 'before');
+  return acceptEquipment(entered.state, [...resolved.events, ...entered.events]);
+}
 export function selectChoice(state: MatchState, choiceId: string, generation: number, definitionId: string, unitLootPolicy?: UnitLootPolicy): MatchCommandResult {
   const reason = choiceFailure(state, choiceId, generation); if (reason) return fail(state, reason);
   const choice = state.pendingChoice!;
+  if (isMechanicChoiceKind(choice.kind)) return completeMechanicChoice(state, definitionId, false);
   if (typeof definitionId !== 'string' || choice.step !== 'offer' || !choice.offers.includes(definitionId)) return fail(state, 'invalid-choice');
   const descriptor=unresolvedLootChoices(state)[0];
   if (descriptor && makeLootPendingChoice(descriptor).choiceId===choiceId) {

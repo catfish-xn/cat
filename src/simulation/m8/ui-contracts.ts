@@ -4,13 +4,13 @@ import type { MonsterFamily } from '../content/neutrals';
 import type { CombatActivity, DamageType, DropIdentity, LootPayload, M8Version, RoundDefinition, Source, StatusGroup, TemporaryEquipment } from './contracts';
 export type EquipmentFailure = 'wrong-phase' | 'unknown-item' | 'unknown-unit' | 'same-item'
   | 'item-not-inventory' | 'invalid-recipe' | 'invalid-slot' | 'item-slot-occupied'
-  | 'unique-conflict' | 'exclusive-slots' | 'temporary-item';
+  | 'unique-conflict' | 'exclusive-slots' | 'temporary-item' | 'item-restricted';
 export interface ItemCatalogEntry {
   readonly id: string;
   readonly apiName: string;
   readonly name: string;
   readonly localizationStatus: 'temporary-unverified' | 'verified';
-  readonly kind: 'component' | 'completed';
+  readonly kind: 'component' | 'completed' | 'radiant';
   readonly recipe: readonly [string, string] | null;
   readonly effectDescriptions: readonly string[];
   readonly unique: boolean;

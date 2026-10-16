@@ -19,7 +19,7 @@ export const catalogEntry = (id: string): Entry | undefined => catalog().byId.ge
 export const itemDescriptions = (id: string): readonly string[] => catalogEntry(id)?.effectDescriptions ?? [];
 
 /** Kind labels; a kind added by later content shows its own label here, or "其他" until one is added (never "undefined"). */
-const KIND_NAMES: Readonly<Record<string, string>> = { component: '组件', completed: '成装' };
+const KIND_NAMES: Readonly<Record<string, string>> = { component: '组件', completed: '成装', radiant: '光明' };
 const KNOWN_KINDS = Object.keys(KIND_NAMES);
 export const itemKindName = (kind: string): string => (Object.hasOwn(KIND_NAMES, kind) ? KIND_NAMES[kind] : '其他');
 const EVIDENCE_NAMES: Readonly<Record<Entry['evidenceStatus'], string>> = { 'source-reviewed': '来源已核对', 'approved-provisional': '批准暂行，待历史核验' };
@@ -180,9 +180,10 @@ function installGridNavigation(table: HTMLTableElement): void {
 
 /** 'kind:<kind>' filters are one per kind the catalogue holds, so new kinds get a group without code changes. */
 type Filter = 'all' | `kind:${string}` | 'unique' | 'slots' | 'provisional';
-/** Known kinds keep their order; any other kind in the catalogue follows in first-seen order. */
+/** Known kinds keep their order (component/completed always; others only when the catalogue holds them); unknown kinds follow in first-seen order. */
 function filters(list: readonly Entry[]): readonly [Filter, string][] {
-  const kinds = [...new Set<string>([...KNOWN_KINDS, ...list.map(entry => entry.kind)])];
+  const present = new Set<string>(list.map(entry => entry.kind));
+  const kinds = [...new Set<string>([...KNOWN_KINDS.filter(kind => present.has(kind) || kind === 'component' || kind === 'completed'), ...present])];
   return [['all', '全部'], ...kinds.map(kind => [`kind:${kind}`, itemKindName(kind)] as [Filter, string]), ['unique', '唯一'], ['slots', '占多槽'], ['provisional', '暂定']];
 }
 const matches = (entry: Entry, filter: Filter) => filter === 'all' || filter === `kind:${entry.kind}` || filter === 'unique' && entry.unique

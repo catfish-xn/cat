@@ -39,7 +39,7 @@ export function combatEventText(event: LedgerCombatEvent, name: UnitNameLookup =
 }
 /** Online (C6) log line for a §14.2 wire event: the facts it carries, without provenance it does not carry. */
 export function viewEventLine(event: DisplayCombatEvent, name: UnitNameLookup = unnamed): string | null {
-  if (event.type === 'unitUpdated') return null;
+  if (event.type === 'unitUpdated' || event.type === 'unitEntered' || event.type === 'unitLeft') return null;
   const prefix = `第 ${event.tick} 刻`;
   switch (event.type) {
     case 'targetChanged': return `${prefix} ${name(event.unitId)} 目标 ${name(event.before)} → ${name(event.after)}`;
