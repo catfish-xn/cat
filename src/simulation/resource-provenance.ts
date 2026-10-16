@@ -14,17 +14,21 @@ import { getRoundSchedule } from './round-schedule';
 import type { ScheduleReceipt, StrategyEvent } from './strategy-types';
 import { getUnitSellPrice } from './unit-stats';
 import type { StarLevel, UnitUpgradedEvent } from './unit-types';
+import { UNIT_DEFINITIONS } from './units';
 
 export const RESOURCE_PROVENANCE_VERSION = 'm8-b8-resource-provenance-v1';
 export type UnitAcquisitionSource =
   | {readonly kind:'carousel';readonly receiptId:string}
   | { readonly kind: 'opening'; readonly seed: number; readonly seatId: string }
   | { readonly kind: 'shop'; readonly generation: number; readonly slotIndex: number; readonly definitionId: string }
-  | { readonly kind: 'loot'; readonly receiptId: string };
+  | { readonly kind: 'loot'; readonly receiptId: string }
+  /** G2-3 seat-mechanics grant; receiptId names a SeatMechanicsState receipt. */
+  | { readonly kind: 'mechanic'; readonly receiptId: string };
 export type ItemAcquisitionSource =
   | {readonly kind:'carousel';readonly receiptId:string}
   | { readonly kind: 'schedule'; readonly eventId: string }
-  | { readonly kind: 'loot'; readonly receiptId: string };
+  | { readonly kind: 'loot'; readonly receiptId: string }
+  | { readonly kind: 'mechanic'; readonly receiptId: string };
 export interface CombatGrowthDelta { readonly sourceUnitId: string; readonly attackDamageBps: number }
 export type ResourceFact =
   | {readonly kind:'carousel-preparation-settled';readonly receiptIds:readonly string[];readonly claimedUnitIds:readonly string[];readonly upgrades:readonly UnitUpgradedEvent[]}
@@ -62,6 +66,8 @@ export interface ResourceProvenanceContext {
   /** Receipts must already be authenticated against their schedule/frozen loot plan. */
   readonly scheduleReceipts: readonly ScheduleReceipt[];
   readonly lootReceipts: readonly LootReceipt[];
+  /** G2-3 seat-mechanics receipts (already structurally validated); absent before G2-3. */
+  readonly mechanicReceipts?: readonly import('./seat-mechanics/types').MechanicReceipt[];
   readonly throughRoundOrdinal: number;
   /** Validate the entire stream, then return this prefix's projection (including prefix 0). */
   readonly prefixLength?: number;
@@ -150,7 +156,22 @@ export function mergeGrowthLedger(
 }
 
 interface BirthReceipt { readonly kind: 'unit' | 'item'; readonly id: string; readonly definitionId: string; readonly roundId: string }
-export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts'>): Map<string, BirthReceipt> {
+/** Births a mechanic receipt authorizes: a held unit, an item, or the item a forge/black-market choice granted. */
+function mechanicBirths(receipts: readonly import('./seat-mechanics/types').MechanicReceipt[]): (BirthReceipt & { readonly key: string })[] {
+  return receipts.flatMap((receipt): (BirthReceipt & { readonly key: string })[] => {
+    const key = `mechanic:${receipt.receiptId}`;
+    if (receipt.kind === 'unit' && receipt.resolution === 'held' && receipt.unitId) {
+      requireValue(SHOP_CATALOG.includes(receipt.definitionId) || !!UNIT_DEFINITIONS[receipt.definitionId]?.summon, 'mechanic unit definition');
+      return [{ key, kind: 'unit' as const, id: receipt.unitId, definitionId: receipt.definitionId, roundId: receipt.roundId }];
+    }
+    const itemId = receipt.kind === 'item' || receipt.kind === 'choice' ? receipt.itemId : null;
+    if (!itemId) return [];
+    const definitionId = receipt.kind === 'item' ? receipt.definitionId : (receipt as Extract<typeof receipt, { kind: 'choice' }>).optionId;
+    requireValue(Object.hasOwn(ITEM_DEFINITIONS, definitionId), 'mechanic item definition');
+    return [{ key, kind: 'item' as const, id: itemId, definitionId, roundId: receipt.roundId }];
+  });
+}
+export function validateResourceReceipts(context: Pick<ResourceProvenanceContext, 'scheduleReceipts' | 'lootReceipts' | 'throughRoundOrdinal' | 'carouselReceipts' | 'mechanicReceipts'>): Map<string, BirthReceipt> {
   const births = new Map<string, BirthReceipt>(), receiptIds = new Set<string>(), assetIds = new Set<string>();
   const add = (key: string, birth: BirthReceipt) => {
     requireValue(!births.has(key) && !assetIds.has(birth.id), 'duplicate receipt birth');
@@ -216,6 +237,10 @@ export function validateResourceReceipts(context: Pick<ResourceProvenanceContext
     requireValue(granted.length === 1 && (kind === 'unit' ? receipt.grantedItemIds : receipt.grantedUnitIds).length === 0, 'loot resource identity');
     nonempty(granted[0]);
     add(`loot:${receipt.receiptId}`, { kind, id: granted[0], definitionId, roundId });
+  }
+  for (const birth of mechanicBirths(context.mechanicReceipts ?? [])) {
+    requireValue(getCatalogRoundById(birth.roundId).ordinal <= context.throughRoundOrdinal, 'mechanic receipt round');
+    add(birth.key, birth);
   }
   return births;
 }
@@ -306,6 +331,9 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         const key = `${entry.source.generation}:${entry.source.slotIndex}`;
         requireValue(!shopSlots.has(key), 'duplicate shop purchase'); shopSlots.add(key); lastShopGeneration = entry.source.generation;
         definitionId = entry.source.definitionId;
+      } else if (entry.source.kind === 'mechanic') {
+        keys(entry.source, ['kind', 'receiptId']); nonempty(entry.source.receiptId);
+        definitionId = takeBirth(`mechanic:${entry.source.receiptId}`, 'unit', entry.unitId, entry.roundId);
       } else {
         keys(entry.source, ['kind', 'receiptId']);
         requireValue(entry.source.kind === 'loot', 'unit source'); nonempty(entry.source.receiptId);
@@ -353,10 +381,10 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
       keys(entry, [...common, 'itemId', 'source']); record(entry.source);
       requireValue(entry.itemId === `item-${nextItemSerial}`, 'item serial'); integer(nextItemSerial + 1, 1);
       const source = entry.source;
-      requireValue(source.kind === 'schedule' || source.kind === 'loot'||source.kind==='carousel', 'item source');
+      requireValue(source.kind === 'schedule' || source.kind === 'loot'||source.kind==='carousel'||source.kind==='mechanic', 'item source');
       keys(source, source.kind === 'schedule' ? ['kind', 'eventId'] : ['kind', 'receiptId']);
       nonempty(source.kind === 'schedule' ? source.eventId : source.receiptId);
-      const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : source.kind==='carousel'?`carousel-item:${source.receiptId}`:`loot:${source.receiptId}`;
+      const key = source.kind === 'schedule' ? `schedule:${source.eventId}` : source.kind==='carousel'?`carousel-item:${source.receiptId}`:source.kind==='mechanic'?`mechanic:${source.receiptId}`:`loot:${source.receiptId}`;
       const definitionId = takeBirth(key, 'item', entry.itemId, entry.roundId);
       items.set(entry.itemId, { id: entry.itemId, definitionId }); nextItemSerial++;
     } else if (entry.kind === 'item-combined') {

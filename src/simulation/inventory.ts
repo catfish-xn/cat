@@ -1,3 +1,4 @@
+import { itemRestrictionAllows } from './seat-mechanics/items';
 import { ITEM_DEFINITIONS } from './content/items';
 import { checkEquipmentPlacement } from './equipment-policy';
 import type { GameState } from './game';
@@ -70,6 +71,7 @@ export function validateEquip(
   if (!unit || unit.team !== 'player') return { allowed: false, reason: 'unknown-unit', conflictingItemIds: [] };
   if (item.location.kind !== 'inventory') return { allowed: false, reason: 'item-not-inventory', conflictingItemIds: [] };
   if (!Number.isInteger(slot) || slot < 0 || slot > 2) return { allowed: false, reason: 'invalid-slot', conflictingItemIds: [] };
+  if (!itemRestrictionAllows(ITEM_DEFINITIONS[item.definitionId]?.restriction, unit.definitionId)) return { allowed: false, reason: 'item-restricted', conflictingItemIds: [] };
   // Ordinary inventory components always combine with the first worn component.
   // Slot order also makes old states with multiple components converge deterministically.
   const component = ITEM_DEFINITIONS[item.definitionId]?.kind === 'component'

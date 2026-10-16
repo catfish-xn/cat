@@ -457,6 +457,7 @@ export type M8CombatEvent = { readonly domain: 'combat'; readonly combatId: stri
   | { readonly type: 'shieldLayerChanged'; readonly layer: ShieldState; readonly reason: 'granted' | 'absorbed' | 'decayed' | ShieldEndReason }
   | { readonly type: 'statChanged'; readonly unitId: string; readonly source: Source; readonly stat: Stat; readonly before: number; readonly after: number }
   | { readonly type: 'maxHpChanged'; readonly unitId: string; readonly source: Source; readonly beforeMax: number; readonly afterMax: number; readonly beforeHp: number; readonly afterHp: number; readonly countsAsHeal: false }
+  | import('../seat-mechanics/combat-events').G23CombatEventData
 );
 
 

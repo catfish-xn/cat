@@ -17,14 +17,16 @@ export type Effect =
   | { readonly kind: 'trigger'; readonly hook: Hook; readonly everyN: number; readonly action: EffectAction };
 export interface TraitTier { readonly threshold: number; readonly effects: readonly Effect[]; readonly memberEffects?: readonly Effect[] }
 export interface TraitDefinition { readonly id: string; readonly name: string; readonly target: 'members' | 'team'; readonly tiers: readonly TraitTier[] }
-export interface ItemDefinition { readonly id: string; readonly name: string; readonly kind: 'component' | 'completed'; readonly effects: readonly Effect[]; readonly recipe?: readonly [string, string]; readonly apiName?: string; readonly unique?: boolean; readonly slotCost?: 1 | 3; readonly effectDescriptions?: readonly string[]; readonly evidenceStatus?: 'source-reviewed' | 'approved-provisional'; readonly conventionIds?: readonly string[]; readonly combatProgram?: import('./m8/item-program').ItemProgram }
+export interface ItemDefinition { readonly radiantOf?: string; readonly restriction?: import('./seat-mechanics/types').ItemRestriction; readonly id: string; readonly name: string; readonly kind: 'component' | 'completed' | 'radiant'; readonly effects: readonly Effect[]; readonly recipe?: readonly [string, string]; readonly apiName?: string; readonly unique?: boolean; readonly slotCost?: 1 | 3; readonly effectDescriptions?: readonly string[]; readonly evidenceStatus?: 'source-reviewed' | 'approved-provisional'; readonly conventionIds?: readonly string[]; readonly combatProgram?: import('./m8/item-program').ItemProgram }
 export interface ChoiceDefinition { readonly id: string; readonly name: string; readonly description: string; readonly effects: readonly Effect[] }
 export interface ItemInstance { readonly id: string; readonly definitionId: string; readonly location: { readonly kind: 'inventory' } | { readonly kind: 'unit'; readonly unitId: string; readonly slot: number } }
 export interface OwnedAugment { readonly definitionId: string; readonly choiceId: string; readonly acquiredRound: number }
 export interface AnomalyBinding { readonly definitionId: string; readonly unitId: string; readonly choiceId: string; readonly boundRound: number }
 export interface PendingChoice {
-  readonly kind: 'augment' | 'anomaly' | 'component'; readonly step: 'target' | 'offer'; readonly choiceId: string;
+  readonly kind: 'augment' | 'anomaly' | 'component' | import('./seat-mechanics/types').MechanicChoiceKind; readonly step: 'target' | 'offer'; readonly choiceId: string;
   readonly returnPhase?: 'preparation' | 'settlement';
+  /** Present exactly for mechanic kinds (forge/blackMarket/armory); see seat-mechanics/choices.ts. */
+  readonly payload?: import('./seat-mechanics/types').MechanicChoicePayload;
   readonly generation: number; readonly offers: readonly string[]; readonly targetId: string | null;
   readonly rerollCount: number; readonly eventId: string;
 }
