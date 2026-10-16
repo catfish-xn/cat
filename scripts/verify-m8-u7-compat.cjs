@@ -16,6 +16,7 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
   let browser;
   try {
     await server.listen();
+    const { M8_VERSION } = await server.ssrLoadModule('/src/simulation/m8/version.ts');
     const url = server.resolvedUrls.local[0];
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox'] });
     const context = await browser.newContext({ acceptDownloads: true });
@@ -53,7 +54,7 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
     await page.locator('[data-debug="m6-random-start"]').click();
     await page.waitForFunction(() => window.__CAT_DEBUG__.read().m6?.mode === 'active', null, { timeout: 60000 });
     const before = await read();
-    check(before.state.rulesVersion === 'm8-14.24b-v1' && before.state.schemaVersion === 6, 'new match runs the M8 version');
+    check(before.state.rulesVersion === M8_VERSION.rulesVersion && before.state.schemaVersion === M8_VERSION.schemaVersion, 'new match runs the M8 version');
     for (const [index, original] of [[0, active], [1, history]]) {
       const [download] = await Promise.all([page.waitForEvent('download'), page.locator('[data-debug="m8-legacy-export"]').nth(index).click()]);
       const bytes = fs.readFileSync(await download.path(), 'utf8');
@@ -74,7 +75,7 @@ const output = path.resolve(process.env.U7_EVIDENCE_DIR || 'artifacts/m8-u7-comp
     // A current-format export with a changed digest: rejected with the frozen reason, match untouched.
     const [current] = await Promise.all([page.waitForEvent('download'), page.locator('[data-debug="m6-export"]').click()]);
     const exported = JSON.parse(fs.readFileSync(await current.path(), 'utf8'));
-    check(exported.saveFormatVersion === 2 && exported.replayFormatVersion === 2, 'current export is format 2');
+    check(exported.saveFormatVersion === M8_VERSION.saveFormatVersion && exported.replayFormatVersion === M8_VERSION.replayFormatVersion, `current export is format ${M8_VERSION.saveFormatVersion}`);
     const forgedFile = path.join(output, 'm8-forged-digest.json'); fs.writeFileSync(forgedFile, JSON.stringify({ ...exported, match: { ...exported.match, contentDigest: 'fnv1a32-utf16:00000000' } }));
     await page.locator('[data-debug="m6-import"]').setInputFiles(forgedFile);
     await page.waitForFunction(() => document.querySelector('[data-debug="m8-compatibility"]')?.textContent.includes('内容摘要'), null, { timeout: 30000 });

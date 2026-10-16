@@ -1,7 +1,8 @@
 /* N2-P2-5 native IndexedDB evidence: one unreadable or incompatible completed archive is quarantined by runId and never
  * hides the good archives around it; a storage-wide read failure stays an explicit save failure, never an empty list.
- * Real SaveRepository, real MatchApplication, complete 33-battle archives from the recorded public cannon route. */
-const fs = require('node:fs'), path = require('node:path'), zlib = require('node:zlib'), assert = require('node:assert/strict'), { execFileSync } = require('node:child_process');
+ * Real SaveRepository, real MatchApplication, complete archives from the public cannon seed-42 route generated under the current rules
+ * (the recorded docs/evidence/m8-b9 golden is a legacy schema-6 route that current startMatchCombat cannot replay). */
+const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict'), { execFileSync } = require('node:child_process');
 const { chromium } = require('playwright'), { sourceFingerprint } = require('./m5-evidence.cjs');
 (async () => {
   const started = performance.now(), output = process.env.M8_ARCHIVES_EVIDENCE_DIR ?? 'artifacts/m8-b9-archives', root = path.resolve(__dirname, '..');
@@ -18,14 +19,14 @@ const { chromium } = require('playwright'), { sourceFingerprint } = require('./m
         next();
       }); } }] });
     await server.listen();
-    const api = await server.ssrLoadModule('/src/simulation/match.ts'), { digestContent } = await server.ssrLoadModule('/src/simulation/content/index.ts');
+    const api = await server.ssrLoadModule('/src/simulation/match.ts'), { digestContent } = await server.ssrLoadModule('/src/simulation/content/index.ts'), { M8_VERSION } = await server.ssrLoadModule('/src/simulation/m8/version.ts');
     const { recordVersion } = await server.ssrLoadModule('/src/replay/history.ts');
-    const route = JSON.parse(zlib.gunzipSync(fs.readFileSync(path.join(root, 'docs/evidence/m8-b9/golden/new-cannon.json.gz'))));
+    const route = await require('./generate-m5-route.cjs').run(api, { build: 'cannon', seed: 42, retainStates: true });
     const battles = route.rounds.map(r => { const events = r.events.filter(e => e.domain === 'combat');
       return { version: recordVersion(r.before), roundId: r.before.m8.round.roundId, runId: 'good-a', combatId: r.after.combat.combatId, context: r.before,
         initial: api.startMatchCombat(r.before).state.combat, events, endTick: r.after.combat.tick, nextEventSeq: r.after.combat.nextEventSeq, result: r.after.combat.result,
         stateHash: digestContent(r.after.combat), eventHash: digestContent(events) }; });
-    envelope = { kind: 'hex-autobattler-save', saveFormatVersion: 2, replayFormatVersion: 2, runId: 'good-a', createdAt: '2026-10-11T00:00:00Z', match: route.final, battles, currentBattle: null };
+    envelope = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion, runId: 'good-a', createdAt: '2026-10-11T00:00:00Z', match: route.final, battles, currentBattle: null };
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, headless: true, args: ['--no-sandbox'] });
     report.browser = browser.version();
     const page = await (await browser.newContext()).newPage();
@@ -78,7 +79,7 @@ const { chromium } = require('playwright'), { sourceFingerprint } = require('./m
       const goodA = named('good-a'), goodB = named('good-b'), bad = named('bad');
       // Positive control: two complete archives give every battle of both.
       { const current = await seed([goodA, goodB]), view = await load(), stored = await after(current, ['good-a', 'good-b']);
-        check(view.options.length === 2 * battles && view.quarantined === 0 && view.statuses.length === 0 && stored.preserved, 'positive: two good archives list 66 choices'); }
+        check(view.options.length === 2 * battles && view.quarantined === 0 && view.statuses.length === 0 && stored.preserved, `positive: two good archives list ${2 * battles} choices`); }
       // Missing run row (metadata still references it) and missing battle row, before, after and between good archives.
       const missingRun = tx => tx.objectStore('runs').delete('bad');
       const missingBattle = tx => tx.objectStore('battles').delete(['bad', template.battles[17].combatId]);
