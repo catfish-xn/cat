@@ -9,13 +9,23 @@ import { LocalRoomClient, type LocalRoomOptions } from '../../src/rendering/onli
 import { toDisplayMatch } from '../../src/rendering/online/seat-view-adapter';
 import { toSeatPrivateView } from '../../src/server/room/projection';
 import type { ClientListeners, LobbyView, PlayerView } from '../../src/rendering/online/protocol';
-import type { CombatReplay } from '../../src/server-entry';
+import { assertSharedPoolConservation, type CombatReplay } from '../../src/server-entry';
+import { Lobby, PlaceholderBattleResolver, TwoSidedBattleResolver } from '../../src/server/room';
+import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
 
 const OPTIONS: Omit<LocalRoomOptions, 'clock'> = { seed: 42, preparationMs: 1_000, choiceMs: 500, settlementMs: 200, myName: '测试', faultAtRound: null, pvpMode: 'two-sided' };
 
-function harness(overrides: Partial<LocalRoomOptions> = {}) {
+function harness(overrides: Partial<LocalRoomOptions> = {}, { carousel = false } = {}) {
   const clock = new ManualClock();
   const client = new LocalRoomClient({ ...OPTIONS, clock, ...overrides });
+  // The browser's local room runs without the carousel; the network server turns the rules' carousel on (server/main.ts).
+  // To cover that path through this client, swap in a lobby built the way the client builds its own, plus the carousel.
+  // The swapped lobby ignores the client's own wiring: pvpMode is fixed to two-sided and faultAtRound/poolCapacities are dropped.
+  if (carousel) {
+    const options = { ...OPTIONS, ...overrides };
+    (client as unknown as { lobby: Lobby }).lobby = new Lobby({ clock, resolver: new TwoSidedBattleResolver(new PlaceholderBattleResolver()), seed: options.seed,
+      timings: { preparationMs: options.preparationMs, choiceMs: options.choiceMs, settlementMs: options.settlementMs }, roomId: 'local-room', pvpMode: 'two-sided', carousel: CAROUSEL_RULES_BINDING });
+  }
   const log = { lobby: [] as LobbyView[], view: [] as PlayerView[], state: [] as MatchState[], replay: [] as CombatReplay[] };
   const listeners: ClientListeners = { lobby: v => log.lobby.push(v), view: v => log.view.push(v),
     state: s => log.state.push(s), replay: r => log.replay.push(r) };
@@ -106,6 +116,50 @@ describe('LocalRoomClient', () => {
     expect(last().phase.kind).toBe('preparation'); expect(last().fault).toBeNull();
     client.dispose();
   });
+  if (mode === 'timing') it('opens the 2-4 carousel through the client: my pick is a room transaction, and the unit reaches my next preparation', async () => {
+    const { client, log, flush, runUntil, last } = harness({}, { carousel: true });
+    client.joinQueue('a'); client.startMatch();
+    // P7-1: no carousel at the opening; the first one is 2-4, after the 1-x PvE rounds and 2-1..2-3.
+    await runUntil(() => last().phase.kind === 'carousel');
+    const room = client.currentRoom!, me = last().mySeatId;
+    const opened = last().carousel!;
+    expect(opened).toMatchObject({ roundId: '2-4', status: 'open', pickedSlot: null, receiptId: null, eligible: false });
+    expect(opened.releaseOrder).toHaveLength(8); expect(opened.releaseOrder).toContain(me);
+    expect(opened.slots.every(slot => slot.pickedBy === null)).toBe(true);
+    // Before my release a pick is refused and changes nothing (no state push, same carousel revision).
+    const statesBefore = log.state.length, revisionBefore = room.state.carousel!.state.revision;
+    const early = client.send({ type: 'carousel-pick', carouselId: opened.id, revision: opened.revision, slot: 0 });
+    expect(early).toMatchObject({ ok: false, reason: 'seat-locked' });
+    await flush();
+    expect(room.state.carousel!.state.revision).toBe(revisionBefore); expect(log.state).toHaveLength(statesBefore);
+    // My batch is released on the room clock; the view says so.
+    await runUntil(() => last().carousel?.eligible === true);
+    const released = last().carousel!;
+    expect(released.elapsedMs).toBeGreaterThanOrEqual(released.releaseAtMs[me]!);
+    const choice = released.slots.find(slot => slot.pickedBy === null)!;
+    const stale = client.send({ type: 'carousel-pick', carouselId: released.id, revision: released.revision - 1, slot: choice.slot });
+    expect(stale).toMatchObject({ ok: false, reason: 'stale-carousel' });
+    const picked = client.send({ type: 'carousel-pick', carouselId: released.id, revision: released.revision, slot: choice.slot });
+    expect(picked.ok).toBe(true);
+    await flush();
+    const after = last().carousel!;
+    expect(after).toMatchObject({ pickedSlot: choice.slot, eligible: false });
+    expect(after.receiptId).not.toBeNull();
+    expect(after.slots.find(slot => slot.slot === choice.slot)!.pickedBy).toBe(me);
+    // One pick per seat.
+    const other = after.slots.find(slot => slot.pickedBy === null)!;
+    expect(client.send({ type: 'carousel-pick', carouselId: after.id, revision: after.revision, slot: other.slot })).toMatchObject({ ok: false, reason: 'already-picked' });
+    // The carousel closes (bots pick or are auto-picked), and the round goes on to its preparation with my unit.
+    await runUntil(() => last().phase.kind === 'preparation' && last().carousel === null);
+    // Every seat holds exactly one carousel receipt, from its own pick or the rules' auto-pick.
+    for (const seat of room.state.seats) expect(seat.match.carousel!.receipts.filter(receipt => receipt.carouselId === released.id)).toHaveLength(1);
+    const mine = log.state.at(-1)!.preparation.units.filter(unit => unit.team === 'player' && unit.definitionId === choice.definitionId);
+    expect(mine.length).toBeGreaterThan(0);
+    expect(log.state.at(-1)!).toEqual(toDisplayMatch(toSeatPrivateView(room.state.seats.find(seat => seat.seatId === me)!.match)));
+    assertSharedPoolConservation(room.state.pool, room.state.seats.map(seat => seat.match));
+    expect(last().fault).toBeNull();
+    client.dispose();
+  }, 60_000);
   if (mode === 'fast') it('refuses the ninth seat with a visible lobby error', () => {
     const { client, log } = harness();
     for (let i = 0; i < 8; i++) (client as unknown as { lobby: { join(name: string): unknown } }).lobby.join(`other ${i}`);
