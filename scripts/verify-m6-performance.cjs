@@ -49,7 +49,12 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
    if(build==='full-load'){
     const loads=history.completedRecords.map(record=>({round:record.context.round,players:record.context.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length,enemies:record.context.preparation.units.filter(u=>u.team==='enemy').length,equipped:record.context.items.filter(i=>i.location.kind==='unit').length}));
     // B8 loot now supplies the real command route's components: the original F1 maximal load runs again.
-    assert(loads.some(load=>load.players===9&&load.enemies===8&&load.equipped===15),'same F1 maximal legal population/equipment load');report.fullLoadObserved=loads;report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.equipped===15);fullLoadEnvelope=envelope;
+    // T13-A (ba319fa, MATCH_CONTRACT "单位全槽自动合成"): a component equipped onto a unit wearing a loose
+    // component combines with it. The route's ~15 components then leave at most 9 separate worn items, and
+    // 15 completed items would need ~30 components, which no legal command route supplies (user decision
+    // 2026-10-16: keep 15 if legally reachable, otherwise 9).
+    const FULL_LOAD_EQUIPPED=9;
+    assert(loads.some(load=>load.players===9&&load.enemies===8&&load.equipped===FULL_LOAD_EQUIPPED),'same F1 maximal legal population/equipment load');report.fullLoadObserved=loads;report.fullLoadCoverage=loads.filter(load=>load.players===9&&load.equipped===FULL_LOAD_EQUIPPED);fullLoadEnvelope=envelope;
    }
    const bytes=Buffer.byteLength(JSON.stringify(envelope));routes.push({build,bytes,incrementalBytes:currentBytes,summary:route.summary});
    if(!largestComplete||bytes>largestComplete.bytes)largestComplete={bytes,envelope};

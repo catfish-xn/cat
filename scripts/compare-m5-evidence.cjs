@@ -58,9 +58,12 @@ if(finalGate){
    assert.equal(manifest.fullOpeningItemScenarioPassed,false);
    // B8 restored the three Rageblade checks on the real 2-1 chain; the two back-to-back opening
    // checks are user-approved archives (not applicable under the frozen schedule, not verified).
+   // T13 removed PvE loot picks: the loot half of the 1-3/1-4 burst is a user-approved archive
+   // (2026-10-16); its next-round-pick half is kept and verified at 2-4.
    assert.deepEqual(manifest.skipped??[],[],'input gate may no longer defer any B8 case');
    assert.deepEqual((manifest.archived??[]).map(entry=>[entry.status,entry.id,entry.verifiedConsecutiveDialogs]),
-    ['mouse','touch'].map(method=>['archived-not-applicable',`${method}-back-to-back-opening-components`,false]),'only the two approved archives');
+    ['mouse','touch'].flatMap(method=>[['archived-not-applicable',`${method}-back-to-back-opening-components`,false],
+     ['archived-not-applicable',`${method}-real-loot-choice-1-3-1-4-burst`,false]]),'only the approved archives');
    // Audit P2-2: the Rageblade summary must be bound to its recorded artifacts (validated below).
    b8InputEvidence.push({name,manifest});
   }

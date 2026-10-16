@@ -191,14 +191,31 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         verifiedConsecutiveDialogs: false });
       console.log(`ARCHIVED [B8] ${method}-back-to-back-opening-components: not applicable under the frozen M8 schedule`);
       // T13 (R3R4_LOOT_DESIGN §2, signed D1-D8 A): PvE loot picks were removed; 1-3/1-4 drops are
-      // orbs granted on kill and no PvE round freezes a choice (frozen rounds' choices are empty;
-      // round-schedule.ts only schedules 'before' choices). The old real 1-3/1-4 loot-pick burst
-      // therefore cannot occur and is archived, NOT verified; the generic modal burst above remains.
+      // orbs granted on kill and no PvE round freezes a choice (frozen rounds' choices are empty).
+      // The loot-specific part of the old 1-3/1-4 burst (an 8-component loot pick, one loot receipt)
+      // is archived, NOT verified. Its other half still applies and is kept: after the confirming
+      // burst above, the next round's real pick (the 2-4 supply component) still works by click.
       (report.archived ??= []).push({ id: `${method}-real-loot-choice-1-3-1-4-burst`, status: 'archived-not-applicable',
-        originalAssertion: "playToLootChoice('1-3') reaches phase 'choice' with an 8-component loot pick; one burst grants one receipt; 1-4 pick follows",
-        basis: 'T13 removed PvE loot choices (docs/R3R4_LOOT_DESIGN.md §2 \u201cPvE \u81ea\u9009\u5220\u9664\u201d); the frozen PvE rounds carry no choices',
-        verifiedConsecutiveDialogs: false });
+        originalAssertion: "playToLootChoice('1-3') reaches phase 'choice' with an 8-component loot pick; one burst grants one loot receipt",
+        basis: 'T13 removed PvE loot choices (docs/R3R4_LOOT_DESIGN.md §2); the frozen PvE rounds carry no choices',
+        keptAs: `${method}-next-round-pick-after-burst-2-4`, verifiedConsecutiveDialogs: false });
       console.log(`ARCHIVED [T13] ${method}-real-loot-choice-1-3-1-4-burst: PvE loot choices removed by T13`);
+      {
+        let next;
+        for (let guard = 0; guard < 20 && !next; guard++) {
+          const current = await state();
+          if (current.phase === 'choice') { assert.equal(current.m8.round.roundId, '2-4', 'next real pick after the 2-1 burst'); next = current; }
+          else if (current.phase === 'preparation') { await delay(450); await click('start-combat'); }
+          else if (current.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
+          else if (current.phase === 'settlement') await click('continue');
+          else throw new Error(`Next-pick route ended at ${current.phase}`);
+        }
+        assert(next, 'reached the 2-4 pick');
+        const pick = next.pendingChoice; assert.equal(pick.kind, 'component');
+        await quiet(); const nextStart = await offset();
+        await click(`choice:${pick.offers[1]}`);
+        await record(`${method}-next-round-pick-after-burst-2-4`, next, accepted(api.selectChoice(next, pick.choiceId, pick.generation, pick.offers[1])), nextStart);
+      }
     }
     await quiet();
     // Explicitly exercise the Chromium compatibility-mouse stream on a hybrid

@@ -220,6 +220,33 @@ async function firstBattle(browser, reduced) {
       basis: 'T13 removed PvE loot choices; all scheduled choices open before preparation; help-open is unreachable under an open choice overlay',
       verified: false });
     console.log('ARCHIVED [T13] help-over-reward-choice: no reward can arrive while help is open');
+    // Kept from F02: a reward pick is never hidden under help. With the real 2-1 augment pick open,
+    // a native click on the help button lands on the reward layer, help stays closed and the pick is untouched.
+    {
+      const { context: ctx, page, errors: helpErrors } = await newGame(browser);
+      await chooseAll(page);
+      for (let guard = 0; guard < 40; guard++) {
+        const current = (await read(page)).state;
+        if (current.phase === 'choice' && current.m8.round.roundId === '2-1') break;
+        if (current.phase === 'choice') await chooseAll(page);
+        else if (current.phase === 'preparation') { await page.waitForTimeout(LIFECYCLE_QUIET_MS); await page.locator('[data-debug="mobile:start-combat"]').click(); }
+        else if (current.phase === 'settlement') await page.locator('[data-debug="mobile:continue"]').click();
+        else await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
+      }
+      await page.waitForFunction(() => !document.querySelector('[data-debug="choice-dismissal-shield"]'));
+      const pending = (await read(page)).state;
+      assert.equal(pending.phase, 'choice', '2-1 offers a reward choice'); assert.equal(pending.pendingChoice.kind, 'augment');
+      const box = await page.locator('[data-debug="help-open"]').boundingBox();
+      const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+      assert(await page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('.choice-overlay')), point), 'the open reward covers the help button');
+      await page.mouse.click(point.x, point.y); await page.waitForTimeout(300);
+      assert.equal(await page.locator('[data-debug="help-dialog"]').isVisible(), false, 'help does not open over the reward');
+      assert.deepEqual((await read(page)).state, pending, 'the click changes nothing and the reward stays pending');
+      await chooseAll(page);
+      assert.equal((await read(page)).state.augments.length, pending.augments.length + 1, 'reward still chosen normally');
+      assert.deepEqual(helpErrors, []); await ctx.close();
+      check('reward-not-hidden-under-help', { roundId: pending.roundDefinitionId, offers: pending.pendingChoice.offers });
+    }
 
     // Audit F07: a bundled portrait that fails to load falls back to the code-drawn emblem.
     {
