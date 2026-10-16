@@ -12,7 +12,7 @@
 
 ## 夹具迁移与证据
 
-保留全部 G2 augments 原始文件，当前测试改读独立 opening-random 文件。重录入口位于 tests/fixtures，未修改 scripts：
+历史 T13 oracle 以 oracle.t13.cjs 保留 Git 基线原始字节，原 audit.oracleSha256 继续验证它；当前 oracle.cjs 则验证固定麦迪/拉克丝规则。保留全部 G2 augments 原始文件，当前测试改读独立 opening-random 文件。重录入口位于 tests/fixtures，未修改 scripts：
 
 ```sh
 node tests/fixtures/record-opening-herald.cjs --write
