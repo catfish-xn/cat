@@ -21,6 +21,11 @@ env:
   M5_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 permissions:
   contents: read
+# A new push to the same PR cancels that PR's unfinished run. Pushes to main and manual
+# dispatches get a group per run, so they never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.ref, github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   warmup-experiment:
     if: ${{ inputs.warmup_experiment }}

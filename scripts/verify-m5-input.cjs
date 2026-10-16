@@ -190,43 +190,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         basis: 'frozen M8 schedule has at most one choice per round (src/simulation/round-schedule.ts); M8B_LOOT §1 freezes one loot choice per PvE round and removes the legacy opening pair',
         verifiedConsecutiveDialogs: false });
       console.log(`ARCHIVED [B8] ${method}-back-to-back-opening-components: not applicable under the frozen M8 schedule`);
-      // Real B8 loot component choices (1-3, then 1-4): one confirming burst grants exactly once,
-      // the rest of the burst lands on the dismissal shield, and the next round's pick still works.
-      {
-        await reset();
-        const playToLootChoice = async roundId => {
-          for (let guard = 0; guard < 20; guard++) {
-            const current = await state();
-            if (current.phase === 'choice') { assert.equal(current.m8.round.roundId, roundId); return current; }
-            if (current.phase === 'preparation') { await delay(450); await click('start-combat'); }
-            else if (current.phase === 'combat') await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
-            else if (current.phase === 'settlement') await click('continue');
-            else throw new Error(`Loot burst route ended at ${current.phase}`);
-          }
-          throw new Error(`No loot choice reached at ${roundId}`);
-        };
-        const first = await playToLootChoice('1-3'), choice = first.pendingChoice;
-        assert.equal(choice.kind, 'component'); assert.equal(choice.offers.length, 8, 'loot pick offers the fixed eight components');
-        await quiet();
-        const node = page.locator(`[data-debug="choice:${choice.offers[0]}"]`); await node.scrollIntoViewIfNeeded();
-        assert.equal(await page.locator('.choice-dialog').getAttribute('data-choice-source'), 'loot');
-        const box = await node.boundingBox(), point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }, start = await offset();
-        const expected = accepted(api.selectChoice(first, choice.choiceId, choice.generation, choice.offers[0]));
-        if (method === 'mouse') await page.mouse.dblclick(point.x, point.y, { delay: 40 });
-        else for (let tap = 0; tap < 2; tap++) {
-          await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 22, x: point.x, y: point.y }] });
-          await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-        }
-        const result = await record(`${method}-real-loot-choice-1-3-burst-single-grant`, first, expected, start);
-        const downs = result.inputs.filter(input => input.type === 'pointerdown');
-        assert.equal(downs.length, 2); assert.equal(downs[1].target, 'choice-dismissal-shield');
-        assert.equal(expected.m8.loot.receipts.length, first.m8.loot.receipts.length + 1, 'one confirming burst, one loot receipt');
-        assert.equal(expected.items.length, first.items.length + 1, 'one confirming burst, one granted component');
-        await quiet();
-        const second = await playToLootChoice('1-4'), next = second.pendingChoice, nextStart = await offset();
-        await click(`choice:${next.offers[1]}`);
-        await record(`${method}-real-loot-choice-1-4-after-burst`, second, accepted(api.selectChoice(second, next.choiceId, next.generation, next.offers[1])), nextStart);
-      }
+      // T13 (R3R4_LOOT_DESIGN §2, signed D1-D8 A): PvE loot picks were removed; 1-3/1-4 drops are
+      // orbs granted on kill and no PvE round freezes a choice (frozen rounds' choices are empty;
+      // round-schedule.ts only schedules 'before' choices). The old real 1-3/1-4 loot-pick burst
+      // therefore cannot occur and is archived, NOT verified; the generic modal burst above remains.
+      (report.archived ??= []).push({ id: `${method}-real-loot-choice-1-3-1-4-burst`, status: 'archived-not-applicable',
+        originalAssertion: "playToLootChoice('1-3') reaches phase 'choice' with an 8-component loot pick; one burst grants one receipt; 1-4 pick follows",
+        basis: 'T13 removed PvE loot choices (docs/R3R4_LOOT_DESIGN.md §2 \u201cPvE \u81ea\u9009\u5220\u9664\u201d); the frozen PvE rounds carry no choices',
+        verifiedConsecutiveDialogs: false });
+      console.log(`ARCHIVED [T13] ${method}-real-loot-choice-1-3-1-4-burst: PvE loot choices removed by T13`);
     }
     await quiet();
     // Explicitly exercise the Chromium compatibility-mouse stream on a hybrid

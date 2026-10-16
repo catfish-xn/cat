@@ -94,7 +94,7 @@ async function firstBattle(browser, reduced) {
 (async () => {
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
-  const report = { url, checks: [], acceptanceScope: 'B6 unskipped checks; post-PvE reward modal restored on the real B8 1-3 loot pick' };
+  const report = { url, checks: [], acceptanceScope: 'B6 unskipped checks; post-PvE reward modal archived after T13 removed PvE loot picks' };
   const check = (name, details = {}) => { report.checks.push({ name, ...details }); console.log(`ok ${name}`); };
   try {
     // Help dialog: information only, focus handling, shortcuts blocked while open.
@@ -210,42 +210,16 @@ async function firstBattle(browser, reduced) {
     check('replay-identity', portraitPixels);
     assert.deepEqual([...normal.game.errors, ...replayErrors], [], 'no page or console errors');
 
-    // Audit F02, restored after B8: help open over an actual post-PvE reward choice. B8 grants loot
-    // picks only for real kills, so the old preparation (bench everyone, field Irelia alone at 2-7)
-    // forfeits the 2-7 pick (verified headlessly: choiceEligibility 'forfeited', no PendingChoice).
-    // The first real post-PvE reward pick of the unbenched seed-42 opening is 1-3; the assertions
-    // below are the original ones.
-    {
-      const { context: ctx, page, errors: helpErrors } = await newGame(browser);
-      await chooseAll(page);
-      await advanceTo(page, '1-3');
-      await page.waitForTimeout(LIFECYCLE_QUIET_MS);
-      await page.locator('[data-debug="mobile:start-combat"]').click();
-      await page.locator('[data-debug="help-open"]').click();
-      await page.waitForFunction(() => window.__CAT_DEBUG__.read().state.phase !== 'combat', null, { timeout: 120000 });
-      await page.waitForTimeout(300);
-      const pending = (await read(page)).state;
-      assert.equal(pending.phase, 'choice', '1-3 PvE offers a reward choice');
-      assert.equal(pending.m8.round.kind, 'pve'); assert.equal(pending.pendingChoice.kind, 'component');
-      assert.equal(pending.pendingChoice.choiceId, JSON.stringify(['m8b-loot-choice', pending.m8.loot.frozen.rounds.find(round => round.encounterPlan.roundId === '1-3').choices[0].dropId]), 'the pick is the earned loot choice');
-      const focusIn = () => page.evaluate(() => ({ help: Boolean(document.querySelector('[data-debug="help-dialog"]').contains(document.activeElement)),
-        choice: Boolean(document.activeElement?.closest('.choice-overlay')), debug: document.activeElement?.dataset.debug ?? null }));
-      assert.deepEqual(await focusIn(), { help: true, choice: false, debug: 'help-close' }, 'the new reward does not steal focus from help');
-      // Tab cycles inside help only; Enter/Space then act on help's own toggle (twice, restoring it), never on the reward.
-      for (let i = 0; i < 4 && (await focusIn()).debug !== 'help-reduced-motion'; i++) await page.keyboard.press('Tab');
-      assert.deepEqual(await focusIn(), { help: true, choice: false, debug: 'help-reduced-motion' });
-      for (const key of ['Enter', 'Enter', 'Space', 'Space']) await page.keyboard.press(key);
-      assert.equal((await focusIn()).help, true, 'focus stays in help');
-      assert.equal(await page.evaluate(() => document.querySelector('.choice-overlay').inert), true, 'reward layer is inert under help');
-      assert.deepEqual((await read(page)).state.pendingChoice, pending.pendingChoice, 'hidden reward was not selected');
-      assert.equal((await read(page)).state.items.length, pending.items.length);
-      await page.locator('[data-debug="help-close"]').click();
-      await page.waitForFunction(() => document.activeElement?.closest('.choice-overlay'));
-      await chooseAll(page);
-      assert.equal((await read(page)).state.items.length, pending.items.length + 1, 'reward chosen after help closes');
-      assert.deepEqual(helpErrors, []); await ctx.close();
-      check('help-over-reward-choice', { round: pending.round, roundId: pending.roundDefinitionId, offers: pending.pendingChoice.offers });
-    }
+    // Audit F02 (help open while a post-PvE reward choice arrives) is archived, NOT verified, after T13:
+    // PvE loot picks were removed (docs/R3R4_LOOT_DESIGN.md §2, frozen rounds carry choices: []), every
+    // scheduled choice opens before preparation (round-schedule.ts timing 'before'), and help cannot be
+    // opened over an open choice (the overlay takes the pointer), so a reward can no longer arrive
+    // while help is open in a single-player match.
+    (report.archived ??= []).push({ id: 'help-over-reward-choice', status: 'archived-not-applicable',
+      originalAssertion: "after 1-3 combat with help open: phase 'choice' (component loot pick), focus stays in help, reward inert and unselected, chosen after help closes",
+      basis: 'T13 removed PvE loot choices; all scheduled choices open before preparation; help-open is unreachable under an open choice overlay',
+      verified: false });
+    console.log('ARCHIVED [T13] help-over-reward-choice: no reward can arrive while help is open');
 
     // Audit F07: a bundled portrait that fails to load falls back to the code-drawn emblem.
     {

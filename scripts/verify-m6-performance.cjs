@@ -28,7 +28,7 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
  try{
   const {createServer}=await import('vite');server=await createServer({root:path.resolve(__dirname,'..'),plugins:[{name:'m6-perf-page',configureServer(s){s.middlewares.use((req,res,next)=>{if(req.url==='/__m6_perf'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><body></body>');}else next();});}}],server:{host:'127.0.0.1',port:0},optimizeDeps:{noDiscovery:true,include:[]}});await server.listen();
   const api=await server.ssrLoadModule('/src/simulation/match.ts'),replay=await server.ssrLoadModule('/src/replay/index.ts');
-  const {digestContent}=await server.ssrLoadModule('/src/simulation/content/index.ts');
+  const {digestContent}=await server.ssrLoadModule('/src/simulation/content/index.ts'),{M8_VERSION}=await server.ssrLoadModule('/src/simulation/m8/version.ts');
   const {ROUND_CATALOG}=await server.ssrLoadModule('/src/simulation/content/round-catalog.ts');
   const routes=[];let largestComplete=null,largestIncremental=null,largestRecord=null,fullLoadEnvelope=null;
   for(const build of ['cannon','sniper','mage','sniper-caitlyn','full-load']){
@@ -41,11 +41,11 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
     if(before.combat?.status==='running'&&result.state.combat?.status==='finished'){
      const final=history.completedRecords.at(-1);const record={...final,events:final.events.filter(e=>e.tick<=before.combat.tick),endTick:before.combat.tick,nextEventSeq:before.combat.nextEventSeq,result:null,stateHash:digestContent(before.combat)};record.eventHash=digestContent(record.events);
      const done=history.completedRecords.slice(0,-1),size=Buffer.byteLength(JSON.stringify({match:before,currentBattle:record,battleKeys:done.map(r=>r.combatId)}));
-     if(size>currentBytes){currentBytes=size;currentMax={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId,createdAt:'2026-10-06T00:00:00.000Z',match:before,battles:done,currentBattle:record};}
+     if(size>currentBytes){currentBytes=size;currentMax={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId,createdAt:'2026-10-06T00:00:00.000Z',match:before,battles:done,currentBattle:record};}
     }
    }});
    assert.equal(route.final.phase,'gameOver');assert.equal(route.final.round,ROUND_CATALOG.at(-1).ordinal);assert.equal(history.completedRecords.length,ROUND_CATALOG.filter(round=>round.kind!=='supply').length);
-   const envelope={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
+   const envelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId,createdAt:'2026-10-06T00:00:00.000Z',match:route.final,battles:history.completedRecords,currentBattle:null};
    if(build==='full-load'){
     const loads=history.completedRecords.map(record=>({round:record.context.round,players:record.context.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').length,enemies:record.context.preparation.units.filter(u=>u.team==='enemy').length,equipped:record.context.items.filter(i=>i.location.kind==='unit').length}));
     // B8 loot now supplies the real command route's components: the original F1 maximal load runs again.
@@ -175,14 +175,14 @@ const {inspectFixtureGroups,fixtureSignature,stageFixtureGroups}=require('./m6-f
   // Warm constructors/listeners/code before establishing the lifecycle baseline.
   const lifecycle=async cycles=>page.evaluate(async cycles=>{
    const {SaveRepository}=await import('/src/persistence/repository.ts'),{SaveCoordinator}=await import('/src/persistence/coordinator.ts'),{createSaveControls}=await import('/src/persistence/save-controls.ts');
-   const {createMatch}=await import('/src/simulation/match.ts'),{MatchSession}=await import('/src/rendering/match-session.ts'),{PlaybackSession}=await import('/src/replay/index.ts');
+   const {createMatch}=await import('/src/simulation/match.ts'),{MatchSession}=await import('/src/rendering/match-session.ts'),{PlaybackSession}=await import('/src/replay/index.ts'),{M8_VERSION}=await import('/src/simulation/m8/version.ts');
    const {createStatsPanel}=await import('/src/stats/stats-panel.ts'),{aggregateStats}=await import('/src/stats/aggregate.ts'),{createCombatFeedbackRenderer}=await import('/src/stats/combat-feedback-renderer.ts');
    const add=EventTarget.prototype.addEventListener,remove=EventTarget.prototype.removeEventListener;let count=0;const seen=new WeakMap();
    EventTarget.prototype.addEventListener=function(type,listener,options){let map=seen.get(this);if(!map){map=new Map();seen.set(this,map);}const key=`${type}/${typeof options==='boolean'?options:Boolean(options?.capture)}`;let set=map.get(key);if(!set){set=new Set();map.set(key,set);}if(listener&&!set.has(listener)){set.add(listener);count++;}return add.call(this,type,listener,options);};
    EventTarget.prototype.removeEventListener=function(type,listener,options){const key=`${type}/${typeof options==='boolean'?options:Boolean(options?.capture)}`;if(seen.get(this)?.get(key)?.delete(listener))count--;return remove.call(this,type,listener,options);};
    try{for(let i=0;i<cycles;i++){
     const host=document.createElement('div');document.body.append(host);const session=new MatchSession(createMatch(42));session.pause('lifecycle');let notified=0;const unsubscribe=session.subscribe(()=>notified++);
-    const dbName=`m6-lifecycle-${crypto.randomUUID()}`,repository=new SaveRepository(dbName);const envelope={kind:'hex-autobattler-save',saveFormatVersion:2,replayFormatVersion:2,runId:crypto.randomUUID(),createdAt:new Date().toISOString(),match:session.state,battles:[],currentBattle:null};const token=await repository.activate(null,envelope);const coordinator=new SaveCoordinator(repository,token,()=>{});
+    const dbName=`m6-lifecycle-${crypto.randomUUID()}`,repository=new SaveRepository(dbName);const envelope={kind:'hex-autobattler-save',saveFormatVersion:M8_VERSION.saveFormatVersion,replayFormatVersion:M8_VERSION.replayFormatVersion,runId:crypto.randomUUID(),createdAt:new Date().toISOString(),match:session.state,battles:[],currentBattle:null};const token=await repository.activate(null,envelope);const coordinator=new SaveCoordinator(repository,token,()=>{});
     coordinator.enqueue({match:session.state,battleKeys:[],addedBattles:[],currentBattle:null});await coordinator.flush();
     const controls=createSaveControls(host,{onNewRandom(){},onNewFixed(){},onContinue(){},onImport(){},onExport(){}});controls.update({startup:false,canContinue:false,seed:42,runId:envelope.runId,busy:false,status:null,hasActive:true});
     const record=window.__M6_PERF_LIFECYCLE_RECORD,playback=new PlaybackSession(record);playback.play();const snapshot=playback.advance(50);const panel=createStatsPanel(host,()=>{});panel.render({stats:aggregateStats(record.runId,record.combatId,snapshot.events),combat:snapshot.combat,events:snapshot.events,selectedUnitId:null});const feedback=createCombatFeedbackRenderer(host);feedback.push(snapshot.events,0);feedback.render(50,new Map());

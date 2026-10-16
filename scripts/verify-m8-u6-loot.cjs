@@ -25,6 +25,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
     const api = await server.ssrLoadModule('/src/simulation/match.ts');
     const { BattleHistory, validateBattleCollection } = await server.ssrLoadModule('/src/replay/index.ts');
     const { validateEnvelope } = await server.ssrLoadModule('/src/persistence/format.ts');
+    const { M8_VERSION } = await server.ssrLoadModule('/src/simulation/m8/version.ts');
     const { run } = require('./generate-m5-route.cjs');
     const accepted = result => { if (!result.ok) throw new Error(result.reason); return result.state; };
     const combatOnly = events => events.filter(event => event.domain === 'combat');
@@ -60,7 +61,7 @@ const output = path.resolve(process.env.U6_EVIDENCE_DIR || 'artifacts/m8-u6-loot
       return { prefix, history };
     }
     async function envelopeFile(name, runId, match, history) {
-      const envelope = { kind: 'hex-autobattler-save', saveFormatVersion: 2, replayFormatVersion: 2, runId,
+      const envelope = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion, runId,
         createdAt: '2026-10-10T00:00:00.000Z', match, battles: history.completedRecords, currentBattle: null };
       await validateEnvelope(JSON.parse(JSON.stringify(envelope)), validateBattleCollection);
       const file = path.join(output, `${name}.json`); fs.writeFileSync(file, JSON.stringify(envelope));
